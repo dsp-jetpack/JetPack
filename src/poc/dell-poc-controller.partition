@@ -1,0 +1,21 @@
+zerombr
+clearpart --all
+
+bootloader --location=mbr
+
+ignoredisk --only-use=sda
+
+part biosboot --ondisk=sda --size=2
+part /boot --fstype=ext4 --size=1024
+part pv.01 --size=79872
+part pv.02 --size=1024 --grow
+
+volgroup VolGroup --pesize=4096 pv.01
+volgroup vg_vms   --pesize=4096 pv.02
+
+logvol / --fstype=ext4    --name=lv_root --vgname=VolGroup --size 30720
+logvol /tmp --fstype=ext4 --name=lv_tmp  --vgname=VolGroup --size 10240
+logvol /var --fstype=ext4 --name=lv_var  --vgname=VolGroup --size 20480
+logvol swap               --name=lv_swap --vgname=VolGroup --size 16384
+
+logvol /store/data --fstype=ext4 --name=data --vgname=vg_vms --size 1 --grow

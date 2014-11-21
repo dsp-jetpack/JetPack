@@ -1,0 +1,238 @@
+# By default all passwords are generated when using erb passwd_auto stanza
+# Replacing passwd_auto content by a string will make it the same everywhere
+# Alternatively static values can be used directly
+<%  require 'facter'
+    require 'securerandom'
+
+    if Facter.version  =~ /2.*/
+      mail_auto = "admin@#{Facter.value('domain')}"
+    else
+      mail_auto = "admin@#{Facter.domain}"
+    end
+
+    passwd_auto = 'changeme'
+  
+    # Using privateAPI network, could be separate network instead
+    controller_admin_host = '172.30.139.100'
+    controller_priv_host = '172.30.139.100'
+    controller_pub_host = '172.10.139.100'
+
+    nova_public_net = '172.10.139.0/24'
+    nova_public_iface = 'em1'
+
+    nova_private_net = '172.20.139.0/24'
+    nova_private_iface = 'em3'
+
+    private_api_net = '172.30.139.0/24'
+    private_api_iface = 'em2'
+
+    # auto assign ips to VMs.
+    auto_float_ip = false
+
+    # Cinder
+    cb_eqlx = false
+    cb_eqlx_name =["eqlx_backend"] 
+    cb_iscsi = false
+    eqlx_chap_login = ["chapadmin"]
+    eqlx_chap_password = ["changeme"]
+    eqlx_chap_group = ["group-0"]
+    eqlx_chap_pool = ["default"]
+    eqlx_use_chap = ["false"]
+    c_m_bes = false
+
+    # Glance
+    g_be = 'file'
+    g_rbd_spool = 'images'
+    g_rbd_suser = 'images'
+
+    # Heat
+    h_cfn = true
+    h_cwatch = true
+
+    # Keystone
+    ks_rc = true
+
+    amqp_pro = 'rabbitmq'
+    ceil = true
+    net_create = true
+    net_fix = nova_private_net
+    net_float = nova_public_net
+    net_man = 'VlanManager'
+    net_size = 256
+    net_num = 1
+    net_ovrides = ''
+    net_priv_iface = nova_private_iface
+    net_pub_iface = nova_public_iface
+
+%>
+---
+## Common Node Variables
+admin_password: <%= passwd_auto %>
+amqp_host: <%= controller_priv_host %>
+amqp_password: <%= passwd_auto %>
+amqp_provider: <%= amqp_pro %>
+amqp_username: openstack
+auto_assign_floating_ip: <%= auto_float_ip %>
+ceilometer_metering_secret: <%= passwd_auto %>
+ceilometer_user_password: <%= passwd_auto %>
+ceph_cluster_network: ''
+ceph_fsid: ''
+ceph_images_key: ''
+ceph_mon_host: []
+ceph_mon_initial_members: []
+ceph_public_network: ''
+ceph_volumes_key: ''
+cinder_backend_gluster: false
+cinder_backend_nfs: false
+cinder_backend_rbd: false
+mysql_ca: /etc/ipa/ca.crt
+mysql_host: <%= controller_priv_host %>
+nova_db_password: <%= passwd_auto %>
+nova_user_password: <%= passwd_auto %>
+ssl: false
+verbose: true
+
+
+
+## Controller Node Variables
+admin_email: <%= mail_auto %>
+amqp_ca: /etc/ipa/ca.crt
+amqp_cert: /etc/pki/tls/certs/PRIV_HOST-amqp.crt
+amqp_key: /etc/pki/tls/private/PRIV_HOST-amqp.key
+amqp_nssdb_password: <%= passwd_auto %>
+
+cinder_backend_eqlx: <%= cb_eqlx %>
+# cinder_backend_eqlx_name: <%= cb_eqlx_name %>
+cinder_backend_eqlx_name:
+<% cb_eqlx_name.each do |name| %>
+- <%= name %>
+<% end %>
+cinder_backend_gluster_name: glusterfs_backend
+cinder_backend_iscsi: <%= cb_iscsi %>
+cinder_backend_iscsi_name: iscsi_backend
+cinder_backend_nfs_name: nfs_backend
+cinder_backend_rbd_name: rbd_backend
+cinder_db_password: <%= passwd_auto %>
+cinder_eqlx_chap_login: 
+<% eqlx_chap_login.each do |name| %>
+- <%= name %>
+<% end %>
+cinder_eqlx_chap_password:
+<% eqlx_chap_password.each do |name| %> 
+- <%= name %>
+<% end %>
+cinder_eqlx_group_name:
+<% eqlx_chap_group.each do |name| %>
+- <%= name %>
+<% end %>
+cinder_eqlx_pool:
+<% eqlx_chap_pool.each do |name| %>
+- <%= name %>
+<% end %>
+cinder_eqlx_use_chap:
+<% eqlx_use_chap.each do |name| %>
+- <%= name %>
+<% end %>
+
+cinder_gluster_shares: []
+cinder_multiple_backends: <%= c_m_bes %>
+cinder_nfs_mount_options: ''
+cinder_nfs_shares: []
+cinder_rbd_ceph_conf: /etc/ceph/cehp.conf
+cinder_rbd_flatten_volume_from_snapshot: false
+cinder_rbd_max_clone_depth: 5
+cinder_rbd_pool: volumes
+cinder_rbd_secret_uuid: ''
+cinder_rbd_user: volumes
+cinder_san_ip: []
+cinder_san_login: []
+cinder_san_password: []
+cinder_san_thin_provision: []
+cinder_user_password: <%= passwd_auto %>
+
+controller_admin_host: <%= controller_admin_host %>
+controller_priv_host: <%= controller_priv_host %>
+controller_pub_host: <%= controller_pub_host %>
+
+freeipa: false
+
+glance_backend: <%= g_be %>
+glance_db_password: <%= passwd_auto %>
+glance_rbd_store_pool: <%= g_rbd_spool %>
+glance_rbd_store_user: <%= g_rbd_suser %>
+glance_user_password: <%= passwd_auto %>
+
+heat_auth_encryption_key: <%= passwd_auto %>
+heat_cfn: <%= h_cfn %>
+heat_cloudwatch: <%= h_cwatch %>
+heat_db_password: <%= passwd_auto %>
+heat_user_password: <%= passwd_auto %>
+
+horizon_ca: /etc/ipa/ca.crt
+horizon_cert: /etc/pki/tls/certs/PUB_HOST-horizon.crt
+horizon_key: /etc/pki/tls/private/PUB_HOST-horizon.key
+horizon_secret_key: <%= passwd_auto %>
+
+keystonerc: <%= ks_rc %>
+keystone_admin_token: <%= passwd_auto %>
+keystone_db_password: <%= passwd_auto %>
+
+mysql_cert: /etc/pki/tls/certs/PRIV_HOST-mysql.crt
+mysql_key: /etc/pki/tls/private/PRIV_HOST-mysql.key
+mysql_root_password: <%= passwd_auto %>
+
+nova_default_floating_pool: nova
+
+swift_admin_password: <%= passwd_auto %>
+swift_ringserver_ip: 192.168.203.1
+swift_shared_secret: <%= passwd_auto %>
+swift_storage_device: device1
+swift_storage_ips:
+- 192.168.203.2
+- 192.168.203.3
+- 192.168.203.4
+
+swift_user_password: ''
+
+
+
+
+## Compute Node Variables
+
+amqp_port: 5672 
+amqp_ssl_port: 5671 
+auth_host: <%= controller_priv_host %>
+ceilometer: <%= ceil %> 
+glance_backend_rbd: false 
+glance_host: <%= controller_priv_host %> 
+libvirt_images_rbd_ceph_conf: /etc/ceph/ceph.conf 
+libvirt_images_rbd_pool: volumes 
+libvirt_images_type: rbd 
+libvirt_inject_key: false 
+libvirt_inject_password: false 
+network_create_networks: <%= net_create %> 
+network_fixed_range: <%= net_fix %> 
+network_floating_range: <%= net_float %>
+network_manager: <%= net_man %> 
+network_network_size: <%= net_size %> 
+network_num_networks: <%= net_num %> 
+network_overrides: <%= net_ovrides %>
+
+network_private_iface: <%= net_priv_iface %> 
+network_private_network: ''
+network_public_iface: <%= net_pub_iface %> 
+network_public_network: ''
+nova_host: <%= controller_priv_host %> 
+nova_multi_host: True 
+private_iface: ''
+private_ip: <%= controller_priv_host %>
+private_network: ''
+rbd_secret_uuid: ''
+rbd_user: volumes 
+
+
+
+
+
+
+

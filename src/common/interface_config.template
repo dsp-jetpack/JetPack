@@ -1,0 +1,66 @@
+
+declare -A nics=<%= @host.params["nics"] %>
+
+for iface in ${!nics[@]}
+do
+  read parms <<< $( tr -d '\r' <<< ${nics[$iface]} )
+
+  unset nic_info
+  declare -A nic_info=(  \
+                         [DEVICE]="${bond}" \
+                         [PROTO]="dhcp" \
+                         [ONBOOT]="no"      \
+                         [NM_CONTROLLED]="no"      \
+                         )
+
+  for parm in ${parms}
+  do
+    case $parm in
+            onboot ) nic_info[ONBOOT]="yes"
+                     ;;
+
+              none ) nic_info[PROTO]="none"
+                     ;;
+
+            static ) nic_info[PROTO]="static"
+                     ;;
+
+              dhcp ) nic_info[PROTO]="dhcp"
+                     ;;
+
+              vlan ) nic_info[VLAN]="yes"
+                     ;;
+
+       *:*:*:*:*:* ) nic_info[MAC]="${parm}"
+                     ;;
+
+   *.*.*.*/*.*.*.* ) read IP NETMASK <<< $( tr '/' ' ' <<< ${parm} )
+                     nic_info[IP]="${IP}"
+                     nic_info[NETMASK]="${NETMASK}"
+                     ;;
+    esac
+  done
+
+  cat << EOI > /etc/sysconfig/network-scripts/ifcfg-${iface}
+DEVICE=${iface}
+BOOTPROTO=${nic_info[PROTO]}
+ONBOOT=${nic_info[ONBOOT]}
+NM_CONTROLLED=${nic_info[NM_CONTROLLED]}
+EOI
+
+  [[ "${nic_info[PROTO]}" = "static" ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${iface}
+IPADDR=${nic_info[IP]}
+NETMASK=${nic_info[NETMASK]}
+EOB
+
+  [[ -n "${nic_info[MAC]}" ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${iface}
+HWADDR=${nic_info[MAC]}
+EOB
+
+  [[ "${nic_info[VLAN]}" = "yes" ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${iface}
+VLAN=${nic_info[VLAN]}
+EOB
+
+
+done
+
