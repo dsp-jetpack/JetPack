@@ -88,7 +88,12 @@ subscription-manager attach --pool="<%= @host.params['subscription_manager_pool'
 
 subscription-manager repos $( sed -e "s/,\s*/ --enable /g" -e "s/^/--enable /" <<< "<%= @host.params['subscription_manager_repos'] %>" )
 
-# update all the base packages from the updates repository
+[[ -n <%= @host.params["yum_versionlock_file"] %> ]] && {
+    [[ ! -e /etc/yum/pluginconf.d/versionlock.conf ]] && yum -y install yum-plugin-versionlock
+    wget -O /etc/yum/pluginconf.d/versionlock.list <%= @host.params["yum_versionlock_file"] %>
+}
+
+# all the base packages from the updates repository
 yum -t -y -e 0 update
 
 yum list "*puppet*"

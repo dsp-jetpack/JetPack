@@ -46,6 +46,8 @@ ntpdate
 system-config-firewall-base
 iptables
 iptables-services
+yum-plugin-versionlock
+yum-utils
 %end
 
 %pre --log /tmp/ceph-pre.log
@@ -196,6 +198,14 @@ EOIP
     echo "server ${ntps}" >> /etc/ntp.conf
   done
 
+  mkdir /tmp/mnt
+  mount /dev/fd0 /tmp/mnt
+  [[ -e /tmp/mnt/versionlock.list ]] && {
+    cp /tmp/mnt/versionlock.list /etc/yum/pluginconf.d
+    chmod 644 /etc/yum/pluginconf.d/versionlock.list
+    }
+
+
   yum -y update
 
   systemctl disable NetworkManager
@@ -214,9 +224,38 @@ EOFKS
 
 [[ ! -e /store/data/images ]] && mkdir -p /store/data/images
 
+[[ -e ceph.vlock ]] && {
+
+  [[ -e /tmp/floppy-ceph.img ]] && rm -rf /tmp/floppy-ceph.img
+  mkfs.vfat -C /tmp/floppy-ceph.img 1440
+  mkdir /tmp/mnt-ceph
+  mount -o loop /tmp/floppy-ceph.img /tmp/mnt-ceph
+  cp ceph.vlock /tmp/mnt-ceph/versionlock.list
+  sync
+  umount /tmp/mnt-ceph
+  rmdir /tmp/mnt-ceph
+
+  virt-install --name ceph \
+    --ram 4096 \
+    --vcpus 2 \
+    --hvm \
+    --os-type linux \
+    --os-variant rhel6 \
+    --disk /store/data/images/ceph.img,bus=virtio,size=16 \
+    --disk /tmp/floppy-ceph.img,device=floppy \
+    --network bridge=public \
+    --network bridge=provision \
+    --initrd-inject /tmp/ceph.ks \
+    --extra-args "ks=file:/ceph.ks" \
+    --noautoconsole \
+    --graphics spice \
+    --autostart \
+    --location ${location}
+  } || {
+
 virt-install --name ceph \
-  --ram 1024 \
-  --vcpus 1 \
+  --ram 4096 \
+  --vcpus 2 \
   --hvm \
   --os-type linux \
   --os-variant rhel6 \
@@ -229,4 +268,5 @@ virt-install --name ceph \
   --graphics spice \
   --autostart \
   --location ${location}
+  }
 

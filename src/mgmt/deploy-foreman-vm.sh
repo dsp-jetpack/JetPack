@@ -44,6 +44,7 @@ firstboot --disable
 @remote-desktop-clients
 ntp
 ntpdate
+yum-plugin-versionlock
 %end
 
 %pre --log /tmp/foreman-pre.log
@@ -158,9 +159,17 @@ chvt 8
     rhel-6-server-openstack-foreman-rpms \
     rhel-server-rhscl-6-rpms
 
-  yum -y update
+  mkdir /tmp/mnt
+  mount /dev/floppy /tmp/mnt
+  [[ -e /tmp/mnt/versionlock.list ]] && {
+    cp /tmp/mnt/versionlock.list /etc/yum/pluginconf.d
+    chmod 644 /etc/yum/pluginconf.d/versionlock.list
+    }
+  umount /tmp/mnt
 
   yum -y install openstack-foreman-installer
+
+  yum -y update
 
   # Firewall rules to allow traffic for the http, https, dns, and tftp services and tcp port 8140.
   # Also accept all traffic from eth1 to pass through to eth0 and become NAT'd on the way out of eth0.
@@ -229,6 +238,36 @@ EOFKS
 
 [[ ! -e /store/data/images ]] && mkdir -p /store/data/images
 
+
+[[ -e foreman.vlock ]] && {
+
+  [[ -e /tmp/floppy-foreman.img ]] && rm -rf /tmp/floppy-foreman.img
+  mkfs.vfat -C /tmp/floppy-foreman.img 1440
+  mkdir /tmp/mnt-foreman
+  mount -o loop /tmp/floppy-foreman.img /tmp/mnt-foreman
+  cp foreman.vlock /tmp/mnt-foreman/versionlock.list
+  sync
+  umount /tmp/mnt-foreman
+  rmdir /tmp/mnt-foreman
+
+  virt-install --name foreman \
+    --ram 4096 \
+    --vcpus 2 \
+    --hvm \
+    --os-type linux \
+    --os-variant rhel6 \
+    --disk /store/data/images/foreman.img,bus=virtio,size=16 \
+    --disk /tmp/floppy-foreman.img,device=floppy \
+    --network bridge=public \
+    --network bridge=provision \
+    --initrd-inject /tmp/foreman.ks \
+    --extra-args "ks=file:/foreman.ks" \
+    --noautoconsole \
+    --graphics spice \
+    --autostart \
+    --location ${location} 
+  } || {
+
 virt-install --name foreman \
   --ram 4096 \
   --vcpus 2 \
@@ -244,4 +283,5 @@ virt-install --name foreman \
   --graphics spice \
   --autostart \
   --location ${location}
+  }
 
