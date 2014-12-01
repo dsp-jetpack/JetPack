@@ -236,8 +236,8 @@ EOFKS
   rmdir /tmp/mnt-ceph
 
   virt-install --name ceph \
-    --ram 1024 \
-    --vcpus 1 \
+    --ram 4096 \
+    --vcpus 2 \
     --hvm \
     --os-type linux \
     --os-variant rhel6 \
@@ -254,8 +254,8 @@ EOFKS
   } || {
 
 virt-install --name ceph \
-  --ram 1024 \
-  --vcpus 1 \
+  --ram 4096 \
+  --vcpus 2 \
   --hvm \
   --os-type linux \
   --os-variant rhel6 \
