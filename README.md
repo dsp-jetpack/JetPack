@@ -1,4 +1,0 @@
-deploy-auto
-===========
-
-deploy-auto

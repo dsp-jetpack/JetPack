@@ -1,0 +1,417 @@
+from osp_deployer.config import Settings
+from auto_common import Ssh, Scp,  Widget, UI_Manager, FileHelper
+from osp_deployer.foreman_ui.login import Login
+import time
+import logging
+logger = logging.getLogger(__name__)
+
+class Foreman():
+    '''
+    TODO:: add debugged/logging
+    '''
+
+    
+    def __init__(self):
+        self.settings = Settings.settings
+        self.mediumID = ''
+        self.controller_partition_tableID = ''
+        self.compute_partition_tableID = ''
+        self.rhel_65_osId = ''
+        self.rhel_7_osId = ''
+        self.openstack_subnet_id = ''
+        self.environment_Id = ''
+        self.domain_id = ''
+        self.puppetProxy_id = ''
+        self.architecture_id = ''
+        
+    def reset_password(self):
+        logger.info(("=== resetting the foreman admin password"))
+        sResetPassword = 'foreman-rake permissions:reset';
+        re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.sah_node.root_password,sResetPassword )
+        foreman_password = re.split("password: ")[1].replace("\n", "").replace("\r", "")     
+        self.settings.foreman_password = foreman_password
+        Settings.settings.foreman_password = foreman_password
+        print "foreman password :: [" + foreman_password   +"]"
+    
+    def update_scripts(self):
+        logger.info( "updating scripts before uploading them")
+        if self.settings.stamp_type =='poc' :
+            file = self.settings.foreman_configuration_scripts + "\\dell-poc.yaml.erb"
+            FileHelper.replaceExpressionTXT(file, 'passwd_auto =.*',"passwd_auto = '" + self.settings.openstack_services_password + "'" )
+            
+            FileHelper.replaceExpressionTXT(file, 'passwd_auto =.*',"passwd_auto = '" + self.settings.openstack_services_password + "'" )
+            FileHelper.replaceExpressionTXT(file, 'controller_admin_host =.*',"controller_admin_host = '" + self.settings.controller_nodes[0].provisioning_ip + "'" )
+            FileHelper.replaceExpressionTXT(file, 'controller_priv_host =.*',"controller_priv_host = '" + self.settings.controller_nodes[0].private_ip + "'" )
+            FileHelper.replaceExpressionTXT(file, 'controller_pub_host =.*',"controller_pub_host = '" + self.settings.controller_nodes[0].public_ip + "'" )
+        
+            FileHelper.replaceExpressionTXT(file, 'nova_public_net =.*',"nova_public_net = '" + self.settings.nova_public_network + "'" )
+            FileHelper.replaceExpressionTXT(file, 'nova_public_iface =.*',"nova_public_iface = '" + self.settings.compute_nodes[0].nova_public_interface + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'nova_private_net =.*',"nova_private_net = '" + self.settings.nova_private_network + "'" )
+            FileHelper.replaceExpressionTXT(file, 'nova_private_iface =.*',"nova_private_iface = '" + self.settings.compute_nodes[0].nova_private_interface + "'" )
+ 
+            FileHelper.replaceExpressionTXT(file, 'private_api_net =.*',"private_api_net = '" + self.settings.nova_private_network + "'" )
+            FileHelper.replaceExpressionTXT(file, 'private_api_iface =.*',"private_api_iface = '" + self.settings.compute_nodes[0].private_interface + "'" )
+ 
+        
+        
+            
+        elif self.settings.stamp_type =='pilot' :
+            files = ['TODO']
+                                                                                   
+    def upload_scripts(self):
+        if self.settings.stamp_type =='poc' :
+            files = ['bonding_snippet.template',
+                     'dell-osp-ks.template',
+                     'dell-osp-pxe.template',
+                     'dell-poc.yaml.erb',
+                     'dell-poc-compute.partition',
+                     'dell-poc-controller.partition',
+                     'interface_config.template',
+                     ]
+        elif self.settings.stamp_type =='pilot' :
+            files = ['TODO']
+        
+        print "uploading deployment scripts .."
+        for file in files :
+            localfile = self.settings.foreman_configuration_scripts + "\\" + file
+            remotefile = '/root/' + file
+            Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)
+
+        
+    def install_hammer(self):
+        install = 'yum -y install "*hammer*"'
+        print ("installing hammer")
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, install)
+        
+        hammerConf = '/etc/hammer/cli_config.yml'
+        
+        print "configure hammer to display 200 lines"
+        cmd = "sed -i 's/per_page:.*/per_page: 200/' /etc/hammer/cli_config.yml"
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+        print "configure hammer not to prompt for a username/password when connecting"
+        cmd = "sed -i '1s/^/:foreman:\\n    :username: 'admin'\\n    :password: '"+self.settings.foreman_password+"'\\n/' /etc/hammer/cli_config.yml"
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+        return
+    
+    def configure_installation_medium(self):
+        
+        print "uploading RHEL 7 iso to foreman node"
+        Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,
+                         self.settings.rhl7_iso, "/root/RHEL7.iso")
+        print "mount iso on foreman node"
+        cmd = 'echo "/root/RHEL7.iso /usr/share/foreman/public/iso iso9660 loop,ro 0 0" >> /etc/fstab'
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        cmd = 'mkdir /usr/share/foreman/public/iso'
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        cmd = 'mount -a'
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        cmd = 'hammer medium create --name "Dell OSP Pilot" --os-family Redhat --path \'http://'+ self.settings.foreman_node.provisioning_ip +'/iso\''
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+        cmd = 'hammer medium list | grep "Dell OSP Pilot" | grep -o "^\w*\\b"'
+        r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        self.mediumID = r_out.replace("\n", "").replace("\r", "")  
+        print "medium ID ::: " + self.mediumID
+        
+    def configure_partitionts_tables(self):
+        print "configure partition tables"
+        print "Stamp Type :: " + self.settings.stamp_type
+        if self.settings.stamp_type =='poc' :
+            compute_parition_table = 'dell-poc-compute.partition'
+            controler_partition_table = 'dell-poc-controller.partition'
+        else: 
+            compute_parition_table ='TODO'
+            controler_partition_table = 'TODO'
+        
+        cmds = ['hammer partition-table create --name dell-poc-controller --os-family Redhat --file /root/' + str(controler_partition_table),
+                'hammer partition-table create --name dell-poc-compute --os-family Redhat --file /root/' + str(compute_parition_table),
+                ]
+        for cmd in cmds:
+            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+        cmd = 'hammer partition-table list | grep "dell-poc-controller" | grep -o "^\w*\\b"'
+        r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        self.controller_partition_tableID = r_out.replace("\n", "").replace("\r", "")  
+        cmd = 'hammer partition-table list | grep "dell-poc-compute" | grep -o "^\w*\\b"'
+        r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        self.compute_partition_tableID = r_out.replace("\n", "").replace("\r", "")  
+        print "Controlller parition table ID  : " + self.controller_partition_tableID
+        print "Compute partition talbe iD : " + self.compute_partition_tableID
+        
+        
+    def configure_operating_systems(self):
+        print "configure operating systems"
+        print "create RHEl7 OS"
+        cmd = 'hammer os create --name "RedHat" --major 7 --minor 0 --family Redhat'
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        cmd = 'hammer os list | grep "6.6" | grep -o "^\w*\\b"'
+        r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        self.rhel_65_osId = r_out.replace("\n", "").replace("\r", "")  
+        cmd = 'hammer os list | grep "7.0" | grep -o "^\w*\\b"'
+        r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)       
+        self.rhel_7_osId = r_out.replace("\n", "").replace("\r", "")  
+        
+        print "associate architecture to OS/s"
+        cmds = ['hammer os add-architecture --architecture x86_64 --id '+ self.rhel_65_osId,
+                'hammer os add-architecture --architecture x86_64 --id ' + self.rhel_7_osId,
+                ]
+        for cmd in cmds : 
+            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+        print "associate parition/Os"
+        
+        cmds = ['hammer os add-ptable --ptable-id '+self.controller_partition_tableID+' --id '+self.rhel_65_osId,
+                'hammer os add-ptable --ptable-id '+self.controller_partition_tableID+' --id '+self.rhel_7_osId,
+                'hammer os add-ptable --ptable-id '+self.compute_partition_tableID+' --id '+self.rhel_65_osId,
+                'hammer os add-ptable --ptable-id '+self.compute_partition_tableID+' --id '+self.rhel_7_osId,
+                ]
+        for cmd in cmds :
+            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+
+
+    def configure_subnets(self):
+        print "configure subnets"
+        
+        cmd = 'hammer subnet list | grep "OpenStack" | grep -o "^\w*\\b"'
+        r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        self.openstack_subnet_id = r_out.replace("\n", "").replace("\r", "") 
+        
+        cmd = 'hammer subnet update --id '+self.openstack_subnet_id +' --from '+self.settings.foreman_provisioning_subnet_ip_start+' --to '+self.settings.foreman_provisioning_subnet_ip_end+' --gateway '+self.settings.foreman_node.provisioning_ip
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+        
+        
+    def configure_templates(self):
+        print "configure templates"
+        if self.settings.stamp_type =='poc' :
+            ks_template = 'dell-osp-ks.template'
+            pxe_template ='dell-osp-pxe.template'
+            interface_template = 'interface_config.template'
+            bonding_template = 'bonding_snippet.template'
+        else: 
+            ks_template = 'TODO'
+            pxe_template = 'TODO'
+            interface_template = 'TODO'
+            bonding_template = 'TODO'
+        cmds = [ 
+            'hammer template create --name "Dell OpenStack Kickstart Template" --type provision --operatingsystem-ids "'+self.rhel_65_osId+', '+self.rhel_7_osId +'" --file /root/' + ks_template,
+            'hammer template create --name "Dell OpenStack PXE Template" --type PXELinux --operatingsystem-ids "'+self.rhel_65_osId+', '+self.rhel_7_osId+'" --file /root/'+ pxe_template,
+            'hammer template create --name "bond_interfaces" --type snippet --file /root/' + bonding_template,
+            'hammer template create --name "interface_config" --type snippet --file /root/' + interface_template,
+            ]
+        for cmd in cmds :
+            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+        cmd = 'hammer template list | grep "Dell OpenStack Kickstart Template" | grep -o "^\w*\\b"'
+        r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        self.kickstart_templateID = r_out.replace("\n", "").replace("\r", "")  
+        cmd = 'hammer template list | grep "Dell OpenStack PXE Template" | grep -o "^\w*\\b"'
+        r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        self.pxe_templateID = r_out.replace("\n", "").replace("\r", "")  
+        
+        cmds = ['hammer os update --config-template-ids "'+self.kickstart_templateID+', '+ self.pxe_templateID+'" --medium-ids '+self.mediumID+' --id '+self.rhel_65_osId,
+                'hammer os update --config-template-ids "'+self.kickstart_templateID+', '+ self.pxe_templateID+'" --medium-ids '+self.mediumID+' --id '+self.rhel_7_osId,
+                ]
+        for cmd in cmds:
+            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+        cmds = ['hammer os set-default-template --config-template-id '+self.kickstart_templateID +' --id ' + self.rhel_65_osId,
+                'hammer os set-default-template --config-template-id '+self.kickstart_templateID +' --id ' + self.rhel_7_osId,
+                'hammer os set-default-template --config-template-id '+self.pxe_templateID +' --id ' + self.rhel_65_osId,
+                'hammer os set-default-template --config-template-id '+self.pxe_templateID +' --id ' + self.rhel_7_osId ,
+                ]
+        for cmd in cmds:
+            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, "hammer os info --id 1")
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, "hammer os info --id 2")
+        
+        print "gather a few more .. "
+        
+        hammer = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, 'hammer environment list | grep "production" | grep -o "^\w*\\b"')[0].replace("\n", "").replace("\r", "")  
+        domain = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, 'hammer environment list | grep "' + self.settings.domain+'" | grep -o "^\w*\\b"')[0].replace("\n", "").replace("\r", "")  
+        proxy = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, 'hammer proxy list | grep "' + self.settings.domain+'" | grep -o "^\w*\\b"')[0].replace("\n", "").replace("\r", "")  
+        architecture = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, 'hammer environment list | grep "_64" | grep -o "^\w*\\b"')[0].replace("\n", "").replace("\r", "")  
+        
+        self.environment_Id = hammer
+        self.domain_id = domain
+        self.puppetProxy_id = proxy
+        self.architecture_id = architecture
+        
+        print "''''''''''''''"
+        attrs = vars(self)
+        print ', '.join("%s: %s" % item for item in attrs.items())
+        print "''''''''''''''"
+
+        
+    def set_ignore_puppet_facts_for_provisioning(self):
+        print "configure facts updates"
+        __locator_user_input = Widget("//input[@id='login_login']")
+        __locator_password_input = Widget("//input[@id='login_password']")
+        __locator_login_button = Widget("//input[@name='commit']")
+        url = self.settings.foreman_node.public_ip
+        UI_Manager.driver().get("http://" + url)
+        
+        __locator_user_input.setText("admin")
+        __locator_password_input.setText(self.settings.foreman_password)
+        __locator_login_button.click()
+        
+        
+        time.sleep(10)
+        UI_Manager.driver().get('https://'+str(self.settings.foreman_node.public_ip)+'/settings')
+        
+        Widget("//a[.='Provisioning']").waitFor(10)
+        
+        Widget("//a[.='Provisioning']").click()
+        setting = Widget("//tr//td[.='ignore_puppet_facts_for_provisioning']/..//span")
+        setting.waitFor(10)
+        setting.click()
+        
+        dropdown = Widget("//tr//td[.='ignore_puppet_facts_for_provisioning']/..//select")
+        save = Widget("//tr//td[.='ignore_puppet_facts_for_provisioning']/..//button[.='Save']")
+        dropdown.waitFor(10)
+        dropdown.select('true')
+        save.click()
+        time.sleep(10)
+        UI_Manager.driver().close()
+        
+    def register_hosts(self):
+        print "Registering nodes & get their id's"
+        
+        for each in self.settings.controller_nodes:
+            hostCreated = False
+            while hostCreated != True:
+                command = 'hammer host create --name "'+ each.hostname +'" --root-password "'+ self.settings.nodes_root_password+'" --build true --enabled true --managed true --environment-id '+self.environment_Id+' --domain-id 1 --puppet-proxy-id 1 --operatingsystem-id '+self.rhel_7_osId+' --ip '+ each.provisioning_ip + ' --subnet-id 1 --architecture-id 1 --medium-id '+self.mediumID+' --partition-table-id '+self.controller_partition_tableID +' --mac "'+each.mac_address+'"'
+                re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+                if "Could not create the host" in err:
+                    print "did not create the host , trying again... " + err
+                    hostCreated = False
+                else :
+                    hostCreated = True
+                    break
+            Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, 'hammer environment list | grep "production" | grep -o "^\w*\\b"')[0].replace("\n", "").replace("\r", "")
+            each.hostID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, 'hammer host list | grep "'+each.hostname+'" | grep -o "^\w*\\b"')[0].replace("\n", "").replace("\r", "")
+            print each.hostname + " host id :: " + each.hostID
+        for each in self.settings.compute_nodes:
+            hostCreated = False
+            while hostCreated != True:
+                command = 'hammer host create --name "'+ each.hostname +'" --root-password "'+ self.settings.nodes_root_password+'" --build true --enabled true --managed true --environment-id '+self.environment_Id+' --domain-id 1 --puppet-proxy-id 1 --operatingsystem-id '+ self.rhel_7_osId+' --ip '+each.provisioning_ip +' --subnet-id 1 --architecture-id 1 --medium-id '+self.mediumID+' --partition-table-id '+self.compute_partition_tableID +' --mac "'+each.mac_address+'"'
+                re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+                if "Could not create the host" in err:
+                    print "did not create the host , trying again... " + err
+                    hostCreated = False
+                else :
+                    hostCreated = True
+                    break
+            each.hostID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, 'hammer host list | grep "'+each.hostname+'" | grep -o "^\w*\\b"')[0].replace("\n", "").replace("\r", "")
+            print each.hostname + " host id :: " + each.hostID
+        
+    def configure_os_updates(self):
+        print "configuring OS updates"
+        
+        commands =[
+                   'hammer os set-parameter --operatingsystem-id '+ self.rhel_65_osId +' --name subscription_manager --value true',
+                   'hammer os set-parameter --operatingsystem-id '+ self.rhel_65_osId +' --name subscription_manager_username --value '+ self.settings.subscription_manager_user,
+                   'hammer os set-parameter --operatingsystem-id '+ self.rhel_65_osId  +' --name subscription_manager_password --value "'+ self.settings.subscription_manager_password+'"',
+                   'hammer os set-parameter --operatingsystem-id '+ self.rhel_65_osId  +' --name subscription_manager_pool --value ' + self.settings.subscription_manager_poolID,
+                   'hammer os set-parameter --operatingsystem-id '+ self.rhel_65_osId +' --name subscription_manager_repos --value "rhel-server-rhscl-6-rpms, rhel-6-server-rpms, rhel-6-server-openstack-5.0-rpms"',
+                   
+                   'hammer os set-parameter --operatingsystem-id '+ self.rhel_7_osId +' --name subscription_manager --value true',
+                   'hammer os set-parameter --operatingsystem-id '+ self.rhel_7_osId +' --name subscription_manager_username --value '+ self.settings.subscription_manager_user,
+                   'hammer os set-parameter --operatingsystem-id '+ self.rhel_7_osId  +' --name subscription_manager_password --value "'+ self.settings.subscription_manager_password+'"',
+                   'hammer os set-parameter --operatingsystem-id '+ self.rhel_7_osId  +' --name subscription_manager_pool --value ' + self.settings.subscription_manager_poolID,
+                   'hammer os set-parameter --operatingsystem-id '+ self.rhel_7_osId +' --name subscription_manager_repos --value "rhel-server-rhscl-7-rpms, rhel-7-server-rpms, rhel-7-server-openstack-5.0-rpms"'
+                   ]
+        for each in commands :
+            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, each)
+        
+    def configure_controller_nic(self): 
+        print "configuring the controller node(s) nics"    
+        for node in self.settings.controller_nodes:
+            command = "hammer host set-parameter --host-id "+node.hostID+" --name nics --value '(["+node.public_interface+"]=\"onboot static "+node.public_mac_address+" "+ node.public_ip +"/"+ node.public_netmask +"\" ["+node.private_interface+"]=\"onboot static "+node.private_mac_address+" "+node.private_ip+"/"+node.private_netmask+"\")'"
+            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)   
+           
+    def configure_compute_nic(self): 
+        print "configuring the compute node(s) nics"      
+        for node in self.settings.compute_nodes:
+            cmd = "hammer host set-parameter --host-id "+node.hostID+" --name nics --value '(["+node.nova_public_interface+"]=\"onboot static "+node.nova_public_mac_address+" "+ node.nova_public_ip +"/"+ node.nova_public_netmask +"\" ["+node.private_interface+"]=\"onboot static "+node.private_mac_address+" "+node.private_ip+"/"+node.private_netmask+"\" ["+node.nova_private_interface+"]=\"onboot none "+node.nova_private_mac_address +"\")'"
+            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)   
+    
+    def applyHostGroups_Parameters(self):
+        print "Configure the hostgroups parameter"
+        
+        cmd = 'yum install -y rubygem-foreman_api'
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+        cmd = "sed -i \"s/options.password = '.*'/options.password = '"+ self.settings.foreman_password +"'/\" /usr/share/openstack-foreman-installer/bin/quickstack_defaults.rb"
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+        cmd = 'cd /usr/share/openstack-foreman-installer; bin/quickstack_defaults.rb -g config/hostgroups.yaml -d ~/dell-poc.yaml.erb -v parameters'
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+        cmd = "hammer sc-param list --per-page 1000 --search network_overrides | awk '/network_overrides/ {print $1}'"
+        paramID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
+        
+        cmd = "hammer sc-param update --id "+paramID+" --default-value \"{'vlan_start': "+self.settings.nova_private_vlanID+", 'force_dhcp_release': 'false'}\" --parameter-type hash --override yes"
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+    def applyHostGroups_to_nodes(self):    
+        print "Apply host groups to nodes"
+        
+        cmd = 'hammer hostgroup list | grep "Controller (Nova Network)" | grep -o "^\w*\\b"'
+        controllerGroupId = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")  
+        print "controllerGroupId : " + controllerGroupId
+        cmd = 'hammer hostgroup list | grep "Compute (Nova Network)" | grep -o "^\w*\\b"'
+        computeGroupId = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
+        print "computeGroupId : " + computeGroupId
+        
+        print "Apply hostgroup to controller node(s)"
+        for each in self.settings.controller_nodes:
+            cmd = 'hammer host list | grep "'+ each.hostname +'" | grep -o "^\w*\\b"'
+            hostID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
+            hostUpdated = False
+            while hostUpdated != True:            
+                cmd = 'hammer host update --hostgroup-id '+controllerGroupId+' --id '+hostID
+                out, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+                if ("Could not update the host" in err) or ( "Could not update the host" in out):
+                    print "did not update the host , trying again... " + err
+                    hostUpdated = False
+                else :
+                    hostUpdated = True
+                    break
+   
+            print "running puppet on " + each.hostname
+            cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
+            Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
+            
+            
+        print "Apply hostgroup to compute nodes "
+        for each in self.settings.compute_nodes:
+            cmd = 'hammer host list | grep "'+ each.hostname +'" | grep -o "^\w*\\b"'
+            hostID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
+            
+            
+            hostUpdated = False
+            while hostUpdated != True:            
+                cmd = 'hammer host update --hostgroup-id '+computeGroupId+' --id '+hostID
+                out, err  = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+                if ("Could not update the host" in err) or ( "Could not update the host" in out):
+                    print "did not update the host , trying again... " + err
+                    hostUpdated = False
+                else :
+                    hostUpdated = True
+                    break
+            
+            print "running puppet on " + each.hostname
+            cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
+            Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
+        
+        
+        
+           
+       
+        
