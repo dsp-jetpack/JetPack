@@ -224,13 +224,13 @@ EOFKS
 
 [[ ! -e /store/data/images ]] && mkdir -p /store/data/images
 
-[[ -e ceph.vlock ]] && {
+[[ -e ceph_vm.vlock ]] && {
 
   [[ -e /tmp/floppy-ceph.img ]] && rm -rf /tmp/floppy-ceph.img
   mkfs.vfat -C /tmp/floppy-ceph.img 1440
   mkdir /tmp/mnt-ceph
   mount -o loop /tmp/floppy-ceph.img /tmp/mnt-ceph
-  cp ceph.vlock /tmp/mnt-ceph/versionlock.list
+  cp ceph_vm.vlock /tmp/mnt-ceph/versionlock.list
   sync
   umount /tmp/mnt-ceph
   rmdir /tmp/mnt-ceph
