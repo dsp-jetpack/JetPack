@@ -20,8 +20,10 @@ if __name__ == '__main__':
     attrs = vars(settings)
     print ('\r '.join("%s: %s" % item for item in attrs.items()))
     
-    print Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "whoami")[0]
-    
+    foremanHost = Foreman()
+    #foremanHost.reset_password()
+    foremanHost.update_scripts()
+    #foremanHost.upload_scripts()
    
     
     

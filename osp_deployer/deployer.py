@@ -68,7 +68,9 @@ if __name__ == '__main__':
         log (Ssh.execute_command(each.public_ip, "root", each.root_password, "subscription-manager remove --all"))
         log (Ssh.execute_command(each.public_ip, "root", each.root_password, "subscription-manager unregister"))
     others =  settings.controller_nodes + settings.compute_nodes
-    for each in others : 
+    if settings.stamp_type == "pilot":
+        nonSAHnodes = others + settings.ceph_nodes
+    for each in nonSAHnodes : 
         log (Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "subscription-manager remove --all"))
         log (Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "subscription-manager unregister"))
         
@@ -78,8 +80,7 @@ if __name__ == '__main__':
     ipmi_sah.power_off()
     
     log ("=== powering down other hosts")
-    allOthers = settings.controller_nodes + settings.compute_nodes
-    for each in allOthers:
+    for each in nonSAHnodes:
         ipmi_session = Ipmi(settings.cygwin_installdir, settings.ipmi_user, settings.ipmi_password, each.idrac_ip)
         ipmi_session.power_off()
     
@@ -95,7 +96,7 @@ if __name__ == '__main__':
     FileHelper.replaceExpression(settings.sah_kickstart, '^NameServers=.*','NameServers="'+settings.sah_node.name_server +'"')
     FileHelper.replaceExpression(settings.sah_kickstart, '^NTPServers=.*','NTPServers="'+settings.ntp_server +'"')
     FileHelper.replaceExpression(settings.sah_kickstart, '^TimeZone=.*','TimeZone="'+settings.time_zone +'"')
-    FileHelper.replaceExpression(settings.sah_kickstart, '^public_bond=.*','public_bond="public '+ settings.sah_node.public_bond + " "+ settings.sah_node.public_ip + " " + settings.sah_node.public_netmask + " " + settings.sah_node.public_slaves + '"')
+    FileHelper.replaceExpression(settings.sah_kickstart, '^public_bond=.*','public_bond="public '+ settings.sah_node.public_bond + " "+ settings.sah_node.public_ip + " " + settings.sah_node.public_netmask + " " + settings.sah_node.public_slaves + ' "')
     FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bond=.*','provision_bond="provision '+ settings.sah_node.provisioning_bond + " "+ settings.sah_node.provisioning_ip + " " + settings.sah_node.provisioning_netmask + " " + settings.sah_node.provisioning_slaves +'"')
         
     log ("=== starting the tftp service & power on the admin")
@@ -242,22 +243,25 @@ if __name__ == '__main__':
     foremanHost.configure_compute_nic()
     
     
-    logger.info( "==== Power on/PXE boot the Controller/Compute nodes")
-    allOthers = settings.controller_nodes + settings.compute_nodes
-    for each in allOthers:
+    logger.info( "==== Power on/PXE boot the Controller/Compute/Storage nodes")
+    for each in nonSAHnodes:
         ipmiSession = Ipmi(settings.cygwin_installdir, settings.ipmi_user, settings.ipmi_password, each.idrac_ip)
         ipmiSession.set_boot_to_pxe()
         ipmiSession.power_on()
         
     logger.info( "wait for the nodes to be up")
-    for each in allOthers:
+    for each in nonSAHnodes:
         log("waiting for " + each.hostname +" to be up @" + each.provisioning_ip)
         while (not "root" in Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "whoami")[0]):
             log("...")
             time.sleep(100);
     
-    foremanHost.applyHostGroups_Parameters()
-    foremanHost.applyHostGroups_to_nodes()
+    
+    if settings.stamp_type == "poc":
+        foremanHost.applyHostGroups_Parameters()
+        foremanHost.applyHostGroups_to_nodes()
+    elif settings.stamp_type == "pilot":
+        print "that's as far as we go for now with Pilot."
     
     log (" that's all folks "    )
     logger.info( "foreman admin password :: " + settings.foreman_password  )

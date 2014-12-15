@@ -53,6 +53,7 @@ class Settings():
         
         self.controller_nodes = []
         self.compute_nodes = []
+        self.ceph_nodes = []
         
         with open(self.network_conf) as config_file:    
             json_data = json.load(config_file)
@@ -89,7 +90,14 @@ class Settings():
                         self.compute_nodes.append(node)
                         print "Compute Node :: " + node.hostname
                 except:
-                    print "."    
+                    print "."   
+                try:
+                    if node.is_ceph_storage == "true":
+                        self.ceph_nodes.append(node)
+                        print "Ceph Node :: " + node.hostname
+                    
+                except:
+                    print "." 
                 attrs = vars(node)
                 print '\r '.join("%s: %s" % item for item in attrs.items())
                 print "==========================================="
