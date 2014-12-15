@@ -1,20 +1,30 @@
 #!/bin/bash
 
-mkdir -p /tmp/jetstream-release; rm -rf /tmp/jetstream-release/*
-dest=/tmp/jetstream-release
-
 if [ ! -d releases ]; then
   echo "Not in repo directory?" ; exit 
 fi
+
+if [ -z "$1" ]; then
+  echo "Usage: export-release.sh <version> [<directory>]"
+  exit
+else
+  if [ ! $(echo "$1" | grep -e "^[0-9]\+\(\.[0-9]\+\)\{1,2\}$") ]; then
+    echo \"$1\" is not a legal release number
+    exit 1 
+  fi
+  dest="releases/jetstream-${1}"
+  [[ $2 ]] && dest=${2}/${dest}
+fi
+mkdir -p $dest; rm -rf ${dest}/*
 
 mk_bundle() {
     local target_dir="$1"; shift
     local src_dirs="$@"
 
     echo "Creating $target_dir node bundles"
-    mkdir -p /tmp/jetstream-release/${target_dir}
+    mkdir -p ${dest}/${target_dir}
     for src_dir in ${src_dirs}; do
-	if [[ $src_dir =~ "versionlock" ]]; then
+	if [[ $src_dir =~ "vlock" ]]; then
             mkdir -p ${dest}/${target_dir}/vlock_files
 	    cp data/vlock_files/$src_dir ${dest}/${target_dir}/vlock_files
         else
@@ -36,8 +46,9 @@ cp doc/*.xlsx $dest
 (cd $dest; sha256sum * > CHECKSUMS.sha256)
 
 # make bundles
-mk_bundle dell-mgmt-node    mgmt         versionlock.list_cephvm versionlock.list_foreman
-mk_bundle dell-pilot-deploy pilot common versionlock.list_cntl versionlock.list_nova
-mk_bundle dell-poc-deploy   poc common   versionlock.list_cntl versionlock.list_nova
+mk_bundle dell-mgmt-node    mgmt         ceph_vm.vlock foreman_vm.vlock
+mk_bundle dell-pilot-deploy pilot common controller.vlock compute.vlock
+mk_bundle dell-poc-deploy   poc common   controller.vlock compute.vlock
 
-echo "Done! - release bundles and files are in /tmp/jetstream-release directory. Use 'sha256sum -c <checksums_file>' to verify"
+echo "Done! - release bundles and files are in ${dest}."
+echo "  Use 'sha256sum -c <checksums_file>' to verify."
