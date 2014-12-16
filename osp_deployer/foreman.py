@@ -1,6 +1,6 @@
 from osp_deployer.config import Settings
 from auto_common import Ssh, Scp,  Widget, UI_Manager, FileHelper
-from osp_deployer.foreman_ui.login import Login
+
 import time
 import logging
 logger = logging.getLogger(__name__)
