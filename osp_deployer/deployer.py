@@ -45,8 +45,10 @@ if __name__ == '__main__':
     
     opts, args = getopt.getopt(sys.argv[1:], ":s:", ["help", "settingsFile="])
     if len(opts)!= 1:
-        logger.info( "usage : python deployer.py -s settingFile")
-        logger.info( "eg : python deployer.py -s settings/settings.ini")
+        logger.fatal( "usage : python deployer.py -s settingFile")
+        logger.fatal( "eg : python deployer.py -s settings/settings.ini")
+	print( "usage : python deployer.py -s settingFile")
+        print( "eg : python deployer.py -s settings/settings.ini")
         sys.exit(2)
     for opt, arg in opts:
         if str(opt) == '-s':
