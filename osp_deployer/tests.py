@@ -10,6 +10,7 @@ from auto_common import Ssh, Scp, UI_Manager, Widget
 from osp_deployer.foreman_ui.login import Login
 import time
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -20,11 +21,12 @@ if __name__ == '__main__':
     attrs = vars(settings)
     print ('\r '.join("%s: %s" % item for item in attrs.items()))
     
-    foremanHost = Foreman()
-    #foremanHost.reset_password()
-    foremanHost.update_scripts()
-    #foremanHost.upload_scripts()
-   
+    print " ...... 1 .... "
+    
+    print settings.stamp_storage
+    #ceph = Ceph()
+    #ceph.copy_installer()
+    #ceph.install_ice()
     
     
         

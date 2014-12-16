@@ -1,4 +1,5 @@
 from osp_deployer.foreman import Foreman
+from osp_deployer.ceph import Ceph
 import sys, getopt
 from osp_deployer import Settings
 from auto_common import Ipmi, Ssh, FileHelper, Scp
@@ -56,10 +57,12 @@ if __name__ == '__main__':
             logger.info( "usage : python deployer.py -s settingFile")
             logger.info( "eg : python deployer.py -s settings/settings.ini")
             sys.exit(2)         
+    logger.info("loading settings files " + settingsFile)
     settings = Settings(settingsFile)   
     attrs = vars(settings)
     log ('\r '.join("%s: %s" % item for item in attrs.items()))
     
+    #######
     log ("=== Unregister the hosts")
     hosts = [ settings.sah_node, settings.foreman_node] 
     if settings.stamp_type == "pilot":
@@ -242,6 +245,14 @@ if __name__ == '__main__':
     foremanHost.configure_controller_nic()
     foremanHost.configure_compute_nic()
     
+    #######
+    print settings.stamp_type
+    
+    print settings.stamp_storage
+    
+    if settings.stamp_type == "pilot" and settings.stamp_storage == "ceph":
+        foremanHost.configure_ceph_nic()
+    
     
     logger.info( "==== Power on/PXE boot the Controller/Compute/Storage nodes")
     for each in nonSAHnodes:
@@ -261,9 +272,13 @@ if __name__ == '__main__':
         foremanHost.applyHostGroups_Parameters()
         foremanHost.applyHostGroups_to_nodes()
     elif settings.stamp_type == "pilot":
-        print "that's as far as we go for now with Pilot."
+        if settings.stamp_storage == "ceph":
+            ceph = Ceph()
+            ceph.copy_installer()
+            ceph.install_ice()
     
     log (" that's all folks "    )
     logger.info( "foreman admin password :: " + settings.foreman_password  )
+    print "All done - foreman admin password :: " + settings.foreman_password
 
     

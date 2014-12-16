@@ -32,6 +32,7 @@ class Settings():
         self.ntp_server = self.cluster_settings_map['ntp_servers']
         self.time_zone = self.cluster_settings_map['time_zone']
         self.stamp_type = self.cluster_settings_map['stamp_type']
+        self.stamp_storage = self.cluster_settings_map['storage']
         
         self.foreman_provisioning_subnet_ip_start = self.cluster_settings_map['foreman_provisioning_subnet_ip_start']
         self.foreman_provisioning_subnet_ip_end=self.cluster_settings_map['foreman_provisioning_subnet_ip_end']
@@ -92,7 +93,7 @@ class Settings():
                 except:
                     print "."   
                 try:
-                    if node.is_ceph_storage == "true":
+                    if self.stamp_storage == "ceph" and node.is_ceph_storage == "true":
                         self.ceph_nodes.append(node)
                         print "Ceph Node :: " + node.hostname
                     
