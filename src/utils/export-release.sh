@@ -47,7 +47,7 @@ cp doc/*.xlsx $dest
 
 # make bundles
 mk_bundle dell-mgmt-node    mgmt         ceph_vm.vlock foreman_vm.vlock
-mk_bundle dell-pilot-deploy pilot common controller.vlock compute.vlock
+mk_bundle dell-pilot-deploy pilot common controller.vlock compute.vlock ceph.vlock
 mk_bundle dell-poc-deploy   poc common   controller.vlock compute.vlock
 
 echo "Done! - release bundles and files are in ${dest}."
