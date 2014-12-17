@@ -278,6 +278,7 @@ if __name__ == '__main__':
             ceph = Ceph()
             ceph.copy_installer()
             ceph.install_ice()
+            ceph.configure_monitor()
     
     log (" that's all folks "    )
     logger.info( "foreman admin password :: " + settings.foreman_password  )

@@ -16,18 +16,20 @@ logger = logging.getLogger(__name__)
 
 if __name__ == '__main__':
    
+    import logging.config
+    logging.basicConfig(filename='c:/auto_results/deployer.log',
+                    format="%(asctime)-15s:%(name)s:%(process)d:%(levelname)s:%(message)s",
+                    filemode='w',
+                    level=logging.INFO)
     
     settings = Settings('settings\settings.ini')  
     attrs = vars(settings)
-    print ('\r '.join("%s: %s" % item for item in attrs.items()))
     
-    print " ...... 1 .... "
     
-    print settings.stamp_storage
-    #ceph = Ceph()
+    ceph = Ceph()
     #ceph.copy_installer()
     #ceph.install_ice()
-    
+    ceph.configure_monitor()
     
         
 
