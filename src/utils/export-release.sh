@@ -8,7 +8,7 @@ if [ -z "$1" ]; then
   echo "Usage: export-release.sh <version> [<directory>]"
   exit
 else
-  if [ ! $(echo "$1" | grep -e "^[0-9]\+\(\.[0-9]\+\)\{1,2\}$") ]; then
+  if [ ! $(echo "$1" | grep -e "^[0-9]\+\(\.[0-9]\+\)\{1,3\}$") ]; then
     echo \"$1\" is not a legal release number
     exit 1 
   fi
