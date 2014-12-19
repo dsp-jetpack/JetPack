@@ -1,7 +1,7 @@
 from osp_deployer.config import Settings
 from auto_common import Ssh, Scp,  Widget, UI_Manager, FileHelper
 import time
-import logging
+import logging, paramiko
 logger = logging.getLogger(__name__)
 
 class Ceph():
@@ -44,27 +44,63 @@ class Ceph():
         print Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
        
     def configure_monitor(self):
+        cmd = 'mkdir ~/.ssh; ssh-keygen -q -f /root/.ssh/id_rsa -P '';touch ~/.ssh/known_hosts'
+        print Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
         cmd = ' ssh-keyscan -H '+ self.settings.ceph_node.hostname +'.' + self.settings.domain +' >> ~/.ssh/known_hosts'
-        
         print Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
         
         logger.info("updating host files for controller nodes & upload ssh keys to enable password less ssh between ceph/controllers")
-        cmd = 'cat ~/.ssh/id_rsa.pub'
+        cmd = 'cat /root/.ssh/id_rsa.pub'
         myKey, err = Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
         monitorList = ''
+        monitorListShort = ''
         for host in self.settings.controller_nodes :
+            cmd = 'echo "'+ host.provisioning_ip+' '+ host.hostname +'-storage" >> /etc/hosts'
+            print Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
             cmd = 'echo "'+ host.provisioning_ip+' '+ host.hostname +'" >> /etc/hosts'
             print Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
-            monitorList = monitorList +  host.hostname + ' '
-            cmd = ' ssh-keyscan -H '+ host.hostname +' >> ~/.ssh/known_hosts'
-            Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
-            cmds = [ 'mkdir ~/.ssh',
-                    'echo "' + myKey + '" >> ~/.ssh/authorized_keys'
-                    ]
-            for cmd in cmds : 
-                logger.info("Executing " + cmd + " on " + host.hostname)
-                print Ssh.execute_command(host.public_ip, "root", self.settings.nodes_root_password,cmd )
-        time.sleep(30)
+        time.sleep(20)
+        for host in self.settings.controller_nodes :
+            monitorList = monitorList +  host.hostname + '-storage '
+            monitorListShort = monitorListShort + host.hostname + " "
+            cmd = 'echo "' + self.settings.ceph_node.provisioning_ip + '  ' + self.settings.ceph_node.hostname + "." + self.settings.domain +'" >> /etc/hosts'
+            print Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd)
         cmd = 'cd ~/cluster;ceph-deploy new ' + monitorList
-        print Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )    
+        print self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd)    
         
+        logger.info("Updating ceph.conf")
+        toAdd = ['public network = ' + self.settings.storage_network,
+                 'cluster network = ' + self.settings.storage_cluster_network,
+                 'osd pool default size = 2'
+                 ]
+        for sett in toAdd:
+            cmd = 'echo "'+ sett +'" >> ~/cluster/ceph.conf'
+        print Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
+        
+        logger.info("ceph deploy.")
+        cmd = 'ceph-deploy install ' + monitorListShort
+        print Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
+        
+    def execute_as_shell_expectPasswords(self, address,usr, pwd, command):
+        conn = paramiko.SSHClient()
+        conn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        conn.connect(address,username = usr,password = pwd)
+        channel = conn.invoke_shell()
+        time.sleep(1)
+        channel.recv(9999) 
+        channel.send(command  + "\n")     
+        buff = ''
+        while not buff.endswith(']# '):
+            resp = channel.recv(9999)
+            buff += resp
+            print " >> [[" + buff  +"]]"
+            if buff.endswith("storage's password: "):
+                channel.send(self.settings.nodes_root_password + "\n")
+            if buff.endswith("(yes/no)? "):
+                channel.send("yes\n")
+                
+                
+                
+                
+                 
+        return buff
