@@ -44,7 +44,7 @@ class Ceph():
         print Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
        
     def configure_monitor(self):
-        cmd = 'mkdir ~/.ssh; ssh-keygen -q -f /root/.ssh/id_rsa -P '';touch ~/.ssh/known_hosts'
+        cmd = 'mkdir ~/.ssh; ssh-keygen -q -f /root/.ssh/id_rsa -P "";touch ~/.ssh/known_hosts'
         print Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
         cmd = ' ssh-keyscan -H '+ self.settings.ceph_node.hostname +'.' + self.settings.domain +' >> ~/.ssh/known_hosts'
         print Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
@@ -58,7 +58,7 @@ class Ceph():
             cmd = 'echo "'+ host.provisioning_ip+' '+ host.hostname +'-storage" >> /etc/hosts'
             print Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
             cmd = 'echo "'+ host.provisioning_ip+' '+ host.hostname +'" >> /etc/hosts'
-            print Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
+            print Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd )
         time.sleep(20)
         for host in self.settings.controller_nodes :
             monitorList = monitorList +  host.hostname + '-storage '

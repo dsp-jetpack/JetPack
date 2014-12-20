@@ -29,6 +29,5 @@ if __name__ == '__main__':
     ceph.install_ice()
     ceph.configure_monitor()
     
-        
 
     
