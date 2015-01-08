@@ -271,7 +271,7 @@ if __name__ == '__main__':
     
     
     if settings.stamp_type == "poc":
-        foremanHost.applyHostGroups_Parameters()
+        foremanHost.configureHostGroups_Parameters()
         foremanHost.applyHostGroups_to_nodes()
     elif settings.stamp_type == "pilot":
         if settings.stamp_storage == "ceph":
@@ -279,9 +279,18 @@ if __name__ == '__main__':
             ceph.copy_installer()
             ceph.install_ice()
             ceph.configure_monitor()
-    
+            ceph.configure_osd()
+            ceph.connectHostsToCalamari()
+            
+            
+        #foremanHost.configureHostGroups_Parameters()
+        #foremanHost.cephConfigurtion()
+        
+    UI_Manager.driver().close()
+        
     log (" that's all folks "    )
     logger.info( "foreman admin password :: " + settings.foreman_password  )
     print "All done - foreman admin password :: " + settings.foreman_password
 
+    
     

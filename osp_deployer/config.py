@@ -21,6 +21,8 @@ class Settings():
         self.nova_private_vlanID = self.cluster_settings_map['nova_private_vlanid']
         self.storage_network = self.cluster_settings_map['storage_network']
         self.storage_cluster_network = self.cluster_settings_map['storage_cluster_network']
+        self.public_network = self.cluster_settings_map['public_network']
+        self.provisioning_network = self.cluster_settings_map['provisioning_network']
         self.network_conf = self.cluster_settings_map['cluster_nodes_configuration_file']
         self.domain = self.cluster_settings_map['domain']
         self.ipmi_user = self.cluster_settings_map['ipmi_user']

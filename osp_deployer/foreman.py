@@ -32,15 +32,15 @@ class Foreman():
         foreman_password = re.split("password: ")[1].replace("\n", "").replace("\r", "")     
         self.settings.foreman_password = foreman_password
         Settings.settings.foreman_password = foreman_password
-        print "foreman password :: [" + foreman_password   +"]"
+        logger.info( "foreman password :: [" + foreman_password   +"]")
     
     def update_scripts(self):
         logger.info( "updating scripts before uploading them")
         if self.settings.stamp_type =='poc' :
             file = self.settings.foreman_configuration_scripts + "\\dell-poc.yaml.erb"
-            FileHelper.replaceExpressionTXT(file, 'passwd_auto =.*',"passwd_auto = '" + self.settings.openstack_services_password + "'" )
             
             FileHelper.replaceExpressionTXT(file, 'passwd_auto =.*',"passwd_auto = '" + self.settings.openstack_services_password + "'" )
+            
             FileHelper.replaceExpressionTXT(file, 'controller_admin_host =.*',"controller_admin_host = '" + self.settings.controller_nodes[0].provisioning_ip + "'" )
             FileHelper.replaceExpressionTXT(file, 'controller_priv_host =.*',"controller_priv_host = '" + self.settings.controller_nodes[0].private_ip + "'" )
             FileHelper.replaceExpressionTXT(file, 'controller_pub_host =.*',"controller_pub_host = '" + self.settings.controller_nodes[0].public_ip + "'" )
@@ -54,12 +54,13 @@ class Foreman():
             FileHelper.replaceExpressionTXT(file, 'private_api_net =.*',"private_api_net = '" + self.settings.nova_private_network + "'" )
             FileHelper.replaceExpressionTXT(file, 'private_api_iface =.*',"private_api_iface = '" + self.settings.compute_nodes[0].private_interface + "'" )
  
-        
-        
-            
+    
         elif self.settings.stamp_type =='pilot' :
-            files = ['TODO']
-                                                                                   
+            file = self.settings.foreman_configuration_scripts + "\\dell-pilot.yaml.erb"
+            
+            FileHelper.replaceExpressionTXT(file, 'passwd_auto =.*',"passwd_auto = '" + self.settings.openstack_services_password + "'" )
+            
+            
     def upload_scripts(self):
         if self.settings.stamp_type =='poc' :
             files = ['bonding_snippet.template',
@@ -398,18 +399,18 @@ class Foreman():
             for node in self.settings.controller_nodes:
                 command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_pool --value '+self.settings.subscription_manager_poolID
                 print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
-                command = 'hammer os set-parameter --host-id '+node.hostID+' --name subscription_manager_repos --value "rhel-server-rhscl-7-rpms, rhel-7-server-rpms, rhel-7-server-openstack-5.0-rpms,rhel-ha-for-rhel-7-server-rpms"'
+                command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_repos --value "rhel-server-rhscl-7-rpms, rhel-7-server-rpms, rhel-7-server-openstack-5.0-rpms,rhel-ha-for-rhel-7-server-rpms"'
                 print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
             for node in self.settings.compute_nodes:
                 command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_pool --value '+self.settings.subscription_manager_poolID
                 print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
-                command = 'hammer os set-parameter --host-id '+node.hostID+' --name subscription_manager_repos --value "rhel-server-rhscl-7-rpms, rhel-7-server-rpms, rhel-7-server-openstack-5.0-rpms"'
+                command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_repos --value "rhel-server-rhscl-7-rpms, rhel-7-server-rpms, rhel-7-server-openstack-5.0-rpms"'
                 print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
             if self.settings.stamp_storage == "ceph":
                 for node in self.settings.ceph_nodes:
                     command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_pool --value '+self.settings.subscription_manager_poolID
                     print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
-                    command = 'hammer os set-parameter --host-id '+node.hostID+' --name subscription_manager_repos --value "rhel-server-rhscl-7-rpms, rhel-7-server-rpms, rhel-x86_64-server-7"'
+                    command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_repos --value "rhel-server-rhscl-7-rpms, rhel-7-server-rpms, rhel-x86_64-server-7"'
                     print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
                     
 
@@ -446,7 +447,7 @@ class Foreman():
                 
                 commands = ["hammer host set-parameter --host-id "+node.hostID+" --name bonds --value '( [bond0]=\"onboot none\" [bond0."+node.nova_private_vlanid+"]=\"onboot static vlan "+node.nova_private_ip+"/"+node.nova_private_netmask+"\" [bond0."+node.private_api_vlanid+"]=\"onboot static vlan "+node.private_ip+"/"+node.private_netmask+"\" [bond0."+node.storage_vlanid+"]=\"onboot static vlan "+node.storage_ip+"/"+node.storage_netmask+"\" [bond1]=\"onboot static "+node.storage_netmask+"/"+node.nova_public_netmask+"\")'",
                             "hammer host set-parameter --host-id "+node.hostID+" --name bond_ifaces --value '( [bond0]=\""+node.bond0_interfaces+"\" [bond1]=\""+node.bond1_interfaces+"\")'",
-                            "hammer host set-parameter --host-id "+node.hostID+" --name bond_opts --value '( [bond0]=\"mode=balance-tlb PROMISC=yes\" [bond1]=\"mode=balancetlb PROMISC=yes\")'"]
+                            "hammer host set-parameter --host-id "+node.hostID+" --name bond_opts --value '( [bond0]=\"mode=balance-tlb PROMISC=yes\" [bond1]=\"mode=balance-tlb PROMISC=yes\")'"]
                 for command in commands:
                     print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
     
@@ -462,23 +463,61 @@ class Foreman():
             for command in commands:
                 print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
                 
-    def applyHostGroups_Parameters(self):
+    def configureHostGroups_Parameters(self):
         print "Configure the hostgroups parameter"
         
         cmd = 'yum install -y rubygem-foreman_api'
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
         
-        cmd = "sed -i \"s/options.password = '.*'/options.password = '"+ self.settings.foreman_password +"'/\" /usr/share/openstack-foreman-installer/bin/quickstack_defaults.rb"
+        #####################################################################################
+        # TODO :: log a bug for the below , missing from the Pilot & POC documentation
+        #####################################################################################
+        cmd = "sed -i \"s/options.password = '.*'/c = '"+ self.settings.foreman_password +"'/\" /usr/share/openstack-foreman-installer/bin/quickstack_defaults.rb"
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
         
-        cmd = 'cd /usr/share/openstack-foreman-installer; bin/quickstack_defaults.rb -g config/hostgroups.yaml -d ~/dell-poc.yaml.erb -v parameters'
+        if self.settings.stamp_type =='poc' :
+            erbFile = 'dell-poc.yaml.erb'
+        elif self.settings.stamp_type == 'pilot':
+            erbFile = 'dell-pilot.yaml.erb'
+            
+        cmd = 'cd /usr/share/openstack-foreman-installer; bin/quickstack_defaults.rb -g config/hostgroups.yaml -d ~/'+erbFile+' -v parameters'
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
         
+        #####################################################################################
+        # TODO :: log a bug for the below , missing section/part command only in Pilot guide.
+        #####################################################################################
         cmd = "hammer sc-param list --per-page 1000 --search network_overrides | awk '/network_overrides/ {print $1}'"
         paramID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
         
         cmd = "hammer sc-param update --id "+paramID+" --default-value \"{'vlan_start': "+self.settings.nova_private_vlanID+", 'force_dhcp_release': 'false'}\" --parameter-type hash --override yes"
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        
+        if self.settings.stamp_type =='pilot' :
+            logger.info("Disabling Neutron")
+            
+            __locator_user_input = Widget("//input[@id='login_login']")
+            __locator_password_input = Widget("//input[@id='login_password']")
+            __locator_login_button = Widget("//input[@name='commit']")
+            url = self.settings.foreman_node.public_ip
+            UI_Manager.driver().get("http://" + url)
+            
+            __locator_user_input.setText("admin")
+            __locator_password_input.setText(self.settings.foreman_password)
+            __locator_login_button.click()
+            
+            time.sleep(10)
+            
+            #TODO/ To Finish .. bug with UI cannot currently override quickstack paremters.
+       
+        
+        
+    def cephConfigurtion(self):
+         logger.info("Updating ceph configuration to prevent foreman/puppet to override ceph config on controller nodes")
+         cmds = ["cp -v /usr/share/openstack-foreman-installer/puppet/modules/quickstack/manifests/ceph/config.pp{,.bak}",
+                   "sed -i '/file { \"etc-ceph\":/,${s/^/#/;};$s/^#//' /usr/share/openstack-foreman-installer/puppet/modules/quickstack/manifests/ceph/config.pp "
+                   ]  
+         for cmd in cmds:
+             logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
         
     def applyHostGroups_to_nodes(self):    
         print "Apply host groups to nodes"
