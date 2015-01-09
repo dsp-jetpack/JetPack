@@ -74,7 +74,7 @@ class Ceph():
             
             cmd = 'echo "' + host.provisioning_ip + '  ' + host.hostname + "-storage." + self.settings.domain +'  ' + host.hostname + '-storage" >> /etc/hosts'
             logger.info( Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd))
-            monHosts = monHosts + host.provisioning_ip + ', ' 
+            monHosts = monHosts + host.storage_ip + ', ' 
             # Update the /etc/hosts on all controller so they can resolve each others over the storage network.
             for each in controllersEtcHosts:
                 logger.info( Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password,each))
@@ -87,7 +87,7 @@ class Ceph():
         logger.info("Updating ceph.conf")
         logger.info("ceph.conf before updating :: ")
         logger.info(Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,"cat /root/cluster/ceph.conf" ))
-        toAdd = ['public network = ' + self.settings.provisioning_network.replace('\n', ""),
+        toAdd = ['public network = ' + self.settings.storage_network.replace('\n', ""),
                  'cluster network = ' + self.settings.storage_cluster_network.replace('\n', ""),
                  'osd pool default size = 2'
                  ]
@@ -170,18 +170,16 @@ class Ceph():
                 
                 logger.info("Partition data disks ")
                 disksCmds = [
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdb:/dev/sdl',   
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdc:/dev/sdl',
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdd:/dev/sdl',
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sde:/dev/sdl',
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdf:/dev/sdl',
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdg:/dev/sdm',
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdh:/dev/sdm',
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdi:/dev/sdm',
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdj:/dev/sdm',
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdk:/dev/sdm',
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + '',
-                            
+                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdb',    #:/dev/sdl
+                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdc',    #:/dev/sdl
+                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdd',   #
+                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sde', #:/dev/sdl
+                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdf',  #:/dev/sdl
+                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdg',  #:/dev/sdm
+                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdh', #:/dev/sdm
+                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdi', #:/dev/sdm
+                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdj', #:/dev/sdm
+                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdk', #:/dev/sdm
                          ]
                 for cmd in disksCmds:
                     logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
