@@ -2,7 +2,7 @@ from osp_deployer.foreman import Foreman
 from osp_deployer.ceph import Ceph
 import sys, getopt
 from osp_deployer import Settings
-from auto_common import Ipmi, Ssh, FileHelper, Scp
+from auto_common import Ipmi, Ssh, FileHelper, Scp, UI_Manager
 from datetime import datetime
 import time,subprocess
 import paramiko, re
@@ -283,8 +283,8 @@ if __name__ == '__main__':
             ceph.connectHostsToCalamari()
             
             
-        #foremanHost.configureHostGroups_Parameters()
-        #foremanHost.cephConfigurtion()
+        foremanHost.configureHostGroups_Parameters()
+        foremanHost.cephConfigurtion()
         
     UI_Manager.driver().close()
         

@@ -165,25 +165,19 @@ class Ceph():
                 logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
         
                 logger.info("clear partitions")
-                cmd = 'cd ~/cluster;ceph-deploy osd disk zap ' + host.hostname + ':/dev/sdb'
-                logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+                # Cgecj ,, NOT osd disk zap in docs , else update docs..
+                #    ':/dev/sdk',#:/dev/sdm
+                     
+                logger.info("Partition data disks & recreate disks ")
+                for disk in host.osd_disks:
+                    cmds = [
+                            'cd ~/cluster;ceph-deploy disk zap ' + host.hostname + disk,
+                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + disk
+                            ]
                 
-                logger.info("Partition data disks ")
-                disksCmds = [
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdb',    #:/dev/sdl
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdc',    #:/dev/sdl
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdd',   #
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sde', #:/dev/sdl
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdf',  #:/dev/sdl
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdg',  #:/dev/sdm
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdh', #:/dev/sdm
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdi', #:/dev/sdm
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdj', #:/dev/sdm
-                            'cd ~/cluster;ceph-deploy osd create ' + host.hostname + ':/dev/sdk', #:/dev/sdm
-                         ]
-                for cmd in disksCmds:
-                    logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
-    
+                    for cmd in cmds:
+                        logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+        
     
     def connectHostsToCalamari(self):
         logger.info("Connect the hosts to the calamari server")     
@@ -194,7 +188,21 @@ class Ceph():
         for host in self.settings.ceph_nodes:
             cmd = 'cd ~/cluster;ceph-deploy calamari connect ' + host.hostname
             logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
-                
+        
+        url = self.settings.ceph_node.public_ip
+        UI_Manager.driver().get("http://" + url)   
+        
+        username = Widget("//input[@name='username']")
+        password = Widget("//input[@name='password']")
+        
+        username.setText("root")
+        password.setText(self.settings.ceph_node.root_password)
+        
+        login = Widget("//button[@name='login']")
+        login.click()
+        
+        
+             
     
     def execute_as_shell(self, address,usr, pwd, command):
         conn = paramiko.SSHClient()

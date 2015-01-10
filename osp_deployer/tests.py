@@ -57,8 +57,11 @@ if __name__ == '__main__':
     settings = Settings('settings\settings.ini')  
     attrs = vars(settings)
     
-    ceph = Ceph()
-    ceph.configure_osd()
+    for node in settings.ceph_nodes:
+        print node.hostname
+        
+        for disk in node.osd_disks:
+            print ">>" + disk
     
     
     
