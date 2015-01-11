@@ -31,9 +31,12 @@ class Widget():
         
     def exists(self):
         #UI_Manager.driver()._info( "exists ? " + self.locator)
-        element = UI_Manager.driver().find_element_by_xpath(self.locator)
-        visible = element.is_displayed()
-        siOno =  visible
+        try:
+            element = UI_Manager.driver().find_element_by_xpath(self.locator)
+            visible = element.is_displayed()
+            siOno =  visible
+        except:
+            siOno = False
         #UI_Manager.driver()._info( "     exists " + str(siOno) + " visible "+ str(visible))
         return siOno
     

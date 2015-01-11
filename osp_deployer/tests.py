@@ -57,12 +57,28 @@ if __name__ == '__main__':
     settings = Settings('settings\settings.ini')  
     attrs = vars(settings)
     
-    for node in settings.ceph_nodes:
-        print node.hostname
-        
-        for disk in node.osd_disks:
-            print ">>" + disk
+    url = settings.ceph_node.public_ip
+    UI_Manager.driver().get("http://" + url)   
     
+    username = Widget("//input[@name='username']")
+    password = Widget("//input[@name='password']")
+    
+    username.setText("root")
+    password.setText(settings.ceph_node.root_password)
+    
+    login = Widget("//button[@name='login']")
+    login.click()
+    
+    addButton = Widget("//button[.='ADD']")
+    addButton.waitFor(20)
+    addButton.click()
+    
+    initialized = Widget("//div[.='Cluster Initialized.']")
+    while initialized.exists() ==  False:
+        time.sleep(5)
+        logger.info("waitinf for cluster to initialize .")
+    closeButton = Widget("//button[.='Close']")
+    closeButton.click()
     
     
     

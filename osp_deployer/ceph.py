@@ -201,6 +201,20 @@ class Ceph():
         login = Widget("//button[@name='login']")
         login.click()
         
+        addButton = Widget("//button[.='ADD']")
+        addButton.waitFor(20)
+        addButton.click()
+        
+        initialized = Widget("//div[.='Cluster Initialized.']")
+        while initialized.exists() ==  False:
+            time.sleep(5)
+            logger.info("waitinf for cluster to initialize .")
+        closeButton = Widget("//button[.='Close']")
+        closeButton.click()
+        
+        
+        
+        
         
              
     

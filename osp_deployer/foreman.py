@@ -495,12 +495,17 @@ class Foreman():
         if self.settings.stamp_type =='pilot' :
             logger.info("Disabling Neutron")
             
-            __locator_user_input = Widget("//input[@id='login_login']")
-            __locator_password_input = Widget("//input[@id='login_password']")
-            __locator_login_button = Widget("//input[@name='commit']")
+            
             url = self.settings.foreman_node.public_ip
             UI_Manager.driver().get("http://" + url)
             
+            
+            __locator_user_input = Widget("//input[@id='login_login']")
+            __locator_password_input = Widget("//input[@id='login_password']")
+            __locator_login_button = Widget("//input[@name='commit']")
+            
+            
+            __locator_user_input.waitFor(20)
             __locator_user_input.setText("admin")
             __locator_password_input.setText(self.settings.foreman_password)
             __locator_login_button.click()
