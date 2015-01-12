@@ -16,52 +16,52 @@
     passwd_auto = 'cr0wBar!'
   
 
-    cluster_member_ip1 = 'CHANGEME_IP_ON_PRIVATE_API'
-    cluster_member_name1 = 'controller1'
+    cluster_member_ip1 = '192.168.131.112'
+    cluster_member_name1 = 'controller01'
 
-    cluster_member_ip2 = 'CHANGEME_IP_ON_PRIVATE_API'
-    cluster_member_name2 = 'controller2'
+    cluster_member_ip2 = = '192.168.131.113'
+    cluster_member_name2 = 'controller02'
 
-    cluster_member_ip3 = 'CHANGEME_IP_ON_PRIVATE_API'
-    cluster_member_name3 = 'controller3'
+    cluster_member_ip3 = '192.168.131.114'
+    cluster_member_name3 = 'controller03'
     
     cluster_admin_host = cluster_member_ip1
 
 
     ## VIPs
-    vip_amqp = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_amqp = '192.168.131.130'
 
-    vip_cinder_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_cinder_adm = '192.168.131.131'
     vip_cinder_priv = vip_cinder_adm
-    vip_cinder_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+    vip_cinder_pub = '10.21.246.119'
 
-    vip_db = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_db = '192.168.131.132'
 
-    vip_glance_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_glance_adm = '192.168.131.133'
     vip_glance_priv = vip_glance_adm
-    vip_glance_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+    vip_glance_pub = '10.21.246.120'
 
-    vip_heat_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_heat_adm = '192.168.131.134'
     vip_heat_priv = vip_heat_adm
-    vip_heat_pub = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_heat_pub = '10.21.246.121'
 
-    vip_heat_cfn_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_heat_cfn_adm = '192.168.131.135'
     vip_heat_cfn_priv = vip_heat_cfn_adm
-    vip_heat_cfn_pub = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_heat_cfn_pub = '10.21.246.122'
 
-    vip_horizon_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_horizon_adm = '192.168.131.136'
     vip_horizon_priv = vip_horizon_adm
-    vip_horizon_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+    vip_horizon_pub = '10.21.246.123'
 
-    vip_keystone_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_keystone_adm = '192.168.131.137'
     vip_keystone_priv = vip_keystone_adm
-    vip_keystone_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+    vip_keystone_pub = '10.21.246.124'
 
-    vip_loadbalancer = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_loadbalancer = '192.168.131.138'
 
-    vip_nova_adm = 'CHANGEME_IP_ON_PRIVATE_API'
-    vip_nova_priv = 'CHANGEME_IP_ON_PRIVATE_API'
-    vip_nova_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+    vip_nova_adm = '192.168.131.139'
+    vip_nova_priv = '192.168.131.140'
+    vip_nova_pub = '10.21.246.125'
 
 
 
@@ -92,7 +92,7 @@
     fence_type = 'fence_ipmilan'
 
     # Interface for cluster communications - Private API
-    fence_clu_iface = 'CHANGEME_PRIVATE_API_INTERFACE'
+    fence_clu_iface = '192.168.131.141'
     
     glance_be = 'file'
     rbd_spool = 'images'
@@ -114,10 +114,10 @@
     net_create = true
 
     # network_fixed_range - nova private network
-    net_fix = 'CHANGEME_IP_ON_NOVA_PRIVATE/NETMASK'
+    net_fix = '192.168.132.0/24'
 
     # network_floating_range - nova public network
-    net_float = 'CHANGEME_IP_ON_NOVA_PUBLIC/NETMASK'
+    net_float = '192.168.135.0/24'
 
     # network_manager, network_network_size, network_num_networks
     net_man = 'VlanManager'
@@ -125,10 +125,10 @@
     net_num = 1
 
     # network_private_iface - nova private interface (em2 or bond0.300, etc...)
-    net_priv_iface = 'CHANGEME_INTERFACE_NAME'
+    net_priv_iface = 'bond0.131'
 
     # network_public_iface - nova public interface (em3 or bond0.301, etc...)
-    net_pub_iface = 'CHANGEME_INTERFACE_NAME'
+    net_pub_iface = 'bond1'
 
     keystnrc = 'true'
 

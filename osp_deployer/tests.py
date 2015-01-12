@@ -64,13 +64,19 @@ if __name__ == '__main__':
     
     
     print 
-    bla = (20 * 100) / 2
-    print pow(2, int(log(bla, 2) + 0.5))
-    print pow(2, int(log(1200, 2) + 0.5))
+   
+    print "Range :: " + settings.vip_private_network_range_start
     
-
     
-
+    startipS_p = settings.vip_private_network_range_start.split(".")[3]
+    vip_ip_private = int(startipS_p)
+    priv_net =  settings.vip_private_network_range_start.split(".")[0]+"." + settings.vip_private_network_range_start.split(".")[1] + "." + settings.vip_private_network_range_start.split(".")[2] + "."
+    
+    print priv_net     
+    
+    
+    foreman = Foreman()
+    foreman.update_scripts()
 
     
     

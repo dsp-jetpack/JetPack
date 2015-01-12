@@ -215,11 +215,13 @@ class Ceph():
         
         
     def grantAdminRightsToOSD(self):
+        logger.info("grant admin rights to the storage nodes")
         for each in self.settings.ceph_nodes:
             cmd = 'cd ~/cluster;ceph-deploy admin ' + each.hostname
             logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
             
     def modifyOSDPlacementGroups(self):
+        logger.info("mofidy the OSD placement groups")
         osds = 0
         for each in self.settings.ceph_nodes:
             add = len(each.osd_disks) -1
@@ -230,12 +232,43 @@ class Ceph():
                 'ceph osd pool set data pg_num ' + str(pgroups),
                 'ceph osd pool set data pgp_num '+ str(pgroups)
                 ]    
+        self.settings.placement_groups = str(pgroups)
         for cmd in cmds:
             logger.info(Ssh.execute_command(self.settings.controller_nodes[0].provisioning_ip, "root", self.settings.nodes_root_password, cmd))
+      
+    def pool_and_keyRing_configuration(self):
+        logger.info("ceph pool creation and keyring configuration")
+        cmds = [
+                'ceph osd pool create images' + self.settings.placement_groups,
+                'ceph osd pool create volumes' + self.settings.placement_groups,
+                'ceph osd pool create backups' + self.settings.placement_groups,
+                'ceph osd lspools',
+                "ceph auth get-or-create client.images mon 'allow r' osd 'allow class-read object_prefix rbd_children, allow rwx pool=images'",
+                "ceph auth get-or-create client.images > /etc/ceph/ceph.client.images.keyring",
+                "ceph auth get-or-create client.volumes mon 'allow r' osd 'allow class-read object_prefix rbd_children, allow rwx pool=volumes, allow rx pool=images'",
+                "ceph auth get-or-create client.volumes > /etc/ceph/ceph.client.volumes.keyring",
+                "ceph auth get-or-create client.backups mon 'allow r' osd 'allow class-read object_prefix rbd_children, allow rwx pool=backups'",
+                "ceph auth get-or-create client.backups > /etc/ceph/ceph.client.backups.keyring ",
+                "ceph auth list"
+                ] 
+        for cmd in cmds:
+            logger.info(Ssh.execute_command(self.settings.controller_nodes[0].provisioning_ip, "root", self.settings.nodes_root_password, cmd))
+        logger.info("updating ceph.conf")
+        moreCmds = [
+                    'echo "[client.images]" >> /etc/ceph/ceph.conf',
+                    'echo "keyring = /etc/ceph/ceph.client.images.keyring" >> /etc/ceph/ceph.conf',
+                    'echo "[client.volumes]" >> /etc/ceph/ceph.conf',
+                    'echo "keyring = /etc/ceph/ceph.client.volumes.keyring" >> /etc/ceph/ceph.conf',
+                    'echo "[client.backups]" >> /etc/ceph/ceph.conf',
+                    'echo "keyring = /etc/ceph/ceph.client.backups.keyring" >> /etc/ceph/ceph.conf'
+                    ]   
+        for cmd in moreCmds:
+            logger.info(Ssh.execute_command(self.settings.controller_nodes[0].provisioning_ip, "root", self.settings.nodes_root_password, cmd))
         
-         
-
-             
+        logger.info("Pull the new configuration file to the ICE Administration host.")
+        cmd = 'ceph-deploy -overwrite-conf config pull ' + self.settings.controller_nodes[0].hostname
+        logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+           
     
     def execute_as_shell(self, address,usr, pwd, command):
         conn = paramiko.SSHClient()

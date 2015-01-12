@@ -19,6 +19,10 @@ class Settings():
         self.nova_private_network = self.cluster_settings_map['nova_private_network']
         self.private_api_network = self.cluster_settings_map['private_api_network']
         self.nova_private_vlanID = self.cluster_settings_map['nova_private_vlanid']
+        
+        self.vip_private_network_range_start = self.cluster_settings_map['vip_private_network_range_start']
+        self.vip_public_network_range_start = self.cluster_settings_map['vip_public_network_range_start']
+
         self.storage_network = self.cluster_settings_map['storage_network']
         self.storage_cluster_network = self.cluster_settings_map['storage_cluster_network']
         self.public_network = self.cluster_settings_map['public_network']
