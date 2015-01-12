@@ -8,8 +8,10 @@ from osp_deployer.config import Settings
 from auto_common import Ssh, Scp, UI_Manager, Widget
 import time
 import logging
-
+from math import log
 logger = logging.getLogger(__name__)
+
+
 
 def execute_as_shell( address,usr, pwd, command):
         conn = paramiko.SSHClient()
@@ -57,28 +59,20 @@ if __name__ == '__main__':
     settings = Settings('settings\settings.ini')  
     attrs = vars(settings)
     
-    url = settings.ceph_node.public_ip
-    UI_Manager.driver().get("http://" + url)   
+    settings.foreman_password = 'HgivMquu7hBKTqFP'
     
-    username = Widget("//input[@name='username']")
-    password = Widget("//input[@name='password']")
     
-    username.setText("root")
-    password.setText(settings.ceph_node.root_password)
     
-    login = Widget("//button[@name='login']")
-    login.click()
+    print 
+    bla = (20 * 100) / 2
+    print pow(2, int(log(bla, 2) + 0.5))
+    print pow(2, int(log(1200, 2) + 0.5))
     
-    addButton = Widget("//button[.='ADD']")
-    addButton.waitFor(20)
-    addButton.click()
+
     
-    initialized = Widget("//div[.='Cluster Initialized.']")
-    while initialized.exists() ==  False:
-        time.sleep(5)
-        logger.info("waitinf for cluster to initialize .")
-    closeButton = Widget("//button[.='Close']")
-    closeButton.click()
+
+
+    
     
     
     

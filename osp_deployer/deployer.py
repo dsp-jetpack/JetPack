@@ -281,10 +281,12 @@ if __name__ == '__main__':
             ceph.configure_monitor()
             ceph.configure_osd()
             ceph.connectHostsToCalamari()
-            
+            ceph.grantAdminRightsToOSD()
+            ceph.modifyOSDPlacementGroups()
             
         foremanHost.configureHostGroups_Parameters()
         foremanHost.cephConfigurtion()
+        foremanHost.configureNodes()
         
     UI_Manager.driver().close()
         

@@ -576,7 +576,106 @@ class Foreman():
             Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
         
         
+    def configureNodes(self):
+            
+        cmd = 'hammer hostgroup list | grep "HA All In One Controller" | grep -o "^\w*\\b"'
+        controllerGroupId = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")  
+        print "controllerGroupId : " + controllerGroupId
+        cmd = 'hammer hostgroup list | grep "Compute (Nova Network)" | grep -o "^\w*\\b"'
+        computeGroupId = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
+        print "computeGroupId : " + computeGroupId
         
+        print "Apply hostgroup to controller node(s)"
+        __locator_user_input = Widget("//input[@id='login_login']")
+        __locator_password_input = Widget("//input[@id='login_password']")
+        __locator_login_button = Widget("//input[@name='commit']")
+        url = self.settings.foreman_node.public_ip
+        UI_Manager.driver().get("http://" + url)
+        
+        __locator_user_input.setText("admin")
+        __locator_password_input.setText(self.settings.foreman_password)
+        __locator_login_button.click()
+        
+        
+        time.sleep(10)
+        for each in self.settings.controller_nodes:
+            cmd = 'hammer host list | grep "'+ each.hostname +'" | grep -o "^\w*\\b"'
+            hostID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
+            hostUpdated = False
+            while hostUpdated != True:            
+                cmd = 'hammer host update --hostgroup-id '+controllerGroupId+' --id '+hostID
+                out, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+                if ("Could not update the host" in err) or ( "Could not update the host" in out):
+                    print "did not update the host , trying again... " + err
+                    hostUpdated = False
+                else :
+                    hostUpdated = True
+                    break
+            
+            url = 'https://10.21.148.112/hosts/'+each.hostname+'.' + self.settings.domain+'/edit'
+            UI_Manager.driver().get(url)
            
-       
-        
+            paramLink = Widget("//a[.='Parameters']")
+            paramLink.waitFor(20)
+            paramLink.click()
+           
+            # quickstack::pacemaker::common fence_ipmilan_address 
+            ipmiAdress_override = Widget("//span[.='fence_ipmilan_address']/../..//a[.='override']")
+            # quickstack::pacemaker::common fence_ipmilan_username 
+            ipmiUser_override = Widget("//span[.='fence_ipmilan_username']/../..//a[.='override']")
+            # quickstack::pacemaker::common fence_ipmilan_password 
+            ipmiPassword_override = Widget("//span[.='fence_ipmilan_password']/../..//a[.='override']")
+            # quickstack::pacemaker::params::private_ip IP address of the controllers nic on the Private API network 
+            privateIp = Widget("//span[.='private_ip']/../..//a[.='override']")
+            
+            
+            ipmiAdress_override.waitFor(20)
+            
+            ipmiAdress_override.click()
+            ipmiUser_override.click()
+            ipmiPassword_override.click()
+            privateIp.click()
+            
+            
+            inputs =   UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
+            
+            ipmiAddress = inputs[0];
+            ipmiUser = inputs[1];
+            ipmiPass = inputs[2];
+            privIp = inputs[3];
+            
+            ipmiAddress.clear();
+            ipmiAddress.send_keys(each.idrac_secondary_ip);
+            ipmiUser.clear();
+            ipmiUser.send_keys(self.settings.ipmi_user);
+            ipmiPass.clear();
+            ipmiPass.send_keys(self.settings.ipmi_password);
+            privIp.clear();
+            privIp.send_keys(each.private_ip);
+            
+            sub = Widget("//input[@value='Submit']")
+            sub.click()
+            time.sleep(10)
+
+        logger.info("run puppet on controller nodes")
+        for each in self.settings.controller_nodes:
+            cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
+            logger.info(Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd))
+            
+        logger.info("Apply the host group on the compute nodes")
+        for each in self.settings.compute_node:
+            cmd = 'hammer host list | grep "'+ each.hostname +'" | grep -o "^\w*\\b"'
+            hostID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
+            hostUpdated = False
+            while hostUpdated != True:            
+                cmd = 'hammer host update --hostgroup-id '+computeGroupId+' --id '+hostID
+                out, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+                if ("Could not update the host" in err) or ( "Could not update the host" in out):
+                    print "did not update the host , trying again... " + err
+                    hostUpdated = False
+                else :
+                    hostUpdated = True
+                    break    
+        for each in self.settings.compute_node:
+            cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
+            logger.info(Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd))

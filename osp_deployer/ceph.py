@@ -3,6 +3,7 @@ from auto_common import Ssh, Scp,  Widget, UI_Manager, FileHelper
 import time
 import logging, paramiko
 logger = logging.getLogger(__name__)
+from math import log
 
 class Ceph():
     '''
@@ -213,9 +214,27 @@ class Ceph():
         closeButton.click()
         
         
+    def grantAdminRightsToOSD(self):
+        for each in self.settings.ceph_nodes:
+            cmd = 'cd ~/cluster;ceph-deploy admin ' + each.hostname
+            logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+            
+    def modifyOSDPlacementGroups(self):
+        osds = 0
+        for each in self.settings.ceph_nodes:
+            add = len(each.osd_disks) -1
+            osds = osds +  add
+        cal =   (osds * 100) / 2
+        pgroups = pow(2, int(log(cal, 2) + 0.5))
+        cmds = [
+                'ceph osd pool set data pg_num ' + str(pgroups),
+                'ceph osd pool set data pgp_num '+ str(pgroups)
+                ]    
+        for cmd in cmds:
+            logger.info(Ssh.execute_command(self.settings.controller_nodes[0].provisioning_ip, "root", self.settings.nodes_root_password, cmd))
         
-        
-        
+         
+
              
     
     def execute_as_shell(self, address,usr, pwd, command):
