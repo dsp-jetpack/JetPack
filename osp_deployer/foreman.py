@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 class Foreman():
     '''
-    TODO:: add debugged/logging
     '''
 
     
@@ -63,7 +62,7 @@ class Foreman():
             FileHelper.replaceExpressionTXT(file, 'cluster_member_ip1 =.*',"cluster_member_ip1 = '" + self.settings.controller_nodes[0].private_ip + "'" )
             FileHelper.replaceExpressionTXT(file, 'cluster_member_name1 =.*',"cluster_member_name1 = '" + self.settings.controller_nodes[0].hostname + "'" )
             
-            FileHelper.replaceExpressionTXT(file, 'cluster_member_ip2 =.*',"cluster_member_ip2 = = '" + self.settings.controller_nodes[1].private_ip + "'" )
+            FileHelper.replaceExpressionTXT(file, 'cluster_member_ip2 =.*',"cluster_member_ip2 = '" + self.settings.controller_nodes[1].private_ip + "'" )
             FileHelper.replaceExpressionTXT(file, 'cluster_member_name2 =.*',"cluster_member_name2 = '" + self.settings.controller_nodes[1].hostname + "'" )
             
             FileHelper.replaceExpressionTXT(file, 'cluster_member_ip3 =.*',"cluster_member_ip3 = '" + self.settings.controller_nodes[2].private_ip + "'" )
@@ -532,10 +531,8 @@ class Foreman():
         cmd = 'yum install -y rubygem-foreman_api'
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
         
-        #####################################################################################
-        # TODO :: log a bug for the below , missing from the Pilot & POC documentation
-        #####################################################################################
-        cmd = "sed -i \"s/options.password = '.*'/c = '"+ self.settings.foreman_password +"'/\" /usr/share/openstack-foreman-installer/bin/quickstack_defaults.rb"
+        # Log a bug :: below missing from the Pilot guide
+        cmd = "sed -i \"s/options.password = '.*'/options.password = '"+ self.settings.foreman_password +"'/\" /usr/share/openstack-foreman-installer/bin/quickstack_defaults.rb"
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
         
         if self.settings.stamp_type =='poc' :
@@ -546,9 +543,6 @@ class Foreman():
         cmd = 'cd /usr/share/openstack-foreman-installer; bin/quickstack_defaults.rb -g config/hostgroups.yaml -d ~/'+erbFile+' -v parameters'
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
         
-        #####################################################################################
-        # TODO :: log a bug for the below , missing section/part command only in Pilot guide.
-        #####################################################################################
         cmd = "hammer sc-param list --per-page 1000 --search network_overrides | awk '/network_overrides/ {print $1}'"
         paramID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
         
@@ -558,26 +552,44 @@ class Foreman():
         if self.settings.stamp_type =='pilot' :
             logger.info("Disabling Neutron")
             
-            
-            url = self.settings.foreman_node.public_ip
-            UI_Manager.driver().get("http://" + url)
-            
-            
             __locator_user_input = Widget("//input[@id='login_login']")
             __locator_password_input = Widget("//input[@id='login_password']")
             __locator_login_button = Widget("//input[@name='commit']")
+            url = self.settings.foreman_node.public_ip
+            UI_Manager.driver().get("http://" + url)
+            if __locator_user_input.exists():
+                __locator_user_input.setText("admin")
+                __locator_password_input.setText(self.settings.foreman_password)
+                __locator_login_button.click()
+                time.sleep(10)
             
             
-            __locator_user_input.waitFor(20)
-            __locator_user_input.setText("admin")
-            __locator_password_input.setText(self.settings.foreman_password)
-            __locator_login_button.click()
+            url = self.settings.foreman_node.public_ip
+            UI_Manager.driver().get("http://" + url +"/hostgroups/")
             
+            allInOne = Widget("//a[.='HA All In One Controller']")
+            allInOne.waitFor(20)
+            allInOne.click()
+            
+            paramLink = Widget("//a[.='Parameters']")
+            paramLink.waitFor(20)
+            paramLink.click()
+       
+            override = Widget("//span[.='quickstack::pacemaker::neutron']/../..//span[.='enabled']/../..//a[.='override']")
+            override.click()
+            
+            inputs =   UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
+            
+            neutronEnabled = inputs[0];
+            
+            neutronEnabled.clear();
+            neutronEnabled.send_keys("false");
+            
+            sub = Widget("//input[@value='Submit']")
+            sub.click()
             time.sleep(10)
             
-            #TODO/ To Finish .. bug with UI cannot currently override quickstack paremters.
-       
-        
+            
         
     def cephConfigurtion(self):
          logger.info("Updating ceph configuration to prevent foreman/puppet to override ceph config on controller nodes")
@@ -654,13 +666,12 @@ class Foreman():
         __locator_login_button = Widget("//input[@name='commit']")
         url = self.settings.foreman_node.public_ip
         UI_Manager.driver().get("http://" + url)
-        
-        __locator_user_input.setText("admin")
-        __locator_password_input.setText(self.settings.foreman_password)
-        __locator_login_button.click()
-        
-        
-        time.sleep(10)
+        if __locator_user_input.exists():
+            __locator_user_input.setText("admin")
+            __locator_password_input.setText(self.settings.foreman_password)
+            __locator_login_button.click()
+            time.sleep(10)
+            
         for each in self.settings.controller_nodes:
             cmd = 'hammer host list | grep "'+ each.hostname +'" | grep -o "^\w*\\b"'
             hostID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
@@ -726,7 +737,7 @@ class Foreman():
             logger.info(Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd))
             
         logger.info("Apply the host group on the compute nodes")
-        for each in self.settings.compute_node:
+        for each in self.settings.compute_nodes:
             cmd = 'hammer host list | grep "'+ each.hostname +'" | grep -o "^\w*\\b"'
             hostID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
             hostUpdated = False
@@ -739,6 +750,6 @@ class Foreman():
                 else :
                     hostUpdated = True
                     break    
-        for each in self.settings.compute_node:
+        for each in self.settings.compute_nodes:
             cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
             logger.info(Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd))

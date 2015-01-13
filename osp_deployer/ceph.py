@@ -7,7 +7,6 @@ from math import log
 
 class Ceph():
     '''
-    TODO:: add debugged/logging
     '''
     
     def __init__(self):
