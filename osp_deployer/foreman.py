@@ -122,7 +122,6 @@ class Foreman():
             FileHelper.replaceExpressionTXT(file, 'net_pub_iface = .*',"net_pub_iface = 'bond1" + "'" )
 
             
-            
     def upload_scripts(self):
         if self.settings.stamp_type =='poc' :
             files = ['bonding_snippet.template',
