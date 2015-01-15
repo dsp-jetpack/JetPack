@@ -579,7 +579,7 @@ class Foreman():
             
             inputs =   UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
             
-            neutronEnabled = inputs[0];
+            neutronEnabled = inputs[4]; # See ceph.conf >> foreman_config_ha_all_in_One, some previous attribute overriden ( should make this more elegant .)
             
             neutronEnabled.clear();
             neutronEnabled.send_keys("false");
@@ -625,8 +625,16 @@ class Foreman():
    
             print "running puppet on " + each.hostname
             cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
-            Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
-            
+            didNotRun = True
+            while didNotRun == True:
+                bla ,err = Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
+                if  "Run of Puppet configuration client already in progress" in bla:
+                    didNotRun = True
+                    logger.info("puppet s busy ... give it a while & retry")
+                    time.sleep(30)
+                else :
+                    didNotRun = False
+                    break
             
         print "Apply hostgroup to compute nodes "
         for each in self.settings.compute_nodes:
@@ -647,7 +655,19 @@ class Foreman():
             
             print "running puppet on " + each.hostname
             cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
-            Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
+            didNotRun = True
+            while didNotRun == True:
+                bla ,err = Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
+                if  "Run of Puppet configuration client already in progress" in bla:
+                    didNotRun = True
+                    logger.info("puppet s busy ... give it a while & retry")
+                    time.sleep(30)
+                else :
+                    didNotRun = False
+                    break
+            
+            
+            
         
         
     def configureNodes(self):
@@ -733,7 +753,19 @@ class Foreman():
         logger.info("run puppet on controller nodes")
         for each in self.settings.controller_nodes:
             cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
-            logger.info(Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd))
+            didNotRun = True
+            while didNotRun == True:
+                bla ,err = Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
+                if  "Run of Puppet configuration client already in progress" in bla:
+                    didNotRun = True
+                    logger.info("puppet s busy ... give it a while & retry")
+                    time.sleep(30)
+                else :
+                    didNotRun = False
+                    break
+            
+            
+            
             
         logger.info("Apply the host group on the compute nodes")
         for each in self.settings.compute_nodes:
@@ -751,4 +783,18 @@ class Foreman():
                     break    
         for each in self.settings.compute_nodes:
             cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
-            logger.info(Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd))
+            
+            for each in self.settings.controller_nodes:
+                cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
+                didNotRun = True
+                while didNotRun == True:
+                    bla ,err = Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
+                    if  "Run of Puppet configuration client already in progress" in bla:
+                        didNotRun = True
+                        logger.info("puppet s busy ... give it a while & retry")
+                        time.sleep(30)
+                    else :
+                        didNotRun = False
+                        break
+            
+            

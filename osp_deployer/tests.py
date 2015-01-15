@@ -10,7 +10,8 @@ import time
 import logging
 from math import log
 logger = logging.getLogger(__name__)
-
+import uuid
+from itertools import imap
 
 
 def execute_as_shell( address,usr, pwd, command):
@@ -59,25 +60,11 @@ if __name__ == '__main__':
     settings = Settings('settings\settings.ini')  
     attrs = vars(settings)
     
-    settings.foreman_password = 'HgivMquu7hBKTqFP'
+    settings.uuid = str(uuid.uuid1())
     
+    ceph = Ceph()
+    ceph.libvirt_config()
     
-    
-    print 
-   
-    print "Range :: " + settings.vip_private_network_range_start
-    
-    
-    startipS_p = settings.vip_private_network_range_start.split(".")[3]
-    vip_ip_private = int(startipS_p)
-    priv_net =  settings.vip_private_network_range_start.split(".")[0]+"." + settings.vip_private_network_range_start.split(".")[1] + "." + settings.vip_private_network_range_start.split(".")[2] + "."
-    
-    print priv_net     
-    
-    
-    foreman = Foreman()
-    foreman.update_scripts()
-
     
     
     

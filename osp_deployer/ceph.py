@@ -4,7 +4,7 @@ import time
 import logging, paramiko
 logger = logging.getLogger(__name__)
 from math import log
-
+import uuid
 class Ceph():
     '''
     '''
@@ -265,9 +265,193 @@ class Ceph():
             logger.info(Ssh.execute_command(self.settings.controller_nodes[0].provisioning_ip, "root", self.settings.nodes_root_password, cmd))
         
         logger.info("Pull the new configuration file to the ICE Administration host.")
-        cmd = 'ceph-deploy -overwrite-conf config pull ' + self.settings.controller_nodes[0].hostname
+        cmd = 'cd ~/cluster/;ceph-deploy --overwrite-conf config pull ' + self.settings.controller_nodes[0].hostname
         logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
-           
+        
+        logger.info("Copy the clients keyrings to the ICE admin host")
+        cmds = [
+                'ssh '+ self.settings.controller_nodes[0].hostname +' "cat /etc/ceph/ceph.client.backups.keyring" >  ~/cluster/ceph.client.backups.keyring',
+                'ssh '+ self.settings.controller_nodes[0].hostname +' "cat /etc/ceph/ceph.client.images.keyring" >  ~/cluster/ceph.client.images.keyring',
+                'ssh '+ self.settings.controller_nodes[0].hostname +' "cat /etc/ceph/ceph.client.volumes.keyring" >  ~/cluster/ceph.client.volumes.keyring',
+                ]
+        for cmd in cmds:
+            logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+        logger.info("Deploy new config file to all configured OSP controller and Ceph nodes.")
+        cmd = 'cd ~/cluster/;ceph-deploy --overwrite-conf config push'
+        for each in self.settings.controller_nodes:
+            if each.hostname != self.settings.controller_nodes[0].hostname:
+                cmd = cmd + " " + each.hostname
+        for each in self.settings.ceph_nodes:
+            cmd = cmd + " " + each.hostname
+        logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+    
+        logger.info("Copy the /etc/ceph/ceph.client.images.keyring, /etc/ceph/ceph.client.volumes.keyring and /etc/ceph/ceph.client.backups.keyring to each monitor's /etc/ceph directory. ")
+        
+        for each in self.settings.controller_nodes:
+            if each.hostname != self.settings.controller_nodes[0].hostname:
+                cmds = [
+                    'cd ~/cluster/;scp ceph.client.backups.keyring ceph.client.images.keyring ceph.client.volumes.keyring '+each.hostname+':', 
+                    'ssh '+each.hostname+' "cp ceph.client.images.keyring /etc/ceph"',
+                    'ssh '+each.hostname+' "cp ceph.client.volumes.keyring /etc/ceph"' 
+                    ]
+                for cmd in cmds :
+                    logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+    
+    def foreman_config_ha_all_in_One(self):
+        logger.info("Foreman Configuration All in One Controler")
+        
+        self.settings.uuid = str(uuid.uuid1())
+        
+        
+        
+        
+        __locator_user_input = Widget("//input[@id='login_login']")
+        __locator_password_input = Widget("//input[@id='login_password']")
+        __locator_login_button = Widget("//input[@name='commit']")
+        url = self.settings.foreman_node.public_ip
+        UI_Manager.driver().get("http://" + url)
+        if __locator_user_input.exists():
+            __locator_user_input.setText("admin")
+            __locator_password_input.setText(self.settings.foreman_password)
+            __locator_login_button.click()
+            time.sleep(10)
+        
+        
+        url = self.settings.foreman_node.public_ip
+        UI_Manager.driver().get("http://" + url +"/hostgroups/")
+        
+        allInOne = Widget("//a[.='HA All In One Controller']")
+        allInOne.waitFor(20)
+        allInOne.click()
+        
+        paramLink = Widget("//a[.='Parameters']")
+        paramLink.waitFor(20)
+        paramLink.click()
+   
+        
+        backend_rbd_override = Widget("//span[.='quickstack::pacemaker::cinder']/../..//span[.='backend_rbd']/../..//a[.='override']")
+        rdb_secret_override = Widget("//span[.='quickstack::pacemaker::cinder']/../..//span[.='rbd_secret_uuid']/../..//a[.='override']")
+        backend_rbd_override.click()
+        rdb_secret_override.click()
+        
+        glance_backEnd_override = Widget("//span[.='quickstack::pacemaker::glance']/../..//span[.='backend']/../..//a[.='override']")
+        pcmk_fs_manage_override = Widget("//span[.='quickstack::pacemaker::glance']/../..//span[.='pcmk_fs_manage']/../..//a[.='override']")
+        glance_backEnd_override.click()
+        pcmk_fs_manage_override.click()
+        
+        inputs =   UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
+        
+        inputs[0].clear();
+        inputs[0].send_keys("true");
+        
+        inputs[1].clear();
+        inputs[1].send_keys(self.settings.uuid);
+        
+        inputs[2].clear();
+        inputs[2].send_keys("rbd");
+        
+        inputs[3].clear();
+        inputs[3].send_keys("false");
+        
+        sub = Widget("//input[@value='Submit']")
+        sub.click()
+        time.sleep(10)
+        
+    def foreman_config_compute(self):
+        logger.info("Foreman Configuration Compute ( Nova )")
+        
+        __locator_user_input = Widget("//input[@id='login_login']")
+        __locator_password_input = Widget("//input[@id='login_password']")
+        __locator_login_button = Widget("//input[@name='commit']")
+        url = self.settings.foreman_node.public_ip
+        UI_Manager.driver().get("http://" + url)
+        if __locator_user_input.exists():
+            __locator_user_input.setText("admin")
+            __locator_password_input.setText(self.settings.foreman_password)
+            __locator_login_button.click()
+            time.sleep(10)
+        
+        
+        url = self.settings.foreman_node.public_ip
+        UI_Manager.driver().get("http://" + url +"/hostgroups/")
+        
+        compute = Widget("//a[.='Compute (Nova Network)']")
+        compute.waitFor(20)
+        compute.click()
+        
+        paramLink = Widget("//a[.='Parameters']")
+        paramLink.waitFor(20)
+        paramLink.click()
+   
+        
+        
+        cinder_backend_rbd = Widget("//span[.='quickstack::nova_network::compute']/../..//span[.='cinder_backend_rbd']/../..//a[.='override']")
+        rbd_secret_uuid = Widget("//span[.='quickstack::nova_network::compute']/../..//span[.='rbd_secret_uuid']/../..//a[.='override']")
+        
+        cinder_backend_rbd.click()
+        rbd_secret_uuid.click()
+        
+        inputs =   UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
+        
+        inputs[0].clear();
+        inputs[0].send_keys("true");
+        
+        inputs[1].clear();
+        inputs[1].send_keys(self.settings.uuid);
+        
+        
+        
+        sub = Widget("//input[@value='Submit']")
+        sub.click()
+        time.sleep(10)
+        
+        
+        
+        
+        
+        
+    def libvirt_config(self):
+        logger.info("Libvirst Configuration")
+        
+        ls = [
+              "<secret ephemeral='no' private='no'>",
+            "<uuid>"+self.settings.uuid+"</uuid>",
+            "<usage type='ceph'>",
+            "<name>client.volumes secret</name>",
+            "</usage>",
+            "</secret>"
+            ]
+        for each in ls:
+            cmd = 'echo "' + each + '" >> ~/cluster/secret.xml'
+            logger.info( Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd))
+        logger.info("Copy the secret.xml file and client.volumes.key file to each compute node")
+        for host in self.settings.compute_nodes:
+            cmd = 'echo "' + host.provisioning_ip + '  ' + host.hostname + "." + self.settings.domain +'  ' + host.hostname + ' " >> /etc/hosts'
+            logger.info( Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd))
+            cmd = 'cd ~/cluster/;scp secret.xml client.volumes.key ' + host.hostname+':'
+            logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+            cmd = 'virsh secret-define --file secret.xml'
+            logger.info( self.execute_as_shell_expectPasswords(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
+            cmd = "virsh secret-set-value --secret "+self.settings.uuid+" --base64 'cat client.volumes.key'"
+            logger.info( self.execute_as_shell_expectPasswords(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
+            cmd = 'virsh secret-list'
+            logger.info( self.execute_as_shell_expectPasswords(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
+            
+    def deploy_ceph_to_compute_hosts(self):
+        logger.info("Deploy ceph configuration to compute hosts")
+        for each in self.settings.compute_nodes:
+            cmd = 'cd ~/cluster;ceph-deploy config push ' + each.hostname
+            logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+            
+            cmd = 'scp ~/cluster/ceph.client.images.keyring ~/cluster/ceph.client.volumes.keyring '+ each.hostname
+            logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+            
+            cmd = 'ssh '+ each.hostname + ' cp ceph.cient.images.keyring ceph.client.volumes.keyring /etc/ceph'
+            logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+            
+            
+    def configure_cinder_for_backup(self):
+        logger.info("Configure Cinder for backups")
     
     def execute_as_shell(self, address,usr, pwd, command):
         conn = paramiko.SSHClient()
