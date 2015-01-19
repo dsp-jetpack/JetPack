@@ -12,7 +12,32 @@ from math import log
 logger = logging.getLogger(__name__)
 import uuid
 from itertools import imap
+import threading
 
+class runThreadedPuppet (threading.Thread):
+    def __init__(self, threadID, host):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.host = host
+        self.settings = Settings.settings
+    
+    def run(self):
+        cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
+        print "Starting Puppet run on " + self.host.hostname
+        
+        didNotRun = True
+        while didNotRun == True:
+            bla ,err = Ssh.execute_command(self.host.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
+            if  "Run of Puppet configuration client already in progress" in bla:
+                didNotRun = True
+                logger.info("puppet s busy ... give it a while & retry")
+                time.sleep(20)
+            else :
+                didNotRun = False
+                logger.info(self.host.hostname + "Puppet run ::")
+                logger.info(bla)
+                break
+        print "Done running puppet on  " + self.host.hostname
 
 def execute_as_shell( address,usr, pwd, command):
         conn = paramiko.SSHClient()
@@ -48,6 +73,8 @@ def execute_as_shell_expectPasswords( address,usr, pwd, command):
  
                  
         return buff
+    
+
 
 if __name__ == '__main__':
    
@@ -60,11 +87,11 @@ if __name__ == '__main__':
     settings = Settings('settings\settings.ini')  
     attrs = vars(settings)
     
-    settings.uuid = str(uuid.uuid1())
-    
-    ceph = Ceph()
-    ceph.libvirt_config()
-    
+    cmd = 'uuidgen'
+    r_out, r_err =   Ssh.execute_command(settings.ceph_node.provisioning_ip, "root", settings.ceph_node.root_password, cmd)
+    uuid = r_out.replace("\n", "").replace("\r", "")  
+    print "uuid  ::: " + uuid
+    settings.uuid = str(uuid)
     
     
     

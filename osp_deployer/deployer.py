@@ -289,13 +289,17 @@ if __name__ == '__main__':
                 ceph.pool_and_keyRing_configuration()
                 ceph.foreman_config_ha_all_in_One()
                 ceph.foreman_config_compute()
-                ceph.libvirt_config()
-                ceph.deploy_ceph_to_compute_hosts()
-                ceph.configure_cinder_for_backup()
+                
                 
             foremanHost.configureHostGroups_Parameters()
             foremanHost.cephConfigurtion()
             foremanHost.configureNodes()
+            
+            if settings.stamp_storage == "ceph":
+                # bugs here with docs, if done earlier as suggeste ceph wont be installed on the compute nodes
+                ceph.libvirt_config()
+                ceph.deploy_ceph_to_compute_hosts()
+                ceph.configure_cinder_for_backup() #TO DO NOT DONE YET
             
         UI_Manager.driver().close()
             

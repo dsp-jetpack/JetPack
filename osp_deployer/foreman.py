@@ -5,6 +5,36 @@ import time
 import logging
 logger = logging.getLogger(__name__)
 
+import threading
+import time
+
+exitFlag = 0
+
+class runThreadedPuppet (threading.Thread):
+    def __init__(self, threadID, host):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.host = host
+        self.settings = Settings.settings
+    
+    def run(self):
+        cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
+        print "Starting Puppet run on " + self.host.hostname
+        
+        didNotRun = True
+        while didNotRun == True:
+            bla ,err = Ssh.execute_command(self.host.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
+            if  "Run of Puppet configuration client already in progress" in bla:
+                didNotRun = True
+                logger.info("puppet s busy ... give it a while & retry")
+                time.sleep(20)
+            else :
+                didNotRun = False
+                logger.info(self.host.hostname + "Puppet run ::")
+                logger.info(bla)
+                break
+        print "Done running puppet on  " + self.host.hostname
+
 class Foreman():
     '''
     '''
@@ -622,19 +652,14 @@ class Foreman():
                 else :
                     hostUpdated = True
                     break
-   
-            print "running puppet on " + each.hostname
-            cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
-            didNotRun = True
-            while didNotRun == True:
-                bla ,err = Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
-                if  "Run of Puppet configuration client already in progress" in bla:
-                    didNotRun = True
-                    logger.info("puppet s busy ... give it a while & retry")
-                    time.sleep(30)
-                else :
-                    didNotRun = False
-                    break
+        controlerPuppetRuns = []
+        for each in self.settings.controller_nodes:
+            puppetRunThr = runThreadedPuppet(each.hostname, each)
+            controlerPuppetRuns.append(puppetRunThr)
+        for thr in controlerPuppetRuns:
+            thr.start()
+        for thr in controlerPuppetRuns:
+            thr.join()
             
         print "Apply hostgroup to compute nodes "
         for each in self.settings.compute_nodes:
@@ -751,23 +776,18 @@ class Foreman():
             time.sleep(10)
 
         logger.info("run puppet on controller nodes")
+        controlerPuppetRuns = []
         for each in self.settings.controller_nodes:
-            cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
-            didNotRun = True
-            while didNotRun == True:
-                bla ,err = Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
-                if  "Run of Puppet configuration client already in progress" in bla:
-                    didNotRun = True
-                    logger.info("puppet s busy ... give it a while & retry")
-                    time.sleep(30)
-                else :
-                    didNotRun = False
-                    break
+            puppetRunThr = runThreadedPuppet(each.hostname, each)
+            controlerPuppetRuns.append(puppetRunThr)
+        for thr in controlerPuppetRuns:
+            thr.start()
+            time.sleep(60) # ...
+        for thr in controlerPuppetRuns:
+            thr.join()           
             
             
-            
-            
-        logger.info("Apply the host group on the compute nodes")
+        logger.info("Apply the host group & run puppet on the compute nodes")
         for each in self.settings.compute_nodes:
             cmd = 'hammer host list | grep "'+ each.hostname +'" | grep -o "^\w*\\b"'
             hostID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
@@ -781,20 +801,17 @@ class Foreman():
                 else :
                     hostUpdated = True
                     break    
-        for each in self.settings.compute_nodes:
+                
             cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
-            
-            for each in self.settings.controller_nodes:
-                cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
-                didNotRun = True
-                while didNotRun == True:
-                    bla ,err = Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
-                    if  "Run of Puppet configuration client already in progress" in bla:
-                        didNotRun = True
-                        logger.info("puppet s busy ... give it a while & retry")
-                        time.sleep(30)
-                    else :
-                        didNotRun = False
-                        break
+            didNotRun = True
+            while didNotRun == True:
+                bla ,err = Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
+                if  "Run of Puppet configuration client already in progress" in bla:
+                    didNotRun = True
+                    logger.info("puppet s busy ... give it a while & retry")
+                    time.sleep(30)
+                else :
+                    didNotRun = False
+                    break
             
             

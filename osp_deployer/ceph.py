@@ -300,9 +300,11 @@ class Ceph():
     def foreman_config_ha_all_in_One(self):
         logger.info("Foreman Configuration All in One Controler")
         
-        self.settings.uuid = str(uuid.uuid1())
-        
-        
+        cmd = 'uuidgen'
+        r_out, r_err =   Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password, cmd)
+        uuid = r_out.replace("\n", "").replace("\r", "")  
+        print "uuid  ::: " + uuid
+        self.settings.uuid = str(uuid)
         
         
         __locator_user_input = Widget("//input[@id='login_login']")
@@ -412,7 +414,8 @@ class Ceph():
         
     def libvirt_config(self):
         logger.info("Libvirst Configuration")
-        
+        cmd = "cd ~/cluster;cat ceph.client.volumes.keyring | grep key | awk '{print $3}'| tee client.volumes.key"
+        logger.info( Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd))
         ls = [
               "<secret ephemeral='no' private='no'>",
             "<uuid>"+self.settings.uuid+"</uuid>",
@@ -443,10 +446,10 @@ class Ceph():
             cmd = 'cd ~/cluster;ceph-deploy config push ' + each.hostname
             logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
             
-            cmd = 'scp ~/cluster/ceph.client.images.keyring ~/cluster/ceph.client.volumes.keyring '+ each.hostname
+            cmd = 'scp ~/cluster/ceph.client.images.keyring ~/cluster/ceph.client.volumes.keyring '+ each.hostname + ":"
             logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
             
-            cmd = 'ssh '+ each.hostname + ' cp ceph.cient.images.keyring ceph.client.volumes.keyring /etc/ceph'
+            cmd = 'ssh '+ each.hostname + ' cp ceph.client.images.keyring ceph.client.volumes.keyring /etc/ceph'
             logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
             
             
