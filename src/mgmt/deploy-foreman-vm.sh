@@ -239,13 +239,13 @@ EOFKS
 [[ ! -e /store/data/images ]] && mkdir -p /store/data/images
 
 
-[[ -e foreman.vlock ]] && {
+[[ -e foreman_vm.vlock ]] && {
 
   [[ -e /tmp/floppy-foreman.img ]] && rm -rf /tmp/floppy-foreman.img
   mkfs.vfat -C /tmp/floppy-foreman.img 1440
   mkdir /tmp/mnt-foreman
   mount -o loop /tmp/floppy-foreman.img /tmp/mnt-foreman
-  cp foreman.vlock /tmp/mnt-foreman/versionlock.list
+  cp foreman_vm.vlock /tmp/mnt-foreman/versionlock.list
   sync
   umount /tmp/mnt-foreman
   rmdir /tmp/mnt-foreman
