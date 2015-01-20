@@ -1,0 +1,32 @@
+This document contains notes about past releases and where they are stored. 
+
+JetStream 2.0
+==============================================================================
+Jetstream 2.0 was our first RHEL/Dell partnered OpenStack Solution. The 
+following locations are where one will find the documentaion and development
+tool archives.  
+
+Wiki Release Page
+  https://wiki.opencrowbar.org/pages/viewpage.action?pageId=6326050
+
+Release Build Artifacts  
+  gitolite@10.9.244.31:cloud_repo.git (TAG Jetstream-2.0)
+
+
+Jenkins Release Build Artifacts
+  None
+
+
+JetStream 2.0.1
+==============================================================================
+Jetstream 2.0.1 added locking bits to JS2.0 and can be found in these locations. 
+
+Wiki Release Page
+  https://wiki.opencrowbar.org/pages/viewpage.action?pageId=7012613
+
+Release Build Artifacts
+  gitolite@10.9.244.31:cloud_repo.git (TAG Jetstream-2.0.1)
+
+Jenkins Release Build Artifacts
+  http://10.9.244.31:3389/jenkins/job/JetStream-Build-201-Release/32/artifact/JS201/releases/jetstream-2.0.1
+  
