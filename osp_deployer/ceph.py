@@ -238,9 +238,9 @@ class Ceph():
     def pool_and_keyRing_configuration(self):
         logger.info("ceph pool creation and keyring configuration")
         cmds = [
-                'ceph osd pool create images' + self.settings.placement_groups,
-                'ceph osd pool create volumes' + self.settings.placement_groups,
-                'ceph osd pool create backups' + self.settings.placement_groups,
+                'ceph osd pool create images ' + self.settings.placement_groups,
+                'ceph osd pool create volumes ' + self.settings.placement_groups,
+                'ceph osd pool create backups ' + self.settings.placement_groups,
                 'ceph osd lspools',
                 "ceph auth get-or-create client.images mon 'allow r' osd 'allow class-read object_prefix rbd_children, allow rwx pool=images'",
                 "ceph auth get-or-create client.images > /etc/ceph/ceph.client.images.keyring",
@@ -293,6 +293,7 @@ class Ceph():
                     'cd ~/cluster/;scp ceph.client.backups.keyring ceph.client.images.keyring ceph.client.volumes.keyring '+each.hostname+':', 
                     'ssh '+each.hostname+' "cp ceph.client.images.keyring /etc/ceph"',
                     'ssh '+each.hostname+' "cp ceph.client.volumes.keyring /etc/ceph"' 
+                    'ssh '+each.hostname+' "cp ceph.ceph.client.backups.keyring /etc/ceph"' 
                     ]
                 for cmd in cmds :
                     logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
@@ -446,15 +447,29 @@ class Ceph():
             cmd = 'cd ~/cluster;ceph-deploy config push ' + each.hostname
             logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
             
-            cmd = 'scp ~/cluster/ceph.client.images.keyring ~/cluster/ceph.client.volumes.keyring '+ each.hostname + ":"
+            cmd = 'scp ~/cluster/ceph.client.images.keyring ~/cluster/ceph.client.volumes.keyring ~/cluster/ceph.client.backups.keyring '+ each.hostname + ":"
             logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
             
-            cmd = 'ssh '+ each.hostname + ' cp ceph.client.images.keyring ceph.client.volumes.keyring /etc/ceph'
+            cmd = 'ssh '+ each.hostname + ' cp ceph.client.images.keyring ceph.client.volumes.keyring ceph.client.backups.keyring /etc/ceph'
             logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
             
             
     def configure_cinder_for_backup(self):
         logger.info("Configure Cinder for backups")
+        for each in self.settings.controller_nodes:
+            cmds = [
+                    'openstack-config --set /etc/cinder/cinder.conf DEFAULT backup_ceph_conf /etc/ceph/ceph.conf',
+                    'openstack-config --set /etc/cinder/cinder.conf DEFAULT backup_ceph_user backups',
+                    'openstack-config --set /etc/cinder/cinder.conf DEFAULT backup_ceph_chunk_size 13421772',
+                    'openstack-config --set /etc/cinder/cinder.conf DEFAULT backup_ceph_pool backup',
+                    'openstack-config --set /etc/cinder/cinder.conf DEFAULT backup_ceph_stripe_unit 0',
+                    'openstack-config --set /etc/cinder/cinder.conf DEFAULT backup_ceph_stripe_count 0',
+                    'openstack-config --set /etc/cinder/cinder.conf DEFAULT restore_discard_excess_bytes tru',
+                    'openstack-config --set /etc/cinder/cinder.conf DEFAULT backup_driver cinder.backup.drivers.ceph',
+                    'pcs resource disable openstack-cinder-backup',
+                    'pcs resource enable openstack-cinder-backu',
+                    ]
+        
     
     def execute_as_shell(self, address,usr, pwd, command):
         conn = paramiko.SSHClient()

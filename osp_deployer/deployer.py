@@ -271,8 +271,9 @@ if __name__ == '__main__':
             while (not "root" in Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "whoami")[0]):
                 log("...")
                 time.sleep(100);
-        
-        
+            log("Disable puppet on the node for now to avoid race conditions later.")
+            log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet stop")[0])
+            
         if settings.stamp_type == "poc":
             foremanHost.configureHostGroups_Parameters()
             foremanHost.applyHostGroups_to_nodes()
@@ -300,6 +301,10 @@ if __name__ == '__main__':
                 ceph.libvirt_config()
                 ceph.deploy_ceph_to_compute_hosts()
                 ceph.configure_cinder_for_backup() #TO DO NOT DONE YET
+        
+        log("re enable puppet service on the nodes")
+        for each in nonSAHnodes:
+            log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet start")[0])
             
         UI_Manager.driver().close()
             
