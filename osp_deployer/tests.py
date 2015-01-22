@@ -85,14 +85,34 @@ if __name__ == '__main__':
                     level=logging.INFO)
     
     settings = Settings('settings\settings.ini')  
+    
     attrs = vars(settings)
+    #foremanHost= Foreman()
+    #settings.foreman_password = 'tewFMD7VQgXKRT5b'
     
-    cmd = 'uuidgen'
-    r_out, r_err =   Ssh.execute_command(settings.ceph_node.provisioning_ip, "root", settings.ceph_node.root_password, cmd)
-    uuid = r_out.replace("\n", "").replace("\r", "")  
-    print "uuid  ::: " + uuid
-    settings.uuid = str(uuid)
+    #ceph = Ceph()
+    #ceph.grantAdminRightsToOSD()
+    #ceph.modifyOSDPlacementGroups()
+    #ceph.pool_and_keyRing_configuration()
+    #ceph.foreman_config_ha_all_in_One()
+    #ceph.foreman_config_compute()
+        
     
+    #foremanHost.configureHostGroups_Parameters()
+    #foremanHost.cephConfigurtion()
+    #foremanHost.configureNodes()
+    
+    # bugs here with docs, if done earlier as suggeste ceph wont be installed on the compute nodes
+    #ceph.libvirt_config()
+    #ceph.deploy_ceph_to_compute_hosts()
+    #ceph.configure_cinder_for_backup() 
+    
+    for each in settings.controller_nodes:
+        print each.hostname
+        print each.provisioning_ip
+        print settings.nodes_root_password
+        Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet start")
+        
     
     
     

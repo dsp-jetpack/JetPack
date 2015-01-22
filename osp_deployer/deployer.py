@@ -300,7 +300,7 @@ if __name__ == '__main__':
                 # bugs here with docs, if done earlier as suggeste ceph wont be installed on the compute nodes
                 ceph.libvirt_config()
                 ceph.deploy_ceph_to_compute_hosts()
-                ceph.configure_cinder_for_backup() #TO DO NOT DONE YET
+                ceph.configure_cinder_for_backup() 
         
         log("re enable puppet service on the nodes")
         for each in nonSAHnodes:
