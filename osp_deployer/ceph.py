@@ -153,7 +153,7 @@ class Ceph():
             
         logger.info("open up ports on storage nodes")
         cmds = [
-                'iptables -I INPUT 1 -p tcp -m multiport --dports 6800-6840 -j ACCEPT',
+                'iptables -I INPUT 1 -p tcp -m multiport --dports 6800:6840 -j ACCEPT',
                 'service iptables save'
                 ]
         for host in self.settings.ceph_nodes:
@@ -301,10 +301,10 @@ class Ceph():
     def foreman_config_ha_all_in_One(self):
         logger.info("Foreman Configuration All in One Controler")
         
-        cmd = 'uuidgen'
+        cmd = 'uuidgen -t'
         r_out, r_err =   Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password, cmd)
         uuid = r_out.replace("\n", "").replace("\r", "")  
-        print "uuid  ::: " + uuid
+        print "uuid  ::: [" + uuid + "]"
         self.settings.uuid = str(uuid)
         
         
@@ -436,7 +436,7 @@ class Ceph():
             logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
             cmd = 'virsh secret-define --file secret.xml'
             logger.info( self.execute_as_shell_expectPasswords(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
-            cmd = "virsh secret-set-value --secret "+self.settings.uuid+" --base64 'cat client.volumes.key'"
+            cmd = "virsh secret-set-value --secret "+self.settings.uuid+" --base64 `cat client.volumes.key`"
             logger.info( self.execute_as_shell_expectPasswords(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
             cmd = 'virsh secret-list'
             logger.info( self.execute_as_shell_expectPasswords(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
@@ -464,12 +464,56 @@ class Ceph():
                     'openstack-config --set /etc/cinder/cinder.conf DEFAULT backup_ceph_pool backup',
                     'openstack-config --set /etc/cinder/cinder.conf DEFAULT backup_ceph_stripe_unit 0',
                     'openstack-config --set /etc/cinder/cinder.conf DEFAULT backup_ceph_stripe_count 0',
-                    'openstack-config --set /etc/cinder/cinder.conf DEFAULT restore_discard_excess_bytes tru',
+                    'openstack-config --set /etc/cinder/cinder.conf DEFAULT restore_discard_excess_bytes true',
                     'openstack-config --set /etc/cinder/cinder.conf DEFAULT backup_driver cinder.backup.drivers.ceph',
                     'pcs resource disable openstack-cinder-backup',
-                    'pcs resource enable openstack-cinder-backu',
+                    'pcs resource enable openstack-cinder-backup',
                     ]
+        for each in self.settings.controller_nodes:
+             for cmd in cmds:
+                 logger.info(Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)[0])
+       
+    def configure_missing_bits_from_docs(self):
+        logger.info("Configure Additional ceph/cinder settings on controller & compute nodes")
+        cmds = [
+             'openstack-config --set /etc/glance/glance-api.conf DEFAULT default_store rbd',
+             'openstack-config --set /etc/glance/glance-api.conf DEFAULT show_image_direct_url true', 
+             'openstack-config --set /etc/glance/glance-api.conf DEFAULT rbd_store_ceph_conf /etc/ceph/ceph.conf', 
+             'openstack-config --set /etc/glance/glance-api.conf DEFAULT rbd_store_user images', 
+             'openstack-config --set /etc/glance/glance-api.conf DEFAULT rbd_store_pool images', 
+             'openstack-config --set /etc/glance/glance-api.conf DEFAULT rbd_store_chunk_size 8',
+             'pcs resource disable openstack-glance-api',
+             'pcs resource enable openstack-glance-ap',
+             'openstack-config --set /etc/cinder/cinder.conf DEFAULT rbd_pool volumes',
+             'openstack-config --set /etc/cinder/cinder.conf DEFAULT rbd_user volumes',
+             'openstack-config --set /etc/cinder/cinder.conf DEFAULT rbd_flatten_volume_from_snapshot false',
+             'openstack-config --set /etc/cinder/cinder.conf DEFAULT rbd_ceph_conf /etc/ceph/ceph.conf',
+             'openstack-config --set /etc/cinder/cinder.conf DEFAULT rbd_secret_uuid ' + self.settings.uuid,
+             'openstack-config --set /etc/cinder/cinder.conf DEFAULT volume_driver cinder.volume.drivers.rbd.RBDDriver', 
+             'openstack-config --set /etc/cinder/cinder.conf DEFAULT rbd_max_clone_depth 5', 
+              'pcs resource disable openstack-cinder-volume',    
+              'pcs resource enable openstack-cinder-volume' 
+            ]
+        for host in self.settings.controller_nodes:
+            for cmd in cmds:
+                logger.info( Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password, cmd)[0])
         
+        cmds = [
+                'yum -y install openstack-utils',
+                'openstack-config --set /etc/nova/nova.conf libvirt libvirt_images_type rbd', 
+                'openstack-config --set /etc/nova/nova.conf libvirt libvirt_images_rbd_pool volumes', 
+                'openstack-config --set /etc/nova/nova.conf libvirt libvirt_images_rbd_ceph_conf /etc/ceph/ceph.conf', 
+                'openstack-config --set /etc/nova/nova.conf libvirt libvirt_inject_password false',
+                'openstack-config --set /etc/nova/nova.conf libvirt libvirt_inject_key false',
+                'openstack-config --set /etc/nova/nova.conf libvirt libvirt_inject_partition -2', 
+                'openstack-config --set /etc/nova/nova.conf libvirt rbd_user volumes ',
+                'openstack-config --set /etc/nova/nova.conf libvirt rbd_secret_uuid ' + self.settings.uuid,
+                'systemctl restart openstack-nova-compute'
+                ]
+        for host in self.settings.compute_nodes:
+            for cmd in cmds:
+                logger.info( Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password, cmd)[0])
+            
     
     def execute_as_shell(self, address,usr, pwd, command):
         conn = paramiko.SSHClient()

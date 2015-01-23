@@ -107,13 +107,27 @@ if __name__ == '__main__':
     #ceph.deploy_ceph_to_compute_hosts()
     #ceph.configure_cinder_for_backup() 
     
-    for each in settings.controller_nodes:
-        print each.hostname
-        print each.provisioning_ip
-        print settings.nodes_root_password
-        Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet start")
-        
+    cmds = [
+                'pcs resource disable openstack-nova-consoleauth',
+               'pcs resource disable openstack-nova-api',
+               'pcs resource disable openstack-nova-conductor',
+               'pcs resource disable openstack-nova-scheduler',
+               'pcs resource disable openstack-glance-registry',
+               'pcs resource disable openstack-glance-api',
+               'pcs resource enable openstack-nova-consoleauth',
+               'pcs resource enable openstack-nova-api',
+               'pcs resource enable openstack-nova-conductor',
+               'pcs resource enable openstack-nova-scheduler',
+               'pcs resource enable openstack-glance-registry',
+               'pcs resource enable openstack-glance-api',
+                'pcs resource disable openstack-cinder-api',
+               'pcs resource disable openstack-cinder-scheduler',
+               'pcs resource enable openstack-cinder-api',
+               'pcs resource enable openstack-cinder-scheduler'
+            ]
+    for cmd in cmds:
+        for host in settings.controller_nodes:
+            print( Ssh.execute_command(host.provisioning_ip, "root", settings.nodes_root_password, cmd))
     
     
-    
-    
+     

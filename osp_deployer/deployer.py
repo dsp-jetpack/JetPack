@@ -301,7 +301,8 @@ if __name__ == '__main__':
                 ceph.libvirt_config()
                 ceph.deploy_ceph_to_compute_hosts()
                 ceph.configure_cinder_for_backup() 
-        
+                ceph.configure_missing_bits_from_docs()
+                
         log("re enable puppet service on the nodes")
         for each in nonSAHnodes:
             log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet start")[0])
