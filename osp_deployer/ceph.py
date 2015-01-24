@@ -342,6 +342,10 @@ class Ceph():
         glance_backEnd_override.click()
         pcmk_fs_manage_override.click()
         
+        VolumeOverrride = Widget(" //span[.='quickstack::pacemaker::cinder']/../..//span[.='volume']/../..//a[.='override']")
+        VolumeOverrride.click()
+       
+        
         inputs =   UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
         
         inputs[0].clear();
@@ -355,6 +359,9 @@ class Ceph():
         
         inputs[3].clear();
         inputs[3].send_keys("false");
+        
+        inputs[4].clear();
+        inputs[4].send_keys("true");
         
         sub = Widget("//input[@value='Submit']")
         sub.click()

@@ -125,9 +125,10 @@ if __name__ == '__main__':
                'pcs resource enable openstack-cinder-api',
                'pcs resource enable openstack-cinder-scheduler'
             ]
-    for cmd in cmds:
-        for host in settings.controller_nodes:
-            print( Ssh.execute_command(host.provisioning_ip, "root", settings.nodes_root_password, cmd))
+    forman = Foreman()
+    forman.reset_password()
+    ceph  = Ceph()
+    ceph.foreman_config_ha_all_in_One()
     
     
      
