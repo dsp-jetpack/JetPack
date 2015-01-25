@@ -609,7 +609,9 @@ class Foreman():
             
             inputs =   UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
             
-            neutronEnabled = inputs[5]; # See ceph.conf >> foreman_config_ha_all_in_One, some previous attribute overriden ( should make this more elegant .)
+            #neutronEnabled = inputs[5]; # See ceph.conf >> foreman_config_ha_all_in_One, some previous attribute overriden ( should make this more elegant .)
+            
+            neutronEnabled = inputs[4]; # See ceph.conf >> foreman_config_ha_all_in_One, some previous attribute overriden ( should make this more elegant .)
             
             neutronEnabled.clear();
             neutronEnabled.send_keys("false");

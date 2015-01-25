@@ -342,8 +342,8 @@ class Ceph():
         glance_backEnd_override.click()
         pcmk_fs_manage_override.click()
         
-        VolumeOverrride = Widget(" //span[.='quickstack::pacemaker::cinder']/../..//span[.='volume']/../..//a[.='override']")
-        VolumeOverrride.click()
+        #VolumeOverrride = Widget(" //span[.='quickstack::pacemaker::cinder']/../..//span[.='volume']/../..//a[.='override']")
+        #VolumeOverrride.click()
        
         
         inputs =   UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
@@ -360,8 +360,8 @@ class Ceph():
         inputs[3].clear();
         inputs[3].send_keys("false");
         
-        inputs[4].clear();
-        inputs[4].send_keys("true");
+        #inputs[4].clear();
+        #inputs[4].send_keys("true");
         
         sub = Widget("//input[@value='Submit']")
         sub.click()
@@ -498,8 +498,9 @@ class Ceph():
              'openstack-config --set /etc/cinder/cinder.conf DEFAULT rbd_secret_uuid ' + self.settings.uuid,
              'openstack-config --set /etc/cinder/cinder.conf DEFAULT volume_driver cinder.volume.drivers.rbd.RBDDriver', 
              'openstack-config --set /etc/cinder/cinder.conf DEFAULT rbd_max_clone_depth 5', 
-              'pcs resource disable openstack-cinder-volume',    
-              'pcs resource enable openstack-cinder-volume' 
+             'systemctl start openstack-cinder-volume'
+              #'pcs resource disable openstack-cinder-volume',    
+              #'pcs resource enable openstack-cinder-volume' 
             ]
         for host in self.settings.controller_nodes:
             for cmd in cmds:
@@ -520,6 +521,32 @@ class Ceph():
         for host in self.settings.compute_nodes:
             for cmd in cmds:
                 logger.info( Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password, cmd)[0])
+        
+        cmds = [
+                'systemctl start openstack-cinder-volume',
+                'pcs resource disable openstack-nova-consoleauth',
+               'pcs resource disable openstack-nova-api',
+               'pcs resource disable openstack-nova-conductor',
+               'pcs resource disable openstack-nova-scheduler',
+               'pcs resource disable openstack-glance-registry',
+               'pcs resource disable openstack-glance-api',
+               'pcs resource enable openstack-nova-consoleauth',
+               'pcs resource enable openstack-nova-api',
+               'pcs resource enable openstack-nova-conductor',
+               'pcs resource enable openstack-nova-scheduler',
+               'pcs resource enable openstack-glance-registry',
+               'pcs resource enable openstack-glance-api',
+                'pcs resource disable openstack-cinder-api',
+               'pcs resource disable openstack-cinder-scheduler',
+               'pcs resource enable openstack-cinder-api',
+               'pcs resource enable openstack-cinder-scheduler'
+               'pcs resource disable openstack-cinder-volume',
+               'resource enable openstack-cinder-volume'
+            ]
+        for each in self.settings.controller_nodes:
+            for cmd in cmds:
+                logger.info(Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)[0])
+   
             
     
     def execute_as_shell(self, address,usr, pwd, command):
