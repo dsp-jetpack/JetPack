@@ -551,8 +551,30 @@ class Ceph():
             for cmd in cmds:
                 logger.info(Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)[0])
    
-            
-    
+    def restart_ha_services(self):
+        cmds = [
+                'pcs resource disable openstack-nova-consoleauth',
+               'pcs resource disable openstack-nova-api',
+               'pcs resource disable openstack-nova-conductor',
+               'pcs resource disable openstack-nova-scheduler',
+               'pcs resource disable openstack-glance-registry',
+               'pcs resource disable openstack-glance-api',
+               'pcs resource enable openstack-nova-consoleauth',
+               'pcs resource enable openstack-nova-api',
+               'pcs resource enable openstack-nova-conductor',
+               'pcs resource enable openstack-nova-scheduler',
+               'pcs resource enable openstack-glance-registry',
+               'pcs resource enable openstack-glance-api',
+                'pcs resource disable openstack-cinder-api',
+               'pcs resource disable openstack-cinder-scheduler',
+               'pcs resource enable openstack-cinder-api',
+               'pcs resource enable openstack-cinder-scheduler'
+            ]        
+        for each in self.settings.controller_nodes:
+            for cmd in cmds:
+                logger.info(Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)[0])
+                
+                
     def execute_as_shell(self, address,usr, pwd, command):
         conn = paramiko.SSHClient()
         conn.set_missing_host_key_policy(paramiko.AutoAddPolicy())

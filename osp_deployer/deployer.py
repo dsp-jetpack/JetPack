@@ -308,6 +308,7 @@ if __name__ == '__main__':
             log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet start")[0])
             
         UI_Manager.driver().close()
+        ceph.restart_ha_services()
             
         log (" that's all folks "    )
         logger.info( "foreman admin password :: " + settings.foreman_password  )

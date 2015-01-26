@@ -125,10 +125,7 @@ if __name__ == '__main__':
                'pcs resource enable openstack-cinder-api',
                'pcs resource enable openstack-cinder-scheduler'
             ]
-    ceph = Ceph()
-    settings.uuid = 'a8ff30b4-a48d-11e4-b457-52540089b126'
-    #ceph.configure_missing_bits_from_docs()
-    
+     
 
     for each in settings.controller_nodes:
          for cmd in cmds:
