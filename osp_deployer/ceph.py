@@ -363,6 +363,12 @@ class Ceph():
         #inputs[4].clear();
         #inputs[4].send_keys("true");
         
+        inputs[4].clear();
+        inputs[4].send_keys("true");
+
+        # note :: if adding more overrides here , make sure to increment the index in foreman.py :: configureHostGroups_Parameters()
+        # todo: make this nicer..
+        
         sub = Widget("//input[@value='Submit']")
         sub.click()
         time.sleep(10)
