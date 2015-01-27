@@ -144,9 +144,10 @@ if __name__ == '__main__':
             'sah.vlock',
             ]
         for file in files :
-            localfile = self.settings.lock_files_dir + "\\" + file
+            localfile = settings.lock_files_dir + "\\" + file
             remotefile = '/root/' + file
-            Scp.put_file(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, localfile, remotefile)
+            print localfile + " >> " + remotefile
+            Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, localfile, remotefile)
                 
         log("=== creating foreman VM");
         log("=== uploading the foreman vm sh script")

@@ -84,52 +84,23 @@ if __name__ == '__main__':
                     filemode='w',
                     level=logging.INFO)
     
-    settings = Settings('settings\settings.ini')  
+    settings = Settings('settings\settings_sample.ini')
     
-    attrs = vars(settings)
-    #foremanHost= Foreman()
-    #settings.foreman_password = 'tewFMD7VQgXKRT5b'
-    
-    #ceph = Ceph()
-    #ceph.grantAdminRightsToOSD()
-    #ceph.modifyOSDPlacementGroups()
-    #ceph.pool_and_keyRing_configuration()
-    #ceph.foreman_config_ha_all_in_One()
-    #ceph.foreman_config_compute()
-        
-    
-    #foremanHost.configureHostGroups_Parameters()
-    #foremanHost.cephConfigurtion()
-    #foremanHost.configureNodes()
-    
-    # bugs here with docs, if done earlier as suggeste ceph wont be installed on the compute nodes
-    #ceph.libvirt_config()
-    #ceph.deploy_ceph_to_compute_hosts()
-    #ceph.configure_cinder_for_backup() 
-    
-    cmds = [
-                'pcs resource disable openstack-nova-consoleauth',
-               'pcs resource disable openstack-nova-api',
-               'pcs resource disable openstack-nova-conductor',
-               'pcs resource disable openstack-nova-scheduler',
-               'pcs resource disable openstack-glance-registry',
-               'pcs resource disable openstack-glance-api',
-               'pcs resource enable openstack-nova-consoleauth',
-               'pcs resource enable openstack-nova-api',
-               'pcs resource enable openstack-nova-conductor',
-               'pcs resource enable openstack-nova-scheduler',
-               'pcs resource enable openstack-glance-registry',
-               'pcs resource enable openstack-glance-api',
-                'pcs resource disable openstack-cinder-api',
-               'pcs resource disable openstack-cinder-scheduler',
-               'pcs resource enable openstack-cinder-api',
-               'pcs resource enable openstack-cinder-scheduler'
-            ]
-     
+    print("Uploading version locking files")
+    files  = [
+        'ceph.vlock',
+        'ceph_vm.vlock',
+        'compute.vlock',
+        'controller.vlock',
+        'foreman_vm.vlock',
+        'sah.vlock',
+        ]
+    for file in files :
+        localfile = settings.lock_files_dir + "\\" + file
+        remotefile = '/root/' + file
+        print localfile + " >> " + remotefile
+        Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, localfile, remotefile)
 
-    for each in settings.controller_nodes:
-         for cmd in cmds:
-             logger.info(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, cmd)[0])
    
          
     
