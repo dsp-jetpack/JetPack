@@ -54,7 +54,7 @@ class Settings():
         self.sah_kickstart= self.bastion_settings_map['sah_kickstart']
         self.foreman_deploy_sh = self.bastion_settings_map['foreman_deploy_sh']
         self.ceph_deploy_sh = self.bastion_settings_map['ceph_deploy_sh']
-        self.lock_files_dir = self.bastion_section_map['locking_files_directory']
+        self.lock_files_dir = self.bastion_settings_map['locking_files_directory']
 
         if self.stamp_type == 'poc':
             self.foreman_configuration_scripts = self.bastion_settings_map['poc_foreman_configuration_scripts_directory']
