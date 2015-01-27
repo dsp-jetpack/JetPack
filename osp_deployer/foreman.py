@@ -177,7 +177,7 @@ class Foreman():
             remotefile = '/root/' + file
             Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)
 
-        logger.info("Uploading lock files")
+        logger.info("Uploading version locking files")
         files  = [
             'ceph.vlock',
             'ceph_vm.vlock',

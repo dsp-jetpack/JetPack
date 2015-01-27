@@ -133,6 +133,20 @@ if __name__ == '__main__':
         Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl7_iso, "/store/data/iso/RHEL7.iso")
         
         log("=== Done with the solution admin host");
+
+        log("Uploading version locking files")
+        files  = [
+            'ceph.vlock',
+            'ceph_vm.vlock',
+            'compute.vlock',
+            'controller.vlock',
+            'foreman_vm.vlock',
+            'sah.vlock',
+            ]
+        for file in files :
+            localfile = self.settings.lock_files_dir + "\\" + file
+            remotefile = '/root/' + file
+            Scp.put_file(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, localfile, remotefile)
                 
         log("=== creating foreman VM");
         log("=== uploading the foreman vm sh script")
