@@ -170,18 +170,36 @@ class Foreman():
                      'dell-pilot.yaml.erb',
                      'interface_config.template',
                      ]
-        
-        print "uploading deployment scripts .."
+
+        logger.info( "uploading deployment scripts .." )
         for file in files :
             localfile = self.settings.foreman_configuration_scripts + "\\" + file
             remotefile = '/root/' + file
             Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)
 
+        logger.info("Uploading lock files")
+        files  = [
+            'ceph.vlock',
+            'ceph_vm.vlock',
+            'compute.vlock',
+            'controller.vlock',
+            'foreman_vm.vlock',
+            'sah.vlock',
+            ]
+        for file in files :
+            localfile = self.settings.lock_files_dir + "\\" + file
+            remotefile = '/root/' + file
+            Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)
+
+    def enable_version_locking(self):
+        logger.info("enable version locking")
+        cmd = 'cp -r /root/dell-pilot-deploy/vlock_files /usr/share/foreman/public'
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
         
     def install_hammer(self):
         install = 'yum -y install "*hammer*"'
-        print ("installing hammer")
-        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, install)
+        logger.info ("installing hammer")
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, install) )
         
         hammerConf = '/etc/hammer/cli_config.yml'
         
@@ -194,6 +212,7 @@ class Foreman():
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
         
         return
+
     
     def configure_installation_medium(self):
         
@@ -526,8 +545,15 @@ class Foreman():
                 
                 for command in commands:
                     print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
-                
-    def configure_compute_nic(self): 
+
+    def configure_controller_version_locking(self):
+        print "Configuring vesion locking for controller nodes"
+        for node in self.settings.controller_nodes:
+            command = "hammer host set-parameter --host-id "+node.hostID+" --name yum_versionlock_file --value 'http://FOREMAN_SERVER/vlock_files/controller.vlock'"
+            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+
+
+    def configure_compute_nic(self):
         print "configuring the compute node(s) nics"      
         for node in self.settings.compute_nodes:
             if self.settings.stamp_type =='poc' :
@@ -541,7 +567,19 @@ class Foreman():
                             "hammer host set-parameter --host-id "+node.hostID+" --name bond_opts --value '( [bond0]=\"mode=balance-tlb PROMISC=yes\" [bond1]=\"mode=balance-tlb PROMISC=yes\")'"]
                 for command in commands:
                     print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
-    
+
+    def configure_compute_version_locking(self):
+        print "Configuring vesion locking for compute nodes"
+        for node in self.settings.compute_nodes:
+            command = "hammer host set-parameter --host-id "+node.hostID+" --name yum_versionlock_file --value 'http://FOREMAN_SERVER/vlock_files/compute.vlock'"
+            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+
+    def configure_ceph_version_locking(self):
+        print "Configuring vesion locking for ceph nodes"
+        for node in self.settings.ceph_nodes:
+            command = "hammer host set-parameter --host-id "+node.hostID+" --name yum_versionlock_file --value 'http://FOREMAN_SERVER/vlock_files/ceph.vlock'"
+            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+
     def configure_ceph_nic(self): 
         print "configuring the Ceph node(s) nics"  
         for node in self.settings.ceph_nodes:

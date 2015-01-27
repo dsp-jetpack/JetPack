@@ -238,6 +238,7 @@ if __name__ == '__main__':
         foremanHost.reset_password()
         foremanHost.update_scripts()
         foremanHost.upload_scripts()
+        foremanHost.enable_version_locking()
         foremanHost.install_hammer()
         foremanHost.configure_installation_medium()
         foremanHost.configure_partitionts_tables()
@@ -248,7 +249,12 @@ if __name__ == '__main__':
         foremanHost.register_hosts()
         foremanHost.configure_os_updates()
         foremanHost.configure_controller_nic()
+        foremanHost.configure_controller_version_locking()
         foremanHost.configure_compute_nic()
+        foremanHost.configure_compute_version_locking()
+        if settings.stamp_storage == "ceph":
+            foremanHost.configure_ceph_version_locking()
+
         
         #######
         print settings.stamp_type
