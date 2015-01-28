@@ -134,14 +134,10 @@ if __name__ == '__main__':
         
         log("=== Done with the solution admin host");
 
-        log("Uploading version locking files")
+        log("Uploading version locking files for foreman & ceph vm's")
         files  = [
-            'ceph.vlock',
             'ceph_vm.vlock',
-            'compute.vlock',
-            'controller.vlock',
             'foreman_vm.vlock',
-            'sah.vlock',
             ]
         for file in files :
             localfile = settings.lock_files_dir + "\\" + file

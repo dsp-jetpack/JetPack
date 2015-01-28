@@ -86,20 +86,18 @@ if __name__ == '__main__':
     
     settings = Settings('settings\settings_sample.ini')
     
-    print("Uploading version locking files")
     files  = [
-        'ceph.vlock',
-        'ceph_vm.vlock',
-        'compute.vlock',
-        'controller.vlock',
-        'foreman_vm.vlock',
-        'sah.vlock',
-        ]
+            'ceph.vlock',
+            'compute.vlock',
+            'controller.vlock',
+            ]
+    cmd = 'mkdir /root/vlock_files'
+    #print Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, cmd)
     for file in files :
         localfile = settings.lock_files_dir + "\\" + file
-        remotefile = '/root/' + file
+        remotefile = '/root/vlock_files/' + file
         print localfile + " >> " + remotefile
-        Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, localfile, remotefile)
+        Scp.put_file( settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, localfile, remotefile)
 
    
          
