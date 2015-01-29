@@ -134,17 +134,18 @@ if __name__ == '__main__':
         
         log("=== Done with the solution admin host");
 
-        log("Uploading version locking files for foreman & ceph vm's")
-        files  = [
-            'ceph_vm.vlock',
-            'foreman_vm.vlock',
-            ]
-        for file in files :
-            localfile = settings.lock_files_dir + "\\" + file
-            remotefile = '/root/' + file
-            print localfile + " >> " + remotefile
-            Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, localfile, remotefile)
-                
+        if settings.version_locking_enabled:
+            log("Uploading version locking files for foreman & ceph vm's")
+            files  = [
+                'ceph_vm.vlock',
+                'foreman_vm.vlock',
+                ]
+            for file in files :
+                localfile = settings.lock_files_dir + "\\" + file
+                remotefile = '/root/' + file
+                print localfile + " >> " + remotefile
+                Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, localfile, remotefile)
+
         log("=== creating foreman VM");
         log("=== uploading the foreman vm sh script")
         remoteSh = "/root/deploy-foreman-vm.sh";

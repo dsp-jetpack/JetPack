@@ -41,7 +41,12 @@ class Settings():
         self.time_zone = self.cluster_settings_map['time_zone']
         self.stamp_type = self.cluster_settings_map['stamp_type']
         self.stamp_storage = self.cluster_settings_map['storage']
-        
+
+        if self.cluster_settings_map['enable_version_locking'].lower() == 'true':
+            self.version_locking_enabled = True
+        else:
+            self.version_locking_enabled = False
+
         self.foreman_provisioning_subnet_ip_start = self.cluster_settings_map['foreman_provisioning_subnet_ip_start']
         self.foreman_provisioning_subnet_ip_end=self.cluster_settings_map['foreman_provisioning_subnet_ip_end']
         
