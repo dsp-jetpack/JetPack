@@ -83,24 +83,29 @@ if __name__ == '__main__':
                     format="%(asctime)-15s:%(name)s:%(process)d:%(levelname)s:%(message)s",
                     filemode='w',
                     level=logging.INFO)
-    
-    settings = Settings('settings\settings_sample.ini')
-    
-    files  = [
-            'ceph.vlock',
-            'compute.vlock',
-            'controller.vlock',
-            ]
-    cmd = 'mkdir /root/vlock_files'
-    #print Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, cmd)
-    for file in files :
-        localfile = settings.lock_files_dir + "\\" + file
-        remotefile = '/root/vlock_files/' + file
-        print localfile + " >> " + remotefile
-        Scp.put_file( settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, localfile, remotefile)
 
-   
-         
+    settings = Settings('settings\settings_sample.ini')
+
+    nodes = [
+        settings.foreman_node,
+        settings.ceph_node,
+    ]
+    others = settings.controller_nodes + settings.compute_nodes + settings.ceph_nodes
+
+    for node in nodes:
+        remoteLocks =  Ssh.execute_command_readlines(node.provisioning_ip, "root", "QaCl0ud",'rpm -qa | sort' )[0]
+        print "::::::::: " + node.hostname + "::::::::: "
+        for each in remoteLocks:
+            print each
+
+    for node in others:
+        remoteLocks =  Ssh.execute_command_readlines(node.provisioning_ip, "root", "QaCl0ud2014",'rpm -qa | sort' )[0]
+        print "::::::::: " + node.hostname + "::::::::: "
+        for each in remoteLocks:
+            print each
+
+
+
     
     
      
