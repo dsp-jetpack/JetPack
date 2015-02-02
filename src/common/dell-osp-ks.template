@@ -8,8 +8,10 @@ network --bootproto <%= @static ? "static" : "dhcp" %> --hostname <%= @host %>
 rootpw --iscrypted <%= root_pass %>
 firewall --<%= @host.operatingsystem.major.to_i >= 6 ? "service=" : "" %>ssh
 authconfig --useshadow --passalgo=sha256 --kickstart
-timezone UTC
-services --disabled autofs,gpm,sendmail,cups,iptables,ip6tables,auditd,arptables_jf,xfs,pcmcia,isdn,rawdevices,hpoj,bluetooth,openibd,avahi-daemon,avahi-dnsconfd,hidd,hplip,pcscd,restorecond,mcstrans,rhnsd,yum-updatesd
+
+timezone Americas/Chicago --ntpservers 0.fedora.pool.ntp.org
+services --disabled autofs,gpm,sendmail,cups,iptables,ip6tables,auditd,arptables_jf,xfs,pcmcia,isdn,rawdevices,hpoj,bluetooth,openibd,avahi-daemon,avahi-dnsconfd,hidd,hplip,pcscd,restorecond,mcstrans,rhnsd,yum-updatesd,NetworkManager
+services --enabled ntpd
 
 bootloader --location=mbr --append="nofb quiet splash=quiet" <%= grub_pass %>
 
@@ -86,16 +88,19 @@ subscription-manager register --username="<%= @host.params['subscription_manager
 
 subscription-manager attach --pool="<%= @host.params['subscription_manager_pool'] %>"
 
+cd /etc/yum.repos.d/
+
+# This is a hack for puddles and won't be needed when we get a pool
+
+wget ftp://partners.redhat.com/8aa5fd896ed3a83f6533a78287906111/OpenStack/6.0-Beta-2/RH7-RHOS-6.0.repo
+
 subscription-manager repos $( sed -e "s/,\s*/ --enable /g" -e "s/^/--enable /" <<< "<%= @host.params['subscription_manager_repos'] %>" )
 
-[[ -n "<%= @host.params['yum_versionlock_file'] %>" ]] && {
-    [[ ! -e /etc/yum/pluginconf.d/versionlock.conf ]] && yum -y install yum-plugin-versionlock
-    wget -O /etc/yum/pluginconf.d/versionlock.list <%= @host.params["yum_versionlock_file"] %>
-}
+systemctl stop firewalld
+systemctl disable firewalld
 
-# all the base packages from the updates repository
+# update all the base packages from the updates repository
 yum -t -y -e 0 update
-
 yum list "*puppet*"
 
 # and add the puppet package
