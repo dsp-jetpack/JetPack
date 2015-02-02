@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 import uuid
 from itertools import imap
 import threading
+import traceback, os.path, urllib2, subprocess
 
 class runThreadedPuppet (threading.Thread):
     def __init__(self, threadID, host):
@@ -86,23 +87,47 @@ if __name__ == '__main__':
 
     settings = Settings('settings\settings_sample.ini')
 
-    nodes = [
-        settings.foreman_node,
-        settings.ceph_node,
-    ]
-    others = settings.controller_nodes + settings.compute_nodes + settings.ceph_nodes
+    #nodes = [
+    #    settings.foreman_node,
+    #    settings.ceph_node,
+    #]
+    #others = settings.controller_nodes + settings.compute_nodes + settings.ceph_nodes
 
-    for node in nodes:
-        remoteLocks =  Ssh.execute_command_readlines(node.provisioning_ip, "root", "QaCl0ud",'rpm -qa | sort' )[0]
-        print "::::::::: " + node.hostname + "::::::::: "
-        for each in remoteLocks:
-            print each
+    #for node in nodes:
+    #    remoteLocks =  Ssh.execute_command_readlines(node.provisioning_ip, "root", "QaCl0ud",'rpm -qa | sort' )[0]
+    #    print "::::::::: " + node.hostname + "::::::::: "
+    #    for each in remoteLocks:
+    #        print each#
 
-    for node in others:
-        remoteLocks =  Ssh.execute_command_readlines(node.provisioning_ip, "root", "QaCl0ud2014",'rpm -qa | sort' )[0]
-        print "::::::::: " + node.hostname + "::::::::: "
-        for each in remoteLocks:
-            print each
+    #for node in others:
+    #    remoteLocks =  Ssh.execute_command_readlines(node.provisioning_ip, "root", "QaCl0ud2014",'rpm -qa | sort' )[0]
+    #    print "::::::::: " + node.hostname + "::::::::: "
+    #    for each in remoteLocks:
+    #        print each#
+
+    print("==== Running envirnment sanity tests")
+    assert os.path.isfile(settings.rhl6_iso) , settings.rhl6_iso + "ISO  doesnn't seem to exist"
+    assert os.path.isfile(settings.rhl7_iso) , settings.rhl7_iso + "ISO doesnn't seem to exist"
+    assert os.path.isfile(settings.sah_kickstart) , settings.sah_kickstart + "kickstart file doesnn't seem to exist"
+    assert os.path.isfile(settings.foreman_deploy_sh) , settings.foreman_deploy_sh + " script doesnn't seem to exist"
+    assert os.path.isfile(settings.ceph_deploy_sh) , settings.ceph_deploy_sh + " script doesnn't seem to exist"
+
+    try:
+            urllib2.urlopen(settings.rhel_install_location +"/eula").read()
+    except:
+        raise AssertionError(settings.rhel_install_location + "/eula is not reachable")
+
+    if "RUNNING" in subprocess.check_output("sc query Tftpd32_svc",stderr=subprocess.STDOUT, shell=True):
+        subprocess.check_output("net stop Tftpd32_svc",stderr=subprocess.STDOUT, shell=True)
+
+    hdw_nodes = settings.controller_nodes + settings.compute_nodes + settings.ceph_nodes
+    hdw_nodes.append(settings.sah_node)
+    for node in hdw_nodes:
+        try:
+            ipmi_session = Ipmi(settings.cygwin_installdir, settings.ipmi_user, settings.ipmi_password, node.idrac_ip)
+            print node.hostname +" :: "+ ipmi_session.get_power_state()
+        except:
+            raise AssertionError("Could not impi to host " + node.hostname)
 
 
 
