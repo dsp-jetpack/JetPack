@@ -13,9 +13,10 @@ cdrom
 reboot
 
 # Partitioning
+ignoredisk --only-use=vda
 zerombr
+bootloader --boot-drive=vda
 clearpart --all
-bootloader --location=mbr
 
 part /boot --fstype=ext4 --size=500
 part pv.01 --size=8192 --grow
@@ -25,15 +26,16 @@ volgroup VolGroup --pesize=4096 pv.01
 logvol / --fstype=ext4 --name=lv_root --vgname=VolGroup --grow --size=1024
 logvol swap --name=lv_swap --vgname=VolGroup --size=1024
 
-%include /tmp/ks_include.txt
-
-keyboard us
+keyboard --vckeymap=us --xlayouts='us'
 lang en_US.UTF-8
 
 auth --enableshadow --passalgo=sha512
 
+%include /tmp/ks_include.txt
+
 skipx
 firstboot --disable
+eula --agreed
 
 %packages
 @base
@@ -44,6 +46,8 @@ firstboot --disable
 @remote-desktop-clients
 ntp
 ntpdate
+-chrony
+system-config-firewall-base
 yum-plugin-versionlock
 %end
 
@@ -71,7 +75,10 @@ do
     echo "echo NameServers=${ip} >> /tmp/ks_post_include.txt"
     }
 
-  [[ ${iface} == gateway ]] && Gateway=${ip} 
+  [[ ${iface} == gateway ]] && {
+    Gateway=${ip} 
+    echo "echo Gateway=${ip} >> /tmp/ks_post_include.txt"
+    }
 
   [[ ${iface} == ntpserver ]] && echo "echo NTPServer=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smuser ]] && echo "echo SMUser=${ip} >> /tmp/ks_post_include.txt"
@@ -87,7 +94,7 @@ do
     }
 
   [[ ${iface} == eth1 ]] && { 
-    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} >> /tmp/ks_include.txt"
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
     }
 done <<< "$( grep -Ev "^#|^;|^\s*$" ${cfg_file} )"
 } >> /tmp/foreman.ks
@@ -117,6 +124,11 @@ chvt 8
   do
     echo "nameserver ${ns}" >> /etc/resolv.conf
   done
+
+  echo "GATEWAY=${Gateway}" >> /etc/sysconfig/network
+
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth0
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth1
 
   echo "$( ip addr show dev eth0 | awk '/inet / { print $2 }' | sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
 
@@ -154,10 +166,16 @@ chvt 8
     yum-config-manager --disable ${repo} | grep -E "^\[|^enabled"
   done
 
-  # Enable only the repositories we need
-  yum-config-manager --enable rhel-6-server-rpms \
-    rhel-6-server-openstack-foreman-rpms \
-    rhel-server-rhscl-6-rpms
+  subscription-manager repos --disable=*
+  subscription-manager repos --enable=rhel-7-server-rpms
+  subscription-manager repos --enable=rhel-server-rhscl-7-rpms
+
+# This is a tempory hack until the final pool is ready
+  cd /etc/yum.repos.d
+  wget ftp://partners.redhat.com/8aa5fd896ed3a83f6533a78287906111/OpenStack/Installer-6.0-RC-1/RH7-RHOS-6.0-Installer.repo
+  wget ftp://partners.redhat.com/8aa5fd896ed3a83f6533a78287906111/OpenStack/6.0-RC-1/RH7-RHOS-6.0.repo
+
+#  yum-config-manager --enable rhel-7-server-rpms rhel-server-rhscl-7-rpms
 
   mkdir /tmp/mnt
   mount /dev/floppy /tmp/mnt
@@ -168,7 +186,7 @@ chvt 8
   umount /tmp/mnt
 
   yum -y install openstack-foreman-installer
-
+  yum -y install ceph-common
   yum -y update
 
   # Firewall rules to allow traffic for the http, https, dns, and tftp services and tcp port 8140.
@@ -207,12 +225,13 @@ COMMIT
 EOIP
 
 
-  sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
+  systemctl enable iptables
 
   sed -i -e "/^net.ipv4.ip_forward/d" /etc/sysctl.conf
   echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
   sysctl -p
 
+  sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
 
   # Configure the ntp daemon
   chkconfig ntpd on
@@ -224,8 +243,11 @@ EOIP
   done
 
 
-  sed -i "/^class.*'foreman'.*/aconfigure_epel_repo => false," /usr/share/openstack-foreman-installer/bin/foreman_server.sh
-  sed -i '/read -p/d' /usr/share/openstack-foreman-installer/bin/foreman_server.sh
+#  sed -i "/^class.*'foreman'.*/aconfigure_epel_repo => false," /usr/share/openstack-foreman-installer/bin/foreman_server.sh
+#  sed -i '/read -p/d' /usr/share/openstack-foreman-installer/bin/foreman_server.sh
+
+  systemctl disable NetworkManager
+  systemctl disable firewalld
 
 ) 2>&1 | /usr/bin/tee -a /root/foreman-posts.log
 
