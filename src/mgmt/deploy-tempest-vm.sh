@@ -226,7 +226,7 @@ EOIP
   cd ~/ 
   git clone https://github.com/redhat-openstack/tempest.git
   cd tempest
-  pip install unittest2 discover Babel
+  pip install unittest2 discover Babel pbr
   python ./setup.py install
   
 
