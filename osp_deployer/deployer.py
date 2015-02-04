@@ -150,7 +150,12 @@ if __name__ == '__main__':
             time.sleep(100);
             #log (Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "whoami"))
         log ("sahh node is up @ " + settings.sah_node.public_ip)
-        
+
+        log("*** Verify the SAH node registered properly ***")
+        subscriptionStatus = Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "subscription-manager status")[0]
+        if "Current" not in subscriptionStatus:
+            raise AssertionError("SAH did not register properly : " + subscriptionStatus)
+
         log ("=== uploading iso's to the sah node")
         Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl6_iso, "/store/data/iso/RHEL6.5.iso")
         Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl7_iso, "/store/data/iso/RHEL7.iso")
@@ -205,6 +210,12 @@ if __name__ == '__main__':
             log ("...")
             time.sleep(30);
         log("foreman host is up")
+
+        log("*** Verify the Foreman VM registered properly ***")
+        subscriptionStatus = Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, "subscription-manager status")[0]
+        if "Current" not in subscriptionStatus:
+            raise AssertionError("Foreman VM did not register properly : " + subscriptionStatus)
+
         log("=== installing foreman")
         
         cmd = "sed -i '/^read -p/d' /usr/share/openstack-foreman-installer/bin/foreman_server.sh"
@@ -258,7 +269,11 @@ if __name__ == '__main__':
                 log ("...")
                 time.sleep(30);
             log("ceph host is up")
-            
+
+            log("*** Verify the Ceph VM registered properly ***")
+            subscriptionStatus = Ssh.execute_command(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "subscription-manager status")[0]
+            if "Current" not in subscriptionStatus:
+                raise AssertionError("Ceph VM did not register properly : " + subscriptionStatus)
             
             
         elif settings.stamp_type == "poc":
