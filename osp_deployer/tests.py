@@ -106,30 +106,18 @@ if __name__ == '__main__':
     #        print each#
 
     print("==== Running envirnment sanity tests")
-    assert os.path.isfile(settings.rhl6_iso) , settings.rhl6_iso + "ISO  doesnn't seem to exist"
-    assert os.path.isfile(settings.rhl7_iso) , settings.rhl7_iso + "ISO doesnn't seem to exist"
-    assert os.path.isfile(settings.sah_kickstart) , settings.sah_kickstart + "kickstart file doesnn't seem to exist"
-    assert os.path.isfile(settings.foreman_deploy_sh) , settings.foreman_deploy_sh + " script doesnn't seem to exist"
-    assert os.path.isfile(settings.ceph_deploy_sh) , settings.ceph_deploy_sh + " script doesnn't seem to exist"
 
-    try:
-            urllib2.urlopen(settings.rhel_install_location +"/eula").read()
-    except:
-        raise AssertionError(settings.rhel_install_location + "/eula is not reachable")
+    subscriptionStatus = Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "subscription-manager status")[0]
+    if not "Current" in subscriptionStatus:
+            raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
-    if "RUNNING" in subprocess.check_output("sc query Tftpd32_svc",stderr=subprocess.STDOUT, shell=True):
-        subprocess.check_output("net stop Tftpd32_svc",stderr=subprocess.STDOUT, shell=True)
+    subscriptionStatus = Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, "subscription-manager status")[0]
+    if "Current" not in subscriptionStatus:
+            raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
-    hdw_nodes = settings.controller_nodes + settings.compute_nodes + settings.ceph_nodes
-    hdw_nodes.append(settings.sah_node)
-    for node in hdw_nodes:
-        try:
-            ipmi_session = Ipmi(settings.cygwin_installdir, settings.ipmi_user, settings.ipmi_password, node.idrac_ip)
-            print node.hostname +" :: "+ ipmi_session.get_power_state()
-        except:
-            raise AssertionError("Could not impi to host " + node.hostname)
-
-
+    subscriptionStatus = Ssh.execute_command(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "subscription-manager status")[0]
+    if "Current" not in subscriptionStatus:
+            raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
     
     
