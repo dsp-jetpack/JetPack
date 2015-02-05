@@ -32,8 +32,8 @@ mk_bundle() {
         fi
     done
     (cd $dest; sha256sum ${target_dir}/* ${target_dir}/vlock_files/* >${target_dir}/CHECKSUMS.sha256)
-    (cd $dest; tar zcvf ${target_dir}.tgz ${target_dir}/*; zip -r ${target_dir} ${target_dir})
-    rm -rf ${dest}/${target_dir}
+    (cd $dest/${target_dir}; tar zcvf $dest/${target_dir}.tgz ./*; zip -r $dest/${target_dir} .)
+    (cd $dest; rm -rf ${dest}/${target_dir})
 }
 
 echo "Copying PDF's"
