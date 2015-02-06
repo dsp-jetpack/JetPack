@@ -774,8 +774,7 @@ class Foreman():
                 else :
                     hostUpdated = True
                     break
-
-            url = 'https://10.21.148.112/hosts/'+each.hostname+'.' + self.settings.domain+'/edit'
+            url = 'https:/'+ str(self.settings.foreman_node.public_ip) +'/hosts/'+each.hostname+'.' + self.settings.domain+'/edit'
             UI_Manager.driver().get(url)
 
             paramLink = Widget("//a[.='Parameters']")
