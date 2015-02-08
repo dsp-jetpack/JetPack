@@ -106,9 +106,8 @@ class Foreman():
             vip_ip_public = int(startipS_pb)
             pub_net = self.settings.vip_public_network_range_start.split(".")[0]+"." + self.settings.vip_public_network_range_start.split(".")[1] + "." + self.settings.vip_public_network_range_start.split(".")[2] + "."
 
-            FileHelper.replaceExpressionTXT(file, 'vip_amqp = .*',"vip_amqp = '" + priv_net+ str(vip_ip_private) + "'" )
-            vip_ip_private +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_cinder_adm = .*',"vip_cinder_adm = '" + priv_net+ str(vip_ip_private) + "'" )
+
+                FileHelper.replaceExpressionTXT(file, 'vip_cinder_adm = .*',"vip_cinder_adm = '" + priv_net+ str(vip_ip_private) + "'" )
             vip_ip_private +=1
             FileHelper.replaceExpressionTXT(file, 'vip_cinder_pub = .*',"vip_cinder_pub = '" + pub_net + str(vip_ip_public) + "'" )
             vip_ip_public +=1
@@ -134,8 +133,6 @@ class Foreman():
             vip_ip_private +=1
             FileHelper.replaceExpressionTXT(file, 'vip_keystone_pub = .*',"vip_keystone_pub = '" +pub_net + str(vip_ip_public) + "'" )
             vip_ip_public +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_loadbalancer = .*',"vip_loadbalancer = '" +priv_net+  str(vip_ip_private) + "'" )
-            vip_ip_private +=1
             FileHelper.replaceExpressionTXT(file, 'vip_nova_adm = .*',"vip_nova_adm = '" + priv_net+ str(vip_ip_private) + "'" )
             vip_ip_private +=1
             FileHelper.replaceExpressionTXT(file, 'vip_nova_priv = .*',"vip_nova_priv = '" + priv_net+ str(vip_ip_private) + "'" )
@@ -144,9 +141,13 @@ class Foreman():
             vip_ip_public +=1
             FileHelper.replaceExpressionTXT(file, 'fence_clu_iface = .*',"fence_clu_iface = '" + priv_net+ str(vip_ip_private) + "'" )
             vip_ip_private +=1
+            FileHelper.replaceExpressionTXT(file, 'vip_loadbalancer = .*',"vip_loadbalancer = '" +priv_net+  str(vip_ip_private) + "'" )
+            vip_ip_private +=1
+            FileHelper.replaceExpressionTXT(file, 'vip_amqp = .*',"vip_amqp = '" + priv_net+ str(vip_ip_private) + "'" )
+            vip_ip_private +=1
 
-            FileHelper.replaceExpressionTXT(file, 'net_fix = .*',"net_fix = '" + self.settings.nova_public_network + "'" )
-            FileHelper.replaceExpressionTXT(file, 'net_float = .*',"net_float = '" + self.settings.nova_private_network + "'" )
+            FileHelper.replaceExpressionTXT(file, 'net_fix = .*',"net_fix = '" + self.settings.nova_private_network + "'" )
+            FileHelper.replaceExpressionTXT(file, 'net_float = .*',"net_float = '" + self.settings.nova_public_network + "'" )
 
             FileHelper.replaceExpressionTXT(file, 'net_priv_iface = .*',"net_priv_iface = 'bond0." + self.settings.controller_nodes[1].private_api_vlanid + "'" )
             FileHelper.replaceExpressionTXT(file, 'net_pub_iface = .*',"net_pub_iface = 'bond1" + "'" )
@@ -565,7 +566,7 @@ class Foreman():
             elif self.settings.stamp_type == 'pilot':
                 print "configure bonded interfaces"
 
-                commands = ["hammer host set-parameter --host-id "+node.hostID+" --name bonds --value '( [bond0]=\"onboot none\" [bond0."+node.nova_private_vlanid+"]=\"onboot static vlan "+node.nova_private_ip+"/"+node.nova_private_netmask+"\" [bond0."+node.private_api_vlanid+"]=\"onboot static vlan "+node.private_ip+"/"+node.private_netmask+"\" [bond0."+node.storage_vlanid+"]=\"onboot static vlan "+node.storage_ip+"/"+node.storage_netmask+"\" [bond1]=\"onboot static "+node.storage_netmask+"/"+node.nova_public_netmask+"\")'",
+                commands = ["hammer host set-parameter --host-id "+node.hostID+" --name bonds --value '( [bond0]=\"onboot none\" [bond0."+node.nova_private_vlanid+"]=\"onboot static vlan "+node.nova_private_ip+"/"+node.nova_private_netmask+"\" [bond0."+node.private_api_vlanid+"]=\"onboot static vlan "+node.private_ip+"/"+node.private_netmask+"\" [bond0."+node.storage_vlanid+"]=\"onboot static vlan "+node.storage_ip+"/"+node.storage_netmask+"\" [bond1]=\"onboot static "+node.nova_public_ip+"/"+node.nova_public_netmask+"\")'",
                             "hammer host set-parameter --host-id "+node.hostID+" --name bond_ifaces --value '( [bond0]=\""+node.bond0_interfaces+"\" [bond1]=\""+node.bond1_interfaces+"\")'",
                             "hammer host set-parameter --host-id "+node.hostID+" --name bond_opts --value '( [bond0]=\"mode=balance-tlb PROMISC=yes\" [bond1]=\"mode=balance-tlb PROMISC=yes\")'"]
                 for command in commands:
