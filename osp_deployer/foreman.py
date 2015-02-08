@@ -107,7 +107,7 @@ class Foreman():
             pub_net = self.settings.vip_public_network_range_start.split(".")[0]+"." + self.settings.vip_public_network_range_start.split(".")[1] + "." + self.settings.vip_public_network_range_start.split(".")[2] + "."
 
 
-                FileHelper.replaceExpressionTXT(file, 'vip_cinder_adm = .*',"vip_cinder_adm = '" + priv_net+ str(vip_ip_private) + "'" )
+            FileHelper.replaceExpressionTXT(file, 'vip_cinder_adm = .*',"vip_cinder_adm = '" + priv_net+ str(vip_ip_private) + "'" )
             vip_ip_private +=1
             FileHelper.replaceExpressionTXT(file, 'vip_cinder_pub = .*',"vip_cinder_pub = '" + pub_net + str(vip_ip_public) + "'" )
             vip_ip_public +=1
