@@ -550,6 +550,16 @@ class Ceph():
         for each in self.settings.controller_nodes:
             for cmd in cmds:
                 logger.info(Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)[0])
+
+        cmds = [
+            'systemctl start iptables',
+            'systemctl enable iptables',
+            'iptables -I INPUT 1 -p tcp -m multiport --dports 4500:7000 -j ACCEPT',
+            'service iptables save'
+            ]
+        for each in self.settings.ceph_nodes:
+            for cmd in cmds:
+                logger.info(Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)[0])
    
     def restart_ha_services(self):
         cmds = [
