@@ -27,9 +27,16 @@
     
     cluster_admin_host = cluster_member_ip1
 
+    # The interface name (such as bond0.140) on the private API network
+    cluster_interconnect_iface = 'CHANGEME_PRIVATE_API_INTERFACE_NAME'
+
 
     ## VIPs
     vip_amqp = 'CHANGEME_IP_ON_PRIVATE_API'
+
+    vip_ceilometer_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_ceilometer_priv = vip_ceilometer_adm
+    vip_ceilometer_pub = 'CHANGEME_IP_ON_PUBLIC_API'
 
     vip_cinder_adm = 'CHANGEME_IP_ON_PRIVATE_API'
     vip_cinder_priv = vip_cinder_adm
@@ -43,11 +50,11 @@
 
     vip_heat_adm = 'CHANGEME_IP_ON_PRIVATE_API'
     vip_heat_priv = vip_heat_adm
-    vip_heat_pub = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_heat_pub = 'CHANGEME_IP_ON_PUBLIC_API'
 
     vip_heat_cfn_adm = 'CHANGEME_IP_ON_PRIVATE_API'
     vip_heat_cfn_priv = vip_heat_cfn_adm
-    vip_heat_cfn_pub = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_heat_cfn_pub = 'CHANGEME_IP_ON_PUBLIC_API'
 
     vip_horizon_adm = 'CHANGEME_IP_ON_PRIVATE_API'
     vip_horizon_priv = vip_horizon_adm
@@ -59,12 +66,13 @@
 
     vip_loadbalancer = 'CHANGEME_IP_ON_PRIVATE_API'
 
+    vip_neutron_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_neutron_priv = vip_neutron_adm
+    vip_neutron_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+
     vip_nova_adm = 'CHANGEME_IP_ON_PRIVATE_API'
-    vip_nova_priv = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_nova_priv = vip_nova_adm
     vip_nova_pub = 'CHANGEME_IP_ON_PUBLIC_API'
-
-
-
 
 
     # auto assign ips to VMs.
@@ -83,16 +91,27 @@
     c_eqlx_pool = [ "default" ]
     c_eqlx_use_chap = [ "false" ]
     c_mult_be = 'false'
+
+    c_ceph_cluster_network =  'CHANGEME_CLUSTER_NETWORK_FROM_CEPH.CONF'
+    c_ceph_fsid =  'CHANGEME_FSID_FROM_CEPH.CONF'
+    c_ceph_images_key = 'CHANGEME_KEY_FROM_IMAGES_KEYRING'
+    c_ceph_mon_host = [ "CHANGEME_IP_OF_STORAGE_NODE1_ON_STORAGE_NETWORK" "CHANGEME_IP_OF_STORAGE_NODE2_ON_STORAGE_NETWORK" ]
+    c_ceph_mon_initial_members =  [ "CHANGEME_NAME_OF_STORAGE_NODE1_ON_STORAGE_NETWORK" "CHANGEME_NAME_OF_STORAGE_NODE2_ON_STORAGE_NETWORK" ]
+    c_ceph_osd_journal_size = 'CHANGEME_OSD_JOURNAL_SIZE_FROM_CEPH.CONF'
+    c_ceph_osd_pool_size = 'CHANGEME_OSD_POOL_SIZE_FROM_CEPH.CONF'
+    c_ceph_public_network = 'CHANGEME_STORAGE_NETWORK_FROM_CEPH.CONF'
+    c_ceph_volumes_key = 'CHANGEME_KEY_FROM_VOLUMES_KEYRING'
+
     c_rbd_pool = 'volumes'
     c_rbd_user = 'volumes'
     
-    fence_ipmi_ip = ''
+    fence_ipmi_ip1 = 'CHANGEME_CONTROLLER1_IPMI_IP'
+    fence_ipmi_ip2 = 'CHANGEME_CONTROLLER2_IPMI_IP'
+    fence_ipmi_ip3 = 'CHANGEME_CONTROLLER3_IPMI_IP'
     fence_ipmi_lanplus = 'true'
     fence_ipmi_user = 'root'
     fence_type = 'fence_ipmilan'
 
-    # Interface for cluster communications - Private API
-    fence_clu_iface = 'CHANGEME_PRIVATE_API_INTERFACE'
     
     glance_be = 'file'
     rbd_spool = 'images'
@@ -110,25 +129,17 @@
     # amqp_provider
     amqp_pro = 'rabbitmq'
 
-    # network_create_networks
-    net_create = true
+    node_access_iface = 'CHANGEME_NOVA_PRIVATE_INTERFACE_NAME'
+    
+    # neutron private/tenant interface (em2 or bond0.300, etc...)
+    net_tenant_iface = 'CHANGEME_NOVA_PRIVATE_INTERFACE_NAME'
 
-    # network_fixed_range - nova private network
-    net_fix = 'CHANGEME_IP_ON_NOVA_PRIVATE/NETMASK'
+    # neutron public/floating/l3 interface (em3 or bond0.301, etc...)
+    net_l3_iface = 'CHANGEME_NOVA_PUBLIC_INTERFACE_NAME'
 
-    # network_floating_range - nova public network
-    net_float = 'CHANGEME_IP_ON_NOVA_PUBLIC/NETMASK'
+    l3_VRRP_enable = 'false'
 
-    # network_manager, network_network_size, network_num_networks
-    net_man = 'VlanManager'
-    net_size = 256
-    net_num = 1
-
-    # network_private_iface - nova private interface (em2 or bond0.300, etc...)
-    net_priv_iface = 'CHANGEME_INTERFACE_NAME'
-
-    # network_public_iface - nova public interface (em3 or bond0.301, etc...)
-    net_pub_iface = 'CHANGEME_INTERFACE_NAME'
+    tenant_vlan_range = 'CHANGEME_VLAN_MIN:CHANGEME_VLAN_MAX'
 
     keystnrc = 'true'
 
@@ -142,7 +153,9 @@
 ####  Variables below this line should not need to be changed.
 ##
 
-keystonerc: <%= keystnrc %>
+debug: <%= dbug %>
+verbose: <%= vbose %>
+
 
 backend_eqlx: <%= c_be_eqlx %>
 backend_eqlx_name:
@@ -152,7 +165,6 @@ backend_eqlx_name:
 
 backend_rbd: <%= c_be_rbd %>
 backend_rbd_name: <%= c_be_rbd_name %>
-debug: <%= dbug %>
 eqlx_chap_login:
 <% c_eqlx_ch_login.each do |name| %>
 - <%= name %>
@@ -182,16 +194,17 @@ multiple_backends: <%= c_mult_be %>
 rbd_pool: <%= c_rbd_pool %>
 rbd_secret_uuid: <%= passwd_auto %>
 rbd_user: <%= c_rbd_user %>
-verbose: <%= vbose %>
 
-fence_ipmilan_address: <%= fence_ipmi_ip %>
+fence_ipmilan_hostlist: "<%= cluster_member_name1 %>,<%= cluster_member_name2 %>,<%= cluster_member_name3 %>"
+fence_ipmilan_host_to_address:
+- "<%= cluster_member_name1 %>:<%= fence_ipmi_ip1 %>"
+- "<%= cluster_member_name2 %>:<%= fence_ipmi_ip2 %>"
+- "<%= cluster_member_name3 %>:<%= fence_ipmi_ip3 %>"
 fence_ipmilan_expose_lanplus: <%= fence_ipmi_lanplus %>
 fence_ipmilan_password: <%= passwd_auto %>
 fence_ipmilan_username: <%= fence_ipmi_user %>
 fence_xvm_key_file_password: <%= passwd_auto %>
-fence_xvm_clu_iface: <%= fence_clu_iface %>
 fencing_type: <%= fence_type %>
-pacemaker_cluster_members: <%= cluster_member_ip1 %> <%= cluster_member_ip2 %> <%= cluster_member_ip3 %>
 
 galera_monitor_password: <%= passwd_auto %>
 mysql_root_password: <%= passwd_auto %>
@@ -206,34 +219,44 @@ rbd_store_pool: <%= rbd_spool %>
 rbd_store_user: <%= rbd_suser %>
 
 secret_key: <%= passwd_auto %>
-verbose: <%= vbose %>
 
 admin_password: <%= passwd_auto %>
-
-#  quickstack::pacemaker::neutron:
-#   ++++ enabled: false
-#   = ovs_bridge_mappings:
-#    = ovs_bridge_uplinks:
-#    - br-p3p1:p3p1
-#    - br-em3:em3
-#    = ovs_vlan_ranges: physint:1000:1020,physext
-
-default_floating_pool: <%= def_float_pool %>
-neutron_metadata_proxy_secret: <%= passwd_auto %>
-
+admin_token: <%= passwd_auto %>
+amqp_host: <%= vip_amqp %>
 amqp_password: <%= passwd_auto %>
+amqp_provider: <%= amqp_pro %>
 amqp_vip: <%= vip_amqp %>
-
-#    =check with keith = ceph_cluster_network: ''
-
+auto_assign_floating_ip: <%= auto_float_ip %>
+ceilometer: true
+ceilometer_admin_vip: <%= vip_ceilometer_adm %>
+ceilometer_db_password: <%= passwd_auto %>
+ceilometer_metering_secret: <%= passwd_auto %>
+ceilometer_private_vip: <%= vip_ceilometer_priv %>
+ceilometer_public_vip: <%= vip_ceilometer_pub %>
+ceilometer_user_password: <%= passwd_auto %>
+ceph_cluster_network: <%= c_ceph_cluster_network %>
+ceph_fsid: <%= c_ceph_fsid %>
+ceph_images_key: <%= c_ceph_images_key %>
+ceph_mon_host: <%= c_ceph_mon_host %>
+ceph_mon_initial_members: <%= c_ceph_mon_initial_members %>
+ceph_osd_journal_size: <%= c_ceph_osd_journal_size %>
+ceph_osd_pool_size: <%= c_ceph_osd_pool_size %>
+ceph_public_network: <%= c_ceph_public_network %>
+ceph_volumes_key: <%= c_ceph_volumes_key %>
 cinder_admin_vip: <%= vip_cinder_adm %>
 cinder_db_password: <%= passwd_auto %>
+cinder_backend_gluster: false
+cinder_backend_nfs: false
+cinder_backend_rbd: 'true'
 cinder_private_vip: <%= vip_cinder_priv %>
 cinder_public_vip: <%= vip_cinder_pub %>
 cinder_user_password: <%= passwd_auto %>
 cluster_control_ip: <%= cluster_admin_host %>
 db_vip: <%= vip_db %>
+enable_tunneling: false
+external_network_bridge: br-ex
 glance_admin_vip: <%= vip_glance_adm %>
+glance_backend_rbd: 'true'
 glance_db_password: <%= passwd_auto %>
 glance_private_vip: <%= vip_glance_priv %>
 glance_public_vip: <%= vip_glance_pub %>
@@ -245,6 +268,7 @@ heat_cfn_enabled: <%= heat_cfn_en %>
 heat_cfn_private_vip: <%= vip_heat_cfn_priv %>
 heat_cfn_public_vip: <%= vip_heat_cfn_pub %>
 heat_cfn_user_password: <%= passwd_auto %>
+heat_cloudwatch:  <%= heat_cloudw_en %>
 heat_cloudwatch_enabled: <%= heat_cloudw_en %>
 heat_db_password: <%= passwd_auto %>
 heat_private_vip: <%= vip_heat_priv %>
@@ -255,13 +279,15 @@ horizon_private_vip: <%= vip_horizon_priv %>
 horizon_public_vip: <%= vip_horizon_pub %>
 include_cinder: <%= inc_cinder %>
 include_heat: <%= inc_heat %>
-include_neutron: false
+include_neutron: true
 include_swift: false
+keystonerc: <%= keystnrc %>
 keystone_admin_vip: <%= vip_keystone_adm %>
 keystone_db_password: <%= passwd_auto %>
 keystone_private_vip: <%= vip_keystone_priv %>
 keystone_public_vip: <%= vip_keystone_pub %>
 keystone_user_password: <%= passwd_auto %>
+l3_ha: <%= l3_VRRP_enable %>
 lb_backend_server_addrs:
 - <%= cluster_member_ip1 %>
 - <%= cluster_member_ip2 %>
@@ -271,38 +297,60 @@ lb_backend_server_names:
 - <%= cluster_member_name2 %>
 - <%= cluster_member_name3 %>
 loadbalancer_vip: <%= vip_loadbalancer %>
-neutron: false
+ml2_flat_networks:
+- ! '*'
+ml2_mechanism_drivers:
+- 'openvswitch'
+- 'l2population'
+ml2_network_vlan_ranges:
+- physint:<%= tenant_vlan_range %>
+- physext
+ml2_tenant_network_types:
+- 'vlan'
+neutron: true
+neutron_admin_vip: <%= vip_neutron_adm %>
+neutron_db_password: <%= passwd_auto %>
+neutron_metadata_proxy_secret: <%= passwd_auto %>
+neutron_private_vip: <%= vip_neutron_priv %>
+neutron_public_vip: <%= vip_neutron_pub %>
+neutron_user_password: <%= passwd_auto %>
 nova_admin_vip: <%= vip_nova_adm %>
 nova_db_password: <%= passwd_auto %>
+nova_default_floating_pool: nova
 nova_private_vip: <%= vip_nova_priv %>
 nova_public_vip: <%= vip_nova_pub %>
 nova_user_password: <%= passwd_auto %>
-private_ip: 127.0.0.1
+ovs_bridge_mappings:
+- physext:br-ex
+- physint:br-tenant
+ovs_bridge_uplinks:
+- br-ex:<%= net_l3_iface %>
+- br-tenant:<%= net_tenant_iface %>
+ovs_l2_population: 'True'
+ovs_tunnel_iface: <%= net_tenant_iface %>
+ovs_tunnel_network: ''
+ovs_tunnel_types:
+- vlan
+ovs_vlan_ranges: 'physint:<%= tenant_vlan_range %>,physext'
+pcmk_iface: <%= cluster_interconnect_iface %>
+pcmk_server_addrs:
+- <%= cluster_member_ip1 %>
+- <%= cluster_member_ip2 %>
+- <%= cluster_member_ip3 %>
+pcmk_server_names:
+- <%= cluster_member_name1 %>
+- <%= cluster_member_name2 %>
+- <%= cluster_member_name3 %>
+private_iface: <%= node_access_iface %>
+private_ip: ''
+swift_shared_secret: <%= passwd_auto %>
+swift_user_password: <%= passwd_auto %>
+tenant_network_type: vlan
+volume: true
 
+# compute node only parameters
 
-
-#########################################
-
-
-amqp_host: <%= vip_amqp %>
-amqp_port: '5672'
-amqp_provider: <%= amqp_pro %>
-amqp_ssl_port: '5671'
-amqp_username: openstack
 auth_host: <%= vip_keystone_adm %>
-auto_assign_floating_ip: <%= auto_float_ip %>
-ceilometer: false
-ceph_cluster_network: ''
-ceph_fsid: ''
-ceph_images_key: ''
-ceph_mon_host: []
-ceph_mon_initial_members: []
-ceph_public_network: ''
-ceph_volumes_key: ''
-cinder_backend_gluster: false
-cinder_backend_nfs: false
-cinder_backend_rbd: 'false'
-glance_backend_rbd: 'false'
 glance_host: <%= vip_glance_adm %>
 libvirt_images_rbd_ceph_conf: /etc/ceph/ceph.conf
 libvirt_images_rbd_pool: volumes
@@ -311,22 +359,5 @@ libvirt_inject_key: 'false'
 libvirt_inject_password: 'false'
 mysql_ca: /etc/ipa/ca.crt
 mysql_host: <%= vip_db %>
-network_create_networks: <%= net_create %>
-network_fixed_range: <%= net_fix %>
-network_floating_range: <%= net_float %>
-network_manager: <%= net_man %>
-network_network_size: <%= net_size %>
-network_num_networks: <%= net_num %>
-network_overrides:
-  vlan_start: 900
-  force_dhcp_release: 'false'
-network_private_iface: <%= net_priv_iface %>
-network_private_network: ''
-network_public_iface: <%= net_pub_iface %>
-network_public_network: ''
-nova_db_password: <%= passwd_auto %>
+neutron_host: <%= vip_neutron_adm %>
 nova_host: <%= vip_nova_adm %>
-nova_multi_host: 'True'
-nova_user_password: <%= passwd_auto %>
-
-
