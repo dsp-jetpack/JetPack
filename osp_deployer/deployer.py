@@ -85,12 +85,13 @@ if __name__ == '__main__':
                 urllib2.urlopen(settings.rhel_install_location +"/EULA").read()
         except:
             raise AssertionError(settings.rhel_install_location + "/EULA is not reachable")
+
         if isLinux == False:
             if "RUNNING" in subprocess.check_output("sc query Tftpd32_svc",stderr=subprocess.STDOUT, shell=True):
                 subprocess.check_output("net stop Tftpd32_svc",stderr=subprocess.STDOUT, shell=True)
         else:
             subprocess.check_output("service tftp stop",stderr=subprocess.STDOUT, shell=True)
-
+        
         hdw_nodes = settings.controller_nodes + settings.compute_nodes + settings.ceph_nodes
         hdw_nodes.append(settings.sah_node)
         for node in hdw_nodes:
@@ -147,7 +148,7 @@ if __name__ == '__main__':
         
         #linux, dhcp is a separate service
         if(isLinux):
-           log ("=== stopping dhcp service")
+           log ("=== starting dhcpd service")
            log (subprocess.check_output("service dhcpd start",stderr=subprocess.STDOUT, shell=True))
 
        
@@ -173,8 +174,8 @@ if __name__ == '__main__':
 
         log("*** Verify the SAH node registered properly ***")
         subscriptionStatus = Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "subscription-manager status")[0]
-        #if "Current" not in subscriptionStatus:
-         #   raise AssertionError("SAH did not register properly : " + subscriptionStatus)
+        if "Current" not in subscriptionStatus:
+            raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
         log ("=== uploading iso's to the sah node")
         Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl6_iso, "/store/data/iso/RHEL6.5.iso")
