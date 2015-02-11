@@ -34,13 +34,21 @@ if __name__ == '__main__':
     
     
     try :
+        log ("=================================")
+        isLinux = False
+        if sys.platform.startswith('linux'):
+            isLinux = True
+            log ("=== Linux System")
+        else:
+           log ("=== Windows System")
+        log ("=================================")
+
+
         import logging.config
-        logging.basicConfig(filename='c:/auto_results/deployer.log',
-                        format="%(asctime)-15s:%(name)s:%(process)d:%(levelname)s:%(message)s",
-                        filemode='w',
-                        level=logging.INFO)
-    
-        
+        logging.basicConfig(filename='/deployer.log' if isLinux else 'c:/auto_results/deployer.log',
+           format="%(asctime)-15s:%(name)s:%(process)d:%(levelname)s:%(message)s",
+                       filemode='w',
+                       level=logging.INFO)    
         
         log ("=================================")
         log ("=== Starting up ...")
@@ -74,9 +82,9 @@ if __name__ == '__main__':
         assert os.path.isfile(settings.ceph_deploy_sh) , settings.ceph_deploy_sh + " script doesnn't seem to exist"
 
         try:
-                urllib2.urlopen(settings.rhel_install_location +"/eula").read()
+                urllib2.urlopen(settings.rhel_install_location +"/EULA").read()
         except:
-            raise AssertionError(settings.rhel_install_location + "/eula is not reachable")
+            raise AssertionError(settings.rhel_install_location + "/EULA is not reachable")
 
         if "RUNNING" in subprocess.check_output("sc query Tftpd32_svc",stderr=subprocess.STDOUT, shell=True):
             subprocess.check_output("net stop Tftpd32_svc",stderr=subprocess.STDOUT, shell=True)
@@ -131,18 +139,28 @@ if __name__ == '__main__':
         FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bond=.*','provision_bond="provision '+ settings.sah_node.provisioning_bond + " "+ settings.sah_node.provisioning_ip + " " + settings.sah_node.provisioning_netmask + " " + settings.sah_node.provisioning_slaves +'"')
             
         log ("=== starting the tftp service & power on the admin")
-        log (subprocess.check_output("net start Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
+        log (subprocess.check_output("service tftp start" if isLinux else "net start Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
         time.sleep(60)
         
         
-        
+        #linux, dhcp is a separate service
+        if(isLinux):
+           log ("=== stopping dhcp service")
+           log (subprocess.check_output("service dhcpd stop",stderr=subprocess.STDOUT, shell=True))
+
+       
         log ("=== power on the admin node & wait for the system to start installing")
         ipmi_sah.set_boot_to_pxe()
         ipmi_sah.power_on()
         time.sleep(400)
         
         log ("=== stopping tftp service")
-        log (subprocess.check_output("net stop Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
+        log (subprocess.check_output("service tftp stop" if isLinux else "net stop Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
+        
+        if(isLinux):
+            log ("=== stopping dhcpd service")
+            log (subprocess.check_output("service dhcpd stop",stderr=subprocess.STDOUT, shell=True))
+
         
         log ("=== waiting for the sah installed to be complete, might take a while")
         while (not "root" in Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "whoami")[0]):
