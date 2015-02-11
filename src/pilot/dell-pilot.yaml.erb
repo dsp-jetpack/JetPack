@@ -75,9 +75,6 @@
     vip_nova_pub = 'CHANGEME_IP_ON_PUBLIC_API'
 
 
-    # auto assign ips to VMs.
-    auto_float_ip = false
-
     vbose = 'false'
     dbug = 'false'
 
@@ -226,7 +223,6 @@ amqp_host: <%= vip_amqp %>
 amqp_password: <%= passwd_auto %>
 amqp_provider: <%= amqp_pro %>
 amqp_vip: <%= vip_amqp %>
-auto_assign_floating_ip: <%= auto_float_ip %>
 ceilometer: true
 ceilometer_admin_vip: <%= vip_ceilometer_adm %>
 ceilometer_db_password: <%= passwd_auto %>
@@ -297,14 +293,13 @@ lb_backend_server_names:
 - <%= cluster_member_name2 %>
 - <%= cluster_member_name3 %>
 loadbalancer_vip: <%= vip_loadbalancer %>
-ml2_flat_networks:
-- ! '*'
 ml2_mechanism_drivers:
 - 'openvswitch'
-- 'l2population'
 ml2_network_vlan_ranges:
 - physint:<%= tenant_vlan_range %>
 - physext
+ml2_type_drivers:
+- 'vlan'
 ml2_tenant_network_types:
 - 'vlan'
 neutron: true
@@ -326,11 +321,9 @@ ovs_bridge_mappings:
 ovs_bridge_uplinks:
 - br-ex:<%= net_l3_iface %>
 - br-tenant:<%= net_tenant_iface %>
-ovs_l2_population: 'True'
+ovs_l2_population: 'false'
 ovs_tunnel_iface: <%= net_tenant_iface %>
-ovs_tunnel_network: ''
-ovs_tunnel_types:
-- vlan
+ovs_tunnel_types: []
 ovs_vlan_ranges: 'physint:<%= tenant_vlan_range %>,physext'
 pcmk_iface: <%= cluster_interconnect_iface %>
 pcmk_server_addrs:
@@ -345,7 +338,6 @@ private_iface: <%= node_access_iface %>
 private_ip: ''
 swift_shared_secret: <%= passwd_auto %>
 swift_user_password: <%= passwd_auto %>
-tenant_network_type: vlan
 volume: true
 
 # compute node only parameters
