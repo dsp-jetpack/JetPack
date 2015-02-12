@@ -1,6 +1,7 @@
 from osp_deployer.config import Settings
 from auto_common import Ssh, Scp,  Widget, UI_Manager, FileHelper
 
+import sys
 import time
 import logging
 logger = logging.getLogger(__name__)
@@ -65,8 +66,9 @@ class Foreman():
 
     def update_scripts(self):
         logger.info( "updating scripts before uploading them")
+        poc_yaml = "/dell-poc.yaml.erb"  if sys.platform.startswith('linux') else "\\dell-poc.yaml.erb" 
         if self.settings.stamp_type =='poc' :
-            file = self.settings.foreman_configuration_scripts + "\\dell-poc.yaml.erb"
+            file = self.settings.foreman_configuration_scripts + poc_yaml
 
             FileHelper.replaceExpressionTXT(file, 'passwd_auto =.*',"passwd_auto = '" + self.settings.openstack_services_password + "'" )
 
@@ -85,7 +87,8 @@ class Foreman():
 
 
         elif self.settings.stamp_type =='pilot' :
-            file = self.settings.foreman_configuration_scripts + "\\dell-pilot.yaml.erb"
+            pilot_yaml = "/dell-pilot.yaml.erb"  if sys.platform.startswith('linux') else "\\dell-pilot.yaml.erb"
+            file = self.settings.foreman_configuration_scripts + pilot_yaml
 
             FileHelper.replaceExpressionTXT(file, 'passwd_auto =.*',"passwd_auto = '" + self.settings.openstack_services_password + "'" )
 
