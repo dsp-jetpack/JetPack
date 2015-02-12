@@ -1,4 +1,5 @@
 import subprocess, os, time
+import sys
 
 class Ipmi():
     '''
@@ -57,7 +58,12 @@ class Ipmi():
         self.__exec_ipmi_command("chassis bootdev disk")
 
     def __exec_ipmi_command(self, command):
-        cmdLine = "ipmitool.exe -I lanplus -H " +  self.idracIp + " -U "+self.ipmi_user +" -P "+self.ipmi_password +" " + command
+
+        cmd = "ipmitool.exe"
+	if sys.platform.startswith('linux'):
+            cmd = "ipmitool"
+
+        cmdLine = cmd + " -I lanplus -H " +  self.idracIp + " -U "+self.ipmi_user +" -P "+self.ipmi_password +" " + command
         try:
             out= subprocess.check_output(cmdLine,stderr=subprocess.STDOUT, shell=True)
             return out
