@@ -14,6 +14,17 @@ import uuid
 from itertools import imap
 import threading
 import traceback, os.path, urllib2, subprocess
+from osp_deployer.foreman import Foreman
+from osp_deployer.ceph import Ceph
+import sys, getopt
+from osp_deployer import Settings
+from auto_common import Ipmi, Ssh, FileHelper, Scp, UI_Manager
+from datetime import datetime
+import time,subprocess
+import paramiko, re
+import logging
+logger = logging.getLogger(__name__)
+import traceback, os.path, urllib2
 
 class runThreadedPuppet (threading.Thread):
     def __init__(self, threadID, host):
@@ -21,11 +32,11 @@ class runThreadedPuppet (threading.Thread):
         self.threadID = threadID
         self.host = host
         self.settings = Settings.settings
-    
+
     def run(self):
         cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
         print "Starting Puppet run on " + self.host.hostname
-        
+
         didNotRun = True
         while didNotRun == True:
             bla ,err = Ssh.execute_command(self.host.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
@@ -46,22 +57,22 @@ def execute_as_shell( address,usr, pwd, command):
         conn.connect(address,username = usr,password = pwd)
         channel = conn.invoke_shell()
         time.sleep(1)
-        channel.recv(9999) 
-        channel.send(command  + "\n")     
+        channel.recv(9999)
+        channel.send(command  + "\n")
         buff = ''
         while not buff.endswith(']# '):
             resp = channel.recv(9999)
             buff += resp
-        return buff     
-    
+        return buff
+
 def execute_as_shell_expectPasswords( address,usr, pwd, command):
         conn = paramiko.SSHClient()
         conn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         conn.connect(address,username = usr,password = pwd)
         channel = conn.invoke_shell()
         time.sleep(1)
-        channel.recv(9999) 
-        channel.send(command  + "\n")     
+        channel.recv(9999)
+        channel.send(command  + "\n")
         buff = ''
         while not buff.endswith(']# '):
             resp = channel.recv(9999)
@@ -71,21 +82,38 @@ def execute_as_shell_expectPasswords( address,usr, pwd, command):
                 channel.send(settings.nodes_root_password + "\n")
             if buff.endswith("(yes/no)? "):
                 channel.send("yes\n")
- 
-                 
+
+
         return buff
-    
+
 
 
 if __name__ == '__main__':
-   
+
     import logging.config
     logging.basicConfig(filename='c:/auto_results/deployer.log',
                     format="%(asctime)-15s:%(name)s:%(process)d:%(levelname)s:%(message)s",
                     filemode='w',
                     level=logging.INFO)
 
-    settings = Settings('settings\settings_sample.ini')
+    opts, args = getopt.getopt(sys.argv[1:], ":s:", ["help", "settingsFile="])
+    if len(opts)!= 1:
+        logger.fatal( "usage : python deployer.py -s settingFile")
+        logger.fatal( "eg : python deployer.py -s settings/settings.ini")
+        print( "usage : python deployer.py -s settingFile")
+        print( "eg : python deployer.py -s settings/settings.ini")
+        sys.exit(2)
+    for opt, arg in opts:
+        if str(opt) == '-s':
+            settingsFile = str(arg)
+            logger.info( "settings file : " + settingsFile)
+        else:
+            logger.info( "usage : python deployer.py -s settingFile")
+            logger.info( "eg : python deployer.py -s settings/settings.ini")
+            sys.exit(2)
+    logger.info("loading settings files " + settingsFile)
+    settings = Settings(settingsFile)
+    attrs = vars(settings)
 
     #nodes = [
     #    settings.foreman_node,
@@ -105,20 +133,11 @@ if __name__ == '__main__':
     #    for each in remoteLocks:
     #        print each#
 
-    print("==== Running envirnment sanity tests")
+    for node in settings.compute_nodes:
+        print "=============================="
+        print node.hostname + " :: " +   node.nova_public_netmask
 
-    subscriptionStatus = Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "subscription-manager status")[0]
-    if not "Current" in subscriptionStatus:
-            raise AssertionError("SAH did not register properly : " + subscriptionStatus)
+        print vars(node)
 
-    subscriptionStatus = Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, "subscription-manager status")[0]
-    if "Current" not in subscriptionStatus:
-            raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
-    subscriptionStatus = Ssh.execute_command(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "subscription-manager status")[0]
-    if "Current" not in subscriptionStatus:
-            raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
-    
-    
-     

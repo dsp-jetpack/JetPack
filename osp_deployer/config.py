@@ -75,7 +75,7 @@ class Settings():
             for each in json_data:
                 node = Node_Conf(each)
                 print "==========================================="
-               
+
                 try:
                     if node.is_sah == "true":
                         self.sah_node = node
