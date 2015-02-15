@@ -137,7 +137,6 @@ class Foreman():
             FileHelper.replaceExpressionTXT(file, 'vip_keystone_pub = .*',"vip_keystone_pub = '" +pub_net + str(vip_ip_public) + "'" )
             vip_ip_public +=1
             FileHelper.replaceExpressionTXT(file, 'vip_nova_adm = .*',"vip_nova_adm = '" + priv_net+ str(vip_ip_private) + "'" )
-            vip_ip_private +=1
             FileHelper.replaceExpressionTXT(file, 'vip_nova_priv = .*',"vip_nova_priv = '" + priv_net+ str(vip_ip_private) + "'" )
             vip_ip_private +=1
             FileHelper.replaceExpressionTXT(file, 'vip_nova_pub = .*',"vip_nova_pub = '" + pub_net + str(vip_ip_public) + "'" )
