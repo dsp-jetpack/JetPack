@@ -170,13 +170,6 @@ chvt 8
   subscription-manager repos --enable=rhel-7-server-rpms
   subscription-manager repos --enable=rhel-server-rhscl-7-rpms
 
-# This is a tempory hack until the final pool is ready
-  cd /etc/yum.repos.d
-  wget ftp://partners.redhat.com/8aa5fd896ed3a83f6533a78287906111/OpenStack/Installer-6.0-RC-1/RH7-RHOS-6.0-Installer.repo
-  wget ftp://partners.redhat.com/8aa5fd896ed3a83f6533a78287906111/OpenStack/6.0-RC-1/RH7-RHOS-6.0.repo
-
-#  yum-config-manager --enable rhel-7-server-rpms rhel-server-rhscl-7-rpms
-
   mkdir /tmp/mnt
   mount /dev/floppy /tmp/mnt
   [[ -e /tmp/mnt/versionlock.list ]] && {

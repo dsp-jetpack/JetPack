@@ -84,10 +84,6 @@ do
   [[ ${iface} == smpassword ]] && echo "echo SMPassword=\'${ip}\' >> /tmp/ks_post_include.txt"
   [[ ${iface} == smpool ]] && echo "echo SMPool=${ip} >> /tmp/ks_post_include.txt"
 
-  [[ ${iface} == smproxy ]] && echo "echo SMProxy=${ip} >> /tmp/ks_post_include.txt"
-  [[ ${iface} == smproxyuser ]] && echo "echo SMProxyUser=${ip} >> /tmp/ks_post_include.txt"
-  [[ ${iface} == smproxypassword ]] && echo "echo SMProxyPassword=${ip} >> /tmp/ks_post_include.txt"
-
   [[ ${iface} == eth0 ]] && { 
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers} >> /tmp/ks_include.txt"
     }
@@ -236,8 +232,8 @@ EOFKS
   rmdir /tmp/mnt-ceph
 
   virt-install --name ceph \
-    --ram 4096 \
-    --vcpus 2 \
+    --ram 1024 \
+    --vcpus 1 \
     --hvm \
     --os-type linux \
     --os-variant rhel6 \
@@ -254,14 +250,14 @@ EOFKS
   } || {
 
 virt-install --name ceph \
-  --ram 4096 \
-  --vcpus 2 \
+  --ram 1024 \
+  --vcpus 1 \
   --hvm \
   --os-type linux \
   --os-variant rhel6 \
   --disk /store/data/images/ceph.img,bus=virtio,size=16 \
   --network bridge=public \
-  --network bridge=provision \
+  --network bridge=storage \
   --initrd-inject /tmp/ceph.ks \
   --extra-args "ks=file:/ceph.ks" \
   --noautoconsole \
