@@ -101,52 +101,45 @@ class Foreman():
             FileHelper.replaceExpressionTXT(file, 'cluster_member_ip3 =.*',"cluster_member_ip3 = '" + self.settings.controller_nodes[2].private_ip + "'" )
             FileHelper.replaceExpressionTXT(file, 'cluster_member_name3 =.*',"cluster_member_name3 = '" + self.settings.controller_nodes[2].hostname + "'" )
 
-            startipS_p = self.settings.vip_private_network_range_start.split(".")[3]
-            vip_ip_private = int(startipS_p)
-            priv_net =  self.settings.vip_private_network_range_start.split(".")[0]+"." + self.settings.vip_private_network_range_start.split(".")[1] + "." + self.settings.vip_private_network_range_start.split(".")[2] + "."
 
-            startipS_pb = self.settings.vip_public_network_range_start.split(".")[3]
-            vip_ip_public = int(startipS_pb)
-            pub_net = self.settings.vip_public_network_range_start.split(".")[0]+"." + self.settings.vip_public_network_range_start.split(".")[1] + "." + self.settings.vip_public_network_range_start.split(".")[2] + "."
+            FileHelper.replaceExpressionTXT(file, 'vip_cinder_adm = .*',"vip_cinder_adm = '" + self.settings.vip_cinder_private + "'" )
 
+            FileHelper.replaceExpressionTXT(file, 'vip_cinder_pub = .*',"vip_cinder_pub = '" +self.settings.vip_cinder_public + "'" )
 
-            FileHelper.replaceExpressionTXT(file, 'vip_cinder_adm = .*',"vip_cinder_adm = '" + priv_net+ str(vip_ip_private) + "'" )
-            vip_ip_private +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_cinder_pub = .*',"vip_cinder_pub = '" + pub_net + str(vip_ip_public) + "'" )
-            vip_ip_public +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_db = .*',"vip_db = '" + priv_net+ str(vip_ip_private) + "'" )
-            vip_ip_private +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_glance_adm = .*',"vip_glance_adm = '" + priv_net+ str(vip_ip_private) + "'" )
-            vip_ip_private +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_glance_pub = .*',"vip_glance_pub = '" + pub_net + str(vip_ip_public) + "'" )
-            vip_ip_public +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_heat_adm = .*',"vip_heat_adm = '" + priv_net+ str(vip_ip_private) + "'" )
-            vip_ip_private +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_heat_pub = .*',"vip_heat_pub = '" +pub_net + str(vip_ip_public) + "'" )
-            vip_ip_public +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_heat_cfn_adm = .*',"vip_heat_cfn_adm = '" + priv_net+ str(vip_ip_private) + "'" )
-            vip_ip_private +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_heat_cfn_pub = .*',"vip_heat_cfn_pub = '" + pub_net + str(vip_ip_public) + "'" )
-            vip_ip_public +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_horizon_adm = .*',"vip_horizon_adm = '" +priv_net+  str(vip_ip_private) + "'" )
-            vip_ip_private +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_horizon_pub = .*',"vip_horizon_pub = '" +pub_net + str(vip_ip_public) + "'" )
-            vip_ip_public +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_keystone_adm = .*',"vip_keystone_adm = '" + priv_net+ str(vip_ip_private) + "'" )
-            vip_ip_private +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_keystone_pub = .*',"vip_keystone_pub = '" +pub_net + str(vip_ip_public) + "'" )
-            vip_ip_public +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_nova_adm = .*',"vip_nova_adm = '" + priv_net+ str(vip_ip_private) + "'" )
-            FileHelper.replaceExpressionTXT(file, 'vip_nova_priv = .*',"vip_nova_priv = '" + priv_net+ str(vip_ip_private) + "'" )
-            vip_ip_private +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_nova_pub = .*',"vip_nova_pub = '" + pub_net + str(vip_ip_public) + "'" )
-            vip_ip_public +=1
-            FileHelper.replaceExpressionTXT(file, 'fence_clu_iface = .*',"fence_clu_iface = '" + priv_net+ str(vip_ip_private) + "'" )
-            vip_ip_private +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_loadbalancer = .*',"vip_loadbalancer = '" +priv_net+  str(vip_ip_private) + "'" )
-            vip_ip_private +=1
-            FileHelper.replaceExpressionTXT(file, 'vip_amqp = .*',"vip_amqp = '" + priv_net+ str(vip_ip_private) + "'" )
-            vip_ip_private +=1
+            FileHelper.replaceExpressionTXT(file, 'vip_db = .*',"vip_db = '" + self.settings.vip_mysql_private + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'vip_glance_adm = .*',"vip_glance_adm = '" + self.settings.vip_glance_private + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'vip_glance_pub = .*',"vip_glance_pub = '" + self.settings.vip_glance_public + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'vip_heat_adm = .*',"vip_heat_adm = '" + self.settings.vip_heat_private + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'vip_heat_pub = .*',"vip_heat_pub = '" + self.settings.vip_heat_public + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'vip_heat_cfn_adm = .*',"vip_heat_cfn_adm = '" + self.settings.vip_heat_cfn_private + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'vip_heat_cfn_pub = .*',"vip_heat_cfn_pub = '" + self.settings.vip_heat_cfn_public + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'vip_horizon_adm = .*',"vip_horizon_adm = '" + self.settings.vip_horizon_private  + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'vip_horizon_pub = .*',"vip_horizon_pub = '" + self.settings.vip_horizon_public + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'vip_keystone_adm = .*',"vip_keystone_adm = '" + self.settings.vip_keystone_private + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'vip_keystone_pub = .*',"vip_keystone_pub = '" + self.settings.vip_keystone_public + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'vip_nova_adm = .*',"vip_nova_adm = '" + self.settings.vip_nova_private + "'" )
+            FileHelper.replaceExpressionTXT(file, 'vip_nova_priv = .*',"vip_nova_priv = '" + self.settings.vip_nova_private + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'vip_nova_pub = .*',"vip_nova_pub = '" + self.settings.vip_nova_public + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'fence_clu_iface = .*',"fence_clu_iface = '"+ self.settings.controller_nodes[1].idrac_interface +"'" )
+
+            #FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip = .*',"fence_ipmi_ip = '" + self.settings.fence_cluster_ip_private + "'" )
+
+            FileHelper.replaceExpressionTXT(file, 'vip_loadbalancer = .*',"vip_loadbalancer = '" + self.settings.vip_load_balancer_private + "'" )
+            FileHelper.replaceExpressionTXT(file, 'vip_amqp = .*',"vip_amqp = '" + self.settings.vip_rabbitmq_private + "'" )
+
 
             FileHelper.replaceExpressionTXT(file, 'net_fix = .*',"net_fix = '" + self.settings.nova_private_network + "'" )
             FileHelper.replaceExpressionTXT(file, 'net_float = .*',"net_float = '" + self.settings.nova_public_network + "'" )

@@ -16,52 +16,52 @@
     passwd_auto = 'cr0wBar!'
   
 
-    cluster_member_ip1 = '192.168.131.112'
+    cluster_member_ip1 = '192.168.140.53'
     cluster_member_name1 = 'controller01'
 
-    cluster_member_ip2 = '192.168.131.113'
+    cluster_member_ip2 = '192.168.140.54'
     cluster_member_name2 = 'controller02'
 
-    cluster_member_ip3 = '192.168.131.114'
+    cluster_member_ip3 = '192.168.140.55'
     cluster_member_name3 = 'controller03'
     
     cluster_admin_host = cluster_member_ip1
 
 
     ## VIPs
-    vip_amqp = '192.168.131.141'
+    vip_amqp = '192.168.131.140'
 
-    vip_cinder_adm = '192.168.131.130'
+    vip_cinder_adm = '192.168.140.63'
     vip_cinder_priv = vip_cinder_adm
-    vip_cinder_pub = '10.21.148.119'
+    vip_cinder_pub = '10.152.251.65'
 
-    vip_db = '192.168.131.131'
+    vip_db = '192.168.140.64'
 
-    vip_glance_adm = '192.168.131.132'
+    vip_glance_adm = '192.168.140.65'
     vip_glance_priv = vip_glance_adm
-    vip_glance_pub = '10.21.148.120'
+    vip_glance_pub = '10.152.251.66'
 
-    vip_heat_adm = '192.168.131.133'
+    vip_heat_adm = '192.168.140.66'
     vip_heat_priv = vip_heat_adm
-    vip_heat_pub = '10.21.148.121'
+    vip_heat_pub = '10.152.251.67'
 
-    vip_heat_cfn_adm = '192.168.131.134'
+    vip_heat_cfn_adm = '192.168.140.67'
     vip_heat_cfn_priv = vip_heat_cfn_adm
-    vip_heat_cfn_pub = '10.21.148.122'
+    vip_heat_cfn_pub = '10.152.251.68'
 
-    vip_horizon_adm = '192.168.131.135'
+    vip_horizon_adm = '192.168.140.68'
     vip_horizon_priv = vip_horizon_adm
-    vip_horizon_pub = '10.21.148.123'
+    vip_horizon_pub = '10.152.251.69'
 
-    vip_keystone_adm = '192.168.131.136'
+    vip_keystone_adm = '192.168.140.69'
     vip_keystone_priv = vip_keystone_adm
-    vip_keystone_pub = '10.21.148.124'
+    vip_keystone_pub = '10.152.251.70'
 
-    vip_loadbalancer = '192.168.131.140'
+    vip_loadbalancer = '192.168.131.139'
 
-    vip_nova_adm = '192.168.131.137'
-    vip_nova_priv = '192.168.131.138'
-    vip_nova_pub = '10.21.148.125'
+    vip_nova_adm = '192.168.140.70'
+    vip_nova_priv = '192.168.140.70'
+    vip_nova_pub = '10.152.251.71'
 
 
 
@@ -92,7 +92,7 @@
     fence_type = 'fence_ipmilan'
 
     # Interface for cluster communications - Private API
-    fence_clu_iface = '192.168.131.139'
+    fence_clu_iface = '192.168.131.138'
     
     glance_be = 'file'
     rbd_spool = 'images'
@@ -125,7 +125,7 @@
     net_num = 1
 
     # network_private_iface - nova private interface (em2 or bond0.300, etc...)
-    net_priv_iface = 'bond0.131'
+    net_priv_iface = 'bond0'
 
     # network_public_iface - nova public interface (em3 or bond0.301, etc...)
     net_pub_iface = 'bond1'
