@@ -133,7 +133,7 @@ class Foreman():
 
             FileHelper.replaceExpressionTXT(file, 'vip_nova_pub = .*',"vip_nova_pub = '" + self.settings.vip_nova_public + "'" )
 
-            FileHelper.replaceExpressionTXT(file, 'fence_clu_iface = .*',"fence_clu_iface = '"+ self.settings.controller_nodes[1] +"'" )
+            FileHelper.replaceExpressionTXT(file, 'fence_clu_iface = .*',"fence_clu_iface = '"+ self.settings.controller_nodes[1].idrac_interface +"'" )
 
             #FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip = .*',"fence_ipmi_ip = '" + self.settings.fence_cluster_ip_private + "'" )
 
