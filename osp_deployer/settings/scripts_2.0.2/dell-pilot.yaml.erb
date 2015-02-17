@@ -29,7 +29,7 @@
 
 
     ## VIPs
-    vip_amqp = '192.168.131.141'
+    vip_amqp = '192.168.131.140'
 
     vip_cinder_adm = '192.168.131.130'
     vip_cinder_priv = vip_cinder_adm
@@ -57,10 +57,10 @@
     vip_keystone_priv = vip_keystone_adm
     vip_keystone_pub = '10.21.148.124'
 
-    vip_loadbalancer = '192.168.131.140'
+    vip_loadbalancer = '192.168.131.139'
 
     vip_nova_adm = '192.168.131.137'
-    vip_nova_priv = '192.168.131.138'
+    vip_nova_priv = '192.168.131.137'
     vip_nova_pub = '10.21.148.125'
 
 
@@ -92,7 +92,7 @@
     fence_type = 'fence_ipmilan'
 
     # Interface for cluster communications - Private API
-    fence_clu_iface = '192.168.131.139'
+    fence_clu_iface = '192.168.131.138'
     
     glance_be = 'file'
     rbd_spool = 'images'
@@ -125,7 +125,7 @@
     net_num = 1
 
     # network_private_iface - nova private interface (em2 or bond0.300, etc...)
-    net_priv_iface = 'bond0.131'
+    net_priv_iface = 'bond0'
 
     # network_public_iface - nova public interface (em3 or bond0.301, etc...)
     net_pub_iface = 'bond1'

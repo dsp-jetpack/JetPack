@@ -20,8 +20,26 @@ class Settings():
         self.private_api_network = self.cluster_settings_map['private_api_network']
         self.nova_private_vlanID = self.cluster_settings_map['nova_private_vlanid']
         
-        self.vip_private_network_range_start = self.cluster_settings_map['vip_private_network_range_start']
-        self.vip_public_network_range_start = self.cluster_settings_map['vip_public_network_range_start']
+
+        self.vip_cinder_private = self.cluster_settings_map['vip_cinder_private']
+        self.vip_cinder_public = self.cluster_settings_map['vip_cinder_public']
+        self.vip_mysql_private = self.cluster_settings_map['vip_mysql_private']
+        self.vip_glance_private = self.cluster_settings_map['vip_glance_private']
+        self.vip_glance_public = self.cluster_settings_map['vip_glance_public']
+        self.vip_heat_private = self.cluster_settings_map['vip_heat_private']
+        self.vip_heat_public = self.cluster_settings_map['vip_heat_public']
+        self.vip_heat_cfn_private = self.cluster_settings_map['vip_heat_cfn_private']
+        self.vip_heat_cfn_public = self.cluster_settings_map['vip_heat_cfn_public']
+        self.vip_horizon_private = self.cluster_settings_map['vip_horizon_private']
+        self.vip_horizon_public = self.cluster_settings_map['vip_horizon_public']
+        self.vip_keystone_private = self.cluster_settings_map['vip_keystone_private']
+        self.vip_keystone_public = self.cluster_settings_map['vip_keystone_public']
+        self.vip_nova_private = self.cluster_settings_map['vip_nova_private']
+        self.vip_nova_public = self.cluster_settings_map['vip_nova_public']
+        self.fence_ipmi_ip = self.cluster_settings_map['fence_ipmi_ip']
+        self.vip_load_balancer_private = self.cluster_settings_map['vip_load_balancer_private']
+        self.vip_rabbitmq_private = self.cluster_settings_map['vip_rabbitmq_private']
+
 
         self.storage_network = self.cluster_settings_map['storage_network']
         self.storage_cluster_network = self.cluster_settings_map['storage_cluster_network']

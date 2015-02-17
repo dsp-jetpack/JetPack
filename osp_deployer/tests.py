@@ -133,11 +133,8 @@ if __name__ == '__main__':
     #    for each in remoteLocks:
     #        print each#
 
-    for node in settings.compute_nodes:
-        print "=============================="
-        print node.hostname + " :: " +   node.nova_public_netmask
-
-        print vars(node)
+    foreman = Foreman()
+    foreman.update_scripts()
 
 
 
