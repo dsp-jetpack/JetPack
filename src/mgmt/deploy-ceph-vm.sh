@@ -8,6 +8,7 @@ location=$2
 cat <<'EOFKS' > /tmp/ceph.ks
 
 install
+text
 cdrom
 reboot
 
