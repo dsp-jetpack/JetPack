@@ -169,6 +169,8 @@ chvt 8
   subscription-manager repos --disable=*
   subscription-manager repos --enable=rhel-7-server-rpms
   subscription-manager repos --enable=rhel-server-rhscl-7-rpms
+  subscription-manager repos --enable=rhel-7-server-openstack-6.0-installer-rpms
+  subscription-manager repos --enable=rhel-7-server-openstack-6.0-rpms
 
   mkdir /tmp/mnt
   mount /dev/floppy /tmp/mnt
