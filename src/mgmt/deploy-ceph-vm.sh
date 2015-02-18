@@ -241,7 +241,7 @@ EOFKS
     --disk /store/data/images/ceph.img,bus=virtio,size=16 \
     --disk /tmp/floppy-ceph.img,device=floppy \
     --network bridge=public \
-    --network bridge=provision \
+    --network bridge=storage \
     --initrd-inject /tmp/ceph.ks \
     --extra-args "ks=file:/ceph.ks" \
     --noautoconsole \
