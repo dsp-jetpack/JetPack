@@ -169,7 +169,8 @@ class Foreman():
 
         logger.info( "uploading deployment scripts .." )
         for file in files :
-            localfile = self.settings.foreman_configuration_scripts + "\\" + file
+            localfile = self.settings.foreman_configuration_scripts + "/" + file if sys.platform.startswith('linux') else  self.settings.foreman_configuration_scripts + "\\" + file
+
             remotefile = '/root/' + file
             Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)
 
