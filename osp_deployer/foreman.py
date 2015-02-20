@@ -562,7 +562,7 @@ class Foreman():
             elif self.settings.stamp_type == 'pilot':
                 print "configure bonded interfaces"
                 logger.info("nova_public_netmask :: ?" + node.nova_public_netmask)
-                commands = ["hammer host set-parameter --host-id "+node.hostID+" --name bonds --value '( [bond0]=\"onboot none\" [bond0."+node.private_api_vlanid+"]=\"onboot static vlan "+node.private_ip+"/"+node.private_netmask+"\" [bond0."+node.storage_vlanid+"]=\"onboot static vlan "+node.storage_ip+"/"+node.storage_netmask+"\" [bond1]=\"onboot static "+node.nova_public_ip+"/"+node.nova_public_netmask+"\")'",
+                commands = ["hammer host set-parameter --host-id "+node.hostID+" --name bonds --value '( [bond0]=\"onboot none promisc\" [bond0."+node.private_api_vlanid+"]=\"onboot static vlan "+node.private_ip+"/"+node.private_netmask+"\" [bond0."+node.storage_vlanid+"]=\"onboot static vlan "+node.storage_ip+"/"+node.storage_netmask+"\" [bond1]=\"onboot static "+node.nova_public_ip+"/"+node.nova_public_netmask+"\")'",
                             "hammer host set-parameter --host-id "+node.hostID+" --name bond_ifaces --value '( [bond0]=\""+node.bond0_interfaces+"\" [bond1]=\""+node.bond1_interfaces+"\")'",
                             "hammer host set-parameter --host-id "+node.hostID+" --name bond_opts --value '( [bond0]=\"mode=balance-tlb miimon=100\" [bond1]=\"mode=balance-tlb miimon=100\")'"]
                 for command in commands:
