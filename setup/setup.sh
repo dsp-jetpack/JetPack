@@ -95,7 +95,7 @@ MENU TITLE unixme.com PXE Menu
 LABEL RHEL7_x64
 MENU LABEL RHEL 7 X64
 KERNEL /netboot/vmlinuz
-APPEND initrd=/netboot/initrd.img inst.repo=http://192.168.120.187/pub ks=http://192.168.120.187/ks.cfg
+APPEND initrd=/netboot/initrd.img inst.repo=http://192.168.120.188/pub ks=http://192.168.120.188/ks.cfg
 EOF
 
 TFTP_CONF_FILE="/etc/xinetd.d/tftp"
@@ -143,7 +143,7 @@ allow unknown-clients;
 # A slightly different configuration for an internal subnet.
 subnet 192.168.120.0 netmask 255.255.255.0 {
 range 192.168.120.190 192.168.120.210;
-option domain-name-servers 192.168.120.187;
+option domain-name-servers $pxe_server_ip;
 default-lease-time 600;
 max-lease-time 7200;
 # PXE SERVER IP
