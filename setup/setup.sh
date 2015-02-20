@@ -158,7 +158,7 @@ http_setup(){
 	info "### Installing http server ###"
 
 	yum install -y httpd
-	service httpd start
+	service httpd restart
 	service httpd status
 
 	systemctl disable firewalld
@@ -309,6 +309,7 @@ file_setup
 ## ui setup
 ui_setup
 ### DONE
+service httpd restart
 info "##### Done #####"
 
 bash
