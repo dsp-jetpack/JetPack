@@ -36,7 +36,6 @@ class Settings():
         self.vip_keystone_public = self.cluster_settings_map['vip_keystone_public']
         self.vip_nova_private = self.cluster_settings_map['vip_nova_private']
         self.vip_nova_public = self.cluster_settings_map['vip_nova_public']
-        self.fence_ipmi_ip = self.cluster_settings_map['fence_ipmi_ip']
         self.vip_load_balancer_private = self.cluster_settings_map['vip_load_balancer_private']
         self.vip_rabbitmq_private = self.cluster_settings_map['vip_rabbitmq_private']
 
