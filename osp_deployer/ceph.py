@@ -1,6 +1,7 @@
 from osp_deployer.config import Settings
 from auto_common import Ssh, Scp,  Widget, UI_Manager, FileHelper
 import time
+import sys
 import logging, paramiko
 logger = logging.getLogger(__name__)
 from math import log
@@ -19,6 +20,9 @@ class Ceph():
         logger.info( Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ) )
         file = 'ICE-1.2.2-rhel7.tar.gz'
         localfile = self.settings.foreman_configuration_scripts + "\\" + file
+        if(sys.platform.startswith('linux')):
+            localfile = self.settings.foreman_configuration_scripts + "/" + file
+        
         logger.info( "local file " + localfile)
         remotefile = '/root/ice-1.2/' + file
         logger.info( "remote file " + remotefile)
