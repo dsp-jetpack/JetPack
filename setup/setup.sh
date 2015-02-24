@@ -158,7 +158,7 @@ http_setup(){
 	info "### Installing http server ###"
 
 	yum install -y httpd
-	service httpd start
+	service httpd restart
 	service httpd status
 
 	systemctl disable firewalld
@@ -250,8 +250,16 @@ file_setup(){
 #finish tftp setup
         cp /var/www/html/pub/isolinux/vmlinuz /var/lib/tftpboot/netboot/
         cp /var/www/html/pub/isolinux/initrd.img /var/lib/tftpboot/netboot/
-        service tftp.socket restart
+        systemctl start tftp.socket
         service tftp restart
+}
+
+ui_setup(){
+info "ui setup"
+yum -y groupinstall 'X Windows System' 'GNOME'
+systemctl enable graphical.target --force
+gnome-shell --version
+yum -y install firefox
 }
 ################################
 
@@ -298,7 +306,10 @@ git_setup
 
 file_setup
 
+## ui setup
+ui_setup
 ### DONE
+service httpd restart
 info "##### Done #####"
 
 bash
