@@ -189,7 +189,7 @@ eqlx_use_chap:
 
 multiple_backends: <%= c_mult_be %>
 rbd_pool: <%= c_rbd_pool %>
-rbd_secret_uuid: <%= passwd_auto %>
+rbd_secret_uuid: <%= c_ceph_fsid %>
 rbd_user: <%= c_rbd_user %>
 
 fence_ipmilan_hostlist: "<%= cluster_member_name1 %>,<%= cluster_member_name2 %>,<%= cluster_member_name3 %>"
