@@ -1,6 +1,7 @@
 from selenium.webdriver import ActionChains
 from selenium import webdriver
 from selenium.webdriver.support.select import Select
+from selenium.webdriver.common.keys import Keys
 
 import time
 
@@ -22,10 +23,10 @@ class Widget():
         self.locator = locator
         
     def click(self):
-        #UI_Manager.sel._info( "clicking " + self.locator)
         self.waitFor(10)
-        
+         
         element = UI_Manager.driver().find_element_by_xpath(self.locator)
+        element.send_keys(Keys.NULL) # force in focus
         element.click()
         
         

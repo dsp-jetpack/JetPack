@@ -16,52 +16,52 @@
     passwd_auto = 'cr0wBar!'
   
 
-    cluster_member_ip1 = '192.168.140.53'
-    cluster_member_name1 = 'controller01'
+    cluster_member_ip1 = '192.168.140.180'
+    cluster_member_name1 = 'r11rh7cntl1'
 
-    cluster_member_ip2 = '192.168.140.54'
-    cluster_member_name2 = 'controller02'
+    cluster_member_ip2 = '192.168.140.181'
+    cluster_member_name2 = 'r11rh7cntl2'
 
-    cluster_member_ip3 = '192.168.140.55'
-    cluster_member_name3 = 'controller03'
+    cluster_member_ip3 = '192.168.140.182'
+    cluster_member_name3 = 'r11rh7cntl3'
     
     cluster_admin_host = cluster_member_ip1
 
 
     ## VIPs
-    vip_amqp = '192.168.140.72'
+    vip_amqp = '192.168.140.198'
 
-    vip_cinder_adm = '192.168.140.63'
+    vip_cinder_adm = '192.168.140.189'
     vip_cinder_priv = vip_cinder_adm
-    vip_cinder_pub = '10.152.251.65'
+    vip_cinder_pub = '10.148.44.189'
 
-    vip_db = '192.168.140.64'
+    vip_db = '192.168.140.190'
 
-    vip_glance_adm = '192.168.140.65'
+    vip_glance_adm = '192.168.140.191'
     vip_glance_priv = vip_glance_adm
-    vip_glance_pub = '10.152.251.66'
+    vip_glance_pub = '10.148.44.191'
 
-    vip_heat_adm = '192.168.140.66'
+    vip_heat_adm = '192.168.140.192'
     vip_heat_priv = vip_heat_adm
-    vip_heat_pub = '10.152.251.67'
+    vip_heat_pub = '10.148.44.192'
 
-    vip_heat_cfn_adm = '192.168.140.67'
+    vip_heat_cfn_adm = '192.168.140.193'
     vip_heat_cfn_priv = vip_heat_cfn_adm
-    vip_heat_cfn_pub = '10.152.251.68'
+    vip_heat_cfn_pub = '10.148.44.193'
 
-    vip_horizon_adm = '192.168.140.68'
+    vip_horizon_adm = '192.168.140.194'
     vip_horizon_priv = vip_horizon_adm
-    vip_horizon_pub = '10.152.251.69'
+    vip_horizon_pub = '10.148.44.194'
 
-    vip_keystone_adm = '192.168.140.69'
+    vip_keystone_adm = '192.168.140.195'
     vip_keystone_priv = vip_keystone_adm
-    vip_keystone_pub = '10.152.251.70'
+    vip_keystone_pub = '10.148.44.195'
 
-    vip_loadbalancer = '192.168.140.71'
+    vip_loadbalancer = '192.168.140.197'
 
-    vip_nova_adm = '192.168.140.70'
-    vip_nova_priv = '192.168.140.70'
-    vip_nova_pub = '10.152.251.71'
+    vip_nova_adm = '192.168.140.196'
+    vip_nova_priv = '192.168.140.196'
+    vip_nova_pub = '10.148.44.196'
 
 
 
@@ -114,7 +114,7 @@
     net_create = true
 
     # network_fixed_range - nova private network
-    net_fix = '192.168.201.0/24'
+    net_fix = '192.168.202.0/24'
 
     # network_floating_range - nova public network
     net_float = '192.168.190.0/24'
