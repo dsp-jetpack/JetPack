@@ -101,7 +101,7 @@ anaconda_interface="10.148.44.211/255.255.255.0 em1"
 # Bond1 (Public)
 public_bond_name="bond1"
 public_boot_opts="onboot none"
-public_bond_opts="mode=balance-tlb miimon=100"
+public_bond_opts="mode=active-backup miimon=100"
 public_ifaces="em2 p1p2"
 #
 # Bond0 (Private)
