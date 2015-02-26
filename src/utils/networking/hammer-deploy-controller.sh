@@ -38,8 +38,8 @@ hammer host set-parameter --host-id  $HOST_ID --name bonds --value "( [bond0]=\"
 echo "hammer host set-parameter --host-id $HOST_ID --name nics --value '( [em4]=\"onboot static ${HEARTBEAT_IP}/${HEARTBEAT_NM}\")'"
 hammer host set-parameter --host-id $HOST_ID --name nics --value "( [em4]=\"onboot static ${HEARTBEAT_IP}/${HEARTBEAT_NM}\")"
 
-echo "hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value '( [bond0]=\"mode=balance-tlb miimon=100\" [bond1]="\mode=balance-tlb miimon=100"\ )'"
-hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value "( [bond0]=\"mode=balance-tlb miimon=100\" [bond1]=\"mode=balance-tlb miimon=100\" )"
+echo "hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value '( [bond0]=\"mode=active-backup miimon=100\" [bond1]="\mode=active-backup miimon=100"\ )'"
+hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value "( [bond0]=\"mode=active-backup miimon=100\" [bond1]=\"mode=active-backup miimon=100\" )"
 
 echo "hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value '([bond0]=\"em1 p1p1\" [bond1]=\"em2 p1p2\" ) '"
 hammer host set-parameter --host-id $HOST_ID --name bond_ifaces --value "( [bond0]=\"em1 p1p1\" [bond1]=\"em2 p1p2\" )"
