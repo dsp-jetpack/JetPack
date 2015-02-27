@@ -92,7 +92,7 @@ TimeZone="UTC"
 
 # Installation interface configuration
 # Format is "ip/netmask interface"
-anaconda_interface="10.148.44.211/255.255.255.0 em1"
+anaconda_interface="10.148.44.211/255.255.255.0 em2"
 
 # Bonding and Bridge configuration. These variables are bash associative arrays and take the form of array[key]="value".
 # Specifying a key more than once will overwrite the first key. For example:
@@ -107,7 +107,7 @@ public_ifaces="em2 p1p2"
 # Bond0 (Private)
 private_bond_name="bond0"
 private_boot_opts="onboot none"
-private_bond_opts="mode=balance-tlb miimon=100"
+private_bond_opts="mode=active-backup miimon=100"
 private_ifaces="em1 p1p1"
 #
 # Provision
