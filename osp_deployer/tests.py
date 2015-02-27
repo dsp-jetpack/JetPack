@@ -133,8 +133,7 @@ if __name__ == '__main__':
     #    for each in remoteLocks:
     #        print each#
 
-    foreman = Foreman()
-    foreman.update_scripts()
+    FileHelper.replaceExpression(settings.sah_kickstart, 'mode=(.*?)\s','mode='+ settings.bond_mode_sah + ' ')
 
 
 

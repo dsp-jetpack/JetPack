@@ -39,6 +39,11 @@ class Settings():
         self.vip_load_balancer_private = self.cluster_settings_map['vip_load_balancer_private']
         self.vip_rabbitmq_private = self.cluster_settings_map['vip_rabbitmq_private']
 
+        self.bond_mode_sah = self.cluster_settings_map['bond_mode_sah']
+        self.bond_mode_controller_nodes = self.cluster_settings_map['bond_mode_controller_nodes']
+        self.bond_mode_compute_nodes = self.cluster_settings_map['bond_mode_compute_nodes']
+        self.bond_mode_storage_nodes = self.cluster_settings_map['bond_mode_storage_nodes']
+
 
         self.storage_network = self.cluster_settings_map['storage_network']
         self.storage_cluster_network = self.cluster_settings_map['storage_cluster_network']

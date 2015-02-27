@@ -140,7 +140,8 @@ if __name__ == '__main__':
         FileHelper.replaceExpression(settings.sah_kickstart, '^TimeZone=.*','TimeZone="'+settings.time_zone +'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^public_bond=.*','public_bond="public '+ settings.sah_node.public_bond + " "+ settings.sah_node.public_ip + " " + settings.sah_node.public_netmask + " " + settings.sah_node.public_slaves + ' "')
         FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bond=.*','provision_bond="provision '+ settings.sah_node.provisioning_bond + " "+ settings.sah_node.provisioning_ip + " " + settings.sah_node.provisioning_netmask + " " + settings.sah_node.provisioning_slaves +'"')
-            
+        FileHelper.replaceExpression(settings.sah_kickstart, 'mode=(.*?)\s','mode='+ settings.bond_mode_sah + ' ')
+
         log ("=== starting the tftp service & power on the admin")
         log (subprocess.check_output("service tftp start" if isLinux else "net start Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
         time.sleep(60)
