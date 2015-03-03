@@ -237,7 +237,7 @@ file_setup(){
 	if [ ! -f /var/www/html/RH7/$rhel7_iso_file ]; then
 	    if [[ $ip_add == *10.152* ]]
 			then
-				wget --no-check-certificate --user "mht1\Script_User" --password "New2Day!" "https://10.152.248.11/folder/ISOs/RHEL-7.0-20140507.0-Server-x86_64-dvd1.iso?dcPath=Cloud%2520Bastion%2520Physical%2520Stamps&dsName=Data2%252dStorage"
+				wget --no-check-certificate --user "mht1\Script_User" --password "New2Day!" -O $rhel7_iso_file "https://10.152.248.11/folder/ISOs/RHEL-7.0-20140507.0-Server-x86_64-dvd1.iso?dcPath=Cloud%2520Bastion%2520Physical%2520Stamps&dsName=Data2%252dStorage"
 		else
 			wget $rhel7_iso
 		fi
@@ -248,7 +248,7 @@ file_setup(){
 	if [ ! -f /var/www/html/RH7/$rhel6_iso_file ]; then
 			if [[ $ip_add == *10.152* ]]
 				then
-					wget --no-check-certificate --user "mht1\Script_User" --password "New2Day!" "https://10.152.248.11/folder/ISOs/RHEL6.5-20131111.0-Server-x86_64-DVD1.iso?dcPath=Cloud%2520Bastion%2520Physical%2520Stamps&dsName=Data2%252dStorage"
+					wget --no-check-certificate --user "mht1\Script_User" --password "New2Day!" -O $rhel6_iso_file "https://10.152.248.11/folder/ISOs/RHEL6.5-20131111.0-Server-x86_64-DVD1.iso?dcPath=Cloud%2520Bastion%2520Physical%2520Stamps&dsName=Data2%252dStorage"
 			else	
                wget $rhel6_iso
 			 fi
