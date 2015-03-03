@@ -303,7 +303,7 @@ http_setup
 
 ### Install ipmi
 
-#ipmi
+ipmi
 
 ### Setup python env ###
 
