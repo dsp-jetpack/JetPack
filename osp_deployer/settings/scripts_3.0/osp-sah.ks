@@ -78,10 +78,7 @@ SystemPassword="CHANGEME"
 SubscriptionManagerUser="CHANGEME"
 SubscriptionManagerPassword="CHANGEME"
 SubscriptionManagerPool="CHANGEME"
-SubscriptionManagerProxy=""
-SubscriptionManagerProxyPort=""
-SubscriptionManagerProxyUser=""
-SubscriptionManagerProxyPassword=""
+
 
 
 # Network configuration
@@ -409,20 +406,17 @@ EOB
 
 done
 
+echo "Disabling em1"
+sed -i 's/^ONBOOT=.*/ONBOOT=no/' /etc/sysconfig/network-scripts/ifcfg-em1
+sed -i 's/^NETBOOT=.*/NETBOOT=no/' /etc/sysconfig/network-scripts/ifcfg-em1
+sed -i 's/^IPV6INIT=.*/IPV6INIT=no/' /etc/sysconfig/network-scripts/ifcfg-em1
+sed -i 's/^BOOTPROTO=.*/BOOTPROTO=none/' /etc/sysconfig/network-scripts/ifcfg-em1
 
+ifdown em1
 
 
 # Register the system using Subscription Manager
-
-[[ "${SMProxy}" ]] && {
-  ProxyCmd="--server.proxy_hostname ${SMProxy}"
-
-  [[ "${SMProxyPort}" ]]     && ProxyCmd+=" --server.proxy_port ${SMProxyPort}"
-  [[ "${SMProxyUser}" ]]     && ProxyCmd+=" --server.proxy_user ${SMProxyUser}"
-  [[ "${SMProxyPassword}" ]] && ProxyCmd+=" --server.proxy_password ${SMProxyPassword}"
-
-  subscription-manager config ${ProxyCmd}
-  }
+subscription-manager register --username ${SMUser} --password ${SMPassword}
 
 SMPool=""
 

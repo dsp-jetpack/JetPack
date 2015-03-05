@@ -19,7 +19,7 @@ class Settings():
         self.nova_private_network = self.cluster_settings_map['nova_private_network']
         self.private_api_network = self.cluster_settings_map['private_api_network']
         self.nova_private_vlanID = self.cluster_settings_map['nova_private_vlanid']
-        
+
 
         self.vip_cinder_private = self.cluster_settings_map['vip_cinder_private']
         self.vip_cinder_public = self.cluster_settings_map['vip_cinder_public']
@@ -61,7 +61,6 @@ class Settings():
         self.subscription_manager_poolID = self.cluster_settings_map['subscription_manager_pool']
         self.ntp_server = self.cluster_settings_map['ntp_servers']
         self.time_zone = self.cluster_settings_map['time_zone']
-        self.stamp_type = self.cluster_settings_map['stamp_type']
         self.stamp_storage = self.cluster_settings_map['storage']
 
         if self.cluster_settings_map['enable_version_locking'].lower() == 'true':
@@ -71,9 +70,8 @@ class Settings():
 
         self.foreman_provisioning_subnet_ip_start = self.cluster_settings_map['foreman_provisioning_subnet_ip_start']
         self.foreman_provisioning_subnet_ip_end=self.cluster_settings_map['foreman_provisioning_subnet_ip_end']
-        
+
         self.bastion_settings_map = self.getSettingsSection("Bastion Settings")
-        self.rhl6_iso = self.bastion_settings_map['rhl6_iso']
         self.rhl7_iso = self.bastion_settings_map['rhl7_iso']
         self.ciros_image = self.bastion_settings_map['ciros_image']
         self.cygwin_installdir = self.bastion_settings_map['cygwin_installdir']
@@ -83,16 +81,13 @@ class Settings():
         self.ceph_deploy_sh = self.bastion_settings_map['ceph_deploy_sh']
         self.lock_files_dir = self.bastion_settings_map['locking_files_directory']
 
-        if self.stamp_type == 'poc':
-            self.foreman_configuration_scripts = self.bastion_settings_map['poc_foreman_configuration_scripts_directory']
-        elif self.stamp_type == 'pilot':
-            self.foreman_configuration_scripts = self.bastion_settings_map['pilot_foreman_configuration_scripts_directory']
-        
+        self.foreman_configuration_scripts = self.bastion_settings_map['pilot_foreman_configuration_scripts_directory']
+
         self.controller_nodes = []
         self.compute_nodes = []
         self.ceph_nodes = []
-        
-        with open(self.network_conf) as config_file:    
+
+        with open(self.network_conf) as config_file:
             json_data = json.load(config_file)
             for each in json_data:
                 node = Node_Conf(each)
@@ -127,20 +122,20 @@ class Settings():
                         self.compute_nodes.append(node)
                         print "Compute Node :: " + node.hostname
                 except:
-                    print "."   
+                    print "."
                 try:
                     if self.stamp_storage == "ceph" and node.is_ceph_storage == "true":
                         self.ceph_nodes.append(node)
                         print "Ceph Node :: " + node.hostname
-                    
+
                 except:
-                    print "." 
+                    print "."
                 attrs = vars(node)
                 print '\r '.join("%s: %s" % item for item in attrs.items())
                 print "==========================================="
-    
+
         Settings.settings = self
-           
+
     def getSettingsSection(self, section):
         dictr = {}
         options = self.conf.options(section)
@@ -152,5 +147,4 @@ class Settings():
             except:
                 print("exception on %s!" % option)
                 dictr[option] = None
-        return dictr  
-        
+        return dictr
