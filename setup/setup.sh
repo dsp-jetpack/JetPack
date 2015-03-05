@@ -94,7 +94,7 @@ MENU TITLE unixme.com PXE Menu
 LABEL RHEL7_x64
 MENU LABEL RHEL 7 X64
 KERNEL /netboot/vmlinuz
-APPEND initrd=/netboot/initrd.img inst.repo=http://192.168.120.188/pub ks=http://192.168.120.188/ks.cfg
+APPEND initrd=/netboot/initrd.img inst.repo=http://$pxe_server_ip/pub ks=http://$pxe_server_ip/ks.cfg
 EOF
 
 TFTP_CONF_FILE="/etc/xinetd.d/tftp"
