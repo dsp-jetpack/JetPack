@@ -26,11 +26,9 @@ API_IP=192.168.140.${FOURTH}
 API_NM=255.255.255.0
 STORAGE_IP=192.168.170.${FOURTH}
 STORAGE_NM=255.255.255.0
-NOVA_PUBLIC_IP=192.168.190.${FOURTH}
-NOVA_PUBLIC_NM=255.255.255.0
 
-echo "hammer host set-parameter --host-id  $HOST_ID --name bonds --value '( [bond0]=\"onboot none promisc\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM} [bond0.170]=\"onboot static vlan ${STORAGE_IP}/${STORAGE_NM} \" [bond1]=\"onboot static ${NOVA_PUBLIC_IP}/${NOVA_PUBLIC_NM} )'"
-hammer host set-parameter --host-id  $HOST_ID --name bonds --value "( [bond0]=\"onboot none promisc\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond0.170]=\"onboot static vlan ${STORAGE_IP}/${STORAGE_NM}\" [bond1]=\"onboot static ${NOVA_PUBLIC_IP}/${NOVA_PUBLIC_NM}\" )"
+echo "hammer host set-parameter --host-id  $HOST_ID --name bonds --value '( [bond0]=\"onboot none promisc\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot static ${STORAGE_IP}/${STORAGE_NM}\" )'"
+hammer host set-parameter --host-id  $HOST_ID --name bonds --value "( [bond0]=\"onboot none promisc\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot static ${STORAGE_IP}/${STORAGE_NM}\" )"
 
 echo "hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value '( [bond0]="mode=active-backup miimon=100" [bond1]="mode=active-backup miimon=100" )'"
 hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value "( [bond0]=\"mode=active-backup miimon=100\" [bond1]=\"mode=active-backup miimon=100\" )"
