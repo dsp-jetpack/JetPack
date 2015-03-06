@@ -289,7 +289,7 @@ if __name__ == '__main__':
                 "ntpserver "+ settings.ntp_server ,
                 "# Iface     IP               NETMASK    " ,
                 "eth0        "+ settings.ceph_node.public_ip +"     "+ settings.ceph_node.public_netmask ,
-                "eth1        "+ settings.ceph_node.provisioning_ip +"    "+ settings.ceph_node.provisioning_netmask,
+                "eth1        "+ settings.ceph_node.storage_ip +"    "+ settings.ceph_node.storage_netmask,
                 )
         for comd in Conf:
             Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "echo '"+ comd+"' >> "+ cephConf)
