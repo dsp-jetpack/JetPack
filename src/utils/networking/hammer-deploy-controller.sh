@@ -23,8 +23,6 @@ HOST_IP=$2
 HEARTBEAT_IP=$3
 
 FOURTH=`echo $HOST_IP | cut -d. -f4`
-PUBLIC_IP=10.148.44.${FOURTH}
-PUBLIC_NM=255.255.255.0
 API_IP=192.168.140.${FOURTH}
 API_NM=255.255.255.0
 STORAGE_IP=192.168.170.${FOURTH}
@@ -32,8 +30,8 @@ STORAGE_NM=255.255.255.0
 HEARTBEAT_NM=255.255.255.0
 
 
-echo "hammer host set-parameter --host-id  $HOST_ID --name bonds --value '( [bond0]=\"onboot none\" [bond0.170]=\"onboot static vlan ${STORAGE_IP}/${STORAGE_NM}\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot static ${PUBLIC_IP}/${PUBLIC_NM}\" )'"
-hammer host set-parameter --host-id  $HOST_ID --name bonds --value "( [bond0]=\"onboot none\" [bond0.170]=\"onboot static vlan ${STORAGE_IP}/${STORAGE_NM}\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot static ${PUBLIC_IP}/${PUBLIC_NM}\" )"
+echo "hammer host set-parameter --host-id  $HOST_ID --name bonds --value '( [bond0]=\"onboot none\" [bond0.170]=\"onboot static vlan ${STORAGE_IP}/${STORAGE_NM}\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot none \" )'"
+hammer host set-parameter --host-id  $HOST_ID --name bonds --value "( [bond0]=\"onboot none\" [bond0.170]=\"onboot static vlan ${STORAGE_IP}/${STORAGE_NM}\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot none \" )"
 
 echo "hammer host set-parameter --host-id $HOST_ID --name nics --value '( [em4]=\"onboot static ${HEARTBEAT_IP}/${HEARTBEAT_NM}\")'"
 hammer host set-parameter --host-id $HOST_ID --name nics --value "( [em4]=\"onboot static ${HEARTBEAT_IP}/${HEARTBEAT_NM}\")"
