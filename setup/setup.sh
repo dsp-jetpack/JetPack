@@ -70,6 +70,14 @@ os_update() {
 	yum -y update
 }
 
+se_linux() {
+    info "### Setting SELINUX to permissive mode ###"
+    sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
+    setenforce 0
+    getenforce
+}
+
+
 tftp_setup(){
 	info "### Installing tftp server ###"	
 
@@ -291,6 +299,9 @@ read_config
 subscription_manager
 
 os_update
+
+se_linux
+
 ### Install tftp server ###
 dhcp_setup
 
