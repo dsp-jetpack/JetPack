@@ -129,7 +129,7 @@ service tftp
 EOF
 
 service xinetd restart
-
+systemctl enable xinetd.service
 }
 
 dhcp_setup(){
@@ -170,6 +170,7 @@ http_setup(){
 
 	systemctl disable firewalld
         systemctl stop iptables
+        systemctl enable httpd.service
         service httpd restart
 }
 
@@ -265,12 +266,14 @@ file_setup(){
 	fi
 
         mkdir /var/www/html/pub
+        umount /var/www/htmp/pub
         mount /var/www/html/RH7/$rhel7_iso_file /var/www/html/pub
 		#finish tftp setup
         cp /var/www/html/pub/isolinux/vmlinuz /var/lib/tftpboot/netboot/
         cp /var/www/html/pub/isolinux/initrd.img /var/lib/tftpboot/netboot/
         systemctl start tftp.socket
         service tftp restart
+        systemctl enable tftp.service
 }
 
 ui_setup(){
