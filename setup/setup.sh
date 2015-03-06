@@ -9,7 +9,6 @@
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
@@ -95,7 +94,7 @@ MENU TITLE unixme.com PXE Menu
 LABEL RHEL7_x64
 MENU LABEL RHEL 7 X64
 KERNEL /netboot/vmlinuz
-APPEND initrd=/netboot/initrd.img inst.repo=http://192.168.120.188/pub ks=http://192.168.120.188/ks.cfg
+APPEND initrd=/netboot/initrd.img inst.repo=http://$pxe_server_ip/pub ks=http://$pxe_server_ip/ks.cfg
 EOF
 
 TFTP_CONF_FILE="/etc/xinetd.d/tftp"
@@ -224,30 +223,42 @@ git_setup() {
 
 	cd ~/
 
-	git clone https://github.com/dell-esg/deploy-auto.git
+	git clone -b $git_branch https://$git_user_name:$git_user_password@github.com/dell-esg/deploy-auto.git
 }
 
 file_setup(){
 	mkdir /var/www/html/RH7
 	cd /var/www/html/RH7
 
+	# are we in Nashua ? if so go grab the iso's somewhere local
+	ip_add=$(ip addr show)
 	
 	#paramterized
 	if [ ! -f /var/www/html/RH7/$rhel7_iso_file ]; then
-       wget $rhel7_iso
+	    if [[ $ip_add == *10.152* ]]
+			then
+				wget --no-check-certificate --user "mht1\Script_User" --password "New2Day!" -O $rhel7_iso_file "https://10.152.248.11/folder/ISOs/RHEL-7.0-20140507.0-Server-x86_64-dvd1.iso?dcPath=Cloud%2520Bastion%2520Physical%2520Stamps&dsName=Data2%252dStorage"
+		else
+			wget $rhel7_iso
+		fi
 	else
 		echo "File Already exists $rhel7_iso_file" 
 	fi
 
 	if [ ! -f /var/www/html/RH7/$rhel6_iso_file ]; then
+			if [[ $ip_add == *10.152* ]]
+				then
+					wget --no-check-certificate --user "mht1\Script_User" --password "New2Day!" -O $rhel6_iso_file "https://10.152.248.11/folder/ISOs/RHEL6.5-20131111.0-Server-x86_64-DVD1.iso?dcPath=Cloud%2520Bastion%2520Physical%2520Stamps&dsName=Data2%252dStorage"
+			else	
                wget $rhel6_iso
+			 fi
 	else
 		echo "File Already exists $rhel6_iso_file" 
 	fi
 
         mkdir /var/www/html/pub
-        mount /var/www/html/RH7/$rhel7_iso_file /var/www/html/pu
-#finish tftp setup
+        mount /var/www/html/RH7/$rhel7_iso_file /var/www/html/pub
+		#finish tftp setup
         cp /var/www/html/pub/isolinux/vmlinuz /var/lib/tftpboot/netboot/
         cp /var/www/html/pub/isolinux/initrd.img /var/lib/tftpboot/netboot/
         systemctl start tftp.socket
@@ -292,7 +303,7 @@ http_setup
 
 ### Install ipmi
 
-#ipmi
+ipmi
 
 ### Setup python env ###
 

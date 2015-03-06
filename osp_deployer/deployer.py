@@ -8,7 +8,7 @@ import time,subprocess
 import paramiko, re
 import logging
 logger = logging.getLogger(__name__)
-import traceback, os.path, urllib2
+import traceback, os.path, urllib2, shutil
 
 def log(message):
     print (message)
@@ -75,7 +75,6 @@ if __name__ == '__main__':
         attrs = vars(settings)
 
         print("==== Running envirnment sanity tests")
-        assert os.path.isfile(settings.rhl6_iso) , settings.rhl6_iso + "ISO  doesnn't seem to exist"
         assert os.path.isfile(settings.rhl7_iso) , settings.rhl7_iso + "ISO doesnn't seem to exist"
         assert os.path.isfile(settings.sah_kickstart) , settings.sah_kickstart + "kickstart file doesnn't seem to exist"
         assert os.path.isfile(settings.foreman_deploy_sh) , settings.foreman_deploy_sh + " script doesnn't seem to exist"
@@ -104,14 +103,12 @@ if __name__ == '__main__':
         #######
         log ("=== Unregister the hosts")
         hosts = [ settings.sah_node, settings.foreman_node] 
-        if settings.stamp_type == "pilot":
-            hosts.append(settings.ceph_node)
+        hosts.append(settings.ceph_node)
         for each in hosts:
             log (Ssh.execute_command(each.public_ip, "root", each.root_password, "subscription-manager remove --all"))
             log (Ssh.execute_command(each.public_ip, "root", each.root_password, "subscription-manager unregister"))
         others =  settings.controller_nodes + settings.compute_nodes
-        if settings.stamp_type == "pilot":
-            nonSAHnodes = others + settings.ceph_nodes
+        nonSAHnodes = others + settings.ceph_nodes
         for each in nonSAHnodes : 
             log (Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "subscription-manager remove --all"))
             log (Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "subscription-manager unregister"))
@@ -127,6 +124,10 @@ if __name__ == '__main__':
             ipmi_session.power_off()
         
         log ("=== updating the sah kickstart based on settings")
+        if(sys.platform.startswith('linux')):
+            shutil.copyfile(settings.foreman_configuration_scripts + "/osp-sah.ks" , settings.sah_kickstart)
+        else:
+            shutil.copyfile(settings.foreman_configuration_scripts + "\\osp-sah.ks" , settings.sah_kickstart)
         FileHelper.replaceExpression(settings.sah_kickstart, "^cdrom",'url --url='+settings.rhel_install_location )
         FileHelper.replaceExpression(settings.sah_kickstart, '^url --url=.*','url --url='+settings.rhel_install_location )
         FileHelper.replaceExpression(settings.sah_kickstart, '^HostName=.*','HostName="'+settings.sah_node.hostname + "." + settings.domain + '"')
@@ -138,9 +139,27 @@ if __name__ == '__main__':
         FileHelper.replaceExpression(settings.sah_kickstart, '^NameServers=.*','NameServers="'+settings.sah_node.name_server +'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^NTPServers=.*','NTPServers="'+settings.ntp_server +'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^TimeZone=.*','TimeZone="'+settings.time_zone +'"')
-        FileHelper.replaceExpression(settings.sah_kickstart, '^public_bond=.*','public_bond="public '+ settings.sah_node.public_bond + " "+ settings.sah_node.public_ip + " " + settings.sah_node.public_netmask + " " + settings.sah_node.public_slaves + ' "')
-        FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bond=.*','provision_bond="provision '+ settings.sah_node.provisioning_bond + " "+ settings.sah_node.provisioning_ip + " " + settings.sah_node.provisioning_netmask + " " + settings.sah_node.provisioning_slaves +'"')
-        FileHelper.replaceExpression(settings.sah_kickstart, 'mode=(.*?)\s','mode='+ settings.bond_mode_sah + ' ')
+
+        FileHelper.replaceExpression(settings.sah_kickstart, '^anaconda_interface=.*','anaconda_interface="'+settings.sah_node.anaconda_ip+ '/'+ settings.sah_node.public_netmask+' '+settings.sah_node.anaconda_iface+'"')
+
+        FileHelper.replaceExpression(settings.sah_kickstart, '^public_bond_name=.*','public_bond_name="'+settings.sah_node.public_bond +'"')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^public_bond_opts="mode=(.*?)\s','public_bond_opts="mode='+ settings.bond_mode_sah + ' ')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^public_ifaces=.*','public_ifaces="'+settings.settings.sah_node.public_slaves +'"')
+
+        FileHelper.replaceExpression(settings.sah_kickstart, '^private_bond_name=.*','private_bond_name="'+settings.sah_node.private_bond +'"')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^private_bond_opts="mode=(.*?)\s','private_bond_opts="mode='+ settings.bond_mode_sah + ' ')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^private_ifaces=.*','private_ifaces="'+settings.settings.sah_node.private_slaves +'"')
+
+        FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bond_name=.*','provision_bond_name=bond0."'+settings.sah_node.provisioning_vlanid +'"')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^storage_bond_name=.*','storage_bond_name=bond0."'+settings.sah_node.storage_vlanid +'"')
+
+        FileHelper.replaceExpression(settings.sah_kickstart, '^public_bridge_boot_opts="onboot static .*','public_bridge_boot_opts="onboot static '+settings.sah_node.public_ip + '/'+ settings.sah_node.public_netmask+'"')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bridge_boot_opts="onboot static .*','provision_bridge_boot_opts="onboot static '+settings.sah_node.provisioning_ip+ '/'+ settings.sah_node.provisioning_netmask+'"')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^storage_bridge_boot_opts="onboot static .*','storage_bridge_boot_opts="onboot static '+settings.sah_node.storage_ip+ '/'+ settings.sah_node.storage_netmask+'"')
+
+        #public_bridge_boot_opts="onboot static 10.148.44.41/255.255.255.0"
+        #provision_bridge_boot_opts="onboot static 192.168.120.41/255.255.255.0"
+        #storage_bridge_boot_opts="onboot static 192.168.170.41/255.255.255.0"
 
         log ("=== starting the tftp service & power on the admin")
         log (subprocess.check_output("service tftp start" if isLinux else "net start Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
@@ -179,7 +198,6 @@ if __name__ == '__main__':
             raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
         log ("=== uploading iso's to the sah node")
-        Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl6_iso, "/store/data/iso/RHEL6.5.iso")
         Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl7_iso, "/store/data/iso/RHEL7.iso")
         
         log("=== Done with the solution admin host");
@@ -219,7 +237,7 @@ if __name__ == '__main__':
         for comd in Conf:
             Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "echo '"+ comd+"' >> "+ foremanConf)
         log("=== kick off the foreman vm deployment")
-        sH = "sh " + remoteSh + " /root/foreman.cfg /store/data/iso/RHEL6.5.iso";
+        sH = "sh " + remoteSh + " /root/foreman.cfg /store/data/iso/RHEL7.iso";
         Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, sH)
         
         log("=== wait for the foreman vm install to be complete & power it on")
@@ -253,57 +271,49 @@ if __name__ == '__main__':
         
         log("=== done with foreman")
         
-    
-        
-        if settings.stamp_type == "pilot":
-            logger.info( "=== creating ceph VM")
-            remoteSh = "/root/deploy-ceph-vm.sh";
-            Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.ceph_deploy_sh, remoteSh);
-        
-            log("=== create ceph.cfg") 
-            cephConf = "/root/ceph.cfg";
-            Conf =  ("rootpassword " + settings.ceph_node.root_password,
-                    "timezone " + settings.time_zone,
-                    "smuser " + settings.subscription_manager_user ,
-                    "smpassword "+settings.subscription_manager_password ,
-                    "smpool " + settings.subscription_manager_poolID ,
-                    "hostname "+ settings.ceph_node.hostname + "." + settings.domain ,
-                    "gateway " + settings.ceph_node.public_gateway ,
-                    "nameserver " + settings.ceph_node.name_server ,
-                    "ntpserver "+ settings.ntp_server ,
-                    "# Iface     IP               NETMASK    " ,
-                    "eth0        "+ settings.ceph_node.public_ip +"     "+ settings.ceph_node.public_netmask ,
-                    "eth1        "+ settings.ceph_node.provisioning_ip +"    "+ settings.ceph_node.provisioning_netmask,
-                    )
-            for comd in Conf:
-                Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "echo '"+ comd+"' >> "+ cephConf)
-            log("=== kick off the ceph vm deployment")
-            sH = "sh " + remoteSh + " /root/ceph.cfg /store/data/iso/RHEL7.iso";
-            logger.info( Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, sH))
-            
-            log("=== wait for the ceph vm install to be complete & power it on")
-            while (not "shut off" in Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "virsh list --all")[0]):
-                log ("...")
-                time.sleep(60);
-            log ("=== power on the ceph VM ")
-            Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "virsh start ceph")
-            while (not "root" in Ssh.execute_command(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "whoami")[0]):
-                log ("...")
-                time.sleep(30);
-            log("ceph host is up")
 
-            log("*** Verify the Ceph VM registered properly ***")
-            subscriptionStatus = Ssh.execute_command(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "subscription-manager status")[0]
-            if "Current" not in subscriptionStatus:
-                raise AssertionError("Ceph VM did not register properly : " + subscriptionStatus)
+        logger.info( "=== creating ceph VM")
+        remoteSh = "/root/deploy-ceph-vm.sh";
+        Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.ceph_deploy_sh, remoteSh);
+
+        log("=== create ceph.cfg")
+        cephConf = "/root/ceph.cfg";
+        Conf =  ("rootpassword " + settings.ceph_node.root_password,
+                "timezone " + settings.time_zone,
+                "smuser " + settings.subscription_manager_user ,
+                "smpassword "+settings.subscription_manager_password ,
+                "smpool " + settings.subscription_manager_poolID ,
+                "hostname "+ settings.ceph_node.hostname + "." + settings.domain ,
+                "gateway " + settings.ceph_node.public_gateway ,
+                "nameserver " + settings.ceph_node.name_server ,
+                "ntpserver "+ settings.ntp_server ,
+                "# Iface     IP               NETMASK    " ,
+                "eth0        "+ settings.ceph_node.public_ip +"     "+ settings.ceph_node.public_netmask ,
+                "eth1        "+ settings.ceph_node.provisioning_ip +"    "+ settings.ceph_node.provisioning_netmask,
+                )
+        for comd in Conf:
+            Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "echo '"+ comd+"' >> "+ cephConf)
+        log("=== kick off the ceph vm deployment")
+        sH = "sh " + remoteSh + " /root/ceph.cfg /store/data/iso/RHEL7.iso";
+        logger.info( Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, sH))
+
+        log("=== wait for the ceph vm install to be complete & power it on")
+        while (not "shut off" in Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "virsh list --all")[0]):
+            log ("...")
+            time.sleep(60);
+        log ("=== power on the ceph VM ")
+        Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "virsh start ceph")
+        while (not "root" in Ssh.execute_command(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "whoami")[0]):
+            log ("...")
+            time.sleep(30);
+        log("ceph host is up")
+
+        log("*** Verify the Ceph VM registered properly ***")
+        subscriptionStatus = Ssh.execute_command(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "subscription-manager status")[0]
+        if "Current" not in subscriptionStatus:
+            raise AssertionError("Ceph VM did not register properly : " + subscriptionStatus)
             
-            
-        elif settings.stamp_type == "poc":
-            log("done with the sah node & it's vms")
-        else:
-            raise IOError ("unknown setting stamp_type, should be poc or pilot")
-        
-        
+
         
         log ("=== Configuring the foreman server")
         foremanHost = Foreman()
@@ -351,23 +361,19 @@ if __name__ == '__main__':
                 time.sleep(100);
             log("Disable puppet on the node for now to avoid race conditions later.")
             log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet stop")[0])
-            
-        if settings.stamp_type == "poc":
-            foremanHost.configureHostGroups_Parameters()
-            foremanHost.applyHostGroups_to_nodes()
-        elif settings.stamp_type == "pilot":
-            if settings.stamp_storage == "ceph":
-                ceph = Ceph()
-                ceph.copy_installer()
-                ceph.install_ice()
-                ceph.configure_monitor()
-                ceph.configure_osd()
-                ceph.connectHostsToCalamari()
-                ceph.grantAdminRightsToOSD()
-                ceph.modifyOSDPlacementGroups()
-                ceph.pool_and_keyRing_configuration()
-                ceph.foreman_config_ha_all_in_One()
-                ceph.foreman_config_compute()
+
+        if settings.stamp_storage == "ceph":
+            ceph = Ceph()
+            ceph.copy_installer()
+            ceph.install_ice()
+            ceph.configure_monitor()
+            ceph.configure_osd()
+            ceph.connectHostsToCalamari()
+            ceph.grantAdminRightsToOSD()
+            ceph.modifyOSDPlacementGroups()
+            ceph.pool_and_keyRing_configuration()
+            ceph.foreman_config_ha_all_in_One()
+            ceph.foreman_config_compute()
                 
                 
             foremanHost.configureHostGroups_Parameters()
