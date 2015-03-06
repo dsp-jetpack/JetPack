@@ -257,7 +257,7 @@ file_setup(){
 	fi
 
         mkdir /var/www/html/pub
-        mount /var/www/html/RH7/$rhel7_iso_file /var/www/html/pu
+        mount /var/www/html/RH7/$rhel7_iso_file /var/www/html/pub
 		#finish tftp setup
         cp /var/www/html/pub/isolinux/vmlinuz /var/lib/tftpboot/netboot/
         cp /var/www/html/pub/isolinux/initrd.img /var/lib/tftpboot/netboot/
