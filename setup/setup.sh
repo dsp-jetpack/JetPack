@@ -223,7 +223,7 @@ git_setup() {
 
 	cd ~/
 
-	git clone https://$git_user_name:$git_user_password@github.com/dell-esg/deploy-auto.git
+	git clone -b $git_branch https://$git_user_name:$git_user_password@github.com/dell-esg/deploy-auto.git
 }
 
 file_setup(){
