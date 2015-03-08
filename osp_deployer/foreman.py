@@ -152,7 +152,11 @@ class Foreman():
             cmd = 'mkdir /root/vlock_files'
             print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
             for file in files :
-                localfile = self.settings.lock_files_dir + "\\" + file
+                if sys.platform.startswith('linux'):
+                    localfile = self.settings.lock_files_dir + "/" + file
+                else:
+                    localfile = self.settings.lock_files_dir + "\\" + file
+
                 remotefile = '/root/vlock_files/' + file
                 print localfile + " >> " + remotefile
                 Scp.put_file( self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)

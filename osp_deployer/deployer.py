@@ -209,7 +209,10 @@ if __name__ == '__main__':
                 'foreman_vm.vlock',
                 ]
             for file in files :
-                localfile = settings.lock_files_dir + "\\" + file
+                if isLinux == False:
+                    localfile = settings.lock_files_dir + "/" + file
+                else:
+                    localfile = settings.lock_files_dir + "\\" + file
                 remotefile = '/root/' + file
                 print localfile + " >> " + remotefile
                 Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, localfile, remotefile)
