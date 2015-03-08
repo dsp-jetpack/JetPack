@@ -210,9 +210,9 @@ if __name__ == '__main__':
                 ]
             for file in files :
                 if isLinux == False:
-                    localfile = settings.lock_files_dir + "/" + file
-                else:
                     localfile = settings.lock_files_dir + "\\" + file
+                else:
+                    localfile = settings.lock_files_dir + "/" + file
                 remotefile = '/root/' + file
                 print localfile + " >> " + remotefile
                 Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, localfile, remotefile)
