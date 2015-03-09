@@ -269,8 +269,12 @@ if __name__ == '__main__':
             
         cmd = "puppet agent  -t"
         logger.info( Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password,cmd))      
-        
-            
+
+        foremanHost = Foreman()
+        foremanHost.reset_password()
+
+        cmd = "sed -i \"s/options.password = '.*'/options.password = '"+ settings.foreman_password +"'/\" /usr/share/openstack-foreman-installer/bin/quickstack_defaults.rb"
+        logger.info( Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password,cmd))
         
         log("=== done with foreman")
         
@@ -319,8 +323,8 @@ if __name__ == '__main__':
 
         
         log ("=== Configuring the foreman server")
-        foremanHost = Foreman()
-        foremanHost.reset_password()
+        foremanHost.set_ignore_puppet_facts_for_provisioning()
+
         foremanHost.update_scripts()
         foremanHost.upload_scripts()
         foremanHost.enable_version_locking()
@@ -330,7 +334,7 @@ if __name__ == '__main__':
         foremanHost.configure_operating_systems()
         foremanHost.configure_subnets()
         foremanHost.configure_templates()
-        foremanHost.set_ignore_puppet_facts_for_provisioning()
+
         foremanHost.register_hosts()
         foremanHost.configure_os_updates()
         foremanHost.configure_controller_nic()

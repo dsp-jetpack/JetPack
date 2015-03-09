@@ -1,0 +1,366 @@
+# By default all passwords are generated when using erb passwd_auto stanza
+# Replacing passwd_auto content by a string will make it the same everywhere
+# Alternatively static values can be used directly
+<%  require 'facter'
+    require 'securerandom'
+
+    if Facter.version  =~ /2.*/
+      mail_auto = "admin@#{Facter.value('domain')}"
+    else
+      mail_auto = "admin@#{Facter.domain}"
+    end
+
+    ### Variables to change
+    ##
+
+    passwd_auto = 'changeme'
+  
+
+    cluster_member_ip1 = 'CHANGEME_IP_ON_PRIVATE_API'
+    cluster_member_name1 = 'controller1'
+
+    cluster_member_ip2 = 'CHANGEME_IP_ON_PRIVATE_API'
+    cluster_member_name2 = 'controller2'
+
+    cluster_member_ip3 = 'CHANGEME_IP_ON_PRIVATE_API'
+    cluster_member_name3 = 'controller3'
+    
+    cluster_admin_host = cluster_member_ip1
+
+    # The interface name (such as bond0.140) on the private API network
+    cluster_interconnect_iface = 'CHANGEME_PRIVATE_API_INTERFACE_NAME'
+
+
+    ## VIPs
+    vip_amqp = 'CHANGEME_IP_ON_PRIVATE_API'
+
+    vip_ceilometer_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_ceilometer_priv = vip_ceilometer_adm
+    vip_ceilometer_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+
+    vip_cinder_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_cinder_priv = vip_cinder_adm
+    vip_cinder_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+
+    vip_db = 'CHANGEME_IP_ON_PRIVATE_API'
+
+    vip_glance_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_glance_priv = vip_glance_adm
+    vip_glance_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+
+    vip_heat_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_heat_priv = vip_heat_adm
+    vip_heat_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+
+    vip_heat_cfn_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_heat_cfn_priv = vip_heat_cfn_adm
+    vip_heat_cfn_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+
+    vip_horizon_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_horizon_priv = vip_horizon_adm
+    vip_horizon_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+
+    vip_keystone_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_keystone_priv = vip_keystone_adm
+    vip_keystone_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+
+    vip_loadbalancer = 'CHANGEME_IP_ON_PRIVATE_API'
+
+    vip_neutron_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_neutron_priv = vip_neutron_adm
+    vip_neutron_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+
+    vip_nova_adm = 'CHANGEME_IP_ON_PRIVATE_API'
+    vip_nova_priv = vip_nova_adm
+    vip_nova_pub = 'CHANGEME_IP_ON_PUBLIC_API'
+
+    # auto assign ips to VMs.
+    auto_float_ip = false
+
+    vbose = 'false'
+    dbug = 'false'
+
+    c_be_eqlx = false
+    c_be_eqlx_name = [ "eqlx_backend" ]
+    c_be_rbd = 'false'
+    c_be_rbd_name = 'rbd_backend'
+    c_eqlx_ch_login = [ "chapadmin"]
+    c_eqlx_ch_pass = [ '""' ]
+    c_eqlx_group_n = [ "group-0"]
+    c_eqlx_pool = [ "default" ]
+    c_eqlx_use_chap = [ "false" ]
+    c_mult_be = 'false'
+
+    c_ceph_cluster_network =  'CHANGEME_CLUSTER_NETWORK_FOR_CEPH.CONF'
+    c_ceph_fsid =  'CHANGEME_FSID_FOR_CEPH.CONF'
+    c_ceph_images_key = 'CHANGEME_KEY_FROM_IMAGES_KEYRING'
+    c_ceph_mon_host = [ "CHANGEME_IP_OF_STORAGE_NODE1_ON_STORAGE_NETWORK" "CHANGEME_IP_OF_STORAGE_NODE2_ON_STORAGE_NETWORK" ]
+    c_ceph_mon_initial_members =  [ "CHANGEME_NAME_OF_STORAGE_NODE1_ON_STORAGE_NETWORK" "CHANGEME_NAME_OF_STORAGE_NODE2_ON_STORAGE_NETWORK" ]
+    c_ceph_osd_journal_size = 'CHANGEME_OSD_JOURNAL_SIZE_FOR_CEPH.CONF'
+    c_ceph_osd_pool_size = 'CHANGEME_OSD_POOL_SIZE_FOR_CEPH.CONF'
+    c_ceph_public_network = 'CHANGEME_STORAGE_NETWORK_FOR_CEPH.CONF'
+    c_ceph_volumes_key = 'CHANGEME_KEY_FROM_VOLUMES_KEYRING'
+
+    c_rbd_pool = 'volumes'
+    c_rbd_user = 'volumes'
+    
+    fence_ipmi_ip1 = 'CHANGEME_CONTROLLER1_IPMI_IP'
+    fence_ipmi_ip2 = 'CHANGEME_CONTROLLER2_IPMI_IP'
+    fence_ipmi_ip3 = 'CHANGEME_CONTROLLER3_IPMI_IP'
+    fence_ipmi_lanplus = 'true'
+    fence_ipmi_user = 'root'
+    fence_type = 'fence_ipmilan'
+
+    
+    glance_be = 'file'
+    rbd_spool = 'images'
+    rbd_suser = 'images'
+
+    def_float_pool = 'nova'
+
+    heat_cfn_en = 'true'
+    heat_cloudw_en = 'true'
+
+    inc_cinder = 'true'
+    inc_heat = 'true'
+
+
+    # amqp_provider
+    amqp_pro = 'rabbitmq'
+
+    node_access_iface = 'CHANGEME_PRIVATE_API_INTERFACE_NAME'
+    
+    # neutron private/tenant interface (em2 or bond0.300, etc...)
+    net_tenant_iface = 'CHANGEME_NOVA_PRIVATE_INTERFACE_NAME'
+
+    # neutron public/floating/l3 interface (em3 or bond0.301, etc...)
+    net_l3_iface = 'CHANGEME_NOVA_PUBLIC_INTERFACE_NAME'
+
+    l3_VRRP_enable = 'false'
+
+    tenant_vlan_range = 'CHANGEME_VLAN_MIN:CHANGEME_VLAN_MAX'
+
+    keystnrc = 'true'
+
+    ##
+    ### End of Variables to change
+
+
+
+%>
+---
+####  Variables below this line should not need to be changed.
+##
+
+debug: <%= dbug %>
+verbose: <%= vbose %>
+
+
+backend_eqlx: <%= c_be_eqlx %>
+backend_eqlx_name:
+<% c_be_eqlx_name.each do |name| %>
+- <%= name %>
+<% end %>
+
+backend_rbd: <%= c_be_rbd %>
+backend_rbd_name: <%= c_be_rbd_name %>
+eqlx_chap_login:
+<% c_eqlx_ch_login.each do |name| %>
+- <%= name %>
+<% end %>
+
+eqlx_chap_password: 
+<% c_eqlx_ch_pass.each do |name| %>
+- <%= name %>
+<% end %>
+
+eqlx_group_name:
+<% c_eqlx_group_n.each do |name| %>
+- <%= name %>
+<% end %>
+
+eqlx_pool:
+<% c_eqlx_pool.each do |name| %>
+- <%= name %>
+<% end %>
+
+eqlx_use_chap:
+<% c_eqlx_use_chap.each do |name| %>
+- <%= name %>
+<% end %>
+
+multiple_backends: <%= c_mult_be %>
+rbd_pool: <%= c_rbd_pool %>
+rbd_secret_uuid: <%= c_ceph_fsid %>
+rbd_user: <%= c_rbd_user %>
+
+fence_ipmilan_hostlist: "<%= cluster_member_name1 %>,<%= cluster_member_name2 %>,<%= cluster_member_name3 %>"
+fence_ipmilan_host_to_address:
+- "<%= cluster_member_name1 %>:<%= fence_ipmi_ip1 %>"
+- "<%= cluster_member_name2 %>:<%= fence_ipmi_ip2 %>"
+- "<%= cluster_member_name3 %>:<%= fence_ipmi_ip3 %>"
+fence_ipmilan_expose_lanplus: <%= fence_ipmi_lanplus %>
+fence_ipmilan_password: <%= passwd_auto %>
+fence_ipmilan_username: <%= fence_ipmi_user %>
+fence_xvm_key_file_password: <%= passwd_auto %>
+fencing_type: <%= fence_type %>
+
+galera_monitor_password: <%= passwd_auto %>
+mysql_root_password: <%= passwd_auto %>
+wsrep_cluster_members:
+- <%= cluster_member_ip1 %>
+- <%= cluster_member_ip2 %>
+- <%= cluster_member_ip3 %>
+wsrep_sst_password: <%= passwd_auto %>
+
+backend: <%= glance_be %>
+rbd_store_pool: <%= rbd_spool %>
+rbd_store_user: <%= rbd_suser %>
+
+
+admin_password: <%= passwd_auto %>
+admin_token: <%= passwd_auto %>
+amqp_host: <%= vip_amqp %>
+amqp_password: <%= passwd_auto %>
+amqp_provider: <%= amqp_pro %>
+amqp_vip: <%= vip_amqp %>
+auto_assign_floating_ip: <%= auto_float_ip %>
+ceilometer: true
+ceilometer_admin_vip: <%= vip_ceilometer_adm %>
+ceilometer_db_password: <%= passwd_auto %>
+ceilometer_metering_secret: <%= passwd_auto %>
+ceilometer_private_vip: <%= vip_ceilometer_priv %>
+ceilometer_public_vip: <%= vip_ceilometer_pub %>
+ceilometer_user_password: <%= passwd_auto %>
+ceph_cluster_network: <%= c_ceph_cluster_network %>
+ceph_fsid: <%= c_ceph_fsid %>
+ceph_images_key: <%= c_ceph_images_key %>
+ceph_mon_host: <%= c_ceph_mon_host %>
+ceph_mon_initial_members: <%= c_ceph_mon_initial_members %>
+ceph_osd_journal_size: '<%= c_ceph_osd_journal_size %>'
+ceph_osd_pool_size: '<%= c_ceph_osd_pool_size %>'
+ceph_osd_pool_default_size: '<%= c_ceph_osd_pool_size %>'
+ceph_public_network: <%= c_ceph_public_network %>
+ceph_volumes_key: <%= c_ceph_volumes_key %>
+cinder_admin_vip: <%= vip_cinder_adm %>
+cinder_db_password: <%= passwd_auto %>
+cinder_backend_gluster: false
+cinder_backend_nfs: false
+cinder_backend_rbd: 'true'
+cinder_private_vip: <%= vip_cinder_priv %>
+cinder_public_vip: <%= vip_cinder_pub %>
+cinder_user_password: <%= passwd_auto %>
+cluster_control_ip: <%= cluster_admin_host %>
+db_vip: <%= vip_db %>
+enable_tunneling: false
+external_network_bridge: br-ex
+glance_admin_vip: <%= vip_glance_adm %>
+glance_backend_rbd: 'true'
+glance_db_password: <%= passwd_auto %>
+glance_private_vip: <%= vip_glance_priv %>
+glance_public_vip: <%= vip_glance_pub %>
+glance_user_password: <%= passwd_auto %>
+heat_admin_vip: <%= vip_heat_adm %>
+heat_auth_encryption_key: <%= passwd_auto %>
+heat_cfn_admin_vip: <%= vip_heat_cfn_adm %>
+heat_cfn_enabled: <%= heat_cfn_en %>
+heat_cfn_private_vip: <%= vip_heat_cfn_priv %>
+heat_cfn_public_vip: <%= vip_heat_cfn_pub %>
+heat_cfn_user_password: <%= passwd_auto %>
+heat_cloudwatch:  <%= heat_cloudw_en %>
+heat_cloudwatch_enabled: <%= heat_cloudw_en %>
+heat_db_password: <%= passwd_auto %>
+heat_private_vip: <%= vip_heat_priv %>
+heat_public_vip: <%= vip_heat_pub %>
+heat_user_password: <%= passwd_auto %>
+horizon_admin_vip: <%= vip_horizon_adm %>
+horizon_private_vip: <%= vip_horizon_priv %>
+horizon_public_vip: <%= vip_horizon_pub %>
+include_cinder: <%= inc_cinder %>
+include_heat: <%= inc_heat %>
+include_neutron: true
+include_swift: false
+keystonerc: <%= keystnrc %>
+keystone_admin_vip: <%= vip_keystone_adm %>
+keystone_db_password: <%= passwd_auto %>
+keystone_private_vip: <%= vip_keystone_priv %>
+keystone_public_vip: <%= vip_keystone_pub %>
+keystone_user_password: <%= passwd_auto %>
+l3_ha: <%= l3_VRRP_enable %>
+lb_backend_server_addrs:
+- <%= cluster_member_ip1 %>
+- <%= cluster_member_ip2 %>
+- <%= cluster_member_ip3 %>
+lb_backend_server_names:
+- <%= cluster_member_name1 %>
+- <%= cluster_member_name2 %>
+- <%= cluster_member_name3 %>
+loadbalancer_vip: <%= vip_loadbalancer %>
+ml2_flat_networks:
+- ! '*'
+ml2_mechanism_drivers:
+- 'openvswitch'
+- 'l2population'
+ml2_network_vlan_ranges:
+- physint:<%= tenant_vlan_range %>
+- physext
+ml2_type_drivers:
+- 'local'
+- 'vlan'
+ml2_tenant_network_types:
+- 'vlan'
+neutron: true
+neutron_admin_vip: <%= vip_neutron_adm %>
+neutron_db_password: <%= passwd_auto %>
+neutron_metadata_proxy_secret: <%= passwd_auto %>
+neutron_private_vip: <%= vip_neutron_priv %>
+neutron_public_vip: <%= vip_neutron_pub %>
+neutron_user_password: <%= passwd_auto %>
+nova_admin_vip: <%= vip_nova_adm %>
+nova_db_password: <%= passwd_auto %>
+nova_default_floating_pool: nova
+nova_private_vip: <%= vip_nova_priv %>
+nova_public_vip: <%= vip_nova_pub %>
+nova_user_password: <%= passwd_auto %>
+ovs_bridge_mappings:
+- physext:br-ex
+- physint:br-tenant
+ovs_bridge_uplinks:
+- br-ex:<%= net_l3_iface %>
+- br-tenant:<%= net_tenant_iface %>
+ovs_l2_population: 'True'
+ovs_tunnel_iface: <%= net_tenant_iface %>
+ovs_tunnel_network: ''
+ovs_tunnel_types:
+- vlan
+ovs_vlan_ranges: 'physint:<%= tenant_vlan_range %>,physext'
+pcmk_iface: <%= cluster_interconnect_iface %>
+pcmk_server_addrs:
+- <%= cluster_member_ip1 %>
+- <%= cluster_member_ip2 %>
+- <%= cluster_member_ip3 %>
+pcmk_server_names:
+- <%= cluster_member_name1 %>
+- <%= cluster_member_name2 %>
+- <%= cluster_member_name3 %>
+private_iface: <%= node_access_iface %>
+private_ip: ''
+secret_key: <%= passwd_auto %>
+swift_shared_secret: <%= passwd_auto %>
+swift_user_password: <%= passwd_auto %>
+tenant_network_type: vlan
+volume: true
+
+# compute node only parameters
+
+auth_host: <%= vip_keystone_adm %>
+glance_host: <%= vip_glance_adm %>
+libvirt_images_rbd_ceph_conf: /etc/ceph/ceph.conf
+libvirt_images_rbd_pool: volumes
+libvirt_images_type: rbd
+libvirt_inject_key: 'false'
+libvirt_inject_password: 'false'
+mysql_ca: /etc/ipa/ca.crt
+mysql_host: <%= vip_db %>
+neutron_host: <%= vip_neutron_adm %>
+nova_host: <%= vip_nova_adm %>
