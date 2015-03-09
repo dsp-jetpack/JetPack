@@ -173,7 +173,7 @@ chvt 8
   subscription-manager repos --enable=rhel-7-server-openstack-6.0-rpms
 
   mkdir /tmp/mnt
-  mount /dev/floppy /tmp/mnt
+  mount /dev/fd0 /tmp/mnt
   [[ -e /tmp/mnt/versionlock.list ]] && {
     cp /tmp/mnt/versionlock.list /etc/yum/pluginconf.d
     chmod 644 /etc/yum/pluginconf.d/versionlock.list
