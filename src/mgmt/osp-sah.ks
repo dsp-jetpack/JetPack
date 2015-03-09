@@ -64,7 +64,7 @@ system-config-firewall-base
 %pre --log /tmp/sah-pre.log
 
 ################### CHANGEME
-# These are the variables that need changed for the environment are preceeded with CHANGEME 
+# The variables that need changed for the environment are preceeded with CHANGEME 
 # Those with examples are preceeded with CHANGEME e.g. (the entire string including the example should be replaced)
 
 # FQDN of server
