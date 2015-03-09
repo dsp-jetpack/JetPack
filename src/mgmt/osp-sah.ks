@@ -64,10 +64,11 @@ system-config-firewall-base
 %pre --log /tmp/sah-pre.log
 
 ################### CHANGEME
-#  These are the variables that need changed for the environment
+# The variables that need changed for the environment are preceeded with CHANGEME 
+# Those with examples are preceeded with CHANGEME e.g. (the entire string including the example should be replaced)
 
 # FQDN of server
-HostName="sah.example.org"
+HostName="CHANGEME e.g. sah.example.org"
 
 # Root password of server
 SystemPassword="CHANGEME"
@@ -85,48 +86,48 @@ SubscriptionManagerProxyPassword=""
 
 
 # Network configuration
-Gateway="10.148.44.254"
-NameServers="10.148.44.11"
+Gateway="CHANGEME e.g. 10.148.44.254"
+NameServers="CHANGEME e.g. 10.148.44.11"
 NTPServers="clock.bos.redhat.com"
 TimeZone="UTC"
 
 # Installation interface configuration
 # Format is "ip/netmask interface"
-anaconda_interface="10.148.44.211/255.255.255.0 em2"
+anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 em2"
 
 # Bonding and Bridge configuration. These variables are bash associative arrays and take the form of array[key]="value".
 # Specifying a key more than once will overwrite the first key. For example:
 #
 # Define the bonds
 # Bond1 (Public)
-public_bond_name="bond1"
+public_bond_name="CHANGEME e.g. bond1"
 public_boot_opts="onboot none"
 public_bond_opts="mode=active-backup miimon=100"
-public_ifaces="em2 p1p2"
+public_ifaces="CHANGEME e.g. em2 p1p2"
 #
 # Bond0 (Private)
-private_bond_name="bond0"
+private_bond_name="CHANGEME e.g. bond0"
 private_boot_opts="onboot none"
 private_bond_opts="mode=active-backup miimon=100"
-private_ifaces="em1 p1p1"
+private_ifaces="CHANGEME e.g. em1 p1p1"
 #
 # Provision
-provision_bond_name="bond0.120"
+provision_bond_name="CHANGEME e.g. bond0.120"
 provision_boot_opts="onboot none vlan"
 #
 # Storage
-storage_bond_name="bond0.170"
+storage_bond_name="CHANGEME e.g. bond0.170"
 storage_boot_opts="onboot none vlan"
 #
 # Define the bridges
 # Public Bridge
-public_bridge_boot_opts="onboot static 10.148.44.41/255.255.255.0"
+public_bridge_boot_opts="CHANGEME e.g. onboot static 10.148.44.41/255.255.255.0"
 #
 # Provision Bridge
-provision_bridge_boot_opts="onboot static 192.168.120.41/255.255.255.0"
+provision_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.120.41/255.255.255.0"
 #
 # Storage Bridge
-storage_bridge_boot_opts="onboot static 192.168.170.41/255.255.255.0"
+storage_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.170.41/255.255.255.0"
 ################### END of CHANGEME
 
 # Create the files that will be used by the installation environment and %post environment
