@@ -425,7 +425,7 @@ done
   subscription-manager config ${ProxyCmd}
   }
 
-SMPool=""
+SMPool="${SubscriptionManagerPool}"
 
 [[ x${SMPool} = x ]] \
   && SMPool=$( subscription-manager list --available \
@@ -437,8 +437,7 @@ SMPool=""
        subscription-manager attach --auto
        )
 
-yum -y update
-
+#yum -y update
 
 systemctl disable NetworkManager
 systemctl disable firewalld
