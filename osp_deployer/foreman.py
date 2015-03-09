@@ -47,6 +47,7 @@ class Foreman():
         self.controller_partition_tableID = ''
         self.compute_partition_tableID = ''
         self.pilot_partition_table = ''
+        self.pilot_partition_table_730 = ''
         self.rhel_7_osId = ''
         self.openstack_subnet_id = ''
         self.environment_Id = ''
@@ -131,6 +132,7 @@ class Foreman():
                  'dell-osp-ks.template',
                  'dell-osp-pxe.template',
                  'dell-pilot.partition',
+                 'dell-pilot-730xd.partition',
                  'dell-pilot.yaml.erb',
                  'interface_config.template',
                  ]
@@ -152,7 +154,11 @@ class Foreman():
             cmd = 'mkdir /root/vlock_files'
             print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
             for file in files :
-                localfile = self.settings.lock_files_dir + "\\" + file
+                if sys.platform.startswith('linux'):
+                    localfile = self.settings.lock_files_dir + "/" + file
+                else:
+                    localfile = self.settings.lock_files_dir + "\\" + file
+
                 remotefile = '/root/vlock_files/' + file
                 print localfile + " >> " + remotefile
                 Scp.put_file( self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)
@@ -186,13 +192,16 @@ class Foreman():
         print "uploading RHEL 7 iso to foreman node"
         Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,
                          self.settings.rhl7_iso, "/root/RHEL7.iso")
+        cmd = 'mkdir /usr/share/foreman/public/iso'
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+
         print "mount iso on foreman node"
         cmd = 'echo "/root/RHEL7.iso /usr/share/foreman/public/iso iso9660 loop,ro 0 0" >> /etc/fstab'
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
-        cmd = 'mkdir /usr/share/foreman/public/iso'
-        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+
         cmd = 'mount -a'
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+
         cmd = 'hammer medium create --name "Dell OSP Pilot" --os-family Redhat --path \'http://'+ self.settings.foreman_node.provisioning_ip +'/iso\''
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
@@ -200,20 +209,25 @@ class Foreman():
         r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
         self.mediumID = r_out.replace("\n", "").replace("\r", "")
         print "medium ID ::: " + self.mediumID
-
     def configure_partitionts_tables(self):
         print "configure partition tables"
-        print "Stamp Type :: " + self.settings.stamp_type
 
         pilot_partition_table ='dell-pilot.partition'
-        cmds = ['hammer partition-table create --name dell-pilot --os-family Redhat --file /root/' + str(pilot_partition_table),
+        pilot_partition_table_730 ='dell-pilot-730xd.partition'
+        cmds = [
+            'hammer partition-table create --name dell-pilot --os-family Redhat --file /root/' + str(pilot_partition_table),
+            'hammer partition-table create --name dell-pilot-730xd --os-family Redhat --file /root/' + str(pilot_partition_table_730),
                     ]
         for cmd in cmds:
             print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
-        cmd = 'hammer partition-table list | grep "dell-pilot" | grep -o "^\w*\\b"'
+        cmd = 'hammer partition-table list | grep "dell-pilot " | grep -o "^\w*\\b"'
         r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
         self.pilot_partition_table = r_out.replace("\n", "").replace("\r", "")
+
+        cmd = 'hammer partition-table list | grep "dell-pilot-730xd" | grep -o "^\w*\\b"'
+        r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        self.pilot_partition_table_730 = r_out.replace("\n", "").replace("\r", "")
 
     def configure_operating_systems(self):
         print "configure operating systems"
@@ -480,11 +494,6 @@ class Foreman():
 
         cmd = 'yum install -y rubygem-foreman_api'
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
-
-        # Log a bug :: below missing from the Pilot guide
-        cmd = "sed -i \"s/options.password = '.*'/options.password = '"+ self.settings.foreman_password +"'/\" /usr/share/openstack-foreman-installer/bin/quickstack_defaults.rb"
-        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
-
 
         erbFile = 'dell-pilot.yaml.erb'
 

@@ -1,4 +1,4 @@
-import ConfigParser, json
+import ConfigParser, json, sys
 from osp_deployer import Node_Conf
 import logging
 logger = logging.getLogger(__name__)
@@ -77,12 +77,14 @@ class Settings():
         self.cygwin_installdir = self.bastion_settings_map['cygwin_installdir']
         self.rhel_install_location = self.bastion_settings_map['rhel_install_location']
         self.sah_kickstart= self.bastion_settings_map['sah_kickstart']
-        self.foreman_deploy_sh = self.bastion_settings_map['foreman_deploy_sh']
-        self.ceph_deploy_sh = self.bastion_settings_map['ceph_deploy_sh']
         self.lock_files_dir = self.bastion_settings_map['locking_files_directory']
-
         self.foreman_configuration_scripts = self.bastion_settings_map['pilot_foreman_configuration_scripts_directory']
-
+        if sys.platform.startswith('linux'):
+            self.foreman_deploy_sh = self.foreman_configuration_scripts + '/deploy-foreman-vm.sh'
+            self.ceph_deploy_sh = self.foreman_configuration_scripts + '/ceph_deploy_sh'
+        else:
+            self.foreman_deploy_sh = self.foreman_configuration_scripts + "\\deploy-foreman-vm.sh"
+            self.ceph_deploy_sh = self.foreman_configuration_scripts + "\\ceph_deploy_sh"
         self.controller_nodes = []
         self.compute_nodes = []
         self.ceph_nodes = []
