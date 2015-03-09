@@ -81,10 +81,10 @@ class Settings():
         self.foreman_configuration_scripts = self.bastion_settings_map['pilot_foreman_configuration_scripts_directory']
         if sys.platform.startswith('linux'):
             self.foreman_deploy_sh = self.foreman_configuration_scripts + '/deploy-foreman-vm.sh'
-            self.ceph_deploy_sh = self.foreman_configuration_scripts + '/ceph_deploy_sh'
+            self.ceph_deploy_sh = self.foreman_configuration_scripts + '/deploy-ceph-vm.sh'
         else:
             self.foreman_deploy_sh = self.foreman_configuration_scripts + "\\deploy-foreman-vm.sh"
-            self.ceph_deploy_sh = self.foreman_configuration_scripts + "\\ceph_deploy_sh"
+            self.ceph_deploy_sh = self.foreman_configuration_scripts + "\\deploy-ceph-vm.sh"
         self.controller_nodes = []
         self.compute_nodes = []
         self.ceph_nodes = []
