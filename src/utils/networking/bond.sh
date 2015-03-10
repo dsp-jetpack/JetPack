@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 # Author:  Chris Dearborn
-# Version: 1.6
+# Version: 1.7
 #
 
 shopt -s nullglob
@@ -155,6 +155,11 @@ parse_args() {
         debug "Setting prefix=$prefix"
         shift
         ;;
+      -pr|--promisc)
+        promisc=$1
+	debug "Setting promisc=$promisc"
+        shift
+        ;;
       -rb|--remove-bond)
         set_command $REMOVE_BOND
         bond_name="$1"
@@ -218,6 +223,7 @@ parse_args() {
   debug "dns=$dns"
   debug "dns_passed=$dns_passed"
   debug "mode=$mode"
+  debug "promisc=$promisc"
   debug "slave_names: ${slave_names[@]}"
   debug "default_route: $default_route_device"
   debug "LOG_LEVEL: $LOG_LEVEL"
@@ -242,6 +248,7 @@ Valid options are:
   -h|--help
   [-i|--ip [<ip>|dhcp]]
   [-p|--prefix <prefix>]|[-n|--netmask <netmask>]
+  [-pr|--promisc yes|no] 
   [-g|--gateway <gateway>]
   [-d|--dns <dns>]
   [-m|--mode balance-rr|active-backup|balance-xor|broadcast|802.3ad|balance-tlb|balance-alb]
@@ -600,6 +607,22 @@ convert_directive0() {
   fi
 }
 
+update_promisc() {
+  local config_file="$1"
+  case "$promisc" in 
+    "yes")
+      add_or_edit_key "$config_file" PROMISC yes
+      ;;
+    "no")
+      remove_key "$config_file" PROMISC quiet
+      ;;
+    *)
+      fatal "Unknown selector for promiscous mode setting: $promisc. Should be 'yes' or 'no'"
+      break
+      ;;
+  esac
+}
+
 handle_ip_settings() {
   local operation="$1"
   local config_file="$2"
@@ -677,6 +700,7 @@ BONDING_MASTER=yes
 DEFROUTE=no
 EOF
 
+  [[ $promisc ]] && update_promisc "$bond_config_file"
   handle_ip_settings add "$bond_config_file"
 
   # Create or edit the slave config files
@@ -706,6 +730,7 @@ ONBOOT=yes
 VLAN=yes
 EOF
 
+  [[ $promisc ]] && update_promisc "$vlan_config_file"
   handle_ip_settings add "$vlan_config_file"
 }
 
@@ -732,6 +757,9 @@ update_device() {
       add_or_edit_key "$device_config_file" DEVICE "$device_name"
     fi
 
+    add_or_edit_key "$device_config_file" NM_CONTROLLED no
+    add_or_edit_key "$device_config_file" ONBOOT yes
+    [[ $promisc ]] && update_promisc "$device_config_file"
     handle_ip_settings update "$device_config_file"
 
   fi
@@ -760,6 +788,7 @@ update_bond() {
       add_or_edit_key "$bond_config_file" DEVICE "$bond_name"
     fi
 
+    [[ $promisc ]] && update_promisc "$bond_config_file"
     handle_ip_settings update "$bond_config_file"
 
     if [ "$mode" -o "$bonding_opts_passed" = "true" ]; then
@@ -817,6 +846,7 @@ update_vlan() {
   down_interface vlan $vlan_name
   info "Updating vlan configuration file $vlan_config_file"
 
+  [[ $promisc ]] && update_promisc "$vlan_config_file"
   handle_ip_settings update "$vlan_config_file"
 }
 
