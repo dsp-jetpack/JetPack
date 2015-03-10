@@ -408,6 +408,7 @@
 0:selinux-policy-targeted-3.12.1-153.el7_0.13.*
 0:libasyncns-0.8-7.el7.*
 1:cups-libs-1.6.3-14.el7.*
+1:cups-client-1.6.3-14.el7.*
 0:audit-2.3.3-4.el7.*
 0:ibus-libs-1.5.3-11.el7.*
 0:giflib-4.1.6-9.el7.*

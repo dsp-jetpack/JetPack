@@ -44,6 +44,8 @@ ntp
 ntpdate
 -chrony
 -firewalld
+-NetworkManager
+-NetworkManager-*
 system-config-firewall-base
 iptables
 iptables-services
@@ -203,12 +205,10 @@ EOIP
     chmod 644 /etc/yum/pluginconf.d/versionlock.list
     }
 
-
   yum -y update
 
   systemctl disable NetworkManager
   systemctl disable firewalld
-
 
 
 ) 2>&1 | /usr/bin/tee -a /root/ceph-post.log

@@ -411,9 +411,9 @@ EOB
 done
 
 
-
-
 # Register the system using Subscription Manager
+subscription-manager register --username=${SubscriptionManagerUser} --password= ${SubscriptionManagerPassword}
+
 
 [[ "${SMProxy}" ]] && {
   ProxyCmd="--server.proxy_hostname ${SMProxy}"
