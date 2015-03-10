@@ -331,27 +331,20 @@ if __name__ == '__main__':
         foremanHost.install_hammer()
         foremanHost.configure_installation_medium()
         foremanHost.configure_partitionts_tables()
-        foremanHost.configure_operating_systems()
+        foremanHost.configure_operating_systems()  # Need to Revisit this 7.0 vs 7.1 , create new or reused pre defined .
         foremanHost.configure_subnets()
         foremanHost.configure_templates()
-
-        foremanHost.register_hosts()
         foremanHost.configure_os_updates()
+        foremanHost.register_hosts()
+
         foremanHost.configure_controller_nic()
         foremanHost.configure_controller_version_locking()
         foremanHost.configure_compute_nic()
         foremanHost.configure_compute_version_locking()
         if settings.stamp_storage == "ceph":
+            foremanHost.configure_ceph_nic()
             foremanHost.configure_ceph_version_locking()
 
-        
-        #######
-        print settings.stamp_type
-        
-        print settings.stamp_storage
-        
-        if settings.stamp_type == "pilot" and settings.stamp_storage == "ceph":
-            foremanHost.configure_ceph_nic()
         
         
         logger.info( "==== Power on/PXE boot the Controller/Compute/Storage nodes")
