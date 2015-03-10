@@ -25,13 +25,12 @@ mk_bundle() {
     mkdir -p ${dest}/${target_dir}
     for src_dir in ${src_dirs}; do
 	if [[ $src_dir =~ "vlock" ]]; then
-            mkdir -p ${dest}/${target_dir}/vlock_files
-	    cp data/vlock_files/$src_dir ${dest}/${target_dir}/vlock_files
+	    cp data/vlock_files/$src_dir ${dest}/${target_dir}
         else
 	    cp src/${src_dir}/* ${dest}/${target_dir}
         fi
     done
-    (cd $dest; sha256sum ${target_dir}/* ${target_dir}/vlock_files/* >${target_dir}/CHECKSUMS.sha256)
+    (cd $dest; sha256sum ${target_dir}/* >${target_dir}/CHECKSUMS.sha256)
     (cd $dest/${target_dir}; tar zcvf $dest/${target_dir}.tgz ./*; zip -r $dest/${target_dir} .)
     (cd $dest; rm -rf ${dest}/${target_dir})
 }
