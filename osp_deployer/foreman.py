@@ -135,6 +135,9 @@ class Foreman():
                  'dell-pilot-730xd.partition',
                  'dell-pilot.yaml.erb',
                  'interface_config.template',
+                 'hammer-deploy-compute.sh',
+                 'hammer-deploy-controller.sh',
+                 'hammer-deploy-storage.sh',
                  ]
 
         logger.info( "uploading deployment scripts .." )
@@ -232,8 +235,7 @@ class Foreman():
     def configure_operating_systems(self):
         print "configure operating systems"
         print "create RHEl7 OS"
-        cmd = 'hammer os create --name "RedHat" --major 7 --minor 0 --family Redhat'
-        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+
         cmd = 'hammer os list | grep "7.0" | grep -o "^\w*\\b"'
         r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
         self.rhel_7_osId = r_out.replace("\n", "").replace("\r", "")
@@ -386,7 +388,10 @@ class Foreman():
             for each in self.settings.ceph_nodes:
                 hostCreated = False
                 while hostCreated != True:
-                    command = 'hammer host create --name "'+ each.hostname +'" --root-password "'+ self.settings.nodes_root_password+'" --build true --enabled true --managed true --environment-id '+self.environment_Id+' --domain-id 1 --puppet-proxy-id 1 --operatingsystem-id '+ self.rhel_7_osId+' --ip '+each.provisioning_ip +' --subnet-id 1 --architecture-id 1 --medium-id '+self.mediumID+' --partition-table-id '+self.pilot_partition_table +' --mac "'+each.provisioning_mac_address+'"'
+                    if each.is_730 == True:
+                        command = 'hammer host create --name "'+ each.hostname +'" --root-password "'+ self.settings.nodes_root_password+'" --build true --enabled true --managed true --environment-id '+self.environment_Id+' --domain-id 1 --puppet-proxy-id 1 --operatingsystem-id '+ self.rhel_7_osId+' --ip '+each.provisioning_ip +' --subnet-id 1 --architecture-id 1 --medium-id '+self.mediumID+' --partition-table-id '+self.pilot_partition_table_730 +' --mac "'+each.provisioning_mac_address+'"'
+                    else:
+                        command = 'hammer host create --name "'+ each.hostname +'" --root-password "'+ self.settings.nodes_root_password+'" --build true --enabled true --managed true --environment-id '+self.environment_Id+' --domain-id 1 --puppet-proxy-id 1 --operatingsystem-id '+ self.rhel_7_osId+' --ip '+each.provisioning_ip +' --subnet-id 1 --architecture-id 1 --medium-id '+self.mediumID+' --partition-table-id '+self.pilot_partition_table +' --mac "'+each.provisioning_mac_address+'"'
                     re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
                     if "Could not create the host" in err:
                         print "did not create the host , trying again... " + err
@@ -408,22 +413,24 @@ class Foreman():
                     ]
         for each in commands :
             print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, each)
-        for node in self.settings.controller_nodes:
-            command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_pool --value '+self.settings.subscription_manager_poolID
-            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
-            command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_repos --value "rhel-server-rhscl-7-rpms, rhel-7-server-rpms, rhel-7-server-openstack-5.0-rpms,rhel-ha-for-rhel-7-server-rpms"'
-            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
-        for node in self.settings.compute_nodes:
-            command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_pool --value '+self.settings.subscription_manager_poolID
-            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
-            command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_repos --value "rhel-server-rhscl-7-rpms, rhel-7-server-rpms, rhel-7-server-openstack-5.0-rpms"'
-            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
-        if self.settings.stamp_storage == "ceph":
-            for node in self.settings.ceph_nodes:
-                command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_pool --value '+self.settings.subscription_manager_poolID
-                print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
-                command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_repos --value "rhel-server-rhscl-7-rpms, rhel-7-server-rpms, rhel-7-server-openstack-5.0-rpms,rhel-ha-for-rhel-7-server-rpms"'
-                print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+
+        # Below moved further down the steps/process but commands should apply still ( new RPM's probably )
+        #for node in self.settings.controller_nodes:
+        #    command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_pool --value '+self.settings.subscription_manager_poolID
+        #    print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+        #    command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_repos --value "rhel-server-rhscl-7-rpms, rhel-7-server-rpms, rhel-7-server-openstack-5.0-rpms,rhel-ha-for-rhel-7-server-rpms"'
+        #    print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+        #for node in self.settings.compute_nodes:
+        #    command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_pool --value '+self.settings.subscription_manager_poolID
+        #    print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+        #    command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_repos --value "rhel-server-rhscl-7-rpms, rhel-7-server-rpms, rhel-7-server-openstack-5.0-rpms"'
+        #    print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+        #if self.settings.stamp_storage == "ceph":
+        #    for node in self.settings.ceph_nodes:
+        #        command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_pool --value '+self.settings.subscription_manager_poolID
+        #        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+        #        command = 'hammer host set-parameter --host-id '+node.hostID+' --name subscription_manager_repos --value "rhel-server-rhscl-7-rpms, rhel-7-server-rpms, rhel-7-server-openstack-5.0-rpms,rhel-ha-for-rhel-7-server-rpms"'
+        #        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
 
 
 
@@ -506,47 +513,47 @@ class Foreman():
         cmd = "hammer sc-param update --id "+paramID+" --default-value \"{'vlan_start': "+self.settings.nova_private_vlanID+", 'force_dhcp_release': 'false'}\" --parameter-type hash --override yes"
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
-        if self.settings.stamp_type =='pilot' :
-            logger.info("Disabling Neutron")
 
-            __locator_user_input = Widget("//input[@id='login_login']")
-            __locator_password_input = Widget("//input[@id='login_password']")
-            __locator_login_button = Widget("//input[@name='commit']")
-            url = self.settings.foreman_node.public_ip
-            UI_Manager.driver().get("http://" + url)
-            if __locator_user_input.exists():
-                __locator_user_input.setText("admin")
-                __locator_password_input.setText(self.settings.foreman_password)
-                __locator_login_button.click()
-                time.sleep(10)
+        logger.info("Disabling Neutron")
 
-
-            url = self.settings.foreman_node.public_ip
-            UI_Manager.driver().get("http://" + url +"/hostgroups/")
-
-            allInOne = Widget("//a[.='HA All In One Controller']")
-            allInOne.waitFor(20)
-            allInOne.click()
-
-            paramLink = Widget("//a[.='Parameters']")
-            paramLink.waitFor(20)
-            paramLink.click()
-
-            override = Widget("//span[.='quickstack::pacemaker::neutron']/../..//span[.='enabled']/../..//a[.='override']")
-            override.click()
-
-            inputs =   UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
-
-            #neutronEnabled = inputs[5]; # See ceph.conf >> foreman_config_ha_all_in_One, some previous attribute overriden ( should make this more elegant .)
-
-            neutronEnabled = inputs[4]; # See ceph.conf >> foreman_config_ha_all_in_One, some previous attribute overriden ( should make this more elegant .)
-
-            neutronEnabled.clear();
-            neutronEnabled.send_keys("false");
-
-            sub = Widget("//input[@value='Submit']")
-            sub.click()
+        __locator_user_input = Widget("//input[@id='login_login']")
+        __locator_password_input = Widget("//input[@id='login_password']")
+        __locator_login_button = Widget("//input[@name='commit']")
+        url = self.settings.foreman_node.public_ip
+        UI_Manager.driver().get("http://" + url)
+        if __locator_user_input.exists():
+            __locator_user_input.setText("admin")
+            __locator_password_input.setText(self.settings.foreman_password)
+            __locator_login_button.click()
             time.sleep(10)
+
+
+        url = self.settings.foreman_node.public_ip
+        UI_Manager.driver().get("http://" + url +"/hostgroups/")
+
+        allInOne = Widget("//a[.='HA All In One Controller']")
+        allInOne.waitFor(20)
+        allInOne.click()
+
+        paramLink = Widget("//a[.='Parameters']")
+        paramLink.waitFor(20)
+        paramLink.click()
+
+        override = Widget("//span[.='quickstack::pacemaker::neutron']/../..//span[.='enabled']/../..//a[.='override']")
+        override.click()
+
+        inputs =   UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
+
+        #neutronEnabled = inputs[5]; # See ceph.conf >> foreman_config_ha_all_in_One, some previous attribute overriden ( should make this more elegant .)
+
+        neutronEnabled = inputs[4]; # See ceph.conf >> foreman_config_ha_all_in_One, some previous attribute overriden ( should make this more elegant .)
+
+        neutronEnabled.clear();
+        neutronEnabled.send_keys("false");
+
+        sub = Widget("//input[@value='Submit']")
+        sub.click()
+        time.sleep(10)
 
 
 

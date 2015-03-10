@@ -430,7 +430,7 @@ SMPool=""
        subscription-manager attach --auto
        )
 
-yum -y update
+#yum -y update
 
 
 systemctl disable NetworkManager
