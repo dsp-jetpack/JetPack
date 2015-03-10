@@ -34,6 +34,7 @@ auth --enableshadow --passalgo=sha512
 %include /tmp/ks_include.txt
 
 skipx
+text
 firstboot --disable
 eula --agreed
 
@@ -63,10 +64,11 @@ system-config-firewall-base
 %pre --log /tmp/sah-pre.log
 
 ################### CHANGEME
-#  These are the variables that need changed for the environment
+# The variables that need changed for the environment are preceeded with CHANGEME 
+# Those with examples are preceeded with CHANGEME e.g. (the entire string including the example should be replaced)
 
 # FQDN of server
-HostName="sah.example.org"
+HostName="CHANGEME e.g. sah.example.org"
 
 # Root password of server
 SystemPassword="CHANGEME"
@@ -76,47 +78,104 @@ SystemPassword="CHANGEME"
 # the first subcription specified as "Red Hat Enterprise Linux Server"
 SubscriptionManagerUser="CHANGEME"
 SubscriptionManagerPassword="CHANGEME"
-SubscriptionManagerPool="8j45445948fg908090fs5681d2243969"
+SubscriptionManagerPool="CHANGEME"
 SubscriptionManagerProxy=""
 SubscriptionManagerProxyPort=""
 SubscriptionManagerProxyUser=""
 SubscriptionManagerProxyPassword=""
 
+
 # Network configuration
-Gateway="10.19.143.254"
-NameServers="10.19.143.247,10.19.143.248"
-NTPServers="CHANGEME.CHANGEME"
-TimeZone="America/Chicago"
+Gateway="CHANGEME e.g. 10.148.44.254"
+NameServers="CHANGEME e.g. 10.148.44.11"
+NTPServers="clock.bos.redhat.com"
+TimeZone="UTC"
 
-# bridge and bonding configuration. The format of the value is
-# a space seperated list containing:
-# Bridge_Name Bond_Name Bridge_IP Bridge_Mask Slave_Interface1 Slave_Interface2 SlaveInterface3 ...
-# The network configuration specified for the public_bond will be used by the installation environment as well.
-public_bond="public bond0 10.19.139.60 255.255.248.0 em1 em3"
-provision_bond="provision bond1 172.44.139.60 255.255.255.0 em2 em4"
+# Installation interface configuration
+# Format is "ip/netmask interface"
+anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 em2"
 
+# Bonding and Bridge configuration. These variables are bash associative arrays and take the form of array[key]="value".
+# Specifying a key more than once will overwrite the first key. For example:
+#
+# Define the bonds
+# Bond1 (Public)
+public_bond_name="CHANGEME e.g. bond1"
+public_boot_opts="onboot none"
+public_bond_opts="mode=active-backup miimon=100"
+public_ifaces="CHANGEME e.g. em2 p1p2"
+#
+# Bond0 (Private)
+private_bond_name="CHANGEME e.g. bond0"
+private_boot_opts="onboot none"
+private_bond_opts="mode=active-backup miimon=100"
+private_ifaces="CHANGEME e.g. em1 p1p1"
+#
+# Provision
+provision_bond_name="CHANGEME e.g. bond0.120"
+provision_boot_opts="onboot none vlan"
+#
+# Storage
+storage_bond_name="CHANGEME e.g. bond0.170"
+storage_boot_opts="onboot none vlan"
+#
+# Define the bridges
+# Public Bridge
+public_bridge_boot_opts="CHANGEME e.g. onboot static 10.148.44.41/255.255.255.0"
+#
+# Provision Bridge
+provision_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.120.41/255.255.255.0"
+#
+# Storage Bridge
+storage_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.170.41/255.255.255.0"
 ################### END of CHANGEME
 
 # Create the files that will be used by the installation environment and %post environment
-read -a itmp <<< ${public_bond}
+read -a itmp <<< $( tr '/' ' ' <<< ${anaconda_interface} )
 
-echo "network --activate --onboot=true --noipv6 --device=${itmp[4]} --bootproto=static --ip=${itmp[2]}" \
-     " --netmask=${itmp[3]} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers}" \
+echo "network --activate --onboot=true --noipv6 --device=${itmp[2]} --bootproto=static --ip=${itmp[0]}" \
+     " --netmask=${itmp[1]} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers}" \
      >> /tmp/ks_include.txt
 
 echo "rootpw ${SystemPassword}" >> /tmp/ks_include.txt
 echo "timezone ${TimeZone} --utc" >> /tmp/ks_include.txt
 
+#Post_include Environment 
 echo "HostName=\"${HostName}\"" >> /tmp/ks_post_include.txt
 echo "Gateway=\"${Gateway}\"" >> /tmp/ks_post_include.txt
 echo "NameServers=\"${NameServers}\"" >> /tmp/ks_post_include.txt
 echo "NTPServers=\"${NTPServers}\"" >> /tmp/ks_post_include.txt
 
-echo "public_bond=\"${public_bond}\"" >> /tmp/ks_post_include.txt
-echo "provision_bond=\"${provision_bond}\"" >> /tmp/ks_post_include.txt
-echo "SMUser=${SubscriptionManagerUser}" >> /tmp/ks_post_include.txt
-echo "SMPassword=${SubscriptionManagerPassword}" >> /tmp/ks_post_include.txt
-echo "SMPool=${SubscriptionManagerPool}" >> /tmp/ks_post_include.txt
+echo "declare -A bonds" >> /tmp/ks_post_include.txt
+echo "declare -A bond_opts" >> /tmp/ks_post_include.txt
+echo "declare -A bond_ifaces" >> /tmp/ks_post_include.txt 
+echo "declare -A bridges" >> /tmp/ks_post_include.txt
+echo "declare -A bridge_iface" >> /tmp/ks_post_include.txt
+
+echo "bonds[${public_bond_name}]=\"${public_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bond_opts[${public_bond_name}]=\"${public_bond_opts}\"" >> /tmp/ks_post_include.txt
+echo "bond_ifaces[${public_bond_name}]=\"${public_ifaces}\"" >> /tmp/ks_post_include.txt
+
+echo "bonds[${private_bond_name}]=\"${private_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bond_opts[${private_bond_name}]=\"${private_bond_opts}\"" >> /tmp/ks_post_include.txt
+echo "bond_ifaces[${private_bond_name}]=\"${private_ifaces}\"" >> /tmp/ks_post_include.txt
+
+echo "bonds[${provision_bond_name}]=\"${provision_boot_opts}\"" >> /tmp/ks_post_include.txt
+
+echo "bonds[${storage_bond_name}]=\"${storage_boot_opts}\"" >> /tmp/ks_post_include.txt
+
+echo "bridges[public]=\"${public_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bridge_iface[public]=\"${public_bond_name}\"" >> /tmp/ks_post_include.txt
+
+echo "bridges[provision]=\"${provision_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bridge_iface[provision]=\"${provision_bond_name}\"" >> /tmp/ks_post_include.txt
+
+echo "bridges[storage]=\"${storage_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bridge_iface[storage]=\"${storage_bond_name}\"" >> /tmp/ks_post_include.txt
+
+echo "SMUser=\"${SubscriptionManagerUser}\"" >> /tmp/ks_post_include.txt
+echo "SMPassword=\"${SubscriptionManagerPassword}\"" >> /tmp/ks_post_include.txt
+echo "SMPool=\"${SubscriptionManagerPool}\"" >> /tmp/ks_post_include.txt
 
 [[ ${SubscriptionManagerProxy} ]] && {
   echo "SMProxy=\"${SubscriptionManagerProxy}\"" >> /tmp/ks_post_include.txt
@@ -197,70 +256,164 @@ do
 done
 
 
-# Configure the interfaces, bonds, and bridges
-for bond in "${public_bond}" "${provision_bond}"
+# Configure Bonding and VLANS
+#
+for bond in ${!bonds[@]}
 do
-  read -a itmp <<< ${bond}
-  bridge=${itmp[0]}
-  bname=${itmp[1]}
-  ip=${itmp[2]}
-  mask=${itmp[3]}
+  read parms <<< $( tr -d '\r' <<< ${bonds[$bond]} )
 
-  itmp=${itmp[@]:4}
+  unset bond_info
+  declare -A bond_info=(  \
+                         [DEVICE]="${bond}" \
+                         [PROTO]="dhcp" \
+                         [ONBOOT]="no"      \
+                         [NM_CONTROLLED]="no"      \
+                         )
 
-# Configure the interfaces
-  for iface in ${itmp}
+  for parm in ${parms}
   do
-    mac=$( ip addr sh dev ${iface} | awk '/link/ {print $2}' )
+    case $parm in
+          promisc ) bond_info[PROMISC]="yes"
+                   ;;
 
-    cat <<EOBF > /etc/sysconfig/network-scripts/ifcfg-${iface}
+          onboot ) bond_info[ONBOOT]="yes"
+                   ;;
+
+            none ) bond_info[PROTO]="none"
+                   ;;
+
+          static ) bond_info[PROTO]="static"
+                   ;;
+
+            dhcp ) bond_info[PROTO]="dhcp"
+                   ;;
+
+            vlan ) bond_info[VLAN]="yes"
+                   ;;
+
+ *.*.*.*/*.*.*.* ) read IP NETMASK <<< $( tr '/' ' ' <<< ${parm} )
+                   bond_info[IP]="${IP}"
+                   bond_info[NETMASK]="${NETMASK}"
+                   ;;
+    esac
+  done
+
+  cat << EOB > /etc/sysconfig/network-scripts/ifcfg-${bond}
+NAME=${bond}
+DEVICE=${bond}
+TYPE=Bond
+ONBOOT=${bond_info[ONBOOT]}
+NM_CONTROLLED=${bond_info[NM_CONTROLLED]}
+BOOTPROTO=${bond_info[PROTO]}
+EOB
+
+  [[ ${bond_opts[${bond}]} ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}
+BONDING_OPTS="$( tr -d '\r' <<< ${bond_opts[$bond]} )"
+EOB
+
+  [[ "${bond_info[PROTO]}" = "static" ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}
+IPADDR=${bond_info[IP]}
+NETMASK=${bond_info[NETMASK]}
+EOB
+
+  [[ "${bond_info[PROMISC]}" = "yes" ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}
+PROMISC=${bond_info[PROMISC]}
+EOB
+
+  [[ "${bond_info[VLAN]}" = "yes" ]] && {
+    cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}
+VLAN=${bond_info[VLAN]}
+EOB
+  } || {
+    cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}
+BONDING_MASTER=yes
+EOB
+  }
+
+
+for iface in $( tr -d '\r' <<< ${bond_ifaces[$bond]} )
+do
+  unset mac
+  mac=$( ip addr sh dev ${iface} | awk '/link/ {print $2}' )
+
+  cat << EOI > /etc/sysconfig/network-scripts/ifcfg-${iface}
 NAME=${iface}
 DEVICE=${iface}
 TYPE=Ethernet
 HWADDR=${mac}
-NM_CONTROLLED=no
-ONBOOT=yes
 BOOTPROTO=none
+ONBOOT=${bond_info[ONBOOT]}
+MASTER=${bond}
 SLAVE=yes
-MASTER=${bname}
-EOBF
-
+NM_CONTROLLED=no
+EOI
   done
-
-# Configure the bonds
-  cat <<EOBF > /etc/sysconfig/network-scripts/ifcfg-${bname}
-NAME=${bname}
-DEVICE=${bname}
-TYPE=Bond
-NM_CONTROLLED=no
-BOOTPROTO=none
-ONBOOT=yes
-BONDING_OPTS="mode=balance-tlb miimon=100"
-BONDING_MASTER=yes
-DEFROUTE=no
-BRIDGE=${bridge}
-EOBF
-
-# Configure the bridges
-  cat <<EOBF > /etc/sysconfig/network-scripts/ifcfg-${bridge}
-NAME=${bridge}
-DEVICE=${bridge}
-TYPE=Bridge
-NM_CONTROLLED=no
-ONBOOT=yes
-BOOTPROTO=static
-IPADDR=${ip}
-NETMASK=${mask}
-EOBF
 
 done
 
-echo "--------------------------------"
-ip addr
-ip route
+
+
+# Configure Bridges
+#
+for bridge in ${!bridges[@]}
+do
+  read parms <<< $( tr -d '\r' <<< ${bridges[$bridge]} )
+
+  unset bridge_info
+  declare -A bridge_info=(  \
+                         [DEVICE]="${bond}" \
+                         [PROTO]="dhcp" \
+                         [ONBOOT]="no"      \
+                         [NM_CONTROLLED]="no"      \
+                         )
+
+  for parm in ${parms}
+  do
+    case $parm in
+          onboot ) bridge_info[ONBOOT]="yes"
+                   ;;
+
+            none ) bridge_info[PROTO]="none"
+                   ;;
+
+          static ) bridge_info[PROTO]="static"
+                   ;;
+
+            dhcp ) bridge_info[PROTO]="dhcp"
+                   ;;
+
+ *.*.*.*/*.*.*.* ) read IP NETMASK <<< $( tr '/' ' ' <<< ${parm} )
+                   bridge_info[IP]="${IP}"
+                   bridge_info[NETMASK]="${NETMASK}"
+                   ;;
+    esac
+  done
+
+
+
+  cat << EOB > /etc/sysconfig/network-scripts/ifcfg-${bridge}
+NAME=${bridge}
+DEVICE=${bridge}
+TYPE=Bridge
+ONBOOT=${bridge_info[ONBOOT]}
+NM_CONTROLLED=${bridge_info[NM_CONTROLLED]}
+BOOTPROTO=${bridge_info[PROTO]}
+EOB
+
+  [[ "${bridge_info[PROTO]}" = "static" ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bridge}
+IPADDR=${bridge_info[IP]}
+NETMASK=${bridge_info[NETMASK]}
+EOB
+
+  [[ "${bridge_iface[${bridge}]}" ]] && echo "BRIDGE=${bridge}" >> /etc/sysconfig/network-scripts/ifcfg-${bridge_iface[${bridge}]}
+
+
+done
 
 
 # Register the system using Subscription Manager
+subscription-manager register --username=${SubscriptionManagerUser} --password= ${SubscriptionManagerPassword}
+
 
 [[ "${SMProxy}" ]] && {
   ProxyCmd="--server.proxy_hostname ${SMProxy}"
@@ -272,7 +425,7 @@ ip route
   subscription-manager config ${ProxyCmd}
   }
 
-SMPool=""
+SMPool="${SubscriptionManagerPool}"
 
 [[ x${SMPool} = x ]] \
   && SMPool=$( subscription-manager list --available \
@@ -284,8 +437,7 @@ SMPool=""
        subscription-manager attach --auto
        )
 
-yum -y update
-
+#yum -y update
 
 systemctl disable NetworkManager
 systemctl disable firewalld

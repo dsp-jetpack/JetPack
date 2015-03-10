@@ -17,6 +17,9 @@ do
   for parm in ${parms}
   do
     case $parm in
+          promisc ) bond_info[PROMISC]="yes"
+                   ;;
+
           onboot ) bond_info[ONBOOT]="yes"
                    ;;
 
@@ -44,12 +47,19 @@ DEVICE=${bond}
 ONBOOT=${bond_info[ONBOOT]}
 NM_CONTROLLED=${bond_info[NM_CONTROLLED]}
 BOOTPROTO=${bond_info[PROTO]}
+EOB
+
+  [[ ${bond_opts[${bond}]} ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}
 BONDING_OPTS="$( tr -d '\r' <<< ${bond_opts[$bond]} )"
 EOB
 
   [[ "${bond_info[PROTO]}" = "static" ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}
 IPADDR=${bond_info[IP]}
 NETMASK=${bond_info[NETMASK]}
+EOB
+
+  [[ "${bond_info[PROMISC]}" = "yes" ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}
+PROMISC=${bond_info[PROMISC]}
 EOB
 
   [[ "${bond_info[VLAN]}" = "yes" ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}

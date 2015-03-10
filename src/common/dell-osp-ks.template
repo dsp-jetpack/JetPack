@@ -9,7 +9,7 @@ rootpw --iscrypted <%= root_pass %>
 firewall --<%= @host.operatingsystem.major.to_i >= 6 ? "service=" : "" %>ssh
 authconfig --useshadow --passalgo=sha256 --kickstart
 
-timezone Americas/Chicago --ntpservers 0.fedora.pool.ntp.org
+timezone UTC --ntpservers 0.fedora.pool.ntp.org
 services --disabled autofs,gpm,sendmail,cups,iptables,ip6tables,auditd,arptables_jf,xfs,pcmcia,isdn,rawdevices,hpoj,bluetooth,openibd,avahi-daemon,avahi-dnsconfd,hidd,hplip,pcscd,restorecond,mcstrans,rhnsd,yum-updatesd,NetworkManager
 services --enabled ntpd
 
@@ -34,7 +34,6 @@ redhat-lsb-core
 subscription-manager
 yum-utils
 -NetworkManager*
--firewalld
 iptables
 iptables-services
 %end
@@ -66,6 +65,7 @@ echo "updating system time"
 /usr/sbin/ntpdate -sub <%= @host.params["ntp-server"] || "0.fedora.pool.ntp.org" %>
 /usr/sbin/hwclock --systohc
 
+systemctl restart ntpd
 
 <%= snippets "interface_config" %>
 <%= snippets "bond_interfaces" %>
@@ -88,16 +88,33 @@ subscription-manager register --username="<%= @host.params['subscription_manager
 
 subscription-manager attach --pool="<%= @host.params['subscription_manager_pool'] %>"
 
-cd /etc/yum.repos.d/
-
-# This is a hack for puddles and won't be needed when we get a pool
-
-wget ftp://partners.redhat.com/8aa5fd896ed3a83f6533a78287906111/OpenStack/6.0-Beta-2/RH7-RHOS-6.0.repo
-
 subscription-manager repos $( sed -e "s/,\s*/ --enable /g" -e "s/^/--enable /" <<< "<%= @host.params['subscription_manager_repos'] %>" )
+
+[[ -n "<%= @host.params['yum_versionlock_file'] %>" ]] && {
+    [[ ! -e /etc/yum/pluginconf.d/versionlock.conf ]] && yum -y install yum-plugin-versionlock
+    wget -O /etc/yum/pluginconf.d/versionlock.list <%= @host.params["yum_versionlock_file"] %>
+}
 
 systemctl stop firewalld
 systemctl disable firewalld
+
+[[ "<%= @host.params['storagenode_iptables'] %>" = "true" ]] && {
+
+cat <<EOF > /etc/sysconfig/iptables
+*filter
+:INPUT ACCEPT [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+-A INPUT -p icmp -j ACCEPT
+-A INPUT -i lo -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 22 -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 6800:7000 -j ACCEPT
+-A INPUT -j REJECT --reject-with icmp-host-prohibited
+-A FORWARD -j REJECT --reject-with icmp-host-prohibited
+COMMIT
+EOF
+}
 
 # update all the base packages from the updates repository
 yum -t -y -e 0 update

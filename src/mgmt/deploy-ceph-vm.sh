@@ -8,6 +8,7 @@ location=$2
 cat <<'EOFKS' > /tmp/ceph.ks
 
 install
+text
 cdrom
 reboot
 
@@ -43,6 +44,8 @@ ntp
 ntpdate
 -chrony
 -firewalld
+-NetworkManager
+-NetworkManager-*
 system-config-firewall-base
 iptables
 iptables-services
@@ -83,10 +86,6 @@ do
   [[ ${iface} == smuser ]] && echo "echo SMUser=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smpassword ]] && echo "echo SMPassword=\'${ip}\' >> /tmp/ks_post_include.txt"
   [[ ${iface} == smpool ]] && echo "echo SMPool=${ip} >> /tmp/ks_post_include.txt"
-
-  [[ ${iface} == smproxy ]] && echo "echo SMProxy=${ip} >> /tmp/ks_post_include.txt"
-  [[ ${iface} == smproxyuser ]] && echo "echo SMProxyUser=${ip} >> /tmp/ks_post_include.txt"
-  [[ ${iface} == smproxypassword ]] && echo "echo SMProxyPassword=${ip} >> /tmp/ks_post_include.txt"
 
   [[ ${iface} == eth0 ]] && { 
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers} >> /tmp/ks_include.txt"
@@ -177,6 +176,7 @@ chvt 8
 -A INPUT -i lo -j ACCEPT
 -A INPUT -p tcp -m state --state NEW -m tcp --dport 22 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 4505 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 4506 -j ACCEPT
 -A INPUT -j REJECT --reject-with icmp-host-prohibited
@@ -205,12 +205,10 @@ EOIP
     chmod 644 /etc/yum/pluginconf.d/versionlock.list
     }
 
-
   yum -y update
 
   systemctl disable NetworkManager
   systemctl disable firewalld
-
 
 
 ) 2>&1 | /usr/bin/tee -a /root/ceph-post.log
@@ -236,15 +234,15 @@ EOFKS
   rmdir /tmp/mnt-ceph
 
   virt-install --name ceph \
-    --ram 4096 \
-    --vcpus 2 \
+    --ram 1024 \
+    --vcpus 1 \
     --hvm \
     --os-type linux \
     --os-variant rhel6 \
     --disk /store/data/images/ceph.img,bus=virtio,size=16 \
     --disk /tmp/floppy-ceph.img,device=floppy \
     --network bridge=public \
-    --network bridge=provision \
+    --network bridge=storage \
     --initrd-inject /tmp/ceph.ks \
     --extra-args "ks=file:/ceph.ks" \
     --noautoconsole \
@@ -254,14 +252,14 @@ EOFKS
   } || {
 
 virt-install --name ceph \
-  --ram 4096 \
-  --vcpus 2 \
+  --ram 1024 \
+  --vcpus 1 \
   --hvm \
   --os-type linux \
   --os-variant rhel6 \
   --disk /store/data/images/ceph.img,bus=virtio,size=16 \
   --network bridge=public \
-  --network bridge=provision \
+  --network bridge=storage \
   --initrd-inject /tmp/ceph.ks \
   --extra-args "ks=file:/ceph.ks" \
   --noautoconsole \
