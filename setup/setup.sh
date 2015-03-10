@@ -300,12 +300,17 @@ file_setup(){
         mkdir /var/www/html/pub
         umount /var/www/htmp/pub
         mount /var/www/html/RH7/$rhel7_iso_file /var/www/html/pub
-		#finish tftp setup
+	#finish tftp setup
         cp /var/www/html/pub/isolinux/vmlinuz /var/lib/tftpboot/netboot/
         cp /var/www/html/pub/isolinux/initrd.img /var/lib/tftpboot/netboot/
         systemctl start tftp.socket
         service tftp restart
         systemctl enable tftp.service
+
+        #Put it in fstab
+        LINE='/var/www/html/RH7$rhel7_iso_file / /var/www/html/pub iso9660 loop,ro 0 0'
+        grep "$LINE" /etc/fstab >/dev/null  || echo $LINE >> /etc/fstab
+      
 }
 
 ui_setup(){
