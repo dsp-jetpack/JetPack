@@ -20,8 +20,9 @@
 
 shopt -s nullglob
 
-NETWORK_CONFIG_DIR=/etc/sysconfig/network-scripts
-
+LOG_FILE=/tmp/setup.log
+exec > >(tee -a ${LOG_FILE} )
+exec 2> >(tee -a ${LOG_FILE} >&2)
 
 # Logging levels
 FATAL=0
