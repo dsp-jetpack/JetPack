@@ -20,8 +20,9 @@
 
 shopt -s nullglob
 
-NETWORK_CONFIG_DIR=/etc/sysconfig/network-scripts
-
+LOG_FILE=/tmp/setup.log
+exec > >(tee -a ${LOG_FILE} )
+exec 2> >(tee -a ${LOG_FILE} >&2)
 
 # Logging levels
 FATAL=0
@@ -54,6 +55,37 @@ read_config(){
 	fi
 	set +e	
 }
+
+init(){
+   info "Random init stuff "
+   systemctl restart network
+   systemctl disable firewalld
+   systemctl stop firewalld
+   iptables -F
+}
+
+check_service(){
+SERVICE="$1"
+
+if [ "'systemctl is-active $SERVICE'" != "active" ] 
+then
+    echo "$SERVICE wasnt running so attempting restart"
+    systemctl restart $SERVICE
+    systemctl status $SERVICE 
+    systemctl enable $SERVICE
+    exit 0
+fi
+echo "$SERVICE is currently running"
+}
+
+end(){
+  
+   check_service "tftp.socket"
+   check_service "httpd"
+   check_service "dhcpd"
+   check_service "tftp" 
+}
+
 
 subscription_manager() {
 	info "### Register with Subscription manager and Yum update ###"
@@ -298,10 +330,12 @@ info "###Setting up Nics - TODO ###"
 ### Read configs
 read_config
 
+init
 ### Register with subscription manager
 subscription_manager
 
-os_update
+#Commented out as gnome installation fails on RHEL7
+#os_update 
 
 se_linux
 
@@ -334,7 +368,8 @@ file_setup
 ## ui setup
 ui_setup
 ### DONE
-service httpd restart
+end
+
 info "##### Done #####"
 
 bash
