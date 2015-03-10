@@ -57,7 +57,7 @@ read_config(){
 
 init(){
    info "Random init stuff "
-   systemctl network restart
+   systemctl restart network
    systemctl disable firewalld
    systemctl stop firewalld
    iptables -F
