@@ -17,7 +17,7 @@ class Ceph():
     def copy_installer(self):
         logger.info( "copying Ceph installer" ) 
         cmd = "mkdir ~/ice-1.2"
-        logger.info( Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ) )
+        logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ) )
         file = 'ICE-1.2.2-rhel7.tar.gz'
         localfile = self.settings.foreman_configuration_scripts + "\\" + file
         if(sys.platform.startswith('linux')):
@@ -26,9 +26,9 @@ class Ceph():
         logger.info( "local file " + localfile)
         remotefile = '/root/ice-1.2/' + file
         logger.info( "remote file " + remotefile)
-        Scp.put_file(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password, localfile, remotefile)
+        Scp.put_file(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password, localfile, remotefile)
         cmd = 'cd ~/ice-1.2;tar -zxvf ' + remotefile
-        logger.info( Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ) )
+        logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ) )
         
         
     def install_ice(self):
@@ -37,26 +37,28 @@ class Ceph():
                     "sed -i 's/prompt_continue()$//' /root/ice-1.2/ice_setup.py"
                     ]
         for cmd in commands :
-            logger.info( Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ) )
+            logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ) )
         cmd = 'cd /root/ice-1.2/;python ice_setup.py'
         logger.info("installing ice")
-        logger.info( Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+        logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
         
         cmd = 'mkdir ~/cluster && cd ~/cluster'
-        logger.info( Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+        logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
         
         cmd = 'cd ~/cluster;calamari-ctl initialize --admin-username root --admin-password '+self.settings.ceph_node.root_password+' --admin-email gael_rehault@dell.com'
-        logger.info( Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+        logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
+
+
        
     def configure_monitor(self):
         cmd = 'mkdir ~/.ssh; ssh-keygen -q -f /root/.ssh/id_rsa -P "";touch ~/.ssh/known_hosts'
-        logger.info( Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+        logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
         cmd = ' ssh-keyscan -H '+ self.settings.ceph_node.hostname +'.' + self.settings.domain +' >> ~/.ssh/known_hosts'
-        logger.info( Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd ))
+        logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
         
         logger.info("updating host files for controller nodes & upload ssh keys to enable password less ssh between ceph/controllers")
         cmd = 'cat /root/.ssh/id_rsa.pub'
-        myKey, err = Ssh.execute_command(self.settings.ceph_node.provisioning_ip, "root", self.settings.ceph_node.root_password,cmd )
+        myKey, err = Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd )
         monitorList = ''
         monitorListShort = ''
         monHosts = 'mon_host = '
