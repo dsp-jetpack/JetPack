@@ -73,7 +73,6 @@ then
     systemctl restart $SERVICE
     systemctl status $SERVICE 
     systemctl enable $SERVICE
-    exit 0
 fi
 echo "$SERVICE is currently running"
 }
@@ -141,9 +140,9 @@ TFTP_CONF_FILE="/etc/xinetd.d/tftp"
 
 cat > $TFTP_CONF_FILE << EOF	
 # default: off
-# description: The tftp server serves files using the trivial file transfer \
-#       protocol.  The tftp protocol is often used to boot diskless \
-#       workstations, download configuration files to network-aware printers, \
+# description: The tftp server serves files using the trivial file transfer 
+#       protocol.  The tftp protocol is often used to boot diskless 
+#       workstations, download configuration files to network-aware printers, 
 #       and to start the installation process for some operating systems.
 service tftp
 {
