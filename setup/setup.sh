@@ -78,11 +78,32 @@ echo "$SERVICE is currently running"
 }
 
 end(){
-  
+ 
+   info "#####VALIDATION#####" 
    check_service "tftp.socket"
    check_service "httpd"
    check_service "dhcpd"
    check_service "tftp" 
+
+   if [ ! -f /var/www/html/pub/EULA ]; then
+     error "Missing mount /var/www/html/pub/EULA"
+   fi
+
+  if [ ! -f /var/lib/tftpboot/netboot/vmlinuz ]; then
+     error "Missing /var/lib/tftpboot/netboot/vmlinz"
+   fi
+  if [ ! -f /var/lib/tftpboot/netboot/initrd.img ]; then
+     error "Missing /var/lib/tftpboot/netboot/initrd.img"
+  fi
+
+  URL="http://$pxe_server_ip/pub/EULA"
+
+  if curl --output /dev/null --silent --head --fail "$URL"
+  then
+    echo "This URL Exists $URL"
+  else
+    echo "This URL Not Exist $URL"
+  fi
 }
 
 
