@@ -157,10 +157,6 @@ if __name__ == '__main__':
         FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bridge_boot_opts="onboot static .*','provision_bridge_boot_opts="onboot static '+settings.sah_node.provisioning_ip+ '/'+ settings.sah_node.provisioning_netmask+'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^storage_bridge_boot_opts="onboot static .*','storage_bridge_boot_opts="onboot static '+settings.sah_node.storage_ip+ '/'+ settings.sah_node.storage_netmask+'"')
 
-        #public_bridge_boot_opts="onboot static 10.148.44.41/255.255.255.0"
-        #provision_bridge_boot_opts="onboot static 192.168.120.41/255.255.255.0"
-        #storage_bridge_boot_opts="onboot static 192.168.170.41/255.255.255.0"
-
         log ("=== starting the tftp service & power on the admin")
         log (subprocess.check_output("service tftp start" if isLinux else "net start Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
         time.sleep(60)
@@ -189,7 +185,6 @@ if __name__ == '__main__':
         while (not "root" in Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "whoami")[0]):
             log ("...")
             time.sleep(100);
-            #log (Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "whoami"))
         log ("sahh node is up @ " + settings.sah_node.public_ip)
 
         log("*** Verify the SAH node registered properly ***")
@@ -344,8 +339,8 @@ if __name__ == '__main__':
         if settings.stamp_storage == "ceph":
             foremanHost.configure_ceph_nic()
             foremanHost.configure_ceph_version_locking()
-
-        
+        foremanHost.configure_pool_ids()
+        foremanHost.configure_repositories()
         
         logger.info( "==== Power on/PXE boot the Controller/Compute/Storage nodes")
         for each in nonSAHnodes:
@@ -362,37 +357,39 @@ if __name__ == '__main__':
             log("Disable puppet on the node for now to avoid race conditions later.")
             log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet stop")[0])
 
-        if settings.stamp_storage == "ceph":
-            ceph = Ceph()
-            ceph.copy_installer()
-            ceph.install_ice()
-            ceph.configure_monitor()
-            ceph.configure_osd()
-            ceph.connectHostsToCalamari()
-            ceph.grantAdminRightsToOSD()
-            ceph.modifyOSDPlacementGroups()
-            ceph.pool_and_keyRing_configuration()
-            ceph.foreman_config_ha_all_in_One()
-            ceph.foreman_config_compute()
+
+
+        #if settings.stamp_storage == "ceph":
+        #    ceph = Ceph()
+        #    ceph.copy_installer()
+        #    ceph.install_ice()
+        #    ceph.configure_monitor()
+        #    ceph.configure_osd()
+        #    ceph.connectHostsToCalamari()
+        #    ceph.grantAdminRightsToOSD()
+        #    ceph.modifyOSDPlacementGroups()
+        #    ceph.pool_and_keyRing_configuration()
+        #    ceph.foreman_config_ha_all_in_One()
+        #    ceph.foreman_config_compute()
                 
                 
-            foremanHost.configureHostGroups_Parameters()
-            foremanHost.cephConfigurtion()
-            foremanHost.configureNodes()
+        #    foremanHost.configureHostGroups_Parameters()
+        #    foremanHost.cephConfigurtion()
+        #    foremanHost.configureNodes()
             
-            if settings.stamp_storage == "ceph":
-                # bugs here with docs, if done earlier as suggeste ceph wont be installed on the compute nodes
-                ceph.libvirt_config()
-                ceph.deploy_ceph_to_compute_hosts()
-                ceph.configure_cinder_for_backup() 
-                ceph.configure_missing_bits_from_docs()
+        #    if settings.stamp_storage == "ceph":
+        #        # bugs here with docs, if done earlier as suggeste ceph wont be installed on the compute nodes
+        #        ceph.libvirt_config()
+        #        ceph.deploy_ceph_to_compute_hosts()
+        #        ceph.configure_cinder_for_backup()
+        #        ceph.configure_missing_bits_from_docs()
                 
         log("re enable puppet service on the nodes")
         for each in nonSAHnodes:
             log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet start")[0])
             
         UI_Manager.driver().close()
-        ceph.restart_ha_services()
+        #ceph.restart_ha_services()
             
         log (" that's all folks "    )
         logger.info( "foreman admin password :: " + settings.foreman_password  )
