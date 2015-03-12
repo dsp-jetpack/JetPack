@@ -112,7 +112,7 @@
     fence_type = 'fence_ipmilan'
 
     
-    glance_be = 'file'
+    glance_be = 'rbd'
     rbd_spool = 'images'
     rbd_suser = 'images'
 
@@ -201,7 +201,6 @@ fence_ipmilan_host_to_address:
 fence_ipmilan_expose_lanplus: <%= fence_ipmi_lanplus %>
 fence_ipmilan_password: <%= passwd_auto %>
 fence_ipmilan_username: <%= fence_ipmi_user %>
-fence_xvm_key_file_password: <%= passwd_auto %>
 fencing_type: <%= fence_type %>
 
 galera_monitor_password: <%= passwd_auto %>
@@ -334,6 +333,7 @@ ovs_tunnel_types:
 - vlan
 ovs_vlan_ranges: 'physint:<%= tenant_vlan_range %>,physext'
 pcmk_iface: <%= cluster_interconnect_iface %>
+pcmk_fs_manage: 'false'
 pcmk_server_addrs:
 - <%= cluster_member_ip1 %>
 - <%= cluster_member_ip2 %>
