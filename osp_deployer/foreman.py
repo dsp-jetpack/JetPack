@@ -700,37 +700,31 @@ class Foreman():
             # quickstack::pacemaker::params::private_ip IP address of the controllers nic on the Private API network
             privateIp = Widget("//span[.='private_ip']/../..//a[.='override']")
 
-
-
-
             ipmiAdress_override.waitFor(20)
 
-            ipmiAddress_input = Widget("//input[@value='fence_ipmilan_address']/../..//textarea")
-            ipmiUser_input = Widget("//input[@value='fence_ipmilan_username']/../..//textarea")
-            ipmipassword_input = Widget("//input[@value='fence_ipmilan_password']/../..//textarea")
-            ipmiPrivateIp_input = Widget("//input[@value='private_ip']/../..//textarea")
 
-            while ipmiAddress_input.exists() == False :
+            while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 8:
                 ipmiAdress_override.click()
                 time.sleep(2)
-            while ipmiUser_input.exists() == False :
+            while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 9:
                 ipmiUser_override.click()
                 time.sleep(2)
-            while ipmipassword_input.exists() == False :
+            while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 10:
                 ipmiPassword_override.click()
                 time.sleep(2)
-            while ipmiPrivateIp_input.exists() == False :
+            while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 11:
                 privateIp.click()
                 time.sleep(2)
 
-            ipmiAddress_input.clear();
-            ipmiAddress_input.send_keys(each.idrac_ip);
-            ipmiUser_input.clear();
-            ipmiUser_input.send_keys(self.settings.ipmi_user);
-            ipmipassword_input.clear();
-            ipmipassword_input.send_keys(self.settings.ipmi_password);
-            ipmiPrivateIp_input.clear();
-            ipmiPrivateIp_input.send_keys(each.private_ip);
+            inputs = UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
+            inputs[0].clear();
+            inputs[0].send_keys(each.idrac_ip);
+            inputs[1].clear();
+            inputs[1].send_keys(self.settings.ipmi_user);
+            inputs[2].clear();
+            inputs[2].send_keys(self.settings.ipmi_password);
+            inputs[3].clear();
+            inputs[3].send_keys(each.private_ip);
 
             sub = Widget("//input[@value='Submit']")
             sub.click()
