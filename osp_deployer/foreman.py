@@ -560,15 +560,14 @@ class Foreman():
         paramLink.click()
 
         override = Widget("//span[.='quickstack::pacemaker::neutron']/../..//span[.='enabled']/../..//a[.='override']")
-        neutronEnabled = Widget("//input[@value='backend']/../..//textarea")
 
-        while neutronEnabled.exists() == False:
+        while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 5:
             override.click()
             time.sleep(2)
 
-
-        neutronEnabled.clear();
-        neutronEnabled.send_keys("false");
+        inputs = UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
+        inputs[0].clear();
+        inputs[0].send_keys("false");
 
         sub = Widget("//input[@value='Submit']")
         sub.click()

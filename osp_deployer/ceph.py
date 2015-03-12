@@ -344,36 +344,33 @@ class Ceph():
         pcmk_fs_manage_override = Widget("//span[.='quickstack::pacemaker::glance']/../..//span[.='pcmk_fs_manage']/../..//a[.='override']")
 
 
-
-        ibackend_rbd_input = Widget("//input[@value='backend_rbd']/../..//textarea")
-        rdb_secret_input = Widget("//input[@value='rbd_secret_uuid']/../..//textarea")
-        glance_backEn_input = Widget("//input[@value='backend']/../..//textarea")
-        pcmk_fs_manage_input = Widget("//input[@value='pcmk_fs_manage']/../..//textarea")
-
-        while ibackend_rbd_input.exists() == False:
+        while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 1:
             backend_rbd_override.click()
             time.sleep(2)
-        while rdb_secret_input.exists() == False:
+        while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 2:
             rdb_secret_override.click()
             time.sleep(2)
-        while glance_backEn_input.exists() == False:
+        while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 3:
             glance_backEnd_override.click()
             time.sleep(2)
-        while pcmk_fs_manage_input.exists() == False:
+        while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 4:
             pcmk_fs_manage_override.click()
             time.sleep(2)
+
+        inputs = UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
+
+        inputs[0].clear();
+        inputs[0].send_keys("true")
         
-        ibackend_rbd_input.clear();
-        ibackend_rbd_input.send_keys("true")
+        inputs[1].clear();
+        inputs[1].send_keys(self.settings.uuid)
         
-        rdb_secret_input.clear();
-        rdb_secret_input.send_keys(self.settings.uuid)
+        inputs[2].clear();
+        inputs[2].send_keys("rbd")
         
-        glance_backEn_input.clear();
-        glance_backEn_input.send_keys("rbd")
-        
-        pcmk_fs_manage_input.clear()
-        pcmk_fs_manage_input.send_keys("false")
+        inputs[3].clear()
+        inputs[3].send_keys("false")
+
         
         sub = Widget("//input[@value='Submit']")
         sub.click()
@@ -409,24 +406,21 @@ class Ceph():
         
         cinder_backend_rbd = Widget("//span[.='quickstack::nova_network::compute']/../..//span[.='cinder_backend_rbd']/../..//a[.='override']")
         rbd_secret_uuid = Widget("//span[.='quickstack::nova_network::compute']/../..//span[.='rbd_secret_uuid']/../..//a[.='override']")
-        
 
-        cinder_backend_rbd_input = Widget("//input[@value='backend']/../..//textarea")
-        rbd_secret_uuid_input = Widget("//input[@value='pcmk_fs_manage']/../..//textarea")
-
-        while cinder_backend_rbd_input.exists() == False:
+        while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 1:
             cinder_backend_rbd.click()
             time.sleep(2)
-        while rbd_secret_uuid_input.exists() == False:
+
+        while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 2:
             rbd_secret_uuid.click()
             time.sleep(2)
 
+        inputs = UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
+        inputs[0].clear();
+        inputs[0].send_keys("true");
         
-        cinder_backend_rbd_input.clear();
-        cinder_backend_rbd_input.send_keys("true");
-        
-        rbd_secret_uuid_input.clear();
-        rbd_secret_uuid_input.send_keys(self.settings.uuid);
+        inputs[1].clear();
+        inputs[1].send_keys(self.settings.uuid);
 
         
         
