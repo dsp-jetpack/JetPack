@@ -194,7 +194,6 @@ rbd_pool: <%= c_rbd_pool %>
 rbd_secret_uuid: <%= c_ceph_fsid %>
 rbd_user: <%= c_rbd_user %>
 
-fence_ipmilan_hostlist: "<%= cluster_member_name1 %>,<%= cluster_member_name2 %>,<%= cluster_member_name3 %>"
 fence_ipmilan_host_to_address:
 - "<%= cluster_member_name1 %>:<%= fence_ipmi_ip1 %>"
 - "<%= cluster_member_name2 %>:<%= fence_ipmi_ip2 %>"
