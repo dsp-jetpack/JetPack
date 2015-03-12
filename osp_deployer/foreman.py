@@ -560,13 +560,12 @@ class Foreman():
         paramLink.click()
 
         override = Widget("//span[.='quickstack::pacemaker::neutron']/../..//span[.='enabled']/../..//a[.='override']")
-        override.click()
+        neutronEnabled = Widget("//input[@value='backend']/../..//textarea")
 
-        inputs =   UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
+        while neutronEnabled.exists() == False:
+            override.click()
+            time.sleep(2)
 
-        #neutronEnabled = inputs[5]; # See ceph.conf >> foreman_config_ha_all_in_One, some previous attribute overriden ( should make this more elegant .)
-
-        neutronEnabled = inputs[4]; # See ceph.conf >> foreman_config_ha_all_in_One, some previous attribute overriden ( should make this more elegant .)
 
         neutronEnabled.clear();
         neutronEnabled.send_keys("false");
@@ -703,29 +702,36 @@ class Foreman():
             privateIp = Widget("//span[.='private_ip']/../..//a[.='override']")
 
 
+
+
             ipmiAdress_override.waitFor(20)
 
-            ipmiAdress_override.click()
-            ipmiUser_override.click()
-            ipmiPassword_override.click()
-            privateIp.click()
+            ipmiAddress_input = Widget("//input[@value='fence_ipmilan_address']/../..//textarea")
+            ipmiUser_input = Widget("//input[@value='fence_ipmilan_username']/../..//textarea")
+            ipmipassword_input = Widget("//input[@value='fence_ipmilan_password']/../..//textarea")
+            ipmiPrivateIp_input = Widget("//input[@value='private_ip']/../..//textarea")
 
+            while ipmiAddress_input.exists() == False :
+                ipmiAdress_override.click()
+                time.sleep(2)
+            while ipmiUser_input.exists() == False :
+                ipmiUser_override.click()
+                time.sleep(2)
+            while ipmipassword_input.exists() == False :
+                ipmiPassword_override.click()
+                time.sleep(2)
+            while ipmiPrivateIp_input.exists() == False :
+                privateIp.click()
+                time.sleep(2)
 
-            inputs =   UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
-
-            ipmiAddress = inputs[0];
-            ipmiUser = inputs[1];
-            ipmiPass = inputs[2];
-            privIp = inputs[3];
-
-            ipmiAddress.clear();
-            ipmiAddress.send_keys(each.idrac_ip);
-            ipmiUser.clear();
-            ipmiUser.send_keys(self.settings.ipmi_user);
-            ipmiPass.clear();
-            ipmiPass.send_keys(self.settings.ipmi_password);
-            privIp.clear();
-            privIp.send_keys(each.private_ip);
+            ipmiAddress_input.clear();
+            ipmiAddress_input.send_keys(each.idrac_ip);
+            ipmiUser_input.clear();
+            ipmiUser_input.send_keys(self.settings.ipmi_user);
+            ipmipassword_input.clear();
+            ipmipassword_input.send_keys(self.settings.ipmi_password);
+            ipmiPrivateIp_input.clear();
+            ipmiPrivateIp_input.send_keys(each.private_ip);
 
             sub = Widget("//input[@value='Submit']")
             sub.click()

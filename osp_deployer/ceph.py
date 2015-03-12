@@ -340,38 +340,40 @@ class Ceph():
         
         backend_rbd_override = Widget("//span[.='quickstack::pacemaker::cinder']/../..//span[.='backend_rbd']/../..//a[.='override']")
         rdb_secret_override = Widget("//span[.='quickstack::pacemaker::cinder']/../..//span[.='rbd_secret_uuid']/../..//a[.='override']")
-        backend_rbd_override.click()
-        rdb_secret_override.click()
-        
         glance_backEnd_override = Widget("//span[.='quickstack::pacemaker::glance']/../..//span[.='backend']/../..//a[.='override']")
         pcmk_fs_manage_override = Widget("//span[.='quickstack::pacemaker::glance']/../..//span[.='pcmk_fs_manage']/../..//a[.='override']")
-        glance_backEnd_override.click()
-        pcmk_fs_manage_override.click()
-        
-        #VolumeOverrride = Widget(" //span[.='quickstack::pacemaker::cinder']/../..//span[.='volume']/../..//a[.='override']")
-        #VolumeOverrride.click()
-       
-        
-        inputs =   UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
-        
-        inputs[0].clear();
-        inputs[0].send_keys("true");
-        
-        inputs[1].clear();
-        inputs[1].send_keys(self.settings.uuid);
-        
-        inputs[2].clear();
-        inputs[2].send_keys("rbd");
-        
-        inputs[3].clear();
-        inputs[3].send_keys("false");
-        
-        #inputs[4].clear();
-        #inputs[4].send_keys("true");
-        
 
-        # note :: if adding more overrides here , make sure to increment the index in foreman.py :: configureHostGroups_Parameters()
-        # todo: make this nicer..
+
+
+        ibackend_rbd_input = Widget("//input[@value='backend_rbd']/../..//textarea")
+        rdb_secret_input = Widget("//input[@value='rbd_secret_uuid']/../..//textarea")
+        glance_backEn_input = Widget("//input[@value='backend']/../..//textarea")
+        pcmk_fs_manage_input = Widget("//input[@value='pcmk_fs_manage']/../..//textarea")
+
+        while ibackend_rbd_input.exists() == False:
+            backend_rbd_override.click()
+            time.sleep(2)
+        while rdb_secret_input.exists() == False:
+            rdb_secret_override.click()
+            time.sleep(2)
+        while glance_backEn_input.exists() == False:
+            glance_backEnd_override.click()
+            time.sleep(2)
+        while pcmk_fs_manage_input.exists() == False:
+            pcmk_fs_manage_override.click()
+            time.sleep(2)
+        
+        ibackend_rbd_input.clear();
+        ibackend_rbd_input.send_keys("true")
+        
+        rdb_secret_input.clear();
+        rdb_secret_input.send_keys(self.settings.uuid)
+        
+        glance_backEn_input.clear();
+        glance_backEn_input.send_keys("rbd")
+        
+        pcmk_fs_manage_input.clear()
+        pcmk_fs_manage_input.send_keys("false")
         
         sub = Widget("//input[@value='Submit']")
         sub.click()
@@ -408,17 +410,24 @@ class Ceph():
         cinder_backend_rbd = Widget("//span[.='quickstack::nova_network::compute']/../..//span[.='cinder_backend_rbd']/../..//a[.='override']")
         rbd_secret_uuid = Widget("//span[.='quickstack::nova_network::compute']/../..//span[.='rbd_secret_uuid']/../..//a[.='override']")
         
-        cinder_backend_rbd.click()
-        rbd_secret_uuid.click()
+
+        cinder_backend_rbd_input = Widget("//input[@value='backend']/../..//textarea")
+        rbd_secret_uuid_input = Widget("//input[@value='pcmk_fs_manage']/../..//textarea")
+
+        while cinder_backend_rbd_input.exists() == False:
+            cinder_backend_rbd.click()
+            time.sleep(2)
+        while rbd_secret_uuid_input.exists() == False:
+            rbd_secret_uuid.click()
+            time.sleep(2)
+
         
-        inputs =   UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
+        cinder_backend_rbd_input.clear();
+        cinder_backend_rbd_input.send_keys("true");
         
-        inputs[0].clear();
-        inputs[0].send_keys("true");
-        
-        inputs[1].clear();
-        inputs[1].send_keys(self.settings.uuid);
-        
+        rbd_secret_uuid_input.clear();
+        rbd_secret_uuid_input.send_keys(self.settings.uuid);
+
         
         
         sub = Widget("//input[@value='Submit']")
