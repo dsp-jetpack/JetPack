@@ -33,6 +33,7 @@
 0:python-ceph-0.80.7-0.el7.*
 0:rpm-build-libs-4.11.1-18.el7_0.*
 1:cups-libs-1.6.3-14.el7.*
+1:cups-client-1.6.3-14.el7.* 
 0:gdisk-0.8.6-4.el7.*
 1:mariadb-libs-5.5.41-2.el7_0.*
 0:poppler-utils-0.22.5-6.el7.*

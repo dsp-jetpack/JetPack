@@ -263,7 +263,9 @@ if __name__ == '__main__':
         logger.info( execute_as_shell(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password,cmd))
 
         cmd = "puppet agent  -t"
-        logger.info( Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password,cmd))
+
+        logger.info( Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password,cmd))      
+
 
         foremanHost = Foreman()
         foremanHost.reset_password()
@@ -372,10 +374,12 @@ if __name__ == '__main__':
         #    ceph.foreman_config_ha_all_in_One()
         #    ceph.foreman_config_compute()
 
-
+                
+                
         #    foremanHost.configureHostGroups_Parameters()
         #    foremanHost.cephConfigurtion()
         #    foremanHost.configureNodes()
+            
 
         #    if settings.stamp_storage == "ceph":
         #        # bugs here with docs, if done earlier as suggeste ceph wont be installed on the compute nodes

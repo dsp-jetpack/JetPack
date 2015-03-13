@@ -30,7 +30,6 @@ class Ceph():
         cmd = 'cd ~/ice-1.2;tar -zxvf ' + remotefile
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ) )
 
-
     def install_ice(self):
         logger.info("removing installation prompts")
         commands = ['sed -i "s/fqdn = prompt.*/return \'http\', fallback_fqdn/" /root/ice-1.2/ice_setup.py',
@@ -42,13 +41,12 @@ class Ceph():
         logger.info("installing ice")
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
 
+        
         cmd = 'mkdir ~/cluster && cd ~/cluster'
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
-
+        
         cmd = 'cd ~/cluster;calamari-ctl initialize --admin-username root --admin-password '+self.settings.ceph_node.root_password+' --admin-email gael_rehault@dell.com'
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
-
-
 
     def configure_monitor(self):
         cmd = 'mkdir ~/.ssh; ssh-keygen -q -f /root/.ssh/id_rsa -P "";touch ~/.ssh/known_hosts'
@@ -362,16 +360,17 @@ class Ceph():
         inputs[0].clear();
         inputs[0].send_keys("true")
 
+        
         inputs[1].clear();
         inputs[1].send_keys(self.settings.uuid)
-
+        
         inputs[2].clear();
         inputs[2].send_keys("rbd")
-
+        
         inputs[3].clear()
         inputs[3].send_keys("false")
 
-
+        
         sub = Widget("//input[@value='Submit']")
         sub.click()
         time.sleep(10)
@@ -421,7 +420,6 @@ class Ceph():
 
         inputs[1].clear();
         inputs[1].send_keys(self.settings.uuid);
-
 
 
         sub = Widget("//input[@value='Submit']")

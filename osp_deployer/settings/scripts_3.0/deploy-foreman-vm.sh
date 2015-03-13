@@ -38,12 +38,9 @@ firstboot --disable
 eula --agreed
 
 %packages
-@base
 @core
-@fonts
-@input-methods
-@internet-browser
-@remote-desktop-clients
+-NetworkManager
+-NetworkManager-*
 ntp
 ntpdate
 -chrony
@@ -160,20 +157,18 @@ chvt 8
          )
 
 
-  # Disable all enabled repositories
-  for repo in $( yum repolist all | awk '/enabled:/ { print $1}' )
-  do
-    yum-config-manager --disable ${repo} | grep -E "^\[|^enabled"
-  done
-
   subscription-manager repos --disable=*
   subscription-manager repos --enable=rhel-7-server-rpms
   subscription-manager repos --enable=rhel-server-rhscl-7-rpms
   subscription-manager repos --enable=rhel-7-server-openstack-6.0-installer-rpms
   subscription-manager repos --enable=rhel-7-server-openstack-6.0-rpms
 
+  # When the ceph solution is refreshed, the following line can be removed
+  # Workaround for broken vlock obsolete processing
+  sed -i 's/^\[main\]/\[main\]\nexclude=python-rados python-rbd/' /etc/yum.conf
+
   mkdir /tmp/mnt
-  mount /dev/floppy /tmp/mnt
+  mount /dev/fd0 /tmp/mnt
   [[ -e /tmp/mnt/versionlock.list ]] && {
     cp /tmp/mnt/versionlock.list /etc/yum/pluginconf.d
     chmod 644 /etc/yum/pluginconf.d/versionlock.list
@@ -301,4 +296,3 @@ virt-install --name foreman \
   --autostart \
   --location ${location}
   }
-

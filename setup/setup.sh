@@ -20,8 +20,9 @@
 
 shopt -s nullglob
 
-NETWORK_CONFIG_DIR=/etc/sysconfig/network-scripts
-
+LOG_FILE=/tmp/setup.log
+exec > >(tee -a ${LOG_FILE} )
+exec 2> >(tee -a ${LOG_FILE} >&2)
 
 # Logging levels
 FATAL=0
@@ -55,6 +56,57 @@ read_config(){
 	set +e	
 }
 
+init(){
+   info "Random init stuff "
+   systemctl restart network
+   systemctl disable firewalld
+   systemctl stop firewalld
+   iptables -F
+}
+
+check_service(){
+SERVICE="$1"
+
+if [ "'systemctl is-active $SERVICE'" != "active" ] 
+then
+    echo "$SERVICE wasnt running so attempting restart"
+    systemctl restart $SERVICE
+    systemctl status $SERVICE 
+    systemctl enable $SERVICE
+fi
+echo "$SERVICE is currently running"
+}
+
+end(){
+ 
+   info "#####VALIDATION#####" 
+   check_service "tftp.socket"
+   check_service "httpd"
+   check_service "dhcpd"
+   check_service "tftp" 
+
+   if [ ! -f /var/www/html/pub/EULA ]; then
+     error "Missing mount /var/www/html/pub/EULA"
+   fi
+
+  if [ ! -f /var/lib/tftpboot/netboot/vmlinuz ]; then
+     error "Missing /var/lib/tftpboot/netboot/vmlinz"
+   fi
+  if [ ! -f /var/lib/tftpboot/netboot/initrd.img ]; then
+     error "Missing /var/lib/tftpboot/netboot/initrd.img"
+  fi
+
+  URL="http://$pxe_server_ip/pub/EULA"
+
+  if curl --output /dev/null --silent --head --fail "$URL"
+  then
+    echo "This URL Exists $URL"
+  else
+    echo "This URL Not Exist $URL"
+  fi
+}
+
+
 subscription_manager() {
 	info "### Register with Subscription manager and Yum update ###"
 
@@ -69,6 +121,14 @@ subscription_manager() {
 os_update() {
 	yum -y update
 }
+
+se_linux() {
+    info "### Setting SELINUX to permissive mode ###"
+    sed -i 's/SELINUX=enforcing/SELINUX=permissive/g' /etc/selinux/config
+    setenforce 0
+    getenforce
+}
+
 
 tftp_setup(){
 	info "### Installing tftp server ###"	
@@ -101,9 +161,9 @@ TFTP_CONF_FILE="/etc/xinetd.d/tftp"
 
 cat > $TFTP_CONF_FILE << EOF	
 # default: off
-# description: The tftp server serves files using the trivial file transfer \
-#       protocol.  The tftp protocol is often used to boot diskless \
-#       workstations, download configuration files to network-aware printers, \
+# description: The tftp server serves files using the trivial file transfer 
+#       protocol.  The tftp protocol is often used to boot diskless 
+#       workstations, download configuration files to network-aware printers, 
 #       and to start the installation process for some operating systems.
 service tftp
 {
@@ -121,7 +181,7 @@ service tftp
 EOF
 
 service xinetd restart
-
+systemctl enable xinetd.service
 }
 
 dhcp_setup(){
@@ -162,6 +222,7 @@ http_setup(){
 
 	systemctl disable firewalld
         systemctl stop iptables
+        systemctl enable httpd.service
         service httpd restart
 }
 
@@ -176,7 +237,7 @@ python_setup(){
 
 	yum groupinstall -y "Development Tools"
 	yum groupinstall -y "Development Libraries"
-	yum install python-devel
+	yum install -y python-devel
 	#yum install -y pip 
 
 	#You need to install a few extra modules, to do this run the following commands in a command prompt :
@@ -223,7 +284,7 @@ git_setup() {
 
 	cd ~/
 
-	git clone https://$git_user_name:$git_user_password@github.com/dell-esg/deploy-auto.git
+	git clone -b $git_branch https://$git_user_name:$git_user_password@github.com/dell-esg/deploy-auto.git
 }
 
 file_setup(){
@@ -257,12 +318,22 @@ file_setup(){
 	fi
 
         mkdir /var/www/html/pub
-        mount /var/www/html/RH7/$rhel7_iso_file /var/www/html/pu
-		#finish tftp setup
+        umount /var/www/htmp/pub
+        mount /var/www/html/RH7/$rhel7_iso_file /var/www/html/pub
+	#finish tftp setup
         cp /var/www/html/pub/isolinux/vmlinuz /var/lib/tftpboot/netboot/
         cp /var/www/html/pub/isolinux/initrd.img /var/lib/tftpboot/netboot/
         systemctl start tftp.socket
         service tftp restart
+        systemctl enable tftp.service
+
+        #Put it in fstab
+        iso_file_name="/var/www/html/RH7/$rhel7_iso_file"
+        echo $iso_file_name
+        fs_tab_line="$iso_file_name /var/www/html/pub iso9660 loop,ro 0 0"
+        echo $fs_tab_line
+        grep "$fs_tab_line" /etc/fstab >/dev/null  || echo $fs_tab_line >> /etc/fstab
+      
 }
 
 ui_setup(){
@@ -287,10 +358,15 @@ info "###Setting up Nics - TODO ###"
 ### Read configs
 read_config
 
+init
 ### Register with subscription manager
 subscription_manager
 
-os_update
+#Commented out as gnome installation fails on RHEL7
+#os_update 
+
+se_linux
+
 ### Install tftp server ###
 dhcp_setup
 
@@ -320,7 +396,8 @@ file_setup
 ## ui setup
 ui_setup
 ### DONE
-service httpd restart
+end
+
 info "##### Done #####"
 
 bash
