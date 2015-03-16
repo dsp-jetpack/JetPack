@@ -328,7 +328,7 @@ if __name__ == '__main__':
         foremanHost.install_hammer()
         foremanHost.configure_installation_medium()
         foremanHost.configure_partitionts_tables()
-        foremanHost.configure_operating_systems()  # Need to Revisit this 7.0 vs 7.1 , create new or reused pre defined .
+        foremanHost.configure_operating_systems()
         foremanHost.configure_subnets()
         foremanHost.configure_templates()
         foremanHost.configure_os_updates()
@@ -359,6 +359,8 @@ if __name__ == '__main__':
             log("Disable puppet on the node for now to avoid race conditions later.")
             log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet stop")[0])
 
+        foremanHost.configureHostGroups_Parameters()
+        foremanHost.configureNodes()
 
 
         #if settings.stamp_storage == "ceph":
@@ -376,7 +378,7 @@ if __name__ == '__main__':
 
                 
                 
-        #    foremanHost.configureHostGroups_Parameters()
+        #
         #    foremanHost.cephConfigurtion()
         #    foremanHost.configureNodes()
             

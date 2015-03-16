@@ -18,7 +18,7 @@ class Settings():
         self.nova_public_network = self.cluster_settings_map['nova_public_network']
         self.nova_private_network = self.cluster_settings_map['nova_private_network']
         self.private_api_network = self.cluster_settings_map['private_api_network']
-        self.nova_private_vlanID = self.cluster_settings_map['nova_private_vlanid']
+        self.tenant_vlan_range = self.cluster_settings_map['tenant_vlan_range']
 
 
         self.vip_cinder_private = self.cluster_settings_map['vip_cinder_private']
@@ -38,6 +38,13 @@ class Settings():
         self.vip_nova_public = self.cluster_settings_map['vip_nova_public']
         self.vip_load_balancer_private = self.cluster_settings_map['vip_load_balancer_private']
         self.vip_rabbitmq_private = self.cluster_settings_map['vip_rabbitmq_private']
+        self.vip_ceilometer_private = self.cluster_settings_map['vip_ceilometer_private']
+        self.vip_ceilometer_public = self.cluster_settings_map['vip_ceilometer_public']
+        self.vip_neutron_public = self.cluster_settings_map['vip_neutron_public']
+        self.vip_neutron_private = self.cluster_settings_map['vip_neutron_private']
+
+
+
 
         self.bond_mode_sah = self.cluster_settings_map['bond_mode_sah']
         self.bond_mode_controller_nodes = self.cluster_settings_map['bond_mode_controller_nodes']

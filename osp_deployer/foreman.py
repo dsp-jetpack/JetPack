@@ -112,9 +112,38 @@ class Foreman():
 
         FileHelper.replaceExpressionTXT(file, 'vip_nova_pub = .*',"vip_nova_pub = '" + self.settings.vip_nova_public + "'" )
 
-        FileHelper.replaceExpressionTXT(file, 'fence_clu_iface = .*',"fence_clu_iface = '"+ self.settings.controller_nodes[1].idrac_interface +"'" )
+        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip1 = .*',"fence_ipmi_ip1 = '"+ self.settings.controller_nodes[0].idrac_interface +"'" )
+        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip2 = .*',"fence_ipmi_ip2 = '"+ self.settings.controller_nodes[1].idrac_interface +"'" )
+        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip3 = .*',"fence_ipmi_ip3 = '"+ self.settings.controller_nodes[2].idrac_interface +"'" )
 
-        #FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip = .*',"fence_ipmi_ip = '" + self.settings.fence_cluster_ip_private + "'" )
+        FileHelper.replaceExpressionTXT(file, 'cluster_interconnect_iface = .*',"cluster_interconnect_iface = 'bond0."+ self.settings.controller_nodes[1].private_api_vlanid +"'" )
+
+        FileHelper.replaceExpressionTXT(file, 'vip_ceilometer_adm = .*',"vip_ceilometer_adm = '" + self.settings.vip_ceilometer_private + "'" )
+        FileHelper.replaceExpressionTXT(file, 'vip_ceilometer_pub = .*',"vip_ceilometer_pub = '" + self.settings.vip_ceilometer_public + "'" )
+
+        FileHelper.replaceExpressionTXT(file, 'vip_neutron_adm = .*',"vip_neutron_adm = '" + self.settings.vip_neutron_private + "'" )
+        FileHelper.replaceExpressionTXT(file, 'vip_neutron_pub = .*',"vip_neutron_pub = '" + self.settings.vip_neutron_public + "'" )
+
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_cluster_network = .*',"c_ceph_cluster_network = '" + self.settings.storage_cluster_network + "'" )
+        ceph_hostsNames = ''
+        ceph_hostsIps = ''
+
+        for host in self.settings.ceph_nodes :
+            ceph_hostsNames = ceph_hostsNames +  host.hostname + ' '
+            ceph_hostsIps = ceph_hostsIps + host.storage_ip + " "
+
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_mon_host = .*',"c_ceph_mon_host = [\"" + ceph_hostsIps + "]\"" )
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_mon_initial_members = .*',"c_ceph_mon_initial_members = [\"" + ceph_hostsNames + "]\"" )
+
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_public_network = .*',"c_ceph_public_network = '" + self.settings.storage_network + "'" )
+
+        FileHelper.replaceExpressionTXT(file, 'node_access_iface = .*',"node_access_iface = 'bond0."+ self.settings.controller_nodes[1].private_api_vlanid +"'" )
+
+        FileHelper.replaceExpressionTXT(file, 'net_tenant_iface = .*',"net_tenant_iface = 'bond0'" )
+        FileHelper.replaceExpressionTXT(file, 'net_l3_iface = .*',"net_l3_iface = 'bond1'" )
+        FileHelper.replaceExpressionTXT(file, 'tenant_vlan_range = .*',"tenant_vlan_range = '" + self.settings.tenant_vlan_range +"'" )
+
+
 
         FileHelper.replaceExpressionTXT(file, 'vip_loadbalancer = .*',"vip_loadbalancer = '" + self.settings.vip_load_balancer_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_amqp = .*',"vip_amqp = '" + self.settings.vip_rabbitmq_private + "'" )
@@ -519,6 +548,36 @@ class Foreman():
     def configureHostGroups_Parameters(self):
         print "Configure the hostgroups parameter"
 
+        logger.info("generating ceph keys/fsid")
+        createKeys = [ 'mkdir /root/ceph_keys',
+            '/root/ceph_keys/ceph-authtool -C -n client.volumes --gen-key client.volumes',
+            '/root/ceph_keys/ceph-authtool -C -n client.images --gen-key client.images']
+        for cmd in createKeys:
+            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+
+        cmd = "cat /root/ceph_keys/client.volumes | awk '/key = / {print $3}'"
+        vol_key  = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
+
+        cmd = "cat /root/ceph_keys/client.images | awk '/key = / {print $3}'"
+        img_key  = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
+
+        cmd = "cat /root/ceph_keys/c_ceph_fsid"
+        fsidl_key  = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
+
+        logger.info("Updating erb file with ceph keys/fsid")
+
+        erbFile = "~/dell-pilot.yaml.erb"
+        cmd = "sed -i \"s/c_ceph_images_key = '.*/c_ceph_images_key = '"+img_key+"'/" + erbFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
+
+        cmd = "sed -i \"s/c_ceph_volumes_key = '.*/c_ceph_volumes_key = '"+vol_key+"'/" + erbFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
+
+        cmd = "sed -i \"s/c_ceph_fsid = '.*/c_ceph_fsid = '"+fsidl_key+"'/" + erbFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
+
+        #TODO :: equaogic step here.
+
         cmd = 'yum install -y rubygem-foreman_api'
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
@@ -526,52 +585,6 @@ class Foreman():
 
         cmd = 'cd /usr/share/openstack-foreman-installer; bin/quickstack_defaults.rb -g config/hostgroups.yaml -d ~/'+erbFile+' -v parameters'
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
-
-        cmd = "hammer sc-param list --per-page 1000 --search network_overrides | awk '/network_overrides/ {print $1}'"
-        paramID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
-
-        cmd = "hammer sc-param update --id "+paramID+" --default-value \"{'vlan_start': "+self.settings.nova_private_vlanID+", 'force_dhcp_release': 'false'}\" --parameter-type hash --override yes"
-        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
-
-
-        logger.info("Disabling Neutron")
-
-        __locator_user_input = Widget("//input[@id='login_login']")
-        __locator_password_input = Widget("//input[@id='login_password']")
-        __locator_login_button = Widget("//input[@name='commit']")
-        url = self.settings.foreman_node.public_ip
-        UI_Manager.driver().get("http://" + url)
-        if __locator_user_input.exists():
-            __locator_user_input.setText("admin")
-            __locator_password_input.setText(self.settings.foreman_password)
-            __locator_login_button.click()
-            time.sleep(10)
-
-
-        url = self.settings.foreman_node.public_ip
-        UI_Manager.driver().get("http://" + url +"/hostgroups/")
-
-        allInOne = Widget("//a[.='HA All In One Controller']")
-        allInOne.waitFor(20)
-        allInOne.click()
-
-        paramLink = Widget("//a[.='Parameters']")
-        paramLink.waitFor(20)
-        paramLink.click()
-
-        override = Widget("//span[.='quickstack::pacemaker::neutron']/../..//span[.='enabled']/../..//a[.='override']")
-
-        while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 5:
-            override.click()
-            time.sleep(2)
-
-        inputs = UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
-        inputs[0].clear();
-        inputs[0].send_keys("false");
-
-        sub = Widget("//input[@value='Submit']")
-        sub.click()
-        time.sleep(10)
 
 
 
@@ -655,21 +668,10 @@ class Foreman():
         cmd = 'hammer hostgroup list | grep "HA All In One Controller" | grep -o "^\w*\\b"'
         controllerGroupId = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
         print "controllerGroupId : " + controllerGroupId
-        cmd = 'hammer hostgroup list | grep "Compute (Nova Network)" | grep -o "^\w*\\b"'
+        cmd = 'hammer hostgroup list | grep "Compute (Neutron)" | grep -o "^\w*\\b"'
         computeGroupId = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
         print "computeGroupId : " + computeGroupId
 
-        print "Apply hostgroup to controller node(s)"
-        __locator_user_input = Widget("//input[@id='login_login']")
-        __locator_password_input = Widget("//input[@id='login_password']")
-        __locator_login_button = Widget("//input[@name='commit']")
-        url = self.settings.foreman_node.public_ip
-        UI_Manager.driver().get("http://" + url)
-        if __locator_user_input.exists():
-            __locator_user_input.setText("admin")
-            __locator_password_input.setText(self.settings.foreman_password)
-            __locator_login_button.click()
-            time.sleep(10)
 
         for each in self.settings.controller_nodes:
             cmd = 'hammer host list | grep "'+ each.hostname +'" | grep -o "^\w*\\b"'
@@ -684,51 +686,9 @@ class Foreman():
                 else :
                     hostUpdated = True
                     break
-            url = 'https:/'+ str(self.settings.foreman_node.public_ip) +'/hosts/'+each.hostname+'.' + self.settings.domain+'/edit'
-            UI_Manager.driver().get(url)
 
-            paramLink = Widget("//a[.='Parameters']")
-            paramLink.waitFor(20)
-            paramLink.click()
-
-            # quickstack::pacemaker::common fence_ipmilan_address
-            ipmiAdress_override = Widget("//span[.='fence_ipmilan_address']/../..//a[.='override']")
-            # quickstack::pacemaker::common fence_ipmilan_username
-            ipmiUser_override = Widget("//span[.='fence_ipmilan_username']/../..//a[.='override']")
-            # quickstack::pacemaker::common fence_ipmilan_password
-            ipmiPassword_override = Widget("//span[.='fence_ipmilan_password']/../..//a[.='override']")
-            # quickstack::pacemaker::params::private_ip IP address of the controllers nic on the Private API network
-            privateIp = Widget("//span[.='private_ip']/../..//a[.='override']")
-
-            ipmiAdress_override.waitFor(20)
-
-
-            while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 8:
-                ipmiAdress_override.click()
-                time.sleep(2)
-            while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 9:
-                ipmiUser_override.click()
-                time.sleep(2)
-            while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 10:
-                ipmiPassword_override.click()
-                time.sleep(2)
-            while len(UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")) != 11:
-                privateIp.click()
-                time.sleep(2)
-
-            inputs = UI_Manager.driver().find_elements_by_xpath("//textarea[@placeholder='Value']")
-            inputs[0].clear();
-            inputs[0].send_keys(each.idrac_ip);
-            inputs[1].clear();
-            inputs[1].send_keys(self.settings.ipmi_user);
-            inputs[2].clear();
-            inputs[2].send_keys(self.settings.ipmi_password);
-            inputs[3].clear();
-            inputs[3].send_keys(each.private_ip);
-
-            sub = Widget("//input[@value='Submit']")
-            sub.click()
-            time.sleep(10)
+        cmd = "sed -i \"s/\\$known_stores    .*/\\$known_stores = \\['glance.store.rbd.Store'\\],/\"n" + " /usr/share/openstack-puppet/modules/glance/manifests/api.pp"
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
         logger.info("run puppet on controller nodes")
         controlerPuppetRuns = []
