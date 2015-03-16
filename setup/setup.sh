@@ -237,7 +237,7 @@ python_setup(){
 
 	yum groupinstall -y "Development Tools"
 	yum groupinstall -y "Development Libraries"
-	yum install python-devel
+	yum install -y python-devel
 	#yum install -y pip 
 
 	#You need to install a few extra modules, to do this run the following commands in a command prompt :
@@ -328,8 +328,11 @@ file_setup(){
         systemctl enable tftp.service
 
         #Put it in fstab
-        LINE='/var/www/html/RH7$rhel7_iso_file / /var/www/html/pub iso9660 loop,ro 0 0'
-        grep "$LINE" /etc/fstab >/dev/null  || echo $LINE >> /etc/fstab
+        iso_file_name="/var/www/html/RH7/$rhel7_iso_file"
+        echo $iso_file_name
+        fs_tab_line="$iso_file_name /var/www/html/pub iso9660 loop,ro 0 0"
+        echo $fs_tab_line
+        grep "$fs_tab_line" /etc/fstab >/dev/null  || echo $fs_tab_line >> /etc/fstab
       
 }
 
