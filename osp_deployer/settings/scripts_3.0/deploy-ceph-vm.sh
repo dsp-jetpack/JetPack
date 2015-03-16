@@ -166,6 +166,10 @@ chvt 8
 
   yum-config-manager --enable rhel-7-server-rpms 
 
+  # When the ceph solution is refreshed, the following line can be removed
+  # Workaround for broken vlock obsolete processing
+  sed -i 's/^\[main\]/\[main\]\nexclude=python-rados python-rbd/' /etc/yum.conf
+
   cat <<EOIP > /etc/sysconfig/iptables
 *filter
 :INPUT ACCEPT [0:0]
@@ -177,6 +181,7 @@ chvt 8
 -A INPUT -p tcp -m state --state NEW -m tcp --dport 22 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 2003 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 4505 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 4506 -j ACCEPT
 -A INPUT -j REJECT --reject-with icmp-host-prohibited
@@ -267,3 +272,4 @@ virt-install --name ceph \
   --autostart \
   --location ${location}
   }
+

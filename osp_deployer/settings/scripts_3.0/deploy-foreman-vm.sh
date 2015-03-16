@@ -296,3 +296,4 @@ virt-install --name foreman \
   --autostart \
   --location ${location}
   }
+
