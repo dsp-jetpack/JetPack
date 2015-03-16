@@ -687,7 +687,7 @@ class Foreman():
                     hostUpdated = True
                     break
 
-        cmd = "sed -i \"s/\\$known_stores    .*/\\$known_stores = \\['glance.store.rbd.Store'\\],/\"n" + " /usr/share/openstack-puppet/modules/glance/manifests/api.pp"
+        cmd = "sed -i \"s/\\$known_stores    .*/\\$known_stores = \\['glance.store.rbd.Store'\\],/\"" + " /usr/share/openstack-puppet/modules/glance/manifests/api.pp"
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
         logger.info("run puppet on controller nodes")
