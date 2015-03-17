@@ -132,8 +132,8 @@ class Foreman():
             ceph_hostsNames = ceph_hostsNames +  host.hostname + ' '
             ceph_hostsIps = ceph_hostsIps + host.storage_ip + " "
 
-        FileHelper.replaceExpressionTXT(file, 'c_ceph_mon_host = .*',"c_ceph_mon_host = [\"" + ceph_hostsIps + "]\"" )
-        FileHelper.replaceExpressionTXT(file, 'c_ceph_mon_initial_members = .*',"c_ceph_mon_initial_members = [\"" + ceph_hostsNames + "]\"" )
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_mon_host = .*',"c_ceph_mon_host = [\"" + ceph_hostsIps + "\"]" )
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_mon_initial_members = .*',"c_ceph_mon_initial_members = [\"" + ceph_hostsNames + "\"]" )
 
         FileHelper.replaceExpressionTXT(file, 'c_ceph_public_network = .*',"c_ceph_public_network = '" + self.settings.storage_network + "'" )
 
@@ -550,8 +550,8 @@ class Foreman():
 
         logger.info("generating ceph keys/fsid")
         createKeys = [ 'mkdir /root/ceph_keys',
-            '/root/ceph_keys/ceph-authtool -C -n client.volumes --gen-key client.volumes',
-            '/root/ceph_keys/ceph-authtool -C -n client.images --gen-key client.images']
+            'cd /root/ceph_keys;ceph-authtool -C -n client.volumes --gen-key client.volumes',
+            'cd /root/ceph_keys;ceph-authtool -C -n client.images --gen-key client.images']
         for cmd in createKeys:
             print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
@@ -567,13 +567,13 @@ class Foreman():
         logger.info("Updating erb file with ceph keys/fsid")
 
         erbFile = "~/dell-pilot.yaml.erb"
-        cmd = "sed -i \"s/c_ceph_images_key = '.*/c_ceph_images_key = '"+img_key+"'/" + erbFile
+        cmd = "sed -i \"s/c_ceph_images_key = '.*/c_ceph_images_key = '"+img_key+"'/\"" + erbFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
 
-        cmd = "sed -i \"s/c_ceph_volumes_key = '.*/c_ceph_volumes_key = '"+vol_key+"'/" + erbFile
+        cmd = "sed -i \"s/c_ceph_volumes_key = '.*/c_ceph_volumes_key = '"+vol_key+"'/\"" + erbFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
 
-        cmd = "sed -i \"s/c_ceph_fsid = '.*/c_ceph_fsid = '"+fsidl_key+"'/" + erbFile
+        cmd = "sed -i \"s/c_ceph_fsid = '.*/c_ceph_fsid = '"+fsidl_key+"'/\"" + erbFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
 
         #TODO :: equaogic step here.

@@ -95,9 +95,9 @@
     c_ceph_fsid =  'CHANGEME_FSID_FOR_CEPH.CONF'
     c_ceph_images_key = 'CHANGEME_KEY_FROM_IMAGES_KEYRING'
     c_ceph_mon_host = ["192.168.170.120 ]"
-    c_ceph_mon_initial_members = ["storage01 ]"
-    c_ceph_osd_journal_size = 'CHANGEME_OSD_JOURNAL_SIZE_FOR_CEPH.CONF'
-    c_ceph_osd_pool_size = 'CHANGEME_OSD_POOL_SIZE_FOR_CEPH.CONF'
+    c_ceph_mon_initial_members = ["storage01" ]
+    c_ceph_osd_journal_size = '5000'
+    c_ceph_osd_pool_size = '1'
     c_ceph_public_network = '192.168.170.0/24'
     c_ceph_volumes_key = 'CHANGEME_KEY_FROM_VOLUMES_KEYRING'
 
@@ -134,7 +134,6 @@
     net_tenant_iface = 'bond0'
 
     # neutron public/floating/l3 interface (em3 or bond0.301, etc...)
-    net_l3_iface = 'bond1'
 
     l3_VRRP_enable = 'false'
 
