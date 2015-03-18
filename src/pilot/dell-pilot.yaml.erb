@@ -82,6 +82,9 @@
 
     c_be_eqlx = false
     c_be_eqlx_name = [ "eqlx_backend" ]
+    c_eqlx_san_ip = 'CHANGEME_EQLX_IP'
+    c_eqlx_san_login = 'CHANGEME_EQLX_USER'
+    c_eqlx_san_password = 'CHANGEME_EQLX_PASSWORD'
     c_eqlx_ch_login = [ "chapadmin"]
     c_eqlx_ch_pass = [ '""' ]
     c_eqlx_group_n = [ "group-0"]
@@ -164,6 +167,9 @@ backend_eqlx_name:
 
 backend_rbd: <%= c_be_rbd %>
 backend_rbd_name: <%= c_be_rbd_name %>
+san_ip: <%= c_eqlx_san_ip %>
+san_login: <%= c_eqlx_san_login %>
+san_password: <%= c_eqlx_san_password %>
 eqlx_chap_login:
 <% c_eqlx_ch_login.each do |name| %>
 - <%= name %>
