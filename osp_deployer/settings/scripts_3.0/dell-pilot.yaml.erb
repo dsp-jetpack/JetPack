@@ -82,7 +82,7 @@
 
     c_be_eqlx = false
     c_be_eqlx_name = [ "eqlx_backend" ]
-    c_be_rbd = 'false'
+    c_be_rbd = 'true'
     c_be_rbd_name = 'rbd_backend'
     c_eqlx_ch_login = [ "chapadmin"]
     c_eqlx_ch_pass = [ '""' ]
@@ -134,7 +134,7 @@
     net_tenant_iface = 'bond0'
 
     # neutron public/floating/l3 interface (em3 or bond0.301, etc...)
-	net_l3_iface = '--'
+	net_l3_iface = 'bond1'
     l3_VRRP_enable = 'false'
 
     tenant_vlan_range = '201:220'

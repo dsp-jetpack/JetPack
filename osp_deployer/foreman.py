@@ -112,12 +112,12 @@ class Foreman():
 
         FileHelper.replaceExpressionTXT(file, 'vip_nova_pub = .*',"vip_nova_pub = '" + self.settings.vip_nova_public + "'" )
 
-        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip1 = .*',"fence_ipmi_ip1 = '"+ self.settings.controller_nodes[0].idrac_interface +"'" )
-        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip2 = .*',"fence_ipmi_ip2 = '"+ self.settings.controller_nodes[1].idrac_interface +"'" )
-        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip3 = .*',"fence_ipmi_ip3 = '"+ self.settings.controller_nodes[2].idrac_interface +"'" )
+        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip1 = .*',"fence_ipmi_ip1 = '"+ self.settings.controller_nodes[0].idrac_secondary_ip +"'" )
+        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip2 = .*',"fence_ipmi_ip2 = '"+ self.settings.controller_nodes[1].idrac_secondary_ip +"'" )
+        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip3 = .*',"fence_ipmi_ip3 = '"+ self.settings.controller_nodes[2].idrac_secondary_ip +"'" )
 
         FileHelper.replaceExpressionTXT(file, 'cluster_interconnect_iface = .*',"cluster_interconnect_iface = 'bond0."+ self.settings.controller_nodes[1].private_api_vlanid +"'" )
-
+        FileHelper.replaceExpressionTXT(file, 'net_l3_iface = .*',"net_l3_iface = 'bond0."+ self.settings.controller_nodes[1].private_api_vlanid +"'" )
         FileHelper.replaceExpressionTXT(file, 'vip_ceilometer_adm = .*',"vip_ceilometer_adm = '" + self.settings.vip_ceilometer_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_ceilometer_pub = .*',"vip_ceilometer_pub = '" + self.settings.vip_ceilometer_public + "'" )
 
@@ -452,7 +452,7 @@ class Foreman():
         for node in self.settings.controller_nodes:
             print "Configure non bonded interfaces"
             # management vlan.
-            command = "hammer host set-parameter --host-id "+node.hostID+" --name nics --value '(["+node.idrac_interface+"]=\"onboot static "+ node.idrac_secondary_macaddress+" "+node.idrac_secondary_ip+"/"+node.idrac_secondary_netmask+"\")'"
+            command = "hammer host set-parameter --host-id "+node.hostID+" --name nics --value '(["+node.idrac_interface+"]=\"onboot static " + node.idrac_secondary_ip+"/"+node.idrac_secondary_netmask+"\")'"
             print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
 
             print "configure bonded interfaces"
@@ -551,7 +551,8 @@ class Foreman():
         logger.info("generating ceph keys/fsid")
         createKeys = [ 'mkdir /root/ceph_keys',
             'cd /root/ceph_keys;ceph-authtool -C -n client.volumes --gen-key client.volumes',
-            'cd /root/ceph_keys;ceph-authtool -C -n client.images --gen-key client.images']
+            'cd /root/ceph_keys;ceph-authtool -C -n client.images --gen-key client.images',
+            'cd /root/ceph_keys; uuidgen > c_ceph_fsid']
         for cmd in createKeys:
             print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
@@ -567,13 +568,13 @@ class Foreman():
         logger.info("Updating erb file with ceph keys/fsid")
 
         erbFile = "~/dell-pilot.yaml.erb"
-        cmd = "sed -i \"s/c_ceph_images_key = '.*/c_ceph_images_key = '"+img_key+"'/\"" + erbFile
+        cmd = "sed -i \"s/c_ceph_images_key = '.*/c_ceph_images_key = '"+img_key+"'/\" " + erbFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
 
-        cmd = "sed -i \"s/c_ceph_volumes_key = '.*/c_ceph_volumes_key = '"+vol_key+"'/\"" + erbFile
+        cmd = "sed -i \"s/c_ceph_volumes_key = '.*/c_ceph_volumes_key = '"+vol_key+"'/\" " + erbFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
 
-        cmd = "sed -i \"s/c_ceph_fsid = '.*/c_ceph_fsid = '"+fsidl_key+"'/\"" + erbFile
+        cmd = "sed -i \"s/c_ceph_fsid = .*/c_ceph_fsid = '"+fsidl_key+"'/\" " + erbFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
 
         #TODO :: equaogic step here.
