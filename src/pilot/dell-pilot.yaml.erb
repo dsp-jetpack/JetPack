@@ -111,7 +111,8 @@
     fence_ipmi_ip2 = 'CHANGEME_CONTROLLER2_IPMI_IP'
     fence_ipmi_ip3 = 'CHANGEME_CONTROLLER3_IPMI_IP'
     fence_ipmi_lanplus = 'true'
-    fence_ipmi_user = 'root'
+    fence_ipmi_user = 'CHANGEME_IPMI_USER'
+	fence_ipmi_password = 'CHANGEME_IPMI_PASSWORD'
     fence_type = 'fence_ipmilan'
 
     
@@ -206,7 +207,7 @@ fence_ipmilan_host_to_address:
 - "<%= cluster_member_name3 %>:<%= fence_ipmi_ip3 %>"
 fence_ipmilan_expose_lanplus: <%= fence_ipmi_lanplus %>
 fence_ipmilan_password: <%= passwd_auto %>
-fence_ipmilan_username: <%= fence_ipmi_user %>
+fence_ipmilan_username: <%= fence_ipmi_password %>
 fencing_type: <%= fence_type %>
 
 galera_monitor_password: <%= passwd_auto %>
