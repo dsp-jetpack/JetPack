@@ -108,7 +108,8 @@
     fence_ipmi_ip2 = '10.21.148.131'
     fence_ipmi_ip3 = '10.21.148.132'
     fence_ipmi_lanplus = 'true'
-    fence_ipmi_user = 'root'
+    fence_ipmi_user = 'ipmi'
+	fence_ipmi_password = 'QaCl0ud'
     fence_type = 'fence_ipmilan'
 
     
@@ -198,7 +199,7 @@ fence_ipmilan_host_to_address:
 - "<%= cluster_member_name2 %>:<%= fence_ipmi_ip2 %>"
 - "<%= cluster_member_name3 %>:<%= fence_ipmi_ip3 %>"
 fence_ipmilan_expose_lanplus: <%= fence_ipmi_lanplus %>
-fence_ipmilan_password: <%= passwd_auto %>
+fence_ipmilan_password: <%= fence_ipmi_password %>
 fence_ipmilan_username: <%= fence_ipmi_user %>
 fencing_type: <%= fence_type %>
 

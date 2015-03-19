@@ -116,6 +116,9 @@ class Foreman():
         FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip2 = .*',"fence_ipmi_ip2 = '"+ self.settings.controller_nodes[1].idrac_secondary_ip +"'" )
         FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip3 = .*',"fence_ipmi_ip3 = '"+ self.settings.controller_nodes[2].idrac_secondary_ip +"'" )
 
+        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_user = .*',"fence_ipmi_user = '" + self.settings.ipmi_user + "'" )
+        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_password = .*',"fence_ipmi_password = '" + self.settings.ipmi_password + "'" )
+
         FileHelper.replaceExpressionTXT(file, 'cluster_interconnect_iface = .*',"cluster_interconnect_iface = 'bond0."+ self.settings.controller_nodes[1].private_api_vlanid +"'" )
         FileHelper.replaceExpressionTXT(file, 'net_l3_iface = .*',"net_l3_iface = 'bond0."+ self.settings.controller_nodes[1].private_api_vlanid +"'" )
         FileHelper.replaceExpressionTXT(file, 'vip_ceilometer_adm = .*',"vip_ceilometer_adm = '" + self.settings.vip_ceilometer_private + "'" )
