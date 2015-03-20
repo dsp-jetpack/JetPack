@@ -507,7 +507,7 @@ class Foreman():
 
             commands = ["hammer host set-parameter --host-id "+node.hostID+" --name bonds --value '( [bond0]=\"onboot none\" [bond0]=\"onboot static vlan "+node.storage_ip+"/"+node.storage_netmask+"\" [bond1]=\"onboot static "+node.storage_cluster_ip+"/"+node.storage_cluster_netmask+"\")'",
                        "hammer host set-parameter --host-id "+node.hostID+" --name bond_ifaces  --value '( [bond0]=\""+node.bond0_interfaces+"\" [bond1]=\""+node.bond1_interfaces+"\")'",
-                       "hammer host set-parameter --host-id "+node.hostID+" --name bond_opts --value '( [bond0]=\"mode="+self.settings.bond_mode_storage_nodes+"\" [bond1]=\"mode="+self.settings.bond_mode_storage_nodes+"\")'"]
+                       "hammer host set-parameter --host-id "+node.hostID+" --name bond_opts --value '( [bond0]=\"mode="+self.settings.bond_mode_storage_nodes+" miimon=100\" [bond1]=\"mode="+self.settings.bond_mode_storage_nodes+" miimon=100\")'"]
 
             for command in commands:
                 print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
