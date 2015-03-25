@@ -439,6 +439,8 @@ SMPool="${SubscriptionManagerPool}"
 
 #yum -y update
 
+rm /etc/libvirt/qemu/networks/default.xml
+
 systemctl disable NetworkManager
 systemctl disable firewalld
 
