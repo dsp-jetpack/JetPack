@@ -567,7 +567,7 @@ class Foreman():
 
         cmd = "cat /root/ceph_keys/c_ceph_fsid"
         fsidl_key  = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
-
+        self.settings.fsid = fsidl_key
         logger.info("Updating erb file with ceph keys/fsid")
 
         erbFile = "~/dell-pilot.yaml.erb"

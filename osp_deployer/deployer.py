@@ -362,33 +362,17 @@ if __name__ == '__main__':
         foremanHost.configureHostGroups_Parameters()
         foremanHost.configureNodes()
 
+        ceph = Ceph()
+        ceph.pre_installation_configuration()
+        ceph.copy_installer()
+        ceph.install_ice()
+        ceph.configure_monitor()
+        ceph.configure_osd()
+        ceph.connectHostsToCalamari()
+        ceph.modifyOSDPlacementGroups()
+        ceph.pool_and_keyRing_configuration()
+        ceph.libvirt_configuation()
 
-        #if settings.stamp_storage == "ceph":
-        #    ceph = Ceph()
-        #    ceph.copy_installer()
-        #    ceph.install_ice()
-        #    ceph.configure_monitor()
-        #    ceph.configure_osd()
-        #    ceph.connectHostsToCalamari()
-        #    ceph.grantAdminRightsToOSD()
-        #    ceph.modifyOSDPlacementGroups()
-        #    ceph.pool_and_keyRing_configuration()
-        #    ceph.foreman_config_ha_all_in_One()
-        #    ceph.foreman_config_compute()
-
-                
-                
-        #
-        #    foremanHost.cephConfigurtion()
-        #    foremanHost.configureNodes()
-            
-
-        #    if settings.stamp_storage == "ceph":
-        #        # bugs here with docs, if done earlier as suggeste ceph wont be installed on the compute nodes
-        #        ceph.libvirt_config()
-        #        ceph.deploy_ceph_to_compute_hosts()
-        #        ceph.configure_cinder_for_backup()
-        #        ceph.configure_missing_bits_from_docs()
 
         log("re enable puppet service on the nodes")
         for each in nonSAHnodes:
@@ -398,8 +382,18 @@ if __name__ == '__main__':
         #ceph.restart_ha_services()
 
         log (" that's all folks "    )
-        logger.info( "foreman admin password :: " + settings.foreman_password  )
-        print "All done - foreman admin password :: " + settings.foreman_password
+        log("Some usefull ip/passwords  ...")
+        log ("")
+        log (" foreman public ip       : " + settings.foreman_node.public_ip)
+        log (" foreman admin password  : " + settings.foreman_password)
+        log ("")
+        log ("Horizon public ip        : " + settings.vip_horizon_public)
+        log ("Horizon admin password   : " + settings.openstack_services_password)
+        log ("")
+        log ("Ceph/Calamari public ip  : " + settings.ceph_node.public_ip )
+        log ("Calamari root password   : " + settings.ceph_node.root_password)
+
+
     except:
         logger.info(traceback.format_exc())
         e = sys.exc_info()[0]
