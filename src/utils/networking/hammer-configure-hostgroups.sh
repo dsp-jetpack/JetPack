@@ -51,5 +51,5 @@ cd /usr/share/openstack-foreman-installer
 bin/quickstack_defaults.rb -g config/hostgroups.yaml -d ~/pilot/dell-pilot.yaml.erb -v parameters
 
 # Update ovs_bridge params on the Compute (Neutron) hostgroup
-update_param ovs_bridge_uplinks '["br-tenant:eno67109440"]'
+update_param ovs_bridge_uplinks '["br-tenant:bond0"]'
 update_param ovs_bridge_mappings '["physint:br-tenant"]'
