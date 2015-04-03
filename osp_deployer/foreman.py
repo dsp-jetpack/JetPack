@@ -571,13 +571,13 @@ class Foreman():
         logger.info("Updating erb file with ceph keys/fsid")
 
         erbFile = "~/dell-pilot.yaml.erb"
-        cmd = "sed -i \"s/c_ceph_images_key = '.*/c_ceph_images_key = '"+img_key+"'/\" " + erbFile
+        cmd = "sed -i \"s|c_ceph_images_key = '.*|c_ceph_images_key = '"+img_key+"'|\" " + erbFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
 
-        cmd = "sed -i \"s/c_ceph_volumes_key = '.*/c_ceph_volumes_key = '"+vol_key+"'/\" " + erbFile
+        cmd = "sed -i \"s|c_ceph_volumes_key = '.*|c_ceph_volumes_key = '"+vol_key+"'|\" " + erbFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
 
-        cmd = "sed -i \"s/c_ceph_fsid = .*/c_ceph_fsid = '"+fsidl_key+"'/\" " + erbFile
+        cmd = "sed -i \"s|c_ceph_fsid = .*|c_ceph_fsid = '"+fsidl_key+"'|\" " + erbFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
 
         #TODO :: equaogic step here.
