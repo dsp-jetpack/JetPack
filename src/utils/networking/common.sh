@@ -21,6 +21,21 @@
 
 PILOT_DIR=/root/pilot
 
+MEDIUM_NAME="Dell OSP Pilot"
+P_NAME="dell-pilot"
+P730_NAME="dell-pilot-730xd"
+OS_NAME="RedHat 7.0"
+SN_NAME="OpenStack"
+DOKT_NAME="Dell OpenStack Kickstart Template"
+DOPT_NAME="Dell OpenStack PXE Template"
+BIT_NAME="bond_interfaces"
+ICT_NAME="interface_config"
+ENV_NAME="production"
+DOMAIN_NAME=$(dnsdomainname)
+PROXY_NAME=$(hostname)
+ARCH_NAME="x86_64"
+
+
 die()
 {
   echo "Exiting"
