@@ -264,7 +264,7 @@ if __name__ == '__main__':
 
         cmd = "puppet agent  -t"
 
-        logger.info( Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password,cmd))      
+        logger.info( Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password,cmd))
 
 
         foremanHost = Foreman()
@@ -382,7 +382,7 @@ if __name__ == '__main__':
         #ceph.restart_ha_services()
 
         log (" that's all folks "    )
-        log("Some usefull ip/passwords  ...")
+        log("Some useful ip/passwords  ...")
         log ("")
         log (" foreman public ip       : " + settings.foreman_node.public_ip)
         log (" foreman admin password  : " + settings.foreman_password)

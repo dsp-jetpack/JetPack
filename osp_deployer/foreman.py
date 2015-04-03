@@ -112,9 +112,9 @@ class Foreman():
 
         FileHelper.replaceExpressionTXT(file, 'vip_nova_pub = .*',"vip_nova_pub = '" + self.settings.vip_nova_public + "'" )
 
-        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip1 = .*',"fence_ipmi_ip1 = '"+ self.settings.controller_nodes[0].idrac_secondary_ip +"'" )
-        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip2 = .*',"fence_ipmi_ip2 = '"+ self.settings.controller_nodes[1].idrac_secondary_ip +"'" )
-        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip3 = .*',"fence_ipmi_ip3 = '"+ self.settings.controller_nodes[2].idrac_secondary_ip +"'" )
+        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip1 = .*',"fence_ipmi_ip1 = '"+ self.settings.controller_nodes[0].idrac_ip +"'" )
+        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip2 = .*',"fence_ipmi_ip2 = '"+ self.settings.controller_nodes[1].idrac_ip +"'" )
+        FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip3 = .*',"fence_ipmi_ip3 = '"+ self.settings.controller_nodes[2].idrac_ip +"'" )
 
         FileHelper.replaceExpressionTXT(file, 'fence_ipmi_user = .*',"fence_ipmi_user = '" + self.settings.ipmi_user + "'" )
         FileHelper.replaceExpressionTXT(file, 'fence_ipmi_password = .*',"fence_ipmi_password = '" + self.settings.ipmi_password + "'" )
@@ -131,7 +131,7 @@ class Foreman():
         ceph_hostsNames = ''
         ceph_hostsIps = ''
 
-        for host in self.settings.ceph_nodes :
+        for host in self.settings.controller_nodes :
             ceph_hostsNames = ceph_hostsNames +  host.hostname + ' '
             ceph_hostsIps = ceph_hostsIps + host.storage_ip + " "
 

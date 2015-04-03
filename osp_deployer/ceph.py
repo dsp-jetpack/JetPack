@@ -91,7 +91,7 @@ class Ceph():
         cmd = 'cd ~/cluster;ceph-deploy config pull ' + self.settings.controller_nodes[0].hostname
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
-        cmd = "cd ~/cluster;sed '/osd_journal_size = .*/a [osd]\\nosd pool default pg num = 1024\\nosd pool default pgp num = 1024' ceph.conf"
+        cmd = "cd ~/cluster;sed -i '/osd_journal_size = .*/a [osd]\\nosd pool default pg num = 1024\\nosd pool default pgp num = 1024' ceph.conf"
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
         cmd = 'cd ~/cluster;sudo calamari-ctl initialize --admin-username root --admin-password '+self.settings.ceph_node.root_password+' --admin-email gael_rehault@dell.com'
@@ -123,16 +123,17 @@ class Ceph():
         cmd = 'HOSTS=`grep '+self.settings.domain+' /etc/hosts | cut -d " " -f 3` ;cd ~/cluster;for HOST in $HOSTS; do ceph-deploy install $HOST; done'
         logger.info( self.execute_as_shell(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
+
         cmd = 'cd ~/cluster;ceph-deploy --overwrite-conf mon create-initial'
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
         logger.info("gathering keys from the controller nodes ")
-        cmd = 'ceph-deploy gatherkeys '
+        cmd = 'cd ~/cluster;ceph-deploy gatherkeys ' + self.settings.controller_nodes[0].hostname
         for host in self.settings.controller_nodes :
             cmd = cmd +  host.hostname + ' '
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
-        cmd = 'ceph-deploy admin ' + self.settings.ceph_node.hostname
+        cmd = 'cd ~/cluster;ceph-deploy admin ' + self.settings.ceph_node.hostname
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
 
@@ -167,11 +168,22 @@ class Ceph():
             cmd = 'cd ~/cluster;ceph-deploy calamari connect ' + host.hostname
             logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
+        # ...
+        print("give time to calamari to pick up the nodes.")
+        time.sleep(180)
+
         url = self.settings.ceph_node.public_ip
         UI_Manager.driver().get("http://" + url)
+        time.sleep(5)
 
         username = Widget("//input[@name='username']")
         password = Widget("//input[@name='password']")
+
+        while username.exists() is False :
+            UI_Manager.driver().get("http://" + url)
+            time.sleep(5)
+
+
 
         username.setText("root")
         password.setText(self.settings.ceph_node.root_password)
@@ -195,34 +207,24 @@ class Ceph():
         logger.info("grant admin rights to the storage nodes")
         for each in self.settings.ceph_nodes:
             cmd = 'cd ~/cluster;ceph-deploy admin ' + each.hostname
-            logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
-
-    def modifyOSDPlacementGroups(self):
-        logger.info("mofidy the OSD placement groups")
-        osds = 0
-        for each in self.settings.ceph_nodes:
-            add = len(each.osd_disks) -1
-            osds = osds +  add
-        cal =   (osds * 100) / 2
-        pgroups = pow(2, int(log(cal, 2) + 0.5))
-        self.settings.placement_groups = str(pgroups)
+            logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
     def pool_and_keyRing_configuration(self):
         logger.info("ceph pool creation and keyring configuration")
         cmds = [
-                'cd cluster;ceph-deploy osd pool create images ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
-                'cd cluster;ceph osd pool create volumes ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
-                'cd cluster;ceph osd pool create backups ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
-                'cd cluster;ceph osd lspools',
-                "cd ~/cluster;scp root@"+self.settings.controller_nodes[0].hostname+":/etc/ceph/ceph.client.volumes.keyring ~/cluster",
-                "cd ~cluster;scp root@"+self.settings.controller_nodes[0].hostname+":/etc/ceph/ceph.client.images.keyring ~/cluster",
-                "cd ~cluster;ceph auth import -i ceph.client.volumes.keyring",
-                "cd ~cluster;ceph auth import -i ceph.client.images.keyring",
+                'cd ~/cluster;ceph osd pool create images ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
+                'cd ~/cluster;ceph osd pool create volumes ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
+                'cd ~/cluster;ceph osd pool create backups ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
+                "cd ~/cluster;scp "+self.settings.controller_nodes[0].hostname+":/etc/ceph/ceph.client.volumes.keyring ~/cluster",
+                "cd ~/cluster;scp "+self.settings.controller_nodes[0].hostname+":/etc/ceph/ceph.client.images.keyring ~/cluster",
+                "cd ~/cluster;ceph auth import -i ceph.client.volumes.keyring",
+                "cd ~/cluster;ceph auth import -i ceph.client.images.keyring",
                 ]
         for cmd in cmds:
             logger.info(Ssh.execute_command(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
         ####
+
     def libvirt_configuation(self):
         logger.info("libvirt configuration")
         cmd = "cd ~/cluster;cat ceph.client.volumes.keyring | grep key | awk '{print $3}' > client.volumes.key"
@@ -268,7 +270,7 @@ class Ceph():
                 #"rm client.volumes.key secret.xml",
                 ]
             for cmd in cmds:
-                logger.info( Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
+                logger.info( self.execute_as_shell(host.provisioning_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
             print "running puppet on " + host.hostname
             cmd = 'puppet agent -t -dv |& tee /root/puppet2.out'
@@ -282,10 +284,6 @@ class Ceph():
                 else :
                     didNotRun = False
                     break
-
-
-
-
     def execute_as_shell(self, address,usr, pwd, command):
         conn = paramiko.SSHClient()
         conn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -303,6 +301,9 @@ class Ceph():
                 return buff
         return buff
 
+
+
+
     def execute_as_shell_expectPasswords(self, address,usr, pwd, command):
         conn = paramiko.SSHClient()
         conn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -315,7 +316,7 @@ class Ceph():
         while not buff.endswith(']# '):
             resp = channel.recv(9999)
             buff += resp
-            print " >> [[" + buff  +"]]"
+            #print " >> [[" + buff  +"]]"
             if buff.endswith("'s password: "):
                 channel.send(self.settings.nodes_root_password + "\n")
             if buff.endswith("(yes/no)? "):
@@ -338,7 +339,7 @@ class Ceph():
         while not buff.endswith(']# ') :
             resp = channel.recv(9999)
             buff += resp
-            print " >> [[" + buff  +"]]"
+            #print " >> [[" + buff  +"]]"
             if buff.endswith("(yes/no)? "):
                 channel.send("yes\n")
             if buff.endswith("'s password: "):
@@ -371,7 +372,7 @@ class Ceph():
         while not buff.endswith(']# ') :
             resp = channel.recv(9999)
             buff += resp
-            print " >> [[" + buff  +"]]"
+            #print " >> [[" + buff  +"]]"
             if buff.endswith("(yes/no)? "):
                 channel.send("yes\n")
             if buff.endswith("'s password: "):
@@ -385,3 +386,13 @@ class Ceph():
             if buff.endswith('~]$ '):
                 return buff
         return buff
+
+    def modifyOSDPlacementGroups(self):
+        logger.info("mofidy the OSD placement groups")
+        osds = 0
+        for each in self.settings.ceph_nodes:
+            add = len(each.osd_disks) -1
+            osds = osds +  add
+        cal =   (osds * 100) / 2
+        pgroups = pow(2, int(log(cal, 2) + 0.5))
+        self.settings.placement_groups = str(pgroups)

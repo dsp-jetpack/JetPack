@@ -94,8 +94,8 @@
     c_ceph_cluster_network = '192.168.180.0/24'
     c_ceph_fsid =  'CHANGEME_FSID_FOR_CEPH.CONF'
     c_ceph_images_key = 'CHANGEME_KEY_FROM_IMAGES_KEYRING'
-    c_ceph_mon_host = ["192.168.170.120 "]
-    c_ceph_mon_initial_members = ["storage01 "]
+    c_ceph_mon_host = ["192.168.170.114 192.168.170.115 192.168.170.116 "]
+    c_ceph_mon_initial_members = ["controller01 controller02 controller03 "]
     c_ceph_osd_journal_size = '5000'
     c_ceph_osd_pool_size = '3'
     c_ceph_public_network = '192.168.170.0/24'
@@ -104,9 +104,9 @@
     c_rbd_pool = 'volumes'
     c_rbd_user = 'volumes'
     
-    fence_ipmi_ip1 = '192.168.110.130'
-    fence_ipmi_ip2 = '10.21.148.131'
-    fence_ipmi_ip3 = '10.21.148.132'
+    fence_ipmi_ip1 = '192.168.110.114'
+    fence_ipmi_ip2 = '192.168.110.115'
+    fence_ipmi_ip3 = '192.168.110.116'
     fence_ipmi_lanplus = 'true'
     fence_ipmi_user = 'ipmi'
 	fence_ipmi_password = 'QaCl0ud'
