@@ -22,7 +22,7 @@ shopt -s nullglob
 NETWORK_CONFIG_DIR=/etc/sysconfig/network-scripts
 
 # Default bonding mode
-DEFAULT_MODE="balance-tlb"
+DEFAULT_MODE="802.3ad"
 
 # Logging levels
 FATAL=0
@@ -252,7 +252,7 @@ Valid options are:
   [-g|--gateway <gateway>]
   [-d|--dns <dns>]
   [-m|--mode balance-rr|active-backup|balance-xor|broadcast|802.3ad|balance-tlb|balance-alb]
-    defaults to balance-tlb
+    defaults to 802.3ad
   -s|--slaves <slave1>,<slave2>,...
   [-l|--log_level fatal|error|warn|info|debug]
     defaults to info
