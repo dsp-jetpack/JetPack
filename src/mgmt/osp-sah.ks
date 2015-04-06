@@ -102,13 +102,13 @@ anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 em2"
 # Bond1 (Public)
 public_bond_name="CHANGEME e.g. bond1"
 public_boot_opts="onboot none"
-public_bond_opts="mode=active-backup miimon=100"
+public_bond_opts="mode=802.3ad miimon=100"
 public_ifaces="CHANGEME e.g. em2 p1p2"
 #
 # Bond0 (Private)
 private_bond_name="CHANGEME e.g. bond0"
 private_boot_opts="onboot none"
-private_bond_opts="mode=active-backup miimon=100"
+private_bond_opts="mode=802.3ad miimon=100"
 private_ifaces="CHANGEME e.g. em1 p1p1"
 #
 # Provision

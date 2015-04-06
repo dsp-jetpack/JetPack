@@ -30,7 +30,7 @@ STORAGE_NM=255.255.255.0
 echo "hammer host set-parameter --host-id  $HOST_ID --name bonds --value '( [bond0]=\"onboot none promisc\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot static ${STORAGE_IP}/${STORAGE_NM}\" )'"
 hammer host set-parameter --host-id  $HOST_ID --name bonds --value "( [bond0]=\"onboot none promisc\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot static ${STORAGE_IP}/${STORAGE_NM}\" )"
 
-echo "hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value '( [bond0]="mode=active-backup miimon=100" [bond1]="mode=active-backup miimon=100" )'"
-hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value "( [bond0]=\"mode=active-backup miimon=100\" [bond1]=\"mode=active-backup miimon=100\" )"
+echo "hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value '( [bond0]="mode=802.3ad miimon=100" [bond1]="mode=802.3ad miimon=100" )'"
+hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value "( [bond0]=\"mode=802.3ad miimon=100\" [bond1]=\"mode=802.3ad miimon=100\" )"
 echo "hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value '( [bond0]="em1 p1p1" [bond1]="em2 p1p2" )'"
 hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value "( [bond0]=\"em1 p1p1\" [bond1]=\"em2 p1p2\" )"
