@@ -55,7 +55,12 @@ fi
 
 if [ -z "$OS_ID" ]
 then
-  execute "hammer os create --name \"RedHat\" --major 7 --minor 0 --family Redhat"
+  OS_PREFIX=$(echo "${OS_NAME}"|awk '{print $1}')
+  OS_SUFFIX=$(echo "${OS_NAME}"|awk '{print $2}')
+  OS_MAJOR=$(echo "${OS_SUFFIX}"|awk -F . '{print $1}')
+  OS_MINOR=$(echo "${OS_SUFFIX}"|awk -F . '{print $2}')
+
+  execute "hammer os create --name \"$OS_PREFIX\" --major ${OS_MAJOR} --minor ${OS_MINOR} --family Redhat"
   OS_ID=$(hammer os list|grep "${OS_NAME}"|awk '{print $1}')
 else
   echo "OS ${OS_NAME} already exists"
