@@ -39,8 +39,8 @@
 0:hwdata-0.252-7.3.el7.*
 2:postfix-2.10.1-6.el7.*
 0:rubygem-rgen-0.6.6-2.1.el7.*
-0:python-ceph-0.80.7-0.el7.*
-#0:python-ceph-0.80.5-4.el7ost.*
+#0:python-ceph-0.80.7-0.el7.*
+0:python-ceph-0.80.5-4.el7ost.*
 0:rpm-build-libs-4.11.1-18.el7_0.*
 1:cups-libs-1.6.3-14.el7.*
 0:gdisk-0.8.6-4.el7.*
@@ -77,8 +77,8 @@
 0:python-markdown-2.1.1-2.el7.*
 2:libertas-usb8388-firmware-20140804-0.1.git6bce2b0.el7_0.*
 0:nettle-2.7.1-2.el7.*
-0:librados2-0.80.7-0.el7.*
-#0:librados2-0.80.5-4.el7ost.*
+#0:librados2-0.80.7-0.el7.*
+0:librados2-0.80.5-4.el7ost.*
 0:libibverbs-1.1.8-1.el7_0.*
 0:libblkid-2.23.2-16.el7.*
 0:gpgme-1.3.2-5.el7.*
@@ -417,8 +417,8 @@
 0:binutils-2.23.52.0.1-16.el7.*
 0:libwebp-0.3.0-3.el7.*
 0:p11-kit-trust-0.18.7-4.el7.*
-0:librbd1-0.80.7-0.el7.*
-#0:librbd1-0.80.5-4.el7ost.*
+#0:librbd1-0.80.7-0.el7.*
+0:librbd1-0.80.5-4.el7ost.*
 0:mailx-12.5-12.el7_0.*
 1:python-glanceclient-0.14.2-1.el7ost.*
 0:gfs2-utils-3.1.6-13.el7.*
@@ -664,8 +664,8 @@
 0:firewalld-0.3.9-7.el7.*
 1:hardlink-1.0-19.el7.*
 0:libnetfilter_cthelper-1.0.0-4.el7ost.*
-0:ceph-common-0.80.7-0.el7.*
-#0:ceph-common-0.80.5-4.el7ost.*
+#0:ceph-common-0.80.7-0.el7.*
+0:ceph-common-0.80.5-4.el7ost.*
 0:pyOpenSSL-0.13.1-3.el7.*
 0:perl-HTTP-Message-6.06-6.el7.*
 0:cronie-anacron-1.4.11-11.el7.*
