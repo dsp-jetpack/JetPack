@@ -42,6 +42,7 @@ class DeleteVolume(MySqlDb):
         sql = self.build_sql('delete from ' +
                              'snapshots where ' +
                              'volume_id in (%s)')
+        sqls.append(sql)
 
         # transfers
         sql = self.build_sql('delete from ' +
