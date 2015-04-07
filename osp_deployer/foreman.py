@@ -582,6 +582,9 @@ class Foreman():
 
         #TODO :: equaogic step here.
 
+        cmd = "sed -i '/.*quickstack\/ceph-conf.erb.*/a  replace => false,' /usr/share/openstack-foreman-installer/puppet/modules/quickstack/manifests/ceph/config.pp"
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+
         cmd = 'yum install -y rubygem-foreman_api'
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
@@ -732,4 +735,3 @@ class Foreman():
                 else :
                     didNotRun = False
                     break
-

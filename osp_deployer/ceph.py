@@ -254,7 +254,7 @@ class Ceph():
             for cmd in cmds:
                 logger.info( Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
         for host in self.settings.controller_nodes:
-            cmd = 'pcs restart openstack-cinder-volume'
+            cmd = 'systemctl restart openstack-cinder-volume'
             logger.info( Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
 
 
