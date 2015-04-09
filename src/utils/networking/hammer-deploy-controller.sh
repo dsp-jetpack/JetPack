@@ -18,27 +18,33 @@
 #
 shopt -s nullglob
 
-HOST_ID=$1
-HOST_IP=$2
-HEARTBEAT_IP=$3
+. ./osp_config.sh
 
+HOST_ID=$1
+HEARTBEAT_IP=$2
+
+HOST_IP=$(hammer host list | grep "^${HOST_ID} "|awk -F\| '{print $5}'|tr -d '[[:space:]]')
 FOURTH=`echo $HOST_IP | cut -d. -f4`
+
+HEARTBEAT_NM=255.255.255.0
+
 PUBLIC_IP=192.168.190.${FOURTH}
 PUBLIC_NM=255.255.255.0
+
 API_IP=192.168.140.${FOURTH}
 API_NM=255.255.255.0
+
 STORAGE_IP=192.168.170.${FOURTH}
 STORAGE_NM=255.255.255.0
-HEARTBEAT_NM=255.255.255.0
 
 echo "hammer host set-parameter --host-id  $HOST_ID --name bonds --value '( [bond0]=\"onboot none\" [bond0.170]=\"onboot static vlan ${STORAGE_IP}/${STORAGE_NM}\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot static ${PUBLIC_IP}/${PUBLIC_NM}\" )'"
 hammer host set-parameter --host-id  $HOST_ID --name bonds --value "( [bond0]=\"onboot none\" [bond0.170]=\"onboot static vlan ${STORAGE_IP}/${STORAGE_NM}\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot static ${PUBLIC_IP}/${PUBLIC_NM}\" )"
 
-echo "hammer host set-parameter --host-id $HOST_ID --name nics --value '( [em4]=\"onboot static ${HEARTBEAT_IP}/${HEARTBEAT_NM}\")'"
-hammer host set-parameter --host-id $HOST_ID --name nics --value "( [em4]=\"onboot static ${HEARTBEAT_IP}/${HEARTBEAT_NM}\")"
+echo "hammer host set-parameter --host-id $HOST_ID --name nics --value \'( [${IDRAC_NIC}]=\"onboot static ${HEARTBEAT_IP}/${HEARTBEAT_NM}\")\'"
+hammer host set-parameter --host-id $HOST_ID --name nics --value "( [${IDRAC_NIC}]=\"onboot static ${HEARTBEAT_IP}/${HEARTBEAT_NM}\")"
 
 echo "hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value '( [bond0]=\"mode=balance-xor miimon=100\" [bond1]="\mode=balance-xor miimon=100"\ )'"
 hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value "( [bond0]=\"mode=balance-xor miimon=100\" [bond1]=\"mode=balance-xor miimon=100\" )"
 
-echo "hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value '([bond0]=\"em1 p1p1\" [bond1]=\"em2 p1p2\" ) '"
-hammer host set-parameter --host-id $HOST_ID --name bond_ifaces --value "( [bond0]=\"em1 p1p1\" [bond1]=\"em2 p1p2\" )"
+echo "hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value \"${CONTROLLER_BONDS}\""
+hammer host set-parameter --host-id $HOST_ID --name bond_ifaces --value "${CONTROLLER_BONDS}"

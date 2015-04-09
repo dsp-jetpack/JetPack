@@ -18,12 +18,16 @@
 #
 shopt -s nullglob
 
+. ./osp_config.sh
+
 HOST_ID=$1
-HOST_IP=$2
+
+HOST_IP=$(hammer host list | grep "^${HOST_ID} "|awk -F\| '{print $5}'|tr -d '[[:space:]]')
 FOURTH=`echo $HOST_IP | cut -d. -f4`
 
 API_IP=192.168.140.${FOURTH}
 API_NM=255.255.255.0
+
 STORAGE_IP=192.168.170.${FOURTH}
 STORAGE_NM=255.255.255.0
 
@@ -32,5 +36,5 @@ hammer host set-parameter --host-id  $HOST_ID --name bonds --value "( [bond0]=\"
 
 echo "hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value '( [bond0]="mode=802.3ad miimon=100" [bond1]="mode=802.3ad miimon=100" )'"
 hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value "( [bond0]=\"mode=802.3ad miimon=100\" [bond1]=\"mode=802.3ad miimon=100\" )"
-echo "hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value '( [bond0]="em1 p1p1" [bond1]="em2 p1p2" )'"
-hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value "( [bond0]=\"em1 p1p1\" [bond1]=\"em2 p1p2\" )"
+echo "hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value \"${COMPUTE_BONDS}\""
+hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value "${COMPUTE_BONDS}"
