@@ -1,13 +1,9 @@
 from osp_deployer.config import Settings
 from auto_common import Ssh, Scp,  Widget, UI_Manager, FileHelper
-
-import sys
-import time
-import logging
+import sys, logging, threading, time, shutil, os
 logger = logging.getLogger(__name__)
 
-import threading
-import time
+
 
 exitFlag = 0
 
@@ -64,70 +60,56 @@ class Foreman():
         Settings.settings.foreman_password = foreman_password
         logger.info( "foreman password :: [" + foreman_password   +"]")
 
-    def update_scripts(self):
+    def update_and_upload_scripts(self):
         logger.info( "updating scripts before uploading them")
-        pilot_yaml = "/dell-pilot.yaml.erb"  if sys.platform.startswith('linux') else "\\dell-pilot.yaml.erb"
-        file = self.settings.foreman_configuration_scripts + pilot_yaml
+        #Copy it temporrly so we dont touch the workpace file.
+
+
+        pilot_yaml = "/pilot/dell-pilot.yaml.erb"  if sys.platform.startswith('linux') else "\\pilot\\dell-pilot.yaml.erb"
+        pilot_yamlTemp = "/dell-pilot.yaml.erb"  if sys.platform.startswith('linux') else "\\dell-pilot.yaml.erb"
+        fileWS = self.settings.foreman_configuration_scripts + pilot_yaml
+        file =  self.settings.foreman_configuration_scripts + pilot_yamlTemp
+        shutil.copyfile(fileWS,file)
 
         FileHelper.replaceExpressionTXT(file, 'passwd_auto =.*',"passwd_auto = '" + self.settings.openstack_services_password + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'cluster_member_ip1 =.*',"cluster_member_ip1 = '" + self.settings.controller_nodes[0].private_ip + "'" )
         FileHelper.replaceExpressionTXT(file, 'cluster_member_name1 =.*',"cluster_member_name1 = '" + self.settings.controller_nodes[0].hostname + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'cluster_member_ip2 =.*',"cluster_member_ip2 = '" + self.settings.controller_nodes[1].private_ip + "'" )
         FileHelper.replaceExpressionTXT(file, 'cluster_member_name2 =.*',"cluster_member_name2 = '" + self.settings.controller_nodes[1].hostname + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'cluster_member_ip3 =.*',"cluster_member_ip3 = '" + self.settings.controller_nodes[2].private_ip + "'" )
         FileHelper.replaceExpressionTXT(file, 'cluster_member_name3 =.*',"cluster_member_name3 = '" + self.settings.controller_nodes[2].hostname + "'" )
-
-
         FileHelper.replaceExpressionTXT(file, 'vip_cinder_adm = .*',"vip_cinder_adm = '" + self.settings.vip_cinder_private + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_cinder_pub = .*',"vip_cinder_pub = '" +self.settings.vip_cinder_public + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_db = .*',"vip_db = '" + self.settings.vip_mysql_private + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_glance_adm = .*',"vip_glance_adm = '" + self.settings.vip_glance_private + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_glance_pub = .*',"vip_glance_pub = '" + self.settings.vip_glance_public + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_heat_adm = .*',"vip_heat_adm = '" + self.settings.vip_heat_private + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_heat_pub = .*',"vip_heat_pub = '" + self.settings.vip_heat_public + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_heat_cfn_adm = .*',"vip_heat_cfn_adm = '" + self.settings.vip_heat_cfn_private + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_heat_cfn_pub = .*',"vip_heat_cfn_pub = '" + self.settings.vip_heat_cfn_public + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_horizon_adm = .*',"vip_horizon_adm = '" + self.settings.vip_horizon_private  + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_horizon_pub = .*',"vip_horizon_pub = '" + self.settings.vip_horizon_public + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_keystone_adm = .*',"vip_keystone_adm = '" + self.settings.vip_keystone_private + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_keystone_pub = .*',"vip_keystone_pub = '" + self.settings.vip_keystone_public + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_nova_adm = .*',"vip_nova_adm = '" + self.settings.vip_nova_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_nova_priv = .*',"vip_nova_priv = '" + self.settings.vip_nova_private + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_nova_pub = .*',"vip_nova_pub = '" + self.settings.vip_nova_public + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip1 = .*',"fence_ipmi_ip1 = '"+ self.settings.controller_nodes[0].idrac_ip +"'" )
         FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip2 = .*',"fence_ipmi_ip2 = '"+ self.settings.controller_nodes[1].idrac_ip +"'" )
         FileHelper.replaceExpressionTXT(file, 'fence_ipmi_ip3 = .*',"fence_ipmi_ip3 = '"+ self.settings.controller_nodes[2].idrac_ip +"'" )
-
         FileHelper.replaceExpressionTXT(file, 'fence_ipmi_user = .*',"fence_ipmi_user = '" + self.settings.ipmi_user + "'" )
         FileHelper.replaceExpressionTXT(file, 'fence_ipmi_password = .*',"fence_ipmi_password = '" + self.settings.ipmi_password + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'cluster_interconnect_iface = .*',"cluster_interconnect_iface = 'bond0."+ self.settings.controller_nodes[1].private_api_vlanid +"'" )
         FileHelper.replaceExpressionTXT(file, 'net_l3_iface = .*',"net_l3_iface = 'bond0."+ self.settings.controller_nodes[1].private_api_vlanid +"'" )
         FileHelper.replaceExpressionTXT(file, 'vip_ceilometer_adm = .*',"vip_ceilometer_adm = '" + self.settings.vip_ceilometer_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_ceilometer_pub = .*',"vip_ceilometer_pub = '" + self.settings.vip_ceilometer_public + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'vip_neutron_adm = .*',"vip_neutron_adm = '" + self.settings.vip_neutron_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_neutron_pub = .*',"vip_neutron_pub = '" + self.settings.vip_neutron_public + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'c_ceph_cluster_network = .*',"c_ceph_cluster_network = '" + self.settings.storage_cluster_network + "'" )
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_journal_size = .*',"c_ceph_osd_journal_size = '3'" )
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_journal_size = .*',"c_ceph_osd_journal_size = '5000'" )
+
+
         ceph_hostsNames = ''
         ceph_hostsIps = ''
 
@@ -137,47 +119,40 @@ class Foreman():
 
         FileHelper.replaceExpressionTXT(file, 'c_ceph_mon_host = .*',"c_ceph_mon_host = [\"" + ceph_hostsIps + "\"]" )
         FileHelper.replaceExpressionTXT(file, 'c_ceph_mon_initial_members = .*',"c_ceph_mon_initial_members = [\"" + ceph_hostsNames + "\"]" )
-
         FileHelper.replaceExpressionTXT(file, 'c_ceph_public_network = .*',"c_ceph_public_network = '" + self.settings.storage_network + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'node_access_iface = .*',"node_access_iface = 'bond0."+ self.settings.controller_nodes[1].private_api_vlanid +"'" )
-
         FileHelper.replaceExpressionTXT(file, 'net_tenant_iface = .*',"net_tenant_iface = 'bond0'" )
         FileHelper.replaceExpressionTXT(file, 'net_l3_iface = .*',"net_l3_iface = 'bond1'" )
         FileHelper.replaceExpressionTXT(file, 'tenant_vlan_range = .*',"tenant_vlan_range = '" + self.settings.tenant_vlan_range +"'" )
-
-
-
         FileHelper.replaceExpressionTXT(file, 'vip_loadbalancer = .*',"vip_loadbalancer = '" + self.settings.vip_load_balancer_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_amqp = .*',"vip_amqp = '" + self.settings.vip_rabbitmq_private + "'" )
-
-
         FileHelper.replaceExpressionTXT(file, 'net_fix = .*',"net_fix = '" + self.settings.nova_private_network + "'" )
         FileHelper.replaceExpressionTXT(file, 'net_float = .*',"net_float = '" + self.settings.nova_public_network + "'" )
-
         FileHelper.replaceExpressionTXT(file, 'net_priv_iface = .*',"net_priv_iface = 'bond0'" )
         FileHelper.replaceExpressionTXT(file, 'net_pub_iface = .*',"net_pub_iface = 'bond1" + "'" )
 
-
-    def upload_scripts(self):
-        files = ['bonding_snippet.template',
-                 'dell-osp-ks.template',
-                 'dell-osp-pxe.template',
-                 'dell-pilot.partition',
-                 'dell-pilot-730xd.partition',
-                 'dell-pilot.yaml.erb',
-                 'interface_config.template',
-                 'hammer-deploy-compute.sh',
-                 'hammer-deploy-controller.sh',
-                 'hammer-deploy-storage.sh',
-                 ]
-
         logger.info( "uploading deployment scripts .." )
-        for file in files :
-            localfile = self.settings.foreman_configuration_scripts + "/" + file if sys.platform.startswith('linux') else  self.settings.foreman_configuration_scripts + "\\" + file
 
+        Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, self.settings.foreman_configuration_scripts + pilot_yamlTemp, '/root/dell-pilot.yaml.erb')
+        os.remove(self.settings.foreman_configuration_scripts + pilot_yamlTemp)
+
+        files_comon = ['bonding_snippet.template',
+         'dell-osp-ks.template',
+         'dell-osp-pxe.template',
+         'interface_config.template'
+         ]
+        for file in files_comon :
+            localfile = self.settings.foreman_configuration_scripts + "/common/" + file if sys.platform.startswith('linux') else  self.settings.foreman_configuration_scripts + "\\common\\" + file
             remotefile = '/root/' + file
             Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)
+
+        files_partitions = ['dell-pilot.partition',
+                 'dell-pilot-730xd.partition']
+        for file in files_partitions :
+            localfile = self.settings.foreman_configuration_scripts + "/pilot/" + file if sys.platform.startswith('linux') else  self.settings.foreman_configuration_scripts + "\\pilot\\" + file
+            remotefile = '/root/' + file
+            Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)
+
 
         if self.settings.version_locking_enabled:
             logger.info("Uploading version locking files")

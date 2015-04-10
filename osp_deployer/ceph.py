@@ -1,8 +1,6 @@
 from osp_deployer.config import Settings
 from auto_common import Ssh, Scp,  Widget, UI_Manager, FileHelper
-import time
-import sys
-import logging, paramiko
+import time, os ,sys, logging, paramiko
 logger = logging.getLogger(__name__)
 from math import log
 import uuid
@@ -61,9 +59,10 @@ class Ceph():
         cmd = "mkdir /home/ceph-user/ice-1.2.2"
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
         file = 'ICE-1.2.2-rhel7.tar.gz'
-        localfile = self.settings.foreman_configuration_scripts + "\\" + file
+        dir = os.getcwd()
+        localfile = dir+ "\\settings\\ice\\" + file
         if(sys.platform.startswith('linux')):
-            localfile = self.settings.foreman_configuration_scripts + "/" + file
+            localfile = dir + "/settings/ice/" + file
 
         logger.info( "local file " + localfile)
         remotefile = '/home/ceph-user/ice-1.2.2/' + file
@@ -119,6 +118,10 @@ class Ceph():
         for each in ( self.settings.controller_nodes + self.settings.compute_nodes ) :
             for cmd in cmnds:
                 logger.info( Ssh.execute_command(each.provisioning_ip,  "root", self.settings.nodes_root_password,cmd))
+
+                #WorkAround for A2 bits dependency issue ::
+                cmdWorkAround = " sed -i 's/^\\[rhel-7-server-openstack-6.0-cts-source-rpms\\].*/priority = 1\\n&/' /etc/yum.repos.d/redhat.repo"
+                logger.info( Ssh.execute_command(each.provisioning_ip,  "root", self.settings.nodes_root_password,cmdWorkAround))
 
         cmd = 'HOSTS=`grep '+self.settings.domain+' /etc/hosts | cut -d " " -f 3` ;cd ~/cluster;for HOST in $HOSTS; do ceph-deploy install $HOST; done'
         logger.info( self.execute_as_shell(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))

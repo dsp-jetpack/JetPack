@@ -125,9 +125,9 @@ if __name__ == '__main__':
 
         log ("=== updating the sah kickstart based on settings")
         if(sys.platform.startswith('linux')):
-            shutil.copyfile(settings.foreman_configuration_scripts + "/osp-sah.ks" , settings.sah_kickstart)
+            shutil.copyfile(os.getcwd() + "/settings/ice/osp-sah.ks" , settings.sah_kickstart)
         else:
-            shutil.copyfile(settings.foreman_configuration_scripts + "\\osp-sah.ks" , settings.sah_kickstart)
+            shutil.copyfile(os.getcwd() + "\\settings\\ice\\osp-sah.ks" , settings.sah_kickstart)
         FileHelper.replaceExpression(settings.sah_kickstart, "^cdrom",'url --url='+settings.rhel_install_location )
         FileHelper.replaceExpression(settings.sah_kickstart, '^url --url=.*','url --url='+settings.rhel_install_location )
         FileHelper.replaceExpression(settings.sah_kickstart, '^HostName=.*','HostName="'+settings.sah_node.hostname + "." + settings.domain + '"')
@@ -153,9 +153,9 @@ if __name__ == '__main__':
         FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bond_name=.*','provision_bond_name=bond0."'+settings.sah_node.provisioning_vlanid +'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^storage_bond_name=.*','storage_bond_name=bond0."'+settings.sah_node.storage_vlanid +'"')
 
-        FileHelper.replaceExpression(settings.sah_kickstart, '^public_bridge_boot_opts="onboot static .*','public_bridge_boot_opts="onboot static '+settings.sah_node.public_ip + '/'+ settings.sah_node.public_netmask+'"')
-        FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bridge_boot_opts="onboot static .*','provision_bridge_boot_opts="onboot static '+settings.sah_node.provisioning_ip+ '/'+ settings.sah_node.provisioning_netmask+'"')
-        FileHelper.replaceExpression(settings.sah_kickstart, '^storage_bridge_boot_opts="onboot static .*','storage_bridge_boot_opts="onboot static '+settings.sah_node.storage_ip+ '/'+ settings.sah_node.storage_netmask+'"')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^public_bridge_boot_opts=.*','public_bridge_boot_opts="onboot static '+settings.sah_node.public_ip + '/'+ settings.sah_node.public_netmask+'"')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bridge_boot_opts=.*','provision_bridge_boot_opts="onboot static '+settings.sah_node.provisioning_ip+ '/'+ settings.sah_node.provisioning_netmask+'"')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^storage_bridge_boot_opts=.*','storage_bridge_boot_opts="onboot static '+settings.sah_node.storage_ip+ '/'+ settings.sah_node.storage_netmask+'"')
 
         log ("=== starting the tftp service & power on the admin")
         log (subprocess.check_output("service tftp start" if isLinux else "net start Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
@@ -322,8 +322,7 @@ if __name__ == '__main__':
         log ("=== Configuring the foreman server")
         foremanHost.set_ignore_puppet_facts_for_provisioning()
 
-        foremanHost.update_scripts()
-        foremanHost.upload_scripts()
+        foremanHost.update_and_upload_scripts()
         foremanHost.enable_version_locking()
         foremanHost.install_hammer()
         foremanHost.configure_installation_medium()
@@ -382,16 +381,16 @@ if __name__ == '__main__':
         #ceph.restart_ha_services()
 
         log (" that's all folks "    )
-        log("Some useful ip/passwords  ...")
+        log("  Some useful ip/passwords  ...")
         log ("")
-        log (" foreman public ip       : " + settings.foreman_node.public_ip)
-        log (" foreman admin password  : " + settings.foreman_password)
+        log (" Foreman public ip       : " + settings.foreman_node.public_ip)
+        log (" Foreman admin password  : " + settings.foreman_password)
         log ("")
-        log ("Horizon public ip        : " + settings.vip_horizon_public)
-        log ("Horizon admin password   : " + settings.openstack_services_password)
+        log ("  Horizon public ip        : " + settings.vip_horizon_public)
+        log ("  Horizon admin password   : " + settings.openstack_services_password)
         log ("")
-        log ("Ceph/Calamari public ip  : " + settings.ceph_node.public_ip )
-        log ("Calamari root password   : " + settings.ceph_node.root_password)
+        log ("  Ceph/Calamari public ip  : " + settings.ceph_node.public_ip )
+        log ("  Calamari root password   : " + settings.ceph_node.root_password)
 
 
     except:

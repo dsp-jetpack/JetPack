@@ -84,14 +84,18 @@ class Settings():
         self.cygwin_installdir = self.bastion_settings_map['cygwin_installdir']
         self.rhel_install_location = self.bastion_settings_map['rhel_install_location']
         self.sah_kickstart= self.bastion_settings_map['sah_kickstart']
-        self.lock_files_dir = self.bastion_settings_map['locking_files_directory']
-        self.foreman_configuration_scripts = self.bastion_settings_map['pilot_foreman_configuration_scripts_directory']
+        self.cloud_repo_dir = self.bastion_settings_map['cloud_repo_dir']
+
         if sys.platform.startswith('linux'):
-            self.foreman_deploy_sh = self.foreman_configuration_scripts + '/deploy-foreman-vm.sh'
-            self.ceph_deploy_sh = self.foreman_configuration_scripts + '/deploy-ceph-vm.sh'
+            self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
+            self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
+            self.foreman_deploy_sh = self.foreman_configuration_scripts + '/mgmt/deploy-foreman-vm.sh'
+            self.ceph_deploy_sh = self.foreman_configuration_scripts + '/mgmt/deploy-ceph-vm.sh'
         else:
-            self.foreman_deploy_sh = self.foreman_configuration_scripts + "\\deploy-foreman-vm.sh"
-            self.ceph_deploy_sh = self.foreman_configuration_scripts + "\\deploy-ceph-vm.sh"
+            self.lock_files_dir = self.cloud_repo_dir + "\\data\\vlock_files"
+            self.foreman_configuration_scripts = self.cloud_repo_dir + "\\src"
+            self.foreman_deploy_sh = self.foreman_configuration_scripts + "\\mgmt\\deploy-foreman-vm.sh"
+            self.ceph_deploy_sh = self.foreman_configuration_scripts + "\\mgmt\\deploy-ceph-vm.sh"
         self.controller_nodes = []
         self.compute_nodes = []
         self.ceph_nodes = []
