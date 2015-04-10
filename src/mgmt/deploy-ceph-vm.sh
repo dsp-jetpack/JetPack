@@ -82,10 +82,14 @@ do
     echo "echo Gateway=${ip} >> /tmp/ks_post_include.txt"
     }
 
-  [[ ${iface} == ntpserver ]] && echo "echo NTPServer=${ip} >> /tmp/ks_post_include.txt"
+  [[ ${iface} == ntpserver ]] && echo "echo NTPServers=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smuser ]] && echo "echo SMUser=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smpassword ]] && echo "echo SMPassword=\'${ip}\' >> /tmp/ks_post_include.txt"
   [[ ${iface} == smpool ]] && echo "echo SMPool=${ip} >> /tmp/ks_post_include.txt"
+
+  [[ ${iface} == smproxy ]] && echo "echo SMProxy=${ip} >> /tmp/ks_post_include.txt"  
+  [[ ${iface} == smproxyuser ]] && echo "echo SMProxyUser=${ip} >> /tmp/ks_post_include.txt"  
+  [[ ${iface} == smproxypassword ]] && echo "echo SMProxyPassword=${ip} >> /tmp/ks_post_include.txt"
 
   [[ ${iface} == eth0 ]] && { 
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers} >> /tmp/ks_include.txt"
@@ -106,6 +110,10 @@ cat <<'EOFKS' >> /tmp/ceph.ks
   cp -v /tmp/ceph-pre.log /mnt/sysimage/root
   cp -v /tmp/ks_include.txt /mnt/sysimage/root
   cp -v /tmp/ks_post_include.txt /mnt/sysimage/root
+  mkdir -p /mnt/sysimage/root/ceph-ks-logs
+  cp -v /tmp/ceph-pre.log /mnt/sysimage/root/ceph-ks-logs
+  cp -v /tmp/ks_include.txt /mnt/sysimage/root/ceph-ks-logs
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/ceph-ks-logs  
 %end
 
 
@@ -195,7 +203,7 @@ EOIP
   sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
 
   # Configure the ntp daemon
-  chkconfig ntpd on
+  systemctl enable ntpd
   sed -i -e "/^server /d" /etc/ntp.conf
 
   for ntps in ${NTPServers//,/ }
