@@ -88,7 +88,7 @@ SubscriptionManagerProxyPassword=""
 # Network configuration
 Gateway="CHANGEME e.g. 10.148.44.254"
 NameServers="CHANGEME e.g. 10.148.44.11"
-NTPServers="clock.bos.redhat.com"
+NTPServers="clock.redhat.com"
 TimeZone="UTC"
 
 # Installation interface configuration
@@ -219,6 +219,10 @@ lvscan
   cp -v /tmp/sah-pre.log /mnt/sysimage/root
   cp -v /tmp/ks_include.txt /mnt/sysimage/root
   cp -v /tmp/ks_post_include.txt /mnt/sysimage/root
+  mkdir -p /mnt/sysimage/root/osp-sah-ks-logs
+  cp -v /tmp/sah-pre.log /mnt/sysimage/root/osp-sah-ks-logs
+  cp -v /tmp/ks_include.txt /mnt/sysimage/root/osp-sah-ks-logs
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/osp-sah-ks-logs  
 %end
 
 
@@ -412,7 +416,7 @@ done
 
 
 # Register the system using Subscription Manager
-subscription-manager register --username=${SubscriptionManagerUser} --password= ${SubscriptionManagerPassword}
+subscription-manager register --username=${SMUser} --password=${SMPassword}
 
 
 [[ "${SMProxy}" ]] && {
@@ -425,8 +429,6 @@ subscription-manager register --username=${SubscriptionManagerUser} --password= 
   subscription-manager config ${ProxyCmd}
   }
 
-SMPool="${SubscriptionManagerPool}"
-
 [[ x${SMPool} = x ]] \
   && SMPool=$( subscription-manager list --available \
   | awk '/Red Hat Enterprise Linux Server/,/Pool/ {pool = $3} END {print pool}' )
@@ -437,16 +439,17 @@ SMPool="${SubscriptionManagerPool}"
        subscription-manager attach --auto
        )
 
-#yum -y update
+yum -y update
 
 rm /etc/libvirt/qemu/networks/default.xml
 
 systemctl disable NetworkManager
 systemctl disable firewalld
+systemctl enable ntpd
 
 mkdir -p /store/data/images
 mkdir -p /store/data/iso
 
-chvt 6
+chvt 1
 
 %end
