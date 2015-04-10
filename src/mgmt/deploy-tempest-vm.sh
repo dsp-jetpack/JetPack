@@ -85,7 +85,7 @@ do
     echo "echo Gateway=${ip} >> /tmp/tempest_ks_post_include.txt"
     }
 
-  [[ ${iface} == ntpserver ]] && echo "echo NTPServer=${ip} >> /tmp/tempest_ks_post_include.txt"
+  [[ ${iface} == ntpserver ]] && echo "echo NTPServers=${ip} >> /tmp/tempest_ks_post_include.txt"
   [[ ${iface} == smuser ]] && echo "echo SMUser=${ip} >> /tmp/tempest_ks_post_include.txt"
   [[ ${iface} == smpassword ]] && echo "echo SMPassword=\'${ip}\' >> /tmp/tempest_ks_post_include.txt"
   [[ ${iface} == smpool ]] && echo "echo SMPool=${ip} >> /tmp/tempest_ks_post_include.txt"
@@ -200,7 +200,7 @@ EOIP
   sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
 
   # Configure the ntp daemon
-  chkconfig ntpd on
+  systemctl enable ntpd
   sed -i -e "/^server /d" /etc/ntp.conf
 
   for ntps in ${NTPServers//,/ }
@@ -233,7 +233,7 @@ EOIP
 
 ) 2>&1 | /usr/bin/tee -a /root/tempest-post.log
 
-chvt 6
+chvt 1
 
 %end
 
