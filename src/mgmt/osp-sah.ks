@@ -441,8 +441,6 @@ subscription-manager register --username=${SMUser} --password=${SMPassword}
 
 yum -y update
 
-rm /etc/libvirt/qemu/networks/default.xml
-
 systemctl disable NetworkManager
 systemctl disable firewalld
 systemctl enable ntpd
