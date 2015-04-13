@@ -166,12 +166,6 @@ chvt 8
          subscription-manager attach --auto
          )
 
-  # Disable all enabled repositories
-  for repo in $( yum repolist all | awk '/enabled:/ { print $1}' )
-  do
-    yum-config-manager --disable ${repo} | grep -E "^\[|^enabled"
-  done
-
   subscription-manager repos --enable=rhel-7-server-rpms 
   subscription-manager repos --enable=rhel-7-server-rhceph-1.2-calamari-rpms 
   subscription-manager repos --enable=rhel-7-server-rhceph-1.2-installer-rpms 
