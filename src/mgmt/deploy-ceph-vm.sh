@@ -172,11 +172,11 @@ chvt 8
     yum-config-manager --disable ${repo} | grep -E "^\[|^enabled"
   done
 
-  yum-config-manager --enable rhel-7-server-rpms 
-
-  # When the ceph solution is refreshed, the following line can be removed
-  # Workaround for broken vlock obsolete processing
-  sed -i 's/^\[main\]/\[main\]\nexclude=python-rados python-rbd/' /etc/yum.conf
+  subscription-manager repos --enable=rhel-7-server-rpms 
+  subscription-manager repos --enable=rhel-7-server-rhceph-1.2-calamari-rpms 
+  subscription-manager repos --enable=rhel-7-server-rhceph-1.2-installer-rpms 
+  subscription-manager repos --enable=rhel-7-server-rhceph-1.2-mon-rpms 
+  subscription-manager repos --enable=rhel-7-server-rhceph-1.2-osd-rpms
 
   cat <<EOIP > /etc/sysconfig/iptables
 *filter
