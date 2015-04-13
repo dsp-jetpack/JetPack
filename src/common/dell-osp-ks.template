@@ -90,10 +90,6 @@ subscription-manager attach --pool="<%= @host.params['subscription_manager_pool'
 
 subscription-manager repos $( sed -e "s/,\s*/ --enable /g" -e "s/^/--enable /" <<< "<%= @host.params['subscription_manager_repos'] %>" )
 
-# When the ceph solution is refreshed, the following line can be removed
-# Workaround for broken vlock obsolete processing
-sed -i 's/^\[main\]/\[main\]\nexclude=python-rados python-rbd/' /etc/yum.conf
-
 [[ -n "<%= @host.params['yum_versionlock_file'] %>" ]] && {
     [[ ! -e /etc/yum/pluginconf.d/versionlock.conf ]] && yum -y install yum-plugin-versionlock
     wget -O /etc/yum/pluginconf.d/versionlock.list <%= @host.params["yum_versionlock_file"] %>
