@@ -167,10 +167,6 @@ chvt 8
   subscription-manager repos --enable=rhel-7-server-openstack-6.0-installer-rpms
   subscription-manager repos --enable=rhel-7-server-openstack-6.0-rpms
 
-  # When the ceph solution is refreshed, the following line can be removed
-  # Workaround for broken vlock obsolete processing
-  sed -i 's/^\[main\]/\[main\]\nexclude=python-rados python-rbd/' /etc/yum.conf
-
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
   [[ -e /tmp/mnt/versionlock.list ]] && {
