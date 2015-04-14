@@ -21,9 +21,9 @@ shopt -s nullglob
 . ./osp_config.sh
 
 HOST_ID=$1
-HEARTBEAT_IP=$2
+HOST_IP=$2
+HEARTBEAT_IP=$3
 
-HOST_IP=$(hammer host list | grep "^${HOST_ID} "|awk -F\| '{print $5}'|tr -d '[[:space:]]')
 FOURTH=`echo $HOST_IP | cut -d. -f4`
 
 HEARTBEAT_NM=255.255.255.0

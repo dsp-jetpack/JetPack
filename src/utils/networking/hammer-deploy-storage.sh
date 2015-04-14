@@ -21,8 +21,8 @@ shopt -s nullglob
 . ./osp_config.sh
 
 HOST_ID=$1
+HOST_IP=$2
 
-HOST_IP=$(hammer host list | grep "^${HOST_ID} "|awk -F\| '{print $5}'|tr -d '[[:space:]]')
 FOURTH=`echo $HOST_IP | cut -d. -f4`
 
 STORAGE_IP="192.168.170.${FOURTH}"
