@@ -1,5 +1,21 @@
 #!/bin/bash
-
+# Copyright 2014, Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#  http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Author:  Chris Dearborn
+# Version: 1.1
+#
 MEDIUM_URL="http://CHANGEME_IP/CHANGEME_PATH"
 START_IP_RANGE="CHANGEME_SUBNET_START_IP"
 END_IP_RANGE="CHANGEME_SUBNET_END_IP"
@@ -14,3 +30,15 @@ IDRAC_NIC="em4"
 CONTROLLER_BONDS="( [bond0]=\"em1 p1p1\" [bond1]=\"em2 p1p2\" )"
 COMPUTE_BONDS="( [bond0]=\"em1 p1p1\" [bond1]=\"em2 p1p2\" )"
 STORAGE_BONDS="( [bond0]=\"em1 p4p1\" [bond1]=\"em2 p4p2\" )"
+
+# CHANGEME: Specify your Red Hat Subscription Manager Repository pool id:
+POOL_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Cluster root password
+ROOT_PASSWORD='CHANGEME_PASSWORD'
+
+SUBSCRIPTION_MANAGER_REPOS="\
+rhel-7-server-rpms, \
+rhel-server-rhscl-7-rpms, \
+rhel-7-server-openstack-6.0-rpms, \
+rhel-ha-for-rhel-7-server-rpms"

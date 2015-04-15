@@ -14,14 +14,21 @@
 # limitations under the License.
 #
 # Author:  John Williams
-# Version: 1.0
+# Version: 1.1
 #
 shopt -s nullglob
 
 . ./osp_config.sh
+. ./common.sh
 
-HOST_ID=$1
-HOST_IP=$2
+HOSTNAME="$1"
+MAC="$2"
+HOST_IP="$3"
+HEARTBEAT_IP="$4"
+
+create_host "${HOSTNAME}" "${MAC}" "${HOST_IP}" "${ROOT_PASSWORD}" "${POOL_ID}"
+HOST_ID=$(hammer host list|grep "${HOSTNAME}"|awk '{print $1}')
+[[ $HOST_ID ]] || die "could not create host!"
 
 FOURTH=`echo $HOST_IP | cut -d. -f4`
 
