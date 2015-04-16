@@ -166,13 +166,11 @@ chvt 8
          subscription-manager attach --auto
          )
 
-  # Disable all enabled repositories
-  for repo in $( yum repolist all | awk '/enabled:/ { print $1}' )
-  do
-    yum-config-manager --disable ${repo} | grep -E "^\[|^enabled"
-  done
-
-  yum-config-manager --enable rhel-7-server-rpms rhel-7-server-optional-rpms rhel-7-server-extras-rpms
+  subscription-manager repos --disable=*
+  subscription-manager repos --enable=rhel-7-server-rpms
+  subscription-manager repos --enable=rhel-server-rhscl-7-rpms
+  subscription-manager repos --enable=rhel-7-server-optional-rpms
+  subscription-manager repos --enable=rhel-7-server-extras-rpms
 	  
   cd /tmp
   wget https://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm

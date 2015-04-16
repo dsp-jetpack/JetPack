@@ -394,7 +394,6 @@ do
   done
 
 
-
   cat << EOB > /etc/sysconfig/network-scripts/ifcfg-${bridge}
 NAME=${bridge}
 DEVICE=${bridge}
@@ -415,29 +414,29 @@ EOB
 done
 
 
+echo "----------------------"
+ip addr
+echo "subscription-manager register --username ${SMUser} --password *********"
+echo "----------------------"
+
 # Register the system using Subscription Manager
-subscription-manager register --username=${SMUser} --password=${SMPassword}
+[[ ${SMProxy} ]] && {
+  ProxyInfo="--proxy ${SMProxy}"
 
-
-[[ "${SMProxy}" ]] && {
-  ProxyCmd="--server.proxy_hostname ${SMProxy}"
-
-  [[ "${SMProxyPort}" ]]     && ProxyCmd+=" --server.proxy_port ${SMProxyPort}"
-  [[ "${SMProxyUser}" ]]     && ProxyCmd+=" --server.proxy_user ${SMProxyUser}"
-  [[ "${SMProxyPassword}" ]] && ProxyCmd+=" --server.proxy_password ${SMProxyPassword}"
-
-  subscription-manager config ${ProxyCmd}
+  [[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
+  [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
   }
 
+subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
+
 [[ x${SMPool} = x ]] \
-  && SMPool=$( subscription-manager list --available \
-  | awk '/Red Hat Enterprise Linux Server/,/Pool/ {pool = $3} END {print pool}' )
+  && SMPool=$( subscription-manager list --available | awk '/Red Hat Enterprise Linux Server/,/Pool/ {pool = $3} END {print pool}' )
 
 [[ -n ${SMPool} ]] \
   && subscription-manager attach --pool ${SMPool} \
-  || ( echo "Could not find an Red Hat Enterprise Linux pool to attach to. - Auto-attaching to any pool." \
+  || ( echo "Could not find a Red Hat Enterprise Linux Server pool to attach to. - Auto-attaching to any pool." \
        subscription-manager attach --auto
-       )
+     )
 
 yum -y update
 

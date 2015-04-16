@@ -160,7 +160,6 @@ chvt 8
          subscription-manager attach --auto
          )
 
-
   subscription-manager repos --disable=*
   subscription-manager repos --enable=rhel-7-server-rpms
   subscription-manager repos --enable=rhel-server-rhscl-7-rpms
