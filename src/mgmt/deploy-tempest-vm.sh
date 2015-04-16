@@ -154,9 +154,6 @@ chvt 8
 
   subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
 
-
-  SMPool=""
-
   [[ x${SMPool} = x ]] \
     && SMPool=$( subscription-manager list --available | awk '/Red Hat Enterprise Linux Server/,/Pool/ {pool = $3} END {print pool}' )
 
