@@ -148,9 +148,6 @@ chvt 8
 
   subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
 
-
-  SMPool=""
-
   [[ x${SMPool} = x ]] \
     && SMPool=$( subscription-manager list --available | awk '/OpenStack/,/Pool/ {pool = $3} END {print pool}' )
 
