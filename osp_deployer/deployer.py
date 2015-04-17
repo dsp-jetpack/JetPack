@@ -59,7 +59,7 @@ if __name__ == '__main__':
         if len(opts)!= 1:
             logger.fatal( "usage : python deployer.py -s settingFile")
             logger.fatal( "eg : python deployer.py -s settings/settings.ini")
-         print( "usage : python deployer.py -s settingFile")
+            print( "usage : python deployer.py -s settingFile")
             print( "eg : python deployer.py -s settings/settings.ini")
             sys.exit(2)
         for opt, arg in opts:
@@ -192,8 +192,8 @@ if __name__ == '__main__':
         Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl7_iso, "/store/data/iso/RHEL7.iso")
 
         log("=== Done with the solution admin host");
-         if(isLinux):
-                    log ("=== stopping dhcpd service")
+        if(isLinux):
+            log ("=== stopping dhcpd service")
             log (subprocess.check_output("service dhcpd stop",stderr=subprocess.STDOUT, shell=True))
 
         if settings.version_locking_enabled:
