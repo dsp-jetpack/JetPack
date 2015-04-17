@@ -24,7 +24,6 @@ shopt -s nullglob
 HOSTNAME="$1"
 MAC="$2"
 HOST_IP="$3"
-HEARTBEAT_IP="$4"
 
 create_host "${HOSTNAME}" "${MAC}" "${HOST_IP}" "${ROOT_PASSWORD}" "${POOL_ID}"
 HOST_ID=$(hammer host list|grep "${HOSTNAME}"|awk '{print $1}')
