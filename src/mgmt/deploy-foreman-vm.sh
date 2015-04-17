@@ -228,12 +228,9 @@ EOIP
     echo "server ${ntps}" >> /etc/ntp.conf
   done
 
-
-#  sed -i "/^class.*'foreman'.*/aconfigure_epel_repo => false," /usr/share/openstack-foreman-installer/bin/foreman_server.sh
-#  sed -i '/read -p/d' /usr/share/openstack-foreman-installer/bin/foreman_server.sh
-
   systemctl disable NetworkManager
   systemctl disable firewalld
+  systemctl disable chronyd
 
 ) 2>&1 | /usr/bin/tee -a /root/foreman-posts.log
 

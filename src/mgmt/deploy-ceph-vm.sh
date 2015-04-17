@@ -214,6 +214,7 @@ EOIP
 
   systemctl disable NetworkManager
   systemctl disable firewalld
+  systemctl disable chronyd
 
 
 ) 2>&1 | /usr/bin/tee -a /root/ceph-post.log
