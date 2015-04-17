@@ -31,14 +31,25 @@ CONTROLLER_BONDS="( [bond0]=\"em1 p1p1\" [bond1]=\"em2 p1p2\" )"
 COMPUTE_BONDS="( [bond0]=\"em1 p1p1\" [bond1]=\"em2 p1p2\" )"
 STORAGE_BONDS="( [bond0]=\"em1 p4p1\" [bond1]=\"em2 p4p2\" )"
 
-# CHANGEME: Specify your Red Hat Subscription Manager Repository pool id:
-POOL_ID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# CHANGEME: Specify your Red Hat Subscription Manager Repository pool id
+# (It's a very long apha-numeric string: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+POOL_ID="CHANGEME_POOL_ID"
 
 # Cluster root password
 ROOT_PASSWORD='CHANGEME_PASSWORD'
 
-SUBSCRIPTION_MANAGER_REPOS="\
+CONTROLLER_NODE_REPOS="\
 rhel-7-server-rpms, \
 rhel-server-rhscl-7-rpms, \
 rhel-7-server-openstack-6.0-rpms, \
 rhel-ha-for-rhel-7-server-rpms"
+
+COMPUTE_NODE_REPOS="\
+rhel-7-server-rpms, \
+rhel-server-rhscl-7-rpms, \
+rhel-7-server-openstack-6.0-rpms"
+
+STORAGE_NODE_REPOS="\
+rhel-7-server-rpms"
+
+

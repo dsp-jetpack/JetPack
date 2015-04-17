@@ -23,6 +23,7 @@ MAC="$2"
 IP="$3"
 ROOT_PASSWORD="$4"
 POOL_ID="$5"
+SUBSCRIPTION_MANAGER_REPOS="$6"
 
 if [ -z "${MEDIUM_ID}" ]
 then
