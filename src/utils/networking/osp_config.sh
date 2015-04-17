@@ -38,8 +38,18 @@ POOL_ID="CHANGEME_POOL_ID"
 # Cluster root password
 ROOT_PASSWORD='CHANGEME_PASSWORD'
 
-SUBSCRIPTION_MANAGER_REPOS="\
+CONTROLLER_NODE_REPOS="\
 rhel-7-server-rpms, \
 rhel-server-rhscl-7-rpms, \
 rhel-7-server-openstack-6.0-rpms, \
 rhel-ha-for-rhel-7-server-rpms"
+
+COMPUTE_NODE_REPOS="\
+rhel-7-server-rpms, \
+rhel-server-rhscl-7-rpms, \
+rhel-7-server-openstack-6.0-rpms"
+
+STORAGE_NODE_REPOS="\
+rhel-7-server-rpms"
+
+
