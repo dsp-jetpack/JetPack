@@ -442,7 +442,7 @@ yum -y update
 
 systemctl disable NetworkManager
 systemctl disable firewalld
-systemctl enable ntpd
+systemctl disable chronyd
 
 mkdir -p /store/data/images
 mkdir -p /store/data/iso

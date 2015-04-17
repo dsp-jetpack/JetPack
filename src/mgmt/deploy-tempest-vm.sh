@@ -215,6 +215,7 @@ EOIP
 
   systemctl disable NetworkManager
   systemctl disable firewalld
+  systemctl disable chronyd
 
   yum -y install python-devel python-pip python-crypto.x86_64 libxslt-devel libxml2-devel libffi-devel
 
