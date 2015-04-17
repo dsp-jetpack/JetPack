@@ -133,8 +133,19 @@ class Foreman():
 
         logger.info( "uploading deployment scripts .." )
 
-        Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, self.settings.foreman_configuration_scripts + pilot_yamlTemp, '/root/dell-pilot.yaml.erb')
+        cmd = 'mkdir /root/pilot'
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+
+        Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, self.settings.foreman_configuration_scripts + pilot_yamlTemp, '/root/pilot/dell-pilot.yaml.erb')
         os.remove(self.settings.foreman_configuration_scripts + pilot_yamlTemp)
+
+        hammer_scripts = ['hammer-configure-hostgroups.sh'
+         ]
+        for file in hammer_scripts  :
+            localfile = self.settings.foreman_configuration_scripts + "/utils/networking/" + file if sys.platform.startswith('linux') else  self.settings.foreman_configuration_scripts + "\\utils\\networking\\" + file
+            remotefile = '/root/pilot/' + file
+            print localfile + " >> " + remotefile
+            Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)
 
         files_comon = ['bonding_snippet.template',
          'dell-osp-ks.template',
@@ -565,8 +576,16 @@ class Foreman():
 
         erbFile = 'dell-pilot.yaml.erb'
 
-        cmd = 'cd /usr/share/openstack-foreman-installer; bin/quickstack_defaults.rb -g config/hostgroups.yaml -d ~/'+erbFile+' -v parameters'
+#        cmd = 'cd /usr/share/openstack-foreman-installer; bin/quickstack_defaults.rb -g config/hostgroups.yaml -d ~/'+erbFile+' -v parameters'
+#        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+
+        file = '/root/pilot/hammer-configure-hostgroups.sh'
+        cmd = 'chmod u+x ' + file
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+
+        logger.info ("executing hammer-configure-hostgroups")
+        cmd =file
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root",self.settings.foreman_node.root_password,cmd))
 
 
 
