@@ -177,6 +177,10 @@ if __name__ == '__main__':
         log ("=== stopping tftp service")
         log (subprocess.check_output("service tftp stop" if isLinux else "net stop Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
 
+        if(isLinux):
+            log ("=== stopping dhcpd service")
+            log (subprocess.check_output("service dhcpd stop",stderr=subprocess.STDOUT, shell=True))
+
         log ("=== waiting for the sah installed to be complete, might take a while")
         while (not "root" in Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "whoami")[0]):
             log ("...")
@@ -193,9 +197,6 @@ if __name__ == '__main__':
 
         log("=== Done with the solution admin host");
 
-        if(isLinux):
-            log ("=== stopping dhcpd service")
-            log (subprocess.check_output("service dhcpd stop",stderr=subprocess.STDOUT, shell=True))
 
         if settings.version_locking_enabled:
             log("Uploading version locking files for foreman & ceph vm's")
@@ -273,7 +274,7 @@ if __name__ == '__main__':
         cmd = "sed -i \"s/options.password = '.*'/options.password = '"+ settings.foreman_password +"'/\" /usr/share/openstack-foreman-installer/bin/quickstack_defaults.rb"
         logger.info( Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password,cmd))
 
- 
+
         log("=== done with foreman")
 
 
