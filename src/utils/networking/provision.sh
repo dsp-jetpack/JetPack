@@ -24,6 +24,7 @@ IP="$3"
 ROOT_PASSWORD="$4"
 POOL_ID="$5"
 SUBSCRIPTION_MANAGER_REPOS="$6"
+PARTITION_ID="$7"
 
 if [ -z "${MEDIUM_ID}" ]
 then
@@ -38,7 +39,7 @@ hammer host create \
   --managed true \
   --medium-id "${MEDIUM_ID}" \
   --operatingsystem-id "${OS_ID}" \
-  --partition-table-id "${P_ID}" \
+  --partition-table-id "${PARTITION_ID}" \
   --environment-id "${ENV_ID}" \
   --domain-id "${DOMAIN_ID}" \
   --puppet-proxy-id "${PROXY_ID}" \

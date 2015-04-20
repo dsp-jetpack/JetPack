@@ -64,8 +64,10 @@ create_host () {
   root_password="$4"
   pool_id="$5"
   repos="$6"
+  partition_id="$7"
 
   host_id=$(echo "${existing_hosts}"|grep "${hostname}"|awk '{print $1}')
+
   if [ -z "${host_id}" ]
   then
     echo "Creating host: ${hostname}"
@@ -73,7 +75,7 @@ create_host () {
     then
       . ./hammer-get-ids.sh
     fi
-    ./provision.sh "${hostname}" "${mac}" "${ip}" "${root_password}" "${pool_id}" "${repos}"
+    ./provision.sh "${hostname}" "${mac}" "${ip}" "${root_password}" "${pool_id}" "${repos}" "${partition_id}"
   else
     echo "${hostname} already exists.  Skipping creation."
   fi
