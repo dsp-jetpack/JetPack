@@ -254,7 +254,7 @@ class Foreman():
         print "configure operating systems"
         print "create RHEl7 OS"
 
-        cmd = 'hammer os list | grep "7.0" | grep -o "^\w*\\b"'
+        cmd = 'hammer os list | grep "7.1" | grep -o "^\w*\\b"'
         r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
         self.rhel_7_osId = r_out.replace("\n", "").replace("\r", "")
 
