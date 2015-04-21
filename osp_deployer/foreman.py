@@ -139,7 +139,11 @@ class Foreman():
         Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, self.settings.foreman_configuration_scripts + pilot_yamlTemp, '/root/pilot/dell-pilot.yaml.erb')
         os.remove(self.settings.foreman_configuration_scripts + pilot_yamlTemp)
 
-        hammer_scripts = ['hammer-configure-hostgroups.sh'
+        hammer_scripts = ['hammer-configure-hostgroups.sh',
+        'hammer-deploy-compute.sh',
+        'hammer-deploy-controller.sh',
+        'hammer-deploy-storage.sh'
+        'hammer-configure-foreman.sh'    
          ]
         for file in hammer_scripts  :
             localfile = self.settings.foreman_configuration_scripts + "/utils/networking/" + file if sys.platform.startswith('linux') else  self.settings.foreman_configuration_scripts + "\\utils\\networking\\" + file
