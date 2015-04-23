@@ -123,3 +123,9 @@ echo
 execute "hammer os set-parameter --operatingsystem-id ${OS_ID} --name subscription_manager_password --value \"${SUBSCRIPTION_MANAGER_PASSWORD}\""
 
 ./hammer-dump-ids.sh
+
+# Workaround for neutron fails to start, BZ1192674
+cp /usr/share/openstack-puppet/modules/neutron/manifests/server.pp /usr/share/openstack-puppet/modules/neutron/manifests/server.pp.orig
+
+sed -e "s/require*=> Neutron_config/subscribe     => Neutron_config/"  /usr/share/openstack-puppet/modules/neutron/manifests/server.pp.orig > /usr/share/openstack-puppet/modules/neutron/manifests/server.pp
+
