@@ -297,31 +297,20 @@ file_setup(){
 	ip_add=$(ip addr show)
 	
 	#paramterized
-	if [ ! -f /var/www/html/RH7/$rhel7_iso_file ]; then
+	if [ ! -f /var/www/html/RH7/$rhel71_iso_file ]; then
 	    if [[ $ip_add == *10.152* ]]
 			then
-				wget --no-check-certificate --user "mht1\Script_User" --password "New2Day!" -O $rhel7_iso_file "https://10.152.248.11/folder/ISOs/RHEL-7.0-20140507.0-Server-x86_64-dvd1.iso?dcPath=Cloud%2520Bastion%2520Physical%2520Stamps&dsName=Data2%252dStorage"
+				wget --no-check-certificate --user "mht1\Script_User" --password "New2Day!" -O $rhel71_iso_file "https://10.152.248.11/folder/ISOs/RHEL-7.1-20150219.1-Server-x86_64-dvd1.iso?dcPath=Cloud%2520Bastion%2520Physical%2520Stamps&dsName=Data2%252dStorage"
 		else
-			wget $rhel7_iso
+			wget $rhel71_iso
 		fi
 	else
-		echo "File Already exists $rhel7_iso_file" 
-	fi
-
-	if [ ! -f /var/www/html/RH7/$rhel6_iso_file ]; then
-			if [[ $ip_add == *10.152* ]]
-				then
-					wget --no-check-certificate --user "mht1\Script_User" --password "New2Day!" -O $rhel6_iso_file "https://10.152.248.11/folder/ISOs/RHEL6.5-20131111.0-Server-x86_64-DVD1.iso?dcPath=Cloud%2520Bastion%2520Physical%2520Stamps&dsName=Data2%252dStorage"
-			else	
-               wget $rhel6_iso
-			 fi
-	else
-		echo "File Already exists $rhel6_iso_file" 
+		echo "File Already exists $rhel71_iso_file" 
 	fi
 
         mkdir /var/www/html/pub
         umount /var/www/htmp/pub
-        mount /var/www/html/RH7/$rhel7_iso_file /var/www/html/pub
+        mount /var/www/html/RH7/$rhel71_iso_file /var/www/html/pub
 	#finish tftp setup
         cp /var/www/html/pub/isolinux/vmlinuz /var/lib/tftpboot/netboot/
         cp /var/www/html/pub/isolinux/initrd.img /var/lib/tftpboot/netboot/
@@ -330,7 +319,7 @@ file_setup(){
         systemctl enable tftp.service
 
         #Put it in fstab
-        iso_file_name="/var/www/html/RH7/$rhel7_iso_file"
+        iso_file_name="/var/www/html/RH7/$rhel71_iso_file"
         echo $iso_file_name
         fs_tab_line="$iso_file_name /var/www/html/pub iso9660 loop,ro 0 0"
         echo $fs_tab_line
