@@ -78,7 +78,18 @@ if __name__ == '__main__':
         assert os.path.isfile(settings.rhl7_iso) , settings.rhl7_iso + "ISO doesnn't seem to exist"
         assert os.path.isfile(settings.sah_kickstart) , settings.sah_kickstart + "kickstart file doesnn't seem to exist"
         assert os.path.isfile(settings.foreman_deploy_sh) , settings.foreman_deploy_sh + " script doesnn't seem to exist"
-        assert os.path.isfile(settings.hammer_configure_hostgroups_sh) , settings.hammer_configure_hostgroups_sh + " script doesnn't seem to exist"
+      
+        hammer_scripts =['hammer-configure-hostgroups.sh',
+        'hammer-deploy-compute.sh',
+        'hammer-deploy-controller.sh',
+        'hammer-deploy-storage.sh',
+        'hammer-configure-foreman.sh'
+         ]
+	hammer_script_folder =  '/utils/networking/' if (sys.platform.startswith('linux')) else "\\utils\\networking\\"
+        for file in hammer_scripts  :
+            hammer_file = settings.foreman_configuration_scripts + hammer_script_folder + file
+            assert os.path.isfile(hammer_file) , hammer_file + " script doesnn't seem to exist"
+
         assert os.path.isfile(settings.ceph_deploy_sh) , settings.ceph_deploy_sh + " script doesnn't seem to exist"
 
         try:
