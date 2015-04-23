@@ -52,4 +52,11 @@ rhel-7-server-openstack-6.0-rpms"
 STORAGE_NODE_REPOS="\
 rhel-7-server-rpms"
 
+CONTROLLER_PARTITION_NAME="CHANGEME_PARTITION_NAME"
 
+COMPUTE_PARTITION_NAME="CHANGEME_PARTITION_NAME"
+
+# CHANGEME - if using xd model as storage, likely one of
+# 12G 720xd - "dell-pilot"
+# 13G 730xd - "dell-pilot-730xd"
+STORAGE_PARTITION_NAME="CHANGEME_PARTITION_NAME"

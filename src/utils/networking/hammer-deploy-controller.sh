@@ -26,7 +26,9 @@ MAC="$2"
 HOST_IP="$3"
 HEARTBEAT_IP="$4"
 
-create_host "${HOSTNAME}" "${MAC}" "${HOST_IP}" "${ROOT_PASSWORD}" "${POOL_ID}" "${CONTROLLER_NODE_REPOS}" "${P_ID}"
+PARTITION_ID=$(hammer partition-table list|grep " ${CONTROLLER_PARTITION_NAME} "|awk '{print $1}')
+
+create_host "${HOSTNAME}" "${MAC}" "${HOST_IP}" "${ROOT_PASSWORD}" "${POOL_ID}" "${CONTROLLER_NODE_REPOS}" "${PARTITION_ID}"
 HOST_ID=$(hammer host list|grep "${HOSTNAME}"|awk '{print $1}')
 [[ $HOST_ID ]] || die "could not create host!"
 
