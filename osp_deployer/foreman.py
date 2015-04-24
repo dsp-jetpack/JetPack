@@ -210,9 +210,9 @@ class Foreman():
 
     def configure_installation_medium(self):
 
-        print "uploading RHEL 7 iso to foreman node"
+        print "uploading RHEL 7.1 iso to foreman node"
         Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,
-                         self.settings.rhl7_iso, "/root/RHEL7.iso")
+                         self.settings.rhl71_iso, "/root/RHEL7.iso")
         cmd = 'mkdir /usr/share/foreman/public/iso'
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 

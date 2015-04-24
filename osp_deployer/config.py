@@ -79,7 +79,8 @@ class Settings():
         self.foreman_provisioning_subnet_ip_end=self.cluster_settings_map['foreman_provisioning_subnet_ip_end']
 
         self.bastion_settings_map = self.getSettingsSection("Bastion Settings")
-        self.rhl7_iso = self.bastion_settings_map['rhl7_iso']
+        self.rhl71_iso = self.bastion_settings_map['rhl71_iso']
+        self.ceph_iso = self.bastion_settings_map['ceph_iso']
         self.ciros_image = self.bastion_settings_map['ciros_image']
         self.cygwin_installdir = self.bastion_settings_map['cygwin_installdir']
         self.rhel_install_location = self.bastion_settings_map['rhel_install_location']

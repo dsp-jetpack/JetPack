@@ -75,7 +75,7 @@ if __name__ == '__main__':
         attrs = vars(settings)
 
         print("==== Running envirnment sanity tests")
-        assert os.path.isfile(settings.rhl7_iso) , settings.rhl7_iso + "ISO doesnn't seem to exist"
+        assert os.path.isfile(settings.rhl71_iso) , settings.rhl71_iso + "ISO doesnn't seem to exist"
         assert os.path.isfile(settings.sah_kickstart) , settings.sah_kickstart + "kickstart file doesnn't seem to exist"
         assert os.path.isfile(settings.foreman_deploy_sh) , settings.foreman_deploy_sh + " script doesnn't seem to exist"
         assert os.path.isfile(settings.hammer_configure_hostgroups_sh) , settings.hammer_configure_hostgroups_sh + " script doesnn't seem to exist"
@@ -193,7 +193,7 @@ if __name__ == '__main__':
             raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
         log ("=== uploading iso's to the sah node")
-        Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl7_iso, "/store/data/iso/RHEL7.iso")
+        Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl71_iso, "/store/data/iso/RHEL7.iso")
 
         log("=== Done with the solution admin host");
 
@@ -365,8 +365,7 @@ if __name__ == '__main__':
 
         ceph = Ceph()
         ceph.pre_installation_configuration()
-        ceph.copy_installer()
-        ceph.install_ice()
+        ceph.setup_calamari_node()
         ceph.configure_monitor()
         ceph.configure_osd()
         ceph.connectHostsToCalamari()
