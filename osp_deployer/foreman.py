@@ -144,8 +144,11 @@ class Foreman():
         'hammer-deploy-controller.sh',
         'hammer-deploy-storage.sh',
         'hammer-configure-foreman.sh',
-        'osp_config.sh',
+        'hammer-get-ids.sh',
+        'hammer-dump-ids.sh',
         'common.sh',
+        'osp_config.sh',
+        'provision.sh',
         'bond.sh'
          ]
         for file in hammer_scripts  :
@@ -153,7 +156,6 @@ class Foreman():
             remotefile = '/root/pilot/' + file
             print localfile + " >> " + remotefile
             Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)
-
             cmd = 'chmod u+x ' + remotefile
             print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
@@ -164,14 +166,14 @@ class Foreman():
          ]
         for file in files_comon :
             localfile = self.settings.foreman_configuration_scripts + "/common/" + file if sys.platform.startswith('linux') else  self.settings.foreman_configuration_scripts + "\\common\\" + file
-            remotefile = '/root/' + file
+            remotefile = '/root/pilot/' + file
             Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)
 
         files_partitions = ['dell-pilot.partition',
                  'dell-pilot-730xd.partition']
         for file in files_partitions :
             localfile = self.settings.foreman_configuration_scripts + "/pilot/" + file if sys.platform.startswith('linux') else  self.settings.foreman_configuration_scripts + "\\pilot\\" + file
-            remotefile = '/root/' + file
+            remotefile = '/root/pilot/' + file
             Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)
 
 
@@ -240,6 +242,41 @@ class Foreman():
         r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
         self.mediumID = r_out.replace("\n", "").replace("\r", "")
         print "medium ID ::: " + self.mediumID
+
+    def configure_foreman(self):
+        print "configure foreman"
+        
+        configFile = '/root/pilot/osp_config.sh'
+        cmd = "sed -i \"s|CHANGEME_IP|" + self.settings.foreman_node.provisioning_ip +"|\" " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+
+        cmd = "sed -i \"s|CHANGEME_PATH|iso|\" " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+
+        cmd = "sed -i \"s|CHANGEME_FOREMAN_PROVISIONING_IP|" + self.settings.foreman_node.provisioning_ip +"|\" " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+        
+        cmd = "sed -i \"s|CHANGEME_SUBNET_START_IP|" + self.settings.foreman_provisioning_subnet_ip_start +"|\" " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+        cmd = "sed -i \"s|CHANGEME_SUBNET_END_IP|" + self.settings.foreman_provisioning_subnet_ip_end +"|\" " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+
+        cmd = "sed -i \"s|CHANGEME_USERNAME|" + self.settings.subscription_manager_user +"|\" " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+        cmd = "sed -i \"s|CHANGEME_PASSWORD|" + self.settings.subscription_manager_password +"|\" " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+        cmd = "sed -i \"s|CHANGEME_POOL_ID|" + self.settings.subscription_manager_poolID +"|\" " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+
+        cmd = "sed -i \"s|CHANGEME_PARTITION_NAME|" + self.pilot_partition_table +"|\" " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+
+        
+        logger.info ("executing hammer-configure-foreman")
+        cmd = 'cd /root/pilot\n./hammer-configure-foreman.sh'
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root",self.settings.foreman_node.root_password,cmd))
+
+
     def configure_partitionts_tables(self):
         print "configure partition tables"
 
@@ -332,23 +369,38 @@ class Foreman():
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, "hammer os info --id 1")
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, "hammer os info --id 2")
 
+
+    def gather_values(self):
+
         print "gather a few more .. "
 
         hammer = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, 'hammer environment list | grep "production" | grep -o "^\w*\\b"')[0].replace("\n", "").replace("\r", "")
         domain = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, 'hammer environment list | grep "' + self.settings.domain+'" | grep -o "^\w*\\b"')[0].replace("\n", "").replace("\r", "")
         proxy = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, 'hammer proxy list | grep "' + self.settings.domain+'" | grep -o "^\w*\\b"')[0].replace("\n", "").replace("\r", "")
         architecture = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, 'hammer environment list | grep "_64" | grep -o "^\w*\\b"')[0].replace("\n", "").replace("\r", "")
+       
+        cmd = 'hammer os list | grep "7.1" | grep -o "^\w*\\b"'
+        r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        operatingsystem = r_out.replace("\n", "").replace("\r", "")
 
+        cmd = 'hammer medium list | grep "Dell OSP Pilot" | grep -o "^\w*\\b"'
+        r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+        self.mediumID = r_out.replace("\n", "").replace("\r", "")
+        print "medium ID ::: " + self.mediumID
+
+ 
         self.environment_Id = hammer
         self.domain_id = domain
         self.puppetProxy_id = proxy
         self.architecture_id = architecture
+        self.rhel_7_osId = operatingsystem
+        self.pilot_partition_table ='dell-pilot.partition'
+        self.pilot_partition_table_730 ='dell-pilot-730xd.partition'
 
         print "''''''''''''''"
         attrs = vars(self)
         print ', '.join("%s: %s" % item for item in attrs.items())
         print "''''''''''''''"
-
 
     def set_ignore_puppet_facts_for_provisioning(self):
         print "configure facts updates"
