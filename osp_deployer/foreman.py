@@ -271,6 +271,14 @@ class Foreman():
         cmd = "sed -i \"s|CHANGEME_PARTITION_NAME|" + self.pilot_partition_table +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
+        cmd = "sed -i \"s|CHANGEME_BOND0|" + self.settings.controller_nodes[0].bond0_interfaces +"|\" " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+
+        cmd = "sed -i \"s|CHANGEME_BOND1|" + self.settings.controller_nodes[0].bond1_interfaces +"|\" " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+
+        cmd = "sed -i \"s|CHANGEME_IDRAC_NIC|" + self.settings.controller_nodes[0].idrac_interface +"|\" " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         
         logger.info ("executing hammer-configure-foreman")
         cmd = 'cd /root/pilot\n./hammer-configure-foreman.sh'
