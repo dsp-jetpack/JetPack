@@ -144,7 +144,7 @@ class Foreman():
         'hammer-deploy-controller.sh',
         'hammer-deploy-storage.sh',
         'hammer-configure-foreman.sh'    
-         ]
+         ]git 
         for file in hammer_scripts  :
             localfile = self.settings.foreman_configuration_scripts + "/utils/networking/" + file if sys.platform.startswith('linux') else  self.settings.foreman_configuration_scripts + "\\utils\\networking\\" + file
             remotefile = '/root/pilot/' + file
