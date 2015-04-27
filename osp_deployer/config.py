@@ -97,6 +97,8 @@ class Settings():
             self.hammer_deploy_controller_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-deploy-controller.sh'
             self.hammer_deploy_storage_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-deploy-storage.sh'
             self.hammer_configure_foreman_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-configure-foreman.sh'
+            self.hammer_get_ids_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-get-ids.sh'
+            self.hammer_dump_ids_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-dump-ids.sh'
         else:
             self.lock_files_dir = self.cloud_repo_dir + "\\data\\vlock_files"
             self.foreman_configuration_scripts = self.cloud_repo_dir + "\\src"
@@ -107,6 +109,8 @@ class Settings():
             self.hammer_deploy_controller_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-deploy-controller.sh"
             self.hammer_deploy_storage_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-deploy-storage.sh"
             self.hammer_configure_foreman_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-configure-foreman.sh"
+            self.hammer_get_ids_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-get-ids.sh"
+            self.hammer_dump_ids_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-dump-ids.sh"
 
         self.controller_nodes = []
         self.compute_nodes = []
