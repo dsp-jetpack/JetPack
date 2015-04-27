@@ -142,7 +142,7 @@ class Foreman():
         hammer_scripts = ['hammer-configure-hostgroups.sh',
         'hammer-deploy-compute.sh',
         'hammer-deploy-controller.sh',
-        'hammer-deploy-storage.sh'
+        'hammer-deploy-storage.sh',
         'hammer-configure-foreman.sh'    
          ]
         for file in hammer_scripts  :
