@@ -143,7 +143,10 @@ class Foreman():
         'hammer-deploy-compute.sh',
         'hammer-deploy-controller.sh',
         'hammer-deploy-storage.sh',
-        'hammer-configure-foreman.sh'    
+        'hammer-configure-foreman.sh',
+        'osp_config.sh',
+        'common.sh',
+        'bond.sh'
          ]
         for file in hammer_scripts  :
             localfile = self.settings.foreman_configuration_scripts + "/utils/networking/" + file if sys.platform.startswith('linux') else  self.settings.foreman_configuration_scripts + "\\utils\\networking\\" + file

@@ -83,7 +83,10 @@ if __name__ == '__main__':
         'hammer-deploy-compute.sh',
         'hammer-deploy-controller.sh',
         'hammer-deploy-storage.sh',
-        'hammer-configure-foreman.sh'
+        'hammer-configure-foreman.sh',
+        'osp_config.sh',
+        'common.sh',
+        'bond.sh'
          ]
 	hammer_script_folder =  '/utils/networking/' if (sys.platform.startswith('linux')) else "\\utils\\networking\\"
         for file in hammer_scripts  :
