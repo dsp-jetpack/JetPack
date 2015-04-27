@@ -84,8 +84,11 @@ if __name__ == '__main__':
         'hammer-deploy-controller.sh',
         'hammer-deploy-storage.sh',
         'hammer-configure-foreman.sh',
-        'osp_config.sh',
+        'hammer-get-ids.sh',
+        'hammer-dump-ids.sh',
         'common.sh',
+        'osp_config.sh',
+        'provision.sh',
         'bond.sh'
          ]
 	hammer_script_folder =  '/utils/networking/' if (sys.platform.startswith('linux')) else "\\utils\\networking\\"
@@ -339,11 +342,8 @@ if __name__ == '__main__':
         foremanHost.enable_version_locking()
         foremanHost.install_hammer()
         foremanHost.configure_installation_medium()
-        foremanHost.configure_partitionts_tables()
-        foremanHost.configure_operating_systems()
-        foremanHost.configure_subnets()
-        foremanHost.configure_templates()
-        foremanHost.configure_os_updates()
+        foremanHost.configure_foreman()
+	foremanHost.gather_values()
 
         foremanHost.configure_controller_nodes()
         foremanHost.configure_compute_nodes()
