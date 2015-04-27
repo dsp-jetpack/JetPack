@@ -351,7 +351,7 @@ class Foreman():
     def configure_controller_nodes(self):
         print "configuring the controller node(s)"
         for node in self.settings.controller_nodes:
-            command = '/root/pilot/hammer-deploy-controller.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip + " " + node.idrac_secondary_ip
+            command = 'cd /root/pilot\n./hammer-deploy-controller.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip + " " + node.idrac_secondary_ip
             print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
 
         if self.settings.version_locking_enabled:
@@ -365,7 +365,7 @@ class Foreman():
     def configure_compute_nodes(self):
         print "configuring the compute node(s)"
         for node in self.settings.compute_nodes:
-            command = '/root/pilot/hammer-deploy-compute.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip
+            command = 'cd /root/pilot\n./hammer-deploy-compute.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip
             print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
 
         if self.settings.version_locking_enabled:
@@ -380,7 +380,7 @@ class Foreman():
     def configure_ceph_nodes(self):
         print "configuring the Ceph node(s)"
         for node in self.settings.ceph_nodes:
-            command = '/root/pilot/hammer-deploy-storage.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip
+            command = 'cd /root/pilot\n./hammer-deploy-storage.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip
             print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
         if self.settings.version_locking_enabled:
             print "Configuring vesion locking for ceph nodes"
