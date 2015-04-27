@@ -24,12 +24,12 @@ SUBSCRIPTION_MANAGER_USERNAME="CHANGEME_USERNAME"
 SUBSCRIPTION_MANAGER_PASSWORD="CHANGEME_PASSWORD"
 
 # CHANGEME: Customize the interface for the IDRAC NIC below as needed
-IDRAC_NIC="em4"
+IDRAC_NIC="CHANGEME_IDRAC_NIC"
 
 # CHANGEME: Customize the interfaces for the bonds below as needed
-CONTROLLER_BONDS="( [bond0]=\"em1 p1p1\" [bond1]=\"em2 p1p2\" )"
-COMPUTE_BONDS="( [bond0]=\"em1 p1p1\" [bond1]=\"em2 p1p2\" )"
-STORAGE_BONDS="( [bond0]=\"em1 p4p1\" [bond1]=\"em2 p4p2\" )"
+CONTROLLER_BONDS="( [bond0]=\"CHANGEME_BOND0\" [bond1]=\"CHANGEME_BOND1\" )"
+COMPUTE_BONDS="( [bond0]=\"CHANGEME_BOND0\" [bond1]=\"CHANGEME_BOND1\" )"
+STORAGE_BONDS="( [bond0]=\"CHANGEME_BOND0\" [bond1]=\"CHANGEME_BOND1\" )"
 
 # CHANGEME: Specify your Red Hat Subscription Manager Repository pool id
 # (It's a very long apha-numeric string: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
