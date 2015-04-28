@@ -62,7 +62,13 @@ class DeleteInstance(MySqlDb):
                              'instance_uuid in (%s)')
         sqls.append(sql)
 
-        # delete from instance_system_metadata
+        # delete from instance_metadata
+        sql = self.build_sql('delete from ' +
+                             'instance_metadata where ' +
+                             'instance_uuid in (%s)')
+        sqls.append(sql) 
+
+         # delete from instance_system_metadata
         sql = self.build_sql('delete from ' +
                              'instance_system_metadata where ' +
                              'instance_uuid in (%s)')
@@ -77,6 +83,12 @@ class DeleteInstance(MySqlDb):
         # delete from fixed_ips
         sql = self.build_sql('delete from ' +
                              'fixed_ips where ' +
+                             'instance_uuid in (%s)')
+        sqls.append(sql)
+
+        # delete from instance_extra, instance_uuid
+        sql = self.build_sql('delete from ' +
+                             'instance_extra where ' +
                              'instance_uuid in (%s)')
         sqls.append(sql)
 

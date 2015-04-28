@@ -13,17 +13,17 @@
     ### Variables to change
     ##
 
-    passwd_auto = 'changeme'
+    passwd_auto = 'CHANGEME'
   
 
     cluster_member_ip1 = 'CHANGEME_IP_ON_PRIVATE_API'
-    cluster_member_name1 = 'controller1'
+    cluster_member_name1 = 'CHANGEME_CONTROLLER1'
 
     cluster_member_ip2 = 'CHANGEME_IP_ON_PRIVATE_API'
-    cluster_member_name2 = 'controller2'
+    cluster_member_name2 = 'CHANGEME_CONTROLLER2'
 
     cluster_member_ip3 = 'CHANGEME_IP_ON_PRIVATE_API'
-    cluster_member_name3 = 'controller3'
+    cluster_member_name3 = 'CHANGEME_CONTROLLER3'
     
     cluster_admin_host = cluster_member_ip1
 
@@ -82,12 +82,12 @@
 
     c_be_eqlx = false
     c_be_eqlx_name = [ "eqlx_backend" ]
-    c_eqlx_san_ip = 'CHANGEME_EQLX_IP'
-    c_eqlx_san_login = 'CHANGEME_EQLX_USER'
-    c_eqlx_san_password = 'CHANGEME_EQLX_PASSWORD'
-    c_eqlx_ch_login = [ "chapadmin"]
+    c_eqlx_san_ip = [ "CHANGEME_EQLX_IP" ]
+    c_eqlx_san_login = [ "CHANGEME_EQLX_USER" ]
+    c_eqlx_san_password = [ "CHANGEME_EQLX_PASSWORD" ]
+    c_eqlx_ch_login = [ "chapadmin" ]
     c_eqlx_ch_pass = [ '""' ]
-    c_eqlx_group_n = [ "group-0"]
+    c_eqlx_group_n = [ "group-0" ]
     c_eqlx_pool = [ "default" ]
     c_eqlx_use_chap = [ "false" ]
     c_mult_be = 'false'
@@ -135,12 +135,12 @@
     node_access_iface = 'CHANGEME_PRIVATE_API_INTERFACE_NAME'
     
     # neutron private/tenant interface (em2 or bond0.300, etc...)
-    net_tenant_iface = 'CHANGEME_NOVA_PRIVATE_INTERFACE_NAME'
+    net_tenant_iface = 'CHANGEME_INTERNAL_NETWORK_INTERFACE_NAME'
 
     # neutron public/floating/l3 interface (em3 or bond0.301, etc...)
-    net_l3_iface = 'CHANGEME_NOVA_PUBLIC_INTERFACE_NAME'
+    net_l3_iface = 'CHANGEME_EXTERNAL_NETWORK_INTERFACE_NAME'
 
-    l3_VRRP_enable = 'false'
+    l3_VRRP_enable = 'true'
 
     tenant_vlan_range = 'CHANGEME_VLAN_MIN:CHANGEME_VLAN_MAX'
 
@@ -265,6 +265,7 @@ glance_db_password: <%= passwd_auto %>
 glance_private_vip: <%= vip_glance_priv %>
 glance_public_vip: <%= vip_glance_pub %>
 glance_user_password: <%= passwd_auto %>
+hacluster_pwd: <%= passwd_auto %>
 heat_admin_vip: <%= vip_heat_adm %>
 heat_auth_encryption_key: <%= passwd_auto %>
 heat_cfn_admin_vip: <%= vip_heat_cfn_adm %>

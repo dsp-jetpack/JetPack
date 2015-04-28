@@ -88,7 +88,7 @@ SubscriptionManagerProxyPassword=""
 # Network configuration
 Gateway="CHANGEME e.g. 10.148.44.254"
 NameServers="CHANGEME e.g. 10.148.44.11"
-NTPServers="clock.bos.redhat.com"
+NTPServers="clock.redhat.com"
 TimeZone="UTC"
 
 # Installation interface configuration
@@ -102,13 +102,13 @@ anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 em2"
 # Bond1 (Public)
 public_bond_name="CHANGEME e.g. bond1"
 public_boot_opts="onboot none"
-public_bond_opts="mode=active-backup miimon=100"
+public_bond_opts="mode=802.3ad miimon=100"
 public_ifaces="CHANGEME e.g. em2 p1p2"
 #
 # Bond0 (Private)
 private_bond_name="CHANGEME e.g. bond0"
 private_boot_opts="onboot none"
-private_bond_opts="mode=active-backup miimon=100"
+private_bond_opts="mode=802.3ad miimon=100"
 private_ifaces="CHANGEME e.g. em1 p1p1"
 #
 # Provision
@@ -219,6 +219,10 @@ lvscan
   cp -v /tmp/sah-pre.log /mnt/sysimage/root
   cp -v /tmp/ks_include.txt /mnt/sysimage/root
   cp -v /tmp/ks_post_include.txt /mnt/sysimage/root
+  mkdir -p /mnt/sysimage/root/osp-sah-ks-logs
+  cp -v /tmp/sah-pre.log /mnt/sysimage/root/osp-sah-ks-logs
+  cp -v /tmp/ks_include.txt /mnt/sysimage/root/osp-sah-ks-logs
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/osp-sah-ks-logs  
 %end
 
 
@@ -390,7 +394,6 @@ do
   done
 
 
-
   cat << EOB > /etc/sysconfig/network-scripts/ifcfg-${bridge}
 NAME=${bridge}
 DEVICE=${bridge}
@@ -411,40 +414,39 @@ EOB
 done
 
 
+echo "----------------------"
+ip addr
+echo "subscription-manager register --username ${SMUser} --password *********"
+echo "----------------------"
+
 # Register the system using Subscription Manager
-subscription-manager register --username=${SubscriptionManagerUser} --password= ${SubscriptionManagerPassword}
+[[ ${SMProxy} ]] && {
+  ProxyInfo="--proxy ${SMProxy}"
 
-
-[[ "${SMProxy}" ]] && {
-  ProxyCmd="--server.proxy_hostname ${SMProxy}"
-
-  [[ "${SMProxyPort}" ]]     && ProxyCmd+=" --server.proxy_port ${SMProxyPort}"
-  [[ "${SMProxyUser}" ]]     && ProxyCmd+=" --server.proxy_user ${SMProxyUser}"
-  [[ "${SMProxyPassword}" ]] && ProxyCmd+=" --server.proxy_password ${SMProxyPassword}"
-
-  subscription-manager config ${ProxyCmd}
+  [[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
+  [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
   }
 
-SMPool="${SubscriptionManagerPool}"
+subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
 
 [[ x${SMPool} = x ]] \
-  && SMPool=$( subscription-manager list --available \
-  | awk '/Red Hat Enterprise Linux Server/,/Pool/ {pool = $3} END {print pool}' )
+  && SMPool=$( subscription-manager list --available | awk '/Red Hat Enterprise Linux Server/,/Pool/ {pool = $3} END {print pool}' )
 
 [[ -n ${SMPool} ]] \
   && subscription-manager attach --pool ${SMPool} \
-  || ( echo "Could not find an Red Hat Enterprise Linux pool to attach to. - Auto-attaching to any pool." \
+  || ( echo "Could not find a Red Hat Enterprise Linux Server pool to attach to. - Auto-attaching to any pool." \
        subscription-manager attach --auto
-       )
+     )
 
-#yum -y update
+yum -y update
 
 systemctl disable NetworkManager
 systemctl disable firewalld
+systemctl disable chronyd
 
 mkdir -p /store/data/images
 mkdir -p /store/data/iso
 
-chvt 6
+chvt 1
 
 %end

@@ -82,10 +82,14 @@ do
     echo "echo Gateway=${ip} >> /tmp/ks_post_include.txt"
     }
 
-  [[ ${iface} == ntpserver ]] && echo "echo NTPServer=${ip} >> /tmp/ks_post_include.txt"
+  [[ ${iface} == ntpserver ]] && echo "echo NTPServers=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smuser ]] && echo "echo SMUser=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smpassword ]] && echo "echo SMPassword=\'${ip}\' >> /tmp/ks_post_include.txt"
   [[ ${iface} == smpool ]] && echo "echo SMPool=${ip} >> /tmp/ks_post_include.txt"
+
+  [[ ${iface} == smproxy ]] && echo "echo SMProxy=${ip} >> /tmp/ks_post_include.txt"  
+  [[ ${iface} == smproxyuser ]] && echo "echo SMProxyUser=${ip} >> /tmp/ks_post_include.txt"  
+  [[ ${iface} == smproxypassword ]] && echo "echo SMProxyPassword=${ip} >> /tmp/ks_post_include.txt"
 
   [[ ${iface} == eth0 ]] && { 
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers} >> /tmp/ks_include.txt"
@@ -106,6 +110,10 @@ cat <<'EOFKS' >> /tmp/ceph.ks
   cp -v /tmp/ceph-pre.log /mnt/sysimage/root
   cp -v /tmp/ks_include.txt /mnt/sysimage/root
   cp -v /tmp/ks_post_include.txt /mnt/sysimage/root
+  mkdir -p /mnt/sysimage/root/ceph-ks-logs
+  cp -v /tmp/ceph-pre.log /mnt/sysimage/root/ceph-ks-logs
+  cp -v /tmp/ks_include.txt /mnt/sysimage/root/ceph-ks-logs
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/ceph-ks-logs  
 %end
 
 
@@ -146,9 +154,6 @@ chvt 8
 
   subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
 
-
-  SMPool=""
-
   [[ x${SMPool} = x ]] \
     && SMPool=$( subscription-manager list --available | awk '/Red Hat Enterprise Linux Server/,/Pool/ {pool = $3} END {print pool}' )
 
@@ -158,17 +163,12 @@ chvt 8
          subscription-manager attach --auto
          )
 
-  # Disable all enabled repositories
-  for repo in $( yum repolist all | awk '/enabled:/ { print $1}' )
-  do
-    yum-config-manager --disable ${repo} | grep -E "^\[|^enabled"
-  done
-
-  yum-config-manager --enable rhel-7-server-rpms 
-
-  # When the ceph solution is refreshed, the following line can be removed
-  # Workaround for broken vlock obsolete processing
-  sed -i 's/^\[main\]/\[main\]\nexclude=python-rados python-rbd/' /etc/yum.conf
+  subscription-manager repos --disable=*
+  subscription-manager repos --enable=rhel-7-server-rpms 
+  subscription-manager repos --enable=rhel-7-server-rhceph-1.2-calamari-rpms 
+  subscription-manager repos --enable=rhel-7-server-rhceph-1.2-installer-rpms 
+  subscription-manager repos --enable=rhel-7-server-rhceph-1.2-mon-rpms 
+  subscription-manager repos --enable=rhel-7-server-rhceph-1.2-osd-rpms
 
   cat <<EOIP > /etc/sysconfig/iptables
 *filter
@@ -195,7 +195,7 @@ EOIP
   sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
 
   # Configure the ntp daemon
-  chkconfig ntpd on
+  systemctl enable ntpd
   sed -i -e "/^server /d" /etc/ntp.conf
 
   for ntps in ${NTPServers//,/ }
@@ -214,6 +214,7 @@ EOIP
 
   systemctl disable NetworkManager
   systemctl disable firewalld
+  systemctl disable chronyd
 
 
 ) 2>&1 | /usr/bin/tee -a /root/ceph-post.log

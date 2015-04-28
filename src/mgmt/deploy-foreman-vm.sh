@@ -77,7 +77,7 @@ do
     echo "echo Gateway=${ip} >> /tmp/ks_post_include.txt"
     }
 
-  [[ ${iface} == ntpserver ]] && echo "echo NTPServer=${ip} >> /tmp/ks_post_include.txt"
+  [[ ${iface} == ntpserver ]] && echo "echo NTPServers=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smuser ]] && echo "echo SMUser=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smpassword ]] && echo "echo SMPassword=\'${ip}\' >> /tmp/ks_post_include.txt"
   [[ ${iface} == smpool ]] && echo "echo SMPool=${ip} >> /tmp/ks_post_include.txt"
@@ -104,6 +104,10 @@ cat <<'EOFKS' >> /tmp/foreman.ks
   cp -v /tmp/foreman-pre.log /mnt/sysimage/root
   cp -v /tmp/ks_include.txt /mnt/sysimage/root
   cp -v /tmp/ks_post_include.txt /mnt/sysimage/root
+  mkdir -p /mnt/sysimage/root/foreman-ks-logs
+  cp -v /tmp/foreman-pre.log /mnt/sysimage/root/foreman-ks-logs
+  cp -v /tmp/ks_include.txt /mnt/sysimage/root/foreman-ks-logs
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/foreman-ks-logs  
 %end
 
 
@@ -144,9 +148,6 @@ chvt 8
 
   subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
 
-
-  SMPool=""
-
   [[ x${SMPool} = x ]] \
     && SMPool=$( subscription-manager list --available | awk '/OpenStack/,/Pool/ {pool = $3} END {print pool}' )
 
@@ -156,16 +157,11 @@ chvt 8
          subscription-manager attach --auto
          )
 
-
   subscription-manager repos --disable=*
   subscription-manager repos --enable=rhel-7-server-rpms
   subscription-manager repos --enable=rhel-server-rhscl-7-rpms
   subscription-manager repos --enable=rhel-7-server-openstack-6.0-installer-rpms
   subscription-manager repos --enable=rhel-7-server-openstack-6.0-rpms
-
-  # When the ceph solution is refreshed, the following line can be removed
-  # Workaround for broken vlock obsolete processing
-  sed -i 's/^\[main\]/\[main\]\nexclude=python-rados python-rbd/' /etc/yum.conf
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -224,7 +220,7 @@ EOIP
   sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
 
   # Configure the ntp daemon
-  chkconfig ntpd on
+  systemctl enable ntpd
   sed -i -e "/^server /d" /etc/ntp.conf
 
   for ntps in ${NTPServers//,/ }
@@ -232,12 +228,9 @@ EOIP
     echo "server ${ntps}" >> /etc/ntp.conf
   done
 
-
-#  sed -i "/^class.*'foreman'.*/aconfigure_epel_repo => false," /usr/share/openstack-foreman-installer/bin/foreman_server.sh
-#  sed -i '/read -p/d' /usr/share/openstack-foreman-installer/bin/foreman_server.sh
-
   systemctl disable NetworkManager
   systemctl disable firewalld
+  systemctl disable chronyd
 
 ) 2>&1 | /usr/bin/tee -a /root/foreman-posts.log
 

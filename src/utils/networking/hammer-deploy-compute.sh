@@ -14,23 +14,35 @@
 # limitations under the License.
 #
 # Author:  John Williams
-# Version: 1.0
+# Version: 1.1
 #
 shopt -s nullglob
 
-HOST_ID=$1
-HOST_IP=$2
+. ./osp_config.sh
+. ./common.sh
+
+HOSTNAME="$1"
+MAC="$2"
+HOST_IP="$3"
+
+PARTITION_ID=$(hammer partition-table list|grep " ${COMPUTE_PARTITION_NAME} "|awk '{print $1}')
+
+create_host "${HOSTNAME}" "${MAC}" "${HOST_IP}" "${ROOT_PASSWORD}" "${POOL_ID}" "${COMPUTE_NODE_REPOS}" "${PARTITION_ID}"
+HOST_ID=$(hammer host list|grep "${HOSTNAME}"|awk '{print $1}')
+[[ $HOST_ID ]] || die "could not create host!"
+
 FOURTH=`echo $HOST_IP | cut -d. -f4`
 
 API_IP=192.168.140.${FOURTH}
 API_NM=255.255.255.0
+
 STORAGE_IP=192.168.170.${FOURTH}
 STORAGE_NM=255.255.255.0
 
 echo "hammer host set-parameter --host-id  $HOST_ID --name bonds --value '( [bond0]=\"onboot none promisc\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot static ${STORAGE_IP}/${STORAGE_NM}\" )'"
 hammer host set-parameter --host-id  $HOST_ID --name bonds --value "( [bond0]=\"onboot none promisc\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot static ${STORAGE_IP}/${STORAGE_NM}\" )"
 
-echo "hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value '( [bond0]="mode=active-backup miimon=100" [bond1]="mode=active-backup miimon=100" )'"
-hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value "( [bond0]=\"mode=active-backup miimon=100\" [bond1]=\"mode=active-backup miimon=100\" )"
-echo "hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value '( [bond0]="em1 p1p1" [bond1]="em2 p1p2" )'"
-hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value "( [bond0]=\"em1 p1p1\" [bond1]=\"em2 p1p2\" )"
+echo "hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value '( [bond0]="mode=802.3ad miimon=100" [bond1]="mode=802.3ad miimon=100" )'"
+hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value "( [bond0]=\"mode=802.3ad miimon=100\" [bond1]=\"mode=802.3ad miimon=100\" )"
+echo "hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value \"${COMPUTE_BONDS}\""
+hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value "${COMPUTE_BONDS}"

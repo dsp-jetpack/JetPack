@@ -9,7 +9,7 @@ rootpw --iscrypted <%= root_pass %>
 firewall --<%= @host.operatingsystem.major.to_i >= 6 ? "service=" : "" %>ssh
 authconfig --useshadow --passalgo=sha256 --kickstart
 
-timezone UTC --ntpservers 0.fedora.pool.ntp.org
+timezone UTC --ntpservers clock.redhat.com
 services --disabled autofs,gpm,sendmail,cups,iptables,ip6tables,auditd,arptables_jf,xfs,pcmcia,isdn,rawdevices,hpoj,bluetooth,openibd,avahi-daemon,avahi-dnsconfd,hidd,hplip,pcscd,restorecond,mcstrans,rhnsd,yum-updatesd,NetworkManager
 services --enabled ntpd
 
@@ -62,7 +62,7 @@ exec < /dev/tty3 > /dev/tty3
 (
 #update local time
 echo "updating system time"
-/usr/sbin/ntpdate -sub <%= @host.params["ntp-server"] || "0.fedora.pool.ntp.org" %>
+/usr/sbin/ntpdate -sub <%= @host.params["ntp-server"] || "clock.redhat.com" %>
 /usr/sbin/hwclock --systohc
 
 systemctl restart ntpd
@@ -89,10 +89,6 @@ subscription-manager register --username="<%= @host.params['subscription_manager
 subscription-manager attach --pool="<%= @host.params['subscription_manager_pool'] %>"
 
 subscription-manager repos $( sed -e "s/,\s*/ --enable /g" -e "s/^/--enable /" <<< "<%= @host.params['subscription_manager_repos'] %>" )
-
-# When the ceph solution is refreshed, the following line can be removed
-# Workaround for broken vlock obsolete processing
-sed -i 's/^\[main\]/\[main\]\nexclude=python-rados python-rbd/' /etc/yum.conf
 
 [[ -n "<%= @host.params['yum_versionlock_file'] %>" ]] && {
     [[ ! -e /etc/yum/pluginconf.d/versionlock.conf ]] && yum -y install yum-plugin-versionlock

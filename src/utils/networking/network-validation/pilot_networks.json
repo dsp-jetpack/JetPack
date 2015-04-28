@@ -2,11 +2,11 @@
   "OSP_admin": {
     "bonds": {
       "bond0": {
-        "mode": "balance-tlb",
+        "mode": "802.3ad",
         "slaves": [ "eth0", "eth1" ]
       },
       "bond1": {
-        "mode": "balance-tlb",
+        "mode": "802.3ad",
         "slaves": [ "eth2", "eth3" ]
       }
     },
@@ -38,11 +38,11 @@
   "OpenStack_controller1": {
     "bonds": {
       "bond0": {
-        "mode": "balance-tlb",
+        "mode": "balance-xor",
         "slaves": [ "eth0", "eth1" ]
       },
       "bond1": {
-        "mode": "balance-tlb",
+        "mode": "balance-xor",
         "slaves": [ "eth2", "eth3" ]
       }
     },
@@ -74,11 +74,11 @@
   "OpenStack_controller2": {
     "bonds": {
       "bond0": {
-        "mode": "balance-tlb",
+        "mode": "balance-xor",
         "slaves": [ "eth0", "eth1" ]
       },
       "bond1": {
-        "mode": "balance-tlb",
+        "mode": "balance-xor",
         "slaves": [ "eth2", "eth3" ]
       }
     },
@@ -110,11 +110,11 @@
   "OpenStack_controller3": {
     "bonds": {
       "bond0": {
-        "mode": "balance-tlb",
+        "mode": "balance-xor",
         "slaves": [ "eth0", "eth1" ]
       },
       "bond1": {
-        "mode": "balance-tlb",
+        "mode": "balance-xor",
         "slaves": [ "eth2", "eth3" ]
       }
     },
@@ -146,11 +146,11 @@
   "OpenStack_compute1": {
     "bonds": {
       "bond0": {
-        "mode": "balance-tlb",
+        "mode": "802.3ad",
         "slaves": [ "eth0", "eth1" ]
       },
       "bond1": {
-        "mode": "balance-tlb",
+        "mode": "802.3ad",
         "slaves": [ "eth2", "eth3" ]
       }
     },
@@ -187,11 +187,11 @@
   "OpenStack_compute2": {
     "bonds": {
       "bond0": {
-        "mode": "balance-tlb",
+        "mode": "802.3ad",
         "slaves": [ "eth0", "eth1" ]
       },
       "bond1": {
-        "mode": "balance-tlb",
+        "mode": "802.3ad",
         "slaves": [ "eth2", "eth3" ]
       }
     },
@@ -228,11 +228,11 @@
   "OpenStack_compute3": {
     "bonds": {
       "bond0": {
-        "mode": "balance-tlb",
+        "mode": "802.3ad",
         "slaves": [ "eth0", "eth1" ]
       },
       "bond1": {
-        "mode": "balance-tlb",
+        "mode": "802.3ad",
         "slaves": [ "eth2", "eth3" ]
       }
     },
@@ -269,11 +269,11 @@
   "Ceph_storage1": {
     "bonds": {
       "bond0": {
-        "mode": "balance-tlb",
+        "mode": "802.3ad",
         "slaves": [ "eth0", "eth1" ]
       },
       "bond1": {
-        "mode": "balance-tlb",
+        "mode": "802.3ad",
         "slaves": [ "eth2", "eth3" ]
       }
     },
@@ -300,11 +300,11 @@
   "Ceph_storage2": {
     "bonds": {
       "bond0": {
-        "mode": "balance-tlb",
+        "mode": "802.3ad",
         "slaves": [ "eth0", "eth1" ]
       },
       "bond1": {
-        "mode": "balance-tlb",
+        "mode": "802.3ad",
         "slaves": [ "eth2", "eth3" ]
       }
     },
@@ -331,11 +331,11 @@
   "Ceph_storage3": {
     "bonds": {
       "bond0": {
-        "mode": "balance-tlb",
+        "mode": "802.3ad",
         "slaves": [ "eth0", "eth1" ]
       },
       "bond1": {
-        "mode": "balance-tlb",
+        "mode": "802.3ad",
         "slaves": [ "eth2", "eth3" ]
       }
     },

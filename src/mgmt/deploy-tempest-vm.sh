@@ -85,7 +85,7 @@ do
     echo "echo Gateway=${ip} >> /tmp/tempest_ks_post_include.txt"
     }
 
-  [[ ${iface} == ntpserver ]] && echo "echo NTPServer=${ip} >> /tmp/tempest_ks_post_include.txt"
+  [[ ${iface} == ntpserver ]] && echo "echo NTPServers=${ip} >> /tmp/tempest_ks_post_include.txt"
   [[ ${iface} == smuser ]] && echo "echo SMUser=${ip} >> /tmp/tempest_ks_post_include.txt"
   [[ ${iface} == smpassword ]] && echo "echo SMPassword=\'${ip}\' >> /tmp/tempest_ks_post_include.txt"
   [[ ${iface} == smpool ]] && echo "echo SMPool=${ip} >> /tmp/tempest_ks_post_include.txt"
@@ -154,9 +154,6 @@ chvt 8
 
   subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
 
-
-  SMPool=""
-
   [[ x${SMPool} = x ]] \
     && SMPool=$( subscription-manager list --available | awk '/Red Hat Enterprise Linux Server/,/Pool/ {pool = $3} END {print pool}' )
 
@@ -166,13 +163,11 @@ chvt 8
          subscription-manager attach --auto
          )
 
-  # Disable all enabled repositories
-  for repo in $( yum repolist all | awk '/enabled:/ { print $1}' )
-  do
-    yum-config-manager --disable ${repo} | grep -E "^\[|^enabled"
-  done
-
-  yum-config-manager --enable rhel-7-server-rpms rhel-7-server-optional-rpms rhel-7-server-extras-rpms
+  subscription-manager repos --disable=*
+  subscription-manager repos --enable=rhel-7-server-rpms
+  subscription-manager repos --enable=rhel-server-rhscl-7-rpms
+  subscription-manager repos --enable=rhel-7-server-optional-rpms
+  subscription-manager repos --enable=rhel-7-server-extras-rpms
 	  
   cd /tmp
   wget https://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
@@ -200,7 +195,7 @@ EOIP
   sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
 
   # Configure the ntp daemon
-  chkconfig ntpd on
+  systemctl enable ntpd
   sed -i -e "/^server /d" /etc/ntp.conf
 
   for ntps in ${NTPServers//,/ }
@@ -220,6 +215,7 @@ EOIP
 
   systemctl disable NetworkManager
   systemctl disable firewalld
+  systemctl disable chronyd
 
   yum -y install python-devel python-pip python-crypto.x86_64 libxslt-devel libxml2-devel libffi-devel
 
@@ -233,7 +229,7 @@ EOIP
 
 ) 2>&1 | /usr/bin/tee -a /root/tempest-post.log
 
-chvt 6
+chvt 1
 
 %end
 
