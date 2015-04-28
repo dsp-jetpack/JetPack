@@ -387,7 +387,7 @@ class Foreman():
             for node in self.settings.ceph_nodes:
                 cmd = 'hammer host list | grep "'+ node.hostname +'" | grep -o "^\w*\\b"'
                 node.hostID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
-                
+
                 command = "hammer host set-parameter --host-id "+node.hostID+" --name yum_versionlock_file --value 'http://"+self.settings.foreman_node.provisioning_ip+"/vlock_files/ceph.vlock'"
                 print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
 
