@@ -51,6 +51,9 @@ class Settings():
         self.bond_mode_compute_nodes = self.cluster_settings_map['bond_mode_compute_nodes']
         self.bond_mode_storage_nodes = self.cluster_settings_map['bond_mode_storage_nodes']
 
+        self.controller_nodes_are_730 = self.cluster_settings_map['controller_nodes_are_730']
+        self.compute_nodes_are_730 = self.cluster_settings_map['compute_nodes_are_730']
+        self.storage_nodes_are_730 = self.cluster_settings_map['storage_nodes_are_730']
 
         self.storage_network = self.cluster_settings_map['storage_network']
         self.storage_cluster_network = self.cluster_settings_map['storage_cluster_network']
