@@ -65,30 +65,30 @@ class Ceph():
         print "local :-> " + localfile
         print "remote :-> " + remotefile
         Scp.put_file(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password, localfile, remotefile)
-        cmd = 'mount '+remotefile+' /mnt'
+        cmd = 'sudo mount '+remotefile+' /mnt'
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
 
         logger.info("copying certificates")
         cmds = [
-            'cp /mnt/RHCeph-Calamari-1.2-x86_64-c1e8ca3b6c57-285.pem /etc/pki/product/285.pem',
-            'cp /mnt/RHCeph-Installer-1.2-x86_64-8ad6befe003d-281.pem /etc/pki/product/281.pem',
-            'cp /mnt/RHCeph-MON-1.2-x86_64-d8afd76a547b-286.pem /etc/pki/product/286.pem',
-            'cp /mnt/RHCeph-OSD-1.2-x86_64-25019bf09fe9-288.pem /etc/pki/product/288.pem'
+            'sudo cp /mnt/RHCeph-Calamari-1.2-x86_64-c1e8ca3b6c57-285.pem /etc/pki/product/285.pem',
+            'sudo cp /mnt/RHCeph-Installer-1.2-x86_64-8ad6befe003d-281.pem /etc/pki/product/281.pem',
+            'sudo cp /mnt/RHCeph-MON-1.2-x86_64-d8afd76a547b-286.pem /etc/pki/product/286.pem',
+            'sudo cp /mnt/RHCeph-OSD-1.2-x86_64-25019bf09fe9-288.pem /etc/pki/product/288.pem'
         ]
         for cmd in cmds :
             logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
 
         logger.info("install the setup script")
-        cmd = 'yum -y install /mnt/ice_setup-*.rpm'
+        cmd = 'sudo yum -y install /mnt/ice_setup-*.rpm'
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
 
         cmd = 'mkdir ~/cluster && cd ~/cluster'
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
         logger.info("removing installation prompts")
-        commands = ['sed -i "s/fqdn = prompt.*/return \'http\', fallback_fqdn/" /usr/lib/python2.7/site-packages/ice_setup/ice.py',
-                    "sed -i 's/prompt_continue()$//' /usr/lib/python2.7/site-packages/ice_setup/ice.py"
-                    "sed -i 's/package_path = get_package_path(package_path)/package_path = \"\\/mnt\"/' /usr/lib/python2.7/site-packages/ice_setup/ice.py"
+        commands = ['sudo sed -i "s/fqdn = prompt.*/return \'http\', fallback_fqdn/" /usr/lib/python2.7/site-packages/ice_setup/ice.py',
+                    "sudo sed -i 's/prompt_continue()$//' /usr/lib/python2.7/site-packages/ice_setup/ice.py"
+                    "sudo sed -i 's/package_path = get_package_path(package_path)/package_path = \"\\/mnt\"/' /usr/lib/python2.7/site-packages/ice_setup/ice.py"
                     ]
         for cmd in commands :
             logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))

@@ -83,7 +83,13 @@ if __name__ == '__main__':
         'hammer-deploy-compute.sh',
         'hammer-deploy-controller.sh',
         'hammer-deploy-storage.sh',
-        'hammer-configure-foreman.sh'
+        'hammer-configure-foreman.sh',
+        'hammer-get-ids.sh',
+        'hammer-dump-ids.sh',
+        'common.sh',
+        'osp_config.sh',
+        'provision.sh',
+        'bond.sh'
          ]
 	hammer_script_folder =  '/utils/networking/' if (sys.platform.startswith('linux')) else "\\utils\\networking\\"
         for file in hammer_scripts  :
@@ -336,22 +342,13 @@ if __name__ == '__main__':
         foremanHost.enable_version_locking()
         foremanHost.install_hammer()
         foremanHost.configure_installation_medium()
-        foremanHost.configure_partitionts_tables()
-        foremanHost.configure_operating_systems()
-        foremanHost.configure_subnets()
-        foremanHost.configure_templates()
-        foremanHost.configure_os_updates()
-        foremanHost.register_hosts()
+        foremanHost.configure_foreman()
+	foremanHost.gather_values()
 
-        foremanHost.configure_controller_nic()
-        foremanHost.configure_controller_version_locking()
-        foremanHost.configure_compute_nic()
-        foremanHost.configure_compute_version_locking()
+        foremanHost.configure_controller_nodes()
+        foremanHost.configure_compute_nodes()
         if settings.stamp_storage == "ceph":
-            foremanHost.configure_ceph_nic()
-            foremanHost.configure_ceph_version_locking()
-        foremanHost.configure_pool_ids()
-        foremanHost.configure_repositories()
+            foremanHost.configure_ceph_nodes()
 
         logger.info( "==== Power on/PXE boot the Controller/Compute/Storage nodes")
         for each in nonSAHnodes:

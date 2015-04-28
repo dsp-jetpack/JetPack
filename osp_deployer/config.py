@@ -51,6 +51,9 @@ class Settings():
         self.bond_mode_compute_nodes = self.cluster_settings_map['bond_mode_compute_nodes']
         self.bond_mode_storage_nodes = self.cluster_settings_map['bond_mode_storage_nodes']
 
+        self.controller_nodes_are_730 = self.cluster_settings_map['controller_nodes_are_730']
+        self.compute_nodes_are_730 = self.cluster_settings_map['compute_nodes_are_730']
+        self.storage_nodes_are_730 = self.cluster_settings_map['storage_nodes_are_730']
 
         self.storage_network = self.cluster_settings_map['storage_network']
         self.storage_cluster_network = self.cluster_settings_map['storage_cluster_network']
@@ -98,6 +101,8 @@ class Settings():
             self.hammer_deploy_controller_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-deploy-controller.sh'
             self.hammer_deploy_storage_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-deploy-storage.sh'
             self.hammer_configure_foreman_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-configure-foreman.sh'
+            self.hammer_get_ids_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-get-ids.sh'
+            self.hammer_dump_ids_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-dump-ids.sh'
         else:
             self.lock_files_dir = self.cloud_repo_dir + "\\data\\vlock_files"
             self.foreman_configuration_scripts = self.cloud_repo_dir + "\\src"
@@ -109,6 +114,8 @@ class Settings():
             self.hammer_deploy_controller_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-deploy-controller.sh"
             self.hammer_deploy_storage_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-deploy-storage.sh"
             self.hammer_configure_foreman_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-configure-foreman.sh"
+            self.hammer_get_ids_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-get-ids.sh"
+            self.hammer_dump_ids_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-dump-ids.sh"
 
         self.controller_nodes = []
         self.compute_nodes = []
