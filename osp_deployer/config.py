@@ -91,6 +91,7 @@ class Settings():
             self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
             self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
             self.foreman_deploy_sh = self.foreman_configuration_scripts + '/mgmt/deploy-foreman-vm.sh'
+            self.sah_ks = self.foreman_configuration_scripts + "/mgmt/osp-sah.ks"
             self.ceph_deploy_sh = self.foreman_configuration_scripts + '/mgmt/deploy-ceph-vm.sh'
             self.hammer_configure_hostgroups_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-configure-hostgroups.sh'
             self.hammer_deploy_compute_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-deploy-compute.sh'
@@ -101,6 +102,7 @@ class Settings():
             self.lock_files_dir = self.cloud_repo_dir + "\\data\\vlock_files"
             self.foreman_configuration_scripts = self.cloud_repo_dir + "\\src"
             self.foreman_deploy_sh = self.foreman_configuration_scripts + "\\mgmt\\deploy-foreman-vm.sh"
+            self.sah_ks = self.foreman_configuration_scripts + "\\mgmt\\osp-sah.ks"
             self.ceph_deploy_sh = self.foreman_configuration_scripts + "\\mgmt\\deploy-ceph-vm.sh"
             self.hammer_configure_hostgroups_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-configure-hostgroups.sh"
             self.hammer_deploy_compute_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-deploy-compute.sh"

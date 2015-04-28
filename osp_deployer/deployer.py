@@ -136,10 +136,7 @@ if __name__ == '__main__':
             ipmi_session.power_off()
 
         log ("=== updating the sah kickstart based on settings")
-        if(sys.platform.startswith('linux')):
-            shutil.copyfile(os.getcwd() + "/settings/ice/osp-sah.ks" , settings.sah_kickstart)
-        else:
-            shutil.copyfile(os.getcwd() + "\\settings\\ice\\osp-sah.ks" , settings.sah_kickstart)
+        shutil.copyfile(settings.sah_ks , settings.sah_kickstart)
         FileHelper.replaceExpression(settings.sah_kickstart, "^cdrom",'url --url='+settings.rhel_install_location )
         FileHelper.replaceExpression(settings.sah_kickstart, '^url --url=.*','url --url='+settings.rhel_install_location )
         FileHelper.replaceExpression(settings.sah_kickstart, '^HostName=.*','HostName="'+settings.sah_node.hostname + "." + settings.domain + '"')
