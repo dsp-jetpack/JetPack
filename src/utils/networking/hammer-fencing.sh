@@ -29,8 +29,7 @@ then
   if [[ $FT_ID ]]
   then
     echo "Updating fencing_type value to: $1 for hostgroup: $HA_ID"
-    echo "hammer sc-param update --id $FT_ID --default-value $FENCE_MODE --override true"
-    #hammer sc-param update --id $FT_ID --default-value $FENCE_MODE --override true
+    hammer sc-param update --id $FT_ID --default-value $FENCE_MODE --override true
   else
     echo "Error: Unable to find parameter $FT_ID"
     exit 1
