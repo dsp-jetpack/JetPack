@@ -124,6 +124,8 @@ execute "hammer os set-parameter --operatingsystem-id ${OS_ID} --name subscripti
 
 ./hammer-dump-ids.sh
 
+./hammer-ceph-fix.sh
+
 # Workaround for neutron fails to start, BZ1192674
 cp /usr/share/openstack-puppet/modules/neutron/manifests/server.pp /usr/share/openstack-puppet/modules/neutron/manifests/server.pp.orig
 
