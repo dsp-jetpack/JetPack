@@ -1,8 +1,8 @@
-#Change Log
-##This is a change log for the settings.ini and settings.properties file
+##Change Log
+#####This is a change log for the settings.ini and settings.properties file
 
 
-###Log:
+#######Log:
 * 1.0: - Initial version.
 * 2.0.x: - Icehouse , RH-OSP5
 * 3.0 - 2/24 - Juno, RH-OSP6 A1
