@@ -158,11 +158,9 @@ if __name__ == '__main__':
         FileHelper.replaceExpression(settings.sah_kickstart, '^anaconda_interface=.*','anaconda_interface="'+settings.sah_node.anaconda_ip+ '/'+ settings.sah_node.public_netmask+' '+settings.sah_node.anaconda_iface+'"')
 
         FileHelper.replaceExpression(settings.sah_kickstart, '^public_bond_name=.*','public_bond_name="'+settings.sah_node.public_bond +'"')
-        FileHelper.replaceExpression(settings.sah_kickstart, '^public_bond_opts="mode=(.*?)\s','public_bond_opts="mode='+ settings.bond_mode_sah + ' ')
         FileHelper.replaceExpression(settings.sah_kickstart, '^public_ifaces=.*','public_ifaces="'+settings.settings.sah_node.public_slaves +'"')
 
         FileHelper.replaceExpression(settings.sah_kickstart, '^private_bond_name=.*','private_bond_name="'+settings.sah_node.private_bond +'"')
-        FileHelper.replaceExpression(settings.sah_kickstart, '^private_bond_opts="mode=(.*?)\s','private_bond_opts="mode='+ settings.bond_mode_sah + ' ')
         FileHelper.replaceExpression(settings.sah_kickstart, '^private_ifaces=.*','private_ifaces="'+settings.settings.sah_node.private_slaves +'"')
 
         FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bond_name=.*','provision_bond_name=bond0."'+settings.sah_node.provisioning_vlanid +'"')

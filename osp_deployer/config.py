@@ -14,7 +14,10 @@ class Settings():
         self.conf = ConfigParser.ConfigParser()
         self.conf.read(settingsFile)
         self.cluster_settings_map = self.getSettingsSection("Cluster Settings")
-        self.openstack_services_password = self.cluster_settings_map['openstack_services_password']
+        self.nodes_root_password = self.cluster_settings_map['cluster_password']
+        if len(self.nodes_root_password) < 8 :
+            raise IOError("cluster_password setting lenght should be > 8 characters")
+        self.openstack_services_password = self.nodes_root_password
         self.nova_public_network = self.cluster_settings_map['nova_public_network']
         self.nova_private_network = self.cluster_settings_map['nova_private_network']
         self.private_api_network = self.cluster_settings_map['private_api_network']
@@ -43,14 +46,6 @@ class Settings():
         self.vip_neutron_public = self.cluster_settings_map['vip_neutron_public']
         self.vip_neutron_private = self.cluster_settings_map['vip_neutron_private']
 
-
-
-
-        self.bond_mode_sah = self.cluster_settings_map['bond_mode_sah']
-        self.bond_mode_controller_nodes = self.cluster_settings_map['bond_mode_controller_nodes']
-        self.bond_mode_compute_nodes = self.cluster_settings_map['bond_mode_compute_nodes']
-        self.bond_mode_storage_nodes = self.cluster_settings_map['bond_mode_storage_nodes']
-
         self.controller_nodes_are_730 = self.cluster_settings_map['controller_nodes_are_730']
         self.compute_nodes_are_730 = self.cluster_settings_map['compute_nodes_are_730']
         self.storage_nodes_are_730 = self.cluster_settings_map['storage_nodes_are_730']
@@ -63,9 +58,7 @@ class Settings():
         self.domain = self.cluster_settings_map['domain']
         self.ipmi_user = self.cluster_settings_map['ipmi_user']
         self.ipmi_password = self.cluster_settings_map['ipmi_password']
-        self.nodes_root_password = self.cluster_settings_map['nodes_root_password']
-        if len(self.nodes_root_password) < 8 :
-            raise IOError("nodes_root_password setting lenght should be > 8 characters")
+
         self.subscription_manager_user = self.cluster_settings_map['subscription_manager_user']
         self.subscription_manager_password = self.cluster_settings_map['subscription_manager_password']
         self.subscription_manager_poolID = self.cluster_settings_map['subscription_manager_pool']

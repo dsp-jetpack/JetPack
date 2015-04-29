@@ -87,7 +87,7 @@ class Ceph():
 
         logger.info("removing installation prompts")
         commands = ['sudo sed -i "s/fqdn = prompt.*/return \'http\', fallback_fqdn/" /usr/lib/python2.7/site-packages/ice_setup/ice.py',
-                    "sudo sed -i 's/prompt_continue()$//' /usr/lib/python2.7/site-packages/ice_setup/ice.py"
+                    "sudo sed -i 's/prompt_continue()$//' /usr/lib/python2.7/site-packages/ice_setup/ice.py",
                     "sudo sed -i 's/package_path = get_package_path(package_path)/package_path = \"\\/mnt\"/' /usr/lib/python2.7/site-packages/ice_setup/ice.py"
                     ]
         for cmd in commands :
