@@ -147,6 +147,7 @@ class Foreman():
         'hammer-get-ids.sh',
         'hammer-dump-ids.sh',
         'hammer-ceph-fix',
+        'hammer-fencing.sh',
         'common.sh',
         'osp_config.sh',
         'provision.sh',
