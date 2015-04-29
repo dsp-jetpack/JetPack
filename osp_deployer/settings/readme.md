@@ -2,11 +2,11 @@
 #####This is a change log for the settings.ini and settings.properties file
 
 
-#######Log:
+######Log:
 * 1.0: - Initial version.
 * 2.0.x: - Icehouse , RH-OSP5
 * 3.0 - 2/24 - Juno, RH-OSP6 A1
-* 3.0.x1 - 3/20/2015 - Added ceph_user_password
+* 3.0.a - 3/20/2015 - Added ceph_user_password
 * 3.0.1 - 04/07/2015 - Initial version of Juno, RH-OSP6 A2
 * 3.0.1.a - 04/10/2015 - Added cloud_repo_dir, clone and use git repo cloud-repo
 * 3.0.1.b - 04/24/2015 - Added rhl71_iso and ceph_iso to the Bastion Settings, removed rhl7_iso
