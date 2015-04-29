@@ -300,10 +300,10 @@ class Foreman():
         cmd = "sed -i 's|CONTROLLER_BONDS=\".*|CONTROLLER_BONDS=\\\"( [bond0]=\\\\\""+self.settings.controller_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.controller_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-        cmd = "sed -i 's|COMPUTE_BONDS=\".*|COMPUTE_BONDS=\\\"( [bond0]=\\\\\""+self.settings.compute_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.controller_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
+        cmd = "sed -i 's|COMPUTE_BONDS=\".*|COMPUTE_BONDS=\\\"( [bond0]=\\\\\""+self.settings.compute_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.compute_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-        cmd = "sed -i 's|STORAGE_BONDS=\".*|STORAGE_BONDS=\\\"( [bond0]=\\\\\""+self.settings.ceph_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.controller_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
+        cmd = "sed -i 's|STORAGE_BONDS=\".*|STORAGE_BONDS=\\\"( [bond0]=\\\\\""+self.settings.ceph_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.ceph_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         
         logger.info ("executing hammer-configure-foreman")
