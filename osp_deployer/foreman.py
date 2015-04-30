@@ -504,8 +504,8 @@ class Foreman():
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
         logger.info("run puppet on controller nodes with fencing disabled")
-	cmd = "/root/pilot/hammer-fencing.sh disabled"
-        logger.info(print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
+        cmd = "/root/pilot/hammer-fencing.sh disabled"
+        logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
         controlerPuppetRuns = []
         for each in self.settings.controller_nodes:
             puppetRunThr = runThreadedPuppet(each.hostname, each)
@@ -518,7 +518,7 @@ class Foreman():
 
         logger.info("run puppet on controller nodes with fencing enabled")
         cmd = "/root/pilot/hammer-fencing.sh enabled"
-        logger.info(print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
+        logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
         controlerPuppetRuns = []
         for each in self.settings.controller_nodes:
             puppetRunThr = runThreadedPuppet(each.hostname, each)
