@@ -117,7 +117,7 @@ class Ceph():
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
         logger.info("gathering keys from the controller nodes ")
-        cmd = 'cd ~/cluster;ceph-deploy gatherkeys ' + self.settings.controller_nodes[0].hostname
+        cmd = 'cd ~/cluster;ceph-deploy gatherkeys '
         for host in self.settings.controller_nodes :
             cmd = cmd +  host.hostname + ' '
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))

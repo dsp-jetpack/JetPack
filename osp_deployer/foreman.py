@@ -106,7 +106,7 @@ class Foreman():
         FileHelper.replaceExpressionTXT(file, 'vip_neutron_adm = .*',"vip_neutron_adm = '" + self.settings.vip_neutron_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_neutron_pub = .*',"vip_neutron_pub = '" + self.settings.vip_neutron_public + "'" )
         FileHelper.replaceExpressionTXT(file, 'c_ceph_cluster_network = .*',"c_ceph_cluster_network = '" + self.settings.storage_cluster_network + "'" )
-        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_journal_size = .*',"c_ceph_osd_journal_size = '3'" )
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_pool_size = .*',"c_ceph_osd_pool_size = '2'" )
         FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_journal_size = .*',"c_ceph_osd_journal_size = '5000'" )
 
 
@@ -146,6 +146,8 @@ class Foreman():
         'hammer-configure-foreman.sh',
         'hammer-get-ids.sh',
         'hammer-dump-ids.sh',
+        'hammer-ceph-fix.sh',
+        'hammer-fencing.sh',
         'common.sh',
         'osp_config.sh',
         'provision.sh',
@@ -270,7 +272,7 @@ class Foreman():
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         cmd = "sed -i \"s|CHANGEME_PASSWORD|" + self.settings.subscription_manager_password +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
-        cmd = "sed -i \"s|CHANGEME_POOL_ID|" + self.settings.subscription_manager_poolID +"|\" " + configFile
+        cmd = "sed -i \"s|CHANGEME_POOL_ID|" + self.settings.subscription_manager_pool_phyical_openstack_nodes +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
         if self.settings.controller_nodes_are_730 == True:
@@ -439,7 +441,7 @@ class Foreman():
         self.settings.fsid = fsidl_key
         logger.info("Updating erb file with ceph keys/fsid")
 
-        erbFile = "~/dell-pilot.yaml.erb"
+        erbFile = "~/pilot/dell-pilot.yaml.erb"
         cmd = "sed -i \"s|c_ceph_images_key = '.*|c_ceph_images_key = '"+img_key+"'|\" " + erbFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
 
@@ -474,73 +476,6 @@ class Foreman():
          for cmd in cmds:
              logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
 
-    def applyHostGroups_to_nodes(self):
-        print "Apply host groups to nodes"
-
-        cmd = 'hammer hostgroup list | grep "Controller (Nova Network)" | grep -o "^\w*\\b"'
-        controllerGroupId = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
-        print "controllerGroupId : " + controllerGroupId
-        cmd = 'hammer hostgroup list | grep "Compute (Nova Network)" | grep -o "^\w*\\b"'
-        computeGroupId = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
-        print "computeGroupId : " + computeGroupId
-
-        print "Apply hostgroup to controller node(s)"
-        for each in self.settings.controller_nodes:
-            cmd = 'hammer host list | grep "'+ each.hostname +'" | grep -o "^\w*\\b"'
-            hostID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
-            hostUpdated = False
-            while hostUpdated != True:
-                cmd = 'hammer host update --hostgroup-id '+controllerGroupId+' --id '+hostID
-                out, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
-                if ("Could not update the host" in err) or ( "Could not update the host" in out):
-                    print "did not update the host , trying again... " + err
-                    hostUpdated = False
-                else :
-                    hostUpdated = True
-                    break
-        controlerPuppetRuns = []
-        for each in self.settings.controller_nodes:
-            puppetRunThr = runThreadedPuppet(each.hostname, each)
-            controlerPuppetRuns.append(puppetRunThr)
-        for thr in controlerPuppetRuns:
-            thr.start()
-        for thr in controlerPuppetRuns:
-            thr.join()
-
-        print "Apply hostgroup to compute nodes "
-        for each in self.settings.compute_nodes:
-            cmd = 'hammer host list | grep "'+ each.hostname +'" | grep -o "^\w*\\b"'
-            hostID = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)[0].replace("\n", "").replace("\r", "")
-
-
-            hostUpdated = False
-            while hostUpdated != True:
-                cmd = 'hammer host update --hostgroup-id '+computeGroupId+' --id '+hostID
-                out, err  = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
-                if ("Could not update the host" in err) or ( "Could not update the host" in out):
-                    print "did not update the host , trying again... " + err
-                    hostUpdated = False
-                else :
-                    hostUpdated = True
-                    break
-
-            print "running puppet on " + each.hostname
-            cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
-            didNotRun = True
-            while didNotRun == True:
-                bla ,err = Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
-                if  "Run of Puppet configuration client already in progress" in bla:
-                    didNotRun = True
-                    logger.info("puppet s busy ... give it a while & retry")
-                    time.sleep(30)
-                else :
-                    didNotRun = False
-                    break
-
-
-
-
-
     def configureNodes(self):
 
         cmd = 'hammer hostgroup list | grep "HA All In One Controller" | grep -o "^\w*\\b"'
@@ -568,7 +503,22 @@ class Foreman():
         cmd = "sed -i \"s/\\$known_stores    .*/\\$known_stores = \\['glance.store.rbd.Store'\\],/\"" + " /usr/share/openstack-puppet/modules/glance/manifests/api.pp"
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
-        logger.info("run puppet on controller nodes")
+        logger.info("run puppet on controller nodes with fencing disabled")
+        cmd = "/root/pilot/hammer-fencing.sh disabled"
+        logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
+        controlerPuppetRuns = []
+        for each in self.settings.controller_nodes:
+            puppetRunThr = runThreadedPuppet(each.hostname, each)
+            controlerPuppetRuns.append(puppetRunThr)
+        for thr in controlerPuppetRuns:
+            thr.start()
+            time.sleep(60) # ...
+        for thr in controlerPuppetRuns:
+            thr.join()
+
+        logger.info("run puppet on controller nodes with fencing enabled")
+        cmd = "/root/pilot/hammer-fencing.sh enabled"
+        logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
         controlerPuppetRuns = []
         for each in self.settings.controller_nodes:
             puppetRunThr = runThreadedPuppet(each.hostname, each)
