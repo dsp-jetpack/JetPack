@@ -148,7 +148,7 @@ private_api_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.140.41/255.255
 # Create the files that will be used by the installation environment and %post environment
 read -a itmp <<< $( tr '/' ' ' <<< ${anaconda_interface} )
 
-echo "network --activate --onboot=false --noipv6 --device=${itmp[2]} --bootproto=static --ip=${itmp[0]}" \
+echo "network --activate --onboot=no --noipv6 --device=${itmp[2]} --bootproto=static --ip=${itmp[0]}" \
      " --netmask=${itmp[1]} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers}" \
      >> /tmp/ks_include.txt
 
