@@ -341,7 +341,7 @@ if __name__ == '__main__':
         foremanHost.install_hammer()
         foremanHost.configure_installation_medium()
         foremanHost.configure_foreman()
-	foremanHost.gather_values()
+        foremanHost.gather_values()
 
         foremanHost.configure_controller_nodes()
         foremanHost.configure_compute_nodes()
