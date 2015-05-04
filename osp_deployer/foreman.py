@@ -106,7 +106,7 @@ class Foreman():
         FileHelper.replaceExpressionTXT(file, 'vip_neutron_adm = .*',"vip_neutron_adm = '" + self.settings.vip_neutron_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_neutron_pub = .*',"vip_neutron_pub = '" + self.settings.vip_neutron_public + "'" )
         FileHelper.replaceExpressionTXT(file, 'c_ceph_cluster_network = .*',"c_ceph_cluster_network = '" + self.settings.storage_cluster_network + "'" )
-        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_pool_size = .*',"c_ceph_osd_journal_size = '2'" )
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_pool_size = .*',"c_ceph_osd_pool_size = '2'" )
         FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_journal_size = .*',"c_ceph_osd_journal_size = '5000'" )
 
 
@@ -272,7 +272,7 @@ class Foreman():
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         cmd = "sed -i \"s|CHANGEME_PASSWORD|" + self.settings.subscription_manager_password +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
-        cmd = "sed -i \"s|CHANGEME_POOL_ID|" + self.settings.subscription_manager_poolID +"|\" " + configFile
+        cmd = "sed -i \"s|CHANGEME_POOL_ID|" + self.settings.subscription_manager_pool_phyical_openstack_nodes +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
         if self.settings.controller_nodes_are_730 == True:
@@ -506,6 +506,10 @@ class Foreman():
         logger.info("run puppet on controller nodes with fencing disabled")
         cmd = "/root/pilot/hammer-fencing.sh disabled"
         logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
+
+        cmd = "/root/pilot/hammer-ceph-fix.sh"
+        logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
+        
         controlerPuppetRuns = []
         for each in self.settings.controller_nodes:
             puppetRunThr = runThreadedPuppet(each.hostname, each)

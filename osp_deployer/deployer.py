@@ -1,14 +1,10 @@
+import sys, getopt, time, subprocess, paramiko,logging, traceback, os.path, urllib2, shutil
 from osp_deployer.foreman import Foreman
 from osp_deployer.ceph import Ceph
-import sys, getopt
-from osp_deployer import Settings
 from auto_common import Ipmi, Ssh, FileHelper, Scp, UI_Manager
-from datetime import datetime
-import time,subprocess
-import paramiko, re
-import logging
+from osp_deployer import Settings
+
 logger = logging.getLogger(__name__)
-import traceback, os.path, urllib2, shutil
 
 def log(message):
     print (message)
@@ -151,7 +147,7 @@ if __name__ == '__main__':
         FileHelper.replaceExpression(settings.sah_kickstart, '^SystemPassword=.*','SystemPassword="'+settings.sah_node.root_password +'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^SubscriptionManagerUser=.*','SubscriptionManagerUser="'+settings.subscription_manager_user +'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^SubscriptionManagerPassword=.*','SubscriptionManagerPassword="'+settings.subscription_manager_password +'"')
-        FileHelper.replaceExpression(settings.sah_kickstart, '^SubscriptionManagerPool=.*','SubscriptionManagerPool="'+ settings.subscription_manager_poolID +'"')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^SubscriptionManagerPool=.*','SubscriptionManagerPool="'+ settings.subscription_manager_pool_sah +'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^Gateway=.*','Gateway="'+settings.sah_node.public_gateway +'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^NameServers=.*','NameServers="'+settings.sah_node.name_server +'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^NTPServers=.*','NTPServers="'+settings.ntp_server +'"')
@@ -238,7 +234,7 @@ if __name__ == '__main__':
                 "timezone " + settings.time_zone,
                 "smuser " + settings.subscription_manager_user ,
                 "smpassword "+settings.subscription_manager_password ,
-                "smpool " + settings.subscription_manager_poolID ,
+                "smpool " + settings.subscription_manager_pool_vm_rhel ,
                 "hostname "+ settings.foreman_node.hostname + "." + settings.domain ,
                 "gateway " + settings.foreman_node.public_gateway ,
                 "nameserver " + settings.foreman_node.name_server ,
@@ -302,7 +298,7 @@ if __name__ == '__main__':
                 "timezone " + settings.time_zone,
                 "smuser " + settings.subscription_manager_user ,
                 "smpassword "+settings.subscription_manager_password ,
-                "smpool " + settings.subscription_manager_poolID ,
+                "smpool " + settings.subscription_manager_vm_ceph ,
                 "hostname "+ settings.ceph_node.hostname + "." + settings.domain ,
                 "gateway " + settings.ceph_node.public_gateway ,
                 "nameserver " + settings.ceph_node.name_server ,
@@ -343,7 +339,7 @@ if __name__ == '__main__':
         foremanHost.install_hammer()
         foremanHost.configure_installation_medium()
         foremanHost.configure_foreman()
-	foremanHost.gather_values()
+        foremanHost.gather_values()
 
         foremanHost.configure_controller_nodes()
         foremanHost.configure_compute_nodes()

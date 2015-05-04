@@ -60,7 +60,14 @@ class Settings():
             raise IOError("nodes_root_password setting lenght should be > 8 characters")
         self.subscription_manager_user = self.cluster_settings_map['subscription_manager_user']
         self.subscription_manager_password = self.cluster_settings_map['subscription_manager_password']
-        self.subscription_manager_poolID = self.cluster_settings_map['subscription_manager_pool']
+
+        self.subscription_manager_pool_sah = self.cluster_settings_map['subscription_manager_pool_sah']
+        self.subscription_manager_pool_vm_rhel = self.cluster_settings_map['subscription_manager_pool_vm_rhel']
+        self.subscription_manager_pool_phyical_openstack_nodes = self.cluster_settings_map['subscription_manager_pool_phyical_openstack_nodes']
+        self.subscription_manager_pool_vm_openstack_nodes = self.cluster_settings_map['subscription_manager_pool_vm_openstack_nodes']
+        self.subscription_manager_vm_ceph = self.cluster_settings_map['subscription_manager_vm_ceph']
+        self.subscription_manager_pool_physical_ceph = self.cluster_settings_map['subscription_manager_pool_physical_ceph']
+
         self.ntp_server = self.cluster_settings_map['ntp_servers']
         self.time_zone = self.cluster_settings_map['time_zone']
         self.stamp_storage = self.cluster_settings_map['storage']
