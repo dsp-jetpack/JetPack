@@ -95,11 +95,15 @@ do
   [[ ${iface} == smproxypassword ]] && echo "echo SMProxyPassword=${ip} >> /tmp/tempest_ks_post_include.txt"
   
 
-  [[ ${iface} == ens3 ]] && { 
+  [[ ${iface} == eth0 ]] && { 
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers} >> /tmp/tempest_ks_include.txt"
     }
 
-  [[ ${iface} == ens4 ]] && { 
+  [[ ${iface} == eth1 ]] && { 
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} >> /tmp/tempest_ks_include.txt"
+    }
+
+  [[ ${iface} == eth2 ]] && {
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} >> /tmp/tempest_ks_include.txt"
     }
 
@@ -134,10 +138,11 @@ chvt 8
 
   echo "GATEWAY=${Gateway}" >> /etc/sysconfig/network
 
-  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-ens3
-  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-ens4
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth0
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth1
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth2
 
-  echo "$( ip addr show dev ens3 | awk '/inet / { print $2 }' | sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
+  echo "$( ip addr show dev eth0 | awk '/inet / { print $2 }' | sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
 
   echo "----------------------"
   ip addr
@@ -258,7 +263,8 @@ EOFKS
     --disk /store/data/images/tempest.img,bus=virtio,size=16 \
     --disk /tmp/floppy-tempest.img,device=floppy \
     --network bridge=public \
-    --network bridge=provision \
+    --network bridge=external \
+    --network bridge=private \
     --initrd-inject /tmp/tempest.ks \
     --extra-args "ks=file:/tempest.ks" \
     --noautoconsole \
@@ -275,7 +281,8 @@ virt-install --name tempest \
   --os-variant rhel7 \
   --disk /store/data/images/tempest.img,bus=virtio,size=16 \
   --network bridge=public \
-  --network bridge=provision \
+  --network bridge=external \
+  --network bridge=private \
   --initrd-inject /tmp/tempest.ks \
   --extra-args "ks=file:/tempest.ks" \
   --noautoconsole \

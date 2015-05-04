@@ -119,6 +119,14 @@ provision_boot_opts="onboot none vlan"
 storage_bond_name="CHANGEME e.g. bond0.170"
 storage_boot_opts="onboot none vlan"
 #
+# External
+external_bond_name="CHANGEME e.g. bond0.190"
+external_boot_opts="onboot none vlan"
+#
+# Private API
+private_api_bond_name="CHANGEME e.g. bond0.140"
+private_api_boot_opts="onboot none vlan"
+#
 # Define the bridges
 # Public Bridge
 public_bridge_boot_opts="CHANGEME e.g. onboot static 10.148.44.41/255.255.255.0"
@@ -128,12 +136,19 @@ provision_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.120.41/255.255.2
 #
 # Storage Bridge
 storage_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.170.41/255.255.255.0"
+#
+# External Bridge
+external_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.190.41/255.255.255.0"
+#
+# Private Bridge
+private_api_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.140.41/255.255.255.0"
+#
 ################### END of CHANGEME
 
 # Create the files that will be used by the installation environment and %post environment
 read -a itmp <<< $( tr '/' ' ' <<< ${anaconda_interface} )
 
-echo "network --activate --onboot=true --noipv6 --device=${itmp[2]} --bootproto=static --ip=${itmp[0]}" \
+echo "network --activate --onboot=no --noipv6 --device=${itmp[2]} --bootproto=static --ip=${itmp[0]}" \
      " --netmask=${itmp[1]} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers}" \
      >> /tmp/ks_include.txt
 
@@ -164,6 +179,10 @@ echo "bonds[${provision_bond_name}]=\"${provision_boot_opts}\"" >> /tmp/ks_post_
 
 echo "bonds[${storage_bond_name}]=\"${storage_boot_opts}\"" >> /tmp/ks_post_include.txt
 
+echo "bonds[${private_api_bond_name}]=\"${private_api_boot_opts}\"" >> /tmp/ks_post_include.txt
+
+echo "bonds[${external_bond_name}]=\"${external_boot_opts}\"" >> /tmp/ks_post_include.txt
+
 echo "bridges[public]=\"${public_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
 echo "bridge_iface[public]=\"${public_bond_name}\"" >> /tmp/ks_post_include.txt
 
@@ -172,6 +191,12 @@ echo "bridge_iface[provision]=\"${provision_bond_name}\"" >> /tmp/ks_post_includ
 
 echo "bridges[storage]=\"${storage_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
 echo "bridge_iface[storage]=\"${storage_bond_name}\"" >> /tmp/ks_post_include.txt
+
+echo "bridges[private]=\"${private_api_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bridge_iface[private]=\"${private_api_bond_name}\"" >> /tmp/ks_post_include.txt
+
+echo "bridges[external]=\"${external_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bridge_iface[external]=\"${external_bond_name}\"" >> /tmp/ks_post_include.txt
 
 echo "SMUser=\"${SubscriptionManagerUser}\"" >> /tmp/ks_post_include.txt
 echo "SMPassword=\"${SubscriptionManagerPassword}\"" >> /tmp/ks_post_include.txt
