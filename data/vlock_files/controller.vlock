@@ -316,9 +316,9 @@
 0:python-jsonpath-rw-1.2.3-2.el7ost.*
 0:boost-thread-1.53.0-23.el7.*
 0:fence-agents-apc-4.0.11-11.el7_1.*
-0:hdparm-9.43-5.el7.*
+#0:hdparm-9.43-5.el7.*
 2:microcode_ctl-2.1-10.el7.*
-1:python-rados-0.80.8-5.el7cp.*
+#1:python-rados-0.80.8-5.el7cp.*
 0:ruby-irb-2.0.0.598-24.el7.*
 0:openpgm-5.2.122-3.el7cp.*
 0:erlang-sasl-R16B-03.7min.1.el7ost.*
@@ -342,7 +342,7 @@
 32:bind-license-9.9.4-18.el7_1.1.*
 0:openstack-dashboard-2014.2.2-2.el7ost.*
 0:python-futures-2.1.6-1.el7ost.*
-0:gdisk-0.8.6-5.el7.*
+#0:gdisk-0.8.6-5.el7.*
 0:python-stevedore-1.1.0-1.el7ost.*
 0:python-versiontools-1.9.1-4.el7ost.*
 0:fontawesome-fonts-4.1.0-2.el7ost.*
@@ -488,7 +488,7 @@
 0:slang-2.2.4-11.el7.*
 0:libdrm-2.4.56-2.el7.*
 0:python-rhsm-1.13.10-1.el7.*
-1:librados2-0.80.8-5.el7cp.*
+#1:librados2-0.80.8-5.el7cp.*
 0:libnl3-cli-3.2.21-8.el7.*
 0:python-XStatic-QUnit-1.14.0.2-2.el7ost.*
 0:python-jsonpointer-1.0-2.el7.*
@@ -567,7 +567,7 @@
 0:python-redis-2.10.3-1.el7ost.*
 0:libutempter-1.1.6-4.el7.*
 0:rubygems-2.0.14-24.el7.*
-1:ceph-common-0.80.8-5.el7cp.*
+#1:ceph-common-0.80.8-5.el7cp.*
 0:pam-1.1.8-12.el7.*
 0:python-gudev-147.2-7.el7.*
 0:openstack-keystone-2014.2.2-1.el7ost.*
@@ -600,7 +600,7 @@
 0:ipset-libs-6.19-4.el7.*
 0:perl-IO-Compress-2.061-2.el7.*
 0:policycoreutils-python-2.2.5-15.el7.*
-0:cryptsetup-1.6.6-3.el7.*
+#0:cryptsetup-1.6.6-3.el7.*
 0:nettle-2.7.1-4.el7.*
 0:python-eventlet-0.15.2-1.el7ost.*
 0:libibverbs-1.1.8-5.el7.*
@@ -683,7 +683,7 @@
 0:libyaml-0.1.4-11.el7_0.*
 0:libmnl-1.0.3-7.el7.*
 0:libquadmath-4.8.3-9.el7.*
-0:libicu-50.1.2-11.el7.*
+#0:libicu-50.1.2-11.el7.*
 0:perl-Pod-Perldoc-3.20-4.el7.*
 0:setup-2.8.71-5.el7.*
 0:openstack-ceilometer-central-2014.2.2-2.el7ost.*
@@ -724,7 +724,7 @@
 0:openstack-heat-api-cfn-2014.2.2-1.el7ost.*
 0:libdb-utils-5.3.21-17.el7_0.1.*
 0:apr-util-1.5.2-6.el7.*
-1:librbd1-0.80.8-5.el7cp.*
+#1:librbd1-0.80.8-5.el7cp.*
 0:rhn-check-2.0.2-6.el7.*
 0:pyOpenSSL-0.13.1-3.el7.*
 0:nss-3.16.2.3-5.el7.*
@@ -732,7 +732,7 @@
 10:qemu-img-rhev-2.1.2-23.el7.*
 0:Red_Hat_Enterprise_Linux-Release_Notes-7-en-US-1.0-9.el7.*
 0:hiera-1.3.1-2.el7.*
-1:python-rbd-0.80.8-5.el7cp.*
+#1:python-rbd-0.80.8-5.el7cp.*
 0:perl-Encode-2.51-7.el7.*
 0:tcp_wrappers-libs-7.6-77.el7.*
 0:python-cheetah-2.4.4-5.el7.*
