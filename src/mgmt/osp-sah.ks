@@ -92,8 +92,8 @@ NTPServers="clock.redhat.com"
 TimeZone="UTC"
 
 # Installation interface configuration
-# Format is "ip/netmask interface"
-anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 em2"
+# Format is "ip/netmask interface onboot no"
+anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 em2 no"
 
 # Bonding and Bridge configuration. These variables are bash associative arrays and take the form of array[key]="value".
 # Specifying a key more than once will overwrite the first key. For example:
@@ -148,12 +148,17 @@ private_api_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.140.41/255.255
 # Create the files that will be used by the installation environment and %post environment
 read -a itmp <<< $( tr '/' ' ' <<< ${anaconda_interface} )
 
-echo "network --activate --onboot=no --noipv6 --device=${itmp[2]} --bootproto=static --ip=${itmp[0]}" \
+echo "network --activate --nodefroute --onboot=${itmp[3]} --noipv6 --device=${itmp[2]} --bootproto=static --ip=${itmp[0]}" \
      " --netmask=${itmp[1]} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers}" \
      >> /tmp/ks_include.txt
 
 echo "rootpw ${SystemPassword}" >> /tmp/ks_include.txt
 echo "timezone ${TimeZone} --utc" >> /tmp/ks_include.txt
+
+[[ ${itmp[3]} = no ]] && { 
+  echo "AnacondaIface_noboot ${itmp[3]}" >> /tmp/ks_include.txt 
+  }
+
 
 #Post_include Environment 
 echo "HostName=\"${HostName}\"" >> /tmp/ks_post_include.txt
@@ -437,6 +442,11 @@ EOB
 
 
 done
+
+
+[[ ${AnacondaIface_noboot} ]] && { 
+  sed -i -e '/ONBOOT=/d' -e '$aONBOOT=no' /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_noboot} 
+  }
 
 
 echo "----------------------"
