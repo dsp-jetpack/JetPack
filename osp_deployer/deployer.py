@@ -166,9 +166,17 @@ if __name__ == '__main__':
         FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bond_name=.*','provision_bond_name=bond0."'+settings.sah_node.provisioning_vlanid +'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^storage_bond_name=.*','storage_bond_name=bond0."'+settings.sah_node.storage_vlanid +'"')
 
+        FileHelper.replaceExpression(settings.sah_kickstart, '^external_bond_name=.*','external_bond_name=bond0."'+settings.sah_node.external_vlanid +'"')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^private_api_bond_name=.*','private_api_bond_name=bond0."'+settings.sah_node.private_api_vlanid +'"')
+
+
         FileHelper.replaceExpression(settings.sah_kickstart, '^public_bridge_boot_opts=.*','public_bridge_boot_opts="onboot static '+settings.sah_node.public_ip + '/'+ settings.sah_node.public_netmask+'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bridge_boot_opts=.*','provision_bridge_boot_opts="onboot static '+settings.sah_node.provisioning_ip+ '/'+ settings.sah_node.provisioning_netmask+'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^storage_bridge_boot_opts=.*','storage_bridge_boot_opts="onboot static '+settings.sah_node.storage_ip+ '/'+ settings.sah_node.storage_netmask+'"')
+
+        FileHelper.replaceExpression(settings.sah_kickstart, '^external_bridge_boot_opts=.*','external_bridge_boot_opts="onboot static '+settings.sah_node.external_ip+ '/'+ settings.sah_node.external_netmask+'"')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^private_api_bridge_boot_opts=.*','private_api_bridge_boot_opts="onboot static '+settings.sah_node.private_api_ip+ '/'+ settings.sah_node.private_api_netmask+'"')
+
 
         log ("=== starting the tftp service & power on the admin")
         log (subprocess.check_output("service tftp start" if isLinux else "net start Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
