@@ -15,6 +15,7 @@ class Settings():
         self.conf.read(settingsFile)
         self.cluster_settings_map = self.getSettingsSection("Cluster Settings")
         self.nodes_root_password = self.cluster_settings_map['cluster_password']
+        self.cluster_password = self.cluster_settings_map['cluster_password']
         if len(self.nodes_root_password) < 8 :
             raise IOError("cluster_password setting lenght should be > 8 characters")
         self.openstack_services_password = self.nodes_root_password
