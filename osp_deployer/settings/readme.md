@@ -31,6 +31,8 @@
 * 3.0.1 -04/07/2015 - Initial version of Juno, RH-OSP6 A2
 * 3.0.1.a - 04/10/2015 - Added is_730 ( true or false) to ceph storage nodes
 * 3.0.1.b - 04/30/2015 - Remove public_ip from compute nodes
+* 3.0.1.c - 05/05/2015 - Added tempest vm properties
+
 
 
 
