@@ -429,6 +429,7 @@ if __name__ == '__main__':
         if "Current" not in subscriptionStatus:
             raise AssertionError("Tempest VM did not register properly : " + subscriptionStatus)
 
+
         logger.info("Configuring tempest")
         cmd = '/root/tempest/tools/config_tempest.py --create identity.uri http://'+ settings.vip_keystone_pub +':5000/v2.0  identity.admin_username admin identity.admin_password  '+ settings.cluster_password+ ' identity.admin_tenant_name admin'
         Ssh.execute_command(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, cmd)
