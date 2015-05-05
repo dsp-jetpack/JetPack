@@ -387,11 +387,14 @@ if __name__ == '__main__':
         ceph.libvirt_configuation()
 
 
+        foremanHost.run_puppet_on_all()
+
+
         log("re enable puppet service on the nodes")
         for each in nonSAHnodes:
             log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet start")[0])
 
-        foremanHost.run_puppet_on_all()
+
 
         UI_Manager.driver().close()
 
