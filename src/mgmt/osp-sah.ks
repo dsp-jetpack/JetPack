@@ -148,12 +148,21 @@ private_api_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.140.41/255.255
 # Create the files that will be used by the installation environment and %post environment
 read -a itmp <<< $( tr '/' ' ' <<< ${anaconda_interface} )
 
-echo "network --activate --nodefroute --onboot=no --noipv6 --device=${itmp[2]} --bootproto=static --ip=${itmp[0]}" \
+echo "network --activate --noipv6 --device=${itmp[2]} --bootproto=static --ip=${itmp[0]}" \
      " --netmask=${itmp[1]} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers}" \
      >> /tmp/ks_include.txt
 
 echo "rootpw ${SystemPassword}" >> /tmp/ks_include.txt
 echo "timezone ${TimeZone} --utc" >> /tmp/ks_include.txt
+
+[[ ${itmp[2]} ]] && { 
+  echo "AnacondaIface_device=\"${itmp[2]}\"" >> /tmp/ks_post_include.txt 
+  }
+
+[[ ${itmp[3]} = no ]] && { 
+  echo "AnacondaIface_noboot=\"${itmp[3]}\"" >> /tmp/ks_post_include.txt 
+  }
+
 
 #Post_include Environment 
 echo "HostName=\"${HostName}\"" >> /tmp/ks_post_include.txt
@@ -436,6 +445,12 @@ EOB
   [[ "${bridge_iface[${bridge}]}" ]] && echo "BRIDGE=${bridge}" >> /etc/sysconfig/network-scripts/ifcfg-${bridge_iface[${bridge}]}
 
 done
+
+
+[[ ${AnacondaIface_noboot} ]] && { 
+  sed -i -e '/DEFROUTE=/d' /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_device} 
+  sed -i -e '/ONBOOT=/d' -e '$aONBOOT=no' /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_device} 
+  }
 
 
 echo "----------------------"
