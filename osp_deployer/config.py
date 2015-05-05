@@ -95,6 +95,7 @@ class Settings():
             self.foreman_deploy_sh = self.foreman_configuration_scripts + '/mgmt/deploy-foreman-vm.sh'
             self.sah_ks = self.foreman_configuration_scripts + "/mgmt/osp-sah.ks"
             self.ceph_deploy_sh = self.foreman_configuration_scripts + '/mgmt/deploy-ceph-vm.sh'
+            self.tempest_deploy_sh =  self.foreman_configuration_scripts + '/mgmt/deploy-tempest-vm.sh'
             self.hammer_configure_hostgroups_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-configure-hostgroups.sh'
             self.hammer_deploy_compute_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-deploy-compute.sh'
             self.hammer_deploy_controller_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-deploy-controller.sh'
@@ -108,6 +109,7 @@ class Settings():
             self.foreman_deploy_sh = self.foreman_configuration_scripts + "\\mgmt\\deploy-foreman-vm.sh"
             self.sah_ks = self.foreman_configuration_scripts + "\\mgmt\\osp-sah.ks"
             self.ceph_deploy_sh = self.foreman_configuration_scripts + "\\mgmt\\deploy-ceph-vm.sh"
+            self.tempest_deploy_sh = self.foreman_configuration_scripts + "\\mgmt\\deploy-tempest-vm.sh"
             self.hammer_configure_hostgroups_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-configure-hostgroups.sh"
             self.hammer_deploy_compute_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-deploy-compute.sh"
             self.hammer_deploy_controller_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-deploy-controller.sh"
@@ -142,6 +144,12 @@ class Settings():
                     if node.is_ceph == "true":
                         self.ceph_node = node
                         print "Ceph Node :: " + self.ceph_node.hostname
+                except:
+                    print "."
+                try:
+                    if node.is_tempest == "true":
+                        self.tempest_node = node
+                        print "Tempest Node :: " + self.tempest_node.hostname
                 except:
                     print "."
                 try:

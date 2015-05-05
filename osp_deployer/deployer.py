@@ -95,6 +95,8 @@ if __name__ == '__main__':
             assert os.path.isfile(hammer_file) , hammer_file + " script doesnn't seem to exist"
 
         assert os.path.isfile(settings.ceph_deploy_sh) , settings.ceph_deploy_sh + " script doesnn't seem to exist"
+        assert os.path.isfile(settings.tempest_deploy_sh) , settings.tempest_deploy_sh + " script doesnn't seem to exist"
+
 
         try:
                 urllib2.urlopen(settings.rhel_install_location +"/EULA").read()
@@ -379,8 +381,54 @@ if __name__ == '__main__':
         for each in nonSAHnodes:
             log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet start")[0])
 
+        foremanHost.run_puppet_on_all()
+
         UI_Manager.driver().close()
-        #ceph.restart_ha_services()
+
+
+        log("=== creating tempest VM");
+        log("=== uploading the tempest vm sh script")
+        remoteSh = "/root/deploy-tempest-vm.sh";
+        Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.tempest_deploy_sh, remoteSh);
+
+        log("=== create tempest.cfg")
+        tempestConf = "/root/tempest.cfg";
+        Conf =  ("rootpassword " + settings.tempest_node.root_password,
+                "timezone " + settings.time_zone,
+                "smuser " + settings.subscription_manager_user ,
+                "smpassword "+settings.subscription_manager_password ,
+                "smpool " + settings.subscription_manager_pool_vm_rhel ,
+                "hostname "+ settings.tempest_node.hostname + "." + settings.domain ,
+                "gateway " + settings.tempest_node.public_gateway ,
+                "nameserver " + settings.tempest_node.name_server ,
+                "ntpserver "+ settings.ntp_server ,
+                "# Iface     IP               NETMASK    " ,
+                "eth0        "+ settings.tempest_node.public_ip +"     "+ settings.tempest_node.public_netmask ,
+                "eth1        "+ settings.tempest_node.external_ip +"    "+ settings.tempest_node.external_netmask,
+                "eth2        "+ settings.tempest_node.private_api_ip +"    "+ settings.tempest_node.private_api_netmask,
+                )
+        for comd in Conf:
+            Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "echo '"+ comd+"' >> "+ tempestConf)
+        log("=== kick off the tempest vm deployment")
+        sH = "sh " + remoteSh + " /root/tempest.cfg /store/data/iso/RHEL7.iso";
+        Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, sH)
+
+        log("=== wait for the tempest vm install to be complete & power it on")
+        while (not "shut off" in Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "virsh list --all")[0]):
+            log ("...")
+            time.sleep(60);
+        log ("=== power on the tempest VM ")
+        Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "virsh start tempest")
+        while (not "root" in Ssh.execute_command(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, "whoami")[0]):
+            log ("...")
+            time.sleep(30);
+        log("Tempest host is up")
+
+        log("*** Verify the Tempest VM registered properly ***")
+        subscriptionStatus = Ssh.execute_command(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, "subscription-manager status")[0]
+        if "Current" not in subscriptionStatus:
+            raise AssertionError("Tempest VM did not register properly : " + subscriptionStatus)
+
 
         log (" that's all folks "    )
         log("  Some useful ip/passwords  ...")
@@ -393,6 +441,8 @@ if __name__ == '__main__':
         log ("")
         log ("  Ceph/Calamari public ip  : " + settings.ceph_node.public_ip )
         log ("  Calamari root password   : " + settings.ceph_node.root_password)
+        log ("")
+
 
 
     except:
