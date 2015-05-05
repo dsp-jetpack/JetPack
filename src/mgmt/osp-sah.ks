@@ -155,8 +155,12 @@ echo "network --activate --nodefroute --onboot=${itmp[3]} --noipv6 --device=${it
 echo "rootpw ${SystemPassword}" >> /tmp/ks_include.txt
 echo "timezone ${TimeZone} --utc" >> /tmp/ks_include.txt
 
+[[ ${itmp[2]} ]] && { 
+  echo "AnacondaIface_device=\"${itmp[2]}\"" >> /tmp/ks_include.txt 
+  }
+
 [[ ${itmp[3]} = no ]] && { 
-  echo "AnacondaIface_noboot ${itmp[3]}" >> /tmp/ks_include.txt 
+  echo "AnacondaIface_noboot=\"${itmp[3]}\"" >> /tmp/ks_include.txt 
   }
 
 
@@ -445,7 +449,7 @@ done
 
 
 [[ ${AnacondaIface_noboot} ]] && { 
-  sed -i -e '/ONBOOT=/d' -e '$aONBOOT=no' /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_noboot} 
+  sed -i -e '/ONBOOT=/d' -e 'ONBOOT=no' /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_device} 
   }
 
 
