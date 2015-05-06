@@ -62,7 +62,7 @@ exec < /dev/tty3 > /dev/tty3
 (
 #update local time
 echo "updating system time"
-/usr/bin/sed -i -e '/^server /d' -e '$a<%= @host.params["ntp-server"] || "clock.redhat.com" %>' /etc/ntp.conf
+/usr/bin/sed -i -e '/^server /d' -e '$aserver <%= @host.params["ntp-server"] || "clock.redhat.com" %>' /etc/ntp.conf
 /usr/sbin/hwclock --systohc
 
 systemctl restart ntpd
