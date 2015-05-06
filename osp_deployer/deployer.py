@@ -416,10 +416,11 @@ if __name__ == '__main__':
                 "nameserver " + settings.tempest_node.name_server ,
                 "ntpserver "+ settings.ntp_server ,
                 "# Iface     IP               NETMASK    " ,
-                "eth0        "+ settings.tempest_node.public_ip +"     "+ settings.tempest_node.public_netmask ,
+                "eth0        "+ settings.tempest_node.public_ip +"    "+ settings.tempest_node.public_netmask ,
                 "eth1        "+ settings.tempest_node.external_ip +"    "+ settings.tempest_node.external_netmask,
                 "eth2        "+ settings.tempest_node.private_api_ip +"    "+ settings.tempest_node.private_api_netmask,
                 )
+
         for comd in Conf:
             Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "echo '"+ comd+"' >> "+ tempestConf)
         log("=== kick off the tempest vm deployment")
