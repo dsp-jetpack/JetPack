@@ -54,7 +54,7 @@ class Foreman():
     def reset_password(self):
         logger.info(("=== resetting the foreman admin password"))
         sResetPassword = 'foreman-rake permissions:reset';
-        re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.sah_node.root_password,sResetPassword )
+        re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,sResetPassword)
         foreman_password = re.split("password: ")[1].replace("\n", "").replace("\r", "")
         self.settings.foreman_password = foreman_password
         Settings.settings.foreman_password = foreman_password
