@@ -569,7 +569,7 @@ class Foreman():
 
     def run_puppet_on_all(self):
         logger.info("Run puppet on all the nodes one last time to work around known issues post deployment")
-
+        
         for each in self.settings.compute_nodes:
             cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
             logger.info("running puppet on " + each.hostname)

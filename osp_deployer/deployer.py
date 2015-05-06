@@ -246,7 +246,7 @@ if __name__ == '__main__':
                 "timezone " + settings.time_zone,
                 "smuser " + settings.subscription_manager_user ,
                 "smpassword "+settings.subscription_manager_password ,
-                "smpool " + settings.subscription_manager_pool_vm_rhel ,
+                "smpool " + settings.subscription_manager_pool_vm_openstack_nodes ,
                 "hostname "+ settings.foreman_node.hostname + "." + settings.domain ,
                 "gateway " + settings.foreman_node.public_gateway ,
                 "nameserver " + settings.foreman_node.name_server ,
