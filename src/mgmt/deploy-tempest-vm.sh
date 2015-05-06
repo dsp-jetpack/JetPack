@@ -255,8 +255,8 @@ EOFKS
   rmdir /tmp/mnt-tempest
 
   virt-install --name tempest \
-    --ram 4096 \
-    --vcpus 2 \
+    --ram 12288 \
+    --vcpus 12 \
     --hvm \
     --os-type linux \
     --os-variant rhel7 \
@@ -274,8 +274,8 @@ EOFKS
   } || {
 
 virt-install --name tempest \
-  --ram 4096 \
-  --vcpus 2 \
+  --ram 12288 \
+  --vcpus 12 \
   --hvm \
   --os-type linux \
   --os-variant rhel7 \
