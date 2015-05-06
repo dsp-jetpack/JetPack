@@ -280,21 +280,22 @@ class Foreman():
         cmd = "sed -i \"s|CHANGEME_POOL_ID|" + self.settings.subscription_manager_pool_phyical_openstack_nodes +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-        if self.settings.controller_nodes_are_730 == True:
+        if self.settings.controller_nodes_are_730 == "true":
             cmd = "sed -i 's|CONTROLLER_PARTITION_NAME=\".*|CONTROLLER_PARTITION_NAME=\""+self.pilot_partition_table_730+"\"|' " + configFile
             logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         else:
             cmd = "sed -i 's|CONTROLLER_PARTITION_NAME=\".*|CONTROLLER_PARTITION_NAME=\""+self.pilot_partition_table+"\"|' " + configFile
             logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-        if self.settings.compute_nodes_are_730 == True:
+        if self.settings.compute_nodes_are_730 == "true":
             cmd = "sed -i 's|COMPUTE_PARTITION_NAME=\".*|COMPUTE_PARTITION_NAME=\""+self.pilot_partition_table_730+"\"|' " + configFile
             logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         else:
             cmd = "sed -i 's|COMPUTE_PARTITION_NAME=\".*|COMPUTE_PARTITION_NAME=\""+self.pilot_partition_table+"\"|' " + configFile
             logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-        if self.settings.storage_nodes_are_730 == True:
+        if self.settings.storage_nodes_are_730 == "true":
+            logger.info("storage node partition .")
             cmd = "sed -i 's|STORAGE_PARTITION_NAME=\".*|STORAGE_PARTITION_NAME=\""+self.pilot_partition_table_730+"\"|' " + configFile
             logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         else:
