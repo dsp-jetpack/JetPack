@@ -224,7 +224,7 @@ EOIP
 
   yum -y install python-devel python-pip python-crypto.x86_64 libxslt-devel libxml2-devel libffi-devel
 
-  cd ~/ 
+  cd /root 
   git clone https://github.com/redhat-openstack/tempest.git
   cd tempest
   pip install unittest2 discover Babel pbr
