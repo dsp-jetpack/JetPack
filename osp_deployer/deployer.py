@@ -120,7 +120,7 @@ if __name__ == '__main__':
 
         #######
         log ("=== Unregister the hosts")
-        hosts = [ settings.sah_node, settings.foreman_node]
+        hosts = [ settings.foreman_node]
         hosts.append(settings.ceph_node)
         for each in hosts:
             log (Ssh.execute_command(each.public_ip, "root", each.root_password, "subscription-manager remove --all"))
@@ -134,7 +134,7 @@ if __name__ == '__main__':
 
         log ("=== powering down the admin")
         ipmi_sah = Ipmi(settings.cygwin_installdir, settings.ipmi_user, settings.ipmi_password, settings.sah_node.idrac_ip)
-        ipmi_sah.power_off()
+#        ipmi_sah.power_off()
 
         log ("=== powering down other hosts")
         for each in nonSAHnodes:
@@ -180,26 +180,26 @@ if __name__ == '__main__':
 
         log ("=== starting the tftp service & power on the admin")
         log (subprocess.check_output("service tftp start" if isLinux else "net start Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
-        time.sleep(60)
+        time.sleep(6)
 
 
         #linux, dhcp is a separate service
         if(isLinux):
            log ("=== starting dhcpd service")
-           log (subprocess.check_output("service dhcpd start",stderr=subprocess.STDOUT, shell=True))
+#           log (subprocess.check_output("service dhcpd start",stderr=subprocess.STDOUT, shell=True))
 
 
         log ("=== power on the admin node & wait for the system to start installing")
         ipmi_sah.set_boot_to_pxe()
         ipmi_sah.power_on()
-        time.sleep(400)
+        time.sleep(4)
 
         log ("=== stopping tftp service")
         log (subprocess.check_output("service tftp stop" if isLinux else "net stop Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
 
         if(isLinux):
             log ("=== stopping dhcpd service")
-            log (subprocess.check_output("service dhcpd stop",stderr=subprocess.STDOUT, shell=True))
+#            log (subprocess.check_output("service dhcpd stop",stderr=subprocess.STDOUT, shell=True))
 
 
         log ("=== waiting for the sah installed to be complete, might take a while")
@@ -215,7 +215,7 @@ if __name__ == '__main__':
             raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
         log ("=== uploading iso's to the sah node")
-        Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl71_iso, "/store/data/iso/RHEL7.iso")
+#        Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl71_iso, "/store/data/iso/RHEL7.iso")
 
         log("=== Done with the solution admin host");
 
