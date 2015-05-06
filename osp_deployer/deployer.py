@@ -193,7 +193,13 @@ if __name__ == '__main__':
         ipmi_sah.set_boot_to_pxe()
         ipmi_sah.power_on()
         time.sleep(400)
-        ipmi_sah.set_boot_to_disk()
+
+        log ("=== stopping tftp service")
+        log (subprocess.check_output("service tftp stop" if isLinux else "net stop Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
+
+        if(isLinux):
+            log ("=== stopping dhcpd service")
+            log (subprocess.check_output("service dhcpd stop",stderr=subprocess.STDOUT, shell=True))
 
 
         log ("=== waiting for the sah installed to be complete, might take a while")
@@ -202,12 +208,6 @@ if __name__ == '__main__':
             time.sleep(100);
         log ("sahh node is up @ " + settings.sah_node.public_ip)
 
-        log ("=== stopping tftp service")
-        log (subprocess.check_output("service tftp stop" if isLinux else "net stop Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
-
-        if(isLinux):
-            log ("=== stopping dhcpd service")
-            log (subprocess.check_output("service dhcpd stop",stderr=subprocess.STDOUT, shell=True))
 
         log("*** Verify the SAH node registered properly ***")
         subscriptionStatus = Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "subscription-manager status")[0]
