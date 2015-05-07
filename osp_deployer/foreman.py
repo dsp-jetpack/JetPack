@@ -54,7 +54,7 @@ class Foreman():
     def reset_password(self):
         logger.info(("=== resetting the foreman admin password"))
         sResetPassword = 'foreman-rake permissions:reset';
-        re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.sah_node.root_password,sResetPassword )
+        re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,sResetPassword)
         foreman_password = re.split("password: ")[1].replace("\n", "").replace("\r", "")
         self.settings.foreman_password = foreman_password
         Settings.settings.foreman_password = foreman_password
@@ -270,26 +270,32 @@ class Foreman():
 
         cmd = "sed -i \"s|CHANGEME_USERNAME|" + self.settings.subscription_manager_user +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+
         cmd = "sed -i \"s|CHANGEME_PASSWORD|" + self.settings.subscription_manager_password +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+
+        cmd = "sed -i \"s|ROOT_PASSWORD='.*|ROOT_PASSWORD='" + self.settings.cluster_password +"'|\" " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+
         cmd = "sed -i \"s|CHANGEME_POOL_ID|" + self.settings.subscription_manager_pool_phyical_openstack_nodes +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-        if self.settings.controller_nodes_are_730 == True:
+        if self.settings.controller_nodes_are_730 == "true":
             cmd = "sed -i 's|CONTROLLER_PARTITION_NAME=\".*|CONTROLLER_PARTITION_NAME=\""+self.pilot_partition_table_730+"\"|' " + configFile
             logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         else:
             cmd = "sed -i 's|CONTROLLER_PARTITION_NAME=\".*|CONTROLLER_PARTITION_NAME=\""+self.pilot_partition_table+"\"|' " + configFile
             logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-        if self.settings.compute_nodes_are_730 == True:
+        if self.settings.compute_nodes_are_730 == "true":
             cmd = "sed -i 's|COMPUTE_PARTITION_NAME=\".*|COMPUTE_PARTITION_NAME=\""+self.pilot_partition_table_730+"\"|' " + configFile
             logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         else:
             cmd = "sed -i 's|COMPUTE_PARTITION_NAME=\".*|COMPUTE_PARTITION_NAME=\""+self.pilot_partition_table+"\"|' " + configFile
             logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-        if self.settings.storage_nodes_are_730 == True:
+        if self.settings.storage_nodes_are_730 == "true":
+            logger.info("storage node partition .")
             cmd = "sed -i 's|STORAGE_PARTITION_NAME=\".*|STORAGE_PARTITION_NAME=\""+self.pilot_partition_table_730+"\"|' " + configFile
             logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         else:
@@ -560,3 +566,31 @@ class Foreman():
                 else :
                     didNotRun = False
                     break
+
+    def run_puppet_on_all(self):
+        logger.info("Run puppet on all the nodes one last time to work around known issues post deployment")
+        
+        for each in self.settings.compute_nodes:
+            cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
+            logger.info("running puppet on " + each.hostname)
+            didNotRun = True
+            while didNotRun == True:
+                bla ,err = Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
+                if  "Run of Puppet configuration client already in progress" in bla:
+                    didNotRun = True
+                    logger.info("puppet s busy ... give it a while & retry")
+                    time.sleep(30)
+                else :
+                    didNotRun = False
+                    break
+
+        controlerPuppetRuns = []
+        logger.info("running puppet on controller nodes")
+        for each in self.settings.controller_nodes:
+            puppetRunThr = runThreadedPuppet(each.hostname, each)
+            controlerPuppetRuns.append(puppetRunThr)
+        for thr in controlerPuppetRuns:
+            thr.start()
+            time.sleep(60) # ...
+        for thr in controlerPuppetRuns:
+            thr.join()

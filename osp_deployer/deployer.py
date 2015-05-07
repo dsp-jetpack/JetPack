@@ -74,7 +74,7 @@ if __name__ == '__main__':
         assert os.path.isfile(settings.rhl71_iso) , settings.rhl71_iso + "ISO doesnn't seem to exist"
         assert os.path.isfile(settings.sah_kickstart) , settings.sah_kickstart + "kickstart file doesnn't seem to exist"
         assert os.path.isfile(settings.foreman_deploy_sh) , settings.foreman_deploy_sh + " script doesnn't seem to exist"
-      
+
         hammer_scripts =['hammer-configure-hostgroups.sh',
         'hammer-deploy-compute.sh',
         'hammer-deploy-controller.sh',
@@ -95,6 +95,8 @@ if __name__ == '__main__':
             assert os.path.isfile(hammer_file) , hammer_file + " script doesnn't seem to exist"
 
         assert os.path.isfile(settings.ceph_deploy_sh) , settings.ceph_deploy_sh + " script doesnn't seem to exist"
+        assert os.path.isfile(settings.tempest_deploy_sh) , settings.tempest_deploy_sh + " script doesnn't seem to exist"
+
 
         try:
                 urllib2.urlopen(settings.rhel_install_location +"/EULA").read()
@@ -153,7 +155,7 @@ if __name__ == '__main__':
         FileHelper.replaceExpression(settings.sah_kickstart, '^NTPServers=.*','NTPServers="'+settings.ntp_server +'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^TimeZone=.*','TimeZone="'+settings.time_zone +'"')
 
-        FileHelper.replaceExpression(settings.sah_kickstart, '^anaconda_interface=.*','anaconda_interface="'+settings.sah_node.anaconda_ip+ '/'+ settings.sah_node.public_netmask+' '+settings.sah_node.anaconda_iface+'"')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^anaconda_interface=.*','anaconda_interface="'+settings.sah_node.anaconda_ip+ '/'+ settings.sah_node.public_netmask+' '+settings.sah_node.anaconda_iface+' no"')
 
         FileHelper.replaceExpression(settings.sah_kickstart, '^public_bond_name=.*','public_bond_name="'+settings.sah_node.public_bond +'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^public_ifaces=.*','public_ifaces="'+settings.settings.sah_node.public_slaves +'"')
@@ -164,9 +166,17 @@ if __name__ == '__main__':
         FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bond_name=.*','provision_bond_name=bond0."'+settings.sah_node.provisioning_vlanid +'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^storage_bond_name=.*','storage_bond_name=bond0."'+settings.sah_node.storage_vlanid +'"')
 
+        FileHelper.replaceExpression(settings.sah_kickstart, '^external_bond_name=.*','external_bond_name=bond0."'+settings.sah_node.external_vlanid +'"')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^private_api_bond_name=.*','private_api_bond_name=bond0."'+settings.sah_node.private_api_vlanid +'"')
+
+
         FileHelper.replaceExpression(settings.sah_kickstart, '^public_bridge_boot_opts=.*','public_bridge_boot_opts="onboot static '+settings.sah_node.public_ip + '/'+ settings.sah_node.public_netmask+'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^provision_bridge_boot_opts=.*','provision_bridge_boot_opts="onboot static '+settings.sah_node.provisioning_ip+ '/'+ settings.sah_node.provisioning_netmask+'"')
         FileHelper.replaceExpression(settings.sah_kickstart, '^storage_bridge_boot_opts=.*','storage_bridge_boot_opts="onboot static '+settings.sah_node.storage_ip+ '/'+ settings.sah_node.storage_netmask+'"')
+
+        FileHelper.replaceExpression(settings.sah_kickstart, '^external_bridge_boot_opts=.*','external_bridge_boot_opts="onboot static '+settings.sah_node.external_ip+ '/'+ settings.sah_node.external_netmask+'"')
+        FileHelper.replaceExpression(settings.sah_kickstart, '^private_api_bridge_boot_opts=.*','private_api_bridge_boot_opts="onboot static '+settings.sah_node.private_api_ip+ '/'+ settings.sah_node.private_api_netmask+'"')
+
 
         log ("=== starting the tftp service & power on the admin")
         log (subprocess.check_output("service tftp start" if isLinux else "net start Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
@@ -191,11 +201,13 @@ if __name__ == '__main__':
             log ("=== stopping dhcpd service")
             log (subprocess.check_output("service dhcpd stop",stderr=subprocess.STDOUT, shell=True))
 
+
         log ("=== waiting for the sah installed to be complete, might take a while")
         while (not "root" in Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "whoami")[0]):
             log ("...")
             time.sleep(100);
         log ("sahh node is up @ " + settings.sah_node.public_ip)
+
 
         log("*** Verify the SAH node registered properly ***")
         subscriptionStatus = Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "subscription-manager status")[0]
@@ -234,7 +246,7 @@ if __name__ == '__main__':
                 "timezone " + settings.time_zone,
                 "smuser " + settings.subscription_manager_user ,
                 "smpassword "+settings.subscription_manager_password ,
-                "smpool " + settings.subscription_manager_pool_vm_rhel ,
+                "smpool " + settings.subscription_manager_pool_vm_openstack_nodes ,
                 "hostname "+ settings.foreman_node.hostname + "." + settings.domain ,
                 "gateway " + settings.foreman_node.public_gateway ,
                 "nameserver " + settings.foreman_node.name_server ,
@@ -375,12 +387,66 @@ if __name__ == '__main__':
         ceph.libvirt_configuation()
 
 
+        foremanHost.run_puppet_on_all()
+
+
         log("re enable puppet service on the nodes")
         for each in nonSAHnodes:
             log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet start")[0])
 
+
+
         UI_Manager.driver().close()
-        #ceph.restart_ha_services()
+
+
+        log("=== creating tempest VM");
+        log("=== uploading the tempest vm sh script")
+        remoteSh = "/root/deploy-tempest-vm.sh";
+        Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.tempest_deploy_sh, remoteSh);
+
+        log("=== create tempest.cfg")
+        tempestConf = "/root/tempest.cfg";
+        Conf =  ("rootpassword " + settings.tempest_node.root_password,
+                "timezone " + settings.time_zone,
+                "smuser " + settings.subscription_manager_user ,
+                "smpassword "+settings.subscription_manager_password ,
+                "smpool " + settings.subscription_manager_pool_vm_rhel ,
+                "hostname "+ settings.tempest_node.hostname + "." + settings.domain ,
+                "gateway " + settings.tempest_node.public_gateway ,
+                "nameserver " + settings.tempest_node.name_server ,
+                "ntpserver "+ settings.ntp_server ,
+                "# Iface     IP               NETMASK    " ,
+                "eth0        "+ settings.tempest_node.public_ip +"    "+ settings.tempest_node.public_netmask ,
+                "eth1        "+ settings.tempest_node.external_ip +"    "+ settings.tempest_node.external_netmask,
+                "eth2        "+ settings.tempest_node.private_api_ip +"    "+ settings.tempest_node.private_api_netmask,
+                )
+
+        for comd in Conf:
+            Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "echo '"+ comd+"' >> "+ tempestConf)
+        log("=== kick off the tempest vm deployment")
+        sH = "sh " + remoteSh + " /root/tempest.cfg /store/data/iso/RHEL7.iso";
+        Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, sH)
+
+        log("=== wait for the tempest vm install to be complete & power it on")
+        while (not "shut off" in Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "virsh list --all")[0]):
+            log ("...")
+            time.sleep(60);
+        log ("=== power on the tempest VM ")
+        Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "virsh start tempest")
+        while (not "root" in Ssh.execute_command(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, "whoami")[0]):
+            log ("...")
+            time.sleep(30);
+        log("Tempest host is up")
+
+        log("*** Verify the Tempest VM registered properly ***")
+        subscriptionStatus = Ssh.execute_command(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, "subscription-manager status")[0]
+        if "Current" not in subscriptionStatus:
+            raise AssertionError("Tempest VM did not register properly : " + subscriptionStatus)
+
+
+        logger.info("Configuring tempest")
+        cmd = '/root/tempest/tools/config_tempest.py --create identity.uri http://'+ settings.vip_keystone_public +':5000/v2.0  identity.admin_username admin identity.admin_password  '+ settings.cluster_password+ ' identity.admin_tenant_name admin'
+        Ssh.execute_command(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, cmd)
 
         log (" that's all folks "    )
         log("  Some useful ip/passwords  ...")
@@ -393,6 +459,8 @@ if __name__ == '__main__':
         log ("")
         log ("  Ceph/Calamari public ip  : " + settings.ceph_node.public_ip )
         log ("  Calamari root password   : " + settings.ceph_node.root_password)
+        log ("")
+
 
 
     except:

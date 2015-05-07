@@ -14,7 +14,11 @@ class Settings():
         self.conf = ConfigParser.ConfigParser()
         self.conf.read(settingsFile)
         self.cluster_settings_map = self.getSettingsSection("Cluster Settings")
-        self.openstack_services_password = self.cluster_settings_map['openstack_services_password']
+        self.nodes_root_password = self.cluster_settings_map['cluster_password']
+        self.cluster_password = self.cluster_settings_map['cluster_password']
+        if len(self.nodes_root_password) < 8 :
+            raise IOError("cluster_password setting lenght should be > 8 characters")
+        self.openstack_services_password = self.nodes_root_password
         self.nova_public_network = self.cluster_settings_map['nova_public_network']
         self.nova_private_network = self.cluster_settings_map['nova_private_network']
         self.private_api_network = self.cluster_settings_map['private_api_network']
@@ -55,9 +59,7 @@ class Settings():
         self.domain = self.cluster_settings_map['domain']
         self.ipmi_user = self.cluster_settings_map['ipmi_user']
         self.ipmi_password = self.cluster_settings_map['ipmi_password']
-        self.nodes_root_password = self.cluster_settings_map['nodes_root_password']
-        if len(self.nodes_root_password) < 8 :
-            raise IOError("nodes_root_password setting lenght should be > 8 characters")
+
         self.subscription_manager_user = self.cluster_settings_map['subscription_manager_user']
         self.subscription_manager_password = self.cluster_settings_map['subscription_manager_password']
 
@@ -95,6 +97,7 @@ class Settings():
             self.foreman_deploy_sh = self.foreman_configuration_scripts + '/mgmt/deploy-foreman-vm.sh'
             self.sah_ks = self.foreman_configuration_scripts + "/mgmt/osp-sah.ks"
             self.ceph_deploy_sh = self.foreman_configuration_scripts + '/mgmt/deploy-ceph-vm.sh'
+            self.tempest_deploy_sh =  self.foreman_configuration_scripts + '/mgmt/deploy-tempest-vm.sh'
             self.hammer_configure_hostgroups_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-configure-hostgroups.sh'
             self.hammer_deploy_compute_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-deploy-compute.sh'
             self.hammer_deploy_controller_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-deploy-controller.sh'
@@ -108,6 +111,7 @@ class Settings():
             self.foreman_deploy_sh = self.foreman_configuration_scripts + "\\mgmt\\deploy-foreman-vm.sh"
             self.sah_ks = self.foreman_configuration_scripts + "\\mgmt\\osp-sah.ks"
             self.ceph_deploy_sh = self.foreman_configuration_scripts + "\\mgmt\\deploy-ceph-vm.sh"
+            self.tempest_deploy_sh = self.foreman_configuration_scripts + "\\mgmt\\deploy-tempest-vm.sh"
             self.hammer_configure_hostgroups_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-configure-hostgroups.sh"
             self.hammer_deploy_compute_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-deploy-compute.sh"
             self.hammer_deploy_controller_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-deploy-controller.sh"
@@ -142,6 +146,12 @@ class Settings():
                     if node.is_ceph == "true":
                         self.ceph_node = node
                         print "Ceph Node :: " + self.ceph_node.hostname
+                except:
+                    print "."
+                try:
+                    if node.is_tempest == "true":
+                        self.tempest_node = node
+                        print "Tempest Node :: " + self.tempest_node.hostname
                 except:
                     print "."
                 try:
