@@ -219,7 +219,7 @@ if __name__ == '__main__':
 
         log("=== Done with the solution admin host");
 
-
+# ============ Start Foreman ++++++++++++++++
         if settings.version_locking_enabled:
             log("Uploading version locking files for foreman & ceph vm's")
             files  = [
@@ -299,7 +299,7 @@ if __name__ == '__main__':
 
         log("=== done with foreman")
 
-
+# ==============  Ceph VM =============
         logger.info( "=== creating ceph VM")
         remoteSh = "/root/deploy-ceph-vm.sh";
         Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.ceph_deploy_sh, remoteSh);
@@ -341,7 +341,7 @@ if __name__ == '__main__':
         if "Current" not in subscriptionStatus:
             raise AssertionError("Ceph VM did not register properly : " + subscriptionStatus)
 
-
+# ================ Configure Foreman ===============
 
         log ("=== Configuring the foreman server")
         foremanHost.set_ignore_puppet_facts_for_provisioning()
