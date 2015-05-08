@@ -34,8 +34,8 @@ class Deployer_sanity():
         assert hasattr(self.settings, 'cluster_password'), self.settings.settingsFile+ " has no cluster_password setting"
 
         assert os.path.isfile(self.settings.rhl71_iso) , self.settings.rhl71_iso + "ISO doesnn't seem to exist"
-        assert os.path.isfile(self.sah_kickstart) , self.settings.sah_kickstart + "kickstart file doesnn't seem to exist"
-        assert os.path.isfile(self.foreman_deploy_sh) , self.settings.foreman_deploy_sh + " script doesnn't seem to exist"
+        assert os.path.isfile(self.settings.sah_kickstart) , self.settings.sah_kickstart + "kickstart file doesnn't seem to exist"
+        assert os.path.isfile(self.settings.foreman_deploy_sh) , self.settings.foreman_deploy_sh + " script doesnn't seem to exist"
 
         hammer_scripts =['hammer-configure-hostgroups.sh',
         'hammer-deploy-compute.sh',
