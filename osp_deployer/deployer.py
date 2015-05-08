@@ -10,6 +10,15 @@ def log(message):
     print (message)
     logger.info(  message)
 
+def verify_subscription_status(public_ip, user, password)
+    i = 0
+    subscriptionStatus = Ssh.execute_command(public_ip, user, password, "subscription-manager status")[0]
+    while("Current" is not in subscriptionStatus and i < 10):
+        time.sleep(60)
+        subscriptionStatus = Ssh.execute_command(public_ip, user, password, "subscription-manager status")[0]
+        i += 1;
+    return subscriptionStatus
+
 
 def execute_as_shell(address,usr, pwd, command):
     conn = paramiko.SSHClient()
@@ -210,7 +219,7 @@ if __name__ == '__main__':
 
 
         log("*** Verify the SAH node registered properly ***")
-        subscriptionStatus = Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "subscription-manager status")[0]
+        subscriptionStatus = verify_subscription_status(settings.sah_node.public_ip, "root", settings.sah_node.root_password)
         if "Current" not in subscriptionStatus:
             raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
@@ -273,7 +282,7 @@ if __name__ == '__main__':
         log("foreman host is up")
 
         log("*** Verify the Foreman VM registered properly ***")
-        subscriptionStatus = Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, "subscription-manager status")[0]
+        subscriptionStatus = verify_subscription_status(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password)
         if "Current" not in subscriptionStatus:
             raise AssertionError("Foreman VM did not register properly : " + subscriptionStatus)
 
@@ -337,7 +346,7 @@ if __name__ == '__main__':
         log("ceph host is up")
 
         log("*** Verify the Ceph VM registered properly ***")
-        subscriptionStatus = Ssh.execute_command(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "subscription-manager status")[0]
+        subscriptionStatus = verify_subscription_status(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password)
         if "Current" not in subscriptionStatus:
             raise AssertionError("Ceph VM did not register properly : " + subscriptionStatus)
 
@@ -439,7 +448,7 @@ if __name__ == '__main__':
         log("Tempest host is up")
 
         log("*** Verify the Tempest VM registered properly ***")
-        subscriptionStatus = Ssh.execute_command(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, "subscription-manager status")[0]
+        subscriptionStatus = verify_subscription_status(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password)
         if "Current" not in subscriptionStatus:
             raise AssertionError("Tempest VM did not register properly : " + subscriptionStatus)
 
