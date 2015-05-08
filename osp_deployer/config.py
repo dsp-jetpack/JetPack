@@ -13,6 +13,7 @@ class Settings():
         self.foreman_password = ''
         self.conf = ConfigParser.ConfigParser()
         self.conf.read(settingsFile)
+        self.settingsFile = settingsFile
         self.cluster_settings_map = self.getSettingsSection("Cluster Settings")
         self.nodes_root_password = self.cluster_settings_map['cluster_password']
         self.cluster_password = self.cluster_settings_map['cluster_password']
