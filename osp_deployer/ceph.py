@@ -54,37 +54,47 @@ class Ceph():
 
 
 
-    def copy_installer(self):
-        logger.info( "copying Ceph installer" )
-        cmd = "mkdir /home/ceph-user/ice-1.2.2"
-        logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
-        file = 'ICE-1.2.2-rhel7.tar.gz'
-        dir = os.getcwd()
-        localfile = dir+ "\\settings\\ice\\" + file
-        if(sys.platform.startswith('linux')):
-            localfile = dir + "/settings/ice/" + file
-
-        logger.info( "local file " + localfile)
-        remotefile = '/home/ceph-user/ice-1.2.2/' + file
+    def setup_calamari_node(self):
+        logger.info( "copying Ceph Iso" )
+        cmd = "mkdir /home/ceph-user/ceph-iso"
+        logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
+        file = 'rhceph-1.2.3-rhel-7-x86_64.iso'
+        localfile = self.settings.ceph_iso
+        remotefile = '/home/ceph-user/ceph-iso/' + file
         logger.info( "remote file " + remotefile)
         print "local :-> " + localfile
         print "remote :-> " + remotefile
-        Scp.put_file(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password, localfile, remotefile)
-        cmd = 'cd /home/ceph-user/ice-1.2.2;tar -zxvf ' + remotefile
+        Scp.put_file(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password, localfile, remotefile)
+        cmd = 'sudo mount '+remotefile+' /mnt'
+        logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
+
+        logger.info("copying certificates")
+        cmds = [
+            'sudo cp /mnt/RHCeph-Calamari-1.2-x86_64-c1e8ca3b6c57-285.pem /etc/pki/product/285.pem',
+            'sudo cp /mnt/RHCeph-Installer-1.2-x86_64-8ad6befe003d-281.pem /etc/pki/product/281.pem',
+            'sudo cp /mnt/RHCeph-MON-1.2-x86_64-d8afd76a547b-286.pem /etc/pki/product/286.pem',
+            'sudo cp /mnt/RHCeph-OSD-1.2-x86_64-25019bf09fe9-288.pem /etc/pki/product/288.pem'
+        ]
+        for cmd in cmds :
+            logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
+
+        logger.info("install the setup script")
+        cmd = 'sudo yum -y install /mnt/ice_setup-*.rpm'
+        logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
+
+        cmd = 'mkdir ~/cluster && cd ~/cluster'
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
-    def install_ice(self):
         logger.info("removing installation prompts")
-        commands = ['sed -i "s/fqdn = prompt.*/return \'http\', fallback_fqdn/" /home/ceph-user/ice-1.2.2/ice_setup.py',
-                    "sed -i 's/prompt_continue()$//' /home/ceph-user/ice-1.2.2/ice_setup.py"
+        commands = ['sudo sed -i "s/fqdn = prompt.*/return \'http\', fallback_fqdn/" /usr/lib/python2.7/site-packages/ice_setup/ice.py',
+                    "sudo sed -i 's/prompt_continue()$//' /usr/lib/python2.7/site-packages/ice_setup/ice.py",
+                    "sudo sed -i 's/package_path = get_package_path(package_path)/package_path = \"\\/mnt\"/' /usr/lib/python2.7/site-packages/ice_setup/ice.py"
                     ]
         for cmd in commands :
             logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
-        cmd = 'cd /home/ceph-user/ice-1.2.2/;sudo python ice_setup.py'
-        logger.info("installing ice")
-        logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
-        cmd = 'mkdir ~/cluster && cd ~/cluster'
+        logger.info("installing ice")
+        cmd = 'cd ~/cluster;sudo ice_setup -d /mnt'
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
         cmd = 'cd ~/cluster;ceph-deploy config pull ' + self.settings.controller_nodes[0].hostname
@@ -97,31 +107,7 @@ class Ceph():
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
 
-
     def configure_monitor(self):
-
-        logger.info("updating the ceph lock files on controller/compute nodes")
-        cmnds = [
-            "sed -i 's/0:librados2-0\.80\.5-4\.el7ost\.\*/#0:librados2-0\.80\.5-4\.el7ost\.\*/' /etc/yum/pluginconf.d/versionlock.list",
-            "sed -i 's/#0:librados2-0\.80\.7-0\.el7\.\*/0:librados2-0\.80\.7-0\.el7\.\*/' /etc/yum/pluginconf.d/versionlock.list",
-
-            "sed -i 's/0:python-ceph-0\.80\.5-4\.el7ost\.\*/#0:python-ceph-0\.80\.5-4\.el7ost\.\*/' /etc/yum/pluginconf.d/versionlock.list",
-            "sed -i 's/#0:python-ceph-0\.80\.7-0\.el7\.\*/0:python-ceph-0\.80\.7-0\.el7\.\*/' /etc/yum/pluginconf.d/versionlock.list",
-
-            "sed -i 's/0:librbd1-0\.80\.5-4\.el7ost\.\*/#0:librbd1-0\.80\.5-4\.el7ost\.\*/' /etc/yum/pluginconf.d/versionlock.list",
-            "sed -i 's/#0:librbd1-0\.80\.7-0\.el7\.\*/0:librbd1-0\.80\.7-0\.el7\.\*/' /etc/yum/pluginconf.d/versionlock.list",
-
-            "sed -i 's/0:ceph-common-0\.80\.5-4\.el7ost\.\*/#0:ceph-common-0\.80\.5-4\.el7ost\.\*/' /etc/yum/pluginconf.d/versionlock.list",
-            "sed -i 's/#0:ceph-common-0\.80\.7-0\.el7\.\*/0:ceph-common-0\.80\.7-0\.el7\.\*/' /etc/yum/pluginconf.d/versionlock.list",
-        ]
-
-        for each in ( self.settings.controller_nodes + self.settings.compute_nodes ) :
-            for cmd in cmnds:
-                logger.info( Ssh.execute_command(each.provisioning_ip,  "root", self.settings.nodes_root_password,cmd))
-
-                #WorkAround for A2 bits dependency issue ::
-                cmdWorkAround = " sed -i 's/^\\[rhel-7-server-openstack-6.0-cts-source-rpms\\].*/priority = 1\\n&/' /etc/yum.repos.d/redhat.repo"
-                logger.info( Ssh.execute_command(each.provisioning_ip,  "root", self.settings.nodes_root_password,cmdWorkAround))
 
         cmd = 'HOSTS=`grep '+self.settings.domain+' /etc/hosts | cut -d " " -f 3` ;cd ~/cluster;for HOST in $HOSTS; do ceph-deploy install $HOST; done'
         logger.info( self.execute_as_shell(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
@@ -131,7 +117,7 @@ class Ceph():
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
         logger.info("gathering keys from the controller nodes ")
-        cmd = 'cd ~/cluster;ceph-deploy gatherkeys ' + self.settings.controller_nodes[0].hostname
+        cmd = 'cd ~/cluster;ceph-deploy gatherkeys '
         for host in self.settings.controller_nodes :
             cmd = cmd +  host.hostname + ' '
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
