@@ -89,13 +89,42 @@ if __name__ == '__main__':
         'provision.sh',
         'bond.sh'
          ]
-	hammer_script_folder =  '/utils/networking/' if (sys.platform.startswith('linux')) else "\\utils\\networking\\"
+        hammer_script_folder =  '/utils/networking/' if (sys.platform.startswith('linux')) else "\\utils\\networking\\"
         for file in hammer_scripts  :
             hammer_file = settings.foreman_configuration_scripts + hammer_script_folder + file
             assert os.path.isfile(hammer_file) , hammer_file + " script doesnn't seem to exist"
 
         assert os.path.isfile(settings.ceph_deploy_sh) , settings.ceph_deploy_sh + " script doesnn't seem to exist"
         assert os.path.isfile(settings.tempest_deploy_sh) , settings.tempest_deploy_sh + " script doesnn't seem to exist"
+
+        #Check new settings/properties are set
+        assert hasattr(settings, 'cluster_password'), settingsFile+ " has no cluster_password setting"
+
+        assert hasattr(settings, 'tempest_node'),  settings.network_conf  + " has no tempest node definition"
+        tempestNodeAttr = [
+            'hostname',
+            'root_password',
+            'public_ip',
+            'public_gateway',
+            'public_netmask',
+            'external_ip',
+            'external_netmask',
+            'private_api_ip',
+            'private_api_netmask',
+            'name_server',
+        ]
+        for each in tempestNodeAttr :
+            assert hasattr(settings.tempest_node, each), settingsFile + " tempest node has no " + each + " attribute"
+        sahNodeAttr = [
+            'external_vlanid',
+            'external_ip',
+            'external_netmask',
+            'private_api_vlanid',
+            'private_api_ip',
+            'private_api_netmask',
+        ]
+        for each in sahNodeAttr :
+            assert hasattr(settings.sah_node, each), settingsFile + " sah node has no  " + each + " attribute"
 
 
         try:
@@ -246,7 +275,7 @@ if __name__ == '__main__':
                 "timezone " + settings.time_zone,
                 "smuser " + settings.subscription_manager_user ,
                 "smpassword "+settings.subscription_manager_password ,
-                "smpool " + settings.subscription_manager_pool_vm_openstack_nodes ,
+                "smpool " + settings.subscription_manager_pool_vm_rhel ,
                 "hostname "+ settings.foreman_node.hostname + "." + settings.domain ,
                 "gateway " + settings.foreman_node.public_gateway ,
                 "nameserver " + settings.foreman_node.name_server ,
@@ -445,7 +474,7 @@ if __name__ == '__main__':
 
 
         logger.info("Configuring tempest")
-        cmd = '/root/tempest/tools/config_tempest.py --create identity.uri http://'+ settings.vip_keystone_public +':5000/v2.0  identity.admin_username admin identity.admin_password  '+ settings.cluster_password+ ' identity.admin_tenant_name admin'
+        cmd = '/root/tempest/tools/config_tempest.py --create identity.uri http://'+ settings.vip_keystone_pub +':5000/v2.0  identity.admin_username admin identity.admin_password  '+ settings.cluster_password+ ' identity.admin_tenant_name admin'
         Ssh.execute_command(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, cmd)
 
         log (" that's all folks "    )
@@ -460,8 +489,6 @@ if __name__ == '__main__':
         log ("  Ceph/Calamari public ip  : " + settings.ceph_node.public_ip )
         log ("  Calamari root password   : " + settings.ceph_node.root_password)
         log ("")
-
-
 
     except:
         logger.info(traceback.format_exc())
