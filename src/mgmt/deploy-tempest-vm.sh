@@ -94,6 +94,7 @@ do
   [[ ${iface} == smproxyuser ]] && echo "echo SMProxyUser=${ip} >> /tmp/tempest_ks_post_include.txt"
   [[ ${iface} == smproxypassword ]] && echo "echo SMProxyPassword=${ip} >> /tmp/tempest_ks_post_include.txt"
   
+  [[ ${iface} == tempestcommit ]] && echo "echo TempestCommit=${ip} >> /tmp/tempest_ks_post_include.txt"
 
   [[ ${iface} == eth0 ]] && { 
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers} >> /tmp/tempest_ks_include.txt"
@@ -227,6 +228,7 @@ EOIP
   cd /root 
   git clone https://github.com/redhat-openstack/tempest.git
   cd tempest
+  git checkout ${TempestCommit}
   pip install unittest2 discover Babel pbr
   python ./setup.py install
   
