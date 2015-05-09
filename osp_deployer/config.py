@@ -69,7 +69,10 @@ class Settings():
         self.subscription_manager_pool_vm_openstack_nodes = self.cluster_settings_map['subscription_manager_pool_vm_openstack_nodes']
         self.subscription_manager_vm_ceph = self.cluster_settings_map['subscription_manager_vm_ceph']
         self.subscription_manager_pool_physical_ceph = self.cluster_settings_map['subscription_manager_pool_physical_ceph']
-
+        if 'subscription_check_retries' in self.cluster_settings_map:
+            self.subscription_check_retries = self.cluster_settings_map['subscription_check_retries']
+        else:
+            self.subscription_check_retries = 20
         self.ntp_server = self.cluster_settings_map['ntp_servers']
         self.time_zone = self.cluster_settings_map['time_zone']
         self.stamp_storage = self.cluster_settings_map['storage']

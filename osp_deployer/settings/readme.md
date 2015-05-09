@@ -15,6 +15,7 @@
 * 3.0.1.d - 04/28/2015 - Removing bonding options bond_mode_*
 * 3.0.1.e - 04/30/2015 - Added new pool ID settings for node types : subscription_manager_pool_sah, subscription_manager_pool_vm_rhel, subscription_manager_pool_phyical_openstack_nodes, subscription_manager_pool_vm_openstack_nodes, subscription_manager_vm_ceph, subscription_manager_pool_physical_ceph; removed subscription_manager_pool
 * 3.0.1.f - 05/05/2015 - Removed nodes_root_password   openstack_services_password, replaced with cluster_password
+* 3.0.1.g - 05/08/2015 - subscription_check_retries property.  New subscription retries setting to allow calls to subscription manager to be retried in case temporary failure is expected (initially, checking subscription status)
 
 #####settings.properties
 * 1.0: - Initial version.
@@ -34,6 +35,8 @@
 * 3.0.1.b - 04/30/2015 - Remove public_ip from compute nodes
 * 3.0.1.c - 05/05/2015 - Added tempest vm properties
 * 3.0.1.d  - 05/05/2015 - New external_vlanid private_api_vlanid vlan properties on the sah to support tempest vm.
+
+
 
 
 
