@@ -1,4 +1,25 @@
 ##Change Log
+### Layout
+Command to execute
+
+python deployer.py -s "PATH to the Settings file"
+
+The structure is each directory represents a site and rack designation
+
+* Please add your spreadsheets for your installs
+* Please name your files
+
+** MHT_RackName.properties
+** MHT_RackName_settings.ini
+
+or
+
+** AUS_RackName.properties
+** AUS_RackName_settings.ini
+
+
+
+
 #####This is a change log for the settings.ini and settings.properties file
 
 
@@ -11,7 +32,7 @@
 * 3.0.1.a - 04/10/2015 - Added cloud_repo_dir, clone and use git repo cloud-repo
 * 3.0.1.b - 04/24/2015 - Added rhl71_iso and ceph_iso to the Bastion Settings, removed rhl7_iso
 * 3.0.1.c - 04/28/2015 - Added partition table variables
-  controller_nodes_are_730,compute_nodes_are_730,storage_nodes_are_730=false       
+  controller_nodes_are_730,compute_nodes_are_730,storage_nodes_are_730=false
 * 3.0.1.d - 04/28/2015 - Removing bonding options bond_mode_*
 * 3.0.1.e - 04/30/2015 - Added new pool ID settings for node types : subscription_manager_pool_sah, subscription_manager_pool_vm_rhel, subscription_manager_pool_phyical_openstack_nodes, subscription_manager_pool_vm_openstack_nodes, subscription_manager_vm_ceph, subscription_manager_pool_physical_ceph; removed subscription_manager_pool
 * 3.0.1.f - 05/05/2015 - Removed nodes_root_password   openstack_services_password, replaced with cluster_password
