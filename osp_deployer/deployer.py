@@ -14,6 +14,8 @@ def verify_subscription_status(public_ip, user, password, retries):
     i = 0
     subscriptionStatus = Ssh.execute_command(public_ip, user, password, "subscription-manager status")[0]
     while("Current" not in subscriptionStatus and i < retries):
+        if "Unknown" in subscriptionStatus:
+            return subscriptionStatus
         log("...")
         time.sleep(60)
         subscriptionStatus = Ssh.execute_command(public_ip, user, password, "subscription-manager status")[0]
