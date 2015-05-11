@@ -28,6 +28,9 @@ EXTERNAL_SUBNET_NAME="external_sub"
 STARTIP="192.168.190.2"
 ENDIP="192.168.190.30"
 EXTERNAL_VLAN_NETWORK="192.168.190.0/24"
+KEY_NAME="key_name"
+NOVA_INSTANCE_NAME="cirros_test"
+VOLUME_NAME="volume_test"
 
 shopt -s nullglob
 
@@ -141,9 +144,14 @@ setup_glance(){
 setup_nova (){
  info "### Setup Nova"""
 
- execute_command "nova keypair-add $KEY_NAME > MY_KEY.pem"
+ $file = "MY_KEY.pem"
+ echo "nova keypair-add $KEY_NAME " > $file 
 
- execute_command "nova boot --flavor 2 --key_name $KEY_NAME --image $image_id --nic net-id=$net_id cirros-test"
+ tenant_net_id=$(neutron net-list | grep $TENANT_NETWORK_NAME | awk '{print $2}')
+
+ image_id=$(glance image-list | grep cirros| awk '{print $2}')
+
+ execute_command "nova boot --flavor 2 --key_name $KEY_NAME --image $image_id --nic net-id=$tenant_net_id $NOVA_INSTANCE_NAME"
 
  execute_command "nova list"
 
@@ -154,11 +162,14 @@ setup_cinder(){
  
  execute_command "cinder list"
 
- execute_command "cinder create --display-name volume_test 1"
+ execute_command "cinder create --display-name $VOLUME_NAME 1"
  
  execute_command "cinder list"
- 
- execute_command "nova volume-attach $server_id $volume_id  $device"
+
+ server_id=$(nova list | grep $NOVA_INSTANCE_NAME| awk '{print $2}')
+ volume_id=$(cinder list | grep $VOLUME_NAME| awk '{print $2}')
+
+ execute_command "nova volume-attach $server_id $volume_id \\\\dev\\vdb"
 
 }
 
@@ -176,7 +187,7 @@ init
 
 ### Setting up Networks
 
-create_the_networks
+#create_the_networks
 
 
 ##
@@ -185,7 +196,7 @@ create_the_networks
 
 #setup_nova
 
-#setup_cinder
+setup_cinder
 
 
 info "##### Done #####"
