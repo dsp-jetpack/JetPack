@@ -27,6 +27,24 @@ def execute_as_shell(address,usr, pwd, command):
     return buff
 
 
+def verify_host_subscribed(address, usr, pwd, hostname):
+
+    timeout = time.time() + 60*20   # Giving the node/RH 20mns , should be plenty..
+    while True:
+        subscriptionStatus = Ssh.execute_command(address, usr, pwd, "subscription-manager status")[0]
+        if "Current" in subscriptionStatus:
+            log(hostname + " registered properly " + subscriptionStatus )
+            return
+        elif "Unknown" in subscriptionStatus:
+            raise AssertionError( hostname + " did not register properly :: " + subscriptionStatus )
+        elif time.time() > timeout:
+            raise AssertionError( hostname + " did not register properly :: " + subscriptionStatus + " in 20 mns")
+        elif "Invalid" in subscriptionStatus:
+            log("Subscription status :: " + subscriptionStatus[0] + " "+ subscriptionStatus[1] + " waiting 2 mns and trying again.. ")
+            time.sleep(120)
+        else :
+            raise AssertionError( hostname + " subscription status not handled  :: " + subscriptionStatus  )
+
 
 if __name__ == '__main__':
 
@@ -170,9 +188,7 @@ if __name__ == '__main__':
 
 
         log("*** Verify the SAH node registered properly ***")
-        subscriptionStatus = Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "subscription-manager status")[0]
-        if "Current" not in subscriptionStatus:
-            raise AssertionError("SAH did not register properly : " + subscriptionStatus)
+        verify_host_subscribed(settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.sah_node.hostname)
 
         log ("=== uploading iso's to the sah node")
         Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl71_iso, "/store/data/iso/RHEL7.iso")
@@ -233,9 +249,7 @@ if __name__ == '__main__':
         log("foreman host is up")
 
         log("*** Verify the Foreman VM registered properly ***")
-        subscriptionStatus = Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, "subscription-manager status")[0]
-        if "Current" not in subscriptionStatus:
-            raise AssertionError("Foreman VM did not register properly : " + subscriptionStatus)
+        verify_host_subscribed(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, settings.foreman_node.hostname)
 
         log("=== installing foreman")
 
@@ -297,9 +311,8 @@ if __name__ == '__main__':
         log("ceph host is up")
 
         log("*** Verify the Ceph VM registered properly ***")
-        subscriptionStatus = Ssh.execute_command(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "subscription-manager status")[0]
-        if "Current" not in subscriptionStatus:
-            raise AssertionError("Ceph VM did not register properly : " + subscriptionStatus)
+        verify_host_subscribed(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, settings.ceph_node.hostname)
+
 
 
 
@@ -399,13 +412,11 @@ if __name__ == '__main__':
         log("Tempest host is up")
 
         log("*** Verify the Tempest VM registered properly ***")
-        subscriptionStatus = Ssh.execute_command(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, "subscription-manager status")[0]
-        if "Current" not in subscriptionStatus:
-            raise AssertionError("Tempest VM did not register properly : " + subscriptionStatus)
+        verify_host_subscribed(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, settings.tempest_node.hostname)
 
 
         logger.info("Configuring tempest")
-        cmd = '/root/tempest/tools/config_tempest.py --create identity.uri http://'+ settings.vip_keystone_pub +':5000/v2.0  identity.admin_username admin identity.admin_password  '+ settings.cluster_password+ ' identity.admin_tenant_name admin'
+        cmd = '/root/tempest/tools/config_tempest.py --create identity.uri http://'+ settings.vip_keystone_public +':5000/v2.0  identity.admin_username admin identity.admin_password  '+ settings.cluster_password+ ' identity.admin_tenant_name admin'
         Ssh.execute_command(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, cmd)
 
         log (" that's all folks "    )
