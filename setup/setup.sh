@@ -203,8 +203,8 @@ allow unknown-clients;
 subnet 192.168.120.0 netmask 255.255.255.0 {
 range 192.168.120.190 192.168.120.210;
 option domain-name-servers $pxe_server_ip;
-default-lease-time 600;
-max-lease-time 7200;
+default-lease-time 6000;
+max-lease-time 72000;
 # PXE SERVER IP
 next-server $pxe_server_ip; 
 filename "pxelinux.0";

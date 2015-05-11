@@ -1,8 +1,8 @@
-import sys, getopt, time, subprocess, paramiko,logging, traceback, os.path, urllib2, shutil
+import sys, getopt, time, subprocess, paramiko,logging, traceback, os.path, urllib2, shutil, socket
 from osp_deployer.foreman import Foreman
 from osp_deployer.ceph import Ceph
 from auto_common import Ipmi, Ssh, FileHelper, Scp, UI_Manager
-from osp_deployer import Settings
+from osp_deployer import Settings, Deployer_sanity
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,8 @@ def execute_as_shell(address,usr, pwd, command):
         buff += resp
         #print">" + resp +"<"
     return buff
+
+
 
 if __name__ == '__main__':
 
@@ -71,52 +73,10 @@ if __name__ == '__main__':
         attrs = vars(settings)
 
         print("==== Running envirnment sanity tests")
-        assert os.path.isfile(settings.rhl71_iso) , settings.rhl71_iso + "ISO doesnn't seem to exist"
-        assert os.path.isfile(settings.sah_kickstart) , settings.sah_kickstart + "kickstart file doesnn't seem to exist"
-        assert os.path.isfile(settings.foreman_deploy_sh) , settings.foreman_deploy_sh + " script doesnn't seem to exist"
-
-        hammer_scripts =['hammer-configure-hostgroups.sh',
-        'hammer-deploy-compute.sh',
-        'hammer-deploy-controller.sh',
-        'hammer-deploy-storage.sh',
-        'hammer-configure-foreman.sh',
-        'hammer-get-ids.sh',
-        'hammer-dump-ids.sh',
-        'hammer-ceph-fix.sh',
-        'hammer-fencing.sh',
-        'common.sh',
-        'osp_config.sh',
-        'provision.sh',
-        'bond.sh'
-         ]
-	hammer_script_folder =  '/utils/networking/' if (sys.platform.startswith('linux')) else "\\utils\\networking\\"
-        for file in hammer_scripts  :
-            hammer_file = settings.foreman_configuration_scripts + hammer_script_folder + file
-            assert os.path.isfile(hammer_file) , hammer_file + " script doesnn't seem to exist"
-
-        assert os.path.isfile(settings.ceph_deploy_sh) , settings.ceph_deploy_sh + " script doesnn't seem to exist"
-        assert os.path.isfile(settings.tempest_deploy_sh) , settings.tempest_deploy_sh + " script doesnn't seem to exist"
-
-
-        try:
-                urllib2.urlopen(settings.rhel_install_location +"/EULA").read()
-        except:
-            raise AssertionError(settings.rhel_install_location + "/EULA is not reachable")
-
-        if isLinux == False:
-            if "RUNNING" in subprocess.check_output("sc query Tftpd32_svc",stderr=subprocess.STDOUT, shell=True):
-                subprocess.check_output("net stop Tftpd32_svc",stderr=subprocess.STDOUT, shell=True)
-        else:
-            subprocess.check_output("service tftp stop",stderr=subprocess.STDOUT, shell=True)
-
-        hdw_nodes = settings.controller_nodes + settings.compute_nodes + settings.ceph_nodes
-        hdw_nodes.append(settings.sah_node)
-        for node in hdw_nodes:
-            try:
-                ipmi_session = Ipmi(settings.cygwin_installdir, settings.ipmi_user, settings.ipmi_password, node.idrac_ip)
-                print node.hostname +" :: "+ ipmi_session.get_power_state()
-            except:
-                raise AssertionError("Could not impi to host " + node.hostname)
+        checks = Deployer_sanity()
+        checks.check_network_settings()
+        checks.check_files()
+        checks.check_ipmi_to_nodes()
 
         #######
         log ("=== Unregister the hosts")
@@ -246,7 +206,7 @@ if __name__ == '__main__':
                 "timezone " + settings.time_zone,
                 "smuser " + settings.subscription_manager_user ,
                 "smpassword "+settings.subscription_manager_password ,
-                "smpool " + settings.subscription_manager_pool_vm_openstack_nodes ,
+                "smpool " + settings.subscription_manager_pool_vm_rhel ,
                 "hostname "+ settings.foreman_node.hostname + "." + settings.domain ,
                 "gateway " + settings.foreman_node.public_gateway ,
                 "nameserver " + settings.foreman_node.name_server ,
@@ -445,7 +405,7 @@ if __name__ == '__main__':
 
 
         logger.info("Configuring tempest")
-        cmd = '/root/tempest/tools/config_tempest.py --create identity.uri http://'+ settings.vip_keystone_public +':5000/v2.0  identity.admin_username admin identity.admin_password  '+ settings.cluster_password+ ' identity.admin_tenant_name admin'
+        cmd = '/root/tempest/tools/config_tempest.py --create identity.uri http://'+ settings.vip_keystone_pub +':5000/v2.0  identity.admin_username admin identity.admin_password  '+ settings.cluster_password+ ' identity.admin_tenant_name admin'
         Ssh.execute_command(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, cmd)
 
         log (" that's all folks "    )
@@ -460,8 +420,6 @@ if __name__ == '__main__':
         log ("  Ceph/Calamari public ip  : " + settings.ceph_node.public_ip )
         log ("  Calamari root password   : " + settings.ceph_node.root_password)
         log ("")
-
-
 
     except:
         logger.info(traceback.format_exc())

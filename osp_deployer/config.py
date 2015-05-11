@@ -13,6 +13,7 @@ class Settings():
         self.foreman_password = ''
         self.conf = ConfigParser.ConfigParser()
         self.conf.read(settingsFile)
+        self.settingsFile = settingsFile
         self.cluster_settings_map = self.getSettingsSection("Cluster Settings")
         self.nodes_root_password = self.cluster_settings_map['cluster_password']
         self.cluster_password = self.cluster_settings_map['cluster_password']
@@ -128,54 +129,50 @@ class Settings():
             json_data = json.load(config_file)
             for each in json_data:
                 node = Node_Conf(each)
-                print "==========================================="
-
                 try:
                     if node.is_sah == "true":
                         self.sah_node = node
                         print "SAH Node :: " + self.sah_node.hostname
                 except:
-                    print "."
+                    pass
                 try:
                     if node.is_foreman == "true":
                         self.foreman_node = node
                         print "Foreman Node :: " + self.foreman_node.hostname
                 except:
-                    print "."
+                    pass
                 try:
                     if node.is_ceph == "true":
                         self.ceph_node = node
                         print "Ceph Node :: " + self.ceph_node.hostname
                 except:
-                    print "."
+                    pass
                 try:
                     if node.is_tempest == "true":
                         self.tempest_node = node
                         print "Tempest Node :: " + self.tempest_node.hostname
                 except:
-                    print "."
+                    pass
                 try:
                     if node.is_controller == "true":
                         self.controller_nodes.append(node)
                         print "Controller Node :: " + node.hostname
                 except:
-                    print "."
+                    pass
                 try:
                     if node.is_compute == "true":
                         self.compute_nodes.append(node)
                         print "Compute Node :: " + node.hostname
                 except:
-                    print "."
+                    pass
                 try:
                     if self.stamp_storage == "ceph" and node.is_ceph_storage == "true":
                         self.ceph_nodes.append(node)
                         print "Ceph Node :: " + node.hostname
 
                 except:
-                    print "."
-                attrs = vars(node)
-                print '\r '.join("%s: %s" % item for item in attrs.items())
-                print "==========================================="
+                    pass
+
 
         Settings.settings = self
 
