@@ -187,7 +187,7 @@ init
 
 ### Setting up Networks
 
-#create_the_networks
+create_the_networks
 
 
 ##
