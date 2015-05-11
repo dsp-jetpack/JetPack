@@ -10,6 +10,18 @@ def log(message):
     print (message)
     logger.info(  message)
 
+def verify_subscription_status(public_ip, user, password, retries):
+    i = 0
+    subscriptionStatus = Ssh.execute_command(public_ip, user, password, "subscription-manager status")[0]
+    while("Current" not in subscriptionStatus and i < retries):
+        if "Unknown" in subscriptionStatus:
+            return subscriptionStatus
+        log("...")
+        time.sleep(60)
+        subscriptionStatus = Ssh.execute_command(public_ip, user, password, "subscription-manager status")[0]
+        i += 1;
+    return subscriptionStatus
+
 
 def execute_as_shell(address,usr, pwd, command):
     conn = paramiko.SSHClient()
@@ -26,24 +38,6 @@ def execute_as_shell(address,usr, pwd, command):
         #print">" + resp +"<"
     return buff
 
-
-def verify_host_subscribed(address, usr, pwd, hostname):
-
-    timeout = time.time() + 60*20   # Giving the node/RH 20mns , should be plenty..
-    while True:
-        subscriptionStatus = Ssh.execute_command(address, usr, pwd, "subscription-manager status")[0]
-        if "Current" in subscriptionStatus:
-            log(hostname + " registered properly " + subscriptionStatus )
-            return
-        elif "Unknown" in subscriptionStatus:
-            raise AssertionError( hostname + " did not register properly :: " + subscriptionStatus )
-        elif time.time() > timeout:
-            raise AssertionError( hostname + " did not register properly :: " + subscriptionStatus + " in 20 mns")
-        elif "Invalid" in subscriptionStatus:
-            log("Subscription status :: " + subscriptionStatus[0] + " "+ subscriptionStatus[1] + " waiting 2 mns and trying again.. ")
-            time.sleep(120)
-        else :
-            raise AssertionError( hostname + " subscription status not handled  :: " + subscriptionStatus  )
 
 
 if __name__ == '__main__':
@@ -188,7 +182,9 @@ if __name__ == '__main__':
 
 
         log("*** Verify the SAH node registered properly ***")
-        verify_host_subscribed(settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.sah_node.hostname)
+        subscriptionStatus = verify_subscription_status(settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.subscription_check_retries)
+        if "Current" not in subscriptionStatus:
+            raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
         log ("=== uploading iso's to the sah node")
         Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl71_iso, "/store/data/iso/RHEL7.iso")
@@ -249,7 +245,9 @@ if __name__ == '__main__':
         log("foreman host is up")
 
         log("*** Verify the Foreman VM registered properly ***")
-        verify_host_subscribed(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, settings.foreman_node.hostname)
+        subscriptionStatus = verify_subscription_status(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, settings.subscription_check_retries)
+        if "Current" not in subscriptionStatus:
+            raise AssertionError("Foreman VM did not register properly : " + subscriptionStatus)
 
         log("=== installing foreman")
 
@@ -311,8 +309,10 @@ if __name__ == '__main__':
         log("ceph host is up")
 
         log("*** Verify the Ceph VM registered properly ***")
-        verify_host_subscribed(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, settings.ceph_node.hostname)
 
+        subscriptionStatus = verify_subscription_status(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, settings.subscription_check_retries)
+        if "Current" not in subscriptionStatus:
+            raise AssertionError("Ceph VM did not register properly : " + subscriptionStatus)
 
 
 
@@ -412,7 +412,10 @@ if __name__ == '__main__':
         log("Tempest host is up")
 
         log("*** Verify the Tempest VM registered properly ***")
-        verify_host_subscribed(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, settings.tempest_node.hostname)
+        subscriptionStatus = verify_subscription_status(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, settings.subscription_check_retries)
+        if "Current" not in subscriptionStatus:
+            raise AssertionError("Tempest VM did not register properly : " + subscriptionStatus)
+
 
 
         logger.info("Configuring tempest")
