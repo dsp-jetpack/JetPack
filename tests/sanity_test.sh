@@ -31,6 +31,7 @@ EXTERNAL_VLAN_NETWORK="192.168.190.0/24"
 KEY_NAME="key_name"
 NOVA_INSTANCE_NAME="cirros_test"
 VOLUME_NAME="volume_test"
+IMAGE_NAME="cirros"
 
 shopt -s nullglob
 
@@ -130,9 +131,11 @@ setup_glance(){
 
  info "### Setting up glance"""
 
- execute_command "wget http://download.cirros-cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img"
+ if [ ! -f ./cirros-0.3.3-x86_64-disk.img]; then
+     execute_command "wget http://download.cirros-cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img"
+ fi
 
- execute_command "glance image-create --name "cirros image" --is-public true --disk-format qcow2 --container-format bare --file cirros-0.3.3-x86_64-disk.img"
+ execute_command "glance image-create --name  $IMAGE_NAME --is-public true --disk-format qcow2 --container-format bare --file cirros-0.3.3-x86_64-disk.img"
 
  execute_command "glance image-list"
 
@@ -144,14 +147,19 @@ setup_glance(){
 setup_nova (){
  info "### Setup Nova"""
 
- $file = "MY_KEY.pem"
- echo "nova keypair-add $KEY_NAME " > $file 
+ info "creating keypair $KEY_NAME"
+
+ file=MY_KEY.pem
+ nova keypair-add $KEY_NAME  > $file 
 
  tenant_net_id=$(neutron net-list | grep $TENANT_NETWORK_NAME | awk '{print $2}')
 
- image_id=$(glance image-list | grep cirros| awk '{print $2}')
+ image_id=$(glance image-list | grep $IMAGE_NAME | awk '{print $2}')
 
  execute_command "nova boot --flavor 2 --key_name $KEY_NAME --image $image_id --nic net-id=$tenant_net_id $NOVA_INSTANCE_NAME"
+ 
+ info "Waiting a min for instance to be built"
+ sleep 1m
 
  execute_command "nova list"
 
@@ -169,13 +177,16 @@ setup_cinder(){
  server_id=$(nova list | grep $NOVA_INSTANCE_NAME| awk '{print $2}')
  volume_id=$(cinder list | grep $VOLUME_NAME| awk '{print $2}')
 
- execute_command "nova volume-attach $server_id $volume_id \\\\dev\\vdb"
+ execute_command "nova volume-attach $server_id $volume_id"
+
+ info "Volume attached, ssh into instance $NOVA_INSTANCE_NAME and verify"
 
 }
 
 end(){
  
-   info "#####VALIDATION#####" 
+
+   info "#####VALIDATION SUCCESS#####" 
 }
 
 
@@ -192,12 +203,13 @@ create_the_networks
 
 ##
 
-#setup_glance
+setup_glance
 
-#setup_nova
+setup_nova
 
 setup_cinder
 
+end 
 
 info "##### Done #####"
 
