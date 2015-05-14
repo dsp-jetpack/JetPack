@@ -529,18 +529,7 @@ class Foreman():
         for thr in controlerPuppetRuns:
             thr.join()
 
-        logger.info("run puppet on controller nodes with fencing enabled")
-        cmd = "/root/pilot/hammer-fencing.sh enabled"
-        logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
-        controlerPuppetRuns = []
-        for each in self.settings.controller_nodes:
-            puppetRunThr = runThreadedPuppet(each.hostname, each)
-            controlerPuppetRuns.append(puppetRunThr)
-        for thr in controlerPuppetRuns:
-            thr.start()
-            time.sleep(60) # ...
-        for thr in controlerPuppetRuns:
-            thr.join()
+        # we will notify the user at end of install that fencing is disabled
 
 
         logger.info("Apply the host group & run puppet on the compute nodes")
