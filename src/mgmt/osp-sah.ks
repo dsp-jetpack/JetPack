@@ -92,7 +92,7 @@ NTPServers="clock.redhat.com"
 TimeZone="UTC"
 
 # Installation interface configuration
-# Format is "ip/netmask interface onboot no"
+# Format is "ip/netmask interface no"
 anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 em2 no"
 
 # Bonding and Bridge configuration. These variables are bash associative arrays and take the form of array[key]="value".
