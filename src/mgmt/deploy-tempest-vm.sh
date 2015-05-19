@@ -223,7 +223,7 @@ EOIP
   systemctl disable firewalld
   systemctl disable chronyd
 
-  yum -y install python-devel python-pip python-crypto.x86_64 libxslt-devel libxml2-devel libffi-devel
+  yum -y install python-devel python-pip python-crypto.x86_64 libxslt-devel libxml2-devel libffi-devel screen
 
   cd /root 
   git clone https://github.com/redhat-openstack/tempest.git
