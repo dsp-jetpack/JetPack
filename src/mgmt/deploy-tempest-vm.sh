@@ -229,7 +229,7 @@ EOIP
   git clone https://github.com/redhat-openstack/tempest.git
   cd tempest
   git checkout ${TempestCommit}
-  sudo pip install -r requirements.txt
+  pip install -r requirements.txt
   pip install unittest2 discover Babel pbr
   python ./setup.py install
   
