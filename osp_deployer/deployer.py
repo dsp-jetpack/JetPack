@@ -392,6 +392,7 @@ if __name__ == '__main__':
                 "eth0        "+ settings.tempest_node.public_ip +"    "+ settings.tempest_node.public_netmask ,
                 "eth1        "+ settings.tempest_node.external_ip +"    "+ settings.tempest_node.external_netmask,
                 "eth2        "+ settings.tempest_node.private_api_ip +"    "+ settings.tempest_node.private_api_netmask,
+                "tempestcommit e42eb3df981957e8a95a6b1d698135b98375c2d6",
                 )
 
         for comd in Conf:
