@@ -378,6 +378,7 @@ class Foreman():
         dropdown.waitFor(10)
         dropdown.select('true')
         while save.exists():
+                UI_Manager.driver().execute_script("window.scrollTo(0, 0);")
                 save.click()
                 time.sleep(5)
 
@@ -528,18 +529,7 @@ class Foreman():
         for thr in controlerPuppetRuns:
             thr.join()
 
-        logger.info("run puppet on controller nodes with fencing enabled")
-        cmd = "/root/pilot/hammer-fencing.sh enabled"
-        logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
-        controlerPuppetRuns = []
-        for each in self.settings.controller_nodes:
-            puppetRunThr = runThreadedPuppet(each.hostname, each)
-            controlerPuppetRuns.append(puppetRunThr)
-        for thr in controlerPuppetRuns:
-            thr.start()
-            time.sleep(60) # ...
-        for thr in controlerPuppetRuns:
-            thr.join()
+        # we will notify the user at end of install that fencing is disabled
 
 
         logger.info("Apply the host group & run puppet on the compute nodes")
@@ -570,7 +560,7 @@ class Foreman():
                     break
 
     def run_puppet_on_all(self):
-        logger.info("Run puppet on all the nodes one last time to work around known issues post deployment")
+        logger.info("Run puppet on all the nodes one last time on compute nodes to work around known issues post deployment")
 
         for each in self.settings.compute_nodes:
             cmd = 'puppet agent -t -dv |& tee /root/puppet.out'
@@ -585,14 +575,12 @@ class Foreman():
                 else :
                     didNotRun = False
                     break
+            cmd = "rm -f /var/lib/puppet/state/agent_catalog_run.lock"
+            Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
 
-        controlerPuppetRuns = []
-        logger.info("running puppet on controller nodes")
+
+        #controlerPuppetRuns = []
+        logger.info("removing lock if any on controller node ")
         for each in self.settings.controller_nodes:
-            puppetRunThr = runThreadedPuppet(each.hostname, each)
-            controlerPuppetRuns.append(puppetRunThr)
-        for thr in controlerPuppetRuns:
-            thr.start()
-            time.sleep(60) # ...
-        for thr in controlerPuppetRuns:
-            thr.join()
+            cmd = "rm -f /var/lib/puppet/state/agent_catalog_run.lock"
+            Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)

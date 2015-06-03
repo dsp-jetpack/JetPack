@@ -128,6 +128,21 @@ def upload_results(ResultsSummary):
     files = {'file': open('upload.log', 'rb')}
     r = requests.post(url, files=files)
 
+def convert_to_utc(time):
+    #print 'time: '+ str(time)
+    #log('time: '+ str(time))
+    os_time = datetime.datetime.now()
+    #print 'os time: '+str(os_time)
+    #log('os time: '+str(os_time))
+    utc_time = datetime.datetime.utcnow()
+    #print 'utc_time: '+str(utc_time)
+    #log('utc_time: '+str(utc_time))
+    diff = os_time - utc_time
+    #log('diff: ' +str(diff))
+
+    time = time + diff
+    #log('time: ' + str(time))
+    return time
 
 def check_disks(name_node_ip):
     print 'checking disks'
@@ -192,6 +207,100 @@ def clear_cache(name_node_ip):
     
     return cl_stdoutd, cl_stderrd
 
+def tpc_benchmark(name_node_ip, tpc_location, tpc_size):
+    print 'running TPC Benchmark'
+    address = str(tpc_location)
+    cmd = 'cd '+address+'; ./TPCx-HS-master.sh -g '+ tpc_size
+    cl_stdoutd, cl_stderrd = c_ssh_as_root(name_node_ip, cmd)
+    #print cmd
+    #print 'TPC error: ' +str(cl_stderrd)
+    #print 'TPC output: ' + str(cl_stdoutd)
+    return cl_stdoutd, cl_stderrd
+
+def run_tpc_benchmark(name_node_ip, tpc_location, tpc_size):
+    jobIDs = []
+    starttimes = []
+    finishtimes = []
+    job_names = []
+    #job_type = 'kmeans'
+    edge_node_ip = "172.16.11.143"
+    timeA = datetime.datetime.now()-datetime.timedelta(1)
+    print str(timeA)
+    
+    out1, out2 = tpc_benchmark(name_node_ip, tpc_location, tpc_size)
+    
+    jobIDs =  re.findall("Job complete: (.+)", out1)
+    #jobIDs = ['job_201504081546_0163', 'job_201504081546_0164', 'job_201504081546_0165', 'job_201504081546_0166', 'job_201504081546_0167', 'job_201504081546_0168']
+    #jobIDs = ['job_201504160841_0187', 'job_201504160841_0188', 'job_201504160841_0189', 'job_201504160841_0190', 'job_201504160841_0191', 'job_201504160841_0192']
+    print "jobIds " +str(jobIDs)
+    #log('jobids: ' +str(jobIDs))
+    time.sleep(30)
+    minute = timedelta(minutes=1)
+    timeB = datetime.datetime.now()+datetime.timedelta(1)+minute
+    print str(timeB)
+    session = ApiResource(edge_node_ip,  7180, "admin", "admin", version=6)
+    #log('jobIds = ' + str(jobIDs))
+    #log(str(id))
+    #id = 'job_1411634913292_0068'
+    for id in jobIDs:
+        # Get the MapReduce job runtime from the job id
+        cdh4 = None
+        for c in session.get_all_clusters():
+            print str(c.version)
+            if c.version == "CDH5":
+                cdh4 = c 
+        for s in cdh4.get_all_services():
+            print s.name
+            ############
+            if s.name == "yarn":
+                mapreduce = s
+            elif s.name == "mapreduce":
+                mapreduce = s
+                
+        print timeA
+        print timeB
+        
+        #ac =  mapreduce.get_yarn_applications(timeA, timeB)
+        ac = mapreduce.get_activity(id)
+        job_type = ac.name
+        #print jobIDs
+        #print str(ac.startTime)
+        #print str(ac.finishTime)
+        #log('API time details for jobID: '+str(id)+ ' ' +str(job_type))
+        #log(str(ac.startTime))
+        #log(str(ac.finishTime))
+        start = datetime.datetime.strptime(ac.startTime, '%Y-%m-%dT%H:%M:%S.%fZ')
+        finish = datetime.datetime.strptime(ac.finishTime, '%Y-%m-%dT%H:%M:%S.%fZ')
+        
+        start = convert_to_utc(start)
+        finish = convert_to_utc(finish)
+        #start = start-datetime.timedelta(hours=5)
+        #finish = finish-datetime.timedelta(hours=5)
+        #log('ac.starttime: ' +str(ac.startTime))
+        #log('ac.finishtime: ' + str(ac.finishTime))
+        starttimes.append(start)
+        finishtimes.append(finish)
+        job_names.append(job_type)
+        #print str(ac)
+            #############
+            #if s.name == "yarn":
+            #    mapreduce = s
+        #ac =  mapreduce.get_yarn_applications(timeA, timeB)
+            #print str(ac)
+            #print str(ac.warnings)
+        #for job in ac.applications:
+        #    if id == str(job.applicationId):
+        #        ob = job
+        #        #log('ob = '+str(ob))         
+        #start = ob.startTime
+        #starttimes.append(start)
+        #finish = ob.endTime
+        
+        
+    return jobIDs, starttimes, finishtimes, job_names
+
+
+    
 
 #def convert_cpu_stats(cpu_stats, numCores):
     #edge_ip = "172.16.2.21"
@@ -210,7 +319,7 @@ def clear_cache(name_node_ip):
 #    cpu_data_perc = float(cpu_stats)#/numCores*100
 #    return cpu_data_perc
 
-def get_other_cpu_stats(timestamp, host, rowCount, job_type, fileCount, fileSize, cpu_user_value):
+def get_other_cpu_stats(timestamp, host, rowCount, job_type, fileCount, fileSize, cpu_user_value, job_name):
     config = importlib.import_module('config_cdh5')
     edge_ip = config.edge_node_ip
     clustername = config.cluster_name
@@ -241,14 +350,19 @@ def get_other_cpu_stats(timestamp, host, rowCount, job_type, fileCount, fileSize
     time_start = timestamp-sec   # GMT +1
  
     time_end = timestamp+sec
+    time_start = convert_to_utc(time_start)
+    time_end = convert_to_utc(time_end)
 
 
     
     for stat in cpu_stats:
         #log('stat: '+ str(stat))
-        
+        #log('stime = '+str(time_start))
+        #log('CPUetime = '+str(time_end))
         tsquery = "select "+stat+" / "+str(numCores)+" * 100 where hostname = \""+ host +"\" and category = Host"
-        #log(str(tsquery))
+        #log('tsquery other_cpu: '+str(tsquery))
+        #time_start = convert_to_utc(time_start)
+        #time_end = convert_to_utc(time_end)
         hostRes = session.query_timeseries(tsquery, time_start, time_end)
         #log(str(hostRes))
 
@@ -267,13 +381,20 @@ def get_other_cpu_stats(timestamp, host, rowCount, job_type, fileCount, fileSize
                     log(job_type +" | "+ str(host) +" | " + stat + " | " + str(point.value) )
                 elif job_type == 'kmeans':
                     log(job_type +" | "+ str(host) +" | " + stat + " | " + str(point.value) )
+                elif job_type == 'tpc':
+                    log(job_type +"-"+str(job_name)+" | "+ str(host) +" | " + stat + " | " + str(point.value) )
+                    #log(str(time_end))
                 else:
                     log(job_type + " | " + str(rowCount) + " | "+ str(host) +" | " + stat + " | " + str(point.value) )
                     
     #print point.value
     total = 0
     for value in cpu_total:
+        #log('cpu total: ' +str(cpu_total))
+        #log('value: '+ str(value))
+        #log('total: ' + str(total))
         total = total+value
+        #log('new total: '+str(total))
     #total = total + cpu_user_value
     #log(job_type + " | " + str(rowCount) + " | cpu_total | " + str(total) )
     #full_totals.append(total)
@@ -383,11 +504,11 @@ def dfsioREAD(numFiles, fileSize, edge_node_ip):
     
 def rrdtoolXtract(start, end, metric, host, crowbar_admin_ip, time_offset):
     offset = time_offset*60*60
-    start = start - offset
-    end = end - offset
+    #start = start - offset
+    #end = end - offset
     #host = "172.16.2.29"
     #host = "da0-36-9f-32-73-74.dell.com"
-    #log(str(start))
+    #log('rrd start = ' + str(start))
     #log(str(end))
     #log(str(host))
     hostName = re.search("(.[a-z0-9]+)", host)
@@ -535,7 +656,11 @@ def get_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, tim
         highestCPU = 0
         print "time start: "+str(time_start)
         print "time end: "+str(time_end)
-        
+        #time_start = convert_to_utc(time_start)
+        #time_end = convert_to_utc(time_end)
+        #time_start = time_start-datetime.timedelta(hours=5)
+        #time_end = time_end-datetime.timedelta(hours=5)
+
         for host in dataNodes:
             print host
             host = get_datanode_entityname(edge_node_ip, cluster_name, host)
@@ -551,6 +676,7 @@ def get_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, tim
             else:
                 tsquery = "select "+stat+" where hostname = \""+ host +"\" and category = Host"
             print tsquery
+            #log(str(tsquery))
             data = []
             points = {}
             timestamps = []
@@ -558,7 +684,12 @@ def get_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, tim
 
 	    #timestamp = []
 	    #rowCount = 10000000000
-
+            #timeAdj = datetime.timedelta(hours=1)
+            #time_start = time_start+timeAdj
+            #time_end = time_end+timeAdj
+            #qtime_start = convert_to_utc(time_start)
+            #qtime_end = convert_to_utc(time_end)
+            #log('tsquery =: ' +str(tsquery))
             hostRes = session.query_timeseries(tsquery, time_start, time_end)
             print 'hostRes[0] = ' + str(hostRes[0])       
             for rez in hostRes[0].timeSeries:
@@ -597,8 +728,8 @@ def get_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, tim
                 #log("Host "+ str(host))
                 #log("index "+ str(dataNodes))
                 print "TIMESTAMPS: "+str(timestamps)
-                adjustedtimestamps = timestamps[0]-datetime.timedelta(hours=6)
-                #log(str(adjustedtimestamps))
+                adjustedtimestamps = convert_to_utc(timestamps[0])
+                #log('adjTimeCpu: '+str(adjustedtimestamps))
                 #log(str(host))
                 #log(str(rowCount))
                 #log(str(job_type))
@@ -614,10 +745,10 @@ def get_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, tim
         if DataNodesCount == 0:
             return "0", [], [], []
         print DataNodesCount
-        log(str(DataNodesCount))
+        #log(str(DataNodesCount))
         return str(avg / DataNodesCount) , highests, timestamps[0], full_totals
 
-def getHIVE_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, time_end, cluster_name, rowCount, job_type, fileCount, fileSize):
+def getHIVE_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, time_end, cluster_name, rowCount, job_type, fileCount, fileSize, job_name):
         session = ApiResource(edge_node_ip, 7180, "admin", "admin", version=6)
         avg = 0.00
         DataNodesCount = 0
@@ -635,11 +766,12 @@ def getHIVE_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start,
             if stat == 'cpu_user_rate':
                 tsquery = "select "+stat+" / "+str(numCores)+" *100 where hostname = \""+ host +"\" and category = Host"
                 print tsquery
+                #log(str(tsquery))
                 #time.sleep(10)
                 #system.exit()
             else:
                 tsquery = "select "+stat+" where hostname = \""+ host +"\" and category = Host"
-            
+                #log(str(tsquery))
             #tsquery = "select "+stat+" where hostname = \""+ host +"\" and category = Host"
             print tsquery
             data = []
@@ -649,10 +781,13 @@ def getHIVE_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start,
 
 	    #timestamp = []
 	    #rowCount = 10000000000
-
+            #qtime_start = convert_to_utc(time_start)
+            #qtime_end = convert_to_utc(time_end)
+            #log('getHIVE_cloudera_dataNodesAverage' + str(time_start))
             hostRes = session.query_timeseries(tsquery, time_start, time_end)
 	    print 'hostRes[0] = ' + str(hostRes[0])
 	    #time.sleep(15)       
+        
             for rez in hostRes[0].timeSeries:
                 print str(len(rez.data))
                 if (len(rez.data) > 0) :
@@ -691,7 +826,7 @@ def getHIVE_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start,
 			#log("Host "+ str(host))
 			#log("index "+ str(dataNodes))
 			#log("cpu_user_rate peaked at: " + str(timestamps[0]))
-	    		other_cpu_stats, full_total = get_other_cpu_stats(timestamps[0], host, rowCount, job_type, fileCount, fileSize, highestCPU)
+	    		other_cpu_stats, full_total = get_other_cpu_stats(timestamps[0], host, rowCount, job_type, fileCount, fileSize, highestCPU, job_name)
 			full_totals.append(full_total)
          		#total = total + cpu_total
 			#log("otherStats " + str(other_cpu_stats))
@@ -726,28 +861,30 @@ def get_cpu_stats_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, ti
             		tsquery = "select "+stat+" where hostname = \""+ host +"\" and category = Host"
             		print tsquery
             		data = []
-            		hostRes = session.query_timeseries(tsquery, time_start, time_end)       
-            		for rez in hostRes[0].timeSeries:
-                		print str(len(rez.data))
-                		if (len(rez.data) > 0) :
-                    			for point in rez.data:
-                        			data.append(point.value)
-						timestamp = point.timestamp 
-						cpu_data.append(point.value)       
+                #qtime_start = convert_to_utc(time_start)
+                #qtime_end = convert_to_utc(time_end)
+            	hostRes = session.query_timeseries(tsquery, time_start, time_end)       
+            	for rez in hostRes[0].timeSeries:
+                	    print str(len(rez.data))
+                	    if (len(rez.data) > 0) :
+                                for point in rez.data:
+                                    data.append(point.value)
+                                    timestamp = point.timestamp 
+                                    cpu_data.append(point.value)       
                 		else :
                     			pass
-            		if len(data) > 0:
-                		highestValue = 0.00
-                		highestValue = sorted(data, key=float, reverse=True)[0]
-                		avg = avg  + highestValue
-                		if highestValue != 0.00:
-                    			print str(highestValue)
-                    			highests.append(dict({host:highestValue}))
-                    			DataNodesCount += 1
-                		else:
-                    			highests.append(dict({host:'0'}))
-            		else:
-                		highests.append(dict({host:'0'}))
+            		    if len(data) > 0:
+                		    highestValue = 0.00
+                		    highestValue = sorted(data, key=float, reverse=True)[0]
+                		    avg = avg  + highestValue
+                		    if highestValue != 0.00:
+                    			    print str(highestValue)
+                    			    highests.append(dict({host:highestValue}))
+                    			    DataNodesCount += 1
+                		    else:
+                    			    highests.append(dict({host:'0'}))
+            		    else:
+                		    highests.append(dict({host:'0'}))
                      
         	if DataNodesCount == 0:
             		return "0", []
@@ -756,7 +893,7 @@ def get_cpu_stats_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, ti
               
 def run_terragen_job(rowCount, edge_node_ip, teragen_params):
         randFolderName = uuid.uuid4()
-        timeA = datetime.datetime.now()-datetime.timedelta(0)
+        timeA = datetime.datetime.now()-datetime.timedelta(1)
         print str(timeA)
         bla = teragen(rowCount, randFolderName, edge_node_ip, teragen_params)
         #jobID = 'job_201412100459_0011'
@@ -778,7 +915,7 @@ def run_terragen_job(rowCount, edge_node_ip, teragen_params):
         time.sleep(30)
         minute = timedelta(minutes=0)
 
-        timeB = datetime.datetime.now()+datetime.timedelta(0)+minute
+        timeB = datetime.datetime.now()+datetime.timedelta(1)+minute
         print str(timeB)
         edge_node_ip = "172.16.11.143"
         session = ApiResource(edge_node_ip,  7180, "admin", "admin", version=6)
@@ -820,7 +957,7 @@ def run_terragen_job(rowCount, edge_node_ip, teragen_params):
         start = datetime.datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
         finish = datetime.datetime.strptime(finish, '%Y-%m-%dT%H:%M:%S.%fZ')
 
-        hourOffset = timedelta(hours=6)
+        hourOffset = timedelta(hours=0)
         start = start-hourOffset
         finish = finish-hourOffset
         print str(start)
@@ -830,7 +967,7 @@ def run_terragen_job(rowCount, edge_node_ip, teragen_params):
 
 def run_terasort_job(folderName, edge_node_ip, terasort_params):
         #randFolderName = uuid.uuid4()
-        timeA = datetime.datetime.now()-datetime.timedelta(1)
+        timeA = datetime.datetime.now()-datetime.timedelta(0)
         print str(timeA)
         bla = terasort(folderName, edge_node_ip, terasort_params)
         time.sleep(60)
@@ -843,8 +980,8 @@ def run_terasort_job(folderName, edge_node_ip, terasort_params):
                 jobID = ma.group(1)
                 print jobID
         time.sleep(30)
-        timeB = datetime.datetime.now()+datetime.timedelta(1)
-        #print str(timeB)
+        timeB = datetime.datetime.now()+datetime.timedelta(0)
+        print str(timeB)
         edge_node_ip = "172.16.11.143"
         session = ApiResource(edge_node_ip,  7180, "admin", "admin", version=6)
         print "session: " + str(session)
@@ -872,7 +1009,7 @@ def run_terasort_job(folderName, edge_node_ip, terasort_params):
         start = datetime.datetime.strptime(ab.startTime, '%Y-%m-%dT%H:%M:%S.%fZ')
         finish = datetime.datetime.strptime(ab.finishTime, '%Y-%m-%dT%H:%M:%S.%fZ')
 
-        hourOffset = timedelta(hours=6)
+        hourOffset = timedelta(hours=0)
         start = start-hourOffset
         finish = finish-hourOffset
         
@@ -898,7 +1035,7 @@ def prepare(edge_node_ip):
 
     edit_file(uservisits, num_visits, file)
     edit_file(pages, num_pages, file)
-    log('prepare start')
+    #log('prepare start')
     #cmd = 'su hdfs; cd /var/lib/hadoop-hdfs/hibench/hivebench/bin/; ./prepare.sh'
     cmd = ' su hdfs - -c "/var/lib/hadoop-hdfs/hibench/hivebench/bin/prepare.sh"'
     #cmd = 'su hdfs'
@@ -907,7 +1044,7 @@ def prepare(edge_node_ip):
     cl_stdoutd, cl_stderrd = c_ssh_as_root(edge_node_ip, cmd)        
     print cl_stdoutd
     print cl_stderrd
-    log('prepare end')
+    #log('prepare end')
     return cl_stdoutd, cl_stderrd
 
 def agg(edge_node_ip):
@@ -926,7 +1063,7 @@ def run_agg(edge_node_ip):
     #log('bla: ' + str(bla))
     #time.sleep(60)
     ls = bla[1].split('\r' );
-    log('ls: ' + str(ls))
+    #log('ls: ' + str(ls))
     for line in ls:
         print str(line)
         ma =  re.search("Job = (.+),", line)
@@ -956,7 +1093,7 @@ def run_agg(edge_node_ip):
     print str(ac.warnings)
     for job in ac.applications:
         if jobID == str(job.applicationId):
-            log(str(jobID))
+            #log(str(jobID))
             ob = job         
     start = ob.startTime
     finish = ob.endTime
@@ -988,7 +1125,8 @@ def get_agg_stats(jobtype, edge_ip, runId, visits, pages, dataNodes, cluster_nam
         fileCount = 0
         fileSize = 0
         rowCount = 0
-        cluster_highest_average_cm, individialHostsHighestPoints, timestamp, full_totals = getHIVE_cloudera_dataNodesAverage(edge_ip, dataNodes, stat, start, finish, cluster_name, rowCount, job_type, fileCount, fileSize)
+        job_name = ''
+        cluster_highest_average_cm, individialHostsHighestPoints, timestamp, full_totals = getHIVE_cloudera_dataNodesAverage(edge_ip, dataNodes, stat, start, finish, cluster_name, rowCount, job_type, fileCount, fileSize, job_name)
         print individialHostsHighestPoints
         if timestamp == 0:
             print timestamp
@@ -1083,11 +1221,16 @@ def get_multi_jobIDs(job_type, edge_node_ip):
         job = kmeans(edge_node_ip)
     elif job_type == 'HIVE-Join':
         job = join(edge_node_ip)
+    elif job_type == 'tpc':
+        job = tpc_benchmark(name_node_ip, tpc_location, tpc_size)
     else:
         print 'job_type problem'
     #log(str(bla))
     #time.sleep(60)
-    ls = job[1].split('\r' );
+    if job_type == 'tpc':
+        ls = job
+    else:
+        ls = job[1].split('\r' );
     #log('ls: ' + str(ls))
     x = 0
     for line in ls:
@@ -1124,8 +1267,13 @@ def get_multi_jobIDs(job_type, edge_node_ip):
                 ob = job
                 #log('ob = '+str(ob))         
         start = ob.startTime
+        #start = start-datetime.timedelta(hours=5)
+        start = convert_to_utc(start)
         starttimes.append(start)
+        
         finish = ob.endTime
+        finish = convert_to_utc(finish)
+        #finish = finish-datetime.timedelta(hours=5)
         finishtimes.append(finish)
         #log(str(start))
         #log(str(finish))
@@ -1140,62 +1288,63 @@ def get_join_stats(jobtype, runId, visits, pages, dataNodes, cluster_name, crowb
     edge_ip = config.edge_node_ip
     #job_type = 'HIVEJOIN'
     jobIDs, starttimes, finishtimes = get_multi_jobIDs(jobtype, edge_ip)
-    log(str(jobIDs))
-    log(str(starttimes))
-    log(str(finishtimes))
+    #log(str(jobIDs))
+    #log(str(starttimes))
+    #log(str(finishtimes))
     stage = 5678
     file = '/var/lib/hadoop-hdfs/hibench/hibench.report'
 
     for each in jobIDs:
-		log("getting join stats for JobID" + str(each))
-		start = starttimes[jobIDs.index(each)]
-		finish = finishtimes[jobIDs.index(each)]
+        log("getting join stats for JobID" + str(each))
+        start = starttimes[jobIDs.index(each)]
+        finish = finishtimes[jobIDs.index(each)]
 
-		start_epoch = int(time.mktime(start.timetuple()))
-        	finish_epoch = int(time.mktime(finish.timetuple()))
-		stage = jobIDs.index(each) + 1
-
-        	runTime = finish_epoch - start_epoch
-        	log(str(jobtype) + " | visits | "+str(visits)+" | pages | "+str(pages)+" | stage " + str(stage) + " | runtime | " + str(runTime ))
-        	ResultsSummary.append([str(runId),
+        start_epoch = int(time.mktime(start.timetuple()))
+        finish_epoch = int(time.mktime(finish.timetuple()))
+        stage = jobIDs.index(each) + 1
+        
+        runTime = finish_epoch - start_epoch
+        log(str(jobtype) + " | visits | "+str(visits)+" | pages | "+str(pages)+" | stage " + str(stage) + " | runtime | " + str(runTime ))
+        ResultsSummary.append([str(runId),
                                        "HIVE-join",
                                       "job",
                                       "runtime",
                                       str(runTime)]                                   
                                       )
 
-		for stat in datapointsToCheck:
-    	    		#print 'start = ' + str(start)
-	    		#print 'finish = ' + str(finish)
-	    		job_type = 'HIVE-Join'
-	    		fileCount = 0
-	    		fileSize = 0
-			rowCount = 0
-			print "start: " + str(start)
-			print "finish: " + str(finish) 
-			#time.sleep(10)
-            		cluster_highest_average_cm, individialHostsHighestPoints, timestamp, full_totals = getHIVE_cloudera_dataNodesAverage(edge_ip, dataNodes, stat, start, finish, cluster_name,  rowCount, job_type, fileCount, fileSize)
-            		print individialHostsHighestPoints
-			print "timestamp = " + str(timestamp)
+        for stat in datapointsToCheck:
+            #print 'start = ' + str(start)
+            #print 'finish = ' + str(finish)
+            job_type = 'HIVE-Join'
+            fileCount = 0
+            fileSize = 0
+            rowCount = 0
+            job_name = ''
+            print "start: " + str(start)
+            print "finish: " + str(finish) 
+            #time.sleep(10)
+            cluster_highest_average_cm, individialHostsHighestPoints, timestamp, full_totals = getHIVE_cloudera_dataNodesAverage(edge_ip, dataNodes, stat, start, finish, cluster_name,  rowCount, job_type, fileCount, fileSize, job_name)
+            print individialHostsHighestPoints
+            print "timestamp = " + str(timestamp)
 			#time.sleep(12)
-	    		#if timestamp == 0:
+	    	#if timestamp == 0:
 			#	print timestamp
 			#	pass
 	    
 
-	    		if stat == 'cpu_user_rate':
-	    			log("HIVE-Join | average | " + stat + " | " + str(cluster_highest_average_cm) )
+            if stat == 'cpu_user_rate':
+                log("HIVE-Join | average | " + stat + " | " + str(cluster_highest_average_cm) )
 
-	    		else:
-            			log("HIVE-Join | average | " + stat + " | " + str(cluster_highest_average_cm) )
+            else:
+                log("HIVE-Join | average | " + stat + " | " + str(cluster_highest_average_cm) )
 
-            		ResultsSummary.append([str(runId),
+                ResultsSummary.append([str(runId),
                                   "HIVE-Join",
                                   "average",
                                   str(stat),
                                   str(cluster_highest_average_cm)])
-            		x = 0
-            		for host in individialHostsHighestPoints:
+                x = 0
+                for host in individialHostsHighestPoints:
 	    			if stat == 'cpu_user_rate':
 					output = int(host.items()[0][1])
 	                		log("HIVE-Join | stage "+ str(stage) + " | "+ str(host.items()[0][0]) +" | " + stat + " | " + str(output) )
@@ -1258,20 +1407,33 @@ def get_multi_stats(job_type, runId, visits, pages, dataNodes, cluster_name, cro
     config = importlib.import_module('config_cdh5') 
     ResultsSummary = []
     edge_ip = config.edge_node_ip
+    name_ip = config.name_node_ip
     interations = config.num_iterations
+    param = config.tpc_size
     #job_type = 'HIVEJOIN'
-    jobIDs, starttimes, finishtimes = get_multi_jobIDs(job_type, edge_ip)
-    del jobIDs[-1]
-    log(str(jobIDs))
-    log(str(starttimes))
-    log(str(finishtimes))
+    if job_type == 'tpc':
+        jobIDs, starttimes, finishtimes, job_names = run_tpc_benchmark(name_ip, config.tpc_location, config.tpc_size)
+        #log('Get_multi - starttimes: '+str(starttimes) +' endtimes: ' +str(finishtimes))
+        #jobIDs = ['job_201504081546_0163', 'job_201504081546_0164', 'job_201504081546_0165', 'job_201504081546_0166', 'job_201504081546_0167', 'job_201504081546_0168']
+    else:
+        job_names =''
+        jobIDs, starttimes, finishtimes = get_multi_jobIDs(job_type, edge_ip)
+        del jobIDs[-1]
+
+    
+    #log(str(jobIDs))
+    #log(str(starttimes))
+    #log(str(finishtimes))
     stage = 5678
     file = '/var/lib/hadoop-hdfs/hibench/hibench.report'
 
     for each in jobIDs:
-        log("getting " +job_type+ " stats for JobID" + str(each))
+        log("getting " +job_type+ " stats for JobID: " + str(each))
         start = starttimes[jobIDs.index(each)]
         finish = finishtimes[jobIDs.index(each)]
+        #start = convert_to_utc(start)
+        #finish = convert_to_utc(finish)
+        job_name = job_names[jobIDs.index(each)]
 
         start_epoch = int(time.mktime(start.timetuple()))
         finish_epoch = int(time.mktime(finish.timetuple()))
@@ -1294,6 +1456,36 @@ def get_multi_stats(job_type, runId, visits, pages, dataNodes, cluster_name, cro
                                       "runtime",
                                       str(runTime)]                                   
                                   )
+        elif job_type =='tpc':
+            rowCount = 12345
+            
+            if jobIDs.index(each)%3 == 0:
+                #need to find out the row-counts for TPC Teragen or alternative TPC 
+                #log("terragen | " + str(rowCount) + " | job | runtime | " + str(runTime ))
+                log(str(job_type) + "-" +str(job_name)+" | "+str(rowCount)+" | job | runtime | " + str(runTime ))
+                ResultsSummary.append([str(runId),
+                                       "HIVE-join",
+                                      "job",
+                                      "runtime",
+                                      str(runTime)]                                   
+                                      )
+            elif jobIDs.index(each)%3 == 1:
+                log(str(job_type) + "-" +str(job_name)+" | "+str(rowCount)+" | job | runtime | " + str(runTime ))
+                ResultsSummary.append([str(runId),
+                                       "HIVE-join",
+                                      "job",
+                                      "runtime",
+                                      str(runTime)]                                   
+                                      )
+            elif jobIDs.index(each)%3 == 2:
+                log(str(job_type)  + "-" +str(job_name)+" | "+str(rowCount)+" | job | runtime | " + str(runTime ))
+                ResultsSummary.append([str(runId),
+                                       "HIVE-join",
+                                      "job",
+                                      "runtime",
+                                      str(runTime)]                                   
+                                      )
+                
         else:
             print 'job type problem in multi_stats'
             
@@ -1307,11 +1499,15 @@ def get_multi_stats(job_type, runId, visits, pages, dataNodes, cluster_name, cro
             fileSize = 0
             rowCount = 0
             print "start: " + str(start)
-            print "finish: " + str(finish) 
+            print "finish: " + str(finish)
+            #log("start: " + str(start))
+            #log("finish: " + str(finish))
             #time.sleep(10)
-            cluster_highest_average_cm, individialHostsHighestPoints, timestamp, full_totals = getHIVE_cloudera_dataNodesAverage(edge_ip, dataNodes, stat, start, finish, cluster_name,  rowCount, job_type, fileCount, fileSize)
+            cluster_highest_average_cm, individialHostsHighestPoints, timestamp, full_totals = getHIVE_cloudera_dataNodesAverage(edge_ip, dataNodes, stat, start, finish, cluster_name,  rowCount, job_type, fileCount, fileSize, job_name)
             print individialHostsHighestPoints
             print "timestamp = " + str(timestamp)
+            #log(str(individialHostsHighestPoints))
+            #log(str("timestamp = " + str(timestamp)))
             #time.sleep(12)
                 #if timestamp == 0:
             #    print timestamp
@@ -1319,10 +1515,10 @@ def get_multi_stats(job_type, runId, visits, pages, dataNodes, cluster_name, cro
         
 
             if stat == 'cpu_user_rate':
-                log(job_type + " | average | " + stat + " | " + str(cluster_highest_average_cm) )
+                log(job_type +"-"+str(job_name)+ " | average | " + stat + " | " + str(cluster_highest_average_cm) )
 
             else:
-                log(job_type + " | average | " + stat + " | " + str(cluster_highest_average_cm) )
+                log(job_type +"-"+str(job_name)+ " | average | " + stat + " | " + str(cluster_highest_average_cm) )
 
                 ResultsSummary.append([str(runId),
                                   str(job_type),
@@ -1334,24 +1530,65 @@ def get_multi_stats(job_type, runId, visits, pages, dataNodes, cluster_name, cro
                 variable_name = 'iteration'
             elif job_type == 'Hive-Join':
                 variable_name = 'stage'
+            elif job_type == 'tpc':
+                if param == '1':
+                    variable_name = '100GB'
+                elif param == '2':
+                    variable_name = '300GB'
+                elif param == '3':
+                    variable_name = '1TB'
+                elif param == '4':
+                    variable_name = '3TB'
+                elif param == '5':
+                    variable_name = '10TB'
+                elif param == '6':
+                    variable_name = '30TB'
+                elif param == '7':
+                    variable_name = '100TB'
+                elif param == '8':
+                    variable_name = '300TB'
+                elif param == '9':
+                    variable_name = '1PB'
             #log(str(stat))
             for host in individialHostsHighestPoints:
                 if stat == 'cpu_user_rate':
                     output = host.items()[0][1]    
-                    log(job_type+ " | "+ variable_name +" "+ str(stage) + " | "+ str(host.items()[0][0]) +" | " + stat + " | " + str(output) )
-                    ResultsSummary.append([str(runId),
+                    if job_type == "tpc":
+                        log(job_type+ "-"+str(job_name)+ " | "+ variable_name + " | "+ str(host.items()[0][0]) +" | " + stat + " | " + str(output) )
+                        ResultsSummary.append([str(runId),
                                        job_type,
                                        str(host.items()[0][0]),
                                        str(stat),
                                        str(output)]                                      
                                              )
-                    full_total = full_totals[x] + output
+                    else:
+                        log(job_type+ "-"+str(job_name)+ " | "+ variable_name +"asdf "+ str(stage) + " | "+ str(host.items()[0][0]) +" | " + stat + " | " + str(output) )
+                        ResultsSummary.append([str(runId),
+                                       job_type,
+                                       str(host.items()[0][0]),
+                                       str(stat),
+                                       str(output)]                                      
+                                             )
+                    full_total = full_totals[x] + float(output)
+                    #log('full tot: '+str(full_total)+ ' fulltotals[x]: ' +str(full_totals[x])+ 'output: '+str(output))
                     #log("HIVE-Join | CPU Total | " + str(cpu_total[individialHostsHighestPoints.index(host)]) )
-                    log(job_type+" | "+variable_name+" "+ str(stage) + " | " + str(host.items()[0][0]) +" | CPU Total | " + str(full_total) )
+                    if job_type == 'tpc':
+                        log(job_type+"-"+str(job_name)+" | "+variable_name+" | " + str(host.items()[0][0]) +" | CPU Total | " + str(full_total) )
+                    else:
+                        log(job_type+"-"+str(job_name)+" | "+variable_name+" "+ str(stage) + " | " + str(host.items()[0][0]) +" | CPU Total | " + str(full_total) )                           
                     x = x+1
                 else:
-                    log(job_type+" | "+str(variable_name)+" "+ str(stage) +" | "+ str(host.items()[0][0]) +" | " + stat + " | " + str(host.items()[0][1]) )
-                    ResultsSummary.append([str(runId),
+                    if job_type == 'tpc':
+                        log(job_type+"-"+str(job_name)+" | "+str(variable_name)+" | "+ str(host.items()[0][0]) +" | " + stat + " | " + str(host.items()[0][1]) )
+                        ResultsSummary.append([str(runId),
+                                         job_type,
+                                          str(host.items()[0][0]),
+                                               str(stat),
+                                                str(host.items()[0][1])]                                      
+                                              )
+                    else:
+                        log(job_type+"-"+str(job_name)+" | "+str(variable_name)+" "+ str(stage) +" | "+ str(host.items()[0][0]) +" | " + stat + " | " + str(host.items()[0][1]) )
+                        ResultsSummary.append([str(runId),
                                          job_type,
                                           str(host.items()[0][0]),
                                                str(stat),
@@ -1372,16 +1609,22 @@ def get_multi_stats(job_type, runId, visits, pages, dataNodes, cluster_name, cro
                                   str(stat),
                                   str(cluster_highest_average_ganglia)])
             for host in individialHostsHighestPoints:
-                log(job_type + " | "+ str(host.items()[0][0]) +" | " + stat + " | " + str(host.items()[0][1]) )
+                log(job_type + "-"+str(job_name)+ " | "+ str(host.items()[0][0]) +" | " + stat + " | " + str(host.items()[0][1]) )
                 ResultsSummary.append([str(runId),
                                        job_type,
                                       str(host.items()[0][0]),
                                       str(stat),
                                       str(host.items()[0][1])]                                      
                                      )
-    upload_results(ResultsSummary)
-    job_type = 'KMEANS' ##fix this, change all occurrances of kmeans to KMEANS
-    hive_out = get_hive_output(edge_ip, job_type, file)
+    #removed this because it was unavailable during TPC testing.
+    #upload_results(ResultsSummary)
+    
+    if job_type == 'tpc':
+        hive_out = 0
+        return hive_out, jobIDs
+    else:
+        job_type = 'KMEANS' ##fix this, change all occurrances of kmeans to KMEANS
+        hive_out = get_hive_output(edge_ip, job_type, file)
     #log_hive('---------[[ '+runId+' ]]-----------')
     #log_hive('Type             Date       Time     Input_data_size      Duration(s)          Throughput(bytes/s)  Throughput/node')       
     #log_hive(hive_out)
@@ -1467,9 +1710,9 @@ def main():
     #edge_ip = config.edge_node_ip
     
     log("------------[[["+str(run_id) + "]]]------------------------------")
-    out1, out2 = clear_disks(name_node_ip)
+    #out1, out2 = clear_disks(name_node_ip)
     #print out1
-    out1, out2 = clear_cache(name_node_ip)
+    #out1, out2 = clear_cache(name_node_ip)
     log( "[[[ Terragen tests ]]]")
     rowCountsBatchValues = config.teragen_row_counts
     teragen_params = config.teragen_parameters 
@@ -1581,7 +1824,8 @@ def main():
                                       str(stat),
                                       str(host.items()[0][1])]                                      
                                       )
-        upload_results(ResultsSummary)
+        #removed during TPC tesing because upload is not available
+        #upload_results(ResultsSummary)
         log( "[[[ Terasort tests ]]]")
         terasort_params = config.terasort_parameters
 
@@ -1683,8 +1927,8 @@ def main():
                                       str(stat),
                                       str(host.items()[0][1])]                                      
                                       )
-            
-        upload_results(ResultsSummary)
+        #removed during TPC testing because upload not available.    
+        #upload_results(ResultsSummary)
         out1, out2 = clear_disks(name_node_ip)
         #print out1
         out1, out2 = clear_cache(name_node_ip)
@@ -2005,6 +2249,41 @@ def main():
     #out1, out2 = clean_disks()
     #print out1
     #print out2
+    
+    #################### TPC Benchmark###########################
+    log("[[[Running TPC Benchmark]]")
+    num_maps = config.NUM_MAPS
+    num_reducers = config.NUM_REDUCERS
+    hadoop_user = config.HADOOP_USER
+    hdfs_user = config.HDFS_USER
+    sleep_between_runs = config.SLEEP_BETWEEN_RUNS
+    file = config.tpc_location +'/Benchmark_Parameters.sh'
+
+    
+    jobtype = 'tpc'
+    if config.tpc_flag == 'true':
+        print 'updating config file'
+        print file
+        edit_file('NUM_MAPS', num_maps, file)
+        edit_file('NUM_REDUCERS', num_reducers, file)
+        edit_file('HADOOP_USER', hadoop_user, file)
+        edit_file('HDFS_USER', hdfs_user, file)
+        edit_file('SLEEP_BETWEEN_RUNS', sleep_between_runs, file)
+
+        tpc_out, jobIDs = get_multi_stats(jobtype, runId, visits, pages, dataNodes, cluster_name, crowbar_admin_ip, time_offset, datapointsToCheck)
+        print jobIDs
+        #print out1
+        #jobIDs, errors = run_tpc_benchmark(name_node_ip, config.tpc_location, config.tpc_size)
+        print "\nTPC RUN COMPLETE\n"
+        print "TPC run complete, here is config info set for the run: "
+        print "NUM_MAPS: "+ num_maps
+        print "NUM_REDUCERS: "+ num_reducers
+        print "HADOOP_USER: "+hadoop_user
+        print "HDFS_USER: " +hdfs_user
+        print "SLEEP_BETWEEN_RUNS: " +sleep_between_runs
+    else:
+        print "TPC not running, flag set to: " + config.tpc_flag       
+        
     log( "[[[ That's all folks ]]]"  )
         
     
