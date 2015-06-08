@@ -78,6 +78,15 @@ class Settings():
         self.time_zone = self.cluster_settings_map['time_zone']
         self.stamp_storage = self.cluster_settings_map['storage']
 
+        if self.cluster_settings_map['use_internal_repo'].lower() == 'true':
+            self.internal_repos= True
+            self.internal_repos_urls= []
+            for each in self.cluster_settings_map['internal_repos_locations'].split(';'):
+                self.internal_repos_urls.append(each)
+        else:
+            self.internal_repos= True
+
+
         if self.cluster_settings_map['enable_version_locking'].lower() == 'true':
             self.version_locking_enabled = True
         else:
