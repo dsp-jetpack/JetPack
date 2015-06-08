@@ -87,6 +87,7 @@ class Settings():
             self.internal_repos= False
 
 
+
         if self.cluster_settings_map['enable_version_locking'].lower() == 'true':
             self.version_locking_enabled = True
         else:
