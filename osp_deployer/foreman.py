@@ -179,7 +179,7 @@ class Foreman():
             Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)
 
 
-        if self.settings.version_locking_enabled:
+        if self.settings.version_locking_enabled is True:
             logger.info("Uploading version locking files")
             files  = [
                 'ceph.vlock',
@@ -199,7 +199,7 @@ class Foreman():
                 Scp.put_file( self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, localfile, remotefile)
 
     def enable_version_locking(self):
-        if self.settings.version_locking_enabled:
+        if self.settings.version_locking_enabled is True:
             logger.info("enable version locking")
             cmd = 'cp -r /root/vlock_files /usr/share/foreman/public'
             print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
@@ -387,10 +387,19 @@ class Foreman():
     def configure_controller_nodes(self):
         print "configuring the controller node(s)"
         for node in self.settings.controller_nodes:
-            command = 'cd /root/pilot\n./hammer-deploy-controller.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip + " " + node.idrac_secondary_ip
-            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+            hostCreated = False
+            while hostCreated != True:
+                command = 'cd /root/pilot\n./hammer-deploy-controller.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip + " " + node.idrac_secondary_ip
+                re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+                if "Could not create the host" in err:
+                    print "did not create the host , trying again... " + err
+                    hostCreated = False
+                else :
+                    hostCreated = True
+                    break
 
-        if self.settings.version_locking_enabled:
+
+        if self.settings.version_locking_enabled is True:
             print "Configuring vesion locking for controller nodes"
             for node in self.settings.controller_nodes:
                 cmd = 'hammer host list | grep "'+ node.hostname +'" | grep -o "^\w*\\b"'
@@ -401,10 +410,18 @@ class Foreman():
     def configure_compute_nodes(self):
         print "configuring the compute node(s)"
         for node in self.settings.compute_nodes:
-            command = 'cd /root/pilot\n./hammer-deploy-compute.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip
-            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+            hostCreated = False
+            while hostCreated != True:
+                command = 'cd /root/pilot\n./hammer-deploy-compute.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip
+                re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+                if "Could not create the host" in err:
+                    print "did not create the host , trying again... " + err
+                    hostCreated = False
+                else :
+                    hostCreated = True
+                    break
 
-        if self.settings.version_locking_enabled:
+        if self.settings.version_locking_enabled is True:
             print "Configuring vesion locking for compute nodes"
             for node in self.settings.compute_nodes:
                 cmd = 'hammer host list | grep "'+ node.hostname +'" | grep -o "^\w*\\b"'
@@ -416,9 +433,18 @@ class Foreman():
     def configure_ceph_nodes(self):
         print "configuring the Ceph node(s)"
         for node in self.settings.ceph_nodes:
-            command = 'cd /root/pilot\n./hammer-deploy-storage.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip
-            print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
-        if self.settings.version_locking_enabled:
+            hostCreated = False
+            while hostCreated != True:
+                command = 'cd /root/pilot\n./hammer-deploy-storage.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip
+                re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
+                if "Could not create the host" in err:
+                    print "did not create the host , trying again... " + err
+                    hostCreated = False
+                else :
+                    hostCreated = True
+                    break
+
+        if self.settings.version_locking_enabled is True:
             print "Configuring vesion locking for ceph nodes"
             for node in self.settings.ceph_nodes:
                 cmd = 'hammer host list | grep "'+ node.hostname +'" | grep -o "^\w*\\b"'
