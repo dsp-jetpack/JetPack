@@ -103,7 +103,7 @@ class Ceph():
         cmd = "cd ~/cluster;sed -i '/osd_journal_size = .*/a [osd]\\nosd pool default pg num = 1024\\nosd pool default pgp num = 1024' ceph.conf"
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
-        cmd = 'cd ~/cluster;sudo calamari-ctl initialize --admin-username root --admin-password '+self.settings.ceph_node.root_password+' --admin-email gael_rehault@dell.com'
+        cmd = 'cd ~/cluster;sudo calamari-ctl initialize --admin-username root --admin-password '+self.settings.ceph_node.root_password+' --admin-email ' + self.settings.ceph_admin_email
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
 

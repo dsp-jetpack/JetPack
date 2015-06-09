@@ -33,6 +33,7 @@ class Deployer_sanity():
         #Check new settings/properties are set
         assert hasattr(self.settings, 'cluster_password'), self.settings.settingsFile+ " has no cluster_password setting"
         assert hasattr(self.settings, 'subscription_check_retries'), self.settings.settingsFile+ " has no subscription_check_retries setting"
+        assert hasattr(self.settings, 'ceph_admin_email'), self.settings.settingsFile+ " has no ceph_admin_email setting"
 
         assert os.path.isfile(self.settings.rhl71_iso) , self.settings.rhl71_iso + "ISO doesnn't seem to exist"
         assert os.path.isfile(self.settings.sah_kickstart) , self.settings.sah_kickstart + "kickstart file doesnn't seem to exist"

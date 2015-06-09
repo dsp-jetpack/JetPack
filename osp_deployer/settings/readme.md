@@ -39,6 +39,8 @@ or
 * 3.0.1.g - 05/08/2015 - subscription_check_retries property.  New subscription retries setting to allow calls to subscription manager to be retried in case temporary failure is expected (initially, checking subscription status)
 * 4.0 - 06/08/2015 - new settings for internal repo's use : use_internal_repo & internal_repos_locations.
 					 - cluster_password must be a 16/24 or 32 bytes string (https://bugs.launchpad.net/heat/+bug/1415887)
+* 4.0.a - 06/09/2015 - Added ceph_admin_email setting
+
 
 #####settings.properties
 * 1.0: - Initial version.

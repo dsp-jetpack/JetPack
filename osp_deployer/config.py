@@ -25,6 +25,7 @@ class Settings():
         self.private_api_network = self.cluster_settings_map['private_api_network']
         self.tenant_vlan_range = self.cluster_settings_map['tenant_vlan_range']
         self.ceph_user_password = self.cluster_settings_map['ceph_user_password']
+        self.ceph_admin_email = self.cluster_settings_map['ceph_admin_email']
 
         self.vip_cinder_private = self.cluster_settings_map['vip_cinder_private']
         self.vip_cinder_public = self.cluster_settings_map['vip_cinder_public']
