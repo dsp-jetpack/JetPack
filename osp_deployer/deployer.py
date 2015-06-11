@@ -100,8 +100,8 @@ if __name__ == '__main__':
         others =  settings.controller_nodes + settings.compute_nodes
         nonSAHnodes = others + settings.ceph_nodes
         for each in nonSAHnodes :
-            log (Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "subscription-manager remove --all"))
-            log (Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "subscription-manager unregister"))
+            log (Ssh.execute_command(each.provisioning_ip, "root", settings.previous_deployment_cluster_password, "subscription-manager remove --all"))
+            log (Ssh.execute_command(each.provisioning_ip, "root", settings.previous_deployment_cluster_password, "subscription-manager unregister"))
 
 
         log ("=== powering down the admin")

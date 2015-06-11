@@ -19,6 +19,7 @@ class Settings():
         self.cluster_password = self.cluster_settings_map['cluster_password']
         if len(self.nodes_root_password) < 8 :
             raise IOError("cluster_password setting lenght should be > 8 characters")
+        self.previous_deployment_cluster_password = self.cluster_settings_map['previous_deployment_cluster_password']
         self.openstack_services_password = self.nodes_root_password
         self.nova_public_network = self.cluster_settings_map['nova_public_network']
         self.nova_private_network = self.cluster_settings_map['nova_private_network']
