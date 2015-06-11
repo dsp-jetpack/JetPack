@@ -87,6 +87,19 @@ class Settings():
         else:
             self.internal_repos= False
 
+        if self.cluster_settings_map['use_equalogic_backend'].lower() == 'true':
+            self.use_eql_backend = True
+            self.c_be_eqlx_name  = self.cluster_settings_map['c_be_eqlx_name']
+            self.c_eqlx_san_ip = self.cluster_settings_map['c_eqlx_san_ip']
+            self.c_eqlx_san_login = self.cluster_settings_map['c_eqlx_san_login']
+            self.c_eqlx_san_password = self.cluster_settings_map['c_eqlx_san_password']
+            self.c_eqlx_ch_login = self.cluster_settings_map['c_eqlx_ch_login']
+            self.c_eqlx_ch_pass = self.cluster_settings_map['c_eqlx_ch_pass']
+            self.c_eqlx_group_n = self.cluster_settings_map['c_eqlx_group_n']
+            self.c_eqlx_pool = self.cluster_settings_map['c_eqlx_pool']
+            self.c_eqlx_use_chap = self.cluster_settings_map['c_eqlx_use_chap']
+            self.c_mult_be = self.cluster_settings_map['c_mult_be']
+
 
 
         if self.cluster_settings_map['enable_version_locking'].lower() == 'true':

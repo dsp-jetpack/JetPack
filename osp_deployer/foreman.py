@@ -109,6 +109,19 @@ class Foreman():
         FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_pool_size = .*',"c_ceph_osd_pool_size = '2'" )
         FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_journal_size = .*',"c_ceph_osd_journal_size = '5000'" )
 
+        if self.settings.use_eql_backend is True:
+                    FileHelper.replaceExpressionTXT(file, 'c_be_eqlx = .*',"c_be_eqlx = true" )
+                    FileHelper.replaceExpressionTXT(file, 'c_be_eqlx_name = .*',"c_be_eqlx_name = [\"" + self.settings.c_be_eqlx_name + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_eqlx_san_ip = .*',"c_eqlx_san_ip = [\"" + self.settings.c_eqlx_san_ip + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_eqlx_san_login = .*',"c_eqlx_san_login = [\"" + self.settings.c_eqlx_san_login + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_eqlx_san_password = .*',"c_eqlx_san_password = [\"" + self.settings.c_eqlx_san_password + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_eqlx_ch_login = .*',"c_eqlx_ch_login = [\"" + self.settings.c_eqlx_ch_login + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_eqlx_ch_pass = .*',"c_eqlx_ch_pass = [\"" + self.settings.c_eqlx_ch_pass + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_eqlx_group_n = .*',"c_eqlx_group_n = [\"" + self.settings.c_eqlx_group_n + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_eqlx_pool = .*',"c_eqlx_pool = [\"" + self.settings.c_eqlx_pool + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_eqlx_use_chap = .*',"c_eqlx_use_chap = [\"" + self.settings.c_eqlx_use_chap + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_mult_be = .*',"c_mult_be = '"+ self.settings.c_mult_be +"'" )
+
 
         ceph_hostsNames = ''
         ceph_hostsIps = ''
