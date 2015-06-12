@@ -260,7 +260,7 @@ class Foreman():
 
     def configure_foreman(self):
         print "configure foreman"
-        
+
         configFile = '/root/pilot/osp_config.sh'
 
         self.pilot_partition_table = 'dell-pilot'
@@ -275,7 +275,7 @@ class Foreman():
 
         cmd = "sed -i \"s|CHANGEME_FOREMAN_PROVISIONING_IP|" + self.settings.foreman_node.provisioning_ip +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
-        
+
         cmd = "sed -i \"s|CHANGEME_SUBNET_START_IP|" + self.settings.foreman_provisioning_subnet_ip_start +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         cmd = "sed -i \"s|CHANGEME_SUBNET_END_IP|" + self.settings.foreman_provisioning_subnet_ip_end +"|\" " + configFile
@@ -326,12 +326,12 @@ class Foreman():
 
         cmd = "sed -i 's|STORAGE_BONDS=\".*|STORAGE_BONDS=\\\"( [bond0]=\\\\\""+self.settings.ceph_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.ceph_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
-        
+
         logger.info ("executing hammer-configure-foreman")
         cmd = 'cd /root/pilot\n./hammer-configure-foreman.sh'
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root",self.settings.foreman_node.root_password,cmd))
 
-    
+
     def gather_values(self):
 
         print "gather a few more .. "
@@ -340,7 +340,7 @@ class Foreman():
         domain = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, 'hammer environment list | grep "' + self.settings.domain+'" | grep -o "^\w*\\b"')[0].replace("\n", "").replace("\r", "")
         proxy = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, 'hammer proxy list | grep "' + self.settings.domain+'" | grep -o "^\w*\\b"')[0].replace("\n", "").replace("\r", "")
         architecture = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, 'hammer environment list | grep "_64" | grep -o "^\w*\\b"')[0].replace("\n", "").replace("\r", "")
-       
+
         cmd = 'hammer os list | grep "7.1" | grep -o "^\w*\\b"'
         r_out, r_err =   Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
         operatingsystem = r_out.replace("\n", "").replace("\r", "")
@@ -350,7 +350,7 @@ class Foreman():
         self.mediumID = r_out.replace("\n", "").replace("\r", "")
         print "medium ID ::: " + self.mediumID
 
- 
+
         self.environment_Id = hammer
         self.domain_id = domain
         self.puppetProxy_id = proxy
@@ -499,7 +499,7 @@ class Foreman():
         cmd = "sed -i \"s|c_ceph_fsid = .*|c_ceph_fsid = '"+fsidl_key+"'|\" " + erbFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
 
-        #TODO :: equaogic step here.
+
 
         cmd = "sed -i '/.*quickstack\/ceph-conf.erb.*/a  replace => false,' /usr/share/openstack-foreman-installer/puppet/modules/quickstack/manifests/ceph/config.pp"
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
@@ -557,7 +557,7 @@ class Foreman():
 
         cmd = "/root/pilot/hammer-ceph-fix.sh"
         logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
-        
+
         controlerPuppetRuns = []
         for each in self.settings.controller_nodes:
             puppetRunThr = runThreadedPuppet(each.hostname, each)
