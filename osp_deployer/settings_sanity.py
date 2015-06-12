@@ -171,7 +171,6 @@ class Deployer_sanity():
             shouldHaveAttrbutes = ['hostname','idrac_ip',
                                    'provisioning_mac_address','provisioning_ip',
                                     'bond1_interfaces','bond0_interfaces',
-                                    'nova_public_vlanid','nova_public_ip','nova_public_netmask',
                                     'private_api_vlanid','private_ip','private_netmask',
                                     'nova_private_vlanid','nova_private_ip','nova_private_netmask',
                                     'storage_vlanid','storage_ip','storage_netmask'
