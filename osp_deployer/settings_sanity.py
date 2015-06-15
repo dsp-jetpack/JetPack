@@ -33,7 +33,7 @@ class Deployer_sanity():
         #Check new settings/properties are set
         assert hasattr(self.settings, 'cluster_password'), self.settings.settingsFile+ " has no cluster_password setting"
         assert hasattr(self.settings, 'previous_deployment_cluster_password'), self.settings.settingsFile+ " has no previous_deployment_cluster_password setting"
-
+        assert hasattr(self.settings, 'use_equalogic_backend'), self.settings.settingsFile+ " has no use_equalogic_backend setting"
         assert hasattr(self.settings, 'subscription_check_retries'), self.settings.settingsFile+ " has no subscription_check_retries setting"
         assert hasattr(self.settings, 'ceph_admin_email'), self.settings.settingsFile+ " has no ceph_admin_email setting"
 
