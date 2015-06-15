@@ -177,7 +177,7 @@ class Deployer_sanity():
                                      ]
             for each in shouldHaveAttrbutes :
                 assert hasattr(compute, each), compute.hostname + " node has no " + each + " attribute"
-                shouldBeValidIps = ['idrac_ip','provisioning_ip','nova_public_ip','private_ip','nova_private_ip','storage_ip']
+                shouldBeValidIps = ['idrac_ip','provisioning_ip','private_ip','nova_private_ip','storage_ip']
             for each in shouldBeValidIps:
                 assert self.isValidIp(getattr(compute, each)), compute.hostname + " node " + each + " is not a valid ip"
 
