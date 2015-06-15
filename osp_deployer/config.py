@@ -100,7 +100,8 @@ class Settings():
             self.c_eqlx_pool = self.cluster_settings_map['c_eqlx_pool']
             self.c_eqlx_use_chap = self.cluster_settings_map['c_eqlx_use_chap']
             self.c_mult_be = self.cluster_settings_map['c_mult_be']
-
+        else:
+            self.use_eql_backend = False
 
 
         if self.cluster_settings_map['enable_version_locking'].lower() == 'true':
