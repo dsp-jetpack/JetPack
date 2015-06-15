@@ -87,7 +87,7 @@ class Settings():
                 self.internal_repos_urls.append(each)
         else:
             self.internal_repos= False
-
+        self.use_equalogic_backend = self.cluster_settings_map['use_equalogic_backend'].lower()
         if self.cluster_settings_map['use_equalogic_backend'].lower() == 'true':
             self.use_eql_backend = True
             self.c_be_eqlx_name  = self.cluster_settings_map['c_be_eqlx_name']
