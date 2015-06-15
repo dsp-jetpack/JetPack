@@ -37,6 +37,11 @@ or
 * 3.0.1.e - 04/30/2015 - Added new pool ID settings for node types : subscription_manager_pool_sah, subscription_manager_pool_vm_rhel, subscription_manager_pool_phyical_openstack_nodes, subscription_manager_pool_vm_openstack_nodes, subscription_manager_vm_ceph, subscription_manager_pool_physical_ceph; removed subscription_manager_pool
 * 3.0.1.f - 05/05/2015 - Removed nodes_root_password   openstack_services_password, replaced with cluster_password
 * 3.0.1.g - 05/08/2015 - subscription_check_retries property.  New subscription retries setting to allow calls to subscription manager to be retried in case temporary failure is expected (initially, checking subscription status)
+* 4.0 - 06/08/2015 - new settings for internal repo's use : use_internal_repo & internal_repos_locations.
+					 - cluster_password must be a 16/24 or 32 bytes string (https://bugs.launchpad.net/heat/+bug/1415887)
+* 4.0.a - 06/09/2015 - Added ceph_admin_email setting
+* 4.0.b - 06/11/32015 - Added previous_deployment_cluster_password to allow to unregister already running nodes/cluster password changes
+
 
 #####settings.properties
 * 1.0: - Initial version.

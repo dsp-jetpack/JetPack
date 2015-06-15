@@ -100,8 +100,8 @@ if __name__ == '__main__':
         others =  settings.controller_nodes + settings.compute_nodes
         nonSAHnodes = others + settings.ceph_nodes
         for each in nonSAHnodes :
-            log (Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "subscription-manager remove --all"))
-            log (Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "subscription-manager unregister"))
+            log (Ssh.execute_command(each.provisioning_ip, "root", settings.previous_deployment_cluster_password, "subscription-manager remove --all"))
+            log (Ssh.execute_command(each.provisioning_ip, "root", settings.previous_deployment_cluster_password, "subscription-manager unregister"))
 
 
         log ("=== powering down the admin")
@@ -192,7 +192,7 @@ if __name__ == '__main__':
         log("=== Done with the solution admin host");
 
 
-        if settings.version_locking_enabled:
+        if settings.version_locking_enabled is True:
             log("Uploading version locking files for foreman & ceph vm's")
             files  = [
                 'ceph_vm.vlock',
@@ -250,6 +250,27 @@ if __name__ == '__main__':
             raise AssertionError("Foreman VM did not register properly : " + subscriptionStatus)
 
         log("=== installing foreman")
+
+        ### Add the internal repo. & if going down that road, and re pull down foreman with the new version
+        if settings.internal_repos is True:
+            count = 1
+            for repo in settings.internal_repos_urls:
+                cmd = 'curl ' + repo + " > /etc/yum.repos.d/internal_" + str(count) + ".repo"
+                logger.info( Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password,cmd))
+                logger.info( Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password,"echo 'priority=1' >> /etc/yum.repos.d/internal_" + str(count) + ".repo"))
+                count += 1
+
+            cmds = [
+                'yum remove openstack-foreman-installer -y',
+                'yum clean all',
+                'yum makecache',
+                'yum repolist all',
+                'yum install openstack-foreman-installer -y',
+                'yum update -y',
+                'yum info openstack-foreman-installer',
+            ]
+            for cmd in cmds:
+                logger.info( Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password,cmd))
 
         cmd = "sed -i '/^read -p/d' /usr/share/openstack-foreman-installer/bin/foreman_server.sh"
         logger.info( Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password,cmd))
@@ -345,6 +366,24 @@ if __name__ == '__main__':
                 time.sleep(100);
             log("Disable puppet on the node for now to avoid race conditions later.")
             log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet stop")[0])
+
+            # Enable the internal repo's if we re going down that route
+            if settings.internal_repos is True:
+                count = 1
+                for repo in settings.internal_repos_urls:
+                    cmd = 'curl ' + repo + " > /etc/yum.repos.d/internal_" + str(count) + ".repo"
+                    logger.info( Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password,cmd))
+                    logger.info( Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password,"echo 'priority=1' >> /etc/yum.repos.d/internal_" + str(count) + ".repo"))
+                    count += 1
+
+                cmds = [
+                    'yum clean all',
+                    'yum makecache',
+                    'yum repolist all',
+                    'yum update -y'
+                ]
+                for cmd in cmds:
+                    logger.info( Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password,cmd))
 
         foremanHost.configureHostGroups_Parameters()
         foremanHost.configureNodes()

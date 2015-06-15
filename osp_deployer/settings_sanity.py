@@ -32,7 +32,10 @@ class Deployer_sanity():
 
         #Check new settings/properties are set
         assert hasattr(self.settings, 'cluster_password'), self.settings.settingsFile+ " has no cluster_password setting"
+        assert hasattr(self.settings, 'previous_deployment_cluster_password'), self.settings.settingsFile+ " has no previous_deployment_cluster_password setting"
+        assert hasattr(self.settings, 'use_equalogic_backend'), self.settings.settingsFile+ " has no use_equalogic_backend setting"
         assert hasattr(self.settings, 'subscription_check_retries'), self.settings.settingsFile+ " has no subscription_check_retries setting"
+        assert hasattr(self.settings, 'ceph_admin_email'), self.settings.settingsFile+ " has no ceph_admin_email setting"
 
         assert os.path.isfile(self.settings.rhl71_iso) , self.settings.rhl71_iso + "ISO doesnn't seem to exist"
         assert os.path.isfile(self.settings.sah_kickstart) , self.settings.sah_kickstart + "kickstart file doesnn't seem to exist"
@@ -168,14 +171,13 @@ class Deployer_sanity():
             shouldHaveAttrbutes = ['hostname','idrac_ip',
                                    'provisioning_mac_address','provisioning_ip',
                                     'bond1_interfaces','bond0_interfaces',
-                                    'nova_public_vlanid','nova_public_ip','nova_public_netmask',
                                     'private_api_vlanid','private_ip','private_netmask',
                                     'nova_private_vlanid','nova_private_ip','nova_private_netmask',
                                     'storage_vlanid','storage_ip','storage_netmask'
                                      ]
             for each in shouldHaveAttrbutes :
                 assert hasattr(compute, each), compute.hostname + " node has no " + each + " attribute"
-                shouldBeValidIps = ['idrac_ip','provisioning_ip','nova_public_ip','private_ip','nova_private_ip','storage_ip']
+                shouldBeValidIps = ['idrac_ip','provisioning_ip','private_ip','nova_private_ip','storage_ip']
             for each in shouldBeValidIps:
                 assert self.isValidIp(getattr(compute, each)), compute.hostname + " node " + each + " is not a valid ip"
 

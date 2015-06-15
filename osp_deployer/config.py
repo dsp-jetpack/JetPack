@@ -19,12 +19,14 @@ class Settings():
         self.cluster_password = self.cluster_settings_map['cluster_password']
         if len(self.nodes_root_password) < 8 :
             raise IOError("cluster_password setting lenght should be > 8 characters")
+        self.previous_deployment_cluster_password = self.cluster_settings_map['previous_deployment_cluster_password']
         self.openstack_services_password = self.nodes_root_password
         self.nova_public_network = self.cluster_settings_map['nova_public_network']
         self.nova_private_network = self.cluster_settings_map['nova_private_network']
         self.private_api_network = self.cluster_settings_map['private_api_network']
         self.tenant_vlan_range = self.cluster_settings_map['tenant_vlan_range']
         self.ceph_user_password = self.cluster_settings_map['ceph_user_password']
+        self.ceph_admin_email = self.cluster_settings_map['ceph_admin_email']
 
         self.vip_cinder_private = self.cluster_settings_map['vip_cinder_private']
         self.vip_cinder_public = self.cluster_settings_map['vip_cinder_public']
@@ -77,6 +79,30 @@ class Settings():
         self.ntp_server = self.cluster_settings_map['ntp_servers']
         self.time_zone = self.cluster_settings_map['time_zone']
         self.stamp_storage = self.cluster_settings_map['storage']
+
+        if self.cluster_settings_map['use_internal_repo'].lower() == 'true':
+            self.internal_repos= True
+            self.internal_repos_urls= []
+            for each in self.cluster_settings_map['internal_repos_locations'].split(';'):
+                self.internal_repos_urls.append(each)
+        else:
+            self.internal_repos= False
+        self.use_equalogic_backend = self.cluster_settings_map['use_equalogic_backend'].lower()
+        if self.cluster_settings_map['use_equalogic_backend'].lower() == 'true':
+            self.use_eql_backend = True
+            self.c_be_eqlx_name  = self.cluster_settings_map['c_be_eqlx_name']
+            self.c_eqlx_san_ip = self.cluster_settings_map['c_eqlx_san_ip']
+            self.c_eqlx_san_login = self.cluster_settings_map['c_eqlx_san_login']
+            self.c_eqlx_san_password = self.cluster_settings_map['c_eqlx_san_password']
+            self.c_eqlx_ch_login = self.cluster_settings_map['c_eqlx_ch_login']
+            self.c_eqlx_ch_pass = self.cluster_settings_map['c_eqlx_ch_pass']
+            self.c_eqlx_group_n = self.cluster_settings_map['c_eqlx_group_n']
+            self.c_eqlx_pool = self.cluster_settings_map['c_eqlx_pool']
+            self.c_eqlx_use_chap = self.cluster_settings_map['c_eqlx_use_chap']
+            self.c_mult_be = self.cluster_settings_map['c_mult_be']
+        else:
+            self.use_eql_backend = False
+
 
         if self.cluster_settings_map['enable_version_locking'].lower() == 'true':
             self.version_locking_enabled = True
