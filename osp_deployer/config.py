@@ -46,6 +46,7 @@ class Settings():
         self.vip_rabbitmq_private = self.cluster_settings_map['vip_rabbitmq_private']
         self.vip_ceilometer_private = self.cluster_settings_map['vip_ceilometer_private']
         self.vip_ceilometer_public = self.cluster_settings_map['vip_ceilometer_public']
+        self.vip_ceilometer_redis = self.cluster_settings_map['vip_ceilometer_redis']
         self.vip_neutron_public = self.cluster_settings_map['vip_neutron_public']
         self.vip_neutron_private = self.cluster_settings_map['vip_neutron_private']
 
@@ -75,6 +76,15 @@ class Settings():
             self.subscription_check_retries = self.cluster_settings_map['subscription_check_retries']
         else:
             self.subscription_check_retries = 20
+        self.debug=None
+        self.verbose=None
+        if 'debug' in self.cluster_settings_map:
+            self.debug = self.cluster_settings_map['debug']
+        if 'verbose' in self.cluster_settings_map:
+            self.verbose = self.cluster_settings_map['verbose']
+        self.heat_auth_key=None
+        if 'heat_auth_key' in self.cluster_settings_map:
+            self.heat_auth_key = self.cluster_settings_map['heat_auth_key']
         self.ntp_server = self.cluster_settings_map['ntp_servers']
         self.time_zone = self.cluster_settings_map['time_zone']
         self.stamp_storage = self.cluster_settings_map['storage']
@@ -87,6 +97,7 @@ class Settings():
         else:
             self.internal_repos= False
 
+        self.use_eql_backend = False
         if self.cluster_settings_map['use_equalogic_backend'].lower() == 'true':
             self.use_eql_backend = True
             self.c_be_eqlx_name  = self.cluster_settings_map['c_be_eqlx_name']
