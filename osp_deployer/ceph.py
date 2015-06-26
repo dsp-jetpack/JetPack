@@ -163,16 +163,14 @@ class Ceph():
 
         url = self.settings.ceph_node.public_ip
         UI_Manager.driver().get("http://" + url)
-        time.sleep(5)
+        time.sleep(15)
 
         username = Widget("//input[@name='username']")
         password = Widget("//input[@name='password']")
 
         while username.exists() is False :
             UI_Manager.driver().get("http://" + url)
-            time.sleep(5)
-
-
+            time.sleep(20)
 
         username.setText("root")
         password.setText(self.settings.ceph_node.root_password)
@@ -184,6 +182,7 @@ class Ceph():
         addButton.waitFor(20)
         addButton.click()
 
+        time.sleep(60)
         initialized = Widget("//div[.='Cluster Initialized.']")
         while initialized.exists() ==  False:
             time.sleep(5)
