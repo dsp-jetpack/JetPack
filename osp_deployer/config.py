@@ -19,6 +19,7 @@ class Settings():
         self.cluster_password = self.cluster_settings_map['cluster_password']
         if len(self.nodes_root_password) < 8 :
             raise IOError("cluster_password setting lenght should be > 8 characters")
+        self.previous_deployment_cluster_password = self.cluster_settings_map['previous_deployment_cluster_password']
         self.openstack_services_password = self.nodes_root_password
         self.nova_public_network = self.cluster_settings_map['nova_public_network']
         self.nova_private_network = self.cluster_settings_map['nova_private_network']
@@ -50,9 +51,7 @@ class Settings():
         self.vip_neutron_public = self.cluster_settings_map['vip_neutron_public']
         self.vip_neutron_private = self.cluster_settings_map['vip_neutron_private']
 
-        self.controller_nodes_are_730 = self.cluster_settings_map['controller_nodes_are_730']
-        self.compute_nodes_are_730 = self.cluster_settings_map['compute_nodes_are_730']
-        self.storage_nodes_are_730 = self.cluster_settings_map['storage_nodes_are_730']
+        self.storage_nodes_are_730 = self.cluster_settings_map['storage_nodes_are_730xd']
 
         self.storage_network = self.cluster_settings_map['storage_network']
         self.storage_cluster_network = self.cluster_settings_map['storage_cluster_network']
@@ -97,7 +96,6 @@ class Settings():
         else:
             self.internal_repos= False
 
-        self.use_eql_backend = False
         if self.cluster_settings_map['use_equalogic_backend'].lower() == 'true':
             self.use_eql_backend = True
             self.c_be_eqlx_name  = self.cluster_settings_map['c_be_eqlx_name']
@@ -110,7 +108,8 @@ class Settings():
             self.c_eqlx_pool = self.cluster_settings_map['c_eqlx_pool']
             self.c_eqlx_use_chap = self.cluster_settings_map['c_eqlx_use_chap']
             self.c_mult_be = self.cluster_settings_map['c_mult_be']
-
+        else:
+            self.use_eql_backend = False
 
 
         if self.cluster_settings_map['enable_version_locking'].lower() == 'true':

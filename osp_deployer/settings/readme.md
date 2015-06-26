@@ -40,7 +40,8 @@ or
 * 4.0 - 06/08/2015 - new settings for internal repo's use : use_internal_repo & internal_repos_locations.
 					 - cluster_password must be a 16/24 or 32 bytes string (https://bugs.launchpad.net/heat/+bug/1415887)
 * 4.0.a - 06/09/2015 - Added ceph_admin_email setting
-
+* 4.0.b - 06/11/2015 - Added previous_deployment_cluster_password to allow to unregister already running nodes/cluster password changes
+* 4.0.c - 06/22/2015 - removed controller_nodes_are_730 & compute_nodes_are_730 settings, renamed  storage_nodes_are_730 to storage_nodes_are_730xd
 
 #####settings.properties
 * 1.0: - Initial version.

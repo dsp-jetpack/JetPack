@@ -100,8 +100,8 @@ if __name__ == '__main__':
         others =  settings.controller_nodes + settings.compute_nodes
         nonSAHnodes = others + settings.ceph_nodes
         for each in nonSAHnodes :
-            log (Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "subscription-manager remove --all"))
-            log (Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "subscription-manager unregister"))
+            log (Ssh.execute_command(each.provisioning_ip, "root", settings.previous_deployment_cluster_password, "subscription-manager remove --all"))
+            log (Ssh.execute_command(each.provisioning_ip, "root", settings.previous_deployment_cluster_password, "subscription-manager unregister"))
 
 
         log ("=== powering down the admin")
@@ -431,7 +431,7 @@ if __name__ == '__main__':
                 "eth0        "+ settings.tempest_node.public_ip +"    "+ settings.tempest_node.public_netmask ,
                 "eth1        "+ settings.tempest_node.external_ip +"    "+ settings.tempest_node.external_netmask,
                 "eth2        "+ settings.tempest_node.private_api_ip +"    "+ settings.tempest_node.private_api_netmask,
-                "tempestcommit e42eb3df981957e8a95a6b1d698135b98375c2d6",
+                "tempestcommit origin/kilo",
                 )
 
         for comd in Conf:
