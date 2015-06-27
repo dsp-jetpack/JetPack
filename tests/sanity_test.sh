@@ -111,7 +111,7 @@ create_the_networks(){
   
   execute_command "grep network_vlan_ranges /etc/neutron/plugin.ini"
 
-  execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external True"
+  execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external --shared"
   
   execute_command "neutron subnet-create --name $EXTERNAL_SUBNET_NAME --allocation-pool start=$STARTIP,end=$ENDIP --disable-dhcp $EXTERNAL_NETWORK_NAME $EXTERNAL_VLAN_NETWORK"
   
@@ -131,7 +131,7 @@ setup_glance(){
 
  info "### Setting up glance"""
 
- if [ ! -f ./cirros-0.3.3-x86_64-disk.img]; then
+ if [ ! -f ./cirros-0.3.3-x86_64-disk.img ]; then
      execute_command "wget http://download.cirros-cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img"
  fi
 
@@ -177,7 +177,7 @@ setup_cinder(){
  server_id=$(nova list | grep $NOVA_INSTANCE_NAME| awk '{print $2}')
  volume_id=$(cinder list | grep $VOLUME_NAME| awk '{print $2}')
 
- execute_command "nova volume-attach $server_id $volume_id"
+ execute_command "nova volume-attach $server_id $volume_id /dev/vdd"
 
  info "Volume attached, ssh into instance $NOVA_INSTANCE_NAME and verify"
 
