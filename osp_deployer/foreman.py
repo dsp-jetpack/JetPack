@@ -55,7 +55,10 @@ class Foreman():
         logger.info(("=== resetting the foreman admin password"))
         sResetPassword = 'foreman-rake permissions:reset';
         re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,sResetPassword)
-        foreman_password = re.split("password: ")[1].replace("\n", "").replace("\r", "")
+        try:
+            foreman_password = re.split("password: ")[1].replace("\n", "").replace("\r", "")
+        except:
+            raise AssertionError("Could not reset the foreman password, this usually means foreman did not install properly" )
         self.settings.foreman_password = foreman_password
         Settings.settings.foreman_password = foreman_password
         logger.info( "foreman password :: [" + foreman_password   +"]")
@@ -71,6 +74,12 @@ class Foreman():
         file =  self.settings.foreman_configuration_scripts + pilot_yamlTemp
         shutil.copyfile(fileWS,file)
 
+        if self.settings.debug is not None: 
+            FileHelper.replaceExpressionTXT(file, 'dbug =.*',"dbug = '" + self.settings.debug + "'" )
+        if self.settings.verbose is not None: 
+            FileHelper.replaceExpressionTXT(file, 'vbose =.*',"vbose = '" + self.settings.verbose + "'" )
+        if self.settings.heat_auth_key is not None:
+            FileHelper.replaceExpressionTXT(file, 'heat_auth_key =.*',"heat_auth_key = '" + self.settings.heat_auth_key + "'" )
         FileHelper.replaceExpressionTXT(file, 'passwd_auto =.*',"passwd_auto = '" + self.settings.openstack_services_password + "'" )
         FileHelper.replaceExpressionTXT(file, 'cluster_member_ip1 =.*',"cluster_member_ip1 = '" + self.settings.controller_nodes[0].private_ip + "'" )
         FileHelper.replaceExpressionTXT(file, 'cluster_member_name1 =.*',"cluster_member_name1 = '" + self.settings.controller_nodes[0].hostname + "'" )
@@ -103,6 +112,7 @@ class Foreman():
         FileHelper.replaceExpressionTXT(file, 'net_l3_iface = .*',"net_l3_iface = 'bond0."+ self.settings.controller_nodes[1].private_api_vlanid +"'" )
         FileHelper.replaceExpressionTXT(file, 'vip_ceilometer_adm = .*',"vip_ceilometer_adm = '" + self.settings.vip_ceilometer_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_ceilometer_pub = .*',"vip_ceilometer_pub = '" + self.settings.vip_ceilometer_public + "'" )
+        FileHelper.replaceExpressionTXT(file, 'vip_ceilometer_redis = .*',"vip_ceilometer_redis = '" + self.settings.vip_ceilometer_redis + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_neutron_adm = .*',"vip_neutron_adm = '" + self.settings.vip_neutron_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_neutron_pub = .*',"vip_neutron_pub = '" + self.settings.vip_neutron_public + "'" )
         FileHelper.replaceExpressionTXT(file, 'c_ceph_cluster_network = .*',"c_ceph_cluster_network = '" + self.settings.storage_cluster_network + "'" )

@@ -47,6 +47,7 @@ class Settings():
         self.vip_rabbitmq_private = self.cluster_settings_map['vip_rabbitmq_private']
         self.vip_ceilometer_private = self.cluster_settings_map['vip_ceilometer_private']
         self.vip_ceilometer_public = self.cluster_settings_map['vip_ceilometer_public']
+        self.vip_ceilometer_redis = self.cluster_settings_map['vip_ceilometer_redis_public']
         self.vip_neutron_public = self.cluster_settings_map['vip_neutron_public']
         self.vip_neutron_private = self.cluster_settings_map['vip_neutron_private']
 
@@ -74,6 +75,11 @@ class Settings():
             self.subscription_check_retries = self.cluster_settings_map['subscription_check_retries']
         else:
             self.subscription_check_retries = 20
+        self.debug=None
+        self.verbose=None
+        self.debug = self.cluster_settings_map['debug']
+        self.verbose = self.cluster_settings_map['verbose']
+        self.heat_auth_key = self.cluster_settings_map['heat_auth_key']
         self.ntp_server = self.cluster_settings_map['ntp_servers']
         self.time_zone = self.cluster_settings_map['time_zone']
         self.stamp_storage = self.cluster_settings_map['storage']
@@ -85,6 +91,7 @@ class Settings():
                 self.internal_repos_urls.append(each)
         else:
             self.internal_repos= False
+    
         self.use_equalogic_backend = self.cluster_settings_map['use_equalogic_backend'].lower()
         if self.cluster_settings_map['use_equalogic_backend'].lower() == 'true':
             self.use_eql_backend = True
@@ -156,6 +163,7 @@ class Settings():
             json_data = json.load(config_file)
             for each in json_data:
                 node = Node_Conf(each)
+
                 try:
                     if node.is_sah == "true":
                         self.sah_node = node
@@ -182,22 +190,28 @@ class Settings():
                     pass
                 try:
                     if node.is_controller == "true":
+                        node.is_controller = True
                         self.controller_nodes.append(node)
                         print "Controller Node :: " + node.hostname
                 except:
+                    node.is_controller = False
                     pass
+
                 try:
                     if node.is_compute == "true":
+                        node.is_compute = True
                         self.compute_nodes.append(node)
                         print "Compute Node :: " + node.hostname
                 except:
+                    node.is_compute = False
                     pass
                 try:
                     if self.stamp_storage == "ceph" and node.is_ceph_storage == "true":
                         self.ceph_nodes.append(node)
+                        node.is_storage = True
                         print "Ceph Node :: " + node.hostname
-
                 except:
+                    node.is_storage = False
                     pass
 
 
