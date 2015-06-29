@@ -17,6 +17,7 @@ class Settings():
         self.cluster_settings_map = self.getSettingsSection("Cluster Settings")
         self.nodes_root_password = self.cluster_settings_map['cluster_password']
         self.cluster_password = self.cluster_settings_map['cluster_password']
+        self.use_equalogic_backend = self.cluster_settings_map['use_equalogic_backend']
         if len(self.nodes_root_password) < 8 :
             raise IOError("cluster_password setting lenght should be > 8 characters")
         self.previous_deployment_cluster_password = self.cluster_settings_map['previous_deployment_cluster_password']
@@ -95,7 +96,6 @@ class Settings():
         else:
             self.internal_repos= False
 
-        self.use_equalogic_backend = self.cluster_settings_map['use_equalogic_backend'].lower(
 
         if self.cluster_settings_map['use_equalogic_backend'].lower() == 'true':
             self.use_eql_backend = True
