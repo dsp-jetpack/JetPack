@@ -42,7 +42,11 @@ or
 * 4.0.a - 06/09/2015 - Added ceph_admin_email setting
 * 4.0.b - 06/11/2015 - Added previous_deployment_cluster_password to allow to unregister already running nodes/cluster password changes
 * 4.0.c - 06/22/2015 - removed controller_nodes_are_730 & compute_nodes_are_730 settings, renamed  storage_nodes_are_730 to storage_nodes_are_730xd
-* 4.0.d - 27/11/2015 - added new settings : heat_auth_key & vip_ceilometer_redis_public
+* 4.0.d - 07/01/2015 - Added Open stack services debug level : debug= & verbose=
+
+# 
+debug=true
+verbose=false
 
 #####settings.properties
 * 1.0: - Initial version.
