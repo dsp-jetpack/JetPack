@@ -1,0 +1,627 @@
+=~=~=~=~=~=~=~=~=~=~=~= PuTTY log 2015.03.27 14:34:11 =~=~=~=~=~=~=~=~=~=~=~=
+login as: twalker
+twalker@192.168.253.203's password: 
+MHT1R1E_SW03#sh run
+Current Configuration ...
+! Version 8.3.5.5
+! Last configuration change at Fri Mar 20 01:01:04 2015 by twalker
+! Startup-config last updated at Fri Mar 20 01:07:28 2015 by twalker
+!
+boot system stack-unit 0 primary system: A:
+boot system stack-unit 0 secondary system: B:
+boot system stack-unit 0 default system: A:
+boot system stack-unit 1 primary system: A:
+boot system stack-unit 1 secondary system: B:
+boot system stack-unit 1 default system: A:
+!
+redundancy auto-synchronize full
+!
+hardware watchdog
+!
+service timestamps log datetime localtime show-timezone
+!
+hostname MHT1R1E_SW03
+!
+username twalker password 7 310601db79fa61430b05ce1b22206b81 privilege 15
+username admin password 7 e0c229bc1598892a6159d10c4432fd81 privilege 15
+!
+--More--        protocol spanning-tree rstp 
+ no disable 
+ hello-time 1 
+ max-age 6 
+ forward-delay 4 
+!
+stack-unit 0 provision S55
+!
+interface GigabitEthernet 0/0
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 0/1
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 0/2
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 0/3
+ no ip address
+--More--         shutdown
+!
+interface GigabitEthernet 0/4
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 0/5
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 0/6
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 0/7
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 0/8
+--More--         no ip address
+ shutdown
+!
+interface GigabitEthernet 0/9
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 0/10
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 0/11
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 0/12
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 0/13
+ no ip address
+ switchport
+--More--         no shutdown
+!
+interface GigabitEthernet 0/14
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 0/15
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 0/16
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 0/17
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 0/18
+--More--         no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 0/19
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 0/20
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 0/21
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 0/22
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 0/23
+ no ip address
+--More--         shutdown
+!
+interface GigabitEthernet 0/24
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/25
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/26
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/27
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/28
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/29
+--More--         no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/30
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/31
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/32
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/33
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/34
+ no ip address
+ no shutdown
+!
+--More--        interface GigabitEthernet 0/35
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/36
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/37
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/38
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/39
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/40
+ no ip address
+ no shutdown
+--More--        !
+interface GigabitEthernet 0/41
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/42
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 0/43
+ description "Connection to Bastion Eth7 vmnic12"
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 0/44
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/45
+ no ip address
+ no shutdown
+--More--        !
+interface GigabitEthernet 0/46
+ no ip address
+ no shutdown
+!
+interface GigabitEthernet 0/47
+ description To Master VLT MHT1R1E_SW05 port 0/25
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 1 mode active 
+ dampening 10 100 1000 60
+ no shutdown
+!
+stack-unit 1 provision S55
+!
+interface GigabitEthernet 1/0
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/1
+ no ip address
+--More--         switchport
+ no shutdown
+!
+interface GigabitEthernet 1/2
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/3
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/4
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/5
+ no ip address
+ switchport
+ no shutdown
+!
+--More--        interface GigabitEthernet 1/6
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/7
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 1/8
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/9
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/10
+ no ip address
+ switchport
+--More--         no shutdown
+!
+interface GigabitEthernet 1/11
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 1/12
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 1/13
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 1/14
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 1/15
+--More--         no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 1/16
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 1/17
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 1/18
+ no ip address
+ switchport
+ shutdown
+!
+interface GigabitEthernet 1/19
+ no ip address
+ switchport
+ shutdown
+--More--        !
+interface GigabitEthernet 1/20
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 1/21
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 1/22
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 1/23
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 1/24
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 1/25
+ no ip address
+--More--         shutdown
+!
+interface GigabitEthernet 1/26
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 1/27
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 1/28
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 1/29
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 1/30
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 1/31
+--More--         no ip address
+ shutdown
+!
+interface GigabitEthernet 1/32
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/33
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/34
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/35
+ no ip address
+ switchport
+ no shutdown
+!
+--More--        interface GigabitEthernet 1/36
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/37
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/38
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/39
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/40
+ no ip address
+ switchport
+--More--         no shutdown
+!
+interface GigabitEthernet 1/41
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/42
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/43
+ no ip address
+ switchport
+ no shutdown
+!
+interface GigabitEthernet 1/44
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 1/45
+ no ip address
+--More--         shutdown
+!
+interface GigabitEthernet 1/46
+ no ip address
+ shutdown
+!
+interface GigabitEthernet 1/47
+ description To Master VLT MHT1R1E_SW06 port 0/23
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 1 mode active 
+ dampening 10 100 1000 60
+ no shutdown
+!
+interface ManagementEthernet 0/0
+ ip address 192.168.253.202/24
+ no shutdown
+!
+interface ManagementEthernet 1/0
+ ip address 192.168.253.203/24
+ no shutdown
+!
+--More--        interface ManagementEthernet 2/0
+ no shutdown
+!
+interface ManagementEthernet 3/0
+ no shutdown
+!
+interface ManagementEthernet 4/0
+ no shutdown
+!
+interface ManagementEthernet 5/0
+ no shutdown
+!
+interface ManagementEthernet 6/0
+ no shutdown
+!
+interface ManagementEthernet 7/0
+ no shutdown
+!
+interface ManagementEthernet 8/0
+ no shutdown
+!
+interface ManagementEthernet 9/0
+ no shutdown
+--More--        !
+interface ManagementEthernet 10/0
+ no shutdown
+!
+interface ManagementEthernet 11/0
+ no shutdown
+!
+interface Port-channel 1
+ no ip address
+ switchport
+ rate-interval 30
+ no shutdown
+!
+interface Vlan 1
+!untagged GigabitEthernet 0/0,4-7,12,16-19
+!untagged GigabitEthernet 1/12-19
+!
+interface Vlan 110
+ description "iDrac/OOB Management"
+ no ip address
+ tagged GigabitEthernet 0/43
+ untagged GigabitEthernet 0/13-15
+ untagged GigabitEthernet 1/32-43
+--More--         shutdown
+!
+interface Vlan 120
+ description "Provisioner Network"
+ ip address 192.168.120.1/24
+ tagged GigabitEthernet 0/43
+ tagged Port-channel 1
+ untagged GigabitEthernet 0/42
+ untagged GigabitEthernet 1/0-11
+ no shutdown
+!
+interface Vlan 140
+ description "Private API Network"
+ no ip address
+ shutdown
+!
+interface Vlan 170
+ description "Storage Network"
+ no ip address
+ shutdown
+!
+interface Vlan 180
+ description "Storage (Ceph) Network"
+--More--         no ip address
+ shutdown
+!
+interface Vlan 190
+ description "Nova-Network Public"
+ no ip address
+ shutdown
+!
+interface Vlan 201
+ description "Nova-Network Private"
+ no ip address
+ shutdown
+!
+interface Vlan 202
+ description "Nova-Network Private"
+ no ip address
+ shutdown
+!
+interface Vlan 203
+ description "Nova-Network Private"
+ no ip address
+ shutdown
+!
+--More--        interface Vlan 204
+ description "Nova-Network Private"
+ no ip address
+ shutdown
+!
+interface Vlan 205
+ description "Nova-Network Private"
+ no ip address
+ shutdown
+!
+interface Vlan 2251
+ description "Public 10.152.251.0 Network"
+ no ip address
+ shutdown
+!
+interface Vlan 2369
+ no ip address
+ tagged GigabitEthernet 0/43
+ shutdown
+!
+snmp-server community R3adonly! ro 
+no ip telnet server enable
+!
+--More--        clock timezone PST -8 
+!
+ip ssh server enable
+!
+protocol lldp 
+ advertise dot1-tlv port-protocol-vlan-id 
+ advertise dot3-tlv max-frame-size 
+ advertise management-tlv system-description system-name 
+ advertise med 
+ no disable 
+!
+line console 0
+line vty 0
+line vty 1
+line vty 2
+line vty 3
+line vty 4
+line vty 5
+line vty 6
+line vty 7
+line vty 8
+line vty 9
+!
+--More--        end
+MHT1R1E_SW03#exit

@@ -1,0 +1,512 @@
+=~=~=~=~=~=~=~=~=~=~=~= PuTTY log 2014.12.05 10:09:52 =~=~=~=~=~=~=~=~=~=~=~=
+login as: crowbar
+crowbar@10.21.246.119's password: 
+R2S4810-OSP#sh rn[1D [1Dun
+Current Configuration ...
+! Version 9.2(0.0)
+! Last configuration change at Sat Dec  6 07:00:33 2014 by crowbar
+! Startup-config last updated at Sat Dec  6 07:02:51 2014 by crowbar
+!
+boot system stack-unit 0 primary system: A:
+boot system stack-unit 0 secondary system: B:
+boot system stack-unit 0 default system: A:
+!
+redundancy auto-synchronize full
+!
+hardware watchdog
+!
+logging console critical
+!
+hostname R2S4810-OSP
+!
+username user1 password 7 b273ab54c2a8d82d privilege 15
+username crowbar password 7 b273ab54c2a8d82d privilege 15
+!
+protocol spanning-tree rstp 
+ no disable 
+!
+stack-unit 0 provision S4810
+!
+interface TenGigabitEthernet 0/0
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/1
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/2
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/3
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/4
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/5
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/6
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/7
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/8
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/9
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/10
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/11
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/12
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/13
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/14
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/15
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/16
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/17
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/18
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/19
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/20
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/21
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/22
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/23
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/24
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/25
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/26
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/27
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/28
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/29
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/30
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/31
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/32
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/33
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/34
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/35
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/36
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/37
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/38
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/39
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/40
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/41
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/42
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/43
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/44
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/45
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface TenGigabitEthernet 0/46
+ no ip address
+ portmode hybrid
+ switchport
+ speed 1000
+ no shutdown
+!
+interface TenGigabitEthernet 0/47
+ no ip address
+ portmode hybrid
+ switchport
+ no shutdown
+!
+interface fortyGigE 0/48
+ no ip address
+ no shutdown
+!
+interface fortyGigE 0/52
+ no ip address
+ no shutdown
+!
+interface fortyGigE 0/56
+ no ip address
+ no shutdown
+!
+interface fortyGigE 0/60
+ no ip address
+ no shutdown
+!
+interface ManagementEthernet 0/0
+ no ip address
+ no shutdown
+!
+interface ManagementEthernet 1/0
+ no shutdown
+!
+interface ManagementEthernet 2/0
+ no shutdown
+!
+interface ManagementEthernet 3/0
+ no shutdown
+!
+interface ManagementEthernet 4/0
+ no shutdown
+!
+interface ManagementEthernet 5/0
+ no shutdown
+!
+interface ManagementEthernet 6/0
+ no shutdown
+!
+interface ManagementEthernet 7/0
+ no shutdown
+!
+interface ManagementEthernet 8/0
+ no shutdown
+!
+interface ManagementEthernet 9/0
+ no shutdown
+!
+interface ManagementEthernet 10/0
+ no shutdown
+!
+interface ManagementEthernet 11/0
+ no shutdown
+!
+interface Vlan 1
+!untagged TenGigabitEthernet 0/1-5,8-11,13-17,20-23,32-35,44-47
+!
+interface Vlan 130
+ description Provisioner
+ ip address 192.168.130.1/24
+ tagged TenGigabitEthernet 0/46
+ untagged TenGigabitEthernet 0/0,12
+ no shutdown
+!
+interface Vlan 131
+ description Private_API
+ ip address 192.168.131.1/24
+ tagged TenGigabitEthernet 0/1-5,13-17,46
+ no shutdown
+!
+interface Vlan 132
+ description Nova_Public
+ ip address 192.168.132.254/24
+ tagged TenGigabitEthernet 0/46
+ untagged TenGigabitEthernet 0/28-29,40-41
+ no shutdown
+!
+interface Vlan 133
+ description Storage_Network
+ ip address 192.168.133.1/24
+ tagged TenGigabitEthernet 0/1-5,13-17,46
+ untagged TenGigabitEthernet 0/6-7,18-19
+ no shutdown
+!
+interface Vlan 134
+ description Ceph_Cluster
+ ip address 192.168.134.1/24
+ tagged TenGigabitEthernet 0/46
+ untagged TenGigabitEthernet 0/30-31,42-43
+ no shutdown
+!
+interface Vlan 135
+ description Nova_Private
+ ip address 192.168.135.1/24
+ tagged TenGigabitEthernet 0/4-5,16-17,46
+ no shutdown
+!
+interface Vlan 200
+ no ip address
+ no shutdown
+!
+interface Vlan 201
+ no ip address
+ no shutdown
+!
+interface Vlan 202
+ no ip address
+ no shutdown
+!
+interface Vlan 3990
+ description R2R720_Public_RHRegister
+ no ip address
+ tagged TenGigabitEthernet 0/47
+ untagged TenGigabitEthernet 0/24-27,36-39
+ no shutdown
+!
+interface Vlan 3997
+ description iDRAC_R2_R720_OSP
+ ip address 10.21.246.119/24
+ tagged TenGigabitEthernet 0/46-47
+ no shutdown
+!
+ip route 0.0.0.0/0 10.21.246.1 
+no ip telnet server enable
+!
+ip ssh server enable
+!
+protocol lldp 
+ advertise dot1-tlv port-protocol-vlan-id 
+ advertise dot3-tlv max-frame-size 
+ advertise management-tlv system-description system-name 
+ advertise med 
+!
+line console 0
+line vty 0
+line vty 1
+line vty 2
+line vty 3
+line vty 4
+line vty 5
+line vty 6
+line vty 7
+line vty 8
+line vty 9
+!
+reload-type normal-reload
+!
+end
+R2S4810-OSP#exit
