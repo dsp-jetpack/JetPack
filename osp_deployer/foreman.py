@@ -322,13 +322,13 @@ class Foreman():
         cmd = "sed -i \"s|CHANGEME_IDRAC_NIC|" + self.settings.controller_nodes[0].idrac_interface +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-        cmd = "sed -i 's|CONTROLLER_BONDS=\".*|CONTROLLER_BONDS=\\\"( [bond0]=\\\\\""+self.settings.controller_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.controller_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
+        cmd = "sed -i 's|R630_BONDS=\".*|R630_BONDS=\\\"( [bond0]=\\\\\""+self.settings.controller_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.controller_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-        cmd = "sed -i 's|COMPUTE_BONDS=\".*|COMPUTE_BONDS=\\\"( [bond0]=\\\\\""+self.settings.compute_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.compute_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
+        cmd = "sed -i 's|R730_BONDS=\".*|R730_BONDS=\\\"( [bond0]=\\\\\""+self.settings.compute_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.compute_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-        cmd = "sed -i 's|STORAGE_BONDS=\".*|STORAGE_BONDS=\\\"( [bond0]=\\\\\""+self.settings.ceph_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.ceph_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
+        cmd = "sed -i 's|R730XD_BONDS=\".*|R730XD_BONDS=\\\"( [bond0]=\\\\\""+self.settings.ceph_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.ceph_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
         logger.info ("executing hammer-configure-foreman")
@@ -406,7 +406,7 @@ class Foreman():
         for node in self.settings.controller_nodes:
             hostCreated = False
             while hostCreated != True:
-                command = 'cd /root/pilot\n./hammer-deploy-controller.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip + " " + node.idrac_secondary_ip
+                command = 'cd /root/pilot\n./hammer-deploy-controller.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip + " " + node.idrac_secondary_ip + " R630"
                 re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
                 if "Could not create the host" in err:
                     print "did not create the host , trying again... " + err
@@ -429,7 +429,7 @@ class Foreman():
         for node in self.settings.compute_nodes:
             hostCreated = False
             while hostCreated != True:
-                command = 'cd /root/pilot\n./hammer-deploy-compute.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip
+                command = 'cd /root/pilot\n./hammer-deploy-compute.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip  + " R730"
                 re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
                 if "Could not create the host" in err:
                     print "did not create the host , trying again... " + err
@@ -452,7 +452,7 @@ class Foreman():
         for node in self.settings.ceph_nodes:
             hostCreated = False
             while hostCreated != True:
-                command = 'cd /root/pilot\n./hammer-deploy-storage.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip
+                command = 'cd /root/pilot\n./hammer-deploy-storage.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip  + " R730XD"
                 re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
                 if "Could not create the host" in err:
                     print "did not create the host , trying again... " + err
