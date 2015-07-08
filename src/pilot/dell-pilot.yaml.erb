@@ -124,7 +124,7 @@
     def_float_pool = 'nova'
     
     # must be 16 or 32 char key
-    heat_auth_key = 'cr0wBar!12345678'
+    heat_auth_key = 'CHANGEME_16OR32_CHAR_HEAT_AUTH_KEY'
     heat_cfn_en = 'true'
     heat_cloudw_en = 'true'
 
@@ -356,6 +356,11 @@ pcmk_server_names:
 - <%= cluster_member_name3 %>
 private_iface: <%= node_access_iface %>
 private_ip: ''
+rabbitmq_use_addrs_not_vip: 'True'
+rabbit_hosts:
+- <%= cluster_member_ip1 %>
+- <%= cluster_member_ip2 %>
+- <%= cluster_member_ip3 %>
 secret_key: <%= passwd_auto %>
 swift_shared_secret: <%= passwd_auto %>
 swift_user_password: <%= passwd_auto %>

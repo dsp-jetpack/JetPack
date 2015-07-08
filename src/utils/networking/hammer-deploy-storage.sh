@@ -18,12 +18,13 @@
 #
 shopt -s nullglob
 
-. ./osp_config.sh
-. ./common.sh
-
 HOSTNAME="$1"
 MAC="$2"
 HOST_IP="$3"
+SERVER_MODEL="$4"
+
+. ./osp_config.sh
+. ./common.sh
 
 PARTITION_ID=$(hammer partition-table list|grep " ${STORAGE_PARTITION_NAME} "|awk '{print $1}')
 
@@ -46,5 +47,5 @@ hammer host set-parameter --host-id  $HOST_ID --name bonds --value "( [bond0]=\"
 echo "hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value '( [bond0]="mode=802.3ad miimon=100" [bond1]="mode=802.3ad miimon=100" )'"
 hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value "( [bond0]=\"mode=802.3ad miimon=100\" [bond1]=\"mode=802.3ad miimon=100\" )"
 
-echo "hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value \"${STORAGE_BONDS}\""
-hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value "${STORAGE_BONDS}"
+echo "hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value \"${SERVER_BONDS}\""
+hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value "${SERVER_BONDS}"

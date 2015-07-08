@@ -26,11 +26,23 @@ SUBSCRIPTION_MANAGER_PASSWORD="CHANGEME_PASSWORD"
 # CHANGEME: Customize the interface for the IDRAC NIC below as needed
 IDRAC_NIC="CHANGEME_IDRAC_NIC"
 
-# CHANGEME: Customize the interfaces for the bonds below as needed
-# e.g. CHANGEME_BOND0 => "p5p2 p7p2"
-CONTROLLER_BONDS="( [bond0]=\"CHANGEME_BOND0\" [bond1]=\"CHANGEME_BOND1\" )"
-COMPUTE_BONDS="( [bond0]=\"CHANGEME_BOND0\" [bond1]=\"CHANGEME_BOND1\" )"
-STORAGE_BONDS="( [bond0]=\"CHANGEME_BOND0\" [bond1]=\"CHANGEME_BOND1\" )"
+# CHANGEME: Customize the interfaces for the bonds for each needed server 
+# model below as needed
+# e.g. CHANGEME_BOND1 => "p5p2 p7p2"
+# the entire line would look like:
+# R720_BONDS="( [bond0]=\"p5p1 p7p1\" [bond1]=\"p5p2 p7p2\" )"
+
+R430_BONDS="( [bond0]=\"CHANGEME_BOND0\" [bond1]=\"CHANGEME_BOND1\" )"
+R630_BONDS="( [bond0]=\"CHANGEME_BOND0\" [bond1]=\"CHANGEME_BOND1\" )"
+R730_BONDS="( [bond0]=\"CHANGEME_BOND0\" [bond1]=\"CHANGEME_BOND1\" )"
+R630XD_BONDS="( [bond0]=\"CHANGEME_BOND0\" [bond1]=\"CHANGEME_BOND1\" )"
+R730XD_BONDS="( [bond0]=\"CHANGEME_BOND0\" [bond1]=\"CHANGEME_BOND1\" )"
+R720_BONDS="( [bond0]=\"CHANGEME_BOND0\" [bond1]=\"CHANGEME_BOND1\" )"
+R720XD_BONDS="( [bond0]=\"CHANGEME_BOND0\" [bond1]=\"CHANGEME_BOND1\" )"
+
+# assign bonds for one of the supported server models, where SERVER_MODEL 
+# (such as "R720") is passed as parameter to the parent script 
+eval "SERVER_BONDS=\${${SERVER_MODEL}_BONDS}"
 
 # CHANGEME: Specify your Red Hat Subscription Manager Repository pool id
 # (It's a very long apha-numeric string: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
