@@ -52,8 +52,8 @@ hammer host set-parameter --host-id  $HOST_ID --name bonds --value "( [bond0]=\"
 echo "hammer host set-parameter --host-id $HOST_ID --name nics --value \'( [${IDRAC_NIC}]=\"onboot static ${HEARTBEAT_IP}/${HEARTBEAT_NM}\")\'"
 hammer host set-parameter --host-id $HOST_ID --name nics --value "( [${IDRAC_NIC}]=\"onboot static ${HEARTBEAT_IP}/${HEARTBEAT_NM}\")"
 
-echo "hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value '( [bond0]=\"mode=balance-xor miimon=100\" [bond1]=\"mode=balance-xor miimon=100\" )'"
-hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value "( [bond0]=\"mode=balance-xor miimon=100\" [bond1]=\"mode=balance-xor miimon=100\" )"
+echo "hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value \'( [bond0]=\"$CONTROLLER_BOND_OPTS\" [bond1]=\"$CONTROLLER_BOND_OPTS\" )\'"
+hammer host set-parameter --host-id  $HOST_ID --name bond_opts --value "( [bond0]=\"mode=$CONTROLLER_BOND_OPTS\" [bond1]=\"$CONTROLLER_BOND_OPTS\" )"
 
 echo "hammer host set-parameter --host-id  $HOST_ID --name bond_ifaces --value \"${SERVER_BONDS}\""
 hammer host set-parameter --host-id $HOST_ID --name bond_ifaces --value "${SERVER_BONDS}"
