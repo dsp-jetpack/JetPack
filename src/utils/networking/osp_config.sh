@@ -45,8 +45,8 @@ R720XD_BONDS="( [bond0]=\"CHANGEME_BOND0\" [bond1]=\"CHANGEME_BOND1\" )"
 eval "SERVER_BONDS=\${${SERVER_MODEL}_BONDS}"
 
 # set the bonding options for each type of node. Supported bond mode types:
-#   "mode=802.3ad miimon=100"  (compute, storage)
-#   "balance-xor miimon=100"   (controller)
+#   "mode=802.3ad miimon=100"  (compute, storage, controller)
+#   "mode=balance-xor miimon=100"   (compute, storage, controller)
 CONTROLLER_BOND_OPTS="CHANGEME_BOND_OPTS"
 COMPUTE_BOND_OPTS="CHANGEME_BOND_OPTS"
 STORAGE_BOND_OPTS="CHANGEME_BOND_OPTS"
