@@ -77,6 +77,9 @@ class Settings():
             self.subscription_check_retries = self.cluster_settings_map['subscription_check_retries']
         else:
             self.subscription_check_retries = 20
+        self.controller_bond_opts=self.cluster_settings_map['controller_bond_opts']
+        self.compute_bond_opts=self.cluster_settings_map['compute_bond_opts']
+        self.storage_bond_opts=self.cluster_settings_map['storage_bond_opts']
         self.debug=None
         self.verbose=None
 
