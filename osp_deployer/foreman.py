@@ -510,9 +510,10 @@ class Foreman():
         cmd = "sed -i \"s|c_ceph_fsid = .*|c_ceph_fsid = '"+fsidl_key+"'|\" " + erbFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
 
-
-
         cmd = "sed -i '/.*quickstack\/ceph-conf.erb.*/a  replace => false,' /usr/share/openstack-foreman-installer/puppet/modules/quickstack/manifests/ceph/config.pp"
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+
+        cmd = "sed -i 's/allow rx pool=images/allow rwx pool=images/' /usr/share/openstack-foreman-installer/puppet/modules/quickstack/manifests/ceph/config.pp"
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
         cmd = 'yum install -y rubygem-foreman_api'
