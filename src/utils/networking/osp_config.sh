@@ -55,15 +55,18 @@ STORAGE_BOND_OPTS="CHANGEME_BOND_OPTS"
 # CHANGEME: Specify your Red Hat Subscription Manager Repository pool id
 # (It's a very long apha-numeric string: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
 POOL_ID="CHANGEME_POOL_ID"
+STORAGE_POOL_ID="CHANGEME_STORAGE_POOL_ID"
 
 # Cluster root password
 ROOT_PASSWORD='CHANGEME_PASSWORD'
+
 
 CONTROLLER_NODE_REPOS="\
 rhel-7-server-rpms, \
 rhel-server-rhscl-7-rpms, \
 rhel-7-server-openstack-6.0-rpms, \
-rhel-ha-for-rhel-7-server-rpms"
+rhel-ha-for-rhel-7-server-rpms, \
+rhel-7-server-rhceph-1.3-mon-rpms"
 
 COMPUTE_NODE_REPOS="\
 rhel-7-server-rpms, \
@@ -71,7 +74,8 @@ rhel-server-rhscl-7-rpms, \
 rhel-7-server-openstack-6.0-rpms"
 
 STORAGE_NODE_REPOS="\
-rhel-7-server-rpms"
+rhel-7-server-rpms, \
+rhel-7-server-rhceph-1.3-osd-rpms"
 
 CONTROLLER_PARTITION_NAME="CHANGEME_PARTITION_NAME e.g. dell-pilot"
 
