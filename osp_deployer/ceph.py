@@ -263,6 +263,7 @@ class Ceph():
     def pool_and_keyRing_configuration(self):
         logger.info("ceph pool creation and keyring configuration")
         cmds = [
+                'chmod 644 /etc/ceph/ceph.client.admin.keyring',
                 'cd ~/cluster;ceph osd pool create images ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
                 'cd ~/cluster;ceph osd pool create volumes ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
                 'cd ~/cluster;ceph osd pool create backups ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
