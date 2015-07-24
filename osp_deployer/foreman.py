@@ -303,6 +303,9 @@ class Foreman():
         cmd = "sed -i \"s|CHANGEME_POOL_ID|" + self.settings.subscription_manager_pool_phyical_openstack_nodes +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
+        cmd = "sed -i \"s|CHANGEME_STORAGE_POOL_ID|" + self.settings.subscription_manager_pool_physical_ceph +"|\" " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+
 
         cmd = "sed -i 's|CONTROLLER_PARTITION_NAME=\".*|CONTROLLER_PARTITION_NAME=\""+self.pilot_partition_table+"\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
@@ -322,13 +325,20 @@ class Foreman():
         cmd = "sed -i \"s|CHANGEME_IDRAC_NIC|" + self.settings.controller_nodes[0].idrac_interface +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-        cmd = "sed -i 's|CONTROLLER_BONDS=\".*|CONTROLLER_BONDS=\\\"( [bond0]=\\\\\""+self.settings.controller_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.controller_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
+        cmd = "sed -i 's|R630_BONDS=\".*|R630_BONDS=\\\"( [bond0]=\\\\\""+self.settings.controller_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.controller_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-        cmd = "sed -i 's|COMPUTE_BONDS=\".*|COMPUTE_BONDS=\\\"( [bond0]=\\\\\""+self.settings.compute_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.compute_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
+        cmd = "sed -i 's|R730_BONDS=\".*|R730_BONDS=\\\"( [bond0]=\\\\\""+self.settings.compute_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.compute_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-        cmd = "sed -i 's|STORAGE_BONDS=\".*|STORAGE_BONDS=\\\"( [bond0]=\\\\\""+self.settings.ceph_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.ceph_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
+        cmd = "sed -i 's|R730XD_BONDS=\".*|R730XD_BONDS=\\\"( [bond0]=\\\\\""+self.settings.ceph_nodes[0].bond0_interfaces+"\\\\\" [bond1]=\\\\\""+self.settings.ceph_nodes[0].bond1_interfaces+"\\\\\" )\"|' " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+
+        cmd = "sed -i 's|CONTROLLER_BOND_OPTS=\".*|CONTROLLER_BOND_OPTS=\\\""+self.settings.controller_bond_opts+"\\\"|' " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+        cmd = "sed -i 's|COMPUTE_BOND_OPTS=\".*|COMPUTE_BOND_OPTS=\\\""+self.settings.compute_bond_opts+"\\\"|' " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+        cmd = "sed -i 's|STORAGE_BOND_OPTS=\".*|STORAGE_BOND_OPTS=\\\""+self.settings.storage_bond_opts+"\\\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
         logger.info ("executing hammer-configure-foreman")
@@ -406,7 +416,7 @@ class Foreman():
         for node in self.settings.controller_nodes:
             hostCreated = False
             while hostCreated != True:
-                command = 'cd /root/pilot\n./hammer-deploy-controller.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip + " " + node.idrac_secondary_ip
+                command = 'cd /root/pilot\n./hammer-deploy-controller.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip + " " + node.idrac_secondary_ip + " R630"
                 re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
                 if "Could not create the host" in err:
                     print "did not create the host , trying again... " + err
@@ -429,7 +439,7 @@ class Foreman():
         for node in self.settings.compute_nodes:
             hostCreated = False
             while hostCreated != True:
-                command = 'cd /root/pilot\n./hammer-deploy-compute.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip
+                command = 'cd /root/pilot\n./hammer-deploy-compute.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip  + " R730"
                 re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
                 if "Could not create the host" in err:
                     print "did not create the host , trying again... " + err
@@ -452,7 +462,7 @@ class Foreman():
         for node in self.settings.ceph_nodes:
             hostCreated = False
             while hostCreated != True:
-                command = 'cd /root/pilot\n./hammer-deploy-storage.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip
+                command = 'cd /root/pilot\n./hammer-deploy-storage.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip  + " R730XD"
                 re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
                 if "Could not create the host" in err:
                     print "did not create the host , trying again... " + err
@@ -503,9 +513,10 @@ class Foreman():
         cmd = "sed -i \"s|c_ceph_fsid = .*|c_ceph_fsid = '"+fsidl_key+"'|\" " + erbFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.ceph_node.root_password,cmd ))
 
-
-
         cmd = "sed -i '/.*quickstack\/ceph-conf.erb.*/a  replace => false,' /usr/share/openstack-foreman-installer/puppet/modules/quickstack/manifests/ceph/config.pp"
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+
+        cmd = "sed -i 's/allow rx pool=images/allow rwx pool=images/' /usr/share/openstack-foreman-installer/puppet/modules/quickstack/manifests/ceph/config.pp"
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
         cmd = 'yum install -y rubygem-foreman_api'
