@@ -139,7 +139,7 @@ class Foreman():
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_iscsi_ip_address = .*',"c_dell_sc_iscsi_ip_address = [\"" + self.settings.c_dell_sc_iscsi_ip_address + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_iscsi_port = .*',"c_dell_sc_iscsi_port = [\"" + self.settings.c_dell_sc_iscsi_port + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_ip = .*',"c_dell_sc_san_ip = [\"" + self.settings.c_dell_sc_san_ip + '"]')
-					FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_login = .*',"c_dell_sc_san_login = [\"" + self.settings.c_dell_sc_san_login + '"]')
+	            FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_login = .*',"c_dell_sc_san_login = [\"" + self.settings.c_dell_sc_san_login + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_password = .*',"c_eqlx_ch_pass = [\"" + self.settings.c_dell_sc_san_password + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_ssn = .*',"c_dell_sc_ssn = [\"" + self.settings.c_dell_sc_ssn + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_server_folder = .*',"c_dell_sc_server_folder = [\"" + self.settings.c_dell_sc_server_folder + '"]')

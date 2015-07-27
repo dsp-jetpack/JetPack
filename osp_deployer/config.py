@@ -115,7 +115,7 @@ class Settings():
         else:
             self.use_eql_backend = False
 
-        if self.cluster_settings_map['use_compellent_backend'].lower() == 'true':
+        if self.cluster_settings_map['use_dell_sc_backend'].lower() == 'true':
             self.use_dell_sc_backend = True
             self.c_be_dell_sc_name  = self.cluster_settings_map['c_be_dell_sc_name']
             self.c_dell_sc_api_port = self.cluster_settings_map['c_dell_sc_api_port']
