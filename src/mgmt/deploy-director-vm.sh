@@ -78,6 +78,10 @@ do
     }
 
   [[ ${iface} == ntpserver ]] && echo "echo NTPServers=${ip} >> /tmp/ks_post_include.txt"
+
+  [[ ${iface} == user ]] && echo "echo User=${ip} >> /tmp/ks_post_include.txt"
+  [[ ${iface} == password ]] && echo "echo Password=${ip} >> /tmp/ks_post_include.txt"
+
   [[ ${iface} == smuser ]] && echo "echo SMUser=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smpassword ]] && echo "echo SMPassword=\'${ip}\' >> /tmp/ks_post_include.txt"
   [[ ${iface} == smpool ]] && echo "echo SMPool=${ip} >> /tmp/ks_post_include.txt"
@@ -124,6 +128,17 @@ chvt 8
   # Source the variables from the %pre section
   . /root/ks_post_include.txt
 
+  # Create a new user
+  useradd ${User}
+  passwd -f ${User} << EOFPW
+${Password}
+${Password}
+EOFPW
+
+  # Give the user sudo permissions
+  echo "${User} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/${User}
+  chmod 0440 /etc/sudoers.d/${User}
+
   # Configure name resolution
   for ns in ${NameServers//,/ }
   do
@@ -136,7 +151,7 @@ chvt 8
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth1
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth2
 
-  echo "$( ip addr show dev eth0 | awk '/inet / { print $2 }' | sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
+  sed -i "/^127.0.0.1 / s/\$/ ${HostName}/" /etc/hosts
 
   echo "----------------------"
   ip addr
@@ -236,6 +251,8 @@ EOIP
   systemctl disable NetworkManager
   systemctl disable firewalld
   systemctl disable chronyd
+
+  cp /usr/share/instack-undercloud/undercloud.conf.sample ~/undercloud.conf
 
 ) 2>&1 | /usr/bin/tee -a /root/director-posts.log
 
