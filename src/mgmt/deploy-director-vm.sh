@@ -252,7 +252,7 @@ EOIP
   systemctl disable firewalld
   systemctl disable chronyd
 
-  cp /usr/share/instack-undercloud/undercloud.conf.sample ~/undercloud.conf
+  cp /usr/share/instack-undercloud/undercloud.conf.sample /home/${User}/undercloud.conf
 
 ) 2>&1 | /usr/bin/tee -a /root/director-posts.log
 
