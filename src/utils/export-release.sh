@@ -45,7 +45,7 @@ cp doc/*.xlsx $dest
 (cd $dest; sha256sum * > CHECKSUMS.sha256)
 
 # make bundles
-mk_bundle dell-mgmt-node    mgmt         ceph_vm.vlock foreman_vm.vlock
+mk_bundle dell-mgmt-node    mgmt         ceph_vm.vlock director_vm.vlock
 mk_bundle dell-pilot-deploy pilot common controller.vlock compute.vlock ceph.vlock utils/networking
 
 echo "Done! - release bundles and files are in ${dest}."

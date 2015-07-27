@@ -5,7 +5,7 @@
 cfg_file=$1
 location=$2
 
-cat <<'EOFKS' > /tmp/foreman.ks
+cat <<'EOFKS' > /tmp/director.ks
 
 install
 text
@@ -48,7 +48,7 @@ system-config-firewall-base
 yum-plugin-versionlock
 %end
 
-%pre --log /tmp/foreman-pre.log
+%pre --log /tmp/director-pre.log
 EOFKS
 
 
@@ -86,28 +86,32 @@ do
   [[ ${iface} == smproxyuser ]] && echo "echo SMProxyUser=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smproxypassword ]] && echo "echo SMProxyPassword=${ip} >> /tmp/ks_post_include.txt"
 
-  [[ ${iface} == eth0 ]] && { 
+  [[ ${iface} == eth0 ]] && {
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers} >> /tmp/ks_include.txt"
     }
 
-  [[ ${iface} == eth1 ]] && { 
+  [[ ${iface} == eth1 ]] && {
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
+    }
+
+  [[ ${iface} == eth2 ]] && {
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
     }
 done <<< "$( grep -Ev "^#|^;|^\s*$" ${cfg_file} )"
-} >> /tmp/foreman.ks
+} >> /tmp/director.ks
 
-cat <<'EOFKS' >> /tmp/foreman.ks
+cat <<'EOFKS' >> /tmp/director.ks
 %end
 
-%post --nochroot --logfile /root/foreman-post.log
+%post --nochroot --logfile /root/director-post.log
 # Copy the files created during the %pre section to /root of the installed system for later use.
-  cp -v /tmp/foreman-pre.log /mnt/sysimage/root
+  cp -v /tmp/director-pre.log /mnt/sysimage/root
   cp -v /tmp/ks_include.txt /mnt/sysimage/root
   cp -v /tmp/ks_post_include.txt /mnt/sysimage/root
-  mkdir -p /mnt/sysimage/root/foreman-ks-logs
-  cp -v /tmp/foreman-pre.log /mnt/sysimage/root/foreman-ks-logs
-  cp -v /tmp/ks_include.txt /mnt/sysimage/root/foreman-ks-logs
-  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/foreman-ks-logs  
+  mkdir -p /mnt/sysimage/root/director-ks-logs
+  cp -v /tmp/director-pre.log /mnt/sysimage/root/director-ks-logs
+  cp -v /tmp/ks_include.txt /mnt/sysimage/root/director-ks-logs
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/director-ks-logs
 %end
 
 
@@ -130,6 +134,7 @@ chvt 8
 
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth0
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth1
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth2
 
   echo "$( ip addr show dev eth0 | awk '/inet / { print $2 }' | sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
 
@@ -159,9 +164,9 @@ chvt 8
 
   subscription-manager repos --disable=*
   subscription-manager repos --enable=rhel-7-server-rpms
-  subscription-manager repos --enable=rhel-server-rhscl-7-rpms
-  subscription-manager repos --enable=rhel-7-server-openstack-6.0-installer-rpms
-  subscription-manager repos --enable=rhel-7-server-openstack-6.0-rpms
+  subscription-manager repos --enable=rhel-7-server-optional-rpms
+  subscription-manager repos --enable=rhel-7-server-extras-rpms
+  # TODO: enable necessary repos for Director and OpenStack
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -171,8 +176,7 @@ chvt 8
     }
   umount /tmp/mnt
 
-  yum -y install openstack-foreman-installer
-  yum -y install ceph-common
+  yum -y install python-rdomanager-oscplugin
   yum -y update
 
   # Firewall rules to allow traffic for the http, https, dns, and tftp services and tcp port 8140.
@@ -193,6 +197,7 @@ COMMIT
 -A INPUT -p icmp -j ACCEPT
 -A INPUT -i lo -j ACCEPT
 -A INPUT -i eth1 -j ACCEPT
+-A INPUT -i eth2 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 22 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
@@ -232,7 +237,7 @@ EOIP
   systemctl disable firewalld
   systemctl disable chronyd
 
-) 2>&1 | /usr/bin/tee -a /root/foreman-posts.log
+) 2>&1 | /usr/bin/tee -a /root/director-posts.log
 
 chvt 1
 
@@ -244,46 +249,48 @@ EOFKS
 [[ ! -e /store/data/images ]] && mkdir -p /store/data/images
 
 
-[[ -e foreman_vm.vlock ]] && {
+[[ -e director_vm.vlock ]] && {
 
-  [[ -e /tmp/floppy-foreman.img ]] && rm -rf /tmp/floppy-foreman.img
-  mkfs.vfat -C /tmp/floppy-foreman.img 1440
-  mkdir /tmp/mnt-foreman
-  mount -o loop /tmp/floppy-foreman.img /tmp/mnt-foreman
-  cp foreman_vm.vlock /tmp/mnt-foreman/versionlock.list
+  [[ -e /tmp/floppy-director.img ]] && rm -rf /tmp/floppy-director.img
+  mkfs.vfat -C /tmp/floppy-director.img 1440
+  mkdir /tmp/mnt-director
+  mount -o loop /tmp/floppy-director.img /tmp/mnt-director
+  cp director_vm.vlock /tmp/mnt-director/versionlock.list
   sync
-  umount /tmp/mnt-foreman
-  rmdir /tmp/mnt-foreman
+  umount /tmp/mnt-director
+  rmdir /tmp/mnt-director
 
-  virt-install --name foreman \
+  virt-install --name director \
     --ram 4096 \
     --vcpus 2 \
     --hvm \
     --os-type linux \
     --os-variant rhel6 \
-    --disk /store/data/images/foreman.img,bus=virtio,size=16 \
-    --disk /tmp/floppy-foreman.img,device=floppy \
+    --disk /store/data/images/director.img,bus=virtio,size=16 \
+    --disk /tmp/floppy-director.img,device=floppy \
     --network bridge=public \
     --network bridge=provision \
-    --initrd-inject /tmp/foreman.ks \
-    --extra-args "ks=file:/foreman.ks" \
+    --network bridge=management \
+    --initrd-inject /tmp/director.ks \
+    --extra-args "ks=file:/director.ks" \
     --noautoconsole \
     --graphics spice \
     --autostart \
     --location ${location} 
   } || {
 
-virt-install --name foreman \
+virt-install --name director \
   --ram 4096 \
   --vcpus 2 \
   --hvm \
   --os-type linux \
   --os-variant rhel6 \
-  --disk /store/data/images/foreman.img,bus=virtio,size=16 \
+  --disk /store/data/images/director.img,bus=virtio,size=16 \
   --network bridge=public \
   --network bridge=provision \
-  --initrd-inject /tmp/foreman.ks \
-  --extra-args "ks=file:/foreman.ks" \
+  --network bridge=management \
+  --initrd-inject /tmp/director.ks \
+  --extra-args "ks=file:/director.ks" \
   --noautoconsole \
   --graphics spice \
   --autostart \

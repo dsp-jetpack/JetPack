@@ -64,8 +64,10 @@ system-config-firewall-base
 %pre --log /tmp/sah-pre.log
 
 ################### CHANGEME
-# The variables that need changed for the environment are preceeded with CHANGEME 
-# Those with examples are preceeded with CHANGEME e.g. (the entire string including the example should be replaced)
+# The variables that need to be changed for the environment are preceeded with:
+# CHANGEME.
+# Those with examples are preceeded with: CHANGEME e.g.
+# (in this case, the entire string including the example should be replaced)
 
 # FQDN of server
 HostName="CHANGEME e.g. sah.example.org"
@@ -111,6 +113,10 @@ private_boot_opts="onboot none"
 private_bond_opts="mode=802.3ad miimon=100"
 private_ifaces="CHANGEME e.g. em1 p1p1"
 #
+# Management
+management_bond_name="CHANGEME e.g. bond0.110"
+management_boot_opts="onboot none vlan"
+#
 # Provision
 provision_bond_name="CHANGEME e.g. bond0.120"
 provision_boot_opts="onboot none vlan"
@@ -130,6 +136,11 @@ private_api_boot_opts="onboot none vlan"
 # Define the bridges
 # Public Bridge
 public_bridge_boot_opts="CHANGEME e.g. onboot static 10.148.44.41/255.255.255.0"
+#
+# Management Bridge
+# Note: The SAH iDRAC is assigned an example IP of 192.168.110.41, so that IP
+#       cannot be used here.  The example IP below adds 100 to the last octet.
+management_bridge_boot_opts="onboot static 192.168.110.141/255.255.255.0"
 #
 # Provision Bridge
 provision_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.120.41/255.255.255.0"
@@ -184,6 +195,8 @@ echo "bonds[${private_bond_name}]=\"${private_boot_opts}\"" >> /tmp/ks_post_incl
 echo "bond_opts[${private_bond_name}]=\"${private_bond_opts}\"" >> /tmp/ks_post_include.txt
 echo "bond_ifaces[${private_bond_name}]=\"${private_ifaces}\"" >> /tmp/ks_post_include.txt
 
+echo "bonds[${management_bond_name}]=\"${management_boot_opts}\"" >> /tmp/ks_post_include.txt
+
 echo "bonds[${provision_bond_name}]=\"${provision_boot_opts}\"" >> /tmp/ks_post_include.txt
 
 echo "bonds[${storage_bond_name}]=\"${storage_boot_opts}\"" >> /tmp/ks_post_include.txt
@@ -194,6 +207,9 @@ echo "bonds[${external_bond_name}]=\"${external_boot_opts}\"" >> /tmp/ks_post_in
 
 echo "bridges[public]=\"${public_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
 echo "bridge_iface[public]=\"${public_bond_name}\"" >> /tmp/ks_post_include.txt
+
+echo "bridges[management]=\"${management_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bridge_iface[management]=\"${management_bond_name}\"" >> /tmp/ks_post_include.txt
 
 echo "bridges[provision]=\"${provision_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
 echo "bridge_iface[provision]=\"${provision_bond_name}\"" >> /tmp/ks_post_include.txt
