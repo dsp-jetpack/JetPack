@@ -112,7 +112,7 @@ class Ceph():
         elif self.settings.ceph_version == "1.3":
 
             logger.info (" installing ice ")
-            cmd = "sudo yum install ice_setup-*.rpm -y"
+            cmd = "sudo yum install ice_setup* -y"
             logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
 
             cmd = 'mkdir ~/cluster && cd ~/cluster'
@@ -127,8 +127,8 @@ class Ceph():
             for cmd in commands :
                 logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
-            cmds = ['sudo yum install ceph-deploy calamari-server calamari-client -y',
-                    'sudo ice_setup update all'
+            cmds = ['sudo yum install ceph-deploy calamari-server calamari-clients -y',
+                    'sudo ice_setup update all',
                     'cd ~/cluster;ceph-deploy config pull ' + self.settings.controller_nodes[0].hostname,
                     "cd ~/cluster;sed -i '/osd_journal_size = .*/a [osd]\\nosd pool default pg num = 1024\\nosd pool default pgp num = 1024' ceph.conf",
                     'cd ~/cluster;sudo calamari-ctl initialize --admin-username root --admin-password '+self.settings.ceph_node.root_password+' --admin-email ' + self.settings.ceph_admin_email
@@ -213,7 +213,7 @@ class Ceph():
                 cmd = 'cd ~/cluster;ceph-deploy calamari connect ' + host.hostname
                 logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password,cmd))
             else:
-                cmd = 'cd ~/cluster;ceph-deploy calamari connect --master ' + self.settings.ceph_node.hostname + '.' + self.setings.domain + ' ' + host.hostname
+                cmd = 'cd ~/cluster;ceph-deploy calamari connect --master ' + self.settings.ceph_node.hostname + '.' + self.settings.domain + ' ' + host.hostname
                 logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
         for host in self.settings.ceph_nodes:
