@@ -65,8 +65,7 @@ CONTROLLER_NODE_REPOS="\
 rhel-7-server-rpms, \
 rhel-server-rhscl-7-rpms, \
 rhel-7-server-openstack-6.0-rpms, \
-rhel-ha-for-rhel-7-server-rpms, \
-rhel-7-server-rhceph-1.3-mon-rpms"
+rhel-ha-for-rhel-7-server-rpms"
 
 COMPUTE_NODE_REPOS="\
 rhel-7-server-rpms, \
@@ -74,8 +73,7 @@ rhel-server-rhscl-7-rpms, \
 rhel-7-server-openstack-6.0-rpms"
 
 STORAGE_NODE_REPOS="\
-rhel-7-server-rpms, \
-rhel-7-server-rhceph-1.3-osd-rpms"
+rhel-7-server-rpms"
 
 CONTROLLER_PARTITION_NAME="CHANGEME_PARTITION_NAME e.g. dell-pilot"
 
