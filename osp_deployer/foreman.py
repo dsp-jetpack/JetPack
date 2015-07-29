@@ -130,9 +130,22 @@ class Foreman():
                     FileHelper.replaceExpressionTXT(file, 'c_eqlx_group_n = .*',"c_eqlx_group_n = [\"" + self.settings.c_eqlx_group_n + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_eqlx_pool = .*',"c_eqlx_pool = [\"" + self.settings.c_eqlx_pool + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_eqlx_use_chap = .*',"c_eqlx_use_chap = [\"" + self.settings.c_eqlx_use_chap + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_mult_be = .*',"c_mult_be = '"+ self.settings.c_mult_be +"'" )		
+ 		
+        if self.settings.use_dell_sc_backend is True:
+                    FileHelper.replaceExpressionTXT(file, 'c_be_dell_sc = .*',"c_be_dell_sc = true" )
+                    FileHelper.replaceExpressionTXT(file, 'c_be_dell_sc_name = .*',"c_be_dell_sc_name = [\"" + self.settings.c_be_dell_sc_name + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_dell_sc_api_port = .*',"c_dell_sc_api_port = [\"" + self.settings.c_dell_sc_api_port + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_dell_sc_iscsi_ip_address = .*',"c_dell_sc_iscsi_ip_address = [\"" + self.settings.c_dell_sc_iscsi_ip_address + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_dell_sc_iscsi_port = .*',"c_dell_sc_iscsi_port = [\"" + self.settings.c_dell_sc_iscsi_port + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_ip = .*',"c_dell_sc_san_ip = [\"" + self.settings.c_dell_sc_san_ip + '"]')
+	            FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_login = .*',"c_dell_sc_san_login = [\"" + self.settings.c_dell_sc_san_login + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_password = .*',"c_eqlx_ch_pass = [\"" + self.settings.c_dell_sc_san_password + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_dell_sc_ssn = .*',"c_dell_sc_ssn = [\"" + self.settings.c_dell_sc_ssn + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_dell_sc_server_folder = .*',"c_dell_sc_server_folder = [\"" + self.settings.c_dell_sc_server_folder + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_dell_sc_volume_folder = .*',"c_dell_sc_volume_folder = [\"" + self.settings.c_dell_sc_volume_folder + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_mult_be = .*',"c_mult_be = '"+ self.settings.c_mult_be +"'" )
-
-
+					
         ceph_hostsNames = ''
         ceph_hostsIps = ''
 

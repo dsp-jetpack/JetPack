@@ -116,6 +116,23 @@ class Settings():
         else:
             self.use_eql_backend = False
 
+        if self.cluster_settings_map['use_dell_sc_backend'].lower() == 'true':
+            self.use_dell_sc_backend = True
+            self.c_be_dell_sc_name  = self.cluster_settings_map['c_be_dell_sc_name']
+            self.c_dell_sc_api_port = self.cluster_settings_map['c_dell_sc_api_port']
+            self.c_dell_sc_iscsi_ip_address = self.cluster_settings_map['c_dell_sc_iscsi_ip_address']
+            self.c_dell_sc_iscsi_port = self.cluster_settings_map['c_dell_sc_iscsi_port']
+            self.c_dell_sc_san_ip = self.cluster_settings_map['c_dell_sc_san_ip']
+            self.c_dell_sc_san_login = self.cluster_settings_map['c_dell_sc_san_login']
+            self.c_dell_sc_san_password = self.cluster_settings_map['c_dell_sc_san_password']
+            self.c_dell_sc_ssn = self.cluster_settings_map['c_dell_sc_ssn']
+            self.c_dell_sc_server_folder = self.cluster_settings_map['c_dell_sc_server_folder']
+            self.c_dell_sc_volume_folder = self.cluster_settings_map['c_dell_sc_volume_folder']        
+            self.c_mult_be = self.cluster_settings_map['c_mult_be']
+        else:
+            self.use_dell_sc_backend = False
+
+
 
         if self.cluster_settings_map['enable_version_locking'].lower() == 'true':
             self.version_locking_enabled = True

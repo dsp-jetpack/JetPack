@@ -83,6 +83,7 @@ class Deployer_sanity():
         hdw_nodes.append(self.settings.sah_node)
         for node in hdw_nodes:
             try:
+		print node.idrac_ip
                 ipmi_session = Ipmi(self.settings.cygwin_installdir, self.settings.ipmi_user, self.settings.ipmi_password, node.idrac_ip)
                 print node.hostname +" :: "+ ipmi_session.get_power_state()
             except:
