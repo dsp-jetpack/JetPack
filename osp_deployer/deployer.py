@@ -640,7 +640,16 @@ if __name__ == '__main__':
         for each in nonSAHnodes:
             log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet start")[0])
 
+        # Ceph - restart cinder services
+        log("restart cinder services")
+        cmds = [
+            "pcs resource restart cinder-api-clone",
+            "pcs resource restart cinder-scheduler-clone",
+            "pcs resource restart cinder-volume",
 
+        ]
+        for cmd in cmds:
+            log( Ssh.execute_command(settings.controller_nodes[0].provisioning_ip, "root", settings.nodes_root_password,cmd )[0])
 
         UI_Manager.driver().close()
 
