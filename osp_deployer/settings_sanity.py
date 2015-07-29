@@ -36,6 +36,8 @@ class Deployer_sanity():
         assert hasattr(self.settings, 'use_equalogic_backend'), self.settings.settingsFile+ " has no use_equalogic_backend setting"
         assert hasattr(self.settings, 'subscription_check_retries'), self.settings.settingsFile+ " has no subscription_check_retries setting"
         assert hasattr(self.settings, 'ceph_admin_email'), self.settings.settingsFile+ " has no ceph_admin_email setting"
+        assert hasattr(self.settings, 'ceph_version'), self.settings.settingsFile+ " has no ceph_version setting"
+
 
         assert os.path.isfile(self.settings.rhl71_iso) , self.settings.rhl71_iso + "ISO doesnn't seem to exist"
         assert os.path.isfile(self.settings.sah_kickstart) , self.settings.sah_kickstart + "kickstart file doesnn't seem to exist"
