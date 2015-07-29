@@ -266,7 +266,6 @@ class Ceph():
                 'sudo chmod 644 /etc/ceph/ceph.client.admin.keyring',
                 'cd ~/cluster;ceph osd pool create images ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
                 'cd ~/cluster;ceph osd pool create volumes ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
-                'cd ~/cluster;ceph osd pool create backups ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
                 "cd ~/cluster;scp "+self.settings.controller_nodes[0].hostname+":/etc/ceph/ceph.client.volumes.keyring ~/cluster",
                 "cd ~/cluster;scp "+self.settings.controller_nodes[0].hostname+":/etc/ceph/ceph.client.images.keyring ~/cluster",
                 "cd ~/cluster;ceph auth import -i ceph.client.volumes.keyring",
