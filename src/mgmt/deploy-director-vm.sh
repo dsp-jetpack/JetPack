@@ -151,7 +151,7 @@ EOFPW
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth1
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth2
 
-  sed -i "/^127.0.0.1 / s/\$/ ${HostName}/" /etc/hosts
+  echo "$( ip addr show dev eth0 | awk '/inet / { print $2 }' | sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
 
   echo "----------------------"
   ip addr
