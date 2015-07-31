@@ -21,7 +21,7 @@ KEYSTONE_ADMIN_PASS=${3}
 CEPH_CONF=/etc/ceph/ceph.conf
 
 ####################
-#Function usage
+# Function usage
 ####################
 usage( ) {
 cat <<EOF
@@ -31,14 +31,14 @@ exit 0
 }
 
 ####################
-#Function is_file_exits
+# Function is_file_exits
 ####################
 is_file_exits(){
         [[ -f "$CEPH_CONF" ]] && return 0 || return 1
 }
 
 ####################
-#Main
+# Main
 ####################
 [[ $# -ne  3  ]] && usage
 

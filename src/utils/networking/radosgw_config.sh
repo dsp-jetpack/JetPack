@@ -34,11 +34,11 @@ EOF
 exit 0
 }
 
+
 ####################
 # Main
 ####################
-[[ $# -ne  3  ]] && usage
-
+[[ $# -lt 8 ]] && usage
 
 cat << EOF > /etc/haproxy/radosgw.cfg
 listen ceph-radosgw
