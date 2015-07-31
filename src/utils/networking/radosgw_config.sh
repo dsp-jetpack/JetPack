@@ -56,3 +56,15 @@ LINE_NUM=$((`iptables -nL --line-numbers| grep "80,443" | cut -f1 -d " "` + 1))
 iptables -I INPUT ${LINE_NUM} -p tcp -m multiport --dports 8087,7480 -m comment --comment "001 civet incoming" -j ACCEPT
 service iptables save
 systemctl restart iptables
+
+#Stop haproxy
+pcs resource disable haproxy
+
+#Add radosgw to HA Proxy serivce 
+sed -i 's/haproxy.cfg/haproxy.cfg -f \/etc\/haproxy\/radosgw.cfg/' /etc/systemd/system/multi-user.target.wants/haproxy.service
+systemctl daemon-reload
+
+#Create VIPS 
+pcs resource create ip-radosgw-prv-${RADOSGW_PRIVATE_VIP} ocf:heartbeat:IPaddr2 ip=${RADOSGW_PRIVATE_VIP} cidr_netmask=32 op monitor interval=10s 
+pcs resource create ip-radosgw-pub-${RADOSGW_PUBLIC_VIP} ocf:heartbeat:IPaddr2 ip=${RADOSGW_PUBLIC_VIP} cidr_netmask=32 op monitor interval=10s 
+pcs resource enable haproxy
