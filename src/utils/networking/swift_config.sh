@@ -18,7 +18,7 @@
 RADOSGW_PUBLIC_VIP=${1}
 KEYSTONE_PRIVATE_VIP=${2}
 KEYSTONE_ADMIN_PASS=${3}
-CEPH_CONF=/etc/ceph/ceph.conf
+CEPH_CONF=ceph.conf
 
 ####################
 # Function usage
@@ -59,6 +59,6 @@ rgw keystone revocation interval = 600
 rgw s3 auth use keystone = true
 EOF
 
-LINE_NUM=`grep -n "filestore_xattr_use_omap" /etc/ceph/ceph.conf | grep -Eo '^[^:]+'`
-sed "${LINE_NUM}r /tmp/swift.tmp" < /etc/ceph/ceph.conf > /tmp/ceph.tmp
-mv /tmp/ceph.tmp /etc/ceph/ceph.conf
+LINE_NUM=`grep -n "filestore_xattr_use_omap" ${CEPH_CONF} | grep -Eo '^[^:]+'`
+sed "${LINE_NUM}r /tmp/swift.tmp" < ${CEPH_CONF} > /tmp/ceph.tmp
+mv /tmp/ceph.tmp ${CEPH_CONF}

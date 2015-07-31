@@ -55,3 +55,4 @@ EOF
 LINE_NUM=$((`iptables -nL --line-numbers| grep "80,443" | cut -f1 -d " "` + 1))
 iptables -I INPUT ${LINE_NUM} -p tcp -m multiport --dports 8087,7480 -m comment --comment "001 civet incoming" -j ACCEPT
 service iptables save
+systemctl restart iptables
