@@ -15,5 +15,5 @@ volgroup VolGroup --pesize=4096 pv.01
 
 logvol / --fstype=ext4    --name=lv_root --vgname=VolGroup --size 30720 --grow
 logvol /tmp --fstype=ext4 --name=lv_tmp  --vgname=VolGroup --size 10240
-logvol /var --fstype=ext4 --name=lv_var  --vgname=VolGroup --size 20480
+logvol /var --fstype=ext4 --name=lv_var  --vgname=VolGroup --size 204800
 logvol swap               --name=lv_swap --vgname=VolGroup --size 16384
