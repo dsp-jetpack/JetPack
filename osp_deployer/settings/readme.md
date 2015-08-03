@@ -44,6 +44,7 @@ or
 * 4.0.c - 06/22/2015 - removed controller_nodes_are_730 & compute_nodes_are_730 settings, renamed  storage_nodes_are_730 to storage_nodes_are_730xd
 * 4.0.d - 07/01/2015 - Added Open stack services debug level : debug= & verbose=
 * 4.0.e - 07/13/2015 - Added mode option configuration: controller_bond_opts, compute_bond_opts, storage_bond_opts
+* 4.0.f - 07/27/2015 - Added compellent/dell_sc support: use_dell_sc_backend, etc
 
 
 #####settings.properties
