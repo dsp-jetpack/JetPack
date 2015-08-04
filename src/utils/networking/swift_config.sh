@@ -27,7 +27,7 @@ usage( ) {
 cat <<EOF
 Usage: $0 <RADOSGW_PUBLIC_VIP> <KEYSTONE_PRIVATE_VIP> <KEYSTONE_ADMIN_TOKEN>
 EOF
-exit 0
+exit -1
 }
 
 ####################
@@ -59,6 +59,12 @@ rgw keystone revocation interval = 600
 rgw s3 auth use keystone = true
 EOF
 
-LINE_NUM=`grep -n "filestore_xattr_use_omap" ${CEPH_CONF} | grep -Eo '^[^:]+'`
-sed "${LINE_NUM}r /tmp/swift.tmp" < ${CEPH_CONF} > /tmp/ceph.tmp
-mv /tmp/ceph.tmp ${CEPH_CONF}
+EXISTING_LINE=`grep -n "rgw swift url" ${CEPH_CONF} | grep -Eo '^[^:]+'`
+if [ ! "$EXISTING_LINE" ]
+then
+  LINE_NUM=`grep -n "filestore_xattr_use_omap" ${CEPH_CONF} | grep -Eo '^[^:]+'`
+    sed "${LINE_NUM}r /tmp/swift.tmp" < ${CEPH_CONF} > /tmp/ceph.tmp
+    mv /tmp/ceph.tmp ${CEPH_CONF}
+else 
+  echo "Nothing to do -- swift integration already found."
+fi
