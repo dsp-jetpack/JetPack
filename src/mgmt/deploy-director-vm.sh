@@ -192,6 +192,7 @@ EOFPW
   umount /tmp/mnt
 
   yum -y install python-rdomanager-oscplugin
+  yum -y install ahc-tools
   yum -y update
 
   # Firewall rules to allow traffic for the http, https, dns, and tftp services and tcp port 8140.
