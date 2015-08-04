@@ -5,6 +5,7 @@ from auto_common import Ipmi, Ssh, FileHelper, Scp, UI_Manager
 from osp_deployer import Settings, Deployer_sanity
 
 logger = logging.getLogger(__name__)
+ping_success = "packets transmitted, 3 received"
 
 def log(message):
     print (message)
@@ -21,6 +22,12 @@ def verify_subscription_status(public_ip, user, password, retries):
         subscriptionStatus = Ssh.execute_command(public_ip, user, password, "subscription-manager status")[0]
         i += 1;
     return subscriptionStatus
+
+def ping_host(public_ip, user, passwd, targetHost):
+    subscriptionStatus = Ssh.execute_command(public_ip, user, passwd, "ping " + targetHost + " -c 3 -w 30 ")[0]
+    return subscriptionStatus
+
+
 
 
 def execute_as_shell(address,usr, pwd, command):
@@ -100,8 +107,8 @@ if __name__ == '__main__':
         others =  settings.controller_nodes + settings.compute_nodes
         nonSAHnodes = others + settings.ceph_nodes
         for each in nonSAHnodes :
-            log (Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "subscription-manager remove --all"))
-            log (Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "subscription-manager unregister"))
+            log (Ssh.execute_command(each.provisioning_ip, "root", settings.previous_deployment_cluster_password, "subscription-manager remove --all"))
+            log (Ssh.execute_command(each.provisioning_ip, "root", settings.previous_deployment_cluster_password, "subscription-manager unregister"))
 
 
         log ("=== powering down the admin")
@@ -186,6 +193,22 @@ if __name__ == '__main__':
         if "Current" not in subscriptionStatus:
             raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
+        log("*** Verify the SAH can ping its public gateway")
+        test = ping_host(settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.sah_node.public_gateway)
+        if ping_success not in test:
+            raise AssertionError("SAH cannot ping its public gateway : " + test)
+
+        log("*** Verify the SAH can ping the outside world (ip)")
+        test = ping_host(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "8.8.8.8")
+        if ping_success not in test:
+            raise AssertionError("SAH cannot ping the outside world (ip) : " + test)
+
+        log("*** Verify the SAH can ping the outside world (dns)")
+        test = ping_host(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "google.com")
+        if ping_success not in test:
+            raise AssertionError("SAH cannot ping the outside world (dns) : " + test)
+
+
         log ("=== uploading iso's to the sah node")
         Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl71_iso, "/store/data/iso/RHEL7.iso")
 
@@ -248,6 +271,32 @@ if __name__ == '__main__':
         subscriptionStatus = verify_subscription_status(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, settings.subscription_check_retries)
         if "Current" not in subscriptionStatus:
             raise AssertionError("Foreman VM did not register properly : " + subscriptionStatus)
+
+        log("*** Verify the Foreman VM can ping its public gateway")
+        test = ping_host(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, settings.foreman_node.public_gateway)
+        if ping_success not in test:
+            raise AssertionError("Foreman VM cannot ping its public gateway : " + test)
+
+        log("*** Verify the Foreman VM can ping the outside world (ip)")
+        test = ping_host(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, "8.8.8.8")
+        if ping_success not in test:
+            raise AssertionError("Foreman VM cannot ping the outside world (ip) : " + test)
+
+        log("*** Verify the Foreman VM can ping the outside world (dns)")
+        test = ping_host(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, "google.com")
+        if ping_success not in test:
+            raise AssertionError("Foreman VM cannot ping the outside world (dns) : " + test)
+
+        log("*** Verify the Foreman VM can ping the SAH node through the provisioning network")
+        test = ping_host(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, settings.sah_node.provisioning_ip)
+        if ping_success not in test:
+            raise AssertionError("Foreman VM cannot ping the SAH node through the provisioning network : " + test)
+
+        log("*** Verify the Foreman VM can ping the SAH node through the public network")
+        test = ping_host(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, settings.sah_node.public_ip)
+        if ping_success not in test:
+            raise AssertionError("Foreman VM cannot ping the SAH node through the provisioning network : " + test)
+
 
         log("=== installing foreman")
 
@@ -330,11 +379,39 @@ if __name__ == '__main__':
         log("ceph host is up")
 
         log("*** Verify the Ceph VM registered properly ***")
-
         subscriptionStatus = verify_subscription_status(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, settings.subscription_check_retries)
         if "Current" not in subscriptionStatus:
             raise AssertionError("Ceph VM did not register properly : " + subscriptionStatus)
 
+        log("*** Verify the Ceph VM can ping its public gateway")
+        test = ping_host(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, settings.foreman_node.public_gateway)
+        if ping_success not in test:
+            raise AssertionError("Ceph VM cannot ping its public gateway : " + test)
+
+        log("*** Verify the Ceph VM can ping the outside world (ip)")
+        test = ping_host(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "8.8.8.8")
+        if ping_success not in test:
+            raise AssertionError("Ceph VM cannot ping the outside world (ip) : " + test)
+
+        log("*** Verify the Ceph VM can ping the outside world (dns)")
+        test = ping_host(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "google.com")
+        if ping_success not in test:
+            raise AssertionError("Ceph VM cannot ping the outside world (dns) : " + test)
+
+        log("*** Verify the Ceph VM can ping the SAH node through the storage network")
+        test = ping_host(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, settings.sah_node.storage_ip)
+        if ping_success not in test:
+            raise AssertionError("Ceph VM cannot ping the SAH node through the storage network : " + test)
+
+        log("*** Verify the Ceph VM can ping the SAH node through the public network")
+        test = ping_host(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, settings.sah_node.public_ip)
+        if ping_success not in test:
+            raise AssertionError("Ceph VM cannot ping the SAH node through the public network : " + test)
+
+        log("*** Verify the Ceph VM can ping the Foreman VM through the public network")
+        test = ping_host(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, settings.foreman_node.public_ip)
+        if ping_success not in test:
+            raise AssertionError("Ceph VM cannot ping the Foreman VM through the provisioning network : " + test)
 
 
         log ("=== Configuring the foreman server")
@@ -364,8 +441,87 @@ if __name__ == '__main__':
             while (not "root" in Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "whoami")[0]):
                 log("...")
                 time.sleep(100);
-            log("Disable puppet on the node for now to avoid race conditions later.")
-            log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet stop")[0])
+
+            # Common tests
+
+            log("*** Verify " + each.hostname + " registered properly ***")
+            subscriptionStatus = verify_subscription_status(each.provisioning_ip, "root", settings.nodes_root_password, settings.subscription_check_retries)
+            if "Current" not in subscriptionStatus:
+                raise AssertionError(" " + each.hostname + " did not register properly : " + subscriptionStatus)
+
+            log("*** Verify " + each.hostname + " can ping the outside world (ip)")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, "8.8.8.8")
+            if ping_success not in test:
+                raise AssertionError(" " + each.hostname + " cannot ping the outside world (ip) : " + test)
+
+            log("*** Verify " + each.hostname + " can ping the outside world (dns)")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, "google.com")
+            if ping_success not in test:
+                raise AssertionError(" " + each.hostname + " cannot ping the outside world (dns) : " + test)
+
+            log("*** Verify  " + each.hostname + " can ping the SAH node through the provisioning network")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.sah_node.provisioning_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping the SAH node through the provisioning network : " + test)
+
+            log("*** Verify  " + each.hostname + " can ping the Foreman node through the provisioning network")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.foreman_node.provisioning_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping the foreman node through the provisioning network : " + test)
+
+            log("*** Verify  " + each.hostname + " can ping the Foreman node through its public ip")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.foreman_node.public_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping the foreman node through its public ip : " + test)
+
+            log("*** Verify  " + each.hostname + " can ping the ceph node through its public ip")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.ceph_node.public_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping the ceph node through its public ip : " + test)
+
+            log("*** Verify  " + each.hostname + " can ping the SAH node through the storage network")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.sah_node.storage_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping the SAH node through the storage network : " + test)
+
+            log("*** Verify  " + each.hostname + " can ping the ceph node over the storage network")
+    	    test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.ceph_node.storage_ip)
+    	    if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping the ceph node over the storage network : " + test)
+
+            if each.is_controller == True or each.is_compute == True  :
+                log("Disable puppet on the node for now to avoid race conditions later.")
+                log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet stop")[0])
+
+                # Controller / Compute tests
+                if "3.6" not in Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "puppet --version")[0]:
+                    raise AssertionError(" " + each.hostname + " : Puppet did not install  : " + subscriptionStatus)
+
+                log("*** Verify  " + each.hostname + " can ping the SAH node through the private API network")
+                test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.sah_node.private_api_ip)
+                if ping_success not in test:
+                    raise AssertionError("  " + each.hostname + " cannot ping the SAH node through the private API network : " + test)
+
+            if each.is_controller == True :
+
+                # Controller tests
+
+                log("*** Verify  " + each.hostname + " can ping the SAH node through the external network")
+                test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.sah_node.external_ip)
+                if ping_success not in test:
+                    raise AssertionError("  " + each.hostname + " cannot ping the SAH node through the external network : " + test)
+
+            if each.is_compute == True :
+
+                # Compute  tests
+                log ("*** no compute only tests defined ***")
+
+            if each.is_storage == True :
+
+                # Storage tests
+
+                log ("*** no storage only tests defined ***")
+
 
             # Enable the internal repo's if we re going down that route
             if settings.internal_repos is True:
@@ -384,6 +540,84 @@ if __name__ == '__main__':
                 ]
                 for cmd in cmds:
                     logger.info( Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password,cmd))
+
+        # Check connectivity between all the nodes now they're all up.
+        # Controllers
+        target = 1
+        for each in settings.controller_nodes:
+            if target ==  len(settings.controller_nodes ):
+                target = 0
+
+            log ("*** "+ each.hostname + " -> " + settings.controller_nodes[target].hostname)
+
+            log("*** Verify the controller nodes can ping each other over the provisioning network ")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.controller_nodes[target].provisioning_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping " + settings.controller_nodes[target].hostname +" over the provisioning network  : " + test)
+
+            log("*** Verify the controller nodes can ping each other over the private api  network")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.controller_nodes[target].private_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping " + settings.controller_nodes[target].hostname +" over the private api network  : " + test)
+
+            log("*** Verify the controller nodes can ping each other over the Storage network")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.controller_nodes[target].storage_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping " + settings.controller_nodes[target].hostname +" over the storage network  : " + test)
+
+            log("*** Verify the controller nodes can ping each other over the External network")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.controller_nodes[target].public_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping " + settings.controller_nodes[target].hostname +" over the external network  : " + test)
+            target += 1
+
+        # Computes
+        target = 1
+        for each in settings.compute_nodes:
+            if target == len(settings.compute_nodes ):
+                target = 0
+            log ("*** "+ each.hostname + " -> " + settings.compute_nodes[target].hostname)
+            log("*** Verify the compute nodes can ping each other over the provisioning network")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.compute_nodes[target].provisioning_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping " + settings.compute_nodes[target].hostname +" over the provisioning network  : " + test)
+
+            log("*** Verify the compute nodes can ping each other over the private api  network")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.compute_nodes[target].private_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping " + settings.compute_nodes[target].hostname +" over the private api network  : " + test)
+
+            log("*** Verify the compute nodes can ping each other over the Storage network")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.compute_nodes[target].storage_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping " + settings.compute_nodes[target].hostname +" over the storage network  : " + test)
+
+            target += 1
+
+        # Storage
+        target = 1
+        for each in settings.ceph_nodes:
+            if target == len(settings.ceph_nodes ) :
+                target = 0
+            log ("*** "+ each.hostname + " -> " + settings.ceph_nodes[target].hostname)
+            log("*** Verify the Storage nodes can ping each other over the provisioning network")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.ceph_nodes[target].provisioning_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping " + settings.ceph_nodes[target].hostname +" over the provisioning network  : " + test)
+
+            log("*** Verify the Storage nodes can ping each other over the storage network")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.ceph_nodes[target].storage_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping " + settings.ceph_nodes[target].hostname +" over the storage network  : " + test)
+
+            log("*** Verify the Storage nodes can ping each other over the cluster network")
+            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.ceph_nodes[target].storage_cluster_ip)
+            if ping_success not in test:
+                raise AssertionError("  " + each.hostname + " cannot ping " + settings.ceph_nodes[target].hostname +" over the cluster network  : " + test)
+
+            target += 1
+
+
 
         foremanHost.configureHostGroups_Parameters()
         foremanHost.configureNodes()
@@ -431,7 +665,7 @@ if __name__ == '__main__':
                 "eth0        "+ settings.tempest_node.public_ip +"    "+ settings.tempest_node.public_netmask ,
                 "eth1        "+ settings.tempest_node.external_ip +"    "+ settings.tempest_node.external_netmask,
                 "eth2        "+ settings.tempest_node.private_api_ip +"    "+ settings.tempest_node.private_api_netmask,
-                "tempestcommit e42eb3df981957e8a95a6b1d698135b98375c2d6",
+                "tempestcommit origin/kilo",
                 )
 
         for comd in Conf:
@@ -456,11 +690,33 @@ if __name__ == '__main__':
         if "Current" not in subscriptionStatus:
             raise AssertionError("Tempest VM did not register properly : " + subscriptionStatus)
 
+        log("*** Verify the Tempest VM can ping the outside world (ip)")
+        test = ping_host(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, "8.8.8.8")
+        if ping_success not in test:
+            raise AssertionError("Tempest VM cannot ping the outside world (ip) : " + test)
 
+        log("*** Verify the Tempest VM can ping the outside world (dns)")
+        test = ping_host(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, "google.com")
+        if ping_success not in test:
+            raise AssertionError("Tempest VM cannot ping the outside world (dns) : " + test)
 
-        logger.info("Configuring tempest")
-        cmd = '/root/tempest/tools/config_tempest.py --create identity.uri http://'+ settings.vip_keystone_public +':5000/v2.0  identity.admin_username admin identity.admin_password  '+ settings.cluster_password+ ' identity.admin_tenant_name admin'
-        Ssh.execute_command(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, cmd)
+        log("*** Verify the Tempest VM can ping the controller Nodes over the External networkk")
+        for each in settings.controller_nodes:
+            test = ping_host(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, each.public_ip)
+            if ping_success not in test:
+                raise AssertionError("Tempest VM cannot ping the "+ each.hostname +" through the External network : " + test)
+
+        log("*** Verify the Tempest VM can ping the controller Nodes over the Private API networkk")
+        for each in settings.controller_nodes:
+            test = ping_host(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, each.private_ip)
+            if ping_success not in test:
+                raise AssertionError("Tempest VM cannot ping the "+ each.hostname +" through the Private api network : " + test)
+
+        log("*** Verify the Tempest VM can ping the compute Nodes over the Private API networkk")
+        for each in settings.compute_nodes:
+            test = ping_host(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, each.private_ip)
+            if ping_success not in test:
+                raise AssertionError("Tempest VM cannot ping the "+ each.hostname +" through the Private api network : " + test)
 
         log (" that's all folks "    )
         log ("")
