@@ -73,7 +73,7 @@ then
   pcs resource disable haproxy
 
   #Add radosgw to HA Proxy serivce 
-  sed -i 's/haproxy.cfg/haproxy.cfg -f \/etc\/haproxy\/radosgw.cfg/' /etc/systemd/system/multi-user.target.wants/haproxy.service
+  sed -i 's/haproxy.cfg/haproxy.cfg -f \/etc\/haproxy\/radosgw.cfg/' /usr/lib/systemd/system/haproxy.service
   systemctl daemon-reload
 
   #Create VIPS 
