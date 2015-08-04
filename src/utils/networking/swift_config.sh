@@ -48,9 +48,6 @@ then
  exit -1
 fi
 
-EXISTING_LINE=`grep -n "rgw swift url" ${CEPH_CONF} | grep -Eo '^[^:]+'`
-if [ ! "$EXISTING_LINE" ]
-then
 cat << EOF > /tmp/swift.tmp
 rgw swift url = http://${RADOSGW_PUBLIC_VIP}:8087
 rgw swift url prefix = swift
@@ -61,10 +58,13 @@ rgw keystone token cache size = 500
 rgw keystone revocation interval = 600
 rgw s3 auth use keystone = true
 EOF
+
+EXISTING_LINE=`grep -n "rgw swift url" ${CEPH_CONF} | grep -Eo '^[^:]+'`
+if [ ! "$EXISTING_LINE" ]
+then
+  LINE_NUM=`grep -n "filestore_xattr_use_omap" ${CEPH_CONF} | grep -Eo '^[^:]+'`
+    sed "${LINE_NUM}r /tmp/swift.tmp" < ${CEPH_CONF} > /tmp/ceph.tmp
+    mv /tmp/ceph.tmp ${CEPH_CONF}
 else 
   echo "Nothing to do -- swift integration already found."
 fi
-
-LINE_NUM=`grep -n "filestore_xattr_use_omap" ${CEPH_CONF} | grep -Eo '^[^:]+'`
-sed "${LINE_NUM}r /tmp/swift.tmp" < ${CEPH_CONF} > /tmp/ceph.tmp
-mv /tmp/ceph.tmp ${CEPH_CONF}
