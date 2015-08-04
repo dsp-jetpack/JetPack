@@ -45,13 +45,13 @@ class Scp():
 
 def edit_file(target, new_value, file):
     config = importlib.import_module('config_cdh5') 
-    hadoop_ip = config.hadoop_ip
+    tpc_ip = config.tpc_ip
     myScp = Scp()
     #open the config file
-    output = myScp.open_remote_file(hadoop_ip, file)
+    output = myScp.open_remote_file(tpc_ip, file)
     
     scon = ssh()
-    scon.connect_with_user(hadoop_ip, 'root', 'cr0wBar!')
+    scon.connect_with_user(tpc_ip, 'root', 'cr0wBar!')
     #hold the current value of the variable to build the sed string
     current_value = ''
     #go through each line of the config and find the live and commented variables
@@ -63,7 +63,7 @@ def edit_file(target, new_value, file):
             cmd = 'sed -i.bak s/^'+target+'='+str(current_value)+'/'+target+'='+str(new_value)+'/g '+file
 
             print "running: " + cmd
-            cl_stdoutd, cl_stderrd = c_ssh_as_root(hadoop_ip, cmd)
+            cl_stdoutd, cl_stderrd = c_ssh_as_root(tpc_ip, cmd)
 
     #print cl_stdoutd
     #print cl_stderrd
@@ -179,8 +179,8 @@ def clear_disks(name_node_ip):
 def clear_cache(name_node_ip):
     log("Clearing cache")
     #name_node_ip = '172.16.11.141'
-    cmd = 'clush -w r2s1xd[1-10] "sync"'
-    cmd2 = 'clush -w r2s1xd[1-10] "echo 3> /proc/sys/vm/drop_caches"'
+    cmd = 'clush -w r3s1xd[1-10] "sync"'
+    cmd2 = 'clush -w r3s1xd[1-10] "echo 3> /proc/sys/vm/drop_caches"'
     print "running " + cmd 
     syncOut, syncError = c_ssh_as_root(name_node_ip, cmd)
     #print 'syncOut' + str(syncOut)
@@ -217,17 +217,17 @@ def tpc_benchmark(name_node_ip, tpc_location, tpc_size):
     #print 'TPC output: ' + str(cl_stdoutd)
     return cl_stdoutd, cl_stderrd
 
-def run_tpc_benchmark(name_node_ip, tpc_location, tpc_size):
+def run_tpc_benchmark(tpc_ip, tpc_location, tpc_size):
     jobIDs = []
     starttimes = []
     finishtimes = []
     job_names = []
-    #job_type = 'kmeans'
-    edge_node_ip = "172.16.11.143"
+
+    edge_node_ip = "172.16.14.100"
     timeA = datetime.datetime.now()-datetime.timedelta(1)
     print str(timeA)
     
-    out1, out2 = tpc_benchmark(name_node_ip, tpc_location, tpc_size)
+    out1, out2 = tpc_benchmark(tpc_ip, tpc_location, tpc_size)
     
     jobIDs =  re.findall("Job complete: (.+)", out1)
     #jobIDs = ['job_201504081546_0163', 'job_201504081546_0164', 'job_201504081546_0165', 'job_201504081546_0166', 'job_201504081546_0167', 'job_201504081546_0168']
@@ -298,8 +298,6 @@ def run_tpc_benchmark(name_node_ip, tpc_location, tpc_size):
         
         
     return jobIDs, starttimes, finishtimes, job_names
-
-
     
 
 #def convert_cpu_stats(cpu_stats, numCores):
@@ -350,8 +348,9 @@ def get_other_cpu_stats(timestamp, host, rowCount, job_type, fileCount, fileSize
     time_start = timestamp-sec   # GMT +1
  
     time_end = timestamp+sec
-    time_start = convert_to_utc(time_start)
-    time_end = convert_to_utc(time_end)
+    if job_type == 'tpc':
+        time_start = convert_to_utc(time_start)
+        time_end = convert_to_utc(time_end)
 
 
     
@@ -361,8 +360,11 @@ def get_other_cpu_stats(timestamp, host, rowCount, job_type, fileCount, fileSize
         #log('CPUetime = '+str(time_end))
         tsquery = "select "+stat+" / "+str(numCores)+" * 100 where hostname = \""+ host +"\" and category = Host"
         #log('tsquery other_cpu: '+str(tsquery))
-        #time_start = convert_to_utc(time_start)
-        #time_end = convert_to_utc(time_end)
+        #testing if the tpc other stats need to 
+        #if job_type == 'tpc':
+        #    time_start = convert_to_utc(time_start)
+        #    time_end = convert_to_utc(time_end)
+
         hostRes = session.query_timeseries(tsquery, time_start, time_end)
         #log(str(hostRes))
 
@@ -455,9 +457,10 @@ def teragen(rowNumber, folderName, edge_node_ip, teragen_params):
     add :
     Defaults:root   !requiretty
     '''
-    cmd = 'cd /opt/cloudera/parcels/CDH-5.2.0-1.cdh5.2.0.p0.36/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.5.0-mr1-cdh5.2.0.jar teragen ' + teragen_params + ' ' + str(rowNumber) +' '+ str(folderName)
+    cmd = 'cd /opt/cloudera/parcels/CDH-5.4.2-1.cdh5.4.2.p0.2/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.6.0-mr1-cdh5.4.2.jar teragen ' + teragen_params + ' ' + str(rowNumber) +' '+ str(folderName)
     print "running " + cmd 
-    cl_stdoutd, cl_stderrd = c_ssh_as_root(edge_node_ip, cmd)        
+    teregen_ip = '172.16.14.97'
+    cl_stdoutd, cl_stderrd = c_ssh_as_root(teregen_ip, cmd)        
     print cl_stdoutd
     print cl_stderrd
     return cl_stdoutd, cl_stderrd
@@ -465,9 +468,10 @@ def teragen(rowNumber, folderName, edge_node_ip, teragen_params):
 def terasort(folderName, edge_node_ip, terasort_params):
     destFolder = folderName + '_Sorted'
 
-    cmd = 'cd /opt/cloudera/parcels/CDH-5.2.0-1.cdh5.2.0.p0.36/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.5.0-mr1-cdh5.2.0.jar terasort ' + terasort_params + ' '+ str(folderName) + ' ' + str(destFolder)
+    cmd = 'cd /opt/cloudera/parcels/CDH-5.4.2-1.cdh5.4.2.p0.2/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.6.0-mr1-cdh5.4.2.jar terasort ' + terasort_params + ' '+ str(folderName) + ' ' + str(destFolder)
     print "running " + cmd 
-    cl_stdoutd, cl_stderrd = c_ssh_as_root(edge_node_ip, cmd)        
+    teregen_ip = '172.16.14.97'
+    cl_stdoutd, cl_stderrd = c_ssh_as_root(teregen_ip, cmd)        
     print cl_stdoutd
     print cl_stderrd
     return cl_stdoutd, cl_stderrd
@@ -487,17 +491,17 @@ def log_hive(entry, printOutput=True):
     f.close()
 
 def dfsio(numFiles, fileSize, edge_node_ip):
+    edge_node_ip = "172.16.14.97"
     
     #cmd = 'cd /usr/lib/hadoop-0.20-mapreduce;sudo -u hdfs hadoop jar hadoop-test-2.2.0-mr1-cdh5.0.0-beta-2.jar TestDFSIO -write -nrFiles '+ str(numFiles) +' -fileSize '+ str(fileSize) + ' -resFile /tmp/results.txt'
-    cmd = 'cd /opt/cloudera/parcels/CDH-5.2.0-1.cdh5.2.0.p0.36/lib/hadoop-0.20-mapreduce;sudo -u hdfs hadoop jar hadoop-examples-2.5.0-mr1-cdh5.2.0.jar TestDFSIO   -write -nrFiles '+ str(numFiles) +' -fileSize '+ str(fileSize) + ' -resFile /tmp/results.txt'
+    cmd = 'cd /opt/cloudera/parcels/CDH-5.4.2-1.cdh5.4.2.p0.2/lib/hadoop-0.20-mapreduce;sudo -u hdfs hadoop jar hadoop-test-2.6.0-mr1-cdh5.4.2.jar TestDFSIO   -write -nrFiles '+ str(numFiles) +' -fileSize '+ str(fileSize) + ' -resFile /tmp/results.txt'
     print "running  " + cmd;
     cl_stdoutd, cl_stderrd = c_ssh_as_root(edge_node_ip, cmd)        
     return cl_stdoutd, cl_stderrd
 
 def dfsioREAD(numFiles, fileSize, edge_node_ip):
-    
-    #cmd = 'cd /usr/lib/hadoop-0.20-mapreduce;sudo -u hdfs hadoop jar hadoop-test-2.2.0-mr1-cdh5.0.0-beta-2.jar TestDFSIO -write -nrFiles '+ str(numFiles) +' -fileSize '+ str(fileSize) + ' -resFile /tmp/results.txt'
-    cmd = 'cd /opt/cloudera/parcels/CDH-5.0.0-1.cdh5.0.0.p0.47/lib/hadoop-mapreduce;sudo -u hdfs hadoop jar hadoop-mapreduce-client-jobclient-2.3.0-cdh5.0.0-tests.jar TestDFSIO   -read -nrFiles '+ str(numFiles) +' -fileSize '+ str(fileSize) + ' -resFile /tmp/results.txt'
+    edge_node_ip = "172.16.14.97"
+    cmd = 'cd /opt/cloudera/parcels/CDH-5.4.2-1.cdh5.4.2.p0.2/lib/hadoop-0.20-mapreduce;sudo -u hdfs hadoop jar hadoop-test-2.6.0-mr1-cdh5.4.2.jar TestDFSIO   -read -nrFiles '+ str(numFiles) +' -fileSize '+ str(fileSize) + ' -resFile /tmp/results.txt'
     print "running  " + cmd;
     cl_stdoutd, cl_stderrd = c_ssh_as_root(edge_node_ip, cmd)        
     return cl_stdoutd, cl_stderrd
@@ -513,7 +517,7 @@ def rrdtoolXtract(start, end, metric, host, crowbar_admin_ip, time_offset):
     #log(str(host))
     hostName = re.search("(.[a-z0-9]+)", host)
     host = hostName.group(1)
-    cmd = 'rrdtool fetch /var/lib/ganglia/rrds/Performance\ Stamp/'+ str(host) + '/' + metric +'.rrd AVERAGE -s '+ str(start) +' -e ' + str(end) 
+    cmd = 'rrdtool fetch /var/lib/ganglia/rrds/13g\ Performance\ Stamp/'+ str(host) + '/' + metric +'.rrd AVERAGE -s '+ str(start) +' -e ' + str(end) 
     #log(str(cmd))
     cl_stdoutd, cl_stderrd = c_ssh_as_root(crowbar_admin_ip, cmd)
     return cl_stdoutd, cl_stderrd
@@ -524,13 +528,15 @@ def run_dfsio_job(fileCount, fileSize, edge_ip):
     timeA = datetime.datetime.now()-datetime.timedelta(1)
     print str(timeA)
     for line in ls:
+        print str(line)
         ma =  re.search("Test exec time sec:\s(.+)", line)
         if ma:
             runTime = ma.group(1)
         ma2 =  re.search("Throughput mb/sec:\s(.+)", line)
         if ma2:
             Throughput = ma2.group(1)
-        ma3 =  re.search("Job (.+) completed", line)
+        #ma3 =  re.search("Job (.+) completed", line)
+        ma3 =  re.search("Job complete:\s(.+)", line)
         if ma3:
                 jobID = ma3.group(1)   
         
@@ -548,19 +554,51 @@ def run_dfsio_job(fileCount, fileSize, edge_ip):
       if c.version == "CDH5":
           cdh4 = c 
     for s in cdh4.get_all_services():
-      print "in get_all_services"
-      print str(s)
-      print str(s.name)
-      if s.name == "yarn":
-          mapreduce = s
-    ac =  mapreduce.get_yarn_applications(timeA, timeB)
-    print str(ac)
-    print str(ac.warnings)
-    for job in ac.applications:
-        if jobID == str(job.applicationId):
-            ob = job         
-    start = ob.startTime
-    finish = ob.endTime
+        print "in get_all_services"
+        print str(s)
+        print str(s.name)
+    if s.name == "mapreduce":
+        mapreduce = s
+        ac = mapreduce.get_activity(jobID)
+        print jobID
+        print str(ac.startTime)
+        print str(ac.finishTime)
+        
+        print str(ac)
+        #print str(ac.warnings)
+        #for job in ac.applications:
+        #    if jobID == str(job.applicationId):
+        #        ob = job         
+        #start = ob.startTime
+        #finish = ob.endTime
+        start = ac.startTime
+        finish = ac.finishTime
+
+    else:
+        ac =  mapreduce.get_yarn_applications(timeA, timeB)
+        for job in ac.applications:
+            if jobID == str(job.applicationId):
+                ob = job         
+        start = ob.startTime
+        finish = ob.endTime
+        
+    #ac =  mapreduce.get_yarn_applications(timeA, timeB)
+    #ab = mapreduce.get_activity(jobID)
+    #print str(ac)
+    #print str(ac.warnings)
+    #for job in ac.applications:
+    #    if jobID == str(job.applicationId):
+    #        ob = job         
+    #start = ob.startTime
+    #finish = ob.endTime
+    
+    start = datetime.datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
+    finish = datetime.datetime.strptime(finish, '%Y-%m-%dT%H:%M:%S.%fZ')
+
+    hourOffset = timedelta(hours=5)
+    start = start-hourOffset
+    finish = finish-hourOffset
+#################
                 
     return start, finish, runTime, Throughput, jobID
 
@@ -570,13 +608,14 @@ def run_dfsioREAD_job(fileCount, fileSize, edge_ip):
     timeA = datetime.datetime.now()-datetime.timedelta(1)
     print str(timeA)
     for line in ls:
+        print str(line)
         ma =  re.search("Test exec time sec:\s(.+)", line)
         if ma:
             runTime = ma.group(1)
         ma2 =  re.search("Throughput mb/sec:\s(.+)", line)
         if ma2:
             Throughput = ma2.group(1)
-        ma3 =  re.search("Job (.+) completed", line)
+        ma3 =  re.search("Job complete:\s(.+)", line)
         if ma3:
                 jobID = ma3.group(1)   
         
@@ -594,19 +633,50 @@ def run_dfsioREAD_job(fileCount, fileSize, edge_ip):
       if c.version == "CDH5":
           cdh4 = c 
     for s in cdh4.get_all_services():
-      print "in get_all_services"
-      print str(s)
-      print str(s.name)
-      if s.name == "yarn":
-          mapreduce = s
-    ac =  mapreduce.get_yarn_applications(timeA, timeB)
-    print str(ac)
-    print str(ac.warnings)
-    for job in ac.applications:
-        if jobID == str(job.applicationId):
-            ob = job         
-    start = ob.startTime
-    finish = ob.endTime
+        print "in get_all_services"
+        print str(s)
+        print str(s.name)
+    if s.name == "mapreduce":
+        mapreduce = s
+        ac = mapreduce.get_activity(jobID)
+        print jobID
+        print str(ac.startTime)
+        print str(ac.finishTime)
+        
+        print str(ac)
+        #print str(ac.warnings)
+        #for job in ac.applications:
+        #    if jobID == str(job.applicationId):
+        #        ob = job         
+        #start = ob.startTime
+        #finish = ob.endTime
+        start = ac.startTime
+        finish = ac.finishTime
+
+    else:
+        ac =  mapreduce.get_yarn_applications(timeA, timeB)
+        for job in ac.applications:
+            if jobID == str(job.applicationId):
+                ob = job         
+        start = ob.startTime
+        finish = ob.endTime
+        
+    #ac =  mapreduce.get_yarn_applications(timeA, timeB)
+    #ab = mapreduce.get_activity(jobID)
+    #print str(ac)
+    #print str(ac.warnings)
+    #for job in ac.applications:
+    #    if jobID == str(job.applicationId):
+    #        ob = job         
+    #start = ob.startTime
+    #finish = ob.endTime
+    
+    start = datetime.datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
+    finish = datetime.datetime.strptime(finish, '%Y-%m-%dT%H:%M:%S.%fZ')
+
+    hourOffset = timedelta(hours=5)
+    start = start-hourOffset
+    finish = finish-hourOffset
                 
     return start, finish, runTime, Throughput, jobID
     
@@ -690,6 +760,8 @@ def get_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, tim
             #qtime_start = convert_to_utc(time_start)
             #qtime_end = convert_to_utc(time_end)
             #log('tsquery =: ' +str(tsquery))
+            print "time start::: "+str(time_start)
+            print "time End::: " + str(time_end)
             hostRes = session.query_timeseries(tsquery, time_start, time_end)
             print 'hostRes[0] = ' + str(hostRes[0])       
             for rez in hostRes[0].timeSeries:
@@ -737,7 +809,7 @@ def get_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, tim
                 #log(str(fileSize))
                 #log(str(highestCPU))
                 #log(str('getting other cpu stats for host ')+ str(host))
-                other_cpu_stats, full_total = get_other_cpu_stats(adjustedtimestamps, host, rowCount, job_type, fileCount, fileSize, highestCPU)
+                other_cpu_stats, full_total = get_other_cpu_stats(adjustedtimestamps, host, rowCount, job_type, fileCount, fileSize, highestCPU, job_type)
                 full_totals.append(full_total)
                 #total = total + cpu_total
                 #log("otherStats " + str(other_cpu_stats))
@@ -818,6 +890,7 @@ def getHIVE_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start,
             else:
 		timestamps.append(0)
                 highests.append(dict({host:'0'}))
+
 	    if len(data) > 0:
 
 	            if stat == 'cpu_user_rate':
@@ -826,6 +899,8 @@ def getHIVE_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start,
 			#log("Host "+ str(host))
 			#log("index "+ str(dataNodes))
 			#log("cpu_user_rate peaked at: " + str(timestamps[0]))
+                        #print "TIMESTAMPS: "+str(timestamps)
+                        adjustedtimestamps = convert_to_utc(timestamps[0])
 	    		other_cpu_stats, full_total = get_other_cpu_stats(timestamps[0], host, rowCount, job_type, fileCount, fileSize, highestCPU, job_name)
 			full_totals.append(full_total)
          		#total = total + cpu_total
@@ -907,9 +982,10 @@ def run_terragen_job(rowCount, edge_node_ip, teragen_params):
             print "line: "+str(line)
             #time.sleep(2)
             ma =  re.search("Job complete: (.+)", line)
+            #ma =  re.search("Job (.+) complete", line)
             print ma
             if ma:
-                jobID = ma.group(1)   
+                jobID = ma.group(1) 
         #time.sleep(30)
         print "waiting 30 seconds"
         time.sleep(30)
@@ -917,7 +993,7 @@ def run_terragen_job(rowCount, edge_node_ip, teragen_params):
 
         timeB = datetime.datetime.now()+datetime.timedelta(1)+minute
         print str(timeB)
-        edge_node_ip = "172.16.11.143"
+        #edge_node_ip = "172.16.11.100"
         session = ApiResource(edge_node_ip,  7180, "admin", "admin", version=6)
 
         # Get the MapReduce job runtime from the job id
@@ -928,36 +1004,52 @@ def run_terragen_job(rowCount, edge_node_ip, teragen_params):
                 cdh4 = c 
         for s in cdh4.get_all_services():
             print "s = " + str(s)
+            slist = []
             if s.name == "yarn":
                 mapreduce = s
+                ac =  mapreduce.get_yarn_applications(timeA, timeB)
+                for job in ac.applications:
+                    if jobID == str(job.applicationId):
+                        ob = job         
+                start = ob.startTime
+                finish = ob.endTime
+
+
             elif s.name == "mapreduce":
                 mapreduce = s
+                slist.append(s)
+                #ac =  mapreduce.get_yarn_applications(timeA, timeB)
+                ac = mapreduce.get_activity(jobID)
+                print jobID
+                print str(ac.startTime)
+                print str(ac.finishTime)
+        
+                print str(ac)
+                #print str(ac.warnings)
+                #for job in ac.applications:
+                #    if jobID == str(job.applicationId):
+                #        ob = job         
+                #start = ob.startTime
+                #finish = ob.endTime
+                start = ac.startTime
+                finish = ac.finishTime
+
+
+
                 
         print timeA
         print timeB
-        
-        #ac =  mapreduce.get_yarn_applications(timeA, timeB)
-        ac = mapreduce.get_activity(jobID)
-        print jobID
-        print str(ac.startTime)
-        print str(ac.finishTime)
-        
-        print str(ac)
-        #print str(ac.warnings)
-        #for job in ac.applications:
-        #    if jobID == str(job.applicationId):
-        #        ob = job         
-        #start = ob.startTime
-        #finish = ob.endTime
-        start = ac.startTime
-        finish = ac.finishTime
+#        if s.name == "mapreduce":
+            
 
+#        else:
+            
 
-        
+        #removed to allow yarn to complete - add back for mapreduce
         start = datetime.datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
         finish = datetime.datetime.strptime(finish, '%Y-%m-%dT%H:%M:%S.%fZ')
 
-        hourOffset = timedelta(hours=0)
+        hourOffset = timedelta(hours=5)
         start = start-hourOffset
         finish = finish-hourOffset
         print str(start)
@@ -976,13 +1068,14 @@ def run_terasort_job(folderName, edge_node_ip, terasort_params):
         for line in ls:
             print str(line)
             ma =  re.search("Job complete: (.+)", line)
+            #ma =  re.search("Job (.+) completed", line)
             if ma:
                 jobID = ma.group(1)
                 print jobID
         time.sleep(30)
         timeB = datetime.datetime.now()+datetime.timedelta(0)
         print str(timeB)
-        edge_node_ip = "172.16.11.143"
+        #edge_node_ip = "172.16.11.143"
         session = ApiResource(edge_node_ip,  7180, "admin", "admin", version=6)
         print "session: " + str(session)
         # Get the MapReduce job runtime from the job id
@@ -994,10 +1087,39 @@ def run_terasort_job(folderName, edge_node_ip, terasort_params):
         for s in cdh4.get_all_services():
             if s.name == "yarn":
                 mapreduce = s
+                ac =  mapreduce.get_yarn_applications(timeA, timeB)
+                for job in ac.applications:
+                    if jobID == str(job.applicationId):
+                        ob = job         
+                start = ob.startTime
+                finish = ob.endTime
+
             elif s.name == "mapreduce":
                 mapreduce = s
+                #ac =  mapreduce.get_yarn_applications(timeA, timeB)
+                ac = mapreduce.get_activity(jobID)
+                print jobID
+                print str(ac.startTime)
+                print str(ac.finishTime)
+        
+                print str(ac)
+                #print str(ac.warnings)
+                #for job in ac.applications:
+                #    if jobID == str(job.applicationId):
+                #        ob = job         
+                #start = ob.startTime
+                #finish = ob.endTime
+                start = ac.startTime
+                finish = ac.finishTime
+
+#        if s.name == "mapreduce":
+            
+
+#        else:
+            
+        
         #ac =  mapreduce.get_yarn_applications(timeA, timeB)
-        ab = mapreduce.get_activity(jobID)
+        #ab = mapreduce.get_activity(jobID)
         #print str(ac)
         #print str(ac.warnings)
         #for job in ac.applications:
@@ -1006,10 +1128,10 @@ def run_terasort_job(folderName, edge_node_ip, terasort_params):
         #start = ob.startTime
         #finish = ob.endTime
     
-        start = datetime.datetime.strptime(ab.startTime, '%Y-%m-%dT%H:%M:%S.%fZ')
-        finish = datetime.datetime.strptime(ab.finishTime, '%Y-%m-%dT%H:%M:%S.%fZ')
+        start = datetime.datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
+        finish = datetime.datetime.strptime(finish, '%Y-%m-%dT%H:%M:%S.%fZ')
 
-        hourOffset = timedelta(hours=0)
+        hourOffset = timedelta(hours=5)
         start = start-hourOffset
         finish = finish-hourOffset
         
@@ -1408,11 +1530,13 @@ def get_multi_stats(job_type, runId, visits, pages, dataNodes, cluster_name, cro
     ResultsSummary = []
     edge_ip = config.edge_node_ip
     name_ip = config.name_node_ip
+    tpc_ip = config.tpc_ip
     interations = config.num_iterations
     param = config.tpc_size
     #job_type = 'HIVEJOIN'
     if job_type == 'tpc':
-        jobIDs, starttimes, finishtimes, job_names = run_tpc_benchmark(name_ip, config.tpc_location, config.tpc_size)
+        print job_type
+        jobIDs, starttimes, finishtimes, job_names = run_tpc_benchmark(tpc_ip, config.tpc_location, config.tpc_size)
         #log('Get_multi - starttimes: '+str(starttimes) +' endtimes: ' +str(finishtimes))
         #jobIDs = ['job_201504081546_0163', 'job_201504081546_0164', 'job_201504081546_0165', 'job_201504081546_0166', 'job_201504081546_0167', 'job_201504081546_0168']
     else:
@@ -1555,6 +1679,7 @@ def get_multi_stats(job_type, runId, visits, pages, dataNodes, cluster_name, cro
                     output = host.items()[0][1]    
                     if job_type == "tpc":
                         log(job_type+ "-"+str(job_name)+ " | "+ variable_name + " | "+ str(host.items()[0][0]) +" | " + stat + " | " + str(output) )
+                         
                         ResultsSummary.append([str(runId),
                                        job_type,
                                        str(host.items()[0][0]),
@@ -1686,6 +1811,7 @@ def main():
     hadoop_ip = config.hadoop_ip
     run_id = config.run_id
     name_node_ip = config.name_node_ip
+    clean_up_ip = config.clean_up_ip
     
     dataNodes = get_datanode_hosts(edge_ip,  config.cluster_name)
     #gangliaDataNodes = get_datanode_entityname(edge_ip, clustername, ipAddress)
@@ -1702,6 +1828,7 @@ def main():
 
     cluster_name = config.cluster_name
     time_offset = config.time_offset
+    clean_up_ip = config.clean_up_ip
     crowbar_admin_ip = config.edge_node_ip
     runId = str(datetime.datetime.now()) + "__" + config.run_id
     
@@ -1710,9 +1837,9 @@ def main():
     #edge_ip = config.edge_node_ip
     
     log("------------[[["+str(run_id) + "]]]------------------------------")
-    #out1, out2 = clear_disks(name_node_ip)
+    out1, out2 = clear_disks(clean_up_ip)
     #print out1
-    #out1, out2 = clear_cache(name_node_ip)
+    out1, out2 = clear_cache(clean_up_ip)
     log( "[[[ Terragen tests ]]]")
     rowCountsBatchValues = config.teragen_row_counts
     teragen_params = config.teragen_parameters 
@@ -1929,9 +2056,14 @@ def main():
                                       )
         #removed during TPC testing because upload not available.    
         #upload_results(ResultsSummary)
-        out1, out2 = clear_disks(name_node_ip)
+
+        #temp-removed**
+        #out1, out2 = clear_disks(clean_up_ip)
+
         #print out1
-        out1, out2 = clear_cache(name_node_ip)
+        #temp-removed**
+        #out1, out2 = clear_cache(clean_up_ip)
+
         #print out1
     i = 0
     for f in folderNames:
@@ -2023,7 +2155,7 @@ def main():
                                       		str(host.items()[0][1])]                                      
                                       		)
 	#log("dfsio | " + str(fileCount)  + "-" + str(fileSize) + " | average | cpu_total | " + str(cpu_total) )
-    	upload_results(ResultsSummary)
+#    	upload_results(ResultsSummary)
 
 ####################################DFSIO READ################################################
 
@@ -2098,7 +2230,7 @@ def main():
                                       		str(host.items()[0][1])]                                      
                                       		)
 	#log("dfsio | " + str(fileCount)  + "-" + str(fileSize) + " | average | cpu_total | " + str(cpu_total) )
-    	upload_results(ResultsSummary)
+    	#upload_results(ResultsSummary)
 
 #####################################################################
 
