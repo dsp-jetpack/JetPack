@@ -62,24 +62,27 @@ then
   iptables -I INPUT ${LINE_NUM} -p tcp -m multiport --dports 8087,7480 -m comment --comment "001 civet incoming" -j ACCEPT
   service iptables save
   systemctl restart iptables
-else 
-  echo "Nothing to do -- Iptables rule for ports 8087 and 7480 already exist"
 fi
+
+#Stop haproxy
+pcs resource disable haproxy
+
+EXISTING_LINE=`cat /usr/lib/systemd/system/haproxy.service | grep radosgw.cfg`
+if [ ! "$EXISTING_LINE" ]
+then
+  #Add radosgw to HA Proxy serivce 
+  sed -i 's/haproxy.cfg/haproxy.cfg -f \/etc\/haproxy\/radosgw.cfg/' /usr/lib/systemd/system/haproxy.service
+  systemctl daemon-reload
+fi
+
 
 
 if  [ ! "`pcs status | grep ip-radosgw`" ] 
 then
-  #Stop haproxy
-  pcs resource disable haproxy
-
-  #Add radosgw to HA Proxy serivce 
-  sed -i 's/haproxy.cfg/haproxy.cfg -f \/etc\/haproxy\/radosgw.cfg/' /usr/lib/systemd/system/haproxy.service
-  systemctl daemon-reload
-
   #Create VIPS 
   pcs resource create ip-radosgw-prv-${RADOSGW_PRIVATE_VIP} ocf:heartbeat:IPaddr2 ip=${RADOSGW_PRIVATE_VIP} cidr_netmask=32 op monitor interval=10s 
   pcs resource create ip-radosgw-pub-${RADOSGW_PUBLIC_VIP} ocf:heartbeat:IPaddr2 ip=${RADOSGW_PUBLIC_VIP} cidr_netmask=32 op monitor interval=10s 
-  pcs resource enable haproxy
-else
-  echo "Nothing to do -- PCS radosgw services already installed"
 fi 
+
+#Start haproxy
+pcs resource enable haproxy
