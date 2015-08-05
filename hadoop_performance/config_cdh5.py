@@ -8,16 +8,23 @@
 #    Defaults:root   !requiretty
 
 # Edge node ip address 
-edge_node_ip = "172.16.11.143"
-crowbar_admin_ip = "172.16.11.143" # 
+edge_node_ip = "172.16.14.100"
+
+#point to ganglia node
+crowbar_admin_ip = "172.16.14.100" # 
+
 time_offset = 0 #hours
 cluster_name = "Cluster 1"
-hadoop_ip = "172.16.11.141"
-name_node_ip = "172.16.11.141"
+
+hadoop_ip = "172.16.14.100"
+name_node_ip = "172.16.14.100"
+
+tpc_ip = "172.16.14.97"
+clean_up_ip = "172.16.14.97"
 
 #run_id = 'terasort_Nicholas_repeat test5 & mapred.child.ulimit=2GB'
 
-run_id = 'Averages_testing'
+run_id = 'TPC kit-30TB MaxRes 1GB blocksize slowstart=0.05 map 48/reduce.max=32 maps/reduce=576/320'
 #run_id = 'config2_Test4_3_iv_MAX'
 #run_id = 'config1_MAX-mr2_high-perf-mr1_test2'
 #run_id = 'Config3_test4_2d_cpu_default_mem_MAx_MINUS_1'
@@ -28,23 +35,24 @@ run_id = 'Averages_testing'
              
 # Teragen Row Count test values
 #teragen_parameters ='-D dfs.replication=3 -D dfs.blocksize=1073741824 -D mapred.tasktracker.map.tasks.maximum=32 -D mapred.tasktracker.reduce.tasks.maximum=16 -D mapred.map.tasks=180 -D mapred.reduce.tasks=98'
-teragen_parameters ='-D dfs.replication=3 -D dfs.blocksize=536870912 -D mapred.tasktracker.map.tasks.maximum=32 -D mapred.tasktracker.reduce.tasks.maximum=16 -D mapred.map.tasks=180 -D mapred.reduce.tasks=98'
+teragen_parameters ='-D dfs.replication=3 -D dfs.blocksize=536870912 -D mapred.tasktracker.map.tasks.maximum=48 -D mapred.tasktracker.reduce.tasks.maximum=24 -D mapred.map.tasks=180 -D mapred.reduce.tasks=98'
 #teragen_parameters ='-D yarn.nodemanager.resource.cpu-vcores=32 -D yarn.nodemanager.resource.memory-mb=30720 -D dfs.replication=1 -D dfs.blocksize=536870912 -D mapreduce.map.cpu.vcores=1 -D mapreduce.reduce.cpu.vcores=1 -D mapreduce.map.memory.mb=1024 -D mapreduce.reduce.memory.mb=2048'
 #teragen_parameters ='-D yarn.nodemanager.resource.cpu-vcores=32 -D yarn.nodemanager.resource.memory-mb=30720 -D yarn.scheduler.maximum-allocation-vcores=32 -D yarn.scheduler.minimum-allocation-mb=2048 -D yarn.scheduler.minimum-allocation-vcores=1 -D dfs.replication=1 -D dfs.blocksize=536870912 -D mapreduce.map.cpu.vcores=1 -D mapreduce.reduce.cpu.vcores=1 -D mapreduce.map.memory.mb=2048 -D mapreduce.reduce.memory.mb=4096 -D mapreduce.map.java.opts=1638 -D mapreduce.reduce.java.opts=3276 -D yarn.app.mapreduce.am.resource.mb=4096 -D yarn.app.mapreduce.am.command-opts=3276'
 #teragen_parameters ='-D yarn.nodemanager.resource.cpu-vcores=32 -D yarn.nodemanager.resource.memory-mb=31744 -D dfs.replication=1 -D dfs.blocksize=536870912 -D mapred.tasktracker.map.tasks.maximum=24 -D mapred.tasktracker.reduce.tasks.maximum=8 -D mapred.map.tasks=90 -D mapred.reduce.tasks=30'
 #teragen_parameters ='-D yarn.nodemanager.resource.cpu-vcores=8 -D yarn.nodemanager.resource.memory-mb=8'
+#teragen_parameters = ''
 #params ignored by yarn
 teragen_row_counts = (#5000000000,
-                      #111000,
-                      #10000000000,
+                      #1000000000,
+                      #10000000000,--1TB
                       #10000000000,
                       #10000000000,
 		      #140000000,                     
 		      #2000000001,
-              #2000000002,
+              #NICHOLAS_run#3000000000,
               #2000000003,
-                      1700000001,
- 		      #1700000002,
+                      #4550500000,
+ 		      #2700000002,
                       #1700000003,
                       #50000000000,
                       )
@@ -160,7 +168,7 @@ dfsio_ganglia_stats = (#'boottime',
                          #'total_cpu_soft_irq')
 
 
-terasort_parameters ='-D dfs.replication=3 -D dfs.blocksize=536870912 -D mapred.tasktracker.map.tasks.maximum=32 -D mapred.tasktracker.reduce.tasks.maximum=16 -D mapred.map.tasks=180 -D mapred.reduce.tasks=98'
+terasort_parameters ='-D dfs.replication=3 -D dfs.blocksize=536870912 -D mapred.tasktracker.map.tasks.maximum=48 -D mapred.tasktracker.reduce.tasks.maximum=24 -D mapred.map.tasks=180 -D mapred.reduce.tasks=98'
 #terasort_parameters ='-D yarn.nodemanager.resource.cpu-vcores=32 -D yarn.nodemanager.resource.memory-mb=30720 -D dfs.replication=1 -D dfs.blocksize=536870912 -D mapreduce.map.cpu.vcores=1 -D mapreduce.reduce.cpu.vcores=1 -D mapreduce.map.memory.mb=1024 -D mapreduce.reduce.memory.mb=2048'
 #terasort_parameters = '-D yarn.nodemanager.resource.cpu-vcores=32 -D yarn.nodemanager.resource.memory-mb=30720 -D yarn.scheduler.maximum-allocation-vcores=32  -D yarn.scheduler.minimum-allocation-mb=2048 -D yarn.scheduler.minimum-allocation-vcores=1 -D dfs.replication=1 -D dfs.blocksize=536870912 -D mapreduce.map.cpu.vcores=1 -D mapreduce.reduce.cpu.vcores=1 -D mapreduce.map.memory.mb=2048 -D mapreduce.reduce.memory.mb=4096 -D mapreduce.map.java.opts=1638 -D mapreduce.reduce.java.opts=3276 -D yarn.app.mapreduce.am.resource.mb=4096 -D yarn.app.mapreduce.am.command-opts=3276'
 #terasort_parameters = '-D yarn.nodemanager.resource.cpu-vcores=32 -D yarn.nodemanager.resource.memory-mb=31744 -D dfs.replication=1 -D dfs.blocksize=536870912 -D mapred.tasktracker.map.tasks.maximum=24 -D mapred.tasktracker.reduce.tasks.maximum=8 -D mapred.map.tasks=90 -D mapred.reduce.tasks=30'
@@ -299,3 +307,15 @@ kmeans_ganglia_stats = (#'boottime',
                          #'total_cpu_system',
                          #'total_cpu_soft_irq')
                          
+
+tpc_flag = 'true'
+tpc_size = '6'
+#tpc_location = '/tpc_xhs_kit/TPCx-HS_Kit_v1.2.0_external/TPCx-HS-Runtime-Suite'
+tpc_location = '/tpc_xhs_kit/tpcx-hs_kit_v1.2.0_external/TPCx-HS_Kit_v1.2.0_external/TPCx-HS-Runtime-Suite'
+tpc_file = 'Benchmark_Parameters.sh'
+NUM_MAPS = '576'
+NUM_REDUCERS = '320'
+HADOOP_USER = 'root'
+HDFS_USER='hdfs'
+SLEEP_BETWEEN_RUNS= '60'
+
