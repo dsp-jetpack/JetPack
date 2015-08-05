@@ -186,6 +186,8 @@ class Foreman():
         'hammer-fencing.sh',
         'common.sh',
         'osp_config.sh',
+        'radosgw_config.sh',
+        'swift_config.sh',
         'provision.sh',
         'bond.sh'
          ]
