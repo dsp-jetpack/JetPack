@@ -51,7 +51,7 @@ fi
 cat << EOF > /tmp/swift.tmp
 rgw swift url = http://${RADOSGW_PUBLIC_VIP}:8087
 rgw swift url prefix = swift
-rgw keystone url = ${KEYSTONE_PRIVATE_VIP}:35357
+rgw keystone url = http://${KEYSTONE_PRIVATE_VIP}:35357
 rgw keystone admin token = ${KEYSTONE_ADMIN_PASS}
 rgw keystone accepted roles = _member_, Member, admin
 rgw keystone token cache size = 500
