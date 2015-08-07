@@ -43,6 +43,7 @@ eula --agreed
 -NetworkManager-*
 ntp
 ntpdate
+wget
 -chrony
 system-config-firewall-base
 yum-plugin-versionlock
@@ -157,11 +158,12 @@ chvt 8
          subscription-manager attach --auto
          )
 
+  (cd /etc/yum.repos.d; wget ftp://partners.redhat.com/1c5d859a/b02956b493cee5f1580ea5339a53df55/OpenStack/7.0-RHEL-7-OFI/2015-08-05.1/RH7-RHOS-7.0-OFI.repo)
+
   subscription-manager repos --disable=*
   subscription-manager repos --enable=rhel-7-server-rpms
   subscription-manager repos --enable=rhel-server-rhscl-7-rpms
-  subscription-manager repos --enable=rhel-7-server-openstack-6.0-installer-rpms
-  subscription-manager repos --enable=rhel-7-server-openstack-6.0-rpms
+  subscription-manager repos --enable=rhel-7-server-openstack-7.0-rpms
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
