@@ -126,7 +126,7 @@ class Ceph():
             cmd = 'mkdir ~/cluster && cd ~/cluster'
             logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
-           radosgw_scripts = [
+            radosgw_scripts = [
                 'radosgw_config.sh',
                 'swift_config.sh'
                 ]
