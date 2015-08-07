@@ -22,7 +22,7 @@ fi
 
 if [ -n "$2" ];
 then
-  dest=${2}
+  dest="${2}/releases/jetstream-${1}"
 else
   dest="$(pwd)/releases/jetstream-${1}"
 fi
