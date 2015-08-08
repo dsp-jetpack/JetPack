@@ -371,7 +371,7 @@ class Ceph():
             cmd = 'cd ~/cluster;ceph-deploy --overwrite-conf rgw create ' + host.hostname
             logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password, cmd))
 
-        cmd = 'cd ~/cluster;./swift_config.sh ' +self.settings.vip_radosgw_public+ ' ' +self.settings.vip_radosgw_private+ ' ' + self.settings.keystone_password
+        cmd = 'cd ~/cluster;./swift_config.sh ' +self.settings.vip_radosgw_public+ ' ' +self.settings.vip_keystone_private+ ' ' + self.settings.keystone_password
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password, cmd))
 
         for host in self.settings.controller_nodes:
