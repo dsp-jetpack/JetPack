@@ -631,6 +631,7 @@ if __name__ == '__main__':
         ceph.modifyOSDPlacementGroups()
         ceph.pool_and_keyRing_configuration()
         ceph.libvirt_configuation()
+        ceph.setup_radosgw()
 
 
         foremanHost.run_puppet_on_all()
