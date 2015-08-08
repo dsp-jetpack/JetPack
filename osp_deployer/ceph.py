@@ -139,7 +139,6 @@ class Ceph():
                 cmd = 'chmod u+x ' + remotefile
                 print Ssh.execute_command(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password, cmd)
 
-            #TODO (need a stamp)::: Make sure those did not change
             logger.info("removing installation prompts")
             commands = ['sudo sed -i "s/fqdn = prompt.*/return \'http\', fallback_fqdn/" /usr/lib/python2.7/site-packages/ice_setup/ice.py',
                         "sudo sed -i 's/prompt_continue()$//' /usr/lib/python2.7/site-packages/ice_setup/ice.py",
