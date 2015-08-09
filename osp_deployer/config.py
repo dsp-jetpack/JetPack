@@ -29,7 +29,6 @@ class Settings():
         self.ceph_user_password = self.cluster_settings_map['ceph_user_password']
         self.ceph_admin_email = self.cluster_settings_map['ceph_admin_email']
         self.ceph_version = self.cluster_settings_map['ceph_version']
-        self.keystone_password = self.cluster_settings_map['keystone_password']
 
         self.vip_cinder_private = self.cluster_settings_map['vip_cinder_private']
         self.vip_cinder_public = self.cluster_settings_map['vip_cinder_public']

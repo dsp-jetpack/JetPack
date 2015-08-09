@@ -216,6 +216,10 @@ class Ceph():
             logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
             logger.info("Partition data disks & recreate disks ")
+            for disk in host.journal_disks:
+                cmd = 'cd ~/cluster;ceph-deploy disk zap ' + host.hostname + disk
+                logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
+
             for disk in host.osd_disks:
                 cmds = [
                         'cd ~/cluster;ceph-deploy disk zap ' + host.hostname + disk,
@@ -370,7 +374,7 @@ class Ceph():
             cmd = 'cd ~/cluster;ceph-deploy --overwrite-conf rgw create ' + host.hostname
             logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password, cmd))
 
-        cmd = 'cd ~/cluster;./swift_config.sh ' +self.settings.vip_radosgw_public+ ' ' +self.settings.vip_keystone_private+ ' ' + self.settings.keystone_password
+        cmd = 'cd ~/cluster;./swift_config.sh ' +self.settings.vip_radosgw_public+ ' ' +self.settings.vip_keystone_private+ ' ' + self.settings.cluster_password
         logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password, cmd))
 
         for host in self.settings.controller_nodes:
@@ -383,15 +387,22 @@ class Ceph():
 
         for host in self.settings.controller_nodes:
             cmds = [
-                'systemctl start ceph-radosgw',
                 '/tmp/radosgw_config.sh ' +self.settings.vip_radosgw_public+ ' ' +self.settings.vip_radosgw_private+ ' ' +self.settings.controller_nodes[0].hostname+ ' ' +self.settings.controller_nodes[0].private_ip+ ' ' +self.settings.controller_nodes[1].hostname+ ' ' +self.settings.controller_nodes[1].private_ip+ ' ' +self.settings.controller_nodes[2].hostname+ ' '+ self.settings.controller_nodes[2].private_ip,
+                'systemctl restart ceph-radosgw',
                 ]
             for cmd in cmds:
                 logger.info( Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
-              
+
+        time.sleep(90)      
+
+        cmd = 'pcs resource cleanup'
+        logger.info( Ssh.execute_command(self.settings.controller_nodes[0].provisioning_ip, "root", self.settings.nodes_root_password, cmd ))
+
+        time.sleep(30)      
+
         cmds = [
-           "source ~/keystonerc_admin; openstack service create --name=swift --description='Swift Service' object-store",
-           'source ~/keystonerc_admin; openstack endpoint create --publicurl http://' +self.settings.vip_radosgw_public+ ':8087/swift/v1 --internalurl http://' +self.settings.vip_radosgw_private+ ':8087/swift/v1 --adminurl http://' +self.settings.vip_radosgw_private+ ':8087/swift/v1 --region RegionOne swift'
+           "( . ~/keystonerc_admin; openstack service create --name=swift --description='Swift Service' object-store )",
+           '( . ~/keystonerc_admin; openstack endpoint create --publicurl http://' +self.settings.vip_radosgw_public+ ':8087/swift/v1 --internalurl http://' +self.settings.vip_radosgw_private+ ':8087/swift/v1 --adminurl http://' +self.settings.vip_radosgw_private+ ':8087/swift/v1 --region RegionOne swift )'
            ]
         for cmd in cmds:
             logger.info( Ssh.execute_command(self.settings.controller_nodes[0].provisioning_ip, "root", self.settings.nodes_root_password, cmd ))
