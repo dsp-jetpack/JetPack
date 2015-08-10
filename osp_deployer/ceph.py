@@ -31,6 +31,14 @@ class Ceph():
         cmd = 'HOSTS=`grep '+self.settings.domain +' /etc/hosts | grep -v '+self.settings.ceph_node.hostname+" | cut -d \" \" -f 3` ;for HOST in $HOSTS; do ssh $HOST 'echo -e \""+ self.settings.ceph_node.storage_ip + ' ' + self.settings.ceph_node.hostname + "." + self.settings.domain + ' ' + self.settings.ceph_node.hostname +"\" >> /etc/hosts';done"
         logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.public_ip, "root", self.settings.ceph_node.root_password, cmd))
 
+        for host in self.settings.controller_nodes:
+            cmds = [
+                'yum -y install ceph-radosgw',
+                "echo 'Defaults:root !requiretty' > /etc/sudoers.d/root",
+                ]
+            for cmd in cmds:
+                logger.info( Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
+
         logger.info("Non-root Administrative User")
 
         cmd = 'HOSTS=`grep '+ self.settings.domain +" /etc/hosts | cut -d \" \" -f 3`; for HOST in $HOSTS; do ssh root@$HOST 'useradd -g adm -m ceph-user';done;for HOST in $HOSTS; do ssh root@$HOST 'passwd ceph-user'; done"
@@ -118,7 +126,19 @@ class Ceph():
             cmd = 'mkdir ~/cluster && cd ~/cluster'
             logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
-            #TODO (need a stamp)::: Make sure those did not change
+            radosgw_scripts = [
+                'radosgw_config.sh',
+                'swift_config.sh'
+                ]
+            for file in radosgw_scripts  :
+                localfile = self.settings.foreman_configuration_scripts + "/utils/networking/" + file if sys.platform.startswith('linux') else  self.settings.foreman_configuration_scripts + "\\utils\\networking\\" + file
+                remotefile = '/home/ceph-user/cluster/' + file
+                print localfile + " >> " + remotefile
+                Scp.put_file(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password, localfile, remotefile)
+
+                cmd = 'chmod u+x ' + remotefile
+                print Ssh.execute_command(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password, cmd)
+
             logger.info("removing installation prompts")
             commands = ['sudo sed -i "s/fqdn = prompt.*/return \'http\', fallback_fqdn/" /usr/lib/python2.7/site-packages/ice_setup/ice.py',
                         "sudo sed -i 's/prompt_continue()$//' /usr/lib/python2.7/site-packages/ice_setup/ice.py",
@@ -196,6 +216,10 @@ class Ceph():
             logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
             logger.info("Partition data disks & recreate disks ")
+            for disk in host.journal_disks:
+                cmd = 'cd ~/cluster;ceph-deploy disk zap ' + host.hostname + disk
+                logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.public_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
+
             for disk in host.osd_disks:
                 cmds = [
                         'cd ~/cluster;ceph-deploy disk zap ' + host.hostname + disk,
@@ -339,6 +363,49 @@ class Ceph():
                     didNotRun = False
                     break
 
+    def setup_radosgw(self):
+        logger.info("radosgw configuration")
+
+        for host in self.settings.controller_nodes:
+            cmd = 'cd ~/cluster;ceph-deploy install --rgw ' + host.hostname
+            logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password, cmd))
+
+        for host in self.settings.controller_nodes:
+            cmd = 'cd ~/cluster;ceph-deploy --overwrite-conf rgw create ' + host.hostname
+            logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password, cmd))
+
+        cmd = 'cd ~/cluster;./swift_config.sh ' +self.settings.vip_radosgw_public+ ' ' +self.settings.vip_keystone_private+ ' ' + self.settings.cluster_password
+        logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password, cmd))
+
+        for host in self.settings.controller_nodes:
+            cmd = 'cd ~/cluster;ceph-deploy --overwrite-conf --ceph-conf ceph.conf config push ' + host.hostname
+            logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password, cmd))
+
+        for host in self.settings.controller_nodes:
+            cmd = 'cd ~/cluster;scp radosgw_config.sh ' +host.hostname+ ':/tmp/'
+            logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password, cmd))
+
+        for host in self.settings.controller_nodes:
+            cmds = [
+                '/tmp/radosgw_config.sh ' +self.settings.vip_radosgw_public+ ' ' +self.settings.vip_radosgw_private+ ' ' +self.settings.controller_nodes[0].hostname+ ' ' +self.settings.controller_nodes[0].private_ip+ ' ' +self.settings.controller_nodes[1].hostname+ ' ' +self.settings.controller_nodes[1].private_ip+ ' ' +self.settings.controller_nodes[2].hostname+ ' '+ self.settings.controller_nodes[2].private_ip,
+                'systemctl restart ceph-radosgw',
+                ]
+            for cmd in cmds:
+                logger.info( Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
+
+        time.sleep(90)      
+
+        cmd = 'pcs resource cleanup'
+        logger.info( Ssh.execute_command(self.settings.controller_nodes[0].provisioning_ip, "root", self.settings.nodes_root_password, cmd ))
+
+        time.sleep(30)      
+
+        cmds = [
+           "( . ~/keystonerc_admin; openstack service create --name=swift --description='Swift Service' object-store )",
+           '( . ~/keystonerc_admin; openstack endpoint create --publicurl http://' +self.settings.vip_radosgw_public+ ':8087/swift/v1 --internalurl http://' +self.settings.vip_radosgw_private+ ':8087/swift/v1 --adminurl http://' +self.settings.vip_radosgw_private+ ':8087/swift/v1 --region RegionOne swift )'
+           ]
+        for cmd in cmds:
+            logger.info( Ssh.execute_command(self.settings.controller_nodes[0].provisioning_ip, "root", self.settings.nodes_root_password, cmd ))
 
     def execute_as_shell(self, address,usr, pwd, command):
         conn = paramiko.SSHClient()

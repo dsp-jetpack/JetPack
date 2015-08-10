@@ -50,6 +50,8 @@ class Settings():
         self.vip_ceilometer_private = self.cluster_settings_map['vip_ceilometer_private']
         self.vip_ceilometer_public = self.cluster_settings_map['vip_ceilometer_public']
         self.vip_ceilometer_redis = self.cluster_settings_map['vip_ceilometer_redis_public']
+        self.vip_radosgw_private = self.cluster_settings_map['vip_radosgw_private']
+        self.vip_radosgw_public = self.cluster_settings_map['vip_radosgw_public']
 
         self.vip_neutron_public = self.cluster_settings_map['vip_neutron_public']
         self.vip_neutron_private = self.cluster_settings_map['vip_neutron_private']
