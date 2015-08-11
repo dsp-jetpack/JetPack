@@ -207,7 +207,7 @@ if __name__ == '__main__':
             raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
         log("*** Verify all pools registered & repositories subscribed ***")
-        if verify_subscription_and_repos(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "/root/" + settings.sah_node.hostname + "-posts.log" ) is False:
+        if verify_subscription_and_repos(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "/root/" + settings.sah_node.hostname + "-post-ks.log" ) is False:
             raise AssertionError("SAH did not subscribe/attach repos properly, see log.")
 
         log("*** Verify the SAH can ping its public gateway")
