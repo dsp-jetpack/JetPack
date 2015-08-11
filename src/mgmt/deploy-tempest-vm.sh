@@ -174,11 +174,7 @@ chvt 8
   subscription-manager repos --enable=rhel-server-rhscl-7-rpms
   subscription-manager repos --enable=rhel-7-server-optional-rpms
   subscription-manager repos --enable=rhel-7-server-extras-rpms
-	  
-  cd /tmp
-  wget https://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
-  ls *.rpm
-  yum -y install epel-release-7-5.noarch.rpm
+  subscription-manager repos --enable=rhel-7-server-openstack-7.0-rpms
 
   cat <<EOIP > /etc/sysconfig/iptables
 *filter
@@ -223,17 +219,12 @@ EOIP
   systemctl disable firewalld
   systemctl disable chronyd
 
-  yum -y install python-devel python-pip python-crypto.x86_64 libxslt-devel libxml2-devel libffi-devel screen
+  yum -y install screen openstack-tempest.noarch python-tempest-lib-doc.noarch
 
   cd /root 
-  git clone https://github.com/redhat-openstack/tempest.git
+  mkdir tempest
   cd tempest
-  git checkout ${TempestCommit}
-  pip install -r requirements.txt
-  pip install unittest2 discover Babel pbr
-  python ./setup.py install
-  
-
+  /usr/share/openstack-tempest-kilo/tools/configure-tempest-directory 
 
 ) 2>&1 | /usr/bin/tee -a /root/tempest-post.log
 
