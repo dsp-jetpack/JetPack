@@ -116,8 +116,8 @@ class Foreman():
         FileHelper.replaceExpressionTXT(file, 'vip_neutron_adm = .*',"vip_neutron_adm = '" + self.settings.vip_neutron_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_neutron_pub = .*',"vip_neutron_pub = '" + self.settings.vip_neutron_public + "'" )
         FileHelper.replaceExpressionTXT(file, 'c_ceph_cluster_network = .*',"c_ceph_cluster_network = '" + self.settings.storage_cluster_network + "'" )
-        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_pool_size = .*',"c_ceph_osd_pool_size = '2'" )
-        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_journal_size = .*',"c_ceph_osd_journal_size = '5000'" )
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_pool_size = .*',"c_ceph_osd_pool_size = '3'" )
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_journal_size = .*',"c_ceph_osd_journal_size = '10000'" )
 
         if self.settings.use_eql_backend is True:
                     FileHelper.replaceExpressionTXT(file, 'c_be_eqlx = .*',"c_be_eqlx = true" )
