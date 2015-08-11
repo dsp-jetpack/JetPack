@@ -189,6 +189,7 @@ class Foreman():
         'radosgw_config.sh',
         'swift_config.sh',
         'provision.sh',
+        'horizon.patch',
         'bond.sh'
          ]
         for file in hammer_scripts  :
