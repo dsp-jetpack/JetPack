@@ -150,7 +150,8 @@ class Ceph():
             cmds = ['sudo yum install ceph-deploy calamari-server calamari-clients -y',
                     'sudo ice_setup update all',
                     'cd ~/cluster;ceph-deploy config pull ' + self.settings.controller_nodes[0].hostname,
-                    "cd ~/cluster;sed -i '/osd_journal_size = .*/a osd pool default pg num = 1024\\nosd pool default pgp num = 1024' ceph.conf",
+                    "cd ~/cluster;sed -i '/osd_pool_default_size = .*/a osd_pool_default_min_size = 2' ceph.conf",
+                    "cd ~/cluster;sed -i '/osd_journal_size = .*/a osd pool default pg num = 4096\\nosd pool default pgp num = 4096\\nmax_open_files = 131072' ceph.conf",
                     'cd ~/cluster;sudo calamari-ctl initialize --admin-username root --admin-password '+self.settings.ceph_node.root_password+' --admin-email ' + self.settings.ceph_admin_email
                     ]
             for cmd in cmds :
@@ -288,8 +289,8 @@ class Ceph():
         logger.info("ceph pool creation and keyring configuration")
         cmds = [
                 'sudo chmod 644 /etc/ceph/ceph.client.admin.keyring',
-                'cd ~/cluster;ceph osd pool create images ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
-                'cd ~/cluster;ceph osd pool create volumes ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
+                'cd ~/cluster;ceph osd pool create images 512 512',
+                'cd ~/cluster;ceph osd pool create volumes 1024 1024',
                 "cd ~/cluster;scp "+self.settings.controller_nodes[0].hostname+":/etc/ceph/ceph.client.volumes.keyring ~/cluster",
                 "cd ~/cluster;scp "+self.settings.controller_nodes[0].hostname+":/etc/ceph/ceph.client.images.keyring ~/cluster",
                 "cd ~/cluster;ceph auth import -i ceph.client.volumes.keyring",
