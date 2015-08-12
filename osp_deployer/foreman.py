@@ -116,8 +116,8 @@ class Foreman():
         FileHelper.replaceExpressionTXT(file, 'vip_neutron_adm = .*',"vip_neutron_adm = '" + self.settings.vip_neutron_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_neutron_pub = .*',"vip_neutron_pub = '" + self.settings.vip_neutron_public + "'" )
         FileHelper.replaceExpressionTXT(file, 'c_ceph_cluster_network = .*',"c_ceph_cluster_network = '" + self.settings.storage_cluster_network + "'" )
-        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_pool_size = .*',"c_ceph_osd_pool_size = '2'" )
-        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_journal_size = .*',"c_ceph_osd_journal_size = '5000'" )
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_pool_size = .*',"c_ceph_osd_pool_size = '3'" )
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_journal_size = .*',"c_ceph_osd_journal_size = '10000'" )
 
         if self.settings.use_eql_backend is True:
                     FileHelper.replaceExpressionTXT(file, 'c_be_eqlx = .*',"c_be_eqlx = true" )
@@ -140,7 +140,7 @@ class Foreman():
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_iscsi_port = .*',"c_dell_sc_iscsi_port = [\"" + self.settings.c_dell_sc_iscsi_port + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_ip = .*',"c_dell_sc_san_ip = [\"" + self.settings.c_dell_sc_san_ip + '"]')
 	            FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_login = .*',"c_dell_sc_san_login = [\"" + self.settings.c_dell_sc_san_login + '"]')
-                    FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_password = .*',"c_eqlx_ch_pass = [\"" + self.settings.c_dell_sc_san_password + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_password = .*',"c_dell_sc_san_password = [\"" + self.settings.c_dell_sc_san_password + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_ssn = .*',"c_dell_sc_ssn = [\"" + self.settings.c_dell_sc_ssn + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_server_folder = .*',"c_dell_sc_server_folder = [\"" + self.settings.c_dell_sc_server_folder + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_volume_folder = .*',"c_dell_sc_volume_folder = [\"" + self.settings.c_dell_sc_volume_folder + '"]')
@@ -183,6 +183,7 @@ class Foreman():
         'hammer-get-ids.sh',
         'hammer-dump-ids.sh',
         'hammer-ceph-fix.sh',
+        'hammer-uuid-fix.sh',
         'hammer-fencing.sh',
         'common.sh',
         'osp_config.sh',
@@ -586,6 +587,10 @@ class Foreman():
 
         if self.settings.ceph_version == "1.2.3":
             cmd = "/root/pilot/hammer-ceph-fix.sh"
+            logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
+
+        if self.settings.ceph_version == "1.3":
+            cmd = "/root/pilot/hammer-uuid-fix.sh"
             logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
 
         controlerPuppetRuns = []
