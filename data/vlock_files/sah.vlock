@@ -1,5 +1,5 @@
 
-# Added locks on Mon Aug 10 11:48:33 2015
+# Added locks on Mon Aug 10 11:21:29 2015
 0:openlmi-storage-0.8.0-2.el7.*
 0:gstreamer1-plugins-base-1.0.7-5.el7.*
 0:librdmacm-1.0.19.1-1.el7.*
@@ -593,7 +593,6 @@
 0:libXv-1.0.9-2.1.el7.*
 0:python-augeas-0.4.1-5.el7.*
 14:libpcap-1.5.3-4.el7_1.2.*
-0:lm_sensors-libs-3.3.4-11.el7.*
 0:fprintd-pam-0.5.0-4.0.el7_0.*
 0:openlmi-software-0.5.0-3.el7.*
 0:xfsprogs-3.2.1-6.el7.*
@@ -640,6 +639,7 @@
 0:abrt-addon-xorg-2.1.11-22.el7_1.*
 0:gvfs-smb-1.16.4-8.el7.*
 0:pciutils-libs-3.2.1-4.el7.*
+0:firefox-38.1.1-1.el7_1.*
 0:langtable-0.0.13-4.el7.*
 0:libXfont-1.4.7-2.el7_0.*
 0:audit-libs-python-2.4.1-5.el7.*
@@ -862,7 +862,7 @@
 0:crontabs-1.11-6.20121102git.el7.*
 0:xorg-x11-xkb-utils-7.7-9.1.el7.*
 0:speex-1.2-0.19.rc1.el7.*
-0:firefox-38.1.0-1.el7_1.*
+0:lm_sensors-libs-3.3.4-11.el7.*
 0:kernel-tools-3.10.0-229.11.1.el7.*
 0:atkmm-2.22.7-3.el7.*
 0:glib-networking-2.40.0-1.el7.*

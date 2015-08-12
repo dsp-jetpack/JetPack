@@ -1,5 +1,5 @@
 
-# Added locks on Mon Aug 10 16:11:54 2015
+# Added locks on Mon Aug 10 16:08:44 2015
 0:cryptsetup-libs-1.6.6-3.el7.*
 0:iptables-1.4.21-13.el7.*
 0:wget-1.14-10.el7_0.1.*
@@ -85,6 +85,7 @@
 0:python-prettytable-0.7.2-1.el7.*
 0:biosdevname-0.6.1-2.el7.*
 0:xz-libs-5.1.2-9alpha.el7.*
+0:p11-kit-0.20.7-3.el7.*
 0:glibc-2.17-78.el7.*
 1:perl-Pod-Escapes-1.04-285.el7.*
 0:yum-rhn-plugin-2.0.1-5.el7.*
@@ -278,7 +279,7 @@
 0:libpipeline-1.2.3-3.el7.*
 0:python-configobj-4.7.2-7.el7.*
 0:audit-libs-2.4.1-5.el7.*
-0:p11-kit-0.20.7-3.el7.*
+1:quota-4.01-11.el7.*
 0:rsyslog-7.4.7-7.el7_0.*
 0:iwl6050-firmware-41.28.5.1-36.el7.*
 0:perl-Text-ParseWords-3.29-4.el7.*
@@ -378,7 +379,6 @@
 0:fontconfig-2.10.95-7.el7.*
 0:libdb-5.3.21-17.el7_0.1.*
 0:libXau-1.0.8-2.1.el7.*
-1:quota-4.01-11.el7.*
 2:shadow-utils-4.1.5.1-18.el7.*
 0:cronie-anacron-1.4.11-13.el7.*
 0:numactl-libs-2.0.9-5.el7_1.*
