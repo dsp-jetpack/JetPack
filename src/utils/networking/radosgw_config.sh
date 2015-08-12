@@ -89,3 +89,6 @@ fi
 
 #Start haproxy
 pcs resource enable haproxy
+
+#Give service time to start -- automation gets to the next step too quiclkly
+sleep 5

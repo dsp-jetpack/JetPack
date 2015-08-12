@@ -64,7 +64,7 @@ ROOT_PASSWORD='CHANGEME_PASSWORD'
 CONTROLLER_NODE_REPOS="\
 rhel-7-server-rpms, \
 rhel-server-rhscl-7-rpms, \
-rhel-7-server-openstack-6.0-rpms, \
+rhel-7-server-openstack-7.0-rpms, \
 rhel-ha-for-rhel-7-server-rpms, \
 rhel-7-server-rhceph-1.3-tools-rpms, \
 rhel-7-server-rhceph-1.3-mon-rpms"
@@ -72,7 +72,7 @@ rhel-7-server-rhceph-1.3-mon-rpms"
 COMPUTE_NODE_REPOS="\
 rhel-7-server-rpms, \
 rhel-server-rhscl-7-rpms, \
-rhel-7-server-openstack-6.0-rpms"
+rhel-7-server-openstack-7.0-rpms"
 
 STORAGE_NODE_REPOS="\
 rhel-7-server-rpms, \
