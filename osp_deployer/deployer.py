@@ -654,27 +654,26 @@ if __name__ == '__main__':
 
         UI_Manager.driver().close()
 
-
-
         log("=== Applying horizon patch");
         log("=== uploading the horizon.patch")
-        for host in self.settings.controller_nodes:
-            cmd = 'cd ~/pilot;scp hammer.patch ' +host.hostname+ ':/tmp/'
-            logger.info( Ssh.execute_command(self.settings.ceph_node.public_ip, "ceph-user", self.settings.cep
-h_user_password, cmd))
+        for host in settings.controller_nodes:
+            localfile = settings.cloud_repo_dir + '/src/utils/networking/horizon.patch'
+            remotefile =  '/tmp/horizon.patch'
+            print localfile + " >> " + remotefile
+            Scp.put_file(host.provisioning_ip, "root", settings.nodes_root_password, localfile, remotefile)
    
         log("=== stop horizon service")
         cmd = 'pcs resource disable horizon'
-        logger.info( Ssh.execute_command(self.settings.controller_nodes[0].provisioning_ip, "root", self.settings.nodes_root_password, cmd ))
+        logger.info( Ssh.execute_command(settings.controller_nodes[0].provisioning_ip, "root", settings.nodes_root_password, cmd ))
 
         log("=== Apply the horizon.patch")
-        for host in self.settings.controller_nodes:
+        for host in settings.controller_nodes:
             cmd = '( cd /usr/share/openstack-dashboard;patch -p1 < /tmp/horizon.patch )'
-            logger.info( Ssh.execute_command(self.settings.controller_nodes.provisioning_ip, "root-user", self.settings.root_password, cmd))
+            logger.info( Ssh.execute_command(host.provisioning_ip, "root", settings.nodes_root_password, cmd))
 
         log("=== start horizon service")
         cmd = 'pcs resource enable horizon'
-        logger.info( Ssh.execute_command(self.settings.controller_nodes[0].provisioning_ip, "root", self.settings.nodes_root_password, cmd ))
+        logger.info( Ssh.execute_command(settings.controller_nodes[0].provisioning_ip, "root", settings.nodes_root_password, cmd ))
 
         log("=== creating tempest VM");
         log("=== uploading the tempest vm sh script")
@@ -773,6 +772,4 @@ h_user_password, cmd))
         logger.info(e)
         print e
         print traceback.format_exc()
-
-
 
