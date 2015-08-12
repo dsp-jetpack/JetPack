@@ -405,7 +405,7 @@ if __name__ == '__main__':
             raise AssertionError("Ceph VM did not register properly : " + subscriptionStatus)
 
         log("*** Verify all pools registered & repositories subscribed ***")
-        if verify_subscription_and_repos(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "/root/" + settings.ceph_node.hostname + "-posts.log" ) is False:
+        if verify_subscription_and_repos(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "/root/" + settings.ceph_node.hostname + "-post.log" ) is False:
             raise AssertionError("Ceph vm did not subscribe/attach repos properly, see log.")
 
         log("*** Verify the Ceph VM can ping its public gateway")
@@ -475,7 +475,7 @@ if __name__ == '__main__':
                 raise AssertionError(" " + each.hostname + " did not register properly : " + subscriptionStatus)
 
             log("*** Verify all pools registered & repositories subscribed ***")
-            if verify_subscription_and_repos(each.provisioning_ip, "root", settings.nodes_root_password, "/root/install-posts.log") is False:
+            if verify_subscription_and_repos(each.provisioning_ip, "root", settings.nodes_root_password, "/root/install.post.log") is False:
                 raise AssertionError(" " + each.hostname +" did not subscribe/attach repos properly, see log.")
 
             log("*** Verify " + each.hostname + " can ping the outside world (ip)")
