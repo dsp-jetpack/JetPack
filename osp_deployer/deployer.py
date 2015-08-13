@@ -23,6 +23,19 @@ def verify_subscription_status(public_ip, user, password, retries):
         i += 1;
     return subscriptionStatus
 
+def verify_subscription_and_repos(ip_addr, user, password, logFile):
+    # check the xxxxx-posts.log for pool id's/repo's related errors.
+    logOut = Ssh.execute_command(ip_addr, user, password, "cat " + logFile)[0]
+
+    error1 = 'No subscriptions are available from the pool with'
+    error2 = 'is not a valid repository'
+    if error1 in logOut or error2 in logOut:
+        logger.info("*** post install log ***")
+        logger.info(logOut)
+        return False
+    return True
+
+
 def ping_host(public_ip, user, passwd, targetHost):
     subscriptionStatus = Ssh.execute_command(public_ip, user, passwd, "ping " + targetHost + " -c 3 -w 30 ")[0]
     return subscriptionStatus
@@ -193,6 +206,10 @@ if __name__ == '__main__':
         if "Current" not in subscriptionStatus:
             raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
+        log("*** Verify all pools registered & repositories subscribed ***")
+        if verify_subscription_and_repos(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "/root/" + settings.sah_node.hostname + "-post-ks.log" ) is False:
+            raise AssertionError("SAH did not subscribe/attach repos properly, see log.")
+
         log("*** Verify the SAH can ping its public gateway")
         test = ping_host(settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.sah_node.public_gateway)
         if ping_success not in test:
@@ -271,6 +288,10 @@ if __name__ == '__main__':
         subscriptionStatus = verify_subscription_status(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, settings.subscription_check_retries)
         if "Current" not in subscriptionStatus:
             raise AssertionError("Foreman VM did not register properly : " + subscriptionStatus)
+
+        log("*** Verify all pools registered & repositories subscribed ***")
+        if verify_subscription_and_repos(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, "/root/" + settings.foreman_node.hostname + "-posts.log" ) is False:
+            raise AssertionError("Foreman vm did not subscribe/attach repos properly, see log.")
 
         log("*** Verify the Foreman VM can ping its public gateway")
         test = ping_host(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, settings.foreman_node.public_gateway)
@@ -383,6 +404,10 @@ if __name__ == '__main__':
         if "Current" not in subscriptionStatus:
             raise AssertionError("Ceph VM did not register properly : " + subscriptionStatus)
 
+        log("*** Verify all pools registered & repositories subscribed ***")
+        if verify_subscription_and_repos(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "/root/" + settings.ceph_node.hostname + "-post.log" ) is False:
+            raise AssertionError("Ceph vm did not subscribe/attach repos properly, see log.")
+
         log("*** Verify the Ceph VM can ping its public gateway")
         test = ping_host(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, settings.foreman_node.public_gateway)
         if ping_success not in test:
@@ -448,6 +473,10 @@ if __name__ == '__main__':
             subscriptionStatus = verify_subscription_status(each.provisioning_ip, "root", settings.nodes_root_password, settings.subscription_check_retries)
             if "Current" not in subscriptionStatus:
                 raise AssertionError(" " + each.hostname + " did not register properly : " + subscriptionStatus)
+
+            log("*** Verify all pools registered & repositories subscribed ***")
+            if verify_subscription_and_repos(each.provisioning_ip, "root", settings.nodes_root_password, "/root/install.post.log") is False:
+                raise AssertionError(" " + each.hostname +" did not subscribe/attach repos properly, see log.")
 
             log("*** Verify " + each.hostname + " can ping the outside world (ip)")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, "8.8.8.8")
