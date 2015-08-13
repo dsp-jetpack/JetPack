@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 # OpenStack - A set of software tools for building and managing cloud computing
 # platforms for public and private clouds.
@@ -538,4 +539,4 @@ class Ceph():
             osds = osds +  add
         cal =   (osds * 100) / 2
         pgroups = pow(2, int(log(cal, 2) + 0.5))
-        self.settings.placement_groups = str(pgroups)
+        self.settings.placement_groups = str(pgroups)

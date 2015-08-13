@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 # OpenStack - A set of software tools for building and managing cloud computing
 # platforms for public and private clouds.

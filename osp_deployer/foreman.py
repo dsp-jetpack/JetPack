@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 
 # OpenStack - A set of software tools for building and managing cloud computing
 # platforms for public and private clouds.
@@ -672,4 +673,4 @@ class Foreman():
         logger.info("removing lock if any on controller node ")
         for each in self.settings.controller_nodes:
             cmd = "rm -f /var/lib/puppet/state/agent_catalog_run.lock"
-            Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
+            Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
