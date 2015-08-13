@@ -183,9 +183,35 @@ setup_cinder(){
 
 }
 
+radosgw_test(){
+ info "### RadosGW test"""
+ 
+ execute_command "swift post container"
+
+ execute_command "swift list"
+
+ execute_command "swift upload container keystonerc_admin"
+
+ execute_command "swift list container"
+
+}
+
+radosgw_cleanup(){
+ info "### RadosGW test"""
+ 
+ execute_command "swift delete container keystonerc_admin"
+
+ execute_command "swift list container"
+
+ execute_command "swift delete container"
+
+ execute_command "swift list"
+
+}
+
+
 end(){
  
-
    info "#####VALIDATION SUCCESS#####" 
 }
 
@@ -208,6 +234,11 @@ setup_glance
 setup_nova
 
 setup_cinder
+
+radosgw_test
+
+radosgw_cleanup
+ 
 
 end 
 
