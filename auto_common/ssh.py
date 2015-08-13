@@ -37,7 +37,7 @@ class Ssh():
             client.connect(address, username=usr, password=pwd)
             stdin, ss_stdout, ss_stderr = client.exec_command(command)
             r_out, r_err = ss_stdout.read(), ss_stderr.read()
-            logger.info("error :: " + r_err)
+            logger.info(r_err)
             if len(r_err) > 5 :
                 logger.error(r_err)
             else:
@@ -62,7 +62,7 @@ class Ssh():
             client.connect(address, username=usr, password=pwd)
             stdin, ss_stdout, ss_stderr = client.exec_command(command)
             r_out, r_err = ss_stdout.readlines(), ss_stderr.read()
-            logger.info("error :: " + r_err)
+            logger.info( r_err)
             if len(r_err) > 5 :
                 logger.error(r_err)
             else:

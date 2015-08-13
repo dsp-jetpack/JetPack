@@ -214,7 +214,7 @@ class Deployer_sanity():
                                     'bond1_interfaces','bond0_interfaces',
                                     'storage_cluster_vlanid','storage_cluster_ip','storage_cluster_netmask',
                                     'storage_vlanid','storage_ip','storage_netmask',
-                                    'osd_disks',
+                                    'osd_disks', 'journal_disks'
                                      ]
             for each in shouldHaveAttrbutes :
                 assert hasattr(storage, each), storage.hostname + " node has no " + each + " attribute"

@@ -27,7 +27,7 @@ TENANT_NETWORK_NAME="tenant_net"
 TENANT_ROUTER_NAME="tenant_201_router"
 VLAN_NETWORK="192.168.201.0/24"
 VLAN_NAME="tenant_201"
-EXTERNAL_NETWORK_NAME="external_net"
+EXTERNAL_NETWORK_NAME="nova"
 EXTERNAL_SUBNET_NAME="external_sub"
 STARTIP="192.168.190.2"
 ENDIP="192.168.190.30"
@@ -187,9 +187,35 @@ setup_cinder(){
 
 }
 
+radosgw_test(){
+ info "### RadosGW test"""
+ 
+ execute_command "swift post container"
+
+ execute_command "swift list"
+
+ execute_command "swift upload container keystonerc_admin"
+
+ execute_command "swift list container"
+
+}
+
+radosgw_cleanup(){
+ info "### RadosGW test"""
+ 
+ execute_command "swift delete container keystonerc_admin"
+
+ execute_command "swift list container"
+
+ execute_command "swift delete container"
+
+ execute_command "swift list"
+
+}
+
+
 end(){
  
-
    info "#####VALIDATION SUCCESS#####" 
 }
 
@@ -212,6 +238,11 @@ setup_glance
 setup_nova
 
 setup_cinder
+
+radosgw_test
+
+radosgw_cleanup
+ 
 
 end 
 
