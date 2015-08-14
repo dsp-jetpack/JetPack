@@ -241,10 +241,24 @@ EOIP
 
   yum -y install screen openstack-tempest.noarch python-tempest-lib-doc.noarch
 
+  # get config script patch
+  cd /tmp
+  git clone https://github.com/redhat-openstack/tempest.git
+  cd tempest  
+  git fetch https://review.gerrithub.io/redhat-openstack/tempest ${TempestCommit} && git cherry-pick FETCH_HEAD
+  # Apply patch to package install tree
+  cp -bf tools/config_tempest.py /usr/share/openstack-tempest-kilo/tools/
+  cp -bf tempest/common/api_discovery.py /usr/share/openstack-tempest-kilo/tempest/common/
+    
+  # init tempest runtime dir
   cd /root 
   mkdir tempest
   cd tempest
   /usr/share/openstack-tempest-kilo/tools/configure-tempest-directory 
+
+  # delete patch checkout
+  rm -rf /tmp/tempest
+
 
 ) 2>&1 | /usr/bin/tee -a /root/tempest-post.log
 
