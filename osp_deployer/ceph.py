@@ -1,3 +1,24 @@
+#!/usr/bin/env python
+
+# OpenStack - A set of software tools for building and managing cloud computing
+# platforms for public and private clouds.
+# Copyright (C) 2015 Dell, Inc.
+#
+# This file is part of OpenStack.
+#
+# OpenStack is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenStack is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
+
 from osp_deployer.config import Settings
 from auto_common import Ssh, Scp,  Widget, UI_Manager, FileHelper
 import time, os ,sys, logging, paramiko
@@ -150,7 +171,8 @@ class Ceph():
             cmds = ['sudo yum install ceph-deploy calamari-server calamari-clients -y',
                     'sudo ice_setup update all',
                     'cd ~/cluster;ceph-deploy config pull ' + self.settings.controller_nodes[0].hostname,
-                    "cd ~/cluster;sed -i '/osd_journal_size = .*/a osd pool default pg num = 1024\\nosd pool default pgp num = 1024' ceph.conf",
+                    "cd ~/cluster;sed -i '/osd_pool_default_size = .*/a osd_pool_default_min_size = 2' ceph.conf",
+                    "cd ~/cluster;sed -i '/osd_journal_size = .*/a osd pool default pg num = 4096\\nosd pool default pgp num = 4096\\nmax_open_files = 131072' ceph.conf",
                     'cd ~/cluster;sudo calamari-ctl initialize --admin-username root --admin-password '+self.settings.ceph_node.root_password+' --admin-email ' + self.settings.ceph_admin_email
                     ]
             for cmd in cmds :
@@ -288,8 +310,8 @@ class Ceph():
         logger.info("ceph pool creation and keyring configuration")
         cmds = [
                 'sudo chmod 644 /etc/ceph/ceph.client.admin.keyring',
-                'cd ~/cluster;ceph osd pool create images ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
-                'cd ~/cluster;ceph osd pool create volumes ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
+                'cd ~/cluster;ceph osd pool create images 512 512',
+                'cd ~/cluster;ceph osd pool create volumes 1024 1024',
                 "cd ~/cluster;scp "+self.settings.controller_nodes[0].hostname+":/etc/ceph/ceph.client.volumes.keyring ~/cluster",
                 "cd ~/cluster;scp "+self.settings.controller_nodes[0].hostname+":/etc/ceph/ceph.client.images.keyring ~/cluster",
                 "cd ~/cluster;ceph auth import -i ceph.client.volumes.keyring",

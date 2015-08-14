@@ -1,19 +1,23 @@
 #!/bin/bash
-# Copyright 2014, Dell
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+# OpenStack - A set of software tools for building and managing cloud
+# computing platforms for public and private clouds.
+# Copyright (C) 2015 Dell, Inc.
 #
-#  http://www.apache.org/licenses/LICENSE-2.0
+# This file is part of OpenStack.
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# OpenStack is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
-# Author: Rajini Ram
-# Version: 0.1
+# OpenStack is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
 #
 #exit on failure
 #set -e 
@@ -23,7 +27,7 @@ TENANT_NETWORK_NAME="tenant_net"
 TENANT_ROUTER_NAME="tenant_201_router"
 VLAN_NETWORK="192.168.201.0/24"
 VLAN_NAME="tenant_201"
-EXTERNAL_NETWORK_NAME="external_net"
+EXTERNAL_NETWORK_NAME="nova"
 EXTERNAL_SUBNET_NAME="external_sub"
 STARTIP="192.168.190.2"
 ENDIP="192.168.190.30"
@@ -183,9 +187,35 @@ setup_cinder(){
 
 }
 
+radosgw_test(){
+ info "### RadosGW test"""
+ 
+ execute_command "swift post container"
+
+ execute_command "swift list"
+
+ execute_command "swift upload container keystonerc_admin"
+
+ execute_command "swift list container"
+
+}
+
+radosgw_cleanup(){
+ info "### RadosGW test"""
+ 
+ execute_command "swift delete container keystonerc_admin"
+
+ execute_command "swift list container"
+
+ execute_command "swift delete container"
+
+ execute_command "swift list"
+
+}
+
+
 end(){
  
-
    info "#####VALIDATION SUCCESS#####" 
 }
 
@@ -208,6 +238,11 @@ setup_glance
 setup_nova
 
 setup_cinder
+
+radosgw_test
+
+radosgw_cleanup
+ 
 
 end 
 
