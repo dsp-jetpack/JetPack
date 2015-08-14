@@ -135,6 +135,7 @@ if __name__ == '__main__':
         log ("=== Unregister the hosts")
         hosts = [ settings.sah_node, settings.foreman_node]
         hosts.append(settings.ceph_node)
+        hosts.append(settings.tempest_node)
         for each in hosts:
             log (Ssh.execute_command(each.public_ip, "root", each.root_password, "subscription-manager remove --all"))
             log (Ssh.execute_command(each.public_ip, "root", each.root_password, "subscription-manager unregister"))
