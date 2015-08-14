@@ -1,3 +1,24 @@
+#!/usr/bin/env python
+
+# OpenStack - A set of software tools for building and managing cloud computing
+# platforms for public and private clouds.
+# Copyright (C) 2015 Dell, Inc.
+#
+# This file is part of OpenStack.
+#
+# OpenStack is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenStack is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
+
 import sys, getopt, time, subprocess, paramiko,logging, traceback, os.path, urllib2, shutil, socket
 from osp_deployer.foreman import Foreman
 from osp_deployer.ceph import Ceph
@@ -36,6 +57,8 @@ class Deployer_sanity():
         assert hasattr(self.settings, 'use_equalogic_backend'), self.settings.settingsFile+ " has no use_equalogic_backend setting"
         assert hasattr(self.settings, 'subscription_check_retries'), self.settings.settingsFile+ " has no subscription_check_retries setting"
         assert hasattr(self.settings, 'ceph_admin_email'), self.settings.settingsFile+ " has no ceph_admin_email setting"
+        assert hasattr(self.settings, 'ceph_version'), self.settings.settingsFile+ " has no ceph_version setting"
+
 
         assert os.path.isfile(self.settings.rhl71_iso) , self.settings.rhl71_iso + "ISO doesnn't seem to exist"
         assert os.path.isfile(self.settings.sah_kickstart) , self.settings.sah_kickstart + "kickstart file doesnn't seem to exist"
@@ -81,6 +104,7 @@ class Deployer_sanity():
         hdw_nodes.append(self.settings.sah_node)
         for node in hdw_nodes:
             try:
+		print node.idrac_ip
                 ipmi_session = Ipmi(self.settings.cygwin_installdir, self.settings.ipmi_user, self.settings.ipmi_password, node.idrac_ip)
                 print node.hostname +" :: "+ ipmi_session.get_power_state()
             except:
@@ -190,7 +214,7 @@ class Deployer_sanity():
                                     'bond1_interfaces','bond0_interfaces',
                                     'storage_cluster_vlanid','storage_cluster_ip','storage_cluster_netmask',
                                     'storage_vlanid','storage_ip','storage_netmask',
-                                    'osd_disks',
+                                    'osd_disks', 'journal_disks'
                                      ]
             for each in shouldHaveAttrbutes :
                 assert hasattr(storage, each), storage.hostname + " node has no " + each + " attribute"

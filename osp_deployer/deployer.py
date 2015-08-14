@@ -1,3 +1,24 @@
+#!/usr/bin/env python
+
+# OpenStack - A set of software tools for building and managing cloud computing
+# platforms for public and private clouds.
+# Copyright (C) 2015 Dell, Inc.
+#
+# This file is part of OpenStack.
+#
+# OpenStack is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenStack is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
+
 import sys, getopt, time, subprocess, paramiko,logging, traceback, os.path, urllib2, shutil, socket
 from osp_deployer.foreman import Foreman
 from osp_deployer.ceph import Ceph
@@ -5,6 +26,7 @@ from auto_common import Ipmi, Ssh, FileHelper, Scp, UI_Manager
 from osp_deployer import Settings, Deployer_sanity
 
 logger = logging.getLogger(__name__)
+ping_success = "packets transmitted, 3 received"
 
 def log(message):
     print (message)
@@ -22,8 +44,21 @@ def verify_subscription_status(public_ip, user, password, retries):
         i += 1;
     return subscriptionStatus
 
+def verify_subscription_and_repos(ip_addr, user, password, logFile):
+    # check the xxxxx-posts.log for pool id's/repo's related errors.
+    logOut = Ssh.execute_command(ip_addr, user, password, "cat " + logFile)[0]
+
+    error1 = 'No subscriptions are available from the pool with'
+    error2 = 'is not a valid repository'
+    if error1 in logOut or error2 in logOut:
+        logger.info("*** post install log ***")
+        logger.info(logOut)
+        return False
+    return True
+
+
 def ping_host(public_ip, user, passwd, targetHost):
-    subscriptionStatus = Ssh.execute_command(public_ip, user, passwd, "ping " + targetHost + " -c 3")[0]
+    subscriptionStatus = Ssh.execute_command(public_ip, user, passwd, "ping " + targetHost + " -c 3 -w 30 ")[0]
     return subscriptionStatus
 
 
@@ -100,6 +135,7 @@ if __name__ == '__main__':
         log ("=== Unregister the hosts")
         hosts = [ settings.sah_node, settings.foreman_node]
         hosts.append(settings.ceph_node)
+        hosts.append(settings.tempest_node)
         for each in hosts:
             log (Ssh.execute_command(each.public_ip, "root", each.root_password, "subscription-manager remove --all"))
             log (Ssh.execute_command(each.public_ip, "root", each.root_password, "subscription-manager unregister"))
@@ -192,19 +228,23 @@ if __name__ == '__main__':
         if "Current" not in subscriptionStatus:
             raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
+        log("*** Verify all pools registered & repositories subscribed ***")
+        if verify_subscription_and_repos(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "/root/" + settings.sah_node.hostname + "-post-ks.log" ) is False:
+            raise AssertionError("SAH did not subscribe/attach repos properly, see log.")
+
         log("*** Verify the SAH can ping its public gateway")
         test = ping_host(settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.sah_node.public_gateway)
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("SAH cannot ping its public gateway : " + test)
 
         log("*** Verify the SAH can ping the outside world (ip)")
         test = ping_host(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "8.8.8.8")
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("SAH cannot ping the outside world (ip) : " + test)
 
         log("*** Verify the SAH can ping the outside world (dns)")
         test = ping_host(settings.sah_node.public_ip, "root", settings.sah_node.root_password, "google.com")
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("SAH cannot ping the outside world (dns) : " + test)
 
 
@@ -271,29 +311,33 @@ if __name__ == '__main__':
         if "Current" not in subscriptionStatus:
             raise AssertionError("Foreman VM did not register properly : " + subscriptionStatus)
 
+        log("*** Verify all pools registered & repositories subscribed ***")
+        if verify_subscription_and_repos(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, "/root/" + settings.foreman_node.hostname + "-posts.log" ) is False:
+            raise AssertionError("Foreman vm did not subscribe/attach repos properly, see log.")
+
         log("*** Verify the Foreman VM can ping its public gateway")
         test = ping_host(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, settings.foreman_node.public_gateway)
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("Foreman VM cannot ping its public gateway : " + test)
 
         log("*** Verify the Foreman VM can ping the outside world (ip)")
         test = ping_host(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, "8.8.8.8")
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("Foreman VM cannot ping the outside world (ip) : " + test)
 
         log("*** Verify the Foreman VM can ping the outside world (dns)")
         test = ping_host(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, "google.com")
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("Foreman VM cannot ping the outside world (dns) : " + test)
 
         log("*** Verify the Foreman VM can ping the SAH node through the provisioning network")
         test = ping_host(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, settings.sah_node.provisioning_ip)
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("Foreman VM cannot ping the SAH node through the provisioning network : " + test)
 
         log("*** Verify the Foreman VM can ping the SAH node through the public network")
         test = ping_host(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, settings.sah_node.public_ip)
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("Foreman VM cannot ping the SAH node through the provisioning network : " + test)
 
 
@@ -382,34 +426,38 @@ if __name__ == '__main__':
         if "Current" not in subscriptionStatus:
             raise AssertionError("Ceph VM did not register properly : " + subscriptionStatus)
 
+        log("*** Verify all pools registered & repositories subscribed ***")
+        if verify_subscription_and_repos(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "/root/" + settings.ceph_node.hostname + "-post.log" ) is False:
+            raise AssertionError("Ceph vm did not subscribe/attach repos properly, see log.")
+
         log("*** Verify the Ceph VM can ping its public gateway")
         test = ping_host(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, settings.foreman_node.public_gateway)
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("Ceph VM cannot ping its public gateway : " + test)
 
         log("*** Verify the Ceph VM can ping the outside world (ip)")
         test = ping_host(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "8.8.8.8")
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("Ceph VM cannot ping the outside world (ip) : " + test)
 
         log("*** Verify the Ceph VM can ping the outside world (dns)")
         test = ping_host(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "google.com")
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("Ceph VM cannot ping the outside world (dns) : " + test)
 
         log("*** Verify the Ceph VM can ping the SAH node through the storage network")
         test = ping_host(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, settings.sah_node.storage_ip)
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("Ceph VM cannot ping the SAH node through the storage network : " + test)
 
         log("*** Verify the Ceph VM can ping the SAH node through the public network")
         test = ping_host(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, settings.sah_node.public_ip)
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("Ceph VM cannot ping the SAH node through the public network : " + test)
 
         log("*** Verify the Ceph VM can ping the Foreman VM through the public network")
         test = ping_host(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, settings.foreman_node.public_ip)
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("Ceph VM cannot ping the Foreman VM through the provisioning network : " + test)
 
 
@@ -448,44 +496,48 @@ if __name__ == '__main__':
             if "Current" not in subscriptionStatus:
                 raise AssertionError(" " + each.hostname + " did not register properly : " + subscriptionStatus)
 
+            log("*** Verify all pools registered & repositories subscribed ***")
+            if verify_subscription_and_repos(each.provisioning_ip, "root", settings.nodes_root_password, "/root/install.post.log") is False:
+                raise AssertionError(" " + each.hostname +" did not subscribe/attach repos properly, see log.")
+
             log("*** Verify " + each.hostname + " can ping the outside world (ip)")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, "8.8.8.8")
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError(" " + each.hostname + " cannot ping the outside world (ip) : " + test)
 
             log("*** Verify " + each.hostname + " can ping the outside world (dns)")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, "google.com")
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError(" " + each.hostname + " cannot ping the outside world (dns) : " + test)
 
             log("*** Verify  " + each.hostname + " can ping the SAH node through the provisioning network")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.sah_node.provisioning_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping the SAH node through the provisioning network : " + test)
 
             log("*** Verify  " + each.hostname + " can ping the Foreman node through the provisioning network")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.foreman_node.provisioning_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping the foreman node through the provisioning network : " + test)
 
             log("*** Verify  " + each.hostname + " can ping the Foreman node through its public ip")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.foreman_node.public_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping the foreman node through its public ip : " + test)
 
             log("*** Verify  " + each.hostname + " can ping the ceph node through its public ip")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.ceph_node.public_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping the ceph node through its public ip : " + test)
 
             log("*** Verify  " + each.hostname + " can ping the SAH node through the storage network")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.sah_node.storage_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping the SAH node through the storage network : " + test)
 
             log("*** Verify  " + each.hostname + " can ping the ceph node over the storage network")
-            test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.ceph_node.storage_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+    	    test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.ceph_node.storage_ip)
+    	    if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping the ceph node over the storage network : " + test)
 
             if each.is_controller == True or each.is_compute == True  :
@@ -498,7 +550,7 @@ if __name__ == '__main__':
 
                 log("*** Verify  " + each.hostname + " can ping the SAH node through the private API network")
                 test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.sah_node.private_api_ip)
-                if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+                if ping_success not in test:
                     raise AssertionError("  " + each.hostname + " cannot ping the SAH node through the private API network : " + test)
 
             if each.is_controller == True :
@@ -507,7 +559,7 @@ if __name__ == '__main__':
 
                 log("*** Verify  " + each.hostname + " can ping the SAH node through the external network")
                 test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.sah_node.external_ip)
-                if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+                if ping_success not in test:
                     raise AssertionError("  " + each.hostname + " cannot ping the SAH node through the external network : " + test)
 
             if each.is_compute == True :
@@ -551,22 +603,22 @@ if __name__ == '__main__':
 
             log("*** Verify the controller nodes can ping each other over the provisioning network ")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.controller_nodes[target].provisioning_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping " + settings.controller_nodes[target].hostname +" over the provisioning network  : " + test)
 
             log("*** Verify the controller nodes can ping each other over the private api  network")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.controller_nodes[target].private_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping " + settings.controller_nodes[target].hostname +" over the private api network  : " + test)
 
             log("*** Verify the controller nodes can ping each other over the Storage network")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.controller_nodes[target].storage_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping " + settings.controller_nodes[target].hostname +" over the storage network  : " + test)
 
             log("*** Verify the controller nodes can ping each other over the External network")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.controller_nodes[target].public_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping " + settings.controller_nodes[target].hostname +" over the external network  : " + test)
             target += 1
 
@@ -578,17 +630,17 @@ if __name__ == '__main__':
             log ("*** "+ each.hostname + " -> " + settings.compute_nodes[target].hostname)
             log("*** Verify the compute nodes can ping each other over the provisioning network")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.compute_nodes[target].provisioning_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping " + settings.compute_nodes[target].hostname +" over the provisioning network  : " + test)
 
             log("*** Verify the compute nodes can ping each other over the private api  network")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.compute_nodes[target].private_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping " + settings.compute_nodes[target].hostname +" over the private api network  : " + test)
 
             log("*** Verify the compute nodes can ping each other over the Storage network")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.compute_nodes[target].storage_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping " + settings.compute_nodes[target].hostname +" over the storage network  : " + test)
 
             target += 1
@@ -601,17 +653,17 @@ if __name__ == '__main__':
             log ("*** "+ each.hostname + " -> " + settings.ceph_nodes[target].hostname)
             log("*** Verify the Storage nodes can ping each other over the provisioning network")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.ceph_nodes[target].provisioning_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping " + settings.ceph_nodes[target].hostname +" over the provisioning network  : " + test)
 
             log("*** Verify the Storage nodes can ping each other over the storage network")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.ceph_nodes[target].storage_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping " + settings.ceph_nodes[target].hostname +" over the storage network  : " + test)
 
             log("*** Verify the Storage nodes can ping each other over the cluster network")
             test = ping_host(each.provisioning_ip, "root", settings.nodes_root_password, settings.ceph_nodes[target].storage_cluster_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("  " + each.hostname + " cannot ping " + settings.ceph_nodes[target].hostname +" over the cluster network  : " + test)
 
             target += 1
@@ -630,6 +682,7 @@ if __name__ == '__main__':
         ceph.modifyOSDPlacementGroups()
         ceph.pool_and_keyRing_configuration()
         ceph.libvirt_configuation()
+        ceph.setup_radosgw()
 
 
         foremanHost.run_puppet_on_all()
@@ -639,10 +692,39 @@ if __name__ == '__main__':
         for each in nonSAHnodes:
             log(Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password, "service puppet start")[0])
 
+        # Ceph - restart cinder services
+        log("restart cinder services")
+        cmds = [
+            "pcs resource restart cinder-api-clone",
+            "pcs resource restart cinder-scheduler-clone",
+            "pcs resource restart cinder-volume",
 
+        ]
+        for cmd in cmds:
+            log( Ssh.execute_command(settings.controller_nodes[0].provisioning_ip, "root", settings.nodes_root_password,cmd )[0])
 
         UI_Manager.driver().close()
 
+        log("=== Applying horizon patch");
+        log("=== uploading the horizon.patch")
+        for host in settings.controller_nodes:
+            localfile = settings.cloud_repo_dir + '/src/utils/networking/horizon.patch'
+            remotefile =  '/tmp/horizon.patch'
+            print localfile + " >> " + remotefile
+            Scp.put_file(host.provisioning_ip, "root", settings.nodes_root_password, localfile, remotefile)
+   
+        log("=== stop horizon service")
+        cmd = 'pcs resource disable horizon'
+        logger.info( Ssh.execute_command(settings.controller_nodes[0].provisioning_ip, "root", settings.nodes_root_password, cmd ))
+
+        log("=== Apply the horizon.patch")
+        for host in settings.controller_nodes:
+            cmd = '( cd /usr/share/openstack-dashboard;patch -p1 < /tmp/horizon.patch )'
+            logger.info( Ssh.execute_command(host.provisioning_ip, "root", settings.nodes_root_password, cmd))
+
+        log("=== start horizon service")
+        cmd = 'pcs resource enable horizon'
+        logger.info( Ssh.execute_command(settings.controller_nodes[0].provisioning_ip, "root", settings.nodes_root_password, cmd ))
 
         log("=== creating tempest VM");
         log("=== uploading the tempest vm sh script")
@@ -664,7 +746,7 @@ if __name__ == '__main__':
                 "eth0        "+ settings.tempest_node.public_ip +"    "+ settings.tempest_node.public_netmask ,
                 "eth1        "+ settings.tempest_node.external_ip +"    "+ settings.tempest_node.external_netmask,
                 "eth2        "+ settings.tempest_node.private_api_ip +"    "+ settings.tempest_node.private_api_netmask,
-                "tempestcommit origin/kilo",
+                "tempestcommit 29f317012e92c2a96434f05092aaeb4148b9fe7a",
                 )
 
         for comd in Conf:
@@ -691,30 +773,30 @@ if __name__ == '__main__':
 
         log("*** Verify the Tempest VM can ping the outside world (ip)")
         test = ping_host(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, "8.8.8.8")
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("Tempest VM cannot ping the outside world (ip) : " + test)
 
         log("*** Verify the Tempest VM can ping the outside world (dns)")
         test = ping_host(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, "google.com")
-        if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+        if ping_success not in test:
             raise AssertionError("Tempest VM cannot ping the outside world (dns) : " + test)
 
         log("*** Verify the Tempest VM can ping the controller Nodes over the External networkk")
         for each in settings.controller_nodes:
             test = ping_host(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, each.public_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("Tempest VM cannot ping the "+ each.hostname +" through the External network : " + test)
 
         log("*** Verify the Tempest VM can ping the controller Nodes over the Private API networkk")
         for each in settings.controller_nodes:
             test = ping_host(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, each.private_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("Tempest VM cannot ping the "+ each.hostname +" through the Private api network : " + test)
 
         log("*** Verify the Tempest VM can ping the compute Nodes over the Private API networkk")
         for each in settings.compute_nodes:
             test = ping_host(settings.tempest_node.public_ip, "root", settings.tempest_node.root_password, each.private_ip)
-            if "3 packets transmitted, 3 received, 0% packet loss" not in test:
+            if ping_success not in test:
                 raise AssertionError("Tempest VM cannot ping the "+ each.hostname +" through the Private api network : " + test)
 
         log (" that's all folks "    )
@@ -741,6 +823,4 @@ if __name__ == '__main__':
         logger.info(e)
         print e
         print traceback.format_exc()
-
-
 

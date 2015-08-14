@@ -1,3 +1,24 @@
+#!/usr/bin/env python
+
+# OpenStack - A set of software tools for building and managing cloud computing
+# platforms for public and private clouds.
+# Copyright (C) 2015 Dell, Inc.
+#
+# This file is part of OpenStack.
+#
+# OpenStack is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenStack is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
+
 import ConfigParser, json, sys
 from osp_deployer import Node_Conf
 import logging
@@ -28,6 +49,7 @@ class Settings():
         self.tenant_vlan_range = self.cluster_settings_map['tenant_vlan_range']
         self.ceph_user_password = self.cluster_settings_map['ceph_user_password']
         self.ceph_admin_email = self.cluster_settings_map['ceph_admin_email']
+        self.ceph_version = self.cluster_settings_map['ceph_version']
 
         self.vip_cinder_private = self.cluster_settings_map['vip_cinder_private']
         self.vip_cinder_public = self.cluster_settings_map['vip_cinder_public']
@@ -49,6 +71,8 @@ class Settings():
         self.vip_ceilometer_private = self.cluster_settings_map['vip_ceilometer_private']
         self.vip_ceilometer_public = self.cluster_settings_map['vip_ceilometer_public']
         self.vip_ceilometer_redis = self.cluster_settings_map['vip_ceilometer_redis_public']
+        self.vip_radosgw_private = self.cluster_settings_map['vip_radosgw_private']
+        self.vip_radosgw_public = self.cluster_settings_map['vip_radosgw_public']
 
         self.vip_neutron_public = self.cluster_settings_map['vip_neutron_public']
         self.vip_neutron_private = self.cluster_settings_map['vip_neutron_private']
@@ -77,6 +101,9 @@ class Settings():
             self.subscription_check_retries = self.cluster_settings_map['subscription_check_retries']
         else:
             self.subscription_check_retries = 20
+        self.controller_bond_opts=self.cluster_settings_map['controller_bond_opts']
+        self.compute_bond_opts=self.cluster_settings_map['compute_bond_opts']
+        self.storage_bond_opts=self.cluster_settings_map['storage_bond_opts']
         self.debug=None
         self.verbose=None
 
@@ -111,6 +138,23 @@ class Settings():
             self.c_mult_be = self.cluster_settings_map['c_mult_be']
         else:
             self.use_eql_backend = False
+
+        if self.cluster_settings_map['use_dell_sc_backend'].lower() == 'true':
+            self.use_dell_sc_backend = True
+            self.c_be_dell_sc_name  = self.cluster_settings_map['c_be_dell_sc_name']
+            self.c_dell_sc_api_port = self.cluster_settings_map['c_dell_sc_api_port']
+            self.c_dell_sc_iscsi_ip_address = self.cluster_settings_map['c_dell_sc_iscsi_ip_address']
+            self.c_dell_sc_iscsi_port = self.cluster_settings_map['c_dell_sc_iscsi_port']
+            self.c_dell_sc_san_ip = self.cluster_settings_map['c_dell_sc_san_ip']
+            self.c_dell_sc_san_login = self.cluster_settings_map['c_dell_sc_san_login']
+            self.c_dell_sc_san_password = self.cluster_settings_map['c_dell_sc_san_password']
+            self.c_dell_sc_ssn = self.cluster_settings_map['c_dell_sc_ssn']
+            self.c_dell_sc_server_folder = self.cluster_settings_map['c_dell_sc_server_folder']
+            self.c_dell_sc_volume_folder = self.cluster_settings_map['c_dell_sc_volume_folder']        
+            self.c_mult_be = self.cluster_settings_map['c_mult_be']
+        else:
+            self.use_dell_sc_backend = False
+
 
 
         if self.cluster_settings_map['enable_version_locking'].lower() == 'true':

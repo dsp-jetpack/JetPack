@@ -43,10 +43,9 @@ or
 * 4.0.b - 06/11/2015 - Added previous_deployment_cluster_password to allow to unregister already running nodes/cluster password changes
 * 4.0.c - 06/22/2015 - removed controller_nodes_are_730 & compute_nodes_are_730 settings, renamed  storage_nodes_are_730 to storage_nodes_are_730xd
 * 4.0.d - 07/01/2015 - Added Open stack services debug level : debug= & verbose=
-
-# 
-debug=true
-verbose=false
+* 4.0.e - 07/13/2015 - Added mode option configuration: controller_bond_opts, compute_bond_opts, storage_bond_opts
+* 4.0.f - 07/22/2014 - Added ceph_version setting ( 1.2.3 or 1.3 are valid options)
+* 4.0.e - 07/29/2015 - Added compellent/dell_sc support: use_dell_sc_backend, etc
 
 #####settings.properties
 * 1.0: - Initial version.
