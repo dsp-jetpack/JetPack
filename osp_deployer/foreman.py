@@ -183,7 +183,6 @@ class Foreman():
         'hammer-get-ids.sh',
         'hammer-dump-ids.sh',
         'hammer-ceph-fix.sh',
-        'hammer-uuid-fix.sh',
         'hammer-fencing.sh',
         'common.sh',
         'osp_config.sh',
@@ -587,10 +586,6 @@ class Foreman():
 
         if self.settings.ceph_version == "1.2.3":
             cmd = "/root/pilot/hammer-ceph-fix.sh"
-            logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
-
-        if self.settings.ceph_version == "1.3":
-            cmd = "/root/pilot/hammer-uuid-fix.sh"
             logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
 
         controlerPuppetRuns = []
