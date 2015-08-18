@@ -726,6 +726,19 @@ if __name__ == '__main__':
         cmd = 'pcs resource enable horizon'
         logger.info( Ssh.execute_command(settings.controller_nodes[0].provisioning_ip, "root", settings.nodes_root_password, cmd ))
 
+        log("=== Applying live migration patch");
+        log("=== uploading the live migration script")
+        for host in settings.compute_nodes:
+            localfile = settings.cloud_repo_dir + '/src/utils/networking/enable_live_migration.sh'
+            remotefile =  '/tmp/enable_live_migration.sh'
+            print localfile + " >> " + remotefile
+            Scp.put_file(host.provisioning_ip, "root", settings.nodes_root_password, localfile, remotefile)
+
+        log("=== Apply the Live migration patch")
+        for host in settings.compute_nodes:
+            cmd = '( /tmp/enable_live_migration.sh)'
+            logger.info( Ssh.execute_command(host.provisioning_ip, "root", settings.nodes_root_password, cmd))
+        
         log("=== creating tempest VM");
         log("=== uploading the tempest vm sh script")
         remoteSh = "/root/deploy-tempest-vm.sh";
