@@ -22,6 +22,9 @@
 
 
 ### Enable live migration within libvirt ###
+### This script requires execution on each compute to enable compute nodes
+### to communicate with each other
+
 #Modify /etc/sysconfig/libvirtd to listen for incoming request
 sed -i.bak 's/^#LIBVIRTD_ARGS="--listen"/LIBVIRTD_ARGS="--listen"/g' /etc/sysconfig/libvirtd
 
