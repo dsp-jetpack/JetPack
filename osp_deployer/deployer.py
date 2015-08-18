@@ -384,7 +384,7 @@ if __name__ == '__main__':
 
         log("=== done with foreman")
 
-# ==============  Ceph VM =============
+
         logger.info( "=== creating ceph VM")
         remoteSh = "/root/deploy-ceph-vm.sh";
         Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.ceph_deploy_sh, remoteSh);
@@ -426,9 +426,6 @@ if __name__ == '__main__':
         if "Current" not in subscriptionStatus:
             raise AssertionError("Ceph VM did not register properly : " + subscriptionStatus)
 
-<<<<<<< HEAD
-# ================ Configure Foreman ===============
-=======
         log("*** Verify all pools registered & repositories subscribed ***")
         if verify_subscription_and_repos(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, "/root/" + settings.ceph_node.hostname + "-post.log" ) is False:
             raise AssertionError("Ceph vm did not subscribe/attach repos properly, see log.")
@@ -463,7 +460,6 @@ if __name__ == '__main__':
         if ping_success not in test:
             raise AssertionError("Ceph VM cannot ping the Foreman VM through the provisioning network : " + test)
 
->>>>>>> master
 
         log ("=== Configuring the foreman server")
         foremanHost.set_ignore_puppet_facts_for_provisioning()
