@@ -244,8 +244,8 @@ EOIP
   # get config script patch
   cd /tmp
   git clone https://github.com/redhat-openstack/tempest.git
-  cd tempest  
-  git fetch https://review.gerrithub.io/redhat-openstack/tempest ${TempestCommit} && git cherry-pick FETCH_HEAD
+  cd tempest
+  git checkout ${TempestCommit}
   # Apply patch to package install tree
   cp -bf tools/config_tempest.py /usr/share/openstack-tempest-kilo/tools/
   cp -bf tempest/common/api_discovery.py /usr/share/openstack-tempest-kilo/tempest/common/
