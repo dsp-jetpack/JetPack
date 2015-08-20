@@ -738,7 +738,7 @@ if __name__ == '__main__':
 
         log("=== Apply the Live migration patch")
         for host in settings.compute_nodes:
-            cmd = '( /tmp/enable_live_migration.sh)'
+            cmd = '( chmod a+x /tmp/enable_live_migration.sh; /tmp/enable_live_migration.sh )'
             logger.info( Ssh.execute_command(host.provisioning_ip, "root", settings.nodes_root_password, cmd))
 
         log("=== Applying Calamari patch");
@@ -749,7 +749,7 @@ if __name__ == '__main__':
         Scp.put_file(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, localfile, remotefile)
    
         log("=== Apply the calamari.patch")
-        cmd = '( cd /opt/calamari/venv/lib/python2.7/site-packages/calamari_cthulhu-py2.7.egg/cthulhu/manager/;patch -p0 < /tmp/calamari.patch )'
+        cmd = '( cd /opt/calamari/venv/lib/python2.7/site-packages/calamari_cthulhu-0.1-py2.7.egg/cthulhu/manager; patch -p0 < /tmp/calamari.patch )'
         logger.info( Ssh.execute_command(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, cmd ))
 
         log("=== restart cthulhu services per the patch instructions from RH ")
