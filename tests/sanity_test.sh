@@ -36,6 +36,10 @@ KEY_NAME="key_name"
 NOVA_INSTANCE_NAME="cirros_test"
 VOLUME_NAME="volume_test"
 IMAGE_NAME="cirros"
+PROJECT_NAME="sanity"
+USER_NAME="sanity"
+PASSWORD="cr0wBar!"
+EMAIL="ce-cloud@dell.com"
 
 shopt -s nullglob
 
@@ -53,6 +57,9 @@ DEBUG=4
 # Default logging level
 LOG_LEVEL=$INFO
 
+# global var
+NAME=''
+
 # Logging functions
 log() { echo -e "$(date '+%F %T'): $@" >&2; }
 fatal() { log "FATAL: $@" >&2; exit 1; }
@@ -65,9 +72,10 @@ debug() { [[ $DEBUG -le $LOG_LEVEL ]] && log "DEBUG: $@"; }
 ######## Functions ############
 
 init(){
-   info "Random init stuff "
+   info "### Random init stuff "
    cd ~
    source keystonerc_admin
+   info "### PCS Status "
    pcs status
 }
 
@@ -83,6 +91,23 @@ execute_command(){
 	fi
 }
 
+#Generates a unique name
+get_unique_name (){
+    name=$1 
+    cmd=$2
+    
+    for i in {1..25}
+    do
+      name_exists=$($cmd | grep $name | head -n 1 )
+      if [ ${#name_exists} -eq 0  ]
+      then
+         NAME=$i
+         return
+      fi
+      name="$name$i"
+    done
+}
+
 check_service(){
 SERVICE="$1"
 
@@ -96,35 +121,76 @@ fi
 echo "$SERVICE is currently running"
 }
 
+set_unique_names(){
+  info "### get_unique-name"
+  inst_exists=$(nova list | grep $NOVA_INSTANCE_NAME |  head -n 1  | awk '{print $4}')
+  if [ "$inst_exists" == "$NOVA_INSTANCE_NAME" ]
+  then
+     info "$NOVA_INSTANCE_NAME instance exists, creating new set"
+     get_unique_name "nova list" "$NOVA_INSTANCE_NAME"
+
+     TENANT_NETWORK_NAME="$TENANT_NETWORK_NAME$NAME"
+     TENANT_ROUTER_NAME="$TENANT_ROUTER_NAME$NAME"
+     VLAN_NAME="$VLAN_NAME$NAME"
+     EXTERNAL_NETWORK_NAME="$EXTERNAL_NETWORK_NAME$NAME"
+     EXTERNAL_SUBNET_NAME="$EXTERNAL_SUBNET_NAME$NAME"
+     NOVA_INSTANCE_NAME="$NOVA_INSTANCE_NAME$NAME"
+     VOLUME_NAME="$VOLUME_NAME$NAME"
+  fi
+}
+
 create_the_networks(){
   info "### Creating the Networks ####"
+ 
   
-  execute_command "neutron net-create $TENANT_NETWORK_NAME"
+  net_exists=$(neutron net-list | grep $TENANT_NETWORK_NAME |  head -n 1  | awk '{print $4}')
+  if [ "$net_exists" != "$TENANT_NETWORK_NAME" ]
+  then 
+    execute_command "neutron net-create $TENANT_NETWORK_NAME"
+  else
+    info "#----- Tenant network '$TENANT_NETWORK_NAME' exists. Skipping"
+  fi
   
-  execute_command "neutron subnet-create $TENANT_NETWORK_NAME $VLAN_NETWORK --name $VLAN_NAME"
-  
-  execute_command "neutron router-create $TENANT_ROUTER_NAME"
-  
-  execute_command "neutron net-list"
-  
-  #get the subnet_id 
+  subnet_exists=$(neutron subnet-list | grep $VLAN_NAME |  head -n 1  | awk '{print $4}')
+  if [ "$subnet_exists" != "$VLAN_NAME" ]
+  then
+    execute_command "neutron subnet-create $TENANT_NETWORK_NAME $VLAN_NETWORK --name $VLAN_NAME"
+  else
+    info "#-----VLAN Network subnet '$VLAN_NETWORK' exists. Skipping"
+  fi
 
-  subnet_id=$(neutron net-list | grep tenant_net | awk '{print $6}')
 
-  execute_command "neutron router-interface-add $TENANT_ROUTER_NAME $subnet_id"
+  router_exists=$(neutron router-list | grep $TENANT_ROUTER_NAME | head -n 1  |  awk '{print $4}')
+  if [ "$router_exists" != "$TENANT_ROUTER_NAME" ]
+  then
+    execute_command "neutron router-create $TENANT_ROUTER_NAME"
+    
+    #get subnet_id
+    subnet_id=$(neutron net-list | grep $TENANT_NETWORK_NAME | head -n 1 | awk '{print $6}')
+
+    execute_command "neutron router-interface-add $TENANT_ROUTER_NAME $subnet_id"
+  else
+    info "#----- $TENANT_ROUTER_NAME exists. Skipping"
+  fi
+
   
   execute_command "grep network_vlan_ranges /etc/neutron/plugin.ini"
 
-  execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external --shared"
-  
-  execute_command "neutron subnet-create --name $EXTERNAL_SUBNET_NAME --allocation-pool start=$STARTIP,end=$ENDIP --disable-dhcp $EXTERNAL_NETWORK_NAME $EXTERNAL_VLAN_NETWORK"
-  
+  ext_net_exists=$(neutron net-list | grep $EXTERNAL_NETWORK_NAME |  head -n 1  | awk '{print $4}')
+  if [ "$ext_net_exists" != "$EXTERNAL_NETWORK_NAME" ]
+  then
+    execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external --shared"
+    execute_command "neutron subnet-create --name $EXTERNAL_SUBNET_NAME --allocation-pool start=$STARTIP,end=$ENDIP --disable-dhcp $EXTERNAL_NETWORK_NAME $EXTERNAL_VLAN_NETWORK"  
+  else
+    info "#----- External network '$EXTERNAL_NETWORK_NAME' exists. Skipping"
+  fi
+
 
    execute_command "neutron net-list"
  
    execute_command "neutron router-list"
 
-   ext_net_id=$(neutron net-list | grep $EXTERNAL_NETWORK_NAME | awk '{print $2}')
+   ext_net_id=$(neutron net-list | grep $EXTERNAL_NETWORK_NAME |  head -n 1  | awk '{print $2}')
 
   #replace the external_net_id
    execute_command "neutron router-gateway-set $TENANT_ROUTER_NAME $ext_net_id"
@@ -137,9 +203,17 @@ setup_glance(){
 
  if [ ! -f ./cirros-0.3.3-x86_64-disk.img ]; then
      execute_command "wget http://download.cirros-cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img"
+ else
+     info "#----- Cirros image exists. Skipping"
  fi
 
- execute_command "glance image-create --name  $IMAGE_NAME --is-public true --disk-format qcow2 --container-format bare --file cirros-0.3.3-x86_64-disk.img"
+  image_exists=$(glance image-list | grep $IMAGE_NAME |  head -n 1  | awk '{print $4}')
+  if [ "$image_exists" != "$IMAGE_NAME" ]
+  then
+     execute_command "glance image-create --name  $IMAGE_NAME --is-public true --disk-format qcow2 --container-format bare --file cirros-0.3.3-x86_64-disk.img"
+  else
+    info "#----- Image '$IMAGE_NAME' exists. Skipping"
+  fi
 
  execute_command "glance image-list"
 
@@ -152,13 +226,16 @@ setup_nova (){
  info "### Setup Nova"""
 
  info "creating keypair $KEY_NAME"
+ if [ ! -f ./MY_KEY.pem ]; then
+   file=MY_KEY.pem
+   nova keypair-add $KEY_NAME  > $file 
+ else
+   info "#----- Key '$KEY_NAME' exists. Skipping"
+ fi
 
- file=MY_KEY.pem
- nova keypair-add $KEY_NAME  > $file 
+ tenant_net_id=$(neutron net-list | grep $TENANT_NETWORK_NAME | head  -n 1  | awk '{print $2}')
 
- tenant_net_id=$(neutron net-list | grep $TENANT_NETWORK_NAME | awk '{print $2}')
-
- image_id=$(glance image-list | grep $IMAGE_NAME | awk '{print $2}')
+ image_id=$(glance image-list | grep $IMAGE_NAME | head -n 1  | awk '{print $2}')
 
  execute_command "nova boot --flavor 2 --key_name $KEY_NAME --image $image_id --nic net-id=$tenant_net_id $NOVA_INSTANCE_NAME"
  
@@ -174,12 +251,15 @@ setup_cinder(){
  
  execute_command "cinder list"
 
- execute_command "cinder create --display-name $VOLUME_NAME 1"
- 
- execute_command "cinder list"
+  vol_exists=$(cinder list | grep $VOLUME_NAME |  head -n 1  | awk '{print $6}')
+  if [ "$vol_exists" != "$VOLUME_NAME" ]
+  then
+     execute_command "cinder create --display-name $VOLUME_NAME 1"
+     execute_command "cinder list"
+  fi
 
- server_id=$(nova list | grep $NOVA_INSTANCE_NAME| awk '{print $2}')
- volume_id=$(cinder list | grep $VOLUME_NAME| awk '{print $2}')
+ server_id=$(nova list | grep $NOVA_INSTANCE_NAME| head -n 1 | awk '{print $2}')
+ volume_id=$(cinder list | grep $VOLUME_NAME| head -n -1 | awk '{print $2}')
 
  execute_command "nova volume-attach $server_id $volume_id /dev/vdd"
 
@@ -213,6 +293,18 @@ radosgw_cleanup(){
 
 }
 
+setup_project(){
+  info "### Setting up new project"
+
+  pro_exists=$(keystone tenant-list | grep $PROJECT_NAME |  head -n 1  | awk '{print $4}')
+  if [ "$pro_exists" != "$PROJECT_NAME" ]
+  then
+       execute_command "keystone tenant-create --name $PROJECT_NAME --description 'Sanity Test Project'"
+       execute_command "keystone user-create --name $USER_NAME --tenant $PROJECT_NAME --pass $PASSWORD --email $EMAIL"
+  else
+      info "#Project $PROJECT_NAME exists ---- Skipping"
+  fi
+}
 
 end(){
  
@@ -225,6 +317,12 @@ info "###Appendix-C Openstack Operations Functional Test ###"
 ####
 
 init
+
+set_unique_names
+echo $NAME is the new set
+
+###
+setup_project
 
 ### Setting up Networks
 
@@ -249,3 +347,4 @@ end
 info "##### Done #####"
 
 exit
+
