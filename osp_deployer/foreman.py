@@ -555,6 +555,9 @@ class Foreman():
         cmd = "sed -i 's/allow rx pool=images/allow rwx pool=images/' /usr/share/openstack-foreman-installer/puppet/modules/quickstack/manifests/ceph/config.pp"
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
+        cmd = "sed -i \"s/enable_quotas' => false/enable_quotas' => true/\" /usr/share/openstack-foreman-installer/puppet/modules/quickstack/manifests/horizon.pp"
+        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
+
         cmd = 'yum install -y rubygem-foreman_api'
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
