@@ -680,15 +680,16 @@ class Foreman():
 
 
     def check_resources(self,settings):
-        stopped = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root","cr0wBar!","pcs status | grep Stop")
-        num_services = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root","cr0wBar!","pcs status | grep ' Resources configured'")
+        stopped = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep Stop")
+        num_services = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep ' Resources configured'")
         logger.info(num_services[0].rstrip())
         logger.info("Resources currently stopped: %d" % stopped[0].count('Stop'))
         return "Stop" not in stopped[0] and "131" in num_services[0]
 
 
     def pcs_cleanup(self,settings) :
-        cleaned = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root","cr0wBar!","pcs resource cleanup")
+        cmd = 'pcs resource cleanup'
+        cleaned = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,cmd)
         return "successfully cleaned up" in cleaned[0]
 
 
@@ -708,8 +709,8 @@ class Foreman():
 
 
     def check_fencing(self,settings) :
-        stonith = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root","cr0wBar!","pcs status | grep stonith")
-        return stonith[0].count('stonith') == len(settings.controller_nodes) and 'Stop' not in stonith[0]
+        stonith = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep stonith")
+        return stonith[0].count('stonith-ipmilan') == len(settings.controller_nodes) and 'Stop' not in stonith[0]
 
 
     def check_services_and_enable_fencing(self):
