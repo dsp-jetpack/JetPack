@@ -759,6 +759,9 @@ if __name__ == '__main__':
 
 ### END Jstream 4.0 patches 
         
+        
+        fencing_enabled = foremanHost.check_services_and_enable_fencing()
+
         log("=== creating tempest VM");
         log("=== uploading the tempest vm sh script")
         remoteSh = "/root/deploy-tempest-vm.sh";
@@ -834,9 +837,11 @@ if __name__ == '__main__':
 
         log (" that's all folks "    )
         log ("")
-        log (" and REMEMBER!  FENCING IS DISABLED!")
-        log (" If your services are all running, and 'pcs status' on a controller node shows that all is well,")
-        log (" you can use the 'hammer-fencing.sh enable' command to enable fencing.")
+        if fencing_enabled :
+            log (" Fencing is enabled")
+        else :
+            log (" FENCING COULD NOT BE ENABLED!")
+            log (" You can use the 'hammer-fencing.sh enable' command to enable fencing after you fixed pcs resource issues.")
         log ("")
         log ("  Some useful ip/passwords  ...")
         log ("")
