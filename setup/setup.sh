@@ -74,7 +74,7 @@ SERVICE="$1"
 if [ "'systemctl is-active $SERVICE'" != "active" ] 
 then
     echo "$SERVICE wasnt running so attempting restart"
-    systemctl restart $SERVICE
+    systemctl start $SERVICE
     systemctl status $SERVICE 
     systemctl enable $SERVICE
 fi

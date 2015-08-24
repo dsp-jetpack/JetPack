@@ -705,6 +705,8 @@ if __name__ == '__main__':
 
         UI_Manager.driver().close()
 
+### Jstream 4.0 patches 
+
         log("=== Applying horizon patch");
         log("=== uploading the horizon.patch")
         for host in settings.controller_nodes:
@@ -726,6 +728,37 @@ if __name__ == '__main__':
         cmd = 'pcs resource enable horizon'
         logger.info( Ssh.execute_command(settings.controller_nodes[0].provisioning_ip, "root", settings.nodes_root_password, cmd ))
 
+        log("=== Applying live migration patch");
+        log("=== uploading the live migration script")
+        for host in settings.compute_nodes:
+            localfile = settings.cloud_repo_dir + '/src/utils/networking/enable_live_migration.sh'
+            remotefile =  '/tmp/enable_live_migration.sh'
+            print localfile + " >> " + remotefile
+            Scp.put_file(host.provisioning_ip, "root", settings.nodes_root_password, localfile, remotefile)
+
+        log("=== Apply the Live migration patch")
+        for host in settings.compute_nodes:
+            cmd = '( chmod a+x /tmp/enable_live_migration.sh; /tmp/enable_live_migration.sh )'
+            logger.info( Ssh.execute_command(host.provisioning_ip, "root", settings.nodes_root_password, cmd))
+
+        log("=== Applying Calamari patch");
+        log("=== uploading the calamari.patch")
+        localfile = settings.cloud_repo_dir + '/src/utils/networking/calamari.patch'
+        remotefile =  '/tmp/calamari.patch'
+        print localfile + " >> " + remotefile
+        Scp.put_file(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, localfile, remotefile)
+   
+        log("=== Apply the calamari.patch")
+        cmd = '( cd /opt/calamari/venv/lib/python2.7/site-packages/calamari_cthulhu-0.1-py2.7.egg/cthulhu/manager; patch -p0 < /tmp/calamari.patch )'
+        logger.info( Ssh.execute_command(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, cmd ))
+
+        log("=== restart cthulhu services per the patch instructions from RH ")
+        cmd = '( source /opt/calamari/venv/bin/activate; supervisorctl restart cthulhu )'
+        logger.info( Ssh.execute_command(settings.ceph_node.public_ip, "root", settings.ceph_node.root_password, cmd ))
+
+
+### END Jstream 4.0 patches 
+        
         log("=== creating tempest VM");
         log("=== uploading the tempest vm sh script")
         remoteSh = "/root/deploy-tempest-vm.sh";
