@@ -299,7 +299,7 @@ setup_project(){
   pro_exists=$(keystone tenant-list | grep $PROJECT_NAME |  head -n 1  | awk '{print $4}')
   if [ "$pro_exists" != "$PROJECT_NAME" ]
   then
-       execute_command "keystone tenant-create --name $PROJECT_NAME --description 'Sanity Test Project'"
+       execute_command "keystone tenant-create --name $PROJECT_NAME"
        execute_command "keystone user-create --name $USER_NAME --tenant $PROJECT_NAME --pass $PASSWORD --email $EMAIL"
   else
       info "#Project $PROJECT_NAME exists ---- Skipping"
