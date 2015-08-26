@@ -204,7 +204,6 @@ class Foreman():
         'hammer-get-ids.sh',
         'hammer-dump-ids.sh',
         'hammer-ceph-fix.sh',
-        'hammer-uuid-fix.sh',
         'hammer-fencing.sh',
         'common.sh',
         'osp_config.sh',
@@ -613,10 +612,6 @@ class Foreman():
             cmd = "/root/pilot/hammer-ceph-fix.sh"
             logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
 
-        if self.settings.ceph_version == "1.3":
-            cmd = "/root/pilot/hammer-uuid-fix.sh"
-            logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
-
         controlerPuppetRuns = []
         for each in self.settings.controller_nodes:
             puppetRunThr = runThreadedPuppet(each.hostname, each)
@@ -682,3 +677,62 @@ class Foreman():
         for each in self.settings.controller_nodes:
             cmd = "rm -f /var/lib/puppet/state/agent_catalog_run.lock"
             Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
+
+
+    def check_resources(self,settings):
+        stopped = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep Stop")
+        num_services = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep ' Resources configured'")
+        logger.info(num_services[0].rstrip())
+        logger.info("Resources currently stopped: %d" % stopped[0].count('Stop'))
+        return "Stop" not in stopped[0] and "131" in num_services[0]
+
+
+    def pcs_cleanup(self,settings) :
+        cmd = 'pcs resource cleanup'
+        cleaned = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,cmd)
+        return "successfully cleaned up" in cleaned[0]
+
+
+    def enable_fencing(self,settings) :
+        logger.info("running puppet on controller nodes with fencing enabled")
+        cmd = "/root/pilot/hammer-fencing.sh enabled"
+        logger.info(Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, cmd))
+        controlerPuppetRuns = []
+        for each in settings.controller_nodes:
+            puppetRunThr = runThreadedPuppet(each.hostname, each)
+            controlerPuppetRuns.append(puppetRunThr)
+        for thr in controlerPuppetRuns:
+            thr.start()
+            time.sleep(60) # ...
+        for thr in controlerPuppetRuns:
+            thr.join()
+
+
+    def check_fencing(self,settings) :
+        stonith = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep stonith")
+        return stonith[0].count('stonith-ipmilan') == len(settings.controller_nodes) and 'Stop' not in stonith[0]
+
+
+    def check_services_and_enable_fencing(self):
+        print("Checking services and enabling fencing")       
+        logger.info("Checking pcs resources")
+        if self.check_resources(self.settings) :
+            logger.info("All services up, enabling Stonish fencing...")
+            self.enable_fencing(self.settings)
+        else:
+            logger.info("Some services are not up, attempting cleanup/restart")
+            self.pcs_cleanup(self.settings)
+            time.sleep(60)
+            if self.check_resources(self.settings) :
+                self.enable_fencing(self.settings)
+            else :
+                print("Error:  Pcs resource cleanup failed!")
+                logger.error("Error: Could not clean up resources - you must manually fix resources and start fencing!!")
+        if self.check_fencing(self.settings) :
+            logger.info("Fencing enabled")
+            return True
+        else:
+            print("Error:  Fencing failed to start!!")
+            logger.error("Error: Fencing failed to start!!")
+            return False
+
