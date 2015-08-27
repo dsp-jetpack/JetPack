@@ -99,13 +99,14 @@ get_unique_name (){
 
     for i in {1..25}
     do
+      name="$tmp$i"    
       name_exists=$($cmd | grep $name | head -n 1 | awk '{print $4}')
-      if [ "$name_exists" != "$tmp"  ]
+      echo $name_exists , $cmd , $tmp, $name
+      if [ "$name_exists" != "$name"  ]
       then
          NAME=$i
          return
       fi
-      name="$name$i"
     done
 }
 
