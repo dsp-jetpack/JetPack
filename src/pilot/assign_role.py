@@ -37,7 +37,7 @@ def get_creds():
       os_auth_url = val
     elif key == 'os_tenant_name':
       os_tenant_name = val
-  os_password = check_output(['hiera', 'admin_password']).strip()
+  os_password = check_output(['sudo', 'hiera', 'admin_password']).strip()
 
 
 def main():
