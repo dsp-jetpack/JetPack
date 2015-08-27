@@ -93,13 +93,14 @@ execute_command(){
 
 #Generates a unique name
 get_unique_name (){
-    name=$1 
-    cmd=$2
-    
+    cmd=$1
+    name=$2
+    tmp=$name
+
     for i in {1..25}
     do
-      name_exists=$($cmd | grep $name | head -n 1 )
-      if [ ${#name_exists} -eq 0  ]
+      name_exists=$($cmd | grep $name | head -n 1 | awk '{print $4}')
+      if [ "$name_exists" != "$tmp"  ]
       then
          NAME=$i
          return
@@ -122,7 +123,7 @@ echo "$SERVICE is currently running"
 }
 
 set_unique_names(){
-  info "### get_unique-name"
+  info "###get_unique-name"
   inst_exists=$(nova list | grep $NOVA_INSTANCE_NAME |  head -n 1  | awk '{print $4}')
   if [ "$inst_exists" == "$NOVA_INSTANCE_NAME" ]
   then
@@ -136,6 +137,8 @@ set_unique_names(){
      EXTERNAL_SUBNET_NAME="$EXTERNAL_SUBNET_NAME$NAME"
      NOVA_INSTANCE_NAME="$NOVA_INSTANCE_NAME$NAME"
      VOLUME_NAME="$VOLUME_NAME$NAME"
+     PROJECT_NAME="$PROJECT_NAME$NAME"
+     USER_NAME="$USER_NAME$NAME"
   fi
 }
 
@@ -259,7 +262,7 @@ setup_cinder(){
   fi
 
  server_id=$(nova list | grep $NOVA_INSTANCE_NAME| head -n 1 | awk '{print $2}')
- volume_id=$(cinder list | grep $VOLUME_NAME| head -n -1 | awk '{print $2}')
+ volume_id=$(cinder list | grep $VOLUME_NAME| head -n 1 | awk '{print $2}')
 
  execute_command "nova volume-attach $server_id $volume_id /dev/vdb"
 
