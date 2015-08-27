@@ -77,6 +77,21 @@ init(){
    source keystonerc_admin
    info "### PCS Status "
    pcs status
+   pcs status | grep -i stopped
+
+
+   info "###Ensure db and rabbit services are in the active state"
+   execute_command "openstack-service status"
+   ps aux | grep rabbit
+   ps -ef | grep mysqld
+   ps -ef | grep mariadb
+
+   info "### Verify OpenStack services are running."
+   execute_command "nova-manage service list"
+   execute_command "cinder-manage service list"
+   execute_command "systemctl status openstack-keystone"
+   execute_command "systemctl status openstack-glance-api"
+   execute_command "systemctl status openstack-glance-registry"
 }
 
 execute_command(){
@@ -318,37 +333,87 @@ end(){
 
 info "###Appendix-C Openstack Operations Functional Test ###"
 
-####
 
-init
+if [[ $# > 0 ]]
+  then
+    ### CLEANUP
+     arg="$1"
+     if [[ "$arg" == "clean" ]]
+     then
+         info "### CLEANING MODE"  
 
-set_unique_names
-echo $NAME is the new set
+         info "### DELETING NETWORKS"
 
-###
-setup_project
+         cmd=$(neutron subnet-list | awk '{print $2}' | grep -v ^ID | grep -v ^$)
+         for subnet in $cmd
+         do
+             if [ "$subnet" != "id" ]
+             then
+                 echo subet_id=$subnet 
 
-### Setting up Networks
+                 cmd=$(neutron router-list | awk '{print $2}' | grep -v ^ID | grep -v ^$)
+                 for router in $cmd
+                 do
+                     if [ "$router" != "id" ]
+                     then
+                        echo router_id=$router 
+                        neutron router-gateway-clear $router
+                        neutron router-interface-delete $router $subnet
+                        neutron router-delete $router
+                     fi
+                 done
+                 neutron subnet-delete $subnet
+             fi
+         done
+         
+         #now delete the networks
+         cmd=$(neutron net-list | awk '{print $2}' | grep -v ^ID | grep -v ^$)
+         for V in $cmd
+         do
+            echo $V ;
+            neutron net-delete $V ;
+         done
 
-create_the_networks
+        
+         info   "#### Deleting the rest"
+
+         nova list | awk '$2 && $2 != "ID" {print $2}' | xargs -n1 nova delete
+         cinder list | awk '$2 && $2 != "ID" {print $2}' | xargs -n1 cinder delete
+         glance image-list | awk '$2 && $2 != "ID" {print $2}' | xargs -n1 glance image-delete
+     fi
+     exit 1
+else
+   #### EXECUTE
+
+   info "### CREATION MODE"
+   init
+
+   set_unique_names
+   echo $NAME is the new set
+
+   ###
+   setup_project
+
+   ### Setting up Networks
+
+   create_the_networks
 
 
-##
+   ##
 
-setup_glance
+   setup_glance
 
-setup_nova
+   setup_nova
 
-setup_cinder
+   setup_cinder
 
-radosgw_test
+   radosgw_test
 
-radosgw_cleanup
+   radosgw_cleanup
  
+   end 
 
-end 
+   info "##### Done #####"
 
-info "##### Done #####"
-
-exit
-
+   exit
+fi
