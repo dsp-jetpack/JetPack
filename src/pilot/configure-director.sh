@@ -22,7 +22,7 @@ create_flavor()
   flavor_uuid=$(openstack flavor list | grep "${flavor_name}" | awk '{print $2}')
   if [ -z "${flavor_uuid}" ];
   then
-    openstack flavor create --id auto --ram 4096 --disk 40 --vcpus 1 "${flavor_name}"
+    openstack flavor create --id auto --ram 6144 --disk 40 --vcpus 4 "${flavor_name}"
   else
     echo "Warning: Flavor ${flavor_name} already exists.  Skipping creation."
   fi
