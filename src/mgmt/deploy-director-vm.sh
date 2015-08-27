@@ -181,7 +181,8 @@ EOFPW
   subscription-manager repos --enable=rhel-7-server-rpms
   subscription-manager repos --enable=rhel-7-server-optional-rpms
   subscription-manager repos --enable=rhel-7-server-extras-rpms
-  # TODO: enable necessary repos for Director and OpenStack
+  subscription-manager repos --enable=rhel-7-server-openstack-7.0-rpms
+  subscription-manager repos --enable=rhel-7-server-openstack-7.0-director-rpms
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -191,9 +192,9 @@ EOFPW
     }
   umount /tmp/mnt
 
+  yum -y update
   yum -y install python-rdomanager-oscplugin
   yum -y install ahc-tools
-  yum -y update
 
   # Firewall rules to allow traffic for the http, https, dns, and tftp services and tcp port 8140.
   # Also accept all traffic from eth1 to pass through to eth0 and become NAT'd on the way out of eth0.
