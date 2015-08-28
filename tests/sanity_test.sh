@@ -77,6 +77,21 @@ init(){
    source keystonerc_admin
    info "### PCS Status "
    pcs status
+   pcs status | grep -i stopped
+
+
+   info "###Ensure db and rabbit services are in the active state"
+   execute_command "openstack-service status"
+   ps aux | grep rabbit
+   ps -ef | grep mysqld
+   ps -ef | grep mariadb
+
+   info "### Verify OpenStack services are running."
+   execute_command "nova-manage service list"
+   execute_command "cinder-manage service list"
+   execute_command "systemctl status openstack-keystone"
+   execute_command "systemctl status openstack-glance-api"
+   execute_command "systemctl status openstack-glance-registry"
 }
 
 execute_command(){
@@ -93,18 +108,20 @@ execute_command(){
 
 #Generates a unique name
 get_unique_name (){
-    name=$1 
-    cmd=$2
-    
+    cmd=$1
+    name=$2
+    tmp=$name
+
     for i in {1..25}
     do
-      name_exists=$($cmd | grep $name | head -n 1 )
-      if [ ${#name_exists} -eq 0  ]
+      name="$tmp$i"    
+      name_exists=$($cmd | grep $name | head -n 1 | awk '{print $4}')
+      echo $name_exists , $cmd , $tmp, $name
+      if [ "$name_exists" != "$name"  ]
       then
          NAME=$i
          return
       fi
-      name="$name$i"
     done
 }
 
@@ -122,7 +139,7 @@ echo "$SERVICE is currently running"
 }
 
 set_unique_names(){
-  info "### get_unique-name"
+  info "###get_unique-name"
   inst_exists=$(nova list | grep $NOVA_INSTANCE_NAME |  head -n 1  | awk '{print $4}')
   if [ "$inst_exists" == "$NOVA_INSTANCE_NAME" ]
   then
@@ -136,6 +153,8 @@ set_unique_names(){
      EXTERNAL_SUBNET_NAME="$EXTERNAL_SUBNET_NAME$NAME"
      NOVA_INSTANCE_NAME="$NOVA_INSTANCE_NAME$NAME"
      VOLUME_NAME="$VOLUME_NAME$NAME"
+     PROJECT_NAME="$PROJECT_NAME$NAME"
+     USER_NAME="$USER_NAME$NAME"
   fi
 }
 
@@ -259,9 +278,9 @@ setup_cinder(){
   fi
 
  server_id=$(nova list | grep $NOVA_INSTANCE_NAME| head -n 1 | awk '{print $2}')
- volume_id=$(cinder list | grep $VOLUME_NAME| head -n -1 | awk '{print $2}')
+ volume_id=$(cinder list | grep $VOLUME_NAME| head -n 1 | awk '{print $2}')
 
- execute_command "nova volume-attach $server_id $volume_id /dev/vdd"
+ execute_command "nova volume-attach $server_id $volume_id /dev/vdb"
 
  info "Volume attached, ssh into instance $NOVA_INSTANCE_NAME and verify"
 
@@ -299,7 +318,7 @@ setup_project(){
   pro_exists=$(keystone tenant-list | grep $PROJECT_NAME |  head -n 1  | awk '{print $4}')
   if [ "$pro_exists" != "$PROJECT_NAME" ]
   then
-       execute_command "keystone tenant-create --name $PROJECT_NAME --description 'Sanity Test Project'"
+       execute_command "keystone tenant-create --name $PROJECT_NAME"
        execute_command "keystone user-create --name $USER_NAME --tenant $PROJECT_NAME --pass $PASSWORD --email $EMAIL"
   else
       info "#Project $PROJECT_NAME exists ---- Skipping"
@@ -314,37 +333,87 @@ end(){
 
 info "###Appendix-C Openstack Operations Functional Test ###"
 
-####
 
-init
+if [[ $# > 0 ]]
+  then
+    ### CLEANUP
+     arg="$1"
+     if [[ "$arg" == "clean" ]]
+     then
+         info "### CLEANING MODE"  
 
-set_unique_names
-echo $NAME is the new set
+         info "### DELETING NETWORKS"
 
-###
-setup_project
+         cmd=$(neutron subnet-list | awk '{print $2}' | grep -v ^ID | grep -v ^$)
+         for subnet in $cmd
+         do
+             if [ "$subnet" != "id" ]
+             then
+                 echo subet_id=$subnet 
 
-### Setting up Networks
+                 cmd=$(neutron router-list | awk '{print $2}' | grep -v ^ID | grep -v ^$)
+                 for router in $cmd
+                 do
+                     if [ "$router" != "id" ]
+                     then
+                        echo router_id=$router 
+                        neutron router-gateway-clear $router
+                        neutron router-interface-delete $router $subnet
+                        neutron router-delete $router
+                     fi
+                 done
+                 neutron subnet-delete $subnet
+             fi
+         done
+         
+         #now delete the networks
+         cmd=$(neutron net-list | awk '{print $2}' | grep -v ^ID | grep -v ^$)
+         for V in $cmd
+         do
+            echo $V ;
+            neutron net-delete $V ;
+         done
 
-create_the_networks
+        
+         info   "#### Deleting the rest"
+
+         nova list | awk '$2 && $2 != "ID" {print $2}' | xargs -n1 nova delete
+         cinder list | awk '$2 && $2 != "ID" {print $2}' | xargs -n1 cinder delete
+         glance image-list | awk '$2 && $2 != "ID" {print $2}' | xargs -n1 glance image-delete
+     fi
+     exit 1
+else
+   #### EXECUTE
+
+   info "### CREATION MODE"
+   init
+
+   set_unique_names
+   echo $NAME is the new set
+
+   ###
+   setup_project
+
+   ### Setting up Networks
+
+   create_the_networks
 
 
-##
+   ##
 
-setup_glance
+   setup_glance
 
-setup_nova
+   setup_nova
 
-setup_cinder
+   setup_cinder
 
-radosgw_test
+   radosgw_test
 
-radosgw_cleanup
+   radosgw_cleanup
  
+   end 
 
-end 
+   info "##### Done #####"
 
-info "##### Done #####"
-
-exit
-
+   exit
+fi
