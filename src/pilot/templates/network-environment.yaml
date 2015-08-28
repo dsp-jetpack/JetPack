@@ -1,0 +1,89 @@
+resource_registry:
+  OS::TripleO::Compute::Net::SoftwareConfig: HOME/pilot/templates/nic-configs/compute.yaml
+  OS::TripleO::Controller::Net::SoftwareConfig: HOME/pilot/templates/nic-configs/controller.yaml
+  OS::TripleO::CephStorage::Net::SoftwareConfig: HOME/pilot/templates/nic-configs/ceph-storage.yaml
+
+  OS::TripleO::Network::External:  HOME/pilot/templates/overcloud/network/external.yaml
+  OS::TripleO::Network::InternalApi:  HOME/pilot/templates/overcloud/network/internal_api.yaml
+  OS::TripleO::Network::StorageMgmt: HOME/pilot/templates/overcloud/network/storage_mgmt.yaml
+  OS::TripleO::Network::Storage: HOME/pilot/templates/overcloud/storage.yaml
+
+  # Port assignments for the controller role
+  OS::TripleO::Controller::Ports::ExternalPort: HOME/pilot/templates/overcloud/network/ports/external.yaml
+  OS::TripleO::Controller::Ports::InternalApiPort: HOME/pilot/templates/overcloud/network/ports/internal_api.yaml
+  OS::TripleO::Controller::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage.yaml
+  OS::TripleO::Controller::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/storage_mgmt.yaml
+  OS::TripleO::Controller::Ports::RedisVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
+
+
+  # Port assignments for the compute role
+  OS::TripleO::Compute::Ports::InternalApiPort: HOME/pilot/templates/overcloud/network/ports/internal_api.yaml
+  OS::TripleO::Compute::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage.yaml
+
+  # Port assignments for the ceph storage role
+  OS::TripleO::CephStorage::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage.yaml
+  OS::TripleO::CephStorage::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/storage_mgmt.yaml
+
+parameter_defaults:
+  # CHANGEME: Change the following to the CIDR for the Private API network
+  InternalApiNetCidr: 192.168.140.0/24
+
+  # CHANGEME: Change the following to the CIDR for the Storage network
+  StorageNetCidr: 192.168.170.0/24
+
+  # CHANGEME: Change the following to the CIDR for the Storage Clustering network
+  StorageMgmtNetCidr: 192.168.180.0/24
+
+  # CHANGEME: Change the following to the CIDR for the External network
+  ExternalNetCidr: 192.168.190.0/24
+
+  # CHANGEME: Change the following to the IP address range to use on the
+  # Private API network
+  InternalApiAllocationPools: [{'start': '192.168.140.20', 'end': '192.168.140.200'}]
+
+  # CHANGEME: Change the following to the IP address range to use on the
+  # Storage network
+  StorageAllocationPools: [{'start': '192.168.170.20', 'end': '192.168.170.200'}]
+
+  # CHANGEME: Change the following to the IP address range to use on the
+  # Storage Clustering network
+  StorageMgmtAllocationPools: [{'start': '192.168.180.20', 'end': '192.168.180.200'}]
+
+  # CHANGEME: Change the following to the IP address range to use on the
+  # External network
+  #
+  # Note: Use a range which will leave room for floating IPs
+  ExternalAllocationPools: [{'start': '192.168.190.20', 'end': '192.168.190.120'}]
+
+  # CHANGEME: Change the following to the VLAN ID to use on the
+  # Private API network
+  InternalApiNetworkVlanID: 140
+
+  # CHANGEME: Change the following to the VLAN ID to use on the
+  # Storage network
+  StorageNetworkVlanID: 170
+
+  # CHANGEME: Change the following to the VLAN ID to use on the
+  # Storage Clustering network
+  StorageMgmtNetworkVlanID: 180
+
+  # CHANGEME: Change the following to the VLAN ID to use on the
+  # External network
+  ExternalNetworkVlanID: 190
+
+  # CHANGEME: Set to the router gateway on the external network
+  ExternalInterfaceDefaultRoute: 192.168.190.1
+
+  # CHANGEME: The follow sets the bonding mode to LACP for all nodes.
+  #
+  # If you wish to use a different bonding mode for all nodes, then change the
+  # options below.
+  #
+  # If you wish to use different bonding modes for different roles, then
+  # delete the following two lines and specify the bonding options per role
+  # type in the nic-configs files.
+  BondInterfaceOvsOptions:
+      "bond_mode=balance-tcp lacp=active other_config:bond-detect-mode=miimon other_config:bond-miimon-interval=100"
+
+  # CHANGEME: Set to empty string for External VLAN, br-ex if on native VLAN of br-ex
+  NeutronExternalNetworkBridge: "''"
