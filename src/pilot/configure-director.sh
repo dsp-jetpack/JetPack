@@ -73,5 +73,17 @@ echo "## Setting up ahc-tools..."
 sudo bash -c "sed 's/\[discoverd/\[ironic/' /etc/ironic-discoverd/discoverd.conf > /etc/ahc-tools/ahc-tools.conf"
 sudo chmod 0600 /etc/ahc-tools/ahc-tools.conf
 sudo cp pilot/ahc-tools/* /etc/ahc-tools/edeploy
+
+echo
+echo
+echo "## Copying heat templates..."
+cp -r /usr/share/openstack-tripleo-heat-templates ~/pilot/templates/overcloud
+
+echo
+echo
+echo "## Configuring network-environment.yaml..."
+ESCAPED_HOME=${HOME//\//\\/}
+sed -i "s/HOME/$ESCAPED_HOME/g" ~/pilot/templates/network-environment.yaml
+
 echo
 echo "## Configuration complete!"
