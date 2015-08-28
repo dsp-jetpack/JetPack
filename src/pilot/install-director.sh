@@ -1,9 +1,12 @@
 #!/bin/bash
 
+exec > >(tee $HOME/pilot/install-director.log)
+exec 2>&1
+
 dns_ip="$1"
 if [ -z "${dns_ip}" ];
 then
-  echo "Usage: configure-director.sh <dns_ip>"
+  echo "Usage: install-director.sh <dns_ip>"
   exit 1
 fi
 
@@ -30,20 +33,34 @@ create_flavor()
 }
 
 
-cd ~
+cd
+
+echo
+echo "## Configuring paths..."
+ESCAPED_HOME=${HOME//\//\\/}
+sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/templates/network-environment.yaml
+sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
+echo "## Done."
+
+echo
+echo "## Installing Director"
+openstack undercloud install
+echo "## Done."
+
 source stackrc
 
 echo
 echo "## Extracting images..."
-if [ ! -d pilot/images ];
+if [ ! -d $HOME/pilot/images ];
 then
-  echo "Error: A directory named $(pwd)/pilot/images must exist and contain the cloud images."
+  echo "Error: A directory named $HOME/pilot/images must exist and contain the cloud images."
   exit 1
 fi
 
-for image in pilot/images/*.tar; do tar xvf $image; done
+cd $HOME/pilot/images
+for image in ./*.tar; do tar xvf $image; done
+echo "## Done."
 
-echo
 echo
 echo "## Uploading images..."
 glance image-list | grep -q overcloud-full
@@ -53,37 +70,32 @@ then
 else
   echo "Warning: Images have already been uploaded.  Skipping upload."
 fi
+echo "## Done."
 
-echo
 echo
 echo "## Creating flavors..."
 create_flavor $controller_flavor_name
 create_flavor $compute_flavor_name
 create_flavor $storage_flavor_name
+echo "## Done."
 
-echo
 echo
 echo "## Setting DNS in Neutron ${subnet_name} subnet..."
 subnet_uuid=$(neutron net-list | grep "${subnet_name}" | awk '{print $6}')
 neutron subnet-update "${subnet_uuid}" --dns-nameserver "${dns_ip}"
+echo "## Done."
 
-echo
 echo
 echo "## Setting up ahc-tools..."
 sudo bash -c "sed 's/\[discoverd/\[ironic/' /etc/ironic-discoverd/discoverd.conf > /etc/ahc-tools/ahc-tools.conf"
 sudo chmod 0600 /etc/ahc-tools/ahc-tools.conf
-sudo cp pilot/ahc-tools/* /etc/ahc-tools/edeploy
+sudo cp $HOME/pilot/ahc-tools/* /etc/ahc-tools/edeploy
+echo "## Done."
 
-echo
 echo
 echo "## Copying heat templates..."
-cp -r /usr/share/openstack-tripleo-heat-templates ~/pilot/templates/overcloud
-
-echo
-echo
-echo "## Configuring network-environment.yaml..."
-ESCAPED_HOME=${HOME//\//\\/}
-sed -i "s/HOME/$ESCAPED_HOME/g" ~/pilot/templates/network-environment.yaml
+cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overcloud
+echo "## Done."
 
 echo
 echo "## Configuration complete!"
