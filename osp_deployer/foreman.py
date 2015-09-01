@@ -716,8 +716,13 @@ class Foreman():
     def check_services_and_enable_fencing(self):
         print("Checking services and enabling fencing")       
         logger.info("Checking pcs resources")
-        if self.check_resources(self.settings) :
-            logger.info("All services up, enabling Stonish fencing...")
+	time.sleep(60)
+        retries = 10
+        while retries > 0 and not self.check_resources(self.settings) :
+            retries -= 1
+            time.sleep(60)
+        if retries > 0 :
+            logger.info("All services up, enabling Stonith fencing...")
             self.enable_fencing(self.settings)
         else:
             logger.info("Some services are not up, attempting cleanup/restart")
