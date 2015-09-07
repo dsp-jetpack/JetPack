@@ -45,7 +45,11 @@ or
 * 4.0.d - 07/01/2015 - Added Open stack services debug level : debug= & verbose=
 * 4.0.e - 07/13/2015 - Added mode option configuration: controller_bond_opts, compute_bond_opts, storage_bond_opts
 * 4.0.f - 07/22/2014 - Added ceph_version setting ( 1.2.3 or 1.3 are valid options)
-* 4.0.e - 07/29/2015 - Added compellent/dell_sc support: use_dell_sc_backend, etc
+* 4.0.g - 07/29/2015 - Added compellent/dell_sc support: use_dell_sc_backend, etc
+* 4.0.h - 09/07/2015 - removed cirros image references from settings
+					   removed ceph iso from settings
+				       removed cygwin references in settings (except CWD)
+					   removed unused subscription_manager_pool_vm_openstack_nodes setting
 
 #####settings.properties
 * 1.0: - Initial version.

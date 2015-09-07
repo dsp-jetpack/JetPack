@@ -94,7 +94,6 @@ class Settings():
         self.subscription_manager_pool_sah = self.cluster_settings_map['subscription_manager_pool_sah']
         self.subscription_manager_pool_vm_rhel = self.cluster_settings_map['subscription_manager_pool_vm_rhel']
         self.subscription_manager_pool_phyical_openstack_nodes = self.cluster_settings_map['subscription_manager_pool_phyical_openstack_nodes']
-        self.subscription_manager_pool_vm_openstack_nodes = self.cluster_settings_map['subscription_manager_pool_vm_openstack_nodes']
         self.subscription_manager_vm_ceph = self.cluster_settings_map['subscription_manager_vm_ceph']
         self.subscription_manager_pool_physical_ceph = self.cluster_settings_map['subscription_manager_pool_physical_ceph']
         if 'subscription_check_retries' in self.cluster_settings_map:
@@ -167,9 +166,15 @@ class Settings():
 
         self.bastion_settings_map = self.getSettingsSection("Bastion Settings")
         self.rhl71_iso = self.bastion_settings_map['rhl71_iso']
-        self.ceph_iso = self.bastion_settings_map['ceph_iso']
+        try:
+            self.ceph_iso = self.bastion_settings_map['ceph_iso']
+        except:
+            pass
         self.ciros_image = self.bastion_settings_map['ciros_image']
-        self.cygwin_installdir = self.bastion_settings_map['cygwin_installdir']
+        if sys.platform.startswith('linux'):
+            self.cygwin_installdir = 'n/a'
+        else:
+            self.cygwin_installdir = self.bastion_settings_map['cygwin_installdir']
         self.rhel_install_location = self.bastion_settings_map['rhel_install_location']
         self.sah_kickstart= self.bastion_settings_map['sah_kickstart']
         self.cloud_repo_dir = self.bastion_settings_map['cloud_repo_dir']
