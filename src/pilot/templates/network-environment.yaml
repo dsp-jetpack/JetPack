@@ -6,13 +6,12 @@ resource_registry:
   OS::TripleO::Network::External:  HOME/pilot/templates/overcloud/network/external.yaml
   OS::TripleO::Network::InternalApi:  HOME/pilot/templates/overcloud/network/internal_api.yaml
   OS::TripleO::Network::StorageMgmt: HOME/pilot/templates/overcloud/network/storage_mgmt.yaml
-  OS::TripleO::Network::Storage: HOME/pilot/templates/overcloud/storage.yaml
+  OS::TripleO::Network::Storage: HOME/pilot/templates/overcloud/network/storage.yaml
 
   # Port assignments for the controller role
   OS::TripleO::Controller::Ports::ExternalPort: HOME/pilot/templates/overcloud/network/ports/external.yaml
   OS::TripleO::Controller::Ports::InternalApiPort: HOME/pilot/templates/overcloud/network/ports/internal_api.yaml
   OS::TripleO::Controller::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage.yaml
-  OS::TripleO::Controller::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/storage_mgmt.yaml
   OS::TripleO::Controller::Ports::RedisVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
 
 
@@ -87,3 +86,5 @@ parameter_defaults:
 
   # CHANGEME: Set to empty string for External VLAN, br-ex if on native VLAN of br-ex
   NeutronExternalNetworkBridge: "''"
+  ServiceNetMap:
+    SwiftMgmtNetwork: storage
