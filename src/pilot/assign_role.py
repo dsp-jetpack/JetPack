@@ -68,7 +68,7 @@ def main():
   print "Setting role for {} to {}".format(args.mac, args.role)
   props = "properties/capabilities=\'profile:{},boot_option:local\'".format(
     args.role)
-  return_code = call(["ironic", "node-update", node_uuid, "replace", props],
+  return_code = call(["ironic", "node-update", node_uuid, "add", props],
                      stdout=DEVNULL)
   if return_code != 0:
     print "Unable to set the profile to {} on the node.".format(args.role)
