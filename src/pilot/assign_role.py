@@ -66,7 +66,7 @@ def main():
   DEVNULL = open(os.devnull, 'w')
 
   print "Setting role for {} to {}".format(args.mac, args.role)
-  props = "properties/capabilities=\'profile:{},boot_option:local\'".format(
+  props = "properties/capabilities=profile:{},boot_option:local".format(
     args.role)
   return_code = call(["ironic", "node-update", node_uuid, "add", props],
                      stdout=DEVNULL)
