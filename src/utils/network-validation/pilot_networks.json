@@ -1,361 +1,157 @@
 {
-  "OSP_admin": {
-    "bonds": {
-      "bond0": {
-        "mode": "802.3ad",
-        "slaves": [ "eth0", "eth1" ]
-      },
-      "bond1": {
-        "mode": "802.3ad",
-        "slaves": [ "eth2", "eth3" ]
-      }
-    },
+  "sah": {
     "networks": {
       "provisioning": {
-         "interface": "bond0.100",
-         "ip": "192.168.120.10",
-         "prefix": 24,
-         "gateway": "192.168.120.1",
-         "dns": "10.80.17.234"
+         "ip": "192.168.120.122"
       },
       "private_api": {
-         "interface": "bond0.200",
-         "ip": "192.168.121.10",
-         "prefix": 24
+         "ip": "192.168.140.122"
       },
       "storage": {
-         "interface": "bond0.300",
-         "ip": "192.168.122.10",
-         "prefix": 24
+         "ip": "192.168.170.122"
       },
       "public_api": {
-         "interface": "bond1",
-         "ip": "172.17.0.10",
-         "prefix": 16
+         "ip": "192.168.190.122"
+      }
+    }
+  },
+  "director_vm": {
+    "networks": {
+      "provisioning": {
+         "ip": "192.168.120.123"
+      }
+    }
+  },
+  "ceph_vm": {
+    "networks": {
+      "storage": {
+         "ip": "192.168.170.124"
       }
     }
   },
   "OpenStack_controller1": {
-    "bonds": {
-      "bond0": {
-        "mode": "balance-xor",
-        "slaves": [ "eth0", "eth1" ]
-      },
-      "bond1": {
-        "mode": "balance-xor",
-        "slaves": [ "eth2", "eth3" ]
-      }
-    },
     "networks": {
       "provisioning": {
-         "interface": "eth4",
-         "ip": "192.168.120.11",
-         "prefix": 24,
-         "gateway": "192.168.120.1",
-         "dns": "10.80.17.234"
+         "ip": "192.168.120.125"
       },
       "private_api": {
-         "interface": "bond0.200",
-         "ip": "192.168.121.11",
-         "prefix": 24
+         "ip": "192.168.140.125"
       },
       "storage": {
-         "interface": "bond0.300",
-         "ip": "192.168.122.11",
-         "prefix": 24
+         "ip": "192.168.170.125"
       },
       "public_api": {
-         "interface": "bond1",
-         "ip": "172.17.0.11",
-         "prefix": 16
+         "ip": "192.168.190.125"
       }
     }
   },
   "OpenStack_controller2": {
-    "bonds": {
-      "bond0": {
-        "mode": "balance-xor",
-        "slaves": [ "eth0", "eth1" ]
-      },
-      "bond1": {
-        "mode": "balance-xor",
-        "slaves": [ "eth2", "eth3" ]
-      }
-    },
     "networks": {
       "provisioning": {
-         "interface": "eth4",
-         "ip": "192.168.120.12",
-         "prefix": 24,
-         "gateway": "192.168.120.1",
-         "dns": "10.80.17.234"
+         "ip": "192.168.120.126"
       },
       "private_api": {
-         "interface": "bond0.200",
-         "ip": "192.168.121.12",
-         "prefix": 24
+         "ip": "192.168.140.126"
       },
       "storage": {
-         "interface": "bond0.300",
-         "ip": "192.168.122.12",
-         "prefix": 24
+         "ip": "192.168.170.126"
       },
       "public_api": {
-         "interface": "bond1",
-         "ip": "172.17.0.12",
-         "prefix": 16
+         "ip": "192.168.190.126"
       }
     }
   },
   "OpenStack_controller3": {
-    "bonds": {
-      "bond0": {
-        "mode": "balance-xor",
-        "slaves": [ "eth0", "eth1" ]
-      },
-      "bond1": {
-        "mode": "balance-xor",
-        "slaves": [ "eth2", "eth3" ]
-      }
-    },
     "networks": {
       "provisioning": {
-         "interface": "eth4",
-         "ip": "192.168.120.13",
-         "prefix": 24,
-         "gateway": "192.168.120.1",
-         "dns": "10.80.17.234"
+         "ip": "192.168.120.127"
       },
       "private_api": {
-         "interface": "bond0.200",
-         "ip": "192.168.121.13",
-         "prefix": 24
+         "ip": "192.168.140.127"
       },
       "storage": {
-         "interface": "bond0.300",
-         "ip": "192.168.122.13",
-         "prefix": 24
+         "ip": "192.168.170.127"
       },
       "public_api": {
-         "interface": "bond1",
-         "ip": "172.17.0.13",
-         "prefix": 16
+         "ip": "192.168.190.127"
       }
     }
   },
   "OpenStack_compute1": {
-    "bonds": {
-      "bond0": {
-        "mode": "802.3ad",
-        "slaves": [ "eth0", "eth1" ]
-      },
-      "bond1": {
-        "mode": "802.3ad",
-        "slaves": [ "eth2", "eth3" ]
-      }
-    },
     "networks": {
       "provisioning": {
-         "interface": "eth4",
-         "ip": "192.168.120.14",
-         "prefix": 24,
-         "gateway": "192.168.120.1",
-         "dns": "10.80.17.234"
+         "ip": "192.168.120.128"
       },
       "private_api": {
-         "interface": "bond0.200",
-         "ip": "192.168.121.14",
-         "prefix": 24
+         "ip": "192.168.140.128"
       },
       "storage": {
-         "interface": "bond0.300",
-         "ip": "192.168.122.14",
-         "prefix": 24
-      },
-      "tenant": {
-         "interface": "bond0",
-         "ip": "192.168.123.14",
-         "prefix": 24
-      },
-      "external": {
-         "interface": "bond1",
-         "ip": "192.168.124.14",
-         "prefix": 24
+         "ip": "192.168.170.128"
       }
     }
   },
   "OpenStack_compute2": {
-    "bonds": {
-      "bond0": {
-        "mode": "802.3ad",
-        "slaves": [ "eth0", "eth1" ]
-      },
-      "bond1": {
-        "mode": "802.3ad",
-        "slaves": [ "eth2", "eth3" ]
-      }
-    },
     "networks": {
       "provisioning": {
-         "interface": "eth4",
-         "ip": "192.168.120.15",
-         "prefix": 24,
-         "gateway": "192.168.120.1",
-         "dns": "10.80.17.234"
+         "ip": "192.168.120.129"
       },
       "private_api": {
-         "interface": "bond0.200",
-         "ip": "192.168.121.15",
-         "prefix": 24
+         "ip": "192.168.140.129"
       },
       "storage": {
-         "interface": "bond0.300",
-         "ip": "192.168.122.15",
-         "prefix": 24
-      },
-      "tenant": {
-         "interface": "bond0",
-         "ip": "192.168.123.15",
-         "prefix": 24
-      },
-      "external": {
-         "interface": "bond1",
-         "ip": "192.168.124.15",
-         "prefix": 24
+         "ip": "192.168.170.129"
       }
     }
   },
   "OpenStack_compute3": {
-    "bonds": {
-      "bond0": {
-        "mode": "802.3ad",
-        "slaves": [ "eth0", "eth1" ]
-      },
-      "bond1": {
-        "mode": "802.3ad",
-        "slaves": [ "eth2", "eth3" ]
-      }
-    },
     "networks": {
       "provisioning": {
-         "interface": "eth4",
-         "ip": "192.168.120.16",
-         "prefix": 24,
-         "gateway": "192.168.120.1",
-         "dns": "10.80.17.234"
+         "ip": "192.168.120.130"
       },
       "private_api": {
-         "interface": "bond0.200",
-         "ip": "192.168.121.16",
-         "prefix": 24
+         "ip": "192.168.140.130"
       },
       "storage": {
-         "interface": "bond0.300",
-         "ip": "192.168.122.16",
-         "prefix": 24
-      },
-      "tenant": {
-         "interface": "bond0",
-         "ip": "192.168.123.16",
-         "prefix": 24
-      },
-      "external": {
-         "interface": "bond1",
-         "ip": "192.168.124.16",
-         "prefix": 24
+         "ip": "192.168.170.130"
       }
     }
   },
   "Ceph_storage1": {
-    "bonds": {
-      "bond0": {
-        "mode": "802.3ad",
-        "slaves": [ "eth0", "eth1" ]
-      },
-      "bond1": {
-        "mode": "802.3ad",
-        "slaves": [ "eth2", "eth3" ]
-      }
-    },
     "networks": {
       "provisioning": {
-         "interface": "eth4",
-         "ip": "192.168.120.17",
-         "prefix": 24,
-         "gateway": "192.168.120.1",
-         "dns": "10.80.17.234"
+         "ip": "192.168.120.131"
       },
       "storage": {
-         "interface": "bond0.300",
-         "ip": "192.168.122.17",
-         "prefix": 24
+         "ip": "192.168.170.131"
       },
       "storage_clustering": {
-         "interface": "bond1",
-         "ip": "192.168.125.17",
-         "prefix": 24
+         "ip": "192.168.180.131"
       }
     }
   },
   "Ceph_storage2": {
-    "bonds": {
-      "bond0": {
-        "mode": "802.3ad",
-        "slaves": [ "eth0", "eth1" ]
-      },
-      "bond1": {
-        "mode": "802.3ad",
-        "slaves": [ "eth2", "eth3" ]
-      }
-    },
     "networks": {
       "provisioning": {
-         "interface": "eth4",
-         "ip": "192.168.120.18",
-         "prefix": 24,
-         "gateway": "192.168.120.1",
-         "dns": "10.80.17.234"
+         "ip": "192.168.120.132"
       },
       "storage": {
-         "interface": "bond0.300",
-         "ip": "192.168.122.18",
-         "prefix": 24
+         "ip": "192.168.170.132"
       },
       "storage_clustering": {
-         "interface": "bond1",
-         "ip": "192.168.125.18",
-         "prefix": 24
+         "ip": "192.168.180.132"
       }
     }
   },
   "Ceph_storage3": {
-    "bonds": {
-      "bond0": {
-        "mode": "802.3ad",
-        "slaves": [ "eth0", "eth1" ]
-      },
-      "bond1": {
-        "mode": "802.3ad",
-        "slaves": [ "eth2", "eth3" ]
-      }
-    },
     "networks": {
       "provisioning": {
-         "interface": "eth4",
-         "ip": "192.168.120.19",
-         "prefix": 24,
-         "gateway": "192.168.120.1",
-         "dns": "10.80.17.234"
+         "ip": "192.168.120.133"
       },
       "storage": {
-         "interface": "bond0.300",
-         "ip": "192.168.122.19",
-         "prefix": 24
+         "ip": "192.168.170.133"
       },
       "storage_clustering": {
-         "interface": "bond1",
-         "ip": "192.168.125.19",
-         "prefix": 24
+         "ip": "192.168.180.133"
       }
     }
   }

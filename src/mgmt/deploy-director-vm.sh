@@ -101,6 +101,15 @@ do
   [[ ${iface} == eth2 ]] && {
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
     }
+
+  [[ ${iface} == eth3 ]] && {
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
+    }
+
+  [[ ${iface} == eth4 ]] && {
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
+    }
+
 done <<< "$( grep -Ev "^#|^;|^\s*$" ${cfg_file} )"
 } >> /tmp/director.ks
 
@@ -150,6 +159,8 @@ EOFPW
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth0
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth1
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth2
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth3
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth4
 
   echo "$( ip addr show dev eth0 | awk '/inet / { print $2 }' | sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
 
@@ -196,7 +207,7 @@ EOFPW
   yum -y update
 
   # Firewall rules to allow traffic for the http, https, dns, and tftp services and tcp port 8140.
-  # Also accept all traffic from eth1 to pass through to eth0 and become NAT'd on the way out of eth0.
+  # Also accept all traffic from eth4 to pass through to eth0 and become NAT'd on the way out of eth0.
 
   cat <<EOIP > /etc/sysconfig/iptables
 *nat
@@ -224,7 +235,7 @@ COMMIT
 -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 -A FORWARD -p icmp -j ACCEPT
 -A FORWARD -i lo -j ACCEPT
--A FORWARD -i eth1 -j ACCEPT
+-A FORWARD -i eth4 -j ACCEPT
 -A FORWARD -o eth0 -j ACCEPT
 -A INPUT -j REJECT --reject-with icmp-host-prohibited
 -A FORWARD -j REJECT --reject-with icmp-host-prohibited
@@ -284,9 +295,11 @@ EOFKS
     --os-variant rhel6 \
     --disk /store/data/images/director.img,bus=virtio,size=16 \
     --disk /tmp/floppy-director.img,device=floppy \
-    --network bridge=public \
-    --network bridge=provision \
-    --network bridge=management \
+    --network bridge=br-extern \
+    --network bridge=br-prov \
+    --network bridge=br-mgmt \
+    --network bridge=br-priv-api \
+    --network bridge=br-pub-api \
     --initrd-inject /tmp/director.ks \
     --extra-args "ks=file:/director.ks" \
     --noautoconsole \
@@ -302,9 +315,11 @@ virt-install --name director \
   --os-type linux \
   --os-variant rhel6 \
   --disk /store/data/images/director.img,bus=virtio,size=16 \
-  --network bridge=public \
-  --network bridge=provision \
-  --network bridge=management \
+  --network bridge=br-extern \
+  --network bridge=br-prov \
+  --network bridge=br-mgmt \
+  --network bridge=br-priv-api \
+  --network bridge=br-pub-api \
   --initrd-inject /tmp/director.ks \
   --extra-args "ks=file:/director.ks" \
   --noautoconsole \
