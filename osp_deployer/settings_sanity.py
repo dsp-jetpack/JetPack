@@ -64,6 +64,9 @@ class Deployer_sanity():
         assert os.path.isfile(self.settings.sah_kickstart) , self.settings.sah_kickstart + "kickstart file doesnn't seem to exist"
         assert os.path.isfile(self.settings.foreman_deploy_sh) , self.settings.foreman_deploy_sh + " script doesnn't seem to exist"
 
+        if self.settings.ceph_version == "1.2.3":
+            assert os.path.isfile(self.settings.ceph_iso), self.settings.ceph_iso + " ISO doesnn't seem to exist"
+
         hammer_scripts =['hammer-configure-hostgroups.sh',
         'hammer-deploy-compute.sh',
         'hammer-deploy-controller.sh',
