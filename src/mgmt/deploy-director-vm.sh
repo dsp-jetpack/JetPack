@@ -289,12 +289,12 @@ EOFKS
   rmdir /tmp/mnt-director
 
   virt-install --name director \
-    --ram 4096 \
+    --ram 6144 \
     --vcpus 2 \
     --hvm \
     --os-type linux \
     --os-variant rhel6 \
-    --disk /store/data/images/director.img,bus=virtio,size=16 \
+    --disk /store/data/images/director.img,bus=virtio,size=40 \
     --disk /tmp/floppy-director.img,device=floppy \
     --network bridge=br-extern \
     --network bridge=br-prov \
@@ -310,12 +310,12 @@ EOFKS
   } || {
 
 virt-install --name director \
-  --ram 4096 \
+  --ram 6144 \
   --vcpus 2 \
   --hvm \
   --os-type linux \
   --os-variant rhel6 \
-  --disk /store/data/images/director.img,bus=virtio,size=16 \
+  --disk /store/data/images/director.img,bus=virtio,size=40 \
   --network bridge=br-extern \
   --network bridge=br-prov \
   --network bridge=br-mgmt \
