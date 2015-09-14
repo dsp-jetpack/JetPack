@@ -20,7 +20,6 @@ class Networks(object):
         parser.add_argument("-l", "--latency", type=int, default=100, help="latency in miliseconds", action="store")
         parser.add_argument("-c", "--config", default="networks.json", help="path to network json config file", action="store")
         parser.add_argument("-m", "--message_level", default="info", help="output message verbosity - warn, info, debug", action="store")
-        parser.add_argument("-s", "--skip_connectivity_test", help="skip network connectivity test", action="store_true")
 
         self.args=parser.parse_args()
         self.set_logging(self.args.message_level)
@@ -29,7 +28,6 @@ class Networks(object):
         logger.debug("latency={0}".format(self.args.latency))
         logger.debug("config=" + self.args.config)
         logger.debug("message_level=" + self.args.message_level)
-        logger.debug("skip_connectivity_test={0}".format(self.args.skip_connectivity_test))
 
     def set_logging(self, level):
         if (level == "info"):
@@ -41,17 +39,6 @@ class Networks(object):
 
     def __init__(self):
         self.parse_args()
-
-    def validate_active_configuration(self):
-        logger.debug("Validating active network configuration")
-
-    def validate_static_configuration(self):
-        logger.debug("Validating static network configuration")
-
-    def validate_network_configuration(self):
-        logger.debug("Validating network configuration")
-        self.validate_active_configuration()
-        self.validate_static_configuration()
 
     def validate_network_communication(self):
         logger.debug("Validating network communication")
@@ -75,9 +62,7 @@ class Networks(object):
 
     def validate(self):
         self.read_network_json()
-        self.validate_network_configuration()
-        if not self.args.skip_connectivity_test:
-            self.validate_network_communication()
+        self.validate_network_communication()
 
 if __name__ == "__main__":
     logger.debug("Validating networks...")
