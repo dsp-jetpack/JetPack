@@ -1,5 +1,5 @@
-#!/usr/bin/env python
-
+#!/bin/bash
+#
 # OpenStack - A set of software tools for building and managing cloud
 # computing platforms for public and private clouds.
 # Copyright (C) 2015 Dell, Inc.
@@ -18,20 +18,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
+#
+HA_ID=`hammer hostgroup list | grep HA | cut -d" " -f1`
 
+HA_CEPH_OSD_MNT_ID=`hammer sc-param list --search token_provider --hostgroup-id $HA_ID | grep token_provider | cut -d" " -f1`
 
-from tempest.cmd.db.mysql.mysql_db import MySqlDb
-
-
-class ResetVolumeQuotas(MySqlDb):
-
-    def __init__(self, config):
-        super(ResetVolumeQuotas, self).__init__(config, "cinder")
-        self.ids = None
-        # Reset the volume quotas to 0,
-        # this is nec because there are several
-        # openstack bugs where in_use is not updated when an object is
-        # deleted through api.
-        sql = self.build_sql('update quota_usages ' +
-                             'set in_use = 0 where in_use != -1')
-        self.sqls.append(sql)
+hammer sc-param update --id $HA_CEPH_OSD_MNT_ID --default-value "keystone.token.providers.uuid.Provider" --override true
