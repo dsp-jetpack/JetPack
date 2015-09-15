@@ -81,7 +81,7 @@
     vbose = 'false'
     dbug = 'false'
     
-    c_mult_be = 'false'
+    c_mult_be = 'true'
 
     c_be_dell_sc = false
     c_be_dell_sc_name = [ "dell_sc_backend" ]
@@ -134,6 +134,7 @@
     rbd_spool = 'images'
     rbd_suser = 'images'
 
+    # external floating ip network pool e.g. "nova" 
     def_float_pool = 'nova'
     
     # must be 16 or 32 char key
@@ -180,7 +181,7 @@ backend_dell_sc_name:
 <% c_be_dell_sc_name.each do |name| %>
 - <%= name %>
 <% end %>
-	
+
 dell_sc_api_port:
 <% c_dell_sc_api_port.each do |name| %>
 - <%= name %>
@@ -191,8 +192,8 @@ dell_sc_iscsi_ip_address:
 - <%= name %>
 <% end %>
 
-dell_sc_san_port:
-<% c_dell_sc_san_port.each do |name| %>
+dell_sc_iscsi_port:
+<% c_dell_sc_iscsi_port.each do |name| %>
 - <%= name %>
 <% end %>
 
@@ -392,7 +393,7 @@ neutron_public_vip: <%= vip_neutron_pub %>
 neutron_user_password: <%= passwd_auto %>
 nova_admin_vip: <%= vip_nova_adm %>
 nova_db_password: <%= passwd_auto %>
-nova_default_floating_pool: nova
+nova_default_floating_pool: <%= def_float_pool %>
 nova_private_vip: <%= vip_nova_priv %>
 nova_public_vip: <%= vip_nova_pub %>
 nova_user_password: <%= passwd_auto %>
