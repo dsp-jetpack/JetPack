@@ -717,7 +717,7 @@ class Foreman():
         print("Checking services and enabling fencing")       
         logger.info("Checking pcs resources")
         time.sleep(60)
-        retries = 10
+        retries = 20
         while retries > 0 and not self.check_resources(self.settings) :
             retries -= 1
             time.sleep(60)
