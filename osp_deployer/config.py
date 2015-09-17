@@ -170,7 +170,10 @@ class Settings():
             self.ceph_iso = self.bastion_settings_map['ceph_iso']
         except:
             pass
-        self.ciros_image = self.bastion_settings_map['ciros_image']
+        try:
+            self.ciros_image = self.bastion_settings_map['ciros_image']
+        except:
+            pass
         if sys.platform.startswith('linux'):
             self.cygwin_installdir = 'n/a'
         else:
