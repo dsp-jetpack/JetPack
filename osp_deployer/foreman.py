@@ -183,8 +183,6 @@ class Foreman():
         FileHelper.replaceExpressionTXT(file, 'tenant_vlan_range = .*',"tenant_vlan_range = '" + self.settings.tenant_vlan_range +"'" )
         FileHelper.replaceExpressionTXT(file, 'vip_loadbalancer = .*',"vip_loadbalancer = '" + self.settings.vip_load_balancer_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_amqp = .*',"vip_amqp = '" + self.settings.vip_rabbitmq_private + "'" )
-        FileHelper.replaceExpressionTXT(file, 'net_fix = .*',"net_fix = '" + self.settings.nova_private_network + "'" )
-        FileHelper.replaceExpressionTXT(file, 'net_float = .*',"net_float = '" + self.settings.nova_public_network + "'" )
         FileHelper.replaceExpressionTXT(file, 'net_priv_iface = .*',"net_priv_iface = 'bond0'" )
         FileHelper.replaceExpressionTXT(file, 'net_pub_iface = .*',"net_pub_iface = 'bond1" + "'" )
 
