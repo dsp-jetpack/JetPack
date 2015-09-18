@@ -75,22 +75,22 @@ def main():
     sys.exit(return_code)
 
   # Configure the BIOS settings for the node in Ironic
-  db = cmdb.load_cmdb(CONF.edeploy.configdir, args.role)
-  bios_settings = db[0]['bios_settings']
+  #db = cmdb.load_cmdb(CONF.edeploy.configdir, args.role)
+  #bios_settings = db[0]['bios_settings']
 
-  return_code = call(["ironic", "node-update", node_uuid, "add",
-                      "extra/bios_settings={}"], stdout=DEVNULL)
-  if return_code != 0:
-    sys.exit(return_code)
+  #return_code = call(["ironic", "node-update", node_uuid, "add",
+                      #"extra/bios_settings={}"], stdout=DEVNULL)
+  #if return_code != 0:
+    #sys.exit(return_code)
 
-  print "Loading {} BIOS settings for {}:".format(args.role, args.mac)
-  for setting, val in iter(sorted(bios_settings.items())):
-    print "  Setting {}={}".format(setting, val)
-    return_code = call(["ironic", "node-update", node_uuid, "add",
-                        "extra/bios_settings/{}={}".format(setting, val)],
-                        stdout=DEVNULL)
-    if return_code != 0:
-      sys.exit(return_code)
+  #print "Loading {} BIOS settings for {}:".format(args.role, args.mac)
+  #for setting, val in iter(sorted(bios_settings.items())):
+    #print "  Setting {}={}".format(setting, val)
+    #return_code = call(["ironic", "node-update", node_uuid, "add",
+                        #"extra/bios_settings/{}={}".format(setting, val)],
+                        #stdout=DEVNULL)
+    #if return_code != 0:
+      #sys.exit(return_code)
 
   # Configure the RAID settings for the node in Ironic
   # TODO
