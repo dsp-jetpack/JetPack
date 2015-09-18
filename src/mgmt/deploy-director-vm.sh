@@ -318,7 +318,7 @@ EOFKS
     --hvm \
     --os-type linux \
     --os-variant rhel6 \
-    --disk /store/data/images/director.img,bus=virtio,size=40 \
+    --disk /store/data/images/director.img,bus=virtio,size=80 \
     --disk /tmp/floppy-director.img,device=floppy \
     --network bridge=br-extern \
     --network bridge=br-prov \
@@ -339,7 +339,7 @@ virt-install --name director \
   --hvm \
   --os-type linux \
   --os-variant rhel6 \
-  --disk /store/data/images/director.img,bus=virtio,size=40 \
+  --disk /store/data/images/director.img,bus=virtio,size=80 \
   --network bridge=br-extern \
   --network bridge=br-prov \
   --network bridge=br-mgmt \
