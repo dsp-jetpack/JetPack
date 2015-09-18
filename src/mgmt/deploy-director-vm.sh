@@ -312,6 +312,9 @@ EOFKS
   umount /tmp/mnt-director
   rmdir /tmp/mnt-director
 
+  # If the VM image file already exists, then remove it
+  rm -f /store/data/images/director.img
+
   virt-install --name director \
     --ram 6144 \
     --vcpus 2 \
