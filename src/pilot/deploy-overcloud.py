@@ -65,6 +65,7 @@ def main():
     args.ntp_server_fqdn,
     args.vlan_range)
 
+  print cmd
   os.system(cmd)
 
 
