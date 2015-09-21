@@ -43,9 +43,7 @@ class Settings():
             raise IOError("cluster_password setting lenght should be > 8 characters")
         self.previous_deployment_cluster_password = self.cluster_settings_map['previous_deployment_cluster_password']
         self.openstack_services_password = self.nodes_root_password
-        self.nova_public_network = self.cluster_settings_map['nova_public_network']
-        self.nova_private_network = self.cluster_settings_map['nova_private_network']
-        self.private_api_network = self.cluster_settings_map['private_api_network']
+
         self.tenant_vlan_range = self.cluster_settings_map['tenant_vlan_range']
         self.ceph_user_password = self.cluster_settings_map['ceph_user_password']
         self.ceph_admin_email = self.cluster_settings_map['ceph_admin_email']
@@ -81,7 +79,6 @@ class Settings():
 
         self.storage_network = self.cluster_settings_map['storage_network']
         self.storage_cluster_network = self.cluster_settings_map['storage_cluster_network']
-        self.public_network = self.cluster_settings_map['public_network']
         self.provisioning_network = self.cluster_settings_map['provisioning_network']
         self.network_conf = self.cluster_settings_map['cluster_nodes_configuration_file']
         self.domain = self.cluster_settings_map['domain']
