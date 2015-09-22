@@ -61,7 +61,19 @@ class Deployer_sanity():
 
 
         assert os.path.isfile(self.settings.rhl71_iso) , self.settings.rhl71_iso + "ISO doesnn't seem to exist"
-        assert os.path.isfile(self.settings.sah_kickstart) , self.settings.sah_kickstart + "kickstart file doesnn't seem to exist"
+
+        assert hasattr(self.settings, 'sah_kickstart'), self.settings.settingsFile+ " has no ceph_version setting"
+
+        #Since the kickstart gets copied from cloud_repo further down the deployment process, the file is not expected to be around first time you run a deployment on a new stamp
+        #the ugly bit there is the file has to be called /ks.cfg, since that value is hardcoded in the initial bastion host setup script.
+        if os.path.exists(self.settings.sah_kickstart):
+            pass
+        elif os.access(os.path.dirname(self.settings.sah_kickstart), os.W_OK) and os.path.basename(self.settings.sah_kickstart) == "ks.cfg":
+            pass
+        else:
+            raise AssertionError(self.settings.sah_kickstart  + " does not appear to be an existing/valid path/filename (check dir is correct and filename is ks.cfg)")
+
+
         assert os.path.isfile(self.settings.foreman_deploy_sh) , self.settings.foreman_deploy_sh + " script doesnn't seem to exist"
 
         if self.settings.ceph_version == "1.2.3":
