@@ -31,7 +31,7 @@ def startIperf3Server(server_node, port_number = 5008):
     # cl_stdoutd, cl_stderrd = Ssh.execute_command(server_node, usr, pwd, cmd)
 
 
-def iperf3(server_node, client_node, cmd):
+def iperf3(server_node, client_node, cmd, port_number = 5008):
 
     """Opens an ssh session and runs the cmd on the client node
 
@@ -40,6 +40,7 @@ def iperf3(server_node, client_node, cmd):
     server_node -- the IP address of the Iperf server node
     client_node -- the IP address of the Iperf client node
     cmd -- the Iperf3 command to execute on the client node
+    port_number -- the port to open the iperf client and server on. - default (5008)
 
     """
 
@@ -49,14 +50,32 @@ def iperf3(server_node, client_node, cmd):
 
     usr = 'root'
     pwd = 'cr0wBar!'
-    startIperf3Server(server_node)
-    print "running: " + cmd
+    startIperf3Server(server_node, port_number)
+
+    print "running: " + str(cmd)
     # cl_stdoutd, cl_stderrd = Ssh.execute_command(client_node, usr, pwd, cmd)
     cl_stdoutd = 'ssh output for cmd: ' + str(cmd)
     cl_stderrd = 'ssh error'
 
 
     return cl_stdoutd, cl_stderrd
+
+def generatePortNumbers(cmd_list):
+
+    """Opens an ssh session and runs the cmd on the client node
+
+    Keyword arguments:
+
+    cmd_list -- a list of the cmds that need to be run
+    
+    """
+    # add logic here to decide how many iperf instances
+    #  we need running on each machine - maybe always one per command.
+    # if a instance is opened on the same port number 
+    port_list = {}
+
+
+    return port_list
 
 
 def runValidation(nodes1, nodes2, metrics, params):
@@ -72,7 +91,7 @@ def runValidation(nodes1, nodes2, metrics, params):
 
     """
     # return [{nodeA: address}, {nodeB: address}, {output: ''}, {direction: ''}, {} ]
-    out = []
+    # out = []
 
     print 'len(nodes1[0]) = '+str(len(nodes1[0]))
     print 'len(nodes2[0]) = '+str(len(nodes2[0]))
@@ -83,7 +102,7 @@ def runValidation(nodes1, nodes2, metrics, params):
         out = 'Error: list 1 is bigger than list 2'
 
     # if there are only 2 nodes AND the Both parameter is NOT set,
-    # then give an error. if the all permutations paramater or
+    # then give an error. if the 'all permutations' parameter or
     # concurrent parameter is entered then, construct the server and
     # client commands for the test.
     # the both parameter means 2 instances of Iperf will be run so that
@@ -100,31 +119,40 @@ def runValidation(nodes1, nodes2, metrics, params):
         server_node = nodes1[0][0]
         client_node = nodes2[0][0]
 
-        if ('-s' in params or '-a' in params) and '-b' not in params:
-            return 0, 0, 'exit: cannot run single job in sequential mode or'\
-                  ' with more than one permutation.'
+        if ('-c' in params) and '-b' not in params:
+            print 'exit: cannot run single job in concurrent mode.'
+            return []
+        elif ('-a' in params or '-p' in params):
+            print 'exit: cannot run a job between single nodes in pair or '\
+                   'with more than one permutation.'
+            return []
         else:
             # construct iperf command.
             # command list needs to keep a record of it's direction.
             # cmd_list = [[{cmd:'ssh output for cmd: iperf3 -c 5.6.7.8'}, {direction:'-f'}, {mode:'-b'}],\
             #              [{cmd:'ssh output for cmd: iperf3 -c 5.6.7.8'}, {direction:'-r'}, {mode:'-b'}]]
-            cmd_list = []
+            # cmd_list = []
             dict_list = []
             dict = {}
             dict2 = {}
+            port_list = {}
 
             if '-b' in params:
-                cmd_list.append('iperf3 -c '+str(client_node))
-                cmd_list.append('iperf3 -c '+str(client_node)+' -R')
+                #cmd_list.append('iperf3 -c '+str(client_node))
+                #cmd_list.append('iperf3 -c '+str(client_node)+' -R')
                 # cmd = string above, direction = Both-forward.
                 # cmd = string above, direction = Both-reverse.
                 
+                dict['client_node'] = client_node
+                dict['server_node'] = server_node
                 dict['command'] = 'iperf3 -c '+str(client_node)
                 dict['direction'] = 'forward'
                 dict['both'] = True
 
                 dict_list.append(dict)
 
+                dict2['client_node'] = client_node
+                dict2['server_node'] = server_node
                 dict2['command'] = 'iperf3 -c '+str(client_node)+' -R'
                 dict2['direction'] = 'reverse'
                 dict2['both'] = True
@@ -135,9 +163,11 @@ def runValidation(nodes1, nodes2, metrics, params):
 
             elif '-R' in params:
                 client_command = 'iperf3 -c '+str(client_node)+' -R'
-                cmd_list.append(client_command)
+                #cmd_list.append(client_command)
 
-                dict['command'] = 'iperf3 -c '+str(client_node)+' -R'
+                dict['client_node'] = client_node
+                dict['server_node'] = server_node
+                dict['command'] = client_command
                 dict['direction'] = 'reverse'
                 dict['both'] = False
 
@@ -146,9 +176,11 @@ def runValidation(nodes1, nodes2, metrics, params):
                 # cmd = string above, direction = Reverse.
             else:
                 client_command = 'iperf3 -c '+str(client_node)
-                cmd_list.append(client_command)
+                #cmd_list.append(client_command)
 
-                dict['command'] = 'iperf3 -c '+str(client_node)
+                dict['client_node'] = client_node
+                dict['server_node'] = server_node
+                dict['command'] = client_command
                 dict['direction'] = 'reverse'
                 dict['both'] = False
 
@@ -156,7 +188,7 @@ def runValidation(nodes1, nodes2, metrics, params):
 
                 # cmd = string above, direction = Forward
 
-            for cmd in cmd_list:
+            for cmd in dict_list:
                 time.sleep(2)
                 # check if the tests should be run concurrently or in sync.
                 if '-c' in params:
@@ -165,11 +197,29 @@ def runValidation(nodes1, nodes2, metrics, params):
                     print 'run all instances at the same time.'
                     # out = 'list of concurrent outputs'
                     
-                    out, err = iperf3(server_node, client_node, cmd)
-                    print "item x in dict list: "+str(dict_list[cmd_list.index(cmd)])
+                    output, err = iperf3(dict_list[dict_list.index(cmd)]['server_node'], dict_list[dict_list.index(cmd)]['client_node'], dict_list[dict_list.index(cmd)]['command'])
+                    print "item x in dict list: "+str(dict_list[dict_list.index(cmd)]['command'])
                     # log('log results for each - ID by port number?')
+                    output = 'Connecting to host 10.148.44.215, port 5201\
+[  4] local 10.148.44.220 port 36765 connected to 10.148.44.215 port 5201\
+[ ID] Interval           Transfer     Bandwidth       Retr  Cwnd\
+[  4]   0.00-1.00   sec  2.59 GBytes  22.2 Gbits/sec    0   3.03 MBytes\
+[  4]   1.00-2.00   sec  2.90 GBytes  24.9 Gbits/sec    0   3.03 MBytes\
+[  4]   2.00-3.00   sec  3.39 GBytes  29.1 Gbits/sec    0   3.03 MBytes\
+[  4]   3.00-4.00   sec  2.49 GBytes  21.4 Gbits/sec  119   1.08 MBytes\
+[  4]   4.00-5.00   sec  2.21 GBytes  19.0 Gbits/sec    0   1.15 MBytes\
+[  4]   5.00-6.00   sec  2.23 GBytes  19.2 Gbits/sec    0   1.20 MBytes\
+[  4]   6.00-7.00   sec  2.31 GBytes  19.9 Gbits/sec    0   1.23 MBytes\
+[  4]   7.00-8.00   sec  2.29 GBytes  19.7 Gbits/sec    0   1.25 MBytes\
+[  4]   8.00-9.00   sec  2.29 GBytes  19.7 Gbits/sec    0   1.26 MBytes\
+[  4]   9.00-10.00  sec  2.29 GBytes  19.7 Gbits/sec    0   1.27 MBytes\
+- - - - - - - - - - - - - - - - - - - - - - - - -\
+[ ID] Interval           Transfer     Bandwidth       Retr\
+[  4]   0.00-10.00  sec  25.0 GBytes  21.5 Gbits/sec  119             sender\
+[  4]   0.00-10.00  sec  25.0 GBytes  21.0 Gbits/sec                  receiver'
+                    dict_list[dict_list.index(cmd)]['results'] = output
                 else:
-                    output, err = iperf3(server_node, client_node, cmd)
+                    output, err = iperf3(dict_list[dict_list.index(cmd)]['server_node'], dict_list[dict_list.index(cmd)]['client_node'], dict_list[dict_list.index(cmd)]['command'])
                     output = 'Connecting to host 10.148.44.215, port 5201\
 [  4] local 10.148.44.220 port 36765 connected to 10.148.44.215 port 5201\
 [ ID] Interval           Transfer     Bandwidth       Retr  Cwnd\
@@ -188,9 +238,9 @@ def runValidation(nodes1, nodes2, metrics, params):
 [  4]   0.00-10.00  sec  25.0 GBytes  21.5 Gbits/sec  119             sender\
 [  4]   0.00-10.00  sec  25.0 GBytes  17.0 Gbits/sec                  receiver'
 
-                    out.append(output)
+                    #out.append(output)
                     # print "item x in dict list: "+str(dict_list[cmd_list.index(cmd)])
-                    dict_list[cmd_list.index(cmd)]['results'] = output
+                    dict_list[dict_list.index(cmd)]['results'] = output
                     # log(out)
                     # print dict_list
                     #print '\n\n'
@@ -230,7 +280,9 @@ def runValidation(nodes1, nodes2, metrics, params):
             # all groups of params are allowed here.
             out = 'list-to-list mode'
 
-    return server_node, client_node, out, dict_list
+    # return server_node, client_node, dict_list
+    return dict_list
+
 
 
 def Main():
@@ -294,11 +346,13 @@ def Main():
                     " nodes: "+str(args.node_list1))
         print 'and ' + str(args.node_list2)
         param_list.append('-s')
-        mode = 'Concurrent'
+        mode = 'Sequential'
     else:
         print 'no Order paramter set'
-        mode = 'Concurrent'
+        mode = 'Sequential'
+
     direction = ''
+
     if args.reverse:
         print ("you are running in reverse mode.")
         param_list.append('-R')
@@ -333,78 +387,53 @@ def Main():
     else:
         test_time = 10
     
-    server_node, client_node, out, dict_list = runValidation(args.node_list1, args.node_list2,
-                                                  metrics_list, param_list)
+    dict_list = runValidation(args.node_list1, args.node_list2, metrics_list, param_list)
 
-    #print out
     # take the output and use reg ex to get and verify the data you want.
-
-    out = ['Connecting to host 10.148.44.215, port 5201\
-[  4] local 10.148.44.220 port 36765 connected to 10.148.44.215 port 5201\
-[ ID] Interval           Transfer     Bandwidth       Retr  Cwnd\
-[  4]   0.00-1.00   sec  2.59 GBytes  22.2 Gbits/sec    0   3.03 MBytes\
-[  4]   1.00-2.00   sec  2.90 GBytes  24.9 Gbits/sec    0   3.03 MBytes\
-[  4]   2.00-3.00   sec  3.39 GBytes  29.1 Gbits/sec    0   3.03 MBytes\
-[  4]   3.00-4.00   sec  2.49 GBytes  21.4 Gbits/sec  119   1.08 MBytes\
-[  4]   4.00-5.00   sec  2.21 GBytes  19.0 Gbits/sec    0   1.15 MBytes\
-[  4]   5.00-6.00   sec  2.23 GBytes  19.2 Gbits/sec    0   1.20 MBytes\
-[  4]   6.00-7.00   sec  2.31 GBytes  19.9 Gbits/sec    0   1.23 MBytes\
-[  4]   7.00-8.00   sec  2.29 GBytes  19.7 Gbits/sec    0   1.25 MBytes\
-[  4]   8.00-9.00   sec  2.29 GBytes  19.7 Gbits/sec    0   1.26 MBytes\
-[  4]   9.00-10.00  sec  2.29 GBytes  19.7 Gbits/sec    0   1.27 MBytes\
-- - - - - - - - - - - - - - - - - - - - - - - - -\
-[ ID] Interval           Transfer     Bandwidth       Retr\
-[  4]   0.00-10.00  sec  25.0 GBytes  21.5 Gbits/sec  119             sender\
-[  4]   0.00-10.00  sec  25.0 GBytes  17.0 Gbits/sec                  receiver',\
-
-'Connecting to host 10.148.44.215, port 5201\
-[  4] local 10.148.44.220 port 36765 connected to 10.148.44.215 port 5201\
-[ ID] Interval           Transfer     Bandwidth       Retr  Cwnd\
-[  4]   0.00-1.00   sec  2.59 GBytes  22.2 Gbits/sec    0   3.03 MBytes\
-[  4]   1.00-2.00   sec  2.90 GBytes  24.9 Gbits/sec    0   3.03 MBytes\
-[  4]   2.00-3.00   sec  3.39 GBytes  29.1 Gbits/sec    0   3.03 MBytes\
-[  4]   3.00-4.00   sec  2.49 GBytes  21.4 Gbits/sec  119   1.08 MBytes\
-[  4]   4.00-5.00   sec  2.21 GBytes  19.0 Gbits/sec    0   1.15 MBytes\
-[  4]   5.00-6.00   sec  2.23 GBytes  19.2 Gbits/sec    0   1.20 MBytes\
-[  4]   6.00-7.00   sec  2.31 GBytes  19.9 Gbits/sec    0   1.23 MBytes\
-[  4]   7.00-8.00   sec  2.29 GBytes  19.7 Gbits/sec    0   1.25 MBytes\
-[  4]   8.00-9.00   sec  2.29 GBytes  19.7 Gbits/sec    0   1.26 MBytes\
-[  4]   9.00-10.00  sec  2.29 GBytes  19.7 Gbits/sec    0   1.27 MBytes\
-- - - - - - - - - - - - - - - - - - - - - - - - -\
-[ ID] Interval           Transfer     Bandwidth       Retr\
-[  4]   0.00-10.00  sec  25.0 GBytes  21.5 Gbits/sec  119             sender\
-[  4]   0.00-10.00  sec  25.0 GBytes  25.0 Gbits/sec                  receiver']
 
     speed_list = []
     result = ''
     results_list = []
 
-    log('Source \t '+ 'Destination \t'+ 'Direction \t'+ 'Speed \t\t'+ 'Result' +'\t'+'Mode')
+    if len(dict_list) == 0:
+        pass
+    else:
 
-    for output in dict_list:
-        # print '\n'
-        res = dict_list[dict_list.index(output)]['results']
-        bandwidth = re.findall("\d+\.\d*\D*/sec", str(res))
-        # print bandwidth
-        results_list.append(bandwidth)
+        log('Source \t '+ 'Destination \t'+ 'Direction \t'+ 'Speed \t\t'+ 'Result' +'\t'+'Mode')
 
-        for i in bandwidth:
-            num = re.findall("\d+\.\d*", i)
-            speed_list.append(num)
+        for output in dict_list:
+            # print '\n'
+            res = dict_list[dict_list.index(output)]['results']
+            bandwidth = re.findall("\d+\.\d*\D*/sec", str(res))
+            # print bandwidth
+            results_list.append(bandwidth)
 
-        speed = speed_list[-1]
+            for i in bandwidth:
+                num = re.findall("\d+\.\d*", i)
+                speed_list.append(num)
 
-        if float(speed[0]) > (float(expected_rate)*float(rate_window)):
-            result = 'Pass'
-        else:
-            result = 'Fail'
+            speed = speed_list[-1]
 
-        if dict_list[dict_list.index(output)]['both'] == True:
-            log(str(server_node) +'\t '+ str(client_node)+ '\t' + str(direction)+'-'+str(dict_list[dict_list.index(output)]['direction'])\
-            + '\t' + str(bandwidth[-1]) + '\t'+ result+'\t' + mode)
-        else:
-            log(str(server_node) +'\t '+ str(client_node)+ '\t' + str(direction)\
-            + '\t\t' + str(bandwidth[-1]) + '\t'+ result+'\t' + mode)
+            if float(speed[0]) > (float(expected_rate)*float(rate_window)):
+                result = 'Pass'
+            else:
+                result = 'Fail'
+
+            # need to add an error message to say why the test failed and handle how we report multiple fails (connectvity, time, bandwidth.)
+            if test_time < 10:
+                print 'Time exceeded'
+                #result = 'Fail'
+            else:
+                #print 'Time not exceeded'
+                #result = 'Pass'
+			    pass_flag = True
+
+            if dict_list[dict_list.index(output)]['both'] == True:
+                log(str(dict_list[dict_list.index(output)]['server_node']) +'\t '+ str(dict_list[dict_list.index(output)]['client_node'])+ '\t' + str(direction)+'-'+str(dict_list[dict_list.index(output)]['direction'])\
+                + '\t' + str(bandwidth[-1]) + '\t'+ result+'\t' + mode)
+            else:
+                log(str(dict_list[dict_list.index(output)]['server_node']) +'\t '+ str(dict_list[dict_list.index(output)]['client_node'])+ '\t' + str(dict_list[dict_list.index(output)]['direction'])\
+                + '\t\t' + str(bandwidth[-1]) + '\t'+ result+'\t' + mode)
 
 
 if __name__ == '__main__':
