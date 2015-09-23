@@ -82,6 +82,9 @@ resources:
             -
               type: ovs_bridge
               name: br-bond1
+              addresses:
+                -
+                  ip_netmask: {get_param: StorageIpSubnet}
               members:
                 -
                   type: ovs_bond
@@ -99,9 +102,6 @@ resources:
                       # CHANGEME: Change the interface name on the following
                       # line to an interface to include in bond1
                       name: p3p2
-                  addresses:
-                    -
-                      ip_netmask: {get_param: StorageIpSubnet}
 
 outputs:
   OS::stack_id:
