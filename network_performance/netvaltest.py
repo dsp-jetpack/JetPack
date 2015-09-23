@@ -131,7 +131,7 @@ def runValidation(nodes1, nodes2, metrics, params):
 
                 dict_list.append(dict2)
                 #cmd_list.append(dict)
-                print dict_list
+                #print dict_list
 
             elif '-R' in params:
                 client_command = 'iperf3 -c '+str(client_node)+' -R'
@@ -139,7 +139,7 @@ def runValidation(nodes1, nodes2, metrics, params):
 
                 dict['command'] = 'iperf3 -c '+str(client_node)+' -R'
                 dict['direction'] = 'reverse'
-                dict['mode'] = False
+                dict['both'] = False
 
                 dict_list.append(dict)
 
@@ -150,7 +150,7 @@ def runValidation(nodes1, nodes2, metrics, params):
 
                 dict['command'] = 'iperf3 -c '+str(client_node)
                 dict['direction'] = 'reverse'
-                dict['mode'] = False
+                dict['both'] = False
 
                 dict_list.append(dict)
 
@@ -166,15 +166,37 @@ def runValidation(nodes1, nodes2, metrics, params):
                     # out = 'list of concurrent outputs'
                     
                     out, err = iperf3(server_node, client_node, cmd)
-                    print "item x in dict list: "+str(cmd_dict[cmd_list.index(cmd)])
+                    print "item x in dict list: "+str(dict_list[cmd_list.index(cmd)])
                     # log('log results for each - ID by port number?')
                 else:
                     output, err = iperf3(server_node, client_node, cmd)
+                    output = 'Connecting to host 10.148.44.215, port 5201\
+[  4] local 10.148.44.220 port 36765 connected to 10.148.44.215 port 5201\
+[ ID] Interval           Transfer     Bandwidth       Retr  Cwnd\
+[  4]   0.00-1.00   sec  2.59 GBytes  22.2 Gbits/sec    0   3.03 MBytes\
+[  4]   1.00-2.00   sec  2.90 GBytes  24.9 Gbits/sec    0   3.03 MBytes\
+[  4]   2.00-3.00   sec  3.39 GBytes  29.1 Gbits/sec    0   3.03 MBytes\
+[  4]   3.00-4.00   sec  2.49 GBytes  21.4 Gbits/sec  119   1.08 MBytes\
+[  4]   4.00-5.00   sec  2.21 GBytes  19.0 Gbits/sec    0   1.15 MBytes\
+[  4]   5.00-6.00   sec  2.23 GBytes  19.2 Gbits/sec    0   1.20 MBytes\
+[  4]   6.00-7.00   sec  2.31 GBytes  19.9 Gbits/sec    0   1.23 MBytes\
+[  4]   7.00-8.00   sec  2.29 GBytes  19.7 Gbits/sec    0   1.25 MBytes\
+[  4]   8.00-9.00   sec  2.29 GBytes  19.7 Gbits/sec    0   1.26 MBytes\
+[  4]   9.00-10.00  sec  2.29 GBytes  19.7 Gbits/sec    0   1.27 MBytes\
+- - - - - - - - - - - - - - - - - - - - - - - - -\
+[ ID] Interval           Transfer     Bandwidth       Retr\
+[  4]   0.00-10.00  sec  25.0 GBytes  21.5 Gbits/sec  119             sender\
+[  4]   0.00-10.00  sec  25.0 GBytes  17.0 Gbits/sec                  receiver'
+
                     out.append(output)
-                    print "item x in dict list: "+str(dict_list[cmd_list.index(cmd)])
+                    # print "item x in dict list: "+str(dict_list[cmd_list.index(cmd)])
                     dict_list[cmd_list.index(cmd)]['results'] = output
                     # log(out)
                     # print dict_list
+                    #print '\n\n'
+                    #print dict_list[cmd_list.index(cmd)]['results']
+
+                    #print '\n\n'
             # out = 'ssh to: '+str(nodes2[0]) + ' and run: '+str(client_command)
 
     # if there is one node in the first list and more than one in
@@ -215,6 +237,7 @@ def Main():
 
     param_list = []
     metrics_list = []
+    mode = ''
 
     parser = argparse.ArgumentParser()
 
@@ -264,13 +287,17 @@ def Main():
                 " on nodes: " + str(args.node_list1))
         print 'and ' + str(args.node_list2)
         param_list.append('-c')
+        mode = 'Concurrent'
+
     elif args.sequential:
         print ("you are running sequential tests on"\
                     " nodes: "+str(args.node_list1))
         print 'and ' + str(args.node_list2)
         param_list.append('-s')
+        mode = 'Concurrent'
     else:
         print 'no Order paramter set'
+        mode = 'Concurrent'
     direction = ''
     if args.reverse:
         print ("you are running in reverse mode.")
@@ -309,8 +336,9 @@ def Main():
     server_node, client_node, out, dict_list = runValidation(args.node_list1, args.node_list2,
                                                   metrics_list, param_list)
 
-    print out
+    #print out
     # take the output and use reg ex to get and verify the data you want.
+
     out = ['Connecting to host 10.148.44.215, port 5201\
 [  4] local 10.148.44.220 port 36765 connected to 10.148.44.215 port 5201\
 [ ID] Interval           Transfer     Bandwidth       Retr  Cwnd\
@@ -351,10 +379,13 @@ def Main():
     result = ''
     results_list = []
 
-    log('Source \t '+ 'Destination \t'+ 'Direction \t'+ 'Speed \t\t'+ 'Result')
+    log('Source \t '+ 'Destination \t'+ 'Direction \t'+ 'Speed \t\t'+ 'Result' +'\t'+'Mode')
 
-    for output in out:
-        bandwidth = re.findall("\d+\.\d*\D*/sec", output)
+    for output in dict_list:
+        # print '\n'
+        res = dict_list[dict_list.index(output)]['results']
+        bandwidth = re.findall("\d+\.\d*\D*/sec", str(res))
+        # print bandwidth
         results_list.append(bandwidth)
 
         for i in bandwidth:
@@ -363,18 +394,17 @@ def Main():
 
         speed = speed_list[-1]
 
-        # print speed[0]
-        # print float(float(expected_rate)*float(rate_window))
-        # print rate_window
-        # print expected_rate
-
         if float(speed[0]) > (float(expected_rate)*float(rate_window)):
             result = 'Pass'
         else:
             result = 'Fail'
 
-        log(str(server_node) +'\t '+ str(client_node)+ '\t' + str(direction)+'-'+str(dict_list[out.index(output)]['direction'])\
-            + '\t' + str(bandwidth[-1]) + '\t'+ result)
+        if dict_list[dict_list.index(output)]['both'] == True:
+            log(str(server_node) +'\t '+ str(client_node)+ '\t' + str(direction)+'-'+str(dict_list[dict_list.index(output)]['direction'])\
+            + '\t' + str(bandwidth[-1]) + '\t'+ result+'\t' + mode)
+        else:
+            log(str(server_node) +'\t '+ str(client_node)+ '\t' + str(direction)\
+            + '\t\t' + str(bandwidth[-1]) + '\t'+ result+'\t' + mode)
 
 
 if __name__ == '__main__':
