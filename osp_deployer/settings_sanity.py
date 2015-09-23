@@ -59,6 +59,13 @@ class Deployer_sanity():
         assert hasattr(self.settings, 'ceph_admin_email'), self.settings.settingsFile+ " has no ceph_admin_email setting"
         assert hasattr(self.settings, 'ceph_version'), self.settings.settingsFile+ " has no ceph_version setting"
 
+        assert self.isValidIp(self.settings.foreman_provisioning_subnet_ip_start), self.settings.foreman_provisioning_subnet_ip_start + " is not a valid ip for setting foreman_provisioning_subnet_ip_start"
+        assert self.isValidIp(self.settings.foreman_provisioning_subnet_ip_end), self.settings.foreman_provisioning_subnet_ip_end + " is not a valid ip for setting foreman_provisioning_subnet_ip_end"
+
+        if len(self.settings.heat_auth_key) == 16 or len(self.settings.heat_auth_key) == 24 or len(self.settings.heat_auth_key) == 32:
+            pass
+        else:
+            raise AssertionError("heat_auth_key setting should be 16/24 or 32 byte long (current value :"+ self.settings.heat_auth_key + " is not valid")
 
         assert os.path.isfile(self.settings.rhl71_iso) , self.settings.rhl71_iso + "ISO doesnn't seem to exist"
 
