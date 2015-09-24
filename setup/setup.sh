@@ -395,4 +395,4 @@ end
 
 info "##### Done #####"
 
-bash
+exit 1
