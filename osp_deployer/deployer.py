@@ -89,8 +89,10 @@ def execute_as_shell(address,usr, pwd, command):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', action='store_true')
-    parser.add_argument('-s', type=str)
+    parser.add_argument('-f', action='store_true', help='fresh install -- resets flags for new/fresh install')
+    parser.add_argument('-s', dest='settings', type=str, required=True, help="settings file -- path must be provided")
+    parser.add_argument('-p', action='store_true', help='password reset -- resets foreman password')
+    parser.add_argument('-v', action='version', version='%(prog)s version 1.0.2')
     options = parser.parse_args(sys.argv[1:])
     print (options)
 
@@ -116,12 +118,18 @@ if __name__ == '__main__':
             cmd = "rm -f " + dir_name + "/*.done " + dir_name + log_name
             print( cmd )
             logger.info(os.system(cmd))
-        if options.s: 
-            settingsFile = options.s
+        if options.settings: 
+            settingsFile = options.settings
             print( "settings file : " + settingsFile)
             logger.info( "settings file : " + settingsFile)
-        else:
-            sys.exit()
+        if options.p: 
+            settings = Settings(settingsFile)
+            foremanHost = Foreman()
+            foremanHost.reset_password()
+            log ("\n**************************************************")
+            log ("**  Foreman admin password  : " + settings.foreman_password + "  **")
+            log ("**************************************************")
+            os._exit(1)
 
         logging.basicConfig(filename= dir_name + log_name if isLinux else 'c:' + dir_name + log_name,
            format="%(asctime)-15s:%(name)s:%(process)d:%(levelname)s:%(message)s",
