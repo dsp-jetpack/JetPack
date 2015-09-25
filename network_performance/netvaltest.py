@@ -12,6 +12,74 @@ def log(entry, printOutput=True):
     f.write(entry + "\n")
     f.close()
 
+def getResults(server_node, client_node, param_list, output, direction, expected_rate, rate_window, test_time):
+    results_list = []
+    speed_list = []
+    bandwidth = re.findall("\d+\.\d*\D*/sec", str(output))
+    # print bandwidth
+    results_list.append(bandwidth)
+    for i in bandwidth:
+        num = re.findall("\d+\.\d*", i)
+        speed_list.append(num)
+
+    speed = speed_list[-1]
+
+    if float(speed[0]) > (float(expected_rate))*(float(rate_window)):
+        #print str(float(speed[0]))
+        #print str((float(expected_rate)*float(rate_window)))
+        result = 'Pass'
+    else:
+        result = 'Fail'
+
+    # need to add an error message to say why the test failed and handle how we report multiple fails (connectvity, time, bandwidth.)
+    if test_time < 10:
+        print 'Time exceeded'
+        #result = 'Fail'
+    else:
+        #print 'Time not exceeded'
+        #result = 'Pass'
+        pass_flag = True
+       
+    if '-c' in param_list:
+        mode = 'Concurrent'
+    else:
+        mode = 'Sequential'
+
+    if '-b' in param_list:
+        order = 'Both'
+        return str(server_node) +'\t '+ str(client_node)+ '\t' + str(order)+'-'+str(direction)\
+        + '\t' + str(bandwidth[-1]) + '\t'+ result+'\t' + mode
+    else:
+        return str(server_node) +'\t '+ str(client_node)+ '\t' + str(direction)\
+        + '\t\t' + str(bandwidth[-1]) + '\t'+ result+'\t' + mode
+
+def commandGenerator(n1, n2):
+    #n1 = a, b, c, d
+    #n2 = w, x, y, z
+    params = ['','-R']
+    # mode = [-s, -c]
+    cmds = []
+    cmds_list = []
+    run_list = []
+    
+    for server in n1:
+        for client in n2:
+            for p in params:
+                #print client, server
+                if p == '-R':
+                    direction = 'reverse'
+                else:
+                    direction = 'forward'
+
+                if n1.index(server) == n2.index(client):
+                    pair = True
+                else:
+                    pair = False
+                cmd = 'iperf -c ' + str(server) +' '+ str(p)
+                cmds_list.append({'server': server, 'client': client, 'command': cmd, 'is_pair': pair, 'direction': direction})
+                #print cmds_list
+
+    return cmds_list
 
 def startIperf3Server(server_node, port_number = 5008):
 
@@ -26,8 +94,8 @@ def startIperf3Server(server_node, port_number = 5008):
     usr = 'root'
     pwd = 'cr0wBar!'
     cmd = 'iperf3 -s -D'
-    print "ssh to server node: " + str(server_node) + " " + str(port_number)
-    print "running: " + cmd
+    #print "ssh to server node: " + str(server_node) + " " + str(port_number)
+    #print "running: " + cmd
     # cl_stdoutd, cl_stderrd = Ssh.execute_command(server_node, usr, pwd, cmd)
 
 
@@ -52,9 +120,26 @@ def iperf3(server_node, client_node, cmd, port_number = 5008):
     pwd = 'cr0wBar!'
     startIperf3Server(server_node, port_number)
 
-    print "running: " + str(cmd)
+    #print "running: " + str(cmd)
     # cl_stdoutd, cl_stderrd = Ssh.execute_command(client_node, usr, pwd, cmd)
-    cl_stdoutd = 'ssh output for cmd: ' + str(cmd)
+    #cl_stdoutd = 'ssh output for cmd: ' + str(cmd)
+    cl_stdoutd = 'Connecting to host 10.148.44.215, port 5201\
+[  4] local 10.148.44.220 port 36765 connected to 10.148.44.215 port 5201\
+[ ID] Interval           Transfer     Bandwidth       Retr  Cwnd\
+[  4]   0.00-1.00   sec  2.59 GBytes  22.2 Gbits/sec    0   3.03 MBytes\
+[  4]   1.00-2.00   sec  2.90 GBytes  24.9 Gbits/sec    0   3.03 MBytes\
+[  4]   2.00-3.00   sec  3.39 GBytes  29.1 Gbits/sec    0   3.03 MBytes\
+[  4]   3.00-4.00   sec  2.49 GBytes  21.4 Gbits/sec  119   1.08 MBytes\
+[  4]   4.00-5.00   sec  2.21 GBytes  19.0 Gbits/sec    0   1.15 MBytes\
+[  4]   5.00-6.00   sec  2.23 GBytes  19.2 Gbits/sec    0   1.20 MBytes\
+[  4]   6.00-7.00   sec  2.31 GBytes  19.9 Gbits/sec    0   1.23 MBytes\
+[  4]   7.00-8.00   sec  2.29 GBytes  19.7 Gbits/sec    0   1.25 MBytes\
+[  4]   8.00-9.00   sec  2.29 GBytes  19.7 Gbits/sec    0   1.26 MBytes\
+[  4]   9.00-10.00  sec  2.29 GBytes  19.7 Gbits/sec    0   1.27 MBytes\
+- - - - - - - - - - - - - - - - - - - - - - - - -\
+[ ID] Interval           Transfer     Bandwidth       Retr\
+[  4]   0.00-10.00  sec  25.0 GBytes  21.5 Gbits/sec  119             sender\
+[  4]   0.00-10.00  sec  25.0 GBytes  21.0 Gbits/sec                  receiver'
     cl_stderrd = 'ssh error'
 
 
@@ -78,9 +163,9 @@ def generatePortNumbers(cmd_list):
     return port_list
 
 
-def runValidation(nodes1, nodes2, metrics, params):
+"""def runValidation(nodes1, nodes2, metrics, params):
 
-    """Validate the connections between nodes.
+    Validate the connections between nodes.
 
     Keyword arguments:
 
@@ -89,12 +174,12 @@ def runValidation(nodes1, nodes2, metrics, params):
     metrics -- the metrics to be tested
     params -- the parameters to construct the Iperf3 command
 
-    """
+    
     # return [{nodeA: address}, {nodeB: address}, {output: ''}, {direction: ''}, {} ]
     # out = []
 
-    print 'len(nodes1[0]) = '+str(len(nodes1[0]))
-    print 'len(nodes2[0]) = '+str(len(nodes2[0]))
+    # print 'len(nodes1[0]) = '+str(len(nodes1[0]))
+    # print 'len(nodes2[0]) = '+str(len(nodes2[0]))
 
     # the first node list cannot be bigger than the second node list.
 
@@ -181,7 +266,7 @@ def runValidation(nodes1, nodes2, metrics, params):
                 dict['client_node'] = client_node
                 dict['server_node'] = server_node
                 dict['command'] = client_command
-                dict['direction'] = 'reverse'
+                dict['direction'] = 'forward'
                 dict['both'] = False
 
                 dict_list.append(dict)
@@ -236,7 +321,7 @@ def runValidation(nodes1, nodes2, metrics, params):
 - - - - - - - - - - - - - - - - - - - - - - - - -\
 [ ID] Interval           Transfer     Bandwidth       Retr\
 [  4]   0.00-10.00  sec  25.0 GBytes  21.5 Gbits/sec  119             sender\
-[  4]   0.00-10.00  sec  25.0 GBytes  17.0 Gbits/sec                  receiver'
+[  4]   0.00-10.00  sec  25.0 GBytes  100.0 Gbits/sec                  receiver'
 
                     #out.append(output)
                     # print "item x in dict list: "+str(dict_list[cmd_list.index(cmd)])
@@ -281,7 +366,7 @@ def runValidation(nodes1, nodes2, metrics, params):
             out = 'list-to-list mode'
 
     # return server_node, client_node, dict_list
-    return dict_list
+    return dict_list"""
 
 
 
@@ -348,7 +433,7 @@ def Main():
         param_list.append('-s')
         mode = 'Sequential'
     else:
-        print 'no Order paramter set'
+        print 'no Order parameter set'
         mode = 'Sequential'
 
     direction = ''
@@ -371,14 +456,14 @@ def Main():
         metrics_list.append({'-e': args.expected_rate})
         expected_rate = args.expected_rate
     else:
-        expected_rate = 20.0
+        expected_rate = 100.0
 
     if args.rate_window:
         print ("rate window: " + str(args.rate_window))
         metrics_list.append({'-w': args.rate_window})
         rate_window = args.rate_window
     else:
-        rate_window = 0.9
+        rate_window = .9
 
     if args.test_time:
         print ("test_time: " + str(args.test_time))
@@ -386,7 +471,7 @@ def Main():
         test_time = args.test_time
     else:
         test_time = 10
-    
+    """"
     dict_list = runValidation(args.node_list1, args.node_list2, metrics_list, param_list)
 
     # take the output and use reg ex to get and verify the data you want.
@@ -414,7 +499,9 @@ def Main():
 
             speed = speed_list[-1]
 
-            if float(speed[0]) > (float(expected_rate)*float(rate_window)):
+            if float(speed[0]) > (float(expected_rate))*(float(rate_window)):
+                #print str(float(speed[0]))
+                #print str((float(expected_rate)*float(rate_window)))
                 result = 'Pass'
             else:
                 result = 'Fail'
@@ -434,7 +521,63 @@ def Main():
             else:
                 log(str(dict_list[dict_list.index(output)]['server_node']) +'\t '+ str(dict_list[dict_list.index(output)]['client_node'])+ '\t' + str(dict_list[dict_list.index(output)]['direction'])\
                 + '\t\t' + str(bandwidth[-1]) + '\t'+ result+'\t' + mode)
+    """
+    #n1 = ['172.168.16.10', '172.168.16.11', '172.168.16.12', '172.168.16.13']
+    #n2 = ['172.168.16.20', '172.168.16.21', '172.168.16.22', '172.168.16.23']
+    #n1 = ['172.168.16.10']
+    #n2 = ['172.168.16.20']
+    
+    server_list = args.node_list1
+    client_list = args.node_list2
+    run_list = commandGenerator(server_list, client_list)
+    #for each in run_list:
+    #    print each
 
+    #params = ['-b', '-p']
+    #params = ['-f']
+    #print param_list
+    #for each in run_list:
+    #    print '\t' +str(each)
+
+    exec_list = []
+    if '-b' and '-a' in param_list:
+        exec_list = run_list
+        print 'run the entire list.'
+    elif '-b' in param_list or ('-b' and '-p' in param_list):
+        for each in run_list:
+            if each['is_pair'] == True:
+                exec_list.append(each)
+        # print 'run all where server equals the first server, and client = first client'
+    elif '-f' in param_list: # or if there are no params.
+        for each in run_list:
+            if each['direction'] == 'forward':
+                exec_list.append(each)
+        # print ' taking out all instances that have -R in command'
+    elif '-R' in param_list:
+        for each in run_list:
+            if each['direction'] == 'reverse':
+                exec_list.append(each)
+        # print 'taking out all instances that have -f in command'
+        # print 'run only where there is -R in the command'
+    elif '-p' in param_list:
+        for each in run_list:
+            if each['is_pair'] == True and each['direction'] == 'forward':
+                exec_list.append(each)
+        # print 'remove all with -R then run all where server equals the first server, and client = first client'
+    else:
+        print 'empty'
+
+    log('Source \t '+ 'Destination \t'+ 'Direction \t'+ 'Speed \t\t'+ 'Result' +'\t'+'Mode')
+    for each in exec_list: #((server_node, client_node, cmd, port_number = 5008)
+        server_node = each['server']
+        client_node = each['client']
+        cmd = each['command']
+        #port_number = 5008)
+        output, err = iperf3(server_node[0], client_node[0], cmd)
+        #print output
+        result = getResults(server_node[0], client_node[0], param_list, output, each['direction'], expected_rate, rate_window, test_time)
+        #print each
+        log(result)
 
 if __name__ == '__main__':
     Main()
