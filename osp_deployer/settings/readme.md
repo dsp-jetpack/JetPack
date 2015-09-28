@@ -69,7 +69,7 @@ or
 * 3.0.1.b - 04/30/2015 - Remove public_ip from compute nodes
 * 3.0.1.c - 05/05/2015 - Added tempest vm properties
 * 3.0.1.d  - 05/05/2015 - New external_vlanid private_api_vlanid vlan properties on the sah to support tempest vm.
-
+* 4.0.1.a - 09/28/15 Removed is_730
 
 
 
