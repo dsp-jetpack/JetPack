@@ -209,10 +209,8 @@ create_the_networks(){
  
    execute_command "neutron router-list"
 
-   ext_net_id=$(neutron net-list | grep $EXTERNAL_NETWORK_NAME |  head -n 1  | awk '{print $2}')
-
-  #replace the external_net_id
-   execute_command "neutron router-gateway-set $TENANT_ROUTER_NAME $ext_net_id"
+  #Use external network name
+   execute_command "neutron router-gateway-set $TENANT_ROUTER_NAME $EXTERNAL_NETWORK_NAME"
  
 }
 
