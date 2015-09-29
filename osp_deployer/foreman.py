@@ -194,7 +194,8 @@ class Foreman():
         Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, self.settings.foreman_configuration_scripts + pilot_yamlTemp, '/root/pilot/dell-pilot.yaml.erb')
         os.remove(self.settings.foreman_configuration_scripts + pilot_yamlTemp)
 
-        hammer_scripts = ['hammer-configure-hostgroups.sh',
+        hammer_scripts = ['enable_live_migration.sh',
+        'hammer-configure-hostgroups.sh',
         'hammer-deploy-compute.sh',
         'hammer-deploy-controller.sh',
         'hammer-deploy-storage.sh',
