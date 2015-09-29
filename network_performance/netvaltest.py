@@ -1,10 +1,31 @@
 import argparse
-import thread
+import threading
 import time
 import random
 import re
-# import logging
+
+from threading import Thread
 from auto_common import *
+
+class runThreadedIperf (threading.Thread):
+    def __init__(self, threadID, server_name, client_name, command, port):
+        threading.Thread.__init__(self)
+        self.threadID = threadID
+        self.server_name = server_name
+        self.client_name = client_name
+        self.command = command
+        self.port = port
+        self.results = ''
+        self.err = ''
+
+    def run(self):
+        cmd = 'my iperf command'
+        # print "Starting Iperf to run on " + str(self.client_name)
+        self.results, self.err = iperf3(self.server_name, self.client_name, self.command, self.port)
+    
+    def join(self):
+        Thread.join(self)
+        return self.results
 
 def log(entry, printOutput=True):
     if printOutput:
@@ -137,7 +158,7 @@ def startIperf3Server(server_node, port_number):
     usr = 'root'
     pwd = 'cr0wBar!'
     cmd = 'iperf3 -s -D'
-    #print "ssh to server node: " + str(server_node) + " " + str(port_number)
+    print "Iperf server running on: " + str(server_node) + " " + str(port_number)
     #print "running: " + cmd
     # cl_stdoutd, cl_stderrd = Ssh.execute_command(server_node, usr, pwd, cmd)
 
@@ -161,11 +182,13 @@ def iperf3(server_node, client_node, cmd, port_number):
 
     usr = 'root'
     pwd = 'cr0wBar!'
-    startIperf3Server(server_node, port_number)
-    
+    # need to remover this so i can start all servers before a concurrent run.
+    # startIperf3Server(server_node, port_number)
+    time.sleep(10)
+    # simulating 10 percent of connections failing to respond.
     error_gen = random.random()*10
-    if error_gen >= 9:
-        cl_stderrd = 'there was no data from ssh session'
+    if error_gen >= 10:
+        cl_stderrd = 'there was no data from ssh session between server: ' +str(server_node) + ' and client: ' +str(client_node)
         #print cl_stderrd
         
     else:
@@ -387,23 +410,57 @@ def Main():
     if len(exec_list) <= 1 and ('-c' in param_list or '-a' in param_list):
         print 'only one job, cannot run seqentially.'
     else:
-        threads = []
-        for each in exec_list:
-            print 'create a thread for: ' +str(each)
-            #thread_list.append(getThread())
+        if '-c' in param_list:
+            # run in concurrent mode.
+            threads = []
+            for each in exec_list:
+                # create a thread for each iperf instance and start all iperf3 servers.
+                server_node = each['server']
+                client_node = each['client']
+                cmd = each['command']
+                port_number = each['port_number']
+            
+                # start all the Iperf3 servers.
+                startIperf3Server(server_node, port_number)
+            
+                print 'create a thread for: ' +str(each)
+                #thread_list.append(getThread())
+                iperfRunThr = runThreadedIperf(exec_list.index(each), server_node, client_node, each, port_number)
+                threads.append(iperfRunThr)
 
-        log('Source \t '+ 'Destination \t'+ 'Direction \t'+ 'Speed \t\t'+ 'Result' +'\t'+'Mode')
-        for each in exec_list: #((server_node, client_node, cmd, port_number = 5008)
-            server_node = each['server']
-            client_node = each['client']
-            cmd = each['command']
-            port_number = each['port_number']
-            output, err = iperf3(server_node, client_node, cmd, port_number)
-            if len(err)>10:
-                log('Error: ' +str(err))
-            else:
-                result = getResults(server_node, client_node, param_list, output, each['direction'], expected_rate, rate_window, test_time)
-                log(result)
+            log('Source \t '+ 'Destination \t'+ 'Direction \t'+ 'Speed \t\t'+ 'Result' +'\t'+'Mode')
+            for each in exec_list: #((server_node, client_node, cmd, port_number = 5008)
+                server_node = each['server']
+                client_node = each['client']
+                cmd = each['command']
+                port_number = each['port_number']
+                # output, err = iperf3(server_node, client_node, cmd, port_number)
+            
+            for thr in threads:
+                thr.start()
 
+            for thr in threads:
+                thr.join()
+                # print thr.getName()
+                # print thr.results
+                if len(thr.err)>10:
+                    log('Error: ' +str(thr.err))
+                else:
+                    result = getResults(thr.server_name, thr.client_name, param_list, thr.results, exec_list[threads.index(thr)]['direction'], expected_rate, rate_window, test_time)
+                    log(result)
+        else:
+            log('Source \t '+ 'Destination \t'+ 'Direction \t'+ 'Speed \t\t'+ 'Result' +'\t'+'Mode')
+            for each in exec_list: #((server_node, client_node, cmd, port_number = 5008)
+                server_node = each['server']
+                client_node = each['client']
+                cmd = each['command']
+                port_number = each['port_number']
+                output, err = iperf3(server_node, client_node, cmd, port_number)
+                if len(err)>10:
+                    log('Error: ' +str(err))
+                else:
+                    result = getResults(server_node, client_node, param_list, output, each['direction'], expected_rate, rate_window, test_time)
+                    log(result)
+        
 if __name__ == '__main__':
     Main()
