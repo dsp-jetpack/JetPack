@@ -116,7 +116,7 @@ subscription_manager() {
 
 	subscription-manager repos --list
 
-	subscription-manager register --username dellcloudsol --password cr0wBar!
+	subscription-manager register --username $subscription_username --password $subscription_password
 
 	# the pool id out to a parameter
 	subscription-manager attach --pool=$pool_id
