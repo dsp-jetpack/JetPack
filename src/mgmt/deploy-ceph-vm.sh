@@ -267,8 +267,8 @@ EOFKS
     --os-variant rhel6 \
     --disk /store/data/images/ceph.img,bus=virtio,size=16 \
     --disk /tmp/floppy-ceph.img,device=floppy \
-    --network bridge=public \
-    --network bridge=storage \
+    --network bridge=br-extern \
+    --network bridge=br-stor \
     --initrd-inject /tmp/ceph.ks \
     --extra-args "ks=file:/ceph.ks" \
     --noautoconsole \
@@ -284,8 +284,8 @@ virt-install --name ceph \
   --os-type linux \
   --os-variant rhel6 \
   --disk /store/data/images/ceph.img,bus=virtio,size=16 \
-  --network bridge=public \
-  --network bridge=storage \
+  --network bridge=br-extern \
+  --network bridge=br-stor \
   --initrd-inject /tmp/ceph.ks \
   --extra-args "ks=file:/ceph.ks" \
   --noautoconsole \
