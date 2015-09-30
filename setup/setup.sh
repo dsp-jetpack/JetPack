@@ -382,7 +382,13 @@ python_setup
 
 ### Setting up GIT ####
 
-git_setup
+### Setting up GIT ####
+if [ $external_customer = false  ]; then
+  git_setup
+else
+  info "##############Skipping GIT Setup for external customer"
+fi
+
 
 ### Setup other files
 
