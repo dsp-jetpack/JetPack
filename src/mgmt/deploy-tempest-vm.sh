@@ -255,7 +255,75 @@ EOIP
   mkdir tempest
   cd tempest
   /usr/share/openstack-tempest-kilo/tools/configure-tempest-directory 
+  # write base conf file to use in config script post install.  
+  cat <<TBASE > etc/tempest.conf.base
+[auth]
+tempest_roles = _member_
+allow_tenant_isolation = False
 
+[compute]
+image_ssh_user = cirros
+image_ssh_password = cubswin:)
+image_alt_ssh_user = cirros
+image_alt_ssh_password = cubswin:)
+
+# Does SSH use Floating IPs? (boolean value)
+use_floatingip_for_ssh = True
+
+[identity]
+username = demo
+tenant_name = demo
+password = secrete
+alt_username = alt_demo
+alt_tenant_name = alt_demo
+alt_password = secrete
+admin_username = admin
+admin_tenant_name = admin
+disable_ssl_certificate_validation = false
+
+[scenario]
+img_dir = etc
+# ssh username for the image file (string value)
+ssh_user = cirros
+ssh_password = cubswin:)
+
+[volume-feature-enabled]
+bootable = true
+backup = False
+
+[compute-feature-enabled]
+live_migrate_paused_instances = True
+preserve_ports = True
+
+# Does the test environment support resizing? (boolean value)
+resize = False
+
+# Does the test environment have the ec2 api running? (boolean value)
+ec2_api = False
+
+[network-feature-enabled]
+# Allow the execution of IPv6 tests (boolean value)
+ipv6 = False
+ipv6_subnet_attributes = False
+
+[object-storage-feature-enabled]
+discoverability = False
+discoverable_apis = 
+
+[service_available]
+glance = True
+cinder = True
+swift = False
+nova = True
+neutron = True
+trove = False
+ceilometer = True
+sahara = False
+ironic = False
+heat = True
+zaqar = False
+horizon = False
+TBASE
   # delete patch checkout
   rm -rf /tmp/tempest
 
