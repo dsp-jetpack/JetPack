@@ -255,7 +255,105 @@ EOIP
   mkdir tempest
   cd tempest
   /usr/share/openstack-tempest-kilo/tools/configure-tempest-directory 
+  # write base conf file to use in config script post install.  
+  cat <<TBASE > etc/tempest.conf.base
 
+[auth]
+tempest_roles = _member_
+allow_tenant_isolation = False
+
+[compute]
+image_ssh_user = cirros
+image_ssh_password = cubswin:)
+image_alt_ssh_user = cirros
+image_alt_ssh_password = cubswin:)
+
+# Name of the fixed network that is visible to all test tenants. If
+# multiple networks are available for a tenant this is the network
+# which will be used for creating servers if tempest does not create a
+# network or a network is not specified elsewhere. It may be used for
+# ssh validation only if floating IPs are disabled. (string value)
+# fixed_network_name = tenant_net
+
+# Network used for SSH connections. Ignored if
+# use_floatingip_for_ssh=true or run_validation=false. (string value)
+# network_for_ssh = nova
+
+# Does SSH use Floating IPs? (boolean value)
+use_floatingip_for_ssh = True
+
+[identity]
+username = demo
+tenant_name = demo
+password = secrete
+alt_username = alt_demo
+alt_tenant_name = alt_demo
+alt_password = secrete
+admin_username = admin
+admin_tenant_name = admin
+disable_ssl_certificate_validation = false
+
+[scenario]
+img_dir = etc
+# ssh username for the image file (string value)
+ssh_user = cirros
+ssh_password = cubswin:)
+
+[volume-feature-enabled]
+bootable = true
+backup = False
+api_v1 = True
+api_v2 = True
+
+[compute-feature-enabled]
+live_migrate_paused_instances = True
+preserve_ports = True
+
+# Does the test environment support resizing? (boolean value)
+resize = False
+
+# Does the test environment have the ec2 api running? (boolean value)
+ec2_api = False
+
+# below is feature needed for shelve/unshelve?
+create_image = True
+
+[network-feature-enabled]
+# Allow the execution of IPv6 tests (boolean value)
+ipv6 = False
+ipv6_subnet_attributes = False
+
+[object-storage-feature-enabled]
+discoverability = False
+discoverable_apis = 
+
+[network]
+# Default floating network name. Used to allocate floating IPs when
+# neutron is enabled. (string value)
+# floating_network_name = nova 
+
+[service_available]
+glance = True
+cinder = True
+swift = False
+nova = True
+neutron = True
+trove = False
+ceilometer = True
+sahara = False
+ironic = False
+heat = True
+zaqar = False
+horizon = False
+
+[image-feature-enabled]
+api_v1 = True
+api_v2 = True
+
+[identity-feature-enabled]
+api_v2 = True
+api_v3 = True
+TBASE
   # delete patch checkout
   rm -rf /tmp/tempest
 
