@@ -16,14 +16,26 @@ class runThreadedIperf (threading.Thread):
         self.server_name = server_name
         self.client_name = client_name
         self.command = command
+        #self.command = 'ping 172.16.30.115 -c 30'
+        
         self.port = port
         self.results = ''
         self.err = ''
 
     def run(self):
+        # print '+++++++++++++'
+        # print self.server_name
+        # print self.client_name
+        # print self.command
+        # print self.port
+        # print self.results
+        # print self.err
+        # print '+++++++++++++'
+        cmd = str(self.command)
         # print "Starting Iperf to run on " + str(self.client_name)
-        self.results, self.err = iperf3(self.server_name, self.client_name,
-                                        self.command, self.port)
+        # print 'self.command == ' + str(cmd)
+        self.results, self.err = iperf3(str(self.server_name), str(self.client_name),
+                                        str(cmd), str(self.port))
 
     def join(self):
         Thread.join(self)
@@ -59,15 +71,20 @@ def getResults(server_node, client_node, param_list, output, direction,
 
     results_list = []
     speed_list = []
-    bandwidth = re.findall("\d+\.\d*\D*/sec", str(output))
+    # print output
+    # bandwidth = re.findall("\d+\.\d*\D*/sec", str(output))
+    bandwidth = re.findall("\d+\d*\D*/sec", str(output))
     # print bandwidth
+    #if len(bandwidth) == 0:
+    #    bandwidth = re.findall("\d+\d*\D*/sec", str(output))
     results_list.append(bandwidth)
 
     run_time = (run_time).total_seconds()
 
     # print test_time
     for i in bandwidth:
-        num = re.findall("\d+\.\d*", i)
+        #num = re.findall("\d+\.\d*", i)
+        num = re.findall("\d+\d*", i)
         speed_list.append(num)
 
     speed = speed_list[-1]
@@ -128,8 +145,10 @@ def commandGenerator(n1, n2):
             for p in params:
                 if p == '-R':
                     direction = 'reverse'
+                    cmd = 'iperf3 -c ' + str(server) + ' ' + str(p)
                 else:
                     direction = 'forward'
+                    cmd = 'iperf3 -c ' + str(server)
 
                 if server_list.index(server) == client_list.index(client):
                     pair = True
@@ -137,7 +156,7 @@ def commandGenerator(n1, n2):
                     pair = False
                 port = 1000 + int(server_list.index(server)*100)\
                     + int(client_list.index(client)*10) + int(params.index(p))
-                cmd = 'iperf -c ' + str(server) + ' ' + str(p)
+   
                 cmds_list.append({'server': server, 'client': client,
                                   'command': cmd, 'is_pair': pair,
                                   'direction': direction, 'port_number': port})
@@ -155,12 +174,13 @@ def startIperf3Server(server_node, port_number):
 
     """
     usr = 'root'
-    pwd = 'cr0wBar!'
-    cmd = 'iperf3 -s -D'
+    pwd = 'Ignition01'
+    cmd = 'iperf3 -s -D -p ' + str(port_number)
     print "Iperf server running on: " + str(server_node)\
         + " " + str(port_number)
-    # print "running: " + cmd
-    # cl_stdoutd, cl_stderrd = Ssh.execute_command(server_node, usr, pwd, cmd)
+    print "running: " + cmd
+    #cl_stdoutd, cl_stderrd = Ssh.execute_command_readlines(server_node, usr, pwd, cmd)
+    #cl_stdoutd, cl_stderrd = Ssh.execute_command(server_node, usr, pwd, cmd)
 
 
 def iperf3(server_node, client_node, cmd, port_number):
@@ -181,10 +201,10 @@ def iperf3(server_node, client_node, cmd, port_number):
     # print cmd
 
     usr = 'root'
-    pwd = 'cr0wBar!'
+    pwd = 'Ignition01'
     # need to remover this so i can start all servers before a concurrent run.
     # startIperf3Server(server_node, port_number)
-    time.sleep(10)
+    # time.sleep(10)
     # simulating 10 percent of connections failing to respond.
     error_gen = random.random()*10
     if error_gen >= 10:
@@ -195,27 +215,28 @@ def iperf3(server_node, client_node, cmd, port_number):
     else:
         cl_stderrd = 'no error'
 
-    # cl_stdoutd, cl_stderrd = Ssh.execute_command(client_node, usr, pwd, cmd)
+        # cl_stdoutd, cl_stderrd = Ssh.execute_command_readlines(client_node, usr, pwd, cmd)
+        #cl_stdoutd, cl_stderrd = Ssh.execute_command(client_node, usr, pwd, cmd)
     # cl_stdoutd = 'ssh output for cmd: ' + str(cmd)
-    cl_stdoutd = 'Connecting to host 10.148.44.215, port 5201\
-[  4] local 10.148.44.220 port 36765 connected to 10.148.44.215 port 5201\
-[ ID] Interval           Transfer     Bandwidth       Retr  Cwnd\
-[  4]   0.00-1.00   sec  2.59 GBytes  22.2 Gbits/sec    0   3.03 MBytes\
-[  4]   1.00-2.00   sec  2.90 GBytes  24.9 Gbits/sec    0   3.03 MBytes\
-[  4]   2.00-3.00   sec  3.39 GBytes  29.1 Gbits/sec    0   3.03 MBytes\
-[  4]   3.00-4.00   sec  2.49 GBytes  21.4 Gbits/sec  119   1.08 MBytes\
-[  4]   4.00-5.00   sec  2.21 GBytes  19.0 Gbits/sec    0   1.15 MBytes\
-[  4]   5.00-6.00   sec  2.23 GBytes  19.2 Gbits/sec    0   1.20 MBytes\
-[  4]   6.00-7.00   sec  2.31 GBytes  19.9 Gbits/sec    0   1.23 MBytes\
-[  4]   7.00-8.00   sec  2.29 GBytes  19.7 Gbits/sec    0   1.25 MBytes\
-[  4]   8.00-9.00   sec  2.29 GBytes  19.7 Gbits/sec    0   1.26 MBytes\
-[  4]   9.00-10.00  sec  2.29 GBytes  19.7 Gbits/sec    0   1.27 MBytes\
-- - - - - - - - - - - - - - - - - - - - - - - - -\
-[ ID] Interval           Transfer     Bandwidth       Retr\
-[  4]   0.00-10.00  sec  25.0 GBytes  21.5 Gbits/sec  119             sender\
-[  4]   0.00-10.00  sec  25.0 GBytes  21.0 Gbits/sec                  receiver'
+        cl_stdoutd = '[  4]   0.00-10.00  sec  25.0 GBytes  754 Gbits/sec                  receiver'
+# Connecting to host 10.148.44.215, port 5201\
+# [  4] local 10.148.44.220 port 36765 connected to 10.148.44.215 port 5201\
+# [ ID] Interval           Transfer     Bandwidth       Retr  Cwnd\
+# [  4]   0.00-1.00   sec  2.59 GBytes  22.2 Gbits/sec    0   3.03 MBytes\
+# [  4]   1.00-2.00   sec  2.90 GBytes  24.9 Gbits/sec    0   3.03 MBytes\
+# [  4]   2.00-3.00   sec  3.39 GBytes  29.1 Gbits/sec    0   3.03 MBytes\
+# [  4]   3.00-4.00   sec  2.49 GBytes  21.4 Gbits/sec  119   1.08 MBytes\
+# [  4]   4.00-5.00   sec  2.21 GBytes  19.0 Gbits/sec    0   1.15 MBytes\
+# [  4]   5.00-6.00   sec  2.23 GBytes  19.2 Gbits/sec    0   1.20 MBytes\
+# [  4]   6.00-7.00   sec  2.31 GBytes  19.9 Gbits/sec    0   1.23 MBytes\
+# [  4]   7.00-8.00   sec  2.29 GBytes  19.7 Gbits/sec    0   1.25 MBytes\
+# [  4]   8.00-9.00   sec  2.29 GBytes  19.7 Gbits/sec    0   1.26 MBytes\
+# [  4]   9.00-10.00  sec  2.29 GBytes  19.7 Gbits/sec    0   1.27 MBytes\
+# - - - - - - - - - - - - - - - - - - - - - - - - -\
+# [ ID] Interval           Transfer     Bandwidth       Retr\
+# [  4]   0.00-10.00  sec  25.0 GBytes  21.5 Gbits/sec  119             sender\
+# [  4]   0.00-10.00  sec  25.0 GBytes  21.0 Gbits/sec                  receiver'
     # cl_stderrd = 'ssh error'
-
     return cl_stdoutd, cl_stderrd
 
 
@@ -416,17 +437,25 @@ def Main():
                 # and start all iperf3 servers.
                 server_node = each['server']
                 client_node = each['client']
-                cmd = each['command']
+                cmd = str(each['command']) + ' -p ' + str(each['port_number'])
                 port_number = each['port_number']
 
                 # start all the Iperf3 servers.
+                # print server_node
+                # print port_number
                 startIperf3Server(server_node, port_number)
 
                 # print 'create a thread for: ' +str(each)
                 # thread_list.append(getThread())
+                # print exec_list.index(each)
+                # print server_node
+                # print client_node
+                # print each
+                # print port_number
+
                 iperfRunThr = runThreadedIperf(exec_list.index(each),
                                                server_node, client_node,
-                                               each, port_number)
+                                               each['command'], port_number)
                 threads.append(iperfRunThr)
 
             log('Source \t ' + 'Destination \t' + 'Direction \t' +
@@ -440,21 +469,39 @@ def Main():
                 # cmd, port_number)
 
             for thr in threads:
+                # print 'STARTING THREAD: ' +str(thr)
                 thr.start()
-
+                #time.sleep(1)
+            #time.sleep(3)
             for thr in threads:
                 start_time = datetime.datetime.now()
                 # print start_time
                 thr.join()
+                #time.sleep(10)
+                # print 'thr.join(): ' + str(thr.join())
                 # print thr.getName()
+                # print thr.server_name
+                # print thr.client_name
+                # print exec_list[threads.index(thr)]['direction']
                 # print thr.results
-                if len(thr.err) > 10:
-                    log('Error: ' + str(thr.err))
+                # print '--------------------'
+
+                if len(thr.err) > 10000:
+                    log('Error:... ' + str(thr.err))
                 else:
                     end_time = datetime.datetime.now()
-                    # print end_time
+                    # print 'end_time ' + str(end_time)
                     run_time = end_time - start_time
+                    # print thr.server_name
+                    # print thr.client_name
+                    # print param_list
+                    # print thr.results
+                    # print exec_list[threads.index(thr)]['direction']
+                    # print expected_rate
+                    # print rate_window
+                    # print test_time
                     # print run_time
+                    
                     result = getResults(thr.server_name, thr.client_name,
                                         param_list, thr.results,
                                         exec_list[threads.index(thr)]
