@@ -179,7 +179,7 @@ class Foreman():
         FileHelper.replaceExpressionTXT(file, 'c_ceph_public_network = .*',"c_ceph_public_network = '" + self.settings.storage_network + "'" )
         FileHelper.replaceExpressionTXT(file, 'node_access_iface = .*',"node_access_iface = 'bond0."+ self.settings.controller_nodes[1].private_api_vlanid +"'" )
         FileHelper.replaceExpressionTXT(file, 'net_tenant_iface = .*',"net_tenant_iface = 'bond0'" )
-        FileHelper.replaceExpressionTXT(file, 'net_l3_iface = .*',"net_l3_iface = 'bond1'" )
+        FileHelper.replaceExpressionTXT(file, 'net_l3_iface = .*',"net_l3_iface = '"+self.settings.tenant_external_vlan+"'" )
         FileHelper.replaceExpressionTXT(file, 'tenant_vlan_range = .*',"tenant_vlan_range = '" + self.settings.tenant_vlan_range +"'" )
         FileHelper.replaceExpressionTXT(file, 'vip_loadbalancer = .*',"vip_loadbalancer = '" + self.settings.vip_load_balancer_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_amqp = .*',"vip_amqp = '" + self.settings.vip_rabbitmq_private + "'" )
@@ -449,8 +449,12 @@ class Foreman():
         print "configuring the controller node(s)"
         for node in self.settings.controller_nodes:
             hostCreated = False
+            if self.settings.api_external_vlan:
+                hammer_deploy_controller = "hammer-deploy-controller.sh"
+            else
+                hammer_deploy_controller = "hammer-deploy-controller-novlan-bond1.sh"
             while hostCreated != True:
-                command = 'cd /root/pilot\n./hammer-deploy-controller.sh ' + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip + " " + node.idrac_secondary_ip + " R630"
+                command = 'cd /root/pilot\n./'+ hammer-deploy-controller + " " + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip + " " + node.idrac_secondary_ip + " R630"
                 re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
                 if "Could not create the host" in err:
                     print "did not create the host , trying again... " + err
@@ -551,9 +555,6 @@ class Foreman():
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
         cmd = "sed -i 's/allow rx pool=images/allow rwx pool=images/' /usr/share/openstack-foreman-installer/puppet/modules/quickstack/manifests/ceph/config.pp"
-        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
-
-        cmd = "sed -i \"s/enable_quotas' => false/enable_quotas' => true/\" /usr/share/openstack-foreman-installer/puppet/modules/quickstack/manifests/horizon.pp"
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
         cmd = 'yum install -y rubygem-foreman_api'
