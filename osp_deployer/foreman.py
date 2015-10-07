@@ -198,6 +198,7 @@ class Foreman():
         'hammer-configure-hostgroups.sh',
         'hammer-deploy-compute.sh',
         'hammer-deploy-controller.sh',
+        'hammer-deploy-controller-novlan-bond1.sh',
         'hammer-deploy-storage.sh',
         'hammer-configure-foreman.sh',
         'hammer-get-ids.sh',
@@ -451,10 +452,10 @@ class Foreman():
             hostCreated = False
             if self.settings.api_external_vlan:
                 hammer_deploy_controller = "hammer-deploy-controller.sh"
-            else
+            else:
                 hammer_deploy_controller = "hammer-deploy-controller-novlan-bond1.sh"
             while hostCreated != True:
-                command = 'cd /root/pilot\n./'+ hammer-deploy-controller + " " + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip + " " + node.idrac_secondary_ip + " R630"
+                command = 'cd /root/pilot\n./'+ hammer_deploy_controller + " " + node.hostname + " " + node.provisioning_mac_address + " " + node.provisioning_ip + " " + node.idrac_secondary_ip + " R630"
                 re, err = Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, command)
                 if "Could not create the host" in err:
                     print "did not create the host , trying again... " + err
