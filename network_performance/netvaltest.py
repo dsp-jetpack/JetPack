@@ -8,6 +8,12 @@ import re
 from threading import Thread
 from auto_common import *
 
+class Result():
+    def __init__(self):
+        self.start_time
+        self.end_time
+        self.results
+        self.error
 
 class runThreadedIperf (threading.Thread):
     def __init__(self, threadID, server_name, client_name, command, port):
@@ -17,7 +23,6 @@ class runThreadedIperf (threading.Thread):
         self.client_name = client_name
         self.command = command
         #self.command = 'ping 172.16.30.115 -c 30'
-        
         self.port = port
         self.results = ''
         self.err = ''
@@ -31,15 +36,20 @@ class runThreadedIperf (threading.Thread):
         # print self.results
         # print self.err
         # print '+++++++++++++'
-        cmd = str(self.command)
+        cmd = str(self.command) + ' -p ' + str(self.port)
         # print "Starting Iperf to run on " + str(self.client_name)
         # print 'self.command == ' + str(cmd)
-        self.results, self.err = iperf3(str(self.server_name), str(self.client_name),
+        #result = Result()
+        #result.start_time = datetime.datetime.now()
+        self.results, self.err = runIperf3(str(self.server_name), str(self.client_name),
                                         str(cmd), str(self.port))
+        # print cmd
+        # print self.err
 
     def join(self):
         Thread.join(self)
-        return self.results
+        # print self.err
+        return self.results, self.err
 
 
 def log(entry, printOutput=True):
@@ -80,25 +90,31 @@ def getResults(server_node, client_node, param_list, output, direction,
     results_list.append(bandwidth)
 
     run_time = (run_time).total_seconds()
-
+    # print run_time
     # print test_time
     for i in bandwidth:
         #num = re.findall("\d+\.\d*", i)
         num = re.findall("\d+\d*", i)
         speed_list.append(num)
 
+    # print len(speed_list)
+    if len(speed_list) <= 0:
+        speed_list.append(['0'])
+        bandwidth.append(['0 Gbits/sec'])
+
+    # print speed_list
     speed = speed_list[-1]
 
     # calculates the rate window, only fails if the speed
     # is UNDER the rate window.
     if float(speed[0]) >= (float(expected_rate)-((float(expected_rate))
-                           * (float(rate_window) // float(100.0)))):
+                           * (float(rate_window) / float(100.0)))):
         result = 'Pass'
     else:
-        result = 'Fail'
+        result = 'FAIL'
 
     if test_time < run_time:
-        print 'Time exceeded'
+        # print 'Time exceeded'
         time_result = 'Fail'
     else:
         # print 'Time not exceeded'
@@ -137,8 +153,8 @@ def commandGenerator(n1, n2):
     for n in n2:
         for c in n:
             client_list.append(c)
-    print server_list
-    print client_list
+    # print server_list
+    # print client_list
 
     for server in server_list:
         for client in client_list:
@@ -154,7 +170,7 @@ def commandGenerator(n1, n2):
                     pair = True
                 else:
                     pair = False
-                port = 1000 + int(server_list.index(server)*100)\
+                port = 5000 + int(server_list.index(server)*100)\
                     + int(client_list.index(client)*10) + int(params.index(p))
    
                 cmds_list.append({'server': server, 'client': client,
@@ -176,14 +192,17 @@ def startIperf3Server(server_node, port_number):
     usr = 'root'
     pwd = 'Ignition01'
     cmd = 'iperf3 -s -D -p ' + str(port_number)
-    print "Iperf server running on: " + str(server_node)\
-        + " " + str(port_number)
-    print "running: " + cmd
-    #cl_stdoutd, cl_stderrd = Ssh.execute_command_readlines(server_node, usr, pwd, cmd)
+    # print "Iperf server running on: " + str(server_node)\
+    #     + " " + str(port_number)
+    # print "running: " + cmd
+    cl_stdoutd = cmd
+    cl_stderrd = cmd
+    # cl_stdoutd, cl_stderrd = Ssh.execute_command_readlines(server_node, usr, pwd, cmd)
     #cl_stdoutd, cl_stderrd = Ssh.execute_command(server_node, usr, pwd, cmd)
+    return cl_stdoutd, cl_stderrd
 
 
-def iperf3(server_node, client_node, cmd, port_number):
+def runIperf3(server_node, client_node, cmd, port_number):
 
     """Opens an ssh session and runs the cmd on the client node
 
@@ -203,7 +222,7 @@ def iperf3(server_node, client_node, cmd, port_number):
     usr = 'root'
     pwd = 'Ignition01'
     # need to remover this so i can start all servers before a concurrent run.
-    # startIperf3Server(server_node, port_number)
+    std_out, std_err = startIperf3Server(server_node, port_number)
     # time.sleep(10)
     # simulating 10 percent of connections failing to respond.
     error_gen = random.random()*10
@@ -216,9 +235,11 @@ def iperf3(server_node, client_node, cmd, port_number):
         cl_stderrd = 'no error'
 
         # cl_stdoutd, cl_stderrd = Ssh.execute_command_readlines(client_node, usr, pwd, cmd)
+        # time.sleep(10)
+        # print cmd
         #cl_stdoutd, cl_stderrd = Ssh.execute_command(client_node, usr, pwd, cmd)
     # cl_stdoutd = 'ssh output for cmd: ' + str(cmd)
-        cl_stdoutd = '[  4]   0.00-10.00  sec  25.0 GBytes  754 Gbits/sec                  receiver'
+        cl_stdoutd = '[  4]   0.00-10.00  sec  25.0 GBytes  100 Gbits/sec                  receiver'
 # Connecting to host 10.148.44.215, port 5201\
 # [  4] local 10.148.44.220 port 36765 connected to 10.148.44.215 port 5201\
 # [ ID] Interval           Transfer     Bandwidth       Retr  Cwnd\
@@ -240,23 +261,6 @@ def iperf3(server_node, client_node, cmd, port_number):
     return cl_stdoutd, cl_stderrd
 
 
-def getPort(seed_number):
-
-    """Opens an ssh session and runs the cmd on the client node
-
-    Keyword arguments:
-
-    none
-
-    """
-    # add logic here to decide how many iperf instances
-    # we need running on each machine - maybe always one per command.
-    # if a instance is opened on the same port number
-    port = 6000 + seed_number
-
-    return port
-
-
 def Main():
 
     param_list = []
@@ -264,6 +268,7 @@ def Main():
     # thread_list = []
     # mode = ''
     # direction = ''
+    log('\n' + str(datetime.datetime.now()))
 
     # argument parser for command line.
 
@@ -312,20 +317,16 @@ def Main():
         print 'and ' + str(args.node_list2)
         param_list.append('-p')
     else:
-        print 'no permutations set, running in all-permutations mode'
-        param_list.append('-a')
+        print 'no permutations set, running in pair mode'
+        param_list.append('-p')
 
     if args.concurrent:
-        print ("you are running concurrent tests"
-               " on nodes: " + str(args.node_list1))
-        print 'and ' + str(args.node_list2)
+        print ("you are running tests concurrently")
         param_list.append('-c')
         # mode = 'Concurrent'
 
     elif args.sequential:
-        print ("you are running sequential tests on"
-               " nodes: "+str(args.node_list1))
-        print 'and ' + str(args.node_list2)
+        print ("you are running tests sequentially.")
         param_list.append('-s')
         # mode = 'Sequential'
     else:
@@ -333,19 +334,19 @@ def Main():
         # mode = 'Sequential'
 
     if args.reverse:
-        print ("you are running in reverse mode.")
+        print ("Testing connectivity in reverse direction.")
         param_list.append('-R')
         # direction = 'Reverse'
     elif args.both:
-        print ("you are running in both directions mode.")
+        print ("Testing connectivity in both directions.")
         param_list.append('-b')
         # direction = 'Both'
     elif args.forward:
-        print ("you are running in forward mode.")
+        print ("Testing connectivity in forward direction.")
         param_list.append('-f')
         # direction = 'forward'
     else:
-        print ("you are running in forward mode.")
+        print ("Testing connectivity in forward direction.")
         # param_list.append('-f')
         # direction = 'forward'
 
@@ -355,21 +356,21 @@ def Main():
         metrics_list.append({'-e': args.expected_rate})
         expected_rate = args.expected_rate
     else:
-        expected_rate = 20.0
+        expected_rate = 0.0
 
     if args.rate_window:
         print ("rate window: " + str(args.rate_window))
         metrics_list.append({'-w': args.rate_window})
         rate_window = args.rate_window
     else:
-        rate_window = 10
+        rate_window = 0
 
     if args.test_time:
         print ("test_time: " + str(args.test_time))
         metrics_list.append({'-t': args.test_time})
         test_time = args.test_time
     else:
-        test_time = 10
+        test_time = 60
 
     # filtering the command matrix using the param_list to
     # only run selected jobs
@@ -385,7 +386,7 @@ def Main():
             exec_list = run_list
             print 'run the entire list.'
     elif '-b' in param_list or ('-b' in param_list and '-p' in param_list):
-        print '-b or -b and -p'
+        # print '-b or -b and -p'
         for each in run_list:
             if each['is_pair'] is True:
                 exec_list.append(each)
@@ -394,7 +395,7 @@ def Main():
     elif '-f' in param_list or '' in param_list:
         # or if there are no params.
         if '-p' in param_list:
-            print '[-f, -p]'
+            # print '[-f, -p]'
             for each in run_list:
                 if each['direction'] == 'forward' and each['is_pair'] is True:
                     exec_list.append(each)
@@ -415,7 +416,7 @@ def Main():
         # print 'taking out all instances that have -f in command'
         # print 'run only where there is -R in the command'
     elif '-p' in param_list:
-        print 'IN -P'
+        # print 'IN -P'
         for each in run_list:
             if each['is_pair'] is True and each['direction'] == 'forward':
                 exec_list.append(each)
@@ -427,7 +428,8 @@ def Main():
     # log the ouput from each command run.
 
     if len(exec_list) <= 1 and ('-c' in param_list or '-a' in param_list):
-        print 'only one job, cannot run seqentially.'
+        # print param_list
+        print 'only one job, cannot run concurrently.'
     else:
         if '-c' in param_list:
             # run in concurrent mode.
@@ -443,7 +445,7 @@ def Main():
                 # start all the Iperf3 servers.
                 # print server_node
                 # print port_number
-                startIperf3Server(server_node, port_number)
+                std_out, std_err = startIperf3Server(server_node, port_number)
 
                 # print 'create a thread for: ' +str(each)
                 # thread_list.append(getThread())
@@ -457,25 +459,27 @@ def Main():
                                                server_node, client_node,
                                                each['command'], port_number)
                 threads.append(iperfRunThr)
+                #print err
 
-            log('Source \t ' + 'Destination \t' + 'Direction \t' +
+            log('Source \t \t ' + 'Destination \t' + 'Direction \t' +
                 'Speed \t\t' + 'Result' + '\t' + 'Time Result \t' + 'Mode')
-            for each in exec_list:
-                server_node = each['server']
-                client_node = each['client']
-                cmd = each['command']
-                port_number = each['port_number']
-                # output, err = iperf3(server_node, client_node,
-                # cmd, port_number)
+            # for each in exec_list:
+            #    server_node = each['server']
+            #    client_node = each['client']
+            #    cmd = each['command']
+            #    port_number = each['port_number']
 
+            start_times = []
             for thr in threads:
+                # print datetime.datetime.now()
                 # print 'STARTING THREAD: ' +str(thr)
+                start_times.append(datetime.datetime.now())
                 thr.start()
                 #time.sleep(1)
             #time.sleep(3)
             for thr in threads:
-                start_time = datetime.datetime.now()
-                # print start_time
+                start_time = start_times[threads.index(thr)]
+                #print 'start_time == ' + str(start_times[threads.index(thr)])
                 thr.join()
                 #time.sleep(10)
                 # print 'thr.join(): ' + str(thr.join())
@@ -486,11 +490,12 @@ def Main():
                 # print thr.results
                 # print '--------------------'
 
-                if len(thr.err) > 10000:
+                if len(thr.err) > 100:
+                    # print thr.err
                     log('Error:... ' + str(thr.err))
                 else:
                     end_time = datetime.datetime.now()
-                    # print 'end_time ' + str(end_time)
+                    # print 'end time: ' + str(end_time)
                     run_time = end_time - start_time
                     # print thr.server_name
                     # print thr.client_name
@@ -508,18 +513,19 @@ def Main():
                                         ['direction'],
                                         expected_rate, rate_window, test_time,
                                         run_time)
+                    # log('run time: ' + str(run_time))
                     log(result)
         else:
-            log('Source \t ' + 'Destination \t' + 'Direction \t' +
+            log('Source \t \t ' + 'Destination \t' + 'Direction \t' +
                 'Speed \t\t' + 'Result' + '\t' +
                 'Time Result' + '\t' + 'Mode')
             for each in exec_list:
                 server_node = each['server']
                 client_node = each['client']
-                cmd = each['command']
                 port_number = each['port_number']
+                cmd = str(each['command']) + ' -p ' + str(port_number)
                 start_time = datetime.datetime.now()
-                output, err = iperf3(server_node, client_node,
+                output, err = runIperf3(server_node, client_node,
                                      cmd, port_number)
                 end_time = datetime.datetime.now()
                 run_time = end_time - start_time
@@ -531,7 +537,8 @@ def Main():
                                         output, each['direction'],
                                         expected_rate, rate_window,
                                         test_time, run_time)
+                    # log('run time: ' + str(run_time))
                     log(result)
-
+    log('Done')
 if __name__ == '__main__':
     Main()
