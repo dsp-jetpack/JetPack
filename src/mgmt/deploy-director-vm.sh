@@ -209,9 +209,6 @@ EOFPW
          subscription-manager attach --auto
          )
 
-  # includes CES-3314 fix 
-  (cd /etc/yum.repos.d; wget ftp://partners.redhat.com/1c5d859a/b02956b493cee5f1580ea5339a53df55/OpenStack/7.0-RHEL-7-OFI/2015-08-14.2/RH7-RHOS-7.0-OFI.repo)
-
   subscription-manager repos --disable=*
   subscription-manager repos --enable=rhel-7-server-rpms
   subscription-manager repos --enable=rhel-7-server-optional-rpms
@@ -226,6 +223,15 @@ EOFPW
     chmod 644 /etc/yum/pluginconf.d/versionlock.list
     }
   umount /tmp/mnt
+
+  yum -y install yum-plugin-priorities
+  yum -y install yum-utils
+
+  yum-config-manager --enable rhel-7-server-openstack-7.0-rpms --setopt="rhel-7-server-openstack-7.0-rpms.priority=1"
+  yum-config-manager --enable rhel-7-server-rpms --setopt="rhel-7-server-rpms.priority=1"
+  yum-config-manager --enable rhel-7-server-optional-rpms --setopt="rhel-7-server-optional-rpms.priority=1"
+  yum-config-manager --enable rhel-7-server-extras-rpms --setopt="rhel-7-server-extras-rpms.priority=1"
+  yum-config-manager --enable rhel-7-server-openstack-7.0-director-rpms --setopt="rhel-7-server-openstack-7.0-director-rpms.priority=1"
 
   yum -y update
   yum -y install python-rdomanager-oscplugin
