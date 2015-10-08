@@ -195,10 +195,9 @@ def startIperf3Server(server_node, port_number):
     # print "Iperf server running on: " + str(server_node)\
     #     + " " + str(port_number)
     # print "running: " + cmd
-    cl_stdoutd = cmd
-    cl_stderrd = cmd
-    # cl_stdoutd, cl_stderrd = Ssh.execute_command_readlines(server_node, usr, pwd, cmd)
-    #cl_stdoutd, cl_stderrd = Ssh.execute_command(server_node, usr, pwd, cmd)
+    # cl_stdoutd = cmd
+    # cl_stderrd = cmd
+    cl_stdoutd, cl_stderrd = Ssh.execute_command(server_node, usr, pwd, cmd)
     return cl_stdoutd, cl_stderrd
 
 
@@ -234,12 +233,11 @@ def runIperf3(server_node, client_node, cmd, port_number):
     else:
         cl_stderrd = 'no error'
 
-        # cl_stdoutd, cl_stderrd = Ssh.execute_command_readlines(client_node, usr, pwd, cmd)
         # time.sleep(10)
         # print cmd
-        #cl_stdoutd, cl_stderrd = Ssh.execute_command(client_node, usr, pwd, cmd)
+        cl_stdoutd, cl_stderrd = Ssh.execute_command(client_node, usr, pwd, cmd)
     # cl_stdoutd = 'ssh output for cmd: ' + str(cmd)
-        cl_stdoutd = '[  4]   0.00-10.00  sec  25.0 GBytes  100 Gbits/sec                  receiver'
+        # cl_stdoutd = '[  4]   0.00-10.00  sec  25.0 GBytes  100 Gbits/sec                  receiver'
 # Connecting to host 10.148.44.215, port 5201\
 # [  4] local 10.148.44.220 port 36765 connected to 10.148.44.215 port 5201\
 # [ ID] Interval           Transfer     Bandwidth       Retr  Cwnd\
