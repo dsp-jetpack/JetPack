@@ -218,12 +218,11 @@ class Deployer_sanity():
                                    'provisioning_mac_address','provisioning_ip',
                                     'bond1_interfaces','bond0_interfaces',
                                     'private_api_vlanid','private_ip','private_netmask',
-                                    'nova_private_vlanid','nova_private_ip','nova_private_netmask',
                                     'storage_vlanid','storage_ip','storage_netmask'
                                      ]
             for each in shouldHaveAttrbutes :
                 assert hasattr(compute, each), compute.hostname + " node has no " + each + " attribute"
-                shouldBeValidIps = ['idrac_ip','provisioning_ip','private_ip','nova_private_ip','storage_ip']
+                shouldBeValidIps = ['idrac_ip','provisioning_ip','private_ip','storage_ip']
             for each in shouldBeValidIps:
                 assert self.isValidIp(getattr(compute, each)), compute.hostname + " node " + each + " is not a valid ip"
 
@@ -231,7 +230,7 @@ class Deployer_sanity():
         # Verify Storage nodes network definition
         print "verifying storage nodes network settings"
         for storage in self.settings.ceph_nodes:
-            shouldHaveAttrbutes = [ 'hostname','is_730','idrac_ip',
+            shouldHaveAttrbutes = [ 'hostname','idrac_ip',
                                     'provisioning_mac_address','provisioning_ip',
                                     'bond1_interfaces','bond0_interfaces',
                                     'storage_cluster_vlanid','storage_cluster_ip','storage_cluster_netmask',
