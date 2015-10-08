@@ -49,8 +49,14 @@ API_NM=255.255.255.0
 STORAGE_IP=192.168.170.${FOURTH}
 STORAGE_NM=255.255.255.0
 
-echo "hammer host set-parameter --host-id  $HOST_ID --name bonds --value '( [bond0]=\"onboot none\" [bond0.170]=\"onboot static vlan ${STORAGE_IP}/${STORAGE_NM}\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot none\" [bond1.191]=\"onboot none vlan\" [bond1.190]=\"onboot static vlan ${PUBLIC_IP}/${PUBLIC_NM}\" )'"
-hammer host set-parameter --host-id  $HOST_ID --name bonds --value "( [bond0]=\"onboot none\" [bond0.170]=\"onboot static vlan ${STORAGE_IP}/${STORAGE_NM}\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot none\" [bond1.191]=\"onboot none vlan\" [bond1.190]=\"onboot static vlan ${PUBLIC_IP}/${PUBLIC_NM}\" )"
+if [[ $EXTERNAL_TENANT_VLAN =~ ^bond[0-9]+\..+$ ]]; then 
+    echo "hammer host set-parameter --host-id  $HOST_ID --name bonds --value '( [bond0]=\"onboot none\" [bond0.170]=\"onboot static vlan ${STORAGE_IP}/${STORAGE_NM}\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot none\" [${EXTERNAL_TENANT_VLAN}]=\"onboot none vlan\" [bond1.190]=\"onboot static vlan ${PUBLIC_IP}/${PUBLIC_NM}\" )'"
+    hammer host set-parameter --host-id  $HOST_ID --name bonds --value "( [bond0]=\"onboot none\" [bond0.170]=\"onboot static vlan ${STORAGE_IP}/${STORAGE_NM}\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot none\" [${EXTERNAL_TENANT_VLAN}]=\"onboot none vlan\" [bond1.190]=\"onboot static vlan ${PUBLIC_IP}/${PUBLIC_NM}\" )"
+else
+    echo "hammer host set-parameter --host-id  $HOST_ID --name bonds --value '( [bond0]=\"onboot none\" [bond0.170]=\"onboot static vlan ${STORAGE_IP}/${STORAGE_NM}\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot static ${PUBLIC_IP}/${PUBLIC_NM}\" )'"
+    hammer host set-parameter --host-id  $HOST_ID --name bonds --value "( [bond0]=\"onboot none\" [bond0.170]=\"onboot static vlan ${STORAGE_IP}/${STORAGE_NM}\" [bond0.140]=\"onboot static vlan ${API_IP}/${API_NM}\" [bond1]=\"onboot static ${PUBLIC_IP}/${PUBLIC_NM}\" )"
+fi
+
 
 echo "hammer host set-parameter --host-id $HOST_ID --name nics --value \'( [${IDRAC_NIC}]=\"onboot static ${HEARTBEAT_IP}/${HEARTBEAT_NM}\")\'"
 hammer host set-parameter --host-id $HOST_ID --name nics --value "( [${IDRAC_NIC}]=\"onboot static ${HEARTBEAT_IP}/${HEARTBEAT_NM}\")"
