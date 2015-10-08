@@ -198,7 +198,6 @@ class Foreman():
         'hammer-configure-hostgroups.sh',
         'hammer-deploy-compute.sh',
         'hammer-deploy-controller.sh',
-        'hammer-deploy-controller-novlan-bond1.sh',
         'hammer-deploy-storage.sh',
         'hammer-configure-foreman.sh',
         'hammer-get-ids.sh',
