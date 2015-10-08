@@ -97,8 +97,9 @@ class Settings():
             self.subscription_check_retries = self.cluster_settings_map['subscription_check_retries']
         else:
             self.subscription_check_retries = 20
-        self.api_external_vlan = self.getMapValue(self.cluster_settings_map,'api_external_vlan',False)
-        self.tenant_external_vlan = self.getMapValue(self.cluster_settings_map,'tenant_external_vlan',"bond1")
+
+        self.external_tenant_vlan = self.getMapValue(self.cluster_settings_map,'external_tenant_vlan',"bond1")
+        self.libvirt_image_type = self.getMapValue(self.cluster_settings_map,'libvirt_image_type',"rgb")
 
         self.controller_bond_opts=self.cluster_settings_map['controller_bond_opts']
         self.compute_bond_opts=self.cluster_settings_map['compute_bond_opts']
