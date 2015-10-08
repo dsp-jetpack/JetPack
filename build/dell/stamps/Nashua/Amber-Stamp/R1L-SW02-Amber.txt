@@ -1,0 +1,750 @@
+! Version 9.0(2.0P1)
+! Last configuration change at Tue May 12 00:22:43 2015
+! Startup-config last updated at Sat May 30 04:19:18 2015
+!
+boot system stack-unit 0 primary system: A:
+boot system stack-unit 0 secondary system: B:
+boot system stack-unit 0 default system: A:
+!
+redundancy auto-synchronize full
+!
+hardware watchdog stack-unit 0 
+hardware watchdog stack-unit 1 
+hardware watchdog stack-unit 2 
+hardware watchdog stack-unit 3 
+hardware watchdog stack-unit 4 
+hardware watchdog stack-unit 5 
+!
+hostname MHT1R1L_SW02
+!
+
+! 
+protocol spanning-tree rstp 
+ no disable 
+! 
+vlt domain 11 
+ peer-link port-channel 11 
+ back-up destination 192.168.253.130 
+ primary-priority 8192 
+ unit-id 1 
+! 
+stack-unit 0 provision S6000
+! 
+stack-unit 0 port 0 portmode quad
+! 
+stack-unit 0 port 8 portmode quad
+! 
+stack-unit 0 port 16 portmode quad
+! 
+stack-unit 0 port 24 portmode quad
+! 
+stack-unit 0 port 36 portmode quad
+! 
+stack-unit 0 port 44 portmode quad
+! 
+stack-unit 0 port 52 portmode quad
+! 
+stack-unit 0 port 60 portmode quad
+! 
+stack-unit 0 port 76 portmode quad
+! 
+interface TenGigabitEthernet 0/0
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 20 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/1
+ no ip address
+ no shutdown
+! 
+interface TenGigabitEthernet 0/2
+ no ip address
+ no shutdown
+! 
+interface TenGigabitEthernet 0/3
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/4
+ no ip address
+ no shutdown
+! 
+interface TenGigabitEthernet 0/8
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 24 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/9
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 25 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/10
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 26 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/11
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 27 mode active 
+ no shutdown
+! 
+interface fortyGigE 0/12
+ no ip address
+ no shutdown
+! 
+interface TenGigabitEthernet 0/16
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 28 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/17
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 29 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/18
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 30 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/19
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 31 mode active 
+ no shutdown
+! 
+interface fortyGigE 0/20
+ no ip address
+ no shutdown
+! 
+interface TenGigabitEthernet 0/24
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 32 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/25
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/26
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/27
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ no shutdown
+! 
+interface fortyGigE 0/28
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/32
+ no ip address
+ no shutdown
+! 
+interface TenGigabitEthernet 0/36
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 40 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/37
+ no ip address
+ no shutdown
+! 
+interface TenGigabitEthernet 0/38
+ no ip address
+ no shutdown
+! 
+interface TenGigabitEthernet 0/39
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/40
+ no ip address
+ no shutdown
+! 
+interface TenGigabitEthernet 0/44
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 44 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/45
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 45 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/46
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 46 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/47
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 47 mode active 
+ no shutdown
+! 
+interface fortyGigE 0/48
+ no ip address
+ no shutdown
+! 
+interface TenGigabitEthernet 0/52
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 48 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/53
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 49 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/54
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 50 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/55
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 51 mode active 
+ no shutdown
+! 
+interface fortyGigE 0/56
+ no ip address
+ no shutdown
+! 
+interface TenGigabitEthernet 0/60
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 52 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/61
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/62
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/63
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ no shutdown
+! 
+interface fortyGigE 0/64
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/68
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/72
+ no ip address
+ no shutdown
+! 
+interface TenGigabitEthernet 0/76
+ description "Uplink from s55 Switch P0/50"
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 1 mode active 
+ no shutdown
+! 
+interface TenGigabitEthernet 0/77
+ no ip address
+ shutdown
+! 
+interface TenGigabitEthernet 0/78
+ no ip address
+ shutdown
+! 
+interface TenGigabitEthernet 0/79
+ no ip address
+ shutdown
+! 
+interface fortyGigE 0/80
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/84
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/88
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/92
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/96
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/100
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/104
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/108
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/112
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/116
+ no ip address
+ no shutdown
+! 
+interface fortyGigE 0/120
+ no ip address
+ shutdown
+! 
+interface fortyGigE 0/124
+ no ip address
+ shutdown
+! 
+interface ManagementEthernet 0/0
+ ip address 192.168.253.131/24
+ no shutdown
+! 
+interface ManagementEthernet 1/0
+ no shutdown
+! 
+interface ManagementEthernet 2/0
+ no shutdown
+! 
+interface ManagementEthernet 3/0
+ no shutdown
+! 
+interface ManagementEthernet 4/0
+ no shutdown
+! 
+interface ManagementEthernet 5/0
+ no shutdown
+! 
+interface Port-channel 1
+ description "Uplink from s55 Switch"
+ no ip address
+ switchport
+ vlt-peer-lag port-channel 1
+ no shutdown
+! 
+interface Port-channel 11
+ description "VLT_to_Switch 1"
+ no ip address
+ channel-member fortyGigE 0/116,124
+ no shutdown
+! 
+interface Port-channel 20
+ no ip address
+ portmode hybrid
+ switchport
+ no spanning-tree 
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 20
+ no shutdown
+! 
+interface Port-channel 21
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ channel-member TenGigabitEthernet 0/1
+ vlt-peer-lag port-channel 21
+ no shutdown
+! 
+interface Port-channel 22
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ channel-member TenGigabitEthernet 0/2
+ vlt-peer-lag port-channel 22
+ no shutdown
+! 
+interface Port-channel 23
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ channel-member TenGigabitEthernet 0/3
+ vlt-peer-lag port-channel 23
+ no shutdown
+! 
+interface Port-channel 24
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 24
+ no shutdown
+! 
+interface Port-channel 25
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 25
+ no shutdown
+! 
+interface Port-channel 26
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 26
+ no shutdown
+! 
+interface Port-channel 27
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 27
+ no shutdown
+! 
+interface Port-channel 28
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 28
+ no shutdown
+! 
+interface Port-channel 29
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 29
+ no shutdown
+! 
+interface Port-channel 30
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 30
+ no shutdown
+! 
+interface Port-channel 31
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 31
+ no shutdown
+! 
+interface Port-channel 32
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 32
+ no shutdown
+! 
+interface Port-channel 40
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 40
+ no shutdown
+! 
+interface Port-channel 41
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ channel-member TenGigabitEthernet 0/37
+ vlt-peer-lag port-channel 41
+ no shutdown
+! 
+interface Port-channel 42
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ channel-member TenGigabitEthernet 0/38
+ vlt-peer-lag port-channel 42
+ no shutdown
+! 
+interface Port-channel 43
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ channel-member TenGigabitEthernet 0/39
+ vlt-peer-lag port-channel 43
+ no shutdown
+! 
+interface Port-channel 44
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 44
+ no shutdown
+! 
+interface Port-channel 45
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 45
+ no shutdown
+! 
+interface Port-channel 46
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 46
+ no shutdown
+! 
+interface Port-channel 47
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 47
+ no shutdown
+! 
+interface Port-channel 48
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 48
+ no shutdown
+! 
+interface Port-channel 49
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 49
+ no shutdown
+! 
+interface Port-channel 50
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 50
+ no shutdown
+! 
+interface Port-channel 51
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 51
+ no shutdown
+! 
+interface Port-channel 52
+ no ip address
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 52
+ no shutdown
+! 
+interface Vlan 1
+!untagged TenGigabitEthernet 0/25-27,61-63
+!untagged Port-channel 11,20-28
+! 
+interface Vlan 110
+ description "iDrac Network"
+ no ip address
+ shutdown
+! 
+interface Vlan 120
+ description "Provisioner Network"
+ no ip address
+ tagged Port-channel 1,20
+ shutdown
+! 
+interface Vlan 140
+ description "Private API Network"
+ no ip address
+ tagged Port-channel 1,20-28
+ shutdown
+! 
+interface Vlan 170
+ description "Storage Network"
+ no ip address
+ tagged Port-channel 1,20-23
+ untagged Port-channel 29-32,44-48
+ no shutdown
+! 
+interface Vlan 180
+ description "Storage (Ceph) Network"
+ no ip address
+ tagged Port-channel 21-23
+ untagged Port-channel 49-52
+ shutdown
+! 
+interface Vlan 190
+ description "Nova-Network Public"
+ no ip address
+ tagged Port-channel 1,20
+ untagged Port-channel 41-43
+ no shutdown
+! 
+interface Vlan 201
+ description "Nova-Network Private"
+ no ip address
+ tagged Port-channel 21-28
+ shutdown
+! 
+interface Vlan 202
+ description "Nova-Network Private"
+ no ip address
+ tagged Port-channel 21-28
+ shutdown
+! 
+interface Vlan 203
+ description "Nova-Network Private"
+ no ip address
+ tagged Port-channel 21-28
+ shutdown
+! 
+interface Vlan 204
+ description "Nova-Network Private"
+ no ip address
+ tagged Port-channel 21-28
+ shutdown
+! 
+interface Vlan 205
+ description "Nova-Network Private"
+ no ip address
+ tagged Port-channel 21-28
+ shutdown
+! 
+interface Vlan 206
+ description "Nova-Network Private"
+ no ip address
+ tagged Port-channel 21-28
+ shutdown
+! 
+interface Vlan 207
+ description "Nova-Network Private"
+ no ip address
+ tagged Port-channel 21-28
+ shutdown
+! 
+interface Vlan 208
+ description "Nova-Network Private"
+ no ip address
+ tagged Port-channel 21-28
+ shutdown
+! 
+interface Vlan 209
+ description "Nova-Network Private"
+ no ip address
+ tagged Port-channel 21-28
+ shutdown
+! 
+interface Vlan 210
+ description "Nova-Network Private"
+ no ip address
+ tagged Port-channel 21-28
+ shutdown
+! 
+interface Vlan 2251
+ description "Public Network"
+ no ip address
+ tagged Port-channel 1
+ untagged Port-channel 40
+ shutdown
+!
+snmp-server community password ro 
+no ip telnet server enable
+!    
+arp learn-enable
+!
+ip ssh server enable
+! 
+protocol lldp 
+ advertise dot1-tlv port-protocol-vlan-id 
+ advertise dot3-tlv max-frame-size 
+ advertise management-tlv system-description system-name 
+ advertise med 
+!
+line console 0
+line vty 0
+line vty 1
+line vty 2
+line vty 3
+line vty 4
+line vty 5
+line vty 6
+line vty 7
+line vty 8
+line vty 9
+! 
+end

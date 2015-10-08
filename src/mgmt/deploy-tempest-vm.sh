@@ -1,4 +1,24 @@
 #! /bin/bash
+#
+# OpenStack - A set of software tools for building and managing cloud computing
+# platforms for public and private clouds.
+# Copyright (C) 2015 Dell, Inc.
+#
+# This file is part of OpenStack.
+#
+# OpenStack is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenStack is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
+#
 
 [[ ${#@} != 2 ]] && echo "This script requires two parameters, a configuration file as the first parameter and the location of the installation ISO as the second parameter." && exit
 
@@ -174,11 +194,7 @@ chvt 8
   subscription-manager repos --enable=rhel-server-rhscl-7-rpms
   subscription-manager repos --enable=rhel-7-server-optional-rpms
   subscription-manager repos --enable=rhel-7-server-extras-rpms
-	  
-  cd /tmp
-  wget https://dl.fedoraproject.org/pub/epel/7/x86_64/e/epel-release-7-5.noarch.rpm
-  ls *.rpm
-  yum -y install epel-release-7-5.noarch.rpm
+  subscription-manager repos --enable=rhel-7-server-openstack-7.0-rpms
 
   cat <<EOIP > /etc/sysconfig/iptables
 *filter
@@ -223,16 +239,25 @@ EOIP
   systemctl disable firewalld
   systemctl disable chronyd
 
-  yum -y install python-devel python-pip python-crypto.x86_64 libxslt-devel libxml2-devel libffi-devel screen
+  yum -y install screen openstack-tempest.noarch python-tempest-lib-doc.noarch
 
-  cd /root 
+  # get config script patch
+  cd /tmp
   git clone https://github.com/redhat-openstack/tempest.git
   cd tempest
   git checkout ${TempestCommit}
-  pip install -r requirements.txt
-  pip install unittest2 discover Babel pbr
-  python ./setup.py install
-  
+  # Apply patch to package install tree
+  cp -bf tools/config_tempest.py /usr/share/openstack-tempest-kilo/tools/
+  cp -bf tempest/common/api_discovery.py /usr/share/openstack-tempest-kilo/tempest/common/
+    
+  # init tempest runtime dir
+  cd /root 
+  mkdir tempest
+  cd tempest
+  /usr/share/openstack-tempest-kilo/tools/configure-tempest-directory 
+
+  # delete patch checkout
+  rm -rf /tmp/tempest
 
 
 ) 2>&1 | /usr/bin/tee -a /root/tempest-post.log
@@ -293,4 +318,3 @@ virt-install --name tempest \
   --autostart \
   --location ${location}
   }
-

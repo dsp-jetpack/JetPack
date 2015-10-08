@@ -1,4 +1,24 @@
 #! /bin/bash
+#
+# OpenStack - A set of software tools for building and managing cloud computing
+# platforms for public and private clouds.
+# Copyright (C) 2015 Dell, Inc.
+#
+# This file is part of OpenStack.
+#
+# OpenStack is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenStack is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
+#
 
 [[ ${#@} != 2 ]] && echo "This script requires two parameters, a configuration file as the first parameter and the location of the installation ISO as the second parameter." && exit
 
@@ -43,6 +63,7 @@ eula --agreed
 -NetworkManager-*
 ntp
 ntpdate
+wget
 -chrony
 system-config-firewall-base
 yum-plugin-versionlock
@@ -157,11 +178,13 @@ chvt 8
          subscription-manager attach --auto
          )
 
+  # includes CES-3314 fix 
+  (cd /etc/yum.repos.d; wget ftp://partners.redhat.com/1c5d859a/b02956b493cee5f1580ea5339a53df55/OpenStack/7.0-RHEL-7-OFI/2015-08-14.2/RH7-RHOS-7.0-OFI.repo)
+
   subscription-manager repos --disable=*
   subscription-manager repos --enable=rhel-7-server-rpms
   subscription-manager repos --enable=rhel-server-rhscl-7-rpms
-  subscription-manager repos --enable=rhel-7-server-openstack-6.0-installer-rpms
-  subscription-manager repos --enable=rhel-7-server-openstack-6.0-rpms
+  subscription-manager repos --enable=rhel-7-server-openstack-7.0-rpms
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -289,4 +312,3 @@ virt-install --name foreman \
   --autostart \
   --location ${location}
   }
-
