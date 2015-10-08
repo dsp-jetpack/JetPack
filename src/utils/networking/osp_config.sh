@@ -56,7 +56,7 @@ COMPUTE_BOND_OPTS="CHANGEME_BOND_OPTS"
 STORAGE_BOND_OPTS="CHANGEME_BOND_OPTS"
 
 # set this to your external tenant vlan for controller nodes (e.g. "bond1.191")
-EXTERNAL_TENANT_VLAN=CHANGEME_VLAN
+EXTERNAL_TENANT_VLAN="CHANGEME_VLAN"
 
 # CHANGEME: Specify your Red Hat Subscription Manager Repository pool id
 # (It's a very long apha-numeric string: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
