@@ -134,6 +134,9 @@
     rbd_spool = 'images'
     rbd_suser = 'images'
 
+    # ephemeral storage: currently supports "rbd" (shared storage like Ceph) or "default" (local compute node storage)
+    libvirt_image_type = 'rbd'
+
     # external floating ip network pool e.g. "nova" 
     def_float_pool = 'nova'
     
@@ -438,7 +441,7 @@ auth_host: <%= vip_keystone_adm %>
 glance_host: <%= vip_glance_adm %>
 libvirt_images_rbd_ceph_conf: /etc/ceph/ceph.conf
 libvirt_images_rbd_pool: volumes
-libvirt_images_type: rbd
+libvirt_images_type: <%= libvirt_image_type %>
 libvirt_inject_key: 'false'
 libvirt_inject_password: 'false'
 mysql_ca: /etc/ipa/ca.crt
