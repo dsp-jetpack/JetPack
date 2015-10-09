@@ -373,6 +373,7 @@ class Foreman():
         cmd = "sed -i 's|COMPUTE_BOND_OPTS=\".*|COMPUTE_BOND_OPTS=\\\""+self.settings.compute_bond_opts+"\\\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         cmd = "sed -i 's|STORAGE_BOND_OPTS=\".*|STORAGE_BOND_OPTS=\\\""+self.settings.storage_bond_opts+"\\\"|' " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         cmd = "sed -i 's|EXTERNAL_TENANT_VLAN=\".*|EXTERNAL_TENANT_VLAN=\\\""+self.settings.external_tenant_vlan+"\\\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
