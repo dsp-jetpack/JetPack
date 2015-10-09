@@ -707,27 +707,6 @@ if __name__ == '__main__':
 
 ### Jstream 4.0 patches 
 
-        log("=== Applying horizon patch");
-        log("=== uploading the horizon.patch")
-        for host in settings.controller_nodes:
-            localfile = settings.cloud_repo_dir + '/src/utils/networking/horizon.patch'
-            remotefile =  '/tmp/horizon.patch'
-            print localfile + " >> " + remotefile
-            Scp.put_file(host.provisioning_ip, "root", settings.nodes_root_password, localfile, remotefile)
-   
-        log("=== stop horizon service")
-        cmd = 'pcs resource disable horizon'
-        logger.info( Ssh.execute_command(settings.controller_nodes[0].provisioning_ip, "root", settings.nodes_root_password, cmd ))
-
-        log("=== Apply the horizon.patch")
-        for host in settings.controller_nodes:
-            cmd = '( cd /usr/share/openstack-dashboard;patch -p1 < /tmp/horizon.patch )'
-            logger.info( Ssh.execute_command(host.provisioning_ip, "root", settings.nodes_root_password, cmd))
-
-        log("=== start horizon service")
-        cmd = 'pcs resource enable horizon'
-        logger.info( Ssh.execute_command(settings.controller_nodes[0].provisioning_ip, "root", settings.nodes_root_password, cmd ))
-
         log("=== Applying live migration patch");
         log("=== uploading the live migration script")
         for host in settings.compute_nodes:
