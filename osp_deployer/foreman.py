@@ -102,6 +102,7 @@ class Foreman():
         if self.settings.heat_auth_key is not None:
             FileHelper.replaceExpressionTXT(file, 'heat_auth_key =.*',"heat_auth_key = '" + self.settings.heat_auth_key + "'" )
         FileHelper.replaceExpressionTXT(file, 'passwd_auto =.*',"passwd_auto = '" + self.settings.openstack_services_password + "'" )
+        FileHelper.replaceExpressionTXT(file, 'libvirt_image_type =.*',"libvirt_image_type = '" + self.settings.libvirt_image_type + "'" )
         FileHelper.replaceExpressionTXT(file, 'cluster_member_ip1 =.*',"cluster_member_ip1 = '" + self.settings.controller_nodes[0].private_ip + "'" )
         FileHelper.replaceExpressionTXT(file, 'cluster_member_name1 =.*',"cluster_member_name1 = '" + self.settings.controller_nodes[0].hostname + "'" )
         FileHelper.replaceExpressionTXT(file, 'cluster_member_ip2 =.*',"cluster_member_ip2 = '" + self.settings.controller_nodes[1].private_ip + "'" )
