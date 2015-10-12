@@ -707,6 +707,28 @@ if __name__ == '__main__':
 
 ### Jstream 4.0 patches 
 
+        log("=== Applying CINDER DELL SC patch");
+        log("=== uploading the cinder_dell_sc.patch")
+        for host in settings.controller_nodes:
+            localfile = settings.cloud_repo_dir + '/src/utils/networking/cinder_dell_sc.patch'
+            remotefile =  '/tmp/cinder_dell_sc.patch'
+            print localfile + " >> " + remotefile
+            Scp.put_file(host.provisioning_ip, "root", settings.nodes_root_password, localfile, remotefile)
+
+        log("=== stop cinder volume service")
+        cmd = 'pcs resource disable cinder-volume'
+        logger.info( Ssh.execute_command(settings.controller_nodes[0].provisioning_ip, "root", settings.nodes_root_password, cmd ))
+
+        log("=== Apply the cinder_dell_sc.patch")
+        for host in settings.controller_nodes:
+            cmd = '( cd /usr/lib/python2.7/site-packages;patch -p1 < /tmp/cinder_dell_sc.patch )'
+            logger.info( Ssh.execute_command(host.provisioning_ip, "root", settings.nodes_root_password, cmd))
+
+        log("=== start cinder-volume service")
+        cmd = 'pcs resource enable cinder-volume'
+        logger.info( Ssh.execute_command(settings.controller_nodes[0].provisioning_ip, "root", settings.nodes_root_password, cmd ))
+
+
         log("=== Applying live migration patch");
         log("=== uploading the live migration script")
         for host in settings.compute_nodes:
