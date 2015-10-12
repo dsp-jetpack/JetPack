@@ -54,6 +54,21 @@ parameter_defaults:
   # Note: Use a range which will leave room for floating IPs
   ExternalAllocationPools: [{'start': '192.168.190.20', 'end': '192.168.190.120'}]
 
+  # CHANGEME: Set to the router gateway on the external network
+  ExternalInterfaceDefaultRoute: 192.168.190.1
+
+  # CHANGEME: Set to the router gateway on the provisioning network (or Undercloud IP)
+  ControlPlaneDefaultRoute: 192.168.120.123
+
+  # CHANGEME: Set to the CIDR of the control plane network
+  ControlPlaneSubnetCidr: "24"
+
+  # CHANGEME: Set to the IP address of the Undercloud
+  EC2MetadataIp: 192.168.120.123
+
+  # CHANGEME: Set to the DNS servers to use for the overcloud nodes (maximum 2)
+  DnsServers: ["8.8.8.8", "8.8.4.4."]
+
   # CHANGEME: Change the following to the VLAN ID to use on the
   # Private API network
   InternalApiNetworkVlanID: 140
@@ -69,9 +84,6 @@ parameter_defaults:
   # CHANGEME: Change the following to the VLAN ID to use on the
   # External network
   ExternalNetworkVlanID: 190
-
-  # CHANGEME: Set to the router gateway on the external network
-  ExternalInterfaceDefaultRoute: 192.168.190.1
 
   # CHANGEME: The follow sets the bonding mode to LACP for all nodes.
   #
