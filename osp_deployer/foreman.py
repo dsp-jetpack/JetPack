@@ -679,7 +679,7 @@ class Foreman():
 
     def check_resources(self,settings):
         stopped = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep Stop")
-        num_services = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep ' Resources configured'")
+        num_services = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep -i ' resources configured'")
         logger.info(num_services[0].rstrip())
         logger.info("Resources currently stopped: %d" % stopped[0].count('Stop'))
         return "Stop" not in stopped[0] and "131" in num_services[0]
