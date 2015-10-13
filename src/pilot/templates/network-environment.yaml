@@ -8,12 +8,21 @@ resource_registry:
   OS::TripleO::Network::StorageMgmt: HOME/pilot/templates/overcloud/network/storage_mgmt.yaml
   OS::TripleO::Network::Storage: HOME/pilot/templates/overcloud/network/storage.yaml
 
+  # Port assignments for the VIPs
+  OS::TripleO::Network::Ports::ExternalVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
+  OS::TripleO::Network::Ports::InternalApiVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
+  OS::TripleO::Network::Ports::StorageVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
+  OS::TripleO::Network::Ports::StorageMgmtVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
+  OS::TripleO::Network::Ports::RedisVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
+
+  # Port assignments for service virtual IPs for the controller role
+  OS::TripleO::Controller::Ports::RedisVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
+
   # Port assignments for the controller role
   OS::TripleO::Controller::Ports::ExternalPort: HOME/pilot/templates/overcloud/network/ports/external.yaml
   OS::TripleO::Controller::Ports::InternalApiPort: HOME/pilot/templates/overcloud/network/ports/internal_api.yaml
   OS::TripleO::Controller::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage.yaml
-  OS::TripleO::Controller::Ports::RedisVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
-
+  OS::TripleO::Controller::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
 
   # Port assignments for the compute role
   OS::TripleO::Compute::Ports::InternalApiPort: HOME/pilot/templates/overcloud/network/ports/internal_api.yaml
