@@ -200,7 +200,7 @@ create_the_networks(){
   if [ "$ext_net_exists" != "$EXTERNAL_NETWORK_NAME" ]
   then
     execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external --shared"
-    execute_command "neutron subnet-create --name $EXTERNAL_SUBNET_NAME --allocation-pool start=$STARTIP,end=$ENDIP --gateway GATEWAY_IP --disable-dhcp $EXTERNAL_NETWORK_NAME $EXTERNAL_VLAN_NETWORK"  
+    execute_command "neutron subnet-create --name $EXTERNAL_SUBNET_NAME --allocation-pool start=$STARTIP,end=$ENDIP --gateway $GATEWAY_IP --disable-dhcp $EXTERNAL_NETWORK_NAME $EXTERNAL_VLAN_NETWORK"  
   else
     info "#----- External network '$EXTERNAL_NETWORK_NAME' exists. Skipping"
   fi
