@@ -12,7 +12,7 @@ resource_registry:
   OS::TripleO::Network::Ports::ExternalVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
   OS::TripleO::Network::Ports::InternalApiVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
   OS::TripleO::Network::Ports::StorageVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
-  OS::TripleO::Network::Ports::StorageMgmtVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
+  OS::TripleO::Network::Ports::StorageMgmtVipPort: HOME/pilot/templates/overcloud/network/ports/ctlplane_vip.yaml
   OS::TripleO::Network::Ports::RedisVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
 
   # Port assignments for service virtual IPs for the controller role
@@ -108,4 +108,31 @@ parameter_defaults:
   # CHANGEME: Set to empty string for External VLAN, br-ex if on native VLAN of br-ex
   NeutronExternalNetworkBridge: "''"
   ServiceNetMap:
-    SwiftMgmtNetwork: storage
+    NeutronTenantNetwork: tenant
+    CeilometerApiNetwork: internal_api
+    MongoDbNetwork: internal_api
+    CinderApiNetwork: internal_api
+    CinderIscsiNetwork: storage
+    GlanceApiNetwork: storage
+    GlanceRegistryNetwork: internal_api
+    KeystoneAdminApiNetwork: ctlplane # Admin connection for Undercloud
+    KeystonePublicApiNetwork: internal_api
+    NeutronApiNetwork: internal_api
+    HeatApiNetwork: internal_api
+    NovaApiNetwork: internal_api
+    NovaMetadataNetwork: internal_api
+    NovaVncProxyNetwork: internal_api
+    SwiftMgmtNetwork: storage # Changed from storage_mgmt
+    SwiftProxyNetwork: storage
+    HorizonNetwork: internal_api
+    MemcachedNetwork: internal_api
+    RabbitMqNetwork: internal_api
+    RedisNetwork: internal_api
+    MysqlNetwork: internal_api
+    CephClusterNetwork: storage # Changed from storage_mgmt
+    CephPublicNetwork: storage
+    ControllerHostnameResolveNetwork: internal_api
+    ComputeHostnameResolveNetwork: internal_api
+    BlockStorageHostnameResolveNetwork: internal_api
+    ObjectStorageHostnameResolveNetwork: internal_api
+    CephStorageHostnameResolveNetwork: storage
