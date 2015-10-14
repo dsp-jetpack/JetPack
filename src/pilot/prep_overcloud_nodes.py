@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import argparse
+import json
 import os
 from ironicclient import client
 from subprocess import check_output
@@ -32,15 +33,20 @@ def get_creds():
   os_password = check_output(['sudo', 'hiera', 'admin_password']).strip()
 
 
+def find_password(ip):
+  for node in nodes:
+    if node["pm_addr"] == ip:
+      return node["pm_password"]
+
+
 def main():
-
-  parser = argparse.ArgumentParser()
-  parser.add_argument("-p", dest="password",
-    required=True, help="The password of the iDRACs")
-
-  args = parser.parse_args()
-
   get_creds()
+
+  instackenv_file = open(os.environ['HOME']+ '/instackenv.json', 'r')
+  instackenv = json.load(instackenv_file)
+
+  global nodes
+  nodes = instackenv["nodes"]
 
   kwargs = {'os_username': os_username,
             'os_password': os_password,
@@ -51,7 +57,7 @@ def main():
   for node in ironic.node.list(detail=True):
     ip = node.driver_info["drac_host"]
     username = node.driver_info["drac_username"]
-    password = args.password
+    password = find_password(ip)
 
     # Power off the node
     cmd="ipmitool -H {} -I lanplus -U {} -P '{}' chassis power off".format(
