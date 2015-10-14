@@ -1,49 +1,67 @@
 #!/usr/bin/python
 
 import argparse
-import netaddr
 import os
-import sys
+from ironicclient import client
+from subprocess import check_output
+
+
+def get_creds():
+  global os_username
+  global os_password
+  global os_auth_url
+  global os_tenant_name
+
+  creds_file = open(os.environ['HOME']+ '/stackrc', 'r')
+
+  for line in creds_file:
+    prefix = "export"
+    if line.startswith(prefix):
+        line=line[len(prefix):]
+
+    line = line.strip()
+    key, val = line.split('=',2)
+    key = key.lower()
+
+    if key == 'os_username':
+      os_username = val
+    elif key == 'os_auth_url':
+      os_auth_url = val
+    elif key == 'os_tenant_name':
+      os_tenant_name = val
+  os_password = check_output(['sudo', 'hiera', 'admin_password']).strip()
 
 
 def main():
 
   parser = argparse.ArgumentParser()
-  parser.add_argument("-u", dest="user",
-    required=True, help="The user ID of the iDRAC")
   parser.add_argument("-p", dest="password",
-    required=True, help="The password of the iDRAC nodes")
-  parser.add_argument("-r", dest="ip_range",
-    required=True, help="The IP address range of the iDRACs in 1.2.3.4-5.6.7.8 format")
+    required=True, help="The password of the iDRACs")
+
   args = parser.parse_args()
 
-  if args.ip_range.find("-") == -1:
-    print "Error: IP range must be in the format of <start_ip>-<end_ip>"
-    sys.exit(1)
+  get_creds()
 
-  start_ip_str, end_ip_str = args.ip_range.split("-",2)
-  if not netaddr.valid_ipv4(start_ip_str):
-    print "Error: The starting IP is invalid"
-    sys.exit(1)
+  kwargs = {'os_username': os_username,
+            'os_password': os_password,
+            'os_auth_url': os_auth_url,
+            'os_tenant_name': os_tenant_name}
+  ironic = client.get_client(1, **kwargs)
 
-  if not netaddr.valid_ipv4(end_ip_str):
-    print "Error: The ending IP is invalid"
-    sys.exit(1)
+  for node in ironic.node.list(detail=True):
+    ip = node.driver_info["drac_host"]
+    username = node.driver_info["drac_username"]
+    password = args.password
 
-  for current_ip in netaddr.IPRange(start_ip_str, end_ip_str):
     # Power off the node
     cmd="ipmitool -H {} -I lanplus -U {} -P '{}' chassis power off".format(
-      str(current_ip),
-      args.user,
-      args.password)
+      ip, username, password)
     print cmd
     os.system(cmd)
 
     # Set the first boot device to PXE
     cmd="ipmitool -H {} -I lanplus -U {} -P '{}' chassis bootdev pxe options=persistent".format(
-      str(current_ip),
-      args.user,
-      args.password)
+      ip, username, password)
     print cmd
     os.system(cmd)
 
