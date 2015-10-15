@@ -179,7 +179,7 @@ chvt 8
          )
 
   # includes CES-3314 fix 
-  (cd /etc/yum.repos.d; wget ftp://partners.redhat.com/1c5d859a/b02956b493cee5f1580ea5339a53df55/OpenStack/7.0-RHEL-7-OFI/2015-10-01.1/RH7-RHOS-7.0-OFI.repo)
+  (cd /etc/yum.repos.d; wget ftp://partners.redhat.com/1c5d859a/b02956b493cee5f1580ea5339a53df55/OpenStack/7.0-RHEL-7-OFI/2015-10-15.1/RH7-RHOS-7.0-OFI.repo) 
 
   subscription-manager repos --disable=*
   subscription-manager repos --enable=rhel-7-server-rpms
