@@ -682,7 +682,7 @@ class Foreman():
         num_services = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep -i ' resources configured'")
         logger.info(num_services[0].rstrip())
         logger.info("Resources currently stopped: %d" % stopped[0].count('Stop'))
-        return "Stop" not in stopped[0] and "131" in num_services[0]
+        return "Stop" not in stopped[0] and settings.num_osp_services in num_services[0]
 
 
     def pcs_cleanup(self,settings) :
