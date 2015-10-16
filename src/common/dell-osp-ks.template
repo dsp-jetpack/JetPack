@@ -116,6 +116,39 @@ COMMIT
 EOF
 }
 
+cat <<EOF > /sbin/ifup-local
+#!/bin/bash
+
+if [ -n "\$1" ]
+then
+  IFACE="\$1"
+
+  # If interface is a bond
+  if [[ \$IFACE =~ ^bond[0-9]+$ ]]
+  then
+    # Do whatever you need for the bond here
+    # example below
+    #/sbin/ethtool -K $IFACE gso off
+
+    # Now deal with slaves
+    # Pull out slave interface names from /proc/net/bonding/bondX
+    SLAVES=\$(/bin/grep -oP "Slave Interface: \K([a-z0-9]+[0-9])" /proc/net/bonding/\$IFACE)
+    for SLAVE in \$SLAVES
+    do
+      # Do whatever you need with the slave here
+      # example below
+      /sbin/ethtool -K \$SLAVE lro off
+    done
+
+  else
+    # Do whatever you need for a physical interface here
+    # example below
+    /sbin/ethtool -K \$IFACE lro off    
+  fi
+fi
+EOF
+chmod +x /sbin/ifup-local
+
 # update all the base packages from the updates repository
 yum -t -y -e 0 update
 yum list "*puppet*"
