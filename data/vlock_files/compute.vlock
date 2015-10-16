@@ -1,5 +1,5 @@
 
-# Added locks on Mon Oct 12 19:43:13 2015
+# Added locks on Fri Oct 16 01:12:08 2015
 0:cryptsetup-libs-1.6.6-3.el7.*
 0:iptables-1.4.21-13.el7.*
 0:wget-1.14-10.el7_0.1.*
@@ -15,7 +15,6 @@
 0:perl-Filter-1.49-3.el7.*
 0:nss-sysinit-3.19.1-5.el7_1.*
 0:python-decorator-3.4.0-3.el7.*
-0:openstack-nova-compute-2015.1.1-1.el7ost.*
 0:iwl6000-firmware-9.221.4.1-36.el7.*
 0:python-backports-ssl_match_hostname-3.4.0.2-4.el7.*
 0:python-ecdsa-0.11-3.el7ost.*
@@ -99,7 +98,7 @@
 0:mtools-4.0.18-5.el7.*
 0:dbus-python-1.1.1-9.el7.*
 0:python-pycadf-0.8.0-1.el7ost.*
-0:python-oslo-vmware-0.11.1-1.el7ost.*
+0:flac-libs-1.3.0-5.el7_1.*
 0:python-paste-deploy-1.5.0-10.el7ost.*
 0:libselinux-utils-2.2.2-6.el7.*
 14:libpcap-1.5.3-4.el7_1.2.*
@@ -110,7 +109,6 @@
 0:m2crypto-0.21.1-15.el7.*
 0:procps-ng-3.3.10-3.el7.*
 0:perl-URI-1.60-9.el7.*
-0:python-nova-2015.1.1-1.el7ost.*
 0:python-eventlet-0.17.4-1.el7ost.*
 0:libtalloc-2.1.1-1.el7.*
 0:libref_array-0.1.4-24.el7.*
@@ -219,6 +217,7 @@
 0:python-kitchen-1.1.1-5.el7.*
 0:sqlite-3.7.17-6.el7_1.1.*
 0:tuned-2.4.1-1.el7.*
+0:openstack-neutron-ml2-2015.1.1-7.el7ost.*
 0:librdmacm-1.0.19.1-1.el7.*
 0:libXtst-1.2.2-2.1.el7.*
 0:libteam-1.15-1.el7.*
@@ -236,6 +235,7 @@
 0:python-msgpack-0.4.6-1.el7ost.*
 0:perl-HTTP-Date-6.02-8.el7.*
 1:quota-nls-4.01-11.el7.*
+0:openstack-nova-common-2015.1.1-3.el7ost.*
 0:libxslt-python-1.1.28-5.el7.*
 0:bridge-utils-1.5-9.el7.*
 0:tcp_wrappers-7.6-77.el7.*
@@ -252,12 +252,13 @@
 0:patch-2.7.1-8.el7.*
 0:libpciaccess-0.13.1-4.1.el7.*
 0:python-mako-0.8.1-2.el7.*
+0:openstack-neutron-openvswitch-2015.1.1-7.el7ost.*
 1:nfs-utils-1.3.0-0.8.el7.*
 0:perl-Net-SSLeay-1.55-3.el7.*
+0:spice-server-0.12.4-9.el7_1.3.*
 0:pulseaudio-libs-3.0-30.el7.*
 0:bc-1.06.95-13.el7.*
 0:iwl135-firmware-18.168.6.1-36.el7.*
-0:python-neutron-2015.1.1-6.el7ost.*
 0:iwl5000-firmware-8.83.5.1_1-36.el7.*
 0:libss-1.42.9-7.el7.*
 0:rhn-setup-2.0.2-6.el7.*
@@ -271,7 +272,6 @@
 0:libasyncns-0.8-7.el7.*
 0:hdparm-9.43-5.el7.*
 0:python-jsonpath-rw-1.2.3-2.el7ost.*
-0:openstack-neutron-common-2015.1.1-6.el7ost.*
 0:ipmitool-1.8.13-8.el7_1.*
 32:bind-license-9.9.4-18.el7_1.5.*
 0:python-memcached-1.48-4.el7.*
@@ -316,6 +316,7 @@
 0:ghostscript-9.07-18.el7.*
 0:pinentry-0.8.1-14.el7.*
 2:python-oslo-config-1.9.3-1.el7ost.*
+0:python-nova-2015.1.1-3.el7ost.*
 0:libblkid-2.23.2-22.el7_1.1.*
 0:libseccomp-2.1.1-2.el7.*
 0:python-werkzeug-0.9.1-1.el7.*
@@ -325,7 +326,6 @@
 0:libnl3-3.2.21-8.el7.*
 2:vim-minimal-7.4.160-1.el7.*
 0:elfutils-libs-0.160-1.el7.*
-0:openstack-neutron-2015.1.1-6.el7ost.*
 0:radvd-1.9.2-7.el7.*
 0:python-amqp-1.4.6-1.el7ost.*
 0:python-cmd2-0.6.7-5.el7ost.*
@@ -367,6 +367,7 @@
 0:cronie-1.4.11-13.el7.*
 0:nss-softokn-3.16.2.3-13.el7_1.*
 0:e2fsprogs-1.42.9-7.el7.*
+0:python-neutron-2015.1.1-7.el7ost.*
 0:yum-plugin-versionlock-1.1.31-29.el7.*
 0:redhat-lsb-core-4.1-27.el7.*
 0:python-mimeparse-0.1.4-1.el7ost.*
@@ -390,6 +391,7 @@
 1:quota-4.01-11.el7.*
 2:shadow-utils-4.1.5.1-18.el7.*
 0:cronie-anacron-1.4.11-13.el7.*
+0:openstack-nova-compute-2015.1.1-3.el7ost.*
 0:libXfont-1.4.7-3.el7_1.*
 0:numactl-libs-2.0.9-5.el7_1.*
 0:pygobject2-2.28.6-11.el7.*
@@ -413,7 +415,6 @@
 0:perl-Compress-Raw-Bzip2-2.061-3.el7.*
 0:yajl-2.0.4-4.el7.*
 0:glibc-common-2.17-78.el7.*
-0:openstack-neutron-openvswitch-2015.1.1-6.el7ost.*
 0:python-openvswitch-2.3.2-1.git20150730.el7_1.*
 1:dbus-libs-1.6.12-11.el7.*
 0:bzip2-libs-1.0.6-12.el7.*
@@ -438,7 +439,6 @@
 0:pam-1.1.8-12.el7_1.1.*
 0:attr-2.4.46-12.el7.*
 0:libnl3-cli-3.2.21-8.el7.*
-0:openstack-nova-common-2015.1.1-1.el7ost.*
 0:python-jsonpointer-1.0-2.el7.*
 0:yum-3.4.3-125.el7.*
 0:python-backports-1.0-8.el7.*
@@ -561,9 +561,9 @@
 0:redhat-lsb-submod-security-4.1-27.el7.*
 0:polkit-0.112-5.el7.*
 0:python-oslo-i18n-1.5.0-3.el7ost.*
-0:spice-server-0.12.4-9.el7_1.1.*
 0:os-prober-1.58-5.el7.*
 0:hostname-3.13-3.el7.*
+0:openstack-neutron-2015.1.1-7.el7ost.*
 0:binutils-2.23.52.0.1-30.el7_1.2.*
 0:which-2.20-7.el7.*
 0:libgomp-4.8.3-9.el7.*
@@ -595,6 +595,7 @@
 0:perl-Storable-2.45-3.el7.*
 0:libassuan-2.1.0-3.el7.*
 0:gobject-introspection-1.36.0-4.el7.*
+0:openstack-neutron-common-2015.1.1-7.el7ost.*
 32:bind-libs-lite-9.9.4-18.el7_1.5.*
 0:OpenIPMI-modalias-2.0.19-11.el7.*
 0:rubygems-2.0.14-25.el7_1.*
@@ -620,7 +621,7 @@
 0:libmnl-1.0.3-7.el7.*
 0:libICE-1.0.8-7.el7.*
 0:perl-Pod-Perldoc-3.20-4.el7.*
-0:flac-libs-1.3.0-5.el7_1.*
+0:python-oslo-vmware-0.11.1-1.el7ost.*
 0:python-rfc3986-0.2.0-1.el7ost.*
 0:kbd-misc-1.15.5-11.el7.*
 0:iwl6000g2b-firmware-17.168.5.2-36.el7.*
@@ -647,7 +648,6 @@
 0:libbasicobjects-0.1.1-24.el7.*
 0:tzdata-2015g-1.el7.*
 0:libusal-1.1.11-22.el7.*
-0:openstack-neutron-ml2-2015.1.1-6.el7ost.*
 0:perl-LWP-MediaTypes-6.02-2.el7.*
 0:pixman-0.32.4-3.el7.*
 0:gnutls-3.3.8-12.el7_1.1.*
