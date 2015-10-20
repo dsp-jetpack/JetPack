@@ -100,6 +100,7 @@ class Settings():
 
         self.external_tenant_vlan = self.getMapValue(self.cluster_settings_map,'external_tenant_vlan',"bond1")
         self.libvirt_image_type = self.getMapValue(self.cluster_settings_map,'libvirt_image_type',"rbd")
+        self.num_osp_services = self.getMapValue(self.cluster_settings_map,'num_osp_services',"130")
 
         self.controller_bond_opts=self.cluster_settings_map['controller_bond_opts']
         self.compute_bond_opts=self.cluster_settings_map['compute_bond_opts']
