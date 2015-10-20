@@ -72,14 +72,12 @@ fi
 pcs resource disable haproxy
 sleep 1
 
-EXISTING_LINE=`cat /usr/lib/systemd/system/haproxy.service | grep radosgw.cfg`
-if [ ! "$EXISTING_LINE" ]
+if [ ! -e /etc/systemd/system/haproxy.service ]
 then
-  #Add radosgw to HA Proxy serivce 
-  systemctl stop haproxy
-  echo `systemctl status haproxy` > /tmp/haproxy.status
-  sed -i 's/haproxy.cfg/haproxy.cfg -f \/etc\/haproxy\/radosgw.cfg/' /usr/lib/systemd/system/haproxy.service
+  #Add radosgw to HA Proxy serivce
+  sed 's/haproxy.cfg/haproxy.cfg -f \/etc\/haproxy\/radosgw.cfg/' /usr/lib/systemd/system/haproxy.service > /etc/systemd/system/haproxy.service
   systemctl daemon-reload
+  systemctl restart haproxy
 fi
 
 
