@@ -102,6 +102,7 @@ class Foreman():
         if self.settings.heat_auth_key is not None:
             FileHelper.replaceExpressionTXT(file, 'heat_auth_key =.*',"heat_auth_key = '" + self.settings.heat_auth_key + "'" )
         FileHelper.replaceExpressionTXT(file, 'passwd_auto =.*',"passwd_auto = '" + self.settings.openstack_services_password + "'" )
+        FileHelper.replaceExpressionTXT(file, 'libvirt_image_type =.*',"libvirt_image_type = '" + self.settings.libvirt_image_type + "'" )
         FileHelper.replaceExpressionTXT(file, 'cluster_member_ip1 =.*',"cluster_member_ip1 = '" + self.settings.controller_nodes[0].private_ip + "'" )
         FileHelper.replaceExpressionTXT(file, 'cluster_member_name1 =.*',"cluster_member_name1 = '" + self.settings.controller_nodes[0].hostname + "'" )
         FileHelper.replaceExpressionTXT(file, 'cluster_member_ip2 =.*',"cluster_member_ip2 = '" + self.settings.controller_nodes[1].private_ip + "'" )
@@ -179,7 +180,7 @@ class Foreman():
         FileHelper.replaceExpressionTXT(file, 'c_ceph_public_network = .*',"c_ceph_public_network = '" + self.settings.storage_network + "'" )
         FileHelper.replaceExpressionTXT(file, 'node_access_iface = .*',"node_access_iface = 'bond0."+ self.settings.controller_nodes[1].private_api_vlanid +"'" )
         FileHelper.replaceExpressionTXT(file, 'net_tenant_iface = .*',"net_tenant_iface = 'bond0'" )
-        FileHelper.replaceExpressionTXT(file, 'net_l3_iface = .*',"net_l3_iface = 'bond1'" )
+        FileHelper.replaceExpressionTXT(file, 'net_l3_iface = .*',"net_l3_iface = '"+self.settings.external_tenant_vlan+"'" )
         FileHelper.replaceExpressionTXT(file, 'tenant_vlan_range = .*',"tenant_vlan_range = '" + self.settings.tenant_vlan_range +"'" )
         FileHelper.replaceExpressionTXT(file, 'vip_loadbalancer = .*',"vip_loadbalancer = '" + self.settings.vip_load_balancer_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_amqp = .*',"vip_amqp = '" + self.settings.vip_rabbitmq_private + "'" )
@@ -194,7 +195,8 @@ class Foreman():
         Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, self.settings.foreman_configuration_scripts + pilot_yamlTemp, '/root/pilot/dell-pilot.yaml.erb')
         os.remove(self.settings.foreman_configuration_scripts + pilot_yamlTemp)
 
-        hammer_scripts = ['hammer-configure-hostgroups.sh',
+        hammer_scripts = ['enable_live_migration.sh',
+        'hammer-configure-hostgroups.sh',
         'hammer-deploy-compute.sh',
         'hammer-deploy-controller.sh',
         'hammer-deploy-storage.sh',
@@ -373,6 +375,8 @@ class Foreman():
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         cmd = "sed -i 's|STORAGE_BOND_OPTS=\".*|STORAGE_BOND_OPTS=\\\""+self.settings.storage_bond_opts+"\\\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+        cmd = "sed -i 's|EXTERNAL_TENANT_VLAN=\".*|EXTERNAL_TENANT_VLAN=\\\""+self.settings.external_tenant_vlan+"\\\"|' " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
         logger.info ("executing hammer-configure-foreman")
         cmd = 'cd /root/pilot\n./hammer-configure-foreman.sh'
@@ -441,7 +445,6 @@ class Foreman():
                 UI_Manager.driver().execute_script("window.scrollTo(0, 0);")
                 save.click()
                 time.sleep(5)
-
 
 
     def configure_controller_nodes(self):
@@ -550,9 +553,6 @@ class Foreman():
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
         cmd = "sed -i 's/allow rx pool=images/allow rwx pool=images/' /usr/share/openstack-foreman-installer/puppet/modules/quickstack/manifests/ceph/config.pp"
-        print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
-
-        cmd = "sed -i \"s/enable_quotas' => false/enable_quotas' => true/\" /usr/share/openstack-foreman-installer/puppet/modules/quickstack/manifests/horizon.pp"
         print Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd)
 
         cmd = 'yum install -y rubygem-foreman_api'
@@ -679,10 +679,10 @@ class Foreman():
 
     def check_resources(self,settings):
         stopped = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep Stop")
-        num_services = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep ' Resources configured'")
+        num_services = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep -i ' resources configured'")
         logger.info(num_services[0].rstrip())
         logger.info("Resources currently stopped: %d" % stopped[0].count('Stop'))
-        return "Stop" not in stopped[0] and "131" in num_services[0]
+        return "Stop" not in stopped[0] and settings.num_osp_services in num_services[0]
 
 
     def pcs_cleanup(self,settings) :

@@ -32,6 +32,7 @@ EXTERNAL_SUBNET_NAME="external_sub"
 STARTIP="192.168.190.2"
 ENDIP="192.168.190.30"
 EXTERNAL_VLAN_NETWORK="192.168.190.0/24"
+GATEWAY_IP=192.168.190.254
 KEY_NAME="key_name"
 NOVA_INSTANCE_NAME="cirros_test"
 VOLUME_NAME="volume_test"
@@ -199,7 +200,7 @@ create_the_networks(){
   if [ "$ext_net_exists" != "$EXTERNAL_NETWORK_NAME" ]
   then
     execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external --shared"
-    execute_command "neutron subnet-create --name $EXTERNAL_SUBNET_NAME --allocation-pool start=$STARTIP,end=$ENDIP --disable-dhcp $EXTERNAL_NETWORK_NAME $EXTERNAL_VLAN_NETWORK"  
+    execute_command "neutron subnet-create --name $EXTERNAL_SUBNET_NAME --allocation-pool start=$STARTIP,end=$ENDIP --gateway $GATEWAY_IP --disable-dhcp $EXTERNAL_NETWORK_NAME $EXTERNAL_VLAN_NETWORK"  
   else
     info "#----- External network '$EXTERNAL_NETWORK_NAME' exists. Skipping"
   fi
@@ -209,10 +210,8 @@ create_the_networks(){
  
    execute_command "neutron router-list"
 
-   ext_net_id=$(neutron net-list | grep $EXTERNAL_NETWORK_NAME |  head -n 1  | awk '{print $2}')
-
-  #replace the external_net_id
-   execute_command "neutron router-gateway-set $TENANT_ROUTER_NAME $ext_net_id"
+  #Use external network name
+   execute_command "neutron router-gateway-set $TENANT_ROUTER_NAME $EXTERNAL_NETWORK_NAME"
  
 }
 

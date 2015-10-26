@@ -116,7 +116,7 @@ subscription_manager() {
 
 	subscription-manager repos --list
 
-	subscription-manager register --username dellcloudsol --password cr0wBar!
+	subscription-manager register --username $subscription_username --password $subscription_password
 
 	# the pool id out to a parameter
 	subscription-manager attach --pool=$pool_id
@@ -382,7 +382,13 @@ python_setup
 
 ### Setting up GIT ####
 
-git_setup
+### Setting up GIT ####
+if [ $external_customer = false  ]; then
+  git_setup
+else
+  info "##############Skipping GIT Setup for external customer"
+fi
+
 
 ### Setup other files
 
@@ -395,4 +401,4 @@ end
 
 info "##### Done #####"
 
-bash
+exit 1

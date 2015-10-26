@@ -1,13 +1,15 @@
 ##Change Log
 ### Layout
-Command to execute
+Command to execute automated deployment:
 
-python deployer.py -s "PATH to the Settings file"
+  cd /root/deploy-auto/osp_deployer
+  python deployer.py -s "PATH to your settings .ini file"
 
-The structure is each directory represents a site and rack designation
+Configuration files for each internal Dell stamp are in the "dell-internal" repo
+under the "dell-esg" github.  There are subdirectories there to contain the 
+configuration for each stamp.
 
-* Please add your spreadsheets for your installs
-* Please name your files
+* Please name your files in some way that designates your stamp:
 
 ** MHT_RackName.properties
 ** MHT_RackName_settings.ini
@@ -19,9 +21,7 @@ or
 
 
 
-
 #####This is a change log for the settings.ini and settings.properties file
-
 
 #####settings.ini:
 * 1.0: - Initial version.
@@ -46,10 +46,14 @@ or
 * 4.0.e - 07/13/2015 - Added mode option configuration: controller_bond_opts, compute_bond_opts, storage_bond_opts
 * 4.0.f - 07/22/2014 - Added ceph_version setting ( 1.2.3 or 1.3 are valid options)
 * 4.0.g - 07/29/2015 - Added compellent/dell_sc support: use_dell_sc_backend, etc
-* 4.0.h - 09/07/2015 - removed cirros image references from settings
-					   removed ceph iso from settings
-				       removed cygwin references in settings (except CWD)
-					   removed unused subscription_manager_pool_vm_openstack_nodes setting
+* 4.0.h - 09/07/2015 - 
+  removed cirros image references from settings
+  removed ceph iso from settings
+  removed cygwin references in settings (except CWD)
+  removed unused subscription_manager_pool_vm_openstack_nodes setting
+* 4.0.1 - 10/12/2015
+  added libvirt_image_type (substituted in the dell-pilot.yaml.erb file)
+  added external_tenant_vlan (substituted in the cloud_repo/src/utils/networking/osp_config.sh file)
 
 #####settings.properties
 * 1.0: - Initial version.
@@ -69,10 +73,4 @@ or
 * 3.0.1.b - 04/30/2015 - Remove public_ip from compute nodes
 * 3.0.1.c - 05/05/2015 - Added tempest vm properties
 * 3.0.1.d  - 05/05/2015 - New external_vlanid private_api_vlanid vlan properties on the sah to support tempest vm.
-
-
-
-
-
-
-
+* 4.0.1.a - 09/28/15 Removed is_730
