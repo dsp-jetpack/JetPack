@@ -263,7 +263,7 @@ class Ceph():
                 logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
         for host in self.settings.ceph_nodes:
-            cmd = 'cd ~/cluster;ceph-deploy calamari connect ' + host.hostname
+            cmd = 'cd ~/cluster;ceph-deploy calamari connect ' + ("" if (self.settings.ceph_version == "1.2.3") else "--master " + self.settings.ceph_node.hostname + '.' + self.settings.domain)  + ' ' + host.hostname
             logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.public_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
         # ...
