@@ -25,6 +25,9 @@
 ### This script requires execution on each compute to enable compute nodes
 ### to communicate with each other
 
+# Modify nova.conf to enable live BLOCK mirgration CES-3985
+sed -i.bak 's/^#block_migration_flag.*$/block_migration_flag=VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, VIR_MIGRATE_LIVE, VIR_MIGRATE_NON_SHARED_INC/' /etc/nova/nova.conf
+
 #Modify /etc/sysconfig/libvirtd to listen for incoming request
 sed -i.bak 's/^#LIBVIRTD_ARGS="--listen"/LIBVIRTD_ARGS="--listen"/g' /etc/sysconfig/libvirtd
 
@@ -35,6 +38,9 @@ sed -i 's/^#auth_tcp = "sasl"/auth_tcp = "none"/g' /etc/libvirt/libvirtd.conf
 
 #Restart libvirtd process
 systemctl restart libvirtd
+
+#Restart nova compute services
+systemctl restart openstack-nova-compute
 
 
 ### Open iptables ports to allow tcp pconnections for libvirtd"
