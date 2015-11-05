@@ -55,8 +55,13 @@ def main():
   ironic = client.get_client(1, **kwargs)
 
   for node in ironic.node.list(detail=True):
-    ip = node.driver_info["drac_host"]
-    username = node.driver_info["drac_username"]
+    if "drac_host" in node.driver_info:
+      ip = node.driver_info["drac_host"]
+      username = node.driver_info["drac_username"]
+    else:
+      ip = node.driver_info["ipmi_address"]
+      username = node.driver_info["ipmi_username"]
+
     password = find_password(ip)
 
     # Power off the node
