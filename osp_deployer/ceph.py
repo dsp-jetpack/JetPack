@@ -274,34 +274,37 @@ class Ceph():
         print("give time to calamari to pick up the nodes.")
         time.sleep(180)
 
-        url = self.settings.ceph_node.public_ip
-        UI_Manager.driver().get("http://" + url)
-        time.sleep(15)
-
-        username = Widget("//input[@name='username']")
-        password = Widget("//input[@name='password']")
-
-        while username.exists() is False :
-            UI_Manager.driver().get("http://" + url)
-            time.sleep(20)
-
-        username.setText("root")
-        password.setText(self.settings.ceph_node.root_password)
-
-        login = Widget("//button[@name='login']")
-        login.click()
-
-        addButton = Widget("//button[.='ADD']")
-        addButton.waitFor(20)
-        addButton.click()
-
-        time.sleep(60)
-        initialized = Widget("//div[.='Cluster Initialized.']")
-        while initialized.exists() ==  False:
-            time.sleep(5)
-            logger.info("waitinf for cluster to initialize .")
-        closeButton = Widget("//button[.='Close']")
-        closeButton.click()
+# we are no longer trying to add the nodes to calamar automatiocally - it 
+# fails unpredictably and we don't know how to fix it.
+#
+#         url = self.settings.ceph_node.public_ip
+#         UI_Manager.driver().get("http://" + url)
+#         time.sleep(15)
+# 
+#         username = Widget("//input[@name='username']")
+#         password = Widget("//input[@name='password']")
+# 
+#         while username.exists() is False :
+#             UI_Manager.driver().get("http://" + url)
+#             time.sleep(20)
+# 
+#         username.setText("root")
+#         password.setText(self.settings.ceph_node.root_password)
+# 
+#         login = Widget("//button[@name='login']")
+#         login.click()
+# 
+#         addButton = Widget("//button[.='ADD']")
+#         addButton.waitFor(20)
+#         addButton.click()
+# 
+#         time.sleep(60)
+#         initialized = Widget("//div[.='Cluster Initialized.']")
+#         while initialized.exists() ==  False:
+#             time.sleep(5)
+#             logger.info("waitinf for cluster to initialize .")
+#         closeButton = Widget("//button[.='Close']")
+#         closeButton.click()
 
 
     def grantAdminRightsToOSD(self):

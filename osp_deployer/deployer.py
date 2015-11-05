@@ -721,11 +721,6 @@ if __name__ == '__main__':
             cmd = '( chmod a+x /tmp/enable_live_migration.sh; /tmp/enable_live_migration.sh )'
             logger.info( Ssh.execute_command(host.provisioning_ip, "root", settings.nodes_root_password, cmd))
 
-        log("=== Apply the patch for nova-compute service issue")
-        for host in settings.compute_nodes:
-            cmd = '( systemctl restart openstack-nova-compute )'
-            logger.info( Ssh.execute_command(host.provisioning_ip, "root", settings.nodes_root_password, cmd))
-
         log("=== Applying Calamari patch");
         log("=== uploading the calamari.patch")
         localfile = settings.cloud_repo_dir + '/src/utils/networking/calamari.patch'
