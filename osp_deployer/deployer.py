@@ -247,6 +247,11 @@ if __name__ == '__main__':
         if ping_success not in test:
             raise AssertionError("SAH cannot ping the outside world (dns) : " + test)
 
+        log("*** Verify the SAH has KVM enabled *** ")
+        cmd = 'ls -al /dev/kvm'
+        if "No such file" in Ssh.execute_command(settings.sah_node.public_ip, "root", settings.sah_node.root_password, cmd)[1]:
+            raise AssertionError("KVM Not running on the SAH node - make sure the node has been DTK'ed/Virtualization enabled in the Bios")
+
 
         log ("=== uploading iso's to the sah node")
         Scp.put_file( settings.sah_node.public_ip, "root", settings.sah_node.root_password, settings.rhl71_iso, "/store/data/iso/RHEL7.iso")
@@ -565,7 +570,10 @@ if __name__ == '__main__':
             if each.is_compute == True :
 
                 # Compute  tests
-                log ("*** no compute only tests defined ***")
+                log("*** Verify the Compute nodes have KVM enabled *** ")
+                cmd = 'ls -al /dev/kvm'
+                if "No such file" in Ssh.execute_command(each.provisioning_ip, "root", settings.nodes_root_password,cmd)[1]:
+                    raise AssertionError("KVM Not running on" + each.hostname + "  - make sure the node has been DTK'ed/Virtualization enabled in the Bios")
 
             if each.is_storage == True :
 
