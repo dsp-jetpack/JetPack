@@ -825,7 +825,7 @@ if __name__ == '__main__':
             if ping_success not in test:
                 raise AssertionError("Tempest VM cannot ping the "+ each.hostname +" through the Private api network : " + test)
 
-        log (" that's all folks "    )
+        log (" Installtion complete! "    )
         log ("")
         if fencing_enabled :
             log (" Fencing is enabled")
@@ -835,8 +835,8 @@ if __name__ == '__main__':
         log ("")
         log ("  Some useful ip/passwords  ...")
         log ("")
-        log (" Foreman public ip       : " + settings.foreman_node.public_ip)
-        log (" Foreman admin password  : " + settings.foreman_password)
+        log ("  Foreman public ip       : " + settings.foreman_node.public_ip)
+        log ("  Foreman admin password  : " + settings.foreman_password)
         log ("")
         log ("  Horizon public ip        : " + settings.vip_horizon_public)
         log ("  Horizon admin password   : " + settings.openstack_services_password)
