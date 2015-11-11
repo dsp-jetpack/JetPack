@@ -39,7 +39,7 @@ VOLUME_NAME="volume_test"
 IMAGE_NAME="cirros"
 PROJECT_NAME="sanity"
 USER_NAME="sanity"
-PASSWORD="cr0wBar!"
+PASSWORD="sanitypass"
 EMAIL="admin@example.com"
 
 shopt -s nullglob
