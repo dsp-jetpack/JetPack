@@ -825,7 +825,7 @@ if __name__ == '__main__':
             if ping_success not in test:
                 raise AssertionError("Tempest VM cannot ping the "+ each.hostname +" through the Private api network : " + test)
 
-        log (" Installtion complete! "    )
+        log (" Installation complete! "    )
         log ("")
         if fencing_enabled :
             log (" Fencing is enabled")
