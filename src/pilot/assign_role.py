@@ -4,6 +4,8 @@ import argparse
 import os
 import sys
 
+from ahc_tools import conf
+from hardware import cmdb
 from ironicclient import client
 from oslo_config import cfg
 from subprocess import call
