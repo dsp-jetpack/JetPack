@@ -44,7 +44,7 @@ def main():
   parser.add_argument("--vlans", dest="vlan_range", required=True,
     help="The VLAN range to use for Neutron in xxx:yyy format")
   parser.add_argument("--ntp", dest="ntp_server_fqdn",
-    default="clock.redhat.com", help="The FQDN of the ntp server to use")
+    default="0.centos.pool.ntp.org", help="The FQDN of the ntp server to use")
   args = parser.parse_args()
 
   p = re.compile('\d+:\d+')
