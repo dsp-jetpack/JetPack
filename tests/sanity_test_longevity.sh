@@ -29,10 +29,10 @@ VLAN_NETWORK="192.168.201.0/24"
 VLAN_NAME="tenant_201"
 EXTERNAL_NETWORK_NAME="nova"
 EXTERNAL_SUBNET_NAME="external_sub"
-STARTIP="192.168.190.2"
-ENDIP="192.168.190.30"
-EXTERNAL_VLAN_NETWORK="192.168.190.0/24"
-GATEWAY_IP=192.168.190.254
+STARTIP="192.168.191.2"
+ENDIP="192.168.191.130"
+EXTERNAL_VLAN_NETWORK="192.168.191.0/24"
+GATEWAY_IP=192.168.191.1
 KEY_NAME="key_name"
 NOVA_INSTANCE_NAME="cirros_test"
 VOLUME_NAME="volume_test"
@@ -243,7 +243,7 @@ setup_glance(){
 setup_nova (){
  info "### Setup Nova"""
 
- NOVA_INSTANCE_NAME=$NOVA_INSTANCE_NAME-$1
+ NOVA_INSTANCE_NAME=cirros_test-$1
 
  info "creating keypair $KEY_NAME"
  if [ ! -f ./MY_KEY.pem ]; then
@@ -269,8 +269,8 @@ setup_nova (){
 setup_cinder(){
  info "### Cinder test"""
 
- VOLUME_NAME=$VOLUME_NAME-$1
- NOVA_INSTANCE_NAME=$NOVA_INSTANCE_NAME-$1
+ VOLUME_NAME=volume_test-$1
+ NOVA_INSTANCE_NAME=cirros_test-$1
  
  execute_command "cinder list"
 
