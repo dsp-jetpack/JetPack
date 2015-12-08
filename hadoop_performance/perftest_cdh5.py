@@ -51,7 +51,7 @@ def edit_file(target, new_value, file):
     output = myScp.open_remote_file(tpc_ip, file)
     
     scon = ssh()
-    scon.connect_with_user(tpc_ip, 'root', 'cr0wBar!')
+    scon.connect_with_user(tpc_ip, 'root', 'Ignition01')
     #hold the current value of the variable to build the sed string
     current_value = ''
     #go through each line of the config and find the live and commented variables
@@ -71,7 +71,25 @@ def edit_file(target, new_value, file):
 
 def c_ssh_as_root(address, command):
     scon = ssh()
-    scon.connect_with_user(address, 'root', 'cr0wBar!')
+    scon.connect_with_user(address, 'root', 'Ignition01')
+    cl_stdoutd, cl_stderrd = scon.action(command)
+    #print cl_stderrd
+    #print cl_stdoutd
+    scon.close()
+    return cl_stdoutd, cl_stderrd
+
+def c_ssh_as_root_DellCloud(address, command):
+    scon = ssh()
+    scon.connect_with_user(address, 'root', 'DellCloud')
+    cl_stdoutd, cl_stderrd = scon.action(command)
+    #print cl_stderrd
+    #print cl_stdoutd
+    scon.close()
+    return cl_stdoutd, cl_stderrd
+
+def c_ssh_as_root_ignition(address, command):
+    scon = ssh()
+    scon.connect_with_user(address, 'root', 'Ignition01')
     cl_stdoutd, cl_stderrd = scon.action(command)
     #print cl_stderrd
     #print cl_stdoutd
@@ -91,7 +109,7 @@ class ssh():
             retstr= subprocess.check_output("del %HOMEPATH%\\.ssh\\known_hosts",stderr=subprocess.STDOUT, shell=True)
         elif "linux" in os:
             retstr= subprocess.check_output("ssh-keygen -R " + address,stderr=subprocess.STDOUT, shell=True)
-        self.connect_with_user(address, 'crowbar', 'crowbar')
+        self.connect_with_user(address, 'crowbar', 'cr0wBar!')
     
     def connect_with_user(self, address, usr, pwd):
         self.address = address
@@ -130,18 +148,18 @@ def upload_results(ResultsSummary):
 
 def convert_to_utc(time):
     #print 'time: '+ str(time)
-    #log('time: '+ str(time))
+    log('time: '+ str(time))
     os_time = datetime.datetime.now()
     #print 'os time: '+str(os_time)
-    #log('os time: '+str(os_time))
+    log('os time: '+str(os_time))
     utc_time = datetime.datetime.utcnow()
     #print 'utc_time: '+str(utc_time)
-    #log('utc_time: '+str(utc_time))
+    log('utc_time: '+str(utc_time))
     diff = os_time - utc_time
-    #log('diff: ' +str(diff))
+    log('diff: ' +str(diff))
 
     time = time + diff
-    #log('time: ' + str(time))
+    log('time: ' + str(time))
     return time
 
 def check_disks(name_node_ip):
@@ -180,7 +198,7 @@ def clear_cache(name_node_ip):
     log("Clearing cache")
     #name_node_ip = '172.16.11.141'
     cmd = 'clush -w r3s1xd[1-10] "sync"'
-    cmd2 = 'clush -w r3s1xd[1-10] "echo 3> /proc/sys/vm/drop_caches"'
+    cmd2 = 'clush -w r3s1xd[1-12] "echo 3> /proc/sys/vm/drop_caches"'
     print "running " + cmd 
     syncOut, syncError = c_ssh_as_root(name_node_ip, cmd)
     #print 'syncOut' + str(syncOut)
@@ -223,7 +241,7 @@ def run_tpc_benchmark(tpc_ip, tpc_location, tpc_size):
     finishtimes = []
     job_names = []
 
-    edge_node_ip = "172.16.14.100"
+    edge_node_ip = "172.16.14.101"
     timeA = datetime.datetime.now()-datetime.timedelta(1)
     print str(timeA)
     
@@ -264,18 +282,20 @@ def run_tpc_benchmark(tpc_ip, tpc_location, tpc_size):
         ac = mapreduce.get_activity(id)
         job_type = ac.name
         #print jobIDs
-        #print str(ac.startTime)
-        #print str(ac.finishTime)
-        #log('API time details for jobID: '+str(id)+ ' ' +str(job_type))
-        #log(str(ac.startTime))
-        #log(str(ac.finishTime))
+        print str(ac.startTime)
+        print str(ac.finishTime)
+        log('API time details for jobID: '+str(id)+ ' ' +str(job_type))
+        log(str(ac.startTime))
+        log(str(ac.finishTime))
         start = datetime.datetime.strptime(ac.startTime, '%Y-%m-%dT%H:%M:%S.%fZ')
         finish = datetime.datetime.strptime(ac.finishTime, '%Y-%m-%dT%H:%M:%S.%fZ')
         
         start = convert_to_utc(start)
         finish = convert_to_utc(finish)
-        #start = start-datetime.timedelta(hours=5)
-        #finish = finish-datetime.timedelta(hours=5)
+        log(str(start))
+        log(str(finish))
+        start = start-datetime.timedelta(hours=-1)
+        finish = finish-datetime.timedelta(hours=-1)
         #log('ac.starttime: ' +str(ac.startTime))
         #log('ac.finishtime: ' + str(ac.finishTime))
         starttimes.append(start)
@@ -351,7 +371,8 @@ def get_other_cpu_stats(timestamp, host, rowCount, job_type, fileCount, fileSize
     if job_type == 'tpc':
         time_start = convert_to_utc(time_start)
         time_end = convert_to_utc(time_end)
-
+        time_start = time_start-datetime.timedelta(hours=-1)
+        time_end = time_end-datetime.timedelta(hours=-1)
 
     
     for stat in cpu_stats:
@@ -457,7 +478,7 @@ def teragen(rowNumber, folderName, edge_node_ip, teragen_params):
     add :
     Defaults:root   !requiretty
     '''
-    cmd = 'cd /opt/cloudera/parcels/CDH-5.4.2-1.cdh5.4.2.p0.2/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.6.0-mr1-cdh5.4.2.jar teragen ' + teragen_params + ' ' + str(rowNumber) +' '+ str(folderName)
+    cmd = 'cd /opt/cloudera/parcels/CDH-5.5.0-1.cdh5.5.0.p0.8/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.6.0-mr1-cdh5.5.0.jar teragen ' + teragen_params + ' ' + str(rowNumber) +' '+ str(folderName)
     print "running " + cmd 
     teregen_ip = '172.16.14.97'
     cl_stdoutd, cl_stderrd = c_ssh_as_root(teregen_ip, cmd)        
@@ -468,7 +489,7 @@ def teragen(rowNumber, folderName, edge_node_ip, teragen_params):
 def terasort(folderName, edge_node_ip, terasort_params):
     destFolder = folderName + '_Sorted'
 
-    cmd = 'cd /opt/cloudera/parcels/CDH-5.4.2-1.cdh5.4.2.p0.2/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.6.0-mr1-cdh5.4.2.jar terasort ' + terasort_params + ' '+ str(folderName) + ' ' + str(destFolder)
+    cmd = 'cd /opt/cloudera/parcels/CDH-5.5.0-1.cdh5.5.0.p0.8/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.6.0-mr1-cdh5.5.0.jar terasort ' + terasort_params + ' '+ str(folderName) + ' ' + str(destFolder)
     print "running " + cmd 
     teregen_ip = '172.16.14.97'
     cl_stdoutd, cl_stderrd = c_ssh_as_root(teregen_ip, cmd)        
@@ -508,18 +529,18 @@ def dfsioREAD(numFiles, fileSize, edge_node_ip):
     
 def rrdtoolXtract(start, end, metric, host, crowbar_admin_ip, time_offset):
     offset = time_offset*60*60
-    #start = start - offset
-    #end = end - offset
+    start = start - offset
+    end = end - offset
     #host = "172.16.2.29"
     #host = "da0-36-9f-32-73-74.dell.com"
     #log('rrd start = ' + str(start))
     #log(str(end))
     #log(str(host))
-    hostName = re.search("(.[a-z0-9]+)", host)
-    host = hostName.group(1)
+    #hostName = re.search("(.[a-z0-9]+)", host)
+    #host = hostName.group(1)
     cmd = 'rrdtool fetch /var/lib/ganglia/rrds/13g\ Performance\ Stamp/'+ str(host) + '/' + metric +'.rrd AVERAGE -s '+ str(start) +' -e ' + str(end) 
-    #log(str(cmd))
-    cl_stdoutd, cl_stderrd = c_ssh_as_root(crowbar_admin_ip, cmd)
+    log(str(cmd))
+    cl_stdoutd, cl_stderrd = c_ssh_as_root_DellCloud(crowbar_admin_ip, cmd)
     return cl_stdoutd, cl_stderrd
 
 def run_dfsio_job(fileCount, fileSize, edge_ip):
@@ -692,7 +713,7 @@ def get_ganglia_datanodesAverage(dataNodes, stat, start_epoch, end_epoch, crowba
     #crowbar_admin_ip = "172.16.2.18"
         for host in dataNodes:
 		entity = get_datanode_entityname(edge_ip, config.cluster_name, host)
-                ganglia = rrdtoolXtract(start_epoch, end_epoch, stat, entity, crowbar_admin_ip, time_offset)
+                ganglia = rrdtoolXtract(start_epoch, end_epoch, stat, entity, edge_ip, time_offset)
                 ls = ganglia[0].splitlines()
                 bytes_in = []
                 for each in ls:            
@@ -993,9 +1014,10 @@ def run_terragen_job(rowCount, edge_node_ip, teragen_params):
 
         timeB = datetime.datetime.now()+datetime.timedelta(1)+minute
         print str(timeB)
-        #edge_node_ip = "172.16.11.100"
+        print edge_node_ip
+        edge_node_ip = "172.16.14.101"
         session = ApiResource(edge_node_ip,  7180, "admin", "admin", version=6)
-
+        print session.version
         # Get the MapReduce job runtime from the job id
         cdh4 = None
         for c in session.get_all_clusters():
@@ -1075,7 +1097,7 @@ def run_terasort_job(folderName, edge_node_ip, terasort_params):
         time.sleep(30)
         timeB = datetime.datetime.now()+datetime.timedelta(0)
         print str(timeB)
-        #edge_node_ip = "172.16.11.143"
+        edge_node_ip = "172.16.14.101"
         session = ApiResource(edge_node_ip,  7180, "admin", "admin", version=6)
         print "session: " + str(session)
         # Get the MapReduce job runtime from the job id
@@ -1537,8 +1559,8 @@ def get_multi_stats(job_type, runId, visits, pages, dataNodes, cluster_name, cro
     if job_type == 'tpc':
         print job_type
         jobIDs, starttimes, finishtimes, job_names = run_tpc_benchmark(tpc_ip, config.tpc_location, config.tpc_size)
-        #log('Get_multi - starttimes: '+str(starttimes) +' endtimes: ' +str(finishtimes))
-        #jobIDs = ['job_201504081546_0163', 'job_201504081546_0164', 'job_201504081546_0165', 'job_201504081546_0166', 'job_201504081546_0167', 'job_201504081546_0168']
+        log('Get_multi - starttimes: '+str(starttimes) +' endtimes: ' +str(finishtimes))
+        #jobIDs = ['job_201511271433_0059', 'job_201511271433_0060', 'job_201511271433_0061', 'job_201511271433_0062', 'job_201511271433_0063', 'job_201511271433_0064']
     else:
         job_names =''
         jobIDs, starttimes, finishtimes = get_multi_jobIDs(job_type, edge_ip)
@@ -1838,7 +1860,7 @@ def main():
     
     log("------------[[["+str(run_id) + "]]]------------------------------")
     out1, out2 = clear_disks(clean_up_ip)
-    #print out1
+    print out1
     out1, out2 = clear_cache(clean_up_ip)
     log( "[[[ Terragen tests ]]]")
     rowCountsBatchValues = config.teragen_row_counts
@@ -2396,11 +2418,11 @@ def main():
     if config.tpc_flag == 'true':
         print 'updating config file'
         print file
-        edit_file('NUM_MAPS', num_maps, file)
-        edit_file('NUM_REDUCERS', num_reducers, file)
-        edit_file('HADOOP_USER', hadoop_user, file)
-        edit_file('HDFS_USER', hdfs_user, file)
-        edit_file('SLEEP_BETWEEN_RUNS', sleep_between_runs, file)
+        #edit_file('NUM_MAPS', num_maps, file)
+        #edit_file('NUM_REDUCERS', num_reducers, file)
+        #edit_file('HADOOP_USER', hadoop_user, file)
+        #edit_file('HDFS_USER', hdfs_user, file)
+        #edit_file('SLEEP_BETWEEN_RUNS', sleep_between_runs, file)
 
         tpc_out, jobIDs = get_multi_stats(jobtype, runId, visits, pages, dataNodes, cluster_name, crowbar_admin_ip, time_offset, datapointsToCheck)
         print jobIDs

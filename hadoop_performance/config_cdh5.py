@@ -8,23 +8,25 @@
 #    Defaults:root   !requiretty
 
 # Edge node ip address 
-edge_node_ip = "172.16.14.100"
+edge_node_ip = "172.16.14.101"
 
 #point to ganglia node
-crowbar_admin_ip = "172.16.14.100" # 
+crowbar_admin_ip = "172.16.14.101" # 
 
-time_offset = 0 #hours
+time_offset = 1 #hours
 cluster_name = "Cluster 1"
 
 hadoop_ip = "172.16.14.100"
-name_node_ip = "172.16.14.100"
+name_node_ip = "172.16.14.97"
 
 tpc_ip = "172.16.14.97"
 clean_up_ip = "172.16.14.97"
 
 #run_id = 'terasort_Nicholas_repeat test5 & mapred.child.ulimit=2GB'
-
-run_id = 'TPC kit-30TB MaxRes 1GB blocksize slowstart=0.05 map 48/reduce.max=32 maps/reduce=576/320'
+#run_id = 'TPC kit-1TB v1.3 kit 256GB RAM VMware params; map/red.max=48/48 map/red tasks=576/320= T22'
+run_id = 'TPC Kit-3TB v1.3 256GM RAM VMware params; map/red.max=48/48 map/red tasks=576/320= T24'
+#**Commenton***No Comments*******
+ 
 #run_id = 'config2_Test4_3_iv_MAX'
 #run_id = 'config1_MAX-mr2_high-perf-mr1_test2'
 #run_id = 'Config3_test4_2d_cpu_default_mem_MAx_MINUS_1'
@@ -309,12 +311,16 @@ kmeans_ganglia_stats = (#'boottime',
                          
 
 tpc_flag = 'true'
-tpc_size = '6'
-#tpc_location = '/tpc_xhs_kit/TPCx-HS_Kit_v1.2.0_external/TPCx-HS-Runtime-Suite'
-tpc_location = '/tpc_xhs_kit/tpcx-hs_kit_v1.2.0_external/TPCx-HS_Kit_v1.2.0_external/TPCx-HS-Runtime-Suite'
+tpc_size = '1'
+##tpc_location = '/tpc_xhs_kit/TPCx-HS_Kit_v1.2.0_external/TPCx-HS-Runtime-Suite'
+#tpc_location = '/tpc_xhs_kit/tpcx-hs_kit_v1.2.0_external/TPCx-HS_Kit_v1.2.0_external/TPCx-HS-Runtime-Suite'
+#tpc_location = '/TPCx-HS_Kit/TPCx-HS_Kit_v1.3.0_external/TPCx-HS-Runtime-Suite'
+tpc_location = '/TPCx-HS_Tools/TPCx-HS_Kit_v1.3.0_external/TPCx-HS-Runtime-Suite'
 tpc_file = 'Benchmark_Parameters.sh'
 NUM_MAPS = '576'
 NUM_REDUCERS = '320'
+#NUM_MAPS = '444'
+#NUM_REDUCERS = '222'
 HADOOP_USER = 'root'
 HDFS_USER='hdfs'
 SLEEP_BETWEEN_RUNS= '60'
