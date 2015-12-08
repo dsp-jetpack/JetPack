@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 #
 # OpenStack - A set of software tools for building and managing cloud
 # computing platforms for public and private clouds.
@@ -30,17 +30,17 @@ VLAN_NAME="tenant_201"
 EXTERNAL_NETWORK_NAME="nova"
 EXTERNAL_SUBNET_NAME="external_sub"
 STARTIP="192.168.191.2"
-ENDIP="192.168.191.30"
+ENDIP="192.168.191.130"
 EXTERNAL_VLAN_NETWORK="192.168.191.0/24"
-GATEWAY_IP=192.168.191.254
+GATEWAY_IP=192.168.191.1
 KEY_NAME="key_name"
 NOVA_INSTANCE_NAME="cirros_test"
 VOLUME_NAME="volume_test"
 IMAGE_NAME="cirros"
 PROJECT_NAME="sanity"
 USER_NAME="sanity"
-PASSWORD="sanitypass"
-EMAIL="admin@example.com"
+PASSWORD="cr0wBar!"
+EMAIL="ce-cloud@dell.com"
 
 shopt -s nullglob
 
@@ -243,6 +243,8 @@ setup_glance(){
 setup_nova (){
  info "### Setup Nova"""
 
+ NOVA_INSTANCE_NAME=cirros_test-$1
+
  info "creating keypair $KEY_NAME"
  if [ ! -f ./MY_KEY.pem ]; then
    file=MY_KEY.pem
@@ -257,7 +259,7 @@ setup_nova (){
 
  execute_command "nova boot --flavor 2 --key_name $KEY_NAME --image $image_id --nic net-id=$tenant_net_id $NOVA_INSTANCE_NAME"
  
- info "Waiting a min for instance to be built"
+ info "Waiting a min for instance $NOVA_INSTANCE_NAME to be built"
  sleep 1m
 
  execute_command "nova list"
@@ -266,6 +268,9 @@ setup_nova (){
 
 setup_cinder(){
  info "### Cinder test"""
+
+ VOLUME_NAME=volume_test-$1
+ NOVA_INSTANCE_NAME=cirros_test-$1
  
  execute_command "cinder list"
 
@@ -402,9 +407,11 @@ else
 
    setup_glance
 
-   setup_nova
-
-   setup_cinder
+   for i in `seq 1 10`
+   do
+        setup_nova $i
+        setup_cinder $i
+    done
 
    radosgw_test
 

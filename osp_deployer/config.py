@@ -1,3 +1,24 @@
+#!/usr/bin/env python
+
+# OpenStack - A set of software tools for building and managing cloud computing
+# platforms for public and private clouds.
+# Copyright (C) 2015 Dell, Inc.
+#
+# This file is part of OpenStack.
+#
+# OpenStack is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenStack is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
+
 import ConfigParser, json, sys
 from osp_deployer import Node_Conf
 import logging
@@ -22,12 +43,11 @@ class Settings():
             raise IOError("cluster_password setting lenght should be > 8 characters")
         self.previous_deployment_cluster_password = self.cluster_settings_map['previous_deployment_cluster_password']
         self.openstack_services_password = self.nodes_root_password
-        self.nova_public_network = self.cluster_settings_map['nova_public_network']
-        self.nova_private_network = self.cluster_settings_map['nova_private_network']
-        self.private_api_network = self.cluster_settings_map['private_api_network']
+
         self.tenant_vlan_range = self.cluster_settings_map['tenant_vlan_range']
         self.ceph_user_password = self.cluster_settings_map['ceph_user_password']
         self.ceph_admin_email = self.cluster_settings_map['ceph_admin_email']
+        self.ceph_version = self.cluster_settings_map['ceph_version']
 
         self.vip_cinder_private = self.cluster_settings_map['vip_cinder_private']
         self.vip_cinder_public = self.cluster_settings_map['vip_cinder_public']
@@ -49,6 +69,8 @@ class Settings():
         self.vip_ceilometer_private = self.cluster_settings_map['vip_ceilometer_private']
         self.vip_ceilometer_public = self.cluster_settings_map['vip_ceilometer_public']
         self.vip_ceilometer_redis = self.cluster_settings_map['vip_ceilometer_redis_public']
+        self.vip_radosgw_private = self.cluster_settings_map['vip_radosgw_private']
+        self.vip_radosgw_public = self.cluster_settings_map['vip_radosgw_public']
 
         self.vip_neutron_public = self.cluster_settings_map['vip_neutron_public']
         self.vip_neutron_private = self.cluster_settings_map['vip_neutron_private']
@@ -57,7 +79,6 @@ class Settings():
 
         self.storage_network = self.cluster_settings_map['storage_network']
         self.storage_cluster_network = self.cluster_settings_map['storage_cluster_network']
-        self.public_network = self.cluster_settings_map['public_network']
         self.provisioning_network = self.cluster_settings_map['provisioning_network']
         self.network_conf = self.cluster_settings_map['cluster_nodes_configuration_file']
         self.domain = self.cluster_settings_map['domain']
@@ -70,13 +91,17 @@ class Settings():
         self.subscription_manager_pool_sah = self.cluster_settings_map['subscription_manager_pool_sah']
         self.subscription_manager_pool_vm_rhel = self.cluster_settings_map['subscription_manager_pool_vm_rhel']
         self.subscription_manager_pool_phyical_openstack_nodes = self.cluster_settings_map['subscription_manager_pool_phyical_openstack_nodes']
-        self.subscription_manager_pool_vm_openstack_nodes = self.cluster_settings_map['subscription_manager_pool_vm_openstack_nodes']
         self.subscription_manager_vm_ceph = self.cluster_settings_map['subscription_manager_vm_ceph']
         self.subscription_manager_pool_physical_ceph = self.cluster_settings_map['subscription_manager_pool_physical_ceph']
         if 'subscription_check_retries' in self.cluster_settings_map:
             self.subscription_check_retries = self.cluster_settings_map['subscription_check_retries']
         else:
             self.subscription_check_retries = 20
+
+        self.external_tenant_vlan = self.getMapValue(self.cluster_settings_map,'external_tenant_vlan',"bond1")
+        self.libvirt_image_type = self.getMapValue(self.cluster_settings_map,'libvirt_image_type',"rbd")
+        self.num_osp_services = self.getMapValue(self.cluster_settings_map,'num_osp_services',"130")
+
         self.controller_bond_opts=self.cluster_settings_map['controller_bond_opts']
         self.compute_bond_opts=self.cluster_settings_map['compute_bond_opts']
         self.storage_bond_opts=self.cluster_settings_map['storage_bond_opts']
@@ -143,9 +168,18 @@ class Settings():
 
         self.bastion_settings_map = self.getSettingsSection("Bastion Settings")
         self.rhl71_iso = self.bastion_settings_map['rhl71_iso']
-        self.ceph_iso = self.bastion_settings_map['ceph_iso']
-        self.ciros_image = self.bastion_settings_map['ciros_image']
-        self.cygwin_installdir = self.bastion_settings_map['cygwin_installdir']
+        try:
+            self.ceph_iso = self.bastion_settings_map['ceph_iso']
+        except:
+            pass
+        try:
+            self.ciros_image = self.bastion_settings_map['ciros_image']
+        except:
+            pass
+        if sys.platform.startswith('linux'):
+            self.cygwin_installdir = 'n/a'
+        else:
+            self.cygwin_installdir = self.bastion_settings_map['cygwin_installdir']
         self.rhel_install_location = self.bastion_settings_map['rhel_install_location']
         self.sah_kickstart= self.bastion_settings_map['sah_kickstart']
         self.cloud_repo_dir = self.bastion_settings_map['cloud_repo_dir']
@@ -241,6 +275,12 @@ class Settings():
 
         Settings.settings = self
 
+    def getMapValue(self,map,name,default):
+        if name in map:
+            return map[name]
+        else:
+            return default 
+        
     def getSettingsSection(self, section):
         dictr = {}
         options = self.conf.options(section)

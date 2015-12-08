@@ -1,3 +1,24 @@
+#!/usr/bin/env python
+
+# OpenStack - A set of software tools for building and managing cloud computing
+# platforms for public and private clouds.
+# Copyright (C) 2015 Dell, Inc.
+#
+# This file is part of OpenStack.
+#
+# OpenStack is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenStack is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
+
 from osp_deployer.config import Settings
 from auto_common import Ssh, Scp,  Widget, UI_Manager, FileHelper
 import sys, logging, threading, time, shutil, os
@@ -81,6 +102,7 @@ class Foreman():
         if self.settings.heat_auth_key is not None:
             FileHelper.replaceExpressionTXT(file, 'heat_auth_key =.*',"heat_auth_key = '" + self.settings.heat_auth_key + "'" )
         FileHelper.replaceExpressionTXT(file, 'passwd_auto =.*',"passwd_auto = '" + self.settings.openstack_services_password + "'" )
+        FileHelper.replaceExpressionTXT(file, 'libvirt_image_type =.*',"libvirt_image_type = '" + self.settings.libvirt_image_type + "'" )
         FileHelper.replaceExpressionTXT(file, 'cluster_member_ip1 =.*',"cluster_member_ip1 = '" + self.settings.controller_nodes[0].private_ip + "'" )
         FileHelper.replaceExpressionTXT(file, 'cluster_member_name1 =.*',"cluster_member_name1 = '" + self.settings.controller_nodes[0].hostname + "'" )
         FileHelper.replaceExpressionTXT(file, 'cluster_member_ip2 =.*',"cluster_member_ip2 = '" + self.settings.controller_nodes[1].private_ip + "'" )
@@ -116,8 +138,8 @@ class Foreman():
         FileHelper.replaceExpressionTXT(file, 'vip_neutron_adm = .*',"vip_neutron_adm = '" + self.settings.vip_neutron_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_neutron_pub = .*',"vip_neutron_pub = '" + self.settings.vip_neutron_public + "'" )
         FileHelper.replaceExpressionTXT(file, 'c_ceph_cluster_network = .*',"c_ceph_cluster_network = '" + self.settings.storage_cluster_network + "'" )
-        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_pool_size = .*',"c_ceph_osd_pool_size = '2'" )
-        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_journal_size = .*',"c_ceph_osd_journal_size = '5000'" )
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_pool_size = .*',"c_ceph_osd_pool_size = '3'" )
+        FileHelper.replaceExpressionTXT(file, 'c_ceph_osd_journal_size = .*',"c_ceph_osd_journal_size = '10000'" )
 
         if self.settings.use_eql_backend is True:
                     FileHelper.replaceExpressionTXT(file, 'c_be_eqlx = .*',"c_be_eqlx = true" )
@@ -140,7 +162,7 @@ class Foreman():
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_iscsi_port = .*',"c_dell_sc_iscsi_port = [\"" + self.settings.c_dell_sc_iscsi_port + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_ip = .*',"c_dell_sc_san_ip = [\"" + self.settings.c_dell_sc_san_ip + '"]')
 	            FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_login = .*',"c_dell_sc_san_login = [\"" + self.settings.c_dell_sc_san_login + '"]')
-                    FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_password = .*',"c_eqlx_ch_pass = [\"" + self.settings.c_dell_sc_san_password + '"]')
+                    FileHelper.replaceExpressionTXT(file, 'c_dell_sc_san_password = .*',"c_dell_sc_san_password = [\"" + self.settings.c_dell_sc_san_password + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_ssn = .*',"c_dell_sc_ssn = [\"" + self.settings.c_dell_sc_ssn + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_server_folder = .*',"c_dell_sc_server_folder = [\"" + self.settings.c_dell_sc_server_folder + '"]')
                     FileHelper.replaceExpressionTXT(file, 'c_dell_sc_volume_folder = .*',"c_dell_sc_volume_folder = [\"" + self.settings.c_dell_sc_volume_folder + '"]')
@@ -158,12 +180,10 @@ class Foreman():
         FileHelper.replaceExpressionTXT(file, 'c_ceph_public_network = .*',"c_ceph_public_network = '" + self.settings.storage_network + "'" )
         FileHelper.replaceExpressionTXT(file, 'node_access_iface = .*',"node_access_iface = 'bond0."+ self.settings.controller_nodes[1].private_api_vlanid +"'" )
         FileHelper.replaceExpressionTXT(file, 'net_tenant_iface = .*',"net_tenant_iface = 'bond0'" )
-        FileHelper.replaceExpressionTXT(file, 'net_l3_iface = .*',"net_l3_iface = 'bond1'" )
+        FileHelper.replaceExpressionTXT(file, 'net_l3_iface = .*',"net_l3_iface = '"+self.settings.external_tenant_vlan+"'" )
         FileHelper.replaceExpressionTXT(file, 'tenant_vlan_range = .*',"tenant_vlan_range = '" + self.settings.tenant_vlan_range +"'" )
         FileHelper.replaceExpressionTXT(file, 'vip_loadbalancer = .*',"vip_loadbalancer = '" + self.settings.vip_load_balancer_private + "'" )
         FileHelper.replaceExpressionTXT(file, 'vip_amqp = .*',"vip_amqp = '" + self.settings.vip_rabbitmq_private + "'" )
-        FileHelper.replaceExpressionTXT(file, 'net_fix = .*',"net_fix = '" + self.settings.nova_private_network + "'" )
-        FileHelper.replaceExpressionTXT(file, 'net_float = .*',"net_float = '" + self.settings.nova_public_network + "'" )
         FileHelper.replaceExpressionTXT(file, 'net_priv_iface = .*',"net_priv_iface = 'bond0'" )
         FileHelper.replaceExpressionTXT(file, 'net_pub_iface = .*',"net_pub_iface = 'bond1" + "'" )
 
@@ -175,7 +195,8 @@ class Foreman():
         Scp.put_file(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, self.settings.foreman_configuration_scripts + pilot_yamlTemp, '/root/pilot/dell-pilot.yaml.erb')
         os.remove(self.settings.foreman_configuration_scripts + pilot_yamlTemp)
 
-        hammer_scripts = ['hammer-configure-hostgroups.sh',
+        hammer_scripts = ['enable_live_migration.sh',
+        'hammer-configure-hostgroups.sh',
         'hammer-deploy-compute.sh',
         'hammer-deploy-controller.sh',
         'hammer-deploy-storage.sh',
@@ -186,6 +207,8 @@ class Foreman():
         'hammer-fencing.sh',
         'common.sh',
         'osp_config.sh',
+        'radosgw_config.sh',
+        'swift_config.sh',
         'provision.sh',
         'bond.sh'
          ]
@@ -319,7 +342,6 @@ class Foreman():
         cmd = "sed -i \"s|CHANGEME_STORAGE_POOL_ID|" + self.settings.subscription_manager_pool_physical_ceph +"|\" " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
-
         cmd = "sed -i 's|CONTROLLER_PARTITION_NAME=\".*|CONTROLLER_PARTITION_NAME=\""+self.pilot_partition_table+"\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
@@ -352,6 +374,8 @@ class Foreman():
         cmd = "sed -i 's|COMPUTE_BOND_OPTS=\".*|COMPUTE_BOND_OPTS=\\\""+self.settings.compute_bond_opts+"\\\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
         cmd = "sed -i 's|STORAGE_BOND_OPTS=\".*|STORAGE_BOND_OPTS=\\\""+self.settings.storage_bond_opts+"\\\"|' " + configFile
+        logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
+        cmd = "sed -i 's|EXTERNAL_TENANT_VLAN=\".*|EXTERNAL_TENANT_VLAN=\\\""+self.settings.external_tenant_vlan+"\\\"|' " + configFile
         logger.info( Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password,cmd ))
 
         logger.info ("executing hammer-configure-foreman")
@@ -421,7 +445,6 @@ class Foreman():
                 UI_Manager.driver().execute_script("window.scrollTo(0, 0);")
                 save.click()
                 time.sleep(5)
-
 
 
     def configure_controller_nodes(self):
@@ -583,8 +606,9 @@ class Foreman():
         cmd = "/root/pilot/hammer-fencing.sh disabled"
         logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
 
-        cmd = "/root/pilot/hammer-ceph-fix.sh"
-        logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
+        if self.settings.ceph_version == "1.2.3":
+            cmd = "/root/pilot/hammer-ceph-fix.sh"
+            logger.info(Ssh.execute_command(self.settings.foreman_node.public_ip, "root", self.settings.foreman_node.root_password, cmd))
 
         controlerPuppetRuns = []
         for each in self.settings.controller_nodes:
@@ -651,3 +675,67 @@ class Foreman():
         for each in self.settings.controller_nodes:
             cmd = "rm -f /var/lib/puppet/state/agent_catalog_run.lock"
             Ssh.execute_command(each.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
+
+
+    def check_resources(self,settings):
+        stopped = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep Stop")
+        num_services = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep -i ' resources configured'")
+        logger.info(num_services[0].rstrip())
+        logger.info("Resources currently stopped: %d" % stopped[0].count('Stop'))
+        return "Stop" not in stopped[0] and settings.num_osp_services in num_services[0]
+
+
+    def pcs_cleanup(self,settings) :
+        cmd = 'pcs resource cleanup'
+        cleaned = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,cmd)
+        return "successfully cleaned up" in cleaned[0]
+
+
+    def enable_fencing(self,settings) :
+        logger.info("running puppet on controller nodes with fencing enabled")
+        cmd = "/root/pilot/hammer-fencing.sh enabled"
+        logger.info(Ssh.execute_command(settings.foreman_node.public_ip, "root", settings.foreman_node.root_password, cmd))
+        controlerPuppetRuns = []
+        for each in settings.controller_nodes:
+            puppetRunThr = runThreadedPuppet(each.hostname, each)
+            controlerPuppetRuns.append(puppetRunThr)
+        for thr in controlerPuppetRuns:
+            thr.start()
+            time.sleep(60) # ...
+        for thr in controlerPuppetRuns:
+            thr.join()
+
+
+    def check_fencing(self,settings) :
+        stonith = Ssh.execute_command(settings.controller_nodes[0].provisioning_ip,"root",settings.nodes_root_password,"pcs status | grep stonith")
+        return stonith[0].count('stonith-ipmilan') == len(settings.controller_nodes) and 'Stop' not in stonith[0]
+
+
+    def check_services_and_enable_fencing(self):
+        print("Checking services and enabling fencing")       
+        logger.info("Checking pcs resources")
+        time.sleep(60)
+        retries = 20
+        while retries > 0 and not self.check_resources(self.settings) :
+            retries -= 1
+            time.sleep(60)
+        if retries > 0 :
+            logger.info("All services up, enabling Stonith fencing...")
+            self.enable_fencing(self.settings)
+        else:
+            logger.info("Some services are not up, attempting cleanup/restart")
+            self.pcs_cleanup(self.settings)
+            time.sleep(60)
+            if self.check_resources(self.settings) :
+                self.enable_fencing(self.settings)
+            else :
+                print("Error:  Pcs resource cleanup failed!")
+                logger.error("Error: Could not clean up resources - you must manually fix resources and start fencing!!")
+        if self.check_fencing(self.settings) :
+            logger.info("Fencing enabled")
+            return True
+        else:
+            print("Error:  Fencing failed to start!!")
+            logger.error("Error: Fencing failed to start!!")
+            return False
+

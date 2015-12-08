@@ -1,3 +1,24 @@
+#!/usr/bin/env python
+
+# OpenStack - A set of software tools for building and managing cloud computing
+# platforms for public and private clouds.
+# Copyright (C) 2015 Dell, Inc.
+#
+# This file is part of OpenStack.
+#
+# OpenStack is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenStack is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
+
 import sys, getopt, time, subprocess, paramiko,logging, traceback, os.path, urllib2, shutil, socket
 from osp_deployer.foreman import Foreman
 from osp_deployer.ceph import Ceph
@@ -36,10 +57,34 @@ class Deployer_sanity():
         assert hasattr(self.settings, 'use_equalogic_backend'), self.settings.settingsFile+ " has no use_equalogic_backend setting"
         assert hasattr(self.settings, 'subscription_check_retries'), self.settings.settingsFile+ " has no subscription_check_retries setting"
         assert hasattr(self.settings, 'ceph_admin_email'), self.settings.settingsFile+ " has no ceph_admin_email setting"
+        assert hasattr(self.settings, 'ceph_version'), self.settings.settingsFile+ " has no ceph_version setting"
+
+        assert self.isValidIp(self.settings.foreman_provisioning_subnet_ip_start), self.settings.foreman_provisioning_subnet_ip_start + " is not a valid ip for setting foreman_provisioning_subnet_ip_start"
+        assert self.isValidIp(self.settings.foreman_provisioning_subnet_ip_end), self.settings.foreman_provisioning_subnet_ip_end + " is not a valid ip for setting foreman_provisioning_subnet_ip_end"
+
+        if len(self.settings.heat_auth_key) == 16 or len(self.settings.heat_auth_key) == 24 or len(self.settings.heat_auth_key) == 32:
+            pass
+        else:
+            raise AssertionError("heat_auth_key setting should be 16/24 or 32 byte long (current value :"+ self.settings.heat_auth_key + " is not valid")
 
         assert os.path.isfile(self.settings.rhl71_iso) , self.settings.rhl71_iso + "ISO doesnn't seem to exist"
-        assert os.path.isfile(self.settings.sah_kickstart) , self.settings.sah_kickstart + "kickstart file doesnn't seem to exist"
+
+        assert hasattr(self.settings, 'sah_kickstart'), self.settings.settingsFile+ " has no sah_kickstart setting"
+
+        #Since the kickstart gets copied from cloud_repo further down the deployment process, the file is not expected to be around first time you run a deployment on a new stamp
+        #the ugly bit there is the file has to be called /ks.cfg, since that value is hardcoded in the initial bastion host setup script.
+        if os.path.exists(self.settings.sah_kickstart):
+            pass
+        elif os.access(os.path.dirname(self.settings.sah_kickstart), os.W_OK) and os.path.basename(self.settings.sah_kickstart) == "ks.cfg":
+            pass
+        else:
+            raise AssertionError(self.settings.sah_kickstart  + " does not appear to be an existing/valid path/filename (check dir is correct and filename is ks.cfg)")
+
+
         assert os.path.isfile(self.settings.foreman_deploy_sh) , self.settings.foreman_deploy_sh + " script doesnn't seem to exist"
+
+        if self.settings.ceph_version == "1.2.3":
+            assert os.path.isfile(self.settings.ceph_iso), self.settings.ceph_iso + " ISO doesnn't seem to exist"
 
         hammer_scripts =['hammer-configure-hostgroups.sh',
         'hammer-deploy-compute.sh',
@@ -173,12 +218,11 @@ class Deployer_sanity():
                                    'provisioning_mac_address','provisioning_ip',
                                     'bond1_interfaces','bond0_interfaces',
                                     'private_api_vlanid','private_ip','private_netmask',
-                                    'nova_private_vlanid','nova_private_ip','nova_private_netmask',
                                     'storage_vlanid','storage_ip','storage_netmask'
                                      ]
             for each in shouldHaveAttrbutes :
                 assert hasattr(compute, each), compute.hostname + " node has no " + each + " attribute"
-                shouldBeValidIps = ['idrac_ip','provisioning_ip','private_ip','nova_private_ip','storage_ip']
+                shouldBeValidIps = ['idrac_ip','provisioning_ip','private_ip','storage_ip']
             for each in shouldBeValidIps:
                 assert self.isValidIp(getattr(compute, each)), compute.hostname + " node " + each + " is not a valid ip"
 
@@ -186,12 +230,12 @@ class Deployer_sanity():
         # Verify Storage nodes network definition
         print "verifying storage nodes network settings"
         for storage in self.settings.ceph_nodes:
-            shouldHaveAttrbutes = [ 'hostname','is_730','idrac_ip',
+            shouldHaveAttrbutes = [ 'hostname','idrac_ip',
                                     'provisioning_mac_address','provisioning_ip',
                                     'bond1_interfaces','bond0_interfaces',
                                     'storage_cluster_vlanid','storage_cluster_ip','storage_cluster_netmask',
                                     'storage_vlanid','storage_ip','storage_netmask',
-                                    'osd_disks',
+                                    'osd_disks', 'journal_disks'
                                      ]
             for each in shouldHaveAttrbutes :
                 assert hasattr(storage, each), storage.hostname + " node has no " + each + " attribute"
