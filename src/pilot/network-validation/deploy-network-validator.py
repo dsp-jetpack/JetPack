@@ -62,9 +62,15 @@ class NetValidatorDeployer(object):
 
     logger.info("Collecting SSH keys...") 
     for node in self.network_config:
-      provisioning_ip = self.network_config[node]["networks"]["provisioning"]["ip"].encode('ascii','ignore')
-      logger.info("    Retrieving SSH key from {}".format(provisioning_ip)) 
-      cmd = "ssh-keyscan -H {} >> ~/.ssh/known_hosts".format(provisioning_ip)
+      if "provisioning" in self.network_config[node]["networks"]:
+        node_ip = self.network_config[node]["networks"]["provisioning"]["ip"].encode('ascii','ignore')
+      else:
+        # This is for the Ceph VM where it does not have an IP on the
+        # provisioning network
+        node_ip = self.network_config[node]["networks"]["external"]["ip"].encode('ascii','ignore')
+
+      logger.info("    Retrieving SSH key from {}".format(node_ip))
+      cmd = "ssh-keyscan -H {} >> ~/.ssh/known_hosts".format(node_ip)
       logger.info("    {}".format(cmd)) 
       os.system(cmd)
 
@@ -73,13 +79,19 @@ class NetValidatorDeployer(object):
     for node in self.network_config:
       logger.info("Copying network validation files to {}...".format(node)) 
 
-      provisioning_ip = self.network_config[node]["networks"]["provisioning"]["ip"].encode('ascii','ignore')
+      if "provisioning" in self.network_config[node]["networks"]:
+        node_ip = self.network_config[node]["networks"]["provisioning"]["ip"].encode('ascii','ignore')
+      else:
+        # This is for the Ceph VM where it does not have an IP on the
+        # provisioning network
+        node_ip = self.network_config[node]["networks"]["external"]["ip"].encode('ascii','ignore')
+
       if "user" in self.network_config[node]:
         user_id = self.network_config[node]["user"].encode('ascii','ignore')
       else:
         user_id = os.environ['USER']
 
-      cmd = "scp -r ~/pilot/network-validation {}@{}:~".format(user_id, provisioning_ip)
+      cmd = "scp -r ~/pilot/network-validation {}@{}:~".format(user_id, node_ip)
       logger.info("    {}".format(cmd)) 
       os.system(cmd)
 
