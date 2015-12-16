@@ -10,9 +10,7 @@ then
   exit 1
 fi
 
-controller_flavor_name="controller"
-compute_flavor_name="compute"
-storage_flavor_name="storage"
+flavors="controller compute storage"
 subnet_name="ctlplane"
 
 # Create the requested flavor if it does not exist.
@@ -20,16 +18,28 @@ subnet_name="ctlplane"
 create_flavor()
 {
   flavor_name="$1"
+
+  set_properties="true"
+  if [ -n "$2" ];
+  then
+    set_properties="$2"
+  fi
+
   echo "## Creating flavor: ${flavor_name}"
 
   flavor_uuid=$(openstack flavor list | grep "${flavor_name}" | awk '{print $2}')
   if [ -z "${flavor_uuid}" ];
   then
     openstack flavor create --id auto --ram 6144 --disk 40 --vcpus 4 "${flavor_name}"
+
+    if [ "$set_properties" = "true" ];
+    then
+      echo "setting properties"
+      openstack flavor set --property "cpu_arch"="x86_64" --property "capabilities:boot_option"="local" --property "capabilities:profile"="${flavor_name}" "${flavor_name}"
+    fi
   else
     echo "Warning: Flavor ${flavor_name} already exists.  Skipping creation."
   fi
-  openstack flavor set --property "cpu_arch"="x86_64" --property "capabilities:boot_option"="local" --property "capabilities:profile"="${flavor_name}" "${flavor_name}"
 }
 
 
@@ -75,9 +85,11 @@ echo "## Done."
 
 echo
 echo "## Creating flavors..."
-create_flavor $controller_flavor_name
-create_flavor $compute_flavor_name
-create_flavor $storage_flavor_name
+for flavor in $flavors;
+do
+  create_flavor $flavor
+done
+create_flavor baremetal false
 echo "## Done."
 
 echo
@@ -87,15 +99,13 @@ neutron subnet-update "${subnet_uuid}" --dns-nameserver "${dns_ip}"
 echo "## Done."
 
 echo
-echo "## Setting up ahc-tools..."
-sudo bash -c "sed 's/\[discoverd/\[ironic/' /etc/ironic-discoverd/discoverd.conf > /etc/ahc-tools/ahc-tools.conf"
-sudo chmod 0600 /etc/ahc-tools/ahc-tools.conf
-sudo cp $HOME/pilot/ahc-tools/* /etc/ahc-tools/edeploy
+echo "## Copying heat templates..."
+cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overcloud
 echo "## Done."
 
 echo
-echo "## Copying heat templates..."
-cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overcloud
+echo "## Updating .bash_profile..."
+echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
 echo

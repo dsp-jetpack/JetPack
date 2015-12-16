@@ -183,7 +183,7 @@ EOFPW
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth3
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth4
 
-  echo "$( ip addr show dev eth0 | awk '/inet / { print $2 }' | sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
+  sed -i "s/\(127.0.0.1\s\+\)/\1${HostName} /" /etc/hosts
 
   echo "----------------------"
   ip addr
@@ -213,8 +213,8 @@ EOFPW
   subscription-manager repos --enable=rhel-7-server-rpms
   subscription-manager repos --enable=rhel-7-server-optional-rpms
   subscription-manager repos --enable=rhel-7-server-extras-rpms
-  subscription-manager repos --enable=rhel-7-server-openstack-7.0-rpms
-  subscription-manager repos --enable=rhel-7-server-openstack-7.0-director-rpms
+  subscription-manager repos --enable=rhel-7-server-openstack-8.0-rpms
+  subscription-manager repos --enable=rhel-7-server-openstack-8.0-director-rpms
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -227,15 +227,14 @@ EOFPW
   yum -y install yum-plugin-priorities
   yum -y install yum-utils
 
-  yum-config-manager --enable rhel-7-server-openstack-7.0-rpms --setopt="rhel-7-server-openstack-7.0-rpms.priority=1"
+  yum-config-manager --enable rhel-7-server-openstack-8.0-rpms --setopt="rhel-7-server-openstack-8.0-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-rpms --setopt="rhel-7-server-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-optional-rpms --setopt="rhel-7-server-optional-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-extras-rpms --setopt="rhel-7-server-extras-rpms.priority=1"
-  yum-config-manager --enable rhel-7-server-openstack-7.0-director-rpms --setopt="rhel-7-server-openstack-7.0-director-rpms.priority=1"
+  yum-config-manager --enable rhel-7-server-openstack-8.0-director-rpms --setopt="rhel-7-server-openstack-8.0-director-rpms.priority=1"
 
   yum -y update
   yum -y install python-rdomanager-oscplugin
-  yum -y install ahc-tools
 
   # Firewall rules to allow traffic for the http, https, dns, and tftp services and tcp port 8140.
   # Also accept all traffic from eth4 to pass through to eth0 and become NAT'd on the way out of eth0.
