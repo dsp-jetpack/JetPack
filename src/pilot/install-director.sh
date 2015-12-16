@@ -104,4 +104,9 @@ cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overclou
 echo "## Done."
 
 echo
+echo "## Updating .bash_profile..."
+echo "source ~/stackrc" >> ~/.bash_profile
+echo "## Done."
+
+echo
 echo "## Configuration complete!"

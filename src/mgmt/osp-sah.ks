@@ -90,7 +90,7 @@ SubscriptionManagerProxyPassword=""
 # Network configuration
 Gateway="CHANGEME e.g. 10.148.44.254"
 NameServers="CHANGEME e.g. 10.148.44.11"
-NTPServers="clock.redhat.com"
+NTPServers="0.centos.pool.ntp.org"
 TimeZone="UTC"
 
 # Installation interface configuration

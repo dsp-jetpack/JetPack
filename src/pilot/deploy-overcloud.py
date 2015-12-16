@@ -44,7 +44,9 @@ def main():
   parser.add_argument("--vlans", dest="vlan_range", required=True,
     help="The VLAN range to use for Neutron in xxx:yyy format")
   parser.add_argument("--ntp", dest="ntp_server_fqdn",
-    default="clock.redhat.com", help="The FQDN of the ntp server to use")
+    default="0.centos.pool.ntp.org", help="The FQDN of the ntp server to use")
+  parser.add_argument("--timeout",
+    default="90", help="The amount of time in minutes to allow the overcloud to deploy")
   args = parser.parse_args()
 
   p = re.compile('\d+:\d+')
@@ -55,7 +57,8 @@ def main():
   get_creds()
 
   # Launch the deployment
-  cmd="cd;openstack overcloud deploy -t 90 --templates ~/pilot/templates/overcloud -e ~/pilot/templates/network-environment.yaml -e ~/pilot/templates/overcloud/environments/storage-environment.yaml --control-scale 3 --control-flavor controller --compute-flavor compute --ceph-storage-flavor storage --swift-storage-flavor storage --block-storage-flavor storage --neutron-public-interface bond1 --neutron-network-type vlan --neutron-disable-tunneling --os-auth-url {} --os-project-name {} --os-user-id {} --os-password {} --compute-scale {} --ceph-storage-scale {} --ntp-server {} --neutron-network-vlan-ranges datacentre:{}".format(
+  cmd="cd;openstack overcloud deploy -t {} --templates ~/pilot/templates/overcloud -e ~/pilot/templates/network-environment.yaml -e ~/pilot/templates/overcloud/environments/storage-environment.yaml -e /usr/share/openstack-tripleo-heat-templates/environments/puppet-pacemaker.yaml --control-scale 3 --control-flavor controller --compute-flavor compute --ceph-storage-flavor storage --swift-storage-flavor storage --block-storage-flavor storage --neutron-public-interface bond1 --neutron-network-type vlan --neutron-disable-tunneling --os-auth-url {} --os-project-name {} --os-user-id {} --os-password {} --compute-scale {} --ceph-storage-scale {} --ntp-server {} --neutron-network-vlan-ranges datacentre:{}".format(
+    args.timeout,
     os_auth_url,
     os_tenant_name,
     os_username,

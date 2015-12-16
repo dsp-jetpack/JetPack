@@ -36,6 +36,7 @@
     }
   },
   "ceph_vm": {
+    "user": "root",
     "networks": {
       "storage": {
          "ip": "192.168.170.124"
@@ -96,7 +97,7 @@
       }
     }
   },
-  "overcloud-compute-0.localdomain": {
+  "overcloud-novacompute-0.localdomain": {
     "user": "heat-admin",
     "networks": {
       "provisioning": {
@@ -110,7 +111,7 @@
       }
     }
   },
-  "overcloud-compute-1.localdomain": {
+  "overcloud-novacompute-1.localdomain": {
     "user": "heat-admin",
     "networks": {
       "provisioning": {
@@ -124,7 +125,7 @@
       }
     }
   },
-  "overcloud-compute-2.localdomain": {
+  "overcloud-novacompute-2.localdomain": {
     "user": "heat-admin",
     "networks": {
       "provisioning": {
