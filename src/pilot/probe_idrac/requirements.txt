@@ -2,8 +2,7 @@
 # of appearance. Changing the order has an impact on the overall integration
 # process, which may cause wedges in the gate later.
 
-# lxml>=2.3
-pbr>=1.6
-# requests>=2.5.2
-# -e git+https://github.com/openstack/python-dracclient#egg=python-dracclient
-# -e git+https://github.com/openstack/python-dracclient
+lxml>=2.3
+pbr>=1.8
+requests>=2.5.2
+python-dracclient>=0.0.4
