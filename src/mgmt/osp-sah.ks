@@ -64,8 +64,10 @@ system-config-firewall-base
 %pre --log /tmp/sah-pre.log
 
 ################### CHANGEME
-# The variables that need changed for the environment are preceeded with CHANGEME 
-# Those with examples are preceeded with CHANGEME e.g. (the entire string including the example should be replaced)
+# The variables that need to be changed for the environment are preceeded with:
+# CHANGEME.
+# Those with examples are preceeded with: CHANGEME e.g.
+# (in this case, the entire string including the example should be replaced)
 
 # FQDN of server
 HostName="CHANGEME e.g. sah.example.org"
@@ -88,7 +90,7 @@ SubscriptionManagerProxyPassword=""
 # Network configuration
 Gateway="CHANGEME e.g. 10.148.44.254"
 NameServers="CHANGEME e.g. 10.148.44.11"
-NTPServers="clock.redhat.com"
+NTPServers="0.centos.pool.ntp.org"
 TimeZone="UTC"
 
 # Installation interface configuration
@@ -97,52 +99,62 @@ anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 em2 no"
 
 # Bonding and Bridge configuration. These variables are bash associative arrays and take the form of array[key]="value".
 # Specifying a key more than once will overwrite the first key. For example:
-#
+
 # Define the bonds
-# Bond1 (Public)
-public_bond_name="CHANGEME e.g. bond1"
-public_boot_opts="onboot none"
-public_bond_opts="mode=802.3ad miimon=100"
-public_ifaces="CHANGEME e.g. em2 p1p2"
-#
-# Bond0 (Private)
-private_bond_name="CHANGEME e.g. bond0"
-private_boot_opts="onboot none"
-private_bond_opts="mode=802.3ad miimon=100"
-private_ifaces="CHANGEME e.g. em1 p1p1"
-#
-# Provision
-provision_bond_name="CHANGEME e.g. bond0.120"
-provision_boot_opts="onboot none vlan"
-#
+# Bond to handle external traffic
+extern_bond_name="CHANGEME e.g. bond1"
+extern_boot_opts="onboot none"
+extern_bond_opts="mode=802.3ad miimon=100"
+extern_ifaces="CHANGEME e.g. em2 p1p2"
+
+# Bond to handle internal traffic
+internal_bond_name="CHANGEME e.g. bond0"
+internal_boot_opts="onboot none"
+internal_bond_opts="mode=802.3ad miimon=100"
+internal_ifaces="CHANGEME e.g. em1 p1p1"
+
+# Management
+mgmt_bond_name="CHANGEME e.g. bond0.110"
+mgmt_boot_opts="onboot none vlan"
+
+# Provisioning
+prov_bond_name="CHANGEME e.g. bond0.120"
+prov_boot_opts="onboot none vlan"
+
 # Storage
-storage_bond_name="CHANGEME e.g. bond0.170"
-storage_boot_opts="onboot none vlan"
-#
-# External
-external_bond_name="CHANGEME e.g. bond0.190"
-external_boot_opts="onboot none vlan"
-#
+stor_bond_name="CHANGEME e.g. bond0.170"
+stor_boot_opts="onboot none vlan"
+
+# Public API
+pub_api_bond_name="CHANGEME e.g. bond0.190"
+pub_api_boot_opts="onboot none vlan"
+
 # Private API
-private_api_bond_name="CHANGEME e.g. bond0.140"
-private_api_boot_opts="onboot none vlan"
-#
+priv_api_bond_name="CHANGEME e.g. bond0.140"
+priv_api_boot_opts="onboot none vlan"
+
+
 # Define the bridges
-# Public Bridge
-public_bridge_boot_opts="CHANGEME e.g. onboot static 10.148.44.41/255.255.255.0"
-#
-# Provision Bridge
-provision_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.120.41/255.255.255.0"
-#
-# Storage Bridge
-storage_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.170.41/255.255.255.0"
-#
-# External Bridge
-external_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.190.41/255.255.255.0"
-#
-# Private Bridge
-private_api_bridge_boot_opts="CHANGEME e.g. onboot static 192.168.140.41/255.255.255.0"
-#
+# External bridge options
+br_extern_boot_opts="CHANGEME e.g. onboot static 10.148.44.41/255.255.255.0"
+
+# Management bridge options
+#   Note: The SAH iDRAC is assigned an example IP of 192.168.110.41, so that IP
+#         cannot be used here.  The example IP below adds 100 to the last octet.
+br_mgmt_boot_opts="onboot static 192.168.110.141/255.255.255.0"
+
+# Provisioning bridge options
+br_prov_boot_opts="CHANGEME e.g. onboot static 192.168.120.41/255.255.255.0"
+
+# Storage bridge options
+br_stor_boot_opts="CHANGEME e.g. onboot static 192.168.170.41/255.255.255.0"
+
+# Public API bridge options
+br_pub_api_boot_opts="CHANGEME e.g. onboot static 192.168.190.41/255.255.255.0"
+
+# Private API bridge options
+br_priv_api_boot_opts="CHANGEME e.g. onboot static 192.168.140.41/255.255.255.0"
+
 ################### END of CHANGEME
 
 # Create the files that will be used by the installation environment and %post environment
@@ -176,36 +188,43 @@ echo "declare -A bond_ifaces" >> /tmp/ks_post_include.txt
 echo "declare -A bridges" >> /tmp/ks_post_include.txt
 echo "declare -A bridge_iface" >> /tmp/ks_post_include.txt
 
-echo "bonds[${public_bond_name}]=\"${public_boot_opts}\"" >> /tmp/ks_post_include.txt
-echo "bond_opts[${public_bond_name}]=\"${public_bond_opts}\"" >> /tmp/ks_post_include.txt
-echo "bond_ifaces[${public_bond_name}]=\"${public_ifaces}\"" >> /tmp/ks_post_include.txt
+echo "bonds[${extern_bond_name}]=\"${extern_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bond_opts[${extern_bond_name}]=\"${extern_bond_opts}\"" >> /tmp/ks_post_include.txt
+echo "bond_ifaces[${extern_bond_name}]=\"${extern_ifaces}\"" >> /tmp/ks_post_include.txt
 
-echo "bonds[${private_bond_name}]=\"${private_boot_opts}\"" >> /tmp/ks_post_include.txt
-echo "bond_opts[${private_bond_name}]=\"${private_bond_opts}\"" >> /tmp/ks_post_include.txt
-echo "bond_ifaces[${private_bond_name}]=\"${private_ifaces}\"" >> /tmp/ks_post_include.txt
+echo "bonds[${internal_bond_name}]=\"${internal_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bond_opts[${internal_bond_name}]=\"${internal_bond_opts}\"" >> /tmp/ks_post_include.txt
+echo "bond_ifaces[${internal_bond_name}]=\"${internal_ifaces}\"" >> /tmp/ks_post_include.txt
 
-echo "bonds[${provision_bond_name}]=\"${provision_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bonds[${mgmt_bond_name}]=\"${mgmt_boot_opts}\"" >> /tmp/ks_post_include.txt
 
-echo "bonds[${storage_bond_name}]=\"${storage_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bonds[${prov_bond_name}]=\"${prov_boot_opts}\"" >> /tmp/ks_post_include.txt
 
-echo "bonds[${private_api_bond_name}]=\"${private_api_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bonds[${stor_bond_name}]=\"${stor_boot_opts}\"" >> /tmp/ks_post_include.txt
 
-echo "bonds[${external_bond_name}]=\"${external_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bonds[${priv_api_bond_name}]=\"${priv_api_boot_opts}\"" >> /tmp/ks_post_include.txt
 
-echo "bridges[public]=\"${public_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
-echo "bridge_iface[public]=\"${public_bond_name}\"" >> /tmp/ks_post_include.txt
+echo "bonds[${pub_api_bond_name}]=\"${pub_api_boot_opts}\"" >> /tmp/ks_post_include.txt
 
-echo "bridges[provision]=\"${provision_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
-echo "bridge_iface[provision]=\"${provision_bond_name}\"" >> /tmp/ks_post_include.txt
 
-echo "bridges[storage]=\"${storage_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
-echo "bridge_iface[storage]=\"${storage_bond_name}\"" >> /tmp/ks_post_include.txt
+echo "bridges[br-extern]=\"${br_extern_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bridge_iface[br-extern]=\"${extern_bond_name}\"" >> /tmp/ks_post_include.txt
 
-echo "bridges[private]=\"${private_api_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
-echo "bridge_iface[private]=\"${private_api_bond_name}\"" >> /tmp/ks_post_include.txt
+echo "bridges[br-mgmt]=\"${br_mgmt_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bridge_iface[br-mgmt]=\"${mgmt_bond_name}\"" >> /tmp/ks_post_include.txt
 
-echo "bridges[external]=\"${external_bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
-echo "bridge_iface[external]=\"${external_bond_name}\"" >> /tmp/ks_post_include.txt
+echo "bridges[br-prov]=\"${br_prov_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bridge_iface[br-prov]=\"${prov_bond_name}\"" >> /tmp/ks_post_include.txt
+
+echo "bridges[br-stor]=\"${br_stor_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bridge_iface[br-stor]=\"${stor_bond_name}\"" >> /tmp/ks_post_include.txt
+
+echo "bridges[br-priv-api]=\"${br_priv_api_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bridge_iface[br-priv-api]=\"${priv_api_bond_name}\"" >> /tmp/ks_post_include.txt
+
+echo "bridges[br-pub-api]=\"${br_pub_api_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "bridge_iface[br-pub-api]=\"${pub_api_bond_name}\"" >> /tmp/ks_post_include.txt
+
 
 echo "SMUser=\"${SubscriptionManagerUser}\"" >> /tmp/ks_post_include.txt
 echo "SMPassword=\"${SubscriptionManagerPassword}\"" >> /tmp/ks_post_include.txt
