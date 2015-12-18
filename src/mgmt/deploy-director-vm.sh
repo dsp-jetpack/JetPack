@@ -25,7 +25,7 @@
 cfg_file=$1
 location=$2
 
-cat <<'EOFKS' > /tmp/foreman.ks
+cat <<'EOFKS' > /tmp/director.ks
 
 install
 text
@@ -69,7 +69,7 @@ system-config-firewall-base
 yum-plugin-versionlock
 %end
 
-%pre --log /tmp/foreman-pre.log
+%pre --log /tmp/director-pre.log
 EOFKS
 
 
@@ -99,6 +99,10 @@ do
     }
 
   [[ ${iface} == ntpserver ]] && echo "echo NTPServers=${ip} >> /tmp/ks_post_include.txt"
+
+  [[ ${iface} == user ]] && echo "echo User=${ip} >> /tmp/ks_post_include.txt"
+  [[ ${iface} == password ]] && echo "echo Password=${ip} >> /tmp/ks_post_include.txt"
+
   [[ ${iface} == smuser ]] && echo "echo SMUser=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smpassword ]] && echo "echo SMPassword=\'${ip}\' >> /tmp/ks_post_include.txt"
   [[ ${iface} == smpool ]] && echo "echo SMPool=${ip} >> /tmp/ks_post_include.txt"
@@ -107,28 +111,41 @@ do
   [[ ${iface} == smproxyuser ]] && echo "echo SMProxyUser=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smproxypassword ]] && echo "echo SMProxyPassword=${ip} >> /tmp/ks_post_include.txt"
 
-  [[ ${iface} == eth0 ]] && { 
+  [[ ${iface} == eth0 ]] && {
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers} >> /tmp/ks_include.txt"
     }
 
-  [[ ${iface} == eth1 ]] && { 
+  [[ ${iface} == eth1 ]] && {
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
     }
-done <<< "$( grep -Ev "^#|^;|^\s*$" ${cfg_file} )"
-} >> /tmp/foreman.ks
 
-cat <<'EOFKS' >> /tmp/foreman.ks
+  [[ ${iface} == eth2 ]] && {
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
+    }
+
+  [[ ${iface} == eth3 ]] && {
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
+    }
+
+  [[ ${iface} == eth4 ]] && {
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
+    }
+
+done <<< "$( grep -Ev "^#|^;|^\s*$" ${cfg_file} )"
+} >> /tmp/director.ks
+
+cat <<'EOFKS' >> /tmp/director.ks
 %end
 
-%post --nochroot --logfile /root/foreman-post.log
+%post --nochroot --logfile /root/director-post.log
 # Copy the files created during the %pre section to /root of the installed system for later use.
-  cp -v /tmp/foreman-pre.log /mnt/sysimage/root
+  cp -v /tmp/director-pre.log /mnt/sysimage/root
   cp -v /tmp/ks_include.txt /mnt/sysimage/root
   cp -v /tmp/ks_post_include.txt /mnt/sysimage/root
-  mkdir -p /mnt/sysimage/root/foreman-ks-logs
-  cp -v /tmp/foreman-pre.log /mnt/sysimage/root/foreman-ks-logs
-  cp -v /tmp/ks_include.txt /mnt/sysimage/root/foreman-ks-logs
-  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/foreman-ks-logs  
+  mkdir -p /mnt/sysimage/root/director-ks-logs
+  cp -v /tmp/director-pre.log /mnt/sysimage/root/director-ks-logs
+  cp -v /tmp/ks_include.txt /mnt/sysimage/root/director-ks-logs
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/director-ks-logs
 %end
 
 
@@ -141,6 +158,17 @@ chvt 8
   # Source the variables from the %pre section
   . /root/ks_post_include.txt
 
+  # Create a new user
+  useradd ${User}
+  passwd -f ${User} << EOFPW
+${Password}
+${Password}
+EOFPW
+
+  # Give the user sudo permissions
+  echo "${User} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/${User}
+  chmod 0440 /etc/sudoers.d/${User}
+
   # Configure name resolution
   for ns in ${NameServers//,/ }
   do
@@ -151,8 +179,11 @@ chvt 8
 
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth0
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth1
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth2
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth3
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth4
 
-  echo "$( ip addr show dev eth0 | awk '/inet / { print $2 }' | sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
+  sed -i "s/\(127.0.0.1\s\+\)/\1${HostName} /" /etc/hosts
 
   echo "----------------------"
   ip addr
@@ -178,13 +209,12 @@ chvt 8
          subscription-manager attach --auto
          )
 
-  # includes CES-3314 fix 
-  (cd /etc/yum.repos.d; wget ftp://partners.redhat.com/1c5d859a/b02956b493cee5f1580ea5339a53df55/OpenStack/7.0-RHEL-7-OFI/2015-10-15.1/RH7-RHOS-7.0-OFI.repo)
-
   subscription-manager repos --disable=*
   subscription-manager repos --enable=rhel-7-server-rpms
-  subscription-manager repos --enable=rhel-server-rhscl-7-rpms
-  subscription-manager repos --enable=rhel-7-server-openstack-7.0-rpms
+  subscription-manager repos --enable=rhel-7-server-optional-rpms
+  subscription-manager repos --enable=rhel-7-server-extras-rpms
+  subscription-manager repos --enable=rhel-7-server-openstack-8.0-rpms
+  subscription-manager repos --enable=rhel-7-server-openstack-8.0-director-rpms
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -194,12 +224,20 @@ chvt 8
     }
   umount /tmp/mnt
 
-  yum -y install openstack-foreman-installer
-  yum -y install ceph-common
+  yum -y install yum-plugin-priorities
+  yum -y install yum-utils
+
+  yum-config-manager --enable rhel-7-server-openstack-8.0-rpms --setopt="rhel-7-server-openstack-8.0-rpms.priority=1"
+  yum-config-manager --enable rhel-7-server-rpms --setopt="rhel-7-server-rpms.priority=1"
+  yum-config-manager --enable rhel-7-server-optional-rpms --setopt="rhel-7-server-optional-rpms.priority=1"
+  yum-config-manager --enable rhel-7-server-extras-rpms --setopt="rhel-7-server-extras-rpms.priority=1"
+  yum-config-manager --enable rhel-7-server-openstack-8.0-director-rpms --setopt="rhel-7-server-openstack-8.0-director-rpms.priority=1"
+
   yum -y update
+  yum -y install python-rdomanager-oscplugin
 
   # Firewall rules to allow traffic for the http, https, dns, and tftp services and tcp port 8140.
-  # Also accept all traffic from eth1 to pass through to eth0 and become NAT'd on the way out of eth0.
+  # Also accept all traffic from eth4 to pass through to eth0 and become NAT'd on the way out of eth0.
 
   cat <<EOIP > /etc/sysconfig/iptables
 *nat
@@ -216,6 +254,7 @@ COMMIT
 -A INPUT -p icmp -j ACCEPT
 -A INPUT -i lo -j ACCEPT
 -A INPUT -i eth1 -j ACCEPT
+-A INPUT -i eth2 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 22 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
@@ -226,7 +265,7 @@ COMMIT
 -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 -A FORWARD -p icmp -j ACCEPT
 -A FORWARD -i lo -j ACCEPT
--A FORWARD -i eth1 -j ACCEPT
+-A FORWARD -i eth4 -j ACCEPT
 -A FORWARD -o eth0 -j ACCEPT
 -A INPUT -j REJECT --reject-with icmp-host-prohibited
 -A FORWARD -j REJECT --reject-with icmp-host-prohibited
@@ -255,7 +294,7 @@ EOIP
   systemctl disable firewalld
   systemctl disable chronyd
 
-) 2>&1 | /usr/bin/tee -a /root/foreman-posts.log
+) 2>&1 | /usr/bin/tee -a /root/director-posts.log
 
 chvt 1
 
@@ -267,46 +306,55 @@ EOFKS
 [[ ! -e /store/data/images ]] && mkdir -p /store/data/images
 
 
-[[ -e foreman_vm.vlock ]] && {
+[[ -e director_vm.vlock ]] && {
 
-  [[ -e /tmp/floppy-foreman.img ]] && rm -rf /tmp/floppy-foreman.img
-  mkfs.vfat -C /tmp/floppy-foreman.img 1440
-  mkdir /tmp/mnt-foreman
-  mount -o loop /tmp/floppy-foreman.img /tmp/mnt-foreman
-  cp foreman_vm.vlock /tmp/mnt-foreman/versionlock.list
+  [[ -e /tmp/floppy-director.img ]] && rm -rf /tmp/floppy-director.img
+  mkfs.vfat -C /tmp/floppy-director.img 1440
+  mkdir /tmp/mnt-director
+  mount -o loop /tmp/floppy-director.img /tmp/mnt-director
+  cp director_vm.vlock /tmp/mnt-director/versionlock.list
   sync
-  umount /tmp/mnt-foreman
-  rmdir /tmp/mnt-foreman
+  umount /tmp/mnt-director
+  rmdir /tmp/mnt-director
 
-  virt-install --name foreman \
-    --ram 4096 \
+  # If the VM image file already exists, then remove it
+  rm -f /store/data/images/director.img
+
+  virt-install --name director \
+    --ram 6144 \
     --vcpus 2 \
     --hvm \
     --os-type linux \
     --os-variant rhel6 \
-    --disk /store/data/images/foreman.img,bus=virtio,size=16 \
-    --disk /tmp/floppy-foreman.img,device=floppy \
-    --network bridge=public \
-    --network bridge=provision \
-    --initrd-inject /tmp/foreman.ks \
-    --extra-args "ks=file:/foreman.ks" \
+    --disk /store/data/images/director.img,bus=virtio,size=80 \
+    --disk /tmp/floppy-director.img,device=floppy \
+    --network bridge=br-extern \
+    --network bridge=br-prov \
+    --network bridge=br-mgmt \
+    --network bridge=br-priv-api \
+    --network bridge=br-pub-api \
+    --initrd-inject /tmp/director.ks \
+    --extra-args "ks=file:/director.ks" \
     --noautoconsole \
     --graphics spice \
     --autostart \
     --location ${location} 
   } || {
 
-virt-install --name foreman \
-  --ram 4096 \
+virt-install --name director \
+  --ram 6144 \
   --vcpus 2 \
   --hvm \
   --os-type linux \
   --os-variant rhel6 \
-  --disk /store/data/images/foreman.img,bus=virtio,size=16 \
-  --network bridge=public \
-  --network bridge=provision \
-  --initrd-inject /tmp/foreman.ks \
-  --extra-args "ks=file:/foreman.ks" \
+  --disk /store/data/images/director.img,bus=virtio,size=80 \
+  --network bridge=br-extern \
+  --network bridge=br-prov \
+  --network bridge=br-mgmt \
+  --network bridge=br-priv-api \
+  --network bridge=br-pub-api \
+  --initrd-inject /tmp/director.ks \
+  --extra-args "ks=file:/director.ks" \
   --noautoconsole \
   --graphics spice \
   --autostart \
