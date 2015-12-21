@@ -19,8 +19,10 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
 
-import subprocess, os, time
+import subprocess, os, time, logging
 import sys
+
+logger = logging.getLogger(__name__)
 
 class Ipmi():
     '''
@@ -64,6 +66,9 @@ class Ipmi():
         
     def power_reset(self):
         return self.__exec_ipmi_command( "power reset")
+
+    def drac_reset(self):
+        return self.__exec_ipmi_command("mc reset cold")
     
     def get_power_state(self):
         state = self.__exec_ipmi_command("power status").strip()
@@ -86,7 +91,9 @@ class Ipmi():
 
         cmdLine = cmd + " -I lanplus -H " +  self.idracIp + " -U "+self.ipmi_user +" -P "+self.ipmi_password +" " + command
         try:
+            logger.info("executing :" + cmdLine)
             out= subprocess.check_output(cmdLine,stderr=subprocess.STDOUT, shell=True)
+            logger.info("cmd return :"+ out)
             return out
                 
         except subprocess.CalledProcessError as e:
