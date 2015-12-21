@@ -32,11 +32,11 @@ class Node_Conf():
         self.hostname = None
         self.idrac_ip = None
         self.root_password = None
-        self.public_ip = None
-        self.public_gateway = None
-        self.public_bond = None
-        self.public_netmask = None
-        self.public_slaves = None
+        self.external_ip = None
+        self.external_gateway = None
+        self.external_bond = None
+        self.external_netmask = None
+        self.external_slaves = None
         self.provisioning_ip    = None
         self.provisioning_ip    = None
         self.provisioning_gateway    = None

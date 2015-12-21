@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 def log(message):
     print (message)
-    logger.info(  message)
+    logger.info(message)
 
 class Deployer_sanity():
     '''
@@ -51,63 +51,31 @@ class Deployer_sanity():
 
     def check_files(self):
 
-        #Check new settings/properties are set
-        assert hasattr(self.settings, 'cluster_password'), self.settings.settingsFile+ " has no cluster_password setting"
-        assert hasattr(self.settings, 'previous_deployment_cluster_password'), self.settings.settingsFile+ " has no previous_deployment_cluster_password setting"
-        assert hasattr(self.settings, 'use_equalogic_backend'), self.settings.settingsFile+ " has no use_equalogic_backend setting"
-        assert hasattr(self.settings, 'subscription_check_retries'), self.settings.settingsFile+ " has no subscription_check_retries setting"
-        assert hasattr(self.settings, 'ceph_admin_email'), self.settings.settingsFile+ " has no ceph_admin_email setting"
-        assert hasattr(self.settings, 'ceph_version'), self.settings.settingsFile+ " has no ceph_version setting"
+        logger.info("Check settings ip's are valid.")
+        shouldBeValidIPs = [
+            'external_netmask','public_gateway','external_gateway',
+            'public_api_netmask','external_allocation_pool_start','external_allocation_pool_end',
+            'private_api_vlanid','private_api_netmask','private_api_allocation_pool_start','private_api_allocation_pool_end',
+            'storage_netmask','storage_allocation_pool_start','storage_allocation_pool_end',
+            'provisioning_netmask','provisioning_net_dhcp_start','provisioning_net_dhcp_end',
+            'storage_cluster_allocation_pool_start','storage_cluster_allocation_pool_end',
+            'managment_netmask','name_server',
+            'ipmi_discovery_range_start','ipmi_discovery_range_end',
+        ]
+        for ip in getattr(self.settings, 'discovery_ip_range').split(","):
+            self.isValidIp(ip), "Setting for discovery_ip_range " + ip + " is not a valid ip "
+        for each in shouldBeValidIPs:
+            assert self.isValidIp(getattr(self.settings, each)), "Setting for " + each + " is not a valid ip " + getattr(self.settings, each)
 
-        assert self.isValidIp(self.settings.foreman_provisioning_subnet_ip_start), self.settings.foreman_provisioning_subnet_ip_start + " is not a valid ip for setting foreman_provisioning_subnet_ip_start"
-        assert self.isValidIp(self.settings.foreman_provisioning_subnet_ip_end), self.settings.foreman_provisioning_subnet_ip_end + " is not a valid ip for setting foreman_provisioning_subnet_ip_end"
+        assert os.path.isfile(self.settings.rhl71_iso) , self.settings.rhl71_iso + "ISO doesn't seem to exist"
+        assert os.path.isfile(self.settings.sah_kickstart) , self.settings.sah_kickstart + "kickstart file doesnn't seem to exist"
+        assert os.path.isfile(self.settings.director_deploy_sh) , self.settings.director_deploy_sh + " script doesn't seem to exist"
+        assert os.path.isfile(self.settings.undercloud_conf) , self.settings.undercloud_conf + " file doesn't seem to exist"
 
-        if len(self.settings.heat_auth_key) == 16 or len(self.settings.heat_auth_key) == 24 or len(self.settings.heat_auth_key) == 32:
-            pass
-        else:
-            raise AssertionError("heat_auth_key setting should be 16/24 or 32 byte long (current value :"+ self.settings.heat_auth_key + " is not valid")
-
-        assert os.path.isfile(self.settings.rhl71_iso) , self.settings.rhl71_iso + "ISO doesnn't seem to exist"
-
-        assert hasattr(self.settings, 'sah_kickstart'), self.settings.settingsFile+ " has no sah_kickstart setting"
-
-        #Since the kickstart gets copied from cloud_repo further down the deployment process, the file is not expected to be around first time you run a deployment on a new stamp
-        #the ugly bit there is the file has to be called /ks.cfg, since that value is hardcoded in the initial bastion host setup script.
-        if os.path.exists(self.settings.sah_kickstart):
-            pass
-        elif os.access(os.path.dirname(self.settings.sah_kickstart), os.W_OK) and os.path.basename(self.settings.sah_kickstart) == "ks.cfg":
-            pass
-        else:
-            raise AssertionError(self.settings.sah_kickstart  + " does not appear to be an existing/valid path/filename (check dir is correct and filename is ks.cfg)")
-
-
-        assert os.path.isfile(self.settings.foreman_deploy_sh) , self.settings.foreman_deploy_sh + " script doesnn't seem to exist"
-
-        if self.settings.ceph_version == "1.2.3":
-            assert os.path.isfile(self.settings.ceph_iso), self.settings.ceph_iso + " ISO doesnn't seem to exist"
-
-        hammer_scripts =['hammer-configure-hostgroups.sh',
-        'hammer-deploy-compute.sh',
-        'hammer-deploy-controller.sh',
-        'hammer-deploy-storage.sh',
-        'hammer-configure-foreman.sh',
-        'hammer-get-ids.sh',
-        'hammer-dump-ids.sh',
-        'hammer-ceph-fix.sh',
-        'hammer-fencing.sh',
-        'common.sh',
-        'osp_config.sh',
-        'provision.sh',
-        'bond.sh'
-         ]
-        hammer_script_folder =  '/utils/networking/' if (sys.platform.startswith('linux')) else "\\utils\\networking\\"
-        for file in hammer_scripts  :
-            hammer_file = self.settings.foreman_configuration_scripts + hammer_script_folder + file
-            assert os.path.isfile(hammer_file) , hammer_file + " script doesnn't seem to exist"
-
-        assert os.path.isfile(self.settings.ceph_deploy_sh) , self.settings.ceph_deploy_sh + " script doesnn't seem to exist"
-        assert os.path.isfile(self.settings.tempest_deploy_sh) , self.settings.tempest_deploy_sh + " script doesnn't seem to exist"
-
+        assert os.path.isfile(self.settings.deploy_ram_disk_image) , self.settings.deploy_ram_disk_image + " file doesn't seem to exist"
+        assert os.path.isfile(self.settings.discovery_ram_disk_image) , self.settings.discovery_ram_disk_image + " file doesn't seem to exist"
+        assert os.path.isfile(self.settings.overcloud_image) , self.settings.overcloud_image + " file doesn't seem to exist"
+        assert os.path.isfile(self.settings.install_director_sh) , self.settings.install_director_sh + " file doesn't seem to exist"
 
 
         try:
@@ -137,76 +105,49 @@ class Deployer_sanity():
 
         # Verify SAH node network definition
         print "verifying sah network settings"
-        shouldHaveAttrbutes = [ 'hostname','idrac_ip','anaconda_ip','root_password',
-                              'public_bond','public_ip','public_netmask','public_slaves','public_gateway',
-                              'private_bond','private_slaves',
-                              'provisioning_vlanid','provisioning_ip','provisioning_netmask',
-                              'storage_vlanid','storage_ip','storage_netmask',
-                              'external_vlanid','external_ip','external_netmask',
-                              'private_api_vlanid','private_api_ip','private_api_netmask',
-                              'name_server'
+        shouldHaveAttrbutes = [ 'hostname','idrac_ip','root_password','anaconda_ip','anaconda_iface',
+                                'external_bond','external_slaves','external_ip',
+                                'private_bond','private_slaves',
+                                'provisioning_ip','storage_ip','public_api_ip','private_api_ip','managment_ip'
                               ]
         for each in shouldHaveAttrbutes :
             assert hasattr(self.settings.sah_node, each), self.settings.network_conf + " SAH node has no " + each + " attribute"
 
-        shouldBeValidIps = ['idrac_ip','anaconda_ip', 'public_ip', 'public_gateway', 'provisioning_ip', 'storage_ip','external_ip','private_api_ip']
+        shouldBeValidIps = ['idrac_ip','anaconda_ip','external_ip',
+                            'provisioning_ip','storage_ip','public_api_ip','private_api_ip','managment_ip'
+                            ]
         for each in shouldBeValidIps:
             assert self.isValidIp(getattr(self.settings.sah_node, each)), "SAH node " + each + " is not a valid ip"
 
-        # Verify Foreman network definition
-        print "verifying foreman vm network settings"
-        shouldHaveAttrbutes = [  'hostname','root_password',
-                                 'public_ip','public_gateway','public_bond','public_netmask',
-                                 'provisioning_ip','provisioning_gateway','provisioning_bond','provisioning_netmask',
-                                 'name_server'
+        # Verify director network definition
+        print "verifying director vm network settings"
+        shouldHaveAttrbutes = [ 'hostname','root_password','external_ip','provisioning_ip',
+                                'managment_ip','public_api_ip','private_api_ip'
                               ]
         for each in shouldHaveAttrbutes :
-            assert hasattr(self.settings.foreman_node, each), self.settings.network_conf + " Foreman node has no " + each + " attribute"
-            shouldBeValidIps = ['public_ip','public_gateway','provisioning_ip','provisioning_gateway']
+            assert hasattr(self.settings.director_node, each), self.settings.network_conf + " director node has no " + each + " attribute"
+            shouldBeValidIps = ['external_ip','provisioning_ip', 'managment_ip','public_api_ip','private_api_ip'
+                                ]
         for each in shouldBeValidIps:
-            assert self.isValidIp(getattr(self.settings.foreman_node, each)), "Foreman node " + each + " is not a valid ip"
+            assert self.isValidIp(getattr(self.settings.director_node, each)), "director_node node " + each + " is not a valid ip"
 
         # Verify Ceph vm node network definition
         print "verifying ceph vm network settings"
-        shouldHaveAttrbutes = [  'hostname','root_password',
-                                 'public_ip','public_gateway','public_bond','public_netmask',
-                                 'storage_ip','storage_gateway','storage_netmask',
-                                 'name_server'
+        shouldHaveAttrbutes = [  'hostname','root_password','external_ip','storage_ip'
                               ]
         for each in shouldHaveAttrbutes :
             assert hasattr(self.settings.ceph_node, each), self.settings.network_conf + " Ceph Vm node has no " + each + " attribute"
-            shouldBeValidIps = ['public_ip','public_gateway','storage_ip','storage_gateway']
+        shouldBeValidIps = ['external_ip','storage_ip']
         for each in shouldBeValidIps:
-            assert self.isValidIp(getattr(self.settings.ceph_node, each)), "Ceph vm node " + each + " is not a valid ip"
-
-        # Verify tempest vm network definition
-        print "verifying tempest vm network settings"
-        shouldHaveAttrbutes = [ 'hostname','root_password',
-                                'public_ip','public_gateway','public_netmask',
-                                'external_ip','external_netmask',
-                                'private_api_ip','private_api_netmask',
-                                'name_server'
-                              ]
-        for each in shouldHaveAttrbutes :
-            assert hasattr(self.settings.sah_node, each), self.settings.network_conf + " Tempest Vm node has no " + each + " attribute"
-            shouldBeValidIps = ['public_ip','public_gateway','external_ip','private_api_ip']
-        for each in shouldBeValidIps:
-            assert self.isValidIp(getattr(self.settings.tempest_node, each)), "Tempest vm node " + each + " is not a valid ip"
-
-        # Verify Controller nodes network definition
+            assert hasattr(self.settings.ceph_node, each), self.settings.network_conf + " Ceph Vm node has no " + each + " attribute"
+        # Verify Controller nodes network definitioncls
         print "verifying controller nodes network settings"
         for controller in self.settings.controller_nodes:
-            shouldHaveAttrbutes = [ 'hostname', 'idrac_ip',
-                                    'provisioning_mac_address','provisioning_ip',
-                                    'bond1_interfaces','bond0_interfaces',
-                                    'public_ip','public_netmask',
-                                    'private_api_vlanid','private_ip','private_netmask',
-                                    'storage_vlanid','storage_ip','storage_netmask',
-                                    'idrac_secondary_vlanid','idrac_interface','idrac_secondary_macaddress','idrac_secondary_ip','idrac_secondary_gateway','idrac_secondary_netmask'
-                                     ]
+            shouldHaveAttrbutes = [ 'hostname','idrac_ip','provisioning_mac_address'
+                                    ]
             for each in shouldHaveAttrbutes :
                 assert hasattr(controller, each), controller.hostname + " node has no " + each + " attribute"
-                shouldBeValidIps = ['idrac_ip', 'provisioning_ip','public_ip','private_ip','storage_ip','idrac_secondary_ip','idrac_secondary_gateway']
+                shouldBeValidIps = ['idrac_ip']
             for each in shouldBeValidIps:
                 assert self.isValidIp(getattr(controller, each)), controller.hostname + " node " + each + " is not a valid ip"
 
@@ -214,15 +155,11 @@ class Deployer_sanity():
         # Verify Compute nodes network definition
         print "verifying compute nodes network settings"
         for compute in self.settings.compute_nodes:
-            shouldHaveAttrbutes = ['hostname','idrac_ip',
-                                   'provisioning_mac_address','provisioning_ip',
-                                    'bond1_interfaces','bond0_interfaces',
-                                    'private_api_vlanid','private_ip','private_netmask',
-                                    'storage_vlanid','storage_ip','storage_netmask'
+            shouldHaveAttrbutes = ['hostname','idrac_ip','provisioning_mac_address'
                                      ]
             for each in shouldHaveAttrbutes :
                 assert hasattr(compute, each), compute.hostname + " node has no " + each + " attribute"
-                shouldBeValidIps = ['idrac_ip','provisioning_ip','private_ip','storage_ip']
+                shouldBeValidIps = ['idrac_ip']
             for each in shouldBeValidIps:
                 assert self.isValidIp(getattr(compute, each)), compute.hostname + " node " + each + " is not a valid ip"
 
@@ -230,16 +167,11 @@ class Deployer_sanity():
         # Verify Storage nodes network definition
         print "verifying storage nodes network settings"
         for storage in self.settings.ceph_nodes:
-            shouldHaveAttrbutes = [ 'hostname','idrac_ip',
-                                    'provisioning_mac_address','provisioning_ip',
-                                    'bond1_interfaces','bond0_interfaces',
-                                    'storage_cluster_vlanid','storage_cluster_ip','storage_cluster_netmask',
-                                    'storage_vlanid','storage_ip','storage_netmask',
-                                    'osd_disks', 'journal_disks'
+            shouldHaveAttrbutes = ['hostname','idrac_ip','provisioning_mac_address','journal_disks', 'osd_disks'
                                      ]
             for each in shouldHaveAttrbutes :
                 assert hasattr(storage, each), storage.hostname + " node has no " + each + " attribute"
-                shouldBeValidIps = ['idrac_ip','provisioning_ip','storage_cluster_ip','storage_ip']
+                shouldBeValidIps = ['idrac_ip',]
             for each in shouldBeValidIps:
                 assert self.isValidIp(getattr(storage, each)), storage.hostname + " node " + each + " is not a valid ip"
 

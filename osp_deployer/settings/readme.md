@@ -1,15 +1,13 @@
 ##Change Log
 ### Layout
-Command to execute automated deployment:
+Command to execute
 
-  cd /root/deploy-auto/osp_deployer
-  python deployer.py -s "PATH to your settings .ini file"
+python deployer.py -s "PATH to the Settings file"
 
-Configuration files for each internal Dell stamp are in the "dell-internal" repo
-under the "dell-esg" github.  There are subdirectories there to contain the 
-configuration for each stamp.
+The structure is each directory represents a site and rack designation
 
-* Please name your files in some way that designates your stamp:
+* Please add your spreadsheets for your installs
+* Please name your files
 
 ** MHT_RackName.properties
 ** MHT_RackName_settings.ini
@@ -23,54 +21,17 @@ or
 
 #####This is a change log for the settings.ini and settings.properties file
 
+
 #####settings.ini:
-* 1.0: - Initial version.
-* 2.0.x: - Icehouse , RH-OSP5
-* 3.0 - 2/24 - Juno, RH-OSP6 A1
-* 3.0.a - 3/20/2015 - Added ceph_user_password
-* 3.0.1 - 04/07/2015 - Initial version of Juno, RH-OSP6 A2
-* 3.0.1.a - 04/10/2015 - Added cloud_repo_dir, clone and use git repo cloud-repo
-* 3.0.1.b - 04/24/2015 - Added rhl71_iso and ceph_iso to the Bastion Settings, removed rhl7_iso
-* 3.0.1.c - 04/28/2015 - Added partition table variables
-  controller_nodes_are_730,compute_nodes_are_730,storage_nodes_are_730=false
-* 3.0.1.d - 04/28/2015 - Removing bonding options bond_mode_*
-* 3.0.1.e - 04/30/2015 - Added new pool ID settings for node types : subscription_manager_pool_sah, subscription_manager_pool_vm_rhel, subscription_manager_pool_phyical_openstack_nodes, subscription_manager_pool_vm_openstack_nodes, subscription_manager_vm_ceph, subscription_manager_pool_physical_ceph; removed subscription_manager_pool
-* 3.0.1.f - 05/05/2015 - Removed nodes_root_password   openstack_services_password, replaced with cluster_password
-* 3.0.1.g - 05/08/2015 - subscription_check_retries property.  New subscription retries setting to allow calls to subscription manager to be retried in case temporary failure is expected (initially, checking subscription status)
-* 4.0 - 06/08/2015 - new settings for internal repo's use : use_internal_repo & internal_repos_locations.
-					 - cluster_password must be a 16/24 or 32 bytes string (https://bugs.launchpad.net/heat/+bug/1415887)
-* 4.0.a - 06/09/2015 - Added ceph_admin_email setting
-* 4.0.b - 06/11/2015 - Added previous_deployment_cluster_password to allow to unregister already running nodes/cluster password changes
-* 4.0.c - 06/22/2015 - removed controller_nodes_are_730 & compute_nodes_are_730 settings, renamed  storage_nodes_are_730 to storage_nodes_are_730xd
-* 4.0.d - 07/01/2015 - Added Open stack services debug level : debug= & verbose=
-* 4.0.e - 07/13/2015 - Added mode option configuration: controller_bond_opts, compute_bond_opts, storage_bond_opts
-* 4.0.f - 07/22/2014 - Added ceph_version setting ( 1.2.3 or 1.3 are valid options)
-* 4.0.g - 07/29/2015 - Added compellent/dell_sc support: use_dell_sc_backend, etc
-* 4.0.h - 09/07/2015 - 
-  removed cirros image references from settings
-  removed ceph iso from settings
-  removed cygwin references in settings (except CWD)
-  removed unused subscription_manager_pool_vm_openstack_nodes setting
-* 4.0.1 - 10/12/2015
-  added libvirt_image_type (substituted in the dell-pilot.yaml.erb file)
-  added external_tenant_vlan (substituted in the cloud_repo/src/utils/networking/osp_config.sh file)
+* 5.0.0.a - Initial 5.0 version - some settings left over from 4.x might go away as this is still work in progress
+* 5.0.0.b - Added new setting use_ipmi_driver
+* 5.0.0.c - removed legacy settings.
 
 #####settings.properties
-* 1.0: - Initial version.
-* 2.0.x: - Icehouse , RH-OSP5
-* 3.0 - 2/24 - Juno, RH-OSP6 A1
-* 3.0.a - 03/06 Added private_bond and private_slaves
-* 3.0.b - 03/13 Added anaconda_ip and anaconda_iface to sah node
-* 3.0.c - 03/06 ceph vm move to storage network(provisioning out)
-**Removed: provisioning_ip, provisioning_gateway, provisioning_bond, provisioning_netmask
-**Added: storage_ip, storage_gateway , storage_bond, storage_netmask
-* 3.0.d - 03/09 Added is_730 ( true,false) to ceph storage nodes
-* 3.0.e -  Added anaconda_ip and anaconda_iface to the sah node
-* 3.0.f - added root_password to ceph node
-* 3.0.g - 04/03/2015 ceph related , changed irdrac_secondary_ip and idrac_secondary_gateway
-* 3.0.1 -04/07/2015 - Initial version of Juno, RH-OSP6 A2
-* 3.0.1.a - 04/10/2015 - Added is_730 ( true or false) to ceph storage nodes
-* 3.0.1.b - 04/30/2015 - Remove public_ip from compute nodes
-* 3.0.1.c - 05/05/2015 - Added tempest vm properties
-* 3.0.1.d  - 05/05/2015 - New external_vlanid private_api_vlanid vlan properties on the sah to support tempest vm.
-* 4.0.1.a - 09/28/15 Removed is_730
+* 5.0.0.a - Initial 5.0 version - some settings left over from 4.x might go away as this is still work in progress
+* 5.0.0.b - removed legacy settings.
+
+
+
+
+
