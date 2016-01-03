@@ -42,6 +42,13 @@ class Director():
         cmd = "mkdir /home/"+install_admin_user+"/pilot"
         logger.info( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
 
+        cmd = "mkdir /home/"+install_admin_user+"/pilot/probe_idrac"
+        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
+
+        cmd = "mkdir /home/"+install_admin_user+"/pilot/probe_idrac/probe_idrac"
+        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
+
+
         cmd = "mkdir /home/"+install_admin_user+"/pilot/templates"
         logger.info( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
 
@@ -126,18 +133,46 @@ class Director():
         install_admin_password = self.settings.director_install_account_pwd
 
 
-        networkYaml = "/home/"+install_admin_user+"/pilot/templates/network-environment.yaml";
-        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.network_env_yaml, networkYaml);
+        networkYaml = "/home/"+install_admin_user+"/pilot/templates/network-environment.yaml"
+        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.network_env_yaml, networkYaml)
 
-        storageYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/ceph-storage.yaml";
-        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.ceph_storage_yaml, storageYaml);
+        storageYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/ceph-storage.yaml"
+        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.ceph_storage_yaml, storageYaml)
 
-        computeYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/compute.yaml";
-        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.compute_yaml, computeYaml);
+        computeYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/compute.yaml"
+        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.compute_yaml, computeYaml)
 
-        controllerYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/controller.yaml";
-        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.controller_yaml, controllerYaml);
+        controllerYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/controller.yaml"
+        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.controller_yaml, controllerYaml)
 
+
+        installProbe = "/home/"+install_admin_user+"/pilot/install_probe_idrac.sh"
+        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.foreman_configuration_scripts + '/pilot/install_probe_idrac.sh', installProbe)
+        cmd = "chmod 777 " + installProbe
+        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+
+        probFiles1 = [
+                'README.rst',
+                'requirements.txt',
+                'setup.cfg',
+                'setup.py',
+        ]
+        for each in probFiles1:
+            remote = "/home/"+install_admin_user+"/pilot/probe_idrac/" + each
+            local = '/pilot/probe_idrac/' + each
+            Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.foreman_configuration_scripts + local, remote)
+            cmd = "chmod 777 " + remote
+            logger.info( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        probFiles2 = [
+                '__init__.py',
+                'probe_idrac.py',
+        ]
+        for each in probFiles2:
+            remote = "/home/"+install_admin_user+"/pilot/probe_idrac/probe_idrac/" + each
+            local = '/pilot/probe_idrac/probe_idrac/' + each
+            Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.foreman_configuration_scripts + local, remote)
+            cmd = "chmod 777 " + remote
+            logger.info( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
         remoteSh = "/home/"+self.settings.director_install_account_user+"/pilot/install-director.sh";
         Scp.put_file( self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd, self.settings.install_director_sh, remoteSh);
@@ -187,6 +222,11 @@ class Director():
                     out = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)[0]
                     if "No integrated 1 GB nics" in out or "No WSMAN endpoint at" in out:
                         logger.warning(node.hostname +" did not get discovered properly")
+                        if "No integrated 1 GB nics" in out:
+                            logger.info("grabbing drac informations in " + node.idrac_ip+".dump")
+                            cmd = "cd ~/pilot/probe_idrac/probe_idrac/;./probe_idrac.py -l "+self.settings.ipmi_user+" -p "+self.settings.ipmi_password+" "+node.idrac_ip+" > "+node.idrac_ip+".dump"
+                            Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+
                         logger.info("reseting idrac")
                         ipmi_session = Ipmi(self.settings.cygwin_installdir, self.settings.ipmi_user, self.settings.ipmi_password, node.idrac_ip)
                         logger.info(ipmi_session.drac_reset())

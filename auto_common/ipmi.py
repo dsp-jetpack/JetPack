@@ -90,16 +90,20 @@ class Ipmi():
             cmd = "ipmitool"
 
         cmdLine = cmd + " -I lanplus -H " +  self.idracIp + " -U "+self.ipmi_user +" -P "+self.ipmi_password +" " + command
-        try:
-            logger.info("executing :" + cmdLine)
-            out= subprocess.check_output(cmdLine,stderr=subprocess.STDOUT, shell=True)
-            logger.info("cmd return :"+ out)
-            return out
-                
-        except subprocess.CalledProcessError as e:
-            raise IOError("failed to execute ipmi command " + str(cmdLine) + e.output)
-        #os.remove(fpath)
-        
+        retries = 20
+        for i in range(0, 20):
+            try:
+                logger.info("executing :" + cmdLine)
+                out= subprocess.check_output(cmdLine,stderr=subprocess.STDOUT, shell=True)
+                logger.info("cmd return :"+ out)
+                return out
+
+            except subprocess.CalledProcessError as e:
+                logger.info("ipmi command failed, retrying (" + str(i) + "/" + str(retries) + ")")
+                time.sleep(10)
+                if i == retries :
+                    raise IOError("failed to execute ipmi command " + str(cmdLine) + e.output)
+
 class Power_State:
     POWER_ON = 'Chassis Power is on'
     POWER_OFF = 'Chassis Power is off'

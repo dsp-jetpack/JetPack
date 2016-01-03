@@ -169,6 +169,7 @@ class Settings():
             self.controller_yaml = self.foreman_configuration_scripts + '/pilot/templates/nic-configs/controller.yaml'
 
 
+
             self.hammer_configure_hostgroups_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-configure-hostgroups.sh'
             self.hammer_deploy_compute_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-deploy-compute.sh'
             self.hammer_deploy_controller_sh = self.foreman_configuration_scripts + '/utils/networking/hammer-deploy-controller.sh'
