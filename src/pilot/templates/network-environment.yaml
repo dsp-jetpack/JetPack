@@ -33,6 +33,9 @@ resource_registry:
   OS::TripleO::CephStorage::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/storage_mgmt.yaml
 
 parameter_defaults:
+  # CHANGEME: Change the following to the CIDR for the Management network
+  ManagementNetCidr: 192.168.110.0/24
+
   # CHANGEME: Change the following to the CIDR for the Private API network
   InternalApiNetCidr: 192.168.140.0/24
 
@@ -65,6 +68,10 @@ parameter_defaults:
 
   # CHANGEME: Set to the router gateway on the external network
   ExternalInterfaceDefaultRoute: 192.168.190.1
+
+  # CHANGEME: Set to the IP of the gateway on the provisioning network which
+  # will allow access to the management network
+  ProvisioningNetworkGateway: 192.168.120.1
 
   # CHANGEME: Set to the router gateway on the provisioning network (or Undercloud IP)
   ControlPlaneDefaultRoute: 192.168.120.123
