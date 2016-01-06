@@ -70,8 +70,8 @@ class Director():
             cmds = [
                 'subscription-manager repos --enable=rhel-7-server-openstack-8.0-rpms',
                 'subscription-manager repos --enable=rhel-7-server-openstack-8.0-director-rpms',
-                'yum-config-manager --enable rhel-7-server-openstack-8.0-rpms --setopt="rhel-7-server-openstack-8.0-rpms.priority=1"',
-                'yum-config-manager --enable rhel-7-server-openstack-8.0-director-rpms --setopt="rhel-7-server-openstack-8.0-director-rpms.priority=1"',
+                'yum-config-manager --enable RH7-RHOS-8.0 --setopt="RH7-RHOS-8.0.priority=1"',
+                'yum-config-manager --enable RH7-RHOS-8.0-director --setopt="RH7-RHOS-8.0-director.priority=1"',
                 'yum remove python-rdomanager-oscplugin -y',
                 'yum remove ahc-tools -y',
                 'yum clean all',
