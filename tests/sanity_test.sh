@@ -166,7 +166,7 @@ create_the_networks(){
   net_exists=$(neutron net-list | grep $TENANT_NETWORK_NAME |  head -n 1  | awk '{print $4}')
   if [ "$net_exists" != "$TENANT_NETWORK_NAME" ]
   then 
-    execute_command "neutron net-create $TENANT_NETWORK_NAME"
+    execute_command "neutron net-create $TENANT_NETWORK_NAME --shared"
   else
     info "#----- Tenant network '$TENANT_NETWORK_NAME' exists. Skipping"
   fi
@@ -199,7 +199,7 @@ create_the_networks(){
   ext_net_exists=$(neutron net-list | grep $EXTERNAL_NETWORK_NAME |  head -n 1  | awk '{print $4}')
   if [ "$ext_net_exists" != "$EXTERNAL_NETWORK_NAME" ]
   then
-    execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external --shared"
+    execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external"
     execute_command "neutron subnet-create --name $EXTERNAL_SUBNET_NAME --allocation-pool start=$STARTIP,end=$ENDIP --gateway $GATEWAY_IP --disable-dhcp $EXTERNAL_NETWORK_NAME $EXTERNAL_VLAN_NETWORK"  
   else
     info "#----- External network '$EXTERNAL_NETWORK_NAME' exists. Skipping"
