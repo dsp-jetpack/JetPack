@@ -1,0 +1,406 @@
+#!/usr/bin/env python
+
+# OpenStack - A set of software tools for building and managing cloud computing
+# platforms for public and private clouds.
+# Copyright (C) 2015 Dell, Inc.
+#
+# This file is part of OpenStack.
+#
+# OpenStack is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# OpenStack is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
+
+import time, calendar, re, uuid,  importlib, datetime, subprocess, paramiko, sys, os, requests, logging
+from cm_api.api_client import ApiResource
+import dateutil.parser
+from datetime import timedelta
+from auto_common import *
+
+
+def get_other_cpu_stats(timestamp, host):
+    config = importlib.import_module('config_cdh5')
+    cm_api_ip = config.cm_api_ip
+    clustername = config.cluster_name
+
+    cpu_stats = ('cpu_soft_irq_rate',
+                 'cpu_iowait_rate',
+                 'cpu_irq_rate',
+                 'cpu_system_rate'
+                 )
+
+    session = ApiResource(cm_api_ip,  7180, "admin", "admin", version=5)
+    data = []
+    cpu_total = []
+
+    numCores = get_datanode_cores(cm_api_ip, clustername, host)
+
+    sec = timedelta(seconds=10)
+
+    time_start = timestamp-sec   # GMT +1
+    time_end = timestamp+sec
+
+    time_start = time_start-datetime.timedelta(hours=6)
+    time_end = time_end-datetime.timedelta(hours=6)
+
+    for stat in cpu_stats:
+        tsquery = "select "+stat+" / "+str(numCores)+" * 100 where hostname = \""+ str(host) +"\" and category = Host"
+        hostRes = session.query_timeseries(tsquery, time_start, time_end)
+
+        for rez in hostRes[0].timeSeries:
+            for point in rez.data:
+                cpu_total.append(point.value)
+                data.append(dict({stat:point.value}))
+                timestamp = point.timestamp
+    total = 0
+    for value in cpu_total:
+        total = total+value
+
+    return data, total
+
+
+def getDataNodeHosts(cm_api_ip, clustername):
+    hosts = []
+    session = ApiResource(cm_api_ip,  7180, "admin", "admin", version=5)
+    cluster = session.get_cluster(clustername)
+    view = session.get_all_hosts("full")
+    for host in view:
+       for each in host.roleRefs:
+           if 'DATANODE' in  each.roleName :
+               hosts.append(host.ipAddress)
+    return hosts
+
+
+def getDataNodeObjects(cm_api_ip, clustername):
+    hosts = []
+    objs = []
+    session = ApiResource(cm_api_ip,  7180, "admin", "admin", version=5)
+    cluster = session.get_cluster(clustername)
+    view = session.get_all_hosts("full")
+    for host in view:
+        for each in host.roleRefs:
+            if 'DATANODE' in  each.roleName :
+                hosts.append(host.ipAddress)
+                objs.append(host)
+    return objs, hosts
+
+
+def getAllNodeObjects(cm_api_ip, clustername):
+    objs = []
+    session = ApiResource(cm_api_ip,  7180, "admin", "admin", version=5)
+    cluster = session.get_cluster(clustername)
+    view = session.get_all_hosts("full")
+    for host in view:
+        objs.append(host)
+    return objs
+
+
+def getCPUCores(cm_api_ip, clustername):
+    hostIPs = []
+    cores = []
+    objs = getAllNodeObjects(cm_api_ip, clustername)
+    for each in objs:
+        hostIPs.append(each.ipAddress)
+        cores.append(each.numCores)
+    return hostIPs, cores
+
+
+def getAllNodeRoles(cm_api_ip, clustername):
+    hosts = []
+    objs = getAllNodeObjects(cm_api_ip, clustername)
+    for each in objs:
+        role_list = []
+        for role in each.roleRefs:
+            role_list.append(role.roleName)
+        hosts.append({'host': each.ipAddress, 'role': role_list})
+    return hosts
+
+
+def get_datanode_entityname(cm_api_ip, clustername, ipAddress):
+    hosts = []
+    session = ApiResource(cm_api_ip,  7180, "admin", "admin", version=5)
+    cluster = session.get_cluster(clustername)
+    view = session.get_all_hosts("full")
+    for host in view:
+        if ipAddress ==  host.ipAddress:
+               return host.hostname
+    return hosts    
+
+
+def get_datanode_ip(cm_api_ip, clustername, hostname):
+    hosts = []
+    session = ApiResource(cm_api_ip,  7180, "admin", "admin", version=5)
+    cluster = session.get_cluster(clustername)
+    view = session.get_all_hosts("full")
+    for host in view:
+        if hostname ==  host.hostname:
+               return host.ipAddress
+    return hosts   
+
+
+def get_datanode_cores(cm_api_ip, clustername, hostname):
+    hosts = []
+    session = ApiResource(cm_api_ip,  7180, "admin", "admin", version=5)
+    cluster = session.get_cluster(clustername)
+    view = session.get_all_hosts("full")
+    for host in view:
+        if host.hostname == hostname:
+            return host.numCores
+    return hosts
+
+
+def teragen(rowNumber, folderName, teragen_ip):
+    '''
+    note for this to work : 
+    on the edge node : 
+    bluepill chef-client stop
+    sudo vi /etc/sudoers
+    add :
+    Defaults:root   !requiretty
+    '''
+    config = importlib.import_module('config_cdh5') 
+    cm_api_ip = config.cm_api_ip
+    teragen_parameters = config.teragen_parameters
+    teragen_jar_location = config.teragen_jar_location
+    teragen_jar_filename = config.teragen_jar_filename
+
+    usr = 'root'
+    pwd = 'Ignition01'
+    cmd = 'cd ' + teragen_jar_location + '/;sudo -u hdfs hadoop jar ' + teragen_jar_filename + ' teragen ' + teragen_parameters + ' ' + str(rowNumber) +' '+ str(folderName)
+    print "running " + cmd
+    cl_stdoutd, cl_stderrd = Ssh.execute_command(teragen_ip, usr, pwd, cmd)    
+    print cl_stdoutd
+    print cl_stderrd
+    return cl_stdoutd, cl_stderrd
+
+
+def terasort(folderName, edge_node_ip, terasort_params):
+    destFolder = folderName + '_Sorted'
+
+    cmd = 'cd /opt/cloudera/parcels/CDH-5.5.0-1.cdh5.5.0.p0.8/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.6.0-mr1-cdh5.5.0.jar terasort ' + terasort_params + ' '+ str(folderName) + ' ' + str(destFolder)
+    print "running " + cmd 
+    teregen_ip = '172.16.14.97'
+    cl_stdoutd, cl_stderrd = c_ssh_as_root(teregen_ip, cmd)        
+    return cl_stdoutd, cl_stderrd
+
+
+def log(entry, printOutput=True):
+    if printOutput:
+        print entry
+    f = open('Results.log','a')
+    f.write(entry + "\n")
+    f.close()
+
+
+def get_cloudera_dataNodesAverage(cm_api_ip, dataNodes, stat, time_start, time_end, cluster_name):
+    session = ApiResource(cm_api_ip, 7180, "admin", "admin", version=6)
+    avg = 0.00
+    DataNodesCount = 0
+    
+    highests = []
+    highestCPU = 0
+    cpu_avgs = 0
+    timeAdj = datetime.timedelta(hours=6)
+    time_start = time_start-timeAdj
+    time_end = time_end-timeAdj
+
+    for host in dataNodes:
+        host = get_datanode_entityname(cm_api_ip, cluster_name, host)
+        numCores = get_datanode_cores(cm_api_ip, cluster_name, host)
+        if stat == 'cpu_user_rate':
+            tsquery = "select "+stat+" / "+str(numCores)+" *100 where hostname = \""+ host +"\" and category = Host"
+        else:
+            tsquery = "select "+stat+" where hostname = \""+ host +"\" and category = Host"
+        data = []
+        points = {}
+        timestamps = []
+        total = 0
+
+        hostRes = session.query_timeseries(tsquery, time_start, time_end)
+        for rez in hostRes[0].timeSeries:
+            if (len(rez.data) > 0) :
+                for point in rez.data:
+                    data.append(point.value)
+                    points.update(dict({point.value:point.timestamp}))          
+            else :
+                pass
+        if len(data) > 0:
+            highestValue = 0.00
+            highestValue = sorted(data, key=float, reverse=True)[0]
+            highestCPU = highestValue
+            for key in sorted(points.iterkeys(), reverse=True):
+                timestamps.append(points[key])
+            avg = avg  + highestValue
+            if highestValue != 0.00:
+                highests.append(dict({host:highestValue}))
+                DataNodesCount += 1
+            else:
+                timestamp = 0
+                highests.append(dict({host:'0'}))
+        else:
+            highests.append(dict({host:'0'}))
+
+        if stat == 'cpu_user_rate':
+            other_cpu_stats, full_total = get_other_cpu_stats(timestamps[0], host)
+            cpu_total = full_total + highestCPU
+            cpu_avgs = cpu_avgs + cpu_total
+        else:
+            cpu_avgs = 0
+
+    if DataNodesCount == 0:
+        return "0", [], [], [], 0
+    return str(avg / DataNodesCount) , highests, timestamps[0], str(cpu_avgs/DataNodesCount)
+
+
+def getYarnJobStartFinishTimes(job_id, start_time, end_time):
+    # get the job id between the given time range.
+    # return the start and end times for that job.
+
+    config = importlib.import_module('config_cdh5') 
+    cm_api_ip = config.cm_api_ip
+    session = ApiResource(cm_api_ip,  7180, "admin", "admin", version=6)
+        # Get the MapReduce2 job runtime from the job id
+    cdh4 = None
+    for c in session.get_all_clusters():
+        if c.version == "CDH5":
+            cdh4 = c
+    for s in cdh4.get_all_services():
+        #print "s = " + str(s)
+        slist = []
+        if s.name == "yarn":
+            mapreduce = s
+            ac =  mapreduce.get_yarn_applications(start_time, end_time)
+            for job in ac.applications:
+                if job_id == str(job.applicationId):
+                    ob = job
+            start = ob.startTime
+            finish = ob.endTime
+    return start, finish
+
+
+def run_terragen_job(rowCount, teragen_ip):
+        randFolderName = uuid.uuid4()
+        timeA = datetime.datetime.now()
+        bla = teragen(rowCount, randFolderName, teragen_ip)
+        time.sleep(60)
+        ls = bla[1].split('\r' );
+        for line in ls:
+            #print "line: "+str(line)
+            #ma =  re.search("Job complete: (.+)", line)
+            ma =  re.search("Job (.+) complete", line)
+            #print ma
+            if ma:
+                jobID = ma.group(1) 
+
+        timeB = datetime.datetime.now()
+        start, finish = getYarnJobStartFinishTimes(jobID, timeA, timeB)
+
+        return jobID, start, finish, randFolderName
+
+
+def main():
+
+    '''
+    on the edge node : 
+    sudo vi /etc/sudoers
+    add :
+    Defaults:root   !requiretty
+    '''
+    config = importlib.import_module('config_cdh5') 
+
+    hadoop_ip = config.hadoop_ip
+    run_id = config.run_id
+    cm_api_ip = config.cm_api_ip
+    clean_up_ip = config.clean_up_ip
+    cluster_name = config.cluster_name
+
+
+    data_nodes = getDataNodeHosts(cm_api_ip, cluster_name)
+    hostObjs, dataHostIPs = getDataNodeObjects(cm_api_ip, cluster_name)
+    hosts = getAllNodeRoles(cm_api_ip, cluster_name)
+
+    runId = str(datetime.datetime.now()) + "__" + config.run_id
+    log("------------[[["+str(run_id) + "]]]------------------------------")
+
+    rowCountsBatchValues = config.teragen_row_counts
+    datapointsToCheck = config.teragen_cloudera_stats
+    teragen_params = config.teragen_parameters
+    teragen_jar_location = config.teragen_jar_location
+    teragen_jar_filename = config.teragen_jar_filename
+
+    for rowCount in rowCountsBatchValues:
+        log( "[[ Terragen Row Count Cycle  " + str(rowCount)   + "]]")
+        ResultsSummary = []
+        
+        jobID, start, finish, teragenFolder = run_terragen_job(rowCount, hadoop_ip)
+        
+        start_epoch = int(time.mktime(start.timetuple()))
+        finish_epoch = int(time.mktime(finish.timetuple()))
+
+        runTime = finish_epoch - start_epoch
+        log("getting teragen stats for JobID: " + str(jobID))
+        log("terragen | " + str(rowCount) + " | job | runtime | " + str(runTime ))
+
+        for stat in datapointsToCheck:
+            job_type = 'terragen'
+            file_count = 0
+            file_size = 0
+            total_cpu_avg = 0
+
+            cluster_highest_average_cm, individualHostsHighestPoints, timestamp, cpu_total = get_cloudera_dataNodesAverage(cm_api_ip, data_nodes, stat, start, finish, cluster_name)
+            if stat == 'cpu_user_rate':
+                log(job_type + " | " + str(rowCount) + " | average | CPU_Total | " + str(cpu_total) )
+
+            log(job_type + " | " + str(rowCount) + " | average | " + stat + " | " + str(cluster_highest_average_cm) )
+            
+            for host in individualHostsHighestPoints:
+                host_name = host.items()[0][0]
+                stat_value = host.items()[0][1]
+
+                if stat == 'cpu_user_rate':
+                    log(job_type + " | " + str(rowCount) + " | "+ str(host_name) +" | " + stat + " | " + str(stat_value) )
+                    #ResultsSummary.append([str(runId),
+                    #                       "terragen",
+                    #                       str(rowCount),
+                    #                       str(host.items()[0][0]),
+                    #                       str(stat),
+                    #                       str(host.items()[0][1])]
+                    #                      )
+
+                    other_cpu_stats, full_total = get_other_cpu_stats(timestamp, host_name)
+
+                    for each in other_cpu_stats:
+                        cpu_stat = each.items()[0][0]
+                        cpu_stat_value = each.items()[0][1]
+
+                        log(job_type + " | " + str(rowCount) + " | "+ str(host_name) +" | " + str(cpu_stat) + " | " + str(cpu_stat_value))
+
+                    log(job_type + " | " + str(rowCount) + " | "+ str(host_name) +" | CPU Total | " + str(full_total + stat_value) )
+                    
+                else:
+                    log(job_type + " | " + str(rowCount) + " | "+ str(host_name) +" | " + stat + " | " + str(stat_value) )
+                    #ResultsSummary.append([str(runId),
+                    #                       "terragen",
+                    #                       str(rowCount),
+                    #                       str(host.items()[0][0]),
+                    #                       str(stat),
+                    #                       str(host.items()[0][1])]
+                    #                      )
+                    #log("terragen | " + str(rowCount) + " | cpu_total | " + str(cpu_total) )
+
+ 
+    log( "[[[ That's all folks ]]]"  )
+
+if __name__ == '__main__':
+    main()
+    
+
+    

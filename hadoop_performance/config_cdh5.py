@@ -34,7 +34,7 @@ edge_node_ip = "172.16.14.101"
 #point to ganglia node
 crowbar_admin_ip = "172.16.14.101" # 
 
-time_offset = 1 #hours
+time_offset = 0 #hours
 cluster_name = "Cluster 1"
 
 hadoop_ip = "172.16.14.100"
@@ -332,7 +332,7 @@ kmeans_ganglia_stats = (#'boottime',
                          
 
 tpc_flag = 'true'
-tpc_size = '1'
+tpc_size = '2'
 ##tpc_location = '/tpc_xhs_kit/TPCx-HS_Kit_v1.2.0_external/TPCx-HS-Runtime-Suite'
 #tpc_location = '/tpc_xhs_kit/tpcx-hs_kit_v1.2.0_external/TPCx-HS_Kit_v1.2.0_external/TPCx-HS-Runtime-Suite'
 #tpc_location = '/TPCx-HS_Kit/TPCx-HS_Kit_v1.3.0_external/TPCx-HS-Runtime-Suite'

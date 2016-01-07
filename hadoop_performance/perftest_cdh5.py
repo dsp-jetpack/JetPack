@@ -169,18 +169,18 @@ def upload_results(ResultsSummary):
 
 def convert_to_utc(time):
     #print 'time: '+ str(time)
-    log('time: '+ str(time))
+    #log('time: '+ str(time))
     os_time = datetime.datetime.now()
     #print 'os time: '+str(os_time)
-    log('os time: '+str(os_time))
+    #log('os time: '+str(os_time))
     utc_time = datetime.datetime.utcnow()
     #print 'utc_time: '+str(utc_time)
-    log('utc_time: '+str(utc_time))
+    #log('utc_time: '+str(utc_time))
     diff = os_time - utc_time
-    log('diff: ' +str(diff))
+    #log('diff: ' +str(diff))
 
     time = time + diff
-    log('time: ' + str(time))
+    #log('time: ' + str(time))
     return time
 
 def check_disks(name_node_ip):
@@ -263,25 +263,27 @@ def run_tpc_benchmark(tpc_ip, tpc_location, tpc_size):
     job_names = []
 
     edge_node_ip = "172.16.14.101"
-    timeA = datetime.datetime.now()-datetime.timedelta(1)
-    print str(timeA)
+    timeA = datetime.datetime.now()-datetime.timedelta(hours=1)
+    #print str(timeA)
     
     out1, out2 = tpc_benchmark(tpc_ip, tpc_location, tpc_size)
-    
-    jobIDs =  re.findall("Job complete: (.+)", out1)
+
+    #jobIDs =  re.findall("Job complete: (.+)", out1)
+    jobIDs =  re.findall("Job (.+) completed", out1)
     #jobIDs = ['job_201504081546_0163', 'job_201504081546_0164', 'job_201504081546_0165', 'job_201504081546_0166', 'job_201504081546_0167', 'job_201504081546_0168']
-    #jobIDs = ['job_201504160841_0187', 'job_201504160841_0188', 'job_201504160841_0189', 'job_201504160841_0190', 'job_201504160841_0191', 'job_201504160841_0192']
-    print "jobIds " +str(jobIDs)
+    #jobIDs = ['job_1450127588408_0086', 'job_1450127588408_0087', 'job_1450127588408_0088', 'job_1450127588408_0089', 'job_1450127588408_0090', 'job_1450127588408_0091']
+    #print "jobIds " +str(jobIDs)
     #log('jobids: ' +str(jobIDs))
     time.sleep(30)
     minute = timedelta(minutes=1)
-    timeB = datetime.datetime.now()+datetime.timedelta(1)+minute
-    print str(timeB)
+    timeB = datetime.datetime.now()+minute
+    #print str(timeB)
     session = ApiResource(edge_node_ip,  7180, "admin", "admin", version=6)
     #log('jobIds = ' + str(jobIDs))
     #log(str(id))
     #id = 'job_1411634913292_0068'
     for id in jobIDs:
+        #log('ID == ' + str(id))
         # Get the MapReduce job runtime from the job id
         cdh4 = None
         for c in session.get_all_clusters():
@@ -293,33 +295,44 @@ def run_tpc_benchmark(tpc_ip, tpc_location, tpc_size):
             ############
             if s.name == "yarn":
                 mapreduce = s
-            elif s.name == "mapreduce":
-                mapreduce = s
+            #elif s.name == "mapreduce":
+            #    mapreduce = s
                 
-        print timeA
-        print timeB
+        #print timeA
+        #print timeB
         
-        #ac =  mapreduce.get_yarn_applications(timeA, timeB)
-        ac = mapreduce.get_activity(id)
-        job_type = ac.name
+        ac =  mapreduce.get_yarn_applications(timeA, timeB)
+        #ac = mapreduce.get_activity(id)
+        #job_type = ac.name
+        for job in ac.applications:
+            #log('job == ' + str(job))
+            if id == str(job.applicationId):
+                ob = job
+                #log('ob = '+str(ob)) 
+        job_type = ob.name
+        #log(str(job_type))		
+        start = ob.startTime
+        start = start-datetime.timedelta(hours=6)
+        starttimes.append(start)
+        finish = ob.endTime
         #print jobIDs
-        print str(ac.startTime)
-        print str(ac.finishTime)
-        log('API time details for jobID: '+str(id)+ ' ' +str(job_type))
-        log(str(ac.startTime))
-        log(str(ac.finishTime))
-        start = datetime.datetime.strptime(ac.startTime, '%Y-%m-%dT%H:%M:%S.%fZ')
-        finish = datetime.datetime.strptime(ac.finishTime, '%Y-%m-%dT%H:%M:%S.%fZ')
+        #print str(ac.startTime)
+        #print str(ac.endTime)
+        #log('API time details for jobID: '+str(id)+ ' ' +str(job_type))
+        #log(str(ac.startTime))
+        #log(str(ac.endTime))
+        #start = datetime.datetime.strptime(ac.startTime, '%Y-%m-%dT%H:%M:%S.%fZ')
+        #finish = datetime.datetime.strptime(ac.finishTime, '%Y-%m-%dT%H:%M:%S.%fZ')
         
-        start = convert_to_utc(start)
-        finish = convert_to_utc(finish)
-        log(str(start))
-        log(str(finish))
-        start = start-datetime.timedelta(hours=-1)
-        finish = finish-datetime.timedelta(hours=-1)
+        #start = convert_to_utc(start)
+        #finish = convert_to_utc(finish)
+        #log(str(start))
+        #log(str(finish))
+        
+        finish = finish-datetime.timedelta(hours=6)
         #log('ac.starttime: ' +str(ac.startTime))
         #log('ac.finishtime: ' + str(ac.finishTime))
-        starttimes.append(start)
+        #starttimes.append(start)
         finishtimes.append(finish)
         job_names.append(job_type)
         #print str(ac)
@@ -336,8 +349,10 @@ def run_tpc_benchmark(tpc_ip, tpc_location, tpc_size):
         #start = ob.startTime
         #starttimes.append(start)
         #finish = ob.endTime
-        
-        
+    #log(str(starttimes))
+    #log(str(finishtimes))
+    #print starttimes
+    #print finishtimes    
     return jobIDs, starttimes, finishtimes, job_names
     
 
@@ -449,9 +464,9 @@ def get_datanode_hosts(edge_ip, clustername):
     hosts = []
     session = ApiResource(edge_ip,  7180, "admin", "admin", version=5)
     cluster = session.get_cluster(clustername)
-    print "clustername: "+str(clustername)
+    #print "clustername: "+str(clustername)
     view = session.get_all_hosts("full")
-    print "view: "+str(view)
+    #print "view: "+str(view)
     for host in view:
        for each in host.roleRefs:
            if 'DATANODE' in  each.roleName :
@@ -560,7 +575,7 @@ def rrdtoolXtract(start, end, metric, host, crowbar_admin_ip, time_offset):
     #hostName = re.search("(.[a-z0-9]+)", host)
     #host = hostName.group(1)
     cmd = 'rrdtool fetch /var/lib/ganglia/rrds/13g\ Performance\ Stamp/'+ str(host) + '/' + metric +'.rrd AVERAGE -s '+ str(start) +' -e ' + str(end) 
-    log(str(cmd))
+    #log(str(cmd))
     cl_stdoutd, cl_stderrd = c_ssh_as_root_DellCloud(crowbar_admin_ip, cmd)
     return cl_stdoutd, cl_stderrd
 
@@ -568,7 +583,7 @@ def run_dfsio_job(fileCount, fileSize, edge_ip):
     bla = dfsio(fileCount, fileSize, edge_ip)
     ls = bla[1].split('\r' );
     timeA = datetime.datetime.now()-datetime.timedelta(1)
-    print str(timeA)
+    #print str(timeA)
     for line in ls:
         print str(line)
         ma =  re.search("Test exec time sec:\s(.+)", line)
@@ -584,7 +599,7 @@ def run_dfsio_job(fileCount, fileSize, edge_ip):
         
         time.sleep(30)
     timeB = datetime.datetime.now()+datetime.timedelta(1)
-    print str(timeB)
+    #print str(timeB)
     session = ApiResource(edge_ip,  7180, "admin", "admin", version=6)
 
     # Get the MapReduce job runtime from the job id
@@ -602,11 +617,11 @@ def run_dfsio_job(fileCount, fileSize, edge_ip):
     if s.name == "mapreduce":
         mapreduce = s
         ac = mapreduce.get_activity(jobID)
-        print jobID
-        print str(ac.startTime)
-        print str(ac.finishTime)
+        #print jobID
+        #print str(ac.startTime)
+        #print str(ac.finishTime)
         
-        print str(ac)
+        #print str(ac)
         #print str(ac.warnings)
         #for job in ac.applications:
         #    if jobID == str(job.applicationId):
@@ -648,9 +663,9 @@ def run_dfsioREAD_job(fileCount, fileSize, edge_ip):
     bla = dfsioREAD(fileCount, fileSize, edge_ip)
     ls = bla[1].split('\r' );
     timeA = datetime.datetime.now()-datetime.timedelta(1)
-    print str(timeA)
+    #print str(timeA)
     for line in ls:
-        print str(line)
+        #print str(line)
         ma =  re.search("Test exec time sec:\s(.+)", line)
         if ma:
             runTime = ma.group(1)
@@ -663,7 +678,7 @@ def run_dfsioREAD_job(fileCount, fileSize, edge_ip):
         
         time.sleep(30)
     timeB = datetime.datetime.now()+datetime.timedelta(1)
-    print str(timeB)
+    #print str(timeB)
     session = ApiResource(edge_ip,  7180, "admin", "admin", version=6)
 
     # Get the MapReduce job runtime from the job id
@@ -681,11 +696,11 @@ def run_dfsioREAD_job(fileCount, fileSize, edge_ip):
     if s.name == "mapreduce":
         mapreduce = s
         ac = mapreduce.get_activity(jobID)
-        print jobID
-        print str(ac.startTime)
-        print str(ac.finishTime)
+        #print jobID
+        #print str(ac.startTime)
+        #print str(ac.finishTime)
         
-        print str(ac)
+        #print str(ac)
         #print str(ac.warnings)
         #for job in ac.applications:
         #    if jobID == str(job.applicationId):
@@ -766,15 +781,15 @@ def get_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, tim
         cpu_total = []
         full_totals = []
         highestCPU = 0
-        print "time start: "+str(time_start)
-        print "time end: "+str(time_end)
+        #print "time start: "+str(time_start)
+        #print "time end: "+str(time_end)
         #time_start = convert_to_utc(time_start)
         #time_end = convert_to_utc(time_end)
         #time_start = time_start-datetime.timedelta(hours=5)
         #time_end = time_end-datetime.timedelta(hours=5)
 
         for host in dataNodes:
-            print host
+            #print host
             host = get_datanode_entityname(edge_node_ip, cluster_name, host)
             numCores = get_datanode_cores(edge_node_ip, cluster_name, host)
             print "NUM_CORES: " + str(numCores)
@@ -787,7 +802,7 @@ def get_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, tim
                 #system.exit()
             else:
                 tsquery = "select "+stat+" where hostname = \""+ host +"\" and category = Host"
-            print tsquery
+            #print tsquery
             #log(str(tsquery))
             data = []
             points = {}
@@ -796,14 +811,14 @@ def get_cloudera_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, tim
 
 	    #timestamp = []
 	    #rowCount = 10000000000
-            #timeAdj = datetime.timedelta(hours=1)
-            #time_start = time_start+timeAdj
-            #time_end = time_end+timeAdj
+            timeAdj = datetime.timedelta(hours=6)
+            time_start = time_start-timeAdj
+            time_end = time_end-timeAdj
             #qtime_start = convert_to_utc(time_start)
             #qtime_end = convert_to_utc(time_end)
             #log('tsquery =: ' +str(tsquery))
-            print "time start::: "+str(time_start)
-            print "time End::: " + str(time_end)
+            #print "time start::: "+str(time_start)
+            #print "time End::: " + str(time_end)
             hostRes = session.query_timeseries(tsquery, time_start, time_end)
             print 'hostRes[0] = ' + str(hostRes[0])       
             for rez in hostRes[0].timeSeries:
@@ -1010,7 +1025,7 @@ def get_cpu_stats_dataNodesAverage(edge_node_ip, dataNodes, stat, time_start, ti
               
 def run_terragen_job(rowCount, edge_node_ip, teragen_params):
         randFolderName = uuid.uuid4()
-        timeA = datetime.datetime.now()-datetime.timedelta(1)
+        timeA = datetime.datetime.now()-datetime.timedelta(0)
         print str(timeA)
         bla = teragen(rowCount, randFolderName, edge_node_ip, teragen_params)
         #jobID = 'job_201412100459_0011'
@@ -1021,24 +1036,26 @@ def run_terragen_job(rowCount, edge_node_ip, teragen_params):
         #log('===ls===')
         #log(str(ls))
         for line in ls:
-            print "line: "+str(line)
+            #print "line: "+str(line)
             #time.sleep(2)
-            ma =  re.search("Job complete: (.+)", line)
-            #ma =  re.search("Job (.+) complete", line)
-            print ma
+            #ma =  re.search("Job complete: (.+)", line)
+            ma =  re.search("Job (.+) complete", line)
+            #print ma
             if ma:
                 jobID = ma.group(1) 
         #time.sleep(30)
+		print jobID
         print "waiting 30 seconds"
         time.sleep(30)
         minute = timedelta(minutes=0)
 
-        timeB = datetime.datetime.now()+datetime.timedelta(1)+minute
-        print str(timeB)
-        print edge_node_ip
+        #timeB = datetime.datetime.now()+datetime.timedelta(1)+minute
+        timeB = datetime.datetime.now()+minute
+        #print str(timeB)
+        #print edge_node_ip
         edge_node_ip = "172.16.14.101"
         session = ApiResource(edge_node_ip,  7180, "admin", "admin", version=6)
-        print session.version
+        #print session.version
         # Get the MapReduce job runtime from the job id
         cdh4 = None
         for c in session.get_all_clusters():
@@ -1048,8 +1065,11 @@ def run_terragen_job(rowCount, edge_node_ip, teragen_params):
         for s in cdh4.get_all_services():
             print "s = " + str(s)
             slist = []
+            #log(str(s.name))
             if s.name == "yarn":
+            #if s.name == "mapreduce":
                 mapreduce = s
+                #timeA = datetime.datetime.now()-datetime.timedelta(hours=1)
                 ac =  mapreduce.get_yarn_applications(timeA, timeB)
                 for job in ac.applications:
                     if jobID == str(job.applicationId):
@@ -1058,30 +1078,30 @@ def run_terragen_job(rowCount, edge_node_ip, teragen_params):
                 finish = ob.endTime
 
 
-            elif s.name == "mapreduce":
-                mapreduce = s
-                slist.append(s)
-                #ac =  mapreduce.get_yarn_applications(timeA, timeB)
-                ac = mapreduce.get_activity(jobID)
-                print jobID
-                print str(ac.startTime)
-                print str(ac.finishTime)
+            #elif s.name == "mapreduce":
+            #    mapreduce = s
+            #    slist.append(s)
+            #    ac =  mapreduce.get_yarn_applications(timeA, timeB)
+            #   #ac = mapreduce.get_activity(jobID)
+            #    #print jobID
+            #    print str(ac.startTime)
+            #    print str(ac.finishTime)
         
-                print str(ac)
-                #print str(ac.warnings)
-                #for job in ac.applications:
-                #    if jobID == str(job.applicationId):
-                #        ob = job         
-                #start = ob.startTime
-                #finish = ob.endTime
-                start = ac.startTime
-                finish = ac.finishTime
+            #    print str(ac)
+            #    #print str(ac.warnings)
+            #    #for job in ac.applications:
+            #    #    if jobID == str(job.applicationId):
+            #    #        ob = job         
+            #    #start = ob.startTime
+            #    #finish = ob.endTime
+            #    start = ac.startTime
+            #    finish = ac.finishTime
 
 
 
                 
-        print timeA
-        print timeB
+        #print timeA
+        #print timeB
 #        if s.name == "mapreduce":
             
 
@@ -1089,34 +1109,34 @@ def run_terragen_job(rowCount, edge_node_ip, teragen_params):
             
 
         #removed to allow yarn to complete - add back for mapreduce
-        start = datetime.datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
-        finish = datetime.datetime.strptime(finish, '%Y-%m-%dT%H:%M:%S.%fZ')
+        #start = datetime.datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
+        #finish = datetime.datetime.strptime(finish, '%Y-%m-%dT%H:%M:%S.%fZ')
 
-        hourOffset = timedelta(hours=5)
-        start = start-hourOffset
-        finish = finish-hourOffset
-        print str(start)
-        print str(finish)
+        #hourOffset = timedelta(hours=5)
+        #start = start-hourOffset
+        #finish = finish-hourOffset
+        #print str(start)
+        #print str(finish)
 
         return jobID, start, finish, randFolderName
 
 def run_terasort_job(folderName, edge_node_ip, terasort_params):
         #randFolderName = uuid.uuid4()
-        timeA = datetime.datetime.now()-datetime.timedelta(0)
-        print str(timeA)
+        timeA = datetime.datetime.now()-datetime.timedelta(hours=0)
+        #print str(timeA)
         bla = terasort(folderName, edge_node_ip, terasort_params)
         time.sleep(60)
         ls = bla[1].split('\r' );
         #jobID = 'job_201412100459_0011'
         for line in ls:
             print str(line)
-            ma =  re.search("Job complete: (.+)", line)
-            #ma =  re.search("Job (.+) completed", line)
+            #ma =  re.search("Job complete: (.+)", line)
+            ma =  re.search("Job (.+) completed", line)
             if ma:
                 jobID = ma.group(1)
                 print jobID
         time.sleep(30)
-        timeB = datetime.datetime.now()+datetime.timedelta(0)
+        timeB = datetime.datetime.now()-datetime.timedelta(hours=0)
         print str(timeB)
         edge_node_ip = "172.16.14.101"
         session = ApiResource(edge_node_ip,  7180, "admin", "admin", version=6)
@@ -1124,36 +1144,40 @@ def run_terasort_job(folderName, edge_node_ip, terasort_params):
         # Get the MapReduce job runtime from the job id
         cdh4 = None
         for c in session.get_all_clusters():
-            print "terasort c: " + str(c)
+            #print "terasort c: " + str(c)
             if c.version == "CDH5":
                 cdh4 = c 
         for s in cdh4.get_all_services():
             if s.name == "yarn":
                 mapreduce = s
+                #print timeA
+                #print " times"
+                #print timeB
                 ac =  mapreduce.get_yarn_applications(timeA, timeB)
                 for job in ac.applications:
+                    print job
                     if jobID == str(job.applicationId):
                         ob = job         
                 start = ob.startTime
                 finish = ob.endTime
 
-            elif s.name == "mapreduce":
-                mapreduce = s
-                #ac =  mapreduce.get_yarn_applications(timeA, timeB)
-                ac = mapreduce.get_activity(jobID)
-                print jobID
-                print str(ac.startTime)
-                print str(ac.finishTime)
+            #elif s.name == "mapreduce":
+            #    mapreduce = s
+            #    #ac =  mapreduce.get_yarn_applications(timeA, timeB)
+            #    ac = mapreduce.get_activity(jobID)
+            #    print jobID
+            #    print str(ac.startTime)
+            #    print str(ac.finishTime)
         
-                print str(ac)
-                #print str(ac.warnings)
-                #for job in ac.applications:
-                #    if jobID == str(job.applicationId):
-                #        ob = job         
-                #start = ob.startTime
-                #finish = ob.endTime
-                start = ac.startTime
-                finish = ac.finishTime
+            #    print str(ac)
+            #    #print str(ac.warnings)
+            #    #for job in ac.applications:
+            #    #    if jobID == str(job.applicationId):
+            #    #        ob = job         
+            #    #start = ob.startTime
+            #    #finish = ob.endTime
+            #    start = ac.startTime
+            #    finish = ac.finishTime
 
 #        if s.name == "mapreduce":
             
@@ -1171,12 +1195,12 @@ def run_terasort_job(folderName, edge_node_ip, terasort_params):
         #start = ob.startTime
         #finish = ob.endTime
     
-        start = datetime.datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
-        finish = datetime.datetime.strptime(finish, '%Y-%m-%dT%H:%M:%S.%fZ')
+        #start = datetime.datetime.strptime(start, '%Y-%m-%dT%H:%M:%S.%fZ')
+        #finish = datetime.datetime.strptime(finish, '%Y-%m-%dT%H:%M:%S.%fZ')
 
-        hourOffset = timedelta(hours=5)
-        start = start-hourOffset
-        finish = finish-hourOffset
+        #hourOffset = timedelta(hours=-1)
+        #start = start-hourOffset
+        #finish = finish-hourOffset
         
         return jobID, start, finish
 
@@ -1283,8 +1307,8 @@ def get_agg_stats(jobtype, edge_ip, runId, visits, pages, dataNodes, cluster_nam
         #datapointsToCheck = config.hive_cloudera_stats
     for stat in datapointsToCheck:
         #log(stat)
-        print 'start = ' + str(start)
-        print 'finish = ' + str(finish)
+        #print 'start = ' + str(start)
+        #print 'finish = ' + str(finish)
         job_type = 'HIVE-Agg'
         file = '/var/lib/hadoop-hdfs/hibench/hibench.report'
         fileCount = 0
@@ -1380,7 +1404,7 @@ def get_multi_jobIDs(job_type, edge_node_ip):
     finishtimes = []
     #job_type = 'kmeans'
     timeA = datetime.datetime.now()-datetime.timedelta(1)
-    print str(timeA)
+    #print str(timeA)
     
     if job_type == 'kmeans':
         job = kmeans(edge_node_ip)
@@ -1410,7 +1434,7 @@ def get_multi_jobIDs(job_type, edge_node_ip):
     time.sleep(30)
     minute = timedelta(minutes=1)
     timeB = datetime.datetime.now()+datetime.timedelta(1)+minute
-    print str(timeB)
+    #print str(timeB)
     session = ApiResource(edge_node_ip,  7180, "admin", "admin", version=6)
     #log('jobIds = ' + str(jobIDs))
     #log(str(id))
@@ -1485,12 +1509,12 @@ def get_join_stats(jobtype, runId, visits, pages, dataNodes, cluster_name, crowb
             fileSize = 0
             rowCount = 0
             job_name = ''
-            print "start: " + str(start)
-            print "finish: " + str(finish) 
+            #print "start: " + str(start)
+            #print "finish: " + str(finish) 
             #time.sleep(10)
             cluster_highest_average_cm, individialHostsHighestPoints, timestamp, full_totals = getHIVE_cloudera_dataNodesAverage(edge_ip, dataNodes, stat, start, finish, cluster_name,  rowCount, job_type, fileCount, fileSize, job_name)
-            print individialHostsHighestPoints
-            print "timestamp = " + str(timestamp)
+            #print individialHostsHighestPoints
+            #print "timestamp = " + str(timestamp)
 			#time.sleep(12)
 	    	#if timestamp == 0:
 			#	print timestamp
@@ -1665,14 +1689,14 @@ def get_multi_stats(job_type, runId, visits, pages, dataNodes, cluster_name, cro
             fileCount = 0
             fileSize = 0
             rowCount = 0
-            print "start: " + str(start)
-            print "finish: " + str(finish)
+            #print "start: " + str(start)
+            #print "finish: " + str(finish)
             #log("start: " + str(start))
             #log("finish: " + str(finish))
             #time.sleep(10)
             cluster_highest_average_cm, individialHostsHighestPoints, timestamp, full_totals = getHIVE_cloudera_dataNodesAverage(edge_ip, dataNodes, stat, start, finish, cluster_name,  rowCount, job_type, fileCount, fileSize, job_name)
-            print individialHostsHighestPoints
-            print "timestamp = " + str(timestamp)
+            #print individialHostsHighestPoints
+            #print "timestamp = " + str(timestamp)
             #log(str(individialHostsHighestPoints))
             #log(str("timestamp = " + str(timestamp)))
             #time.sleep(12)
@@ -1922,15 +1946,15 @@ def main():
                                   #str(cluster_highest_average_cm)])
 
         for stat in datapointsToCheck:
-            print 'start = ' + str(start)
-            print 'finish = ' + str(finish)
+            #print 'start = ' + str(start)
+            #print 'finish = ' + str(finish)
             job_type = 'terragen'
             fileCount = 0
             fileSize = 0 
             cluster_highest_average_cm, individialHostsHighestPoints, timestamp, full_totals = get_cloudera_dataNodesAverage(edge_ip, dataNodes, stat, start, finish, config.cluster_name, rowCount, job_type, fileCount, fileSize)
             print individialHostsHighestPoints
             if timestamp == 0:
-                print timestamp
+                #print timestamp
                 pass
             if stat == 'cpu_user_rate':
                 log("terragen1 | " + str(rowCount) + " | average | " + stat + " | " + str(cluster_highest_average_cm) )
@@ -2025,13 +2049,13 @@ def main():
         print "------ Cloudera Stats ! ------ "
          
         for stat in datapointsToCheck:
-            print 'start = ' + str(start)
-            print 'finish = ' + str(finish)
+            #print 'start = ' + str(start)
+            #print 'finish = ' + str(finish)
             job_type = 'terasort'
             fileCount = 0
             fileSize = 0
             cluster_highest_average_cm, individialHostsHighestPoints, timestamp, full_totals = get_cloudera_dataNodesAverage(edge_ip, dataNodes, stat, start, finish, config.cluster_name, rowCount, job_type, fileCount, fileSize)
-            print individialHostsHighestPoints
+            #print individialHostsHighestPoints
             if stat == 'cpu_user_rate':
                 log("terasort | " + str(rowCount) + " | average | " + stat + " | " + str(cluster_highest_average_cm) )
             else:
