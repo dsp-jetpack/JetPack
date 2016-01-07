@@ -157,7 +157,7 @@ def get_datanode_cores(cm_api_ip, clustername, hostname):
     return hosts
 
 
-def teragen(rowNumber, folderName, teragen_ip):
+def teragen(rowNumber, folderName):
     '''
     note for this to work : 
     on the edge node : 
@@ -166,8 +166,8 @@ def teragen(rowNumber, folderName, teragen_ip):
     add :
     Defaults:root   !requiretty
     '''
-    config = importlib.import_module('config_cdh5') 
-    cm_api_ip = config.cm_api_ip
+    config = importlib.import_module('config_cdh5')
+    hadoop_ip = config.hadoop_ip
     teragen_parameters = config.teragen_parameters
     teragen_jar_location = config.teragen_jar_location
     teragen_jar_filename = config.teragen_jar_filename
@@ -176,19 +176,30 @@ def teragen(rowNumber, folderName, teragen_ip):
     pwd = 'Ignition01'
     cmd = 'cd ' + teragen_jar_location + '/;sudo -u hdfs hadoop jar ' + teragen_jar_filename + ' teragen ' + teragen_parameters + ' ' + str(rowNumber) +' '+ str(folderName)
     print "running " + cmd
-    cl_stdoutd, cl_stderrd = Ssh.execute_command(teragen_ip, usr, pwd, cmd)    
+    cl_stdoutd, cl_stderrd = Ssh.execute_command(hadoop_ip, usr, pwd, cmd)    
     print cl_stdoutd
     print cl_stderrd
     return cl_stdoutd, cl_stderrd
 
 
-def terasort(folderName, edge_node_ip, terasort_params):
+def terasort(folderName):
     destFolder = folderName + '_Sorted'
+    config = importlib.import_module('config_cdh5') 
+    cm_api_ip = config.cm_api_ip
+    terasort_parameters = config.terasort_parameters
+    teragen_jar_location = config.teragen_jar_location
+    teragen_jar_filename = config.teragen_jar_filename
+    hadoop_ip = config.hadoop_ip
+    usr = 'root'
+    pwd = 'Ignition01'
 
-    cmd = 'cd /opt/cloudera/parcels/CDH-5.5.0-1.cdh5.5.0.p0.8/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.6.0-mr1-cdh5.5.0.jar terasort ' + terasort_params + ' '+ str(folderName) + ' ' + str(destFolder)
+    #cmd = 'cd /opt/cloudera/parcels/CDH-5.5.0-1.cdh5.5.0.p0.8/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.6.0-mr1-cdh5.5.0.jar terasort ' + terasort_params + ' '+ str(folderName) + ' ' + str(destFolder)
+    cmd = 'cd ' + teragen_jar_location + '/;sudo -u hdfs hadoop jar ' + teragen_jar_filename + ' terasort ' + terasort_parameters + ' '+ str(folderName) + ' ' + str(destFolder)
+    
     print "running " + cmd 
-    teregen_ip = '172.16.14.97'
-    cl_stdoutd, cl_stderrd = c_ssh_as_root(teregen_ip, cmd)        
+    cl_stdoutd, cl_stderrd = Ssh.execute_command(hadoop_ip, usr, pwd, cmd)
+    print cl_stdoutd
+    print cl_stderrd
     return cl_stdoutd, cl_stderrd
 
 
@@ -211,6 +222,8 @@ def get_cloudera_dataNodesAverage(cm_api_ip, dataNodes, stat, time_start, time_e
     timeAdj = datetime.timedelta(hours=6)
     time_start = time_start-timeAdj
     time_end = time_end-timeAdj
+    # add 60 seconds to the end time to allow for collecting stats for post-job processing that affects CPU usage.
+    time_end = time_end + datetime.timedelta(seconds=60)
 
     for host in dataNodes:
         host = get_datanode_entityname(cm_api_ip, cluster_name, host)
@@ -250,6 +263,7 @@ def get_cloudera_dataNodesAverage(cm_api_ip, dataNodes, stat, time_start, time_e
 
         if stat == 'cpu_user_rate':
             other_cpu_stats, full_total = get_other_cpu_stats(timestamps[0], host)
+            log(str(timestamps[0]))
             cpu_total = full_total + highestCPU
             cpu_avgs = cpu_avgs + cpu_total
         else:
@@ -259,6 +273,53 @@ def get_cloudera_dataNodesAverage(cm_api_ip, dataNodes, stat, time_start, time_e
         return "0", [], [], [], 0
     return str(avg / DataNodesCount) , highests, timestamps[0], str(cpu_avgs/DataNodesCount)
 
+def get_ganglia_datanodesAverage(dataNodes, stat, start_epoch, end_epoch, crowbar_admin_ip, time_offset):
+        # Checking Ganglia stats
+        DataNodesCount = 0
+        avg = 0.00
+        highests = []
+	config = importlib.import_module('config_cdh5')
+	edge_ip = config.edge_node_ip
+	clustername = config.cluster_name
+    #crowbar_admin_ip = "172.16.2.18"
+        for host in dataNodes:
+		entity = get_datanode_entityname(edge_ip, config.cluster_name, host)
+                ganglia = rrdtoolXtract(start_epoch, end_epoch, stat, entity, edge_ip, time_offset)
+                ls = ganglia[0].splitlines()
+                bytes_in = []
+                for each in ls:            
+                    if ": " in each:
+                        sp = each.split(': ')
+                        f = float(str(sp[1]).strip())
+                        bytes_in.append(f)
+                if len(bytes_in) > 0:
+                    highestValue = sorted(bytes_in, key=float, reverse=True)[0]
+                    if f == 'nan':
+                            highests.append(dict({host:'0'}))
+                            continue
+                    else:
+                        DataNodesCount += 1
+                        highests.append(dict({host:highestValue}))
+                    avg = avg  + highestValue
+                else:
+                    highests.append(dict({host:'0'}))                   
+        if DataNodesCount == 0:
+            return "0", []
+        return str(avg / DataNodesCount), highests
+
+
+def rrdtoolXtract(start, end, metric, host, crowbar_admin_ip, time_offset):
+    config = importlib.import_module('config_cdh5')
+    location = config.ganglia_stat_locations
+    offset = time_offset*60*60
+    start = start - offset
+    end = end - offset
+    usr = 'root'
+    pwd = 'DellCloud'
+    cmd = 'rrdtool fetch '+location + '' + str(host) + '/' + metric +'.rrd AVERAGE -s '+ str(start) +' -e ' + str(end) 
+    #log(str(cmd))
+    cl_stdoutd, cl_stderrd = Ssh.execute_command(crowbar_admin_ip, usr, pwd, cmd)
+    return cl_stdoutd, cl_stderrd
 
 def getYarnJobStartFinishTimes(job_id, start_time, end_time):
     # get the job id between the given time range.
@@ -286,25 +347,122 @@ def getYarnJobStartFinishTimes(job_id, start_time, end_time):
     return start, finish
 
 
-def run_terragen_job(rowCount, teragen_ip):
-        randFolderName = uuid.uuid4()
-        timeA = datetime.datetime.now()
-        bla = teragen(rowCount, randFolderName, teragen_ip)
-        time.sleep(60)
-        ls = bla[1].split('\r' );
-        for line in ls:
-            #print "line: "+str(line)
-            #ma =  re.search("Job complete: (.+)", line)
-            ma =  re.search("Job (.+) complete", line)
-            #print ma
-            if ma:
-                jobID = ma.group(1) 
+def run_teragen_job(rowCount):
+    randFolderName = str(uuid.uuid4())
+    timeA = datetime.datetime.now()
+    bla = teragen(rowCount, randFolderName)
+    time.sleep(60)
+    ls = bla[1].split('\r' );
+    for line in ls:
+        #print "line: "+str(line)
+        #ma =  re.search("Job complete: (.+)", line)
+        ma =  re.search("Job (.+) complete", line)
+        #print ma
+        if ma:
+            jobID = ma.group(1) 
 
-        timeB = datetime.datetime.now()
-        start, finish = getYarnJobStartFinishTimes(jobID, timeA, timeB)
+    timeB = datetime.datetime.now()
+    start, finish = getYarnJobStartFinishTimes(jobID, timeA, timeB)
 
-        return jobID, start, finish, randFolderName
+    return jobID, start, finish, randFolderName
 
+def run_terasort_job(target_folder):
+    timeA = datetime.datetime.now()
+    bla = terasort(target_folder)
+    time.sleep(60)
+    ls = bla[1].split('\r' );
+    for line in ls:
+        print "line: "+str(line)
+        #ma =  re.search("Job complete: (.+)", line)
+        ma =  re.search("Job (.+) complete", line)
+        #print ma
+        if ma:
+            jobID = ma.group(1) 
+
+    timeB = datetime.datetime.now()
+    log(str(jobID))
+    start, finish = getYarnJobStartFinishTimes(jobID, timeA, timeB)
+
+    return jobID, start, finish
+
+def logStats(job_type, data_nodes, start, finish, rowCount, start_epoch, finish_epoch):
+    config = importlib.import_module('config_cdh5')
+    datapointsToCheck = config.teragen_cloudera_stats
+    ganglia_ip = config.ganglia_ip
+    time_offset = config.time_offset
+    cluster_name = config.cluster_name
+    cm_api_ip = config.cm_api_ip
+
+    for stat in datapointsToCheck:
+        #job_type = 'terragen'
+        #file_count = 0
+        #file_size = 0
+        total_cpu_avg = 0
+
+        cluster_highest_average_cm, individualHostsHighestPoints, timestamp, cpu_total = get_cloudera_dataNodesAverage(cm_api_ip, data_nodes, stat, start, finish, cluster_name)
+        if stat == 'cpu_user_rate':
+            log(job_type + " | " + str(rowCount) + " | average | CPU_Total | " + str(cpu_total) )
+
+        log(job_type + " | " + str(rowCount) + " | average | " + stat + " | " + str(cluster_highest_average_cm) )
+        
+        for host in individualHostsHighestPoints:
+            host_name = host.items()[0][0]
+            stat_value = host.items()[0][1]
+
+            if stat == 'cpu_user_rate':
+                log(job_type + " | " + str(rowCount) + " | "+ str(host_name) +" | " + stat + " | " + str(stat_value) )
+                #ResultsSummary.append([str(runId),
+                #                       "terragen",
+                #                       str(rowCount),
+                #                       str(host.items()[0][0]),
+                #                       str(stat),
+                #                       str(host.items()[0][1])]
+                #                      )
+
+                other_cpu_stats, full_total = get_other_cpu_stats(timestamp, host_name)
+
+                for each in other_cpu_stats:
+                    cpu_stat = each.items()[0][0]
+                    cpu_stat_value = each.items()[0][1]
+
+                    log(job_type + " | " + str(rowCount) + " | "+ str(host_name) +" | " + str(cpu_stat) + " | " + str(cpu_stat_value))
+
+                log(job_type + " | " + str(rowCount) + " | "+ str(host_name) +" | CPU Total | " + str(full_total + stat_value) )
+                
+            else:
+                log(job_type + " | " + str(rowCount) + " | "+ str(host_name) +" | " + stat + " | " + str(stat_value) )
+                #ResultsSummary.append([str(runId),
+                #                       "terragen",
+                #                       str(rowCount),
+                #                       str(host.items()[0][0]),
+                #                       str(stat),
+                #                       str(host.items()[0][1])]
+                #                      )
+                #log("terragen | " + str(rowCount) + " | cpu_total | " + str(cpu_total) )
+
+    ganglia_stats = config.teragen_ganglia_stats
+
+    #print( "[Getting ganglia stats]")
+    print "------ Ganglia Stats ! ------ "
+    for stat in ganglia_stats:
+        cluster_highest_average_ganglia, individualHostsHighestPoints = get_ganglia_datanodesAverage(data_nodes, stat, start_epoch, finish_epoch, ganglia_ip, time_offset)
+       
+        log(job_type + " | ganglia | " + str(rowCount) + " | average | " + stat + " | " + str(cluster_highest_average_ganglia) )
+        #ResultsSummary.append([str(runId),
+        #                       "terragen",
+        #                      str(rowCount),
+        #                      "average",
+        #                      str(stat),
+        #                      str(cluster_highest_average_ganglia)])
+        for host in individualHostsHighestPoints:
+            log(job_type + " | ganglia | " + str(rowCount) + " | "+ str(host.items()[0][0]) +" | " + stat + " | " + str(host.items()[0][1]) )
+        #    ResultsSummary.append([str(runId),
+        #                           "terragen",
+        #                          str(rowCount),
+        #                          str(host.items()[0][0]),
+        #                          str(stat),
+        #                          str(host.items()[0][1])]                                      
+        #                          )
 
 def main():
 
@@ -322,6 +480,9 @@ def main():
     clean_up_ip = config.clean_up_ip
     cluster_name = config.cluster_name
 
+    ganglia_ip = config.ganglia_ip
+    time_offset = config.time_offset
+
 
     data_nodes = getDataNodeHosts(cm_api_ip, cluster_name)
     hostObjs, dataHostIPs = getDataNodeObjects(cm_api_ip, cluster_name)
@@ -337,66 +498,32 @@ def main():
     teragen_jar_filename = config.teragen_jar_filename
 
     for rowCount in rowCountsBatchValues:
-        log( "[[ Terragen Row Count Cycle  " + str(rowCount)   + "]]")
+        log( "[[ Teragen Row Count Cycle  " + str(rowCount)   + "]]")
         ResultsSummary = []
+        job_type = 'Teragen'
         
-        jobID, start, finish, teragenFolder = run_terragen_job(rowCount, hadoop_ip)
+        jobID, start, finish, teragenFolder = run_teragen_job(rowCount)
         
         start_epoch = int(time.mktime(start.timetuple()))
         finish_epoch = int(time.mktime(finish.timetuple()))
-
         runTime = finish_epoch - start_epoch
+
         log("getting teragen stats for JobID: " + str(jobID))
-        log("terragen | " + str(rowCount) + " | job | runtime | " + str(runTime ))
+        log("Teragen | " + str(rowCount) + " | job | runtime | " + str(runTime ))
+        logStats(job_type, data_nodes, start, finish, rowCount, start_epoch, finish_epoch)
 
-        for stat in datapointsToCheck:
-            job_type = 'terragen'
-            file_count = 0
-            file_size = 0
-            total_cpu_avg = 0
+        job_type = 'Terasort'
+        log( "[[ Terasort Row Count Cycle  " + str(rowCount)   + "]]")
 
-            cluster_highest_average_cm, individualHostsHighestPoints, timestamp, cpu_total = get_cloudera_dataNodesAverage(cm_api_ip, data_nodes, stat, start, finish, cluster_name)
-            if stat == 'cpu_user_rate':
-                log(job_type + " | " + str(rowCount) + " | average | CPU_Total | " + str(cpu_total) )
+        jobID, start, finish = run_terasort_job(teragenFolder)
+        log("getting terasort stats for JobID: " + str(jobID))
 
-            log(job_type + " | " + str(rowCount) + " | average | " + stat + " | " + str(cluster_highest_average_cm) )
-            
-            for host in individualHostsHighestPoints:
-                host_name = host.items()[0][0]
-                stat_value = host.items()[0][1]
+        start_epoch = int(time.mktime(start.timetuple()))
+        finish_epoch = int(time.mktime(finish.timetuple()))
+        runTime = finish_epoch - start_epoch
 
-                if stat == 'cpu_user_rate':
-                    log(job_type + " | " + str(rowCount) + " | "+ str(host_name) +" | " + stat + " | " + str(stat_value) )
-                    #ResultsSummary.append([str(runId),
-                    #                       "terragen",
-                    #                       str(rowCount),
-                    #                       str(host.items()[0][0]),
-                    #                       str(stat),
-                    #                       str(host.items()[0][1])]
-                    #                      )
-
-                    other_cpu_stats, full_total = get_other_cpu_stats(timestamp, host_name)
-
-                    for each in other_cpu_stats:
-                        cpu_stat = each.items()[0][0]
-                        cpu_stat_value = each.items()[0][1]
-
-                        log(job_type + " | " + str(rowCount) + " | "+ str(host_name) +" | " + str(cpu_stat) + " | " + str(cpu_stat_value))
-
-                    log(job_type + " | " + str(rowCount) + " | "+ str(host_name) +" | CPU Total | " + str(full_total + stat_value) )
-                    
-                else:
-                    log(job_type + " | " + str(rowCount) + " | "+ str(host_name) +" | " + stat + " | " + str(stat_value) )
-                    #ResultsSummary.append([str(runId),
-                    #                       "terragen",
-                    #                       str(rowCount),
-                    #                       str(host.items()[0][0]),
-                    #                       str(stat),
-                    #                       str(host.items()[0][1])]
-                    #                      )
-                    #log("terragen | " + str(rowCount) + " | cpu_total | " + str(cpu_total) )
-
- 
+        logStats(job_type, data_nodes, start, finish, rowCount, start_epoch, finish_epoch)
+        
     log( "[[[ That's all folks ]]]"  )
 
 if __name__ == '__main__':
