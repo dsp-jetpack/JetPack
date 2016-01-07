@@ -57,7 +57,7 @@ class Deployer_sanity():
             'public_api_netmask','external_allocation_pool_start','external_allocation_pool_end',
             'private_api_vlanid','private_api_netmask','private_api_allocation_pool_start','private_api_allocation_pool_end',
             'storage_netmask','storage_allocation_pool_start','storage_allocation_pool_end',
-            'provisioning_netmask','provisioning_net_dhcp_start','provisioning_net_dhcp_end',
+            'provisioning_netmask','provisioning_net_dhcp_start','provisioning_net_dhcp_end','provisioning_gateway',
             'storage_cluster_allocation_pool_start','storage_cluster_allocation_pool_end',
             'managment_netmask','name_server',
             'ipmi_discovery_range_start','ipmi_discovery_range_end',

@@ -438,6 +438,7 @@ if __name__ == '__main__':
         log("=== Overcloud stack state : "+ overcloud_status )
         log("Applyin neutron vlan config workaround ")
         director_vm.fix_controllers_vlan_range()
+        log("note : it might take a few minutes for the controlers to come back up")
         log("====================================")
         log("= log : " + loggile)
         log("====================================")

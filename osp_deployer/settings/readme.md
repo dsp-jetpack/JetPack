@@ -26,6 +26,7 @@ or
 * 5.0.0.a - Initial 5.0 version - some settings left over from 4.x might go away as this is still work in progress
 * 5.0.0.b - Added new setting use_ipmi_driver
 * 5.0.0.c - removed legacy settings.
+* 5.0.0.d - added management_network & provisioning_gateway settings
 
 #####settings.properties
 * 5.0.0.a - Initial 5.0 version - some settings left over from 4.x might go away as this is still work in progress

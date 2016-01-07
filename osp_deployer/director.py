@@ -326,6 +326,8 @@ class Director():
             'sed -i "s|StorageMgmtAllocationPools:.*|StorageMgmtAllocationPools: ' + "[{'start': '" + self.settings.storage_cluster_allocation_pool_start + "', 'end': '"+ self.settings.storage_cluster_allocation_pool_end +"'}]"   '|" ' + networkYaml,
             'sed -i "s|ExternalAllocationPools:.*|ExternalAllocationPools: ' + "[{'start': '" + self.settings.external_allocation_pool_start + "', 'end': '"+ self.settings.external_allocation_pool_end +"'}]"   '|" ' + networkYaml,
             'sed -i "s|ExternalInterfaceDefaultRoute:.*|ExternalInterfaceDefaultRoute: ' + self.settings.external_gateway + '|" ' + networkYaml,
+            'sed -i "s|ManagementNetCidr:.*|ManagementNetCidr: ' + self.settings.management_network + '|" ' + networkYaml,
+            'sed -i "s|ProvisioningNetworkGateway:.*|ProvisioningNetworkGateway: ' + self.settings.provisioning_gateway + '|" ' + networkYaml,
             'sed -i "s|ControlPlaneDefaultRoute:.*|ControlPlaneDefaultRoute: ' + self.settings.director_node.provisioning_ip + '|" ' + networkYaml,
             "sed -i 's|ControlPlaneSubnetCidr:.*|ControlPlaneSubnetCidr: " + '"' + self.settings.provisioning_network.split("/")[1] + '"' +  "|' " + networkYaml,
             'sed -i "s|EC2MetadataIp:.*|EC2MetadataIp: ' + self.settings.director_node.provisioning_ip + '|" ' + networkYaml,
@@ -347,6 +349,8 @@ class Director():
                 'sed -i "s|em2|'+ self.settings.controller_bond1_interfaces.split(" ")[0] +'|" ' + controllerYaml,
                 'sed -i "s|p3p2|'+ self.settings.controller_bond1_interfaces.split(" ")[1] +'|" ' + controllerYaml,
                 'sed -i "s|em3|'+ self.settings.controller_provisioning_interface +'|" ' + controllerYaml,
+                'sed -i "s|192.168.110.0/24|'+ self.settings.management_network +'|" ' + controllerYaml,
+                'sed -i "s|192.168.120.1|'+ self.settings.provisioning_gateway +'|" ' + controllerYaml,
 
                 ]
         for cmd in cmds :
