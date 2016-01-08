@@ -20,7 +20,6 @@
 # along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
 
 import sys, getopt, time, subprocess, paramiko,logging, traceback, os.path, urllib2, shutil, socket
-from osp_deployer.foreman import Foreman
 from osp_deployer.ceph import Ceph
 from auto_common import Ipmi, Ssh, FileHelper, Scp, UI_Manager
 from osp_deployer import Settings
