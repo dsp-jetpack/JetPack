@@ -203,6 +203,43 @@ def terasort(folderName):
     return cl_stdoutd, cl_stderrd
 
 
+def tpc_benchmark(tpc_size):
+    config = importlib.import_module('config_cdh5') 
+    tpc_node_ip = config.tpc_node_ip
+    tpc_location = config.tpc_location
+    print 'running TPC Benchmark'
+    cmd = 'cd '+str(tpc_location)+'; ./TPCx-HS-master.sh -g '+ tpc_size
+    usr = 'root'
+    pwd = 'Ignition01'
+    cl_stdoutd, cl_stderrd = Ssh.execute_command(tpc_node_ip, usr, pwd, cmd)
+    print cmd
+    print 'TPC error: ' +str(cl_stderrd)
+    print 'TPC output: ' + str(cl_stdoutd)
+    return cl_stdoutd, cl_stderrd
+
+
+def convertToSF(tpc_size):
+    if tpc_size == '1':
+        tpc_size = '100GB'
+    elif tpc_size == '2':
+        tpc_size = '300GB'
+    elif tpc_size == '3':
+        tpc_size = '1TB'
+    elif tpc_size == '4':
+        tpc_size = '3TB'
+    elif tpc_size == '5':
+        tpc_size = '10TB'
+    elif tpc_size == '6':
+        tpc_size = '30TB'
+    elif tpc_size == '7':
+        tpc_size = '100TB'
+    elif tpc_size == '8':
+        tpc_size = '300TB'
+    elif tpc_size == '9':
+        tpc_size = '1PB'
+
+    return tpc_size
+
 def log(entry, printOutput=True):
     if printOutput:
         print entry
@@ -270,7 +307,7 @@ def get_cloudera_dataNodesAverage(cm_api_ip, dataNodes, stat, time_start, time_e
             cpu_avgs = 0
 
     if DataNodesCount == 0:
-        return "0", [], [], [], 0
+        return "0", [], [], 0
     return str(avg / DataNodesCount) , highests, timestamps[0], str(cpu_avgs/DataNodesCount)
 
 def get_ganglia_datanodesAverage(dataNodes, stat, start_epoch, end_epoch, crowbar_admin_ip, time_offset):
@@ -344,7 +381,9 @@ def getYarnJobStartFinishTimes(job_id, start_time, end_time):
                     ob = job
             start = ob.startTime
             finish = ob.endTime
-    return start, finish
+            job_name = ob.name
+
+    return job_name, start, finish
 
 
 def run_teragen_job(rowCount):
@@ -359,12 +398,12 @@ def run_teragen_job(rowCount):
         ma =  re.search("Job (.+) complete", line)
         #print ma
         if ma:
-            jobID = ma.group(1) 
+            job_id = ma.group(1) 
 
     timeB = datetime.datetime.now()
-    start, finish = getYarnJobStartFinishTimes(jobID, timeA, timeB)
+    job_name, start, finish = getYarnJobStartFinishTimes(job_id, timeA, timeB)
 
-    return jobID, start, finish, randFolderName
+    return job_id, job_name, start, finish, randFolderName
 
 def run_terasort_job(target_folder):
     timeA = datetime.datetime.now()
@@ -377,13 +416,72 @@ def run_terasort_job(target_folder):
         ma =  re.search("Job (.+) complete", line)
         #print ma
         if ma:
-            jobID = ma.group(1) 
+            job_id = ma.group(1) 
 
     timeB = datetime.datetime.now()
-    log(str(jobID))
-    start, finish = getYarnJobStartFinishTimes(jobID, timeA, timeB)
+    log(str(job_id))
+    job_name, start, finish = getYarnJobStartFinishTimes(job_id, timeA, timeB)
 
-    return jobID, start, finish
+    return job_id, job_name, start, finish
+
+def run_tpc_benchmark(tpc_size):
+    job_ids = []
+    start_times = []
+    finish_times = []
+    job_names = []
+
+    time_start = datetime.datetime.now()
+    out1, out2 = tpc_benchmark(tpc_size)
+    time.sleep(80)
+    time_end= datetime.datetime.now()
+    log(str(time_end))
+    #job_ids =  re.findall("Job complete: (.+)", out1)
+    job_ids =  re.findall("Job (.+) completed", out1)
+    print "job_ids " +str(job_ids)
+    
+    for job in job_ids:
+        job_name, start, finish = getYarnJobStartFinishTimes(job, time_start, time_end)
+        log(str(job_name))
+        log(str(start))
+        log(str(finish))
+        start_times.append(start)
+        finish_times.append(finish)
+        job_names.append(job_name)
+        #log("getting " +job_type+ " stats for JobID: " + str(job))
+        #log("getting TPC stats for JobID: " + str(job))
+        #start = starttimes[job_ids.index(each)]
+        #finish = finishtimes[job_ids.index(each)]
+
+ #       job_name = job_names[job_ids.index(each)]
+
+        #start_epoch = int(time.mktime(start.timetuple()))
+        #finish_epoch = int(time.mktime(finish.timetuple()))
+        #minute = timedelta(minutes=1)
+        #timeB = datetime.datetime.now()+minute
+        #print str(timeB)
+    
+        #job_type = ob.name
+        #log(str(job_type))		
+        #start = ob.startTime
+        #start = start-datetime.timedelta(hours=6)
+        #starttimes.append(start)
+        #finish = ob.endTime
+
+        #log('API time details for jobID: '+str(id)+ ' ' +str(job_type))
+
+        
+        #finish = finish-datetime.timedelta(hours=6)
+
+        #finishtimes.append(finish)
+        #job_names.append(job_type)
+
+    #log(str(starttimes))
+    #log(str(finishtimes))
+    #print starttimes
+    #print finishtimes    
+    #return job_ids, starttimes, finishtimes, job_names
+    return job_ids, job_names, start_times, finish_times
+
 
 def logStats(job_type, data_nodes, start, finish, rowCount, start_epoch, finish_epoch):
     config = importlib.import_module('config_cdh5')
@@ -455,7 +553,9 @@ def logStats(job_type, data_nodes, start, finish, rowCount, start_epoch, finish_
         #                      str(stat),
         #                      str(cluster_highest_average_ganglia)])
         for host in individualHostsHighestPoints:
-            log(job_type + " | ganglia | " + str(rowCount) + " | "+ str(host.items()[0][0]) +" | " + stat + " | " + str(host.items()[0][1]) )
+            host_name = get_datanode_entityname(cm_api_ip, cluster_name, host.items()[0][0])
+            stat_value = host.items()[0][1]
+            log(job_type + " | ganglia | " + str(rowCount) + " | "+ str(host_name) +" | " + stat + " | " + str(stat_value) )
         #    ResultsSummary.append([str(runId),
         #                           "terragen",
         #                          str(rowCount),
@@ -502,28 +602,71 @@ def main():
         ResultsSummary = []
         job_type = 'Teragen'
         
-        jobID, start, finish, teragenFolder = run_teragen_job(rowCount)
+        jobID, job_name, start, finish, teragenFolder = run_teragen_job(rowCount)
         
         start_epoch = int(time.mktime(start.timetuple()))
         finish_epoch = int(time.mktime(finish.timetuple()))
         runTime = finish_epoch - start_epoch
 
         log("getting teragen stats for JobID: " + str(jobID))
-        log("Teragen | " + str(rowCount) + " | job | runtime | " + str(runTime ))
+        log(job_name + " | " + str(rowCount) + " | job | runtime | " + str(runTime ))
         logStats(job_type, data_nodes, start, finish, rowCount, start_epoch, finish_epoch)
 
         job_type = 'Terasort'
         log( "[[ Terasort Row Count Cycle  " + str(rowCount)   + "]]")
 
-        jobID, start, finish = run_terasort_job(teragenFolder)
+        jobID, job_name, start, finish = run_terasort_job(teragenFolder)
         log("getting terasort stats for JobID: " + str(jobID))
 
         start_epoch = int(time.mktime(start.timetuple()))
         finish_epoch = int(time.mktime(finish.timetuple()))
-        runTime = finish_epoch - start_epoch
 
+        runTime = finish_epoch - start_epoch
+        log(job_name + " | " + str(rowCount) + " | job | runtime | " + str(runTime ))
         logStats(job_type, data_nodes, start, finish, rowCount, start_epoch, finish_epoch)
-        
+
+    job_type = 'TPC'
+    tpc_size = config.tpc_size
+
+    if config.tpc_flag == 'true':
+        #print 'updating config file'
+        #print file
+        #edit_file('NUM_MAPS', num_maps, file)
+        #edit_file('NUM_REDUCERS', num_reducers, file)
+        #edit_file('HADOOP_USER', hadoop_user, file)
+        #edit_file('HDFS_USER', hdfs_user, file)
+        #edit_file('SLEEP_BETWEEN_RUNS', sleep_between_runs, file)
+
+        #tpc_out, jobIDs = get_multi_stats(jobtype, runId, visits, pages, dataNodes, cluster_name, crowbar_admin_ip, time_offset, datapointsToCheck)
+
+        job_ids, job_names, starts, finishs = run_tpc_benchmark(tpc_size)
+        for job in job_ids:
+            start = starts[job_ids.index(job)]
+            finish = finishs[job_ids.index(job)]
+            job_name = job_names[job_ids.index(job)]
+
+            start_epoch = int(time.mktime(start.timetuple()))
+            finish_epoch = int(time.mktime(finish.timetuple()))
+            runTime = finish_epoch - start_epoch
+            
+            tpc_size = convertToSF(tpc_size)
+
+            log("getting TPC stats for JobID: " + str(job))
+            log('TPC- ' + job_name + " | " + str(tpc_size) + " | job | runtime | " + str(runTime ))
+            logStats(job_name, data_nodes, start, finish, tpc_size, start_epoch, finish_epoch)
+
+#        print jobIDs
+#        print "\nTPC RUN COMPLETE\n"
+#        print "TPC run complete, here is config info set for the run: "
+#        print "NUM_MAPS: "+ num_maps
+#        print "NUM_REDUCERS: "+ num_reducers
+#        print "HADOOP_USER: "+hadoop_user
+#        print "HDFS_USER: " +hdfs_user
+#        print "SLEEP_BETWEEN_RUNS: " +sleep_between_runs
+    else:
+        print "TPC not running, flag set to: " + config.tpc_flag
+
+
     log( "[[[ That's all folks ]]]"  )
 
 if __name__ == '__main__':
