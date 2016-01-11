@@ -146,7 +146,10 @@ class Settings():
 
         self.bastion_settings_map = self.getSettingsSection("Bastion Settings")
         self.rhl71_iso = self.bastion_settings_map['rhl71_iso']
-        self.cygwin_installdir = self.bastion_settings_map['cygwin_installdir']
+        if sys.platform.startswith('linux'):
+            self.cygwin_installdir = 'n/a'
+        else:
+            self.cygwin_installdir = self.bastion_settings_map['cygwin_installdir']
         self.rhel_install_location = self.bastion_settings_map['rhel_install_location']
         self.sah_kickstart= self.bastion_settings_map['sah_kickstart']
         self.cloud_repo_dir = self.bastion_settings_map['cloud_repo_dir']
