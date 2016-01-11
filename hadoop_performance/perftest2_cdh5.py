@@ -28,16 +28,92 @@ from auto_common import *
 
 
 def edit_file(target, new_value, file):
+
     config = importlib.import_module('config_cdh5') 
     tpc_node_ip = config.tpc_node_ip
-    myScp = Scp()
     usr = 'root'
     pwd = 'Ignition01'
-
     cmd = 'sed -i.bak s/'"^"+target+'=.*/'+target+'='+str(new_value)+'/g '+file
 
     #print "running: " + cmd
     Ssh.execute_command(tpc_node_ip, usr, pwd, cmd)
+
+
+def check_disks(clean_up_ip):
+
+    print 'checking disks'
+    usr = 'root'
+    pwd = 'Ignition01'
+    cmd = 'sudo -u hdfs hadoop fs -ls hdfs:///user/hdfs'
+
+    cl_stdoutd, cl_stderrd = Ssh.execute_command(clean_up_ip, usr, pwd, cmd)
+    if cl_stderrd != '':
+        print 'check disk error: ' +str(cl_stderrd)
+        sys.exit()
+    if cl_stdoutd == '':
+        print 'no files to delete'
+        return 0
+    else:
+        print 'Files found by disk check: ' + str(cl_stdoutd)
+        return 1
+
+
+def clear_disks(clean_up_ip):
+
+    usr = 'root'
+    pwd = 'Ignition01'
+    if check_disks(clean_up_ip):
+        log("Clearing Disks")
+        #clean_up_ip = '172.16.11.141'
+        cmd = 'sudo -u hdfs hadoop fs -rm -R -f -skipTrash /user/hdfs/*'
+        print "running " + cmd 
+        cl_stdoutd, cl_stderrd = Ssh.execute_command(clean_up_ip, usr, pwd, cmd)        
+        print cl_stdoutd
+        print cl_stderrd
+
+        if cl_stderrd != '':
+            print cl_stderrd
+            sys.exit()
+        return cl_stdoutd, cl_stderrd
+    else:
+        print 'skipping clear disks'
+        return '', ''
+
+def clear_cache(clean_up_ip):
+
+    log("Clearing cache")
+    #clean_up_ip = '172.16.11.141'
+    usr = 'root'
+    pwd = 'Ignition01'
+
+    cmd = 'clush -w r3s1xd[1-10] "sync"'
+    cmd2 = 'clush -w r3s1xd[1-12] "echo 3> /proc/sys/vm/drop_caches"'
+
+    print "running " + cmd 
+    syncOut, syncError = Ssh.execute_command(clean_up_ip, usr, pwd, cmd)
+    #print 'syncOut' + str(syncOut)
+    #print 'syncError' + str(syncError)
+    if syncError != '':
+        print 'sync error: ' + str(syncError)
+        sys.exit()
+    
+    print "running " + cmd2
+    cl_stdoutd, cl_stderrd = Ssh.execute_command(clean_up_ip, usr, pwd, cmd2)
+    
+    print cl_stdoutd
+    #print cl_stderrd
+    if cl_stderrd != '':
+        print 'cache clearing error: ' + str(cl_stderrd)
+        sys.exit()
+
+    if cl_stdoutd == '':
+        print 'cache not cleared'
+        sys.exit()
+
+    #output =  re.search("Deleted ", cl_stdoutd)
+    #print 'line: ' + str(output)
+
+    return cl_stdoutd, cl_stderrd
 
 
 def get_other_cpu_stats(timestamp, host):
@@ -573,6 +649,12 @@ def main():
     teragen_params = config.teragen_parameters
     teragen_jar_location = config.teragen_jar_location
     teragen_jar_filename = config.teragen_jar_filename
+
+    out1, out2 = clear_disks(clean_up_ip)
+    print out1
+    out1, out2 = clear_cache(clean_up_ip)
+
+    log( "[[[ Teragen tests ]]]")
 
     for rowCount in rowCountsBatchValues:
         log( "[[ Teragen Row Count Cycle  " + str(rowCount)   + "]]")
