@@ -20,10 +20,24 @@
 # along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
 
 import time, calendar, re, uuid,  importlib, datetime, subprocess, paramiko, sys, os, requests, logging
+import fileinput
 from cm_api.api_client import ApiResource
 import dateutil.parser
 from datetime import timedelta
 from auto_common import *
+
+
+def edit_file(target, new_value, file):
+    config = importlib.import_module('config_cdh5') 
+    tpc_node_ip = config.tpc_node_ip
+    myScp = Scp()
+    usr = 'root'
+    pwd = 'Ignition01'
+
+    cmd = 'sed -i.bak s/'"^"+target+'=.*/'+target+'='+str(new_value)+'/g '+file
+
+    #print "running: " + cmd
+    Ssh.execute_command(tpc_node_ip, usr, pwd, cmd)
 
 
 def get_other_cpu_stats(timestamp, host):
@@ -300,7 +314,7 @@ def get_cloudera_dataNodesAverage(cm_api_ip, dataNodes, stat, time_start, time_e
 
         if stat == 'cpu_user_rate':
             other_cpu_stats, full_total = get_other_cpu_stats(timestamps[0], host)
-            log(str(timestamps[0]))
+            #log(str(timestamps[0]))
             cpu_total = full_total + highestCPU
             cpu_avgs = cpu_avgs + cpu_total
         else:
@@ -419,7 +433,7 @@ def run_terasort_job(target_folder):
             job_id = ma.group(1) 
 
     timeB = datetime.datetime.now()
-    log(str(job_id))
+
     job_name, start, finish = getYarnJobStartFinishTimes(job_id, timeA, timeB)
 
     return job_id, job_name, start, finish
@@ -434,52 +448,18 @@ def run_tpc_benchmark(tpc_size):
     out1, out2 = tpc_benchmark(tpc_size)
     time.sleep(80)
     time_end= datetime.datetime.now()
-    log(str(time_end))
+
     #job_ids =  re.findall("Job complete: (.+)", out1)
     job_ids =  re.findall("Job (.+) completed", out1)
     print "job_ids " +str(job_ids)
     
     for job in job_ids:
         job_name, start, finish = getYarnJobStartFinishTimes(job, time_start, time_end)
-        log(str(job_name))
-        log(str(start))
-        log(str(finish))
+
         start_times.append(start)
         finish_times.append(finish)
         job_names.append(job_name)
-        #log("getting " +job_type+ " stats for JobID: " + str(job))
-        #log("getting TPC stats for JobID: " + str(job))
-        #start = starttimes[job_ids.index(each)]
-        #finish = finishtimes[job_ids.index(each)]
 
- #       job_name = job_names[job_ids.index(each)]
-
-        #start_epoch = int(time.mktime(start.timetuple()))
-        #finish_epoch = int(time.mktime(finish.timetuple()))
-        #minute = timedelta(minutes=1)
-        #timeB = datetime.datetime.now()+minute
-        #print str(timeB)
-    
-        #job_type = ob.name
-        #log(str(job_type))		
-        #start = ob.startTime
-        #start = start-datetime.timedelta(hours=6)
-        #starttimes.append(start)
-        #finish = ob.endTime
-
-        #log('API time details for jobID: '+str(id)+ ' ' +str(job_type))
-
-        
-        #finish = finish-datetime.timedelta(hours=6)
-
-        #finishtimes.append(finish)
-        #job_names.append(job_type)
-
-    #log(str(starttimes))
-    #log(str(finishtimes))
-    #print starttimes
-    #print finishtimes    
-    #return job_ids, starttimes, finishtimes, job_names
     return job_ids, job_names, start_times, finish_times
 
 
@@ -492,9 +472,6 @@ def logStats(job_type, data_nodes, start, finish, rowCount, start_epoch, finish_
     cm_api_ip = config.cm_api_ip
 
     for stat in datapointsToCheck:
-        #job_type = 'terragen'
-        #file_count = 0
-        #file_size = 0
         total_cpu_avg = 0
 
         cluster_highest_average_cm, individualHostsHighestPoints, timestamp, cpu_total = get_cloudera_dataNodesAverage(cm_api_ip, data_nodes, stat, start, finish, cluster_name)
@@ -628,16 +605,27 @@ def main():
     job_type = 'TPC'
     tpc_size = config.tpc_size
 
-    if config.tpc_flag == 'true':
-        #print 'updating config file'
-        #print file
-        #edit_file('NUM_MAPS', num_maps, file)
-        #edit_file('NUM_REDUCERS', num_reducers, file)
-        #edit_file('HADOOP_USER', hadoop_user, file)
-        #edit_file('HDFS_USER', hdfs_user, file)
-        #edit_file('SLEEP_BETWEEN_RUNS', sleep_between_runs, file)
+    num_maps = config.NUM_MAPS
+    num_reducers = config.NUM_REDUCERS
+    hadoop_user = config.HADOOP_USER
+    hdfs_user = config.HDFS_USER
+    sleep_between_runs = config.SLEEP_BETWEEN_RUNS
+    file = config.tpc_location +'/Benchmark_Parameters.sh'
 
-        #tpc_out, jobIDs = get_multi_stats(jobtype, runId, visits, pages, dataNodes, cluster_name, crowbar_admin_ip, time_offset, datapointsToCheck)
+    
+    if config.tpc_flag == 'true':
+        print 'updating config file'
+        #print file
+
+        edit_file('NUM_MAPS', num_maps, file)
+        edit_file('NUM_REDUCERS', num_reducers, file)
+        edit_file('HADOOP_USER', hadoop_user, file)
+        edit_file('HDFS_USER', hdfs_user, file)
+        edit_file('SLEEP_BETWEEN_RUNS', sleep_between_runs, file)
+
+        #################### TPC Benchmark###########################
+        log("[[[Running TPC Benchmark]]")
+
 
         job_ids, job_names, starts, finishs = run_tpc_benchmark(tpc_size)
         for job in job_ids:
@@ -655,14 +643,14 @@ def main():
             log('TPC- ' + job_name + " | " + str(tpc_size) + " | job | runtime | " + str(runTime ))
             logStats(job_name, data_nodes, start, finish, tpc_size, start_epoch, finish_epoch)
 
-#        print jobIDs
-#        print "\nTPC RUN COMPLETE\n"
-#        print "TPC run complete, here is config info set for the run: "
-#        print "NUM_MAPS: "+ num_maps
-#        print "NUM_REDUCERS: "+ num_reducers
-#        print "HADOOP_USER: "+hadoop_user
-#        print "HDFS_USER: " +hdfs_user
-#        print "SLEEP_BETWEEN_RUNS: " +sleep_between_runs
+        print job_ids
+        print "\nTPC RUN COMPLETE\n"
+        print "TPC run complete, here is config info set for the run: "
+        print "NUM_MAPS: "+ num_maps
+        print "NUM_REDUCERS: "+ num_reducers
+        print "HADOOP_USER: "+hadoop_user
+        print "HDFS_USER: " +hdfs_user
+        print "SLEEP_BETWEEN_RUNS: " +sleep_between_runs
     else:
         print "TPC not running, flag set to: " + config.tpc_flag
 
