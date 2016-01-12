@@ -204,60 +204,68 @@ class Director():
 
     def node_discovery(self):
 
-        cmds = [
-            "echo 'export GOPATH=$HOME/go' >>$HOME/.bash_profile",
-            "echo 'export PATH=$PATH:$HOME/go/bin' >> $HOME/.bash_profile",
-            'sudo yum -y install golang -y',
-            '. $HOME/.bash_profile;go get github.com/VictorLowther/idracula',
-            '. $HOME/.bash_profile;go install github.com/VictorLowther/idracula'
-            ]
-        for cmd in cmds:
+        if self.settings.use_custom_instack_json is True:
+            logger.info("Using custom instack.json file - NOT scannings nodes")
+            cmd = "rm /home/"+self.settings.director_install_account_user+"/instackenv.json -f"
             logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
-
-        # Idrac doesn't always play nice .. so working around cases where nic's dont get detected .. resetting idrac & powering on the node seems to do it.
-        for node in (self.settings.controller_nodes + self.settings.compute_nodes + self.settings.ceph_nodes) :
-                while 1:
-                    cmd = ". $HOME/.bash_profile;idracula -u "+ self.settings.ipmi_user + " -p '" + self.settings.ipmi_password  +"' -scan '"+ node.idrac_ip+"-"+node.idrac_ip+"'"
-                    out = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)[0]
-                    if "No integrated 1 GB nics" in out or "No WSMAN endpoint at" in out:
-                        logger.warning(node.hostname +" did not get discovered properly")
-                        if "No integrated 1 GB nics" in out:
-                            logger.info("grabbing drac informations in " + node.idrac_ip+".dump")
-                            cmd = "cd ~/pilot/probe_idrac/probe_idrac/;./probe_idrac.py -l "+self.settings.ipmi_user+" -p "+self.settings.ipmi_password+" "+node.idrac_ip+" > "+node.idrac_ip+".dump"
-                            Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
-
-                        logger.info("reseting idrac")
-                        ipmi_session = Ipmi(self.settings.cygwin_installdir, self.settings.ipmi_user, self.settings.ipmi_password, node.idrac_ip)
-                        logger.info(ipmi_session.drac_reset())
-                        time.sleep(120)
-                        backToLife = False
-                        while backToLife == False :
-                            try:
-                                logger.info(ipmi_session.get_power_state())
-                                backToLife = True
-                                time.sleep(20)
-                            except:
-                                pass
-                        ipmi_session.power_on()
-                        time.sleep(120)
-                        ipmi_session.power_off()
-                        ipmi_session.set_boot_to_pxe()
-                    else:
-                        break
+            remoteSh = "/home/"+self.settings.director_install_account_user+"/instackenv.json"
+            Scp.put_file( self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd, self.settings.custom_instack_json, remoteSh);
+        else :
+            cmds = [
+                "echo 'export GOPATH=$HOME/go' >>$HOME/.bash_profile",
+                "echo 'export PATH=$PATH:$HOME/go/bin' >> $HOME/.bash_profile",
+                'sudo yum -y install golang -y',
+                '. $HOME/.bash_profile;go get github.com/VictorLowther/idracula',
+                '. $HOME/.bash_profile;go install github.com/VictorLowther/idracula'
+                ]
+            for cmd in cmds:
+                logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
 
-        cmd = ". $HOME/.bash_profile;idracula -u "+ self.settings.ipmi_user + " -p '" + self.settings.ipmi_password  +"' -scan '"+self.settings.ipmi_discovery_range_start+"-"+self.settings.ipmi_discovery_range_end+"' > ~/instackenv.json"
-        logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            # Idrac doesn't always play nice .. so working around cases where nic's dont get detected .. resetting idrac & powering on the node seems to do it.
+            for node in (self.settings.controller_nodes + self.settings.compute_nodes + self.settings.ceph_nodes) :
+                    while 1:
+                        cmd = ". $HOME/.bash_profile;idracula -u "+ self.settings.ipmi_user + " -p '" + self.settings.ipmi_password  +"' -scan '"+ node.idrac_ip+"-"+node.idrac_ip+"'"
+                        out = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)[0]
+                        if "No integrated 1 GB nics" in out or "No WSMAN endpoint at" in out:
+                            logger.warning(node.hostname +" did not get discovered properly")
+                            if "No integrated 1 GB nics" in out:
+                                logger.info("grabbing drac informations in " + node.idrac_ip+".dump")
+                                cmd = "cd ~/pilot/probe_idrac/probe_idrac/;./probe_idrac.py -l "+self.settings.ipmi_user+" -p "+self.settings.ipmi_password+" "+node.idrac_ip+" > "+node.idrac_ip+".dump"
+                                Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
 
-        cmd = "ls -la ~/instackenv.json | awk '{print $5;}'"
-        size = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)[0]
-        if int(size) <= 50:
-            logger.fatal("did not manage to pick up the nodes..")
-            raise AssertionError("Unable to scan all the nodes ... need to go & pull the plug(s) - " + size + " - " +size[0])
+                            logger.info("reseting idrac")
+                            ipmi_session = Ipmi(self.settings.cygwin_installdir, self.settings.ipmi_user, self.settings.ipmi_password, node.idrac_ip)
+                            logger.info(ipmi_session.drac_reset())
+                            time.sleep(120)
+                            backToLife = False
+                            while backToLife == False :
+                                try:
+                                    logger.info(ipmi_session.get_power_state())
+                                    backToLife = True
+                                    time.sleep(20)
+                                except:
+                                    pass
+                            ipmi_session.power_on()
+                            time.sleep(120)
+                            ipmi_session.power_off()
+                            ipmi_session.set_boot_to_pxe()
+                        else:
+                            break
 
-        else:
-            logger.info("nodes appear to have been picked up")
+
+            cmd = ". $HOME/.bash_profile;idracula -u "+ self.settings.ipmi_user + " -p '" + self.settings.ipmi_password  +"' -scan '"+self.settings.ipmi_discovery_range_start+"-"+self.settings.ipmi_discovery_range_end+"' > ~/instackenv.json"
+            logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+
+            cmd = "ls -la ~/instackenv.json | awk '{print $5;}'"
+            size = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)[0]
+            if int(size) <= 50:
+                logger.fatal("did not manage to pick up the nodes..")
+                raise AssertionError("Unable to scan all the nodes ... need to go & pull the plug(s) - " + size + " - " +size[0])
+
+            else:
+                logger.info("nodes appear to have been picked up")
 
         for node in (self.settings.controller_nodes + self.settings.compute_nodes + self.settings.ceph_nodes) :
                     ipmi_session = Ipmi(self.settings.cygwin_installdir, self.settings.ipmi_user, self.settings.ipmi_password, node.idrac_ip)

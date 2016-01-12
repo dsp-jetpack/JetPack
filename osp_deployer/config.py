@@ -96,6 +96,13 @@ class Settings():
         self.ipmi_discovery_range_start = self.cluster_settings_map['ipmi_discovery_range_start']
         self.ipmi_discovery_range_end = self.cluster_settings_map['ipmi_discovery_range_end']
 
+        if self.cluster_settings_map['use_custom_instack_json'].lower() == 'true':
+            self.use_custom_instack_json = True
+            self.custom_instack_json = self.cluster_settings_map['custom_instack_json']
+        else:
+            self.user_custom_instack_json = False
+
+
         self.network_conf = self.cluster_settings_map['cluster_nodes_configuration_file']
         self.domain = self.cluster_settings_map['domain']
         self.ipmi_user = self.cluster_settings_map['ipmi_user']

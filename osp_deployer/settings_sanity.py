@@ -70,6 +70,8 @@ class Deployer_sanity():
         assert os.path.isfile(self.settings.sah_kickstart) , self.settings.sah_kickstart + "kickstart file doesnn't seem to exist"
         assert os.path.isfile(self.settings.director_deploy_sh) , self.settings.director_deploy_sh + " script doesn't seem to exist"
         assert os.path.isfile(self.settings.undercloud_conf) , self.settings.undercloud_conf + " file doesn't seem to exist"
+        if self.settings.use_custom_instack_json is True:
+            assert os.path.isfile(self.settings.custom_instack_json) , self.settings.custom_instack_json + " file doesn't seem to exist"
 
         assert os.path.isfile(self.settings.deploy_ram_disk_image) , self.settings.deploy_ram_disk_image + " file doesn't seem to exist"
         assert os.path.isfile(self.settings.discovery_ram_disk_image) , self.settings.discovery_ram_disk_image + " file doesn't seem to exist"
