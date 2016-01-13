@@ -105,7 +105,8 @@ class Sah():
         install_admin_user = self.settings.director_install_account_user
         install_admin_password = self.settings.director_install_account_pwd
         remoteSh = "/root/deploy-director-vm.sh";
-        directorConf = "/root/director.cfg";
+        directorConf = "/root/director.cfg"
+        Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "rm " + directorConf + " -f")
         Conf =  ("rootpassword " + self.settings.director_node.root_password,
                 "timezone " + self.settings.time_zone,
                 "smuser " + self.settings.subscription_manager_user ,
@@ -152,7 +153,8 @@ class Sah():
         Scp.put_file(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, self.settings.ceph_deploy_sh, remoteSh)
 
         logger.info("=== create ceph.cfg")
-        cephConf = "/root/ceph.cfg";
+        cephConf = "/root/ceph.cfg"
+        Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "rm " + cephConf + " -f")
         Conf =  ("rootpassword " + self.settings.ceph_node.root_password,
                 "timezone " + self.settings.time_zone,
                 "smuser " + self.settings.subscription_manager_user ,

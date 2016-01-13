@@ -184,6 +184,20 @@ class Director():
         cmd = '~/pilot/install-director.sh ' + self.settings.name_server
         logger.info(Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
+        # WORKAROUND FOR https://jira.opencrowbar.org/browse/CES-4414
+        ipxe_rpm = 'ipxe-bootimgs-20151005-1.git6847232.el7.test.noarch.rpm'
+        remote = "/home/"+install_admin_user+"/pilot/" + ipxe_rpm
+        local = self.settings.ipxe_rpm
+        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, local, remote)
+        cmds = [
+            'sudo rpm -Uvh '+remote,
+            'cd /tftpboot;sudo curl -O http://boot.ipxe.org/undionly.kpxe',
+            'sudo chmod 744 /tftpboot/undionly.kpxe',
+            'sudo chown ironic:ironic /tftpboot/undionly.kpxe',
+            'sudo chcon system_u:object_r:tftpdir_t:s0 /tftpboot/undionly.kpxe',
+        ]
+        for cmd in cmds:
+            logger.info(Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
     def upload_cloud_images(self):
 
