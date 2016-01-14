@@ -41,20 +41,23 @@ def edit_file(target, new_value, file):
 
 def check_disks(clean_up_ip):
 
-    print 'checking disks'
+    print 'Checking disks'
     usr = 'root'
     pwd = 'Ignition01'
     cmd = 'sudo -u hdfs hadoop fs -ls hdfs:///user/hdfs'
 
     cl_stdoutd, cl_stderrd = Ssh.execute_command(clean_up_ip, usr, pwd, cmd)
     if cl_stderrd != '':
-        print 'check disk error: ' +str(cl_stderrd)
+        print 'Check disk error: ' +str(cl_stderrd)
         sys.exit()
     if cl_stdoutd == '':
-        print 'no files to delete'
+        print 'No files to delete'
+
         return 0
+
     else:
         print 'Files found by disk check: ' + str(cl_stdoutd)
+
         return 1
 
 
@@ -66,7 +69,7 @@ def clear_disks(clean_up_ip):
         log(arch_file, "Clearing Disks")
         #clean_up_ip = '172.16.11.141'
         cmd = 'sudo -u hdfs hadoop fs -rm -R -f -skipTrash /user/hdfs/*'
-        print "running " + cmd 
+        print "Running " + cmd 
         cl_stdoutd, cl_stderrd = Ssh.execute_command(clean_up_ip, usr, pwd, cmd)        
         print cl_stdoutd
         print cl_stderrd
@@ -74,9 +77,12 @@ def clear_disks(clean_up_ip):
         if cl_stderrd != '':
             print cl_stderrd
             sys.exit()
+
         return cl_stdoutd, cl_stderrd
+
     else:
         print 'skipping clear disks'
+
         return '', ''
 
 def clear_cache(clean_up_ip):
@@ -89,7 +95,7 @@ def clear_cache(clean_up_ip):
     cmd = 'clush -w r3s1xd[1-10] "sync"'
     cmd2 = 'clush -w r3s1xd[1-12] "echo 3> /proc/sys/vm/drop_caches"'
 
-    print "running " + cmd 
+    print "Running " + cmd 
     syncOut, syncError = Ssh.execute_command(clean_up_ip, usr, pwd, cmd)
     #print 'syncOut' + str(syncOut)
     #print 'syncError' + str(syncError)
@@ -97,17 +103,17 @@ def clear_cache(clean_up_ip):
         print 'sync error: ' + str(syncError)
         sys.exit()
     
-    print "running " + cmd2
+    print "Running " + cmd2
     cl_stdoutd, cl_stderrd = Ssh.execute_command(clean_up_ip, usr, pwd, cmd2)
     
     print cl_stdoutd
     #print cl_stderrd
     if cl_stderrd != '':
-        print 'cache clearing error: ' + str(cl_stderrd)
+        print 'Cache clearing error: ' + str(cl_stderrd)
         sys.exit()
 
     if cl_stdoutd == '':
-        print 'cache not cleared'
+        print 'Cache not cleared'
         sys.exit()
 
     #output =  re.search("Deleted ", cl_stdoutd)
@@ -168,6 +174,7 @@ def getDataNodeHosts(cm_api_ip, clustername):
        for each in host.roleRefs:
            if 'DATANODE' in  each.roleName :
                hosts.append(host.ipAddress)
+
     return hosts
 
 
@@ -183,6 +190,7 @@ def getDataNodeObjects(cm_api_ip, clustername):
             if 'DATANODE' in  each.roleName :
                 hosts.append(host.ipAddress)
                 objs.append(host)
+
     return objs, hosts
 
 
@@ -194,6 +202,7 @@ def getAllNodeObjects(cm_api_ip, clustername):
     view = session.get_all_hosts("full")
     for host in view:
         objs.append(host)
+
     return objs
 
 
@@ -205,6 +214,7 @@ def getCPUCores(cm_api_ip, clustername):
     for each in objs:
         hostIPs.append(each.ipAddress)
         cores.append(each.numCores)
+
     return hostIPs, cores
 
 
@@ -217,6 +227,7 @@ def getAllNodeRoles(cm_api_ip, clustername):
         for role in each.roleRefs:
             role_list.append(role.roleName)
         hosts.append({'host': each.ipAddress, 'role': role_list})
+
     return hosts
 
 
@@ -229,6 +240,7 @@ def get_datanode_entityname(cm_api_ip, clustername, ipAddress):
     for host in view:
         if ipAddress ==  host.ipAddress:
             return host.hostname
+
     return hosts    
 
 
@@ -241,6 +253,7 @@ def get_datanode_ip(cm_api_ip, clustername, hostname):
     for host in view:
         if hostname ==  host.hostname:
             return host.ipAddress
+
     return hosts   
 
 
@@ -253,6 +266,7 @@ def get_datanode_cores(cm_api_ip, clustername, hostname):
     for host in view:
         if host.hostname == hostname:
             return host.numCores
+
     return hosts
 
 
@@ -274,10 +288,11 @@ def teragen(rowNumber, folderName):
     usr = 'root'
     pwd = 'Ignition01'
     cmd = 'cd ' + teragen_jar_location + '/;sudo -u hdfs hadoop jar ' + teragen_jar_filename + ' teragen ' + teragen_parameters + ' ' + str(rowNumber) +' '+ str(folderName)
-    print "running " + cmd
+    print "Running " + cmd
     cl_stdoutd, cl_stderrd = Ssh.execute_command(hadoop_ip, usr, pwd, cmd)    
     print cl_stdoutd
     print cl_stderrd
+
     return cl_stdoutd, cl_stderrd
 
 
@@ -296,10 +311,11 @@ def terasort(folderName):
     #cmd = 'cd /opt/cloudera/parcels/CDH-5.5.0-1.cdh5.5.0.p0.8/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.6.0-mr1-cdh5.5.0.jar terasort ' + terasort_params + ' '+ str(folderName) + ' ' + str(destFolder)
     cmd = 'cd ' + teragen_jar_location + '/;sudo -u hdfs hadoop jar ' + teragen_jar_filename + ' terasort ' + terasort_parameters + ' '+ str(folderName) + ' ' + str(destFolder)
     
-    print "running " + cmd 
+    print "Running " + cmd 
     cl_stdoutd, cl_stderrd = Ssh.execute_command(hadoop_ip, usr, pwd, cmd)
     print cl_stdoutd
     print cl_stderrd
+
     return cl_stdoutd, cl_stderrd
 
 
@@ -319,10 +335,11 @@ def teravalidate(folderName):
     #cmd = 'cd /opt/cloudera/parcels/CDH-5.5.0-1.cdh5.5.0.p0.8/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.6.0-mr1-cdh5.5.0.jar terasort ' + terasort_params + ' '+ str(folderName) + ' ' + str(destFolder)
     cmd = 'cd ' + teragen_jar_location + '/;sudo -u hdfs hadoop jar ' + teragen_jar_filename + ' teravalidate ' + str(folderName) + ' ' + str(destFolder)
     
-    print "running " + cmd 
+    print "Running " + cmd 
     cl_stdoutd, cl_stderrd = Ssh.execute_command(hadoop_ip, usr, pwd, cmd)
     print cl_stdoutd
     print cl_stderrd
+
     return cl_stdoutd, cl_stderrd
 
 
@@ -331,7 +348,7 @@ def tpc_benchmark(tpc_size):
     config = importlib.import_module('config_cdh5') 
     tpc_node_ip = config.tpc_node_ip
     tpc_location = config.tpc_location
-    print 'running TPC Benchmark'
+    #print 'Running TPC Benchmark'
     cmd = 'cd '+str(tpc_location)+'; ./TPCx-HS-master.sh -g '+ tpc_size
     usr = 'root'
     pwd = 'Ignition01'
@@ -339,6 +356,7 @@ def tpc_benchmark(tpc_size):
     print cmd
     print 'TPC error: ' +str(cl_stderrd)
     print 'TPC output: ' + str(cl_stdoutd)
+
     return cl_stdoutd, cl_stderrd
 
 
@@ -365,6 +383,7 @@ def convertToSF(tpc_size):
 
     return tpc_size
 
+
 def log(file_name, entry, printOutput=True):
 
     if printOutput:
@@ -373,10 +392,10 @@ def log(file_name, entry, printOutput=True):
     f.write(entry + "\n")
     f.close()
     
-    a = open(file_name + '.log', 'a')
+    a = open(file_name, 'a')
     a.write(entry + "\n")
     a.close()
-    
+    return file_name
 
 def createArch(file_name):
     file_name = 'ResultLogArch/Results_' + file_name + '_' + str(uuid.uuid4()) + '.log'
@@ -384,6 +403,12 @@ def createArch(file_name):
     a.close()
     return file_name
 
+def renameFile(old_name, new_name):
+    print old_name
+    print new_name
+    old_name = old_name
+    new_name = 'ResultLogArch/' + new_name
+    os.rename(old_name, new_name)
 
 def get_cloudera_dataNodesAverage(cm_api_ip, dataNodes, stat, time_start, time_end, cluster_name):
 
@@ -499,6 +524,7 @@ def rrdtoolXtract(start, end, metric, host, crowbar_admin_ip, time_offset):
     cl_stdoutd, cl_stderrd = Ssh.execute_command(crowbar_admin_ip, usr, pwd, cmd)
     return cl_stdoutd, cl_stderrd
 
+
 def getJobStartFinishTimes(job_id, start_time, end_time):
 
     # get the job id between the given time range.
@@ -521,7 +547,7 @@ def getJobStartFinishTimes(job_id, start_time, end_time):
         if c.version == "CDH5":
             cdh4 = c
     for s in cdh4.get_all_services():
-        print "s = " + str(s)
+        # print "s = " + str(s)
         if s.name == "yarn":
             yarn_flag = True
             services.append(dict({s.name:s}))
@@ -547,7 +573,7 @@ def getJobStartFinishTimes(job_id, start_time, end_time):
         job_name = ob.name
 
     elif yarn_flag == False and mapreduce_flag == True:
-        print 'run mapreduce - put mapreduce code here'
+        print 'Run mapreduce - put mapreduce code here'
     else:
         print 'Neither Mapreduce or Yarn available'
 
@@ -581,7 +607,7 @@ def run_terasort_job(target_folder):
     time.sleep(80)
     ls = bla[1].split('\r' );
     for line in ls:
-        print "line: "+str(line)
+        #print "line: "+str(line)
         #ma =  re.search("Job complete: (.+)", line)
         ma =  re.search("Job (.+) complete", line)
         #print ma
@@ -602,7 +628,7 @@ def run_teravalidate_job(target_folder):
     time.sleep(80)
     ls = bla[1].split('\r' );
     for line in ls:
-        print "line: "+str(line)
+        #print "line: "+str(line)
         #ma =  re.search("Job complete: (.+)", line)
         ma =  re.search("Job (.+) completed successfully", line)
         #print ma
@@ -766,8 +792,6 @@ def main():
         job_type = 'Teragen'
         
         jobID, job_name, start, finish, teragenFolder = run_teragen_job(rowCount)
-        print start
-        print finish
 
         start_epoch = int(time.mktime(start.timetuple()))
         finish_epoch = int(time.mktime(finish.timetuple()))
@@ -903,7 +927,26 @@ def main():
         print "TPC not running, flag set to: " + config.tpc_flag
 
 
-    log(arch_file,  "[[[ That's all folks ]]]"  )
+    file_name = log(arch_file,  "[[[ That's all folks ]]]"  )
+
+    if config.tpc_flag == 'true':
+        
+        # Rename and index the last Archive log for this run
+        target_file = '-' + convertToSF(config.tpc_size)
+        id_list = []
+        for filename in os.listdir("ResultLogArch/."):
+            if target_file in filename:
+                file_id = re.search("Results" + target_file + " T(.+).log", filename)
+                id_list.append(file_id.group(1))
+            else:
+                file_id = 0
+                id_list.append(file_id)
+
+        highestValue = 0
+        highestValue = sorted(id_list, key=float, reverse=True)[0]
+        new_id = int(highestValue) + 1
+        new_file_name = "Results" + target_file + " T" + str(new_id) + ".log"
+        renameFile(file_name, new_file_name)
 
 if __name__ == '__main__':
     main()
