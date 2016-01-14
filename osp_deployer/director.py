@@ -321,6 +321,22 @@ class Director():
         logger.info("Configuring network settings for overcloud")
 
         networkYaml = "/home/"+install_admin_user+"/pilot/templates/network-environment.yaml";
+	storageYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/ceph-storage.yaml";
+        computeYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/compute.yaml";
+        controllerYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/controller.yaml";
+		
+	#Re - Upload the yaml files in case we're trying to leave the undercloud intact but want to redeploy with a different config
+	#and replace the HOME in the netwrk env that install director would have previously updated
+        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.network_env_yaml, networkYaml)
+        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.ceph_storage_yaml, storageYaml)
+        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.compute_yaml, computeYaml)
+        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.controller_yaml, controllerYaml)
+
+        cmd = "sudo chmod 777 " +networkYaml
+        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+	
+	cmd ="sed -i 's/HOME\\//\\/home\\/osp_admin\\//' " + networkYaml
+	logger.info( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
         cmds = [
             'sed -i "s|ControlPlaneDefaultRoute:.*|ControlPlaneDefaultRoute: ' + self.settings.director_node.provisioning_ip + '|" ' + networkYaml,
@@ -347,9 +363,25 @@ class Director():
         ]
         for cmd in cmds:
             logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
-        storageYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/ceph-storage.yaml";
-        computeYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/compute.yaml";
-        controllerYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/controller.yaml";
+
+	if self.settings.controller_bond_opts == self.settings.compute_bond_opts and self.settings.compute_bond_opts == self.settings.storage_bond_opts:
+                logger.info("applying " + self.settings.settings.compute_bond_opts + " bond mode to all the nodes (network-environment.yaml)")
+                cmds = [
+			 'sed -i "s|      \\"mode=802.3ad miimon=100\\"|      \\"mode='+ self.settings.compute_bond_opts +'\\"|" ' + networkYaml,
+			]
+		for cmd in cmds:
+                	logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        else:
+		logger.info("applying bond mode on a per type basis")
+		cmds = [
+		       "sed -i '/BondInterfaceOptions:/d' " + networkYaml,
+                       "sed -i '/mode=802.3ad miimon=100/d' " + networkYaml,
+		       'sed -i "/BondInterfaceOptions:/{n;s/.*/    default: \'mode='+ self.settings.settings.compute_bond_opts +"'\\n/;}\" " + computeYaml,
+		       'sed -i "/BondInterfaceOptions:/{n;s/.*/    default: \'mode='+ self.settings.controller_bond_opts +"'\\n/;}\" " + controllerYaml,
+ 		       'sed -i "/BondInterfaceOptions:/{n;s/.*/    default: \'mode='+ self.settings.storage_bond_opts +"'\\n/;}\" " + storageYaml,	
+		]
+		for cmd in cmds:
+            		logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
         logger.info("updating controller yaml")
         cmds = ['sed -i "s|em1|'+ self.settings.controller_bond0_interfaces.split(" ")[0] +'|" ' + controllerYaml,
