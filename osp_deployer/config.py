@@ -100,7 +100,7 @@ class Settings():
             self.use_custom_instack_json = True
             self.custom_instack_json = self.cluster_settings_map['custom_instack_json']
         else:
-            self.user_custom_instack_json = False
+            self.use_custom_instack_json = False
 
 
         self.network_conf = self.cluster_settings_map['cluster_nodes_configuration_file']
