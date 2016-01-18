@@ -152,7 +152,7 @@ class Settings():
 
 
         self.bastion_settings_map = self.getSettingsSection("Bastion Settings")
-        self.rhl71_iso = self.bastion_settings_map['rhl71_iso']
+        self.rhl72_iso = self.bastion_settings_map['rhl72_iso']
         if sys.platform.startswith('linux'):
             self.cygwin_installdir = 'n/a'
         else:

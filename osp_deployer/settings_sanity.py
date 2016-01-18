@@ -66,7 +66,7 @@ class Deployer_sanity():
         for each in shouldBeValidIPs:
             assert self.isValidIp(getattr(self.settings, each)), "Setting for " + each + " is not a valid ip " + getattr(self.settings, each)
 
-        assert os.path.isfile(self.settings.rhl71_iso) , self.settings.rhl71_iso + "ISO doesn't seem to exist"
+        assert os.path.isfile(self.settings.rhl72_iso) , self.settings.rhl722_iso + "ISO doesn't seem to exist"
         assert os.path.isfile(self.settings.sah_kickstart) , self.settings.sah_kickstart + "kickstart file doesnn't seem to exist"
         assert os.path.isfile(self.settings.director_deploy_sh) , self.settings.director_deploy_sh + " script doesn't seem to exist"
         assert os.path.isfile(self.settings.undercloud_conf) , self.settings.undercloud_conf + " file doesn't seem to exist"
