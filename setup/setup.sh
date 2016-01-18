@@ -313,7 +313,7 @@ file_setup(){
 	fi
 
         mkdir /var/www/html/pub
-        umount /var/www/htmp/pub
+        umount /var/www/html/pub
         mount /var/www/html/RH7/$rhel71_iso_file /var/www/html/pub
 	#finish tftp setup
         cp /var/www/html/pub/isolinux/vmlinuz /var/lib/tftpboot/netboot/
