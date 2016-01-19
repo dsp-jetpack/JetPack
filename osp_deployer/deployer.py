@@ -425,6 +425,15 @@ if __name__ == '__main__':
                 ip_info.append( "     - storage cluster ip : " + cluster_ip)
                 ip_info.append ("     - storage ip         : " + storage_ip)
             ip_info.append ("====================================")
+	    
+	    try:
+		overcloud_endpoint = Ssh.execute_command_tty(settings.director_node.external_ip, settings.director_install_account_user, settings.director_install_account_pwd,'grep "OS_AUTH_URL=" ~/overcloudrc')[0].split('=')[1].replace(':5000/v2.0/','')
+		overcloud_pass = Ssh.execute_command_tty(settings.director_node.external_ip, settings.director_install_account_user, settings.director_install_account_pwd,'grep "OS_PASSWORD=" ~/overcloudrc')[0].split('=')[1]
+	  	ip_info.append("OverCloud Horizon        : " + overcloud_endpoint)
+		ip_info.append("OverCloud admin password : " + overcloud_pass)
+	    except:
+		pass
+	    ip_info.append ("====================================") 	    
 
             for each in ip_info:
                     log(each)

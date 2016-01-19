@@ -301,20 +301,20 @@ file_setup(){
 	ip_add=$(ip addr show)
 	
 	#paramterized
-	if [ ! -f /var/www/html/RH7/$rhel71_iso_file ]; then
+	if [ ! -f /var/www/html/RH7/$rhel72_iso_file ]; then
 	    if [[ $ip_add == *10.152* ]]
 			then
-				wget --no-check-certificate --user "mht1\Script_User" --password "New2Day!" -O $rhel71_iso_file "https://10.152.248.11/folder/ISOs/RHEL-7.1-20150219.1-Server-x86_64-dvd1.iso?dcPath=Cloud%2520Bastion%2520Physical%2520Stamps&dsName=Data2%252dStorage"
+				wget --no-check-certificate --user "mht1\Script_User" --password "New2Day!" -O $rhel72_iso_file "https://10.152.248.11/folder/ISOs/rhel-server-7.2-x86_64-dvd.iso?dcPath=Cloud%2520Bastion%2520Physical%2520Stamps&dsName=Data2%252dStorage" -O $rhel72_iso_file
 		else
-			wget $rhel71_iso
+			wget $rhel72_iso -O $rhel72_iso_file
 		fi
 	else
-		echo "File Already exists $rhel71_iso_file" 
+		echo "File Already exists $rhel72_iso_file" 
 	fi
 
         mkdir /var/www/html/pub
         umount /var/www/html/pub
-        mount /var/www/html/RH7/$rhel71_iso_file /var/www/html/pub
+        mount /var/www/html/RH7/$rhel72_iso_file /var/www/html/pub
 	#finish tftp setup
         cp /var/www/html/pub/isolinux/vmlinuz /var/lib/tftpboot/netboot/
         cp /var/www/html/pub/isolinux/initrd.img /var/lib/tftpboot/netboot/
@@ -323,7 +323,7 @@ file_setup(){
         systemctl enable tftp.service
 
         #Put it in fstab
-        iso_file_name="/var/www/html/RH7/$rhel71_iso_file"
+        iso_file_name="/var/www/html/RH7/$rhel72_iso_file"
         echo $iso_file_name
         fs_tab_line="$iso_file_name /var/www/html/pub iso9660 loop,ro 0 0"
         echo $fs_tab_line
