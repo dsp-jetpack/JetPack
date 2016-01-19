@@ -451,8 +451,8 @@ if __name__ == '__main__':
         log("====================================")
         log("= log : " + loggile)
         log("====================================")
+	log("Deployment complete")
 
-        sys.exit(0)
 
 
     except:
