@@ -216,8 +216,8 @@ class Director():
                 "echo 'export GOPATH=$HOME/go' >>$HOME/.bash_profile",
                 "echo 'export PATH=$PATH:$HOME/go/bin' >> $HOME/.bash_profile",
                 'sudo yum -y install golang -y',
-                '. $HOME/.bash_profile;go get github.com/VictorLowther/idracula',
-                '. $HOME/.bash_profile;go install github.com/VictorLowther/idracula'
+                '. $HOME/.bash_profile;go get get github.com/dell-esg/idracula',
+                '. $HOME/.bash_profile;go install github.com/dell-esg/idracula'
                 ]
             for cmd in cmds:
                 logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
