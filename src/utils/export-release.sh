@@ -28,7 +28,7 @@ if [ -z "$1" ]; then
 fi
 
 dir=$(pwd)
-if [ ! -d $dir/data -o ! -d $dir/doc -o ! -d $dir/src ];
+if [ ! -d $dir/data -o ! -d $dir/src ];
 then
   echo "This script must be run from the root directory of the cloud_repo"
   exit 1
