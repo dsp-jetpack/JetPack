@@ -26,9 +26,7 @@ from osp_deployer import Settings
 
 logger = logging.getLogger(__name__)
 
-def log(message):
-    print (message)
-    logger.info(message)
+
 
 class Deployer_sanity():
     '''
@@ -50,7 +48,7 @@ class Deployer_sanity():
 
     def check_files(self):
 
-        logger.info("Check settings ip's are valid.")
+        logger.debug("Check settings ip's are valid.")
         shouldBeValidIPs = [
             'external_netmask','public_gateway','external_gateway',
             'public_api_netmask','external_allocation_pool_start','external_allocation_pool_end',

@@ -26,12 +26,9 @@ from auto_common import Ipmi, Ssh
 from osp_deployer import Settings, Deployer_sanity
 from datetime import datetime
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("JetStream deployer")
 ping_success = "packets transmitted, 3 received"
 
-def log(message):
-    print (message)
-    logger.info( message)
 
 def verify_subscription_status(external_ip, user, password, retries):
     i = 0
@@ -39,7 +36,7 @@ def verify_subscription_status(external_ip, user, password, retries):
     while("Current" not in subscriptionStatus and i < retries):
         if "Unknown" in subscriptionStatus:
             return subscriptionStatus
-        log("...")
+        logger.debug("...")
         time.sleep(60)
         subscriptionStatus = Ssh.execute_command(external_ip, user, password, "subscription-manager status")[0]
         i += 1;
@@ -50,34 +47,34 @@ def ping_host(external_ip, user, passwd, targetHost):
     return subscriptionStatus
 
 
+def deploy():
 
-if __name__ == '__main__':
-
-    log ("=================================")
+    logger.debug ("=================================")
     isLinux = False
     if sys.platform.startswith('linux'):
         isLinux = True
-        log ("=== Linux System")
+        logger.debug ("=== Linux System")
     else:
-       log ("=== Windows System")
-    log ("=================================")
+       logger.debug ("=== Windows System")
+    logger.debug ("=================================")
 
     fname = datetime.now().strftime("deployment-%Y.%m.%d-%H.%M.log")
     loggile = '/' + fname if isLinux else 'c:/auto_results/' +fname
 
-    try :
+    try:
 
         import logging.config
 
-        logging.basicConfig(filename=loggile,
-           format="%(asctime)-15s:%(name)s:%(process)d:%(levelname)s:%(message)s",
-                       filemode='w',
-                       level=logging.INFO)
+        logging.config.fileConfig('logging.conf')
 
-        log ("=================================")
-        log ("=== Starting up ...")
-        log ("=================================")
-        log("Log file : "+ loggile)
+        deployer_log_handler = logging.FileHandler(loggile, mode='w')
+        deployer_log_handler.setLevel(logging.DEBUG)
+        logger.addHandler(deployer_log_handler)
+
+        logger.debug ("=================================")
+        logger.info ("=== Starting up ...")
+        logger.debug ("=================================")
+        logger.debug("Log file : "+ loggile)
 
         parser = argparse.ArgumentParser(description='Jetstream 5.x deployer')
         parser.add_argument('-s','--settings', help='ini settings file, e.g settings/acme.ini', required=True)
@@ -87,18 +84,18 @@ if __name__ == '__main__':
         args = parser.parse_args()
 
         if args.skip_undercloud is True :
-            log("Skipping SAH & Undercloud install")
+            logger.info("Skipping SAH & Undercloud install")
             args.skip_sah = True
         if args.skip_sah is True :
-            log("Skipping SAH install")
+            logger.info("Skipping SAH install")
         if args.skip_ceph_vm is True:
-            log("Skipping ceph vm install")
+            logger.info("Skipping ceph vm install")
 
-        logger.info("loading settings files " + args.settings)
+        logger.debug("loading settings files " + args.settings)
         settings = Settings(args.settings)
         attrs = vars(settings)
 
-        print("==== Running environment sanity tests")
+        logger.info("==== Running environment sanity tests")
         checks = Deployer_sanity()
         checks.check_network_settings()
         checks.check_files()
@@ -113,214 +110,219 @@ if __name__ == '__main__':
         sah_node = Sah()
 
         if args.skip_sah is False :
-            log ("=== Unregister the hosts")
-            log (Ssh.execute_command(settings.sah_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager remove --all"))
-            log (Ssh.execute_command(settings.sah_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager unregister"))
+            logger.info ("=== Unregister the hosts")
+            logger.debug (Ssh.execute_command(settings.sah_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager remove --all"))
+            logger.debug (Ssh.execute_command(settings.sah_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager unregister"))
 
-            log (Ssh.execute_command(settings.ceph_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager remove --all"))
-            log (Ssh.execute_command(settings.ceph_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager unregister"))
+            logger.debug (Ssh.execute_command(settings.ceph_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager remove --all"))
+            logger.debug (Ssh.execute_command(settings.ceph_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager unregister"))
 
-            log (Ssh.execute_command(settings.director_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager remove --all"))
-            log (Ssh.execute_command(settings.director_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager unregister"))
+            logger.debug (Ssh.execute_command(settings.director_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager remove --all"))
+            logger.debug (Ssh.execute_command(settings.director_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager unregister"))
 
             #TODO unregister tempest VM when available ( if on SAH )
 
-            log ("=== powering down the SAH node")
+            logger.info("preparing the SAH installation")
+
+            logger.debug ("=== powering down the SAH node & all the nodes")
             ipmi_sah = Ipmi(settings.cygwin_installdir, settings.ipmi_user, settings.ipmi_password, settings.sah_node.idrac_ip)
             ipmi_sah.power_off()
 
-            log ("=== powering down other hosts")
+            logger.debug ("=== powering down other hosts")
             for each in nonSAHnodes:
                 ipmi_session = Ipmi(settings.cygwin_installdir, settings.ipmi_user, settings.ipmi_password, each.idrac_ip)
                 ipmi_session.power_off()
                 ipmi_session.set_boot_to_pxe()
 
-            log ("=== updating the sah kickstart based on settings")
+            logger.info ("=== updating the sah kickstart based on settings")
 
             sah_node.update_kickstart()
 
-            log ("=== starting the tftp service & power on the admin")
-            log (subprocess.check_output("service tftp start" if isLinux else "net start Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
+            logger.debug ("=== starting the tftp service & power on the admin")
+            logger.debug (subprocess.check_output("service tftp start" if isLinux else "net start Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
             time.sleep(60)
 
             #linux, dhcp is a separate service
             if(isLinux):
-               log ("=== starting dhcpd service")
-               log (subprocess.check_output("service dhcpd start",stderr=subprocess.STDOUT, shell=True))
+               logger.debug ("=== starting dhcpd service")
+               logger.debug (subprocess.check_output("service dhcpd start",stderr=subprocess.STDOUT, shell=True))
 
 
-            log ("=== power on the admin node & wait for the system to start installing")
+            logger.debug ("=== power on the admin node & wait for the system to start installing")
             ipmi_sah.set_boot_to_pxe()
             ipmi_sah.power_on()
             time.sleep(400)
 
-            log ("=== stopping tftp service")
-            log (subprocess.check_output("service tftp stop" if isLinux else "net stop Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
+            logger.debug ("=== stopping tftp service")
+            logger.debug (subprocess.check_output("service tftp stop" if isLinux else "net stop Tftpd32_svc",stderr=subprocess.STDOUT, shell=True))
 
             if(isLinux):
-                log ("=== stopping dhcpd service")
-                log (subprocess.check_output("service dhcpd stop",stderr=subprocess.STDOUT, shell=True))
+                logger.debug ("=== stopping dhcpd service")
+                logger.debug (subprocess.check_output("service dhcpd stop",stderr=subprocess.STDOUT, shell=True))
 
 
-            log ("=== waiting for the sah installed to be complete, might take a while")
+            logger.info ("=== Installing the SAH node")
             while (not "root" in Ssh.execute_command(settings.sah_node.external_ip, "root", settings.sah_node.root_password, "whoami")[0]):
-                log ("...")
+                logger.debug ("...")
                 time.sleep(100)
-            log ("sahh node is up @ " + settings.sah_node.external_ip)
+            logger.debug ("sahh node is up @ " + settings.sah_node.external_ip)
 
 
-            log("*** Verify the SAH node registered properly ***")
+            logger.info("SAH node health check")
+            logger.debug("*** Verify the SAH node registered properly ***")
             subscriptionStatus = verify_subscription_status(settings.sah_node.external_ip, "root", settings.sah_node.root_password, settings.subscription_check_retries)
             if "Current" not in subscriptionStatus:
                 raise AssertionError("SAH did not register properly : " + subscriptionStatus)
 
-            log("*** Verify the SAH can ping its public gateway")
+            logger.debug("*** Verify the SAH can ping its public gateway")
             test = ping_host(settings.sah_node.external_ip, "root", settings.sah_node.root_password, settings.external_gateway)
             if ping_success not in test:
                 raise AssertionError("SAH cannot ping its public gateway : " + test)
 
-            log("*** Verify the SAH can ping the outside world (ip)")
+            logger.debug("*** Verify the SAH can ping the outside world (ip)")
             test = ping_host(settings.sah_node.external_ip, "root", settings.sah_node.root_password, "8.8.8.8")
             if ping_success not in test:
                 raise AssertionError("SAH cannot ping the outside world (ip) : " + test)
 
-            log("*** Verify the SAH can ping the outside world (dns)")
+            logger.debug("*** Verify the SAH can ping the outside world (dns)")
             test = ping_host(settings.sah_node.external_ip, "root", settings.sah_node.root_password, "google.com")
             if ping_success not in test:
                 raise AssertionError("SAH cannot ping the outside world (dns) : " + test)
 
-            log("*** Verify the SAH has KVM enabled *** ")
+            logger.debug("*** Verify the SAH has KVM enabled *** ")
             cmd = 'ls -al /dev/kvm'
             if "No such file" in Ssh.execute_command(settings.sah_node.external_ip, "root", settings.sah_node.root_password, cmd)[1]:
                 raise AssertionError("KVM Not running on the SAH node - make sure the node has been DTK'ed/Virtualization enabled in the Bios")
 
-
-            log ("=== uploading iso's to the sah node")
+            logger.info("Uploading configs/iso/scripts..")
+            logger.debug ("=== uploading iso's to the sah node")
             sah_node.upload_iso()
 
             if settings.version_locking_enabled is True:
-                log("Uploading version locking files for director & ceph vm's")
+                logger.debug("Uploading version locking files for director & ceph vm's")
                 sah_node.upload_lock_files()
 
-            log("=== uploading the director vm sh script")
+            logger.debug("=== uploading the director vm sh script")
             sah_node.upload_director_scripts()
 
-            log("=== Done with the solution admin host");
+            logger.debug("=== Done with the solution admin host");
         else:
-            log("=== Skipped SAH install")
+            logger.info("=== Skipped SAH install")
             if args.skip_undercloud is False :
-                log("Delete the Director VM")
+                logger.debug("Delete the Director VM")
 
-                log (Ssh.execute_command(settings.director_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager remove --all"))
-                log (Ssh.execute_command(settings.director_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager unregister"))
+                logger.debug (Ssh.execute_command(settings.director_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager remove --all"))
+                logger.debug (Ssh.execute_command(settings.director_node.external_ip, "root", settings.sah_node.root_password, "subscription-manager unregister"))
 
                 sah_node.delete_director_vm()
 
 
 
         if args.skip_undercloud is False :
-            log("=== create the director vm")
+            logger.info("=== create the director vm")
             sah_node.create_director_vm()
 
-            log("*** Verify the Director VM registered properly ***")
+            logger.info("Director VM health checks")
+            logger.debug("*** Verify the Director VM registered properly ***")
             subscriptionStatus = verify_subscription_status(settings.director_node.external_ip, "root", settings.director_node.root_password, settings.subscription_check_retries)
             if "Current" not in subscriptionStatus:
                 raise AssertionError("Director VM did not register properly : " + subscriptionStatus)
 
-            log("*** Verify the Director VM can ping its public gateway")
+            logger.debug("*** Verify the Director VM can ping its public gateway")
             test = ping_host(settings.director_node.external_ip, "root", settings.director_node.root_password, settings.external_gateway)
             if ping_success not in test:
                 raise AssertionError("Director VM cannot ping its public gateway : " + test)
 
-            log("*** Verify the Director VM can ping the outside world (ip)")
+            logger.debug("*** Verify the Director VM can ping the outside world (ip)")
             test = ping_host(settings.director_node.external_ip, "root", settings.director_node.root_password, "8.8.8.8")
             if ping_success not in test:
                 raise AssertionError("Director VM cannot ping the outside world (ip) : " + test)
 
-            log("*** Verify the Director VM can ping the outside world (dns)")
+            logger.debug("*** Verify the Director VM can ping the outside world (dns)")
             test = ping_host(settings.director_node.external_ip, "root", settings.director_node.root_password, "google.com")
             if ping_success not in test:
                 raise AssertionError("Director VM cannot ping the outside world (dns) : " + test)
 
-            log("*** Verify the Director VM can ping the SAH node through the provisioning network")
+            logger.debug("*** Verify the Director VM can ping the SAH node through the provisioning network")
             test = ping_host(settings.director_node.external_ip, "root", settings.director_node.root_password, settings.sah_node.provisioning_ip)
             if ping_success not in test:
                 raise AssertionError("Director VM cannot ping the SAH node through the provisioning network : " + test)
 
-            log("*** Verify the Director VM can ping the SAH node through the public network")
+            logger.debug("*** Verify the Director VM can ping the SAH node through the public network")
             test = ping_host(settings.director_node.external_ip, "root", settings.director_node.root_password, settings.sah_node.external_ip)
             if ping_success not in test:
                 raise AssertionError("Director VM cannot ping the SAH node through the provisioning network : " + test)
 
-
+            logger.info("Preparing the Director VM")
             ## Temporary till packages are available on the CDN and installed by the kickstart
-            log(" *** install RDO bits since not available on the cdn yet")
+            logger.debug(" *** install RDO bits since not available on the cdn yet")
             director_vm = Director()
             director_vm.apply_internal_repos()
 
-            log("===  Uploading & configuring undercloud.conf . environment yaml ===")
+            logger.debug("===  Uploading & configuring undercloud.conf . environment yaml ===")
             director_vm.upload_update_conf_files()
 
-            log("=== installing the director & undercloud ===")
+            logger.info("=== installing the director & undercloud ===")
             director_vm.upload_cloud_images()
             director_vm.install_director()
         else :
-            log("=== Skipped Director VM/Undercloud install")
+            logger.info("=== Skipped Director VM/Undercloud install")
             director_vm = Director()
-            log("Deleting overcloud stack")
+            logger.debug("Deleting overcloud stack")
             director_vm.delete_overcloud()
 
 
         if args.skip_ceph_vm is False :
             if args.skip_sah is True:
-                log("Delete the ceph VM")
-                log (Ssh.execute_command(settings.director_node.external_ip, "root", settings.ceph_node.root_password, "subscription-manager remove --all"))
-                log (Ssh.execute_command(settings.director_node.external_ip, "root", settings.ceph_node.root_password, "subscription-manager unregister"))
+                logger.debug("Delete the ceph VM")
+                logger.debug (Ssh.execute_command(settings.director_node.external_ip, "root", settings.ceph_node.root_password, "subscription-manager remove --all"))
+                logger.debug (Ssh.execute_command(settings.director_node.external_ip, "root", settings.ceph_node.root_password, "subscription-manager unregister"))
 
                 sah_node.delete_ceph_vm()
 
-            log( "=== creating ceph VM")
+            logger.info( "=== creating ceph VM")
             sah_node.create_ceph_vm()
 
-            log("*** Verify the Ceph VM registered properly ***")
+            logger.info("Ceph VM health checks")
+            logger.debug("*** Verify the Ceph VM registered properly ***")
             subscriptionStatus = verify_subscription_status(settings.ceph_node.external_ip, "root", settings.ceph_node.root_password, settings.subscription_check_retries)
             if "Current" not in subscriptionStatus:
                 raise AssertionError("Ceph VM did not register properly : " + subscriptionStatus)
 
-            log("*** Verify the Ceph VM can ping its public gateway")
+            logger.debug("*** Verify the Ceph VM can ping its public gateway")
             test = ping_host(settings.ceph_node.external_ip, "root", settings.ceph_node.root_password, settings.public_gateway)
             if ping_success not in test:
                 raise AssertionError("Ceph VM cannot ping its public gateway : " + test)
 
-            log("*** Verify the Ceph VM can ping the outside world (ip)")
+            logger.debug("*** Verify the Ceph VM can ping the outside world (ip)")
             test = ping_host(settings.ceph_node.external_ip, "root", settings.ceph_node.root_password, "8.8.8.8")
             if ping_success not in test:
                 raise AssertionError("Ceph VM cannot ping the outside world (ip) : " + test)
 
-            log("*** Verify the Ceph VM can ping the outside world (dns)")
+            logger.debug("*** Verify the Ceph VM can ping the outside world (dns)")
             test = ping_host(settings.ceph_node.external_ip, "root", settings.ceph_node.root_password, "google.com")
             if ping_success not in test:
                 raise AssertionError("Ceph VM cannot ping the outside world (dns) : " + test)
 
-            log("*** Verify the Ceph VM can ping the SAH node through the storage network")
+            logger.debug("*** Verify the Ceph VM can ping the SAH node through the storage network")
             test = ping_host(settings.ceph_node.external_ip, "root", settings.ceph_node.root_password, settings.sah_node.storage_ip)
             if ping_success not in test:
                 raise AssertionError("Ceph VM cannot ping the SAH node through the storage network : " + test)
 
-            log("*** Verify the Ceph VM can ping the SAH node through the public network")
+            logger.debug("*** Verify the Ceph VM can ping the SAH node through the public network")
             test = ping_host(settings.ceph_node.external_ip, "root", settings.ceph_node.root_password, settings.sah_node.external_ip)
             if ping_success not in test:
                 raise AssertionError("Ceph VM cannot ping the SAH node through the public network : " + test)
 
-            log("*** Verify the Ceph VM can ping the Director VM through the public network")
+            logger.debug("*** Verify the Ceph VM can ping the Director VM through the public network")
             test = ping_host(settings.ceph_node.external_ip, "root", settings.ceph_node.root_password, settings.director_node.external_ip)
             if ping_success not in test:
                 raise AssertionError("Ceph VM cannot ping the Director VM through the provisioning network : " + test)
         else :
-            log("Skipped the ceph vm install")
+            logger.info("Skipped the ceph vm install")
 
 
-        log("=== Configuring the Director vm ===")
+        logger.info("=== Preparing the undercloud ===")
         for each in nonSAHnodes:
                 ipmi_session = Ipmi(settings.cygwin_installdir, settings.ipmi_user, settings.ipmi_password, each.idrac_ip)
                 ipmi_session.power_off()
@@ -331,14 +333,14 @@ if __name__ == '__main__':
 
 
         director_vm.setup_networking()
-
-        log ("installing the overcloud ... this might take a while")
+        logger.info("=== Installing the overcloud ")
+        logger.debug ("installing the overcloud ... this might take a while")
         director_vm.deploy_overcloud()
 
-        log ("**** that s all up to now ..... ! ")
+        logger.info  ("**** Retreiving nodes information ")
         ip_info = []
         try:
-            log("retreiving node ip details ..")
+            logger.debug("retreiving node ip details ..")
 
             ip_info.append(  "====================================")
             ip_info.append(  "### nodes ip information ###")
@@ -425,43 +427,44 @@ if __name__ == '__main__':
                 ip_info.append( "     - storage cluster ip : " + cluster_ip)
                 ip_info.append ("     - storage ip         : " + storage_ip)
             ip_info.append ("====================================")
-	    
-	    try:
-		overcloud_endpoint = Ssh.execute_command_tty(settings.director_node.external_ip, settings.director_install_account_user, settings.director_install_account_pwd,'grep "OS_AUTH_URL=" ~/overcloudrc')[0].split('=')[1].replace(':5000/v2.0/','')
-		overcloud_pass = Ssh.execute_command_tty(settings.director_node.external_ip, settings.director_install_account_user, settings.director_install_account_pwd,'grep "OS_PASSWORD=" ~/overcloudrc')[0].split('=')[1]
-	  	ip_info.append("OverCloud Horizon        : " + overcloud_endpoint)
-		ip_info.append("OverCloud admin password : " + overcloud_pass)
-	    except:
-		pass
-	    ip_info.append ("====================================") 	    
 
+            try:
+                overcloud_endpoint = Ssh.execute_command_tty(settings.director_node.external_ip, settings.director_install_account_user, settings.director_install_account_pwd,'grep "OS_AUTH_URL=" ~/overcloudrc')[0].split('=')[1].replace(':5000/v2.0/','')
+                overcloud_pass = Ssh.execute_command_tty(settings.director_node.external_ip, settings.director_install_account_user, settings.director_install_account_pwd,'grep "OS_PASSWORD=" ~/overcloudrc')[0].split('=')[1]
+                ip_info.append("OverCloud Horizon        : " + overcloud_endpoint)
+                ip_info.append("OverCloud admin password : " + overcloud_pass)
+            except:
+                pass
+            ip_info.append ("====================================")
             for each in ip_info:
-                    log(each)
+                logger.debug(each)
 
         except:
                 for each in ip_info:
-                    log(each)
-                log(" Failed to retreive the nodes ip information ")
+                    logger.debug(each)
+                logger.debug(" Failed to retreive the nodes ip information ")
+
+
         cmd = "source ~/stackrc;heat stack-list | grep overcloud | awk '{print $6}'"
         overcloud_status = Ssh.execute_command_tty(settings.director_node.external_ip, settings.director_install_account_user, settings.director_install_account_pwd,cmd)[0]
-        log("=== Overcloud stack state : "+ overcloud_status )
-        log("Applyin neutron vlan config workaround ")
+        logger.debug("=== Overcloud stack state : "+ overcloud_status )
+        logger.info("Applyin neutron vlan config workaround (note : it might take a few minutes for the controlers to come back up)")
         director_vm.fix_controllers_vlan_range()
-        log("note : it might take a few minutes for the controlers to come back up")
-        log("====================================")
-        log("= log : " + loggile)
-        log("====================================")
-	log("Deployment complete")
 
-
+        logger.debug("====================================")
+        logger.info("= log : " + loggile)
+        logger.debug("====================================")
+        logger.info("Deployment complete")
 
     except:
-        logger.info(traceback.format_exc())
+        logger.error(traceback.format_exc())
         e = sys.exc_info()[0]
-        logger.info(e)
+        logger.error(e)
         print e
         print traceback.format_exc()
         print ("**** See log file " + "= log : " + loggile)
 
 
+if __name__ == "__main__":
 
+        deploy()

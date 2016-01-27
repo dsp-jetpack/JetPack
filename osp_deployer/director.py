@@ -40,31 +40,31 @@ class Director():
         install_admin_password = self.settings.director_install_account_pwd
 
         cmd = "mkdir /home/"+install_admin_user+"/pilot"
-        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
+        logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
 
         cmd = "mkdir /home/"+install_admin_user+"/pilot/probe_idrac"
-        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
+        logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
 
         cmd = "mkdir /home/"+install_admin_user+"/pilot/probe_idrac/probe_idrac"
-        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
+        logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
 
 
         cmd = "mkdir /home/"+install_admin_user+"/pilot/templates"
-        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
+        logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
 
         cmd = "mkdir /home/"+install_admin_user+"/pilot/templates/nic-configs"
-        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
+        logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
 
 
     def apply_internal_repos(self):
         ### Add the internal repo. & if going down that road, and re pull down foreman with the new version
         if self.settings.internal_repos is True:
-            logger.info("Applying internal repo's to the director vm & reinstall rdo manager")
+            logger.debug("Applying internal repo's to the director vm & reinstall rdo manager")
             count = 1
             for repo in self.settings.internal_repos_urls:
                 cmd = 'curl ' + repo + " > /etc/yum.repos.d/internal_" + str(count) + ".repo"
-                logger.info( Ssh.execute_command(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password,cmd))
-                logger.info( Ssh.execute_command(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password,"sed -i '/enabled=1/a priority=1' /etc/yum.repos.d/internal_" + str(count) + ".repo"))
+                logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password,cmd))
+                logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password,"sed -i '/enabled=1/a priority=1' /etc/yum.repos.d/internal_" + str(count) + ".repo"))
                 count += 1
 
             cmds = [
@@ -83,12 +83,12 @@ class Director():
                 'yum info python-rdomanager-oscplugin',
             ]
             for cmd in cmds:
-                logger.info( Ssh.execute_command(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password,cmd))
-	    for repo in self.settings.internal_repos_urls:
-	    	if "Beta-4" in repo:
-                	logger.info("Workaroud for https://bugzilla.redhat.com/show_bug.cgi?id=1298189")
-                	cmd = "sudo sed -i \"s/.*Keystone_domain\['heat_domain'\].*/Service\['keystone'\] -> Class\['::keystone::roles::admin'\] -> Class\['::heat::keystone::domain'\]/\" /usr/share/instack-undercloud/puppet-stack-config/puppet-stack-config.pp"
-                	logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password,cmd))
+                logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password,cmd))
+        for repo in self.settings.internal_repos_urls:
+            if "Beta-4" in repo:
+                    logger.debug("Workaroud for https://bugzilla.redhat.com/show_bug.cgi?id=1298189")
+                    cmd = "sudo sed -i \"s/.*Keystone_domain\['heat_domain'\].*/Service\['keystone'\] -> Class\['::keystone::roles::admin'\] -> Class\['::heat::keystone::domain'\]/\" /usr/share/instack-undercloud/puppet-stack-config/puppet-stack-config.pp"
+                    logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password,cmd))
 
     def upload_update_conf_files(self):
 
@@ -102,7 +102,7 @@ class Director():
         Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.network_env_yaml, remoteSh);
 
         cmd = "sudo chmod 777 " +remoteSh
-        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
 
         remoteSh = "/home/"+install_admin_user+"/pilot/templates/nic-configs/ceph-storage.yaml";
@@ -128,7 +128,7 @@ class Director():
             'sed -i "s|inspection_iprange = .*|inspection_iprange = '+ self.settings.discovery_ip_range +'|" pilot/undercloud.conf',
      ]
         for cmd in cmds:
-            logger.info( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
+            logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, install_admin_user, install_admin_password,cmd))
 
     def install_director(self):
         logger.debug("uploading & executing sh script")
@@ -153,7 +153,7 @@ class Director():
         installProbe = "/home/"+install_admin_user+"/pilot/install_probe_idrac.sh"
         Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.foreman_configuration_scripts + '/pilot/install_probe_idrac.sh', installProbe)
         cmd = "chmod 777 " + installProbe
-        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
         probFiles1 = [
                 'README.rst',
@@ -166,7 +166,7 @@ class Director():
             local = '/pilot/probe_idrac/' + each
             Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.foreman_configuration_scripts + local, remote)
             cmd = "chmod 777 " + remote
-            logger.info( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
         probFiles2 = [
                 '__init__.py',
                 'probe_idrac.py',
@@ -176,17 +176,17 @@ class Director():
             local = '/pilot/probe_idrac/probe_idrac/' + each
             Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.foreman_configuration_scripts + local, remote)
             cmd = "chmod 777 " + remote
-            logger.info( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
         remoteSh = "/home/"+self.settings.director_install_account_user+"/pilot/install-director.sh";
         Scp.put_file( self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd, self.settings.install_director_sh, remoteSh);
 
         cmd = "chmod 777 /home/"+self.settings.director_install_account_user + "/pilot/install-director.sh"
-        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
 
         cmd = '~/pilot/install-director.sh ' + self.settings.name_server
-        logger.info(Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        logger.debug(Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
         # WORKAROUND FOR https://jira.opencrowbar.org/browse/CES-4414
         ipxe_rpm = 'ipxe-bootimgs-20151005-1.git6847232.el7.test.noarch.rpm'
@@ -201,14 +201,14 @@ class Director():
             'sudo chcon system_u:object_r:tftpdir_t:s0 /tftpboot/undionly.kpxe',
         ]
         for cmd in cmds:
-            logger.info(Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            logger.debug(Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
     def upload_cloud_images(self):
 
-        logger.info("Uploading cloud images to the Director vm")
+        logger.debug("Uploading cloud images to the Director vm")
 
         cmd = "mkdir /home/"+self.settings.director_install_account_user+"/pilot/images"
-        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
         remoteSh = "/home/"+self.settings.director_install_account_user+"/pilot/images/deploy-ramdisk-ironic.tar";
         Scp.put_file( self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd, self.settings.deploy_ram_disk_image, remoteSh);
@@ -223,9 +223,9 @@ class Director():
     def node_discovery(self):
 
         if self.settings.use_custom_instack_json is True:
-            logger.info("Using custom instack.json file - NOT scannings nodes")
+            logger.debug("Using custom instack.json file - NOT scannings nodes")
             cmd = "rm /home/"+self.settings.director_install_account_user+"/instackenv.json -f"
-            logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
             remoteSh = "/home/"+self.settings.director_install_account_user+"/instackenv.json"
             Scp.put_file( self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd, self.settings.custom_instack_json, remoteSh);
@@ -238,7 +238,7 @@ class Director():
                 '. $HOME/.bash_profile;go install github.com/dell-esg/idracula'
                 ]
             for cmd in cmds:
-                logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+                logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
 
             # Idrac doesn't always play nice .. so working around cases where nic's dont get detected .. resetting idrac & powering on the node seems to do it.
@@ -249,18 +249,18 @@ class Director():
                         if "No integrated 1 GB nics" in out or "No WSMAN endpoint at" in out:
                             logger.warning(node.hostname +" did not get discovered properly")
                             if "No integrated 1 GB nics" in out:
-                                logger.info("grabbing drac informations in " + node.idrac_ip+".dump")
+                                logger.debug("grabbing drac informations in " + node.idrac_ip+".dump")
                                 cmd = "cd ~/pilot/probe_idrac/probe_idrac/;./probe_idrac.py -l "+self.settings.ipmi_user+" -p "+self.settings.ipmi_password+" "+node.idrac_ip+" > "+node.idrac_ip+".dump"
                                 Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
 
-                            logger.info("reseting idrac")
+                            logger.debug("reseting idrac")
                             ipmi_session = Ipmi(self.settings.cygwin_installdir, self.settings.ipmi_user, self.settings.ipmi_password, node.idrac_ip)
-                            logger.info(ipmi_session.drac_reset())
+                            logger.debug(ipmi_session.drac_reset())
                             time.sleep(120)
                             backToLife = False
                             while backToLife == False :
                                 try:
-                                    logger.info(ipmi_session.get_power_state())
+                                    logger.debug(ipmi_session.get_power_state())
                                     backToLife = True
                                     time.sleep(20)
                                 except:
@@ -274,7 +274,7 @@ class Director():
 
 
             cmd = ". $HOME/.bash_profile;idracula -u "+ self.settings.ipmi_user + " -p '" + self.settings.ipmi_password  +"' -scan '"+self.settings.ipmi_discovery_range_start+"-"+self.settings.ipmi_discovery_range_end+"' > ~/instackenv.json"
-            logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
             cmd = "ls -la ~/instackenv.json | awk '{print $5;}'"
             size = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)[0]
@@ -283,7 +283,7 @@ class Director():
                 raise AssertionError("Unable to scan all the nodes ... need to go & pull the plug(s) - " + size + " - " +size[0])
 
             else:
-                logger.info("nodes appear to have been picked up")
+                logger.debug("nodes appear to have been picked up")
 
         for node in (self.settings.controller_nodes + self.settings.compute_nodes + self.settings.ceph_nodes) :
                     ipmi_session = Ipmi(self.settings.cygwin_installdir, self.settings.ipmi_user, self.settings.ipmi_password, node.idrac_ip)
@@ -291,44 +291,44 @@ class Director():
                     time.sleep(60)
 
         if self.settings.use_ipmi_driver is True:
-            logger.info("Using pxe_ipmi driver")
+            logger.debug("Using pxe_ipmi driver")
             cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ~/instackenv.json'
-            logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
 
         cmd = "source stackrc;openstack baremetal import --json ~/instackenv.json"
-        logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
 
         cmd = "source stackrc;openstack baremetal configure boot"
-        logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
         cmd = "source stackrc;openstack baremetal introspection bulk start"
-        logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
 
     def assign_node_roles(self):
-        logger.info("uploading assign script")
+        logger.debug("uploading assign script")
 
         remoteSh = "/home/"+self.settings.director_install_account_user+"/assign_role.py";
         Scp.put_file( self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd, self.settings.assign_role_py, remoteSh);
 
         cmd = "chmod 777 /home/"+self.settings.director_install_account_user + "/assign_role.py"
-        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
-        logger.info("Assigning roles to nodes")
+        logger.debug("Assigning roles to nodes")
 
         for node in self.settings.controller_nodes:
             cmd = 'cd ' + "/home/"+self.settings.director_install_account_user + ";source stackrc;./assign_role.py " + node.provisioning_mac_address + " controller"
-            logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
         for node in self.settings.compute_nodes:
             cmd = 'cd ' + "/home/"+self.settings.director_install_account_user + ";source stackrc;./assign_role.py " + node.provisioning_mac_address + " compute"
-            logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
         for node in self.settings.ceph_nodes:
             cmd = 'cd ' + "/home/"+self.settings.director_install_account_user + ";source stackrc;./assign_role.py " + node.provisioning_mac_address + " storage"
-            logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
 
     def setup_networking(self):
@@ -336,7 +336,7 @@ class Director():
         install_admin_user = self.settings.director_install_account_user
         install_admin_password = self.settings.director_install_account_pwd
 
-        logger.info("Configuring network settings for overcloud")
+        logger.debug("Configuring network settings for overcloud")
 
         networkYaml = "/home/"+install_admin_user+"/pilot/templates/network-environment.yaml";
 	storageYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/ceph-storage.yaml";
@@ -351,10 +351,10 @@ class Director():
         Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.controller_yaml, controllerYaml)
 
         cmd = "sudo chmod 777 " +networkYaml
-        logger.info( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 	
 	cmd ="sed -i 's/HOME\\//\\/home\\/osp_admin\\//' " + networkYaml
-	logger.info( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+	logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
         cmds = [
             'sed -i "s|ControlPlaneDefaultRoute:.*|ControlPlaneDefaultRoute: ' + self.settings.director_node.provisioning_ip + '|" ' + networkYaml,
@@ -380,17 +380,17 @@ class Director():
             'sed -i "s|ExternalNetworkVlanID:.*|ExternalNetworkVlanID: ' + self.settings.public_api_vlanid + '|" ' + networkYaml,
         ]
         for cmd in cmds:
-            logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
 	if self.settings.controller_bond_opts == self.settings.compute_bond_opts and self.settings.compute_bond_opts == self.settings.storage_bond_opts:
-                logger.info("applying " + self.settings.settings.compute_bond_opts + " bond mode to all the nodes (network-environment.yaml)")
+                logger.debug("applying " + self.settings.settings.compute_bond_opts + " bond mode to all the nodes (network-environment.yaml)")
                 cmds = [
 			 'sed -i "s|      \\"mode=802.3ad miimon=100\\"|      \\"mode='+ self.settings.compute_bond_opts +'\\"|" ' + networkYaml,
 			]
 		for cmd in cmds:
-                	logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+                	logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
         else:
-		logger.info("applying bond mode on a per type basis")
+		logger.debug("applying bond mode on a per type basis")
 		cmds = [
 		       "sed -i '/BondInterfaceOptions:/d' " + networkYaml,
                        "sed -i '/mode=802.3ad miimon=100/d' " + networkYaml,
@@ -399,9 +399,9 @@ class Director():
  		       'sed -i "/BondInterfaceOptions:/{n;s/.*/    default: \'mode='+ self.settings.storage_bond_opts +"'\\n/;}\" " + storageYaml,	
 		]
 		for cmd in cmds:
-            		logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            		logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
-        logger.info("updating controller yaml")
+        logger.debug("updating controller yaml")
         cmds = ['sed -i "s|em1|'+ self.settings.controller_bond0_interfaces.split(" ")[0] +'|" ' + controllerYaml,
                 'sed -i "s|p3p1|'+ self.settings.controller_bond0_interfaces.split(" ")[1] +'|" ' + controllerYaml,
                 'sed -i "s|em2|'+ self.settings.controller_bond1_interfaces.split(" ")[0] +'|" ' + controllerYaml,
@@ -412,9 +412,9 @@ class Director():
 
                 ]
         for cmd in cmds :
-            logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
-        logger.info("updating compute yaml")
+        logger.debug("updating compute yaml")
         cmds = ['sed -i "s|em1|'+ self.settings.compute_bond0_interfaces.split(" ")[0] +'|" ' + computeYaml,
                 'sed -i "s|p3p1|'+ self.settings.compute_bond0_interfaces.split(" ")[1] +'|" ' + computeYaml,
                 'sed -i "s|em2|'+ self.settings.compute_bond1_interfaces.split(" ")[0] +'|" ' + computeYaml,
@@ -423,9 +423,9 @@ class Director():
 
                 ]
         for cmd in cmds:
-            logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
-        logger.info("updating storage yaml")
+        logger.debug("updating storage yaml")
         cmds = ['sed -i "s|em1|'+ self.settings.storage_bond0_interfaces.split(" ")[0] +'|" ' + storageYaml,
                 'sed -i "s|p2p1|'+ self.settings.storage_bond0_interfaces.split(" ")[1] +'|" ' + storageYaml,
                 'sed -i "s|em2|'+ self.settings.storage_bond1_interfaces.split(" ")[0] +'|" ' + storageYaml,
@@ -434,7 +434,7 @@ class Director():
 
                 ]
         for cmd in cmds :
-            logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
 
     def deploy_overcloud(self):
@@ -442,26 +442,26 @@ class Director():
         install_admin_user = self.settings.director_install_account_user
         install_admin_password = self.settings.director_install_account_pwd
 
-        logger.info("Configuring network settings for overcloud")
+        logger.debug("Configuring network settings for overcloud")
 
         deployOvercloud_sh = "/home/"+install_admin_user+"/pilot/deploy-overcloud.py"
         Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.deploy_overcloud_sh, deployOvercloud_sh);
 
         cmd = "sudo chmod 777 " + deployOvercloud_sh
-        logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
-        logger.info("Starting overcloud deployment .. you can monitor the progress from the director vm running heat resource-list overcloud")
+        logger.debug("Starting overcloud deployment .. you can monitor the progress from the director vm running heat resource-list overcloud")
         cmd = "cd ~/pilot;source ~/stackrc;./deploy-overcloud.py" + " --computes " + str(len(self.settings.compute_nodes)) + " --storage " + str(len(self.settings.ceph_nodes)) + " --vlan " + self.settings.tenant_vlan_range
-        logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
     def delete_overcloud(self):
 
         install_admin_user = self.settings.director_install_account_user
         install_admin_password = self.settings.director_install_account_pwd
 
-        logger.info("Deleting the overcloud stack")
+        logger.debug("Deleting the overcloud stack")
         cmd = "cd ~/pilot;source ~/stackrc;heat stack-delete overcloud"
-        logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
         cmd = "cd ~/pilot;source ~/stackrc;heat stack-list"
         while 1 :
@@ -477,7 +477,7 @@ class Director():
 
 
     def fix_controllers_vlan_range(self):
-        logger.info("Workaround for known beta2 issue where neutron tenant vlan configuration is not applied properly")
+        logger.debug("Workaround for known beta2 issue where neutron tenant vlan configuration is not applied properly")
         cmd = "source ~/stackrc;nova list | grep controller"
         re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
 
@@ -486,12 +486,12 @@ class Director():
         for each in controllers:
             provisioning_ip = each.split("|")[6].split("=")[1]
             cmd = "ssh heat-admin@" + provisioning_ip + " \"sudo sed -i 's/network_vlan_ranges =datacentre/network_vlan_ranges =datacentre:"+self.settings.tenant_vlan_range+"/' /etc/neutron/plugin.ini\""
-            logger.info( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) )
+            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) )
         for each in self.settings.controller_nodes:
             ipmi_session = Ipmi(self.settings.cygwin_installdir, self.settings.ipmi_user, self.settings.ipmi_password, each.idrac_ip)
             ipmi_session.power_off()
             time.sleep(20)
             ipmi_session.power_on()
-            logger.info("Controller nodes booting up .. might take a few minutes")
+            logger.debug("Controller nodes booting up .. might take a few minutes")
 
 
