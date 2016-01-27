@@ -51,17 +51,17 @@ class Ipmi():
         self.idracIp = idracIp
         
     def power_on(self):
-        print "powering on"
+        logger.info( "powering on " + self.idracIp )
         self.__exec_ipmi_command("power on")
         while self.get_power_state() != Power_State.POWER_ON:
-            print "give it time to wake up"
+            logger.info( "give it time to wake up")
             time.sleep(5)           
     
     def power_off(self):
-        print "powering off"
+        logger.info( "powering off" + self.idracIp)
         self.__exec_ipmi_command("power off")
         while self.get_power_state() != Power_State.POWER_OFF:
-            print "give it time to turn off"
+            logger.info( "give it time to turn off" )
             time.sleep(5)    
         
     def power_reset(self):
@@ -72,15 +72,15 @@ class Ipmi():
     
     def get_power_state(self):
         state = self.__exec_ipmi_command("power status").strip()
-        print "power state: " + state
+        logger.info( "power state: " + state)
         return state
     
     def set_boot_to_pxe(self):
-        print "setting boot to pxe"
+        logger.info( "setting boot to pxe")
         self.__exec_ipmi_command("chassis bootdev pxe")
        
     def set_boot_to_disk(self):
-        print "setting boot to disk"
+        logger.info( "setting boot to disk" )
         self.__exec_ipmi_command("chassis bootdev disk")
 
     def __exec_ipmi_command(self, command):
