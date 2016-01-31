@@ -22,7 +22,7 @@
 from osp_deployer.config import Settings
 from auto_common import Ssh, Scp,  Widget, UI_Manager, FileHelper
 import sys, logging, threading, time, shutil, os
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("osp_deployer")
 
 
 exitFlag = 0
@@ -92,7 +92,6 @@ class Sah():
             else:
                 localfile = self.settings.lock_files_dir + "/" + file
             remotefile = '/root/' + file
-            print localfile + " >> " + remotefile
             Scp.put_file( self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, localfile, remotefile)
 
     def upload_director_scripts(self):

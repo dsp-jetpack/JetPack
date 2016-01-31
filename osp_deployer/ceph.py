@@ -22,7 +22,7 @@
 from osp_deployer.config import Settings
 from auto_common import Ssh, Scp,  Widget, UI_Manager, FileHelper
 import time, os ,sys, logging, paramiko
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("osp_deployer")
 from math import log
 import uuid
 class Ceph():
@@ -83,8 +83,8 @@ class Ceph():
         localfile = self.settings.ceph_iso
         remotefile = '/home/ceph-user/ceph-iso/' + file
         logger.debug( "remote file " + remotefile)
-        print "local :-> " + localfile
-        print "remote :-> " + remotefile
+        #print "local :-> " + localfile
+        #print "remote :-> " + remotefile
         Scp.put_file(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password, localfile, remotefile)
         cmd = 'sudo mount '+remotefile+' /mnt'
         logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
@@ -179,7 +179,7 @@ class Ceph():
             logger.debug( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
         # ...
-        print("give time to calamari to pick up the nodes.")
+        logger.debug("give time to calamari to pick up the nodes.")
         time.sleep(180)
 
         url = self.settings.ceph_node.external_ip
@@ -281,7 +281,7 @@ class Ceph():
             for cmd in cmds:
                 logger.debug( self.execute_as_shell(host.provisioning_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
-            print "running puppet on " + host.hostname
+            logger.debug( "running puppet on " + host.hostname)
             cmd = 'puppet agent -t -dv |& tee /root/puppet2.out'
             didNotRun = True
             while didNotRun == True:

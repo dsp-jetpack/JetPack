@@ -26,9 +26,8 @@ from auto_common import Ipmi, Ssh
 from osp_deployer import Settings, Deployer_sanity
 from datetime import datetime
 
-logger = logging.getLogger("JetStream deployer")
 ping_success = "packets transmitted, 3 received"
-
+logger = logging.getLogger("osp_deployer")
 
 def verify_subscription_status(external_ip, user, password, retries):
     i = 0
@@ -48,33 +47,18 @@ def ping_host(external_ip, user, passwd, targetHost):
 
 
 def deploy():
-
-    logger.debug ("=================================")
+    import logging.config
+    logging.config.fileConfig('logging.conf')
     isLinux = False
     if sys.platform.startswith('linux'):
         isLinux = True
-        logger.debug ("=== Linux System")
-    else:
-       logger.debug ("=== Windows System")
-    logger.debug ("=================================")
 
-    fname = datetime.now().strftime("deployment-%Y.%m.%d-%H.%M.log")
-    loggile = '/' + fname if isLinux else 'c:/auto_results/' +fname
-
+   
     try:
-
-        import logging.config
-
-        logging.config.fileConfig('logging.conf')
-
-        deployer_log_handler = logging.FileHandler(loggile, mode='w')
-        deployer_log_handler.setLevel(logging.DEBUG)
-        logger.addHandler(deployer_log_handler)
 
         logger.debug ("=================================")
         logger.info ("=== Starting up ...")
         logger.debug ("=================================")
-        logger.debug("Log file : "+ loggile)
 
         parser = argparse.ArgumentParser(description='Jetstream 5.x deployer')
         parser.add_argument('-s','--settings', help='ini settings file, e.g settings/acme.ini', required=True)
@@ -452,9 +436,9 @@ def deploy():
         director_vm.fix_controllers_vlan_range()
 
         logger.debug("====================================")
-        logger.info("= log : " + loggile)
-        logger.debug("====================================")
-        logger.info("Deployment complete")
+        logger.info(" OverCloud deployment status: " + overcloud_status)
+	logger.debug("====================================")
+        logger.info("Deployment complete, see log for details ")
 
     except:
         logger.error(traceback.format_exc())
@@ -462,9 +446,9 @@ def deploy():
         logger.error(e)
         print e
         print traceback.format_exc()
-        print ("**** See log file " + "= log : " + loggile)
 
 
 if __name__ == "__main__":
 
         deploy()
+

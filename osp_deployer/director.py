@@ -22,7 +22,7 @@
 from osp_deployer.config import Settings
 from auto_common import Ssh, Scp, Ipmi
 import sys,logging, time
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("osp_deployer")
 
 
 exitFlag = 0
@@ -78,14 +78,12 @@ class Director():
                 'yum makecache',
                 'yum repolist all',
                 'yum install python-rdomanager-oscplugin -y',
-                'yum install ahc-tools -y',
                 'yum update -y',
-                'yum info python-rdomanager-oscplugin',
             ]
             for cmd in cmds:
                 logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password,cmd))
         for repo in self.settings.internal_repos_urls:
-            if "Beta-4" in repo:
+            if "Beta-4" in repo or "Beta-5" in repo:
                     logger.debug("Workaroud for https://bugzilla.redhat.com/show_bug.cgi?id=1298189")
                     cmd = "sudo sed -i \"s/.*Keystone_domain\['heat_domain'\].*/Service\['keystone'\] -> Class\['::keystone::roles::admin'\] -> Class\['::heat::keystone::domain'\]/\" /usr/share/instack-undercloud/puppet-stack-config/puppet-stack-config.pp"
                     logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password,cmd))
@@ -101,8 +99,8 @@ class Director():
         remoteSh = "/home/"+install_admin_user+"/pilot/templates/network-environment.yaml";
         Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.network_env_yaml, remoteSh);
 
-        cmd = "sudo chmod 777 " +remoteSh
-        logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        #cmd = "sudo chmod 777 " +remoteSh
+        #logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
 
         remoteSh = "/home/"+install_admin_user+"/pilot/templates/nic-configs/ceph-storage.yaml";
@@ -188,20 +186,6 @@ class Director():
         cmd = '~/pilot/install-director.sh ' + self.settings.name_server
         logger.debug(Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
-        # WORKAROUND FOR https://jira.opencrowbar.org/browse/CES-4414
-        ipxe_rpm = 'ipxe-bootimgs-20151005-1.git6847232.el7.test.noarch.rpm'
-        remote = "/home/"+install_admin_user+"/pilot/" + ipxe_rpm
-        local = self.settings.ipxe_rpm
-        Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, local, remote)
-        cmds = [
-            'sudo rpm -Uvh '+remote,
-            'cd /tftpboot;sudo curl -O http://boot.ipxe.org/undionly.kpxe',
-            'sudo chmod 744 /tftpboot/undionly.kpxe',
-            'sudo chown ironic:ironic /tftpboot/undionly.kpxe',
-            'sudo chcon system_u:object_r:tftpdir_t:s0 /tftpboot/undionly.kpxe',
-        ]
-        for cmd in cmds:
-            logger.debug(Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
     def upload_cloud_images(self):
 
@@ -350,8 +334,8 @@ class Director():
         Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.compute_yaml, computeYaml)
         Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.controller_yaml, controllerYaml)
 
-        cmd = "sudo chmod 777 " +networkYaml
-        logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        #cmd = "sudo chmod 777 " +networkYaml
+        #logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 	
 	cmd ="sed -i 's/HOME\\//\\/home\\/osp_admin\\//' " + networkYaml
 	logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
@@ -466,7 +450,7 @@ class Director():
         cmd = "cd ~/pilot;source ~/stackrc;heat stack-list"
         while 1 :
 
-            if "overcloud" in Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)[0]:
+            if "overcloud" in Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)[0]:
                 time.sleep(60)
             else :
                 return
