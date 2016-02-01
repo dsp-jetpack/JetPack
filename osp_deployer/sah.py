@@ -76,7 +76,7 @@ class Sah():
         FileHelper.replaceExpression(self.settings.sah_kickstart, '^br_priv_api_boot_opts=.*','br_priv_api_boot_opts="onboot static '+self.settings.sah_node.private_api_ip+ '/'+ self.settings.private_api_netmask+'"')
 
     def upload_iso(self):
-        Scp.put_file( self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, self.settings.rhl71_iso, "/store/data/iso/RHEL7.iso")
+        Scp.put_file( self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, self.settings.rhl72_iso, "/store/data/iso/RHEL7.iso")
 
     def upload_lock_files(self):
         isLinux = False

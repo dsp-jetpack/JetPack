@@ -100,7 +100,7 @@ class Settings():
             self.use_custom_instack_json = True
             self.custom_instack_json = self.cluster_settings_map['custom_instack_json']
         else:
-            self.user_custom_instack_json = False
+            self.use_custom_instack_json = False
 
 
         self.network_conf = self.cluster_settings_map['cluster_nodes_configuration_file']
@@ -152,7 +152,7 @@ class Settings():
 
 
         self.bastion_settings_map = self.getSettingsSection("Bastion Settings")
-        self.rhl71_iso = self.bastion_settings_map['rhl71_iso']
+        self.rhl72_iso = self.bastion_settings_map['rhl72_iso']
         if sys.platform.startswith('linux'):
             self.cygwin_installdir = 'n/a'
         else:
