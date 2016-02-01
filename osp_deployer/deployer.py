@@ -19,7 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
 
-import sys,time, subprocess, logging, traceback, argparse
+import sys,time, subprocess, logging, traceback, argparse, os
 from osp_deployer.director import Director
 from osp_deployer.sah import Sah
 from auto_common import Ipmi, Ssh
@@ -48,11 +48,13 @@ def ping_host(external_ip, user, passwd, targetHost):
 
 def deploy():
     import logging.config
-    logging.config.fileConfig('logging.conf')
     isLinux = False
     if sys.platform.startswith('linux'):
         isLinux = True
-
+	path = '/auto_results' 
+        if not os.path.exists(path):
+   		os.makedirs(path)
+    logging.config.fileConfig('logging.conf')
    
     try:
 

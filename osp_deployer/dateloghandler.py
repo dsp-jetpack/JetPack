@@ -9,7 +9,7 @@ class dateLogHandler(logging.FileHandler):
         isLinux = False
         if sys.platform.startswith('linux'):
                 isLinux = True
-        path = '/'  if isLinux else 'c:/auto_results/'
+        path = '/auto_results/'
         fname = datetime.now().strftime(".%Y.%m.%d-%H.%M")
         super(dateLogHandler,self).__init__(path + fileName + fname,mode)
 
