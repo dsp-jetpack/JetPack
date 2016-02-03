@@ -32,7 +32,7 @@ EXTERNAL_SUBNET_NAME="external_sub"
 STARTIP="192.168.190.2"
 ENDIP="192.168.190.30"
 EXTERNAL_VLAN_NETWORK="192.168.190.0/24"
-GATEWAY_IP=192.168.190.254
+GATEWAY_IP=192.168.190.1
 KEY_NAME="key_name"
 NOVA_INSTANCE_NAME="cirros_test"
 VOLUME_NAME="volume_test"
@@ -357,6 +357,7 @@ end(){
 
 info "###Appendix-C Openstack Operations Functional Test ###"
 
+init
 
 if [[ $# > 0 ]]
 then
@@ -427,7 +428,6 @@ else
   #### EXECUTE
 
   info "### CREATION MODE"
-  init
 
   set_unique_names
   echo $NAME is the new set
