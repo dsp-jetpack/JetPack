@@ -37,6 +37,8 @@ def get_creds():
 def main():
 
   parser = argparse.ArgumentParser()
+  parser.add_argument("--controllers", dest="num_controllers", type=int,
+    default=3, help="The number of controller nodes")
   parser.add_argument("--computes", dest="num_computes", type=int,
     required=True, help="The number of compute nodes")
   parser.add_argument("--storage", dest="num_storage", type=int,
@@ -57,12 +59,13 @@ def main():
   get_creds()
 
   # Launch the deployment
-  cmd="cd;openstack overcloud deploy -t {} --templates ~/pilot/templates/overcloud -e ~/pilot/templates/network-environment.yaml -e ~/pilot/templates/overcloud/environments/storage-environment.yaml -e /usr/share/openstack-tripleo-heat-templates/environments/puppet-pacemaker.yaml --control-scale 3 --control-flavor controller --compute-flavor compute --ceph-storage-flavor storage --swift-storage-flavor storage --block-storage-flavor storage --neutron-public-interface bond1 --neutron-network-type vlan --neutron-disable-tunneling --os-auth-url {} --os-project-name {} --os-user-id {} --os-password {} --compute-scale {} --ceph-storage-scale {} --ntp-server {} --neutron-network-vlan-ranges datacentre:{}".format(
+  cmd="cd;openstack overcloud deploy -t {} --templates ~/pilot/templates/overcloud -e ~/pilot/templates/network-environment.yaml -e ~/pilot/templates/overcloud/environments/storage-environment.yaml -e /usr/share/openstack-tripleo-heat-templates/environments/puppet-pacemaker.yaml --control-flavor controller --compute-flavor compute --ceph-storage-flavor storage --swift-storage-flavor storage --block-storage-flavor storage --neutron-public-interface bond1 --neutron-network-type vlan --neutron-disable-tunneling --os-auth-url {} --os-project-name {} --os-user-id {} --os-password {} --control-scale {} --compute-scale {} --ceph-storage-scale {} --ntp-server {} --neutron-network-vlan-ranges datacentre:{}".format(
     args.timeout,
     os_auth_url,
     os_tenant_name,
     os_username,
     os_password,
+    args.num_controllers,
     args.num_computes,
     args.num_storage,
     args.ntp_server_fqdn,
