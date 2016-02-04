@@ -66,7 +66,7 @@ def clear_disks(clean_up_ip):
     usr = 'root'
     pwd = 'Ignition01'
     if check_disks(clean_up_ip):
-        log(arch_file, "Clearing Disks")
+        #log(arch_file, "Clearing Disks")
         #clean_up_ip = '172.16.11.141'
         cmd = 'sudo -u hdfs hadoop fs -rm -R -f -skipTrash /user/hdfs/*'
         print "Running " + cmd 
@@ -87,7 +87,7 @@ def clear_disks(clean_up_ip):
 
 def clear_cache(clean_up_ip):
 
-    log(arch_file, "Clearing cache")
+    #log(arch_file, "Clearing cache")
     #clean_up_ip = '172.16.11.141'
     usr = 'root'
     pwd = 'Ignition01'
@@ -287,8 +287,9 @@ def teragen(rowNumber, folderName):
 
     usr = 'root'
     pwd = 'Ignition01'
-    cmd = 'cd ' + teragen_jar_location + '/;sudo -u hdfs hadoop jar ' + teragen_jar_filename + ' teragen ' + teragen_parameters + ' ' + str(rowNumber) +' '+ str(folderName)
+    cmd = 'cd ' + teragen_jar_location + '/;sudo -u hdfs hadoop jar ' + teragen_jar_filename + ' teragen' + teragen_parameters + ' ' + str(rowNumber) +' '+ str(folderName)
     print "Running " + cmd
+    debugLog(cmd)
     cl_stdoutd, cl_stderrd = Ssh.execute_command(hadoop_ip, usr, pwd, cmd)    
     print cl_stdoutd
     print cl_stderrd
@@ -310,7 +311,7 @@ def terasort(folderName):
 
     #cmd = 'cd /opt/cloudera/parcels/CDH-5.5.0-1.cdh5.5.0.p0.8/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.6.0-mr1-cdh5.5.0.jar terasort ' + terasort_params + ' '+ str(folderName) + ' ' + str(destFolder)
     cmd = 'cd ' + teragen_jar_location + '/;sudo -u hdfs hadoop jar ' + teragen_jar_filename + ' terasort ' + terasort_parameters + ' '+ str(folderName) + ' ' + str(destFolder)
-    
+    debugLog(cmd)
     print "Running " + cmd 
     cl_stdoutd, cl_stderrd = Ssh.execute_command(hadoop_ip, usr, pwd, cmd)
     print cl_stdoutd
@@ -333,7 +334,7 @@ def teravalidate(folderName):
     pwd = 'Ignition01'
 
     #cmd = 'cd /opt/cloudera/parcels/CDH-5.5.0-1.cdh5.5.0.p0.8/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.6.0-mr1-cdh5.5.0.jar terasort ' + terasort_params + ' '+ str(folderName) + ' ' + str(destFolder)
-    cmd = 'cd ' + teragen_jar_location + '/;sudo -u hdfs hadoop jar ' + teragen_jar_filename + ' teravalidate ' + str(folderName) + ' ' + str(destFolder)
+    cmd = 'cd ' + teragen_jar_location + '/;sudo -u hdfs hadoop jar ' + teragen_jar_filename + ' teravalidate ' + terasort_parameters + ' '+ str(folderName) + ' ' + str(destFolder)
     
     print "Running " + cmd 
     cl_stdoutd, cl_stderrd = Ssh.execute_command(hadoop_ip, usr, pwd, cmd)
@@ -383,6 +384,21 @@ def convertToSF(tpc_size):
 
     return tpc_size
 
+def jobLog(entry, printOutput=True):
+
+    if printOutput:
+        print entry
+    f = open('jobLog.log','a')
+    f.write(entry + "\n")
+    f.close()
+
+def debugLog(entry, printOutput=True):
+
+    if printOutput:
+        print entry
+    f = open('debug.log','a')
+    f.write(entry + "\n")
+    f.close()
 
 def log(file_name, entry, printOutput=True):
 
@@ -519,7 +535,9 @@ def rrdtoolXtract(start, end, metric, host, crowbar_admin_ip, time_offset):
     end = end - offset
     usr = 'root'
     pwd = 'DellCloud'
-    cmd = 'rrdtool fetch '+location + '' + str(host) + '/' + metric +'.rrd AVERAGE -s '+ str(start) +' -e ' + str(end) 
+    cmd = 'rrdtool fetch '+location + '' + str(host) + '/' + metric +'.rrd AVERAGE -s '+ str(start) +' -e ' + str(end)
+    #print cmd
+    #time.sleep(2)
     #log(arch_file, str(cmd))
     cl_stdoutd, cl_stderrd = Ssh.execute_command(crowbar_admin_ip, usr, pwd, cmd)
     return cl_stdoutd, cl_stderrd
@@ -576,6 +594,8 @@ def getJobStartFinishTimes(job_id, start_time, end_time):
         print 'Run mapreduce - put mapreduce code here'
     else:
         print 'Neither Mapreduce or Yarn available'
+        
+    jobLog(str(job_name) + ' ' +str(job_id) + ' ' + str(start) + ' ' + str(finish) )
 
     return job_name, start, finish
 
@@ -623,7 +643,7 @@ def run_terasort_job(target_folder):
 
 def run_teravalidate_job(target_folder):
 
-    #timeA = datetime.datetime.now()
+    timeA = datetime.datetime.now()
     bla = teravalidate(target_folder)
     time.sleep(80)
     ls = bla[1].split('\r' );
@@ -637,8 +657,12 @@ def run_teravalidate_job(target_folder):
             result = str(job_id) + ' | Successfull.'
         else:
             result = ' | Error\n Teravalidate Output:\n' + str(ls)
-    
-    return result
+
+    timeB = datetime.datetime.now()
+
+    job_name, start, finish = getJobStartFinishTimes(job_id, timeA, timeB)
+
+    return result, job_id, job_name, start, finish
 
 
 def run_tpc_benchmark(tpc_size):
@@ -868,9 +892,21 @@ def main():
         logStats(arch_file, job_type, data_nodes, start, finish, rowCount, start_epoch, finish_epoch)
 
         job_type = 'Teravalidate'
-        result = run_teravalidate_job(teragenFolder)
+        log(arch_file,  "[[ Teravalidate Row Count Cycle  " + str(rowCount)   + "]]")
+        result, jobID, job_name, start, finish = run_teravalidate_job(teragenFolder)
         log(arch_file, job_type + ' | result | ' + str(result))
+        log(arch_file, "Getting teravalidate stats for JobID: " + str(jobID))
         
+        run_time = finish - start
+
+        runTime = (finish - start).total_seconds()
+
+        start_epoch = int(time.mktime(start.timetuple()))
+        finish_epoch = int(time.mktime(finish.timetuple()))
+
+        log(arch_file, job_name + " | Cloudera | " + str(rowCount) + " | job | runtime | " + str(run_time) + ' ('+ str(runTime) +' seconds)')
+        logStats(arch_file, job_type, data_nodes, start, finish, rowCount, start_epoch, finish_epoch)
+
     job_type = 'TPC'
     tpc_size = config.tpc_size
 
@@ -911,7 +947,7 @@ def main():
 
             tpc_size = convertToSF(tpc_size)
 
-            log(arch_file, "Getting TPC stats for JobID: " + str(job))
+            log(arch_file, 'Getting TPC-' + job_name + 'stats for JobID: ' + str(job))
             log(arch_file, job_name + " | Cloudera | " + str(tpc_size) + " | job | runtime | " + str(run_time) + ' ('+ str(runTime) +' seconds)')
             logStats(arch_file, job_name, data_nodes, start, finish, tpc_size, start_epoch, finish_epoch)
 
@@ -947,6 +983,31 @@ def main():
         new_id = int(highestValue) + 1
         new_file_name = "Results" + target_file + " T" + str(new_id) + ".log"
         renameFile(file_name, new_file_name)
+    else:
+        # Rename and index the last Archive log for this run
+        target_file = '-' + str(config.teragen_row_counts[0])
+        id_list = []
+        print target_file
+        for filename in os.listdir("ResultLogArch/."):
+            #print filename
+            if target_file in filename:
+                #print target_file
+                #print filename
+                file_id = re.search("Results" + target_file + " T(.+).log", filename)
+                if file_id:
+                    print 'found: ' + str(file_id.group(1))
+                    id_list.append(file_id.group(1))
+                    print id_list
+            else:
+                file_id = 0
+                id_list.append(file_id)
+
+        highestValue = 0
+        highestValue = sorted(id_list, key=float, reverse=True)[0]
+        new_id = int(highestValue) + 1
+        new_file_name = "Results" + target_file + " T" + str(new_id) + ".log"
+        renameFile(file_name, new_file_name)
+        
 
 if __name__ == '__main__':
     main()
