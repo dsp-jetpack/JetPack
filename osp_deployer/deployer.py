@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+
 # OpenStack - A set of software tools for building and managing cloud computing
 # platforms for public and private clouds.
 # Copyright (C) 2015 Dell, Inc.
@@ -80,7 +81,8 @@ def deploy():
         logger.debug("loading settings files " + args.settings)
         settings = Settings(args.settings)
         attrs = vars(settings)
-
+	logger.info("Settings .ini: " + settings.settingsFile)
+	logger.info("Settings .properties " + settings.network_conf)
         logger.info("==== Running environment sanity tests")
         checks = Deployer_sanity()
         checks.check_network_settings()
@@ -175,6 +177,11 @@ def deploy():
             if ping_success not in test:
                 raise AssertionError("SAH cannot ping the outside world (dns) : " + test)
 
+	    logger.debug("*** Verify the SAH can ping the idrac network")
+	    test = ping_host(settings.sah_node.external_ip, "root", settings.sah_node.root_password, settings.controller_nodes[0].idrac_ip)
+	    if ping_success not in test:
+                raise AssertionError("SAH cannot ping idrac networkn (ip) : " + test)
+
             logger.debug("*** Verify the SAH has KVM enabled *** ")
             cmd = 'ls -al /dev/kvm'
             if "No such file" in Ssh.execute_command(settings.sah_node.external_ip, "root", settings.sah_node.root_password, cmd)[1]:
@@ -238,6 +245,11 @@ def deploy():
             test = ping_host(settings.director_node.external_ip, "root", settings.director_node.root_password, settings.sah_node.external_ip)
             if ping_success not in test:
                 raise AssertionError("Director VM cannot ping the SAH node through the provisioning network : " + test)
+            
+            logger.debug("*** Verify the Director VM can ping the idrac network")
+            test = ping_host(settings.director_node.external_ip, "root", settings.director_node.root_password, settings.controller_nodes[0].idrac_ip)
+            if ping_success not in test:
+                raise AssertionError("Director VM cannot ping idrac network (ip) : " + test)
 
             logger.info("Preparing the Director VM")
             ## Temporary till packages are available on the CDN and installed by the kickstart
@@ -437,10 +449,12 @@ def deploy():
         logger.info("Applyin neutron vlan config workaround (note : it might take a few minutes for the controlers to come back up)")
         director_vm.fix_controllers_vlan_range()
 
-        logger.debug("====================================")
+        logger.info("====================================")
         logger.info(" OverCloud deployment status: " + overcloud_status)
-	logger.debug("====================================")
-        logger.info("Deployment complete, see log for details ")
+	logger.info(" log : /auto_results/ ")
+	logger.info("====================================")
+	if not "CREATE_COMPLETE" in overcloud_status:
+		raise AssertionError("OverCloud did not install properly : " + overcloud_status)
 
     except:
         logger.error(traceback.format_exc())
@@ -448,6 +462,7 @@ def deploy():
         logger.error(e)
         print e
         print traceback.format_exc()
+	logger.info("log : /auto_results/ ")
 
 
 if __name__ == "__main__":
