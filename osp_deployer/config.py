@@ -22,7 +22,7 @@
 import ConfigParser, json, sys
 from osp_deployer import Node_Conf
 import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("osp_deployer")
 
 class Settings():
     '''
@@ -179,6 +179,8 @@ class Settings():
             self.ceph_storage_yaml = self.foreman_configuration_scripts + '/pilot/templates/nic-configs/ceph-storage.yaml'
             self.compute_yaml = self.foreman_configuration_scripts + '/pilot/templates/nic-configs/compute.yaml'
             self.controller_yaml = self.foreman_configuration_scripts + '/pilot/templates/nic-configs/controller.yaml'
+            self.controller_yaml = self.foreman_configuration_scripts + '/pilot/templates/nic-configs/controller.yaml'
+            self.ipxe_rpm = self.foreman_configuration_scripts + '/pilot/ipxe/ipxe-bootimgs-20151005-1.git6847232.el7.test.noarch.rpm'
 
 
 
@@ -202,12 +204,7 @@ class Settings():
             self.ceph_storage_yaml = self.foreman_configuration_scripts + '\\pilot\\templates\\nic-configs\\ceph-storage.yaml'
             self.compute_yaml = self.foreman_configuration_scripts + '\\pilot\\templates\\nic-configs\\compute.yaml'
             self.controller_yaml = self.foreman_configuration_scripts + '\\pilot\\templates\\nic-configs\\controller.yaml'
-            self.hammer_configure_hostgroups_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-configure-hostgroups.sh"
-            self.hammer_deploy_compute_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-deploy-compute.sh"
-            self.hammer_deploy_controller_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-deploy-controller.sh"
-            self.hammer_deploy_storage_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-deploy-storage.sh"
-            self.hammer_get_ids_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-get-ids.sh"
-            self.hammer_dump_ids_sh = self.foreman_configuration_scripts + "\\utils\\networking\\hammer-dump-ids.sh"
+            self.ipxe_rpm = self.foreman_configuration_scripts + '\\pilot\\ipxe\\ipxe-bootimgs-20151005-1.git6847232.el7.test.noarch.rpm'
 
         self.controller_nodes = []
         self.compute_nodes = []
@@ -221,26 +218,22 @@ class Settings():
                 try:
                     if node.is_sah == "true":
                         self.sah_node = node
-                        print "SAH Node :: " + self.sah_node.hostname
                 except:
                     pass
                 try:
                     if node.is_director == "true":
                         self.director_node = node
-                        print "Director Node :: " + self.director_node.hostname
                 except:
                     pass
                 try:
                     if node.is_ceph == "true":
                         self.ceph_node = node
-                        print "Ceph Node :: " + self.ceph_node.hostname
                 except:
                     pass
                 try:
                     if node.is_controller == "true":
                         node.is_controller = True
                         self.controller_nodes.append(node)
-                        print "Controller Node :: " + node.hostname
                 except:
                     node.is_controller = False
                     pass
@@ -249,7 +242,6 @@ class Settings():
                     if node.is_compute == "true":
                         node.is_compute = True
                         self.compute_nodes.append(node)
-                        print "Compute Node :: " + node.hostname
                 except:
                     node.is_compute = False
                     pass
@@ -257,7 +249,6 @@ class Settings():
                     if node.is_ceph_storage == "true":
                         self.ceph_nodes.append(node)
                         node.is_storage = True
-                        print "Ceph Node :: " + node.hostname
                 except:
                     node.is_storage = False
                     pass
@@ -272,8 +263,8 @@ class Settings():
             try:
                 dictr[option] = self.conf.get(section, option)
                 if dictr[option] == -1:
-                    print("skip: %s" % option)
+                    logger.debug("skip: %s" % option)
             except:
-                print("exception on %s!" % option)
+                logger.debug("exception on %s!" % option)
                 dictr[option] = None
         return dictr

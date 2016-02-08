@@ -24,11 +24,9 @@ from osp_deployer.ceph import Ceph
 from auto_common import Ipmi, Ssh, FileHelper, Scp, UI_Manager
 from osp_deployer import Settings
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("osp_deployer")
 
-def log(message):
-    print (message)
-    logger.info(message)
+
 
 class Deployer_sanity():
     '''
@@ -50,7 +48,7 @@ class Deployer_sanity():
 
     def check_files(self):
 
-        logger.info("Check settings ip's are valid.")
+        logger.debug("Check settings ip's are valid.")
         shouldBeValidIPs = [
             'external_netmask','public_gateway','external_gateway',
             'public_api_netmask','external_allocation_pool_start','external_allocation_pool_end',
@@ -95,9 +93,9 @@ class Deployer_sanity():
         hdw_nodes.append(self.settings.sah_node)
         for node in hdw_nodes:
             try:
-		print node.idrac_ip
+		logger.debug( node.idrac_ip)
                 ipmi_session = Ipmi(self.settings.cygwin_installdir, self.settings.ipmi_user, self.settings.ipmi_password, node.idrac_ip)
-                print node.hostname +" :: "+ ipmi_session.get_power_state()
+                logger.debug( node.hostname +" :: "+ ipmi_session.get_power_state())
             except:
                 raise AssertionError("Could not impi to host " + node.hostname)
 
@@ -105,7 +103,7 @@ class Deployer_sanity():
         #
 
         # Verify SAH node network definition
-        print "verifying sah network settings"
+        logger.debug( "verifying sah network settings")
         shouldHaveAttrbutes = [ 'hostname','idrac_ip','root_password','anaconda_ip','anaconda_iface',
                                 'external_bond','external_slaves','external_ip',
                                 'private_bond','private_slaves',
@@ -121,7 +119,7 @@ class Deployer_sanity():
             assert self.isValidIp(getattr(self.settings.sah_node, each)), "SAH node " + each + " is not a valid ip"
 
         # Verify director network definition
-        print "verifying director vm network settings"
+        logger.debug( "verifying director vm network settings")
         shouldHaveAttrbutes = [ 'hostname','root_password','external_ip','provisioning_ip',
                                 'managment_ip','public_api_ip','private_api_ip'
                               ]
@@ -133,7 +131,7 @@ class Deployer_sanity():
             assert self.isValidIp(getattr(self.settings.director_node, each)), "director_node node " + each + " is not a valid ip"
 
         # Verify Ceph vm node network definition
-        print "verifying ceph vm network settings"
+        logger.debug( "verifying ceph vm network settings")
         shouldHaveAttrbutes = [  'hostname','root_password','external_ip','storage_ip'
                               ]
         for each in shouldHaveAttrbutes :
@@ -142,7 +140,7 @@ class Deployer_sanity():
         for each in shouldBeValidIps:
             assert hasattr(self.settings.ceph_node, each), self.settings.network_conf + " Ceph Vm node has no " + each + " attribute"
         # Verify Controller nodes network definitioncls
-        print "verifying controller nodes network settings"
+        logger.debug( "verifying controller nodes network settings")
         for controller in self.settings.controller_nodes:
             shouldHaveAttrbutes = [ 'hostname','idrac_ip','provisioning_mac_address'
                                     ]
@@ -154,7 +152,7 @@ class Deployer_sanity():
 
 
         # Verify Compute nodes network definition
-        print "verifying compute nodes network settings"
+        logger.debug( "verifying compute nodes network settings")
         for compute in self.settings.compute_nodes:
             shouldHaveAttrbutes = ['hostname','idrac_ip','provisioning_mac_address'
                                      ]
@@ -166,7 +164,7 @@ class Deployer_sanity():
 
 
         # Verify Storage nodes network definition
-        print "verifying storage nodes network settings"
+        logger.debug( "verifying storage nodes network settings")
         for storage in self.settings.ceph_nodes:
             shouldHaveAttrbutes = ['hostname','idrac_ip','provisioning_mac_address','journal_disks', 'osd_disks'
                                      ]
