@@ -1,12 +1,14 @@
 #!/usr/bin/python
 
 import argparse
+import distutils.dir_util
 import os
 import re
 import sys
 
-from os.path import expanduser
 from subprocess import check_output
+
+home_dir = os.path.expanduser('~')
 
 
 def get_creds():
@@ -15,7 +17,6 @@ def get_creds():
   global os_auth_url
   global os_tenant_name
 
-  home_dir = expanduser("~")
   creds_file = open(home_dir + '/stackrc', 'r')
 
   for line in creds_file:
@@ -36,21 +37,19 @@ def get_creds():
   os_password = check_output(['sudo', 'hiera', 'admin_password']).strip()
 
 
-def subst_net_envt():
-  home_dir = expanduser("~")
+def subst_home(relative_path):
+  in_file_name = os.path.join(home_dir, relative_path)
+  out_file_name = in_file_name + '.out'
 
-  net_envt_file_name = home_dir + '/pilot/templates/network-environment.yaml'
-  out_net_envt_file_name = net_envt_file_name + '.out'
+  in_file = open(in_file_name, 'r')
+  out_file = open(out_file_name, 'w')
 
-  in_net_envt_file = open(net_envt_file_name, 'r')
-  out_net_envt_file = open(out_net_envt_file_name, 'w')
-
-  for line in in_net_envt_file:
+  for line in in_file:
     line = re.sub("HOME", home_dir, line)
-    out_net_envt_file.write(line)
+    out_file.write(line)
 
-  os.rename(net_envt_file_name, net_envt_file_name + ".bak")
-  os.rename(out_net_envt_file_name, net_envt_file_name)
+  os.rename(in_file_name, in_file_name + '.bak')
+  os.rename(out_file_name, in_file_name)
 
 
 def main():
@@ -76,11 +75,17 @@ def main():
 
   get_creds()
 
-  # Replace HOME with the actual home directory in the network_environment.yaml
-  subst_net_envt()
+  # Replace HOME with the actual home directory in a couple of files
+  subst_home('pilot/templates/dell-environment.yaml')
+  subst_home('pilot/templates/network-environment.yaml')
+
+  # Recursively copy pilot/templates/overrides to pilot/templates/overcloud
+  overrides_dir = os.path.join(home_dir, 'pilot/templates/overrides')
+  overcloud_dir = os.path.join(home_dir, 'pilot/templates/overcloud')
+  distutils.dir_util.copy_tree(overrides_dir, overcloud_dir)
 
   # Launch the deployment
-  cmd="cd;openstack overcloud deploy --debug --log-file ~/pilot/overcloud_deployment.log -t {} --templates ~/pilot/templates/overcloud -e ~/pilot/templates/network-environment.yaml -e ~/pilot/templates/overcloud/environments/storage-environment.yaml -e /usr/share/openstack-tripleo-heat-templates/environments/puppet-pacemaker.yaml --control-flavor controller --compute-flavor compute --ceph-storage-flavor storage --swift-storage-flavor storage --block-storage-flavor storage --neutron-public-interface bond1 --neutron-network-type vlan --neutron-disable-tunneling --os-auth-url {} --os-project-name {} --os-user-id {} --os-password {} --control-scale {} --compute-scale {} --ceph-storage-scale {} --ntp-server {} --neutron-network-vlan-ranges datacentre:{}".format(
+  cmd="cd;openstack overcloud deploy --debug --log-file ~/pilot/overcloud_deployment.log -t {} --templates ~/pilot/templates/overcloud -e ~/pilot/templates/network-environment.yaml -e ~/pilot/templates/dell-environment.yaml -e ~/pilot/templates/overcloud/environments/storage-environment.yaml -e /usr/share/openstack-tripleo-heat-templates/environments/puppet-pacemaker.yaml --control-flavor controller --compute-flavor compute --ceph-storage-flavor storage --swift-storage-flavor storage --block-storage-flavor storage --neutron-public-interface bond1 --neutron-network-type vlan --neutron-disable-tunneling --os-auth-url {} --os-project-name {} --os-user-id {} --os-password {} --control-scale {} --compute-scale {} --ceph-storage-scale {} --ntp-server {} --neutron-network-vlan-ranges datacentre:{}".format(
     args.timeout,
     os_auth_url,
     os_tenant_name,

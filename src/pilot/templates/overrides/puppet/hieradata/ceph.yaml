@@ -1,0 +1,36 @@
+ceph::profile::params::osd_journal_size: 10000
+ceph::profile::params::osd_pool_default_pg_num: 1024
+ceph::profile::params::osd_pool_default_pgp_num: 1024
+ceph::profile::params::osd_pool_default_size: 3
+ceph::profile::params::osd_pool_default_min_size: 2
+ceph::profile::params::manage_repo: false
+ceph::profile::params::authentication_type: cephx
+
+# CHANGEME:
+# Modify the 'osds' parameter to reflect the list of drives to be used as
+# OSDs. A configuration that colocates Ceph journals on every OSD should look
+# like this:
+# ceph::profile::params::osds:
+#   '/dev/sdb': {}
+#   '/dev/sdc': {}
+#   ... and so on.
+# A configuration that places Ceph journals on dedicated drives (such as SSDs)
+# should look like this:
+# ceph::profile::params::osds:
+#   '/dev/sde':
+#     journal: '/dev/sdb'
+#   '/dev/sdf':
+#     journal: '/dev/sdb'
+#   ... and so on.
+# The line containing "'/srv/data': {}" should be commented out or removed.
+ceph::profile::params::osds:
+  '/srv/data': {}
+
+ceph_pools:
+  - volumes
+  - vms
+  - images
+
+ceph_classes: []
+
+ceph_osd_selinux_permissive: true

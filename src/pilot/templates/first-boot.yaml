@@ -1,0 +1,36 @@
+heat_template_version: 2014-10-16
+
+resources:
+  userdata:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+      - config: {get_resource: wipe_disk}
+
+  wipe_disk:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      config: |
+        #!/bin/bash
+        if [[ $HOSTNAME =~ "cephstorage" ]]; then
+        {
+          for letter in {a..z}; do
+            disk="sd${letter}"
+            device="/dev/${disk}"
+            # Skip if device doesn't exist or is mounted
+            [ -b "${device}" ] || continue
+            if grep -q ^${device}[1-9] /proc/mounts; then
+              echo "Skipping ${device} because it's mounted"
+              continue
+            fi
+            echo "Partitioning disk: ${disk}"
+            sgdisk -og ${device}
+            echo
+          done
+          parted -lm
+        } |& tee /root/wipe-disk.txt
+        fi
+
+outputs:
+  OS::stack_id:
+    value: {get_resource: userdata}
