@@ -190,3 +190,4 @@ class Sah():
             time.sleep(20)
             Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh undefine ceph")
             time.sleep(20)
+
