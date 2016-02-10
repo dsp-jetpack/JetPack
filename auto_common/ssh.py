@@ -28,7 +28,7 @@ class Ssh():
     @staticmethod
     def execute_command(address, usr, pwd, command):
         try :
-            logger.info ( "ssh @" + address + ", running : " + command )
+            logger.debug ( "ssh @" + address + ", running : " + command )
             client = paramiko.SSHClient()
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
@@ -37,11 +37,11 @@ class Ssh():
             client.connect(address, username=usr, password=pwd)
             stdin, ss_stdout, ss_stderr = client.exec_command(command)
             r_out, r_err = ss_stdout.read(), ss_stderr.read()
-            logger.info(r_err)
+            logger.debug(r_err)
             if len(r_err) > 5 :
                 logger.error(r_err)
             else:
-                logger.info(r_out)
+                logger.debug(r_out)
             client.close()
         except IOError :
             logger.warning( ".. host "+ address + " is not up")
@@ -53,7 +53,7 @@ class Ssh():
     @staticmethod
     def execute_command_readlines(address, usr, pwd, command):
         try :
-            logger.info ( "ssh @" + address + ", running : " + command )
+            logger.debug ( "ssh @" + address + ", running : " + command )
             client = paramiko.SSHClient()
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -62,11 +62,11 @@ class Ssh():
             client.connect(address, username=usr, password=pwd)
             stdin, ss_stdout, ss_stderr = client.exec_command(command)
             r_out, r_err = ss_stdout.readlines(), ss_stderr.read()
-            logger.info( r_err)
+            logger.debug( r_err)
             if len(r_err) > 5 :
                 logger.error(r_err)
             else:
-                logger.info(r_out)
+                logger.debug(r_out)
             client.close()
         except IOError :
             logger.warning( ".. host "+ address + " is not up")
@@ -78,7 +78,7 @@ class Ssh():
     @staticmethod
     def execute_command_tty(address, usr, pwd, command):
         try :
-            logger.info ( "ssh @" + address + ", running : " + command )
+            logger.debug ( "ssh @" + address + ", running : " + command )
             client = paramiko.SSHClient()
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -87,11 +87,11 @@ class Ssh():
             client.connect(address, username=usr, password=pwd)
             stdin, ss_stdout, ss_stderr = client.exec_command(command, get_pty=True)
             r_out, r_err = ss_stdout.read(), ss_stderr.read()
-            logger.info(r_err)
+            logger.debug(r_err)
             if len(r_err) > 5 :
                 logger.error(r_err)
             else:
-                logger.info(r_out)
+                logger.debug(r_out)
             client.close()
         except IOError :
             logger.warning( ".. host "+ address + " is not up")

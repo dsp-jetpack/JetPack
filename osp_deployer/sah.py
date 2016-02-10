@@ -22,7 +22,7 @@
 from osp_deployer.config import Settings
 from auto_common import Ssh, Scp,  Widget, UI_Manager, FileHelper
 import sys, logging, threading, time, shutil, os
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("osp_deployer")
 
 
 exitFlag = 0
@@ -76,7 +76,7 @@ class Sah():
         FileHelper.replaceExpression(self.settings.sah_kickstart, '^br_priv_api_boot_opts=.*','br_priv_api_boot_opts="onboot static '+self.settings.sah_node.private_api_ip+ '/'+ self.settings.private_api_netmask+'"')
 
     def upload_iso(self):
-        Scp.put_file( self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, self.settings.rhl71_iso, "/store/data/iso/RHEL7.iso")
+        Scp.put_file( self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, self.settings.rhl72_iso, "/store/data/iso/RHEL7.iso")
 
     def upload_lock_files(self):
         isLinux = False
@@ -92,7 +92,6 @@ class Sah():
             else:
                 localfile = self.settings.lock_files_dir + "/" + file
             remotefile = '/root/' + file
-            print localfile + " >> " + remotefile
             Scp.put_file( self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, localfile, remotefile)
 
     def upload_director_scripts(self):
@@ -105,7 +104,8 @@ class Sah():
         install_admin_user = self.settings.director_install_account_user
         install_admin_password = self.settings.director_install_account_pwd
         remoteSh = "/root/deploy-director-vm.sh";
-        directorConf = "/root/director.cfg";
+        directorConf = "/root/director.cfg"
+        Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "rm " + directorConf + " -f")
         Conf =  ("rootpassword " + self.settings.director_node.root_password,
                 "timezone " + self.settings.time_zone,
                 "smuser " + self.settings.subscription_manager_user ,
@@ -129,16 +129,16 @@ class Sah():
         sH = "sh " + remoteSh + " /root/director.cfg /store/data/iso/RHEL7.iso";
         Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, sH)
 
-        logger.info("=== wait for the director vm install to be complete & power it on")
+        logger.debug("=== wait for the director vm install to be complete & power it on")
         while (not "shut off" in Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh list --all")[0]):
-            logger.info ("...")
+            logger.debug ("...")
             time.sleep(60);
-        logger.info ("=== power on the director VM ")
+        logger.debug ("=== power on the director VM ")
         Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh start director")
         while (not "root" in Ssh.execute_command(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password, "whoami")[0]):
-            logger.info ("...")
+            logger.debug ("...")
             time.sleep(30);
-        logger.info("director host is up")
+        logger.debug("director host is up")
 
     def delete_director_vm(self):
         while "director" in Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh list --all")[0]:
@@ -151,8 +151,9 @@ class Sah():
         remoteSh = "/root/deploy-ceph-vm.sh";
         Scp.put_file(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, self.settings.ceph_deploy_sh, remoteSh)
 
-        logger.info("=== create ceph.cfg")
-        cephConf = "/root/ceph.cfg";
+        logger.debug("=== create ceph.cfg")
+        cephConf = "/root/ceph.cfg"
+        Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "rm " + cephConf + " -f")
         Conf =  ("rootpassword " + self.settings.ceph_node.root_password,
                 "timezone " + self.settings.time_zone,
                 "smuser " + self.settings.subscription_manager_user ,
@@ -168,20 +169,20 @@ class Sah():
                 )
         for comd in Conf:
             Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "echo '"+ comd+"' >> "+ cephConf)
-        logger.info("=== kick off the ceph vm deployment")
+        logger.debug("=== kick off the ceph vm deployment")
         sH = "sh " + remoteSh + " /root/ceph.cfg /store/data/iso/RHEL7.iso";
-        logger.info( Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, sH))
+        logger.debug( Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, sH))
 
-        logger.info("=== wait for the ceph vm install to be complete & power it on")
+        logger.debug("=== wait for the ceph vm install to be complete & power it on")
         while (not "shut off" in Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh list --all")[0]):
-            logger.info ("...")
+            logger.debug ("...")
             time.sleep(60)
-        logger.info ("=== power on the ceph VM ")
+        logger.debug ("=== power on the ceph VM ")
         Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh start ceph")
         while (not "root" in Ssh.execute_command(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password, "whoami")[0]):
-            logger.info ("...")
+            logger.debug ("...")
             time.sleep(30);
-        logger.info("ceph host is up")
+        logger.debug("ceph host is up")
 
     def delete_ceph_vm(self):
         if "ceph" in Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh list --all")[0]:

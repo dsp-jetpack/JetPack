@@ -23,6 +23,8 @@ import subprocess, os, time, logging
 import sys
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARNING)
+
 
 class Ipmi():
     '''
@@ -51,17 +53,17 @@ class Ipmi():
         self.idracIp = idracIp
         
     def power_on(self):
-        print "powering on"
+        logger.debug( "powering on " + self.idracIp )
         self.__exec_ipmi_command("power on")
         while self.get_power_state() != Power_State.POWER_ON:
-            print "give it time to wake up"
+            logger.debug( "give it time to wake up")
             time.sleep(5)           
     
     def power_off(self):
-        print "powering off"
+        logger.debug( "powering off" + self.idracIp)
         self.__exec_ipmi_command("power off")
         while self.get_power_state() != Power_State.POWER_OFF:
-            print "give it time to turn off"
+            logger.debug( "give it time to turn off" )
             time.sleep(5)    
         
     def power_reset(self):
@@ -72,15 +74,15 @@ class Ipmi():
     
     def get_power_state(self):
         state = self.__exec_ipmi_command("power status").strip()
-        print "power state: " + state
-        return state
+        logger.debug( "power state: " + state)
+	return state
     
     def set_boot_to_pxe(self):
-        print "setting boot to pxe"
+        logger.debug( "setting boot to pxe")
         self.__exec_ipmi_command("chassis bootdev pxe")
        
     def set_boot_to_disk(self):
-        print "setting boot to disk"
+        logger.debug( "setting boot to disk" )
         self.__exec_ipmi_command("chassis bootdev disk")
 
     def __exec_ipmi_command(self, command):
@@ -93,13 +95,13 @@ class Ipmi():
         retries = 20
         for i in range(0, 20):
             try:
-                logger.info("executing :" + cmdLine)
+                logger.debug("executing :" + cmdLine)
                 out= subprocess.check_output(cmdLine,stderr=subprocess.STDOUT, shell=True)
-                logger.info("cmd return :"+ out)
+                logger.debug("cmd return :"+ out)
                 return out
 
             except subprocess.CalledProcessError as e:
-                logger.info("ipmi command failed, retrying (" + str(i) + "/" + str(retries) + ")")
+                logger.debug("ipmi command failed, retrying (" + str(i) + "/" + str(retries) + ")")
                 time.sleep(10)
                 if i == retries :
                     raise IOError("failed to execute ipmi command " + str(cmdLine) + e.output)

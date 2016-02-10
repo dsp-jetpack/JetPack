@@ -22,7 +22,7 @@
 from osp_deployer.config import Settings
 from auto_common import Ssh, Scp,  Widget, UI_Manager, FileHelper
 import time, os ,sys, logging, paramiko
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("osp_deployer")
 from math import log
 import uuid
 class Ceph():
@@ -34,62 +34,62 @@ class Ceph():
 
 
     def pre_installation_configuration(self):
-        logger.info( "Ceph Pre-Installation Configuration Requirements")
+        logger.debug( "Ceph Pre-Installation Configuration Requirements")
 
-        logger.info("Sudo access")
+        logger.debug("Sudo access")
         allNodes = self.settings.controller_nodes + self.settings.compute_nodes + self.settings.ceph_nodes
         allNodes.append(self.settings.ceph_node)
 
         for each in allNodes:
             cmd = 'echo "' + each.storage_ip + ' ' + each.hostname + "." + self.settings.domain +' ' + each.hostname + ' " >> /etc/hosts'
-            logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password,cmd))
+            logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password,cmd))
         cmd = 'ssh-keygen'
-        logger.info( self.execute_as_shell_for_sshkeygen(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password,cmd))
+        logger.debug( self.execute_as_shell_for_sshkeygen(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password,cmd))
 
         cmd = 'HOSTS=`grep '+self.settings.domain+' /etc/hosts | grep -v '+self.settings.ceph_node.hostname+' | cut -d " " -f 3` ; echo $HOSTS;  for HOST in $HOSTS; do ssh-copy-id $HOST; done'
-        logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password, cmd))
+        logger.debug( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password, cmd))
 
         cmd = 'HOSTS=`grep '+self.settings.domain +' /etc/hosts | grep -v '+self.settings.ceph_node.hostname+" | cut -d \" \" -f 3` ;for HOST in $HOSTS; do ssh $HOST 'echo -e \""+ self.settings.ceph_node.storage_ip + ' ' + self.settings.ceph_node.hostname + "." + self.settings.domain + ' ' + self.settings.ceph_node.hostname +"\" >> /etc/hosts';done"
-        logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password, cmd))
+        logger.debug( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password, cmd))
 
-        logger.info("Non-root Administrative User")
+        logger.debug("Non-root Administrative User")
 
         cmd = 'HOSTS=`grep '+ self.settings.domain +" /etc/hosts | cut -d \" \" -f 3`; for HOST in $HOSTS; do ssh root@$HOST 'useradd -g adm -m ceph-user';done;for HOST in $HOSTS; do ssh root@$HOST 'passwd ceph-user'; done"
-        logger.info( self.execute_as_shell_for_passwd(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password,cmd, self.settings.ceph_user_password))
+        logger.debug( self.execute_as_shell_for_passwd(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password,cmd, self.settings.ceph_user_password))
 
         cmd = 'HOSTS=`grep '+ self.settings.domain +" /etc/hosts | cut -d \" \" -f 3`;for HOST in $HOSTS; do ssh root@$HOST 'echo -e \"ceph-user ALL = (root) NOPASSWD:ALL\" > /etc/sudoers.d/ceph-user';done"
-        logger.info( self.execute_as_shell_for_passwd(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password,cmd, self.settings.ceph_user_password))
+        logger.debug( self.execute_as_shell_for_passwd(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password,cmd, self.settings.ceph_user_password))
 
         cmd = 'HOSTS=`grep '+ self.settings.domain +" /etc/hosts | cut -d \" \" -f 3`;" + "for HOST in $HOSTS; do ssh root@$HOST 'echo -e \"Defaults:ceph-user !requiretty\" >> /etc/sudoers.d/ceph-user'; done"
-        logger.info( self.execute_as_shell_for_passwd(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password,cmd, self.settings.ceph_user_password))
+        logger.debug( self.execute_as_shell_for_passwd(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password,cmd, self.settings.ceph_user_password))
 
         cmd = 'HOSTS=`grep '+ self.settings.domain +" /etc/hosts | cut -d \" \" -f 3`;" + "for HOST in $HOSTS; do ssh root@$HOST 'chmod 0440 /etc/sudoers.d/ceph-user'; done"
-        logger.info( self.execute_as_shell_for_passwd(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password,cmd, self.settings.ceph_user_password))
+        logger.debug( self.execute_as_shell_for_passwd(self.settings.ceph_node.external_ip, "root", self.settings.ceph_node.root_password,cmd, self.settings.ceph_user_password))
 
-        logger.info("SSH Key Authentication")
+        logger.debug("SSH Key Authentication")
 
         cmd = 'ssh-keygen'
-        logger.info( self.execute_as_shell_for_sshkeygen(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
+        logger.debug( self.execute_as_shell_for_sshkeygen(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
         cmd = 'HOSTS=`grep '+self.settings.domain+' /etc/hosts | grep -v '+self.settings.ceph_node.hostname+' | cut -d " " -f 3` ; echo $HOSTS;  for HOST in $HOSTS; do ssh-copy-id $HOST; done'
-        logger.info( self.execute_as_shell_for_sshkeygen(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
+        logger.debug( self.execute_as_shell_for_sshkeygen(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
 
 
     def setup_calamari_node(self):
-        logger.info( "copying Ceph Iso" )
+        logger.debug( "copying Ceph Iso" )
         cmd = "mkdir /home/ceph-user/ceph-iso"
-        logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
+        logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
         file = 'rhceph-1.2.3-rhel-7-x86_64.iso'
         localfile = self.settings.ceph_iso
         remotefile = '/home/ceph-user/ceph-iso/' + file
-        logger.info( "remote file " + remotefile)
-        print "local :-> " + localfile
-        print "remote :-> " + remotefile
+        logger.debug( "remote file " + remotefile)
+        #print "local :-> " + localfile
+        #print "remote :-> " + remotefile
         Scp.put_file(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password, localfile, remotefile)
         cmd = 'sudo mount '+remotefile+' /mnt'
-        logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
+        logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
 
-        logger.info("copying certificates")
+        logger.debug("copying certificates")
         cmds = [
             'sudo cp /mnt/RHCeph-Calamari-1.2-x86_64-c1e8ca3b6c57-285.pem /etc/pki/product/285.pem',
             'sudo cp /mnt/RHCeph-Installer-1.2-x86_64-8ad6befe003d-281.pem /etc/pki/product/281.pem',
@@ -97,67 +97,67 @@ class Ceph():
             'sudo cp /mnt/RHCeph-OSD-1.2-x86_64-25019bf09fe9-288.pem /etc/pki/product/288.pem'
         ]
         for cmd in cmds :
-            logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
+            logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
 
-        logger.info("install the setup script")
+        logger.debug("install the setup script")
         cmd = 'sudo yum -y install /mnt/ice_setup-*.rpm'
-        logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
+        logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password, cmd))
 
         cmd = 'mkdir ~/cluster && cd ~/cluster'
-        logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
+        logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
-        logger.info("removing installation prompts")
+        logger.debug("removing installation prompts")
         commands = ['sudo sed -i "s/fqdn = prompt.*/return \'http\', fallback_fqdn/" /usr/lib/python2.7/site-packages/ice_setup/ice.py',
                     "sudo sed -i 's/prompt_continue()$//' /usr/lib/python2.7/site-packages/ice_setup/ice.py",
                     "sudo sed -i 's/package_path = get_package_path(package_path)/package_path = \"\\/mnt\"/' /usr/lib/python2.7/site-packages/ice_setup/ice.py"
                     ]
         for cmd in commands :
-            logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
+            logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
-        logger.info("installing ice")
+        logger.debug("installing ice")
         cmd = 'cd ~/cluster;sudo ice_setup -d /mnt'
-        logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
+        logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
         cmd = 'cd ~/cluster;ceph-deploy config pull ' + self.settings.controller_nodes[0].hostname
-        logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
+        logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
         cmd = "cd ~/cluster;sed -i '/osd_journal_size = .*/a [osd]\\nosd pool default pg num = 1024\\nosd pool default pgp num = 1024' ceph.conf"
-        logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
+        logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
         cmd = 'cd ~/cluster;sudo calamari-ctl initialize --admin-username root --admin-password '+self.settings.ceph_node.root_password+' --admin-email ' + self.settings.ceph_admin_email
-        logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
+        logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
 
     def configure_monitor(self):
 
         cmd = 'HOSTS=`grep '+self.settings.domain+' /etc/hosts | cut -d " " -f 3` ;cd ~/cluster;for HOST in $HOSTS; do ceph-deploy install $HOST; done'
-        logger.info( self.execute_as_shell(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
+        logger.debug( self.execute_as_shell(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
 
         cmd = 'cd ~/cluster;ceph-deploy --overwrite-conf mon create-initial'
-        logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
+        logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
-        logger.info("gathering keys from the controller nodes ")
+        logger.debug("gathering keys from the controller nodes ")
         cmd = 'cd ~/cluster;ceph-deploy gatherkeys '
         for host in self.settings.controller_nodes :
             cmd = cmd +  host.hostname + ' '
-        logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
+        logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
         cmd = 'cd ~/cluster;ceph-deploy admin ' + self.settings.ceph_node.hostname
-        logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
+        logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
 
 
     def configure_osd(self):
-       logger.info("OSD configuration")
+       logger.debug("OSD configuration")
 
        for host in self.settings.ceph_nodes:
 
-            logger.info("list disks (?)")
+            logger.debug("list disks (?)")
             cmd = 'cd ~/cluster;ceph-deploy disk list ' + host.hostname
-            logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
+            logger.debug( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
-            logger.info("Partition data disks & recreate disks ")
+            logger.debug("Partition data disks & recreate disks ")
             for disk in host.osd_disks:
                 cmds = [
                         'cd ~/cluster;ceph-deploy disk zap ' + host.hostname + disk,
@@ -165,21 +165,21 @@ class Ceph():
                         ]
 
                 for cmd in cmds:
-                    logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
+                    logger.debug( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip,  "ceph-user", self.settings.ceph_user_password,cmd))
 
 
     def connectHostsToCalamari(self):
-        logger.info("Connect the hosts to the calamari server")
+        logger.debug("Connect the hosts to the calamari server")
         for host in self.settings.controller_nodes:
             cmd = 'cd ~/cluster;ceph-deploy calamari connect ' + host.hostname
-            logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
+            logger.debug( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
         for host in self.settings.ceph_nodes:
             cmd = 'cd ~/cluster;ceph-deploy calamari connect ' + host.hostname
-            logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
+            logger.debug( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
         # ...
-        print("give time to calamari to pick up the nodes.")
+        logger.debug("give time to calamari to pick up the nodes.")
         time.sleep(180)
 
         url = self.settings.ceph_node.external_ip
@@ -207,19 +207,19 @@ class Ceph():
         initialized = Widget("//div[.='Cluster Initialized.']")
         while initialized.exists() ==  False:
             time.sleep(5)
-            logger.info("waitinf for cluster to initialize .")
+            logger.debug("waitinf for cluster to initialize .")
         closeButton = Widget("//button[.='Close']")
         closeButton.click()
 
 
     def grantAdminRightsToOSD(self):
-        logger.info("grant admin rights to the storage nodes")
+        logger.debug("grant admin rights to the storage nodes")
         for each in self.settings.ceph_nodes:
             cmd = 'cd ~/cluster;ceph-deploy admin ' + each.hostname
-            logger.info( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
+            logger.debug( self.execute_as_shell_expectPasswords(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
     def pool_and_keyRing_configuration(self):
-        logger.info("ceph pool creation and keyring configuration")
+        logger.debug("ceph pool creation and keyring configuration")
         cmds = [
                 'cd ~/cluster;ceph osd pool create images ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
                 'cd ~/cluster;ceph osd pool create volumes ' + self.settings.placement_groups + ' ' + self.settings.placement_groups,
@@ -230,16 +230,16 @@ class Ceph():
                 "cd ~/cluster;ceph auth import -i ceph.client.images.keyring",
                 ]
         for cmd in cmds:
-            logger.info(Ssh.execute_command(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
+            logger.debug(Ssh.execute_command(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
         ####
 
     def libvirt_configuation(self):
-        logger.info("libvirt configuration")
+        logger.debug("libvirt configuration")
         cmd = "cd ~/cluster;cat ceph.client.volumes.keyring | grep key | awk '{print $3}' > client.volumes.key"
-        logger.info(Ssh.execute_command(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
+        logger.debug(Ssh.execute_command(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
-        logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
+        logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
         ls = [
               "<secret ephemeral='no' private='no'>",
             "<uuid>"+self.settings.fsid+"</uuid>",
@@ -250,7 +250,7 @@ class Ceph():
             ]
         for each in ls:
             cmd = 'echo "' + each + '" >> ~/cluster/secret.xml'
-            logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
+            logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
 
 
@@ -261,15 +261,15 @@ class Ceph():
                 'openstack-service restart',
                 ]
             for cmd in cmds:
-                logger.info( Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
+                logger.debug( Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
         for host in self.settings.controller_nodes:
             cmd = 'systemctl restart openstack-cinder-volume'
-            logger.info( Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
+            logger.debug( Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password,cmd ))
 
 
         for host in self.settings.compute_nodes:
             cmd = 'cd ~/cluster;scp secret.xml client.volumes.key '+host.hostname+':'
-            logger.info( Ssh.execute_command(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
+            logger.debug( Ssh.execute_command(self.settings.ceph_node.external_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
         for host in self.settings.compute_nodes:
             cmds = [
@@ -279,16 +279,16 @@ class Ceph():
                 #"rm client.volumes.key secret.xml",
                 ]
             for cmd in cmds:
-                logger.info( self.execute_as_shell(host.provisioning_ip, "ceph-user", self.settings.ceph_user_password,cmd))
+                logger.debug( self.execute_as_shell(host.provisioning_ip, "ceph-user", self.settings.ceph_user_password,cmd))
 
-            print "running puppet on " + host.hostname
+            logger.debug( "running puppet on " + host.hostname)
             cmd = 'puppet agent -t -dv |& tee /root/puppet2.out'
             didNotRun = True
             while didNotRun == True:
                 bla ,err = Ssh.execute_command(host.provisioning_ip, "root", self.settings.nodes_root_password, cmd)
                 if  "Run of Puppet configuration client already in progress" in bla:
                     didNotRun = True
-                    logger.info("puppet s busy ... give it a while & retry")
+                    logger.debug("puppet s busy ... give it a while & retry")
                     time.sleep(30)
                 else :
                     didNotRun = False
@@ -305,7 +305,7 @@ class Ceph():
         while not buff.endswith(']# '):
             resp = channel.recv(9999)
             buff += resp
-            logger.info(" - " + buff )
+            logger.debug(" - " + buff )
             if buff.endswith(']$ '):
                 return buff
         return buff
@@ -397,7 +397,7 @@ class Ceph():
         return buff
 
     def modifyOSDPlacementGroups(self):
-        logger.info("mofidy the OSD placement groups")
+        logger.debug("mofidy the OSD placement groups")
         osds = 0
         for each in self.settings.ceph_nodes:
             add = len(each.osd_disks) -1
