@@ -347,8 +347,8 @@ class Director():
 
         #cmd = "sudo chmod 777 " +networkYaml
         #logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
-
-	cmd ="sed -i 's/HOME\\//\\/home\\/"+ install_admin_user  +"\\//' " + networkYaml
+	
+	cmd ="sed -i 's/HOME\\//\\/home\\/"+install_admin_user+"\\//' " + networkYaml
 	logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
         cmds = [
