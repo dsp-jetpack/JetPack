@@ -1,7 +1,11 @@
+=======================
 Network Testing Toolkit
 =======================
 
- The nework testing tool is a command line tool for testing  network connectivity and throughput between nodes in a cluster. For more information  on the command line arguments you can use the help argument  --help when   running the toolkit.
+The nework testing tool is a command line tool for testing  network
+connectivity and throughput between nodes in a cluster. For more
+information  on the command line arguments you can use the help argument
+--help when   running the toolkit.
 
 
 Prerequisites
@@ -67,7 +71,6 @@ optional arguments:
   --node_list2 NODE_LIST2 [NODE_LIST2 ...]
                         second list of nodes to test
   -v, --verbose         increase output verbosity
-
 
 
 Installing Iperf3 using the EPEL repo

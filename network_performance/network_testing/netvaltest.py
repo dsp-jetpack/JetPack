@@ -9,7 +9,7 @@ import re
 
 from optparse import OptionParser
 from threading import Thread
-from auto_common import *
+#from auto_common import *
 
 class Result():
     def __init__(self):
@@ -621,5 +621,3 @@ def Main():
         log(each)
                     
     log('Done')
-if __name__ == '__main__':
-    Main()
