@@ -41,6 +41,7 @@ PROJECT_NAME="sanity"
 USER_NAME="sanity"
 PASSWORD="cr0wBar!"
 EMAIL="ce-cloud@dell.com"
+SECURITY_GROUP_NAME="sanity_security_group"
 
 shopt -s nullglob
 
@@ -213,6 +214,27 @@ create_the_networks(){
 
   # Use external network name
   execute_command "neutron router-gateway-set $TENANT_ROUTER_NAME $EXTERNAL_NETWORK_NAME"
+
+  neutron security-group-list | grep -q $SECURITY_GROUP_NAME
+  if [[ "$?" == 0 ]];
+  then 
+    info "#----- Security group '$SECURITY_GROUP_NAME' exists. Skipping"
+  else
+    info "### Creating a Security Group ####"
+    execute_command "neutron security-group-create $SECURITY_GROUP_NAME"
+
+    # Allow all inbound and outbound ICMP
+    execute_command "neutron security-group-rule-create --tenant-id sanity --direction ingress --ethertype IPv4 --protocol icmp --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "neutron security-group-rule-create --tenant-id sanity --direction egress --ethertype IPv4 --protocol icmp --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+
+    # Allow all inbound and outbound TCP
+    execute_command "neutron security-group-rule-create --tenant-id sanity --direction ingress --ethertype IPv4 --protocol tcp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "neutron security-group-rule-create --tenant-id sanity --direction egress --ethertype IPv4 --protocol tcp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+
+    # Allow all inbound and outbound UDP
+    execute_command "neutron security-group-rule-create --tenant-id sanity --direction ingress --ethertype IPv4 --protocol udp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "neutron security-group-rule-create --tenant-id sanity --direction egress --ethertype IPv4 --protocol udp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+  fi
 }
 
 
@@ -257,7 +279,7 @@ setup_nova (){
 
   image_id=$(glance image-list | grep $IMAGE_NAME | head -n 1  | awk '{print $2}')
 
-  execute_command "nova boot --flavor 2 --key_name $KEY_NAME --image $image_id --nic net-id=$tenant_net_id $NOVA_INSTANCE_NAME"
+  execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor 2 --key_name $KEY_NAME --image $image_id --nic net-id=$tenant_net_id $NOVA_INSTANCE_NAME"
 
   info "### Waiting for the instance to be built..."
   instance_status=$(nova list | grep "$NOVA_INSTANCE_NAME" | awk '{print $6}')
@@ -273,6 +295,32 @@ setup_nova (){
   info "### Instance is built, status is ${instance_status}"
 
   execute_command "nova list"
+}
+
+
+test_neutron_networking (){
+  vm_ip=$(nova list | grep "$NOVA_INSTANCE_NAME" | awk '{print $12}' | awk -F= '{print $2}')
+  subnet="${vm_ip%.[0-9]*}."
+
+  while read name_space;
+  do
+    if [[ "$name_space" =~ "qdhcp-" ]];
+    then
+      ip netns exec "$name_space" ip a | grep -q "$subnet"
+      if [[ "$?" == 0 ]];
+      then
+        info "### Pinging the VM $vm_ip from netns $name_space"
+        ip netns exec ${name_space} ping -c 1 -w 5 ${vm_ip}
+        if [[ "$?" == 0 ]]
+        then
+          info "### Successfully pinged VM $vm_ip from netns $name_space"
+        else
+          fatal "### Unable to ping VM $vm_ip from netns $name_space!  Aborting sanity test"
+        fi
+        break
+      fi
+    fi
+  done <<< "$(ip netns)"
 }
 
 
@@ -412,6 +460,9 @@ then
       num_instances=$(nova list | awk '$2 && $2 != "ID" {print $2}'|wc -l)
     done
 
+    info   "#### Deleting the security group"
+    neutron security-group-delete "$SECURITY_GROUP_NAME"
+
     info   "#### Deleting the volumes"
     cinder list | awk '$2 && $2 != "ID" {print $2}' | xargs -n1 cinder delete
 
@@ -439,12 +490,11 @@ else
 
   create_the_networks
 
-
-  ##
-
   setup_glance
 
   setup_nova
+
+  test_neutron_networking
 
   setup_cinder
 
