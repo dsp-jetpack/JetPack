@@ -22,6 +22,7 @@
 from osp_deployer.config import Settings
 from auto_common import Ssh, Scp, Ipmi
 import sys,logging, time
+from checkpoints import Checkpoints
 logger = logging.getLogger("osp_deployer")
 
 
@@ -186,6 +187,8 @@ class Director():
         cmd = '~/pilot/install-director.sh ' + self.settings.name_server
         logger.debug(Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
+        tester = Checkpoints()
+        tester.verify_undercloud_installed()
 
     def upload_cloud_images(self):
 
@@ -282,13 +285,16 @@ class Director():
 
         cmd = "source stackrc;openstack baremetal import --json ~/instackenv.json"
         logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
-
+        tester = Checkpoints()
+        tester.verify_nodes_registered_in_ironic()
 
         cmd = "source stackrc;openstack baremetal configure boot"
         logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
         cmd = "source stackrc;openstack baremetal introspection bulk start"
-        logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        logger.debug(Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+        tester.verify_introspection_sucessfull()
+
 
 
     def assign_node_roles(self):
@@ -304,16 +310,21 @@ class Director():
 
         for node in self.settings.controller_nodes:
             cmd = 'cd ' + "/home/"+self.settings.director_install_account_user + ";source stackrc;./assign_role.py " + node.provisioning_mac_address + " controller"
-            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            out =  Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+            if "Not Found" in out[0]:
+                raise AssertionError("Failed to assign Controller node role to mac " + node.provisioning_mac_address )
 
         for node in self.settings.compute_nodes:
             cmd = 'cd ' + "/home/"+self.settings.director_install_account_user + ";source stackrc;./assign_role.py " + node.provisioning_mac_address + " compute"
-            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+            out = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+            if "Not Found" in out[0]:
+                raise AssertionError("Failed to assign Compute node role to mac " + node.provisioning_mac_address )
 
         for node in self.settings.ceph_nodes:
             cmd = 'cd ' + "/home/"+self.settings.director_install_account_user + ";source stackrc;./assign_role.py " + node.provisioning_mac_address + " storage"
-            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
-
+            out = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+            if "Not Found" in out[0]:
+                raise AssertionError("Failed to assign Storage node role to mac " + node.provisioning_mac_address )
 
     def setup_networking(self):
 
@@ -326,7 +337,7 @@ class Director():
 	storageYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/ceph-storage.yaml";
         computeYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/compute.yaml";
         controllerYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/controller.yaml";
-		
+
 	#Re - Upload the yaml files in case we're trying to leave the undercloud intact but want to redeploy with a different config
 	#and replace the HOME in the netwrk env that install director would have previously updated
         Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.network_env_yaml, networkYaml)
@@ -380,7 +391,7 @@ class Director():
                        "sed -i '/mode=802.3ad miimon=100/d' " + networkYaml,
 		       'sed -i "/BondInterfaceOptions:/{n;s/.*/    default: \'mode='+ self.settings.settings.compute_bond_opts +"'\\n/;}\" " + computeYaml,
 		       'sed -i "/BondInterfaceOptions:/{n;s/.*/    default: \'mode='+ self.settings.controller_bond_opts +"'\\n/;}\" " + controllerYaml,
- 		       'sed -i "/BondInterfaceOptions:/{n;s/.*/    default: \'mode='+ self.settings.storage_bond_opts +"'\\n/;}\" " + storageYaml,	
+ 		       'sed -i "/BondInterfaceOptions:/{n;s/.*/    default: \'mode='+ self.settings.storage_bond_opts +"'\\n/;}\" " + storageYaml,
 		]
 		for cmd in cmds:
             		logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
@@ -436,6 +447,8 @@ class Director():
 
         logger.debug("Starting overcloud deployment .. you can monitor the progress from the director vm running heat resource-list overcloud")
         cmd = "cd ~/pilot;source ~/stackrc;./deploy-overcloud.py" + " --computes " + str(len(self.settings.compute_nodes)) + " --controllers " + str(len(self.settings.controller_nodes))  +" --storage " + str(len(self.settings.ceph_nodes)) + " --vlan " + self.settings.tenant_vlan_range
+        if self.settings.overcloud_deploy_timeout != "90":
+            cmd += " --timeout "+ self.settings.overcloud_deploy_timeout
         logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
     def delete_overcloud(self):
@@ -453,11 +466,128 @@ class Director():
             if "overcloud" in Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)[0]:
                 time.sleep(60)
             else :
-                return
+                 break
+        # Unregister the nodes from Ironic
+        cmd = "source ~/stackrc;ironic node-list | grep None"
+        re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+        list = re[0].split("\n")
+        list.pop()
+        for node in list:
+            node_id = node.split("|")[1]
+            cmd = "source ~/stackrc;ironic node-delete " + node_id
+            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
-    def sanity_test(self):
-        #TODO .. upload & prep sanity tests // run it & clean up ?
-        print "todo"
+
+
+
+    def retreive_nodes_ips(self):
+        logger.info  ("**** Retreiving nodes information ")
+        ip_info = []
+        try:
+            logger.debug("retreiving node ip details ..")
+
+            ip_info.append(  "====================================")
+            ip_info.append(  "### nodes ip information ###")
+            known_hosts_filename = "~/.ssh/known_hosts"
+            cmd = "source ~/stackrc;nova list | grep controller"
+            re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+
+            ip_info.append(  "### Controllers ###" )
+            list = re[0].split("\n")
+            list.pop()
+
+            for each in list:
+                hostname = each.split("|")[2]
+                provisioning_ip = each.split("|")[6].split("=")[1]
+                cmd = "ssh-keyscan -H {} >> ~/.ssh/known_hosts".format(provisioning_ip)
+                re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+
+                cmd = "ssh heat-admin@"+provisioning_ip+ " /sbin/ifconfig | grep \"inet.*"+self.settings.private_api_vlanid+".*netmask "+self.settings.private_api_netmask+".*\" | awk '{print $2}'"
+                re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+                private_api = re[0].split("\n")[0]
+
+                cmd = "ssh heat-admin@"+provisioning_ip+ "/sbin/ifconfig | grep \"inet.*"+self.settings.public_api_vlanid+".*netmask "+self.settings.public_api_netmask+".*\" | awk '{print $2}'"
+                re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+                nova_public_ip = re[0].split("\n")[0]
+
+
+                cmd = "ssh heat-admin@"+provisioning_ip+ " /sbin/ifconfig | grep \"inet.*"+self.settings.storage_vlanid+".*netmask "+self.settings.storage_netmask+".*\" | awk '{print $2}'"
+                re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+                storage_ip = re[0].split("\n")[0]
+
+                ip_info.append(  hostname + ":")
+                ip_info.append("     - provisioning ip  : " + provisioning_ip)
+                ip_info.append("     - nova private ip  : " + private_api)
+                ip_info.append("     - nova public ip   : " + nova_public_ip)
+                ip_info.append("     - storage ip       : " + storage_ip)
+
+
+            cmd = "source ~/stackrc;nova list | grep compute"
+            re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+
+            ip_info.append(  "### Compute  ###" )
+            list = re[0].split("\n")
+            list.pop()
+            for each in list:
+                hostname = each.split("|")[2]
+                provisioning_ip = each.split("|")[6].split("=")[1]
+                cmd = "ssh-keyscan -H {} >> ~/.ssh/known_hosts".format(provisioning_ip)
+                re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+
+                cmd = "ssh heat-admin@"+provisioning_ip+ " /sbin/ifconfig | grep \"inet.*"+self.settings.private_api_vlanid+".*netmask "+self.settings.private_api_netmask+".*\" | awk '{print $2}'"
+                re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+                private_api = re[0].split("\n")[0]
+
+                cmd = "ssh heat-admin@"+provisioning_ip+ " /sbin/ifconfig | grep \"inet.*"+self.settings.storage_vlanid+".*netmask "+self.settings.storage_netmask+".*\" | awk '{print $2}'"
+                re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user,self. settings.director_install_account_pwd,cmd)
+                storage_ip = re[0].split("\n")[0]
+
+                ip_info.append( hostname + ":")
+                ip_info.append( "     - provisioning ip  : " + provisioning_ip)
+                ip_info.append( "     - nova private ip  : " + private_api)
+                ip_info.append( "     - storage ip       : " + storage_ip)
+
+            cmd = "source ~/stackrc;nova list | grep storage"
+            re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+
+            ip_info.append ("### Storage  ###")
+            list = re[0].split("\n")
+            list.pop()
+            for each in list:
+                hostname = each.split("|")[2]
+                provisioning_ip = each.split("|")[6].split("=")[1]
+                cmd = "ssh-keyscan -H {} >> ~/.ssh/known_hosts".format(provisioning_ip)
+                re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+
+                cmd = "ssh heat-admin@"+provisioning_ip+ " /sbin/ifconfig | grep \"inet.*"+self.settings.storage_cluster_vlanid+".*netmask 255.255.255.0.*\" | awk '{print $2}'"
+                re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+                cluster_ip = re[0].split("\n")[0]
+
+                cmd = "ssh heat-admin@"+provisioning_ip+ " /sbin/ifconfig | grep \"inet.*"+self.settings.storage_vlanid+".*netmask "+self.settings.storage_netmask+".*\" | awk '{print $2}'"
+                re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+                storage_ip = re[0].split("\n")[0]
+
+                ip_info.append ( hostname + ":")
+                ip_info.append ("     - provisioning ip    : " + provisioning_ip)
+                ip_info.append( "     - storage cluster ip : " + cluster_ip)
+                ip_info.append ("     - storage ip         : " + storage_ip)
+            ip_info.append ("====================================")
+
+            try:
+                overcloud_endpoint = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,'grep "OS_AUTH_URL=" ~/overcloudrc')[0].split('=')[1].replace(':5000/v2.0/','')
+                overcloud_pass = Ssh.execute_command_tty(self.settings.director_node.external_ip,self. settings.director_install_account_user, self.settings.director_install_account_pwd,'grep "OS_PASSWORD=" ~/overcloudrc')[0].split('=')[1]
+                ip_info.append("OverCloud Horizon        : " + overcloud_endpoint)
+                ip_info.append("OverCloud admin password : " + overcloud_pass)
+            except:
+                pass
+            ip_info.append ("====================================")
+            for each in ip_info:
+                logger.debug(each)
+
+        except:
+                for each in ip_info:
+                    logger.debug(each)
+                logger.debug(" Failed to retreive the nodes ip information ")
 
 
     def fix_controllers_vlan_range(self):
@@ -477,5 +607,6 @@ class Director():
             time.sleep(20)
             ipmi_session.power_on()
             logger.debug("Controller nodes booting up .. might take a few minutes")
+
 
 
