@@ -57,7 +57,12 @@ def main():
     print banner
     # Display the list ordered by the iDRAC address
     for n in sorted(nodes, key=lambda x: x.driver_info['ipmi_address']):
-        idrac_addr = n.driver_info['ipmi_address']
+        if 'drac_host' in n.driver_info:
+            idrac_addr = n.driver_info['drac_host']
+        elif 'ipmi_address' in n.driver_info:
+            idrac_addr = n.driver_info['ipmi_address']
+        else:
+            idrac_addr = 'Unknown'
 
         if 'display_name' in n.instance_info:
             node_name = n.instance_info['display_name']
