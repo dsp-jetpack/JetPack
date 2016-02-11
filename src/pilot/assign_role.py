@@ -12,6 +12,7 @@ from dracclient import wsman, utils
 from subprocess import check_output
 from oslo_utils import units
 import requests
+from ironicclient.openstack.common.apiclient.exceptions import NotFound
 
 
 requests.packages.urllib3.disable_warnings()
@@ -170,7 +171,7 @@ def handle_r730xd_flex_bays(ironic_client, drac_client, node_uuid, debug):
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("mac", help="The MAC address of the node")
+    parser.add_argument("ip_or_mac", help="Either the IP address of the iDRAC, or the MAC address of the interface on the provisioning network")
     parser.add_argument("role",
                         choices=["controller", "compute", "storage"],
                         help="The role that the node will play")
@@ -187,11 +188,33 @@ def main():
               'os_tenant_name': os_tenant_name}
     ironic_client = ironicclient.client.get_client(1, **kwargs)
 
-    port = ironic_client.port.get_by_address(args.mac)
-    node_uuid = port.node_uuid
+    node_uuid = None
+    if ":" in args.ip_or_mac:
+        try:
+            port = ironic_client.port.get_by_address(args.ip_or_mac)
+            node_uuid = port.node_uuid
+        except NotFound:
+            pass
+    else:
+        nodes = ironic_client.node.list(fields=["uuid", "driver_info"])
+        for node in nodes:
+            driver_info = node.driver_info
+
+            if "drac_host" in driver_info:
+                drac_ip = driver_info["drac_host"]
+            else:
+                drac_ip = driver_info["ipmi_address"]
+
+            if drac_ip == args.ip_or_mac:
+                node_uuid = node.uuid
+                break
+
+    if node_uuid is None:
+        print "Error:  Unable to find node {}".format( args.ip_or_mac )
+        sys.exit(1)
 
     # Assign the role to the node
-    print "Setting role for {} to {}".format(args.mac, args.role)
+    print "Setting role for {} to {}".format(args.ip_or_mac, args.role)
     patch = [{'op': 'add',
               'value': "profile:{},boot_option:local".format(args.role),
               'path': '/properties/capabilities'}]
