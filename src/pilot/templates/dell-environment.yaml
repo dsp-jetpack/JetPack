@@ -1,0 +1,3 @@
+resource_registry:
+    OS::TripleO::NodeUserData: HOME/pilot/templates/first-boot.yaml
+    OS::TripleO::NodeExtraConfigPost: HOME/pilot/templates/post-deploy.yaml

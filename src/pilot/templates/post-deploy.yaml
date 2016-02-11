@@ -1,0 +1,29 @@
+heat_template_version: 2014-10-16
+
+description: >
+  Extra config for post-deployment
+
+parameters:
+  servers:
+    type: json
+
+resources:
+  ExtraConfig:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config: |
+        #!/bin/sh
+        if [[ $HOSTNAME =~ "cephstorage" ]]; then
+        {
+           echo "Restarting Ceph..." 
+           systemctl restart ceph 
+        } |& tee /root/post-deploy.txt
+        fi
+
+  ExtraDeployments:
+    type: OS::Heat::SoftwareDeployments
+    properties:
+      servers:  {get_param: servers}
+      config: {get_resource: ExtraConfig}
+      actions: ['CREATE', 'UPDATE' ] # Only do this on CREATE or UPDATE
