@@ -30,6 +30,17 @@ def get_openstack_creds():
     return os_auth_url, os_tenant_name, os_username, os_password
 
 
+def get_idrac_addr(node):
+    driver_info = node.driver_info
+    if 'drac_host' in driver_info:
+        idrac_addr = driver_info['drac_host']
+    elif 'ipmi_address' in driver_info:
+        idrac_addr = driver_info['ipmi_address']
+    else:
+        idrac_addr = 'Unknown'
+    return idrac_addr
+
+
 def main():
     os_auth_url, os_tenant_name, os_username, os_password = \
         get_openstack_creds()
@@ -56,15 +67,21 @@ def main():
     print nodeinfo.format('iDRAC Addr', 'Node Name', 'Provision Addr')
     print banner
     # Display the list ordered by the iDRAC address
-    for n in sorted(nodes, key=lambda x: x.driver_info['ipmi_address']):
-        idrac_address = n.driver_info['ipmi_address']
-        node_name = n.instance_info['display_name']
-        nova_ips = nova.servers.ips(n.instance_uuid)
-        if 'ctlplane' in nova_ips:
-            prov_addr = nova_ips['ctlplane'][0]['addr']
+    for n in sorted(nodes, key=lambda x: get_idrac_addr(x)):
+        idrac_addr = get_idrac_addr(n)
+
+        if 'display_name' in n.instance_info:
+            node_name = n.instance_info['display_name']
         else:
-            prov_addr = 'None'
-        print nodeinfo.format(idrac_address, node_name, prov_addr)
+            node_name = 'None'
+
+        prov_addr = 'None'
+        if n.instance_uuid:
+            nova_ips = nova.servers.ips(n.instance_uuid)
+            if nova_ips and 'ctlplane' in nova_ips:
+                prov_addr = nova_ips['ctlplane'][0]['addr']
+
+        print nodeinfo.format(idrac_addr, node_name, prov_addr)
     print banner
 
 
