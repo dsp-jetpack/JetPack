@@ -14,11 +14,11 @@ resources:
         #!/bin/bash
         if [[ $HOSTNAME =~ "cephstorage" ]]; then
         {
-          for letter in {a..z}; do
-            disk="sd${letter}"
+          lsblk -dno NAME,TYPE | \
+          while read disk type; do
+            # Skip if the device type isn't "disk" or if it's mounted
+            [ "${type}" == "disk" ] || continue
             device="/dev/${disk}"
-            # Skip if device doesn't exist or is mounted
-            [ -b "${device}" ] || continue
             if grep -q ^${device}[1-9] /proc/mounts; then
               echo "Skipping ${device} because it's mounted"
               continue
