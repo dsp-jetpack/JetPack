@@ -64,7 +64,7 @@ parameter_defaults:
   # External network
   #
   # Note: Use a range which will leave room for floating IPs
-  ExternalAllocationPools: [{'start': '192.168.190.20', 'end': '192.168.190.120'}]
+  ExternalAllocationPools: [{'start': '192.168.190.125', 'end': '192.168.190.224'}]
 
   # CHANGEME: Set to the router gateway on the external network
   ExternalInterfaceDefaultRoute: 192.168.190.1
