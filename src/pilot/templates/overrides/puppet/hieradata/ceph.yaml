@@ -22,9 +22,33 @@ ceph::profile::params::authentication_type: cephx
 #   '/dev/sdf':
 #     journal: '/dev/sdb'
 #   ... and so on.
-# The line containing "'/srv/data': {}" should be commented out or removed.
 ceph::profile::params::osds:
-  '/srv/data': {}
+  '/dev/sdd':
+    journal: '/dev/sda'
+  '/dev/sde':
+    journal: '/dev/sda'
+  '/dev/sdf':
+    journal: '/dev/sda'
+  '/dev/sdg':
+    journal: '/dev/sda'
+  '/dev/sdh':
+    journal: '/dev/sda'
+  '/dev/sdi':
+    journal: '/dev/sdb'
+  '/dev/sdj':
+    journal: '/dev/sdb'
+  '/dev/sdk':
+    journal: '/dev/sdb'
+  '/dev/sdl':
+    journal: '/dev/sdb'
+  '/dev/sdm':
+    journal: '/dev/sdc'
+  '/dev/sdn':
+    journal: '/dev/sdc'
+  '/dev/sdo':
+    journal: '/dev/sdc'
+  '/dev/sdp':
+    journal: '/dev/sdc'
 
 ceph_pools:
   - volumes
