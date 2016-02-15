@@ -1,14 +1,15 @@
 import argparse
 import datetime
 import logging
+from optparse import OptionParser
 import os
 import threading
+from threading import Thread
 import time
 import random
 import re
 
-from optparse import OptionParser
-from threading import Thread
+
 #from auto_common import *
 
 class Result():
