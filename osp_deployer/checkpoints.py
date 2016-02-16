@@ -35,6 +35,18 @@ class Checkpoints():
             i += 1;
         return subscriptionStatus
 
+    def verify_pools_attached(self, ip_addr, user, password, logFile):
+    	# check the xxxxx-posts.log for pool id's/repo's related errors.
+    	logOut = Ssh.execute_command(ip_addr, user, password, "cat " + logFile)[0]
+
+    	error1 = 'No subscriptions are available from the pool with'
+    	error2 = 'Removed temporarly as this error will show when not pulling from the cdn but internal repos' #'is not a valid repository'
+	error3 = 'Could not find an OpenStack pool to attach to'
+    	if error1 in logOut or error2 in logOut or error3 in logOut:
+        	logger.info("*** post install log ***")
+        	logger.info(logOut)
+        	return False
+    	return True
 
     def ping_host(self, external_ip, user, passwd, targetHost):
         subscriptionStatus = Ssh.execute_command(external_ip, user, passwd, "ping " + targetHost + " -c 3 -w 30 ")[0]
@@ -79,6 +91,10 @@ class Checkpoints():
         subscriptionStatus = self.verify_subscription_status(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password, self.settings.subscription_check_retries)
         if "Current" not in subscriptionStatus:
             raise AssertionError("Director VM did not register properly : " + subscriptionStatus)
+
+	logger.debug("*** Verify all pools registered & repositories subscribed ***")
+        if self.verify_pools_attached(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password, "/root/" + self.settings.director_node.hostname + "-posts.log" ) is False:
+            raise AssertionError("Director vm did not subscribe/attach repos properly, see log.")
 
         logger.debug("*** Verify the Director VM can ping its public gateway")
         test = self.ping_host(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password, self.settings.external_gateway)
