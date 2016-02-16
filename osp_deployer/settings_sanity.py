@@ -166,7 +166,7 @@ class Deployer_sanity():
         # Verify Storage nodes network definition
         logger.debug( "verifying storage nodes network settings")
         for storage in self.settings.ceph_nodes:
-            shouldHaveAttrbutes = ['hostname','idrac_ip','provisioning_mac_address','journal_disks', 'osd_disks'
+            shouldHaveAttrbutes = ['hostname','idrac_ip','provisioning_mac_address', 'osd_disks'
                                      ]
             for each in shouldHaveAttrbutes :
                 assert hasattr(storage, each), storage.hostname + " node has no " + each + " attribute"
