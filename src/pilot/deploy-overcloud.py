@@ -65,7 +65,7 @@ def main():
   parser.add_argument("--ntp", dest="ntp_server_fqdn",
     default="0.centos.pool.ntp.org", help="The FQDN of the ntp server to use")
   parser.add_argument("--timeout",
-    default="90", help="The amount of time in minutes to allow the overcloud to deploy")
+    default="120", help="The amount of time in minutes to allow the overcloud to deploy")
   args = parser.parse_args()
 
   p = re.compile('\d+:\d+')
