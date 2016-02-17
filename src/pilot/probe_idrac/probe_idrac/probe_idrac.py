@@ -32,6 +32,7 @@ def main():
     # http://en.community.dell.com/techcenter/systems-management/w/wiki/1840.
     dcims = [
         'DCIM_SystemView',
+        'DCIM_PhysicalDiskView',
         'DCIM_VirtualDiskView',
         'DCIM_CPUView',
         'DCIM_NICView',
