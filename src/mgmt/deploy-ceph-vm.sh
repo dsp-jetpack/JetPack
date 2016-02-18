@@ -204,6 +204,7 @@ chvt 8
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 2003 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 4505 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 4506 -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 5432 -j ACCEPT
 -A INPUT -j REJECT --reject-with icmp-host-prohibited
 -A FORWARD -j REJECT --reject-with icmp-host-prohibited
 COMMIT
@@ -222,6 +223,20 @@ EOIP
   do
     echo "server ${ntps}" >> /etc/ntp.conf
   done
+
+  # Add heat user for remote/manual installation steps of integrating Calamari to RDO based OSP
+  /usr/sbin/groupadd -g 1000 heat-admin
+  /usr/sbin/useradd -d /home/heat-admin -s /bin/bash -u 1000 -g 1000 heat-admin
+
+  #Add heat-admin to sudoers 
+  echo "heat-admin ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/heat-admin
+  echo "Defaults:heat-admin !requiretty" >> /etc/sudoers.d/heat-admin
+
+  /usr/bin/yum install -y calamari-server calamari-clients
+  
+  # Reset salt services
+  /bin/systemctl disable salt-minion
+  /bin/systemctl enable salt-master
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
