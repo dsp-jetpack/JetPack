@@ -31,6 +31,7 @@ EXTERNAL_NETWORK_NAME="nova"
 EXTERNAL_SUBNET_NAME="external_sub"
 STARTIP="192.168.190.2"
 ENDIP="192.168.190.30"
+EXTERNAL_VLAN="190"
 EXTERNAL_VLAN_NETWORK="192.168.190.0/24"
 GATEWAY_IP=192.168.190.1
 KEY_NAME="key_name"
@@ -201,7 +202,7 @@ create_the_networks(){
   ext_net_exists=$(neutron net-list | grep $EXTERNAL_NETWORK_NAME |  head -n 1  | awk '{print $4}')
   if [ "$ext_net_exists" != "$EXTERNAL_NETWORK_NAME" ]
   then
-    execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external"
+    execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external --provider:network_type vlan --provider:physical_network physext --provider:segmentation_id $EXTERNAL_VLAN"
     execute_command "neutron subnet-create --name $EXTERNAL_SUBNET_NAME --allocation-pool start=$STARTIP,end=$ENDIP --gateway $GATEWAY_IP --disable-dhcp $EXTERNAL_NETWORK_NAME $EXTERNAL_VLAN_NETWORK"  
   else
     info "#----- External network '$EXTERNAL_NETWORK_NAME' exists. Skipping"
