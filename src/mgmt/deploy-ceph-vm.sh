@@ -235,8 +235,8 @@ EOIP
   /usr/bin/yum install -y calamari-server calamari-clients
   
   # Reset salt services
-  /bin/systemctl stop salt-minion
-  /bin/systemctl restart salt-master
+  /bin/systemctl disable salt-minion
+  /bin/systemctl enable salt-master
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
