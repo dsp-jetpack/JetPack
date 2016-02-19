@@ -2,7 +2,9 @@
 
 import unittest
 
-import unittests_netval
+#import unittests_netval
+import test_iperf3
+import test_netlog
 
 def test_all():
     """return a suite of all tests for the network_testing package
@@ -15,6 +17,8 @@ def test_all():
     """
 
     suite = unittest.TestSuite()
-    suite.addTest(unittests_netval.suite)
+    #suite.addTest(unittests_netval.suite)
+    suite.addTest(test_iperf3.suite)
+    suite.addTest(test_netlog.suite)
 
     return suite
