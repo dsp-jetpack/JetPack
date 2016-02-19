@@ -217,7 +217,7 @@ def deploy():
         director_vm.assign_node_roles()
 
 
-        director_vm.setup_networking()
+        director_vm.setup_templates()
         logger.info("=== Installing the overcloud ")
         logger.debug ("installing the overcloud ... this might take a while")
         director_vm.deploy_overcloud()
@@ -226,8 +226,8 @@ def deploy():
         cmd = "source ~/stackrc;heat stack-list | grep overcloud | awk '{print $6}'"
         overcloud_status = Ssh.execute_command_tty(settings.director_node.external_ip, settings.director_install_account_user, settings.director_install_account_pwd,cmd)[0]
         logger.debug("=== Overcloud stack state : "+ overcloud_status )
-        logger.info("Applyin neutron vlan config workaround (note : it might take a few minutes for the controlers to come back up)")
         director_vm.fix_controllers_vlan_range()
+	director_vm.fix_cinder_conf()
 
         logger.info("====================================")
         logger.info(" OverCloud deployment status: " + overcloud_status)

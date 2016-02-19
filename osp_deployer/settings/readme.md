@@ -34,6 +34,7 @@ or
 #####settings.properties
 * 5.0.0.a - Initial 5.0 version - some settings left over from 4.x might go away as this is still work in progress
 * 5.0.0.b - removed legacy settings.
+* 5.0.0.c - removed "journal_disks" on storage nodes
 
 
 
