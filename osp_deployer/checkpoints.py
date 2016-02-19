@@ -14,7 +14,7 @@ class Checkpoints():
 
     def __init__(self):
         self.settings = Settings.settings
-        self.ping_success = "packets transmitted, 3 received"
+        self.ping_success = "packets transmitted, 1 received"
 
     def verify_deployer_settings(self):
         logger.info("==== Running environment sanity tests")
@@ -49,8 +49,12 @@ class Checkpoints():
     	return True
 
     def ping_host(self, external_ip, user, passwd, targetHost):
-        subscriptionStatus = Ssh.execute_command(external_ip, user, passwd, "ping " + targetHost + " -c 3 -w 30 ")[0]
-        return subscriptionStatus
+	for i in range(1, 30):
+            pingStatus = Ssh.execute_command(external_ip, user, passwd, "ping " + targetHost + " -c 1 -w 30 ")[0]
+            if self.ping_success in pingStatus:
+                logger.debug("Ping {} successful on attempt #{}".format(targetHost, i))
+                break
+        return pingStatus
 
     def sah_health_check(self):
         settings = Settings.settings
