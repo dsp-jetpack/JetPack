@@ -2,6 +2,8 @@ import netvaltest
 #import netperftest
 
 
+__version__ = '1.0.1b1'
+
 def run_netvaltest():
     """ entry point for network validation tool """    
     netvaltest.Main()

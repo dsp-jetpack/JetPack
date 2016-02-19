@@ -1,26 +1,46 @@
 """A setuptools based setup module for Dell network validation tools.
 
 """
-
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
 # To use a consistent encoding
 from codecs import open
+import io
 from os import path
+import re
+
+def read_version_file(*names, **kwargs):
+    with io.open(
+        path.join(path.dirname(__file__), *names),
+        encoding=kwargs.get("encoding", "utf8")
+    ) as fp:
+        return fp.read()
+
+def find_version(*file_paths):
+    version_file = read_version_file(*file_paths)
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
+                              version_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Unable to find version string.")
 
 here = path.abspath(path.dirname(__file__))
+
+name = 'network_testing'
+# get current version from package
+version = find_version(name, '__init__.py')
 
 # Get the long description from the README file
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(
-    name='network_testing',
+    name=name,
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.0.1b1',
+    version=version,
 
     description='Dell network testing tools',
     long_description=long_description,
