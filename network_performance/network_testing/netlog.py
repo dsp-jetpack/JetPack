@@ -41,11 +41,13 @@ def enable_debug():
     log.debug(msg)   
 
 def debug(msg, *args, **kwargs):
-
     log.debug(msg, *args, **kwargs) 
 
 def info(msg, *args, **kwargs):
-
     log.info(msg, *args, **kwargs)
 
+def error(msg, *args, **kwargs):
+    log.error(msg, *args, **kwargs) 
 
+def critical(msg, *args, **kwargs):
+    log.critical(msg, *args, **kwargs) 

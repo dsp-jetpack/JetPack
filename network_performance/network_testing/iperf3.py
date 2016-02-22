@@ -253,12 +253,18 @@ class Iperf3Client(threading.Thread):
         """
 
         assert not self.is_running()
-        netlog.debug('get_results()')
+        netlog.debug('parse_results()')
 
-        if json_data:
-            parsed_results = json.load(json_data)
-        else:
-            parsed_results = json.loads(self.stdout)
+        try:
+            if json_data:
+                parsed_results = json.load(json_data)
+            else:
+                parsed_results = json.loads(self.stdout)
+        except ValueError as e:
+            netlog.error('json parse failed in parse_results')
+            netlog.error('Bad json:')
+            netlog.error(self.stdout)
+            raise e
 
         # get some handy references and pick the data out
         # of the nested structure representing the json

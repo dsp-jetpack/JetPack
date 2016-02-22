@@ -83,7 +83,7 @@ setup(
     ],
 
     # What does your project relate to?
-    keywords='networking deployment testing performance cluster hpc bigdata ',
+    keywords='networking testing performance cluster',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
@@ -97,7 +97,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['paramiko'],
+    install_requires=['paramiko', 'argparse'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
