@@ -36,6 +36,7 @@ def main():
         'DCIM_VirtualDiskView',
         'DCIM_CPUView',
         'DCIM_NICView',
+        'DCIM_NICStatistics',
     ]
 
     # Probe each iDRAC specified on the command line.
