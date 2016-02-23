@@ -2,17 +2,21 @@ import os
 import time
 import unittest
 
-data_dir = 'tests/test_data'
+# These are sometimes handy for debugging...
+# from network_testing import netlog
+# netlog.init()
+# netlog.enable_debug()
 
-from network_testing.iperf3 import Iperf3, Iperf3IntervalResult
+from network_testing.iperf3 import Iperf3IntervalResult
 from network_testing.iperf3 import Iperf3Server, Iperf3Client
 
+data_dir = 'tests/test_data'
 
-class TestIperf3(unittest.TestCase):
+class TestIperf3IntervalResult(unittest.TestCase):
 
     def test_instance(self):
         """object creation with default arguments"""
-        instance = Iperf3()
+        instance = Iperf3IntervalResult()
         self.assertTrue(instance)
 
 
@@ -23,14 +27,15 @@ class TestIperf3Server(unittest.TestCase):
         instance = Iperf3Server('localhost', 8080)
         self.assertTrue(instance)
 
-
-class TestIperf3IntervalResult(unittest.TestCase):
-
-    def test_instance(self):
-        """object creation with default arguments"""
-        instance = Iperf3IntervalResult()
-        self.assertTrue(instance)
-
+    def test_start_stop(self):
+        """start and stop an iperf server"""
+        server = Iperf3Server('localhost', 8080)
+        server.start()
+        time.sleep(3)
+        server.stop()
+        server.join(10)
+        self.assertFalse(server.is_alive())
+        self.assertEqual(server.exit_code, 0)
 
 class TestIperf3Client(unittest.TestCase):
 
@@ -71,7 +76,10 @@ class TestIperf3Client(unittest.TestCase):
 
     def test_running(self):
         """iperf3 client run test"""
+
         # Assumes an iperf server is running !
+        server = Iperf3Server('localhost', 5201)
+        server.start()
 
         client = Iperf3Client('localhost', 'localhost', 5201)
         client.start()
@@ -84,11 +92,14 @@ class TestIperf3Client(unittest.TestCase):
         self.assertTrue(len(client.stdout) >0 )
         client.parse_results()
 
+        server.stop()
+        server.join(10)
+        self.assertEqual(server.exit_code, 0)
+
         
 # suite is all the test cases in this module
 
 suite = unittest.TestSuite([
-    unittest.TestLoader().loadTestsFromTestCase(TestIperf3),
     unittest.TestLoader().loadTestsFromTestCase(TestIperf3IntervalResult),
     unittest.TestLoader().loadTestsFromTestCase(TestIperf3Server),
     unittest.TestLoader().loadTestsFromTestCase(TestIperf3Client),

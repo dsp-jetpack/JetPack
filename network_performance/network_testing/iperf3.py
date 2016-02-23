@@ -1,40 +1,47 @@
 """
 Abstraction for iperf3 execution and result processing.
 
+This module implements wrappers aorund iperf3 using the 
+Python threading module.
+
 See: http://software.es.net/iperf/
 
 """
-
 import datetime
 import json
-import time
+import re
 import threading
+import time
 
 import paramiko
 
 import netlog
 
-class Iperf3(object):
-    """An instance of Iperf3"""
 
-    pass
-
-class Iperf3Server(Iperf3):
+class Iperf3Server(threading.Thread):
     """An iperf3 server"""
 
     def __init__(self, server_node, server_port_number):
+
+        super(Iperf3Server, self).__init__()
         self.remote_pid = None
         self.start_time = None
         self.end_time = None
+        self.exit_code = 0
         self.server_node = server_node
         self.server_port_number = server_port_number
         self.ssh_client = None
-        self.stdout = None
-        self.stderr = None
+        self.stdout = ""
+        self.stderr = ""
+        self._stop_request = threading.Event()
 
-    def start(self):
-        """start the iperf3 server"""
+    def run(self):
+        """the iperf3 server thread
 
+        This runs on a thread until we either kill the 
+        server or it exits for some reason.
+
+        """
         self.start_time = datetime.datetime.now()
 
         self.ssh_client = paramiko.SSHClient()
@@ -44,53 +51,126 @@ class Iperf3Server(Iperf3):
         transport = self.ssh_client.get_transport()
         channel = transport.open_session()
         #channel.setblocking(0)
+        #channel.settimeout(0)
+        # no pty; we want stderr and stdout on separate streams.
+        # channel.get_pty()
         channel.invoke_shell()
 
-        command = 'echo $$ ; exec iperf3 -s -p {0}'.format(
+        command = 'echo PID$$DIP ; exec iperf3 -s -p {0}'.format(
             self.server_port_number)
         channel.sendall(command + '\n')
-        netlog.debug('sent command')
+        #netlog.debug('sent command')
 
-        # XXX(mikeyp) need to tidy up waiting here, to avoid
-        # potential deadlocks and be compatible with threading.
-        # TODO(mikeyp) nedd to parse result for pid
-        # XXX the iperf server generates output while a client 
-        # test is running;
-        # need to be sure we don't block with a full buffer.
+        # babysit the server process by reading stdout and stderr.
+        #  It is expected to run forever, unless we stop it.
+        # TODO need to limit how much standard output we store.
+        block_size = 2048
+        stdout_done = False
+        stderr_done = False
 
-        while not channel.recv_ready():
+        done = False
+        while not done:
+            # loop until there's an exit status, or we are 
+            # requested to stop
             time.sleep(1)
-            netlog.debug('waiting for output')
-        self.stdout = channel.recv(1024)
+            #netlog.debug("check recv_ready ")
+            if channel.recv_ready():
+                data = channel.recv(block_size)
+                if not (data):
+                    stdout_done = True 
+                else:
+                    self.stdout += data
+            #netlog.debug("check recv_stderr_ready ")
+            if channel.recv_stderr_ready():
+                data = channel.recv_stderr(block_size)
+                if not (data):
+                    stderr_done = True 
+                else:
+                    self.stderr += data
+            #netlog.debug("check exit_status_ready ")
+            if channel.exit_status_ready():
+                self.exit_code = channel.recv_exit_status()
+                done = True
+            #netlog.debug("check stop_request")
+            if self._stop_request.is_set():
+                # kill the process, and we will pick up the exit code
+                # next time around
+                self._kill_iperf()
 
-        #while not channel.recv_stderr_ready():
-        #    time.sleep(1)
-        #    netlog.debug ('waiting for stderr')
-        #self.stderr = channel.recv_stderr(1024)
+        # pick up any remaining data available. We read
+        # until the channel is empty unless it was done already.
+        #netlog.debug("final check recv_ready ")
+        if not stdout_done and channel.recv_ready():
+            while (not stdout_done):
+                data = channel.recv(block_size)
+                if not data:
+                    stdout_done = True
+                else:
+                    self.stdout += data
 
-        status_count = 0
-        while not channel.exit_status_ready():
-            time.sleep(1)
-            status_count += 1
-            if status_count >= 5:
-                break
-        if channel.exit_status_ready():
-            # somethings wrong, should not have exited....
-            exit_code = channel.recv_exit_status()
-            netlog.debug( 'remote error:%d', exit_code)
-            # XXX(mikeyp) need to check stdout/err ofr startup error
-            # since iperf3 returns success when the port was busy....
+        #netlog.debug("final check recv_stderr_ready ")
+        if not stderr_done and channel.recv_stderr_ready():
+            while not stderr_done:
+                data = channel.recv_stderr(block_size)
+                if not (data):
+                    stderr_done = True 
+                else:
+                    self.stderr += data
+
+        # extract the remote pid from stdout
+        self.remote_pid = self._get_pid()
+
+        # exit code processing.  
+        # If we were flagged to stop, fudge the exit code to zero
+        # since we killed iperf.
+        if self._stop_request.is_set():
+            self.exit_code = 0
+        # XXX HACK: check stderr for possible errors, since iperf3 3.0.11 
+        # returns a success exit code if it fails to bind to a port.
+        # e.g. 
+        # iperf3: error - unable to start listener for connections: 
+        #   Address already in use
+        if self.exit_code == 0:
+            if self.stderr.find('error') != -1:
+                self.exit_code = 1
+        #netlog.info('Remote iperf server exited with code: %d',
+        #    self.exit_code) 
+
         self.ssh_client.close()
+        self.end_time = datetime.datetime.now()
 
-    def is_running():
-        pass
+    def _get_pid(self):
+        """determine iperf PID from stdout"""
+        
+        match = re.search(r'PID(\d*)DIP', self.stdout)
+        if match:
+            return int(match.group(1))
+        else:
+            assert False, 'did not determine remote server pid'
+
+    def _kill_iperf(self):
+        """terminate the remote iperf process
+
+        We open another session on the same transport and kill
+        the process. 
+
+        """
+        #netlog.debug("server got stop request, killing remote process")
+        transport = self.ssh_client.get_transport()
+        channel = transport.open_session()
+        channel.exec_command('kill %d' % self._get_pid())
+
+    def is_running(self):
+        """Determine if the thread is running"""
+        return self.is_alive()
 
     def stop(self):
-        """stop the iperf3 server"""
+        """stop the iperf3 server
 
-        # TODO must ssh to to remote host, and explicitly kill the 
-        # pid 
-        pass
+        Ths routine flags the main thread to stop itself.
+
+        """
+        self._stop_request.set()
 
 
 class Iperf3IntervalResult(object):
@@ -174,6 +254,7 @@ class Iperf3Client(threading.Thread):
 
         done = False
         while not done:
+            time.sleep(1)
             # loop until there's an exit status, 
             if channel.recv_ready():
                 data = channel.recv(block_size)
@@ -204,6 +285,8 @@ class Iperf3Client(threading.Thread):
                 stderr_done = True 
             else:
                 self.stderr += data
+
+        self.ssh_client.close()
         self.end_time = datetime.datetime.now()
 
     def parse_results(self, json_data=None):
