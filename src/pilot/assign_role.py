@@ -51,7 +51,7 @@ def get_openstack_creds():
     return os_auth_url, os_tenant_name, os_username, os_password
 
 
-def get_drac_creds(ironic_client, node_uuid):
+def get_drac_creds(ironic_client, node_uuid, instackenv_file):
     # Get the DRAC IP, username, and password
     node = ironic_client.node.get(node_uuid, ["driver_info"])
     driver_info = node.driver_info
@@ -64,22 +64,25 @@ def get_drac_creds(ironic_client, node_uuid):
         drac_user = driver_info["ipmi_username"]
 
     # Can't get the password out of ironic, so dig it out of the
-    # instackenv.json file
-    drac_password = get_drac_password(drac_ip)
+    # instackenv.json file (or whatever is specified in --file)
+    drac_password = get_drac_password(drac_ip, instackenv_file)
 
     return drac_ip, drac_user, drac_password
 
 
-def get_drac_password(ip):
-    instackenv_file = open(os.environ['HOME'] + '/instackenv.json', 'r')
-    instackenv = json.load(instackenv_file)
+def get_drac_password(ip, instackenv_file):
+    json_file = os.environ['HOME'] + '/' + instackenv_file
+    instackenv_json = open(json_file, 'r')
+    instackenv = json.load(instackenv_json)
 
     nodes = instackenv["nodes"]
 
     for node in nodes:
         if node["pm_addr"] == ip:
             return node["pm_password"]
-
+    print ("Node not found in {}. Use the --file argment to specify a json "
+           "file that contains the node data".format(json_file))
+    sys.exit()
 
 def get_fqdd(doc, namespace):
     return utils.find_xml(doc, 'FQDD', namespace).text
@@ -175,6 +178,7 @@ def main():
     parser.add_argument("role",
                         choices=["controller", "compute", "storage"],
                         help="The role that the node will play")
+    parser.add_argument("--file", help="name of json file containing the node being set", default="instackenv.json")
     parser.add_argument("--debug", action='store_true', default=False)
     args = parser.parse_args()
 
@@ -224,7 +228,8 @@ def main():
     if args.role == "storage":
         # Get the DRAC IP, username, and password
         drac_ip, drac_user, drac_password = get_drac_creds(ironic_client,
-                                                           node_uuid)
+                                                           node_uuid,
+                                                           args.file)
 
         # Get the model of the server from the DRAC
         drac_client = wsman.Client(drac_ip, drac_user, drac_password)
