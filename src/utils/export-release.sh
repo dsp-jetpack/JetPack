@@ -72,18 +72,14 @@ mk_bundle() {
   rm -rf ${target_root_dir}
 }
 
-echo "Copying PDF's"
-cp doc/*.pdf $dest
 
-echo "Copying hardware configuration spreadsheets"
-cp doc/*.xlsx $dest
 
 # checksum the base directory files
 (cd $dest; sha256sum * > ${checksum_file})
 
 # make bundles
 mk_bundle dell-mgmt-node mgmt ceph_vm.vlock director_vm.vlock
-mk_bundle dell-pilot-deploy pilot common controller.vlock compute.vlock ceph.vlock utils/networking
+mk_bundle dell-pilot-deploy pilot common controller.vlock compute.vlock ceph.vlock
 
 echo "Done! - release bundles and files are in ${dest}."
 echo "  Use 'sha256sum -c ${checksum_file}' to verify."
