@@ -17,6 +17,8 @@ import paramiko
 
 import netlog
 
+# time in seconds to delay the IO pool loops
+IO_CHECK_INTERVAL = 5
 
 class Iperf3Server(threading.Thread):
     """An iperf3 server"""
@@ -56,7 +58,7 @@ class Iperf3Server(threading.Thread):
         # channel.get_pty()
         channel.invoke_shell()
 
-        command = 'echo PID$$DIP ; exec iperf3 -s -p {0}'.format(
+        command = 'echo PID$$DIP ; exec iperf3 -s --version4 -p {0}'.format(
             self.server_port_number)
         channel.sendall(command + '\n')
         #netlog.debug('sent command')
@@ -72,7 +74,7 @@ class Iperf3Server(threading.Thread):
         while not done:
             # loop until there's an exit status, or we are 
             # requested to stop
-            time.sleep(1)
+            time.sleep(IO_CHECK_INTERVAL)
             #netlog.debug("check recv_ready ")
             if channel.recv_ready():
                 data = channel.recv(block_size)
@@ -207,7 +209,7 @@ class Iperf3Client(threading.Thread):
     def __init__(self, client_node, server_node, server_port_number):
 
         super(Iperf3Client, self).__init__()
-
+        self.remote_pid = None
         self.daemon = False
         self.start_time = None
         self.end_time = None
@@ -219,6 +221,7 @@ class Iperf3Client(threading.Thread):
         self.stdin = ""
         self.stdout = ""
         self.stderr = ""
+        self._stop_request = threading.Event()
         # iperf result data
         self.final_send_data = Iperf3IntervalResult()
         self.final_recv_data = Iperf3IntervalResult()
@@ -242,10 +245,8 @@ class Iperf3Client(threading.Thread):
         channel.invoke_shell()
 
         # we run iperf in json output mode, with no intervals
-        command = 'exec iperf3 -c {1} -p {0} --json --i 0\n'.format(
+        command = 'echo PID$$DIP ; exec iperf3 --version4 -c {1} -p {0} --json --i 0\n'.format(
             self.server_port_number, self.server_node)
-        #command = 'echo $$ ; exec iperf3 -c -p {0} {1} --json --i 0'.format(
-        #    self.server_port_number, self.server_node)
         channel.sendall(command)
         # wait for the command to complete, 
         block_size = 2048
@@ -254,40 +255,102 @@ class Iperf3Client(threading.Thread):
 
         done = False
         while not done:
-            time.sleep(1)
-            # loop until there's an exit status, 
+            # loop until there's an exit status, or we are 
+            # requested to stop
+            time.sleep(IO_CHECK_INTERVAL)
+            #netlog.debug("check recv_ready ")
             if channel.recv_ready():
                 data = channel.recv(block_size)
                 if not (data):
                     stdout_done = True 
                 else:
                     self.stdout += data
+            #netlog.debug("check recv_stderr_ready ")
             if channel.recv_stderr_ready():
                 data = channel.recv_stderr(block_size)
                 if not (data):
                     stderr_done = True 
                 else:
                     self.stderr += data
+            #netlog.debug("check exit_status_ready ")
             if channel.exit_status_ready():
                 self.exit_code = channel.recv_exit_status()
                 done = True
-        while not stdout_done and not stderr_done:
-            # pick up any remaining data available. We don't 
-            # check for recv_ready() ready here, either there's data
-            # or we're done 
-            data = channel.recv(block_size)
-            if not (data):
-                stdout_done = True 
-            else:
-                self.stdout += data
-            data = channel.recv_stderr(block_size)
-            if not (data):
-                stderr_done = True 
-            else:
-                self.stderr += data
+            #netlog.debug("check stop_request")
+            if self._stop_request.is_set():
+                # kill the process, and we will pick up the exit code
+                # next time around
+                self._kill_iperf()
+
+        # pick up any remaining data available. We read
+        # until the channel is empty unless it was done already.
+        #netlog.debug("final check recv_ready ")
+        if not stdout_done and channel.recv_ready():
+            while (not stdout_done):
+                data = channel.recv(block_size)
+                if not data:
+                    stdout_done = True
+                else:
+                    self.stdout += data
+
+        #netlog.debug("final check recv_stderr_ready ")
+        if not stderr_done and channel.recv_stderr_ready():
+            while not stderr_done:
+                data = channel.recv_stderr(block_size)
+                if not (data):
+                    stderr_done = True 
+                else:
+                    self.stderr += data
+
+        # extract the remote pid from stdout, then clean stdout
+        self.remote_pid = self._get_pid()
+        self._fixup_stdout()
+
+        # exit code processing.  
+        # If we were flagged to stop, fudge the exit code to zero
+        # since we killed iperf.
+        if self._stop_request.is_set():
+            self.exit_code = 0
 
         self.ssh_client.close()
         self.end_time = datetime.datetime.now()
+
+    def _get_pid(self):
+        """determine iperf PID from stdout"""
+        
+        match = re.search(r'PID(\d*)DIP', self.stdout)
+        if match:
+            return int(match.group(1))
+        else:
+            assert False, 'did not determine remote server pid'
+
+    def _fixup_stdout(self):
+        """Remove the PID embedded in stdout"""
+
+        self.stdout = re.sub(r'PID(\d*)DIP', '', self.stdout)
+
+    def _kill_iperf(self):
+        """terminate the remote iperf process
+
+        We open another session on the same transport and kill
+        the process. 
+
+        """
+        #netlog.debug("server got stop request, killing remote process")
+        transport = self.ssh_client.get_transport()
+        channel = transport.open_session()
+        channel.exec_command('kill %d' % self._get_pid())
+
+    def is_running(self):
+        return self.is_alive()
+
+    def stop(self):
+        """stop the iperf3 server
+
+        Ths routine flags the main thread to stop itself.
+
+        """
+        self._stop_request.set()
 
     def parse_results(self, json_data=None):
         """parse the results of the client run
@@ -374,11 +437,4 @@ class Iperf3Client(threading.Thread):
         destination.retransmits  = 0
         destination.bits_per_second = float(result_stanza['bits_per_second'])
 
-    def is_running(self):
-        return self.is_alive()
-
-    def stop(self):
-        """stop the iperf3 client """
-        # XXX There's no apparent way to kil a thread....
-        pass
 

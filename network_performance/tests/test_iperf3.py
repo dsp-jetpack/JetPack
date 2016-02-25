@@ -23,7 +23,7 @@ class TestIperf3IntervalResult(unittest.TestCase):
 class TestIperf3Server(unittest.TestCase):
 
     def test_instance(self):
-        """object creation with default arguments"""
+        """Iperf3Server() creation with default arguments"""
         instance = Iperf3Server('localhost', 8080)
         self.assertTrue(instance)
 
@@ -40,7 +40,7 @@ class TestIperf3Server(unittest.TestCase):
 class TestIperf3Client(unittest.TestCase):
 
     def test_instance(self):
-        """object creation with default arguments"""
+        """Iperf3Client() creation with default arguments"""
         instance = Iperf3Client('localhost', 'remote_host', 8080)
         self.assertTrue(instance)
 
@@ -77,7 +77,7 @@ class TestIperf3Client(unittest.TestCase):
     def test_running(self):
         """iperf3 client run test"""
 
-        # Assumes an iperf server is running !
+        # test requires an iperf server running !
         server = Iperf3Server('localhost', 5201)
         server.start()
 
@@ -86,14 +86,19 @@ class TestIperf3Client(unittest.TestCase):
         # it runs async - wait for it to finish
         while client.is_running():
             time.sleep(1)
+        client.join(10)
+
         self.assertFalse(client.is_running())
-        self.assertEqual(client.exit_code, 0)
         self.assertEqual(len(client.stderr), 0)
+        self.assertEqual(client.exit_code, 0)
         self.assertTrue(len(client.stdout) >0 )
         client.parse_results()
+        # print client.final_recv_data
 
+        # shutdown the server 
         server.stop()
         server.join(10)
+        # print server.stderr
         self.assertEqual(server.exit_code, 0)
 
         
