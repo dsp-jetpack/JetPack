@@ -32,3 +32,4 @@ cd /tmp
 
 # Install the probe_idrac Python package.
 sudo pip install ./probe-idrac-${PBR_VERSION}.tar.gz
+sudo yum -y remove python-pip epel-release
