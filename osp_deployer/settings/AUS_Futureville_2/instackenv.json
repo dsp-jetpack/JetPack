@@ -56,6 +56,19 @@
       "pm_type": "pxe_ipmitool",
       "pm_user": "root",
       "pm_password": "1S0lut1on!",
+      "pm_addr": "192.168.110.209",
+      "mac": [
+        "ec:f4:bb:cc:d5:84"
+      ],
+      "cpu": "16",
+      "memory": "131072",
+      "disk": "1",
+      "arch": "x86_64"
+    },
+    {
+      "pm_type": "pxe_ipmitool",
+      "pm_user": "root",
+      "pm_password": "1S0lut1on!",
       "pm_addr": "192.168.110.210",
       "mac": [
         "ec:f4:bb:dc:42:cc"
