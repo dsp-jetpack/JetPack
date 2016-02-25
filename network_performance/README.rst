@@ -10,7 +10,10 @@ information  on the command line arguments you can use the help argument
 
 Prerequisites
 =============
- Before running the Network Testing Toolkit, applications and pyton packages must be installed on the node running the tool and the target nodes for the tool as follows:
+
+Before running the Network Testing Toolkit, applications and pyton
+packages must be installed on the node running the tool and the target
+nodes for the tool as follows:
 
 Node running the Network Testing Toolkit
 ----------------------------------------
@@ -24,6 +27,7 @@ Node running the Network Testing Toolkit
  ---------------
  - Paramiko
  - Selenium
+ - argparse
 
 Target nodes in the cluster
 ---------------------------
@@ -33,12 +37,20 @@ Target nodes in the cluster
  - Iperf3
 
 
+Installation
+============
+
+    #. Extract the the source distribution 
+    #. python setup.py install
+
 Running the Network Testing Toolkit
 ===================================
 
 Where to run the toolkit
 ------------------------
-The toolkit can be run from any Linux or Windows node on a network that meets the prerequistes definited in this README file.
+
+The toolkit can be run from any Linux node on a network that meets the
+prerequistes definited in this README file.
 
 How to run the toolkit
 ----------------------
