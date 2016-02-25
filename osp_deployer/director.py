@@ -72,11 +72,9 @@ class Director():
             ]
             for cmd in cmds:
                 logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password,cmd))
-        for repo in self.settings.internal_repos_urls:
-            if "Beta-4" in repo or "Beta-5" or "Beta-6" in repo:
-                    logger.debug("Workaroud for https://bugzilla.redhat.com/show_bug.cgi?id=1298189")
-                    cmd = "sudo sed -i \"s/.*Keystone_domain\['heat_domain'\].*/Service\['keystone'\] -> Class\['::keystone::roles::admin'\] -> Class\['::heat::keystone::domain'\]/\" /usr/share/instack-undercloud/puppet-stack-config/puppet-stack-config.pp"
-                    logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password,cmd))
+        logger.debug("Workaroud for https://bugzilla.redhat.com/show_bug.cgi?id=1298189")
+        cmd = "sudo sed -i \"s/.*Keystone_domain\['heat_domain'\].*/Service\['keystone'\] -> Class\['::keystone::roles::admin'\] -> Class\['::heat::keystone::domain'\]/\" /usr/share/instack-undercloud/puppet-stack-config/puppet-stack-config.pp"
+        logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, "root", self.settings.director_node.root_password,cmd))
 
     def upload_update_conf_files(self):
 

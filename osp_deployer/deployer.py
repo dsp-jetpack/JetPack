@@ -31,16 +31,20 @@ from datetime import datetime
 
 logger = logging.getLogger("osp_deployer")
 
-
-def deploy():
+def setup_logging():
     import logging.config
-    isLinux = False
     if sys.platform.startswith('linux'):
         isLinux = True
     path = '/auto_results'
     if not os.path.exists(path):
         os.makedirs(path)
     logging.config.fileConfig('logging.conf')
+
+
+def deploy():
+    isLinux = False
+    if sys.platform.startswith('linux'):
+        isLinux = True
    
     try:
 
@@ -246,6 +250,6 @@ def deploy():
 
 
 if __name__ == "__main__":
-
+        setup_logging()
         deploy()
 
