@@ -123,6 +123,9 @@ class Settings():
         self.compute_bond_opts=self.cluster_settings_map['compute_bond_opts']
         self.storage_bond_opts=self.cluster_settings_map['storage_bond_opts']
 
+        self.overcloud_deploy_timeout=self.cluster_settings_map['overcloud_deploy_timeout']
+
+
 
         self.ntp_server = self.cluster_settings_map['ntp_servers']
         self.time_zone = self.cluster_settings_map['time_zone']
