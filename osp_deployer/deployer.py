@@ -57,7 +57,7 @@ def deploy():
         parser.add_argument('-skip_sah','--skip_sah', help='Do not reinstall the SAH node',action='store_true', required=False)
         parser.add_argument('-skip_undercloud','--skip_undercloud', help='Do not reinstall the SAH or Undercloud',action='store_true', required=False)
         parser.add_argument('-skip_ceph_vm','--skip_ceph_vm', help='Do not reinstall the ceph vm',action='store_true', required=False)
-        args = parser.parse_args()
+        args, ignore = parser.parse_known_args()
 
         if args.skip_undercloud is True :
             logger.info("Skipping SAH & Undercloud install")

@@ -3,7 +3,7 @@
 from datetime import datetime
 import logging
 from pprint import pprint
-import sys
+import sys, os
 import yaml
 
 from dciclient.v1.logger import DciHandler
