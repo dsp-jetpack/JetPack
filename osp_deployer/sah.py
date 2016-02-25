@@ -130,7 +130,7 @@ class Sah():
         Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, sH)
 
         logger.debug("=== wait for the director vm install to be complete & power it on")
-        while (not "shut off" in Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh list --all")[0]):
+        while (not "shut off" in Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh list --all | grep director")[0]):
             logger.debug ("...")
             time.sleep(60);
         logger.debug ("=== power on the director VM ")
@@ -141,7 +141,7 @@ class Sah():
         logger.debug("director host is up")
 
     def delete_director_vm(self):
-        while "director" in Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh list --all")[0]:
+        while "director" in Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh list --all | grep director")[0]:
             Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh destroy director")
             time.sleep(20)
             Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh undefine director")
@@ -174,7 +174,7 @@ class Sah():
         logger.debug( Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, sH))
 
         logger.debug("=== wait for the ceph vm install to be complete & power it on")
-        while (not "shut off" in Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh list --all")[0]):
+        while (not "shut off" in Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh list --all | grep ceph")[0]):
             logger.debug ("...")
             time.sleep(60)
         logger.debug ("=== power on the ceph VM ")
@@ -185,7 +185,7 @@ class Sah():
         logger.debug("ceph host is up")
 
     def delete_ceph_vm(self):
-        if "ceph" in Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh list --all")[0]:
+        if "ceph" in Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh list --all | grep ceph")[0]:
             Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh destroy ceph")
             time.sleep(20)
             Ssh.execute_command(self.settings.sah_node.external_ip, "root", self.settings.sah_node.root_password, "virsh undefine ceph")
