@@ -10,7 +10,7 @@ then
   exit 1
 fi
 
-flavors="controller compute storage"
+flavors="control compute ceph-storage"
 subnet_name="ctlplane"
 
 # Create the requested flavor if it does not exist.
