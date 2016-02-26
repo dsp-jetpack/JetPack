@@ -26,6 +26,12 @@ DCIM_PhysicalDiskView = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
 
 RAID1 = "4"
 
+ROLES = {
+    'controller': 'control',
+    'compute': 'compute',
+    'storage': 'ceph-storage'
+}
+
 
 def get_openstack_creds():
     creds_file = open(os.environ['HOME'] + '/stackrc', 'r')
@@ -182,6 +188,8 @@ def main():
     parser.add_argument("--debug", action='store_true', default=False)
     args = parser.parse_args()
 
+    flavor = ROLES[args.role]
+
     os_auth_url, os_tenant_name, os_username, os_password = \
         get_openstack_creds()
 
@@ -218,9 +226,10 @@ def main():
         sys.exit(1)
 
     # Assign the role to the node
-    print "Setting role for {} to {}".format(args.ip_or_mac, args.role)
+    print "Setting role for {} to {}, flavor {}".format(
+        args.ip_or_mac, args.role, flavor)
     patch = [{'op': 'add',
-              'value': "profile:{},boot_option:local".format(args.role),
+              'value': "profile:{},boot_option:local".format(flavor),
               'path': '/properties/capabilities'}]
     node = ironic_client.node.update(node_uuid, patch)
 
