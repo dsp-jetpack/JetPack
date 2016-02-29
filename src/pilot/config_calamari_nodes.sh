@@ -1,5 +1,8 @@
 #!/bin/bash
-
+ 
+############
+# Usage 
+############
 ceph_node_ip="$1"
 if [ -z "${ceph_node_ip}" ];
 then
@@ -7,31 +10,39 @@ then
   exit 1
 fi
 
-#Create Host file for Ceph VM Storage Node
+
+############
+# Copy Director root keys to Ceph node
+############
+printf "[INFO] Pushing ssh-keys to Ceph node...\n"
+ssh-copy-id root@${ceph_node_ip} 2> /dev/null
+
+
+############
+# Create Host file for Ceph VM Storage Node
+############
 tmp_hostfile=`mktemp`
 echo "" > $tmp_hostfile
-echo "Entries below generated with Calamari installation." >> $tmp_hostfile
+echo "#Entries below generated with Calamari installation." >> $tmp_hostfile
 
 calamari_host_clients=`nova list | awk -F'[|=]' '/2/ {print $8 $3}' | awk '/controller|storage/ {print $1}'`
  
-printf "[INFO] Gathering Calamari MONs and OSDs node information: "
+printf "\n[INFO] Gathering Calamari MONs and OSDs host data..."
 for host in $calamari_host_clients
 do 
-  printf "."
-  storage_net_ip=`ssh -oStrictHostKeyChecking=no heat-admin@$host '/usr/sbin/ip a | grep 170.*\/24' | awk -F'[/ ]' '{print $6}'`
-  printf "."
+  printf "\n[INFO] - gathering host data for client: $host..." 
+  storage_net_cidr=`grep StorageNetCidr ~/pilot/templates/network-environment.yaml | awk '{print $2}' | sed -e "s/0\//\*\//"`
+  storage_net_ip=`ssh -oStrictHostKeyChecking=no heat-admin@$host "/usr/sbin/ip a | grep ${storage_net_cidr}" | awk -F'[/ ]' '{print $6}'`
   short_name=`ssh heat-admin@$host 'hostname -s'`
   echo $storage_net_ip $short_name >> $tmp_hostfile
 done
 
 
-#Prep Ceph VM Storage Node
-printf "\n[INFO] Pushing ssh-keys to Ceph node."
-cmd="if [ ! -d ~heat-admin/.ssh ]; then mkdir ~heat-admin/.ssh; cd ~heat-admin/.ssh; cp ~root/.ssh/authorized_keys .; chown -R heat-admin:heat-admin ~heat-admin/.ssh; chmod 700 ~heat-admin/.ssh; fi"
-ssh root@${ceph_node_ip} $cmd 
-
-printf "\n[INFO] Pushing Calamari host entries to Ceph node."
-scp -oStrictHostKeyChecking=no $tmp_hostfile root@${ceph_node_ip}:/tmp/host_addins
+############
+# Prep Ceph VM Storage Node
+############
+printf "\n[INFO] Pushing Calamari host entries to Ceph node..."
+scp -oStrictHostKeyChecking=no $tmp_hostfile root@${ceph_node_ip}:/tmp/host_addins &>/dev/null
 ssh root@${ceph_node_ip} 'bash -s' <<'ENDSSH'
 calamari_hosts=`grep "#Entries below generated with Calamari" /etc/hosts`
 if [ -z "$calamari_hosts" ]
@@ -40,39 +51,67 @@ then
 fi
 ENDSSH
 
-printf "[INFO] Configuring Calamari clients: "
-ceph_hostname=`ssh root@${ceph_node_ip} 'hostname -s'`
-ceph_storage_net_ip=`ssh -oStrictHostKeyChecking=no heat-admin@${ceph_node_ip} '/usr/sbin/ip a | grep 170.*\/24' | awk -F'[/ ]' '{print $6}'`
 
+############
+# Gather Ceph VM data 
+############
+printf "\n[INFO] Gathering Ceph VM data..."
+ceph_hostname=`ssh root@${ceph_node_ip} 'hostname -s'`
+storage_net_cidr=`grep StorageNetCidr ~/pilot/templates/network-environment.yaml | awk '{print $2}' | sed -e "s/0\//\*\//"`
+ceph_storage_net_ip=`ssh -oStrictHostKeyChecking=no root@${ceph_node_ip} "/usr/sbin/ip a | grep ${storage_net_cidr}" | awk -F'[/ ]' '{print $6}'`
+
+
+############
+# Prep Ceph Calamari Storage client nodes 
+############
+printf "\n[INFO] Configuring Calamari clients... "
 if [ -n "$calamari_host_clients" ] 
 then
   for host in $calamari_host_clients
   do 
-    ssh heat-admin@$host "sudo bash -c $(printf '%q' "echo '$ceph_storage_net_ip  $ceph_hostname' >> /etc/hosts")"
-    ssh -oStrictHostKeyChecking=no heat-admin@$host 'sudo mkdir -p /etc/salt/minion.d'
-    ssh heat-admin@$host "bash -c $(printf '%q' "[[ ! -f /etc/salt/minion.d/calamari.conf ]] && echo 'master: $ceph_hostname' > /etc/salt/minion.d/calamari.conf ")"
+    printf "\n[INFO] - configuring client: $host..." 
+    client_hostname=`ssh heat-admin@$host 'hostname -s'`
 
-    if [[ "$host" =~ "controller" ]]
-    then 
-      ssh heat-admin@$host 'sudo /usr/sbin/iptables -I INPUT 1 -p tcp -m multiport --dports 6800:7300 -j ACCEPT'
-      ssh heat-admin@$host 'sudo service iptables save'
-    fi
+    configured=`ssh heat-admin@$host "grep '#Entries below generated with Calamari' /etc/hosts"`
+    if [ -z "$configured" ]
+    then
+       ssh heat-admin@$host "sudo bash -c $(printf '%q' "echo '#Entries below generated with Calamari installation.' >> /etc/hosts")"
+       ssh heat-admin@$host "sudo bash -c $(printf '%q' "echo '$ceph_storage_net_ip  $ceph_hostname' >> /etc/hosts")"
+       ssh heat-admin@$host 'sudo mkdir -p /etc/salt/minion.d'
+       ssh heat-admin@$host "sudo bash -c $(printf '%q' "[[ ! -f /etc/salt/minion.d/calamari.conf ]] && echo 'master: $ceph_hostname' > /etc/salt/minion.d/calamari.conf ")"
 
-    if [[ "$host" =~ "storage" ]]
-    then 
-      ssh heat-admin@$host 'sudo /usr/sbin/iptables -I INPUT 1 -p tcp --dports 6879 -j ACCEPT'
-      ssh heat-admin@$host 'sudo service iptables save'
+       if [[ "$client_hostname" =~ "controller" ]]
+       then 
+         ssh heat-admin@$host "sudo /usr/sbin/iptables -I INPUT 1 -p tcp -m multiport --dport 6800:7300 -j ACCEPT"
+         ssh heat-admin@$host "sudo service iptables save"
+       fi
+
+       if [[ "$client_hostname" =~ "storage" ]]
+       then 
+         ssh heat-admin@$host "sudo /usr/sbin/iptables -I INPUT 1 -p tcp --dport 6879 -j ACCEPT"
+         ssh heat-admin@$host "sudo service iptables save"
+       fi
+       ssh heat-admin@$host 'sudo systemctl start salt-minion'
+    else
+       ssh heat-admin@$host 'sudo systemctl restart salt-minion'
     fi
-    ssh heat-admin@$host 'sudo systemctl start salt-minion'
-    printf "."
   done
 fi
 
-ssh root@${ceph_node_ip} 'bash -s' <<'ENDSSH2'
+
+############
+# Restart the salt-master services on the Ceph VM node
+############
+printf "\n[INFO] Restarting salt services... "
+ssh root@${ceph_node_ip} 'bash -s' <<'ENDSSH'
 /bin/systemctl stop salt-master
 /bin/systemctl start salt-master
-ENDSSH2A
+/usr/bin/salt-key -a '*'
+ENDSSH
 
+
+############
+# Prompt the user to take final steps on the Ceph VM node to finish the installation.
+############
 printf "\n[INFO] Calamari configuration steps are complete."
 printf "\n\nLogon to the Ceph Admin Node as root and run 'calamari-ctl initialize'."
-printf "\nWhen the initialization is complete, login to Calamari via a web browser and accept the OSD and MON nodes.\n\n"
