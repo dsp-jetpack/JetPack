@@ -12,7 +12,7 @@ tmp_hostfile=/tmp/$(tr -dc 'A-Z0-9' < /dev/urandom | head -c8)
 echo "" > $tmp_hostfile
 echo "Entries below generated with Calamari installation." >> $tmp_hostfile
 
-calamari_host_clients=`nova list | awk -F'[|=]' '/2/ {print $8 $3}' | awk '/controller|storage/' | awk '{print $1}'`
+calamari_host_clients=`nova list | awk -F'[|=]' '/2/ {print $8 $3}' | awk '/controller|storage/ {print $1}'`
  
 printf "[INFO] Gathering Calamari MONs and OSDs node information: "
 for host in $calamari_host_clients
@@ -71,7 +71,8 @@ fi
 ssh root@${ceph_node_ip} 'bash -s' <<'ENDSSH2'
 /bin/systemctl stop salt-master
 /bin/systemctl start salt-master
+ENDSSH2A
+
 printf "\n[INFO] Calamari configuration steps are complete."
 printf "\n\nLogon to the Ceph Admin Node as root and run 'calamari-ctl initialize'."
 printf "\nWhen the initialization is complete, login to Calamari via a web browser and accept the OSD and MON nodes.\n\n"
-ENDSSH2
