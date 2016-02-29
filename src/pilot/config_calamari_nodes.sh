@@ -33,7 +33,7 @@ ssh root@${ceph_node_ip} $cmd
 printf "\n[INFO] Pushing Calamari host entries to Ceph node."
 scp -oStrictHostKeyChecking=no $tmp_hostfile root@${ceph_node_ip}:/tmp/host_addins
 ssh root@${ceph_node_ip} 'bash -s' <<'ENDSSH'
-calamari_hosts=`grep "Entries below generated with Calamari" /etc/hosts`
+calamari_hosts=`grep "#Entries below generated with Calamari" /etc/hosts`
 if [ -z "$calamari_hosts" ]
 then
    cat /tmp/host_addins >> /etc/hosts
