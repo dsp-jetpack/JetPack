@@ -8,7 +8,7 @@ then
 fi
 
 #Create Host file for Ceph VM Storage Node
-tmp_hostfile=/tmp/$(tr -dc 'A-Z0-9' < /dev/urandom | head -c8)
+tmp_hostfile=`mktemp`
 echo "" > $tmp_hostfile
 echo "Entries below generated with Calamari installation." >> $tmp_hostfile
 
