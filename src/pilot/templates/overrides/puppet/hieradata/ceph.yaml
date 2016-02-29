@@ -1,6 +1,8 @@
 ceph::profile::params::osd_journal_size: 10000
-ceph::profile::params::osd_pool_default_pg_num: 1024
-ceph::profile::params::osd_pool_default_pgp_num: 1024
+# CHANGEME: Change osd_pool_default_pg_num and osd_pool_default_pgp_num to
+# be the smallest value in 'ceph_pool_pgs' (which appears below).
+ceph::profile::params::osd_pool_default_pg_num: 256
+ceph::profile::params::osd_pool_default_pgp_num: 256
 ceph::profile::params::osd_pool_default_size: 3
 ceph::profile::params::osd_pool_default_min_size: 2
 ceph::profile::params::manage_repo: false
@@ -54,6 +56,18 @@ ceph_pools:
   - volumes
   - vms
   - images
+  - .rgw.buckets
+
+# CHANGEME: The following table lists the pg_num and pgp_num values for each
+# of the specified pools. Change the value for each pool based on the size of
+# Ceph cluster, using http://ceph.com/pgcalc for guidance. Small pools used by
+# the RADOS Gateway (any pool whose name begins with '.'), other than the
+# '.rgw.buckets' pool, should not be listed.
+ceph_pool_pgs:
+  'volumes': 1024
+  'vms': 256
+  'images': 256
+  '.rgw.buckets': 512
 
 ceph_classes: []
 
