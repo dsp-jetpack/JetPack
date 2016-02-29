@@ -586,6 +586,19 @@ class Director():
                     logger.debug(each)
                 logger.debug(" Failed to retreive the nodes ip information ")
 
+    def fix_controllers_admin_auth_url(self):
+	logger.debug("Workaround for known issue https://bugzilla.redhat.com/show_bug.cgi?id=1308422")
+	cmd = "source ~/stackrc;nova list | grep controller"
+        re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+	controllers = re[0].split("\n")
+        controllers.pop()
+        for each in controllers:
+		provisioning_ip = each.split("|")[6].split("=")[1]
+		cmd = "ssh heat-admin@" + provisioning_ip + " \"sudo sed -i 's/^admin_auth_url=/ s/$/\\/v2.0/' /etc/neutron/plugin.ini\""
+		logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) )
+		cmd = 'pcs resource restart openstack-nova-api-clone'
+		logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) )
+
 
     def fix_controllers_vlan_range(self):
         logger.debug("Workaround for know issue https://bugzilla.redhat.com/show_bug.cgi?id=1282963")

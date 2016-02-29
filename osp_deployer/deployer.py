@@ -226,12 +226,14 @@ def deploy():
         logger.debug ("installing the overcloud ... this might take a while")
         director_vm.deploy_overcloud()
         director_vm.retreive_nodes_ips()
+        tester.verify_computes_virtualization_enabled()
 
         cmd = "source ~/stackrc;heat stack-list | grep overcloud | awk '{print $6}'"
         overcloud_status = Ssh.execute_command_tty(settings.director_node.external_ip, settings.director_install_account_user, settings.director_install_account_pwd,cmd)[0]
         logger.debug("=== Overcloud stack state : "+ overcloud_status )
         director_vm.fix_controllers_vlan_range()
 	director_vm.fix_cinder_conf()
+	director_vm.fix_controllers_admin_auth_url()
 
         logger.info("====================================")
         logger.info(" OverCloud deployment status: " + overcloud_status)
