@@ -594,7 +594,7 @@ class Director():
         controllers.pop()
         for each in controllers:
 		provisioning_ip = each.split("|")[6].split("=")[1]
-		cmd = "ssh heat-admin@" + provisioning_ip + " \"sudo sed -i 's/^admin_auth_url=/ s/$/\\/v2.0/' /etc/neutron/plugin.ini\""
+		cmd = "ssh heat-admin@" + provisioning_ip + " \"sudo sed -i '/^admin_auth_url=/ s/$/\\/v2.0/' /etc/nova/nova.conf\""
 		logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) )
 		cmd = 'pcs resource restart openstack-nova-api-clone'
 		logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) )
