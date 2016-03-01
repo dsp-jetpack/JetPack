@@ -4,9 +4,10 @@
 # Usage 
 ############
 ceph_node_ip="$1"
-if [ -z "${ceph_node_ip}" ];
+root_password="$2"
+if [ -z "${ceph_node_ip}" ]
 then
-  echo "Usage: $0 <ceph_node_ip>"
+  echo "Usage: $0 <ceph_node_ip> [root_password]"
   exit 1
 fi
 
@@ -14,9 +15,17 @@ fi
 ############
 # Copy Director root keys to Ceph node
 ############
-printf "[INFO] Pushing ssh-keys to Ceph node...\n"
-ssh-copy-id root@${ceph_node_ip} 2> /dev/null
-
+if [ -z "${root_password}" ]
+then
+  printf "[INFO] Pushing ssh-keys to Ceph node...\n"
+  ssh-copy-id root@${ceph_node_ip} 1>&2> /dev/null
+else
+  tmp_root_file=`mktemp`
+  echo ${root_password} >> ${tmp_root_file}
+  sudo yum -y install sshpass 1>&2> /dev/null
+  sshpass -f ${tmp_root_file} ssh-copy-id root@${ceph_node_ip} 1>&2> /dev/null
+  rm ${tmp_root_file} 
+fi
 
 ############
 # Create Host file for Ceph VM Storage Node
@@ -83,13 +92,13 @@ then
        if [[ "$client_hostname" =~ "controller" ]]
        then 
          ssh heat-admin@$host "sudo /usr/sbin/iptables -I INPUT 1 -p tcp -m multiport --dport 6800:7300 -j ACCEPT"
-         ssh heat-admin@$host "sudo service iptables save"
+         ssh heat-admin@$host "sudo service iptables save" 1>&2> /dev/null
        fi
 
        if [[ "$client_hostname" =~ "storage" ]]
        then 
          ssh heat-admin@$host "sudo /usr/sbin/iptables -I INPUT 1 -p tcp --dport 6879 -j ACCEPT"
-         ssh heat-admin@$host "sudo service iptables save"
+         ssh heat-admin@$host "sudo service iptables save" 1>&2> /dev/null
        fi
        ssh heat-admin@$host 'sudo systemctl start salt-minion'
     else
@@ -106,12 +115,19 @@ printf "\n[INFO] Restarting salt services... "
 ssh root@${ceph_node_ip} 'bash -s' <<'ENDSSH'
 /bin/systemctl stop salt-master
 /bin/systemctl start salt-master
-/usr/bin/salt-key -a '*'
+/usr/bin/salt-key -y -q -A 1>&2> /dev/null
 ENDSSH
 
 
 ############
-# Prompt the user to take final steps on the Ceph VM node to finish the installation.
+# Prompt the user to take final steps on the Ceph VM node to finish the installation or Initialize Calamari.
 ############
-printf "\n[INFO] Calamari configuration steps are complete."
-printf "\n\nLogon to the Ceph Admin Node as root and run 'calamari-ctl initialize'."
+printf "\n[INFO] Calamari configuration steps are complete.\n"
+if [ -z "${root_password}" ]
+then
+  printf "\nLogon to the Ceph Admin Node as root and run 'calamari-ctl initialize'.\n\n"
+else
+  printf "[INFO] Final Steps -- Initializing Calamari...\n"
+  local_hostname=`ssh root@${ceph_node_ip} "hostname"`
+  ssh root@${ceph_node_ip} "calamari-ctl initialize --admin-username root --admin-password ${root_password} --admin-email root@${local_hostname}"
+fi
