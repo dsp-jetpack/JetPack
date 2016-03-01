@@ -16,8 +16,42 @@ resources:
         #!/bin/bash
         if [[ $HOSTNAME =~ "cephstorage" ]]; then
         {
-           echo "Restarting Ceph..." 
-           systemctl restart ceph 
+          echo "Apply ceph_tuning to ceph.conf..."
+          hiera ceph_tuning | python -c "
+        import ast, os, sys
+        input = ' '.join(map(str.strip, sys.stdin.readlines()))
+        if input == 'nil':
+            ceph_tuning = {}
+        else:
+            ceph_tuning = ast.literal_eval(input.replace('=>', ': '))
+
+        conf_cur = '/etc/ceph/ceph.conf'
+        lines = open(conf_cur, 'r').readlines()
+        beg_marker = '# Start of ceph_tuning\n'
+        end_marker = '# End of ceph_tuning\n'
+        try:
+            # Remove any prior ceph_tuning
+            beg_index = lines.index(beg_marker)
+            end_index = lines.index(end_marker) + 1
+            lines[beg_index:end_index] = []
+        except:
+            pass
+
+        conf_new = conf_cur + '.new'
+        f = open(conf_new, 'w')
+        for line in lines:
+            f.write(line)
+            if ceph_tuning and '[global]' in line:
+                f.write(beg_marker)
+                for entry in ceph_tuning:
+                    f.write('{} = {}\n'.format(entry, ceph_tuning[entry]))
+                f.write(end_marker)
+
+        f.close()
+        os.rename(conf_new, conf_cur)
+        "
+          echo "Restarting Ceph..."
+          systemctl restart ceph
         } |& tee /root/post-deploy.txt
         fi
         # BEGIN workaround for BZ 1283721
