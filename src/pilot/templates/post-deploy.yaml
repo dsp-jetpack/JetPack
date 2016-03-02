@@ -13,13 +13,64 @@ resources:
     properties:
       group: script
       config: |
-        #!/bin/sh
+        #!/bin/bash
         if [[ $HOSTNAME =~ "cephstorage" ]]; then
         {
            echo "Restarting Ceph..." 
            systemctl restart ceph 
         } |& tee /root/post-deploy.txt
         fi
+        # BEGIN workaround for BZ 1283721
+        if [[ $HOSTNAME =~ "cephstorage-0" ]]; then
+        {
+          echo "Checking Ceph pools pg_num..."
+          sleep 10
+          hiera ceph_pool_pgs | python -c "
+        import ast, subprocess, sys, time
+        def issue_cmd(cmd, printCmd=True):
+            if printCmd:
+                print(cmd)
+            for i in range(1, 10):
+                try:
+                    return subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT)
+                except subprocess.CalledProcessError as e:
+                    if 'EBUSY' in e.output:
+                        print '  Cluster is busy, retrying...'
+                        time.sleep(5)
+                    else:
+                        sys.stderr.write('{}\nAborting due to fatal error.\n'.format(e.output))
+                        sys.exit(1)
+        
+            sys.stderr.write('Aborting due to excessive retries.\n')
+            sys.exit(1)
+        
+        def set_pg_num(pool, pg_num):
+            out = issue_cmd('ceph osd pool get {} pg_num'.format(pool), printCmd=False).split()
+            pg_cur = int(out[1])
+            if pg_cur == pg_num:
+                print 'Pool \'{}\' pg_num already set to {}'.format(pool, pg_num)
+            elif pg_cur > pg_num:
+                print 'Cannot decrease pool \'{}\' pg_num from {} to {}'.format(pool, pg_cur, pg_num)
+            else:
+                print 'Increasing pool \'{}\' pg_num from {} to {}'.format(pool, pg_cur, pg_num)
+                while pg_cur < pg_num:
+                    pg_cur *= 2
+                    if pg_cur > pg_num:
+                        pg_cur = pg_num
+        
+                    issue_cmd('ceph osd pool set {} pg_num {}'.format(pool, pg_cur))
+                    time.sleep(10)
+        
+                issue_cmd('ceph osd pool set {} pgp_num {}'.format(pool, pg_num))
+        
+        input = sys.stdin.readline() or '{}'
+        pool_pgs = ast.literal_eval(input.replace('=>', ': '))
+        for pool in pool_pgs:
+            set_pg_num(pool, pool_pgs[pool])
+        "
+        } |& tee -a /root/post-deploy.txt
+        fi
+        # END workaround for BZ 1283721
 
   ExtraDeployments:
     type: OS::Heat::SoftwareDeployments
