@@ -2,4 +2,6 @@ rhos_mirror: http://192.168.250.115
 remoteci_id: instance uuid
 login: dell
 password: changeme
+topic: default
+
 
