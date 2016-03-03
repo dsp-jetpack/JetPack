@@ -22,7 +22,7 @@ then
 else
   tmp_root_file=`mktemp`
   echo ${root_password} >> ${tmp_root_file}
-  sudo yum -y install sshpass 1>&2> /dev/null
+  sudo yum -y install sshpass --enablerepo "rhel-7-server-rhceph-1.3-calamari-rpms" 1>&2> /dev/null
   sshpass -f ${tmp_root_file} ssh-copy-id root@${ceph_node_ip} 1>&2> /dev/null
   rm ${tmp_root_file} 
 fi
