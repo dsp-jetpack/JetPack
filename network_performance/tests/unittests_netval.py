@@ -1,8 +1,9 @@
-from netvaltest import getResults, runIperf3, startIperf3Server, commandGenerator, runThreadedIperf, log
 import unittest
 import time
 import datetime
 from datetime import timedelta
+
+from network_testing.netvaltest import getResults, runIperf3, startIperf3Server, commandGenerator, runThreadedIperf, log
 
 class TestMyFunctions(unittest.TestCase):
     #(server_node, client_node, param_list, output, direction,
@@ -146,6 +147,6 @@ class TestMyFunctions(unittest.TestCase):
         #self, threadID, server_name, client_name, command, port
         self.assertTrue(runThreadedIperf('tID', 'nodeS', 'NodeC', self.command, 1000))
 
+# suite is all the test cases in this module
 
-if __name__ == '__main__':
-    unittest.main(exit=False)
+suite = unittest.TestLoader().loadTestsFromTestCase(TestMyFunctions)
