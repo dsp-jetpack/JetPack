@@ -31,16 +31,20 @@ from datetime import datetime
 
 logger = logging.getLogger("osp_deployer")
 
-
-def deploy():
+def setup_logging():
     import logging.config
-    isLinux = False
     if sys.platform.startswith('linux'):
         isLinux = True
     path = '/auto_results'
     if not os.path.exists(path):
         os.makedirs(path)
     logging.config.fileConfig('logging.conf')
+
+
+def deploy():
+    isLinux = False
+    if sys.platform.startswith('linux'):
+        isLinux = True
    
     try:
 
@@ -53,7 +57,7 @@ def deploy():
         parser.add_argument('-skip_sah','--skip_sah', help='Do not reinstall the SAH node',action='store_true', required=False)
         parser.add_argument('-skip_undercloud','--skip_undercloud', help='Do not reinstall the SAH or Undercloud',action='store_true', required=False)
         parser.add_argument('-skip_ceph_vm','--skip_ceph_vm', help='Do not reinstall the ceph vm',action='store_true', required=False)
-        args = parser.parse_args()
+        args, ignore = parser.parse_known_args()
 
         if args.skip_undercloud is True :
             logger.info("Skipping SAH & Undercloud install")
@@ -222,12 +226,12 @@ def deploy():
         logger.debug ("installing the overcloud ... this might take a while")
         director_vm.deploy_overcloud()
         director_vm.retreive_nodes_ips()
+        tester.verify_computes_virtualization_enabled()
 
         cmd = "source ~/stackrc;heat stack-list | grep overcloud | awk '{print $6}'"
         overcloud_status = Ssh.execute_command_tty(settings.director_node.external_ip, settings.director_install_account_user, settings.director_install_account_pwd,cmd)[0]
         logger.debug("=== Overcloud stack state : "+ overcloud_status )
-        director_vm.fix_controllers_vlan_range()
-	director_vm.fix_cinder_conf()
+	director_vm.fix_controllers_admin_auth_url()
 
         logger.info("====================================")
         logger.info(" OverCloud deployment status: " + overcloud_status)
@@ -246,6 +250,6 @@ def deploy():
 
 
 if __name__ == "__main__":
-
+        setup_logging()
         deploy()
 

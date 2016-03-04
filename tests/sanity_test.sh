@@ -31,6 +31,7 @@ EXTERNAL_NETWORK_NAME="nova"
 EXTERNAL_SUBNET_NAME="external_sub"
 STARTIP="192.168.190.2"
 ENDIP="192.168.190.30"
+EXTERNAL_VLAN="190"
 EXTERNAL_VLAN_NETWORK="192.168.190.0/24"
 GATEWAY_IP=192.168.190.1
 KEY_NAME="key_name"
@@ -201,7 +202,7 @@ create_the_networks(){
   ext_net_exists=$(neutron net-list | grep $EXTERNAL_NETWORK_NAME |  head -n 1  | awk '{print $4}')
   if [ "$ext_net_exists" != "$EXTERNAL_NETWORK_NAME" ]
   then
-    execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external"
+    execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external --provider:network_type vlan --provider:physical_network physext --provider:segmentation_id $EXTERNAL_VLAN"
     execute_command "neutron subnet-create --name $EXTERNAL_SUBNET_NAME --allocation-pool start=$STARTIP,end=$ENDIP --gateway $GATEWAY_IP --disable-dhcp $EXTERNAL_NETWORK_NAME $EXTERNAL_VLAN_NETWORK"  
   else
     info "#----- External network '$EXTERNAL_NETWORK_NAME' exists. Skipping"
@@ -299,9 +300,11 @@ setup_nova (){
 
 
 test_neutron_networking (){
-  vm_ip=$(nova list | grep "$NOVA_INSTANCE_NAME" | awk '{print $12}' | awk -F= '{print $2}')
-  subnet="${vm_ip%.[0-9]*}."
+  private_ip=$(nova list | grep "$NOVA_INSTANCE_NAME" | awk '{print $12}' | awk -F= '{print $2}')
+  private_ip=${private_ip%,}
+  subnet="${private_ip%.[0-9]*}."
 
+  # Test pinging the private IP of the instance from the network namespace
   while read name_space;
   do
     if [[ "$name_space" =~ "qdhcp-" ]];
@@ -309,18 +312,38 @@ test_neutron_networking (){
       ip netns exec "$name_space" ip a | grep -q "$subnet"
       if [[ "$?" == 0 ]];
       then
-        info "### Pinging the VM $vm_ip from netns $name_space"
-        ip netns exec ${name_space} ping -c 1 -w 5 ${vm_ip}
+        info "### Pinging the VM $private_ip from netns $name_space"
+        ip netns exec ${name_space} ping -c 1 -w 5 ${private_ip}
         if [[ "$?" == 0 ]]
         then
-          info "### Successfully pinged VM $vm_ip from netns $name_space"
+          info "### Successfully pinged VM $private_ip from netns $name_space"
         else
-          fatal "### Unable to ping VM $vm_ip from netns $name_space!  Aborting sanity test"
+          fatal "### Unable to ping VM $private_ip from netns $name_space!  Aborting sanity test"
         fi
         break
       fi
     fi
   done <<< "$(ip netns)"
+
+  # Allocate a floating IP
+  floating_ip_id=$(neutron floatingip-create $EXTERNAL_NETWORK_NAME | grep " id " | awk '{print $4}')
+  floating_ip=$(neutron floatingip-show $floating_ip_id | grep floating_ip_address | awk '{print $4}')
+
+  # Associate it with the instance
+  port_id=$(neutron port-list | grep $private_ip | awk '{print $2}')
+
+  neutron floatingip-associate $floating_ip_id $port_id
+  sleep 3
+
+  # Try pinging the floating IP directly from the controller
+  ping -c 1 -w 5 $floating_ip
+
+  if [[ "$?" == 0 ]]
+  then
+    info "### Successfully pinged VM's floating IP $floating_ip"
+  else
+    fatal "### Unable to ping VM's floating IP ${floating_ip}!  Aborting sanity test"
+  fi
 }
 
 
@@ -414,6 +437,15 @@ then
   if [[ "$arg" == "clean" ]]
   then
     info "### CLEANING MODE"  
+
+    info "### CLEANING UP THE FLOATING IP"
+    private_ip=$(nova list | grep "$NOVA_INSTANCE_NAME" | awk '{print $12}' | awk -F= '{print $2}')
+    private_ip=${private_ip%,}
+
+    floating_ip_id=$(neutron floatingip-list | grep $private_ip | awk '{print $2}')
+
+    neutron floatingip-disassociate $floating_ip_id
+    neutron floatingip-delete $floating_ip_id
 
     info "### DELETING NETWORKS"
     cmd=$(neutron subnet-list | awk '{print $2}' | grep -v ^ID | grep -v ^$)

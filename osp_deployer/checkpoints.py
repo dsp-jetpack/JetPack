@@ -14,7 +14,7 @@ class Checkpoints():
 
     def __init__(self):
         self.settings = Settings.settings
-        self.ping_success = "packets transmitted, 3 received"
+        self.ping_success = "packets transmitted, 1 received"
 
     def verify_deployer_settings(self):
         logger.info("==== Running environment sanity tests")
@@ -49,8 +49,12 @@ class Checkpoints():
     	return True
 
     def ping_host(self, external_ip, user, passwd, targetHost):
-        subscriptionStatus = Ssh.execute_command(external_ip, user, passwd, "ping " + targetHost + " -c 3 -w 30 ")[0]
-        return subscriptionStatus
+	for i in range(1, 30):
+            pingStatus = Ssh.execute_command(external_ip, user, passwd, "ping " + targetHost + " -c 1 -w 30 ")[0]
+            if self.ping_success in pingStatus:
+                logger.debug("Ping {} successful on attempt #{}".format(targetHost, i))
+                break
+        return pingStatus
 
     def sah_health_check(self):
         settings = Settings.settings
@@ -195,4 +199,16 @@ class Checkpoints():
         if not "Undercloud install complete." in re[0]:
             raise AssertionError("Director & Undercloud did not install properly, check /pilot/install-director.log for details")
 
+    def verify_computes_virtualization_enabled(self):
+	logger.debug("*** Verify the Compute nodes have KVM enabled *** ")
+	cmd = "source ~/stackrc;nova list | grep compute"
+        re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+        computes = re[0].split("\n")
+        computes.pop()
+        for each in computes:
+            provisioning_ip = each.split("|")[6].split("=")[1]        
+	    cmd = "ssh heat-admin@" + provisioning_ip + " \"ls -al /dev/kvm'\""
+            re =  Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+	    if "No such file" in re[0]:
+            	raise AssertionError("KVM Not running on the Compute node - make sure the node has been DTK'ed/Virtualization enabled in the Bios")
 
