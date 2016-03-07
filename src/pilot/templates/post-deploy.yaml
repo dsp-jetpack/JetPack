@@ -17,13 +17,10 @@ resources:
         if [[ $HOSTNAME =~ "cephstorage" ]]; then
         {
           echo "Apply ceph_tuning to ceph.conf..."
-          hiera ceph_tuning | python -c "
+          hiera ceph_tuning {} | python -c "
         import ast, os, sys
         input = ' '.join(map(str.strip, sys.stdin.readlines()))
-        if input == 'nil':
-            ceph_tuning = {}
-        else:
-            ceph_tuning = ast.literal_eval(input.replace('=>', ': '))
+        ceph_tuning = ast.literal_eval(input.replace('=>', ': '))
 
         conf_cur = '/etc/ceph/ceph.conf'
         lines = open(conf_cur, 'r').readlines()
@@ -59,11 +56,10 @@ resources:
         {
           echo "Checking Ceph pools pg_num..."
           sleep 10
-          hiera ceph_pool_pgs | python -c "
-        import ast, subprocess, sys, time
-        def issue_cmd(cmd, printCmd=True):
-            if printCmd:
-                print(cmd)
+          hiera ceph_pool_pgs {} | HOME="/root" python -c "
+        import ast, re, subprocess, sys, time
+        def issue_cmd(cmd):
+            print(cmd)
             for i in range(1, 10):
                 try:
                     return subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT)
@@ -72,15 +68,21 @@ resources:
                         print '  Cluster is busy, retrying...'
                         time.sleep(5)
                     else:
-                        sys.stderr.write('{}\nAborting due to fatal error.\n'.format(e.output))
+                        print '{}\nAborting due to fatal error.'.format(e.output)
                         sys.exit(1)
         
-            sys.stderr.write('Aborting due to excessive retries.\n')
+            print 'Aborting due to excessive retries.'
             sys.exit(1)
         
         def set_pg_num(pool, pg_num):
-            out = issue_cmd('ceph osd pool get {} pg_num'.format(pool), printCmd=False).split()
-            pg_cur = int(out[1])
+            out = issue_cmd('ceph osd pool get {} pg_num'.format(pool))
+            print(out)
+            m = re.search('(\S*)(pg_num: )(\d+)(\S*)', out)
+            if not m:
+                print 'Aborting due to error reading current pg_num.'
+                sys.exit(1)
+            
+            pg_cur = int(m.group(3))
             if pg_cur == pg_num:
                 print 'Pool \'{}\' pg_num already set to {}'.format(pool, pg_num)
             elif pg_cur > pg_num:
@@ -97,7 +99,7 @@ resources:
         
                 issue_cmd('ceph osd pool set {} pgp_num {}'.format(pool, pg_num))
         
-        input = sys.stdin.readline() or '{}'
+        input = ' '.join(map(str.strip, sys.stdin.readlines()))
         pool_pgs = ast.literal_eval(input.replace('=>', ': '))
         for pool in pool_pgs:
             set_pg_num(pool, pool_pgs[pool])

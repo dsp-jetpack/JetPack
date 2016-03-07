@@ -52,12 +52,6 @@ ceph::profile::params::osds:
   '/dev/sdp':
     journal: '/dev/sdc'
 
-ceph_pools:
-  - volumes
-  - vms
-  - images
-  - .rgw.buckets
-
 # CHANGEME: The following table lists the pg_num and pgp_num values for each
 # of the specified pools. Change the value for each pool based on the size of
 # Ceph cluster, using http://ceph.com/pgcalc for guidance. Small pools used by
@@ -68,9 +62,6 @@ ceph_pool_pgs:
   'vms': 256
   'images': 256
   '.rgw.buckets': 512
-
-ceph_tuning:
-  'max_open_files': 131072
 
 ceph_classes: []
 
