@@ -30,6 +30,9 @@ or
 * 5.0.0.e - added user_custom_instack_json & custom_instack_json settings to allow nodes scanning bypass
 * 5.0.0.f - renamed rhl71_iso to rhl72_iso
 * 5.0.0.g - added overcloud_deploy_timeout
+* 5.0.0.h - added sanity_test & run_sanity
+
+
 
 #####settings.properties
 * 5.0.0.a - Initial 5.0 version - some settings left over from 4.x might go away as this is still work in progress

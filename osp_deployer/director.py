@@ -586,6 +586,42 @@ class Director():
                     logger.debug(each)
                 logger.debug(" Failed to retreive the nodes ip information ")
 
+    def run_sanity_test(self):
+	if self.settings.run_sanity is True:
+	   logger.debug("Running sanity test")
+	   remoteSh = "/home/"+self.settings.director_install_account_user+"/sanity_test.sh"
+	   Scp.put_file(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd, self.settings.sanity_test, remoteSh)
+	   
+	   cmd = "source stackrc; nova list | grep controller |  head -n 1  | awk '{print $12}' | awk '{split($0,a,\"=\"); print a[3] a[2]}'"
+	   re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+           firstController = re[0].rstrip()
+	   
+	   cmds = [
+		'wget http://download.cirros-cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img',
+		'scp cirros-0.3.3-x86_64-disk.img heat-admin@'+firstController+':~',
+		'scp overcloudrc heat-admin@'+firstController+':~',
+		'scp sanity_test.sh heat-admin@'+firstController+':~'
+
+	   ]
+	   for cmd in cmds :
+                logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) )
+	   cmd = "ssh heat-admin@"+ firstController +" 'sudo chmod 777 /home/heat-admin/cirros-0.3.3-x86_64-disk.img'"
+           Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)	   
+
+	   cmd = "ssh heat-admin@"+ firstController +" 'sudo chmod 777 /home/heat-admin/sanity_test.sh'"
+           Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) 
+	   cmd = "ssh heat-admin@"+ firstController +" 'sudo sh -c \"source /home/heat-admin/overcloudrc;cd /home/heat-admin;./sanity_test.sh\"'"
+	   re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) 
+	   if "VALIDATION SUCCESS" in re[0]:
+		logger.info("Sanity Test Passed")
+           else:
+		logger.fatal("Sanity Test failed")
+		raise AssertionError("Sanity test failed - see log for details")	
+	else:
+	   logger.debug("NOT running sanity test")
+	   pass
+	
+
     def fix_controllers_admin_auth_url(self):
 	logger.debug("Workaround for known issue https://bugzilla.redhat.com/show_bug.cgi?id=1308422")
 	cmd = "source ~/stackrc;nova list | grep controller"

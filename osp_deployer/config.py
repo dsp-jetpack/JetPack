@@ -163,7 +163,12 @@ class Settings():
         self.rhel_install_location = self.bastion_settings_map['rhel_install_location']
         self.sah_kickstart= self.bastion_settings_map['sah_kickstart']
         self.cloud_repo_dir = self.bastion_settings_map['cloud_repo_dir']
-
+	if self.bastion_settings_map['run_sanity'].lower() == 'true':
+            self.run_sanity = True
+	    self.sanity_test = self.bastion_settings_map['sanity_test']
+        else:
+            self.run_sanity = False
+	
         self.deploy_ram_disk_image =self.bastion_settings_map['deploy_ram_disk_image']
         self.discovery_ram_disk_image =self.bastion_settings_map['discovery_ram_disk_image']
         self.overcloud_image = self.bastion_settings_map['overcloud_image']
