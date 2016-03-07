@@ -218,12 +218,3 @@ def main():
     #name = threading.currentThread().getName()
     #print name
     #print t.getName()
-        
-    
-    #
- 
-if __name__ == '__main__':
-    main()
-    
-
-    
