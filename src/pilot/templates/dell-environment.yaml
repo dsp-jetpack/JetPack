@@ -1,3 +1,19 @@
 resource_registry:
     OS::TripleO::NodeUserData: HOME/pilot/templates/first-boot.yaml
     OS::TripleO::NodeExtraConfigPost: HOME/pilot/templates/post-deploy.yaml
+
+parameter_defaults:
+  # Override ceph_pools so the .rgw.buckets pool is created during deployment.
+  # Place this in ExtraConfig rather than CephStorageExtraConfig so the list
+  # of default pools is available on all nodes.
+  ExtraConfig:
+    ceph_pools: [
+      "volumes",
+      "vms",
+      "images",
+      ".rgw.buckets"
+    ]
+  CephStorageExtraConfig:
+    ceph_tuning:
+      'max_open_files': 131072
+
