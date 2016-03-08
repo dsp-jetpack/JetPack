@@ -48,10 +48,14 @@ def run_tempest():
     parser.add_argument('-skip_ceph_vm','--skip_ceph_vm', help='Do not reinstall the ceph vm',action='store_true', required=False)
     args, ignore = parser.parse_known_args()
 
-    logger.info("=== Running tempest ==")
     settings = Settings(args.settings)
-    director_vm = Director()
-    director_vm.run_tempest()
+    
+    if settings.run_tempest is True:
+        logger.info("=== Running tempest ==")
+    	director_vm = Director()
+    	director_vm.run_tempest()
+    else:
+	logger.debug("not running tempest")
 	
 
 def deploy():
@@ -267,6 +271,6 @@ def deploy():
 
 if __name__ == "__main__":
         setup_logging()
-        deploy()
+        #deploy()
 	run_tempest()
 
