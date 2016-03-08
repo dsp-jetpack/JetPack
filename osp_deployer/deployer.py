@@ -271,6 +271,6 @@ def deploy():
 
 if __name__ == "__main__":
         setup_logging()
-        #deploy()
+        deploy()
 	run_tempest()
 
