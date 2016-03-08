@@ -32,6 +32,7 @@ or
 * 5.0.0.g - added overcloud_deploy_timeout
 * 5.0.0.h - added sanity_test & run_sanity
 * 5.0.0.i - added eqlx backend settings
+* 5.0.0.j - added run_tempest & tempest_smoke_only
 
 
 #####settings.properties
