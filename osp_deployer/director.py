@@ -622,8 +622,7 @@ class Director():
 	   pass
 	
     def run_tempest(self):
-	if self.settings.run_tempest is True:
-           logger.debug("Running tempest")
+	logger.debug("running tempest")
 	cmds = [
 	     "source ~/overcloudrc;mkdir /home/"+self.settings.director_install_account_user+"/tempest",
              'source ~/overcloudrc;cd ~/tempest;/usr/share/openstack-tempest-liberty/tools/configure-tempest-directory',

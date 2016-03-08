@@ -184,7 +184,7 @@ class Settings():
               self.run_tempest = False
 	      self.tempest_smoke_only = False
         except:
-              self.tempest = False
+              self.run_tempest = False
 	      self.tempest_smoke_only = False
 	
         self.deploy_ram_disk_image =self.bastion_settings_map['deploy_ram_disk_image']
