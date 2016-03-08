@@ -23,26 +23,36 @@
 #set -e 
 
 #Variables
-TENANT_NETWORK_NAME="tenant_net"
-TENANT_ROUTER_NAME="tenant_201_router"
 VLAN_NETWORK="192.168.201.0/24"
-VLAN_NAME="tenant_201"
 EXTERNAL_NETWORK_NAME="nova"
 EXTERNAL_SUBNET_NAME="external_sub"
-STARTIP="192.168.190.2"
-ENDIP="192.168.190.30"
-EXTERNAL_VLAN="190"
-EXTERNAL_VLAN_NETWORK="192.168.190.0/24"
-GATEWAY_IP=192.168.190.1
+STARTIP="192.168.191.2"
+ENDIP="192.168.191.30"
+EXTERNAL_VLAN="191"
+EXTERNAL_VLAN_NETWORK="192.168.191.0/24"
+GATEWAY_IP=192.168.191.1
 KEY_NAME="key_name"
-NOVA_INSTANCE_NAME="cirros_test"
-VOLUME_NAME="volume_test"
 IMAGE_NAME="cirros"
-PROJECT_NAME="sanity"
-USER_NAME="sanity"
 PASSWORD="cr0wBar!"
 EMAIL="ce-cloud@dell.com"
-SECURITY_GROUP_NAME="sanity_security_group"
+
+BASE_SECURITY_GROUP_NAME="sanity_security_group"
+BASE_TENANT_NETWORK_NAME="tenant_net"
+BASE_TENANT_ROUTER_NAME="tenant_201_router"
+BASE_VLAN_NAME="tenant_201"
+BASE_NOVA_INSTANCE_NAME="cirros_test"
+BASE_VOLUME_NAME="volume_test"
+BASE_PROJECT_NAME="sanity"
+BASE_USER_NAME="sanity"
+
+SECURITY_GROUP_NAME="$BASE_SECURITY_GROUP_NAME"
+TENANT_NETWORK_NAME="$BASE_TENANT_NETWORK_NAME"
+TENANT_ROUTER_NAME="$BASE_TENANT_ROUTER_NAME"
+VLAN_NAME="$BASE_VLAN_NAME"
+NOVA_INSTANCE_NAME="$BASE_NOVA_INSTANCE_NAME"
+VOLUME_NAME="$BASE_VOLUME_NAME"
+PROJECT_NAME="$BASE_PROJECT_NAME"
+USER_NAME="$BASE_USER_NAME"
 
 shopt -s nullglob
 
@@ -77,24 +87,33 @@ debug() { [[ $DEBUG -le $LOG_LEVEL ]] && log "DEBUG: $@"; }
 init(){
   info "### Random init stuff "
   cd ~
-  source overcloudrc
-  info "### PCS Status "
-  pcs status
-  pcs status | grep -i stopped
 
+  # Find the IP for controller0 from the undercloud
+  source stackrc
+  CONTROLLER=$(nova show overcloud-controller-0|grep "ctlplane network"| awk -F\| '{print $3}'| tr -d ' ')
+
+  # Get a list of the IPs of all the controller nodes for later use
+  CONTROLLERS=$(nova list | grep overcloud-controller- | awk -F\| '{print $7}' | awk -F= '{print $2}')
+
+  # Now switch to point the OpenStack commands at the overcloud
+  source overcloudrc
+
+  info "### PCS Status "
+  ssh heat-admin@$CONTROLLER 'sudo /usr/sbin/pcs status'
+  ssh heat-admin@$CONTROLLER 'sudo /usr/sbin/pcs status|grep -i stopped'
 
   info "###Ensure db and rabbit services are in the active state"
   execute_command "openstack-service status"
-  ps aux | grep rabbit
-  ps -ef | grep mysqld
-  ps -ef | grep mariadb
+  ssh heat-admin@$CONTROLLER 'sudo ps aux | grep rabbit'
+  ssh heat-admin@$CONTROLLER 'ps -ef | grep mysqld'
+  ssh heat-admin@$CONTROLLER 'ps -ef | grep mariadb'
 
   info "### Verify OpenStack services are running."
-  execute_command "nova-manage service list"
-  execute_command "cinder-manage service list"
-  execute_command "systemctl status openstack-keystone"
-  execute_command "systemctl status openstack-glance-api"
-  execute_command "systemctl status openstack-glance-registry"
+  execute_command "ssh heat-admin@$CONTROLLER sudo nova-manage service list"
+  execute_command "ssh heat-admin@$CONTROLLER sudo cinder-manage service list"
+  execute_command "ssh heat-admin@$CONTROLLER systemctl status openstack-keystone"
+  execute_command "ssh heat-admin@$CONTROLLER systemctl status openstack-glance-api"
+  execute_command "ssh heat-admin@$CONTROLLER systemctl status openstack-glance-registry"
 }
 
 
@@ -131,20 +150,6 @@ get_unique_name (){
 }
 
 
-check_service(){
-  SERVICE="$1"
-
-  if [ "'systemctl is-active $SERVICE'" != "active" ]
-  then
-    echo "$SERVICE wasnt running so attempting restart"
-    systemctl restart $SERVICE
-    systemctl status $SERVICE 
-    systemctl enable $SERVICE
-  fi
-  echo "$SERVICE is currently running"
-}
-
-
 set_unique_names(){
   info "###get_unique-name"
   inst_exists=$(nova list | grep $NOVA_INSTANCE_NAME |  head -n 1  | awk '{print $4}')
@@ -156,8 +161,6 @@ set_unique_names(){
      TENANT_NETWORK_NAME="$TENANT_NETWORK_NAME$NAME"
      TENANT_ROUTER_NAME="$TENANT_ROUTER_NAME$NAME"
      VLAN_NAME="$VLAN_NAME$NAME"
-     EXTERNAL_NETWORK_NAME="$EXTERNAL_NETWORK_NAME$NAME"
-     EXTERNAL_SUBNET_NAME="$EXTERNAL_SUBNET_NAME$NAME"
      NOVA_INSTANCE_NAME="$NOVA_INSTANCE_NAME$NAME"
      VOLUME_NAME="$VOLUME_NAME$NAME"
      PROJECT_NAME="$PROJECT_NAME$NAME"
@@ -197,7 +200,7 @@ create_the_networks(){
     info "#----- $TENANT_ROUTER_NAME exists. Skipping"
   fi
 
-  execute_command "grep network_vlan_ranges /etc/neutron/plugin.ini"
+  execute_command "ssh heat-admin@$CONTROLLER sudo grep network_vlan_ranges /etc/neutron/plugin.ini"
 
   ext_net_exists=$(neutron net-list | grep $EXTERNAL_NETWORK_NAME |  head -n 1  | awk '{print $4}')
   if [ "$ext_net_exists" != "$EXTERNAL_NETWORK_NAME" ]
@@ -299,51 +302,60 @@ setup_nova (){
 }
 
 
+ping_from_netns(){
+
+  ip=$1
+  name_space=$2
+
+  # Find the controller that has the IP set to an interface in the netns
+  for controller in $CONTROLLERS
+  do
+    ssh heat-admin@$controller "sudo /sbin/ip netns exec ${name_space} ip a" | grep -q $ip
+    if [[ "$?" == 0 ]]
+    then
+      break
+    fi
+  done
+
+  info "### Pinging $ip from netns $name_space on controller $controller"
+  execute_command "ssh heat-admin@$controller sudo ip netns exec ${name_space} ping -c 1 -w 5 ${ip}"
+  if [[ "$?" == 0 ]]
+  then
+      info "### Successfully pinged $ip from netns $name_space on controller $controller"
+  else
+      fatal "### Unable to ping $ip from netns $name_space on controller $controller!  Aborting sanity test"
+  fi
+}
+
+
 test_neutron_networking (){
-  private_ip=$(nova list | grep "$NOVA_INSTANCE_NAME" | awk '{print $12}' | awk -F= '{print $2}')
-  private_ip=${private_ip%,}
-  subnet="${private_ip%.[0-9]*}."
+
+  private_ip=$(nova show $NOVA_INSTANCE_NAME | grep "$TENANT_NETWORK_NAME network" | awk -F\| '{print $3}' | tr -d " ")
+
+  net_ids=$(neutron net-show -F id -F subnets $TENANT_NETWORK_NAME | grep -E 'id|subnets' | awk '{print $4}')
+  net_id=$(echo $net_ids | awk '{print $1}')
+  subnet_id=$(echo $net_ids | awk '{print $2}')
 
   # Test pinging the private IP of the instance from the network namespace
-  while read name_space;
-  do
-    if [[ "$name_space" =~ "qdhcp-" ]];
-    then
-      ip netns exec "$name_space" ip a | grep -q "$subnet"
-      if [[ "$?" == 0 ]];
-      then
-        info "### Pinging the VM $private_ip from netns $name_space"
-        ip netns exec ${name_space} ping -c 1 -w 5 ${private_ip}
-        if [[ "$?" == 0 ]]
-        then
-          info "### Successfully pinged VM $private_ip from netns $name_space"
-        else
-          fatal "### Unable to ping VM $private_ip from netns $name_space!  Aborting sanity test"
-        fi
-        break
-      fi
-    fi
-  done <<< "$(ip netns)"
+  ping_from_netns $private_ip "qdhcp-${net_id}"
 
   # Allocate a floating IP
+  info "Allocating floating IP"
   floating_ip_id=$(neutron floatingip-create $EXTERNAL_NETWORK_NAME | grep " id " | awk '{print $4}')
   floating_ip=$(neutron floatingip-show $floating_ip_id | grep floating_ip_address | awk '{print $4}')
 
-  # Associate it with the instance
-  port_id=$(neutron port-list | grep $private_ip | awk '{print $2}')
+  # Find the port to associate it with
+  port_id=$(neutron port-list | grep $subnet_id | grep $private_ip | awk '{print $2}')
+  router_id=$(neutron router-show -F id $TENANT_ROUTER_NAME | grep "id" | awk '{print $4}')
 
-  neutron floatingip-associate $floating_ip_id $port_id
+  # And finally associate the floating IP with the instance
+  execute_command "neutron floatingip-associate $floating_ip_id $port_id"
+
   sleep 3
 
-  # Try pinging the floating IP directly from the controller
-  ping -c 1 -w 5 $floating_ip
-
-  if [[ "$?" == 0 ]]
-  then
-    info "### Successfully pinged VM's floating IP $floating_ip"
-  else
-    fatal "### Unable to ping VM's floating IP ${floating_ip}!  Aborting sanity test"
-  fi
+  # Test pinging the floating IP of the instance from the virtual router
+  # network namespace
+  ping_from_netns $floating_ip "qrouter-${router_id}"
 }
 
 
@@ -438,72 +450,70 @@ then
   then
     info "### CLEANING MODE"  
 
-    info "### CLEANING UP THE FLOATING IP"
-    private_ip=$(nova list | grep "$NOVA_INSTANCE_NAME" | awk '{print $12}' | awk -F= '{print $2}')
-    private_ip=${private_ip%,}
-
-    floating_ip_id=$(neutron floatingip-list | grep $private_ip | awk '{print $2}')
-
-    neutron floatingip-disassociate $floating_ip_id
-    neutron floatingip-delete $floating_ip_id
-
-    info "### DELETING NETWORKS"
-    cmd=$(neutron subnet-list | awk '{print $2}' | grep -v ^ID | grep -v ^$)
-    for subnet in $cmd
+    info "### Deleting the floating ips"
+    private_ips=$(nova list | grep "$BASE_NOVA_INSTANCE_NAME" | awk '{print $12}' | awk -F= '{print $2}')
+    for private_ip in $private_ips
     do
-      if [ "$subnet" != "id" ]
-      then
-        echo subet_id=$subnet 
+      private_ip=${private_ip%,}
+      public_ip_id=$(neutron floatingip-list | grep $private_ip | awk '{print $2}')
 
-        cmd=$(neutron router-list | awk '{print $2}' | grep -v ^ID | grep -v ^$)
-        for router in $cmd
-        do
-          if [ "$router" != "id" ]
-          then
-            echo router_id=$router 
-            neutron router-gateway-clear $router
-            neutron router-interface-delete $router $subnet
-            neutron router-delete $router
-          fi
-        done
-        neutron subnet-delete $subnet
-      fi
+      [[ $public_ip_id ]] && neutron floatingip-disassociate $public_ip_id
+      [[ $public_ip_id ]] && neutron floatingip-delete $public_ip_id
     done
-
-    #now delete the networks
-    cmd=$(neutron net-list | awk '{print $2}' | grep -v ^ID | grep -v ^$)
-    for V in $cmd
-    do
-      echo $V ;
-      neutron net-delete $V ;
-    done
-
-    info   "#### Deleting the images"
-    glance image-list | awk '$2 && $2 != "ID" {print $2}' | xargs -n1 glance image-delete
 
     info   "#### Deleting the instances"
-    nova list | awk '$2 && $2 != "ID" {print $2}' | xargs -n1 nova delete
- 
-    info "### Waiting for the instances to be deleted..."
-    num_instances=$(nova list | awk '$2 && $2 != "ID" {print $2}'|wc -l)
+    instance_ids=$(nova list | grep $NOVA_INSTANCE_NAME | awk '{print $2}')
+    [[ $instance_ids ]] && echo $instance_ids | xargs -n1 nova delete
+
+    info "### Waiting for the instance to be deleted..."
+    num_instances=$(nova list | grep $NOVA_INSTANCE_NAME | wc -l)
     while [ "$num_instances" -gt 0 ]; do
       info "#### ${num_instances} remain.  Sleeping..."
       sleep 3
-      num_instances=$(nova list | awk '$2 && $2 != "ID" {print $2}'|wc -l)
+      num_instances=$(nova list | grep $NOVA_INSTANCE_NAME | wc -l)
     done
 
-    info   "#### Deleting the security group"
-    neutron security-group-delete "$SECURITY_GROUP_NAME"
-
     info   "#### Deleting the volumes"
-    cinder list | awk '$2 && $2 != "ID" {print $2}' | xargs -n1 cinder delete
+    volume_ids=$(cinder list | grep $VOLUME_NAME | awk '{print $2}')
+    [[ $volume_ids ]] && echo $volume_ids | xargs -n1 cinder delete
 
     info "### Waiting for the volumes to be deleted..."
-    num_volumes=$(cinder list | awk '$2 && $2 != "ID" {print $2}'|wc -l)
+    num_volumes=$(cinder list | grep $VOLUME_NAME | wc -l)
     while [ "$num_volumes" -gt 0 ]; do
       info "#### ${num_volumes} remain.  Sleeping..."
       sleep 3
-      num_volumes=$(cinder list | awk '$2 && $2 != "ID" {print $2}'|wc -l)
+      num_volumes=$(cinder list | grep $VOLUME_NAME | wc -l)
+    done
+
+    info   "#### Deleting the images"
+    image_ids=$(glance image-list | grep $IMAGE_NAME | awk '{print $2}')
+    [[ $image_ids ]] && echo $image_ids | xargs -n1 glance image-delete
+
+    info   "#### Deleting the security groups"
+    security_group_ids=$(neutron security-group-list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
+    [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 neutron security-group-delete
+
+    info "### Deleting networks"
+
+    # Pick up all of the subnets in the tenants and the external subnet
+    subnet_ids=$(neutron subnet-list | grep -E "$BASE_VLAN_NAME|$EXTERNAL_SUBNET_NAME" | awk '{print $2}')
+    for subnet_id in $subnet_ids
+    do
+      # Pick up all of the tenant routers
+      router_ids=$(neutron router-list | grep $BASE_TENANT_ROUTER_NAME | awk '{print $2}')
+      for router_id in $router_ids
+      do
+        neutron router-gateway-clear $router_id
+        neutron router-interface-delete $router_id $subnet_id
+        neutron router-delete $router_id
+      done
+    done
+
+    # Now delete the networks
+    network_ids=$(neutron net-list | grep -E "$BASE_TENANT_NETWORK_NAME|$EXTERNAL_NETWORK_NAME" | awk '{print $2}')
+    for network_id in $network_ids
+    do
+      neutron net-delete $network_id
     done
   fi
   exit 1
