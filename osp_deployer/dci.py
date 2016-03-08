@@ -3,7 +3,7 @@
 from datetime import datetime
 import logging
 from pprint import pprint
-import sys, os
+import sys, os, traceback
 import yaml
 import ConfigParser
 from dciclient.v1.logger import DciHandler
@@ -92,15 +92,19 @@ with open('/var/www/html/RH7-RHOS-8.0.repo', 'w') as f:
 
 dcijobstate.create(dci_context, 'pre-run', 'initializing', dci_context.last_job_id)
 setup_logging(dci_context)
-dcijobstate.create(dci_context, 'running', 'running', dci_context.last_job_id)
+dcijobstate.create(dci_context, 'running', 'Running deployment', dci_context.last_job_id)
 
 try:
    osp_deployer.deployer.deploy()
-   dcijobstate.create(dci_context, 'post-run','todo :: tempest etc.', dci_context.last_job_id)
+   dcijobstate.create(dci_context, 'post-run','Running tempest', dci_context.last_job_id)
+   osp_deployer.deployer.run_tempest()
    dcijobstate.create(dci_context, 'success', 'All done', dci_context.last_job_id)
 except:
    print " somebody set us up the bomb "
    dcijobstate.create(dci_context, 'failure', 'failure', dci_context.last_job_id)
+   e = sys.exc_info()[0]
+   print e
+   print traceback.format_exc()
 
 
 

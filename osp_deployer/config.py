@@ -163,11 +163,29 @@ class Settings():
         self.rhel_install_location = self.bastion_settings_map['rhel_install_location']
         self.sah_kickstart= self.bastion_settings_map['sah_kickstart']
         self.cloud_repo_dir = self.bastion_settings_map['cloud_repo_dir']
-	if self.bastion_settings_map['run_sanity'].lower() == 'true':
-            self.run_sanity = True
-	    self.sanity_test = self.bastion_settings_map['sanity_test']
-        else:
-            self.run_sanity = False
+	
+	try:
+	   if self.bastion_settings_map['run_sanity'].lower() == 'true':
+              self.run_sanity = True
+	      self.sanity_test = self.bastion_settings_map['sanity_test']
+           else:
+              self.run_sanity = False
+	except:
+	      self.run_sanity = False
+
+	try:
+           if self.bastion_settings_map['run_tempest'].lower() == 'true':
+              self.run_tempest = True
+	      if self.bastion_settings_map['tempest_smoke_only'].lower() == 'true':
+	         self.tempest_smoke_only = True
+	      else:
+		 self.tempest_smoke_only = False
+           else:
+              self.run_tempest = False
+	      self.tempest_smoke_only = False
+        except:
+              self.tempest = False
+	      self.tempest_smoke_only = False
 	
         self.deploy_ram_disk_image =self.bastion_settings_map['deploy_ram_disk_image']
         self.discovery_ram_disk_image =self.bastion_settings_map['discovery_ram_disk_image']

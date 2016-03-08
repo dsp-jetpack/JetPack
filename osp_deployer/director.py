@@ -621,7 +621,24 @@ class Director():
 	   logger.debug("NOT running sanity test")
 	   pass
 	
-
+    def run_tempest(self):
+	if self.settings.run_tempest is True:
+           logger.debug("Running tempest")
+	cmds = [
+	     "source ~/overcloudrc;mkdir /home/"+self.settings.director_install_account_user+"/tempest",
+             'source ~/overcloudrc;cd ~/tempest;/usr/share/openstack-tempest-liberty/tools/configure-tempest-directory',
+             'source ~/overcloudrc;cd ~/tempest;tools/config_tempest.py --deployer-input ~/tempest-deployer-input.conf --debug --create identity.uri $OS_AUTH_URL identity.admin_password $OS_PASSWORD'
+	]
+	for cmd in cmds :
+                Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) 
+	if self.settings.tempest_smoke_only is True:
+		cmd = "source ~/overcloudrc;cd ~/tempest;tools/run-tests.sh '.*smoke'"
+	else :
+		cmd =  "source ~/overcloudrc;cd ~/tempest;tools/run-tests.sh"
+	logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) )
+	#TOTO : grab the log files , copy them to the bastion ?
+	logger.debug("Finished running tempest")
+    
     def fix_controllers_admin_auth_url(self):
 	logger.debug("Workaround for known issue https://bugzilla.redhat.com/show_bug.cgi?id=1308422")
 	cmd = "source ~/stackrc;nova list | grep controller"
