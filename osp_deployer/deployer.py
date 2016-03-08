@@ -40,6 +40,23 @@ def setup_logging():
         os.makedirs(path)
     logging.config.fileConfig('logging.conf')
 
+def run_tempest():
+    parser = argparse.ArgumentParser(description='Jetstream 5.x deployer')
+    parser.add_argument('-s','--settings', help='ini settings file, e.g settings/acme.ini', required=True)
+    parser.add_argument('-skip_sah','--skip_sah', help='Do not reinstall the SAH node',action='store_true', required=False)
+    parser.add_argument('-skip_undercloud','--skip_undercloud', help='Do not reinstall the SAH or Undercloud',action='store_true', required=False)
+    parser.add_argument('-skip_ceph_vm','--skip_ceph_vm', help='Do not reinstall the ceph vm',action='store_true', required=False)
+    args, ignore = parser.parse_known_args()
+
+    settings = Settings(args.settings)
+    
+    if settings.run_tempest is True:
+        logger.info("=== Running tempest ==")
+    	director_vm = Director()
+    	director_vm.run_tempest()
+    else:
+	logger.debug("not running tempest")
+	
 
 def deploy():
     isLinux = False
@@ -239,7 +256,9 @@ def deploy():
         logger.info("====================================")
         if not "CREATE_COMPLETE" in overcloud_status:
             raise AssertionError("OverCloud did not install properly : " + overcloud_status)
+	logger.info("Running Sanity tests")
 	director_vm.run_sanity_test()
+	
 
     except:
         logger.error(traceback.format_exc())
@@ -253,4 +272,5 @@ def deploy():
 if __name__ == "__main__":
         setup_logging()
         deploy()
+	run_tempest()
 
