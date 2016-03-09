@@ -246,12 +246,6 @@ setup_glance(){
 
   info "### Setting up glance"""
 
-  if [ ! -f ./cirros-0.3.3-x86_64-disk.img ]; then
-    execute_command "wget http://download.cirros-cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img"
-  else
-    info "#----- Cirros image exists. Skipping"
-  fi
-
   image_exists=$(glance image-list | grep $IMAGE_NAME |  head -n 1  | awk '{print $4}')
   if [ "$image_exists" != "$IMAGE_NAME" ]
   then

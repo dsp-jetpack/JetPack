@@ -239,6 +239,7 @@ def deploy():
         logger.info("====================================")
         if not "CREATE_COMPLETE" in overcloud_status:
             raise AssertionError("OverCloud did not install properly : " + overcloud_status)
+	director_vm.run_sanity_test()
 
     except:
         logger.error(traceback.format_exc())
