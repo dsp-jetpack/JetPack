@@ -73,13 +73,12 @@ mk_bundle() {
 }
 
 
-
-# checksum the base directory files
-(cd $dest; sha256sum * > ${checksum_file})
-
 # make bundles
 mk_bundle dell-mgmt-node mgmt ceph_vm.vlock director_vm.vlock
 mk_bundle dell-pilot-deploy pilot common controller.vlock compute.vlock ceph.vlock
+
+# checksum the base directory files
+(cd $dest; sha256sum * > ${checksum_file})
 
 echo "Done! - release bundles and files are in ${dest}."
 echo "  Use 'sha256sum -c ${checksum_file}' to verify."
