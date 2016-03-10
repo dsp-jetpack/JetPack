@@ -646,8 +646,9 @@ class Director():
 		cmd = "source ~/overcloudrc;cd ~/tempest;tools/run-tests.sh '.*smoke'"
 	else :
 		cmd =  "source ~/overcloudrc;cd ~/tempest;tools/run-tests.sh"
-	logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) )
-	#TOTO : grab the log files , copy them to the bastion ?
+	Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) 
+	Scp.get_file(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,"/auto_results/tempest.xml", "/home/"+self.settings.director_install_account_user+"/tempest/tempest.xml")
+	Scp.get_file(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,"/auto_results/tempest.log", "/home/"+self.settings.director_install_account_user+"/tempest/tempest.log")
 	logger.debug("Finished running tempest")
     
     def fix_controllers_admin_auth_url(self):
