@@ -32,7 +32,7 @@ class Scp():
         trans = paramiko.Transport((adress, 22))
         trans.connect(username = user, password = passw)
         sftp = paramiko.SFTPClient.from_transport(trans)
-        sftp.get(localfile, remotefile)
+        sftp.get(remotefile, localfile)
         sftp.close()
         trans.close()
 

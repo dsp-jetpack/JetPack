@@ -98,6 +98,16 @@ try:
    osp_deployer.deployer.deploy()
    dcijobstate.create(dci_context, 'post-run','Running tempest', dci_context.last_job_id)
    osp_deployer.deployer.run_tempest()
+   try:
+   	with open('/auto_results/tempest.xml', 'r') as f:
+   	   dcifile.create(
+       		dci_context,
+       		'tempest_result.xml',
+       		f.read(),
+       		'application/xml',
+       		dci_context.last_jobstate_id)
+   except:
+	pass
    dcijobstate.create(dci_context, 'success', 'All done', dci_context.last_job_id)
 except:
    print " somebody set us up the bomb "
