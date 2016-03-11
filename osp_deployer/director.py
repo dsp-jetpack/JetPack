@@ -248,13 +248,14 @@ class Director():
                 raise AssertionError("Failed to assign Storage node role to mac " + node.provisioning_mac_address )
 
     def setup_templates(self):
-		# Re-upload the yaml files in case we're trying to leave the undercloud
+	 # Re-upload the yaml files in case we're trying to leave the undercloud
          # intact but want to redeploy with a different config.
  
          install_admin_user = self.settings.director_install_account_user
          install_admin_password = self.settings.director_install_account_pwd
 	 self.setup_networking()
 	 self.setup_storage()
+	 self.setup_eqlx()
 
     def setup_storage(self):
          if len(self.settings.ceph_nodes) == 0:
@@ -327,6 +328,36 @@ class Director():
          Scp.put_file(self.settings.director_node.external_ip, install_admin_user, install_admin_password, tmp_name, dst_name)
          os.remove(tmp_name)
 
+    def setup_eqlx(self):
+	
+	if self.settings.enable_eqlx_backend is False:
+	   logger.debug("not setting up eqlx backend")
+	   return
+
+	logger.debug("configuring eql backend")
+	#Re - Upload the yaml files in case we're trying to leave the undercloud intact but want to redeploy with a different config
+	eqlx_yaml = "/home/"+ self.settings.director_install_account_user +"/pilot/templates/dell-eqlx-environment.yaml"
+	Scp.put_file( self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd, self.settings.eqlx_yaml, eqlx_yaml)
+
+	cmds = [
+	   'sed -i "s|CinderEnableEqlxBackend: .*|CinderEnableEqlxBackend: true|" ' + eqlx_yaml,
+           'sed -i "s|CinderEqlxBackendName: .*|CinderEqlxBackendName: ' + "'" +  self.settings.eqlx_backend_name + "'" + '|" ' + eqlx_yaml,
+           'sed -i "s|CinderEqlxSanIp: .*|CinderEqlxSanIp: ' + "'" +  self.settings.eqlx_san_ip + "'" + '|" ' + eqlx_yaml,
+           'sed -i "s|CinderEqlxSanLogin: .*|CinderEqlxSanLogin: ' + "'" +  self.settings.eqlx_san_login + "'" + '|" ' + eqlx_yaml,
+           'sed -i "s|CinderEqlxSanPassword: .*|CinderEqlxSanPassword: ' + "'" +  self.settings.eqlx_san_password + "'" + '|" ' + eqlx_yaml,
+           'sed -i "s|CinderEqlxSanThinProvision: .*|CinderEqlxSanThinProvision: ' +  self.settings.eqlx_thin_provisioning + '|" ' + eqlx_yaml,
+           'sed -i "s|CinderEqlxGroupname: .*|CinderEqlxGroupname: ' + "'" +  self.settings.eqlx_group_n + "'" + '|" ' + eqlx_yaml,
+           'sed -i "s|CinderEqlxPool: .*|CinderEqlxPool: ' + "'" +  self.settings.eqlx_pool + "'" + '|" ' + eqlx_yaml,
+           'sed -i "s|CinderEqlxChapLogin: .*|CinderEqlxChapLogin: ' + "'" +  self.settings.eqlx_ch_login + "'" + '|" ' + eqlx_yaml,
+           'sed -i "s|CinderEqlxChapPassword: .*|CinderEqlxChapPassword: ' + "'" +  self.settings.eqlx_ch_pass + "'" + '|" ' + eqlx_yaml,
+           'sed -i "s|CinderEqlxUseChap: .*|CinderEqlxUseChap: ' +  self.settings.eqlx_use_chap + '|" ' + eqlx_yaml,
+	]
+	for cmd in cmds:
+            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+	logger.info("Applying workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1314073")
+	cmd = "sudo sed -i 's|2015-11-06|2015-10-15|' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/controller/cinder-eqlx.yaml"
+	Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+
     def setup_networking(self):
 
         install_admin_user = self.settings.director_install_account_user
@@ -340,7 +371,6 @@ class Director():
         controllerYaml = "/home/"+install_admin_user+"/pilot/templates/nic-configs/controller.yaml";
 
 	#Re - Upload the yaml files in case we're trying to leave the undercloud intact but want to redeploy with a different config
-	#and replace the HOME in the netwrk env that install director would have previously updated
         Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.network_env_yaml, networkYaml)
         Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.ceph_storage_yaml, storageYaml)
         Scp.put_file( self.settings.director_node.external_ip, install_admin_user, install_admin_password, self.settings.compute_yaml, computeYaml)
@@ -349,12 +379,6 @@ class Director():
         #cmd = "sudo chmod 777 " +networkYaml
         #logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 	
-	cmd ="sed -i 's/HOME\\//\\/home\\/"+install_admin_user+"\\//' " + networkYaml
-	logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
-
-	cmd ="sed -i 's/HOME\\//\\/home\\/"+install_admin_user+"\\//' " +  "/home/"+install_admin_user+"/pilot/templates/dell-environment.yaml"
-        logger.debug( Ssh.execute_command(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
-
         cmds = [
             'sed -i "s|ControlPlaneDefaultRoute:.*|ControlPlaneDefaultRoute: ' + self.settings.director_node.provisioning_ip + '|" ' + networkYaml,
             'sed -i "s|EC2MetadataIp:.*|EC2MetadataIp: ' + self.settings.director_node.provisioning_ip + '|" ' + networkYaml,
@@ -446,6 +470,8 @@ class Director():
         cmd = "cd ~/pilot;source ~/stackrc;./deploy-overcloud.py" + " --computes " + str(len(self.settings.compute_nodes)) + " --controllers " + str(len(self.settings.controller_nodes))  +" --storage " + str(len(self.settings.ceph_nodes)) + " --vlan " + self.settings.tenant_vlan_range
         if self.settings.overcloud_deploy_timeout != "90":
             cmd += " --timeout "+ self.settings.overcloud_deploy_timeout
+	if self.settings.enable_eqlx_backend is True:
+	    cmd += " --enable_eqlx"
         logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 
     def delete_overcloud(self):
@@ -592,25 +618,11 @@ class Director():
 	   remoteSh = "/home/"+self.settings.director_install_account_user+"/sanity_test.sh"
 	   Scp.put_file(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd, self.settings.sanity_test, remoteSh)
 	   
-	   cmd = "source stackrc; nova list | grep controller |  head -n 1  | awk '{print $12}' | awk '{split($0,a,\"=\"); print a[3] a[2]}'"
-	   re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
-           firstController = re[0].rstrip()
-	   
-	   cmds = [
-		'wget http://download.cirros-cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img',
-		'scp cirros-0.3.3-x86_64-disk.img heat-admin@'+firstController+':~',
-		'scp overcloudrc heat-admin@'+firstController+':~',
-		'scp sanity_test.sh heat-admin@'+firstController+':~'
-
-	   ]
-	   for cmd in cmds :
-                logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) )
-	   cmd = "ssh heat-admin@"+ firstController +" 'sudo chmod 777 /home/heat-admin/cirros-0.3.3-x86_64-disk.img'"
-           Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)	   
-
-	   cmd = "ssh heat-admin@"+ firstController +" 'sudo chmod 777 /home/heat-admin/sanity_test.sh'"
-           Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) 
-	   cmd = "ssh heat-admin@"+ firstController +" 'sudo sh -c \"source /home/heat-admin/overcloudrc;cd /home/heat-admin;./sanity_test.sh\"'"
+	   cmd = 'wget http://download.cirros-cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img'
+           logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) )
+	   cmd = 'cd ~;chmod ugo+x sanity_test.sh'
+           logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) )
+	   cmd = 'cd ~; ./sanity_test.sh'
 	   re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) 
 	   if "VALIDATION SUCCESS" in re[0]:
 		logger.info("Sanity Test Passed")

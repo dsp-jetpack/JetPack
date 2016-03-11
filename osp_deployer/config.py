@@ -153,6 +153,21 @@ class Settings():
         else:
             self.use_ipmi_driver = False
 
+	if self.cluster_settings_map['enable_eqlx_backend'].lower() == 'true':
+	    self.enable_eqlx_backend = True
+	    self.eqlx_backend_name =  self.cluster_settings_map['eqlx_backend_name']
+	    self.eqlx_san_ip =  self.cluster_settings_map['eqlx_san_ip']
+            self.eqlx_san_login =  self.cluster_settings_map['eqlx_san_login']
+            self.eqlx_san_password =  self.cluster_settings_map['eqlx_san_password']
+            self.eqlx_ch_login =  self.cluster_settings_map['eqlx_ch_login']
+            self.eqlx_ch_pass =  self.cluster_settings_map['eqlx_ch_pass']
+            self.eqlx_group_n =  self.cluster_settings_map['eqlx_group_n']
+            self.eqlx_thin_provisioning =  self.cluster_settings_map['eqlx_thin_provisioning']
+            self.eqlx_pool =  self.cluster_settings_map['eqlx_pool']
+            self.eqlx_use_chap =  self.cluster_settings_map['eqlx_use_chap']
+	else:
+	    self.enable_eqlx_backend = False
+
 
         self.bastion_settings_map = self.getSettingsSection("Bastion Settings")
         self.rhl72_iso = self.bastion_settings_map['rhl72_iso']
@@ -202,6 +217,7 @@ class Settings():
             self.deploy_overcloud_sh = self.foreman_configuration_scripts + '/pilot/deploy-overcloud.py'
             self.assign_role_py = self.foreman_configuration_scripts + '/pilot/assign_role.py'
             self.network_env_yaml = self.foreman_configuration_scripts + '/pilot/templates/network-environment.yaml'
+	    self.eqlx_yaml = self.foreman_configuration_scripts + '/pilot/templates/dell-eqlx-environment.yaml'
             self.ceph_storage_yaml = self.foreman_configuration_scripts + '/pilot/templates/nic-configs/ceph-storage.yaml'
             self.compute_yaml = self.foreman_configuration_scripts + '/pilot/templates/nic-configs/compute.yaml'
             self.controller_yaml = self.foreman_configuration_scripts + '/pilot/templates/nic-configs/controller.yaml'
