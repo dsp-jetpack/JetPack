@@ -90,13 +90,12 @@ def main():
   distutils.dir_util.copy_tree(overrides_dir, overcloud_dir)
 
   # Launch the deployment
-  cmd="cd;openstack overcloud deploy --debug --log-file ~/pilot/overcloud_deployment.log -t {} --templates ~/pilot/templates/overcloud -e ~/pilot/templates/network-environment.yaml -e ~/pilot/templates/dell-environment.yaml -e ~/pilot/templates/overcloud/environments/storage-environment.yaml -e /usr/share/openstack-tripleo-heat-templates/environments/puppet-pacemaker.yaml"
+  cmd="cd;openstack overcloud deploy --debug --log-file ~/pilot/overcloud_deployment.log -t {} --templates ~/pilot/templates/overcloud -e ~/pilot/templates/network-environment.yaml -e ~/pilot/templates/dell-environment.yaml -e ~/pilot/templates/overcloud/environments/storage-environment.yaml -e /usr/share/openstack-tripleo-heat-templates/environments/puppet-pacemaker.yaml".format(args.timeout)
   if args.enable_dellsc:
     cmd += " -e ~/pilot/templates/dell-dellsc-environment.yaml"
   if args.enable_eqlx:
     cmd += " -e ~/pilot/templates/dell-eqlx-environment.yaml"  
   cmd +=" --control-flavor control --compute-flavor compute --ceph-storage-flavor ceph-storage --swift-storage-flavor swift-storage --block-storage-flavor block-storage --neutron-public-interface bond1 --neutron-network-type vlan --neutron-disable-tunneling --os-auth-url {} --os-project-name {} --os-user-id {} --os-password {} --control-scale {} --compute-scale {} --ceph-storage-scale {} --ntp-server {} --neutron-network-vlan-ranges physint:{},physext --neutron-bridge-mappings physint:br-tenant,physext:br-ex".format(
-    args.timeout,
     os_auth_url,
     os_tenant_name,
     os_username,
