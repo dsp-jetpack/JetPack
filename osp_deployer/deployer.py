@@ -248,7 +248,6 @@ def deploy():
         cmd = "source ~/stackrc;heat stack-list | grep overcloud | awk '{print $6}'"
         overcloud_status = Ssh.execute_command_tty(settings.director_node.external_ip, settings.director_install_account_user, settings.director_install_account_pwd,cmd)[0]
         logger.debug("=== Overcloud stack state : "+ overcloud_status )
-	director_vm.fix_controllers_admin_auth_url()
 
         logger.info("====================================")
         logger.info(" OverCloud deployment status: " + overcloud_status)
