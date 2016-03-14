@@ -256,6 +256,7 @@ class Director():
 	 self.setup_networking()
 	 self.setup_storage()
 	 self.setup_eqlx()
+	 self.setup_dellsc()
 
     def setup_storage(self):
          if len(self.settings.ceph_nodes) == 0:
@@ -356,6 +357,37 @@ class Director():
             logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 	logger.info("Applying workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1314073")
 	cmd = "sudo sed -i 's|2015-11-06|2015-10-15|' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/controller/cinder-eqlx.yaml"
+	Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+
+    def setup_dellsc(self):
+	
+	if self.settings.enable_dellsc_backend is False:
+	   logger.debug("not setting up dellsc backend")
+	   return
+
+	logger.debug("configuring dell sc backend")
+	#Re - Upload the yaml files in case we're trying to leave the undercloud intact but want to redeploy with a different config
+	dellsc_yaml = "/home/"+ self.settings.director_install_account_user +"/pilot/templates/dell-dellsc-environment.yaml"
+	Scp.put_file( self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd, self.settings.dellsc_yaml, dellsc_yaml)
+
+	cmds = [
+	   'sed -i "s|CinderEnableDellScBackend: .*|CinderEnableDellScBackend: true|" ' + dellsc_yaml,
+       'sed -i "s|CinderDellScBackendName: .*|CinderDellScBackendName: ' + "'" +  self.settings.dellsc_backend_name + "'" + '|" ' + dellsc_yaml,
+	   'sed -i "s|CinderDellScSanIp: .*|CinderDellScSanIp: ' + "'" +  self.settings.dellsc_san_ip + "'" + '|" ' + dellsc_yaml,
+	   'sed -i "s|CinderDellScSanLogin: .*|CinderDellScSanLogin: ' + "'" +  self.settings.dellsc_san_login + "'" + '|" ' + dellsc_yaml,
+	   'sed -i "s|CinderDellScSanPassword: .*|CinderDellScSanPassword: ' +  self.settings.dellsc_san_password + '|" ' + dellsc_yaml,
+	   'sed -i "s|CinderDellScSsn: .*|CinderDellScSsn: ' + "'" +  self.settings.dellsc_ssn + "'" + '|" ' + dellsc_yaml,
+	   'sed -i "s|CinderDellScIscsiIpAddress: .*|CinderDellScIscsiIpAddress: ' +  self.settings.dellsc_iscsi_ip_address + '|" ' + dellsc_yaml,
+	   'sed -i "s|CinderDellScIscsiPort: .*|CinderDellScIscsiPort: ' + "'" +  self.settings.dellsc_iscsi_port + "'" + '|" ' + dellsc_yaml,
+	   'sed -i "s|CinderDellScApiPort: .*|CinderDellScApiPort: ' + "'" +  self.settings.dellsc_api_port + "'" + '|" ' + dellsc_yaml,
+	   'sed -i "s|CinderDellScServerFolder: .*|CinderDellScServerFolder: ' + "'" +  self.settings.dellsc_server_folder + "'" + '|" ' + dellsc_yaml,
+	   'sed -i "s|CinderDellScVolumeFolder: .*|CinderDellScVolumeFolder: ' + "'" +  self.settings.dellsc_volume_folder + "'" + '|" ' + dellsc_yaml,
+	  
+	]
+	for cmd in cmds:
+            logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
+	logger.info("Applying workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1314073")
+	cmd = "sudo sed -i 's|2015-11-06|2015-10-15|' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/controller/cinder-dellsc.yaml"
 	Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
 
     def setup_networking(self):
@@ -470,10 +502,14 @@ class Director():
         cmd = "cd ~/pilot;source ~/stackrc;./deploy-overcloud.py" + " --computes " + str(len(self.settings.compute_nodes)) + " --controllers " + str(len(self.settings.controller_nodes))  +" --storage " + str(len(self.settings.ceph_nodes)) + " --vlan " + self.settings.tenant_vlan_range
         if self.settings.overcloud_deploy_timeout != "90":
             cmd += " --timeout "+ self.settings.overcloud_deploy_timeout
-	if self.settings.enable_eqlx_backend is True:
-	    cmd += " --enable_eqlx"
+	    if self.settings.enable_eqlx_backend is True:
+	        cmd += " --enable_eqlx"
+     
+	    if self.settings.enable_dellsc_backend is True:
+	      cmd += " --enable_dellsc"
+		  
         logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
-
+		
     def delete_overcloud(self):
 
         install_admin_user = self.settings.director_install_account_user
