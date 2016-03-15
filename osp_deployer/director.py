@@ -355,6 +355,8 @@ class Director():
 	for cmd in cmds:
             logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd))
 	logger.info("Applying workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1314073")
+	cmd = "sudo sed -i 's|2015-11-06|2015-10-15|' /home/"+ self.settings.director_install_account_user +"/pilot/templates/overcloud/puppet/extraconfig/pre_deploy/controller/cinder-eqlx.yaml"
+	Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
 	cmd = "sudo sed -i 's|2015-11-06|2015-10-15|' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/controller/cinder-eqlx.yaml"
 	Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
 
