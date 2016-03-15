@@ -90,6 +90,21 @@ init(){
 
   # Find the IP for controller0 from the undercloud
   source stackrc
+
+  # Collect the SSH keys from all of the overcloud nodes
+  info "### Collecting SSH keys... ###"
+
+  overcloud_node_ips=$(nova list | grep overcloud- | awk -F\| '{print $7}' | awk -F= '{print $2}')
+  for overcloud_node_ip in $overcloud_node_ips
+  do
+    grep -q $overcloud_node_ip ~/.ssh/known_hosts
+    if [ $? -ne 0 ]
+    then
+      info "###   Retrieving key from $overcloud_node_ip"
+      ssh-keyscan $overcloud_node_ip >> ~/.ssh/known_hosts
+    fi
+  done
+
   CONTROLLER=$(nova show overcloud-controller-0|grep "ctlplane network"| awk -F\| '{print $3}'| tr -d ' ')
 
   # Get a list of the IPs of all the controller nodes for later use
