@@ -168,7 +168,23 @@ class Settings():
 	else:
 	    self.enable_eqlx_backend = False
 
-
+    
+	if self.cluster_settings_map['enable_dellsc_backend'].lower() == 'true':
+	    self.enable_dellsc_backend = True
+	    self.dellsc_backend_name =  self.cluster_settings_map['dellsc_backend_name']
+	    self.dellsc_san_ip =  self.cluster_settings_map['dellsc_san_ip']
+            self.dellsc_san_login =  self.cluster_settings_map['dellsc_san_login']
+            self.dellsc_san_password =  self.cluster_settings_map['dellsc_san_password']
+            self.dellsc_iscsi_ip_address =  self.cluster_settings_map['dellsc_iscsi_ip_address']
+            self.dellsc_iscsi_port =  self.cluster_settings_map['dellsc_iscsi_port']
+            self.dellsc_api_port =  self.cluster_settings_map['dellsc_api_port']
+            self.dellsc_ssn =  self.cluster_settings_map['dellsc_ssn']
+            self.dellsc_server_folder =  self.cluster_settings_map['dellsc_server_folder']
+            self.dellsc_volume_folder =  self.cluster_settings_map['dellsc_volume_folder']
+	else:
+	    self.enable_dellsc_backend = False
+		
+		
         self.bastion_settings_map = self.getSettingsSection("Bastion Settings")
         self.rhl72_iso = self.bastion_settings_map['rhl72_iso']
         if sys.platform.startswith('linux'):
@@ -218,6 +234,7 @@ class Settings():
             self.assign_role_py = self.foreman_configuration_scripts + '/pilot/assign_role.py'
             self.network_env_yaml = self.foreman_configuration_scripts + '/pilot/templates/network-environment.yaml'
 	    self.eqlx_yaml = self.foreman_configuration_scripts + '/pilot/templates/dell-eqlx-environment.yaml'
+            self.dellsc_yaml = self.foreman_configuration_scripts + '/pilot/templates/dell-dellsc-environment.yaml'
             self.ceph_storage_yaml = self.foreman_configuration_scripts + '/pilot/templates/nic-configs/ceph-storage.yaml'
             self.compute_yaml = self.foreman_configuration_scripts + '/pilot/templates/nic-configs/compute.yaml'
             self.controller_yaml = self.foreman_configuration_scripts + '/pilot/templates/nic-configs/controller.yaml'
