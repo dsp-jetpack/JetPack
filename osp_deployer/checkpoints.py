@@ -210,5 +210,5 @@ class Checkpoints():
 	    cmd = "ssh heat-admin@" + provisioning_ip + " \"ls -al /dev/kvm\""
             re =  Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
 	    if "No such file" in re[0]:
-            	raise AssertionError("KVM Not running on the Compute node - make sure the node has been DTK'ed/Virtualization enabled in the Bios")
+                raise AssertionError("KVM Not running on Compute node '{}' - make sure the node has been DTK'ed/Virtualization enabled in the Bios".format(provisioning_ip))
 
