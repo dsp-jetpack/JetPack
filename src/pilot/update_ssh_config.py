@@ -39,6 +39,49 @@ def get_nodes():
         yield node, addr
 
 
+def update_known_hosts(overcloud_addrs):
+    """
+    Updates your ~/.ssh/known_hosts file the ssh keys for each of the
+    overcloud_addrs. First it removes old (stale) entries for each address,
+    then it uses ssh-keyscan to fetch fresh keys.
+    """
+
+    known_hosts = os.path.join(os.path.expanduser('~'), '.ssh', 'known_hosts')
+    try:
+        with open(known_hosts, 'r') as f:
+            hosts = list(f)
+    except:
+        hosts = []
+
+    # Remove stale references to all overcloud_addrs
+    for addr in overcloud_addrs:
+        for h in [h for h in hosts if h.startswith(addr + ' ')]:
+            hosts.remove(h)
+
+    # Write remaining entries to a new file
+    known_hosts_new = known_hosts + '.new'
+    with open(known_hosts_new, 'w') as f:
+        f.writelines(hosts)
+
+    # Fetch and append the keys for the overcloud_addrs
+    try:
+        cmd = 'ssh-keyscan -t ecdsa-sha2-nistp256'.split()
+        cmd.extend(overcloud_addrs)
+        # ssh-keyscan produces "chatty" output on stderr when things work, so
+        # just suppress it. If there are error messages, the user will eventually
+        # see them when they try to access the host that triggered the error.
+        subprocess.call(cmd,
+                        stdout=open(known_hosts_new, 'a'),
+                        stderr=open('/dev/null', 'w'))
+    except:
+        pass
+
+    if os.path.isfile(known_hosts):
+        os.rename(known_hosts, known_hosts + '.old')
+    os.rename(known_hosts_new, known_hosts)
+    os.chmod(known_hosts, 0600)
+
+
 def main():
     """
     (Re)writes your ~/.ssh/config file with data that makes it easy to
@@ -49,13 +92,18 @@ def main():
     OK to rewrite the "stack" user's ~/.ssh/config.
     """
 
+    overcloud_addrs = []
+
     ssh_config = os.path.join(os.path.expanduser('~'), '.ssh', 'config')
     with open(ssh_config, 'w') as f:
         for node, addr in get_nodes():
+            overcloud_addrs.append(addr)
             f.write("Host {}\n".format(node))
             f.write("  Hostname {}\n".format(addr))
             f.write("  User heat-admin\n\n")
     os.chmod(ssh_config, 0600)
+
+    update_known_hosts(overcloud_addrs)
 
 
 if __name__ == "__main__":

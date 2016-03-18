@@ -70,7 +70,7 @@ class NetValidatorDeployer(object):
         node_ip = self.network_config[node]["networks"]["external"]["ip"].encode('ascii','ignore')
 
       logger.info("    Retrieving SSH key from {}".format(node_ip))
-      cmd = "ssh-keyscan -H {} >> ~/.ssh/known_hosts".format(node_ip)
+      cmd = "ssh-keyscan {} >> ~/.ssh/known_hosts".format(node_ip)
       logger.info("    {}".format(cmd)) 
       os.system(cmd)
 
