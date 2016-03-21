@@ -214,8 +214,8 @@ def deploy():
         if args.skip_ceph_vm is False :
             if args.skip_sah is True:
                 logger.debug("Delete the ceph VM")
-                logger.debug (Ssh.execute_command(settings.director_node.external_ip, "root", settings.ceph_node.root_password, "subscription-manager remove --all"))
-                logger.debug (Ssh.execute_command(settings.director_node.external_ip, "root", settings.ceph_node.root_password, "subscription-manager unregister"))
+                logger.debug (Ssh.execute_command(settings.ceph_node.external_ip, "root", settings.ceph_node.root_password, "subscription-manager remove --all"))
+                logger.debug (Ssh.execute_command(settings.ceph_node.external_ip, "root", settings.ceph_node.root_password, "subscription-manager unregister"))
 
                 sah_node.delete_ceph_vm()
 
@@ -255,7 +255,8 @@ def deploy():
         logger.info("====================================")
         if not "CREATE_COMPLETE" in overcloud_status:
             raise AssertionError("OverCloud did not install properly : " + overcloud_status)
-	logger.info("Running Sanity tests")
+	if args.skip_ceph_vm is False:
+	    director_vm.configure_calamari()
 	director_vm.run_sanity_test()
 	
 
