@@ -11,9 +11,11 @@ import os.path
 import sys
 from time import sleep
 
+import netaddr
 import requests.packages
 
 import discover_nodes.dracclient.client as discover_nodes_dracclient
+from exceptions import ValueError
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being
 # made. See
@@ -34,7 +36,7 @@ logging.basicConfig(
     format='%(asctime)-15s %(name)-48s %(levelname)-8s %(message)s',
     level=logging.WARNING)
 
-# Create and configure this script's logging.  Logs emitted from this
+# Create and configure this script's logging. Logs emitted from this
 # script include the IP address of the Dell Integrated Dell Remote
 # Access Controller (iDRAC).
 
@@ -116,6 +118,10 @@ OSPD_NODE_TEMPLATE_VALUE_MAC_USER_INTERVENTION_REQUIRED = \
 OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IDRAC = 'pxe_drac'
 OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IPMI = 'pxe_ipmitool'
 
+
+class NotSupported(BaseException):
+    pass
+
 # Create a factory function for creating tuple-like objects that contain
 # the information needed to generate an OSP Director node template. The
 # generated template is in JavaScript Object Notation (JSON) format.
@@ -152,7 +158,18 @@ def main():
     parser = argparse.ArgumentParser(
         description='Discover nodes.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('idrac', nargs='+', help='IP addresses of iDRACs')
+    parser.add_argument('idrac',
+                        nargs='+',
+                        help="""White space separated list of IP address
+                                specifications to scan for iDRACs. Each
+                                specification may be an IP address,
+                                range of IP addresses, or IP network
+                                address. A range's start and end IP
+                                addresses are separated by a hyphen. An
+                                IP network address may contain a CIDR,
+                                netmask, or hostmask. The addresses that
+                                can be assigned to hosts are scanned.
+                                Only IPv4 addresses are supported.""")
     parser.add_argument(
         '-u',
         '--username',
@@ -174,9 +191,24 @@ def main():
 
     args = parser.parse_args()
 
+    try:
+        # Create a set of IP addresses from the idrac command line
+        # arguments.
+        ip_set = parse_idrac_arguments(idrac_list=args.idrac)
+    except (NotSupported, ValueError, netaddr.AddrFormatError) as e:
+        # Print this script's usage message, information about the error
+        # detected in the command line argument, and exit
+        # unsuccessfully.
+        parser.print_usage(file=sys.stderr)
+        print(sys.argv[0],
+              ': error: argument idrac:',
+              e.message,
+              file=sys.stderr)
+        sys.exit(1)
+
     nodes = {
         OSPD_NODE_TEMPLATE_ATTRIBUTE_NODES: scan(
-            ip_addresses=args.idrac,
+            ip_set,
             user_name=args.username,
             password=args.password,
             provisioning_nics=args.nics)}
@@ -188,12 +220,132 @@ def main():
                      sort_keys=True))
 
 
-def scan(ip_addresses, user_name, password, provisioning_nics):
+def parse_idrac_arguments(idrac_list):
+    ip_set = netaddr.IPSet()
+
+    for idrac in idrac_list:
+        ip_set = ip_set.union(ip_set_from_idrac(idrac))
+
+    return ip_set
+
+
+def ip_set_from_idrac(idrac):
+    range_bounds = idrac.split('-')
+
+    if len(range_bounds) == 2:
+        start, end = range_bounds
+        ip_set = ip_set_from_address_range(start, end)
+    elif len(range_bounds) == 1:
+        ip_set = ip_set_from_address(range_bounds[0])
+    else:
+        # String contains more than one (1) dash.
+        raise ValueError(
+            ('invalid IP range: %(idrac)s (contains more than one hyphen)') % {
+                'idrac': idrac})
+
+    return ip_set
+
+
+def ip_set_from_address_range(start, end):
+    try:
+        start_ip_address = ip_address_from_address(start)
+        end_ip_address = ip_address_from_address(end)
+    except (NotSupported, ValueError) as e:
+        raise ValueError(
+            ('invalid IP range: %(start)s-%(end)s (%(message)s)') %
+            {
+                'start': start,
+                'end': end,
+                'message': e.message})
+    except netaddr.AddrFormatError as e:
+        raise ValueError(
+            ("invalid IP range: '%(start)s-%(end)s' (%(message)s)") %
+            {
+                'start': start,
+                'end': end,
+                'message': e.message})
+
+    if start_ip_address > end_ip_address:
+        raise ValueError(
+            ('invalid IP range: %(start)s-%(end)s (lower bound IP greater than'
+             ' upper bound)') %
+            {
+                'start': start,
+                'end': end})
+
+    ip_range = netaddr.IPRange(start_ip_address, end_ip_address)
+
+    return netaddr.IPSet(ip_range)
+
+
+def ip_set_from_address(address):
+    ip_set = netaddr.IPSet()
+
+    try:
+        ip_address = ip_address_from_address(address)
+        ip_set.add(ip_address)
+    except ValueError:
+        ip_network = ip_network_from_address(address)
+        ip_set.update(ip_network.iter_hosts())
+
+    return ip_set
+
+
+def ip_address_from_address(address):
+    try:
+        ip_address = netaddr.IPAddress(address)
+    except ValueError as e:
+        # address contains a CIDR prefix, netmask, or hostmask.
+        e.message = ('invalid IP address: %(address)s (detected CIDR, netmask,'
+                     ' hostmask, or subnet)') % {'address': address}
+        raise
+    except netaddr.AddrFormatError as e:
+        # address is not an IP address represented in an accepted string
+        # format.
+        e.message = ("invalid IP address: '%(address)s' (failed to detect a"
+                     " valid IP address)") % {'address': address}
+        raise
+
+    if ip_address.version == 4:
+        return ip_address
+    else:
+        raise NotSupported(
+            ('invalid IP address: %(address)s (Internet Protocol version'
+             ' %(version)s is not supported)') % {
+                'address': address,
+                'version': ip_address.version})
+
+
+def ip_network_from_address(address):
+    try:
+        ip_network = netaddr.IPNetwork(address)
+    except netaddr.AddrFormatError as e:
+        # address is not an IP address represented in an accepted string
+        # format.
+        e.message = ("invalid IP network: '%(address)s' (failed to detect a"
+                     " valid IP network)") % {
+            'address': address}
+        raise
+
+    if ip_network.version == 4:
+        return ip_network
+    else:
+        raise NotSupported(
+            ('invalid IP network: %(address)s (Internet Protocol version'
+             ' %(version)s is not supported)') % {
+                'address': address,
+                'version': ip_network.version})
+
+
+def scan(ip_set, user_name, password, provisioning_nics):
+    # Scan each iDRAC.
     nodes = []
 
-    # Scan each iDRAC.
-    for ip in ip_addresses:
-        node = scan_one(ScanInfo(ip, user_name, password, provisioning_nics))
+    for ip_address in ip_set:
+        node = scan_one(ScanInfo(str(ip_address),
+                                 user_name,
+                                 password,
+                                 provisioning_nics))
 
         if node is not None:
             nodes.append(node._asdict())
