@@ -774,6 +774,3 @@ class Director():
 	cmd = 'source stackrc;cd ~'+ self.settings.director_install_account_user +'/pilot;./config_calamari_nodes.sh '+ self.settings.ceph_node.external_ip + ' ' + self.settings.ceph_node.root_password
 
 	Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
-
-    def retreive_switch_config(self):
-	logger.info(Ssh.execute_command_tty('10.21.246.119', 'crowbar', 'cr0wBar!', 'show version'))
