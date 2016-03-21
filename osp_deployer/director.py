@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#usr/bin/env python
 
 # OpenStack - A set of software tools for building and managing cloud computing
 # platforms for public and private clouds.
@@ -501,7 +501,7 @@ class Director():
 
         logger.debug("Configuring network settings for overcloud")
 
-        cmd = "cd ~/pilot;source ~/stackrc;./deploy-overcloud.py" + " --computes " + str(len(self.settings.compute_nodes)) + " --controllers " + str(len(self.settings.controller_nodes))  +" --storage " + str(len(self.settings.ceph_nodes)) + " --vlan " + self.settings.tenant_vlan_range
+        cmd = "cd ~/pilot;source ~/stackrc;./deploy-overcloud.py" + " --computes " + str(len(self.settings.compute_nodes)) + " --controllers " + str(len(self.settings.controller_nodes))  +" --storage " + str(len(self.settings.ceph_nodes)) + " --vlan " + self.settings.tenant_vlan_range + " > overcloud_deploy_out.log"
         if self.settings.overcloud_deploy_timeout != "90":
             cmd += " --timeout "+ self.settings.overcloud_deploy_timeout
 	    if self.settings.enable_eqlx_backend is True:
@@ -652,7 +652,7 @@ class Director():
 
     def run_sanity_test(self):
 	if self.settings.run_sanity is True:
-	   logger.debug("Running sanity test")
+	   logger.info("Running sanity test")
 	   remoteSh = "/home/"+self.settings.director_install_account_user+"/sanity_test.sh"
 	   Scp.put_file(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd, self.settings.sanity_test, remoteSh)
 	   
@@ -668,7 +668,7 @@ class Director():
 		logger.fatal("Sanity Test failed")
 		raise AssertionError("Sanity test failed - see log for details")	
 	else:
-	   logger.debug("NOT running sanity test")
+	   logger.info("NOT running sanity test")
 	   pass
 	
     def run_tempest(self):
@@ -769,4 +769,11 @@ class Director():
                 cmd = "ssh heat-admin@" + provisioning_ip + " \" " + cmd + "\""
                 logger.debug( Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd) )
 
+    def configure_calamari(self):
+	logger.info("Configure Calamari")
+	cmd = 'source stackrc;cd ~'+ self.settings.director_install_account_user +'/pilot;./config_calamari_nodes.sh '+ self.settings.ceph_node.external_ip + ' ' + self.settings.ceph_node.root_password
 
+	Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+
+    def retreive_switch_config(self):
+	logger.info(Ssh.execute_command_tty('10.21.246.119', 'crowbar', 'cr0wBar!', 'show version'))
