@@ -4,9 +4,15 @@ import argparse
 import distutils.dir_util
 import os
 import re
+import subprocess
 import sys
+import time
 
 from subprocess import check_output
+
+# Dell utilities
+from identify_nodes import main as identify_nodes
+from update_ssh_config import main as update_ssh_config
 
 home_dir = os.path.expanduser('~')
 
@@ -47,6 +53,9 @@ def subst_home(relative_path):
   for line in in_file:
     line = re.sub("HOME", home_dir, line)
     out_file.write(line)
+
+  in_file.close()
+  out_file.close()
 
   os.rename(in_file_name, in_file_name + '.bak')
   os.rename(out_file_name, in_file_name)
@@ -90,25 +99,71 @@ def main():
   distutils.dir_util.copy_tree(overrides_dir, overcloud_dir)
 
   # Launch the deployment
-  cmd="cd;openstack overcloud deploy --debug --log-file ~/pilot/overcloud_deployment.log -t {} --templates ~/pilot/templates/overcloud -e ~/pilot/templates/network-environment.yaml -e ~/pilot/templates/dell-environment.yaml -e ~/pilot/templates/overcloud/environments/storage-environment.yaml -e /usr/share/openstack-tripleo-heat-templates/environments/puppet-pacemaker.yaml".format(args.timeout)
-  if args.enable_dellsc:
-    cmd += " -e ~/pilot/templates/dell-dellsc-environment.yaml"
-  if args.enable_eqlx:
-    cmd += " -e ~/pilot/templates/dell-eqlx-environment.yaml"  
-  cmd +=" --control-flavor control --compute-flavor compute --ceph-storage-flavor ceph-storage --swift-storage-flavor swift-storage --block-storage-flavor block-storage --neutron-public-interface bond1 --neutron-network-type vlan --neutron-disable-tunneling --os-auth-url {} --os-project-name {} --os-user-id {} --os-password {} --control-scale {} --compute-scale {} --ceph-storage-scale {} --ntp-server {} --neutron-network-vlan-ranges physint:{},physext --neutron-bridge-mappings physint:br-tenant,physext:br-ex".format(
-    os_auth_url,
-    os_tenant_name,
-    os_username,
-    os_password,
-    args.num_controllers,
-    args.num_computes,
-    args.num_storage,
-    args.ntp_server_fqdn,
-    args.vlan_range)
-    
-  print cmd
-  os.system(cmd)
+  env_opts = "-e ~/pilot/templates/network-environment.yaml" \
+             " -e ~/pilot/templates/dell-environment.yaml" \
+             " -e ~/pilot/templates/overcloud/environments/storage-environment.yaml" \
+             " -e /usr/share/openstack-tripleo-heat-templates/environments/puppet-pacemaker.yaml"
 
+  if args.enable_dellsc:
+    env_opts += " -e ~/pilot/templates/dell-dellsc-environment.yaml"
+  if args.enable_eqlx:
+    env_opts += " -e ~/pilot/templates/dell-eqlx-environment.yaml"
+
+  cmd = "cd ; openstack overcloud deploy" \
+        " --debug" \
+        " --log-file ~/pilot/overcloud_deployment.log" \
+        " -t {}" \
+        " --templates ~/pilot/templates/overcloud" \
+        " {}" \
+        " --control-flavor control" \
+        " --compute-flavor compute" \
+        " --ceph-storage-flavor ceph-storage" \
+        " --swift-storage-flavor swift-storage" \
+        " --block-storage-flavor block-storage" \
+        " --neutron-public-interface bond1" \
+        " --neutron-network-type vlan" \
+        " --neutron-disable-tunneling" \
+        " --os-auth-url {}" \
+        " --os-project-name {}" \
+        " --os-user-id {}" \
+        " --os-password {}" \
+        " --control-scale {}" \
+        " --compute-scale {}" \
+        " --ceph-storage-scale {}" \
+        " --ntp-server {}" \
+        " --neutron-network-vlan-ranges physint:{},physext" \
+        " --neutron-bridge-mappings physint:br-tenant,physext:br-ex" \
+        "".format (args.timeout,
+                   env_opts,
+                   os_auth_url,
+                   os_tenant_name,
+                   os_username,
+                   os_password,
+                   args.num_controllers,
+                   args.num_computes,
+                   args.num_storage,
+                   args.ntp_server_fqdn,
+                   args.vlan_range)
+
+  print cmd
+  start = time.time()
+  os.system(cmd)
+  end = time.time()
+  print '\nExecution time: {} (hh:mm:ss)'.format(time.strftime('%H:%M:%S', time.gmtime(end - start)))
+  print 'Fetching SSH keys...'
+  update_ssh_config()
+  print 'Overcloud nodes:'
+  identify_nodes()
+
+  try:
+    # Data will look like this: '"http://192.168.190.127:5000/v2.0"\n'
+    data = subprocess.check_output('heat output-show overcloud KeystoneURL'.split())
+    keystone_url = data.translate(None, '"\n')
+    # Form the Dashboard URL by trimming everything after the trailing ':'
+    print '\nHorizon Dashboard URL: {}\n'.format(keystone_url[:keystone_url.rfind(':'):])
+  except:
+    # In case the overcloud failed to deploy
+    pass
 
 if __name__ == "__main__":
   main()
