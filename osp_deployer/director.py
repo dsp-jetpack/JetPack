@@ -774,3 +774,4 @@ class Director():
 	cmd = 'source stackrc;cd ~'+ self.settings.director_install_account_user +'/pilot;./config_calamari_nodes.sh '+ self.settings.ceph_node.external_ip + ' ' + self.settings.ceph_node.root_password
 
 	Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
+

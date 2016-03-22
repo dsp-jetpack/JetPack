@@ -205,6 +205,15 @@ class Settings():
 	      self.run_sanity = False
 
 	try:
+	   self.bastion_host_ip = self.bastion_settings_map['bastion_host_ip']
+	   self.bastion_host_user = self.bastion_settings_map['bastion_host_user']
+ 	   self.bastion_host_password = self.bastion_settings_map['bastion_host_password']
+	   self.retreive_switches_config = True
+	except:
+	   self.retreive_switches_config = False
+
+
+	try:
            if self.bastion_settings_map['run_tempest'].lower() == 'true':
               self.run_tempest = True
 	      if self.bastion_settings_map['tempest_smoke_only'].lower() == 'true':
@@ -268,6 +277,7 @@ class Settings():
         self.controller_nodes = []
         self.compute_nodes = []
         self.ceph_nodes = []
+	self.switches = []
 
         with open(self.network_conf) as config_file:
             json_data = json.load(config_file)
@@ -311,6 +321,11 @@ class Settings():
                 except:
                     node.is_storage = False
                     pass
+		try:
+		    if node.is_switch == "true":
+		    	self.switches.append(node)			
+		except:
+		    pass
 
 
         Settings.settings = self
