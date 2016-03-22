@@ -92,6 +92,8 @@ def deploy():
 
         tester = Checkpoints()
         tester.verify_deployer_settings()
+	if settings.retreive_switches_config is True:
+		tester.retreive_switches_config()
 
         hosts = [settings.sah_node, settings.director_node]
         hosts.append(settings.ceph_node)
