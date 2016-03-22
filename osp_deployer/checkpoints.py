@@ -212,3 +212,29 @@ class Checkpoints():
 	    if "No such file" in re[0]:
                 raise AssertionError("KVM Not running on Compute node '{}' - make sure the node has been DTK'ed/Virtualization enabled in the Bios".format(provisioning_ip))
 
+    def retreive_switches_config(self):
+        if self.settings.switches == 0 :
+                return
+        logger.info("Retreiving switch(es) configuration")
+        for each in self.settings.switches:
+                logger.info("Retreiving configuration for switch " + each.switch_name)
+                logger.info(self.execute_as_shell(each.ip, each.user, each.password, 'show version'))
+                logger.info(self.execute_as_shell(each.ip, each.user, each.password, 'copy running-config scp://'+ self.settings.bastion_host_user +':'+self.settings.bastion_host_password+'@'+self.settings.bastion_host_ip+'//auto_results/switch-config-'+ each.switch_name))
+
+
+    def execute_as_shell(self, address,usr, pwd, command):
+        import paramiko
+        conn = paramiko.SSHClient()
+        conn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        conn.connect(address,username = usr,password = pwd)
+        channel = conn.invoke_shell(term='vt100', width=800, height=1000, width_pixels=0,
+                 height_pixels=0)
+        time.sleep(1)
+        channel.recv(9999)
+        channel.send(command  + "\n")
+        buff = ''
+        while not buff.endswith('#'):
+            resp = channel.recv(9999)
+            buff += resp
+
+
