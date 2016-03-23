@@ -56,9 +56,7 @@ class NetValidatorDeployer(object):
     self.parse_args()
 
   def collect_ssh_keys(self):
-    known_hosts_filename = "~/.ssh/known_hosts"
-    if os.path.isfile(known_hosts_filename):
-      os.remove(known_hosts_filename)
+    node_ips = []
 
     logger.info("Collecting SSH keys...") 
     for node in self.network_config:
@@ -69,10 +67,19 @@ class NetValidatorDeployer(object):
         # provisioning network
         node_ip = self.network_config[node]["networks"]["external"]["ip"].encode('ascii','ignore')
 
-      logger.info("    Retrieving SSH key from {}".format(node_ip))
-      cmd = "ssh-keyscan {} >> ~/.ssh/known_hosts".format(node_ip)
-      logger.info("    {}".format(cmd)) 
-      os.system(cmd)
+      node_ips.append(node_ip)
+
+    pilot_dir = os.path.join(os.path.expanduser('~'), 'pilot')
+    sys.path.append(pilot_dir)
+    try:
+      from update_ssh_config import update_known_hosts
+    except:
+      logger.error("Unable to locate 'update_ssh_config' utility in {}".format(pilot_dir))
+      sys.exit(1)
+
+    logger.info("    update_known_hosts {}".format(' '.join(node_ips)))
+    update_known_hosts(node_ips)
+
 
   def deploy_network_validator(self):
 
