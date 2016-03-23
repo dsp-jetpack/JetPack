@@ -549,7 +549,6 @@ class Director():
 
             ip_info.append(  "====================================")
             ip_info.append(  "### nodes ip information ###")
-            known_hosts_filename = "~/.ssh/known_hosts"
             cmd = "source ~/stackrc;nova list | grep controller"
             re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
 
@@ -560,8 +559,6 @@ class Director():
             for each in list:
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
-                cmd = "ssh-keyscan {} >> ~/.ssh/known_hosts".format(provisioning_ip)
-                re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
 
                 cmd = "ssh heat-admin@"+provisioning_ip+ " /sbin/ifconfig | grep \"inet.*"+self.settings.private_api_vlanid+".*netmask "+self.settings.private_api_netmask+".*\" | awk '{print $2}'"
                 re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
@@ -592,8 +589,6 @@ class Director():
             for each in list:
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
-                cmd = "ssh-keyscan {} >> ~/.ssh/known_hosts".format(provisioning_ip)
-                re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
 
                 cmd = "ssh heat-admin@"+provisioning_ip+ " /sbin/ifconfig | grep \"inet.*"+self.settings.private_api_vlanid+".*netmask "+self.settings.private_api_netmask+".*\" | awk '{print $2}'"
                 re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
@@ -617,8 +612,6 @@ class Director():
             for each in list:
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
-                cmd = "ssh-keyscan {} >> ~/.ssh/known_hosts".format(provisioning_ip)
-                re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
 
                 cmd = "ssh heat-admin@"+provisioning_ip+ " /sbin/ifconfig | grep \"inet.*"+self.settings.storage_cluster_vlanid+".*netmask 255.255.255.0.*\" | awk '{print $2}'"
                 re = Ssh.execute_command_tty(self.settings.director_node.external_ip, self.settings.director_install_account_user, self.settings.director_install_account_pwd,cmd)
