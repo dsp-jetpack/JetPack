@@ -39,10 +39,10 @@ def get_nodes():
         yield node, addr
 
 
-def update_known_hosts(overcloud_addrs):
+def update_known_hosts(host_addrs):
     """
     Updates your ~/.ssh/known_hosts file the ssh keys for each of the
-    overcloud_addrs. First it removes old (stale) entries for each address,
+    host_addrs. First it removes old (stale) entries for each address,
     then it uses ssh-keyscan to fetch fresh keys.
     """
 
@@ -53,8 +53,8 @@ def update_known_hosts(overcloud_addrs):
     except:
         hosts = []
 
-    # Remove stale references to all overcloud_addrs
-    for addr in overcloud_addrs:
+    # Remove stale references to all host_addrs
+    for addr in host_addrs:
         for h in [h for h in hosts if h.startswith(addr + ' ')]:
             hosts.remove(h)
 
@@ -63,10 +63,10 @@ def update_known_hosts(overcloud_addrs):
     with open(known_hosts_new, 'w') as f:
         f.writelines(hosts)
 
-    # Fetch and append the keys for the overcloud_addrs
+    # Fetch and append the keys for the host_addrs
     try:
         cmd = 'ssh-keyscan -t ecdsa-sha2-nistp256'.split()
-        cmd.extend(overcloud_addrs)
+        cmd.extend(host_addrs)
         # ssh-keyscan produces "chatty" output on stderr when things work, so
         # just suppress it. If there are error messages, the user will eventually
         # see them when they try to access the host that triggered the error.
