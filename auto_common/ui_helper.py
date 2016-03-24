@@ -19,41 +19,41 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
 
-from auto_common import UI_Manager, Widget
+from auto_common import UIManager
 import time
 
-class UI_Helper:
+
+# noinspection PyClassHasNoInit,PyUnresolvedReferences,PyProtectedMember
+class UIHelper():
     
     @staticmethod
-    def verify_new_window_opened(pageTitle):
-        '''
+    def verify_new_window_opened(page_title):
+        """
         Verifies the right page (given its title), opened
         raise exception if it didn't
-        '''
+        """
         time.sleep(1)
-        driver = UI_Manager.sel()._current_browser()
+        driver = UIManager.sel()._current_browser()
         windows = driver.window_handles
         if len(windows) != 2:
             raise AssertionError("Only one window opened")
         driver.switch_to_window(windows[1])
-        if driver.title == pageTitle:
+        if driver.title == page_title:
                 driver.switch_to_window(windows[1])
                 return
         else:
-            raise AssertionError("Wrong window opened, expected [" + pageTitle + "], got [" + driver.title + "]")
-            
-                
+            raise AssertionError("Wrong window opened, expected [" + page_title + "], got [" + driver.title + "]")
+
     @staticmethod
-    def switch_to_window( windowTitle):
+    def switch_to_window(window_title):
         time.sleep(1)
-        driver = UI_Manager.sel()._current_browser()
+        driver = UIManager.sel()._current_browser()
         windows = driver.window_handles
         if len(windows) != 2:
             raise AssertionError("Only one window opened")
         driver.switch_to_window(windows[1])
-        if driver.title == windowTitle:
+        if driver.title == window_title:
                 return
         else:
-            raise AssertionError("Wrong window found cannot switch to it, expected [" + windowTitle + "], got [" + driver.title + "]")
-            
-    
+            raise AssertionError("Wrong window found cannot switch to it, expected ["
+                                 + window_title + "], got [" + driver.title + "]")

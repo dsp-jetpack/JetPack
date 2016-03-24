@@ -22,32 +22,32 @@
 import re
 import codecs
 
-class FileHelper():
 
+# noinspection PyClassHasNoInit
+class FileHelper():
     @staticmethod
-    def replaceExpression(fileref, searchExp,replaceExp):
+    def replace_expression(fileref, search_exp, replace_exp):
         fh = open(fileref, 'rU')
         content = fh.readlines()
         fh.close()
         updated = []
         for line in content:
-            line = re.sub(searchExp,replaceExp, line)
+            line = re.sub(search_exp, replace_exp, line)
             updated.append(line)
 
-        with codecs.open(fileref,'wbU',encoding='utf8') as f:
+        with codecs.open(fileref, 'wbU', encoding='utf8') as f:
             for line in updated:
                 f.write(line)
 
-
     @staticmethod
-    def replaceExpressionTXT(fileref, searchExp,replaceExp):
+    def replace_expression_txt(fileref, search_exp, replace_exp):
         fh = open(fileref, 'r')
-        content = fh.readlines() #Dont try this on large files..
+        content = fh.readlines()  # Dont try this on large files..
         fh.close()
         updated = []
 
         for line in content:
-            line = re.sub(searchExp,replaceExp, line)
+            line = re.sub(search_exp, replace_exp, line)
             updated.append(line)
 
         f_out = file(fileref, 'w')

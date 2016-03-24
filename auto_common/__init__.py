@@ -19,9 +19,9 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
 
-from ipmi import Ipmi, Power_State
+from ipmi import Ipmi, PowerState
 from ssh import Ssh
 from file_utils import FileHelper
-from ui_manager import UI_Manager, Widget
-from ui_helper import UI_Helper
+from ui_manager import UIManager, Widget
+from ui_helper import UIHelper
 from Scp import Scp

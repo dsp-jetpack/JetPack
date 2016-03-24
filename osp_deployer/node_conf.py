@@ -19,16 +19,16 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
 
-class Node_Conf():
-    '''
-    holds the network etc. related settings for the nodes (content of cluster.properties)
-    '''
 
+class NodeConf():
 
-    def __init__(self , json):
-        self.is_sah = None
-        self.is_foreman  = None
-        self.is_ceph = None
+    def __init__(self, json):
+        self.is_sah = False
+        self.is_foreman = False
+        self.is_ceph = False
+        self.is_director = False
+        self.is_ceph_storage = False
+        self.is_switch = False
         self.hostname = None
         self.idrac_ip = None
         self.root_password = None
@@ -37,15 +37,11 @@ class Node_Conf():
         self.external_bond = None
         self.external_netmask = None
         self.external_slaves = None
-        self.provisioning_ip    = None
-        self.provisioning_ip    = None
-        self.provisioning_gateway    = None
-        self.provisioning_bond    = None
-        self.provisioning_netmask    = None
-        self.provisioning_slaves    = None
-        self.name_server    = None
-
+        self.provisioning_ip = None
+        self.provisioning_ip = None
+        self.provisioning_gateway = None
+        self.provisioning_bond = None
+        self.provisioning_netmask = None
+        self.provisioning_slaves = None
+        self.name_server = None
         self.__dict__ = json
-        
-        
-        
