@@ -1,9 +1,9 @@
 from auto_common import Ssh
 from osp_deployer import Settings, DeployerSanity
 
-logger = logging.getLogger("osp_deployer")
 import time
 import logging
+logger = logging.getLogger("osp_deployer")
 
 
 class Checkpoints():
