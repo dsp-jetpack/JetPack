@@ -93,7 +93,8 @@ class Widget():
         return element.get_attribute(attribute)
          
     def select(self, label_value):
-        element = Select(UIManager.driver().find_element_by_xpath(self.locator))
+        element = Select(
+            UIManager.driver().find_element_by_xpath(self.locator))
         element.select_by_visible_text(label_value)
     
     def select_by_value(self, value):
@@ -116,4 +117,5 @@ class Widget():
             else:
                 time.sleep(2)
                 inc += 2
-        raise AssertionError(self.locator + " not found in " + str(timeout_seconds) + " seconds")
+        raise AssertionError(self.locator + " not found in "
+                             + str(timeout_seconds) + " seconds")

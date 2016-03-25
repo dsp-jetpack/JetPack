@@ -82,7 +82,8 @@ class Ssh():
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
             client.connect(address, username=usr, password=pwd)
-            stdin, ss_stdout, ss_stderr = client.exec_command(command, get_pty=True)
+            stdin, ss_stdout, ss_stderr = client.exec_command(
+                command, get_pty=True)
             r_out, r_err = ss_stdout.read(), ss_stderr.read()
             logger.debug(r_err)
             if len(r_err) > 5:

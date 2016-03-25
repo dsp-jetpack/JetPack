@@ -25,7 +25,6 @@ import time
 
 # noinspection PyClassHasNoInit,PyUnresolvedReferences,PyProtectedMember
 class UIHelper():
-    
     @staticmethod
     def verify_new_window_opened(page_title):
         """
@@ -39,10 +38,12 @@ class UIHelper():
             raise AssertionError("Only one window opened")
         driver.switch_to_window(windows[1])
         if driver.title == page_title:
-                driver.switch_to_window(windows[1])
-                return
+            driver.switch_to_window(windows[1])
+            return
         else:
-            raise AssertionError("Wrong window opened, expected [" + page_title + "], got [" + driver.title + "]")
+            raise AssertionError(
+                "Wrong window opened, expected [" + page_title
+                + "], got [" + driver.title + "]")
 
     @staticmethod
     def switch_to_window(window_title):
@@ -53,7 +54,8 @@ class UIHelper():
             raise AssertionError("Only one window opened")
         driver.switch_to_window(windows[1])
         if driver.title == window_title:
-                return
+            return
         else:
-            raise AssertionError("Wrong window found cannot switch to it, expected ["
-                                 + window_title + "], got [" + driver.title + "]")
+            raise AssertionError(
+                "Wrong window found cannot switch to it, expected ["
+                + window_title + "], got [" + driver.title + "]")
