@@ -286,31 +286,31 @@ class Settings():
             '/pilot/deploy-overcloud.py'
         self.assign_role_py = self.foreman_configuration_scripts +\
             '/pilot/assign_role.py'
-        self.network_env_yaml = self.foreman_configuration_scripts \
-            + '/pilot/templates/network-environment.yaml'
-        self.eqlx_yaml = self.foreman_configuration_scripts \
-            + '/pilot/templates/dell-eqlx-environment.yaml'
-        self.dellsc_yaml = self.foreman_configuration_scripts \
-            + '/pilot/templates/dell-dellsc-environment.yaml'
-        self.ceph_storage_yaml = self.foreman_configuration_scripts \
-            + '/pilot/templates/nic-configs/ceph-storage.yaml'
-        self.compute_yaml = self.foreman_configuration_scripts \
-            + '/pilot/templates/nic-configs/compute.yaml'
-        self.controller_yaml = self.foreman_configuration_scripts \
-            + '/pilot/templates/nic-configs/controller.yaml'
-        self.controller_yaml = self.foreman_configuration_scripts \
-            + '/pilot/templates/nic-configs/controller.yaml'
-        self.ipxe_rpm = self.foreman_configuration_scripts \
-            + '/pilot/ipxe/ipxe-bootimgs-20151005-1.git6847232.el7.' \
+        self.network_env_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/network-environment.yaml'
+        self.eqlx_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/dell-eqlx-environment.yaml'
+        self.dellsc_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/dell-dellsc-environment.yaml'
+        self.ceph_storage_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/nic-configs/ceph-storage.yaml'
+        self.compute_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/nic-configs/compute.yaml'
+        self.controller_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/nic-configs/controller.yaml'
+        self.controller_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/nic-configs/controller.yaml'
+        self.ipxe_rpm = self.foreman_configuration_scripts + \
+            '/pilot/ipxe/ipxe-bootimgs-20151005-1.git6847232.el7.' \
               'test.noarch.rpm'
-        self.hammer_configure_hostgroups_sh = self.foreman_configuration_scripts \
-            + '/utils/networking/hammer-configure-hostgroups.sh'
-        self.hammer_deploy_compute_sh = self.foreman_configuration_scripts \
-            + '/utils/networking/hammer-deploy-compute.sh'
-        self.hammer_deploy_controller_sh = self.foreman_configuration_scripts \
-            + '/utils/networking/hammer-deploy-controller.sh'
-        self.hammer_deploy_storage_sh = self.foreman_configuration_scripts \
-            + '/utils/networking/hammer-deploy-storage.sh'
+        self.hammer_configure_hostgroups_sh = self.foreman_configuration_scripts + \
+            '/utils/networking/hammer-configure-hostgroups.sh'
+        self.hammer_deploy_compute_sh = self.foreman_configuration_scripts + \
+            '/utils/networking/hammer-deploy-compute.sh'
+        self.hammer_deploy_controller_sh = self.foreman_configuration_scripts + \
+            '/utils/networking/hammer-deploy-controller.sh'
+        self.hammer_deploy_storage_sh = self.foreman_configuration_scripts + \
+            '/utils/networking/hammer-deploy-storage.sh'
         self.hammer_get_ids_sh = self.foreman_configuration_scripts +\
             '/utils/networking/hammer-get-ids.sh'
         self.hammer_dump_ids_sh = self.foreman_configuration_scripts + \

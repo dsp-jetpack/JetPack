@@ -51,14 +51,16 @@ def setup_logging(dci_contxt):
 def upload_configuration_files(dci_contxt, jetstream_ini_file):
     jetstream_settings = ConfigParser.RawConfigParser()
     jetstream_settings.read(jetstream_ini_file)
-    dcihelper.upload_file(dci_contxt, jetstream_ini_file,
+    dcihelper.upload_file(dci_contxt,
+                          jetstream_ini_file,
                           dci_context.last_job_id)
 
 
 parser_dci = argparse.ArgumentParser(
     description='dci only, nothing to see here')
 parser_dci.add_argument('-dci', '--dci_conf',
-                        help='dci configuration yaml file', required=True)
+                        help='dci configuration yaml file',
+                        required=True)
 parser_dci.add_argument('-s', '--settings',
                         help='ini settings file, e.g settings/acme.ini',
                         required=True)
@@ -68,7 +70,8 @@ parser_dci.add_argument('-skip_sah', '--skip_sah',
                         required=False)
 parser_dci.add_argument('-skip_undercloud', '--skip_undercloud',
                         help='Do not reinstall the SAH or Undercloud',
-                        action='store_true', required=False)
+                        action='store_true',
+                        required=False)
 parser_dci.add_argument('-skip_ceph_vm', '--skip_ceph_vm',
                         help='Do not reinstall the ceph vm',
                         action='store_true',
@@ -117,13 +120,17 @@ with open('/var/www/html/RH7-RHOS-8.0.repo', 'w') as f:
 dcijobstate.create(dci_context, 'pre-run', 'initializing',
                    dci_context.last_job_id)
 setup_logging(dci_context)
-dcijobstate.create(dci_context, 'running', 'Running deployment',
+dcijobstate.create(dci_context,
+                   'running',
+                   'Running deployment',
                    dci_context.last_job_id)
 
 # noinspection PyBroadException
 try:
     osp_deployer.deployer.deploy()
-    dcijobstate.create(dci_context, 'post-run', 'Running tempest',
+    dcijobstate.create(dci_context,
+                       'post-run',
+                       'Running tempest',
                        dci_context.last_job_id)
     osp_deployer.deployer.run_tempest()
     # noinspection PyBroadException
@@ -137,7 +144,9 @@ try:
                 dci_context.last_jobstate_id)
     except:
         pass
-    dcijobstate.create(dci_context, 'success', 'All done',
+    dcijobstate.create(dci_context,
+                       'success',
+                       'All done',
                        dci_context.last_job_id)
 except:
     print " somebody set us up the bomb "

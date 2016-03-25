@@ -125,10 +125,12 @@ class DeployerSanity():
                                                     stderr=subprocess.STDOUT,
                                                     shell=True):
                 subprocess.check_output("net stop Tftpd32_svc",
-                                        stderr=subprocess.STDOUT, shell=True)
+                                        stderr=subprocess.STDOUT,
+                                        shell=True)
         else:
             subprocess.check_output("service tftp stop",
-                                    stderr=subprocess.STDOUT, shell=True)
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
 
     def check_ipmi_to_nodes(self):
         hdw_nodes = (self.settings.controller_nodes +
@@ -141,7 +143,8 @@ class DeployerSanity():
                 logger.debug(node.idrac_ip)
                 ipmi_session = Ipmi(self.settings.cygwin_installdir,
                                     self.settings.ipmi_user,
-                                    self.settings.ipmi_password, node.idrac_ip)
+                                    self.settings.ipmi_password,
+                                    node.idrac_ip)
                 logger.debug(
                     node.hostname + " :: " + ipmi_session.get_power_state())
             except:

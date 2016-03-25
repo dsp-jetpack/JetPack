@@ -124,26 +124,32 @@ def deploy():
 
         if args.skip_sah is False:
             logger.info("=== Unregister the hosts")
-            Ssh.execute_command(settings.sah_node.external_ip, "root",
+            Ssh.execute_command(settings.sah_node.external_ip,
+                                "root",
                                 settings.sah_node.root_password,
                                 "subscription-manager remove --all")
-            Ssh.execute_command(settings.sah_node.external_ip, "root",
+            Ssh.execute_command(settings.sah_node.external_ip,
+                                "root",
                                 settings.sah_node.root_password,
                                 "subscription-manager unregister")
 
-            Ssh.execute_command(settings.ceph_node.external_ip, "root",
+            Ssh.execute_command(settings.ceph_node.external_ip,
+                                "root",
                                 settings.sah_node.root_password,
                                 "subscription-manager remove --all")
-            Ssh.execute_command(settings.ceph_node.external_ip, "root",
+            Ssh.execute_command(settings.ceph_node.external_ip,
+                                "root",
                                 settings.sah_node.root_password,
                                 "subscription-manager unregister")
 
             logger.debug(
-                Ssh.execute_command(settings.director_node.external_ip, "root",
+                Ssh.execute_command(settings.director_node.external_ip,
+                                    "root",
                                     settings.sah_node.root_password,
                                     "subscription-manager remove --all"))
             logger.debug(
-                Ssh.execute_command(settings.director_node.external_ip, "root",
+                Ssh.execute_command(settings.director_node.external_ip,
+                                    "root",
                                     settings.sah_node.root_password,
                                     "subscription-manager unregister"))
 
@@ -152,7 +158,8 @@ def deploy():
             logger.info("preparing the SAH installation")
 
             logger.debug("=== powering down the SAH node & all the nodes")
-            ipmi_sah = Ipmi(settings.cygwin_installdir, settings.ipmi_user,
+            ipmi_sah = Ipmi(settings.cygwin_installdir,
+                            settings.ipmi_user,
                             settings.ipmi_password,
                             settings.sah_node.idrac_ip)
             ipmi_sah.power_off()
@@ -160,7 +167,8 @@ def deploy():
             logger.debug("=== powering down other hosts")
             for each in non_sah_nodes:
                 ipmi_session = Ipmi(settings.cygwin_installdir,
-                                    settings.ipmi_user, settings.ipmi_password,
+                                    settings.ipmi_user,
+                                    settings.ipmi_password,
                                     each.idrac_ip)
                 ipmi_session.power_off()
                 ipmi_session.set_boot_to_pxe()
@@ -199,7 +207,8 @@ def deploy():
 
             logger.info("=== Installing the SAH node")
             while "root" not in \
-                    Ssh.execute_command(settings.sah_node.external_ip, "root",
+                    Ssh.execute_command(settings.sah_node.external_ip,
+                                        "root",
                                         settings.sah_node.root_password,
                                         "whoami")[0]:
                 logger.debug("...")
@@ -227,10 +236,12 @@ def deploy():
                 logger.debug("Delete the Director VM")
 
                 Ssh.execute_command(settings.director_node.external_ip,
-                                    "root", settings.sah_node.root_password,
+                                    "root",
+                                    settings.sah_node.root_password,
                                     "subscription-manager remove --all")
                 Ssh.execute_command(settings.director_node.external_ip,
-                                    "root", settings.sah_node.root_password,
+                                    "root",
+                                    settings.sah_node.root_password,
                                     "subscription-manager unregister")
 
                 sah_node.delete_director_vm()
@@ -268,10 +279,12 @@ def deploy():
             if args.skip_sah is True:
                 logger.debug("Delete the ceph VM")
                 logger.debug(
-                    Ssh.execute_command(settings.ceph_node.external_ip, "root",
+                    Ssh.execute_command(settings.ceph_node.external_ip,
+                                        "root",
                                         settings.ceph_node.root_password,
                                         "subscription-manager remove --all"))
-                Ssh.execute_command(settings.ceph_node.external_ip, "root",
+                Ssh.execute_command(settings.ceph_node.external_ip,
+                                    "root",
                                     settings.ceph_node.root_password,
                                     "subscription-manager unregister")
 
@@ -287,7 +300,8 @@ def deploy():
 
         logger.info("=== Preparing the undercloud ===")
         for each in non_sah_nodes:
-            ipmi_session = Ipmi(settings.cygwin_installdir, settings.ipmi_user,
+            ipmi_session = Ipmi(settings.cygwin_installdir,
+                                settings.ipmi_user,
                                 settings.ipmi_password, each.idrac_ip)
             ipmi_session.power_off()
             ipmi_session.set_boot_to_pxe()

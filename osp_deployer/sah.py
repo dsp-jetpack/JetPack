@@ -170,9 +170,11 @@ class Sah():
                                       + sets.private_api_netmask + '"')
 
     def upload_iso(self):
-        Scp.put_file(self.settings.sah_node.external_ip, "root",
+        Scp.put_file(self.settings.sah_node.external_ip,
+                     "root",
                      self.settings.sah_node.root_password,
-                     self.settings.rhl72_iso, "/store/data/iso/RHEL7.iso")
+                     self.settings.rhl72_iso,
+                     "/store/data/iso/RHEL7.iso")
 
     def upload_lock_files(self):
 
@@ -183,25 +185,32 @@ class Sah():
         for eachone in files:
             localfile = self.settings.lock_files_dir + "/" + eachone
             remotefile = '/root/' + eachone
-            Scp.put_file(self.settings.sah_node.external_ip, "root",
-                         self.settings.sah_node.root_password, localfile,
+            Scp.put_file(self.settings.sah_node.external_ip,
+                         "root",
+                         self.settings.sah_node.root_password,
+                         localfile,
                          remotefile)
 
     def upload_director_scripts(self):
         remote_file = "/root/deploy-director-vm.sh"
-        Scp.put_file(self.settings.sah_node.external_ip, "root",
+        Scp.put_file(self.settings.sah_node.external_ip,
+                     "root",
                      self.settings.sah_node.root_password,
-                     self.settings.director_deploy_sh, remote_file)
+                     self.settings.director_deploy_sh,
+                     remote_file)
         cmd = "chmod 777 /root/deploy-director-vm.sh"
-        Ssh.execute_command(self.settings.sah_node.external_ip, "root",
-                            self.settings.sah_node.root_password, cmd)
+        Ssh.execute_command(self.settings.sah_node.external_ip,
+                            "root",
+                            self.settings.sah_node.root_password,
+                            cmd)
 
     def create_director_vm(self):
         install_admin_user = self.settings.director_install_account_user
         install_admin_password = self.settings.director_install_account_pwd
         remote_file = "/root/deploy-director-vm.sh"
         director_conf = "/root/director.cfg"
-        Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+        Ssh.execute_command(self.settings.sah_node.external_ip,
+                            "root",
                             self.settings.sah_node.root_password,
                             "rm " + director_conf + " -f")
         conf = ("rootpassword " + self.settings.director_node.root_password,
@@ -229,12 +238,14 @@ class Sah():
                 + "    " + self.settings.public_api_netmask,
                 )
         for line in conf:
-            Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+            Ssh.execute_command(self.settings.sah_node.external_ip,
+                                "root",
                                 self.settings.sah_node.root_password,
                                 "echo '" + line + "' >> " + director_conf)
         remote_file = "sh " + remote_file + \
                       " /root/director.cfg /store/data/iso/RHEL7.iso"
-        Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+        Ssh.execute_command(self.settings.sah_node.external_ip,
+                            "root",
                             self.settings.sah_node.root_password,
                             remote_file)
 
@@ -242,13 +253,15 @@ class Sah():
             "=== wait for the director vm install "
             "to be complete & power it on")
         while "shut off" not in \
-                Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+                Ssh.execute_command(self.settings.sah_node.external_ip,
+                                    "root",
                                     self.settings.sah_node.root_password,
                                     "virsh list --all | grep director")[0]:
             logger.debug("...")
             time.sleep(60)
         logger.debug("=== power on the director VM ")
-        Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+        Ssh.execute_command(self.settings.sah_node.external_ip,
+                            "root",
                             self.settings.sah_node.root_password,
                             "virsh start director")
         while "root" not in \
@@ -262,27 +275,32 @@ class Sah():
 
     def delete_director_vm(self):
         while "director" in \
-                Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+                Ssh.execute_command(self.settings.sah_node.external_ip,
+                                    "root",
                                     self.settings.sah_node.root_password,
                                     "virsh list --all | grep director")[0]:
-            Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+            Ssh.execute_command(self.settings.sah_node.external_ip,
+                                "root",
                                 self.settings.sah_node.root_password,
                                 "virsh destroy director")
             time.sleep(20)
-            Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+            Ssh.execute_command(self.settings.sah_node.external_ip,
+                                "root",
                                 self.settings.sah_node.root_password,
                                 "virsh undefine director")
             time.sleep(20)
 
     def create_ceph_vm(self):
         remote_file = "/root/deploy-ceph-vm.sh"
-        Scp.put_file(self.settings.sah_node.external_ip, "root",
+        Scp.put_file(self.settings.sah_node.external_ip,
+                     "root",
                      self.settings.sah_node.root_password,
                      self.settings.ceph_deploy_sh, remote_file)
 
         logger.debug("=== create ceph.cfg")
         ceph_conf = "/root/ceph.cfg"
-        Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+        Ssh.execute_command(self.settings.sah_node.external_ip,
+                            "root",
                             self.settings.sah_node.root_password,
                             "rm " + ceph_conf + " -f")
         conf = ("rootpassword " + self.settings.ceph_node.root_password,
@@ -302,27 +320,31 @@ class Sah():
                 + "    " + self.settings.storage_netmask,
                 )
         for comd in conf:
-            Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+            Ssh.execute_command(self.settings.sah_node.external_ip,
+                                "root",
                                 self.settings.sah_node.root_password,
                                 "echo '" + comd + "' >> " + ceph_conf)
         logger.debug("=== kick off the ceph vm deployment")
         remote_sh = "sh " + remote_file + \
                     " /root/ceph.cfg /store/data/iso/RHEL7.iso"
         logger.debug(
-            Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+            Ssh.execute_command(self.settings.sah_node.external_ip,
+                                "root",
                                 self.settings.sah_node.root_password,
                                 remote_sh))
 
         logger.debug(
             "=== wait for the ceph vm install to be complete & power it on")
         while "shut off" not in \
-                Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+                Ssh.execute_command(self.settings.sah_node.external_ip,
+                                    "root",
                                     self.settings.sah_node.root_password,
                                     "virsh list --all | grep ceph")[0]:
             logger.debug("...")
             time.sleep(60)
         logger.debug("=== power on the ceph VM ")
-        Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+        Ssh.execute_command(self.settings.sah_node.external_ip,
+                            "root",
                             self.settings.sah_node.root_password,
                             "virsh start ceph")
         while "root" not in \
@@ -336,14 +358,17 @@ class Sah():
 
     def delete_ceph_vm(self):
         if "ceph" in \
-                Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+                Ssh.execute_command(self.settings.sah_node.external_ip,
+                                    "root",
                                     self.settings.sah_node.root_password,
                                     "virsh list --all | grep ceph")[0]:
-            Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+            Ssh.execute_command(self.settings.sah_node.external_ip,
+                                "root",
                                 self.settings.sah_node.root_password,
                                 "virsh destroy ceph")
             time.sleep(20)
-            Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+            Ssh.execute_command(self.settings.sah_node.external_ip,
+                                "root",
                                 self.settings.sah_node.root_password,
                                 "virsh undefine ceph")
             time.sleep(20)

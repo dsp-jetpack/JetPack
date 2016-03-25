@@ -23,7 +23,9 @@ class Checkpoints():
     def verify_subscription_status(external_ip, user, password, retries):
         i = 0
         subscription_status = Ssh.execute_command(
-            external_ip, user, password,
+            external_ip,
+            user,
+            password,
             "subscription-manager status")[0]
 
         while "Current" not in subscription_status and i < retries:
@@ -31,7 +33,9 @@ class Checkpoints():
                 return subscription_status
             time.sleep(60)
             subscription_status = \
-                Ssh.execute_command(external_ip, user, password,
+                Ssh.execute_command(external_ip,
+                                    user,
+                                    password,
                                     "subscription-manager status")[0]
             i += 1
         return subscription_status
@@ -53,10 +57,11 @@ class Checkpoints():
 
     def ping_host(self, external_ip, user, passwd, target_host):
         for i in range(1, 30):
-            ping_status = Ssh.execute_command(external_ip, user, passwd,
-                                              "ping " + target_host
-                                              + " -c 1 -w 30 ")[
-                0]
+            ping_status = Ssh.execute_command(external_ip,
+                                              user,
+                                              passwd,
+                                              "ping " + target_host +
+                                              " -c 1 -w 30 ")[0]
             if self.ping_success in ping_status:
                 logger.debug(
                     "Ping {} successful on attempt #{}".format(target_host, i))
@@ -69,7 +74,8 @@ class Checkpoints():
         logger.info("SAH node health check")
         logger.debug("*** Verify the SAH node registered properly ***")
         subscription_status = self.verify_subscription_status(
-            self.settings.sah_node.external_ip, "root",
+            self.settings.sah_node.external_ip,
+            "root",
             self.settings.sah_node.root_password,
             self.settings.subscription_check_retries)
         if "Current" not in subscription_status:
@@ -77,7 +83,8 @@ class Checkpoints():
                 "SAH did not register properly : " + subscription_status)
 
         logger.debug("*** Verify the SAH can ping its public gateway")
-        test = self.ping_host(self.settings.sah_node.external_ip, "root",
+        test = self.ping_host(self.settings.sah_node.external_ip,
+                              "root",
                               self.settings.sah_node.root_password,
                               self.settings.external_gateway)
         if self.ping_success not in test:
@@ -85,7 +92,8 @@ class Checkpoints():
                 "SAH cannot ping its public gateway : " + test)
 
         logger.debug("*** Verify the SAH can ping the outside world (ip)")
-        test = self.ping_host(self.settings.sah_node.external_ip, "root",
+        test = self.ping_host(self.settings.sah_node.external_ip,
+                              "root",
                               self.settings.sah_node.root_password,
                               "8.8.8.8")
         if self.ping_success not in test:
@@ -93,7 +101,8 @@ class Checkpoints():
                 "SAH cannot ping the outside world (ip) : " + test)
 
         logger.debug("*** Verify the SAH can ping the outside world (dns)")
-        test = self.ping_host(self.settings.sah_node.external_ip, "root",
+        test = self.ping_host(self.settings.sah_node.external_ip,
+                              "root",
                               self.settings.sah_node.root_password,
                               "google.com")
         if self.ping_success not in test:
@@ -101,7 +110,8 @@ class Checkpoints():
                 "SAH cannot ping the outside world (dns) : " + test)
 
         logger.debug("*** Verify the SAH can ping the idrac network")
-        test = self.ping_host(self.settings.sah_node.external_ip, "root",
+        test = self.ping_host(self.settings.sah_node.external_ip,
+                              "root",
                               self.settings.sah_node.root_password,
                               self.settings.controller_nodes[0].idrac_ip)
         if self.ping_success not in test:
@@ -111,7 +121,8 @@ class Checkpoints():
         logger.debug("*** Verify the SAH has KVM enabled *** ")
         cmd = 'ls -al /dev/kvm'
         if "No such file" in \
-                Ssh.execute_command(self.settings.sah_node.external_ip, "root",
+                Ssh.execute_command(self.settings.sah_node.external_ip,
+                                    "root",
                                     self.settings.sah_node.root_password,
                                     cmd)[1]:
             raise AssertionError(
@@ -124,7 +135,8 @@ class Checkpoints():
         logger.info("Director VM health checks")
         logger.debug("*** Verify the Director VM registered properly ***")
         subscription_status = self.verify_subscription_status(
-            setts.director_node.external_ip, "root",
+            setts.director_node.external_ip,
+            "root",
             setts.director_node.root_password,
             setts.subscription_check_retries)
         if "Current" not in subscription_status:
@@ -144,7 +156,8 @@ class Checkpoints():
                 "repos properly, see log.")
 
         logger.debug("*** Verify the Director VM can ping its public gateway")
-        test = self.ping_host(setts.director_node.external_ip, "root",
+        test = self.ping_host(setts.director_node.external_ip,
+                              "root",
                               setts.director_node.root_password,
                               setts.external_gateway)
         if self.ping_success not in test:
@@ -153,7 +166,8 @@ class Checkpoints():
 
         logger.debug(
             "*** Verify the Director VM can ping the outside world (ip)")
-        test = self.ping_host(setts.director_node.external_ip, "root",
+        test = self.ping_host(setts.director_node.external_ip,
+                              "root",
                               setts.director_node.root_password,
                               "8.8.8.8")
         if self.ping_success not in test:
@@ -162,7 +176,8 @@ class Checkpoints():
 
         logger.debug(
             "*** Verify the Director VM can ping the outside world (dns)")
-        test = self.ping_host(setts.director_node.external_ip, "root",
+        test = self.ping_host(setts.director_node.external_ip,
+                              "root",
                               setts.director_node.root_password,
                               "google.com")
         if self.ping_success not in test:
@@ -172,7 +187,8 @@ class Checkpoints():
         logger.debug(
             "*** Verify the Director VM can ping the SAH node "
             "through the provisioning network")
-        test = self.ping_host(setts.director_node.external_ip, "root",
+        test = self.ping_host(setts.director_node.external_ip,
+                              "root",
                               setts.director_node.root_password,
                               setts.sah_node.provisioning_ip)
         if self.ping_success not in test:
@@ -183,7 +199,8 @@ class Checkpoints():
         logger.debug(
             "*** Verify the Director VM can ping the SAH node "
             "through the public network")
-        test = self.ping_host(setts.director_node.external_ip, "root",
+        test = self.ping_host(setts.director_node.external_ip,
+                              "root",
                               setts.director_node.root_password,
                               setts.sah_node.external_ip)
         if self.ping_success not in test:
@@ -192,7 +209,8 @@ class Checkpoints():
                 "the provisioning network : " + test)
 
         logger.debug("*** Verify the Director VM can ping the idrac network")
-        test = self.ping_host(setts.director_node.external_ip, "root",
+        test = self.ping_host(setts.director_node.external_ip,
+                              "root",
                               setts.director_node.root_password,
                               setts.controller_nodes[0].idrac_ip)
         if self.ping_success not in test:
@@ -203,7 +221,8 @@ class Checkpoints():
         logger.info("Ceph VM health checks")
         logger.debug("*** Verify the Ceph VM registered properly ***")
         subscription_status = self.verify_subscription_status(
-            self.settings.ceph_node.external_ip, "root",
+            self.settings.ceph_node.external_ip,
+            "root",
             self.settings.ceph_node.root_password,
             self.settings.subscription_check_retries)
         if "Current" not in subscription_status:
@@ -211,7 +230,8 @@ class Checkpoints():
                 "Ceph VM did not register properly : " + subscription_status)
 
         logger.debug("*** Verify the Ceph VM can ping its public gateway")
-        test = self.ping_host(self.settings.ceph_node.external_ip, "root",
+        test = self.ping_host(self.settings.ceph_node.external_ip,
+                              "root",
                               self.settings.ceph_node.root_password,
                               self.settings.public_gateway)
         if self.ping_success not in test:
@@ -219,7 +239,8 @@ class Checkpoints():
                 "Ceph VM cannot ping its public gateway : " + test)
 
         logger.debug("*** Verify the Ceph VM can ping the outside world (ip)")
-        test = self.ping_host(self.settings.ceph_node.external_ip, "root",
+        test = self.ping_host(self.settings.ceph_node.external_ip,
+                              "root",
                               self.settings.ceph_node.root_password,
                               "8.8.8.8")
         if self.ping_success not in test:
@@ -227,7 +248,8 @@ class Checkpoints():
                 "Ceph VM cannot ping the outside world (ip) : " + test)
 
         logger.debug("*** Verify the Ceph VM can ping the outside world (dns)")
-        test = self.ping_host(self.settings.ceph_node.external_ip, "root",
+        test = self.ping_host(self.settings.ceph_node.external_ip,
+                              "root",
                               self.settings.ceph_node.root_password,
                               "google.com")
         if self.ping_success not in test:
@@ -237,7 +259,8 @@ class Checkpoints():
         logger.debug(
             "*** Verify the Ceph VM can ping the SAH node "
             "through the storage network")
-        test = self.ping_host(self.settings.ceph_node.external_ip, "root",
+        test = self.ping_host(self.settings.ceph_node.external_ip,
+                              "root",
                               self.settings.ceph_node.root_password,
                               self.settings.sah_node.storage_ip)
         if self.ping_success not in test:
@@ -248,7 +271,8 @@ class Checkpoints():
         logger.debug(
             "*** Verify the Ceph VM can ping the SAH "
             "node through the public network")
-        test = self.ping_host(self.settings.ceph_node.external_ip, "root",
+        test = self.ping_host(self.settings.ceph_node.external_ip,
+                              "root",
                               self.settings.ceph_node.root_password,
                               self.settings.sah_node.external_ip)
         if self.ping_success not in test:
@@ -260,7 +284,8 @@ class Checkpoints():
         logger.debug(
             "*** Verify the Ceph VM can ping the Director VM "
             "through the public network")
-        test = self.ping_host(self.settings.ceph_node.external_ip, "root",
+        test = self.ping_host(self.settings.ceph_node.external_ip,
+                              "root",
                               self.settings.ceph_node.root_password,
                               self.settings.director_node.external_ip)
         if self.ping_success not in test:
@@ -364,7 +389,9 @@ class Checkpoints():
                 self.execute_as_shell(each.ip, each.user, each.password,
                                       'show version'))
             logger.info(
-                self.execute_as_shell(each.ip, each.user, each.password,
+                self.execute_as_shell(each.ip,
+                                      each.user,
+                                      each.password,
                                       'copy running-config scp://'
                                       + self.settings.bastion_host_user + ':'
                                       + self.settings.bastion_host_password
