@@ -3,34 +3,8 @@ resource_registry:
   OS::TripleO::Controller::Net::SoftwareConfig: HOME/pilot/templates/nic-configs/controller.yaml
   OS::TripleO::CephStorage::Net::SoftwareConfig: HOME/pilot/templates/nic-configs/ceph-storage.yaml
 
-  OS::TripleO::Network::External:  HOME/pilot/templates/overcloud/network/external.yaml
-  OS::TripleO::Network::InternalApi:  HOME/pilot/templates/overcloud/network/internal_api.yaml
-  OS::TripleO::Network::StorageMgmt: HOME/pilot/templates/overcloud/network/storage_mgmt.yaml
-  OS::TripleO::Network::Storage: HOME/pilot/templates/overcloud/network/storage.yaml
-
-  # Port assignments for the VIPs
-  OS::TripleO::Network::Ports::ExternalVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
-  OS::TripleO::Network::Ports::InternalApiVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
-  OS::TripleO::Network::Ports::StorageVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
-  OS::TripleO::Network::Ports::StorageMgmtVipPort: HOME/pilot/templates/overcloud/network/ports/ctlplane_vip.yaml
-  OS::TripleO::Network::Ports::RedisVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
-
-  # Port assignments for service virtual IPs for the controller role
-  OS::TripleO::Controller::Ports::RedisVipPort: HOME/pilot/templates/overcloud/network/ports/vip.yaml
-
-  # Port assignments for the controller role
-  OS::TripleO::Controller::Ports::ExternalPort: HOME/pilot/templates/overcloud/network/ports/external.yaml
-  OS::TripleO::Controller::Ports::InternalApiPort: HOME/pilot/templates/overcloud/network/ports/internal_api.yaml
-  OS::TripleO::Controller::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage.yaml
   OS::TripleO::Controller::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
 
-  # Port assignments for the compute role
-  OS::TripleO::Compute::Ports::InternalApiPort: HOME/pilot/templates/overcloud/network/ports/internal_api.yaml
-  OS::TripleO::Compute::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage.yaml
-
-  # Port assignments for the ceph storage role
-  OS::TripleO::CephStorage::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage.yaml
-  OS::TripleO::CephStorage::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/storage_mgmt.yaml
 
 parameter_defaults:
   # CHANGEME: Change the following to the CIDR for the Management network
@@ -38,6 +12,9 @@ parameter_defaults:
 
   # CHANGEME: Change the following to the CIDR for the Private API network
   InternalApiNetCidr: 192.168.140.0/24
+
+  # CHANGEME: Change the following to the CIDR for the Tenant network
+  TenantNetCidr: 192.168.130.0/24
 
   # CHANGEME: Change the following to the CIDR for the Storage network
   StorageNetCidr: 192.168.170.0/24
@@ -51,6 +28,10 @@ parameter_defaults:
   # CHANGEME: Change the following to the IP address range to use on the
   # Private API network
   InternalApiAllocationPools: [{'start': '192.168.140.20', 'end': '192.168.140.200'}]
+
+  # CHANGEME: Change the following to the IP address range to use on the
+  # Tenant network
+  TenantAllocationPools: [{'start': '192.168.130.20', 'end': '192.168.130.200'}]
 
   # CHANGEME: Change the following to the IP address range to use on the
   # Storage network
@@ -96,6 +77,10 @@ parameter_defaults:
   # CHANGEME: Change the following to the VLAN ID to use on the
   # Storage Clustering network
   StorageMgmtNetworkVlanID: 180
+
+  # CHANGEME: Change the following to the VLAN ID to use on the
+  # Tenant network
+  TenantNetworkVlanID: 130
 
   # CHANGEME: Change the following to the VLAN ID to use on the
   # External network

@@ -79,6 +79,8 @@ def main():
     help="Enable cinder Dell Eqlx backend")
   parser.add_argument('--enable_dellsc', action='store_true', default=False,
     help="Enable cinder Dell Storage Center backend")
+  parser.add_argument('--static_ips', action='store_true', default=False,
+    help="Specify the IPs and VIPs on the controller nodes")
   args = parser.parse_args()
   p = re.compile('\d+:\d+')
   if not p.match(args.vlan_range):
@@ -88,6 +90,7 @@ def main():
 
   # Replace HOME with the actual home directory in a few files
   subst_home('pilot/templates/dell-environment.yaml')
+  subst_home('pilot/templates/static-ip-environment.yaml')
   subst_home('pilot/templates/network-environment.yaml')
   subst_home('pilot/templates/dell-dellsc-environment.yaml')
   subst_home('pilot/templates/dell-eqlx-environment.yaml')
@@ -99,10 +102,21 @@ def main():
   distutils.dir_util.copy_tree(overrides_dir, overcloud_dir)
 
   # Launch the deployment
-  env_opts = "-e ~/pilot/templates/network-environment.yaml" \
-             " -e ~/pilot/templates/dell-environment.yaml" \
-             " -e ~/pilot/templates/overcloud/environments/storage-environment.yaml" \
-             " -e /usr/share/openstack-tripleo-heat-templates/environments/puppet-pacemaker.yaml"
+
+  # The order of the environment files is important as a later inclusion
+  # overrides resources defined in prior inclusions.
+
+  # The network-environment.yaml must be included after the network-isolation.yaml
+  env_opts = "-e ~/pilot/templates/overcloud/environments/network-isolation.yaml" \
+             " -e ~/pilot/templates/network-environment.yaml"
+
+  # The static-ip-environment.yaml must be included after the network-environment.yaml
+  if args.static_ips:
+    env_opts += " -e ~/pilot/templates/static-ip-environment.yaml"
+
+  env_opts += " -e ~/pilot/templates/dell-environment.yaml" \
+              " -e ~/pilot/templates/overcloud/environments/storage-environment.yaml" \
+              " -e /usr/share/openstack-tripleo-heat-templates/environments/puppet-pacemaker.yaml"
 
   if args.enable_dellsc:
     env_opts += " -e ~/pilot/templates/dell-dellsc-environment.yaml"
