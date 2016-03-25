@@ -302,12 +302,14 @@ class Settings():
             '/pilot/templates/nic-configs/controller.yaml'
         self.ipxe_rpm = self.foreman_configuration_scripts + \
             '/pilot/ipxe/ipxe-bootimgs-20151005-1.git6847232.el7.' \
-              'test.noarch.rpm'
-        self.hammer_configure_hostgroups_sh = self.foreman_configuration_scripts + \
+            'test.noarch.rpm'
+        self.hammer_configure_hostgroups_sh = \
+            self.foreman_configuration_scripts + \
             '/utils/networking/hammer-configure-hostgroups.sh'
         self.hammer_deploy_compute_sh = self.foreman_configuration_scripts + \
             '/utils/networking/hammer-deploy-compute.sh'
-        self.hammer_deploy_controller_sh = self.foreman_configuration_scripts + \
+        self.hammer_deploy_controller_sh = \
+            self.foreman_configuration_scripts + \
             '/utils/networking/hammer-deploy-controller.sh'
         self.hammer_deploy_storage_sh = self.foreman_configuration_scripts + \
             '/utils/networking/hammer-deploy-storage.sh'

@@ -48,5 +48,3 @@ class Scp():
         sftp.put(localfile, remotefile)
         sftp.close()
         trans.close()
-
-

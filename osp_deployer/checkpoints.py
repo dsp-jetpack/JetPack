@@ -1,8 +1,9 @@
 from auto_common import Ssh
 from osp_deployer import Settings, DeployerSanity
-
 import time
 import logging
+logger = logging.getLogger("osp_deployer")
+
 logger = logging.getLogger("osp_deployer")
 
 
@@ -149,8 +150,8 @@ class Checkpoints():
         if self.verify_pools_attached(setts.director_node.external_ip,
                                       "root",
                                       setts.director_node.root_password,
-                                      "/root/" + setts.director_node.hostname
-                                      + "-posts.log") is False:
+                                      "/root/" + setts.director_node.hostname +
+                                      "-posts.log") is False:
             raise AssertionError(
                 "Director vm did not subscribe/attach "
                 "repos properly, see log.")
@@ -278,8 +279,7 @@ class Checkpoints():
         if self.ping_success not in test:
             raise AssertionError(
                 "Ceph VM cannot ping the SAH node through "
-                "the public network : "
-                + test)
+                "the public network : " + test)
 
         logger.debug(
             "*** Verify the Ceph VM can ping the Director VM "
@@ -309,9 +309,8 @@ class Checkpoints():
         if len(ls_nodes) != expected_nodes:
             raise AssertionError(
                 "Expected amount of nodes registered in Ironic "
-                "does not add up "
-                + str(len(list)) + "/" + str(
-                    expected_nodes))
+                "does not add up " +
+                str(len(list)) + "/" + str(expected_nodes))
 
     def verify_introspection_sucessfull(self):
         logger.debug("Verify the introspection did not encounter any errors")
@@ -392,12 +391,12 @@ class Checkpoints():
                 self.execute_as_shell(each.ip,
                                       each.user,
                                       each.password,
-                                      'copy running-config scp://'
-                                      + self.settings.bastion_host_user + ':'
-                                      + self.settings.bastion_host_password
-                                      + '@' + self.settings.bastion_host_ip
-                                      + '//auto_results/switch-config-'
-                                      + each.switch_name))
+                                      'copy running-config scp://' +
+                                      self.settings.bastion_host_user + ':' +
+                                      self.settings.bastion_host_password +
+                                      '@' + self.settings.bastion_host_ip +
+                                      '//auto_results/switch-config-' +
+                                      each.switch_name))
 
     @staticmethod
     def execute_as_shell(address, usr, pwd, command):
@@ -416,5 +415,3 @@ class Checkpoints():
         while not buff.endswith('#'):
             resp = channel.recv(9999)
             buff += resp
-
-

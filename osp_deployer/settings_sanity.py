@@ -183,13 +183,15 @@ class DeployerSanity():
                                 'managment_ip', 'public_api_ip',
                                 'private_api_ip']
         for each in shouldhaveattributes:
-            assert hasattr(self.settings.director_node, each), self.settings.network_conf \
+            assert hasattr(self.settings.director_node, each),\
+                self.settings.network_conf \
                 + " director node has no " + each + " attribute"
             shouldbbevalidips = ['external_ip', 'provisioning_ip',
                                  'managment_ip', 'public_api_ip',
                                  'private_api_ip']
         for each in shouldbbevalidips:
-            assert self.is_valid_ip(getattr(self.settings.director_node, each)), \
+            assert self.is_valid_ip(
+                getattr(self.settings.director_node, each)), \
                 "director_node node " + each + " is not a valid ip"
 
         # Verify Ceph vm node network definition
@@ -251,8 +253,3 @@ class DeployerSanity():
                     getattr(storage, each)),\
                     storage.hostname + " node " +\
                     each + " is not a valid ip"
-
-
-
-
-

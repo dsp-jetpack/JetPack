@@ -9,4 +9,3 @@ class Dateloghandler(logging.FileHandler):
         path = '/auto_results/'
         fname = datetime.now().strftime(".%Y.%m.%d-%H.%M")
         super(Dateloghandler, self).__init__(path + filename + fname, mode)
-

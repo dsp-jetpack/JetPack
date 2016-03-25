@@ -39,135 +39,135 @@ class Sah():
         shutil.copyfile(sets.sah_ks, sets.sah_kickstart)
         FileHelper.replace_expression(sets.sah_kickstart,
                                       "^cdrom",
-                                      'url --url='
-                                      + sets.rhel_install_location)
+                                      'url --url=' +
+                                      sets.rhel_install_location)
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^url --url=.*',
-                                      'url --url='
-                                      + sets.rhel_install_location)
+                                      'url --url=' +
+                                      sets.rhel_install_location)
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^HostName=.*',
-                                      'HostName="'
-                                      + sets.sah_node.hostname
-                                      + "." + sets.domain + '"')
+                                      'HostName="' +
+                                      sets.sah_node.hostname +
+                                      "." + sets.domain + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^SystemPassword=.*',
-                                      'SystemPassword="'
-                                      + sets.sah_node.root_password
-                                      + '"')
+                                      'SystemPassword="' +
+                                      sets.sah_node.root_password +
+                                      '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^SubscriptionManagerUser=.*',
-                                      'SubscriptionManagerUser="'
-                                      + sets.subscription_manager_user
-                                      + '"')
+                                      'SubscriptionManagerUser="' +
+                                      sets.subscription_manager_user +
+                                      '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^SubscriptionManagerPassword=.*',
-                                      'SubscriptionManagerPassword="'
-                                      + sets.subscription_manager_password
-                                      + '"')
+                                      'SubscriptionManagerPassword="' +
+                                      sets.subscription_manager_password +
+                                      '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^SubscriptionManagerPool=.*',
-                                      'SubscriptionManagerPool="'
-                                      + sets.subscription_manager_pool_sah +
+                                      'SubscriptionManagerPool="' +
+                                      sets.subscription_manager_pool_sah +
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^Gateway=.*',
                                       'Gateway="' +
-                                      sets.public_gateway
-                                      + '"')
+                                      sets.public_gateway +
+                                      '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^NameServers=.*',
                                       'NameServers="' +
-                                      sets.name_server
-                                      + '"')
+                                      sets.name_server +
+                                      '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^NTPServers=.*',
                                       'NTPServers="' +
-                                      sets.ntp_server
-                                      + '"')
+                                      sets.ntp_server +
+                                      '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^TimeZone=.*',
                                       'TimeZone="' +
-                                      sets.time_zone
-                                      + '"')
+                                      sets.time_zone +
+                                      '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^anaconda_interface=.*',
                                       'anaconda_interface="' +
-                                      sets.sah_node.anaconda_ip + '/'
-                                      + sets.external_netmask + ' '
-                                      + sets.sah_node.anaconda_iface
-                                      + ' no"')
+                                      sets.sah_node.anaconda_ip + '/' +
+                                      sets.external_netmask + ' ' +
+                                      sets.sah_node.anaconda_iface +
+                                      ' no"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^extern_bond_name=.*',
-                                      'extern_bond_name="'
-                                      + sets.sah_node.external_bond
-                                      + '"')
+                                      'extern_bond_name="' +
+                                      sets.sah_node.external_bond +
+                                      '"')
         FileHelper.replace_expression(sets.sah_kickstart,
-                                      '^extern_ifaces=.*', 'extern_ifaces="'
-                                      + sets.sah_node.external_slaves
-                                      + '"')
+                                      '^extern_ifaces=.*', 'extern_ifaces="' +
+                                      sets.sah_node.external_slaves +
+                                      '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^internal_bond_name=.*',
-                                      'internal_bond_name="'
-                                      + sets.sah_node.private_bond
-                                      + '"')
+                                      'internal_bond_name="' +
+                                      sets.sah_node.private_bond +
+                                      '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^internal_ifaces=.*',
-                                      'internal_ifaces="'
-                                      + sets.sah_node.private_slaves
-                                      + '"')
+                                      'internal_ifaces="' +
+                                      sets.sah_node.private_slaves +
+                                      '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^prov_bond_name=.*',
-                                      'prov_bond_name=bond0."'
-                                      + sets.provisioning_vlanid
-                                      + '"')
+                                      'prov_bond_name=bond0."' +
+                                      sets.provisioning_vlanid +
+                                      '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^stor_bond_name=.*',
-                                      'stor_bond_name=bond0."'
-                                      + sets.storage_vlanid + '"')
+                                      'stor_bond_name=bond0."' +
+                                      sets.storage_vlanid + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^mgmt_bond_name=.*',
-                                      'mgmt_bond_name=bond0."'
-                                      + sets.managment_vlanid + '"')
+                                      'mgmt_bond_name=bond0."' +
+                                      sets.managment_vlanid + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^pub_api_bond_name=.*',
-                                      'pub_api_bond_name=bond0."'
-                                      + sets.public_api_vlanid + '"')
+                                      'pub_api_bond_name=bond0."' +
+                                      sets.public_api_vlanid + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^priv_api_bond_name=.*',
-                                      'priv_api_bond_name=bond0."'
-                                      + sets.private_api_vlanid + '"')
+                                      'priv_api_bond_name=bond0."' +
+                                      sets.private_api_vlanid + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^br_extern_boot_opts=.*',
-                                      'br_extern_boot_opts="onboot static '
-                                      + sets.sah_node.external_ip + '/'
-                                      + sets.external_netmask + '"')
+                                      'br_extern_boot_opts="onboot static ' +
+                                      sets.sah_node.external_ip + '/' +
+                                      sets.external_netmask + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^br_prov_boot_opts=.*',
-                                      'br_prov_boot_opts="onboot static '
-                                      + sets.sah_node.provisioning_ip + '/'
-                                      + sets.provisioning_netmask + '"')
+                                      'br_prov_boot_opts="onboot static ' +
+                                      sets.sah_node.provisioning_ip + '/' +
+                                      sets.provisioning_netmask + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^br_stor_boot_opts=.*',
-                                      'br_stor_boot_opts="onboot static '
-                                      + sets.sah_node.storage_ip + '/'
-                                      + sets.storage_netmask + '"')
+                                      'br_stor_boot_opts="onboot static ' +
+                                      sets.sah_node.storage_ip + '/' +
+                                      sets.storage_netmask + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^br_mgmt_boot_opts=.*',
-                                      'br_mgmt_boot_opts="onboot static '
-                                      + sets.sah_node.managment_ip + '/'
-                                      + sets.managment_netmask + '"')
+                                      'br_mgmt_boot_opts="onboot static ' +
+                                      sets.sah_node.managment_ip + '/' +
+                                      sets.managment_netmask + '"')
 
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^br_pub_api_boot_opts=.*',
-                                      'br_pub_api_boot_opts="onboot static '
-                                      + sets.sah_node.public_api_ip + '/'
-                                      + sets.external_netmask + '"')
+                                      'br_pub_api_boot_opts="onboot static ' +
+                                      sets.sah_node.public_api_ip + '/' +
+                                      sets.external_netmask + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^br_priv_api_boot_opts=.*',
-                                      'br_priv_api_boot_opts="onboot static '
-                                      + sets.sah_node.private_api_ip + '/'
-                                      + sets.private_api_netmask + '"')
+                                      'br_priv_api_boot_opts="onboot static ' +
+                                      sets.sah_node.private_api_ip + '/' +
+                                      sets.private_api_netmask + '"')
 
     def upload_iso(self):
         Scp.put_file(self.settings.sah_node.external_ip,
@@ -226,16 +226,16 @@ class Sah():
                 "user " + install_admin_user,
                 "password " + install_admin_password,
                 "# Iface     IP               NETMASK    ",
-                "eth0        " + self.settings.director_node.external_ip
-                + "     " + self.settings.external_netmask,
-                "eth1        " + self.settings.director_node.provisioning_ip
-                + "    " + self.settings.provisioning_netmask,
-                "eth2        " + self.settings.director_node.managment_ip
-                + "    " + self.settings.managment_netmask,
-                "eth3        " + self.settings.director_node.private_api_ip
-                + "    " + self.settings.private_api_netmask,
-                "eth4        " + self.settings.director_node.public_api_ip
-                + "    " + self.settings.public_api_netmask,
+                "eth0        " + self.settings.director_node.external_ip +
+                "     " + self.settings.external_netmask,
+                "eth1        " + self.settings.director_node.provisioning_ip +
+                "    " + self.settings.provisioning_netmask,
+                "eth2        " + self.settings.director_node.managment_ip +
+                "    " + self.settings.managment_netmask,
+                "eth3        " + self.settings.director_node.private_api_ip +
+                "    " + self.settings.private_api_netmask,
+                "eth4        " + self.settings.director_node.public_api_ip +
+                "    " + self.settings.public_api_netmask,
                 )
         for line in conf:
             Ssh.execute_command(self.settings.sah_node.external_ip,
@@ -308,16 +308,16 @@ class Sah():
                 "smuser " + self.settings.subscription_manager_user,
                 "smpassword " + self.settings.subscription_manager_password,
                 "smpool " + self.settings.subscription_manager_vm_ceph,
-                "hostname " + self.settings.ceph_node.hostname + "."
-                + self.settings.domain,
+                "hostname " + self.settings.ceph_node.hostname + "." +
+                self.settings.domain,
                 "gateway " + self.settings.public_gateway,
                 "nameserver " + self.settings.name_server,
                 "ntpserver " + self.settings.ntp_server,
                 "# Iface     IP               NETMASK    ",
-                "eth0        " + self.settings.ceph_node.external_ip
-                + "     " + self.settings.external_netmask,
-                "eth1        " + self.settings.ceph_node.storage_ip
-                + "    " + self.settings.storage_netmask,
+                "eth0        " + self.settings.ceph_node.external_ip +
+                "     " + self.settings.external_netmask,
+                "eth1        " + self.settings.ceph_node.storage_ip +
+                "    " + self.settings.storage_netmask,
                 )
         for comd in conf:
             Ssh.execute_command(self.settings.sah_node.external_ip,
@@ -372,4 +372,3 @@ class Sah():
                                 self.settings.sah_node.root_password,
                                 "virsh undefine ceph")
             time.sleep(20)
-

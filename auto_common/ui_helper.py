@@ -42,8 +42,8 @@ class UIHelper():
             return
         else:
             raise AssertionError(
-                "Wrong window opened, expected [" + page_title
-                + "], got [" + driver.title + "]")
+                "Wrong window opened, expected [" + page_title +
+                "], got [" + driver.title + "]")
 
     @staticmethod
     def switch_to_window(window_title):
@@ -57,5 +57,5 @@ class UIHelper():
             return
         else:
             raise AssertionError(
-                "Wrong window found cannot switch to it, expected ["
-                + window_title + "], got [" + driver.title + "]")
+                "Wrong window found cannot switch to it, expected [" +
+                window_title + "], got [" + driver.title + "]")

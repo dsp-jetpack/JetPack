@@ -116,9 +116,9 @@ def deploy():
         if settings.retreive_switches_config is True:
             tester.retreive_switches_config()
 
-        non_sah_nodes = (settings.controller_nodes
-                         + settings.compute_nodes
-                         + settings.ceph_nodes)
+        non_sah_nodes = (settings.controller_nodes +
+                         settings.compute_nodes +
+                         settings.ceph_nodes)
 
         sah_node = Sah()
 
@@ -349,4 +349,3 @@ if __name__ == "__main__":
     setup_logging()
     deploy()
     run_tempest()
-
