@@ -819,82 +819,82 @@ class Director():
                     self.settings.director_install_account_pwd,
                     cmd))
 
-            logger.debug("updating controller yaml")
-            cmds = [
-                'sed -i "s|em1|' +
-                self.settings.controller_bond0_interfaces.split(" ")[
-                    0] + '|" ' + controller_yaml,
+        logger.debug("updating controller yaml")
+        cmds = [
+            'sed -i "s|em1|' +
+            self.settings.controller_bond0_interfaces.split(" ")[
+                0] + '|" ' + controller_yaml,
+            'sed -i "s|p3p1|' +
+            self.settings.controller_bond0_interfaces.split(" ")[
+                1] + '|" ' + controller_yaml,
+            'sed -i "s|em2|' +
+            self.settings.controller_bond1_interfaces.split(" ")[
+                0] + '|" ' + controller_yaml,
+            'sed -i "s|p3p2|' +
+            self.settings.controller_bond1_interfaces.split(" ")[
+                1] + '|" ' + controller_yaml,
+            'sed -i "s|em3|' +
+            self.settings.controller_provisioning_interface +
+            '|" ' + controller_yaml,
+            'sed -i "s|192.168.110.0/24|' +
+            self.settings.management_network + '|" ' + controller_yaml,
+            'sed -i "s|192.168.120.1|' +
+            self.settings.provisioning_gateway + '|" ' + controller_yaml
+        ]
+        for cmd in cmds:
+            logger.debug(Ssh.execute_command_tty(
+                self.settings.director_node.external_ip,
+                self.settings.director_install_account_user,
+                self.settings.director_install_account_pwd,
+                cmd))
+
+        logger.debug("updating compute yaml")
+        cmds = ['sed -i "s|em1|' +
+                self.settings.compute_bond0_interfaces.split(" ")[
+                    0] + '|" ' + compute_yaml,
                 'sed -i "s|p3p1|' +
-                self.settings.controller_bond0_interfaces.split(" ")[
-                    1] + '|" ' + controller_yaml,
+                self.settings.compute_bond0_interfaces.split(" ")[
+                    1] + '|" ' + compute_yaml,
                 'sed -i "s|em2|' +
-                self.settings.controller_bond1_interfaces.split(" ")[
-                    0] + '|" ' + controller_yaml,
+                self.settings.compute_bond1_interfaces.split(" ")[
+                    0] + '|" ' + compute_yaml,
                 'sed -i "s|p3p2|' +
-                self.settings.controller_bond1_interfaces.split(" ")[
-                    1] + '|" ' + controller_yaml,
+                self.settings.compute_bond1_interfaces.split(" ")[
+                    1] + '|" ' + compute_yaml,
                 'sed -i "s|em3|' +
-                self.settings.controller_provisioning_interface +
-                '|" ' + controller_yaml,
-                'sed -i "s|192.168.110.0/24|' +
-                self.settings.management_network + '|" ' + controller_yaml,
-                'sed -i "s|192.168.120.1|' +
-                self.settings.provisioning_gateway + '|" ' + controller_yaml
-            ]
-            for cmd in cmds:
-                logger.debug(Ssh.execute_command_tty(
-                    self.settings.director_node.external_ip,
-                    self.settings.director_install_account_user,
-                    self.settings.director_install_account_pwd,
-                    cmd))
+                self.settings.compute_provisioning_interface + '|" ' +
+                compute_yaml
+                ]
+        for cmd in cmds:
+            logger.debug(Ssh.execute_command_tty(
+                self.settings.director_node.external_ip,
+                self.settings.director_install_account_user,
+                self.settings.director_install_account_pwd,
+                cmd))
 
-            logger.debug("updating compute yaml")
-            cmds = ['sed -i "s|em1|' +
-                    self.settings.compute_bond0_interfaces.split(" ")[
-                        0] + '|" ' + compute_yaml,
-                    'sed -i "s|p3p1|' +
-                    self.settings.compute_bond0_interfaces.split(" ")[
-                        1] + '|" ' + compute_yaml,
-                    'sed -i "s|em2|' +
-                    self.settings.compute_bond1_interfaces.split(" ")[
-                        0] + '|" ' + compute_yaml,
-                    'sed -i "s|p3p2|' +
-                    self.settings.compute_bond1_interfaces.split(" ")[
-                        1] + '|" ' + compute_yaml,
-                    'sed -i "s|em3|' +
-                    self.settings.compute_provisioning_interface + '|" ' +
-                    compute_yaml
-                    ]
-            for cmd in cmds:
-                logger.debug(Ssh.execute_command_tty(
-                    self.settings.director_node.external_ip,
-                    self.settings.director_install_account_user,
-                    self.settings.director_install_account_pwd,
-                    cmd))
-
-            logger.debug("updating storage yaml")
-            cmds = ['sed -i "s|em1|' +
-                    self.settings.storage_bond0_interfaces.split(" ")[
-                        0] + '|" ' + storage_yaml,
-                    'sed -i "s|p2p1|' +
-                    self.settings.storage_bond0_interfaces.split(" ")[
-                        1] + '|" ' + storage_yaml,
-                    'sed -i "s|em2|' +
-                    self.settings.storage_bond1_interfaces.split(" ")[
-                        0] + '|" ' + storage_yaml,
-                    'sed -i "s|p2p2|' +
-                    self.settings.storage_bond1_interfaces.split(" ")[
-                        1] + '|" ' + storage_yaml,
-                    'sed -i "s|em3|' +
-                    self.settings.storage_provisioning_interface + '|" ' +
-                    storage_yaml
-                    ]
-            for cmd in cmds:
-                logger.debug(Ssh.execute_command_tty(
-                    self.settings.director_node.external_ip,
-                    self.settings.director_install_account_user,
-                    self.settings.director_install_account_pwd,
-                    cmd))
+        logger.debug("updating storage yaml")
+        cmds = ['sed -i "s|em1|' +
+                self.settings.storage_bond0_interfaces.split(" ")[
+                    0] + '|" ' + storage_yaml,
+                'sed -i "s|p2p1|' +
+                self.settings.storage_bond0_interfaces.split(" ")[
+                    1] + '|" ' + storage_yaml,
+                'sed -i "s|em2|' +
+                self.settings.storage_bond1_interfaces.split(" ")[
+                    0] + '|" ' + storage_yaml,
+                'sed -i "s|p2p2|' +
+                self.settings.storage_bond1_interfaces.split(" ")[
+                    1] + '|" ' + storage_yaml,
+                'sed -i "s|em3|' +
+                self.settings.storage_provisioning_interface + '|" ' +
+                storage_yaml
+                ]
+        for cmd in cmds:
+            logger.debug(Ssh.execute_command_tty(
+                self.settings.director_node.external_ip,
+                self.settings.director_install_account_user,
+                self.settings.director_install_account_pwd,
+                cmd))
 
     def deploy_overcloud(self):
 
