@@ -301,7 +301,8 @@ def deploy():
         for each in non_sah_nodes:
             ipmi_session = Ipmi(settings.cygwin_installdir,
                                 settings.ipmi_user,
-                                settings.ipmi_password, each.idrac_ip)
+                                settings.ipmi_password,
+				each.idrac_ip)
             ipmi_session.power_off()
             ipmi_session.set_boot_to_pxe()
 
