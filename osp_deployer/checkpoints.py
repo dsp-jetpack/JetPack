@@ -4,8 +4,6 @@ import time
 import logging
 logger = logging.getLogger("osp_deployer")
 
-logger = logging.getLogger("osp_deployer")
-
 
 class Checkpoints():
     def __init__(self):
