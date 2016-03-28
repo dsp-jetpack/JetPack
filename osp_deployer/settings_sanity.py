@@ -118,11 +118,11 @@ class DeployerSanity():
                 self.settings.rhel_install_location + "/EULA").read()
         except:
             raise AssertionError(
-                self.settings.rhel_install_location + "/EULA is not reachable")
-
+                                 self.settings.rhel_install_location +
+                                 "/EULA is not reachable")
         subprocess.check_output("service tftp stop",
-                                    stderr=subprocess.STDOUT,
-                                    shell=True)
+                                stderr=subprocess.STDOUT,
+                                shell=True)
 
     def check_ipmi_to_nodes(self):
         hdw_nodes = (self.settings.controller_nodes +
