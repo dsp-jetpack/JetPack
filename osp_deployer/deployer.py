@@ -153,7 +153,6 @@ def deploy():
                                     settings.sah_node.root_password,
                                     "subscription-manager unregister"))
 
-
             logger.info("preparing the SAH installation")
 
             logger.debug("=== powering down the SAH node & all the nodes")
@@ -302,7 +301,7 @@ def deploy():
             ipmi_session = Ipmi(settings.cygwin_installdir,
                                 settings.ipmi_user,
                                 settings.ipmi_password,
-				each.idrac_ip)
+                                each.idrac_ip)
             ipmi_session.power_off()
             ipmi_session.set_boot_to_pxe()
 

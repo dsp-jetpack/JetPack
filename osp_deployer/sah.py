@@ -104,7 +104,7 @@ class Sah():
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^extern_ifaces=.*',
-				      'extern_ifaces="' +
+                                      'extern_ifaces="' +
                                       sets.sah_node.external_slaves +
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
@@ -296,7 +296,8 @@ class Sah():
         Scp.put_file(self.settings.sah_node.external_ip,
                      "root",
                      self.settings.sah_node.root_password,
-                     self.settings.ceph_deploy_sh, remote_file)
+                     self.settings.ceph_deploy_sh,
+                     remote_file)
 
         logger.debug("=== create ceph.cfg")
         ceph_conf = "/root/ceph.cfg"
