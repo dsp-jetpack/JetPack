@@ -153,7 +153,6 @@ def deploy():
                                     settings.sah_node.root_password,
                                     "subscription-manager unregister"))
 
-            # TODO unregister tempest VM when available ( if on SAH )
 
             logger.info("preparing the SAH installation")
 
