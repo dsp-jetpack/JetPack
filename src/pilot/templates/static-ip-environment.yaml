@@ -1,0 +1,42 @@
+resource_registry:
+  OS::TripleO::Controller::Ports::ExternalPort: HOME/pilot/templates/overcloud/network/ports/external_from_pool.yaml
+  OS::TripleO::Controller::Ports::InternalApiPort: HOME/pilot/templates/overcloud/network/ports/internal_api_from_pool.yaml
+  OS::TripleO::Controller::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage_from_pool.yaml
+  OS::TripleO::Controller::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
+  OS::TripleO::Controller::Ports::TenantPort: HOME/pilot/templates/overcloud/network/ports/tenant_from_pool.yaml
+
+parameter_defaults:
+  # Specify the IPs for the controllers on the indicated networks below.
+  # The IPs are listed in the order: controller0, controller1, controller2
+  # for each network
+  ControllerIPs:
+    # CHANGEME: Change the following to the IPs for the controllers on the
+    # External network
+    external:
+    - 192.168.190.10
+    - 192.168.190.11
+    - 192.168.190.12
+    # CHANGEME: Change the following to the IPs for the controllers on the
+    # Private API network
+    internal_api:
+    - 192.168.140.10
+    - 192.168.140.11
+    - 192.168.140.12
+    # CHANGEME: Change the following to the IPs for the controllers on the
+    # Storage network
+    storage:
+    - 192.168.170.10
+    - 192.168.170.11
+    - 192.168.170.12
+    # CHANGEME: Change the following to the IPs for the controllers on the
+    # Storage Clustering network
+    storage_mgmt:
+    - 192.168.180.10
+    - 192.168.180.11
+    - 192.168.180.12
+    # CHANGEME: Change the following IPs to the IPs for the controllers on the
+    # Tenant network
+    tenant:
+    - 192.168.130.10
+    - 192.168.130.11
+    - 192.168.130.12
