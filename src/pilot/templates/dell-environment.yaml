@@ -3,6 +3,10 @@ resource_registry:
     OS::TripleO::NodeExtraConfigPost: HOME/pilot/templates/post-deploy.yaml
 
 parameter_defaults:
+  # Set to true to enable Nova usage of Ceph for ephemeral storage.
+  # If set to false, Nova uses the storage local to the compute.
+  NovaEnableRbdBackend: true
+
   # Override ceph_pools so the .rgw.buckets pool is created during deployment.
   # Place this in ExtraConfig rather than CephStorageExtraConfig so the list
   # of default pools is available on all nodes.

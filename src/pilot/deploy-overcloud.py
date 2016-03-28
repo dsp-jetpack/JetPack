@@ -114,8 +114,9 @@ def main():
   if args.static_ips:
     env_opts += " -e ~/pilot/templates/static-ip-environment.yaml"
 
-  env_opts += " -e ~/pilot/templates/dell-environment.yaml" \
-              " -e ~/pilot/templates/overcloud/environments/storage-environment.yaml" \
+  # The dell-environment.yaml must be included after the storage-environment.yaml
+  env_opts += " -e ~/pilot/templates/overcloud/environments/storage-environment.yaml" \
+              " -e ~/pilot/templates/dell-environment.yaml" \
               " -e /usr/share/openstack-tripleo-heat-templates/environments/puppet-pacemaker.yaml"
 
   if args.enable_dellsc:
