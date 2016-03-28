@@ -120,15 +120,7 @@ class DeployerSanity():
             raise AssertionError(
                 self.settings.rhel_install_location + "/EULA is not reachable")
 
-        if not sys.platform.startswith('linux'):
-            if "RUNNING" in subprocess.check_output("sc query Tftpd32_svc",
-                                                    stderr=subprocess.STDOUT,
-                                                    shell=True):
-                subprocess.check_output("net stop Tftpd32_svc",
-                                        stderr=subprocess.STDOUT,
-                                        shell=True)
-        else:
-            subprocess.check_output("service tftp stop",
+        subprocess.check_output("service tftp stop",
                                     stderr=subprocess.STDOUT,
                                     shell=True)
 
