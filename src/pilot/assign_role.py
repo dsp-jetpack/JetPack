@@ -98,7 +98,7 @@ def get_size_in_bytes(doc, namespace):
     return utils.find_xml(doc, 'SizeInBytes', namespace).text
 
 
-def handle_r730xd_flex_bays(ironic_client, drac_client, node_uuid, debug):
+def select_os_disk(ironic_client, drac_client, node_uuid, debug):
     # Get the virtual disks
     virtual_disk_view_doc = drac_client.enumerate(DCIM_VirtualDiskView)
     virtual_disk_docs = utils.find_xml(virtual_disk_view_doc,
@@ -245,9 +245,10 @@ def main():
         doc = drac_client.enumerate(DCIM_SystemView)
         model = utils.find_xml(doc, 'Model', DCIM_SystemView).text
 
-        if model == "PowerEdge R730xd":
-            handle_r730xd_flex_bays(ironic_client, drac_client, node_uuid,
-                                    args.debug)
+        # Select the disk for the OS to be installed on.  Note that this
+        # is only necessary for storage nodes because the other node types
+        # are configured to have 1 huge volume created by the DTK.
+        select_os_disk(ironic_client, drac_client, node_uuid, args.debug)
 
 
 if __name__ == "__main__":
