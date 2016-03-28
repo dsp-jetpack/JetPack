@@ -103,7 +103,8 @@ class Sah():
                                       sets.sah_node.external_bond +
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
-                                      '^extern_ifaces=.*', 'extern_ifaces="' +
+                                      '^extern_ifaces=.*',
+				      'extern_ifaces="' +
                                       sets.sah_node.external_slaves +
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
