@@ -19,18 +19,19 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
 
-import paramiko 
+import paramiko
 
+
+# noinspection PyClassHasNoInit
 class Scp():
-    
+
     @staticmethod
     def get_file(adress, user, passw, localfile, remotefile):
-        
         client = paramiko.SSHClient()
         client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         trans = paramiko.Transport((adress, 22))
-        trans.connect(username = user, password = passw)
+        trans.connect(username=user, password=passw)
         sftp = paramiko.SFTPClient.from_transport(trans)
         sftp.get(remotefile, localfile)
         sftp.close()
@@ -38,15 +39,12 @@ class Scp():
 
     @staticmethod
     def put_file(adress, user, passw, localfile, remotefile):
-        
         client = paramiko.SSHClient()
         client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         trans = paramiko.Transport((adress, 22))
-        trans.connect(username = user, password = passw)
+        trans.connect(username=user, password=passw)
         sftp = paramiko.SFTPClient.from_transport(trans)
         sftp.put(localfile, remotefile)
         sftp.close()
         trans.close()
-
-

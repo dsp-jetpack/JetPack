@@ -19,84 +19,80 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
 
-import subprocess, paramiko, sys
+import paramiko
 import logging
+
 logger = logging.getLogger(__name__)
 
-class Ssh():
 
+# noinspection PyClassHasNoInit
+class Ssh():
     @staticmethod
     def execute_command(address, usr, pwd, command):
-        try :
-            logger.debug ( "ssh @" + address + ", running : " + command )
+        try:
+            logger.debug("ssh @" + address + ", running : " + command)
             client = paramiko.SSHClient()
             client.load_system_host_keys()
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy()) 
-            os = sys.platform
-            
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
             client.connect(address, username=usr, password=pwd)
             stdin, ss_stdout, ss_stderr = client.exec_command(command)
             r_out, r_err = ss_stdout.read(), ss_stderr.read()
             logger.debug(r_err)
-            if len(r_err) > 5 :
+            if len(r_err) > 5:
                 logger.error(r_err)
             else:
                 logger.debug(r_out)
             client.close()
-        except IOError :
-            logger.warning( ".. host "+ address + " is not up")
+        except IOError:
+            logger.warning(".. host " + address + " is not up")
             return "host not up"
-            
-            
+
         return r_out, r_err
 
     @staticmethod
     def execute_command_readlines(address, usr, pwd, command):
-        try :
-            logger.debug ( "ssh @" + address + ", running : " + command )
+        try:
+            logger.debug("ssh @" + address + ", running : " + command)
             client = paramiko.SSHClient()
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            os = sys.platform
 
             client.connect(address, username=usr, password=pwd)
             stdin, ss_stdout, ss_stderr = client.exec_command(command)
             r_out, r_err = ss_stdout.readlines(), ss_stderr.read()
-            logger.debug( r_err)
-            if len(r_err) > 5 :
+            logger.debug(r_err)
+            if len(r_err) > 5:
                 logger.error(r_err)
             else:
                 logger.debug(r_out)
             client.close()
-        except IOError :
-            logger.warning( ".. host "+ address + " is not up")
+        except IOError:
+            logger.warning(".. host " + address + " is not up")
             return "host not up"
-
 
         return r_out, r_err
 
     @staticmethod
     def execute_command_tty(address, usr, pwd, command):
-        try :
-            logger.debug ( "ssh @" + address + ", running : " + command )
+        try:
+            logger.debug("ssh @" + address + ", running : " + command)
             client = paramiko.SSHClient()
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            os = sys.platform
 
             client.connect(address, username=usr, password=pwd)
-            stdin, ss_stdout, ss_stderr = client.exec_command(command, get_pty=True)
+            stdin, ss_stdout, ss_stderr = client.exec_command(
+                command, get_pty=True)
             r_out, r_err = ss_stdout.read(), ss_stderr.read()
             logger.debug(r_err)
-            if len(r_err) > 5 :
+            if len(r_err) > 5:
                 logger.error(r_err)
             else:
                 logger.debug(r_out)
             client.close()
-        except IOError :
-            logger.warning( ".. host "+ address + " is not up")
+        except IOError:
+            logger.warning(".. host " + address + " is not up")
             return "host not up"
 
-
         return r_out, r_err
-    
