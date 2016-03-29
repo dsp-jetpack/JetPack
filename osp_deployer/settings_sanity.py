@@ -76,7 +76,7 @@ class DeployerSanity():
 
         assert os.path.isfile(
             self.settings.rhl72_iso), \
-            self.settings.rhl722_iso + \
+            self.settings.rhl72_iso + \
             "ISO doesn't seem to exist"
         assert os.path.isfile(
             self.settings.sah_kickstart), \
