@@ -63,7 +63,6 @@ class DeployerSanity():
             'storage_cluster_allocation_pool_start',
             'storage_cluster_allocation_pool_end',
             'managment_netmask', 'name_server',
-            'ipmi_discovery_range_start', 'ipmi_discovery_range_end',
         ]
         for ip in getattr(self.settings, 'discovery_ip_range').split(","):
             self.is_valid_ip(ip),\

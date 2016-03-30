@@ -123,10 +123,6 @@ class Settings():
             'storage_bond1_interfaces']
         self.storage_provisioning_interface = cluster[
             'storage_provisioning_interface']
-        self.ipmi_discovery_range_start = cluster[
-            'ipmi_discovery_range_start']
-        self.ipmi_discovery_range_end = cluster[
-            'ipmi_discovery_range_end']
         self.network_conf = cluster[
             'cluster_nodes_configuration_file']
         self.domain = cluster['domain']
