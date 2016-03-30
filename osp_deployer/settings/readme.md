@@ -34,6 +34,7 @@ or
 * 5.0.0.i - added eqlx backend settings
 * 5.0.0.j - added run_tempest & tempest_smoke_only
 * 5.0.0.k - added dellsc backend settings
+* 5.0.0.l - removed ipmi_discovery_range_start & ipmi_discovery_range_end
 
 #####settings.properties
 * 5.0.0.a - Initial 5.0 version - some settings left over from 4.x might go away as this is still work in progress
