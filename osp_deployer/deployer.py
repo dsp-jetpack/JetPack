@@ -296,7 +296,7 @@ def deploy():
         else:
             logger.info("Skipped the ceph vm install")
 
-        logger.info("=== Preparing the undercloud ===")
+        logger.info("=== Preparing the overcloud ===")
         for each in non_sah_nodes:
             ipmi_session = Ipmi(settings.cygwin_installdir,
                                 settings.ipmi_user,
