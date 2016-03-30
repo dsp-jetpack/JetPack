@@ -85,7 +85,7 @@ class Checkpoints():
         test = self.ping_host(self.settings.sah_node.external_ip,
                               "root",
                               self.settings.sah_node.root_password,
-                              self.settings.external_gateway)
+                              self.settings.public_gateway)
         if self.ping_success not in test:
             raise AssertionError(
                 "SAH cannot ping its public gateway : " + test)
