@@ -25,7 +25,6 @@ from auto_common import Ssh, Scp, Ipmi
 import logging
 import time
 import os
-
 logger = logging.getLogger("osp_deployer")
 
 exitFlag = 0
@@ -120,7 +119,7 @@ class Director():
 
         logger.debug("tar up the required pilot files")
         os.system(
-            " cd " + self.settings.foreman_configuration_scripts +
+            "cd " + self.settings.foreman_configuration_scripts +
             "/pilot/;tar -zcvf /root/pilot.tar.gz *")
         remote_file = "/home/" + install_admin_user + "/pilot.tar.gz"
         Scp.put_file(self.settings.director_node.external_ip,
@@ -237,85 +236,17 @@ class Director():
                          setts.custom_instack_json,
                          remote_file)
         else:
-            cmds = [
-                "echo 'export GOPATH=$HOME/go' >>$HOME/.bash_profile",
-                "echo 'export PATH=$PATH:$HOME/go/bin' >> $HOME/.bash_profile",
-                'sudo yum -y install golang -y',
-                '. $HOME/.bash_profile;go get github.com/dell-esg/idracula',
-                '. $HOME/.bash_profile;go install github.com/dell-esg/idracula'
-            ]
-            for cmd in cmds:
-                logger.debug(Ssh.execute_command_tty(
-                    setts.director_node.external_ip,
-                    setts.director_install_account_user,
-                    setts.director_install_account_pwd,
-                    cmd))
+            self.check_idracs()
+            setts = self.settings
+            cmd = "cd ~/pilot/discover_nodes;./discover_nodes.py  -u " + \
+                  setts.ipmi_user + \
+                  " -p '" + setts.ipmi_password + "'"
+            for node in (self.settings.controller_nodes +
+                         self.settings.compute_nodes +
+                         self.settings.ceph_nodes):
+                cmd += ' ' + node.idrac_ip
+            cmd += '> ~/instackenv.json'
 
-            # Idrac doesn't always play nice .. so working around cases
-            # where nic's dont get detected .. resetting idrac & powering on
-            # the node seems to do it.
-            for node in (setts.controller_nodes +
-                         setts.compute_nodes +
-                         setts.ceph_nodes):
-                while 1:
-                    cmd = ". $HOME/.bash_profile;idracula " \
-                          "-u " + setts.ipmi_user \
-                          + " -p '" + setts.ipmi_password + \
-                          "' -scan '" + node.idrac_ip + \
-                          "-" + node.idrac_ip + "'"
-                    out = Ssh.execute_command_tty(
-                        setts.director_node.external_ip,
-                        setts.director_install_account_user,
-                        setts.director_install_account_pwd,
-                        cmd)[0]
-                    if "No integrated 1 GB nics" in out or \
-                       "No WSMAN endpoint at" in out:
-                        logger.warning(
-                            node.hostname + " did not get discovered properly")
-                        if "No integrated 1 GB nics" in out:
-                            logger.debug(
-                                "grabbing drac informations in " +
-                                node.idrac_ip + ".dump")
-                            cmd = "cd ~/pilot/probe_idrac/probe_idrac/;" \
-                                  "./probe_idrac.py -l " + \
-                                  setts.ipmi_user + \
-                                  " -p " + setts.ipmi_password + " " + \
-                                  node.idrac_ip + " > " + node.idrac_ip + \
-                                  ".dump"
-                            Ssh.execute_command_tty(
-                                setts.director_node.external_ip,
-                                setts.director_install_account_user,
-                                setts.director_install_account_pwd,
-                                cmd)
-
-                        logger.debug("reseting idrac")
-                        ipmi_session = Ipmi(setts.cygwin_installdir,
-                                            setts.ipmi_user,
-                                            setts.ipmi_password,
-                                            node.idrac_ip)
-                        logger.debug(ipmi_session.drac_reset())
-                        time.sleep(120)
-                        back2life = False
-                        while not back2life:
-                            # noinspection PyBroadException
-                            try:
-                                logger.debug(ipmi_session.get_power_state())
-                                back2life = True
-                                time.sleep(20)
-                            except:
-                                pass
-                        ipmi_session.power_on()
-                        time.sleep(120)
-                        ipmi_session.power_off()
-                        ipmi_session.set_boot_to_pxe()
-                    else:
-                        break
-
-            cmd = ". $HOME/.bash_profile;idracula -u " + setts.ipmi_user + \
-                  " -p '" + setts.ipmi_password \
-                  + "' -scan '" + setts.ipmi_discovery_range_start + "-" \
-                  + setts.ipmi_discovery_range_end \
-                  + "' > ~/instackenv.json"
             logger.debug(Ssh.execute_command_tty(
                 setts.director_node.external_ip,
                 setts.director_install_account_user,
@@ -382,6 +313,74 @@ class Director():
                                 setts.director_install_account_pwd,
                                 cmd)
         tester.verify_introspection_sucessfull()
+
+    def check_idracs(self):
+        # Idrac doesn't always play nice ..
+        # working around cases where nic's dont get detected
+        for node in (self.settings.controller_nodes +
+                     self.settings.compute_nodes +
+                     self.settings.ceph_nodes):
+                while 1:
+                    cmd = 'ipmitool -I lanplus -H ' + \
+                          self.settings.controller_nodes[0].idrac_ip + \
+                          ' -U ' +\
+                          self.settings.ipmi_user + \
+                          ' -P ' + \
+                          self.settings.ipmi_password + \
+                          ' power status'
+                    ip = self.settings.director_node.external_ip
+                    user = self.settings.director_install_account_user
+                    passwd = self.settings.director_install_account_pwd
+                    Ssh.execute_command_tty(
+                                            ip,
+                                            user,
+                                            passwd,
+                                            cmd)
+                    cmd = "cd ~/pilot/discover_nodes;./discover_nodes.py" \
+                          " -u " + \
+                          self.settings.ipmi_user + \
+                          " -p '" + \
+                          self.settings.ipmi_password + "' " + \
+                          node.idrac_ip
+                    out = Ssh.execute_command_tty(
+                                                  ip,
+                                                  user,
+                                                  passwd,
+                                                  cmd)[0]
+                    # yes, running it twice - throws errors on first attempts
+                    # depending on the state of the node
+                    out = Ssh.execute_command_tty(
+                                                  ip,
+                                                  user,
+                                                  passwd,
+                                                  cmd)[0]
+                    if ("FIXME" in out) or ("WSMan request failed" in out):
+                        logger.warning(
+                                       node.hostname +
+                                       " did not get discovered properly")
+                        logger.debug("reseting idrac")
+                        ipmi_session = Ipmi(
+                                            self.settings.cygwin_installdir,
+                                            self.settings.ipmi_user,
+                                            self.settings.ipmi_password,
+                                            node.idrac_ip)
+                        logger.debug(ipmi_session.drac_reset())
+                        time.sleep(120)
+                        backToLife = False
+                        while backToLife is False:
+                            try:
+                                logger.debug(
+                                             ipmi_session.get_power_state())
+                                backToLife = True
+                                time.sleep(20)
+                            except:
+                                pass
+                        ipmi_session.power_on()
+                        time.sleep(120)
+                        ipmi_session.set_boot_to_pxe()
+                        time.sleep(120)
+                    else:
+                        break
 
     def assign_node_roles(self):
         logger.debug("uploading assign script")
