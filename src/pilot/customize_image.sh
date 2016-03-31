@@ -35,11 +35,8 @@ echo "## Unregister from subscription manager"
 virt-customize -a overcloud-full.qcow2 --run-command 'subscription-manager remove --all'
 virt-customize -a overcloud-full.qcow2 --run-command 'subscription-manager unregister'
 
-
-
-# upload the updated image to the overcloud < no .. move all this in install director script before uploading images& let it upload
+# upload the image to the overcloud
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
-
 
 
 echo "## Done updating the overcloud image"
