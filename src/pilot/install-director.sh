@@ -4,9 +4,12 @@ exec > >(tee $HOME/pilot/install-director.log)
 exec 2>&1
 
 dns_ip="$1"
-if [ -z "${dns_ip}" ];
-then
-  echo "Usage: install-director.sh <dns_ip>"
+subscription_manager_user="$2"
+subscription_manager_pass="$3"
+subcription_manager_poolid="$4"
+
+if [ "$#" -ne 4 ]; then
+  echo "Usage: $0 <dns_ip> <subscription_manager_user> <subscription_manager_pass> <subcription_manager_poolid>"
   exit 1
 fi
 
@@ -76,15 +79,9 @@ for image in ./*.tar; do tar xvf $image; done
 echo "## Done."
 
 echo
-echo "## Uploading images..."
-glance image-list | grep -q overcloud-full
-if [ "$?" -ne 0 ];
-then
-  openstack overcloud image upload
-else
-  echo "Warning: Images have already been uploaded.  Skipping upload."
-fi
-echo "## Done."
+echo "## Customizing the overcloud image & upload images"
+~/pilot/customize_image.sh $subscription_manager_user $subscription_manager_pass $subcription_manager_poolid
+echo "## Done"
 
 echo
 echo "## Creating flavors..."
