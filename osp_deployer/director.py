@@ -170,7 +170,11 @@ class Director():
     def install_director(self):
         logger.debug("uploading & executing sh script")
 
-        cmd = '~/pilot/install-director.sh ' + self.settings.name_server
+        cmd = '~/pilot/install-director.sh ' + \
+              self.settings.name_server + \
+              self.settings.subscription_manager_user + \
+              self.settings.subscription_manager_password + \
+              self.settings.subscription_manager_vm_ceph
         Ssh.execute_command_tty(self.settings.director_node.external_ip,
                                 self.settings.director_install_account_user,
                                 self.settings.director_install_account_pwd,
@@ -190,14 +194,6 @@ class Director():
                                 self.settings.director_install_account_user,
                                 self.settings.director_install_account_pwd,
                                 cmd))
-
-        remote_file = "/home/" + self.settings.director_install_account_user +\
-                      "/pilot/images/deploy-ramdisk-ironic.tar"
-        Scp.put_file(self.settings.director_node.external_ip,
-                     self.settings.director_install_account_user,
-                     self.settings.director_install_account_pwd,
-                     self.settings.deploy_ram_disk_image,
-                     remote_file)
 
         remote_file = "/home/" + self.settings.director_install_account_user +\
                       "/pilot/images/discovery-ramdisk.tar"
@@ -1122,15 +1118,12 @@ class Director():
     def run_sanity_test(self):
         if self.settings.run_sanity is True:
             logger.info("Running sanity test")
-            remote_file = "/home/" +\
-                          self.settings.director_install_account_user\
-                          + "/sanity_test.sh"
-            Scp.put_file(self.settings.director_node.external_ip,
-                         self.settings.director_install_account_user,
-                         self.settings.director_install_account_pwd,
-                         self.settings.sanity_test,
-                         remote_file)
-
+            cmd = 'rm -f ~/MY_KEY.pem'
+            logger.debug(Ssh.execute_command_tty(
+                self.settings.director_node.external_ip,
+                self.settings.director_install_account_user,
+                self.settings.director_install_account_pwd,
+                cmd))
             cmd = 'wget ' \
                   'http://download.cirros-cloud.net/0.3.3/' \
                   'cirros-0.3.3-x86_64-disk.img'
@@ -1139,13 +1132,13 @@ class Director():
                 self.settings.director_install_account_user,
                 self.settings.director_install_account_pwd,
                 cmd))
-            cmd = 'cd ~;chmod ugo+x sanity_test.sh'
+            cmd = 'cd ~/pilot/deployment-validation;chmod ugo+x sanity_test.sh'
             logger.debug(Ssh.execute_command_tty(
                 self.settings.director_node.external_ip,
                 self.settings.director_install_account_user,
                 self.settings.director_install_account_pwd,
                 cmd))
-            cmd = 'cd ~; ./sanity_test.sh'
+            cmd = 'cd ~/pilot/deployment-validation;./sanity_test.sh'
             re = Ssh.execute_command_tty(
                 self.settings.director_node.external_ip,
                 self.settings.director_install_account_user,
