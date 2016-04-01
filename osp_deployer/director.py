@@ -35,11 +35,11 @@ class Director():
         self.settings = Settings.settings
 
         #TODO update all below references
-        home_dir = "/home/" + self.settings.director_install_account_user
-        pilot_dir = os.path.join(home_dir, "pilot")
-        images_dir = os.path.join(pilot_dir, "images")
-        templates_dir = os.path.join(pilot_dir, "templates")
-        nic_configs_dir = os.path.join(templates_dir, "nic-configs")
+        self.home_dir = "/home/" + self.settings.director_install_account_user
+        self.pilot_dir = os.path.join(home_dir, "pilot")
+        self.images_dir = os.path.join(pilot_dir, "images")
+        self.templates_dir = os.path.join(pilot_dir, "templates")
+        self.nic_configs_dir = os.path.join(templates_dir, "nic-configs")
 
         cmd = "mkdir " + pilot_dir
         logger.debug(
