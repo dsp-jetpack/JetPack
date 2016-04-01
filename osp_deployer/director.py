@@ -33,16 +33,22 @@ exitFlag = 0
 class Director():
     def __init__(self):
         self.settings = Settings.settings
-        cmd = "mkdir /home/" + self.settings.director_install_account_user \
-              + "/pilot"
+
+        #TODO update all below references
+        home_dir = "/home/" + self.settings.director_install_account_user
+        pilot_dir = os.path.join(home_dir, "pilot")
+        images_dir = os.path.join(pilot_dir, "images")
+        templates_dir = os.path.join(pilot_dir, "templates")
+        nic_configs_dir = os.path.join(templates_dir, "nic-configs")
+
+        cmd = "mkdir " + pilot_dir
         logger.debug(
             Ssh.execute_command(self.settings.director_node.external_ip,
                                 self.settings.director_install_account_user,
                                 self.settings.director_install_account_pwd,
                                 cmd))
 
-        cmd = "mkdir /home/" + self.settings.director_install_account_user \
-              + "/pilot/images"
+        cmd = "mkdir " + images_dir
         logger.debug(
             Ssh.execute_command(self.settings.director_node.external_ip,
                                 self.settings.director_install_account_user,
@@ -121,7 +127,7 @@ class Director():
         os.system(
             "cd " + self.settings.foreman_configuration_scripts +
             "/pilot/;tar -zcvf /root/pilot.tar.gz *")
-        remote_file = "/home/" + install_admin_user + "/pilot.tar.gz"
+        remote_file = self.home_dir + "/pilot.tar.gz"
         Scp.put_file(self.settings.director_node.external_ip,
                      install_admin_user,
                      install_admin_password,
@@ -437,6 +443,28 @@ class Director():
         self.setup_storage()
         self.setup_eqlx()
         self.setup_dellsc()
+        self.setup_environment()
+
+    def setup_environment(self):
+
+        env_yaml = os.path.join(self.templates_dir + "dell-environment.yaml ")
+
+        # reupload the file if this is an overcloud only install
+        Scp.put_file(self.settings.director_node.external_ip,
+                     self.settings.director_install_account_user,
+                     self.settings.director_install_account_pwd,
+                     self.settings.dell_env_yaml,
+                     env_yaml)
+        cmd = 'sed -i "s|NovaEnableRbdBackend: .*|' \
+              'NovaEnableRbdBackend: ' + \
+              self.settings.enable_rbd_backend.lower() + \
+              '|" ' + \
+              env_yaml
+        logger.debug(Ssh.execute_command_tty(
+                     self.settings.director_node.external_ip,
+                     self.settings.director_install_account_user,
+                     self.settings.director_install_account_pwd,
+                     cmd))
 
     def setup_storage(self):
         if len(self.settings.ceph_nodes) == 0:
@@ -539,7 +567,6 @@ class Director():
                      self.settings.director_install_account_pwd,
                      self.settings.eqlx_yaml,
                      eqlx_yaml)
-
         cmds = [
             'sed -i "s|CinderEnableEqlxBackend: .*|'
             'CinderEnableEqlxBackend: true|" ' +
