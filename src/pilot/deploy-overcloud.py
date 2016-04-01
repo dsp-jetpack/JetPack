@@ -60,6 +60,16 @@ def subst_home(relative_path):
   os.rename(in_file_name, in_file_name + '.bak')
   os.rename(out_file_name, in_file_name)
 
+def create_volume_types(types):
+    for type in types:
+        cmd = "source $HOME/overcloudrc && " \
+              "cinder type-create {} && " \
+              "cinder type-key {} set volume_backend_name={}" \
+              "".format(type[0], type[0], type[1])
+        os.system(cmd)
+
+    os.system('source $HOME/overcloudrc && cinder extra-specs-list')
+
 
 def main():
   parser = argparse.ArgumentParser()
@@ -165,6 +175,13 @@ def main():
   os.system(cmd)
   end = time.time()
   print '\nExecution time: {} (hh:mm:ss)'.format(time.strftime('%H:%M:%S', time.gmtime(end - start)))
+  print 'Creating cinder volume types ...'
+  types = [["rbd_backend","tripleo_ceph"]]
+  if args.enable_eqlx:
+      types.append(["eql_backend","tripleo_eqlx"])
+  if args.enable_dellsc:
+      types.append(["dellsc_backend","tripleo_dellsc"])
+  create_volume_types(types)
   print 'Fetching SSH keys...'
   update_ssh_config()
   print 'Overcloud nodes:'
