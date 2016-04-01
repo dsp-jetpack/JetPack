@@ -171,9 +171,9 @@ class Director():
         logger.debug("uploading & executing sh script")
 
         cmd = '~/pilot/install-director.sh ' + \
-              self.settings.name_server + \
-              self.settings.subscription_manager_user + \
-              self.settings.subscription_manager_password + \
+              self.settings.name_server + " " + \
+              self.settings.subscription_manager_user + " " + \
+              self.settings.subscription_manager_password + " " + \
               self.settings.subscription_manager_vm_ceph
         Ssh.execute_command_tty(self.settings.director_node.external_ip,
                                 self.settings.director_install_account_user,
