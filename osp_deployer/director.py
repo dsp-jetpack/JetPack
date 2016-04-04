@@ -435,8 +435,7 @@ class Director():
 
         self.setup_networking()
         self.setup_storage()
-        self.setup_eqlx()
-        self.setup_dellsc()
+        self.setup_dell_storage()
 
     def setup_storage(self):
         if len(self.settings.ceph_nodes) == 0:
@@ -522,49 +521,59 @@ class Director():
                      tmp_name,
                      dst_name)
         os.remove(tmp_name)
+		
 
-    def setup_eqlx(self):
+    def setup_dell_storage(self):
+        # Re - Upload the yaml files in case we're trying to
+        # leave the undercloud intact but want to redeploy with
+        # a different config
+        dell_storage_yaml = "/home/" + self.settings.director_install_account_user \
+                      + "/pilot/templates/dell-cinder-backends.yaml"
+        Scp.put_file(self.settings.director_node.external_ip,
+                     self.settings.director_install_account_user,
+                     self.settings.director_install_account_pwd,
+                     self.settings.dell_storage_yaml,
+                     dell_storage_yaml)
+
+        self.setup_eqlx(dell_storage_yaml)
+        self.setup_dellsc(dell_storage_yaml)
+        enabled_backends = ""
+        if self.settings.enable_eqlx_backend is True:
+            enabled_backends = "['eqlx1']"
+        if self.settings.enable_dellsc_backend is True:
+            if self.settings.enable_eqlx_backend is True:
+                enabled_backends = "['eqlx1','dellsc']"
+            else:
+                enabled_backends = "['dellsc']"
+
+        cmd = 'sed -i "s|cinder_user_enabled_backends:.*|cinder_user_enabled_backends: ' + \
+        enabled_backends +  '|" ' + dell_storage_yaml
+        logger.debug(Ssh.execute_command_tty(
+                self.settings.director_node.external_ip,
+                self.settings.director_install_account_user,
+                self.settings.director_install_account_pwd,
+                cmd))
+
+
+
+    def setup_eqlx(self,dell_storage_yaml):
 
         if self.settings.enable_eqlx_backend is False:
             logger.debug("not setting up eqlx backend")
             return
 
         logger.debug("configuring eql backend")
-        # Re - Upload the yaml files in case we're trying to leave
-        # the undercloud intact but want to redeploy with a different config
-        eqlx_yaml = "/home/" + self.settings.director_install_account_user \
-                    + "/pilot/templates/dell-eqlx-environment.yaml"
-        Scp.put_file(self.settings.director_node.external_ip,
-                     self.settings.director_install_account_user,
-                     self.settings.director_install_account_pwd,
-                     self.settings.eqlx_yaml,
-                     eqlx_yaml)
 
         cmds = [
-            'sed -i "s|CinderEnableEqlxBackend: .*|'
-            'CinderEnableEqlxBackend: true|" ' +
-            eqlx_yaml,
-            'sed -i "s|CinderEqlxBackendName: .*|CinderEqlxBackendName: ' +
-            "'" + self.settings.eqlx_backend_name + "'" + '|" ' + eqlx_yaml,
-            'sed -i "s|CinderEqlxSanIp: .*|CinderEqlxSanIp: ' + "'" +
-            self.settings.eqlx_san_ip + "'" + '|" ' + eqlx_yaml,
-            'sed -i "s|CinderEqlxSanLogin: .*|CinderEqlxSanLogin: ' +
-            "'" + self.settings.eqlx_san_login + "'" + '|" ' + eqlx_yaml,
-            'sed -i "s|CinderEqlxSanPassword: .*|CinderEqlxSanPassword: ' +
-            "'" + self.settings.eqlx_san_password + "'" + '|" ' + eqlx_yaml,
-            'sed -i "s|CinderEqlxSanThinProvision: .*|'
-            'CinderEqlxSanThinProvision: ' +
-            self.settings.eqlx_thin_provisioning + '|" ' + eqlx_yaml,
-            'sed -i "s|CinderEqlxGroupname: .*|CinderEqlxGroupname: ' + "'" +
-            self.settings.eqlx_group_n + "'" + '|" ' + eqlx_yaml,
-            'sed -i "s|CinderEqlxPool: .*|CinderEqlxPool: ' +
-            "'" + self.settings.eqlx_pool + "'" + '|" ' + eqlx_yaml,
-            'sed -i "s|CinderEqlxChapLogin: .*|CinderEqlxChapLogin: ' + "'" +
-            self.settings.eqlx_ch_login + "'" + '|" ' + eqlx_yaml,
-            'sed -i "s|CinderEqlxChapPassword: .*|CinderEqlxChapPassword: ' +
-            "'" + self.settings.eqlx_ch_pass + "'" + '|" ' + eqlx_yaml,
-            'sed -i "s|CinderEqlxUseChap: .*|CinderEqlxUseChap: ' +
-            self.settings.eqlx_use_chap + '|" ' + eqlx_yaml,
+            'sed -i "s|<eqlx_san_ip>|' + self.settings.eqlx_san_ip + '|" ' + dell_storage_yaml,
+            'sed -i "s|<eqlx_san_login>|' + self.settings.eqlx_san_login  + '|" ' + dell_storage_yaml,
+            'sed -i "s|<eqlx_san_password>|' + self.settings.eqlx_san_password + '|" ' + dell_storage_yaml,
+            'sed -i "s|<eqlx_san_thin_provision>|' + self.settings.eqlx_thin_provisioning + '|" ' + dell_storage_yaml,
+            'sed -i "s|<eqlx_group_name>|' + self.settings.eqlx_group_n + '|" ' + dell_storage_yaml,
+            'sed -i "s|<eqlx_pool>|' + self.settings.eqlx_pool + '|" ' + dell_storage_yaml,
+            'sed -i "s|<eqlx_use_chap>|' + self.settings.eqlx_use_chap + '|" ' + dell_storage_yaml,
+            'sed -i "s|<eqlx_chap_login>|' + self.settings.eqlx_ch_login + '|" ' + dell_storage_yaml,
+            'sed -i "s|<eqlx_chap_password>|' + self.settings.eqlx_ch_pass + '|" ' + dell_storage_yaml,
         ]
         for cmd in cmds:
             logger.debug(Ssh.execute_command_tty(
@@ -573,55 +582,24 @@ class Director():
                 self.settings.director_install_account_pwd,
                 cmd))
 
-    def setup_dellsc(self):
+    def setup_dellsc(self,dell_storage_yaml):
 
         if self.settings.enable_dellsc_backend is False:
             logger.debug("not setting up dellsc backend")
             return
 
         logger.debug("configuring dell sc backend")
-        # Re - Upload the yaml files in case we're trying to
-        # leave the undercloud intact but want to redeploy with
-        # a different config
-        dellsc_yaml = "/home/" + self.settings.director_install_account_user \
-                      + "/pilot/templates/dell-dellsc-environment.yaml"
-        Scp.put_file(self.settings.director_node.external_ip,
-                     self.settings.director_install_account_user,
-                     self.settings.director_install_account_pwd,
-                     self.settings.dellsc_yaml,
-                     dellsc_yaml)
 
         cmds = [
-            'sed -i "s|CinderEnableDellScBackend: .*|'
-            'CinderEnableDellScBackend: true|" ' +
-            dellsc_yaml,
-            'sed -i "s|CinderDellScBackendName: .*|CinderDellScBackendName: ' +
-            "'" + self.settings.dellsc_backend_name + "'" + '|" ' +
-            dellsc_yaml,
-            'sed -i "s|CinderDellScSanIp: .*|CinderDellScSanIp: '
-            "'" + self.settings.dellsc_san_ip + "'" + '|" ' + dellsc_yaml,
-            'sed -i "s|CinderDellScSanLogin: .*|CinderDellScSanLogin: ' +
-            "'" + self.settings.dellsc_san_login + "'" + '|" ' + dellsc_yaml,
-            'sed -i "s|CinderDellScSanPassword: .*|CinderDellScSanPassword: ' +
-            self.settings.dellsc_san_password + '|" ' + dellsc_yaml,
-            'sed -i "s|CinderDellScSsn: .*|CinderDellScSsn: ' + "'" +
-            self.settings.dellsc_ssn + "'" + '|" ' + dellsc_yaml,
-            'sed -i "s|CinderDellScIscsiIpAddress: .*|'
-            'CinderDellScIscsiIpAddress: ' +
-            self.settings.dellsc_iscsi_ip_address + '|" ' + dellsc_yaml,
-            'sed -i "s|CinderDellScIscsiPort: .*|CinderDellScIscsiPort: ' +
-            "'" + self.settings.dellsc_iscsi_port + "'" + '|" ' +
-            dellsc_yaml,
-            'sed -i "s|CinderDellScApiPort: .*|CinderDellScApiPort: ' +
-            "'" + self.settings.dellsc_api_port + "'" + '|" ' + dellsc_yaml,
-            'sed -i "s|CinderDellScServerFolder: .*|' +
-            'CinderDellScServerFolder: ' +
-            "'" + self.settings.dellsc_server_folder + "'" + '|" ' +
-            dellsc_yaml,
-            'sed -i "s|CinderDellScVolumeFolder: .*|' +
-            'CinderDellScVolumeFolder: ' +
-            "'" + self.settings.dellsc_volume_folder + "'" + '|" ' +
-            dellsc_yaml,
+            'sed -i "s|<dellsc_san_ip>|' + self.settings.dellsc_san_ip + '|" ' + dell_storage_yaml,
+            'sed -i "s|<dellsc_san_login>|' + self.settings.dellsc_san_login + '|" ' + dell_storage_yaml,
+            'sed -i "s|<dellsc_san_password>|' + self.settings.dellsc_san_password + '|" ' + dell_storage_yaml,
+            'sed -i "s|<dellsc_sc_ssn>|' + self.settings.dellsc_ssn + '|" ' + dell_storage_yaml,
+            'sed -i "s|<dellsc_iscsi_ip_address>|' + self.settings.dellsc_iscsi_ip_address + '|" ' + dell_storage_yaml,
+            'sed -i "s|<dellsc_iscsi_port>|' + self.settings.dellsc_iscsi_port + '|" ' + dell_storage_yaml,
+            'sed -i "s|<dellsc_sc_api_port>|' + self.settings.dellsc_api_port + '|" ' + dell_storage_yaml,
+            'sed -i "s|<dellsc_server_folder>|' + self.settings.dellsc_server_folder + '|" ' + dell_storage_yaml,
+            'sed -i "s|<dellsc_volume_folder>|' + self.settings.dellsc_volume_folder + '|" ' + dell_storage_yaml,
 
         ]
         for cmd in cmds:

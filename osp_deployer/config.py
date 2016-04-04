@@ -178,8 +178,6 @@ class Settings():
 
         if cluster['enable_eqlx_backend'].lower() == 'true':
             self.enable_eqlx_backend = True
-            self.eqlx_backend_name = cluster[
-                'eqlx_backend_name']
             self.eqlx_san_ip = cluster['eqlx_san_ip']
             self.eqlx_san_login = cluster['eqlx_san_login']
             self.eqlx_san_password = cluster[
@@ -196,8 +194,6 @@ class Settings():
 
         if cluster['enable_dellsc_backend'].lower() == 'true':
             self.enable_dellsc_backend = True
-            self.dellsc_backend_name = cluster[
-                'dellsc_backend_name']
             self.dellsc_san_ip = cluster['dellsc_san_ip']
             self.dellsc_san_login = cluster[
                 'dellsc_san_login']
@@ -281,10 +277,8 @@ class Settings():
             '/pilot/assign_role.py'
         self.network_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/network-environment.yaml'
-        self.eqlx_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/dell-eqlx-environment.yaml'
-        self.dellsc_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/dell-dellsc-environment.yaml'
+        self.dell_storage_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/dell-cinder-backends.yaml'
         self.ceph_storage_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/nic-configs/ceph-storage.yaml'
         self.compute_yaml = self.foreman_configuration_scripts + \
