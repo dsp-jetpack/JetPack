@@ -5,9 +5,8 @@ from subprocess import check_output
 
 class CredentialHelper:
     @staticmethod
-    def get_undercloud_creds():
-        creds_file = open(os.path.join(os.path.expanduser('~'), 'stackrc'),
-                          'r')
+    def get_creds(filename):
+        creds_file = open(filename, 'r')
 
         for line in creds_file:
             prefix = "export"
@@ -24,10 +23,23 @@ class CredentialHelper:
                 os_auth_url = val
             elif key == 'os_tenant_name':
                 os_tenant_name = val
+            elif key == 'os_password':
+                os_password = val
 
-        os_password = check_output(['sudo', 'hiera', 'admin_password']).strip()
+        if 'hiera' in os_password:
+            os_password = check_output(['sudo', 'hiera', 'admin_password']).strip()
 
         return os_auth_url, os_tenant_name, os_username, os_password
+
+    @staticmethod
+    def get_undercloud_creds():
+        return CredentialHelper.get_creds(os.path.join(os.path.expanduser('~'),
+                                                       'stackrc'))
+
+    @staticmethod
+    def get_overcloud_creds():
+        return CredentialHelper.get_creds(os.path.join(os.path.expanduser('~'),
+                                                       'overcloudrc'))
 
     @staticmethod
     def get_drac_creds(ironic_client, node_uuid,
