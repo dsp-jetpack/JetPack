@@ -875,13 +875,13 @@ class Director(InfraHost):
             try:
                overcloud_endpoint = self.run_tty(
                     'grep "OS_AUTH_URL=" ~/overcloudrc')[0].split('=')[1].replace(':5000/v2.0/', '')
-                overcloud_pass = Ssh.execute_command_tty(
-                    'grep "OS_PASSWORD=" ~/overcloudrc')[0].split('=')[1]
-                ip_info.append(
-                    "OverCloud Horizon        : " + overcloud_endpoint)
-                ip_info.append("OverCloud admin password : " + overcloud_pass)
+               overcloud_pass = self.run(
+                                                        'grep "OS_PASSWORD=" ~/overcloudrc')[0].split('=')[1]
+               ip_info.append("OverCloud Horizon        : " +
+                              overcloud_endpoint)
+               ip_info.append("OverCloud admin password : " + overcloud_pass)
             except:
-                pass
+                 pass
             ip_info.append("====================================")
             for each in ip_info:
                 logger.debug(each)
