@@ -6,9 +6,9 @@ parameter_defaults:
   ExtraConfig:
     cinder::config::cinder_config:
       eqlx/volume_backend_name:
-        value: tripleo_eqlx	
+        value: tripleo_eqlx
       eqlx/volume_driver:
-        value: cinder.volume.drivers.eqlx.DellEQLSanISCSIDriver		
+        value: cinder.volume.drivers.eqlx.DellEQLSanISCSIDriver
       eqlx/san_ip:
         value: <eqlx_san_ip>
       eqlx/san_login:
@@ -22,7 +22,7 @@ parameter_defaults:
       eqlx/eqlx_pool:
         value: <eqlx_pool>
       eqlx/eqlx_use_chap:
-        value: <eqlx_use_chap>     	
+        value: <eqlx_use_chap>
       eqlx/eqlx_chap_login:
         value: <eqlx_chap_login>
       eqlx/eqlx_chap_password:
