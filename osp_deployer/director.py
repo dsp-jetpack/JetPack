@@ -708,7 +708,8 @@ class Director(InfraHost):
     def deploy_overcloud(self):
 
         logger.debug("Configuring network settings for overcloud")
-
+        cmd = "rm -f " + self.home_dir + '/.ssh/known_hosts'
+        self.run_tty(cmd)
         cmd = self.source_stackrc + "cd" \
                                     " ~/pilot;./deploy-overcloud.py" \
                                     " --computes " + \
