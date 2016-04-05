@@ -21,7 +21,8 @@
 
 from osp_deployer.config import Settings
 from checkpoints import Checkpoints
-from auto_common import Ssh, Scp, Ipmi
+from infra_host import InfraHost
+from auto_common import Scp, Ipmi
 import logging
 import time
 import os
@@ -30,48 +31,45 @@ logger = logging.getLogger("osp_deployer")
 exitFlag = 0
 
 
-class Director():
-    def __init__(self):
-        self.settings = Settings.settings
-        cmd = "mkdir /home/" + self.settings.director_install_account_user \
-              + "/pilot"
-        logger.debug(
-            Ssh.execute_command(self.settings.director_node.external_ip,
-                                self.settings.director_install_account_user,
-                                self.settings.director_install_account_pwd,
-                                cmd))
+class Director(InfraHost):
 
-        cmd = "mkdir /home/" + self.settings.director_install_account_user \
-              + "/pilot/images"
-        logger.debug(
-            Ssh.execute_command(self.settings.director_node.external_ip,
-                                self.settings.director_install_account_user,
-                                self.settings.director_install_account_pwd,
-                                cmd))
+    def __init__(self):
+
+        self.settings = Settings.settings
+        self.user = self.settings.director_install_account_user
+        self.ip = self.settings.director_node.external_ip
+        self.pwd = self.settings.director_install_account_pwd
+        self.root_pwd = self.settings.director_node.root_password
+
+        self.home_dir = "/home/" + self.user
+        self.pilot_dir = os.path.join(self.home_dir, "pilot")
+        self.images_dir = os.path.join(self.pilot_dir, "images")
+        self.templates_dir = os.path.join(self.pilot_dir, "templates")
+        self.nic_configs_dir = os.path.join(self.templates_dir, "nic-configs")
+        self.validation_dir = os.path.join(self.pilot_dir,
+                                           "deployment-validation")
+        self.source_stackrc = 'source ' + self.home_dir + "/stackrc;"
+
+        cmd = "mkdir " + self.pilot_dir
+        self.run(cmd)
 
     def apply_internal_repos(self):
-        # Add the internal repo. & if going down that road,
-        # and re pull down foreman with the new version
+        # Add the internal repo. if going down that road,
         if self.settings.internal_repos is True:
             logger.debug(
                 "Applying internal repo's to the "
                 "director vm & reinstall rdo manager")
             count = 1
             for repo in self.settings.internal_repos_urls:
-                cmd = 'curl ' + repo + " > /etc/yum.repos.d/internal_" + str(
-                    count) + ".repo"
-                logger.debug(Ssh.execute_command(
-                    self.settings.director_node.external_ip,
-                    "root",
-                    self.settings.director_node.root_password,
-                    cmd))
-                logger.debug(Ssh.execute_command(
-                    self.settings.director_node.external_ip,
-                    "root",
-                    self.settings.director_node.root_password,
-                    "sed -i '/enabled=1/a priority=1' "
-                    "/etc/yum.repos.d/internal_" +
-                    str(count) + ".repo"))
+                cmd = 'curl ' + \
+                      repo + \
+                      " > /etc/yum.repos.d/internal_" + \
+                      str(count) + \
+                      ".repo"
+                self.run_as_root(cmd)
+                self.run_as_root("sed -i '/enabled=1/a priority=1' "
+                                 "/etc/yum.repos.d/internal_" +
+                                 str(count) + ".repo")
                 count += 1
 
             cmds = [
@@ -93,11 +91,7 @@ class Director():
                 'yum update -y',
             ]
             for cmd in cmds:
-                logger.debug(Ssh.execute_command(
-                    self.settings.director_node.external_ip,
-                    "root",
-                    self.settings.director_node.root_password,
-                    cmd))
+                self.run_as_root(cmd)
         logger.debug(
             "Workaroud for "
             "https://bugzilla.redhat.com/show_bug.cgi?id=1298189")
@@ -106,34 +100,18 @@ class Director():
               " -> Class\['::heat::keystone::domain'\]/\" " \
               "/usr/share/instack-undercloud/" \
               "puppet-stack-config/puppet-stack-config.pp"
-        logger.debug(
-            Ssh.execute_command_tty(self.settings.director_node.external_ip,
-                                    "root",
-                                    self.settings.director_node.root_password,
-                                    cmd))
+        self.run_tty_as_root(cmd)
 
     def upload_update_conf_files(self):
 
-        install_admin_user = self.settings.director_install_account_user
-        install_admin_password = self.settings.director_install_account_pwd
-
         logger.debug("tar up the required pilot files")
-        os.system(
-            "cd " + self.settings.foreman_configuration_scripts +
-            "/pilot/;tar -zcvf /root/pilot.tar.gz *")
-        remote_file = "/home/" + install_admin_user + "/pilot.tar.gz"
-        Scp.put_file(self.settings.director_node.external_ip,
-                     install_admin_user,
-                     install_admin_password,
-                     "/root/pilot.tar.gz",
-                     remote_file)
+        os.system("cd " +
+                  self.settings.foreman_configuration_scripts +
+                  "/pilot/;tar -zcvf /root/pilot.tar.gz *")
+        self.upload_file("/root/pilot.tar.gz",
+                         self.home_dir + "/pilot.tar.gz")
 
-        cmd = 'cd;tar zxvf pilot.tar.gz -C pilot'
-        logger.debug(
-            Ssh.execute_command(self.settings.director_node.external_ip,
-                                install_admin_user,
-                                install_admin_password,
-                                cmd))
+        self.run('cd;tar zxvf pilot.tar.gz -C pilot')
 
         cmds = [
             'sed -i "s|local_ip = .*|local_ip = ' +
@@ -161,24 +139,16 @@ class Director():
             '|" pilot/undercloud.conf',
         ]
         for cmd in cmds:
-            logger.debug(
-                Ssh.execute_command(self.settings.director_node.external_ip,
-                                    install_admin_user,
-                                    install_admin_password,
-                                    cmd))
+            self.run(cmd)
 
     def install_director(self):
         logger.debug("uploading & executing sh script")
 
-        cmd = '~/pilot/install-director.sh ' + \
-              self.settings.name_server + " " + \
-              self.settings.subscription_manager_user + " " + \
-              self.settings.subscription_manager_password + " " + \
-              self.settings.subscription_manager_vm_ceph
-        Ssh.execute_command_tty(self.settings.director_node.external_ip,
-                                self.settings.director_install_account_user,
-                                self.settings.director_install_account_pwd,
-                                cmd)
+        self.run_tty('~/pilot/install-director.sh ' +
+                     self.settings.name_server + " " +
+                     self.settings.subscription_manager_user + " " +
+                     self.settings.subscription_manager_password + " " +
+                     self.settings.subscription_manager_vm_ceph)
 
         tester = Checkpoints()
         tester.verify_undercloud_installed()
@@ -186,51 +156,25 @@ class Director():
     def upload_cloud_images(self):
 
         logger.debug("Uploading cloud images to the Director vm")
+        self.run("mkdir " + self.images_dir)
 
-        cmd = "mkdir /home/" + self.settings.director_install_account_user +\
-              "/pilot/images"
-        logger.debug(
-            Ssh.execute_command(self.settings.director_node.external_ip,
-                                self.settings.director_install_account_user,
-                                self.settings.director_install_account_pwd,
-                                cmd))
+        self.upload_file(self.settings.discovery_ram_disk_image,
+                         self.images_dir + "/discovery-ramdisk.tar")
 
-        remote_file = "/home/" + self.settings.director_install_account_user +\
-                      "/pilot/images/discovery-ramdisk.tar"
-        Scp.put_file(self.settings.director_node.external_ip,
-                     self.settings.director_install_account_user,
-                     self.settings.director_install_account_pwd,
-                     self.settings.discovery_ram_disk_image,
-                     remote_file)
-
-        remote_file = "/home/" + self.settings.director_install_account_user +\
-                      "/pilot/images/overcloud-full.tar"
-        Scp.put_file(self.settings.director_node.external_ip,
-                     self.settings.director_install_account_user,
-                     self.settings.director_install_account_pwd,
-                     self.settings.overcloud_image,
-                     remote_file)
+        self.upload_file(self.settings.overcloud_image,
+                         self.images_dir + "/overcloud-full.tar")
 
     def node_discovery(self):
         setts = self.settings
         if setts.use_custom_instack_json is True:
             logger.debug(
                 "Using custom instack.json file - NOT scannings nodes")
-            cmd = "rm /home/" + setts.director_install_account_user +\
-                  "/instackenv.json -f"
-            logger.debug(Ssh.execute_command_tty(
-                setts.director_node.external_ip,
-                setts.director_install_account_user,
-                setts.director_install_account_pwd,
-                cmd))
+            cmd = "rm " + self.home_dir + "/instackenv.json -f"
+            self.run_tty(cmd)
 
-            remote_file = "/home/" + setts.director_install_account_user + \
-                          "/instackenv.json"
-            Scp.put_file(setts.director_node.external_ip,
-                         setts.director_install_account_user,
-                         setts.director_install_account_pwd,
-                         setts.custom_instack_json,
-                         remote_file)
+            remote_file = self.home_dir + "/instackenv.json"
+            self.upload_file(setts.custom_instack_json,
+                             remote_file)
         else:
             self.check_idracs()
             setts = self.settings
@@ -243,19 +187,11 @@ class Director():
                 cmd += ' ' + node.idrac_ip
             cmd += '> ~/instackenv.json'
 
-            logger.debug(Ssh.execute_command_tty(
-                setts.director_node.external_ip,
-                setts.director_install_account_user,
-                setts.director_install_account_pwd,
-                cmd))
+            self.run_tty(cmd)
 
             cmd = "ls -la ~/instackenv.json | awk '{print $5;}'"
             size = \
-                Ssh.execute_command_tty(
-                    setts.director_node.external_ip,
-                    setts.director_install_account_user,
-                    setts.director_install_account_pwd,
-                    cmd)[0]
+                self.run_tty(cmd)[0]
             if int(size) <= 50:
                 logger.fatal("did not manage to pick up the nodes..")
                 raise AssertionError(
@@ -280,34 +216,22 @@ class Director():
         if setts.use_ipmi_driver is True:
             logger.debug("Using pxe_ipmi driver")
             cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ~/instackenv.json'
-            logger.debug(Ssh.execute_command_tty(
-                setts.director_node.external_ip,
-                setts.director_install_account_user,
-                setts.director_install_account_pwd,
-                cmd))
+            self.run_tty(cmd)
 
-        cmd = "source stackrc;openstack baremetal import --json " \
-              "~/instackenv.json"
+        cmd = self.source_stackrc + "openstack " \
+                                    "baremetal import --json ~/instackenv.json"
         logger.debug(
-            Ssh.execute_command_tty(setts.director_node.external_ip,
-                                    setts.director_install_account_user,
-                                    setts.director_install_account_pwd,
-                                    cmd))
+            self.run_tty(cmd))
         tester = Checkpoints()
         tester.verify_nodes_registered_in_ironic()
 
-        cmd = "source stackrc;openstack baremetal configure boot"
-        logger.debug(
-            Ssh.execute_command_tty(setts.director_node.external_ip,
-                                    setts.director_install_account_user,
-                                    setts.director_install_account_pwd,
-                                    cmd))
+        cmd = self.source_stackrc + "openstack" \
+                                    " baremetal configure boot"
+        self.run_tty(cmd)
 
-        cmd = "source stackrc;openstack baremetal introspection bulk start"
-        Ssh.execute_command_tty(setts.director_node.external_ip,
-                                setts.director_install_account_user,
-                                setts.director_install_account_pwd,
-                                cmd)
+        cmd = self.source_stackrc + "openstack " \
+                                    "baremetal introspection bulk start"
+        self.run_tty(cmd)
         tester.verify_introspection_sucessfull()
 
     def check_idracs(self):
@@ -319,37 +243,23 @@ class Director():
                 while 1:
                     cmd = 'ipmitool -I lanplus -H ' + \
                           self.settings.controller_nodes[0].idrac_ip + \
-                          ' -U ' +\
+                          ' -U ' + \
                           self.settings.ipmi_user + \
                           ' -P ' + \
                           self.settings.ipmi_password + \
                           ' power status'
-                    ip = self.settings.director_node.external_ip
-                    user = self.settings.director_install_account_user
-                    passwd = self.settings.director_install_account_pwd
-                    Ssh.execute_command_tty(
-                                            ip,
-                                            user,
-                                            passwd,
-                                            cmd)
+
+                    self.run_tty(cmd)
                     cmd = "cd ~/pilot/discover_nodes;./discover_nodes.py" \
                           " -u " + \
                           self.settings.ipmi_user + \
                           " -p '" + \
                           self.settings.ipmi_password + "' " + \
                           node.idrac_ip
-                    out = Ssh.execute_command_tty(
-                                                  ip,
-                                                  user,
-                                                  passwd,
-                                                  cmd)[0]
+                    self.run_tty(cmd)[0]
                     # yes, running it twice - throws errors on first attempts
                     # depending on the state of the node
-                    out = Ssh.execute_command_tty(
-                                                  ip,
-                                                  user,
-                                                  passwd,
-                                                  cmd)[0]
+                    out = self.run_tty(cmd)[0]
                     if ("FIXME" in out) or ("WSMan request failed" in out):
                         logger.warning(
                                        node.hostname +
@@ -360,14 +270,13 @@ class Director():
                                             self.settings.ipmi_user,
                                             self.settings.ipmi_password,
                                             node.idrac_ip)
-                        logger.debug(ipmi_session.drac_reset())
+                        ipmi_session.drac_reset()
                         time.sleep(120)
-                        backToLife = False
-                        while backToLife is False:
+                        back2life = False
+                        while back2life is False:
                             try:
-                                logger.debug(
-                                             ipmi_session.get_power_state())
-                                backToLife = True
+                                ipmi_session.get_power_state()
+                                back2life = True
                                 time.sleep(20)
                             except:
                                 pass
@@ -379,51 +288,34 @@ class Director():
                         break
 
     def assign_node_roles(self):
-        logger.debug("uploading assign script")
 
         logger.debug("Assigning roles to nodes")
 
         for node in self.settings.controller_nodes:
-            cmd = 'cd ' + "/home/" + \
-                  self.settings.director_install_account_user +  \
-                  ";source stackrc;cd ~/pilot;./assign_role.py " + \
-                  node.provisioning_mac_address + " controller"
-            out = Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd)
+            out = self.run_tty(self.source_stackrc +
+                               "cd ~/pilot;./assign_role.py " +
+                               node.provisioning_mac_address +
+                               " controller")
             if "Not Found" in out[0]:
                 raise AssertionError(
                     "Failed to assign Controller node role to mac " +
                     node.provisioning_mac_address)
 
         for node in self.settings.compute_nodes:
-            cmd = 'cd ' + "/home/" + \
-                  self.settings.director_install_account_user + \
-                  ";source stackrc;cd ~/pilot;./assign_role.py " + \
-                  node.provisioning_mac_address + " compute"
-            out = Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd)
+            out = self.run_tty(self.source_stackrc +
+                               "cd ~/pilot;./assign_role.py " +
+                               node.provisioning_mac_address +
+                               " compute")
             if "Not Found" in out[0]:
                 raise AssertionError(
                     "Failed to assign Compute node role to mac " +
                     node.provisioning_mac_address)
 
         for node in self.settings.ceph_nodes:
-            cmd = 'cd ' + "/home/" + \
-                  self.settings.director_install_account_user + \
-                  ";source stackrc;cd ~/pilot;./assign_role.py " + \
-                  node.provisioning_mac_address + \
-                  " storage"
-            out = Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd)
+            out = self.run_tty(self.source_stackrc +
+                               "cd ~/pilot;./assign_role.py " +
+                               node.provisioning_mac_address +
+                               " storage")
             if "Not Found" in out[0]:
                 raise AssertionError(
                     "Failed to assign Storage node role to mac " +
@@ -437,6 +329,20 @@ class Director():
         self.setup_storage()
         self.setup_eqlx()
         self.setup_dellsc()
+        self.setup_environment()
+
+    def setup_environment(self):
+
+        env_yaml = os.path.join(self.templates_dir + "/dell-environment.yaml ")
+
+        # reupload the file if this is an overcloud only install
+        self.upload_file(self.settings.dell_env_yaml,
+                         env_yaml)
+        self.run_tty('sed -i "s|NovaEnableRbdBackend: .*|'
+                     'NovaEnableRbdBackend: ' +
+                     str(self.settings.enable_rbd_backend).lower() +
+                     '|" ' +
+                     env_yaml)
 
     def setup_storage(self):
         if len(self.settings.ceph_nodes) == 0:
@@ -511,16 +417,12 @@ class Director():
         src_file.close()
         tmp_file.close()
 
-        install_admin_user = self.settings.director_install_account_user
-        install_admin_password = self.settings.director_install_account_pwd
+        install_admin_user = self.user
 
         dst_name = os.path.join(
             os.path.join("/home", install_admin_user, ceph_yaml))
-        Scp.put_file(self.settings.director_node.external_ip,
-                     install_admin_user,
-                     install_admin_password,
-                     tmp_name,
-                     dst_name)
+        self.upload_file(tmp_name,
+                         dst_name)
         os.remove(tmp_name)
 
     def setup_eqlx(self):
@@ -532,14 +434,9 @@ class Director():
         logger.debug("configuring eql backend")
         # Re - Upload the yaml files in case we're trying to leave
         # the undercloud intact but want to redeploy with a different config
-        eqlx_yaml = "/home/" + self.settings.director_install_account_user \
-                    + "/pilot/templates/dell-eqlx-environment.yaml"
-        Scp.put_file(self.settings.director_node.external_ip,
-                     self.settings.director_install_account_user,
-                     self.settings.director_install_account_pwd,
-                     self.settings.eqlx_yaml,
-                     eqlx_yaml)
-
+        eqlx_yaml = self.templates_dir + "/dell-eqlx-environment.yaml"
+        self.upload_file(self.settings.eqlx_yaml,
+                         eqlx_yaml)
         cmds = [
             'sed -i "s|CinderEnableEqlxBackend: .*|'
             'CinderEnableEqlxBackend: true|" ' +
@@ -567,11 +464,7 @@ class Director():
             self.settings.eqlx_use_chap + '|" ' + eqlx_yaml,
         ]
         for cmd in cmds:
-            logger.debug(Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd))
+            self.run_tty(cmd)
 
     def setup_dellsc(self):
 
@@ -583,13 +476,9 @@ class Director():
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy with
         # a different config
-        dellsc_yaml = "/home/" + self.settings.director_install_account_user \
-                      + "/pilot/templates/dell-dellsc-environment.yaml"
-        Scp.put_file(self.settings.director_node.external_ip,
-                     self.settings.director_install_account_user,
-                     self.settings.director_install_account_pwd,
-                     self.settings.dellsc_yaml,
-                     dellsc_yaml)
+        dellsc_yaml = self.templates_dir + "/dell-dellsc-environment.yaml"
+        self.upload_file(self.settings.dellsc_yaml,
+                         dellsc_yaml)
 
         cmds = [
             'sed -i "s|CinderEnableDellScBackend: .*|'
@@ -625,49 +514,27 @@ class Director():
 
         ]
         for cmd in cmds:
-            logger.debug(Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd))
+            self.run_tty(cmd)
 
     def setup_networking(self):
 
-        install_admin_user = self.settings.director_install_account_user
-        install_admin_password = self.settings.director_install_account_pwd
-
         logger.debug("Configuring network settings for overcloud")
 
-        network_yaml = "/home/" + install_admin_user \
-                       + "/pilot/templates/network-environment.yaml"
-        storage_yaml = "/home/" + install_admin_user \
-                       + "/pilot/templates/nic-configs/ceph-storage.yaml"
-        compute_yaml = "/home/" + install_admin_user \
-                       + "/pilot/templates/nic-configs/compute.yaml"
-        controller_yaml = "/home/" + install_admin_user \
-                          + "/pilot/templates/nic-configs/controller.yaml"
+        network_yaml = self.templates_dir + "/network-environment.yaml"
+        storage_yaml = self.nic_configs_dir + "/ceph-storage.yaml"
+        compute_yaml = self.nic_configs_dir + "/compute.yaml"
+        controller_yaml = self.nic_configs_dir + "/controller.yaml"
 
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy
         # with a different config
-        Scp.put_file(self.settings.director_node.external_ip,
-                     install_admin_user,
-                     install_admin_password,
-                     self.settings.network_env_yaml,
-                     network_yaml)
-        Scp.put_file(self.settings.director_node.external_ip,
-                     install_admin_user,
-                     install_admin_password,
-                     self.settings.ceph_storage_yaml,
-                     storage_yaml)
-        Scp.put_file(self.settings.director_node.external_ip,
-                     install_admin_user, install_admin_password,
-                     self.settings.compute_yaml, compute_yaml)
-        Scp.put_file(self.settings.director_node.external_ip,
-                     install_admin_user,
-                     install_admin_password,
-                     self.settings.controller_yaml,
-                     controller_yaml)
+        self.upload_file(self.settings.network_env_yaml,
+                         network_yaml)
+        self.upload_file(self.settings.ceph_storage_yaml,
+                         storage_yaml)
+        self.upload_file(self.settings.compute_yaml, compute_yaml)
+        self.upload_file(self.settings.controller_yaml,
+                         controller_yaml)
 
         cmds = [
             'sed -i "s|ControlPlaneDefaultRoute:.*|' +
@@ -739,11 +606,7 @@ class Director():
             self.settings.public_api_vlanid + '|" ' + network_yaml,
         ]
         for cmd in cmds:
-            logger.debug(Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd))
+            self.run_tty(cmd)
 
         if self.settings.controller_bond_opts == \
            self.settings.compute_bond_opts \
@@ -758,11 +621,7 @@ class Director():
                 '|      \\"mode=' +
                 self.settings.compute_bond_opts + '\\"|" ' + network_yaml]
             for cmd in cmds:
-                logger.debug(Ssh.execute_command_tty(
-                    self.settings.director_node.external_ip,
-                    self.settings.director_install_account_user,
-                    self.settings.director_install_account_pwd,
-                    cmd))
+                self.run_tty(cmd)
         else:
             logger.debug("applying bond mode on a per type basis")
             cmds = [
@@ -779,11 +638,7 @@ class Director():
                 "'\\n/;}\" " + storage_yaml,
             ]
             for cmd in cmds:
-                logger.debug(Ssh.execute_command_tty(
-                    self.settings.director_node.external_ip,
-                    self.settings.director_install_account_user,
-                    self.settings.director_install_account_pwd,
-                    cmd))
+                self.run_tty(cmd)
 
         logger.debug("updating controller yaml")
         cmds = [
@@ -808,11 +663,7 @@ class Director():
             self.settings.provisioning_gateway + '|" ' + controller_yaml
         ]
         for cmd in cmds:
-            logger.debug(Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd))
+            self.run_tty(cmd)
 
         logger.debug("updating compute yaml")
         cmds = ['sed -i "s|em1|' +
@@ -832,11 +683,7 @@ class Director():
                 compute_yaml
                 ]
         for cmd in cmds:
-            logger.debug(Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd))
+            self.run_tty(cmd)
 
         logger.debug("updating storage yaml")
         cmds = ['sed -i "s|em1|' +
@@ -856,22 +703,26 @@ class Director():
                 storage_yaml
                 ]
         for cmd in cmds:
-            logger.debug(Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd))
+            self.run_tty(cmd)
 
     def deploy_overcloud(self):
 
         logger.debug("Configuring network settings for overcloud")
-
-        cmd = "cd ~/pilot;source ~/stackrc;./deploy-overcloud.py" + \
-              " --computes " + str(len(self.settings.compute_nodes)) + \
-              " --controllers " + str(len(self.settings.controller_nodes)) + \
-              " --storage " + str(len(self.settings.ceph_nodes)) + \
-              " --vlan " + self.settings.tenant_vlan_range + \
-              " > overcloud_deploy_out.log"
+        cmd = "rm -f " + self.home_dir + '/.ssh/known_hosts'
+        self.run_tty(cmd)
+        cmd = self.source_stackrc + "cd" \
+                                    " ~/pilot;./deploy-overcloud.py" \
+                                    " --computes " + \
+                                    str(len(self.settings.compute_nodes)) + \
+                                    " --controllers " + \
+                                    str(len(
+                                            self.settings.controller_nodes
+                                            )) + \
+                                    " --storage " + \
+                                    str(len(self.settings.ceph_nodes)) + \
+                                    " --vlan " + \
+                                    self.settings.tenant_vlan_range + \
+                                    " > overcloud_deploy_out.log"
         if self.settings.overcloud_deploy_timeout != "90":
             cmd += " --timeout " \
                    + self.settings.overcloud_deploy_timeout
@@ -880,49 +731,29 @@ class Director():
 
         if self.settings.enable_dellsc_backend is True:
             cmd += " --enable_dellsc"
-        setts = self.settings
-        Ssh.execute_command_tty(setts.director_node.external_ip,
-                                setts.director_install_account_user,
-                                setts.director_install_account_pwd,
-                                cmd)
+
+        self.run_tty(cmd)
 
     def delete_overcloud(self):
-        setts = self.settings
+
         logger.debug("Deleting the overcloud stack")
-        cmd = "cd ~/pilot;source ~/stackrc;heat stack-delete overcloud"
-        logger.debug(
-            Ssh.execute_command_tty(setts.director_node.external_ip,
-                                    setts.director_install_account_user,
-                                    setts.director_install_account_pwd,
-                                    cmd))
-
-        cmd = "cd ~/pilot;source ~/stackrc;heat stack-list"
+        self.run_tty(self.source_stackrc +
+                     "heat stack-delete overcloud")
         while 1:
-
-            if "overcloud" in Ssh.execute_command_tty(
-                    setts.director_node.external_ip,
-                    setts.director_install_account_user,
-                    setts.director_install_account_pwd,
-                    cmd)[0]:
+            if "overcloud" in self.run_tty(self.source_stackrc +
+                                           "heat stack-list")[0]:
                 time.sleep(60)
             else:
                 break
         # Unregister the nodes from Ironic
-        cmd = "source ~/stackrc;ironic node-list | grep None"
-        re = Ssh.execute_command_tty(setts.director_node.external_ip,
-                                     setts.director_install_account_user,
-                                     setts.director_install_account_pwd,
-                                     cmd)
+        re = self.run_tty(self.source_stackrc + "ironic node-list | grep None")
         ls_nodes = re[0].split("\n")
         ls_nodes.pop()
         for node in ls_nodes:
             node_id = node.split("|")[1]
-            cmd = "source ~/stackrc;ironic node-delete " + node_id
-            logger.debug(Ssh.execute_command_tty(
-                setts.director_node.external_ip,
-                setts.director_install_account_user,
-                setts.director_install_account_pwd,
-                cmd))
+            self.run_tty(self.source_stackrc +
+                         "ironic node-delete " +
+                         node_id)
 
     def retreive_nodes_ips(self):
         logger.info("**** Retreiving nodes information ")
@@ -932,12 +763,8 @@ class Director():
             logger.debug("retreiving node ip details ..")
             ip_info.append("====================================")
             ip_info.append("### nodes ip information ###")
-            cmd = "source ~/stackrc;nova list | grep controller"
-            re = Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd)
+            re = self.run_tty(self.source_stackrc +
+                              "nova list | grep controller")
 
             ip_info.append("### Controllers ###")
             ls_nodes = re[0].split("\n")
@@ -947,46 +774,31 @@ class Director():
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
 
-                cmd = "ssh heat-admin@" + \
-                      provisioning_ip + \
-                      " /sbin/ifconfig | grep \"inet.*" + \
-                      self.settings.private_api_vlanid + \
-                      ".*netmask " + \
-                      self.settings.private_api_netmask + \
-                      ".*\" | awk '{print $2}'"
-                re = Ssh.execute_command_tty(
-                    self.settings.director_node.external_ip,
-                    self.settings.director_install_account_user,
-                    self.settings.director_install_account_pwd,
-                    cmd)
+                re = self.run_tty("ssh heat-admin@" +
+                                  provisioning_ip +
+                                  " /sbin/ifconfig | grep \"inet.*" +
+                                  self.settings.private_api_vlanid +
+                                  ".*netmask " +
+                                  self.settings.private_api_netmask +
+                                  ".*\" | awk '{print $2}'")
                 private_api = re[0].split("\n")[0]
 
-                cmd = "ssh heat-admin@" + \
-                      provisioning_ip + \
-                      "/sbin/ifconfig | grep \"inet.*" + \
-                      self.settings.public_api_vlanid + \
-                      ".*netmask " + \
-                      self.settings.public_api_netmask + \
-                      ".*\" | awk '{print $2}'"
-                re = Ssh.execute_command_tty(
-                    self.settings.director_node.external_ip,
-                    self.settings.director_install_account_user,
-                    self.settings.director_install_account_pwd,
-                    cmd)
+                re = self.run_tty("ssh heat-admin@" +
+                                  provisioning_ip +
+                                  "/sbin/ifconfig | grep \"inet.*" +
+                                  self.settings.public_api_vlanid +
+                                  ".*netmask " +
+                                  self.settings.public_api_netmask +
+                                  ".*\" | awk '{print $2}'")
                 nova_public_ip = re[0].split("\n")[0]
 
-                cmd = "ssh heat-admin@" + \
-                      provisioning_ip + \
-                      " /sbin/ifconfig | grep \"inet.*" + \
-                      self.settings.storage_vlanid + \
-                      ".*netmask " + \
-                      self.settings.storage_netmask + \
-                      ".*\" | awk '{print $2}'"
-                re = Ssh.execute_command_tty(
-                    self.settings.director_node.external_ip,
-                    self.settings.director_install_account_user,
-                    self.settings.director_install_account_pwd,
-                    cmd)
+                re = self.run_tty("ssh heat-admin@" +
+                                  provisioning_ip +
+                                  " /sbin/ifconfig | grep \"inet.*" +
+                                  self.settings.storage_vlanid +
+                                  ".*netmask " +
+                                  self.settings.storage_netmask +
+                                  ".*\" | awk '{print $2}'")
                 storage_ip = re[0].split("\n")[0]
 
                 ip_info.append(hostname + ":")
@@ -995,12 +807,7 @@ class Director():
                 ip_info.append("     - nova public ip   : " + nova_public_ip)
                 ip_info.append("     - storage ip       : " + storage_ip)
 
-            cmd = "source ~/stackrc;nova list | grep compute"
-            re = Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd)
+            re = self.run_tty(self.source_stackrc + "nova list | grep compute")
 
             ip_info.append("### Compute  ###")
             ls_nodes = re[0].split("\n")
@@ -1009,32 +816,22 @@ class Director():
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
 
-                cmd = "ssh heat-admin@" + \
-                      provisioning_ip + \
-                      " /sbin/ifconfig | grep \"inet.*" + \
-                      self.settings.private_api_vlanid + \
-                      ".*netmask " \
-                      + self.settings.private_api_netmask \
-                      + ".*\" | awk '{print $2}'"
-                re = Ssh.execute_command_tty(
-                    self.settings.director_node.external_ip,
-                    self.settings.director_install_account_user,
-                    self.settings.director_install_account_pwd,
-                    cmd)
+                re = self.run_tty("ssh heat-admin@" +
+                                  provisioning_ip +
+                                  " /sbin/ifconfig | grep \"inet.*" +
+                                  self.settings.private_api_vlanid +
+                                  ".*netmask " +
+                                  self.settings.private_api_netmask +
+                                  ".*\" | awk '{print $2}'")
                 private_api = re[0].split("\n")[0]
 
-                cmd = "ssh heat-admin@" + \
-                      provisioning_ip + \
-                      " /sbin/ifconfig | grep \"inet.*" + \
-                      self.settings.storage_vlanid + \
-                      ".*netmask " +\
-                      self.settings.storage_netmask + \
-                      ".*\" | awk '{print $2}'"
-                re = Ssh.execute_command_tty(
-                    self.settings.director_node.external_ip,
-                    self.settings.director_install_account_user,
-                    self.settings.director_install_account_pwd,
-                    cmd)
+                re = self.run_tty("ssh heat-admin@" +
+                                  provisioning_ip +
+                                  " /sbin/ifconfig | grep \"inet.*" +
+                                  self.settings.storage_vlanid +
+                                  ".*netmask " +
+                                  self.settings.storage_netmask +
+                                  ".*\" | awk '{print $2}'")
                 storage_ip = re[0].split("\n")[0]
 
                 ip_info.append(hostname + ":")
@@ -1042,12 +839,7 @@ class Director():
                 ip_info.append("     - nova private ip  : " + private_api)
                 ip_info.append("     - storage ip       : " + storage_ip)
 
-            cmd = "source ~/stackrc;nova list | grep storage"
-            re = Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd)
+            re = self.run_tty(self.source_stackrc + "nova list | grep storage")
 
             ip_info.append("### Storage  ###")
             ls_nodes = re[0].split("\n")
@@ -1056,29 +848,21 @@ class Director():
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
 
-                cmd = "ssh heat-admin@" \
-                      + provisioning_ip + \
-                      " /sbin/ifconfig | grep \"inet.*" + \
-                      self.settings.storage_cluster_vlanid + \
-                      ".*netmask 255.255.255.0.*\" | awk '{print $2}'"
-                re = Ssh.execute_command_tty(
-                    self.settings.director_node.external_ip,
-                    self.settings.director_install_account_user,
-                    self.settings.director_install_account_pwd,
-                    cmd)
+                re = self.run_tty("ssh heat-admin@" +
+                                  provisioning_ip +
+                                  " /sbin/ifconfig | grep \"inet.*" +
+                                  self.settings.storage_cluster_vlanid +
+                                  ".*netmask 255.255.255.0.*\""
+                                  " | awk '{print $2}'")
                 cluster_ip = re[0].split("\n")[0]
 
-                cmd = "ssh heat-admin@" + \
-                      provisioning_ip + \
-                      " /sbin/ifconfig | grep \"inet.*" + \
-                      self.settings.storage_vlanid + \
-                      ".*netmask " + \
-                      self.settings.storage_netmask + \
-                      ".*\" | awk '{print $2}'"
-                re = Ssh.execute_command_tty(
-                    self.settings.director_node.external_ip,
-                    self.settings.director_install_account_user,
-                    self.settings.director_install_account_pwd, cmd)
+                re = self.run_tty("ssh heat-admin@" +
+                                  provisioning_ip +
+                                  " /sbin/ifconfig | grep \"inet.*" +
+                                  self.settings.storage_vlanid +
+                                  ".*netmask " +
+                                  self.settings.storage_netmask +
+                                  ".*\" | awk '{print $2}'")
                 storage_ip = re[0].split("\n")[0]
 
                 ip_info.append(hostname + ":")
@@ -1090,22 +874,15 @@ class Director():
 
             # noinspection PyBroadException
             try:
-                overcloud_endpoint = Ssh.execute_command_tty(
-                    self.settings.director_node.external_ip,
-                    self.settings.director_install_account_user,
-                    self.settings.director_install_account_pwd,
-                    'grep "OS_AUTH_URL=" ~/overcloudrc')[0].split('=')[
-                    1].replace(':5000/v2.0/', '')
-                overcloud_pass = Ssh.execute_command_tty(
-                    self.settings.director_node.external_ip,
-                    self.settings.director_install_account_user,
-                    self.settings.director_install_account_pwd,
-                    'grep "OS_PASSWORD=" ~/overcloudrc')[0].split('=')[1]
-                ip_info.append(
-                    "OverCloud Horizon        : " + overcloud_endpoint)
-                ip_info.append("OverCloud admin password : " + overcloud_pass)
+               overcloud_endpoint = self.run_tty(
+                    'grep "OS_AUTH_URL=" ~/overcloudrc')[0].split('=')[1].replace(':5000/v2.0/', '')
+               overcloud_pass = self.run(
+                                                        'grep "OS_PASSWORD=" ~/overcloudrc')[0].split('=')[1]
+               ip_info.append("OverCloud Horizon        : " +
+                              overcloud_endpoint)
+               ip_info.append("OverCloud admin password : " + overcloud_pass)
             except:
-                pass
+                 pass
             ip_info.append("====================================")
             for each in ip_info:
                 logger.debug(each)
@@ -1119,31 +896,14 @@ class Director():
         if self.settings.run_sanity is True:
             logger.info("Running sanity test")
             cmd = 'rm -f ~/MY_KEY.pem'
-            logger.debug(Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd))
-            cmd = 'wget ' \
-                  'http://download.cirros-cloud.net/0.3.3/' \
-                  'cirros-0.3.3-x86_64-disk.img'
-            logger.debug(Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd))
-            cmd = 'cd ~/pilot/deployment-validation;chmod ugo+x sanity_test.sh'
-            logger.debug(Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd))
-            cmd = 'cd ~/pilot/deployment-validation;./sanity_test.sh'
-            re = Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd)
+            self.run_tty(cmd)
+            self.run_tty('wget '
+                         'http://download.cirros-cloud.net/0.3.3/'
+                         'cirros-0.3.3-x86_64-disk.img')
+            self.run_tty(self.validation_dir +
+                         ';chmod ugo+x sanity_test.sh')
+            re = self.run_tty("cd " + self.validation_dir +
+                              ';./sanity_test.sh')
             if "VALIDATION SUCCESS" in re[0]:
                 logger.info("Sanity Test Passed")
             else:
@@ -1171,19 +931,13 @@ class Director():
             'identity.admin_password $OS_PASSWORD'
         ]
         for cmd in cmds:
-            Ssh.execute_command_tty(setts.director_node.external_ip,
-                                    setts.director_install_account_user,
-                                    setts.director_install_account_pwd,
-                                    cmd)
+            self.run_tty(cmd)
         if setts.tempest_smoke_only is True:
             cmd = "source ~/overcloudrc;cd " \
                   "~/tempest;tools/run-tests.sh '.*smoke'"
         else:
             cmd = "source ~/overcloudrc;cd ~/tempest;tools/run-tests.sh"
-        Ssh.execute_command_tty(setts.director_node.external_ip,
-                                setts.director_install_account_user,
-                                setts.director_install_account_pwd,
-                                cmd)
+        self.run_tty(cmd)
         Scp.get_file(setts.director_node.external_ip,
                      setts.director_install_account_user,
                      setts.director_install_account_pwd,
@@ -1200,13 +954,8 @@ class Director():
 
     def configure_calamari(self):
         logger.info("Configure Calamari")
-        cmd = 'source stackrc;cd ~' +\
-              self.settings.director_install_account_user + \
-              '/pilot;./config_calamari_nodes.sh ' +\
-              self.settings.ceph_node.external_ip + \
-              ' ' + self.settings.ceph_node.root_password
-
-        Ssh.execute_command_tty(self.settings.director_node.external_ip,
-                                self.settings.director_install_account_user,
-                                self.settings.director_install_account_pwd,
-                                cmd)
+        self.run_tty(self.source_stackrc + 'cd ' +
+                     self.pilot_dir +
+                     ';./config_calamari_nodes.sh ' +
+                     self.settings.ceph_node.external_ip +
+                     ' ' + self.settings.ceph_node.root_password)

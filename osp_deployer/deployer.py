@@ -142,16 +142,14 @@ def deploy():
                                 settings.sah_node.root_password,
                                 "subscription-manager unregister")
 
-            logger.debug(
-                Ssh.execute_command(settings.director_node.external_ip,
-                                    "root",
-                                    settings.sah_node.root_password,
-                                    "subscription-manager remove --all"))
-            logger.debug(
-                Ssh.execute_command(settings.director_node.external_ip,
-                                    "root",
-                                    settings.sah_node.root_password,
-                                    "subscription-manager unregister"))
+            Ssh.execute_command(settings.director_node.external_ip,
+                                "root",
+                                settings.sah_node.root_password,
+                                "subscription-manager remove --all")
+            Ssh.execute_command(settings.director_node.external_ip,
+                                "root",
+                                settings.sah_node.root_password,
+                                "subscription-manager unregister")
 
             logger.info("preparing the SAH installation")
 
