@@ -1,0 +1,25 @@
+{
+    "cdn_credentials": {
+        "cdn_username": "username",
+        "cdn_password": "password"
+    },
+    "_comment": [ "If using a proxy, remove the leading underscore from",
+                  "_proxy_credentials below and fill in the following proxy",
+                  "information." ],
+    "_proxy_credentials": {
+        "proxy_url": "hostname:port",
+        "proxy_username": "username",
+        "proxy_password": "password"
+    },
+    "roles": {
+        "control": {
+            "pool_ids": [ "pool_id" ]
+        },
+        "compute": {
+            "pool_ids": [ "pool_id" ]
+        },
+        "ceph-storage": {
+            "pool_ids": [ "pool_id" ]
+        }
+    }
+}
