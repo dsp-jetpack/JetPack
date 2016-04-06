@@ -21,7 +21,6 @@
 #
 #exit on failure
 #set -e 
-set -x
 
 shopt -s nullglob
 
@@ -302,7 +301,7 @@ file_setup(){
 	ip_add=$(ip addr show)
 	
 	#paramterized
-	if [ ! -f /var/www/html/RH7/$rhel72_iso_file ]; then
+	if [ ! -s /var/www/html/RH7/$rhel72_iso_file ]; then
 	    if [[ $ip_add == *10.152* ]]
 			then
 				wget --no-check-certificate --user "mht1\Script_User" --password "New2Day!" -O $rhel72_iso_file "https://10.152.248.11/folder/ISOs/rhel-server-7.2-x86_64-dvd.iso?dcPath=Cloud%2520Bastion%2520Physical%2520Stamps&dsName=Data2%252dStorage" -O $rhel72_iso_file
