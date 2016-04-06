@@ -446,11 +446,7 @@ class Director(InfraHost):
 
         cmd = 'sed -i "s|cinder_user_enabled_backends:.*|cinder_user_enabled_backends: ' + \
         enabled_backends +  '|" ' + dell_storage_yaml
-        logger.debug(Ssh.execute_command_tty(
-                self.settings.director_node.external_ip,
-                self.settings.director_install_account_user,
-                self.settings.director_install_account_pwd,
-                cmd))
+        self.run_tty(cmd)
 
 
 
