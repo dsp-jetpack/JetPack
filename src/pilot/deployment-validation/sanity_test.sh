@@ -32,6 +32,7 @@ EXTERNAL_VLAN="191"
 EXTERNAL_VLAN_NETWORK="192.168.191.0/24"
 GATEWAY_IP=192.168.191.1
 KEY_NAME="key_name"
+KEY_FILE="$KEY_NAME.pem"
 IMAGE_NAME="cirros"
 PASSWORD="cr0wBar!"
 EMAIL="ce-cloud@dell.com"
@@ -256,6 +257,7 @@ setup_glance(){
   info "### Setting up glance"""
 
   if [ ! -f ./cirros-0.3.3-x86_64-disk.img ]; then
+    sleep 5 #HACK: a timing issue exists on some stamps -- 5 seconds seems sufficient to fix it
     execute_command "wget http://download.cirros-cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img"
   else
     info "#----- Cirros image exists. Skipping"
@@ -281,9 +283,8 @@ setup_nova (){
   info "### Setup Nova"""
 
   info "creating keypair $KEY_NAME"
-  if [ ! -f ./MY_KEY.pem ]; then
-    file=MY_KEY.pem
-    nova keypair-add $KEY_NAME  > $file 
+  if [ ! -f "$KEY_FILE" ]; then
+    nova keypair-add $KEY_NAME  > "$KEY_FILE" 
   else
     info "#----- Key '$KEY_NAME' exists. Skipping"
   fi
@@ -498,9 +499,11 @@ then
     image_ids=$(glance image-list | grep $IMAGE_NAME | awk '{print $2}')
     [[ $image_ids ]] && echo $image_ids | xargs -n1 glance image-delete
 
-    info   "#### Deleting the security groups"
+    info   "#### Deleting the security groups and key_file"
     security_group_ids=$(neutron security-group-list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
     [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 neutron security-group-delete
+
+    rm -f $KEY_FILE
 
     info "### Deleting networks"
 
