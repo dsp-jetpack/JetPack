@@ -102,8 +102,6 @@ def main():
   subst_home('pilot/templates/dell-environment.yaml')
   subst_home('pilot/templates/static-ip-environment.yaml')
   subst_home('pilot/templates/network-environment.yaml')
-  subst_home('pilot/templates/dell-dellsc-environment.yaml')
-  subst_home('pilot/templates/dell-eqlx-environment.yaml')
 
 
   # Recursively copy pilot/templates/overrides to pilot/templates/overcloud
