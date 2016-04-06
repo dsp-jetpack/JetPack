@@ -8,6 +8,7 @@ import subprocess
 import sys
 import time
 
+from credential_helper import CredentialHelper
 from subprocess import check_output
 
 # Dell utilities
@@ -15,32 +16,6 @@ from identify_nodes import main as identify_nodes
 from update_ssh_config import main as update_ssh_config
 
 home_dir = os.path.expanduser('~')
-
-
-def get_creds():
-  global os_username
-  global os_password
-  global os_auth_url
-  global os_tenant_name
-
-  creds_file = open(home_dir + '/stackrc', 'r')
-
-  for line in creds_file:
-    prefix = "export"
-    if line.startswith(prefix):
-        line=line[len(prefix):]
-
-    line = line.strip()
-    key, val = line.split('=',2)
-    key = key.lower()
-
-    if key == 'os_username':
-      os_username = val
-    elif key == 'os_auth_url':
-      os_auth_url = val
-    elif key == 'os_tenant_name':
-      os_tenant_name = val
-  os_password = check_output(['sudo', 'hiera', 'admin_password']).strip()
 
 
 def subst_home(relative_path):
@@ -96,7 +71,9 @@ def main():
   if not p.match(args.vlan_range):
     print("Error: The VLAN range must be a number followed by a colon, followed by another number")
     sys.exit(1)
-  get_creds()
+
+  os_auth_url, os_tenant_name, os_username, os_password = \
+      CredentialHelper.get_undercloud_creds()
 
   # Replace HOME with the actual home directory in a few files
   subst_home('pilot/templates/dell-environment.yaml')

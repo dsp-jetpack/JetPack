@@ -11,6 +11,7 @@ import ironicclient
 from dracclient import wsman, utils
 from subprocess import check_output
 from oslo_utils import units
+from credential_helper import CredentialHelper
 import requests
 from ironicclient.openstack.common.apiclient.exceptions import NotFound
 
@@ -32,63 +33,6 @@ ROLES = {
     'storage': 'ceph-storage'
 }
 
-
-def get_openstack_creds():
-    creds_file = open(os.environ['HOME'] + '/stackrc', 'r')
-
-    for line in creds_file:
-        prefix = "export"
-        if line.startswith(prefix):
-            line = line[len(prefix):]
-
-        line = line.strip()
-        key, val = line.split('=', 2)
-        key = key.lower()
-
-        if key == 'os_username':
-            os_username = val
-        elif key == 'os_auth_url':
-            os_auth_url = val
-        elif key == 'os_tenant_name':
-            os_tenant_name = val
-
-    os_password = check_output(['sudo', 'hiera', 'admin_password']).strip()
-
-    return os_auth_url, os_tenant_name, os_username, os_password
-
-
-def get_drac_creds(ironic_client, node_uuid, instackenv_file):
-    # Get the DRAC IP, username, and password
-    node = ironic_client.node.get(node_uuid, ["driver_info"])
-    driver_info = node.driver_info
-
-    if "drac_host" in driver_info:
-        drac_ip = driver_info["drac_host"]
-        drac_user = driver_info["drac_username"]
-    else:
-        drac_ip = driver_info["ipmi_address"]
-        drac_user = driver_info["ipmi_username"]
-
-    # Can't get the password out of ironic, so dig it out of the
-    # instackenv.json file (or whatever is specified in --file)
-    drac_password = get_drac_password(drac_ip, instackenv_file)
-
-    return drac_ip, drac_user, drac_password
-
-
-def get_drac_password(ip, instackenv_file):
-    json_file = os.environ['HOME'] + '/' + instackenv_file
-    instackenv_json = open(json_file, 'r')
-    instackenv = json.load(instackenv_json)
-
-    nodes = instackenv["nodes"]
-
-    for node in nodes:
-        if node["pm_addr"] == ip:
-            return node["pm_password"]
-    print ("Node not found in {}. Use the --file argment to specify a json "
-           "file that contains the node data".format(json_file))
-    sys.exit()
 
 def get_fqdd(doc, namespace):
     return utils.find_xml(doc, 'FQDD', namespace).text
@@ -191,7 +135,7 @@ def main():
     flavor = ROLES[args.role]
 
     os_auth_url, os_tenant_name, os_username, os_password = \
-        get_openstack_creds()
+        CredentialHelper.get_undercloud_creds()
 
     # Get the UUID of the node
     kwargs = {'os_username': os_username,
@@ -210,12 +154,7 @@ def main():
     else:
         nodes = ironic_client.node.list(fields=["uuid", "driver_info"])
         for node in nodes:
-            driver_info = node.driver_info
-
-            if "drac_host" in driver_info:
-                drac_ip = driver_info["drac_host"]
-            else:
-                drac_ip = driver_info["ipmi_address"]
+            drac_ip, drac_user = CredentialHelper.get_drac_ip_and_user(node)
 
             if drac_ip == args.ip_or_mac:
                 node_uuid = node.uuid
@@ -235,12 +174,8 @@ def main():
 
     # Are we assigning the storage role to this node?
     if args.role == "storage":
-        # Get the DRAC IP, username, and password
-        drac_ip, drac_user, drac_password = get_drac_creds(ironic_client,
-                                                           node_uuid,
-                                                           args.file)
-
         # Get the model of the server from the DRAC
+        drac_password = CredentialHelper.get_drac_password(drac_ip, args.file)
         drac_client = wsman.Client(drac_ip, drac_user, drac_password)
         doc = drac_client.enumerate(DCIM_SystemView)
         model = utils.find_xml(doc, 'Model', DCIM_SystemView).text
