@@ -21,6 +21,7 @@
 #
 #exit on failure
 #set -e 
+set -x
 
 shopt -s nullglob
 
@@ -333,7 +334,7 @@ file_setup(){
 
 ui_setup(){
 info "ui setup"
-yum -y groupinstall 'X Windows System' 'GNOME'
+yum -y groupinstall 'X Window System' 'GNOME'
 systemctl enable graphical.target --force
 gnome-shell --version
 yum -y install firefox
