@@ -4,6 +4,8 @@ import os
 import re
 import subprocess
 
+from misc_helper import MiscHelper
+
 
 def get_nodes():
     """
@@ -11,12 +13,14 @@ def get_nodes():
     by running "nova list"
     """
 
+    stack_name = MiscHelper.get_stack_name()
+
     # A dictionary that maps nova node names to something shorter and easier
     # to type.
     node_names = {
-        'overcloud-controller': 'cntl',
-        'overcloud-novacompute': 'nova',
-        'overcloud-cephstorage': 'stor'
+        stack_name + '-controller': 'cntl',
+        stack_name + '-novacompute': 'nova',
+        stack_name + '-cephstorage': 'stor'
     }
 
     for line in subprocess.check_output(['nova', 'list']).split('\n'):
