@@ -9,6 +9,7 @@ import sys
 import time
 
 from credential_helper import CredentialHelper
+from misc_helper import MiscHelper
 from subprocess import check_output
 
 # Dell utilities
@@ -60,12 +61,14 @@ def main():
     default="0.centos.pool.ntp.org", help="The FQDN of the ntp server to use")
   parser.add_argument("--timeout",
     default="120", help="The amount of time in minutes to allow the overcloud to deploy")
+  parser.add_argument("--overcloud_name", default=None,
+    help="The name of the overcloud")
   parser.add_argument('--enable_eqlx', action='store_true', default=False, 
     help="Enable cinder Dell Eqlx backend")
   parser.add_argument('--enable_dellsc', action='store_true', default=False,
     help="Enable cinder Dell Storage Center backend")
-  parser.add_argument('--static_ips', action='store_true', default=False,
-    help="Specify the IPs and VIPs on the controller nodes")
+  #parser.add_argument('--static_ips', action='store_true', default=False,
+  #  help="Specify the IPs and VIPs on the controller nodes")
   args = parser.parse_args()
   p = re.compile('\d+:\d+')
   if not p.match(args.vlan_range):
@@ -88,6 +91,10 @@ def main():
 
   # Launch the deployment
 
+  overcloud_name_opt = ""
+  if args.overcloud_name is not None:
+    overcloud_name_opt = "--stack " + args.overcloud_name
+
   # The order of the environment files is important as a later inclusion
   # overrides resources defined in prior inclusions.
 
@@ -96,8 +103,8 @@ def main():
              " -e ~/pilot/templates/network-environment.yaml"
 
   # The static-ip-environment.yaml must be included after the network-environment.yaml
-  if args.static_ips:
-    env_opts += " -e ~/pilot/templates/static-ip-environment.yaml"
+  #if args.static_ips:
+  #  env_opts += " -e ~/pilot/templates/static-ip-environment.yaml"
 
   # The dell-environment.yaml must be included after the storage-environment.yaml
   env_opts += " -e ~/pilot/templates/overcloud/environments/storage-environment.yaml" \
@@ -111,6 +118,7 @@ def main():
         " --debug" \
         " --log-file ~/pilot/overcloud_deployment.log" \
         " -t {}" \
+        " {}" \
         " --templates ~/pilot/templates/overcloud" \
         " {}" \
         " --control-flavor control" \
@@ -132,6 +140,7 @@ def main():
         " --neutron-network-vlan-ranges physint:{},physext" \
         " --neutron-bridge-mappings physint:br-tenant,physext:br-ex" \
         "".format (args.timeout,
+                   overcloud_name_opt,
                    env_opts,
                    os_auth_url,
                    os_tenant_name,
@@ -161,11 +170,15 @@ def main():
   identify_nodes()
 
   try:
-    # Data will look like this: '"http://192.168.190.127:5000/v2.0"\n'
-    data = subprocess.check_output('heat output-show overcloud KeystoneURL'.split())
-    keystone_url = data.translate(None, '"\n')
-    # Form the Dashboard URL by trimming everything after the trailing ':'
-    print '\nHorizon Dashboard URL: {}\n'.format(keystone_url[:keystone_url.rfind(':'):])
+    stack_name = MiscHelper.get_stack_name()
+
+    if stack_name:
+      # Data will look like this: '"http://192.168.190.127:5000/v2.0"\n'
+      data = subprocess.check_output(
+        'heat output-show {} KeystoneURL'.format(stack_name).split())
+      keystone_url = data.translate(None, '"\n')
+      # Form the Dashboard URL by trimming everything after the trailing ':'
+      print '\nHorizon Dashboard URL: {}\n'.format(keystone_url[:keystone_url.rfind(':'):])
   except:
     # In case the overcloud failed to deploy
     pass
