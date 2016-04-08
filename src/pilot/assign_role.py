@@ -175,7 +175,8 @@ def main():
     # Are we assigning the storage role to this node?
     if args.role == "storage":
         # Get the model of the server from the DRAC
-        drac_password = CredentialHelper.get_drac_password(drac_ip, args.file)
+        drac_ip, drac_user, drac_password = \
+          CredentialHelper.get_drac_creds_from_node(node, args.file)
         drac_client = wsman.Client(drac_ip, drac_user, drac_password)
         doc = drac_client.enumerate(DCIM_SystemView)
         model = utils.find_xml(doc, 'Model', DCIM_SystemView).text
