@@ -213,8 +213,8 @@ EOFPW
   subscription-manager repos --enable=rhel-7-server-rpms
   subscription-manager repos --enable=rhel-7-server-optional-rpms
   subscription-manager repos --enable=rhel-7-server-extras-rpms
-  subscription-manager repos --enable=rhel-7-server-openstack-8.0-rpms
-  subscription-manager repos --enable=rhel-7-server-openstack-8.0-director-rpms
+  subscription-manager repos --enable=rhel-7-server-openstack-8-rpms
+  subscription-manager repos --enable=rhel-7-server-openstack-8-director-rpms
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -227,11 +227,11 @@ EOFPW
   yum -y install yum-plugin-priorities
   yum -y install yum-utils
 
-  yum-config-manager --enable rhel-7-server-openstack-8.0-rpms --setopt="rhel-7-server-openstack-8.0-rpms.priority=1"
+  yum-config-manager --enable rhel-7-server-openstack-8-rpms --setopt="rhel-7-server-openstack-8-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-rpms --setopt="rhel-7-server-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-optional-rpms --setopt="rhel-7-server-optional-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-extras-rpms --setopt="rhel-7-server-extras-rpms.priority=1"
-  yum-config-manager --enable rhel-7-server-openstack-8.0-director-rpms --setopt="rhel-7-server-openstack-8.0-director-rpms.priority=1"
+  yum-config-manager --enable rhel-7-server-openstack-8-director-rpms --setopt="rhel-7-server-openstack-8-director-rpms.priority=1"
 
   yum -y update
   yum -y install python-rdomanager-oscplugin
