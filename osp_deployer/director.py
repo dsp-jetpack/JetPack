@@ -26,6 +26,8 @@ from auto_common import Scp, Ipmi
 import logging
 import time
 import os
+import re
+
 logger = logging.getLogger("osp_deployer")
 
 exitFlag = 0
@@ -435,15 +437,19 @@ class Director(InfraHost):
 
         self.setup_eqlx(dell_storage_yaml)
         self.setup_dellsc(dell_storage_yaml)
-        enabled_backends = ""
+        enabled_backends = "["
         if self.settings.enable_eqlx_backend is True:
-            enabled_backends = "['eqlx']"
+           index = 1
+           eqlx_san_ip_array = self.settings.eqlx_san_ip.split(",")
+	   for san_ip in eqlx_san_ip_array:
+	       enabled_backends += "'eqlx" + str(index) + "'," 
+	       index = index +1	
+				
         if self.settings.enable_dellsc_backend is True:
-            if self.settings.enable_eqlx_backend is True:
-                enabled_backends = "['eqlx','dellsc']"
-            else:
-                enabled_backends = "['dellsc']"
-
+            enabled_backends += "'dellsc'" 
+                
+        enabled_backends += "]"
+		
         cmd = 'sed -i "s|cinder_user_enabled_backends:.*|cinder_user_enabled_backends: ' + \
         enabled_backends +  '|" ' + dell_storage_yaml
         self.run_tty(cmd)
@@ -457,19 +463,73 @@ class Director(InfraHost):
             return
 
         logger.debug("configuring eql backend")
-        cmds = [
-            'sed -i "s|<eqlx_san_ip>|' + self.settings.eqlx_san_ip + '|" ' + dell_storage_yaml,
-            'sed -i "s|<eqlx_san_login>|' + self.settings.eqlx_san_login  + '|" ' + dell_storage_yaml,
-            'sed -i "s|<eqlx_san_password>|' + self.settings.eqlx_san_password + '|" ' + dell_storage_yaml,
-            'sed -i "s|<eqlx_san_thin_provision>|' + self.settings.eqlx_thin_provisioning + '|" ' + dell_storage_yaml,
-            'sed -i "s|<eqlx_group_name>|' + self.settings.eqlx_group_n + '|" ' + dell_storage_yaml,
-            'sed -i "s|<eqlx_pool>|' + self.settings.eqlx_pool + '|" ' + dell_storage_yaml,
-            'sed -i "s|<eqlx_use_chap>|' + self.settings.eqlx_use_chap + '|" ' + dell_storage_yaml,
-            'sed -i "s|<eqlx_chap_login>|' + self.settings.eqlx_ch_login + '|" ' + dell_storage_yaml,
-            'sed -i "s|<eqlx_chap_password>|' + self.settings.eqlx_ch_pass + '|" ' + dell_storage_yaml,
-        ]
-        for cmd in cmds:
-            self.run_tty(cmd)
+	eqlx_san_ip_array = self.settings.eqlx_san_ip.split(",")
+	eqlx_san_login_array  = self.settings.eqlx_san_login.split(",")
+	eqlx_san_password_array  = self.settings.eqlx_san_password.split(",")
+	eqlx_thin_provisioning_array  = self.settings.eqlx_thin_provisioning.split(",")
+	eqlx_group_n_array  = self.settings.eqlx_group_n.split(",")
+	eqlx_pool_array  = self.settings.eqlx_pool.split(",")
+	eqlx_use_chap_array  = self.settings.eqlx_use_chap.split(",")
+	eqlx_ch_login_array  = self.settings.eqlx_ch_login.split(",")
+	eqlx_ch_pass_array  = self.settings.eqlx_ch_pass.split(",")
+		
+	if( len(eqlx_san_ip_array) < len(eqlx_san_login_array) or
+	   len(eqlx_san_ip_array) < len(eqlx_san_password_array) or
+	   len(eqlx_san_ip_array) < len(eqlx_thin_provisioning_array) or
+	   len(eqlx_san_ip_array) < len(eqlx_group_n_array) or
+	   len(eqlx_san_ip_array) < len(eqlx_pool_array) or
+	   len(eqlx_san_ip_array) < len(eqlx_use_chap_array) or
+	   len(eqlx_san_ip_array) < len(eqlx_ch_login_array) or
+	   len(eqlx_san_ip_array) < len(eqlx_ch_pass_array)) :
+	        self.settings.enable_eqlx_backend = false
+	        logger.debug("not setting up eqlx backend, data missing")
+                return
+			
+	eqlx_configs = ""
+        index = 0		
+	for san_ip in eqlx_san_ip_array:
+	    eqlx_config = """
+      eqlx/volume_backend_name:
+        value: {}	
+      eqlx/volume_driver:
+        value: cinder.volume.drivers.eqlx.DellEQLSanISCSIDriver		
+      eqlx/san_ip:
+        value: {}
+      eqlx/san_login:
+        value: {}
+      eqlx/san_password:
+        value: {}
+      eqlx/san_thin_provision:
+        value: {}     
+      eqlx/eqlx_group_name:
+        value: {}  
+      eqlx/eqlx_pool:
+        value: {}     
+      eqlx/eqlx_use_chap:
+        value: {}     	
+      eqlx/eqlx_chap_login:
+        value: {}     
+      eqlx/eqlx_chap_password:
+        value: {}""".format("eqlx" +str(index+1),
+			      eqlx_san_ip_array[index],
+			      eqlx_san_login_array[index],
+			      eqlx_san_password_array[index],
+			      eqlx_thin_provisioning_array[index],
+			      eqlx_group_n_array[index],
+			      eqlx_pool_array[index],
+			      eqlx_use_chap_array[index],
+			      eqlx_ch_login_array[index],
+			      eqlx_ch_pass_array[index]
+			)
+            eql_backend = "eqlx" + str(index+1) 
+            pattern = re.compile("eqlx\/", re.MULTILINE|re.DOTALL)
+            eqlx_config = pattern.sub(eql_backend+"/",eqlx_config)
+            eqlx_configs += eqlx_config	           
+            index = index +1		
+	
+        eqlx_configs = "#EQLX" + eqlx_configs + "\n      #EQLX-END"
+        logger.info("****EQLX Config:\n" + eqlx_configs)
+        self.run_ssh_edit(dell_storage_yaml,"#EQLX.*?#EQLX-END",eqlx_configs)
 
     def setup_dellsc(self,dell_storage_yaml):
 
