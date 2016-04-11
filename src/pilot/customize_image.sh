@@ -16,6 +16,8 @@ echo "## install libguestfs-tools"
 cd ~/pilot/images
 sudo yum install libguestfs-tools -y
 
+export LIBGUESTFS_BACKEND=direct
+
 echo "## Register the image with subscription manager & enable repos"
 virt-customize -a overcloud-full.qcow2 --run-command "subscription-manager register --username=${subscription_manager_user} --password=${subscription_manager_pass}"
 virt-customize -a overcloud-full.qcow2 --run-command "subscription-manager attach --pool=${subcription_manager_poolid}"
