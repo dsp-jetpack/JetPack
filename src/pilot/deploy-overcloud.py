@@ -38,11 +38,20 @@ def subst_home(relative_path):
 
 def create_volume_types():
   print 'Creating cinder volume types...'
+  #Add ceph by default
   types = [["rbd_backend","tripleo_ceph"]]
-  if args.enable_eqlx:
-    types.append(["eql_backend","tripleo_eqlx"])
-  if args.enable_dellsc:
-    types.append(["dellsc_backend","tripleo_dellsc"])
+
+  if args.enable_eqlx or args.enable_dellsc:
+      cinder_file = open(home_dir + '/pilot/templates/dell-cinder-backends.yaml', 'r')
+      for line in cinder_file:
+        line = line.strip()
+        try:
+           found = re.search('cinder_user_enabled_backends: \[(.+?)\]', line).group(1)
+           backends = found.split(",")
+           for backend in backends:
+               types.append([backend + "_backend",backend])
+        except AttributeError:
+           found = '' 
 
   for type in types:
     cmd = "source $HOME/overcloudrc && " \
