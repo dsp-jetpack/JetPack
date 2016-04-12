@@ -5,8 +5,9 @@
 parameter_defaults:
   ExtraConfig:
     cinder::config::cinder_config:
+      #EQLX
       eqlx/volume_backend_name:
-        value: tripleo_eqlx
+        value: eqlx
       eqlx/volume_driver:
         value: cinder.volume.drivers.eqlx.DellEQLSanISCSIDriver
       eqlx/san_ip:
@@ -27,8 +28,10 @@ parameter_defaults:
         value: <eqlx_chap_login>
       eqlx/eqlx_chap_password:
         value: <eqlx_chap_password>
+      #EQLX-END
+      #DELLSC
       dellsc/volume_backend_name:
-        value: tripleo_dellsc
+        value: dellsc
       dellsc/volume_driver:
         value: cinder.volume.drivers.dell.dell_storagecenter_iscsi.DellStorageCenterISCSIDriver
       dellsc/san_ip:
@@ -49,4 +52,5 @@ parameter_defaults:
         value: dellsc_osp8_server_folder
       dellsc/dell_sc_volume_folder:
         value: dellsc_osp8_volume_folder
+      #DELLSC-END
     cinder_user_enabled_backends: ['eqlx','dellsc']
