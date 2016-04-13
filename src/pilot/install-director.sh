@@ -59,6 +59,7 @@ sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
 cp $HOME/pilot/undercloud.conf $HOME
 echo "## Done."
 
+
 echo
 echo "## Installing Director"
 openstack undercloud install
@@ -107,6 +108,12 @@ echo
 echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
+
+echo
+echo "## Downgrading ipxe packages"
+sudo yum downgrade ~/pilot/ipxe/ipxe-bootimgs-20150821-1.git4e03af8e.el7.noarch.rpm -y
+sudo yum downgrade ~/pilot/ipxe/ipxe-roms-qemu-20150821-1.git4e03af8e.el7.noarch.rpm -y
+
 
 echo
 echo "## Configuration complete!"
