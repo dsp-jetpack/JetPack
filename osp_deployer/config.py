@@ -105,6 +105,8 @@ class Settings():
             'director_install_user']
         self.director_install_account_pwd = cluster[
             'director_install_user_password']
+        self.overcloud_name = cluster[
+            'overcloud_name']
         self.controller_bond0_interfaces = cluster[
             'controller_bond0_interfaces']
         self.controller_bond1_interfaces = cluster[
