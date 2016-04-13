@@ -434,6 +434,8 @@ class Director(InfraHost):
         dell_storage_yaml = self.templates_dir + "/dell-cinder-backends.yaml"
         self.upload_file(self.settings.dell_storage_yaml,
                          dell_storage_yaml)
+        # Backup before modifying
+        self.run_tty("cp " + dell_storage_yaml + " " + dell_storage_yaml + ".bak")
 
         self.setup_eqlx(dell_storage_yaml)
         self.setup_dellsc(dell_storage_yaml)
