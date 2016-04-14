@@ -115,6 +115,7 @@ resources:
           sed -i "s|RGW_KEYSTONE_URL|${keystone_url}|" /etc/ceph/ceph.conf
           sed -i "s|RGW_KEYSTONE_ADMIN_TOKEN|${keystone_token}|" /etc/ceph/ceph.conf
           echo "Restarting RGW..."
+          chkconfig --add ceph-radosgw
           systemctl restart ceph-radosgw
         } >> /root/post-deploy.txt 2>&1
         fi
