@@ -753,7 +753,7 @@ class Director(InfraHost):
                                     self.settings.tenant_vlan_range + \
                                     " --overcloud_name " + \
                                     self.settings.overcloud_name + \
-        if self.settings.overcloud_deploy_timeout != "90":
+        if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \
                    + self.settings.overcloud_deploy_timeout
         if self.settings.enable_eqlx_backend is True:
