@@ -94,15 +94,6 @@ class Director(InfraHost):
             ]
             for cmd in cmds:
                 self.run_as_root(cmd)
-        logger.debug(
-            "Workaroud for "
-            "https://bugzilla.redhat.com/show_bug.cgi?id=1298189")
-        cmd = "sudo sed -i \"s/.*Keystone_domain\['heat_domain'\].*" \
-              "/Service\['keystone'\] -> Class\['::keystone::roles::admin'\]" \
-              " -> Class\['::heat::keystone::domain'\]/\" " \
-              "/usr/share/instack-undercloud/" \
-              "puppet-stack-config/puppet-stack-config.pp"
-        self.run_tty_as_root(cmd)
 
     def upload_update_conf_files(self):
 
@@ -762,6 +753,8 @@ class Director(InfraHost):
                                     str(len(self.settings.ceph_nodes)) + \
                                     " --vlan " + \
                                     self.settings.tenant_vlan_range + \
+                                    " --overcloud_name " + \
+                                    self.settings.overcloud_name + \
                                     " > overcloud_deploy_out.log"
         if self.settings.overcloud_deploy_timeout != "90":
             cmd += " --timeout " \
@@ -778,9 +771,11 @@ class Director(InfraHost):
 
         logger.debug("Deleting the overcloud stack")
         self.run_tty(self.source_stackrc +
-                     "heat stack-delete overcloud")
+                     "heat stack-delete " +
+                     self.settings.overcloud_name + 
+                     " -y")
         while 1:
-            if "overcloud" in self.run_tty(self.source_stackrc +
+            if self.settings.overcloud_name in self.run_tty(self.source_stackrc +
                                            "heat stack-list")[0]:
                 time.sleep(60)
             else:
