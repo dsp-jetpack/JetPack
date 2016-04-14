@@ -19,19 +19,21 @@
 # You should have received a copy of the GNU General Public License
 # along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
 
+import time
 
 report_location = 'ResultLogArch'
 
-results_file = 'Results-10000000000 T37.log'
+#results_file = 'Results-300000000000 T6.log'
 tpc_log = 'tpc_log.log'
 
 job_history_ip = '172.16.14.97'
 
-history_location = 'hdfs:///user/history/done/2016/02/04/000000/'
-
+date = time.strftime('%Y/%m/%d')
+history_location = 'hdfs:///user/history/done/'+date+'/000000/'
+#print history_location
 #job_id = 'job_1453282072018_0006'
 #job_id = 'job_1453363483287_0002'
-job_id = 'job_1454593041052_0002'
+#job_id = 'job_1459243785029_0002'
 
 node = 'r3s1xd8.ignition.dell.'
 
@@ -65,7 +67,8 @@ params = ('dfs.replication',
             'mapreduce.reduce.memory.mb',
             'mapreduce.reduce.cpu.vcores',
             'yarn.app.mapreduce.am.resource.mb',
-            'yarn.app.mapreduce.am.command-opts')
+            'yarn.app.mapreduce.am.command-opts',
+            'mapreduce.job.reduces')
 
 '''
 # Edge node ip address 
