@@ -753,7 +753,6 @@ class Director(InfraHost):
                                     self.settings.tenant_vlan_range + \
                                     " --overcloud_name " + \
                                     self.settings.overcloud_name + \
-                                    " > overcloud_deploy_out.log"
         if self.settings.overcloud_deploy_timeout != "90":
             cmd += " --timeout " \
                    + self.settings.overcloud_deploy_timeout
@@ -762,8 +761,10 @@ class Director(InfraHost):
 
         if self.settings.enable_dellsc_backend is True:
             cmd += " --enable_dellsc"
-
-        self.run_tty(cmd)
+	
+	cmd += " > overcloud_deploy_out.log"
+        
+	self.run_tty(cmd)
 
     def delete_overcloud(self):
 
