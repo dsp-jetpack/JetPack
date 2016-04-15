@@ -107,7 +107,8 @@ init(){
   CONTROLLERS=$(nova list | grep '\-controller-' | awk -F\| '{print $7}' | awk -F= '{print $2}')
 
   # Now switch to point the OpenStack commands at the overcloud
-  source ~/overcloudrc
+  STACK_NAME=$(heat stack-list | grep CREATE_ | awk -F\| '{print $3}' | tr -d ' ')
+  source ~/${STACK_NAME}rc
 
   info "### PCS Status "
   ssh heat-admin@$CONTROLLER 'sudo /usr/sbin/pcs status'
