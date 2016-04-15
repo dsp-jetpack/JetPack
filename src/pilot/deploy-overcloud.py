@@ -56,7 +56,7 @@ def create_volume_types():
   stack_name = MiscHelper.get_stack_name()
 
   for type in types:
-    cmd = "source $HOME/{} && " \
+    cmd = "source $HOME/{}rc && " \
           "cinder type-create {} && " \
           "cinder type-key {} set volume_backend_name={}" \
           "".format(stack_name, type[0], type[0], type[1])
