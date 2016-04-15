@@ -53,17 +53,17 @@ def create_volume_types():
         except AttributeError:
            found = '' 
 
-  stack_name = MiscHelper.get_stack_name()
+  overcloudrc_name = MiscHelper.get_overcloudrc_name()
 
   for type in types:
-    cmd = "source $HOME/{}rc && " \
+    cmd = "source {} && " \
           "cinder type-create {} && " \
           "cinder type-key {} set volume_backend_name={}" \
-          "".format(stack_name, type[0], type[0], type[1])
+          "".format(overcloudrc_name, type[0], type[0], type[1])
     os.system(cmd)
 
-  os.system("source $HOME/{}rc && " \
-            "cinder extra-specs-list".format(stack_name))
+  os.system("source {} && " \
+            "cinder extra-specs-list".format(overcloudrc_name))
 
 
 def update_swift_endpoint(keystone_client):
