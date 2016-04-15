@@ -754,7 +754,7 @@ class Director(InfraHost):
                                     " --vlan " + \
                                     self.settings.tenant_vlan_range + \
                                     " --overcloud_name " + \
-                                    self.settings.overcloud_name
+                                    self.settings.overcloud_name  
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \
                    + self.settings.overcloud_deploy_timeout
@@ -911,9 +911,9 @@ class Director(InfraHost):
             # noinspection PyBroadException
             try:
                overcloud_endpoint = self.run_tty(
-                    'grep "OS_AUTH_URL=" ~/overcloudrc')[0].split('=')[1].replace(':5000/v2.0/', '')
+                    'grep "OS_AUTH_URL=" ~/' + self.settings.overcloud_name + 'rc')[0].split('=')[1].replace(':5000/v2.0/', '')
                overcloud_pass = self.run(
-                                                        'grep "OS_PASSWORD=" ~/overcloudrc')[0].split('=')[1]
+                                                        'grep "OS_PASSWORD=" ~/' + self.settings.overcloud_name + 'rc')[0].split('=')[1]
                ip_info.append("OverCloud Horizon        : " +
                               overcloud_endpoint)
                ip_info.append("OverCloud admin password : " + overcloud_pass)
@@ -954,13 +954,13 @@ class Director(InfraHost):
         logger.debug("running tempest")
         setts = self.settings
         cmds = [
-            "source ~/overcloudrc;mkdir /home/" +
+            "source ~/" + self.settings.overcloud_name + "rc;mkdir /home/" +
             setts.director_install_account_user +
             "/tempest",
-            'source ~/overcloudrc;cd '
+            'source ~/' + self.settings.overcloud_name + 'rc;cd '
             '~/tempest;/usr/share/openstack-tempest-liberty/tools/'
             'configure-tempest-directory',
-            'source ~/overcloudrc;cd ~/tempest;tools/config_tempest.py '
+            'source ~/' + self.settings.overcloud_name + 'rc;cd ~/tempest;tools/config_tempest.py '
             '--deployer-input '
             '~/tempest-deployer-input.conf --debug '
             '--create identity.uri $OS_AUTH_URL '
@@ -969,10 +969,10 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
         if setts.tempest_smoke_only is True:
-            cmd = "source ~/overcloudrc;cd " \
+            cmd = "source ~/' + self.settings.overcloud_name + 'rc;cd " \
                   "~/tempest;tools/run-tests.sh '.*smoke'"
         else:
-            cmd = "source ~/overcloudrc;cd ~/tempest;tools/run-tests.sh"
+            cmd = "source ~/" + self.settings.overcloud_name + "rc;cd ~/tempest;tools/run-tests.sh"
         self.run_tty(cmd)
         Scp.get_file(setts.director_node.external_ip,
                      setts.director_install_account_user,
