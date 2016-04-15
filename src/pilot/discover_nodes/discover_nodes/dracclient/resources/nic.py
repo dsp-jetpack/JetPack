@@ -5,10 +5,11 @@ import collections
 import logging
 import re
 
-import dracclient.exceptions as exceptions
+import dracclient.exceptions as ironic_exceptions
 import dracclient.utils as utils
 import dracclient.wsman as wsman
 
+from .. import exceptions
 from . import uris
 
 LOG = logging.getLogger(__name__)
@@ -87,6 +88,7 @@ class NICManagement(object):
         :raises: WSManInvalidResponse when receiving invalid response
         :raises: DRACOperationFailed on error reported back by the iDRAC
                  interface
+        :raises: NotFound when no statistics for NIC found
         """
         return self.get_nic_statistics(nic_id).link_status
 
@@ -98,6 +100,7 @@ class NICManagement(object):
                   otherwise
         :raises: WSManRequestFailure on request failures
         :raises: WSManInvalidResponse when receiving invalid response
+        :raises: NotFound when no statistics for NIC found
         """
         filter_query = ('select * '
                         'from DCIM_NICStatistics '
@@ -111,7 +114,9 @@ class NICManagement(object):
 
         # Were no statistics found?
         if drac_nic_statistics is None:
-            return None
+            raise exceptions.NotFound(
+                what=('statistics for NIC %(nic)s') % {
+                    'nic': nic_id})
 
         return self._parse_drac_nic_statistics(drac_nic_statistics)
 
@@ -122,6 +127,7 @@ class NICManagement(object):
         :returns: boolean indicating whether or not the link is up
         :raises: WSManRequestFailure on request failures
         :raises: WSManInvalidResponse when receiving invalid response
+        :raises: NotFound when no statistics for NIC found
         """
         return self.get_nic_statistics(nic_id).link_status == 'up'
 
@@ -151,7 +157,7 @@ class NICManagement(object):
         # _list_nics_common() implements for the same bug.
         try:
             nics = self._list_nics_common(filter_query, sort)
-        except exceptions.WSManRequestFailure:
+        except ironic_exceptions.WSManRequestFailure:
             doc = self.client.enumerate(uris.DCIM_NICView)
 
             name_spaces = {'n1': uris.DCIM_NICView}
@@ -217,7 +223,7 @@ class NICManagement(object):
             try:
                 doc = self.client.enumerate(uris.DCIM_NICView,
                                             filter_query=filter_query)
-            except exceptions.WSManRequestFailure:
+            except ironic_exceptions.WSManRequestFailure:
                 if attempt == max_attempts - 1:
                     LOG.debug('All %d enumerate attempts failed', attempt + 1)
                     raise
@@ -533,6 +539,7 @@ class NICConfiguration(object):
         :raises: WSManInvalidResponse when receiving invalid response
         :raises: DRACOperationFailed on error reported back by the iDRAC
                  interface
+        :raises: NotFound when no settings for NIC found
         """
         return self.get_nic_setting(nic_id, 'LegacyBootProto')
 
@@ -545,6 +552,7 @@ class NICConfiguration(object):
         :raises: WSManInvalidResponse when receiving invalid response
         :raises: DRACOperationFailed on error reported back by the iDRAC
                  interface
+        :raises: NotFound when no settings for NIC found
         """
         return self.get_nic_setting(nic_id, 'LinkStatus')
 
@@ -559,6 +567,7 @@ class NICConfiguration(object):
         :raises: WSManInvalidResponse when receiving invalid response
         :raises: DRACOperationFailed on error reported back by the iDRAC
                  interface
+        :raises: NotFound when no settings for NIC found
         """
         selection_expression = ('InstanceID = '
                                 '"%(fqdd)s:%(attribute_name)s"') % {
@@ -568,7 +577,9 @@ class NICConfiguration(object):
 
         # Were no settings found?
         if not settings:
-            return None
+            raise exceptions.NotFound(
+                what=('settings for NIC %(nic)s') % {
+                    'nic': nic_id})
 
         # Do the settings include the attribute?
         if attribute_name not in settings:
@@ -586,6 +597,7 @@ class NICConfiguration(object):
         :raises: WSManInvalidResponse when receiving invalid response
         :raises: DRACOperationFailed on error reported back by the iDRAC
                  interface
+        :raises: NotFound when no settings for NIC found
         """
         return self.get_nic_legacy_boot_protocol(nic_id).current_value == 'PXE'
 
@@ -598,6 +610,7 @@ class NICConfiguration(object):
         :raises: WSManInvalidResponse when receiving invalid response
         :raises: DRACOperationFailed on error reported back by the iDRAC
                  interface
+        :raises: NotFound when no settings for NIC found
         """
         return self.get_nic_link_status(nic_id).current_value == 'Connected'
 
@@ -685,7 +698,7 @@ class NICConfiguration(object):
         if unknown_keys:
             msg = ('Unknown NIC attributes found: %(unknown_keys)r' %
                    {'unknown_keys': unknown_keys})
-            raise exceptions.InvalidParameterValue(reason=msg)
+            raise ironic_exceptions.InvalidParameterValue(reason=msg)
 
         read_only_keys = []
         unchanged_attribs = []
@@ -720,7 +733,8 @@ class NICConfiguration(object):
                 read_only_msg = []
 
             drac_messages = '\n'.join(invalid_attribs_msgs + read_only_msg)
-            raise exceptions.DRACOperationFailed(drac_messages=drac_messages)
+            raise ironic_exceptions.DRACOperationFailed(
+                drac_messages=drac_messages)
 
         if not attrib_names:
             return {'commit_required': False}
@@ -783,7 +797,7 @@ class NICConfiguration(object):
                                        attr_cls)
 
             if not set(result).isdisjoint(set(attribs)):
-                raise exceptions.DRACOperationFailed(
+                raise ironic_exceptions.DRACOperationFailed(
                     drac_messages=('Colliding attributes %r' % (
                         set(result) & set(attribs))))
 
