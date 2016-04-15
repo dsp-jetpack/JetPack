@@ -207,16 +207,19 @@ class RegisterOvercloud:
                self.proxy_args]
         return_code, stdout = self._execute_cmd(cmd)
         if return_code == 0:
-            self.logger.warn(node_ip + " is already registered with CDN.  "
+            self.logger.warn(role + " " + node_ip +
+                             " is already registered with CDN.  "
                              "Using existing registration")
         else:
             if "This system is not yet registered" not in stdout:
-                self.logger.error("Failed to determine if " + node_ip +
-                                  " is already registered: " + stdout)
+                self.logger.error("Failed to determine if " + role + " " +
+                                  node_ip + " is already registered: " +
+                                  stdout)
                 sys.exit(1)
 
             # The node isn't registered, so register it
-            self.logger.info("Registering {} with CDN".format(node_ip))
+            self.logger.info("Registering {} {} with CDN".format(role,
+                                                                 node_ip))
 
             # If we're using an activation key, then construct the args for
             # that
@@ -240,14 +243,15 @@ class RegisterOvercloud:
                    self.proxy_args]
             return_code, stdout = self._execute_cmd(cmd)
             if return_code == 0:
-                self.logger.debug("Registered {} successfully".format(node_ip))
+                self.logger.debug("Registered {} {} successfully".format(
+                    role, node_ip))
             else:
-                self.logger.error("Failed to register node " + node_ip + ": " +
-                                  stdout)
+                self.logger.error("Failed to register " + role + " " +
+                                  node_ip + ": " + stdout)
                 sys.exit(1)
 
     def _unregister_node(self, role, node_ip):
-        self.logger.info("Unregistering {} with CDN".format(node_ip))
+        self.logger.info("Unregistering {} {} with CDN".format(role, node_ip))
 
         cmd = ["ssh",
                "heat-admin@{}".format(node_ip),
@@ -257,11 +261,11 @@ class RegisterOvercloud:
                self.proxy_args]
         return_code, stdout = self._execute_cmd(cmd)
         if return_code == 0:
-            self.logger.debug("Removed subscriptions from node "
-                              "{} successfully".format(node_ip))
+            self.logger.debug("Removed subscriptions from {} "
+                              "{} successfully".format(role, node_ip))
         else:
-            self.logger.warn("Unable to remove subscriptions from node " +
-                             node_ip + ": " + stdout)
+            self.logger.warn("Unable to remove subscriptions from " + role +
+                             " " + node_ip + ": " + stdout)
 
         cmd = ["ssh",
                "heat-admin@{}".format(node_ip),
@@ -271,10 +275,11 @@ class RegisterOvercloud:
                self.proxy_args]
         return_code, stdout = self._execute_cmd(cmd)
         if return_code == 0:
-            self.logger.debug("Unregistered {} successfully".format(node_ip))
+            self.logger.debug("Unregistered {} {} successfully".format(
+                role, node_ip))
         else:
-            self.logger.warn("Failed to unregister node " + node_ip + ": " +
-                             stdout)
+            self.logger.warn("Failed to unregister " + role + " " + node_ip +
+                             ": " + stdout)
 
     def _get_consumed_pool_ids(self, node_ip):
         # Build up a list of consumed pool IDs for this node
@@ -315,12 +320,13 @@ class RegisterOvercloud:
         for pool_id in pool_ids:
             # Check to see if this node is already attached to this pool ID
             if pool_id in consumed_pool_ids:
-                self.logger.warn(node_ip + " is already attached to pool " +
-                                 pool_id + ".  Skipping attach")
+                self.logger.warn(role + " " + node_ip +
+                                 " is already attached to pool " + pool_id +
+                                 ".  Skipping attach")
             else:
                 # Not already attached, so attach
-                self.logger.info("Attaching " + node_ip + " to pool " +
-                                 pool_id)
+                self.logger.info("Attaching " + role + " " + node_ip +
+                                 " to pool " + pool_id)
                 cmd = ["ssh",
                        "heat-admin@{}".format(node_ip),
                        "sudo",
@@ -331,12 +337,57 @@ class RegisterOvercloud:
                        self.proxy_args]
                 return_code, stdout = self._execute_cmd(cmd)
                 if return_code == 0:
-                    self.logger.debug("Attached " + node_ip + " to pool " +
-                                      pool_id)
+                    self.logger.debug("Attached " + role + " " + node_ip +
+                                      " to pool " + pool_id)
                 else:
-                    self.logger.error("Failed to attach " + node_ip +
-                                      " to pool " + pool_id + ": " + stdout)
+                    self.logger.error("Failed to attach " + role + " " +
+                                      node_ip + " to pool " + pool_id + ": " +
+                                      stdout)
                     sys.exit(1)
+
+    def _subscribe_node(self, role, node_ip):
+        # First disable all repos on the node
+        self.logger.info("Disabling all repos on " + role + " " + node_ip)
+        cmd = ["ssh",
+               "heat-admin@{}".format(node_ip),
+               "sudo",
+               "subscription-manager",
+               "repos",
+               "--disable=*",
+               self.proxy_args]
+        return_code, stdout = self._execute_cmd(cmd)
+        if return_code == 0:
+            self.logger.debug("Successfully disabled all repos on " + role +
+                              " " + node_ip)
+        else:
+            self.logger.error("Failed to disabled all repos on " + role + " " +
+                              node_ip + ": " + stdout)
+            sys.exit(1)
+
+        # Enable all requested repos on the node
+        repos = self.subscriptions["roles"][role]["repos"]
+
+        repo_list = ""
+        for repo in repos:
+            repo_list += "--enable={} ".format(repo)
+
+        self.logger.info("Enabling the following repos on " + role + " " +
+                         node_ip + ": " + str(repos))
+        cmd = ["ssh",
+               "heat-admin@{}".format(node_ip),
+               "sudo",
+               "subscription-manager",
+               "repos",
+               repo_list,
+               self.proxy_args]
+        return_code, stdout = self._execute_cmd(cmd)
+        if return_code == 0:
+            self.logger.debug("Successfully enabled the repos on " + role +
+                              " " + node_ip)
+        else:
+            self.logger.error("Failed to enable the repos on " + role + " " +
+                              node_ip + ": " + stdout)
+            sys.exit(1)
 
     def register_nodes(self):
         self._collect_inputs()
@@ -352,6 +403,9 @@ class RegisterOvercloud:
 
                 # Attach the node to the pool IDs
                 self._attach_node(role, node_ip)
+
+                # Subscribe the node to the requested repos
+                self._subscribe_node(role, node_ip)
 
     def unregister_nodes(self):
         self._collect_inputs()

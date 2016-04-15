@@ -39,9 +39,7 @@ class CredentialHelper:
 
     @staticmethod
     def get_overcloud_creds():
-        rc_name = "{}rc".format(MiscHelper.get_stack_name())
-        return CredentialHelper.get_creds(os.path.join(os.path.expanduser('~'),
-                                                       rc_name))
+        return CredentialHelper.get_creds(MiscHelper.get_overcloudrc_name())
 
     @staticmethod
     def get_drac_creds(ironic_client, node_uuid,
