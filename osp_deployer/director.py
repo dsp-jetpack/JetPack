@@ -754,7 +754,7 @@ class Director(InfraHost):
                                     " --vlan " + \
                                     self.settings.tenant_vlan_range + \
                                     " --overcloud_name " + \
-                                    self.settings.overcloud_name + \
+                                    self.settings.overcloud_name
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \
                    + self.settings.overcloud_deploy_timeout
