@@ -1,6 +1,7 @@
 import os
 import json
 from subprocess import check_output
+from misc_helper import MiscHelper
 
 
 class CredentialHelper:
@@ -38,8 +39,9 @@ class CredentialHelper:
 
     @staticmethod
     def get_overcloud_creds():
+        rc_name = "{}rc".format(MiscHelper.get_stack_name())
         return CredentialHelper.get_creds(os.path.join(os.path.expanduser('~'),
-                                                       'overcloudrc'))
+                                                       rc_name))
 
     @staticmethod
     def get_drac_creds(ironic_client, node_uuid,
