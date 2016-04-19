@@ -110,7 +110,7 @@ echo "ssh $FIRST_CONTROLLER_NODE \"sudo pcs resource disable openstack-keystone 
 # Use this list to tag these nodes as controllers with the osprole=controller property.
 ############
 echo ""
-echo "INFO: Create a list of the current controllers using cibadmin data and tag these nodes as controllers with the osprole=controller property."
+echo "INFO: Create a list of the current controllers using cibadmin data and these nodes as controllers with the osprole=controller property."
 
 controllers=`ssh $FIRST_CONTROLLER_NODE "sudo cibadmin -Q -o nodes | grep uname" | sed s/.*uname..// | awk -F\" '{print $1}'`
 for controller in ${controllers}; do echo "ssh $FIRST_CONTROLLER_NODE \"sudo pcs property set --node ${controller} osprole=controller\""; done
@@ -121,10 +121,10 @@ for controller in ${controllers}; do echo "ssh $FIRST_CONTROLLER_NODE \"sudo pcs
 # skipping any stonith devices listed.
 ############
 echo ""
-echo "INFO: Build a list of stonith devices already present in the environment and tag the control plane services to make sure they only run on the controllers. This section may take a while to complete."
+echo "INFO: Build a list of stonith devices already present in the environment and tag the control plane services to make sure they only run on the controllers."
 
 stonithdevs=`ssh $FIRST_CONTROLLER_NODE "sudo pcs stonith "| awk '{print $1}'`
-if [[ -z "$stonithdevs" ]]; then
+if [ -z \"$stonithdevs\" ]; then
   echo "ERROR: No stonith devices found, please ensure fencing is enabled."
   exit -1
 fi
