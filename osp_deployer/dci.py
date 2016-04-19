@@ -46,6 +46,7 @@ def setup_logging(dci_contxt):
         logger.addHandler(stream_handler)
         logger.addHandler(file_handler)
         logger.addHandler(dci_handler)
+    return log_file_name
 
 
 def upload_configuration_files(dci_contxt, jetstream_ini_file):
@@ -119,7 +120,7 @@ with open('/var/www/html/RH7-RHOS-8.0.repo', 'w') as f:
 
 dcijobstate.create(dci_context, 'pre-run', 'initializing',
                    dci_context.last_job_id)
-setup_logging(dci_context)
+log_file_name = setup_logging(dci_context)
 dcijobstate.create(dci_context,
                    'running',
                    'Running deployment',
@@ -155,3 +156,11 @@ except:
     e = sys.exc_info()[0]
     print e
     print traceback.format_exc()
+finally:
+    with open(log_file_name, 'r') as f:
+        dcifile.create(
+	    dci_context,
+            'deployment.log',
+            f.read(),
+            'text/plain',
+            dci_context.last_jobstate_id)
