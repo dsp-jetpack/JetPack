@@ -7,6 +7,10 @@ parameter_defaults:
   # If set to false, Nova uses the storage local to the compute.
   NovaEnableRbdBackend: true
 
+  # Set false in order to use use Ceph radosgw for object storage.
+  ControllerEnableSwiftStorage: false
+
+  # Additional hiera data for all nodes
   # Override ceph_pools so the .rgw.buckets pool is created during deployment.
   # Place this in ExtraConfig rather than CephStorageExtraConfig so the list
   # of default pools is available on all nodes.
@@ -17,7 +21,24 @@ parameter_defaults:
       "images",
       ".rgw.buckets"
     ]
-  CephStorageExtraConfig:
-    ceph_tuning:
-      'max_open_files': 131072
 
+  # Additional hiera data for storage nodes
+  CephStorageExtraConfig:
+    # Additional entries added to /etc/ceph/ceph.conf
+    ceph_tuning:
+      max_open_files: 131072
+
+  # Additional hiera data for controller nodes
+  controllerExtraConfig:
+    swift::service::enabled: false
+    ceph::profile::params::enable_rgw: true
+    ceph::profile::params::rgw_frontends: "civetweb port=7480"
+    # Additional entries added to /etc/ceph/ceph.conf
+    ceph_tuning:
+      rgw_keystone_url: RGW_KEYSTONE_URL
+      rgw_keystone_admin_token: RGW_KEYSTONE_ADMIN_TOKEN
+      rgw_keystone_accepted_roles: "_member_, Member, admin, swift"
+      rgw_keystone_token_cache size: 500
+      rgw_keystone_revocation_interval: 600
+      rgw_keystone_make_new_tenants: true
+      rgw_s3_auth_use_keystone: true

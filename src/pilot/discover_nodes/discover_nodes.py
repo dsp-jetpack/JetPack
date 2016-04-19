@@ -10,7 +10,6 @@ import json
 import logging
 import os.path
 import sys
-from time import sleep
 
 import dracclient.exceptions
 import dracclient.utils
@@ -86,17 +85,6 @@ IDRAC_FACTORY_ADMIN_USER_CREDENTIALS = {
 # (JSON).
 JSON_FORMAT_INDENT_LEVEL = 2
 JSON_FORMAT_SEPARATORS = (',', ': ')
-
-# Dictionary that maps integral link speeds in gigabits per second
-# (Gbps) to the textual representations returned by dracclient.
-LINK_SPEEDS = {
-    1: discover_nodes_dracclient.LINK_SPEED_1_GBPS,
-    10: discover_nodes_dracclient.LINK_SPEED_10_GBPS,
-    25: discover_nodes_dracclient.LINK_SPEED_25_GBPS,
-    40: discover_nodes_dracclient.LINK_SPEED_40_GBPS,
-    50: discover_nodes_dracclient.LINK_SPEED_50_GBPS,
-    100: discover_nodes_dracclient.LINK_SPEED_100_GBPS,
-}
 
 # Red Hat Enterprise Linux OpenStack Platform (OSP) Director node
 # definition template attributes. They are documented in "Red Hat
@@ -431,8 +419,8 @@ def scan_one(scan_info):
         pm_address += OSPD_NODE_TEMPLATE_VALUE_USER_INTERVENTION_REQUIRED
     else:
         # Obtain the values of the attributes. By contract, none of the
-        # following functions may raise an exception. Note that only
-        # get_mac() actually interacts with the iDRAC.
+        # following functions may raise an exception. None of them
+        # interact with the iDRAC.
         cpu = get_cpu(client)
         disk = get_disk(client)
         mac = get_mac(client, scan_info.provisioning_nics)
@@ -546,65 +534,10 @@ def get_disk(client):
 
 
 def get_mac(client, provisioning_nics):
-    # By contract, this function may not raise an exception.
-    try:
-        # The provisioning network interface must be on an integrated
-        # network interface controller (NIC). Sort them so that they can
-        # be considered below in lexicographical order.
-        nics = client.list_integrated_nics(sort=True)
-
-        if len(nics) == 0:
-            LOG.warning('No integrated NIC found')
-            return None
-
-        provisioning_link_speed = LINK_SPEEDS[provisioning_nics]
-        nic_to_use = None
-
-        # Select the first interface whose link status is up and whose
-        # link speed equals that specified by 'provisioning_nics'.
-        for i, nic in enumerate(nics):
-            if not client.is_nic_link_up(nic.id):
-                if i == 0:
-                    LOG.warning('Link status of first integrated NIC %s is not'
-                                ' up',
-                                nic.id)
-                continue
-
-            if nic.link_speed != provisioning_link_speed:
-                if i == 0:
-                    LOG.warning('Link speed of first integrated NIC %s is %s,'
-                                ' instead of %s',
-                                nic.id,
-                                nic.link_speed,
-                                provisioning_link_speed)
-                else:
-                    LOG.info('Link speed of integrated NIC %s is %s, instead'
-                             ' of %s',
-                             nic.id,
-                             nic.link_speed,
-                             provisioning_link_speed)
-                continue
-
-            nic_to_use = nic
-            break
-
-        if nic_to_use is None:
-            LOG.error('No integrated NIC with link speed %s found',
-                      provisioning_link_speed)
-            return OSPD_NODE_TEMPLATE_VALUE_USER_INTERVENTION_REQUIRED
-
-        # Ensure that the selected network interface is configured to
-        # PXE boot.
-        set_nic_to_pxe_boot(client, nic_to_use.id)
-    except Exception:
-        # Log an error level message, along with the exception, because
-        # this is something that should be addressed and infrequently
-        # encountered.
-        LOG.exception('Unexpected exception encountered while getting MAC'
-                      ' address of provisioning network interface')
-        return OSPD_NODE_TEMPLATE_VALUE_USER_INTERVENTION_REQUIRED
-
-    return nic_to_use.mac_address
+    # An empty list value for the node definition template 'mac'
+    # attribute is sufficient, because Ironic introspection determines
+    # its value and overwrites what is in the template.
+    return []
 
 
 def get_memory(client):
@@ -612,37 +545,6 @@ def get_memory(client):
     # attribute is sufficient, because Ironic introspection determines
     # its value and overwrites what is in the template.
     return ''
-
-
-def set_nic_to_pxe_boot(client, nic_id):
-    if client.is_nic_legacy_boot_protocol_pxe(nic_id):
-        LOG.info('Integrated NIC %s is already configured to PXE boot', nic_id)
-        return
-
-    result = client.set_nic_legacy_boot_protocol_pxe(nic_id)
-
-    if not result['commit_required']:
-        LOG.info('No commit required while configuring integrated NIC %s to'
-                 ' PXE boot',
-                 nic_id)
-        return
-
-    job_id = client.commit_pending_nic_changes(nic_id, reboot=True)
-    job_state = 'Unknown'
-
-    LOG.info('Waiting for job %s to finish', job_id)
-
-    # Poll for the job's final state.
-    while not (job_state == 'Completed' or
-               job_state == 'Completed with Errors' or
-               job_state == 'Failed'):
-        sleep(10)
-        job_state = client.get_job(job_id).state
-
-    if job_state == 'Completed':
-        LOG.info('Job %s successful with final state %s', job_id, job_state)
-    else:
-        LOG.error('Job %s unsuccessful with final state %s', job_id, job_state)
 
 
 if __name__ == '__main__':

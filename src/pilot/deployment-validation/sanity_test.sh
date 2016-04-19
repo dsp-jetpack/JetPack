@@ -89,7 +89,6 @@ init(){
   info "### Random init stuff "
   cd ~
 
-  # Find the IP for controller0 from the undercloud
   source ~/stackrc
 
   # Collect the SSH keys from all of the overcloud nodes
@@ -100,13 +99,16 @@ init(){
       fatal "### '${update_ssh_config}' is required but missing!  Aborting sanity test"
   execute_command "${update_ssh_config}"
 
-  CONTROLLER=$(nova show overcloud-controller-0|grep "ctlplane network"| awk -F\| '{print $3}'| tr -d ' ')
+  # Find the IP for controller0 from the undercloud
+  CONTROLLER_0_NAME=$(nova list | grep '\-controller-0' | awk -F\| '{print $3}'| tr -d ' ')
+  CONTROLLER=$(nova show ${CONTROLLER_0_NAME} |grep "ctlplane network"| awk -F\| '{print $3}'| tr -d ' ')
 
   # Get a list of the IPs of all the controller nodes for later use
-  CONTROLLERS=$(nova list | grep overcloud-controller- | awk -F\| '{print $7}' | awk -F= '{print $2}')
+  CONTROLLERS=$(nova list | grep '\-controller-' | awk -F\| '{print $7}' | awk -F= '{print $2}')
 
   # Now switch to point the OpenStack commands at the overcloud
-  source ~/overcloudrc
+  STACK_NAME=$(heat stack-list | grep CREATE_ | awk -F\| '{print $3}' | tr -d ' ')
+  source ~/${STACK_NAME}rc
 
   info "### PCS Status "
   ssh heat-admin@$CONTROLLER 'sudo /usr/sbin/pcs status'

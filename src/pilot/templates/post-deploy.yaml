@@ -14,13 +14,12 @@ resources:
       group: script
       config: |
         #!/bin/bash
-        if [[ $HOSTNAME =~ "cephstorage" ]]; then
         {
           echo "Apply ceph_tuning to ceph.conf..."
           hiera ceph_tuning {} | python -c "
-        import ast, os, sys
+        import os, sys, yaml
         input = ' '.join(map(str.strip, sys.stdin.readlines()))
-        ceph_tuning = ast.literal_eval(input.replace('=>', ': '))
+        ceph_tuning = yaml.load(input.replace('=>', ': '))
 
         conf_cur = '/etc/ceph/ceph.conf'
         lines = open(conf_cur, 'r').readlines()
@@ -49,15 +48,14 @@ resources:
         "
           echo "Restarting Ceph..."
           systemctl restart ceph
-        } |& tee /root/post-deploy.txt
-        fi
+        } >> /root/post-deploy.txt 2>&1
         # BEGIN workaround for BZ 1283721
         if [[ $HOSTNAME =~ "cephstorage-0" ]]; then
         {
           echo "Checking Ceph pools pg_num..."
           sleep 10
           hiera ceph_pool_pgs {} | HOME="/root" python -c "
-        import ast, re, subprocess, sys, time
+        import re, subprocess, sys, time, yaml
         def issue_cmd(cmd):
             print(cmd)
             for i in range(1, 10):
@@ -100,13 +98,27 @@ resources:
                 issue_cmd('ceph osd pool set {} pgp_num {}'.format(pool, pg_num))
         
         input = ' '.join(map(str.strip, sys.stdin.readlines()))
-        pool_pgs = ast.literal_eval(input.replace('=>', ': '))
+        pool_pgs = yaml.load(input.replace('=>', ': '))
         for pool in pool_pgs:
             set_pg_num(pool, pool_pgs[pool])
         "
-        } |& tee -a /root/post-deploy.txt
+        } >> /root/post-deploy.txt 2>&1
         fi
         # END workaround for BZ 1283721
+        if [[ $HOSTNAME =~ "controller" ]]; then
+        {
+          echo "Patching ceph.conf..."
+          keystone_url=$(awk '$1 == "identity_uri" {print $NF}' /etc/cinder/cinder.conf)
+          keystone_token=$(awk '$1 == "admin_token" {print $NF}' /etc/keystone/keystone.conf)
+          echo "RGW_KEYSTONE_URL : ${keystone_url}"
+          echo "RGW_KEYSTONE_ADMIN_TOKEN : ${keystone_token}"
+          sed -i "s|RGW_KEYSTONE_URL|${keystone_url}|" /etc/ceph/ceph.conf
+          sed -i "s|RGW_KEYSTONE_ADMIN_TOKEN|${keystone_token}|" /etc/ceph/ceph.conf
+          echo "Restarting RGW..."
+          chkconfig --add ceph-radosgw
+          systemctl restart ceph-radosgw
+        } >> /root/post-deploy.txt 2>&1
+        fi
 
   ExtraDeployments:
     type: OS::Heat::SoftwareDeployments
