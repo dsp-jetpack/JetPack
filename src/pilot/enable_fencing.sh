@@ -16,10 +16,12 @@ function enable_stonith {
   do
     echo $i
     # create the fence device
-    $SSH_CMD $i 'sudo pcs stonith create $(hostname -s)-ipmi fence_ipmilan pcmk_host_list=$(hostname -s) ipaddr=$(sudo ipmitool lan print 1 | awk " /IP Address / { print \$4 } ") login=root passwd=PASSWORD lanplus=1 cipher=1 op monitor interval=60sr'
+    if ! $SSH_CMD $i 'sudo pcs stonith | grep "$(hostname -s)-ipmi"' ; then
+      $SSH_CMD $i 'sudo pcs stonith create $(hostname -s)-ipmi fence_ipmilan pcmk_host_list=$(hostname -s) ipaddr=$(sudo ipmitool lan print 1 | awk " /IP Address / { print \$4 } ") login=root passwd=PASSWORD lanplus=1 cipher=1 op monitor interval=60sr'
   
-    # avoid fencing yourself
-    $SSH_CMD $i 'sudo pcs constraint location $(hostname -s)-ipmi avoids $(hostname -s)'
+      # avoid fencing yourself
+      $SSH_CMD $i 'sudo pcs constraint location $(hostname -s)-ipmi avoids $(hostname -s)'
+    fi
   done
 
   # enable STONITH devices from any controller
