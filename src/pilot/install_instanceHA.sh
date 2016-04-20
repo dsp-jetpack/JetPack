@@ -209,10 +209,11 @@ echo "INFO: Create Compute node resources and set the stonith level 1."
 for compute_node in $COMPUTE_NODES
 do
   crm_node_name=`ssh $compute_node "sudo crm_node -n"`
+  crm_node_sname=`echo $crm_node_name | cut -d"." -f1`
 
   ssh $FIRST_CONTROLLER_NODE "sudo pcs resource create $crm_node_name ocf:pacemaker:remote reconnect_interval=60 op monitor interval=20"
   ssh $FIRST_CONTROLLER_NODE "sudo pcs property set --node $crm_node_name osprole=compute"
-  ssh $FIRST_CONTROLLER_NODE "sudo pcs stonith level add 1 $crm_node_name ipmilan-$crm_node_name,fence-nova"
+  ssh $FIRST_CONTROLLER_NODE "sudo pcs stonith level add 1 $crm_node_name ipmilan-$crm_node_sname,fence-nova"
 done
 
 ssh $FIRST_CONTROLLER_NODE "sudo pcs stonith"
