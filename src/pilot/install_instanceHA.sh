@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash 
 
 IDRAC_USER=$1
 IDRAC_PASS=$2
@@ -22,6 +22,8 @@ CONTROLLER_NODES=`cat ~/.ssh/config | awk '/cntl/ {print $2}'`
 FIRST_COMPUTE_NODE=`cat ~/.ssh/config | awk '/nova0/ {print $2}'`
 COMPUTE_NODES=`cat ~/.ssh/config | awk '/nova/ {print $2}'`
 COMPUTE_NOVA_NAMES=`nova list | awk '/compute/ {print $4}'`
+OVERCLOUD_NAME=`ssh $FIRST_COMPUTE_NODE "sudo crm_node -n | cut -d\- -f1"`
+OVERCLOUDRC_NAME=${OVERCLOUD_NAME}rc
 
 ############
 # Stop and disable openstack-service and libvirtd on all Compute nodes
@@ -82,9 +84,7 @@ done
 echo ""
 echo "INFO: Create a NovaEvacuate active/passive resource using the overcloudrc file to provide the auth_url, username, tenant and password values."
 
-#scp ~/overcloudrc $FIRST_CONTROLLER_NODE:~/
-#ssh $FIRST_CONTROLLER_NODE "source ~/overcloudrc; sudo pcs resource create nova-evacuate ocf:openstack:NovaEvacuate auth_url=$OS_AUTH_URL username=$OS_USERNAME password=$OS_PASSWORD tenant_name=$OS_TENANT_NAME"
-source ~/overcloudrc
+source ~/$OVERCLOUDRC_NAME
 ssh $FIRST_CONTROLLER_NODE "sudo pcs resource create nova-evacuate ocf:openstack:NovaEvacuate auth_url=$OS_AUTH_URL username=$OS_USERNAME password=$OS_PASSWORD tenant_name=$OS_TENANT_NAME"
 
 ############
@@ -176,7 +176,7 @@ echo "INFO: Add stonith devices for the compute nodes."
 for compute_node in $COMPUTE_NODES
 do
   crm_node_name=`ssh $compute_node "sudo crm_node -n"`
-  nova_compute_name=`echo $compute_node | sed -e 's/nova/overcloud-novacompute-/'`
+  nova_compute_name=`echo $crm_node_name | cut -d. -f1`
   compute_node_ip=`grep $nova_compute_name ~/undercloud_nodes.txt | cut -d" " -f2`
   
   ssh $FIRST_CONTROLLER_NODE "sudo pcs stonith create ipmilan-$nova_compute_name fence_ipmilan pcmk_host_list=$crm_node_name ipaddr=$compute_node_ip login=$IDRAC_USER passwd=$IDRAC_PASS lanplus=1 cipher=1 op monitor interval=60s"
