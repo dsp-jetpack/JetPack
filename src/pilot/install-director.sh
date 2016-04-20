@@ -115,5 +115,6 @@ cd $HOME/pilot/ipxe
 sudo yum install -y openstack-ironic-api-4.2.3-2.el7ost.noarch.rpm openstack-ironic-common-4.2.3-2.el7ost.noarch.rpm openstack-ironic-conductor-4.2.3-2.el7ost.noarch.rpm
 sudo sed -i '/\[pxe\]/a \\nipxe_timeout = 0' /etc/ironic/ironic.conf
 
+
 echo
 echo "## Configuration complete!"
