@@ -931,7 +931,7 @@ class Director(InfraHost):
     def run_sanity_test(self):
         if self.settings.run_sanity is True:
             logger.info("Running sanity test")
-            cmd = 'rm -f ~/MY_KEY.pem'
+            cmd = 'rm -f ~/key_name'
             self.run_tty(cmd)
             self.run_tty('wget '
                          'http://download.cirros-cloud.net/0.3.3/'
@@ -969,8 +969,8 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
         if setts.tempest_smoke_only is True:
-            cmd = "source ~/' + self.settings.overcloud_name + 'rc;cd " \
-                  "~/tempest;tools/run-tests.sh '.*smoke'"
+            cmd = "source ~/" + self.settings.overcloud_name + "rc;cd " \
+                  "~/tempest;tools/run-tests.sh .*smoke'"
         else:
             cmd = "source ~/" + self.settings.overcloud_name + "rc;cd ~/tempest;tools/run-tests.sh"
         self.run_tty(cmd)
