@@ -5,7 +5,7 @@ env | grep OS_
 SSH_CMD="ssh -l heat-admin"
 
 function usage {
-   echo "USAGE: $0 [enable|test]"
+   echo "USAGE: $0"
    exit 1
 }
 
