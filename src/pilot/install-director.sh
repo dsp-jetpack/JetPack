@@ -110,10 +110,10 @@ echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
 echo
-echo "## Downgrading ipxe packages"
-sudo yum downgrade ~/pilot/ipxe/ipxe-bootimgs-20150821-1.git4e03af8e.el7.noarch.rpm -y
-sudo yum downgrade ~/pilot/ipxe/ipxe-roms-qemu-20150821-1.git4e03af8e.el7.noarch.rpm -y
-
+echo "## Apply pxe freeze patches"
+cd $HOME/pilot/ipxe
+sudo yum install -y openstack-ironic-api-4.2.3-2.el7ost.noarch.rpm openstack-ironic-common-4.2.3-2.el7ost.noarch.rpm openstack-ironic-conductor-4.2.3-2.el7ost.noarch.rpm
+sudo sed -i '/\[pxe\]/a \\nipxe_timeout = 0' /etc/ironic/ironic.conf
 
 echo
 echo "## Configuration complete!"
