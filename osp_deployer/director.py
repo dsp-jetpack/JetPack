@@ -931,7 +931,7 @@ class Director(InfraHost):
     def run_sanity_test(self):
         if self.settings.run_sanity is True:
             logger.info("Running sanity test")
-            cmd = 'rm -f ~/key_name'
+            cmd = 'rm -f ~/key_name.pem'
             self.run_tty(cmd)
             self.run_tty('wget '
                          'http://download.cirros-cloud.net/0.3.3/'
