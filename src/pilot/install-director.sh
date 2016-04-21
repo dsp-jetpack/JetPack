@@ -113,7 +113,7 @@ echo
 echo "## Apply pxe freeze patches"
 cd $HOME/pilot/ipxe
 sudo yum install -y openstack-ironic-api-4.2.3-2.el7ost.noarch.rpm openstack-ironic-common-4.2.3-2.el7ost.noarch.rpm openstack-ironic-conductor-4.2.3-2.el7ost.noarch.rpm
-sudo sed -i '/\[pxe\]/a \\nipxe_timeout = 0' /etc/ironic/ironic.conf
+sudo sed -i '/\[pxe\]/a \\nipxe_timeout = 60' /etc/ironic/ironic.conf
 sudo service openstack-ironic-api restart
 sudo service openstack-ironic-conductor restart
 
