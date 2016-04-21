@@ -965,12 +965,13 @@ class Director(InfraHost):
             '~/tempest-deployer-input.conf --debug '
             '--create identity.uri $OS_AUTH_URL '
             'identity.admin_password $OS_PASSWORD'
+            ' object-storage-feature-enabled.discoverability False'
         ]
         for cmd in cmds:
             self.run_tty(cmd)
         if setts.tempest_smoke_only is True:
             cmd = "source ~/" + self.settings.overcloud_name + "rc;cd " \
-                  "~/tempest;tools/run-tests.sh .*smoke'"
+                  "~/tempest;tools/run-tests.sh .*smoke"
         else:
             cmd = "source ~/" + self.settings.overcloud_name + "rc;cd ~/tempest;tools/run-tests.sh"
         self.run_tty(cmd)
