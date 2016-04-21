@@ -59,6 +59,7 @@ sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
 cp $HOME/pilot/undercloud.conf $HOME
 echo "## Done."
 
+
 echo
 echo "## Installing Director"
 openstack undercloud install
@@ -107,6 +108,14 @@ echo
 echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
+
+echo
+echo "## Apply pxe freeze patches"
+cd $HOME/pilot/ipxe
+sudo yum install -y openstack-ironic-api-4.2.3-2.el7ost.noarch.rpm openstack-ironic-common-4.2.3-2.el7ost.noarch.rpm openstack-ironic-conductor-4.2.3-2.el7ost.noarch.rpm
+sudo sed -i '/\[pxe\]/a \\nipxe_timeout = 60' /etc/ironic/ironic.conf
+sudo service openstack-ironic-api restart
+sudo service openstack-ironic-conductor restart
 
 echo
 echo "## Configuration complete!"
