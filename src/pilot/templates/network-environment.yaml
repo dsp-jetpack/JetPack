@@ -3,6 +3,7 @@ resource_registry:
   OS::TripleO::Controller::Net::SoftwareConfig: HOME/pilot/templates/nic-configs/controller.yaml
   OS::TripleO::CephStorage::Net::SoftwareConfig: HOME/pilot/templates/nic-configs/ceph-storage.yaml
 
+  OS::TripleO::Network::Ports::StorageMgmtVipPort: HOME/pilot/templates/overcloud/network/ports/ctlplane_vip.yaml
   OS::TripleO::Controller::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
 
 
