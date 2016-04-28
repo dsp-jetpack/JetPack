@@ -59,25 +59,9 @@ sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
 cp $HOME/pilot/undercloud.conf $HOME
 echo "## Done."
 
-echo "## Workaround introspection pxe freeze"
-sudo yum install -y openstack-puppet-modules
-sudo rm -f /usr/share/openstack-puppet/modules/ironic/templates/inspector_ipxe.erb
-sudo touch /usr/share/openstack-puppet/modules/ironic/templates/inspector_ipxe.erb
-sudo chmod 777 /usr/share/openstack-puppet/modules/ironic/templates/inspector_ipxe.erb
-cat <<EOT >> /usr/share/openstack-puppet/modules/ironic/templates/inspector_ipxe.erb
-#!ipxe
 
-dhcp
-
-:goto loop
-imgfree
-kernel --timeout 60 http://<%= @dnsmasq_local_ip %>:8088/agent.kernel ipa-inspection-callback-url=http://<%= @dnsmasq_local_ip %>:5050/v1/continue ipa-inspection-collectors=<%= @ramdisk_collectors %> systemd.journald.forward_to_console=yes BOOTIF=${mac} <%= @ramdisk_kernel_args %> initrd=agent.ramdisk || goto loop
-initrd --timeout 60 http://<%= @dnsmasq_local_ip %>:8088/agent.ramdisk || goto loop
-boot
-
-EOT
-
-echo "## Installing the undercloud"
+echo
+echo "## Installing Director"
 openstack undercloud install
 echo "## Done."
 
@@ -127,7 +111,6 @@ echo "## Done."
 
 echo
 echo "## Apply pxe freeze patches"
-
 cd $HOME/pilot/ipxe
 sudo yum install -y openstack-ironic-api-4.2.3-2.el7ost.noarch.rpm openstack-ironic-common-4.2.3-2.el7ost.noarch.rpm openstack-ironic-conductor-4.2.3-2.el7ost.noarch.rpm
 sudo sed -i '/\[pxe\]/a \\nipxe_timeout = 60' /etc/ironic/ironic.conf
