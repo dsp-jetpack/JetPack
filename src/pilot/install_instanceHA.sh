@@ -17,11 +17,11 @@ fi
 source ~/stackrc
 ~/pilot/update_ssh_config.py
 ~/pilot/identify_nodes.py > ~/undercloud_nodes.txt
-FIRST_CONTROLLER_NODE=`cat ~/.ssh/config | awk '/cntl0/ {print $2}'`
-CONTROLLER_NODES=`cat ~/.ssh/config | awk '/cntl/ {print $2}'`
-FIRST_COMPUTE_NODE=`cat ~/.ssh/config | awk '/nova0/ {print $2}'`
-COMPUTE_NODES=`cat ~/.ssh/config | awk '/nova/ {print $2}'`
-COMPUTE_NOVA_NAMES=`nova list | awk '/compute/ {print $4}'`
+FIRST_CONTROLLER_NODE=$(cat ~/.ssh/config | awk '/cntl0/ {print $2}' | tr -d ' ')
+CONTROLLER_NODES=$(cat ~/.ssh/config | awk '/cntl/ {print $2}' | tr -d ' ')
+FIRST_COMPUTE_NODE=$(cat ~/.ssh/config | awk '/nova0/ || /compute0/ {print $2}' | tr -d ' ')
+COMPUTE_NODES=$(cat ~/.ssh/config | awk '/nova/ || /compute/ {print $2}' | tr -d ' ')
+COMPUTE_NOVA_NAMES=$(nova list | awk '/compute/ {print $4}' | tr -d ' ')
 OVERCLOUD_NAME=$(heat stack-list | grep CREATE_ | awk -F\| '{print $3}' | tr -d ' ')
 
 ############
