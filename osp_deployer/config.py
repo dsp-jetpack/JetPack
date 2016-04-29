@@ -219,6 +219,11 @@ class Settings():
         else:
             self.enable_rbd_backend = False
 
+        if cluster['enable_instance_ha'].lower() == 'true':
+            self.enable_instance_ha = True
+        else:
+            self.enable_instance_ha = False
+
         self.bastion_settings_map = self.get_settings_section(
             "Bastion Settings")
         self.rhel_install_location = self.bastion_settings_map[
