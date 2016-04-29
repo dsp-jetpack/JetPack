@@ -22,8 +22,7 @@ CONTROLLER_NODES=`cat ~/.ssh/config | awk '/cntl/ {print $2}'`
 FIRST_COMPUTE_NODE=`cat ~/.ssh/config | awk '/nova0/ {print $2}'`
 COMPUTE_NODES=`cat ~/.ssh/config | awk '/nova/ {print $2}'`
 COMPUTE_NOVA_NAMES=`nova list | awk '/compute/ {print $4}'`
-OVERCLOUD_NAME=`ssh $FIRST_COMPUTE_NODE "sudo crm_node -n | cut -d\- -f1"`
-OVERCLOUDRC_NAME=${OVERCLOUD_NAME}rc
+OVERCLOUD_NAME=$(heat stack-list | grep CREATE_ | awk -F\| '{print $3}' | tr -d ' ')
 
 ############
 # Stop and disable openstack-service and libvirtd on all Compute nodes
@@ -84,7 +83,7 @@ done
 echo ""
 echo "INFO: Create a NovaEvacuate active/passive resource using the overcloudrc file to provide the auth_url, username, tenant and password values."
 
-source ~/$OVERCLOUDRC_NAME
+source ~/${OVERCLOUD_NAME}rc
 ssh $FIRST_CONTROLLER_NODE "sudo pcs resource create nova-evacuate ocf:openstack:NovaEvacuate auth_url=$OS_AUTH_URL username=$OS_USERNAME password=$OS_PASSWORD tenant_name=$OS_TENANT_NAME"
 
 ############
