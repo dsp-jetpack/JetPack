@@ -331,6 +331,7 @@ def deploy():
                 "OverCloud did not install properly : " + overcloud_status)
         if args.skip_ceph_vm is False:
             director_vm.configure_calamari()
+        director_vm.enable_instance_ha()
         director_vm.run_sanity_test()
 
     except:

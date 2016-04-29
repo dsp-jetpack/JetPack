@@ -996,3 +996,18 @@ class Director(InfraHost):
                      ';./config_calamari_nodes.sh ' +
                      self.settings.ceph_node.external_ip +
                      ' ' + self.settings.ceph_node.root_password)
+
+    def enable_instance_ha(self):
+        if self.settings.enable_instance_ha is True:
+            logger.info("Enabling instance HA")
+            cmds=['cd ' + 
+                  self.pilot_dir +
+                 ';./enable_fencing.sh enable',
+                 'cd ' +
+                  self.pilot_dir +
+                  ';./install_instanceHA.sh ' +
+                  self.settings.ipmi_user +
+                  ' ' +
+                  self.settings.ipmi_password]
+            for cmd in cmds:
+                self.run_tty(cmd)

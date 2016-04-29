@@ -318,6 +318,7 @@ class Checkpoints():
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
+        #TODO :: i fnode failed introspection - set to to PXE - reboot
         ls_nodes = re[0].split("\n")
         ls_nodes.pop()
         for node in ls_nodes:
