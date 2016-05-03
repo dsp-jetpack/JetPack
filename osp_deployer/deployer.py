@@ -333,6 +333,8 @@ def deploy():
             director_vm.configure_calamari()
         director_vm.enable_instance_ha()
         director_vm.run_sanity_test()
+        logger.info("Depoyment summary info; usefull ip's etc.. " + \
+                    "/auto_results/deployment_summary.log")
 
     except:
         logger.error(traceback.format_exc())

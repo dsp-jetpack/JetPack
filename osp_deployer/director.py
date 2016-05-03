@@ -27,6 +27,7 @@ import logging
 import time
 import os
 import re
+import errno
 
 logger = logging.getLogger("osp_deployer")
 
@@ -793,15 +794,19 @@ class Director(InfraHost):
 
     def retreive_nodes_ips(self):
         logger.info("**** Retreiving nodes information ")
+        deployment_log = '/auto_results/deployment_summary.log'
+        try:
+            os.remove(deployment_log)
+        except OSError:
+            pass
         ip_info = []
-        # noinspection PyBroadException
+        fi = open(deployment_log, "ab")
         try:
             logger.debug("retreiving node ip details ..")
             ip_info.append("====================================")
             ip_info.append("### nodes ip information ###")
             re = self.run_tty(self.source_stackrc +
                               "nova list | grep controller")
-
             ip_info.append("### Controllers ###")
             ls_nodes = re[0].split("\n")
             ls_nodes.pop()
@@ -922,11 +927,13 @@ class Director(InfraHost):
             ip_info.append("====================================")
             for each in ip_info:
                 logger.debug(each)
-
         except:
+            logger.debug(" Failed to retreive the nodes ip information ")
+        finally:
             for each in ip_info:
                 logger.debug(each)
-            logger.debug(" Failed to retreive the nodes ip information ")
+                fi.write(each + "\n")
+            fi.close()
 
     def run_sanity_test(self):
         if self.settings.run_sanity is True:
