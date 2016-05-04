@@ -120,6 +120,14 @@ def deploy():
                          settings.compute_nodes +
                          settings.ceph_nodes)
 
+        logger.debug("=== powering the nodes")
+        for each in non_sah_nodes:
+            ipmi_session = Ipmi(settings.cygwin_installdir,
+                                settings.ipmi_user,
+                                settings.ipmi_password,
+                                each.idrac_ip)
+            ipmi_session.power_off()
+            ipmi_session.set_boot_to_pxe()
         sah_node = Sah()
 
         if args.skip_sah is False:
@@ -159,15 +167,6 @@ def deploy():
                             settings.ipmi_password,
                             settings.sah_node.idrac_ip)
             ipmi_sah.power_off()
-
-            logger.debug("=== powering down other hosts")
-            for each in non_sah_nodes:
-                ipmi_session = Ipmi(settings.cygwin_installdir,
-                                    settings.ipmi_user,
-                                    settings.ipmi_password,
-                                    each.idrac_ip)
-                ipmi_session.power_off()
-                ipmi_session.set_boot_to_pxe()
 
             logger.info("=== updating the sah kickstart based on settings")
 
@@ -295,13 +294,6 @@ def deploy():
             logger.info("Skipped the ceph vm install")
 
         logger.info("=== Preparing the overcloud ===")
-        for each in non_sah_nodes:
-            ipmi_session = Ipmi(settings.cygwin_installdir,
-                                settings.ipmi_user,
-                                settings.ipmi_password,
-                                each.idrac_ip)
-            ipmi_session.power_off()
-            ipmi_session.set_boot_to_pxe()
 
         director_vm.node_discovery()
         director_vm.assign_node_roles()
