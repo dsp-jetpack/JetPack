@@ -101,9 +101,10 @@ if not dci_conf['rhos_mirror'].startswith('http'):
     exit(1)
 topic = dcitopic.get(dci_context, dci_conf.get('topic', 'default')).json()[
     'topic']
-job = dcijob.schedule(dci_context, remoteci_id=dci_conf['remoteci_id'],
-                      topic_id=topic['id']).json()
-print(job)
+r = dcijob.schedule(dci_context, remoteci_id=dci_conf['remoteci_id'],
+                      topic_id=topic['id'])
+if r.status_code == 412:
+    exit(0)
 job_full_data = dcijob.get_full_data(dci_context, dci_context.last_job_id)
 upload_configuration_files(dci_context, nspace.settings)
 
