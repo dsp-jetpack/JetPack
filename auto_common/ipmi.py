@@ -98,7 +98,7 @@ class Ipmi():
                       + self.ipmi_user + " -P " + self.ipmi_password \
                       + " " + command
         retries = 20
-        for i in range(0, 20):
+        for i in range(0, retries):
             try:
                 logger.debug("executing :" + cmdline)
                 out = subprocess.check_output(cmdline,

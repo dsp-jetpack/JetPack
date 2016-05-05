@@ -4,6 +4,7 @@ from datetime import datetime
 import logging
 from pprint import pprint
 import os
+import os.path
 import traceback
 import yaml
 import ConfigParser
@@ -93,6 +94,7 @@ gpgcheck=0
 priority=0
 
 """
+tempest_file = '/auto_results/tempest.xml'
 
 pprint(dci_conf)
 
@@ -101,15 +103,19 @@ if not dci_conf['rhos_mirror'].startswith('http'):
     exit(1)
 topic = dcitopic.get(dci_context, dci_conf.get('topic', 'default')).json()[
     'topic']
-job = dcijob.schedule(dci_context, remoteci_id=dci_conf['remoteci_id'],
-                      topic_id=topic['id']).json()
-print(job)
+r = dcijob.schedule(dci_context, remoteci_id=dci_conf['remoteci_id'],
+                      topic_id=topic['id'])
+if r.status_code == 412:
+    exit(0)
 job_full_data = dcijob.get_full_data(dci_context, dci_context.last_job_id)
 upload_configuration_files(dci_context, nspace.settings)
 
 if job_full_data['test']['name'] != 'tempest':
     print('invalid test')
     exit(0)
+
+if os.path.isfile(tempest_file):
+    ok.unlink(tempest_file)
 
 with open('/var/www/html/RH7-RHOS-8.0.repo', 'w') as f:
     for component in job_full_data['components']:
@@ -163,4 +169,11 @@ finally:
             'deployment.log',
             f.read(),
             'text/plain',
+            dci_context.last_jobstate_id)
+    with open(tempest_file, 'r') as f:
+        dcifile.create(
+	    dci_context,
+            'tempest.xml',
+            f.read(),
+            'application/junit',
             dci_context.last_jobstate_id)
