@@ -795,12 +795,8 @@ class Director(InfraHost):
     def retreive_nodes_ips(self):
         logger.info("**** Retreiving nodes information ")
         deployment_log = '/auto_results/deployment_summary.log'
-        try:
-            os.remove(deployment_log)
-        except OSError:
-            pass
         ip_info = []
-        fi = open(deployment_log, "ab")
+        fi = open(deployment_log, "wb")
         try:
             logger.debug("retreiving node ip details ..")
             ip_info.append("====================================")
@@ -925,8 +921,6 @@ class Director(InfraHost):
             except:
                  pass
             ip_info.append("====================================")
-            for each in ip_info:
-                logger.debug(each)
         except:
             logger.debug(" Failed to retreive the nodes ip information ")
         finally:
