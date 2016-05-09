@@ -178,8 +178,11 @@ def deploy():
                                                  shell=True))
             time.sleep(60)
 
-            logger.debug("=== starting dhcpd service")
-            logger.debug(subprocess.check_output("service dhcpd start",
+            logger.debug("=== enabling and starting dhcpd service")
+            logger.debug(subprocess.check_output("systemctl enable dhcpd",
+                                                 stderr=subprocess.STDOUT,
+                                                 shell=True))
+            logger.debug(subprocess.check_output("systemctl start dhcpd",
                                                  stderr=subprocess.STDOUT,
                                                  shell=True))
 
@@ -195,8 +198,11 @@ def deploy():
                                                  stderr=subprocess.STDOUT,
                                                  shell=True))
 
-            logger.debug("=== stopping dhcpd service")
-            logger.debug(subprocess.check_output("service dhcpd stop",
+            logger.debug("=== stopping and disabling dhcpd service")
+            logger.debug(subprocess.check_output("systemctl stop dhcpd",
+                                                 stderr=subprocess.STDOUT,
+                                                 shell=True))
+            logger.debug(subprocess.check_output("systemctl disable dhcpd",
                                                  stderr=subprocess.STDOUT,
                                                  shell=True))
 
