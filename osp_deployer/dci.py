@@ -124,12 +124,8 @@ if r.status_code == 412:
 job_full_data = dcijob.get_full_data(dci_context, dci_context.last_job_id)
 upload_configuration_files(dci_context, nspace.settings)
 
-if job_full_data['test']['name'] != 'tempest':
-    print('invalid test')
-    exit(0)
-
 if os.path.isfile(tempest_file):
-    ok.unlink(tempest_file)
+    os.unlink(tempest_file)
 
 with open('/var/www/html/RH7-RHOS-8.0.repo', 'w') as f:
     for component in job_full_data['components']:
