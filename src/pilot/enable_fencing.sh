@@ -1,33 +1,61 @@
 #!/bin/bash
+IDRAC_USER=$1
+IDRAC_PASS=$2
+
+function usage {
+  echo "USAGE: $0 idrac_user idrac_password [ enable | disable ]"
+  exit -1
+}
+ 
+if [ $# -le 2 ]
+then
+  usage
+fi
 
 source ~/stackrc
 env | grep OS_
 SSH_CMD="ssh -l heat-admin"
-
-function usage {
-   echo "USAGE: $0"
-   exit 1
-}
 
 function enable_stonith {
   # For all controller nodes (select by flavor rather than name)
   for i in $(nova list --flavor control --fields networks | awk ' /ctlplane/ { print $4 } ' | cut -f2 -d=)
   # original: nova list | awk ' /controller/ { print $12 } ' | cut -f2 -d=)
   do
-    echo $i
     # create the fence device
-    if ! $SSH_CMD $i 'sudo pcs stonith | grep "$(hostname -s)-ipmi"' ; then
-      $SSH_CMD $i 'sudo pcs stonith create $(hostname -s)-ipmi fence_ipmilan pcmk_host_list=$(hostname -s) ipaddr=$(sudo ipmitool lan print 1 | awk " /IP Address / { print \$4 } ") login=root passwd=PASSWORD lanplus=1 cipher=1 op monitor interval=60sr'
+    IPADDR=`$SSH_CMD $i 'sudo ipmitool lan print 1 | grep -v Source | grep "IP Address " | cut -d: -f2' | tr -d ' '` 
+    HOSTNAME=`$SSH_CMD $i 'echo "$(hostname -s)"'`
+    STONITH_NAME="$HOSTNAME-ipmi"
   
-      # avoid fencing yourself
-      $SSH_CMD $i 'sudo pcs constraint location $(hostname -s)-ipmi avoids $(hostname -s)'
-    fi
+    $SSH_CMD $i "sudo pcs stonith create $STONITH_NAME fence_ipmilan pcmk_host_list=$HOSTNAME ipaddr=$IPADDR login=$IDRAC_USER passwd=$IDRAC_PASS lanplus=1 cipher=1 op monitor interval=60s"
+  
+    # avoid fencing yourself
+    $SSH_CMD $i "sudo pcs constraint location $STONITH_NAME avoids $HOSTNAME"
   done
 
-  # enable STONITH devices from any controller
+  # enable STONITH devices from any controller; hence we can use the last node 
   $SSH_CMD $i 'sudo pcs property set stonith-enabled=true'
   $SSH_CMD $i 'sudo pcs property show'
 }
 
-enable_stonith
+function disable_stonith {
+  for i in $(nova list --flavor control --fields networks | awk ' /ctlplane/ { print $4 } ' | cut -f2 -d=)
+  do
+    STONITH_NAME=`$SSH_CMD $i 'echo "$(hostname -s)-ipmi"'`
+    $SSH_CMD $i "sudo pcs stonith delete $STONITH_NAME"
+  done 
 
+  # disable STONITH devices from any controller; hence we can use the last node 
+  $SSH_CMD $i 'sudo pcs property set stonith-enabled=false'
+  $SSH_CMD $i 'sudo pcs property show'
+}
+
+if [[ $3 == "enable" ]]
+then
+  enable_stonith
+elif [[ $3 == "disable" ]]
+then 
+  disable_stonith
+else
+  echo "ERROR: Third passed argument mmust be either \"enable\" or \"disable\"." 
+  usage
+fi
