@@ -1003,8 +1003,12 @@ class Director(InfraHost):
             logger.info("Enabling instance HA")
             cmds=['cd ' + 
                   self.pilot_dir +
-                 ';./enable_fencing.sh enable',
-                 'cd ' +
+                  ';./agent_fencing.sh ' +
+                  self.settings.self.settings.ipmi_user + 
+                  ' ' +
+                  self.settings.ipmi_password +
+                  ' enable',
+                  'cd ' +
                   self.pilot_dir +
                   ';./install_instanceHA.sh ' +
                   self.settings.ipmi_user +
