@@ -48,7 +48,7 @@ ceph::profile::params::osds:
   '/dev/sdg':
     journal: '/dev/sda'
   '/dev/sdh':
-    journal: '/dev/sda'
+    journal: '/dev/sdb'
   '/dev/sdi':
     journal: '/dev/sdb'
   '/dev/sdj':
@@ -56,14 +56,12 @@ ceph::profile::params::osds:
   '/dev/sdk':
     journal: '/dev/sdb'
   '/dev/sdl':
-    journal: '/dev/sdb'
+    journal: '/dev/sdc'
   '/dev/sdm':
     journal: '/dev/sdc'
   '/dev/sdn':
     journal: '/dev/sdc'
   '/dev/sdo':
-    journal: '/dev/sdc'
-  '/dev/sdp':
     journal: '/dev/sdc'
 
 # CHANGEME: The following table lists the pg_num and pgp_num values for each
