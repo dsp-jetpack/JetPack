@@ -1008,7 +1008,7 @@ class Director(InfraHost):
                   ' ' + \
                   self.settings.ipmi_password + \
                   ' enable'
-            self.run(cmd)
+            self.run_tty(cmd)
 
     def enable_instance_ha(self):
         if self.settings.enable_instance_ha is True:
