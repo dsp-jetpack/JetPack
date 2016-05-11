@@ -998,21 +998,27 @@ class Director(InfraHost):
                      self.settings.ceph_node.external_ip +
                      ' ' + self.settings.ceph_node.root_password)
 
+    def enable_fencing(self):
+        if self.settings.enable_fencing is True:
+            logger.info("enabling fencing")
+            cmd = 'cd ' + \
+                  self.pilot_dir + \
+                  ';./agent_fencing.sh ' + \
+                  self.settings.ipmi_user + \
+                  ' ' + \
+                  self.settings.ipmi_password + \
+                  ' enable'
+            self.run(cmd)
+
     def enable_instance_ha(self):
         if self.settings.enable_instance_ha is True:
             logger.info("Enabling instance HA")
-            cmds=['cd ' + 
-                  self.pilot_dir +
-                  ';./agent_fencing.sh ' +
-                  self.settings.ipmi_user + 
-                  ' ' +
-                  self.settings.ipmi_password +
-                  ' enable',
-                  'cd ' +
-                  self.pilot_dir +
-                  ';./install_instanceHA.sh ' +
-                  self.settings.ipmi_user +
-                  ' ' +
-                  self.settings.ipmi_password]
-            for cmd in cmds:
-                self.run_tty(cmd)
+            if self.settings.enable_fencing is False:
+                logger.error("Fencing NOT enabled, this is required for instance_ha")
+            cmd = 'cd ' + \
+                  self.pilot_dir + \
+                  ';./install_instanceHA.sh ' + \
+                  self.settings.ipmi_user + \
+                  ' ' + \
+                  self.settings.ipmi_password
+            self.run_tty(cmd)

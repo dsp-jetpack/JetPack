@@ -47,8 +47,6 @@ class Settings():
         self.external_network = cluster['external_network']
         self.provisioning_network = cluster[
             'provisioning_network']
-        self.nova_public_network = cluster[
-            'nova_public_network']
         self.nova_private_network = cluster[
             'nova_private_network']
         self.private_api_network = cluster[
@@ -218,6 +216,11 @@ class Settings():
             self.enable_rbd_backend = True
         else:
             self.enable_rbd_backend = False
+
+        if cluster['enable_fencing'].lower() == 'true':
+            self.enable_fencing = True
+        else:
+            self.enable_fencing = False
 
         if cluster['enable_instance_ha'].lower() == 'true':
             self.enable_instance_ha = True
