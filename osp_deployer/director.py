@@ -1004,7 +1004,7 @@ class Director(InfraHost):
             cmds=['cd ' + 
                   self.pilot_dir +
                   ';./agent_fencing.sh ' +
-                  self.settings.self.settings.ipmi_user + 
+                  self.settings.ipmi_user + 
                   ' ' +
                   self.settings.ipmi_password +
                   ' enable',
