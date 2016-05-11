@@ -39,6 +39,7 @@ or
 * 5.0.0.n - added enable_rbd_backend
 * 5.0.0.o - added overcloud_name
 * 5.0.0.p - added enable_instance_ha
+* 5.0.0.q - removed nova_public_network - added enable_fencing
 
 #####settings.properties
 * 5.0.0.a - Initial 5.0 version - some settings left over from 4.x might go away as this is still work in progress
