@@ -1,23 +1,4 @@
 ##Change Log
-### Layout
-Command to execute
-
-python deployer.py -s "PATH to the Settings file"
-
-The structure is each directory represents a site and rack designation
-
-* Please add your spreadsheets for your installs
-* Please name your files
-
-** MHT_RackName.properties
-** MHT_RackName_settings.ini
-
-or
-
-** AUS_RackName.properties
-** AUS_RackName_settings.ini
-
-
 
 #####This is a change log for the settings.ini and settings.properties file
 
