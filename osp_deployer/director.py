@@ -541,8 +541,8 @@ class Director(InfraHost):
             'sed -i "s|<dellsc_iscsi_ip_address>|' + self.settings.dellsc_iscsi_ip_address + '|" ' + dell_storage_yaml,
             'sed -i "s|<dellsc_iscsi_port>|' + self.settings.dellsc_iscsi_port + '|" ' + dell_storage_yaml,
             'sed -i "s|<dellsc_sc_api_port>|' + self.settings.dellsc_api_port + '|" ' + dell_storage_yaml,
-            'sed -i "s|<dellsc_server_folder>|' + self.settings.dellsc_server_folder + '|" ' + dell_storage_yaml,
-            'sed -i "s|<dellsc_volume_folder>|' + self.settings.dellsc_volume_folder + '|" ' + dell_storage_yaml,
+            'sed -i "s|dellsc_osp8_server_folder|' + self.settings.dellsc_server_folder + '|" ' + dell_storage_yaml,
+            'sed -i "s|dellsc_osp8_volume_folder|' + self.settings.dellsc_volume_folder + '|" ' + dell_storage_yaml,
 
         ]
         for cmd in cmds:
