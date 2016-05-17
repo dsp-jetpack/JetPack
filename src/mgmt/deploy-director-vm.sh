@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# (c) 2015-2016 Dell
+# (c) 2014-2016 Dell
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -316,8 +316,8 @@ EOFKS
   rm -f /store/data/images/director.img
 
   virt-install --name director \
-    --ram 6144 \
-    --vcpus 2 \
+    --ram 32768 \
+    --vcpus 8 \
     --hvm \
     --os-type linux \
     --os-variant rhel6 \
@@ -330,15 +330,19 @@ EOFKS
     --network bridge=br-pub-api \
     --initrd-inject /tmp/director.ks \
     --extra-args "ks=file:/director.ks" \
-    --noautoconsole \
     --graphics spice \
     --autostart \
     --location ${location} 
+
+  virsh destroy director
+  virsh detach-disk director fda --persistent
+  virsh start director
+
   } || {
 
 virt-install --name director \
-  --ram 6144 \
-  --vcpus 2 \
+  --ram 32768 \
+  --vcpus 8 \
   --hvm \
   --os-type linux \
   --os-variant rhel6 \

@@ -269,7 +269,7 @@ EOFKS
   rmdir /tmp/mnt-ceph
 
   virt-install --name ceph \
-    --ram 1024 \
+    --ram 4096 \
     --vcpus 1 \
     --hvm \
     --os-type linux \
@@ -280,14 +280,18 @@ EOFKS
     --network bridge=br-stor \
     --initrd-inject /tmp/ceph.ks \
     --extra-args "ks=file:/ceph.ks" \
-    --noautoconsole \
     --graphics spice \
     --autostart \
     --location ${location}
+
+  virsh destroy ceph
+  virsh detach-disk ceph fda --persistent
+  virsh start ceph
+
   } || {
 
 virt-install --name ceph \
-  --ram 1024 \
+  --ram 4096 \
   --vcpus 1 \
   --hvm \
   --os-type linux \

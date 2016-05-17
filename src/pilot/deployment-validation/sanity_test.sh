@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# (c) 2016 Dell
+# (c) 2015-2016 Dell
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 
 #Variables
 VLAN_NETWORK="192.168.201.0/24"
-EXTERNAL_NETWORK_NAME="nova"
+EXTERNAL_NETWORK_NAME="public"
 EXTERNAL_SUBNET_NAME="external_sub"
 STARTIP="192.168.191.2"
 ENDIP="192.168.191.30"
