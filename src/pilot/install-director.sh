@@ -73,6 +73,14 @@ sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
 cp $HOME/pilot/undercloud.conf $HOME
 echo "## Done."
 
+echo "# Fetching the puppet-ironic with the iPXE fix"
+sudo yum install -y openstack-puppet-modules instack-undercloud git
+# NOTE(Gonéri): to remove as soon as the new openstack-puppet-modules is available
+sudo rm -rf /usr/share/openstack-puppet/modules/ironic
+sudo git clone https://github.com/openstack/puppet-ironic -b stable/liberty /usr/share/openstack-puppet/modules/ironic
+
+sudo sed -i "s,\('pxe/http_root':                value => '/httpboot';\),\1\n  'pxe/ipxe_timeout':             value => '60';," /usr/share/instack-undercloud/puppet-stack-config/puppet-stack-config.pp
+sudo bash -c "echo 'ironic::inspector::ipxe_timeout: 60' >> /usr/share/instack-undercloud/puppet-stack-config/puppet-stack-config.yaml.template"
 
 echo
 echo "## Installing Director"
