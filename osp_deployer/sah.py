@@ -237,16 +237,20 @@ class Sah(InfraHost):
         remote_file = "sh /root/deploy-director-vm.sh " + \
                       director_conf + \
                       " /store/data/iso/RHEL7.iso"
-        self.run(remote_file)
-
-        logger.debug(
-            "=== wait for the director vm install "
-            "to be complete & power it on")
-        while "shut off" not in \
-                self.run("virsh list --all | grep director")[0]:
-            time.sleep(60)
-        logger.debug("=== power on the director VM ")
-        self.run("virsh start director")
+        re = self.run_tty(remote_file)
+        startVM = True
+        for ln in re[0].split("\n"):
+            if "Restarting guest" in ln:
+                startVM = False
+        if startVM :
+            logger.debug(
+                "=== wait for the director vm install "
+                "to be complete")
+            while "shut off" not in \
+                    self.run("virsh list --all | grep director")[0]:
+                time.sleep(60)
+            logger.debug("=== power on the director VM ")
+            self.run("virsh start director")
         while "root" not in \
                 self.run("whoami")[0]:
             time.sleep(30)
@@ -288,20 +292,24 @@ class Sah(InfraHost):
             self.run("echo '" + comd + "' >> " + ceph_conf)
         logger.debug("=== kick off the ceph vm deployment")
 
-        self.run("sh " +
+        re = self.run_tty("sh " +
                  remote_file +
                  " /root/ceph.cfg /store/data/iso/RHEL7.iso")
-
-        logger.debug(
-            "=== wait for the ceph vm install to be complete & power it on")
-        while "shut off" not in \
+        startVM = True
+        for ln in re[0].split("\n"):
+            if "Restarting guest" in ln:
+                startVM = False
+        if startVM :
+            logger.debug(
+                "=== wait for the ceph vm install to be complete & power it on")
+            while "shut off" not in \
                 self.run("virsh list --all | grep ceph")[0]:
-            time.sleep(60)
-        logger.debug("=== power on the ceph VM ")
-        self.run("virsh start ceph")
+                time.sleep(60)
+            logger.debug("=== power on the ceph VM ")
+            self.run("virsh start ceph")
         while "root" not in \
                 self.run("whoami")[0]:
-            time.sleep(30)
+            time.sleep(40)
         logger.debug("ceph host is up")
 
     def delete_ceph_vm(self):
