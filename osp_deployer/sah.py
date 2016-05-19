@@ -237,11 +237,11 @@ class Sah(InfraHost):
         remote_file = "sh /root/deploy-director-vm.sh " + \
                       director_conf + \
                       " /store/data/iso/RHEL7.iso"
-        self.run(remote_file)
+        self.run_tty(remote_file)
 
         logger.debug(
             "=== wait for the director vm install "
-            "to be complete & power it on")
+            "to be complete")
         while "shut off" not in \
                 self.run("virsh list --all | grep director")[0]:
             time.sleep(60)
@@ -288,20 +288,20 @@ class Sah(InfraHost):
             self.run("echo '" + comd + "' >> " + ceph_conf)
         logger.debug("=== kick off the ceph vm deployment")
 
-        self.run("sh " +
+        self.runi_tty("sh " +
                  remote_file +
                  " /root/ceph.cfg /store/data/iso/RHEL7.iso")
 
         logger.debug(
             "=== wait for the ceph vm install to be complete & power it on")
-        while "shut off" not in \
+        while "shut oiff" not in \
                 self.run("virsh list --all | grep ceph")[0]:
             time.sleep(60)
         logger.debug("=== power on the ceph VM ")
         self.run("virsh start ceph")
         while "root" not in \
                 self.run("whoami")[0]:
-            time.sleep(30)
+            time.sleep(40)
         logger.debug("ceph host is up")
 
     def delete_ceph_vm(self):
