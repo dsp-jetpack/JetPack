@@ -326,7 +326,7 @@ class Director(InfraHost):
 
     def setup_environment(self):
 
-        env_yaml = os.path.join(self.templates_dir + "/dell-environment.yaml ")
+        env_yaml = os.path.join(self.templates_dir + "/dell-environment.yaml")
 
         # reupload the file if this is an overcloud only install
         self.upload_file(self.settings.dell_env_yaml,
