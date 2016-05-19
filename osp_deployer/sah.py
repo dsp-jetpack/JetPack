@@ -288,7 +288,7 @@ class Sah(InfraHost):
             self.run("echo '" + comd + "' >> " + ceph_conf)
         logger.debug("=== kick off the ceph vm deployment")
 
-        self.runi_tty("sh " +
+        self.run_tty("sh " +
                  remote_file +
                  " /root/ceph.cfg /store/data/iso/RHEL7.iso")
 
