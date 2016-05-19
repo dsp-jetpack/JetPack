@@ -178,12 +178,5 @@ finally:
 	    dci_context,
             'deployment.log',
             f.read(),
-            'text/plain',
-            dci_context.last_jobstate_id)
-    with open(tempest_file, 'r') as f:
-        dcifile.create(
-	    dci_context,
-            'tempest.xml',
-            f.read(),
-            'application/junit',
-            dci_context.last_jobstate_id)
+            mime='text/plain',
+            job_id=dci_context.last_jobstate_id)
