@@ -294,7 +294,7 @@ class Sah(InfraHost):
 
         logger.debug(
             "=== wait for the ceph vm install to be complete & power it on")
-        while "shut oiff" not in \
+        while "shut off" not in \
                 self.run("virsh list --all | grep ceph")[0]:
             time.sleep(60)
         logger.debug("=== power on the ceph VM ")
