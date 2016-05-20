@@ -233,9 +233,15 @@ class Settings():
             'rhel_install_location']
         self.sah_kickstart = self.bastion_settings_map['sah_kickstart']
         self.cloud_repo_dir = self.bastion_settings_map['cloud_repo_dir']
-        self.discovery_ram_disk_image = self.bastion_settings_map[
-            'discovery_ram_disk_image']
-        self.overcloud_image = self.bastion_settings_map['overcloud_image']
+        
+        if self.bastion_settings_map['pull_images_from_cdn'].lower() == 'true':
+            self.pull_images_from_cnd = True
+            self.discovery_ram_disk_image = self.bastion_settings_map[
+                'discovery_ram_disk_image']
+            self.overcloud_image = self.bastion_settings_map['overcloud_image']
+        else:
+            self.pull_images_from_cnd = False
+
         self.rhl72_iso = self.bastion_settings_map['rhl72_iso']
 
         if sys.platform.startswith('linux'):

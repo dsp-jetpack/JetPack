@@ -21,6 +21,7 @@
 * 5.0.0.o - added overcloud_name
 * 5.0.0.p - added enable_instance_ha
 * 5.0.0.q - removed nova_public_network - added enable_fencing
+* 5.0.0.r - added pull_images_from_cdn
 
 #####settings.properties
 * 5.0.0.a - Initial 5.0 version - some settings left over from 4.x might go away as this is still work in progress
