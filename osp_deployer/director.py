@@ -585,7 +585,7 @@ class Director(InfraHost):
             'sed -i "s|StorageMgmtNetCidr:.*|StorageMgmtNetCidr: ' +
             self.settings.storage_cluster_network + '|" ' + network_yaml,
             'sed -i "s|ExternalNetCidr:.*|ExternalNetCidr: ' +
-            self.settings.external_network + '|" ' + network_yaml,
+            self.settings.public_api_network + '|" ' + network_yaml,
             'sed -i "s|InternalApiAllocationPools:.*|'
             'InternalApiAllocationPools: ' +
             "[{'start': '" + self.settings.private_api_allocation_pool_start +
@@ -604,13 +604,13 @@ class Director(InfraHost):
             self.settings.storage_cluster_allocation_pool_end + "'}]"   '|" ' +
             network_yaml,
             'sed -i "s|ExternalAllocationPools:.*|ExternalAllocationPools: ' +
-            "[{'start': '" + self.settings.external_allocation_pool_start +
+            "[{'start': '" + self.settings.public_api_allocation_pool_start +
             "', 'end': '" +
-            self.settings.external_allocation_pool_end + "'}]"   '|" ' +
+            self.settings.public_api_allocation_pool_end + "'}]"   '|" ' +
             network_yaml,
             'sed -i "s|ExternalInterfaceDefaultRoute:.*|'
             'ExternalInterfaceDefaultRoute: ' +
-            self.settings.external_gateway + '|" ' + network_yaml,
+            self.settings.public_api_gateway + '|" ' + network_yaml,
             'sed -i "s|ManagementNetCidr:.*|ManagementNetCidr: ' +
             self.settings.management_network + '|" ' + network_yaml,
             'sed -i "s|ProvisioningNetworkGateway:.*|'

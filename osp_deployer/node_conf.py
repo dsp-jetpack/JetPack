@@ -33,7 +33,7 @@ class NodeConf():
         self.idrac_ip = None
         self.root_password = None
         self.external_ip = None
-        self.external_gateway = None
+        self.public_api_gateway = None
         self.external_bond = None
         self.external_netmask = None
         self.external_slaves = None
