@@ -22,13 +22,14 @@
 * 5.0.0.p - added enable_instance_ha
 * 5.0.0.q - removed nova_public_network - added enable_fencing
 * 5.0.0.r - added pull_images_from_cdn
+* 5.0.0.m - removed nova_private_network, renamed  external/public api network settings
 
 #####settings.properties
 * 5.0.0.a - Initial 5.0 version - some settings left over from 4.x might go away as this is still work in progress
 * 5.0.0.b - removed legacy settings.
 * 5.0.0.c - removed "journal_disks" on storage nodes
 * 5.0.0.d - removed is_730 on storage nodes
-
+* 5.0.0.e - removed p drive from storage nodes
 
 
 

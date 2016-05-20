@@ -80,7 +80,7 @@ class Sah(InfraHost):
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^Gateway=.*',
                                       'Gateway="' +
-                                      sets.public_gateway +
+                                      sets.external_gateway +
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^NameServers=.*',
@@ -212,7 +212,7 @@ class Sah(InfraHost):
                 "smpool " + self.settings.subscription_manager_pool_vm_rhel,
                 "hostname " + self.settings.director_node.hostname + "." +
                 self.settings.domain,
-                "gateway " + self.settings.public_gateway,
+                "gateway " + self.settings.external_gateway,
                 "nameserver " + self.settings.name_server,
                 "ntpserver " + self.settings.ntp_server,
                 "user " + self.settings.director_install_account_user,
@@ -279,7 +279,7 @@ class Sah(InfraHost):
                 "smpool " + self.settings.subscription_manager_vm_ceph,
                 "hostname " + self.settings.ceph_node.hostname + "." +
                 self.settings.domain,
-                "gateway " + self.settings.public_gateway,
+                "gateway " + self.settings.external_gateway,
                 "nameserver " + self.settings.name_server,
                 "ntpserver " + self.settings.ntp_server,
                 "# Iface     IP               NETMASK    ",
