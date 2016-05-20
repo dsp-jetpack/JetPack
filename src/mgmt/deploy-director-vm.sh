@@ -330,13 +330,10 @@ EOFKS
     --network bridge=br-pub-api \
     --initrd-inject /tmp/director.ks \
     --extra-args "ks=file:/director.ks" \
+    --noautoconsole \
     --graphics spice \
     --autostart \
     --location ${location} 
-
-  virsh destroy director
-  virsh detach-disk director fda --persistent
-  virsh start director
 
   } || {
 

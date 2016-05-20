@@ -280,13 +280,10 @@ EOFKS
     --network bridge=br-stor \
     --initrd-inject /tmp/ceph.ks \
     --extra-args "ks=file:/ceph.ks" \
+    --noautoconsole \
     --graphics spice \
     --autostart \
     --location ${location}
-
-  virsh destroy ceph
-  virsh detach-disk ceph fda --persistent
-  virsh start ceph
 
   } || {
 
