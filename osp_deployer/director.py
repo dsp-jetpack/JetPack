@@ -148,15 +148,17 @@ class Director(InfraHost):
         tester.verify_undercloud_installed()
 
     def upload_cloud_images(self):
+        if self.settings.pull_images_from_cnd is False:
+            logger.debug("Uploading cloud images to the Director vm")
+            self.run("mkdir " + self.images_dir)
 
-        logger.debug("Uploading cloud images to the Director vm")
-        self.run("mkdir " + self.images_dir)
+            self.upload_file(self.settings.discovery_ram_disk_image,
+                             self.images_dir + "/discovery-ramdisk.tar")
 
-        self.upload_file(self.settings.discovery_ram_disk_image,
-                         self.images_dir + "/discovery-ramdisk.tar")
-
-        self.upload_file(self.settings.overcloud_image,
-                         self.images_dir + "/overcloud-full.tar")
+            self.upload_file(self.settings.overcloud_image,
+                             self.images_dir + "/overcloud-full.tar")
+        else:
+            logger.info("will pull images from the cdn")
 
     def node_discovery(self):
         setts = self.settings
