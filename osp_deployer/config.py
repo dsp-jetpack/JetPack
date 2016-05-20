@@ -236,11 +236,11 @@ class Settings():
         
         if self.bastion_settings_map['pull_images_from_cdn'].lower() == 'true':
             self.pull_images_from_cnd = True
+        else:
+            self.pull_images_from_cnd = False
             self.discovery_ram_disk_image = self.bastion_settings_map[
                 'discovery_ram_disk_image']
             self.overcloud_image = self.bastion_settings_map['overcloud_image']
-        else:
-            self.pull_images_from_cnd = False
 
         self.rhl72_iso = self.bastion_settings_map['rhl72_iso']
 
