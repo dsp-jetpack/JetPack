@@ -85,7 +85,7 @@ class Checkpoints():
         test = self.ping_host(self.settings.sah_node.external_ip,
                               "root",
                               self.settings.sah_node.root_password,
-                              self.settings.public_gateway)
+                              self.settings.external_gateway)
         if self.ping_success not in test:
             raise AssertionError(
                 "SAH cannot ping its public gateway : " + test)
@@ -158,7 +158,7 @@ class Checkpoints():
         test = self.ping_host(setts.director_node.external_ip,
                               "root",
                               setts.director_node.root_password,
-                              setts.external_gateway)
+                              setts.public_api_gateway)
         if self.ping_success not in test:
             raise AssertionError(
                 "Director VM cannot ping its public gateway : " + test)
@@ -232,7 +232,7 @@ class Checkpoints():
         test = self.ping_host(self.settings.ceph_node.external_ip,
                               "root",
                               self.settings.ceph_node.root_password,
-                              self.settings.public_gateway)
+                              self.settings.external_gateway)
         if self.ping_success not in test:
             raise AssertionError(
                 "Ceph VM cannot ping its public gateway : " + test)

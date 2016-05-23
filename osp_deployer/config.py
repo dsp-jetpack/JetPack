@@ -44,11 +44,9 @@ class Settings():
         self.storage_network = cluster['storage_network']
         self.storage_cluster_network = cluster[
             'storage_cluster_network']
-        self.external_network = cluster['external_network']
+        self.public_api_network = cluster['public_api_network']
         self.provisioning_network = cluster[
             'provisioning_network']
-        self.nova_private_network = cluster[
-            'nova_private_network']
         self.private_api_network = cluster[
             'private_api_network']
         self.private_api_allocation_pool_start = cluster[
@@ -63,13 +61,13 @@ class Settings():
             'storage_cluster_allocation_pool_start']
         self.storage_cluster_allocation_pool_end = cluster[
             'storage_cluster_allocation_pool_end']
-        self.external_allocation_pool_start = cluster[
-            'external_allocation_pool_start']
-        self.external_allocation_pool_end = cluster[
-            'external_allocation_pool_end']
-        self.public_gateway = cluster['public_gateway']
-        self.external_netmask = cluster['external_netmask']
+        self.public_api_allocation_pool_start = cluster[
+            'public_api_allocation_pool_start']
+        self.public_api_allocation_pool_end = cluster[
+            'public_api_allocation_pool_end']
         self.external_gateway = cluster['external_gateway']
+        self.external_netmask = cluster['external_netmask']
+        self.public_api_gateway = cluster['public_api_gateway']
         self.provisioning_vlanid = cluster[
             'provisioning_vlanid']
         self.provisioning_netmask = cluster[
@@ -233,9 +231,15 @@ class Settings():
             'rhel_install_location']
         self.sah_kickstart = self.bastion_settings_map['sah_kickstart']
         self.cloud_repo_dir = self.bastion_settings_map['cloud_repo_dir']
-        self.discovery_ram_disk_image = self.bastion_settings_map[
-            'discovery_ram_disk_image']
-        self.overcloud_image = self.bastion_settings_map['overcloud_image']
+        
+        if self.bastion_settings_map['pull_images_from_cdn'].lower() == 'true':
+            self.pull_images_from_cnd = True
+        else:
+            self.pull_images_from_cnd = False
+            self.discovery_ram_disk_image = self.bastion_settings_map[
+                'discovery_ram_disk_image']
+            self.overcloud_image = self.bastion_settings_map['overcloud_image']
+
         self.rhl72_iso = self.bastion_settings_map['rhl72_iso']
 
         if sys.platform.startswith('linux'):

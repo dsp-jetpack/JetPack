@@ -50,9 +50,9 @@ class DeployerSanity():
 
         logger.debug("Check settings ip's are valid.")
         shouldbbevalidips = [
-            'external_netmask', 'public_gateway', 'external_gateway',
-            'public_api_netmask', 'external_allocation_pool_start',
-            'external_allocation_pool_end',
+            'external_netmask', 'public_api_gateway', 'public_api_gateway',
+            'public_api_netmask', 'public_api_allocation_pool_start',
+            'public_api_allocation_pool_end',
             'private_api_vlanid', 'private_api_netmask',
             'private_api_allocation_pool_start',
             'private_api_allocation_pool_end',
