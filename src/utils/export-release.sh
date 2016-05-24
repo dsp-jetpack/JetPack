@@ -54,6 +54,7 @@ mk_bundle() {
 
   echo "Creating $(echo $src_dirs|awk '{print $2}') node bundles"
   mkdir -p ${target_dir}
+  cp COPYING ${target_dir}
   for src_dir in ${src_dirs}; do
   if [[ $src_dir =~ "vlock" ]]; then
     cp data/vlock_files/$src_dir ${target_dir}
