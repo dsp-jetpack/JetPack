@@ -310,7 +310,7 @@ def deploy():
         director_vm.deploy_overcloud()
         director_vm.retreive_nodes_ips()
         tester.verify_computes_virtualization_enabled()
-
+        tester.verify_backends_connectivity()
         cmd = "source ~/stackrc;heat stack-list | grep "+ settings.overcloud_name +" |" \
               " awk '{print $6}'"
         overcloud_status = \

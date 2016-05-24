@@ -414,3 +414,75 @@ class Checkpoints():
         while not buff.endswith('#'):
             resp = channel.recv(9999)
             buff += resp
+
+    def verify_backends_connectivity(self):
+        if self.settings.enable_dellsc_backend or self.settings.enable_eqlx_backend:
+            setts = self.settings
+            cmd = "source ~/stackrc;nova list | grep compute"
+            re = Ssh.execute_command_tty(setts.director_node.external_ip,
+                                         setts.director_install_account_user,
+                                         setts.director_install_account_pwd,
+                                         cmd)
+            ls =  re[0].split("\n")
+            ls.pop()
+            compute_node_ip = ls[0].split("|")[6].split("=")[1]
+
+            cmd = "source ~/stackrc;nova list | grep controller"
+            re = Ssh.execute_command_tty(setts.director_node.external_ip,
+                                         setts.director_install_account_user,
+                                         setts.director_install_account_pwd,
+                                         cmd)
+            ls = re[0].split("\n")
+            ls.pop()
+            controller_node_ip = ls[0].split("|")[6].split("=")[1]
+
+        if self.settings.enable_dellsc_backend:
+            logger.debug("Verifying dellsc backend connectivity")
+
+            logger.debug("Verify Controller nodes can ping the san ip")
+            cmd = "ssh heat-admin@" + controller_node_ip +\
+                  " ping " + self.settings.dellsc_san_ip  +\
+                  " -c 1 -w 30 "
+            re = Ssh.execute_command_tty(setts.director_node.external_ip,
+                                        setts.director_install_account_user,
+                                         setts.director_install_account_pwd,
+                                         cmd)
+            if self.ping_success not in re[0]:
+                raise AssertionError(controller_node_ip +
+                                     " cannot ping the dellsc san ip " +
+                                     self.settings.dellsc_san_ip)
+
+            logger.debug("Verify Make sure ISCSI access work from Compute & Controller nodes")
+            for each in compute_node_ip, controller_node_ip :
+                cmd = "ssh heat-admin@" + each +\
+                      " sudo iscsiadm -m discovery -t sendtargets -p " +\
+                      self.settings.dellsc_iscsi_ip_address +\
+                      ":" + self.settings.dellsc_iscsi_port
+                re = Ssh.execute_command_tty(setts.director_node.external_ip,
+                                        setts.director_install_account_user,
+                                         setts.director_install_account_pwd,
+                                         cmd)
+                if "com.compellent" not in re[0]:
+                   raise AssertionError(each +
+                                        " not able to validate ISCSI access to " +
+                                        self.settings.dellsc_iscsi_ip_address +
+                                        ":" + self.settings.dellsc_iscsi_port)
+
+        if self.settings.enable_eqlx_backend:
+            logger.debug("Verifying eql backend connectivity")
+
+            logger.debug("Verify ssh access to the san ip from Compute & Controller nodes")
+
+            for each in compute_node_ip, controller_node_ip :
+                cmd = "ssh heat-admin@" + each +\
+                      " sshpass -p " + self.settings.eqlx_san_password +\
+                      " ssh " + self.settings.eqlx_san_login + "@" +\
+                      self.settings.eqlx_san_ip + " 'logout'"
+                re = Ssh.execute_command_tty(setts.director_node.external_ip,
+                                            setts.director_install_account_user,
+                                             setts.director_install_account_pwd,
+                                             cmd)
+                if "Unsupported command: logout" not in re[0]:
+                    raise AssertionError(each +
+                                         " not able to ssh to EQL san ip " +
+                                         self.settings.eqlx_san_ip)
