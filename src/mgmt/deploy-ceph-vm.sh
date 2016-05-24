@@ -206,8 +206,8 @@ EOIP
 
   systemctl enable iptables
 
-
-  sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
+  # To configure SELINUX to permissive, uncomment the following line
+  #sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
 
   # Configure the ntp daemon
   systemctl enable ntpd
