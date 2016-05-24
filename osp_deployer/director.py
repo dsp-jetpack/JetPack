@@ -53,7 +53,7 @@ class Director(InfraHost):
                                            "deployment-validation")
         self.source_stackrc = 'source ' + self.home_dir + "/stackrc;"
 
-        cmd = "mkdir " + self.pilot_dir
+        cmd = "mkdir -p " + self.pilot_dir
         self.run(cmd)
 
     def apply_internal_repos(self):
@@ -150,7 +150,7 @@ class Director(InfraHost):
     def upload_cloud_images(self):
         if self.settings.pull_images_from_cnd is False:
             logger.debug("Uploading cloud images to the Director vm")
-            self.run("mkdir " + self.images_dir)
+            self.run("mkdir -p " + self.images_dir)
 
             self.upload_file(self.settings.discovery_ram_disk_image,
                              self.images_dir + "/discovery-ramdisk.tar")
@@ -957,7 +957,7 @@ class Director(InfraHost):
         logger.debug("running tempest")
         setts = self.settings
         cmds = [
-            "source ~/" + self.settings.overcloud_name + "rc;mkdir /home/" +
+            "source ~/" + self.settings.overcloud_name + "rc;mkdir -p /home/" +
             setts.director_install_account_user +
             "/tempest",
             'source ~/' + self.settings.overcloud_name + 'rc;cd '
