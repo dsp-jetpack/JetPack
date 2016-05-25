@@ -36,6 +36,8 @@ def main():
         default='',
         help='user to login as')
     parser.add_argument("-p", "--password", default='', help='password')
+    parser.add_argument("-m", "--mofs", default='',
+                        help='A comma separated list of MOFs to retrieve')
 
     args = parser.parse_args()
 
@@ -44,14 +46,17 @@ def main():
     # The Dell Common Information Model (DCIM) Extensions Library Managed
     # Object Format (MOF) Collection is available at
     # http://en.community.dell.com/techcenter/systems-management/w/wiki/1840.
-    dcims = [
-        'DCIM_SystemView',
-        'DCIM_PhysicalDiskView',
-        'DCIM_VirtualDiskView',
-        'DCIM_CPUView',
-        'DCIM_NICView',
-        'DCIM_NICStatistics',
-    ]
+    if args.mofs:
+        dcims = args.mofs.split(",")
+    else:
+        dcims = [
+            'DCIM_SystemView',
+            'DCIM_PhysicalDiskView',
+            'DCIM_VirtualDiskView',
+            'DCIM_CPUView',
+            'DCIM_NICView',
+            'DCIM_NICStatistics',
+        ]
 
     # Probe each iDRAC specified on the command line.
     for i in args.idrac:
