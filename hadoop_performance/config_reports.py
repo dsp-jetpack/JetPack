@@ -25,6 +25,7 @@ report_location = 'ResultLogArch'
 
 #results_file = 'Results-300000000000 T6.log'
 tpc_log = 'tpc_log.log'
+tpc_location_ip = '172.16.14.97'
 
 job_history_ip = '172.16.14.97'
 
