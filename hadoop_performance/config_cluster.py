@@ -37,12 +37,12 @@ yarn_app_mapreduce_am_resource_mb	=	2048
 yarn_app_mapreduce_am_max_heap	=	1717986918
 
 
-mapred_reduce_tasks = 240 # 240 # 480 # 576
+mapred_reduce_tasks = 240 # 240 # 480 # 576 # mapreduce.job.reduces
 mapred_reduce_slowstart_completed_maps = 0.05
 
 dfs_block_size = 1073741824 # 536870912 # 1073741824
-datanode_java_heapsize = 1073741824 # 1073741824 # 2147483648
-namenode_java_heapsize = 2695091978 # 2695091978 # 4294967296
+datanode_java_heapsize = 2147483648 # 1073741824 # 2147483648
+namenode_java_heapsize = 4294967296 # 2695091978 # 4294967296
 secondary_namenode_java_heapsize = namenode_java_heapsize
 
 #cloudera manager api IP address

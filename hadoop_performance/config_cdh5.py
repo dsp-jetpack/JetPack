@@ -58,7 +58,7 @@ clean_up_ip = "172.16.14.97"
 #run_id = 'SF30 - 48 containers - RAM per container = 1 - slowstarts 0.05 ; mapreduce.job.reduce=480; additional params: '
 #run_id = 'command-am 1024 test'
 # run_id = 'SF10 - 48 containers - repeatability 2a dfs.rep=3 - RAM per container = 1; mapreduce.job.reduce=240; additional params: '
-run_id = 'Sprint review demo2 - SF1 test using RAM 4'
+run_id = 'TPC kit test 1'
 
 #**Commenton***No Comments*******
 
@@ -73,7 +73,11 @@ teragen_jar_filename = 'hadoop-mapreduce-examples-2.6.0-cdh5.6.0.jar'
 #-D dfs.replication=1 -D dfs.blocksize=536870912 -D mapred.tasktracker.map.tasks.maximum=24 -D mapred.tasktracker.reduce.tasks.maximum=8 -D mapred.map.tasks=90 -D mapred.reduce.tasks=30
 
 # Teragen Row Count test values
-teragen_parameters = ' -D mapreduce.terasort.output.replication=3 -D mapreduce.job.maps=480 -D mapreduce.job.reduces=240'#-D mapreduce.job.maps=480'
+# teragen_parameters = ' -D mapreduce.job.maps=480 -D mapreduce.job.reduces=240'
+#-D mapreduce.job.maps=480'
+
+teragen_parameters = ' -D mapreduce.terasort.output.replication=3 -D mapreduce.job.maps=480'#-D mapreduce.job.maps=480'
+
 #teragen_parameters = ' -D dfs.blocksize=536870912 -D mapred.map.tasks=576 -D mapred.reduce.tasks=288'
 #teragen_parameters = ' -D mapred.map.tasks=576 -D mapreduce.job.reduces=480 -D dfs.blocksize=536870912 -D yarn.nodemanager.resource.memory-mb=214748364800 -D yarn.scheduler.minimum-allocation-mb=5120 -D yarn.scheduler.maximum-allocation-mb=204800 -D mapreduce.map.memory.mb=5120 -D mapreduce.reduce.memory.mb=10240 -D mapreduce.map.java.opts=-Djava.net.preferIPv4Stack=true-Xmx4294967296 -D mapreduce.reduce.java.opts=-Djava.net.preferIPv4Stack=true-Xmx8589934592 -D yarn.app.mapreduce.am.resource.mb=10240 -D yarn.app.mapreduce.am.command-opts=-Djava.net.preferIPv4Stack=true-Xmx825955249'
 #teragen_parameters = ' -D mapred.map.tasks=240' #1252' #576' # -D mapreduce.job.reduces=288 -D dfs.blocksize=536870912'
@@ -87,11 +91,14 @@ teragen_parameters = ' -D mapreduce.terasort.output.replication=3 -D mapreduce.j
 #teragen_parameters = ''
 #params ignored by yarn
 
+#terasort_parameters = '-D mapreduce.job.reduces=240'
 terasort_parameters = '-D mapreduce.terasort.output.replication=3 -D mapreduce.job.reduces=240'
+
 #terasort_parameters = '-D mapred.map.tasks=576 -D mapreduce.job.reduces=480 -D dfs.blocksize=536870912 -D yarn.nodemanager.resource.memory-mb=214748364800 -D yarn.scheduler.minimum-allocation-mb=5120 -D yarn.scheduler.maximum-allocation-mb=204800 -D mapreduce.map.memory.mb=5120 -D mapreduce.reduce.memory.mb=10240 -D mapreduce.map.java.opts=-Djava.net.preferIPv4Stack=true-Xmx4294967296 -D mapreduce.reduce.java.opts=-Djava.net.preferIPv4Stack=true-Xmx8589934592 -D yarn.app.mapreduce.am.resource.mb=10240 -D yarn.app.mapreduce.am.command-opts=-Djava.net.preferIPv4Stack=true-Xmx825955249'
 #terasort_parameters = '-D mapred.map.tasks=240' # -D mapreduce.job.reduces=288 -D dfs.blocksize=536870912'
 
-teravalidate_parameters = '-D mapreduce.job.reduces=480'
+#teravalidate_parameters = '-D mapreduce.job.reduces=240'
+teravalidate_parameters = '-D mapreduce.terasort.output.replication=3 -D mapreduce.job.reduces=240'
 run_id = run_id + ' ' + teragen_parameters
 
 teragen_row_counts = (#3500000000,
@@ -102,7 +109,7 @@ teragen_row_counts = (#3500000000,
                      #1000000000,
                        #2500000000,
                       #4000000000,
-                      10000000000, #-1TB
+                      #10000000000, #-1TB
                       #30000000000, # -3TB
                      #100000000000, # -10TB
                      #300000000000, # -30TB
@@ -374,15 +381,15 @@ kmeans_ganglia_stats = (#'boottime',
                          #'total_cpu_soft_irq')
                          
 
-tpc_flag = 'ntrue'
-tpc_size = '3'
+tpc_flag = 'true'
+tpc_size = '4'
 ##tpc_location = '/tpc_xhs_kit/TPCx-HS_Kit_v1.2.0_external/TPCx-HS-Runtime-Suite'
 #tpc_location = '/tpc_xhs_kit/tpcx-hs_kit_v1.2.0_external/TPCx-HS_Kit_v1.2.0_external/TPCx-HS-Runtime-Suite'
 #tpc_location = '/TPCx-HS_Kit/TPCx-HS_Kit_v1.3.0_external/TPCx-HS-Runtime-Suite'
 tpc_location = '/TPCx-HS_Tools/TPCx-HS_Kit_v1.3.0_external/TPCx-HS-Runtime-Suite'
 tpc_file = 'Benchmark_Parameters.sh'
-NUM_MAPS = '480'
-NUM_REDUCERS = '480'
+NUM_MAPS = '768'   # 768 M,240M, 200 R 768M, 768R    768 M, 720 
+NUM_REDUCERS = '768' # 720 R   640 M, 600R
 #NUM_MAPS = '444'
 #NUM_REDUCERS = '222'
 HADOOP_USER = 'root'
