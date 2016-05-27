@@ -490,7 +490,7 @@ class Checkpoints():
             for each in compute_node_ip, controller_node_ip :
                 cmd = "ssh heat-admin@" + each +\
                       " sshpass -p " + self.settings.eqlx_san_password +\
-                      " ssh " + self.settings.eqlx_san_login + "@" +\
+                      " ssh -o StrictHostKeyChecking=no " + self.settings.eqlx_san_login + "@" +\
                       self.settings.eqlx_san_ip + " 'logout'"
                 re = Ssh.execute_command_tty(setts.director_node.external_ip,
                                             setts.director_install_account_user,
