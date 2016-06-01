@@ -85,14 +85,15 @@ class DeployerSanity():
                 self.settings.custom_instack_json),\
                 self.settings.custom_instack_json + \
                 " file doesn't seem to exist"
-        assert os.path.isfile(
-            self.settings.discovery_ram_disk_image),\
-            self.settings.discovery_ram_disk_image +\
-            " file doesn't seem to exist"
-        assert os.path.isfile(
-            self.settings.overcloud_image), \
-            self.settings.overcloud_image + \
-            " file doesn't seem to exist"
+        if self.settings.pull_images_from_cnd is False:
+            assert os.path.isfile(
+                self.settings.discovery_ram_disk_image),\
+                self.settings.discovery_ram_disk_image +\
+                " file doesn't seem to exist"
+            assert os.path.isfile(
+                self.settings.overcloud_image), \
+                self.settings.overcloud_image + \
+                " file doesn't seem to exist"
         assert os.path.isfile(
             self.settings.install_director_sh), \
             self.settings.install_director_sh +\
