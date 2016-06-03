@@ -18,7 +18,7 @@ import os
 import re
 import subprocess
 
-from misc_helper import MiscHelper
+from credential_helper import CredentialHelper
 
 
 def get_nodes():
@@ -27,7 +27,7 @@ def get_nodes():
     by running "nova list"
     """
 
-    stack_name = MiscHelper.get_stack_name()
+    stack_name = CredentialHelper.get_stack_name()
 
     # A dictionary that maps nova node names to something shorter and easier
     # to type.
@@ -87,8 +87,9 @@ def update_known_hosts(host_addrs):
         cmd = 'ssh-keyscan -t ecdsa-sha2-nistp256'.split()
         cmd.extend(host_addrs)
         # ssh-keyscan produces "chatty" output on stderr when things work, so
-        # just suppress it. If there are error messages, the user will eventually
-        # see them when they try to access the host that triggered the error.
+        # just suppress it. If there are error messages, the user will
+        # eventually see them when they try to access the host that triggered
+        # the error.
         subprocess.call(cmd,
                         stdout=open(known_hosts_new, 'a'),
                         stderr=open('/dev/null', 'w'))

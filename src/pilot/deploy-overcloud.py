@@ -23,7 +23,6 @@ import sys
 import time
 
 from credential_helper import CredentialHelper
-from misc_helper import MiscHelper
 from subprocess import check_output
 
 # Dell utilities
@@ -67,7 +66,7 @@ def create_volume_types():
         except AttributeError:
            found = '' 
 
-  overcloudrc_name = MiscHelper.get_overcloudrc_name()
+  overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 
   for type in types:
     cmd = "source {} && " \
