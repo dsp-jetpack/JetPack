@@ -15,7 +15,8 @@
 import os
 import json
 from subprocess import check_output
-from misc_helper import MiscHelper
+from os_cloud_config.utils import clients
+from heatclient.client import Client as HeatClient
 
 
 class CredentialHelper:
@@ -42,18 +43,20 @@ class CredentialHelper:
                 os_password = val
 
         if 'hiera' in os_password:
-            os_password = check_output(['sudo', 'hiera', 'admin_password']).strip()
+            os_password = check_output(['sudo', 'hiera',
+                                       'admin_password']).strip()
 
         return os_auth_url, os_tenant_name, os_username, os_password
 
     @staticmethod
     def get_undercloud_creds():
-        return CredentialHelper.get_creds(os.path.join(os.path.expanduser('~'),
-                                                       'stackrc'))
+        return CredentialHelper.get_creds(
+            CredentialHelper.get_undercloudrc_name())
 
     @staticmethod
     def get_overcloud_creds():
-        return CredentialHelper.get_creds(MiscHelper.get_overcloudrc_name())
+        return CredentialHelper.get_creds(
+            CredentialHelper.get_overcloudrc_name())
 
     @staticmethod
     def get_drac_creds(ironic_client, node_uuid,
@@ -105,3 +108,43 @@ class CredentialHelper:
                 return node["pm_password"]
 
         return None
+
+    @staticmethod
+    def get_undercloudrc_name():
+        return os.path.join(os.path.expanduser('~'), 'stackrc')
+
+    @staticmethod
+    def get_overcloudrc_name():
+        home_dir = os.path.expanduser('~')
+        overcloudrc_name = "{}rc".format(CredentialHelper.get_stack_name())
+
+        return os.path.join(home_dir, overcloudrc_name)
+
+    @staticmethod
+    def get_stack_name():
+        os_auth_url, os_tenant_name, os_username, os_password = \
+            CredentialHelper.get_undercloud_creds()
+
+        keystone_client = clients.get_keystone_client(os_username,
+                                                      os_password,
+                                                      os_tenant_name,
+                                                      os_auth_url)
+
+        heat_url = keystone_client.service_catalog.url_for(
+            service_type='orchestration',
+            endpoint_type='publicURL')
+
+        heat_client = HeatClient('1',
+                                 endpoint=heat_url,
+                                 token=keystone_client.auth_token)
+
+        stacks = heat_client.stacks.list()
+
+        # There can be only one overcloud stack, so get the name from the
+        # first one if there is one
+        stack_name = None
+        stack = next(stacks, None)
+        if stack:
+            stack_name = stack.stack_name
+
+        return stack_name
