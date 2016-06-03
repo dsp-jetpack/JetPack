@@ -73,11 +73,12 @@ sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
 cp $HOME/pilot/undercloud.conf $HOME
 echo "## Done."
 
-echo "# Fetching the puppet-ironic with the iPXE fix"
+echo "# iPXE fix part 1"
 sudo yum install -y openstack-puppet-modules instack-undercloud git
-# NOTE(Gonéri): to remove as soon as the new openstack-puppet-modules is available
 sudo rm -rf /usr/share/openstack-puppet/modules/ironic
 sudo git clone https://github.com/openstack/puppet-ironic -b stable/liberty /usr/share/openstack-puppet/modules/ironic
+cd /usr/share/openstack-puppet/modules/ironic
+sudo git reset --hard 565ee8d0d17776e2d011c907c83f91d16fd13a22
 
 sudo sed -i "s,\('pxe/http_root':                value => '/httpboot';\),\1\n  'pxe/ipxe_timeout':             value => '60';," /usr/share/instack-undercloud/puppet-stack-config/puppet-stack-config.pp
 sudo bash -c "echo 'ironic::inspector::ipxe_timeout: 60' >> /usr/share/instack-undercloud/puppet-stack-config/puppet-stack-config.yaml.template"
@@ -87,7 +88,7 @@ echo "## Installing Director"
 openstack undercloud install
 echo "## Done."
 
-source stackrc
+source $HOME/stackrc
 
 echo
 if [ ! -d $HOME/pilot/images ];
@@ -135,7 +136,7 @@ echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
 echo
-echo "## Apply pxe freeze patches"
+echo "## iPXE fix part 2"
 
 LOCKFILE=/etc/yum/pluginconf.d/versionlock.list
 if [ $LOCKFILE ]
