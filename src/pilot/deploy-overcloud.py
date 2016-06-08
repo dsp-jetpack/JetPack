@@ -215,7 +215,6 @@ def main():
     env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
 
   cmd = "cd ; openstack overcloud deploy" \
-        " --debug" \
         " --log-file ~/pilot/overcloud_deployment.log" \
         " -t {}" \
         " {}" \
