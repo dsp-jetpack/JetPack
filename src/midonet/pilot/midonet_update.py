@@ -32,9 +32,12 @@ def subst_bkup (relative_path):
 subst_bkup('pilot/templates/nic-configs/compute.yaml')
 subst_bkup('pilot/templates/nic-configs/controller.yaml')
 subst_bkup('pilot/templates/nic-configs/ceph-storage.yaml')
+subst_bkup ('pilot/templastes/network-environment.yaml')
 subst_bkup('pilot/deploy-overcloud.py')
 #copy midonet files into the right dir
 nic_dir = os.path.join(home_dir, 'pilot/templates/nic-configs')
 pilot_dir = os.path.join(home_dir,'pilot')
+templates_dir = os.path.join (hume_dir,'pilot/templates')
 distutils.dir_util.copy_tree('./templates/nic-configs', nic_dir)
 distutils.file_util.copy_file('./deploy-overcloud.py',pilot_dir)
+distutils.file_util.copy_file('./templates/network_environment.yaml',templates_dir)

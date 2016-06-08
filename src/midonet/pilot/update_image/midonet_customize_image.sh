@@ -93,5 +93,5 @@ virt-customize -a ${TARGET_IMG} --delete /etc/yum.repos.d/midokura.repo
 echo "## Done preparing MidoNet overcloud image"
 
 # upload the image to the overcloud
-#openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
+openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
 
