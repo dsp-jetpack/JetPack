@@ -952,26 +952,36 @@ class Director(InfraHost):
         logger.debug("running tempest")
         setts = self.settings
         cmds = [
+            'source ~/' + self.settings.overcloud_name + 'rc;'
+            "sudo ip route add `neutron subnet-list | grep external_sub | awk '{print $6;}'` dev eth4",
+            'source ~/' + self.settings.overcloud_name + 'rc;'
+            'keystone role-create --name heat_stack_owner',
             "source ~/" + self.settings.overcloud_name + "rc;mkdir -p /home/" +
             setts.director_install_account_user +
             "/tempest",
             'source ~/' + self.settings.overcloud_name + 'rc;cd '
             '~/tempest;/usr/share/openstack-tempest-liberty/tools/'
-            'configure-tempest-directory',
+            'configure-tempest-directory',        
             'source ~/' + self.settings.overcloud_name + 'rc;cd ~/tempest;tools/config_tempest.py '
-            '--deployer-input '
+            '--create --deployer-input '
             '~/tempest-deployer-input.conf --debug '
-            '--create identity.uri $OS_AUTH_URL '
-            'identity.admin_password $OS_PASSWORD'
-            ' object-storage-feature-enabled.discoverability False'
+            'service_available.swift False object-storage-feature-enabled.discoverability False '
+            ' identity.uri $OS_AUTH_URL '
+            'identity-feature-enabled.api_v3 False '
+            'identity.admin_username $OS_USERNAME '
+            'identity.admin_password $OS_PASSWORD '
+            'identity.admin_tenant_name $OS_TENANT_NAME',
+	    'source ~/' + self.settings.overcloud_name + 'rc;cd '
+            '~/tempest;'
+	    'tempest cleanup --init-saved-state'
         ]
         for cmd in cmds:
             self.run_tty(cmd)
         if setts.tempest_smoke_only is True:
             cmd = "source ~/" + self.settings.overcloud_name + "rc;cd " \
-                  "~/tempest;tools/run-tests.sh .*smoke"
+                  "~/tempest;tools/run-tests.sh  '.*smoke' --concurrency=4"
         else:
-            cmd = "source ~/" + self.settings.overcloud_name + "rc;cd ~/tempest;tools/run-tests.sh"
+            cmd = "source ~/" + self.settings.overcloud_name + "rc;cd ~/tempest;tools/run-tests.sh --concurrency=4"
         self.run_tty(cmd)
         Scp.get_file(setts.director_node.external_ip,
                      setts.director_install_account_user,
@@ -986,6 +996,16 @@ class Director(InfraHost):
                      "/home/" + setts.director_install_account_user +
                      "/tempest/tempest.log")
         logger.debug("Finished running tempest")
+	logger.debug("Tempest clean up")
+        cmds = [
+            'source ~/' + self.settings.overcloud_name + 'rc;cd '
+            '~/tempest;tempest cleanup --dry-run',
+            'source ~/' + self.settings.overcloud_name + 'rc;cd '
+            '~/tempest;tempest cleanup'
+        ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
 
     def configure_calamari(self):
         logger.info("Configure Calamari")
