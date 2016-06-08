@@ -70,16 +70,13 @@ class Director(InfraHost):
                                  str(count) + ".repo")
                 count += 1
 
-            cmds = [
-                'subscription-manager repos '
-                '--enable=rhel-7-server-openstack-8.0-rpms',
-                'subscription-manager repos '
-                '--enable=rhel-7-server-openstack-8.0-director-rpms',
-                'yum-config-manager '
-                '--enable RH7-RHOS-8.0 --setopt="RH7-RHOS-8.0.priority=1"',
-                'yum-config-manager '
-                '--enable RH7-RHOS-8.0-director '
-                '--setopt="RH7-RHOS-8.0-director.priority=1"',
+            cmds = []
+            for repo in self.settings.rhsm_repos:
+                cmds += [
+                    'subscription-manager repos '
+                    '--enable=' + repo]
+
+            cmds += [
                 'yum remove python-rdomanager-oscplugin -y',
                 'yum remove ahc-tools -y',
                 'yum clean all',

@@ -332,6 +332,13 @@ class Settings():
         self.switches = []
 	self.nodes = []
 
+        if 'rhsm_repos' in cluster:
+            self.rhsm_repos = cluster['rhsm_repos'].split(',')
+        else:
+            self.rhsm_repos = [
+                'rhel-7-server-openstack-8.0-rpms',
+                'rhel-7-server-openstack-8.0-director-rpms']
+
         with open(self.network_conf) as config_file:
             json_data = json.load(config_file)
             for each in json_data:
