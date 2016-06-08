@@ -75,6 +75,7 @@ echo "## Done."
 
 echo
 echo "## Installing Director"
+sudo yum -y install python-rdomanager-oscplugin
 openstack undercloud install
 echo "## Done."
 
