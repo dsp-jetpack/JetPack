@@ -141,13 +141,13 @@ echo "## iPXE fix part 2"
 LOCKFILE=/etc/yum/pluginconf.d/versionlock.list
 if [ $LOCKFILE ]
 then
-    sudo sed -i 's/openstack-ironic-conductor-.*/openstack-ironic-conductor-4.2.3-2.el7ost.*/' $LOCKFILE
-    sudo sed -i 's/openstack-ironic-api-.*/openstack-ironic-api-4.2.3-2.el7ost.*/' $LOCKFILE
-    sudo sed -i 's/openstack-ironic-common-.*/openstack-ironic-common-4.2.3-2.el7ost.*/' $LOCKFILE
+    sudo sed -i 's/openstack-ironic-conductor-.*/openstack-ironic-conductor-4.2.3-1.el7ost.*/' $LOCKFILE
+    sudo sed -i 's/openstack-ironic-api-.*/openstack-ironic-api-4.2.3-1.el7ost.*/' $LOCKFILE
+    sudo sed -i 's/openstack-ironic-common-.*/openstack-ironic-common-4.2.3-1.el7ost.*/' $LOCKFILE
 fi
 
 cd $HOME/pilot/ipxe
-sudo yum install -y openstack-ironic-api-4.2.3-2.el7ost.noarch.rpm openstack-ironic-common-4.2.3-2.el7ost.noarch.rpm openstack-ironic-conductor-4.2.3-2.el7ost.noarch.rpm
+sudo yum install -y openstack-ironic-api-4.2.3-1.el7ost.noarch.rpm openstack-ironic-common-4.2.3-1.el7ost.noarch.rpm openstack-ironic-conductor-4.2.3-1.el7ost.noarch.rpm
 sudo sed -i '/\[pxe\]/a \\nipxe_timeout = 60' /etc/ironic/ironic.conf
 sudo service openstack-ironic-api restart
 sudo service openstack-ironic-conductor restart
