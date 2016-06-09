@@ -16,6 +16,7 @@
 
 from tempest.cmd.db.mysql.mysql_db import MySqlDb
 
+
 class DeleteStack(MySqlDb):
 
     def __init__(self, config):

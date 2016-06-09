@@ -602,7 +602,8 @@ class NICConfiguration(object):
         return settings[attribute_name]
 
     def is_nic_legacy_boot_protocol_pxe(self, nic_id):
-        """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE, false otherwise.
+        """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE,
+           false otherwise.
 
         :param nic_id: id of the network interface controller (NIC)
         :returns: boolean indicating whether or not the legacy,
