@@ -1,5 +1,19 @@
 #!/usr/bin/python
 
+# (c) 2016 Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 import distutils.dir_util
 import os
@@ -9,7 +23,6 @@ import sys
 import time
 
 from credential_helper import CredentialHelper
-from misc_helper import MiscHelper
 from subprocess import check_output
 
 # Dell utilities
@@ -53,7 +66,7 @@ def create_volume_types():
         except AttributeError:
            found = '' 
 
-  overcloudrc_name = MiscHelper.get_overcloudrc_name()
+  overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 
   for type in types:
     cmd = "source {} && " \
@@ -202,7 +215,6 @@ def main():
     env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
 
   cmd = "cd ; openstack overcloud deploy" \
-        " --debug" \
         " --log-file ~/pilot/overcloud_deployment.log" \
         " -t {}" \
         " {}" \

@@ -1,5 +1,19 @@
 #!/bin/bash
 
+# (c) 2016 Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 exec > >(tee $HOME/pilot/install-director.log)
 exec 2>&1
 
@@ -59,22 +73,34 @@ sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
 cp $HOME/pilot/undercloud.conf $HOME
 echo "## Done."
 
+echo "# iPXE fix part 1"
+sudo yum install -y openstack-puppet-modules instack-undercloud git
+sudo rm -rf /usr/share/openstack-puppet/modules/ironic
+sudo git clone https://github.com/openstack/puppet-ironic -b stable/liberty /usr/share/openstack-puppet/modules/ironic
+cd /usr/share/openstack-puppet/modules/ironic
+sudo git reset --hard 565ee8d0d17776e2d011c907c83f91d16fd13a22
+
+sudo sed -i "s,\('pxe/http_root':                value => '/httpboot';\),\1\n  'pxe/ipxe_timeout':             value => '60';," /usr/share/instack-undercloud/puppet-stack-config/puppet-stack-config.pp
+sudo bash -c "echo 'ironic::inspector::ipxe_timeout: 60' >> /usr/share/instack-undercloud/puppet-stack-config/puppet-stack-config.yaml.template"
 
 echo
 echo "## Installing Director"
 openstack undercloud install
 echo "## Done."
 
-source stackrc
+source $HOME/stackrc
 
 echo
-echo "## Extracting images..."
 if [ ! -d $HOME/pilot/images ];
 then
-  echo "Error: A directory named $HOME/pilot/images must exist and contain the cloud images."
-  exit 1
+  echo "## Downloading images..."
+  sudo yum install rhosp-director-images -y
+  mkdir $HOME/pilot/images
+  ln -sf /usr/share/rhosp-director-images/overcloud-full-latest-8.0.tar $HOME/pilot/images/overcloud-full.tar
+  ln -sf /usr/share/rhosp-director-images/ironic-python-agent-latest-8.0.tar $HOME/pilot/images/ironic-python-agent.tar
 fi
 
+echo "## Extracting images..."
 cd $HOME/pilot/images
 for image in ./*.tar; do tar xvf $image; done
 echo "## Done."
@@ -110,7 +136,16 @@ echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
 echo
-echo "## Apply pxe freeze patches"
+echo "## iPXE fix part 2"
+
+LOCKFILE=/etc/yum/pluginconf.d/versionlock.list
+if [ $LOCKFILE ]
+then
+    sudo sed -i 's/openstack-ironic-conductor-.*/openstack-ironic-conductor-4.2.3-2.el7ost.*/' $LOCKFILE
+    sudo sed -i 's/openstack-ironic-api-.*/openstack-ironic-api-4.2.3-2.el7ost.*/' $LOCKFILE
+    sudo sed -i 's/openstack-ironic-common-.*/openstack-ironic-common-4.2.3-2.el7ost.*/' $LOCKFILE
+fi
+
 cd $HOME/pilot/ipxe
 sudo yum install -y openstack-ironic-api-4.2.3-2.el7ost.noarch.rpm openstack-ironic-common-4.2.3-2.el7ost.noarch.rpm openstack-ironic-conductor-4.2.3-2.el7ost.noarch.rpm
 sudo sed -i '/\[pxe\]/a \\nipxe_timeout = 60' /etc/ironic/ironic.conf

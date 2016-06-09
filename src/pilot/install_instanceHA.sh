@@ -1,5 +1,19 @@
 #!/bin/bash 
 
+# (c) 2016 Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 IDRAC_USER=$1
 IDRAC_PASS=$2
  
@@ -17,13 +31,12 @@ fi
 source ~/stackrc
 ~/pilot/update_ssh_config.py
 ~/pilot/identify_nodes.py > ~/undercloud_nodes.txt
-FIRST_CONTROLLER_NODE=`cat ~/.ssh/config | awk '/cntl0/ {print $2}'`
-CONTROLLER_NODES=`cat ~/.ssh/config | awk '/cntl/ {print $2}'`
-FIRST_COMPUTE_NODE=`cat ~/.ssh/config | awk '/nova0/ {print $2}'`
-COMPUTE_NODES=`cat ~/.ssh/config | awk '/nova/ {print $2}'`
-COMPUTE_NOVA_NAMES=`nova list | awk '/compute/ {print $4}'`
-OVERCLOUD_NAME=`ssh $FIRST_COMPUTE_NODE "sudo crm_node -n | cut -d\- -f1"`
-OVERCLOUDRC_NAME=${OVERCLOUD_NAME}rc
+FIRST_CONTROLLER_NODE=$(cat ~/.ssh/config | awk '/cntl0/ {print $2}' | tr -d ' ')
+CONTROLLER_NODES=$(cat ~/.ssh/config | awk '/cntl/ {print $2}' | tr -d ' ')
+FIRST_COMPUTE_NODE=$(cat ~/.ssh/config | awk '/nova0/ || /compute0/ {print $2}' | tr -d ' ')
+COMPUTE_NODES=$(cat ~/.ssh/config | awk '/nova/ || /compute/ {print $2}' | tr -d ' ')
+COMPUTE_NOVA_NAMES=$(nova list | awk '/compute/ {print $4}' | tr -d ' ')
+OVERCLOUD_NAME=$(heat stack-list | grep CREATE_ | awk -F\| '{print $3}' | tr -d ' ')
 
 ############
 # Stop and disable openstack-service and libvirtd on all Compute nodes
@@ -84,7 +97,7 @@ done
 echo ""
 echo "INFO: Create a NovaEvacuate active/passive resource using the overcloudrc file to provide the auth_url, username, tenant and password values."
 
-source ~/$OVERCLOUDRC_NAME
+source ~/${OVERCLOUD_NAME}rc
 ssh $FIRST_CONTROLLER_NODE "sudo pcs resource create nova-evacuate ocf:openstack:NovaEvacuate auth_url=$OS_AUTH_URL username=$OS_USERNAME password=$OS_PASSWORD tenant_name=$OS_TENANT_NAME"
 
 ############
