@@ -144,7 +144,7 @@ pprint(dci_conf)
 if not dci_conf['rhos_mirror'].startswith('http'):
     print('RHOS mirror should be an URL')
     exit(1)
-topic = dcitopic.get(dci_context, dci_conf.get('topic', 'default')).json()[
+topic = dcitopic.get(dci_context, dci_conf.get('topic', 'OSP8')).json()[
     'topic']
 r = dcijob.schedule(dci_context, remoteci_id=dci_conf['remoteci_id'],
                       topic_id=topic['id'])
