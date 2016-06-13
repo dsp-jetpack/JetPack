@@ -1,23 +1,18 @@
 #!/usr/bin/env python
 
-# OpenStack - A set of software tools for building and managing cloud computing
-# platforms for public and private clouds.
-# Copyright (C) 2015 Dell, Inc.
+# (c) 2015-2016 Dell
 #
-# This file is part of OpenStack.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# OpenStack is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# OpenStack is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from auto_common import Ipmi
 from osp_deployer import Settings
@@ -50,9 +45,9 @@ class DeployerSanity():
 
         logger.debug("Check settings ip's are valid.")
         shouldbbevalidips = [
-            'external_netmask', 'public_gateway', 'external_gateway',
-            'public_api_netmask', 'external_allocation_pool_start',
-            'external_allocation_pool_end',
+            'external_netmask', 'public_api_gateway', 'public_api_gateway',
+            'public_api_netmask', 'public_api_allocation_pool_start',
+            'public_api_allocation_pool_end',
             'private_api_vlanid', 'private_api_netmask',
             'private_api_allocation_pool_start',
             'private_api_allocation_pool_end',
@@ -90,14 +85,15 @@ class DeployerSanity():
                 self.settings.custom_instack_json),\
                 self.settings.custom_instack_json + \
                 " file doesn't seem to exist"
-        assert os.path.isfile(
-            self.settings.discovery_ram_disk_image),\
-            self.settings.discovery_ram_disk_image +\
-            " file doesn't seem to exist"
-        assert os.path.isfile(
-            self.settings.overcloud_image), \
-            self.settings.overcloud_image + \
-            " file doesn't seem to exist"
+        if self.settings.pull_images_from_cnd is False:
+            assert os.path.isfile(
+                self.settings.discovery_ram_disk_image),\
+                self.settings.discovery_ram_disk_image +\
+                " file doesn't seem to exist"
+            assert os.path.isfile(
+                self.settings.overcloud_image), \
+                self.settings.overcloud_image + \
+                " file doesn't seem to exist"
         assert os.path.isfile(
             self.settings.install_director_sh), \
             self.settings.install_director_sh +\

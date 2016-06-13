@@ -1,23 +1,18 @@
 #!/usr/bin/env python
 
-# OpenStack - A set of software tools for building and managing cloud computing
-# platforms for public and private clouds.
-# Copyright (C) 2015 Dell, Inc.
+# (c) 2015-2016 Dell
 #
-# This file is part of OpenStack.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# OpenStack is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# OpenStack is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from osp_deployer.config import Settings
 from checkpoints import Checkpoints
@@ -53,7 +48,7 @@ class Director(InfraHost):
                                            "deployment-validation")
         self.source_stackrc = 'source ' + self.home_dir + "/stackrc;"
 
-        cmd = "mkdir " + self.pilot_dir
+        cmd = "mkdir -p " + self.pilot_dir
         self.run(cmd)
 
     def apply_internal_repos(self):
@@ -148,15 +143,17 @@ class Director(InfraHost):
         tester.verify_undercloud_installed()
 
     def upload_cloud_images(self):
+        if self.settings.pull_images_from_cnd is False:
+            logger.debug("Uploading cloud images to the Director vm")
+            self.run("mkdir -p " + self.images_dir)
 
-        logger.debug("Uploading cloud images to the Director vm")
-        self.run("mkdir " + self.images_dir)
+            self.upload_file(self.settings.discovery_ram_disk_image,
+                             self.images_dir + "/discovery-ramdisk.tar")
 
-        self.upload_file(self.settings.discovery_ram_disk_image,
-                         self.images_dir + "/discovery-ramdisk.tar")
-
-        self.upload_file(self.settings.overcloud_image,
-                         self.images_dir + "/overcloud-full.tar")
+            self.upload_file(self.settings.overcloud_image,
+                             self.images_dir + "/overcloud-full.tar")
+        else:
+            logger.info("will pull images from the cdn")
 
     def node_discovery(self):
         setts = self.settings
@@ -326,7 +323,7 @@ class Director(InfraHost):
 
     def setup_environment(self):
 
-        env_yaml = os.path.join(self.templates_dir + "/dell-environment.yaml ")
+        env_yaml = os.path.join(self.templates_dir + "/dell-environment.yaml")
 
         # reupload the file if this is an overcloud only install
         self.upload_file(self.settings.dell_env_yaml,
@@ -583,7 +580,7 @@ class Director(InfraHost):
             'sed -i "s|StorageMgmtNetCidr:.*|StorageMgmtNetCidr: ' +
             self.settings.storage_cluster_network + '|" ' + network_yaml,
             'sed -i "s|ExternalNetCidr:.*|ExternalNetCidr: ' +
-            self.settings.external_network + '|" ' + network_yaml,
+            self.settings.public_api_network + '|" ' + network_yaml,
             'sed -i "s|InternalApiAllocationPools:.*|'
             'InternalApiAllocationPools: ' +
             "[{'start': '" + self.settings.private_api_allocation_pool_start +
@@ -602,13 +599,13 @@ class Director(InfraHost):
             self.settings.storage_cluster_allocation_pool_end + "'}]"   '|" ' +
             network_yaml,
             'sed -i "s|ExternalAllocationPools:.*|ExternalAllocationPools: ' +
-            "[{'start': '" + self.settings.external_allocation_pool_start +
+            "[{'start': '" + self.settings.public_api_allocation_pool_start +
             "', 'end': '" +
-            self.settings.external_allocation_pool_end + "'}]"   '|" ' +
+            self.settings.public_api_allocation_pool_end + "'}]"   '|" ' +
             network_yaml,
             'sed -i "s|ExternalInterfaceDefaultRoute:.*|'
             'ExternalInterfaceDefaultRoute: ' +
-            self.settings.external_gateway + '|" ' + network_yaml,
+            self.settings.public_api_gateway + '|" ' + network_yaml,
             'sed -i "s|ManagementNetCidr:.*|ManagementNetCidr: ' +
             self.settings.management_network + '|" ' + network_yaml,
             'sed -i "s|ProvisioningNetworkGateway:.*|'
@@ -955,26 +952,36 @@ class Director(InfraHost):
         logger.debug("running tempest")
         setts = self.settings
         cmds = [
-            "source ~/" + self.settings.overcloud_name + "rc;mkdir /home/" +
+            'source ~/' + self.settings.overcloud_name + 'rc;'
+            "sudo ip route add `neutron subnet-list | grep external_sub | awk '{print $6;}'` dev eth4",
+            'source ~/' + self.settings.overcloud_name + 'rc;'
+            'keystone role-create --name heat_stack_owner',
+            "source ~/" + self.settings.overcloud_name + "rc;mkdir -p /home/" +
             setts.director_install_account_user +
             "/tempest",
             'source ~/' + self.settings.overcloud_name + 'rc;cd '
             '~/tempest;/usr/share/openstack-tempest-liberty/tools/'
-            'configure-tempest-directory',
+            'configure-tempest-directory',        
             'source ~/' + self.settings.overcloud_name + 'rc;cd ~/tempest;tools/config_tempest.py '
-            '--deployer-input '
+            '--create --deployer-input '
             '~/tempest-deployer-input.conf --debug '
-            '--create identity.uri $OS_AUTH_URL '
-            'identity.admin_password $OS_PASSWORD'
-            ' object-storage-feature-enabled.discoverability False'
+            'service_available.swift False object-storage-feature-enabled.discoverability False '
+            ' identity.uri $OS_AUTH_URL '
+            'identity-feature-enabled.api_v3 False '
+            'identity.admin_username $OS_USERNAME '
+            'identity.admin_password $OS_PASSWORD '
+            'identity.admin_tenant_name $OS_TENANT_NAME',
+	    'source ~/' + self.settings.overcloud_name + 'rc;cd '
+            '~/tempest;'
+	    'tempest cleanup --init-saved-state'
         ]
         for cmd in cmds:
             self.run_tty(cmd)
         if setts.tempest_smoke_only is True:
             cmd = "source ~/" + self.settings.overcloud_name + "rc;cd " \
-                  "~/tempest;tools/run-tests.sh .*smoke"
+                  "~/tempest;tools/run-tests.sh  '.*smoke' --concurrency=4"
         else:
-            cmd = "source ~/" + self.settings.overcloud_name + "rc;cd ~/tempest;tools/run-tests.sh"
+            cmd = "source ~/" + self.settings.overcloud_name + "rc;cd ~/tempest;tools/run-tests.sh --concurrency=4"
         self.run_tty(cmd)
         Scp.get_file(setts.director_node.external_ip,
                      setts.director_install_account_user,
@@ -989,6 +996,16 @@ class Director(InfraHost):
                      "/home/" + setts.director_install_account_user +
                      "/tempest/tempest.log")
         logger.debug("Finished running tempest")
+	logger.debug("Tempest clean up")
+        cmds = [
+            'source ~/' + self.settings.overcloud_name + 'rc;cd '
+            '~/tempest;tempest cleanup --dry-run',
+            'source ~/' + self.settings.overcloud_name + 'rc;cd '
+            '~/tempest;tempest cleanup'
+        ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
 
     def configure_calamari(self):
         logger.info("Configure Calamari")

@@ -1,23 +1,18 @@
 #!/usr/bin/env python
 
-# OpenStack - A set of software tools for building and managing cloud computing
-# platforms for public and private clouds.
-# Copyright (C) 2015 Dell, Inc.
+# (c) 2015-2016 Dell
 #
-# This file is part of OpenStack.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# OpenStack is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# OpenStack is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.,
-#
-# You should have received a copy of the GNU General Public License
-# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from osp_deployer.config import Settings
 from infra_host import InfraHost
@@ -80,7 +75,7 @@ class Sah(InfraHost):
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^Gateway=.*',
                                       'Gateway="' +
-                                      sets.public_gateway +
+                                      sets.external_gateway +
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^NameServers=.*',
@@ -212,7 +207,7 @@ class Sah(InfraHost):
                 "smpool " + self.settings.subscription_manager_pool_vm_rhel,
                 "hostname " + self.settings.director_node.hostname + "." +
                 self.settings.domain,
-                "gateway " + self.settings.public_gateway,
+                "gateway " + self.settings.external_gateway,
                 "nameserver " + self.settings.name_server,
                 "ntpserver " + self.settings.ntp_server,
                 "user " + self.settings.director_install_account_user,
@@ -237,16 +232,20 @@ class Sah(InfraHost):
         remote_file = "sh /root/deploy-director-vm.sh " + \
                       director_conf + \
                       " /store/data/iso/RHEL7.iso"
-        self.run(remote_file)
-
-        logger.debug(
-            "=== wait for the director vm install "
-            "to be complete & power it on")
-        while "shut off" not in \
-                self.run("virsh list --all | grep director")[0]:
-            time.sleep(60)
-        logger.debug("=== power on the director VM ")
-        self.run("virsh start director")
+        re = self.run_tty(remote_file)
+        startVM = True
+        for ln in re[0].split("\n"):
+            if "Restarting guest" in ln:
+                startVM = False
+        if startVM :
+            logger.debug(
+                "=== wait for the director vm install "
+                "to be complete")
+            while "shut off" not in \
+                    self.run("virsh list --all | grep director")[0]:
+                time.sleep(60)
+            logger.debug("=== power on the director VM ")
+            self.run("virsh start director")
         while "root" not in \
                 self.run("whoami")[0]:
             time.sleep(30)
@@ -275,7 +274,7 @@ class Sah(InfraHost):
                 "smpool " + self.settings.subscription_manager_vm_ceph,
                 "hostname " + self.settings.ceph_node.hostname + "." +
                 self.settings.domain,
-                "gateway " + self.settings.public_gateway,
+                "gateway " + self.settings.external_gateway,
                 "nameserver " + self.settings.name_server,
                 "ntpserver " + self.settings.ntp_server,
                 "# Iface     IP               NETMASK    ",
@@ -288,20 +287,24 @@ class Sah(InfraHost):
             self.run("echo '" + comd + "' >> " + ceph_conf)
         logger.debug("=== kick off the ceph vm deployment")
 
-        self.run("sh " +
+        re = self.run_tty("sh " +
                  remote_file +
                  " /root/ceph.cfg /store/data/iso/RHEL7.iso")
-
-        logger.debug(
-            "=== wait for the ceph vm install to be complete & power it on")
-        while "shut off" not in \
+        startVM = True
+        for ln in re[0].split("\n"):
+            if "Restarting guest" in ln:
+                startVM = False
+        if startVM :
+            logger.debug(
+                "=== wait for the ceph vm install to be complete & power it on")
+            while "shut off" not in \
                 self.run("virsh list --all | grep ceph")[0]:
-            time.sleep(60)
-        logger.debug("=== power on the ceph VM ")
-        self.run("virsh start ceph")
+                time.sleep(60)
+            logger.debug("=== power on the ceph VM ")
+            self.run("virsh start ceph")
         while "root" not in \
                 self.run("whoami")[0]:
-            time.sleep(30)
+            time.sleep(40)
         logger.debug("ceph host is up")
 
     def delete_ceph_vm(self):

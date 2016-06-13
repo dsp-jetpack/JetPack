@@ -280,6 +280,16 @@ def get_datanode_cores(cm_api_ip, clustername, hostname):
 
     return hosts
 
+def teragen_cmd(rowNumber, cmd):
+    config = importlib.import_module('config_cdh5')
+    hadoop_ip = config.hadoop_ip
+    usr = 'root'
+    pwd = 'Ignition01'
+    cl_stdoutd, cl_stderrd = Ssh.execute_command(hadoop_ip, usr, pwd, cmd)
+    print cl_stdoutd
+    print cl_stderrd
+
+    return cl_stdoutd, cl_stderrd
 
 def teragen(rowNumber, folderName):
     '''
@@ -307,6 +317,27 @@ def teragen(rowNumber, folderName):
 
     return cl_stdoutd, cl_stderrd
 
+def terasort_output_folder(folderName, outFolder):
+
+    destFolder = outFolder
+    config = importlib.import_module('config_cdh5') 
+    cm_api_ip = config.cm_api_ip
+    terasort_parameters = config.terasort_parameters
+    teragen_jar_location = config.teragen_jar_location
+    teragen_jar_filename = config.teragen_jar_filename
+    hadoop_ip = config.hadoop_ip
+    usr = 'root'
+    pwd = 'Ignition01'
+
+    #cmd = 'cd /opt/cloudera/parcels/CDH-5.5.0-1.cdh5.5.0.p0.8/lib/hadoop-0.20-mapreduce/;sudo -u hdfs hadoop jar hadoop-examples-2.6.0-mr1-cdh5.5.0.jar terasort ' + terasort_params + ' '+ str(folderName) + ' ' + str(destFolder)
+    cmd = 'cd ' + teragen_jar_location + '/;sudo -u hdfs hadoop jar ' + teragen_jar_filename + ' terasort ' + terasort_parameters + ' '+ str(folderName) + ' ' + str(destFolder)
+    debugLog(cmd)
+    print "Running " + cmd 
+    cl_stdoutd, cl_stderrd = Ssh.execute_command(hadoop_ip, usr, pwd, cmd)
+    print cl_stdoutd
+    print cl_stderrd
+
+    return cl_stdoutd, cl_stderrd
 
 def terasort(folderName):
 
@@ -564,7 +595,11 @@ def getJobStartFinishTimes(job_id, start_time, end_time):
     config = importlib.import_module('config_cdh5') 
     cm_api_ip = config.cm_api_ip
     session = ApiResource(cm_api_ip,  7180, "admin", "admin", version=6)
-
+    
+    #job_name = '' 
+    #start = None
+    #finish = None
+    
     yarn_flag = False
     mapreduce_flag = False
 
@@ -596,22 +631,33 @@ def getJobStartFinishTimes(job_id, start_time, end_time):
         else:
             print 'Yarn available'
         ac =  yarn_service.get_yarn_applications(start_time, end_time)
+
         for job in ac.applications:
+            print 'job_id: ' + str(job_id)
+            print 'job_applicationID: ' + str(job.applicationId)
             if job_id == str(job.applicationId):
                 ob = job
-        start = ob.startTime
-        finish = ob.endTime
-        job_name = ob.name
+                print 'ob scope1: ' + str(ob)
+
+                start = ob.startTime
+                finish = ob.endTime
+                job_name = ob.name
+
+                jobLog(str(job_name) + ' ' +str(job_id) + ' ' + str(start) + ' ' + str(finish) )
+                print job_name  
+                print 'return'
+                return job_name, start, finish
 
     elif yarn_flag == False and mapreduce_flag == True:
         print 'Run mapreduce - put mapreduce code here'
+
     else:
         print 'Neither Mapreduce or Yarn available'
-        
-    jobLog(str(job_name) + ' ' +str(job_id) + ' ' + str(start) + ' ' + str(finish) )
 
-    return job_name, start, finish
+        print '000000000000'
+        #jobLog(str(job_name) + ' ' +str(job_id) + ' ' + str(start) + ' ' + str(finish) )
 
+        return 0, 0, 0
 
 def run_teragen_job(rowCount):
 
@@ -685,17 +731,24 @@ def run_tpc_benchmark(tpc_size):
     job_names = []
 
     time_start = datetime.datetime.now()
+    print time_start
     out1, out2 = tpc_benchmark(tpc_size)
     time.sleep(80)
-    time_end= datetime.datetime.now()
-
+    time_end = datetime.datetime.now()
+    print time_end
     #job_ids =  re.findall("Job complete: (.+)", out1)
     job_ids =  re.findall("Job (.+) completed", out1)
     print "job_ids " +str(job_ids)
-    
+    #job_ids = {'job_1460938781401_0135'}
     for job in job_ids:
+        print '&&&&' + str(job_ids)
+        time_end = datetime.datetime.now()
+        print time_end
         job_name, start, finish = getJobStartFinishTimes(job, time_start, time_end)
-
+        print job_name
+        print start
+        print finish
+        time.sleep(8)
         start_times.append(start)
         finish_times.append(finish)
         job_names.append(job_name)
@@ -819,6 +872,7 @@ def main():
     teragen_jar_filename = config.teragen_jar_filename
 
     #out1, out2 = clear_disks(clean_up_ip)
+    #out1, out2 = clear_disks(clean_up_ip)
     #print out1
     #out1, out2 = clear_cache(clean_up_ip)
     #time.sleep(150)
@@ -831,7 +885,7 @@ def main():
     CLUSTER = API.get_cluster(cluster_name)
     #stamp.updateConfig(CLUSTER)
     #stamp.restartCluster(CLUSTER)
-    
+    #time.sleep(120)
     log(arch_file, "[[[ Teragen tests ]]]")
 
     for rowCount in rowCountsBatchValues:
@@ -958,6 +1012,8 @@ def main():
 
 
         job_ids, job_names, starts, finishs = run_tpc_benchmark(tpc_size)
+        print job_ids
+        print '***********'
         for job in job_ids:
             start = starts[job_ids.index(job)]
             finish = finishs[job_ids.index(job)]
@@ -976,7 +1032,11 @@ def main():
             log(arch_file, job_name + " | Cloudera | " + str(tpc_size) + " | job | runtime | " + str(run_time) + ' ('+ str(runTime) +' seconds)')
             logStats(arch_file, job_name, data_nodes, start, finish, tpc_size, start_epoch, finish_epoch)
 
+            if job_ids.index(job) == 2:
+                log(arch_file, '**********  end of run one   ***********')
+
         print job_ids
+        report_job_id = job_ids[1]
         print "\nTPC RUN COMPLETE\n"
         print "TPC run complete, here is config info set for the run: "
         print "NUM_MAPS: "+ num_maps
@@ -991,7 +1051,7 @@ def main():
     file_name = log(arch_file,  "[[[ That's all folks ]]]"  )
 
     if config.tpc_flag == 'true':
-        
+        scale_factor = convertToSF(tpc_size)
         # Rename and index the last Archive log for this run
         target_file = '-' + convertToSF(config.tpc_size)
         id_list = []
@@ -1009,6 +1069,7 @@ def main():
         new_file_name = "Results" + target_file + " T" + str(new_id) + ".log"
         renameFile(file_name, new_file_name)
     else:
+        scale_factor = convertToSF(config.teragen_row_counts[0])
         # Rename and index the last Archive log for this run
         target_file = '-' + str(config.teragen_row_counts[0])
         id_list = []
@@ -1042,7 +1103,15 @@ def main():
 
     # generate a report based on the output from the job run above.
     bob = ReportBuilder()
-    bob.createReport(report_job_id, results_file)
+    #report_job_id = 'job_1460938781401_0023'
+    #results_file = 'Results-300000000000 T7.log'
+    # scale_factor = convertToSF(tpc_size)
+    
+    print report_job_id
+    print results_file
+    print scale_factor
+
+    bob.createReport(report_job_id, results_file, scale_factor)
     
 if __name__ == '__main__':
     main()
