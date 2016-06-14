@@ -167,8 +167,9 @@ def main():
                         help="Enable cinder Dell Eqlx backend")
     parser.add_argument('--enable_dellsc', action='store_true', default=False,
                         help="Enable cinder Dell Storage Center backend")
-    # parser.add_argument('--static_ips', action='store_true', default=False,
-    #  help="Specify the IPs and VIPs on the controller nodes")
+    parser.add_argument('--static_ips', action='store_true', default=False,
+                        help="Specify the IPs and VIPs on the controller "
+                             "nodes")
     args = parser.parse_args()
     p = re.compile('\d+:\d+')
     if not p.match(args.vlan_range):
@@ -216,8 +217,8 @@ def main():
 
     # The static-ip-environment.yaml must be included after the
     # network-environment.yaml
-    # if args.static_ips:
-    #   env_opts += " -e ~/pilot/templates/static-ip-environment.yaml"
+    if args.static_ips:
+        env_opts += " -e ~/pilot/templates/static-ip-environment.yaml"
 
     # The dell-environment.yaml must be included after the
     # storage-environment.yaml
