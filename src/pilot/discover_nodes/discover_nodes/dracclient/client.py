@@ -150,7 +150,8 @@ class DRACClient(ironic_client.DRACClient):
         return self._nic_mgmt.get_nic_statistics(nic_id)
 
     def is_nic_legacy_boot_protocol_pxe(self, nic_id):
-        """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE, false otherwise.
+        """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE,
+           false otherwise.
 
         :param nic_id: id of the network interface controller (NIC)
         :returns: boolean indicating whether or not the legacy,

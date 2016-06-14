@@ -138,11 +138,15 @@ def select_os_disk(ironic_client, drac_client, node_uuid, debug):
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("ip_or_mac", help="Either the IP address of the iDRAC, or the MAC address of the interface on the provisioning network")
+    parser.add_argument("ip_or_mac",
+                        help="Either the IP address of the iDRAC, or the MAC "
+                        "address of the interface on the provisioning network")
     parser.add_argument("role",
                         choices=["controller", "compute", "storage"],
                         help="The role that the node will play")
-    parser.add_argument("--file", help="name of json file containing the node being set", default="instackenv.json")
+    parser.add_argument("--file",
+                        help="Name of json file containing the node being set",
+                        default="instackenv.json")
     parser.add_argument("--debug", action='store_true', default=False)
     args = parser.parse_args()
 
@@ -175,7 +179,7 @@ def main():
                 break
 
     if node_uuid is None:
-        print "Error:  Unable to find node {}".format( args.ip_or_mac )
+        print "Error:  Unable to find node {}".format(args.ip_or_mac)
         sys.exit(1)
 
     # Assign the role to the node
@@ -190,7 +194,7 @@ def main():
     if args.role == "storage":
         # Get the model of the server from the DRAC
         drac_ip, drac_user, drac_password = \
-          CredentialHelper.get_drac_creds_from_node(node, args.file)
+            CredentialHelper.get_drac_creds_from_node(node, args.file)
         drac_client = wsman.Client(drac_ip, drac_user, drac_password)
         doc = drac_client.enumerate(DCIM_SystemView)
         model = utils.find_xml(doc, 'Model', DCIM_SystemView).text

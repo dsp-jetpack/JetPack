@@ -16,6 +16,7 @@
 
 from tempest.cmd.db.mysql.mysql_db import MySqlDb
 
+
 class DeleteInstance(MySqlDb):
 
     def __init__(self, config):
@@ -64,9 +65,9 @@ class DeleteInstance(MySqlDb):
         sql = self.build_sql('delete from ' +
                              'instance_metadata where ' +
                              'instance_uuid in (%s)')
-        sqls.append(sql) 
+        sqls.append(sql)
 
-         # delete from instance_system_metadata
+        # delete from instance_system_metadata
         sql = self.build_sql('delete from ' +
                              'instance_system_metadata where ' +
                              'instance_uuid in (%s)')
