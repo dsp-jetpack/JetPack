@@ -25,8 +25,8 @@ from credential_helper import CredentialHelper
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--power", required=True, default=None,
-                        choices=["on", "off"],
-                        help="Power on/off all overcloud nodes")
+                        choices=["on", "off", "reset", "cycle"],
+                        help="Control power state of all overcloud nodes")
     args = parser.parse_args()
 
     os_auth_url, os_tenant_name, os_username, os_password = \
