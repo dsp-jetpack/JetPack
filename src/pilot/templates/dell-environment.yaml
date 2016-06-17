@@ -17,6 +17,10 @@ resource_registry:
     OS::TripleO::NodeExtraConfigPost: HOME/pilot/templates/post-deploy.yaml
 
 parameter_defaults:
+  # To customize the domain name of the overcloud nodes, change "localdomain"
+  # in the following line to the desired domain name.
+  CloudDomain: localdomain
+
   # Set to true to enable Nova usage of Ceph for ephemeral storage.
   # If set to false, Nova uses the storage local to the compute.
   NovaEnableRbdBackend: true

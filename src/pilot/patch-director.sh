@@ -72,3 +72,15 @@ EOF
     status=$?
     [ ${status} -eq 0 ] || exit ${status}
 fi
+
+# Hack the domain name into nova.conf and restart nova
+domain_name=$(grep CloudDomain ~/pilot/templates/dell-environment.yaml | awk -F: '{print$2}' | tr -d '[:space:]')
+
+sudo sed -i.bak "s/^dhcp_domain=.*/dhcp_domain=${domain_name}/" /etc/nova/nova.conf
+
+# Restart all of nova
+sudo systemctl restart openstack-nova-api.service
+sudo systemctl restart openstack-nova-cert.service
+sudo systemctl restart openstack-nova-compute.service
+sudo systemctl restart openstack-nova-conductor.service
+sudo systemctl restart openstack-nova-scheduler.service
