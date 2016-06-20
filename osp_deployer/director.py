@@ -328,6 +328,11 @@ class Director(InfraHost):
         # reupload the file if this is an overcloud only install
         self.upload_file(self.settings.dell_env_yaml,
                          env_yaml)
+        self.run_tty('sed -i "s|CloudDomain: .*|'
+                     'CloudDomain: ' +
+                     str(self.settings.domain).lower() +
+                     '|" ' +
+                     env_yaml)
         self.run_tty('sed -i "s|NovaEnableRbdBackend: .*|'
                      'NovaEnableRbdBackend: ' +
                      str(self.settings.enable_rbd_backend).lower() +
