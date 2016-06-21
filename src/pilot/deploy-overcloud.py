@@ -137,10 +137,11 @@ def finalize_overcloud():
     create_volume_types()
     update_swift_endpoint(keystone_client)
 
-    horizon_service = keystone_client.services.find(**{'name': 'horizon'})
-    horizon_endpoint = keystone_client.endpoints.find(
-        **{'service_id': horizon_service.id})
-    return horizon_endpoint.publicurl
+    #horizon_service = keystone_client.services.find(**{'name': 'horizon'})
+    #horizon_endpoint = keystone_client.endpoints.find(
+    #    **{'service_id': horizon_service.id})
+    #return horizon_endpoint.publicurl
+    return None
 
 
 def main():
@@ -231,6 +232,7 @@ def main():
         env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
 
     cmd = "cd ; openstack overcloud deploy" \
+          " --debug" \
           " --log-file ~/pilot/overcloud_deployment.log" \
           " -t {}" \
           " {}" \
