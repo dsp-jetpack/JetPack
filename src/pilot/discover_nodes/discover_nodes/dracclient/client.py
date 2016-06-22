@@ -1,3 +1,17 @@
+# (c) 2016 Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 Wrapper for pywsman.Client
 """
@@ -136,7 +150,8 @@ class DRACClient(ironic_client.DRACClient):
         return self._nic_mgmt.get_nic_statistics(nic_id)
 
     def is_nic_legacy_boot_protocol_pxe(self, nic_id):
-        """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE, false otherwise.
+        """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE,
+           false otherwise.
 
         :param nic_id: id of the network interface controller (NIC)
         :returns: boolean indicating whether or not the legacy,

@@ -1,8 +1,24 @@
 #!/usr/bin/python
 
+# (c) 2016 Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import re
 import subprocess
+
+from credential_helper import CredentialHelper
 
 
 def get_nodes():
@@ -11,12 +27,15 @@ def get_nodes():
     by running "nova list"
     """
 
+    stack_name = CredentialHelper.get_stack_name()
+
     # A dictionary that maps nova node names to something shorter and easier
     # to type.
     node_names = {
-        'overcloud-controller': 'cntl',
-        'overcloud-novacompute': 'nova',
-        'overcloud-cephstorage': 'stor'
+        stack_name + '-controller': 'cntl',
+        stack_name + '-novacompute': 'nova',
+        stack_name + '-compute': 'nova',
+        stack_name + '-cephstorage': 'stor'
     }
 
     for line in subprocess.check_output(['nova', 'list']).split('\n'):
@@ -68,8 +87,9 @@ def update_known_hosts(host_addrs):
         cmd = 'ssh-keyscan -t ecdsa-sha2-nistp256'.split()
         cmd.extend(host_addrs)
         # ssh-keyscan produces "chatty" output on stderr when things work, so
-        # just suppress it. If there are error messages, the user will eventually
-        # see them when they try to access the host that triggered the error.
+        # just suppress it. If there are error messages, the user will
+        # eventually see them when they try to access the host that triggered
+        # the error.
         subprocess.call(cmd,
                         stdout=open(known_hosts_new, 'a'),
                         stderr=open('/dev/null', 'w'))

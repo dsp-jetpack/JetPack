@@ -1,3 +1,16 @@
+# (c) 2014-2016 Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 #version=RHEL7
 
 install
@@ -136,24 +149,22 @@ priv_api_boot_opts="onboot none vlan"
 
 # Define the bridges
 # External bridge options
-br_extern_boot_opts="CHANGEME e.g. onboot static 10.148.44.41/255.255.255.0"
+br_extern_boot_opts="CHANGEME e.g. onboot static 10.148.44.12/255.255.255.0"
 
 # Management bridge options
-#   Note: The SAH iDRAC is assigned an example IP of 192.168.110.41, so that IP
-#         cannot be used here.  The example IP below adds 100 to the last octet.
-br_mgmt_boot_opts="onboot static 192.168.110.141/255.255.255.0"
+br_mgmt_boot_opts="onboot static 192.168.110.12/255.255.255.0"
 
 # Provisioning bridge options
-br_prov_boot_opts="CHANGEME e.g. onboot static 192.168.120.41/255.255.255.0"
+br_prov_boot_opts="CHANGEME e.g. onboot static 192.168.120.12/255.255.255.0"
 
 # Storage bridge options
-br_stor_boot_opts="CHANGEME e.g. onboot static 192.168.170.41/255.255.255.0"
+br_stor_boot_opts="CHANGEME e.g. onboot static 192.168.170.12/255.255.255.0"
 
 # Public API bridge options
-br_pub_api_boot_opts="CHANGEME e.g. onboot static 192.168.190.41/255.255.255.0"
+br_pub_api_boot_opts="CHANGEME e.g. onboot static 192.168.190.12/255.255.255.0"
 
 # Private API bridge options
-br_priv_api_boot_opts="CHANGEME e.g. onboot static 192.168.140.41/255.255.255.0"
+br_priv_api_boot_opts="CHANGEME e.g. onboot static 192.168.140.12/255.255.255.0"
 
 ################### END of CHANGEME
 

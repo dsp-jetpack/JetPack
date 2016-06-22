@@ -1,12 +1,29 @@
 #!/bin/bash
 
+# (c) 2016 Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 exec > >(tee $HOME/pilot/install-director.log)
 exec 2>&1
 
 dns_ip="$1"
-if [ -z "${dns_ip}" ];
-then
-  echo "Usage: install-director.sh <dns_ip>"
+subscription_manager_user="$2"
+subscription_manager_pass="$3"
+subcription_manager_poolid="$4"
+
+if [ "$#" -ne 4 ]; then
+  echo "Usage: $0 <dns_ip> <subscription_manager_user> <subscription_manager_pass> <subcription_manager_poolid>"
   exit 1
 fi
 
@@ -61,30 +78,27 @@ echo "## Installing Director"
 openstack undercloud install
 echo "## Done."
 
-source stackrc
+source $HOME/stackrc
 
 echo
-echo "## Extracting images..."
 if [ ! -d $HOME/pilot/images ];
 then
-  echo "Error: A directory named $HOME/pilot/images must exist and contain the cloud images."
-  exit 1
+  echo "## Downloading images..."
+  sudo yum install rhosp-director-images -y
+  mkdir $HOME/pilot/images
+  ln -sf /usr/share/rhosp-director-images/overcloud-full-latest-8.0.tar $HOME/pilot/images/overcloud-full.tar
+  ln -sf /usr/share/rhosp-director-images/ironic-python-agent-latest-8.0.tar $HOME/pilot/images/ironic-python-agent.tar
 fi
 
+echo "## Extracting images..."
 cd $HOME/pilot/images
 for image in ./*.tar; do tar xvf $image; done
 echo "## Done."
 
 echo
-echo "## Uploading images..."
-glance image-list | grep -q overcloud-full
-if [ "$?" -ne 0 ];
-then
-  openstack overcloud image upload
-else
-  echo "Warning: Images have already been uploaded.  Skipping upload."
-fi
-echo "## Done."
+echo "## Customizing the overcloud image & upload images"
+~/pilot/customize_image.sh $subscription_manager_user $subscription_manager_pass $subcription_manager_poolid
+echo "## Done"
 
 echo
 echo "## Creating flavors..."

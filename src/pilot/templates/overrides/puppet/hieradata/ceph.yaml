@@ -1,3 +1,17 @@
+# (c) 2016 Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 ceph::profile::params::osd_journal_size: 10000
 # CHANGEME: Change osd_pool_default_pg_num and osd_pool_default_pgp_num to
 # be the smallest value in 'ceph_pool_pgs' (which appears below).
@@ -34,7 +48,7 @@ ceph::profile::params::osds:
   '/dev/sdg':
     journal: '/dev/sda'
   '/dev/sdh':
-    journal: '/dev/sda'
+    journal: '/dev/sdb'
   '/dev/sdi':
     journal: '/dev/sdb'
   '/dev/sdj':
@@ -42,14 +56,12 @@ ceph::profile::params::osds:
   '/dev/sdk':
     journal: '/dev/sdb'
   '/dev/sdl':
-    journal: '/dev/sdb'
+    journal: '/dev/sdc'
   '/dev/sdm':
     journal: '/dev/sdc'
   '/dev/sdn':
     journal: '/dev/sdc'
   '/dev/sdo':
-    journal: '/dev/sdc'
-  '/dev/sdp':
     journal: '/dev/sdc'
 
 # CHANGEME: The following table lists the pg_num and pgp_num values for each

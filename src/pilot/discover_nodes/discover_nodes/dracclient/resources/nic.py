@@ -1,3 +1,17 @@
+# (c) 2016 Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -5,13 +19,22 @@ import collections
 import logging
 import re
 
-import dracclient.exceptions as exceptions
+import dracclient.exceptions as ironic_exceptions
 import dracclient.utils as utils
 import dracclient.wsman as wsman
 
+from .. import exceptions
 from . import uris
 
 LOG = logging.getLogger(__name__)
+
+# Defining these constants to have the same value effectively disables
+# retries of WS_Man Enumerate operation requests by
+# NICManagement._list_nics_common(). This helps us more quickly iterate
+# while working to identify the root cause of the bug that the retry
+# behavior attempts to work around.
+ENUMERATE_WITH_FILTER_ATTEMPTS_MIN = 1
+ENUMERATE_WITH_FILTER_ATTEMPTS_MAX = 1
 
 LINK_SPEED_UNKNOWN = 'unknown'
 LINK_SPEED_10_MBPS = '10 Mbps'
@@ -79,6 +102,7 @@ class NICManagement(object):
         :raises: WSManInvalidResponse when receiving invalid response
         :raises: DRACOperationFailed on error reported back by the iDRAC
                  interface
+        :raises: NotFound when no statistics for NIC found
         """
         return self.get_nic_statistics(nic_id).link_status
 
@@ -90,6 +114,7 @@ class NICManagement(object):
                   otherwise
         :raises: WSManRequestFailure on request failures
         :raises: WSManInvalidResponse when receiving invalid response
+        :raises: NotFound when no statistics for NIC found
         """
         filter_query = ('select * '
                         'from DCIM_NICStatistics '
@@ -103,7 +128,9 @@ class NICManagement(object):
 
         # Were no statistics found?
         if drac_nic_statistics is None:
-            return None
+            raise exceptions.NotFound(
+                what=('statistics for NIC %(nic)s') % {
+                    'nic': nic_id})
 
         return self._parse_drac_nic_statistics(drac_nic_statistics)
 
@@ -114,6 +141,7 @@ class NICManagement(object):
         :returns: boolean indicating whether or not the link is up
         :raises: WSManRequestFailure on request failures
         :raises: WSManInvalidResponse when receiving invalid response
+        :raises: NotFound when no statistics for NIC found
         """
         return self.get_nic_statistics(nic_id).link_status == 'up'
 
@@ -129,7 +157,37 @@ class NICManagement(object):
         filter_query = ('select * '
                         'from DCIM_NICView '
                         'where InstanceID like "NIC.Integrated.%"')
-        return self._list_nics_common(filter_query, sort)
+
+        # _list_nics_common() may raise a WSManRequestFailure
+        # exception. It is believed that is caused by a bug that is
+        # triggered by the use of the Common Information Model (CIM)
+        # Query Language (CQL) filter_query above.
+        #
+        # When that occurs, this works around it by enumerating all of
+        # the DCIM_NICView instances. XPath is used to find the elements
+        # in the returned document that are for the integrated NICs.
+        #
+        # Note that this is in addition to the retry logic that
+        # _list_nics_common() implements for the same bug.
+        try:
+            nics = self._list_nics_common(filter_query, sort)
+        except ironic_exceptions.WSManRequestFailure:
+            doc = self.client.enumerate(uris.DCIM_NICView)
+
+            name_spaces = {'n1': uris.DCIM_NICView}
+            query = (
+                './/n1:%(item)s/n1:InstanceID[contains(., '
+                '"NIC.Integrated.")]/..' %
+                {
+                    'item': 'DCIM_NICView'})
+            drac_integrated_nics = doc.xpath(query, namespaces=name_spaces)
+
+            nics = [self._parse_drac_nic(nic) for nic in drac_integrated_nics]
+
+            if sort:
+                nics.sort(key=lambda nic: nic.id)
+
+        return nics
 
     def list_nics(self, sort=False):
         """Return the list of NICs.
@@ -153,8 +211,43 @@ class NICManagement(object):
                                              property_name)
 
     def _list_nics_common(self, filter_query=None, sort=False):
-        doc = self.client.enumerate(uris.DCIM_NICView,
-                                    filter_query=filter_query)
+        # This retry logic attempts to work around a bug that causes
+        # this method to encounter a WSManRequestFailure exception. That
+        # exception is raised by the Ironic python-dracclient's simple
+        # WS-Man client. It has occurred when a filter_query argument is
+        # passed to this function. That in turn is included in the
+        # Enumerate request sent to the iDRAC. It has never been seen
+        # when filter_query is None. python-dracclient's simple WS-Man
+        # client is implemented by class dracclient.wsman.Client,
+        # defined in dracclient/wsman.py.
+        #
+        # It has been reported that the bug can be worked around by
+        # simply reissuing the same Enumerate request.
+        #
+        # Since the bug has only been encountered when DCIM_NICView
+        # objects are enumerated, this is implemented here, instead of
+        # more generally in the simple WS-Man client's enumerate()
+        # method.
+        if filter_query is None:
+            max_attempts = ENUMERATE_WITH_FILTER_ATTEMPTS_MIN
+        else:
+            max_attempts = ENUMERATE_WITH_FILTER_ATTEMPTS_MAX
+
+        for attempt in range(max_attempts):
+            try:
+                doc = self.client.enumerate(uris.DCIM_NICView,
+                                            filter_query=filter_query)
+            except ironic_exceptions.WSManRequestFailure:
+                if attempt == max_attempts - 1:
+                    LOG.debug('All %d enumerate attempts failed', attempt + 1)
+                    raise
+            else:
+                if attempt >= ENUMERATE_WITH_FILTER_ATTEMPTS_MIN:
+                    LOG.debug('Had to enumerate %d times, instead of just %d',
+                              attempt + 1,
+                              ENUMERATE_WITH_FILTER_ATTEMPTS_MIN)
+
+                break
 
         drac_nics = utils.find_xml(doc,
                                    'DCIM_NICView',
@@ -460,6 +553,7 @@ class NICConfiguration(object):
         :raises: WSManInvalidResponse when receiving invalid response
         :raises: DRACOperationFailed on error reported back by the iDRAC
                  interface
+        :raises: NotFound when no settings for NIC found
         """
         return self.get_nic_setting(nic_id, 'LegacyBootProto')
 
@@ -472,6 +566,7 @@ class NICConfiguration(object):
         :raises: WSManInvalidResponse when receiving invalid response
         :raises: DRACOperationFailed on error reported back by the iDRAC
                  interface
+        :raises: NotFound when no settings for NIC found
         """
         return self.get_nic_setting(nic_id, 'LinkStatus')
 
@@ -486,6 +581,7 @@ class NICConfiguration(object):
         :raises: WSManInvalidResponse when receiving invalid response
         :raises: DRACOperationFailed on error reported back by the iDRAC
                  interface
+        :raises: NotFound when no settings for NIC found
         """
         selection_expression = ('InstanceID = '
                                 '"%(fqdd)s:%(attribute_name)s"') % {
@@ -495,7 +591,9 @@ class NICConfiguration(object):
 
         # Were no settings found?
         if not settings:
-            return None
+            raise exceptions.NotFound(
+                what=('settings for NIC %(nic)s') % {
+                    'nic': nic_id})
 
         # Do the settings include the attribute?
         if attribute_name not in settings:
@@ -504,7 +602,8 @@ class NICConfiguration(object):
         return settings[attribute_name]
 
     def is_nic_legacy_boot_protocol_pxe(self, nic_id):
-        """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE, false otherwise.
+        """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE,
+           false otherwise.
 
         :param nic_id: id of the network interface controller (NIC)
         :returns: boolean indicating whether or not the legacy,
@@ -513,6 +612,7 @@ class NICConfiguration(object):
         :raises: WSManInvalidResponse when receiving invalid response
         :raises: DRACOperationFailed on error reported back by the iDRAC
                  interface
+        :raises: NotFound when no settings for NIC found
         """
         return self.get_nic_legacy_boot_protocol(nic_id).current_value == 'PXE'
 
@@ -525,6 +625,7 @@ class NICConfiguration(object):
         :raises: WSManInvalidResponse when receiving invalid response
         :raises: DRACOperationFailed on error reported back by the iDRAC
                  interface
+        :raises: NotFound when no settings for NIC found
         """
         return self.get_nic_link_status(nic_id).current_value == 'Connected'
 
@@ -612,7 +713,7 @@ class NICConfiguration(object):
         if unknown_keys:
             msg = ('Unknown NIC attributes found: %(unknown_keys)r' %
                    {'unknown_keys': unknown_keys})
-            raise exceptions.InvalidParameterValue(reason=msg)
+            raise ironic_exceptions.InvalidParameterValue(reason=msg)
 
         read_only_keys = []
         unchanged_attribs = []
@@ -647,7 +748,8 @@ class NICConfiguration(object):
                 read_only_msg = []
 
             drac_messages = '\n'.join(invalid_attribs_msgs + read_only_msg)
-            raise exceptions.DRACOperationFailed(drac_messages=drac_messages)
+            raise ironic_exceptions.DRACOperationFailed(
+                drac_messages=drac_messages)
 
         if not attrib_names:
             return {'commit_required': False}
@@ -710,7 +812,7 @@ class NICConfiguration(object):
                                        attr_cls)
 
             if not set(result).isdisjoint(set(attribs)):
-                raise exceptions.DRACOperationFailed(
+                raise ironic_exceptions.DRACOperationFailed(
                     drac_messages=('Colliding attributes %r' % (
                         set(result) & set(attribs))))
 

@@ -1,5 +1,19 @@
 #!/usr/bin/python
 
+# (c) 2016 Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 import dracclient.wsman
 import lxml
@@ -22,6 +36,8 @@ def main():
         default='',
         help='user to login as')
     parser.add_argument("-p", "--password", default='', help='password')
+    parser.add_argument("-m", "--mofs", default='',
+                        help='A comma separated list of MOFs to retrieve')
 
     args = parser.parse_args()
 
@@ -30,14 +46,17 @@ def main():
     # The Dell Common Information Model (DCIM) Extensions Library Managed
     # Object Format (MOF) Collection is available at
     # http://en.community.dell.com/techcenter/systems-management/w/wiki/1840.
-    dcims = [
-        'DCIM_SystemView',
-        'DCIM_PhysicalDiskView',
-        'DCIM_VirtualDiskView',
-        'DCIM_CPUView',
-        'DCIM_NICView',
-        'DCIM_NICStatistics',
-    ]
+    if args.mofs:
+        dcims = args.mofs.split(",")
+    else:
+        dcims = [
+            'DCIM_SystemView',
+            'DCIM_PhysicalDiskView',
+            'DCIM_VirtualDiskView',
+            'DCIM_CPUView',
+            'DCIM_NICView',
+            'DCIM_NICStatistics',
+        ]
 
     # Probe each iDRAC specified on the command line.
     for i in args.idrac:

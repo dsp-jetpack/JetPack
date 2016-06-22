@@ -1,24 +1,18 @@
 #! /bin/bash
+
+# (c) 2014-2016 Dell
 #
-# OpenStack - A set of software tools for building and managing cloud computing
-# platforms for public and private clouds.
-# Copyright (C) 2015 Dell, Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This file is part of OpenStack.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# OpenStack is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# OpenStack is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
-#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 [[ ${#@} != 2 ]] && echo "This script requires two parameters, a configuration file as the first parameter and the location of the installation ISO as the second parameter." && exit
 
@@ -212,8 +206,8 @@ EOIP
 
   systemctl enable iptables
 
-
-  sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
+  # To configure SELINUX to permissive, uncomment the following line
+  #sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
 
   # Configure the ntp daemon
   systemctl enable ntpd
@@ -275,7 +269,7 @@ EOFKS
   rmdir /tmp/mnt-ceph
 
   virt-install --name ceph \
-    --ram 1024 \
+    --ram 4096 \
     --vcpus 1 \
     --hvm \
     --os-type linux \
@@ -290,10 +284,11 @@ EOFKS
     --graphics spice \
     --autostart \
     --location ${location}
+
   } || {
 
 virt-install --name ceph \
-  --ram 1024 \
+  --ram 4096 \
   --vcpus 1 \
   --hvm \
   --os-type linux \

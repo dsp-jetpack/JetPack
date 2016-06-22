@@ -1,30 +1,25 @@
 #!/bin/bash
+
+# (c) 2015-2016 Dell
 #
-# OpenStack - A set of software tools for building and managing cloud
-# computing platforms for public and private clouds.
-# Copyright (C) 2015 Dell, Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This file is part of OpenStack.
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# OpenStack is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# OpenStack is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with OpenStack.  If not, see <http://www.gnu.org/licenses/>.
-#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 #exit on failure
 #set -e 
 
 #Variables
 VLAN_NETWORK="192.168.201.0/24"
-EXTERNAL_NETWORK_NAME="nova"
+EXTERNAL_NETWORK_NAME="public"
 EXTERNAL_SUBNET_NAME="external_sub"
 STARTIP="192.168.191.2"
 ENDIP="192.168.191.30"
@@ -32,6 +27,7 @@ EXTERNAL_VLAN="191"
 EXTERNAL_VLAN_NETWORK="192.168.191.0/24"
 GATEWAY_IP=192.168.191.1
 KEY_NAME="key_name"
+KEY_FILE="$KEY_NAME.pem"
 IMAGE_NAME="cirros"
 PASSWORD="cr0wBar!"
 EMAIL="ce-cloud@dell.com"
@@ -88,7 +84,6 @@ init(){
   info "### Random init stuff "
   cd ~
 
-  # Find the IP for controller0 from the undercloud
   source ~/stackrc
 
   # Collect the SSH keys from all of the overcloud nodes
@@ -99,13 +94,16 @@ init(){
       fatal "### '${update_ssh_config}' is required but missing!  Aborting sanity test"
   execute_command "${update_ssh_config}"
 
-  CONTROLLER=$(nova show overcloud-controller-0|grep "ctlplane network"| awk -F\| '{print $3}'| tr -d ' ')
+  # Find the IP for controller0 from the undercloud
+  CONTROLLER_0_NAME=$(nova list | grep '\-controller-0' | awk -F\| '{print $3}'| tr -d ' ')
+  CONTROLLER=$(nova show ${CONTROLLER_0_NAME} |grep "ctlplane network"| awk -F\| '{print $3}'| tr -d ' ')
 
   # Get a list of the IPs of all the controller nodes for later use
-  CONTROLLERS=$(nova list | grep overcloud-controller- | awk -F\| '{print $7}' | awk -F= '{print $2}')
+  CONTROLLERS=$(nova list | grep '\-controller-' | awk -F\| '{print $7}' | awk -F= '{print $2}')
 
   # Now switch to point the OpenStack commands at the overcloud
-  source ~/overcloudrc
+  STACK_NAME=$(heat stack-list | grep CREATE_ | awk -F\| '{print $3}' | tr -d ' ')
+  source ~/${STACK_NAME}rc
 
   info "### PCS Status "
   ssh heat-admin@$CONTROLLER 'sudo /usr/sbin/pcs status'
@@ -256,6 +254,7 @@ setup_glance(){
   info "### Setting up glance"""
 
   if [ ! -f ./cirros-0.3.3-x86_64-disk.img ]; then
+    sleep 5 #HACK: a timing issue exists on some stamps -- 5 seconds seems sufficient to fix it
     execute_command "wget http://download.cirros-cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img"
   else
     info "#----- Cirros image exists. Skipping"
@@ -281,9 +280,8 @@ setup_nova (){
   info "### Setup Nova"""
 
   info "creating keypair $KEY_NAME"
-  if [ ! -f ./MY_KEY.pem ]; then
-    file=MY_KEY.pem
-    nova keypair-add $KEY_NAME  > $file 
+  if [ ! -f "$KEY_FILE" ]; then
+    nova keypair-add $KEY_NAME  > "$KEY_FILE" 
   else
     info "#----- Key '$KEY_NAME' exists. Skipping"
   fi
@@ -498,9 +496,11 @@ then
     image_ids=$(glance image-list | grep $IMAGE_NAME | awk '{print $2}')
     [[ $image_ids ]] && echo $image_ids | xargs -n1 glance image-delete
 
-    info   "#### Deleting the security groups"
+    info   "#### Deleting the security groups and key_file"
     security_group_ids=$(neutron security-group-list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
     [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 neutron security-group-delete
+
+    rm -f $KEY_FILE
 
     info "### Deleting networks"
 

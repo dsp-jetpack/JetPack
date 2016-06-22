@@ -1,21 +1,36 @@
 #!/usr/bin/python
 
+# (c) 2016 Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from __future__ import absolute_import
 from __future__ import print_function
 
 import argparse
 from collections import namedtuple
+from exceptions import ValueError
 import json
 import logging
 import os.path
 import sys
-from time import sleep
 
+import dracclient.exceptions
+import dracclient.utils
 import netaddr
 import requests.packages
 
 import discover_nodes.dracclient.client as discover_nodes_dracclient
-from exceptions import ValueError
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being
 # made. See
@@ -73,6 +88,9 @@ LOG = CustomLoggerAdapter(logger, {})
 
 PROGRAM_NAME = os.path.splitext(os.path.basename(sys.argv[0]))[0]
 
+DCIM_iDRACCardView = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
+                      'DCIM_iDRACCardView')
+
 IDRAC_FACTORY_ADMIN_USER_CREDENTIALS = {
     'user_name': 'root',
     'password': 'calvin'}
@@ -81,17 +99,6 @@ IDRAC_FACTORY_ADMIN_USER_CREDENTIALS = {
 # (JSON).
 JSON_FORMAT_INDENT_LEVEL = 2
 JSON_FORMAT_SEPARATORS = (',', ': ')
-
-# Dictionary that maps integral link speeds in gigabits per second
-# (Gbps) to the textual representations returned by dracclient.
-LINK_SPEEDS = {
-    1: discover_nodes_dracclient.LINK_SPEED_1_GBPS,
-    10: discover_nodes_dracclient.LINK_SPEED_10_GBPS,
-    25: discover_nodes_dracclient.LINK_SPEED_25_GBPS,
-    40: discover_nodes_dracclient.LINK_SPEED_40_GBPS,
-    50: discover_nodes_dracclient.LINK_SPEED_50_GBPS,
-    100: discover_nodes_dracclient.LINK_SPEED_100_GBPS,
-}
 
 # Red Hat Enterprise Linux OpenStack Platform (OSP) Director node
 # definition template attributes. They are documented in "Red Hat
@@ -113,10 +120,10 @@ OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_PASSWORD = 'pm_password'
 OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_TYPE = 'pm_type'
 OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_USER = 'pm_user'
 
-OSPD_NODE_TEMPLATE_VALUE_MAC_USER_INTERVENTION_REQUIRED = \
-    'FIXME and rerun ' + PROGRAM_NAME
 OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IDRAC = 'pxe_drac'
 OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IPMI = 'pxe_ipmitool'
+OSPD_NODE_TEMPLATE_VALUE_USER_INTERVENTION_REQUIRED = \
+    'FIXME and rerun ' + PROGRAM_NAME
 
 
 class NotSupported(BaseException):
@@ -356,122 +363,202 @@ def scan(ip_set, user_name, password, provisioning_nics):
 def scan_one(scan_info):
     LOG.set_idrac_ip_address(scan_info.ip_address)
 
-    # Create client for talking to the iDRAC over the WS-Man protocol.
+    # Create client for managing a server's resources through its iDRAC.
+    # It interacts with the iDRAC using the Distributed Management Task
+    # Force, Inc.'s (DMTF) Web Services for Management (WS-Man)
+    # protocol. See the DMTF's "Web Services for Management
+    # (WS-Management) Specification"
+    # (http://www.dmtf.org/sites/default/files/standards/documents/DSP0226_1.2.0.pdf).
     client = discover_nodes_dracclient.DRACClient(scan_info.ip_address,
                                                   scan_info.user_name,
                                                   scan_info.password)
 
-    # The node is of interest only if it has an iDRAC. Ensure that the
-    # IP address is a WS-Man endpoint and an iDRAC.
-    if not has_idrac(client):
-        return None
-
     # Testing determined that Ironic introspection fails for a node
-    # definition template that does not contain the arch, cpu, disk, and
-    # memory attributes. This contradicts the documentation, which
-    # describes them as optional, as well as information received from
-    # Red Hat engineers that they are not needed. Empty string values
-    # for those attributes are sufficient.
+    # definition template that does not contain the 'arch', 'cpu',
+    # 'disk', and 'memory' attributes. This contradicts the
+    # documentation, which describes them as optional, as well as
+    # information received from Red Hat engineers that they are not
+    # needed. Empty string values for those attributes are sufficient.
     #
     # The documentation is identified at the beginning of this file.
+
+    # Initialize the values of the attributes.
+    architecture = ''
+    cpu = None
+    disk = None
+    mac = None
+    memory = None
+    pm_address = scan_info.ip_address
+    pm_password = scan_info.password
+    pm_type = OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IPMI
+    pm_user = scan_info.user_name
+
+    try:
+        # Determine if the IP address is a WS-Man endpoint and an iDRAC.
+        # If it is not, return None so that no entry is created for it
+        # in the node definition template.
+        if not is_idrac(client):
+            LOG.info('IP address is not an iDRAC')
+            return None
+    except dracclient.exceptions.WSManInvalidResponse:
+        # Most likely the user credentials are unauthorized.
+
+        # Log an error level message, along with the exception, because
+        # this is something that should be addressed and infrequently
+        # encountered.
+        LOG.exception('Could not determine if IP address is an iDRAC')
+
+        # Create an entry in the node definition template for this IP
+        # address that provides information about what needs to be
+        # fixed.
+        pm_user += ' '
+        pm_user += OSPD_NODE_TEMPLATE_VALUE_USER_INTERVENTION_REQUIRED
+
+        pm_password += ' '
+        pm_password += OSPD_NODE_TEMPLATE_VALUE_USER_INTERVENTION_REQUIRED
+    except Exception:
+        # Handle all other exceptions so that the remaining addresses
+        # can be scanned.
+
+        # Log an error level message, along with the exception, because
+        # this is something that should be addressed and infrequently
+        # encountered.
+        LOG.exception('Unexpected exception encountered while determining if'
+                      ' IP address is an iDRAC')
+
+        # Create an entry in the node definition template for this IP
+        # address that provides information about what needs to be
+        # fixed.
+        pm_address += ' '
+        pm_address += OSPD_NODE_TEMPLATE_VALUE_USER_INTERVENTION_REQUIRED
+    else:
+        # Obtain the values of the attributes. By contract, none of the
+        # following functions may raise an exception. None of them
+        # interact with the iDRAC.
+        cpu = get_cpu(client)
+        disk = get_disk(client)
+        mac = get_mac(client, scan_info.provisioning_nics)
+        memory = get_memory(client)
+
     kwargs = {
-        OSPD_NODE_TEMPLATE_ATTRIBUTE_ARCHITECTURE: '',
-        OSPD_NODE_TEMPLATE_ATTRIBUTE_CPU: '',
-        OSPD_NODE_TEMPLATE_ATTRIBUTE_DISK: '',
-        OSPD_NODE_TEMPLATE_ATTRIBUTE_MAC: [
-            get_mac(client, scan_info.provisioning_nics)],
-        OSPD_NODE_TEMPLATE_ATTRIBUTE_MEMORY: '',
-        OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_ADDR: scan_info.ip_address,
-        OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_PASSWORD: scan_info.password,
-        OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_TYPE:
-            OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IPMI,
-        OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_USER: scan_info.user_name,
+        OSPD_NODE_TEMPLATE_ATTRIBUTE_ARCHITECTURE: architecture,
+        OSPD_NODE_TEMPLATE_ATTRIBUTE_CPU: cpu,
+        OSPD_NODE_TEMPLATE_ATTRIBUTE_DISK: disk,
+        OSPD_NODE_TEMPLATE_ATTRIBUTE_MAC: mac,
+        OSPD_NODE_TEMPLATE_ATTRIBUTE_MEMORY: memory,
+        OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_ADDR: pm_address,
+        OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_PASSWORD: pm_password,
+        OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_TYPE: pm_type,
+        OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_USER: pm_user,
     }
     return NodeInfo(**kwargs)
 
 
 # TODO: CES-4471 Ensure IPv4 address is a WS-Man endpoint and iDRAC
-def has_idrac(client):
-    return True
+#
+#       When the Python python-dracclient package's simple WS-Man
+#       client, class dracclient.Client, which is implemented in
+#       dracclient/wsman.py, provides support for the WS-Man Identify
+#       operation, change this function to use it. See the Distributed
+#       Management Task Force, Inc.'s (DMTF) "Web Services for
+#       Management (WS-Management) Specification"
+#       (http://www.dmtf.org/sites/default/files/standards/documents/DSP0226_1.2.0.pdf),
+#       section 11, "Metadata and Discovery", for the specification of
+#       Identify.
+def is_idrac(client):
+    # This determines whether or not an IPv4 address is a WS-Man
+    # endpoint and iDRAC.
+    #
+    # The Dell Common Information Model's (DCIM) DCIM_iDRACCardView
+    # class is leveraged. That class is documented in the "iDRAC Card
+    # Profile"
+    # (http://en.community.dell.com/techcenter/extras/m/white_papers/20441091/download),
+    # which is part of the DCIM Extensions Library Profile Collection.
+    # The collection is available at
+    # http://en.community.dell.com/techcenter/systems-management/w/wiki/1906.dcim-library-profile.
+    #
+    # An instance of that class represents an iDRAC's information. This
+    # assumes that at most only one (1) instance can be obtained from a
+    # WS-Man service implementation that is an iDRAC. WS-Man's Enumerate
+    # operation is used to obtain it.
+    #
+    # This returns true if the Enumerate operation succeeds, the
+    # response contains an DCIM_iDRACCardView instance, the instance has
+    # a 'DeviceDescription' property, and the value of that property is
+    # 'iDRAC'; otherwise, false is returned.
+
+    # Squelch a couple of chatty libraries.
+    dracclient_wsman_logger = logging.getLogger('dracclient.wsman')
+    dracclient_wsman_logger.disabled = True
+    requests_logger = logging.getLogger(
+        'requests.packages.urllib3.connectionpool')
+    requests_logger.disabled = True
+
+    try:
+        doc = client.client.enumerate(DCIM_iDRACCardView)
+    except dracclient.exceptions.WSManInvalidResponse as e:
+        # Most likely the user credentials are unauthorized.
+
+        # Since it cannot be determined if the IP address is an iDRAC,
+        # re-raise the exception so the calling function can handle it.
+        raise
+    except dracclient.exceptions.WSManRequestFailure as e:
+        # Most likely the host does not exist, there is no route to it,
+        # or the connection was refused.
+
+        # Log a debug level message, because it is reasonable for this
+        # to be encountered when the user specifies IP address ranges or
+        # network addresses to scan on the command line. And a large
+        # number of them can occur.
+        LOG.debug(
+            '%(message)s; host is not reachable or connection refused' % {
+                'message': e.message})
+        # Consider the IP address to not be an iDRAC.
+        return False
+    except Exception as e:
+        # Since it cannot be determined if the IP address is an iDRAC,
+        # re-raise the exception so the calling function can handle it.
+        raise
+    finally:
+        # Ensure the libraries' loggers are re-enabled.
+        requests_logger.disabled = False
+        dracclient_wsman_logger.disabled = False
+
+    if doc is None:
+        return False
+
+    return dracclient.utils.get_wsman_resource_attr(
+        doc,
+        DCIM_iDRACCardView,
+        'DeviceDescription') == 'iDRAC'
+
+
+def get_cpu(client):
+    # An empty string value for the node definition template 'cpu's
+    # attribute is sufficient, because Ironic introspection determines
+    # its value and overwrites what is in the template.
+    return ''
+
+
+def get_disk(client):
+    # An empty string value for the node definition template 'disk'
+    # attribute is sufficient, because Ironic introspection determines
+    # its value and overwrites what is in the template.
+    return ''
 
 
 def get_mac(client, provisioning_nics):
-    # The provisioning network interface must be on an integrated
-    # network interface controller (NIC). Sort them so that they can be
-    # considered below in lexicographical order.
-    nics = client.list_integrated_nics(sort=True)
-
-    if len(nics) == 0:
-        LOG.warning('No integrated NIC found')
-        return None
-
-    provisioning_link_speed = LINK_SPEEDS[provisioning_nics]
-    nic_to_use = None
-
-    # Select the first interface whose link status is up and whose link
-    # speed equals that specified by 'provisioning_nics'.
-    for i, nic in enumerate(nics):
-        if not client.is_nic_link_up(nic.id):
-            if i == 0:
-                LOG.warning('Link status of first integrated NIC %s is not up',
-                            nic.id)
-            continue
-
-        if nic.link_speed != provisioning_link_speed:
-            if i == 0:
-                LOG.warning('Link speed of first integrated NIC %s is %s,'
-                            ' instead of %s',
-                            nic.id,
-                            nic.link_speed,
-                            provisioning_link_speed)
-            else:
-                LOG.info('Link speed of integrated NIC %s is %s, instead of'
-                         ' %s',
-                         nic.id,
-                         nic.link_speed,
-                         provisioning_link_speed)
-            continue
-
-        nic_to_use = nic
-        break
-
-    if nic_to_use is None:
-        LOG.warning('No integrated NIC with link speed %s found',
-                    provisioning_link_speed)
-        return OSPD_NODE_TEMPLATE_VALUE_MAC_USER_INTERVENTION_REQUIRED
-
-    # Ensure that the selected network interface is configured to PXE
-    # boot.
-    set_nic_to_pxe_boot(client, nic_to_use.id)
-
-    return nic_to_use.mac_address
+    # An empty list value for the node definition template 'mac'
+    # attribute is sufficient, because Ironic introspection determines
+    # its value and overwrites what is in the template.
+    return []
 
 
-def set_nic_to_pxe_boot(client, nic_id):
-    if client.is_nic_legacy_boot_protocol_pxe(nic_id):
-        return
-
-    result = client.set_nic_legacy_boot_protocol_pxe(nic_id)
-
-    if not result['commit_required']:
-        return
-
-    job_id = client.commit_pending_nic_changes(nic_id, reboot=True)
-    job_state = 'Unknown'
-
-    LOG.info('Waiting for job %s to finish', job_id)
-
-    # Poll for the job's final state.
-    while not (job_state == 'Completed' or
-               job_state == 'Completed with Errors' or
-               job_state == 'Failed'):
-        sleep(10)
-        job_state = client.get_job(job_id).state
-
-    if job_state == 'Completed':
-        LOG.info('Job %s successful with final state %s', job_id, job_state)
-    else:
-        LOG.error('Job %s unsuccessful with final state %s', job_id, job_state)
+def get_memory(client):
+    # An empty string value for the node definition template 'memory'
+    # attribute is sufficient, because Ironic introspection determines
+    # its value and overwrites what is in the template.
+    return ''
 
 
 if __name__ == '__main__':

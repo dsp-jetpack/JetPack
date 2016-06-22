@@ -1,5 +1,19 @@
 #!/usr/bin/python
 
+# (c) 2016 Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 import json
 import os
@@ -11,6 +25,7 @@ import ironicclient
 from dracclient import wsman, utils
 from subprocess import check_output
 from oslo_utils import units
+from credential_helper import CredentialHelper
 import requests
 from ironicclient.openstack.common.apiclient.exceptions import NotFound
 
@@ -33,63 +48,6 @@ ROLES = {
 }
 
 
-def get_openstack_creds():
-    creds_file = open(os.environ['HOME'] + '/stackrc', 'r')
-
-    for line in creds_file:
-        prefix = "export"
-        if line.startswith(prefix):
-            line = line[len(prefix):]
-
-        line = line.strip()
-        key, val = line.split('=', 2)
-        key = key.lower()
-
-        if key == 'os_username':
-            os_username = val
-        elif key == 'os_auth_url':
-            os_auth_url = val
-        elif key == 'os_tenant_name':
-            os_tenant_name = val
-
-    os_password = check_output(['sudo', 'hiera', 'admin_password']).strip()
-
-    return os_auth_url, os_tenant_name, os_username, os_password
-
-
-def get_drac_creds(ironic_client, node_uuid, instackenv_file):
-    # Get the DRAC IP, username, and password
-    node = ironic_client.node.get(node_uuid, ["driver_info"])
-    driver_info = node.driver_info
-
-    if "drac_host" in driver_info:
-        drac_ip = driver_info["drac_host"]
-        drac_user = driver_info["drac_username"]
-    else:
-        drac_ip = driver_info["ipmi_address"]
-        drac_user = driver_info["ipmi_username"]
-
-    # Can't get the password out of ironic, so dig it out of the
-    # instackenv.json file (or whatever is specified in --file)
-    drac_password = get_drac_password(drac_ip, instackenv_file)
-
-    return drac_ip, drac_user, drac_password
-
-
-def get_drac_password(ip, instackenv_file):
-    json_file = os.environ['HOME'] + '/' + instackenv_file
-    instackenv_json = open(json_file, 'r')
-    instackenv = json.load(instackenv_json)
-
-    nodes = instackenv["nodes"]
-
-    for node in nodes:
-        if node["pm_addr"] == ip:
-            return node["pm_password"]
-    print ("Node not found in {}. Use the --file argment to specify a json "
-           "file that contains the node data".format(json_file))
-    sys.exit()
-
 def get_fqdd(doc, namespace):
     return utils.find_xml(doc, 'FQDD', namespace).text
 
@@ -98,7 +56,7 @@ def get_size_in_bytes(doc, namespace):
     return utils.find_xml(doc, 'SizeInBytes', namespace).text
 
 
-def handle_r730xd_flex_bays(ironic_client, drac_client, node_uuid, debug):
+def select_os_disk(ironic_client, drac_client, node_uuid, debug):
     # Get the virtual disks
     virtual_disk_view_doc = drac_client.enumerate(DCIM_VirtualDiskView)
     virtual_disk_docs = utils.find_xml(virtual_disk_view_doc,
@@ -180,18 +138,22 @@ def handle_r730xd_flex_bays(ironic_client, drac_client, node_uuid, debug):
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("ip_or_mac", help="Either the IP address of the iDRAC, or the MAC address of the interface on the provisioning network")
+    parser.add_argument("ip_or_mac",
+                        help="Either the IP address of the iDRAC, or the MAC "
+                        "address of the interface on the provisioning network")
     parser.add_argument("role",
                         choices=["controller", "compute", "storage"],
                         help="The role that the node will play")
-    parser.add_argument("--file", help="name of json file containing the node being set", default="instackenv.json")
+    parser.add_argument("--file",
+                        help="Name of json file containing the node being set",
+                        default="instackenv.json")
     parser.add_argument("--debug", action='store_true', default=False)
     args = parser.parse_args()
 
     flavor = ROLES[args.role]
 
     os_auth_url, os_tenant_name, os_username, os_password = \
-        get_openstack_creds()
+        CredentialHelper.get_undercloud_creds()
 
     # Get the UUID of the node
     kwargs = {'os_username': os_username,
@@ -210,19 +172,14 @@ def main():
     else:
         nodes = ironic_client.node.list(fields=["uuid", "driver_info"])
         for node in nodes:
-            driver_info = node.driver_info
-
-            if "drac_host" in driver_info:
-                drac_ip = driver_info["drac_host"]
-            else:
-                drac_ip = driver_info["ipmi_address"]
+            drac_ip, drac_user = CredentialHelper.get_drac_ip_and_user(node)
 
             if drac_ip == args.ip_or_mac:
                 node_uuid = node.uuid
                 break
 
     if node_uuid is None:
-        print "Error:  Unable to find node {}".format( args.ip_or_mac )
+        print "Error:  Unable to find node {}".format(args.ip_or_mac)
         sys.exit(1)
 
     # Assign the role to the node
@@ -235,19 +192,17 @@ def main():
 
     # Are we assigning the storage role to this node?
     if args.role == "storage":
-        # Get the DRAC IP, username, and password
-        drac_ip, drac_user, drac_password = get_drac_creds(ironic_client,
-                                                           node_uuid,
-                                                           args.file)
-
         # Get the model of the server from the DRAC
+        drac_ip, drac_user, drac_password = \
+            CredentialHelper.get_drac_creds_from_node(node, args.file)
         drac_client = wsman.Client(drac_ip, drac_user, drac_password)
         doc = drac_client.enumerate(DCIM_SystemView)
         model = utils.find_xml(doc, 'Model', DCIM_SystemView).text
 
-        if model == "PowerEdge R730xd":
-            handle_r730xd_flex_bays(ironic_client, drac_client, node_uuid,
-                                    args.debug)
+        # Select the disk for the OS to be installed on.  Note that this
+        # is only necessary for storage nodes because the other node types
+        # are configured to have 1 huge volume created by the DTK.
+        select_os_disk(ironic_client, drac_client, node_uuid, args.debug)
 
 
 if __name__ == "__main__":
