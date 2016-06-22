@@ -40,25 +40,29 @@ parameter_defaults:
   # CHANGEME: Change the following to the CIDR for the External network
   ExternalNetCidr: 192.168.190.0/24
 
-  # CHANGEME: Change the following to the IP address range to use on the
+  # The allocation pools below are used to dynamically assign DHCP IP addresses
+  # to the various networks on the overcloud nodes as they are provisioned.  If
+  # using static IPs instead, see static-ip-environment.yaml.
+
+  # CHANGEME: Change the following to the DHCP range to use on the
   # Private API network
-  InternalApiAllocationPools: [{'start': '192.168.140.20', 'end': '192.168.140.200'}]
+  InternalApiAllocationPools: [{'start': '192.168.140.121', 'end': '192.168.140.250'}]
 
-  # CHANGEME: Change the following to the IP address range to use on the
+  # CHANGEME: Change the following to the DHCP range to use on the
   # Tenant network
-  TenantAllocationPools: [{'start': '192.168.130.20', 'end': '192.168.130.200'}]
+  TenantAllocationPools: [{'start': '192.168.130.121', 'end': '192.168.130.250'}]
 
-  # CHANGEME: Change the following to the IP address range to use on the
+  # CHANGEME: Change the following to the DHCP range to use on the
   # Storage network
-  StorageAllocationPools: [{'start': '192.168.170.20', 'end': '192.168.170.200'}]
+  StorageAllocationPools: [{'start': '192.168.170.121', 'end': '192.168.170.250'}]
 
-  # CHANGEME: Change the following to the IP address range to use on the
+  # CHANGEME: Change the following to the DHCP range to use on the
   # Storage Clustering network
-  StorageMgmtAllocationPools: [{'start': '192.168.180.20', 'end': '192.168.180.200'}]
+  StorageMgmtAllocationPools: [{'start': '192.168.180.121', 'end': '192.168.180.250'}]
 
-  # CHANGEME: Change the following to the IP address range to use on the
+  # CHANGEME: Change the following to the DHCP range to use on the
   # External network
-  ExternalAllocationPools: [{'start': '192.168.190.125', 'end': '192.168.190.224'}]
+  ExternalAllocationPools: [{'start': '192.168.190.121', 'end': '192.168.190.250'}]
 
   # CHANGEME: Set to the router gateway on the external network
   ExternalInterfaceDefaultRoute: 192.168.190.1
@@ -68,13 +72,13 @@ parameter_defaults:
   ProvisioningNetworkGateway: 192.168.120.1
 
   # CHANGEME: Set to the router gateway on the provisioning network (or Undercloud IP)
-  ControlPlaneDefaultRoute: 192.168.120.123
+  ControlPlaneDefaultRoute: 192.168.120.13
 
   # CHANGEME: Set to the CIDR of the control plane network
   ControlPlaneSubnetCidr: "24"
 
   # CHANGEME: Set to the IP address of the Undercloud
-  EC2MetadataIp: 192.168.120.123
+  EC2MetadataIp: 192.168.120.13
 
   # CHANGEME: Set to the DNS servers to use for the overcloud nodes (maximum 2)
   DnsServers: ["8.8.8.8", "8.8.4.4"]
