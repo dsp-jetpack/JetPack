@@ -1,9 +1,35 @@
+# (c) 2016 Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 resource_registry:
   OS::TripleO::Controller::Ports::ExternalPort: HOME/pilot/templates/overcloud/network/ports/external_from_pool.yaml
   OS::TripleO::Controller::Ports::InternalApiPort: HOME/pilot/templates/overcloud/network/ports/internal_api_from_pool.yaml
   OS::TripleO::Controller::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage_from_pool.yaml
   OS::TripleO::Controller::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
   OS::TripleO::Controller::Ports::TenantPort: HOME/pilot/templates/overcloud/network/ports/tenant_from_pool.yaml
+
+  OS::TripleO::Compute::Ports::ExternalPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
+  OS::TripleO::Compute::Ports::InternalApiPort: HOME/pilot/templates/overcloud/network/ports/internal_api_from_pool.yaml
+  OS::TripleO::Compute::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage_from_pool.yaml
+  OS::TripleO::Compute::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
+  OS::TripleO::Compute::Ports::TenantPort: HOME/pilot/templates/overcloud/network/ports/tenant_from_pool.yaml
+
+  OS::TripleO::CephStorage::Ports::ExternalPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
+  OS::TripleO::CephStorage::Ports::InternalApiPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
+  OS::TripleO::CephStorage::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage_from_pool.yaml
+  OS::TripleO::CephStorage::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/storage_mgmt_from_pool.yaml
+  OS::TripleO::CephStorage::Ports::TenantPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
 
 parameter_defaults:
   # Specify the IPs for the controllers on the indicated networks below.
@@ -40,3 +66,37 @@ parameter_defaults:
     - 192.168.130.10
     - 192.168.130.11
     - 192.168.130.12
+
+  NovaComputeIPs:
+    # CHANGEME: Change the following to the IPs for the computes on the
+    # Private API network
+    internal_api:
+    - 192.168.140.20
+    - 192.168.140.21
+    - 192.168.140.22
+    # CHANGEME: Change the following to the IPs for the computes on the
+    # Storage network
+    storage:
+    - 192.168.170.20
+    - 192.168.170.21
+    - 192.168.170.22
+    # CHANGEME: Change the following IPs to the IPs for the computes on the
+    # Tenant network
+    tenant:
+    - 192.168.130.20
+    - 192.168.130.21
+    - 192.168.130.22
+
+  CephStorageIPs:
+    # CHANGEME: Change the following to the IPs for the ceph storage nodes on
+    # the Storage network
+    storage:
+    - 192.168.170.50
+    - 192.168.170.51
+    - 192.168.170.52
+    # CHANGEME: Change the following to the IPs for the ceph storage nodes on
+    # the # Storage Clustering network
+    storage_mgmt:
+    - 192.168.180.50
+    - 192.168.180.51
+    - 192.168.180.52
