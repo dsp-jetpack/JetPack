@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # (c) 2015-2016 Dell
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -105,17 +104,6 @@ end(){
   fi
 }
 
-
-subscription_manager() {
-	info "### Register with Subscription manager and Yum update ###"
-
-	subscription-manager repos --list
-
-	subscription-manager register --username $subscription_username --password $subscription_password
-
-	# the pool id out to a parameter
-	subscription-manager attach --pool=$pool_id
-}
 
 os_update() {
 	yum -y update
@@ -236,18 +224,13 @@ python_setup(){
 
 	yum groupinstall -y "Development Tools"
 	yum groupinstall -y "Development Libraries"
-	yum install -y python-devel
-	#yum install -y pip 
+	yum install -y gcc libffi-devel python-devel openssl-devel python-setuptools
 
 	#You need to install a few extra modules, to do this run the following commands in a command prompt :
 
 	easy_install decorator
 	easy_install paramiko
-	easy_install pysphere
-	easy_install pyyaml
-	easy_install wxpython 
 	easy_install selenium
-	easy_install cm_api
 
 	### Setup PATHs
 
@@ -265,7 +248,7 @@ python_setup(){
 	if [ $? -eq 0 ]; then
 	  echo 'export PATH=$PATH:~/deploy-auto' >> ~/.bashrc
 	fi	
-       
+        . ~/.bashrc 
 
 	info "After: PYTHONPATH = $PYTHONPATH"
 	info "After: PATH = $PATH"
@@ -292,17 +275,9 @@ file_setup(){
 	mkdir /var/www/html/RH7
 	cd /var/www/html/RH7
 
-	# are we in Nashua ? if so go grab the iso's somewhere local
-	ip_add=$(ip addr show)
-	
 	#paramterized
 	if [ ! -s /var/www/html/RH7/$rhel72_iso_file ]; then
-	    if [[ $ip_add == *10.152* ]]
-			then
-				wget --no-check-certificate --user "mht1\Script_User" --password "New2Day!" -O $rhel72_iso_file "https://10.152.248.11/folder/ISOs/rhel-server-7.2-x86_64-dvd.iso?dcPath=Cloud%2520Bastion%2520Physical%2520Stamps&dsName=Data2%252dStorage" -O $rhel72_iso_file
-		else
 			wget $rhel72_iso -O $rhel72_iso_file
-		fi
 	else
 		echo "File Already exists $rhel72_iso_file" 
 	fi
@@ -349,8 +324,6 @@ info "###Setting up Nics - TODO ###"
 read_config
 
 init
-### Register with subscription manager
-subscription_manager
 
 #Commented out as gnome installation fails on RHEL7
 #os_update 
