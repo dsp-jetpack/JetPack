@@ -47,12 +47,14 @@ mkdir -p $dest
 mk_bundle() {
   local archive_name=$1
   shift
+  local root_dir=$2
+  shift
   local src_dirs="$@"
 
   local target_root_dir="$dest/stage"
-  local target_dir="$target_root_dir/pilot"
+  local target_dir="$target_root_dir/$root_dir"
 
-  echo "Creating $(echo $src_dirs|awk '{print $2}') node bundles"
+  echo "Creating $(echo $src_dirs|awk '{print $1}') node bundles"
   mkdir -p ${target_dir}
   cp LICENSE ${target_dir}
   for src_dir in ${src_dirs}; do
@@ -63,14 +65,16 @@ mk_bundle() {
   fi
   done
   (cd $target_dir; sha256sum * >${target_dir}/${checksum_file})
-  (cd $target_root_dir; tar zcvf $dest/${archive_name}.tgz pilot; zip -r $dest/${archive_name} pilot)
+  (cd $target_root_dir; tar zcvf $dest/${archive_name}.tgz $root_dir; zip -r $dest/${archive_name} $root_dir)
   rm -rf ${target_root_dir}
 }
 
 
 # make bundles
-mk_bundle dell-mgmt-node mgmt ceph_vm.vlock director_vm.vlock
-mk_bundle dell-pilot-deploy pilot common controller.vlock compute.vlock ceph.vlock
+# mk_bundle <tar-file-name> <tar-root-dir-name> <src-dirs> <vlock-files>
+mk_bundle dell-mgmt-node pilot mgmt ceph_vm.vlock director_vm.vlock
+mk_bundle dell-pilot-deploy pilot pilot 
+mk_bundle midonet_pilot midonet midonet
 
 # checksum the base directory files
 (cd $dest; sha256sum * > ${checksum_file})
