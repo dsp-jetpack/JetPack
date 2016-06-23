@@ -190,10 +190,15 @@ class DeployerSanity():
         for controller in self.settings.controller_nodes:
             shouldhaveattributes = ['hostname', 'idrac_ip',
                                     'provisioning_mac_address']
+            shouldbbevalidips = ['idrac_ip']
+	    if self.settings.overcloud_static_ips is True:
+	        shouldhaveattributes.extend(["public_api_ip","private_api_ip",
+				           "storage_ip", "storage_cluster_ip", "tenant_ip"])
+	        shouldbbevalidips.extend(["public_api_ip","private_api_ip",
+                                           "storage_ip", "storage_cluster_ip", "tenant_ip"])
             for each in shouldhaveattributes:
                 assert hasattr(controller, each), \
                     controller.hostname + " node has no " + each + " attribute"
-                shouldbbevalidips = ['idrac_ip']
             for each in shouldbbevalidips:
                 assert self.is_valid_ip(
                     getattr(controller, each)), \
@@ -205,6 +210,10 @@ class DeployerSanity():
         for compute in self.settings.compute_nodes:
             shouldhaveattributes = ['hostname', 'idrac_ip',
                                     'provisioning_mac_address']
+	    shouldbbevalidips = ['idrac_ip']
+            if self.settings.overcloud_static_ips is True:
+                shouldhaveattributes.extend(["private_api_ip", "storage_ip", "tenant_ip"])
+                shouldbbevalidips.extend(["private_api_ip", "storage_ip", "tenant_ip"])
             for each in shouldhaveattributes:
                 assert hasattr(compute, each), \
                     compute.hostname + \
@@ -221,11 +230,14 @@ class DeployerSanity():
         for storage in self.settings.ceph_nodes:
             shouldhaveattributes = ['hostname', 'idrac_ip',
                                     'provisioning_mac_address', 'osd_disks']
+	    shouldbbevalidips = ['idrac_ip', ]
+	    if self.settings.overcloud_static_ips is True:
+                shouldhaveattributes.extend(["storage_ip", "storage_cluster_ip"])
+                shouldbbevalidips.extend(["storage_ip", "storage_cluster_ip"])
             for each in shouldhaveattributes:
                 assert hasattr(storage, each),\
                     storage.hostname +\
                     " node has no " + each + " attribute"
-                shouldbbevalidips = ['idrac_ip', ]
             for each in shouldbbevalidips:
                 assert self.is_valid_ip(
                     getattr(storage, each)),\

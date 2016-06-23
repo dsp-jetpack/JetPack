@@ -558,6 +558,7 @@ class Director(InfraHost):
         storage_yaml = self.nic_configs_dir + "/ceph-storage.yaml"
         compute_yaml = self.nic_configs_dir + "/compute.yaml"
         controller_yaml = self.nic_configs_dir + "/controller.yaml"
+        static_ips_yaml = self.templates_dir + "/static-ip-environment.yaml"
 
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy
@@ -569,6 +570,7 @@ class Director(InfraHost):
         self.upload_file(self.settings.compute_yaml, compute_yaml)
         self.upload_file(self.settings.controller_yaml,
                          controller_yaml)
+        self.upload_file(self.settings.static_ips_yaml, static_ips_yaml)
 
         cmds = [
             'sed -i "s|ControlPlaneDefaultRoute:.*|' +
@@ -638,6 +640,14 @@ class Director(InfraHost):
             self.settings.storage_cluster_vlanid + '|" ' + network_yaml,
             'sed -i "s|ExternalNetworkVlanID:.*|ExternalNetworkVlanID: ' +
             self.settings.public_api_vlanid + '|" ' + network_yaml,
+
+	    'sed -i "s|TenantNetCidr:.*|TenantNetCidr: ' +
+            self.settings.tenant_network + '|" ' + network_yaml,
+	    'sed -i "s|TenantAllocationPools:.*|TenantAllocationPools: ' +
+            "[{'start': '" + self.settings.tenant_network_allocation_pool_start +
+            "', 'end': '" +
+            self.settings.tenant_network_allocation_pool_end + "'}]"   '|" ' +
+            network_yaml,
         ]
         for cmd in cmds:
             self.run_tty(cmd)
@@ -738,6 +748,52 @@ class Director(InfraHost):
                 ]
         for cmd in cmds:
             self.run_tty(cmd)
+        
+        if self.settings.overcloud_static_ips is True:
+	        logger.debug("Updating static_ips yaml for the overcloud nodes")
+        	#static_ips_yaml
+
+	        control_external_ips = ''
+        	control_private_ips = ''
+	        control_storage_ips = ''
+        	control_storage_cluster_ips = ''
+		control_tenant_ips = ''
+		for node in self.settings.controller_nodes:
+		    control_external_ips +=  "    - " + node.public_api_ip + "\\n"
+	            control_private_ips +=  "    - " + node.private_api_ip + "\\n"
+        	    control_storage_ips +=  "    - " + node.storage_ip + "\\n"
+	            control_storage_cluster_ips += "    - " + node.storage_cluster_ip + "\\n"
+		    control_tenant_ips += "    - " + node.tenant_ip + "\\n"
+
+                compute_tenant_ips = ''
+                compute_private_ips = ''
+                compute_storage_ips = ''
+		for node in self.settings.compute_nodes:
+			compute_tenant_ips += "    - " + node.tenant_ip + "\\n"
+			compute_private_ips += "    - " + node.private_api_ip + "\\n"
+			compute_storage_ips += "    - " + node.storage_ip + "\\n"
+
+		storage_storgage_ip = ''
+		storage_cluster_ip = ''
+		for node in self.settings.ceph_nodes:
+			storage_storgage_ip += "    - " + node.storage_ip + "\\n"
+			storage_cluster_ip += "    - "  + node.storage_cluster_ip + "\\n"
+
+
+        	cmds = [ 'sed -i "/192.168/d" '+ static_ips_yaml,
+		       'sed -i "/ControllerIPs/,/NovaComputeIPs/ s/tenant:/tenant: \\n'+ control_tenant_ips+"/\" " +static_ips_yaml,
+                       'sed -i "/ControllerIPs/,/NovaComputeIPs/ s/external:/external: \\n'+ control_external_ips+"/\" " +static_ips_yaml,
+                       'sed -i "/ControllerIPs/,/NovaComputeIPs/ s/internal_api:/internal_api: \\n'+ control_private_ips+"/\" " +static_ips_yaml,
+                       'sed -i "/ControllerIPs/,/NovaComputeIPs/ s/storage:/storage: \\n'+ control_storage_ips+"/\" " +static_ips_yaml,
+                       'sed -i "/ControllerIPs/,/NovaComputeIPs/ s/storage_mgmt:/storage_mgmt: \\n'+ control_storage_cluster_ips+"/\" " +static_ips_yaml,
+		       'sed -i "/NovaComputeIPs/,/CephStorageIPs/ s/tenant:/tenant: \\n'+ compute_tenant_ips +"/\" " +static_ips_yaml,
+		       'sed -i "/NovaComputeIPs/,/CephStorageIPs/ s/internal_api:/internal_api: \\n'+ compute_private_ips +"/\" " +static_ips_yaml,
+		       'sed -i "/NovaComputeIPs/,/CephStorageIPs/ s/storage:/storage: \\n'+ compute_storage_ips +"/\" " +static_ips_yaml,	
+		       'sed -i "/CephStorageIPs/,/$p/ s/storage:/storage: \\n'+ storage_storgage_ip +"/\" " +static_ips_yaml,
+		       'sed -i "/CephStorageIPs/,/$p/ s/storage_mgmt:/storage_mgmt: \\n'+ storage_cluster_ip +"/\" " +static_ips_yaml
+                       ]
+        for cmd in cmds:
+            self.run_tty(cmd)    
 
     def deploy_overcloud(self):
 
@@ -763,9 +819,10 @@ class Director(InfraHost):
                    + self.settings.overcloud_deploy_timeout
         if self.settings.enable_eqlx_backend is True:
             cmd += " --enable_eqlx"
-
         if self.settings.enable_dellsc_backend is True:
             cmd += " --enable_dellsc"
+        if self.settings.overcloud_static_ips is True:
+            cmd += "  --static_ips"
 	
 	cmd += " > overcloud_deploy_out.log"
         
