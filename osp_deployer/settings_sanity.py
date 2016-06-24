@@ -132,18 +132,18 @@ class DeployerSanity():
 	# Verify the dhcp ranges defined in the ini don't overlap with static ips
 	# defined in the .properties
 
-	# public_api network allocation pool
-	start = self.settings.public_api_allocation_pool_start.split(".")[-1] 
-	end = self.settings.public_api_allocation_pool_end.split(".")[-1]
-	for each in self.settings.nodes:
+        # public_api network allocation pool
+        start = self.settings.public_api_allocation_pool_start.split(".")[-1] 
+        end = self.settings.public_api_allocation_pool_end.split(".")[-1]
+        for each in self.settings.nodes:
 	    if hasattr(each, 'public_api_ip'):
 	        ip = each.public_api_ip.split(".")[-1]
 	    	if int(start) < int(ip) < int(end):
 		    raise AssertionError(each.public_api_ip + " in .properties is in" \
 				   "the public api allocation pool range definied in the .ini")
 
-	# private_api network allocation pool
-	start = self.settings.private_api_allocation_pool_start.split(".")[-1]
+        # private_api network allocation pool
+        start = self.settings.private_api_allocation_pool_start.split(".")[-1]
         end = self.settings.private_api_allocation_pool_end.split(".")[-1]
         for each in self.settings.nodes:
             if hasattr(each, 'private_api_ip'):
@@ -152,8 +152,8 @@ class DeployerSanity():
                     raise AssertionError(each.private_api_ip + " in .properties is in" \
                                    "the private api allocation pool range definied in the .ini")
 
-	# storage_network allocation pool
-	start = self.settings.storage_allocation_pool_start.split(".")[-1]
+        # storage_network allocation pool
+        start = self.settings.storage_allocation_pool_start.split(".")[-1]
         end = self.settings.storage_allocation_pool_end.split(".")[-1]
         for each in self.settings.nodes:
             if hasattr(each, 'storage_ip'):
@@ -162,8 +162,8 @@ class DeployerSanity():
                     raise AssertionError(each.storage_ip + " in .properties is in" \
                                    "the storage allocation pool range definied in the .ini")
 
-	# provisioning network allocation pool
-	start = self.settings.provisioning_net_dhcp_start.split(".")[-1]
+        # provisioning network allocation pool
+        start = self.settings.provisioning_net_dhcp_start.split(".")[-1]
         end = self.settings.provisioning_net_dhcp_end.split(".")[-1]
         for each in self.settings.nodes:
             if hasattr(each, 'provisioning_ip'):
@@ -172,8 +172,8 @@ class DeployerSanity():
                     raise AssertionError(each.provisioning_ip + " in .properties is in" \
                                    "the privioning dhcp  allocation pool range definied in the .ini")	
 
-	# discovery_ip_range (provisioning network)
-	start = self.settings.discovery_ip_range.split(",")[0].split(".")[-1]
+        # discovery_ip_range (provisioning network)
+        start = self.settings.discovery_ip_range.split(",")[0].split(".")[-1]
         end = self.settings.discovery_ip_range.split(",")[1].split(".")[-1]
         for each in self.settings.nodes:
             if hasattr(each, 'provisioning_ip'):
@@ -182,8 +182,8 @@ class DeployerSanity():
                     raise AssertionError(each.provisioning_ip + " in .properties is in" \
                                    "the discovery ip range definied in the .ini")
 
-	# storage cluster allocation pool
-	start = self.settings.storage_cluster_allocation_pool_start.split(".")[-1]
+        # storage cluster allocation pool
+        start = self.settings.storage_cluster_allocation_pool_start.split(".")[-1]
         end = self.settings.storage_cluster_allocation_pool_end.split(".")[-1]
         for each in self.settings.nodes:
             if hasattr(each, 'storage_cluster_ip'):
