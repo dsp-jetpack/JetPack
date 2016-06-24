@@ -138,7 +138,7 @@ class DeployerSanity():
         for each in self.settings.nodes:
 	    if hasattr(each, 'public_api_ip'):
 	        ip = each.public_api_ip.split(".")[-1]
-	    	if int(start) < int(ip) < int(end):
+	    	if int(start) <= int(ip) <= int(end):
 		    raise AssertionError(each.public_api_ip + " in .properties is in" \
 				   "the public api allocation pool range definied in the .ini")
 
@@ -148,7 +148,7 @@ class DeployerSanity():
         for each in self.settings.nodes:
             if hasattr(each, 'private_api_ip'):
                 ip = each.private_api_ip.split(".")[-1]
-                if int(start) < int(ip) < int(end):
+                if int(start) <= int(ip) <= int(end):
                     raise AssertionError(each.private_api_ip + " in .properties is in" \
                                    "the private api allocation pool range definied in the .ini")
 
@@ -158,7 +158,7 @@ class DeployerSanity():
         for each in self.settings.nodes:
             if hasattr(each, 'storage_ip'):
                 ip = each.storage_ip.split(".")[-1]
-                if int(start) < int(ip) < int(end):
+                if int(start) <= int(ip) <= int(end):
                     raise AssertionError(each.storage_ip + " in .properties is in" \
                                    "the storage allocation pool range definied in the .ini")
 
@@ -168,7 +168,7 @@ class DeployerSanity():
         for each in self.settings.nodes:
             if hasattr(each, 'provisioning_ip'):
                 ip = each.provisioning_ip.split(".")[-1]
-                if int(start) < int(ip) < int(end):
+                if int(start) <= int(ip) <= int(end):
                     raise AssertionError(each.provisioning_ip + " in .properties is in" \
                                    "the privioning dhcp  allocation pool range definied in the .ini")	
 
@@ -178,7 +178,7 @@ class DeployerSanity():
         for each in self.settings.nodes:
             if hasattr(each, 'provisioning_ip'):
                 ip = each.provisioning_ip.split(".")[-1]
-                if int(start) < int(ip) < int(end):
+                if int(start) <= int(ip) <= int(end):
                     raise AssertionError(each.provisioning_ip + " in .properties is in" \
                                    "the discovery ip range definied in the .ini")
 
@@ -188,7 +188,7 @@ class DeployerSanity():
         for each in self.settings.nodes:
             if hasattr(each, 'storage_cluster_ip'):
                 ip = each.storage_cluster_ip.split(".")[-1]
-                if int(start) < int(ip) < int(end):
+                if int(start) <= int(ip) <= int(end):
                     raise AssertionError(each.storage_cluster_ip + " in .properties is in" \
                                    "the storage cluster allocation pool range definied in the .ini")
 
