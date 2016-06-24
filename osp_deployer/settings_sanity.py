@@ -127,10 +127,74 @@ class DeployerSanity():
                     node.hostname + " :: " + ipmi_session.get_power_state())
             except:
                 raise AssertionError("Could not impi to host " + node.hostname)
+    
+    def check_network_overlaps(self):
+	# Verify the dhcp ranges defined in the ini don't overlap with static ips
+	# defined in the .properties
+
+        # public_api network allocation pool
+        start = self.settings.public_api_allocation_pool_start.split(".")[-1] 
+        end = self.settings.public_api_allocation_pool_end.split(".")[-1]
+        for each in self.settings.nodes:
+	    if hasattr(each, 'public_api_ip'):
+	        ip = each.public_api_ip.split(".")[-1]
+	    	if int(start) < int(ip) < int(end):
+		    raise AssertionError(each.public_api_ip + " in .properties is in" \
+				   "the public api allocation pool range definied in the .ini")
+
+        # private_api network allocation pool
+        start = self.settings.private_api_allocation_pool_start.split(".")[-1]
+        end = self.settings.private_api_allocation_pool_end.split(".")[-1]
+        for each in self.settings.nodes:
+            if hasattr(each, 'private_api_ip'):
+                ip = each.private_api_ip.split(".")[-1]
+                if int(start) < int(ip) < int(end):
+                    raise AssertionError(each.private_api_ip + " in .properties is in" \
+                                   "the private api allocation pool range definied in the .ini")
+
+        # storage_network allocation pool
+        start = self.settings.storage_allocation_pool_start.split(".")[-1]
+        end = self.settings.storage_allocation_pool_end.split(".")[-1]
+        for each in self.settings.nodes:
+            if hasattr(each, 'storage_ip'):
+                ip = each.storage_ip.split(".")[-1]
+                if int(start) < int(ip) < int(end):
+                    raise AssertionError(each.storage_ip + " in .properties is in" \
+                                   "the storage allocation pool range definied in the .ini")
+
+        # provisioning network allocation pool
+        start = self.settings.provisioning_net_dhcp_start.split(".")[-1]
+        end = self.settings.provisioning_net_dhcp_end.split(".")[-1]
+        for each in self.settings.nodes:
+            if hasattr(each, 'provisioning_ip'):
+                ip = each.provisioning_ip.split(".")[-1]
+                if int(start) < int(ip) < int(end):
+                    raise AssertionError(each.provisioning_ip + " in .properties is in" \
+                                   "the privioning dhcp  allocation pool range definied in the .ini")	
+
+        # discovery_ip_range (provisioning network)
+        start = self.settings.discovery_ip_range.split(",")[0].split(".")[-1]
+        end = self.settings.discovery_ip_range.split(",")[1].split(".")[-1]
+        for each in self.settings.nodes:
+            if hasattr(each, 'provisioning_ip'):
+                ip = each.provisioning_ip.split(".")[-1]
+                if int(start) < int(ip) < int(end):
+                    raise AssertionError(each.provisioning_ip + " in .properties is in" \
+                                   "the discovery ip range definied in the .ini")
+
+        # storage cluster allocation pool
+        start = self.settings.storage_cluster_allocation_pool_start.split(".")[-1]
+        end = self.settings.storage_cluster_allocation_pool_end.split(".")[-1]
+        for each in self.settings.nodes:
+            if hasattr(each, 'storage_cluster_ip'):
+                ip = each.storage_cluster_ip.split(".")[-1]
+                if int(start) < int(ip) < int(end):
+                    raise AssertionError(each.storage_cluster_ip + " in .properties is in" \
+                                   "the storage cluster allocation pool range definied in the .ini")
+
+
 
     def check_network_settings(self):
-        #
-
         # Verify SAH node network definition
         logger.debug("verifying sah network settings")
         shouldhaveattributes = ['hostname', 'idrac_ip', 'root_password',
@@ -190,10 +254,15 @@ class DeployerSanity():
         for controller in self.settings.controller_nodes:
             shouldhaveattributes = ['hostname', 'idrac_ip',
                                     'provisioning_mac_address']
+            shouldbbevalidips = ['idrac_ip']
+	    if self.settings.overcloud_static_ips is True:
+	        shouldhaveattributes.extend(["public_api_ip","private_api_ip",
+				           "storage_ip", "storage_cluster_ip", "tenant_ip"])
+	        shouldbbevalidips.extend(["public_api_ip","private_api_ip",
+                                           "storage_ip", "storage_cluster_ip", "tenant_ip"])
             for each in shouldhaveattributes:
                 assert hasattr(controller, each), \
                     controller.hostname + " node has no " + each + " attribute"
-                shouldbbevalidips = ['idrac_ip']
             for each in shouldbbevalidips:
                 assert self.is_valid_ip(
                     getattr(controller, each)), \
@@ -205,6 +274,10 @@ class DeployerSanity():
         for compute in self.settings.compute_nodes:
             shouldhaveattributes = ['hostname', 'idrac_ip',
                                     'provisioning_mac_address']
+	    shouldbbevalidips = ['idrac_ip']
+            if self.settings.overcloud_static_ips is True:
+                shouldhaveattributes.extend(["private_api_ip", "storage_ip", "tenant_ip"])
+                shouldbbevalidips.extend(["private_api_ip", "storage_ip", "tenant_ip"])
             for each in shouldhaveattributes:
                 assert hasattr(compute, each), \
                     compute.hostname + \
@@ -221,11 +294,14 @@ class DeployerSanity():
         for storage in self.settings.ceph_nodes:
             shouldhaveattributes = ['hostname', 'idrac_ip',
                                     'provisioning_mac_address', 'osd_disks']
+	    shouldbbevalidips = ['idrac_ip', ]
+	    if self.settings.overcloud_static_ips is True:
+                shouldhaveattributes.extend(["storage_ip", "storage_cluster_ip"])
+                shouldbbevalidips.extend(["storage_ip", "storage_cluster_ip"])
             for each in shouldhaveattributes:
                 assert hasattr(storage, each),\
                     storage.hostname +\
                     " node has no " + each + " attribute"
-                shouldbbevalidips = ['idrac_ip', ]
             for each in shouldbbevalidips:
                 assert self.is_valid_ip(
                     getattr(storage, each)),\

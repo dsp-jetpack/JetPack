@@ -91,6 +91,9 @@ class Settings():
             'provisioning_net_dhcp_end']
         self.discovery_ip_range = cluster[
             'discovery_ip_range']
+	self.tenant_network = cluster['tenant_network']
+	self.tenant_network_allocation_pool_start = cluster['tenant_network_allocation_pool_start']
+	self.tenant_network_allocation_pool_end = cluster['tenant_network_allocation_pool_end']
         self.tenant_vlan_range = cluster['tenant_vlan_range']
         self.director_install_account_user = cluster[
             'director_install_user']
@@ -159,6 +162,10 @@ class Settings():
                 self.internal_repos_urls.append(each)
         else:
             self.internal_repos = False
+        if cluster['overcloud_static_ips'].lower() == 'true':
+            self.overcloud_static_ips = True
+        else:
+            self.overcloud_static_ips = False
         if cluster['enable_version_locking'].lower() == 'true':
             self.version_locking_enabled = True
         else:
@@ -299,8 +306,8 @@ class Settings():
             '/pilot/templates/nic-configs/ceph-storage.yaml'
         self.compute_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/nic-configs/compute.yaml'
-        self.controller_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/nic-configs/controller.yaml'
+        self.static_ips_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/static-ip-environment.yaml'
         self.controller_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/nic-configs/controller.yaml'
         self.ipxe_rpm = self.foreman_configuration_scripts + \
@@ -311,6 +318,7 @@ class Settings():
         self.compute_nodes = []
         self.ceph_nodes = []
         self.switches = []
+	self.nodes = []
 
         with open(self.network_conf) as config_file:
             json_data = json.load(config_file)
@@ -356,7 +364,8 @@ class Settings():
                     if node.is_switch == "true":
                         self.switches.append(node)
                 except AttributeError:
-                    pass
+		    self.nodes.append(node)
+		    pass
 
         Settings.settings = self
 
