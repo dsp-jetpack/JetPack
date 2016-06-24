@@ -318,6 +318,7 @@ class Settings():
         self.compute_nodes = []
         self.ceph_nodes = []
         self.switches = []
+	self.nodes = []
 
         with open(self.network_conf) as config_file:
             json_data = json.load(config_file)
@@ -363,7 +364,8 @@ class Settings():
                     if node.is_switch == "true":
                         self.switches.append(node)
                 except AttributeError:
-                    pass
+		    self.nodes.append(node)
+		    pass
 
         Settings.settings = self
 

@@ -31,6 +31,7 @@ class Checkpoints():
         checks.check_network_settings()
         checks.check_files()
         checks.check_ipmi_to_nodes()
+        check.check_network_overlaps()
 
     @staticmethod
     def verify_subscription_status(external_ip, user, password, retries):
