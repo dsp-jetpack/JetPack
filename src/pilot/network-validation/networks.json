@@ -1,184 +1,56 @@
 {
-  "sah": {
-    "user": "root",
     "networks": {
-      "provisioning": {
-         "ip": "192.168.120.122"
-      },
-      "private_api": {
-         "ip": "192.168.140.122"
-      },
-      "storage": {
-         "ip": "192.168.170.122"
-      },
-      "public_api": {
-         "ip": "192.168.190.122"
-      },
-      "external": {
-         "ip": "10.148.44.122"
-      }
+        "external": "10.148.44.0/24"
+    },
+    "flavors_to_networks": {
+        "control": [
+            "provisioning",
+            "private_api",
+            "storage",
+            "public_api"
+        ],
+        "compute": [
+            "provisioning",
+            "private_api",
+            "storage"
+        ],
+        "ceph-storage": [
+            "provisioning",
+            "storage",
+            "storage_clustering"
+        ]
+    },
+    "nodes": {
+        "sah": {
+            "user": "root",
+            "ip" : "192.168.120.122",
+            "networks": [
+                "provisioning",
+                "management",
+                "private_api",
+                "storage",
+                "public_api",
+                "external"
+            ]
+        },
+        "director_vm": {
+            "user": "stack",
+            "ip" : "192.168.120.123",
+            "networks": [
+                "provisioning",
+                "management",
+                "private_api",
+                "public_api",
+                "external"
+            ]
+        },
+        "ceph_vm": {
+            "user": "root",
+            "ip" : "10.148.44.124",
+            "networks": [
+                "external",
+                "storage"
+            ]
+        }
     }
-  },
-  "director_vm": {
-    "networks": {
-      "provisioning": {
-         "ip": "192.168.120.123"
-      },
-      "private_api": {
-         "ip": "192.168.140.123"
-      },
-      "public_api": {
-         "ip": "192.168.190.123"
-      },
-      "external": {
-         "ip": "10.148.44.123"
-      }
-    }
-  },
-  "ceph_vm": {
-    "user": "root",
-    "networks": {
-      "storage": {
-         "ip": "192.168.170.124"
-      },
-      "external": {
-         "ip": "10.148.44.124"
-      }
-    }
-  },
-  "overcloud-controller-0.localdomain": {
-    "user": "heat-admin",
-    "networks": {
-      "provisioning": {
-         "ip": "192.168.120.125"
-      },
-      "private_api": {
-         "ip": "192.168.140.125"
-      },
-      "storage": {
-         "ip": "192.168.170.125"
-      },
-      "public_api": {
-         "ip": "192.168.190.125"
-      }
-    }
-  },
-  "overcloud-controller-1.localdomain": {
-    "user": "heat-admin",
-    "networks": {
-      "provisioning": {
-         "ip": "192.168.120.126"
-      },
-      "private_api": {
-         "ip": "192.168.140.126"
-      },
-      "storage": {
-         "ip": "192.168.170.126"
-      },
-      "public_api": {
-         "ip": "192.168.190.126"
-      }
-    }
-  },
-  "overcloud-controller-2.localdomain": {
-    "user": "heat-admin",
-    "networks": {
-      "provisioning": {
-         "ip": "192.168.120.127"
-      },
-      "private_api": {
-         "ip": "192.168.140.127"
-      },
-      "storage": {
-         "ip": "192.168.170.127"
-      },
-      "public_api": {
-         "ip": "192.168.190.127"
-      }
-    }
-  },
-  "overcloud-novacompute-0.localdomain": {
-    "user": "heat-admin",
-    "networks": {
-      "provisioning": {
-         "ip": "192.168.120.128"
-      },
-      "private_api": {
-         "ip": "192.168.140.128"
-      },
-      "storage": {
-         "ip": "192.168.170.128"
-      }
-    }
-  },
-  "overcloud-novacompute-1.localdomain": {
-    "user": "heat-admin",
-    "networks": {
-      "provisioning": {
-         "ip": "192.168.120.129"
-      },
-      "private_api": {
-         "ip": "192.168.140.129"
-      },
-      "storage": {
-         "ip": "192.168.170.129"
-      }
-    }
-  },
-  "overcloud-novacompute-2.localdomain": {
-    "user": "heat-admin",
-    "networks": {
-      "provisioning": {
-         "ip": "192.168.120.130"
-      },
-      "private_api": {
-         "ip": "192.168.140.130"
-      },
-      "storage": {
-         "ip": "192.168.170.130"
-      }
-    }
-  },
-  "overcloud-cephstorage-0.localdomain": {
-    "user": "heat-admin",
-    "networks": {
-      "provisioning": {
-         "ip": "192.168.120.131"
-      },
-      "storage": {
-         "ip": "192.168.170.131"
-      },
-      "storage_clustering": {
-         "ip": "192.168.180.131"
-      }
-    }
-  },
-  "overcloud-cephstorage-1.localdomain": {
-    "user": "heat-admin",
-    "networks": {
-      "provisioning": {
-         "ip": "192.168.120.132"
-      },
-      "storage": {
-         "ip": "192.168.170.132"
-      },
-      "storage_clustering": {
-         "ip": "192.168.180.132"
-      }
-    }
-  },
-  "overcloud-cephstorage-2.localdomain": {
-    "user": "heat-admin",
-    "networks": {
-      "provisioning": {
-         "ip": "192.168.120.133"
-      },
-      "storage": {
-         "ip": "192.168.170.133"
-      },
-      "storage_clustering": {
-         "ip": "192.168.180.133"
-      }
-    }
-  }
 }

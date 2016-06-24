@@ -17,6 +17,8 @@
 import re
 import os
 import netaddr
+import yaml
+from netaddr import IPNetwork
 
 
 class NetworkHelper:
@@ -34,3 +36,38 @@ class NetworkHelper:
                 break
 
         return cidr
+
+    @staticmethod
+    def _get_net_envt():
+        net_envt_f = open(os.path.join(os.path.expanduser('~'),
+                                       'pilot',
+                                       'templates',
+                                       'network-environment.yaml'), 'r')
+        net_envt = yaml.load(net_envt_f)
+        net_envt_f.close()
+        return net_envt
+
+    @staticmethod
+    def get_public_api_network():
+        net_envt = NetworkHelper._get_net_envt()
+        return IPNetwork(net_envt['parameter_defaults']['ExternalNetCidr'])
+
+    @staticmethod
+    def get_private_api_network():
+        net_envt = NetworkHelper._get_net_envt()
+        return IPNetwork(net_envt['parameter_defaults']['InternalApiNetCidr'])
+
+    @staticmethod
+    def get_storage_network():
+        net_envt = NetworkHelper._get_net_envt()
+        return IPNetwork(net_envt['parameter_defaults']['StorageNetCidr'])
+
+    @staticmethod
+    def get_storage_clustering_network():
+        net_envt = NetworkHelper._get_net_envt()
+        return IPNetwork(net_envt['parameter_defaults']['StorageMgmtNetCidr'])
+
+    @staticmethod
+    def get_management_network():
+        net_envt = NetworkHelper._get_net_envt()
+        return IPNetwork(net_envt['parameter_defaults']['ManagementNetCidr'])

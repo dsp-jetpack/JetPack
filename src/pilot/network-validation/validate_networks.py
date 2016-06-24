@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import ConfigParser
 import sys
 import argparse
 import json
@@ -22,15 +23,20 @@ import os
 import re
 import socket
 import subprocess
+import novaclient.client as nova_client
+from netaddr import IPNetwork
+
+pilot_dir = os.path.join(os.path.expanduser('~'), 'pilot')
+sys.path.append(pilot_dir)
+
+from credential_helper import CredentialHelper
+from network_helper import NetworkHelper
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 
-class Networks(object):
-
-    def read_network_json(self):
-        self.network_config = json.load(open(self.args.config))
+class NetworkValidation(object):
 
     def parse_args(self):
         parser = argparse.ArgumentParser()
@@ -51,6 +57,9 @@ class Networks(object):
         logger.debug("config=" + self.args.config)
         logger.debug("message_level=" + self.args.message_level)
 
+    def read_network_json(self):
+        self.network_config = json.load(open(self.args.config))
+
     def set_logging(self, level):
         if (level == "info"):
             logger.setLevel(logging.INFO)
@@ -61,28 +70,99 @@ class Networks(object):
 
     def __init__(self):
         self.parse_args()
+        self.read_network_json()
+        self.build_network_to_subnet_map()
 
-    def get_ip(self, node):
-        if "provisioning" in self.network_config[node]["networks"]:
-            node_ip = self.network_config[node]["networks"]["provisioning"][
-                "ip"].encode('ascii', 'ignore')
-        else:
-            # This is for the Ceph VM where it does not have an IP on the
-            # provisioning network
-            node_ip = self.network_config[node]["networks"]["external"][
-                "ip"].encode('ascii', 'ignore')
+    def build_network_to_subnet_map(self):
+        # Build a map of network name to CIDR
+        self.network_to_subnet = {}
+        self.network_to_subnet["public_api"] = \
+            NetworkHelper.get_public_api_network()
+        self.network_to_subnet["private_api"] = \
+            NetworkHelper.get_private_api_network()
+        self.network_to_subnet["storage"] = \
+            NetworkHelper.get_storage_network()
+        self.network_to_subnet["storage_clustering"] = \
+            NetworkHelper.get_storage_clustering_network()
+        self.network_to_subnet["management"] = \
+            NetworkHelper.get_management_network()
+        self.network_to_subnet["provisioning"] = \
+            NetworkHelper.get_provisioning_network()
 
-        return node_ip
+        # Pull in custom networks from the json
+        for network in self.network_config["networks"].keys():
+            self.network_to_subnet[network] = \
+                IPNetwork(self.network_config["networks"][network])
+
+        logger.debug("network_to_subnet map is:")
+        for network in self.network_to_subnet.keys():
+            logger.debug("    " + network + " => " + str(self.network_to_subnet[network]))
+
+    def build_node_list(self):
+        self.nodes=[]
+
+        # Pull in the nodes that nova doesn't know about in our json file
+        for server_name in self.network_config["nodes"].keys():
+            server = self.network_config["nodes"][server_name]
+            node = self.Node(server_name,
+                             server["ip"],
+                             server["user"],
+                             server["networks"])
+
+            self.nodes.append(node)
+
+        # Sort just these by name so the SAH/Director/Calamari nodes come first
+        self.nodes.sort(key=lambda n: n.name)
+
+        os_auth_url, os_tenant_name, os_username, os_password = \
+            CredentialHelper.get_undercloud_creds()
+
+        kwargs = {'os_username': os_username,
+                  'os_password': os_password,
+                  'os_auth_url': os_auth_url,
+                  'os_tenant_name': os_tenant_name}
+
+        nova = nova_client.Client('2',  # API version
+                                   os_username,
+                                   os_password,
+                                   os_tenant_name,
+                                   os_auth_url)
+
+        # Build up a map that maps flavor ids to flavor names
+        flavor_map = {}
+        flavors = nova.flavors.list()
+        for flavor in flavors:
+            flavor_map[flavor.id] = flavor.name
+
+        logger.debug("flavor_map is:")
+        for flavor in flavor_map.keys():
+            logger.debug("    " + flavor + " => " + flavor_map[flavor])
+
+        # Get the nodes from nova
+        tmp_nodes = []
+        nova_servers = nova.servers.list()
+        for nova_server in nova_servers:
+            # From the flavor, get the networks
+            flavor_name = flavor_map[nova_server.flavor["id"]]
+            networks = self.network_config["flavors_to_networks"][flavor_name]
+
+            node = self.Node(nova_server.name,
+                             nova_server.networks["ctlplane"][0],
+                             "heat-admin",
+                             networks)
+            tmp_nodes.append(node)
+
+        # Sort the overcloud nodes by name to group the role types together
+        tmp_nodes.sort(key=lambda n: n.name)
+        self.nodes.extend(tmp_nodes)
 
     def collect_ssh_keys(self):
         node_ips = []
 
         logger.info("Collecting SSH keys...")
-        for node in self.network_config:
-            node_ips.append(self.get_ip(node))
+        for node in self.nodes:
+            node_ips.append(node.ip)
 
-        pilot_dir = os.path.join(os.path.expanduser('~'), 'pilot')
-        sys.path.append(pilot_dir)
         try:
             from update_ssh_config import update_known_hosts
         except:
@@ -90,92 +170,124 @@ class Networks(object):
                          pilot_dir)
             sys.exit(1)
 
-        logger.info("    update_known_hosts {}".format(' '.join(node_ips)))
+        logger.debug("    update_known_hosts {}".format(' '.join(node_ips)))
         update_known_hosts(node_ips)
 
     def setup_ssh_access(self):
         logger.info("Setting up ssh access")
 
-        for node_name in self.network_config.keys():
-            if node_name == "director_vm":
-                continue
-
-            user = self.network_config[node_name]["user"]
-            node_ip = self.get_ip(node_name)
-            logger.debug("  Testing ssh access to " + node_name + " (" +
-                         node_ip + "):")
+        for node in self.nodes:
+            logger.debug("  Testing ssh access to " + node.name + " (" +
+                         node.ip + "):")
 
             cmd = ["ssh",
                    "-oNumberOfPasswordPrompts=0",
-                   user + "@" + node_ip,
+                   node.user + "@" + node.ip,
                    "pwd"]
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
             process.communicate()[0]
             if process.returncode == 0:
-                logger.debug("    ssh access to " + node_name + " (" +
-                             node_ip + ") works!)")
+                logger.debug("    ssh access to " + node.name + " (" +
+                             node.ip + ") works!)")
                 continue
 
-            logger.info("  ssh access to " + node_name + " (" + node_ip +
+            logger.info("  ssh access to " + node.name + " (" + node.ip +
                         ") needs to be configured.")
-            logger.info("    Enter the password for the " + user +
+            logger.info("    Enter the password for the " + node.user +
                         " user below:")
             cmd = ["ssh-copy-id",
-                   user + "@" + node_ip]
+                   node.user + "@" + node.ip]
             process = subprocess.Popen(cmd, stdin=subprocess.PIPE)
             process.communicate()[0]
+
+    def resolve_node_networks(self):
+        logger.debug("Nodes after network resolution:")
+        for node in self.nodes:
+            node.resolve_networks(self.network_to_subnet)
+            logger.debug("    " + str(node))
+ 
+    class Node:
+        def __init__(self, name, ip, user, networks):
+            self.name = name
+            self.ip = ip
+            self.user = user
+            self.networks = networks
+            self.network_to_ip = {}
+
+        def resolve_networks(self, network_to_subnet):
+            # Get the IPs for the networks on the node
+            cmd = ["ssh",
+                   "{}@{}".format(self.user, self.ip),
+                   "/usr/sbin/ip -4 a"]
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+            stdout = process.stdout.read()
+
+            for network in self.networks:
+                subnet = str(network_to_subnet[network].network)
+                subnet_prefix = subnet[:subnet.rfind('.')]
+                subnet_prefix = subnet_prefix.replace('.', '\.')
+
+                cidr = network_to_subnet[network].prefixlen
+
+                match = re.search("inet ({}\.\d+)/{} brd".format(
+                    subnet_prefix, cidr), stdout)
+
+                if match:
+                    self.network_to_ip[network] = match.group(1)
+                else:
+                    logger.error("Unable to find IP on subnet {} on node {}".format(subnet, self.name))
+                    sys.exit(1)
+
+        def __str__(self):
+            return "name: " + self.name + ", ip: " + self.ip + ",user: " + self.user + ", networks: " + str(self.networks) + ", network_to_ip: " + str(self.network_to_ip)
 
     def validate(self):
         logger.debug("Validating network communication")
 
-        for node_name in self.network_config.keys():
-            if node_name == "director_vm":
-                continue
+        for source_node in self.nodes:
+            logger.info("  From {} ({}):".format(source_node.name, source_node.ip))
 
-            user = self.network_config[node_name]["user"]
-            node_ip = self.get_ip(node_name)
-            logger.info("  From {} ({}):".format(node_name, node_ip))
-
-            networks = self.network_config[node_name]["networks"]
-            for network in networks.keys():
+            for network in source_node.networks:
                 logger.info("    Pinging {} network: ".format(network))
-                for node in self.network_config:
-                    if network in self.network_config[node]["networks"]:
-                        node_network = \
-                            self.network_config[node]["networks"][network]
+                for destination_node in self.nodes:
+                    if source_node == destination_node:
+                        continue
 
-                        target_ip = node_network["ip"].encode(
-                            'ascii', 'ignore')
+                    if network in destination_node.networks:
+                        destination_ip = destination_node.network_to_ip[network]
 
                         cmd = ["ssh",
-                               "{}@{}".format(user, node_ip),
-                               "ping -c 1 -w 2 {}".format(target_ip)]
+                               "{}@{}".format(source_node.user, source_node.ip),
+                               "ping -c 1 -w 2 {}".format(destination_ip)]
                         process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
                         stdout = process.stdout.read()
                         match = re.search("64 bytes from {0}: icmp_.eq=\d+ "
                                           "ttl=\d+ time=(.*) ms".format(
-                                              target_ip), stdout)
+                                              destination_ip), stdout)
 
                         if match:
-                            logger.info("      Pinged {0} - {1} ({2} ms)".
-                                        format(node,
-                                               target_ip,
+                            logger.info("      Pinged {0: <20} - {1: <15} ({2} ms)".
+                                        format(destination_node.name,
+                                               destination_ip,
                                                match.group(1)))
                         else:
-                            logger.warn("      Ping failed for {0} {1} "
+                            logger.warn("      FAILED {0: <20} - {1: <15} ({2})"
                                         "network {2}!".format(
-                                            node, target_ip, network))
+                                            destination_node.name,
+                                            destination_ip,
+                                            network))
                     else:
                         logger.debug("      Node {0} is not on network {1}".
-                                     format(node, network))
+                                     format(destination_node, network))
 
 
 if __name__ == "__main__":
     logger.debug("Validating networks...")
-    networks = Networks()
-    networks.read_network_json()
-    networks.collect_ssh_keys()
-    networks.setup_ssh_access()
-    networks.validate()
+    network_validation = NetworkValidation()
+    network_validation.build_node_list()
+    network_validation.collect_ssh_keys()
+    network_validation.setup_ssh_access()
+    network_validation.resolve_node_networks()
+    network_validation.validate()
     logger.debug("validation complete...")
     sys.exit()
