@@ -65,7 +65,7 @@ parameter_defaults:
     - 192.168.180.22
     - 192.168.180.23
     # CHANGEME: Change the following to the static IPs for the controllers
-    # on the External network
+    # on the Public API network
     external:
     - 192.168.190.21
     - 192.168.190.22
