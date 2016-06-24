@@ -23,7 +23,7 @@
     "nodes": {
         "sah": {
             "user": "root",
-            "ip" : "192.168.120.122",
+            "ip" : "192.168.120.12",
             "networks": [
                 "provisioning",
                 "management",
@@ -35,7 +35,7 @@
         },
         "director_vm": {
             "user": "stack",
-            "ip" : "192.168.120.123",
+            "ip" : "192.168.120.13",
             "networks": [
                 "provisioning",
                 "management",
@@ -46,7 +46,7 @@
         },
         "ceph_vm": {
             "user": "root",
-            "ip" : "10.148.44.124",
+            "ip" : "10.148.44.14",
             "networks": [
                 "external",
                 "storage"
