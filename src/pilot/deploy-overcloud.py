@@ -169,8 +169,9 @@ def main():
     parser.add_argument('--enable_dellsc', action='store_true', default=False,
                         help="Enable cinder Dell Storage Center backend")
     parser.add_argument('--static_ips', action='store_true', default=False,
-                        help="Specify the IPs and VIPs on the controller "
-                             "nodes")
+                        help="Specify the IPs on the overcloud nodes")
+    parser.add_argument('--static_vips', action='store_true', default=False,
+                        help="Specify the VIPs for the networks")
     args = parser.parse_args()
     p = re.compile('\d+:\d+')
     if not p.match(args.vlan_range):
@@ -184,6 +185,7 @@ def main():
     # Replace HOME with the actual home directory in a few files
     subst_home('pilot/templates/dell-environment.yaml')
     subst_home('pilot/templates/static-ip-environment.yaml')
+    subst_home('pilot/templates/static-vip-environment.yaml')
     subst_home('pilot/templates/network-environment.yaml')
 
     # Apply any patches required on the Director itself. This is done each time
@@ -220,6 +222,11 @@ def main():
     # network-environment.yaml
     if args.static_ips:
         env_opts += " -e ~/pilot/templates/static-ip-environment.yaml"
+
+    # The static-vip-environment.yaml must be included after the
+    # network-environment.yaml
+    if args.static_vips:
+        env_opts += " -e ~/pilot/templates/static-vip-environment.yaml"
 
     # The dell-environment.yaml must be included after the
     # storage-environment.yaml
