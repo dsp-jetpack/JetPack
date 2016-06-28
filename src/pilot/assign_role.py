@@ -48,6 +48,10 @@ ROLES = {
 }
 
 
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+
 def get_fqdd(doc, namespace):
     return utils.find_xml(doc, 'FQDD', namespace).text
 
@@ -142,15 +146,29 @@ def main():
                         help="Either the IP address of the iDRAC, or the MAC "
                         "address of the interface on the provisioning network")
     parser.add_argument("role",
-                        choices=["controller", "compute", "storage"],
-                        help="The role that the node will play")
+                        help="The role that the node will play with an optional index that indicates placement order in the rack.  Valid choices are: controller[-<index>], compute[-<index>], and storage[-<index>]")
     parser.add_argument("--file",
                         help="Name of json file containing the node being set",
                         default="instackenv.json")
     parser.add_argument("--debug", action='store_true', default=False)
     args = parser.parse_args()
 
-    flavor = ROLES[args.role]
+    role = args.role
+    index = None
+    if args.role.find"-") != -1:
+        role_tokens = role.split("-")
+        role = role_tokens[0]
+        index = role_tokens[1]
+
+    if role in ROLES.keys():
+        flavor = ROLES[role]
+    else
+        eprint("Error: {} is not a valid role.  Valid roles are: {}".format(role, str(ROLES.keys)))
+        sys.exit(1)
+
+    if index and !index.isnumeric():
+        eprint("Error: {} is not a valid role index.  Valid role indexes are numbers.".format(index))
+        sys.exit(1)
 
     os_auth_url, os_tenant_name, os_username, os_password = \
         CredentialHelper.get_undercloud_creds()
@@ -179,19 +197,26 @@ def main():
                 break
 
     if node_uuid is None:
-        print "Error:  Unable to find node {}".format(args.ip_or_mac)
+        eprint("Error:  Unable to find node {}".format(args.ip_or_mac))
         sys.exit(1)
 
     # Assign the role to the node
     print "Setting role for {} to {}, flavor {}".format(
         args.ip_or_mac, args.role, flavor)
+
+    # If an index was specified then use baremetal as the flavor
+    if index:
+        value = "node:{}-{},profile:baremetal,boot_option:local".format(flavor, index),
+    else
+        value = "profile:{},boot_option:local".format(flavor),
+
     patch = [{'op': 'add',
-              'value': "profile:{},boot_option:local".format(flavor),
+              'value': value,
               'path': '/properties/capabilities'}]
     node = ironic_client.node.update(node_uuid, patch)
 
     # Are we assigning the storage role to this node?
-    if args.role == "storage":
+    if role == "storage":
         # Get the model of the server from the DRAC
         drac_ip, drac_user, drac_password = \
             CredentialHelper.get_drac_creds_from_node(node, args.file)

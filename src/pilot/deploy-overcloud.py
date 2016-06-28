@@ -172,6 +172,8 @@ def main():
                         help="Specify the IPs on the overcloud nodes")
     parser.add_argument('--static_vips', action='store_true', default=False,
                         help="Specify the VIPs for the networks")
+    parser.add_argument('--node_placement', action='store_true', default=False,
+                        help="Control which physical server is assigned which instance")
     args = parser.parse_args()
     p = re.compile('\d+:\d+')
     if not p.match(args.vlan_range):
@@ -227,6 +229,9 @@ def main():
     # network-environment.yaml
     if args.static_vips:
         env_opts += " -e ~/pilot/templates/static-vip-environment.yaml"
+
+    if args.node_placement:
+        env_opts += " -e ~/pilot/templates/node-placement.yaml"
 
     # The dell-environment.yaml must be included after the
     # storage-environment.yaml
