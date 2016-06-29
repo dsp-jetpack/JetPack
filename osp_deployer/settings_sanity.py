@@ -130,7 +130,7 @@ class DeployerSanity():
     
     def check_network_overlaps(self):
 	# Verify the dhcp ranges defined in the ini don't overlap with static ips
-	# defined in the .properties
+	# defined in the .properties or with the VIPs if used.
 
         # public_api network allocation pool
         start = self.settings.public_api_allocation_pool_start.split(".")[-1] 
@@ -141,6 +141,9 @@ class DeployerSanity():
 	    	if int(start) <= int(ip) <= int(end):
 		    raise AssertionError(each.public_api_ip + " in .properties is in" \
 				   "the public api allocation pool range definied in the .ini")
+        if self.settings.use_static_vips is True:
+            if not int(start) <= int(self.settings.public_api_vip.split(".")[-1]) <= int(end):
+                raise AssertionError("public_api_vip should be within the public api allocation pool range")
 
         # private_api network allocation pool
         start = self.settings.private_api_allocation_pool_start.split(".")[-1]
@@ -151,6 +154,11 @@ class DeployerSanity():
                 if int(start) <= int(ip) <= int(end):
                     raise AssertionError(each.private_api_ip + " in .properties is in" \
                                    "the private api allocation pool range definied in the .ini")
+        if self.settings.use_static_vips is True:
+            if int(start) <= int(self.settings.redis_vip.split(".")[-1]) <= int(end):
+                raise AssertionError("redis_vip should be outside the private api allocation pool range")
+            if not int(start) <= int(self.settings.private_api_vip.split(".")[-1]) <= int(end):
+                raise AssertionError("private_api_vip should be within the private api allocation pool range")
 
         # storage_network allocation pool
         start = self.settings.storage_allocation_pool_start.split(".")[-1]
@@ -161,6 +169,9 @@ class DeployerSanity():
                 if int(start) <= int(ip) <= int(end):
                     raise AssertionError(each.storage_ip + " in .properties is in" \
                                    "the storage allocation pool range definied in the .ini")
+        if self.settings.use_static_vips is True:
+            if not int(start) <= int(self.settings.storage_vip.split(".")[-1]) <= int(end):
+                raise AssertionError("storage_vip should be within the storage allocation pool range")
 
         # provisioning network allocation pool
         start = self.settings.provisioning_net_dhcp_start.split(".")[-1]
@@ -170,7 +181,13 @@ class DeployerSanity():
                 ip = each.provisioning_ip.split(".")[-1]
                 if int(start) <= int(ip) <= int(end):
                     raise AssertionError(each.provisioning_ip + " in .properties is in" \
-                                   "the privioning dhcp  allocation pool range definied in the .ini")	
+                                   "the provisioning dhcp  allocation pool range definied in the .ini")
+        if self.settings.use_static_vips is True:
+            if not int(start) <= int(self.settings.storage_cluster_vip.split(".")[-1]) <= int(end):
+                raise AssertionError("storage_cluster_vip should be within the provisioning  allocation pool range")
+        if self.settings.use_static_vips is True:
+            if not int(start) <= int(self.settings.provisioning_vip.split(".")[-1]) <= int(end):
+                raise AssertionError("provisioning_vip should be within the provisioning  allocation pool range")
 
         # discovery_ip_range (provisioning network)
         start = self.settings.discovery_ip_range.split(",")[0].split(".")[-1]

@@ -26,6 +26,15 @@
 	       . tenant_network_allocation_pool_end
                * note : Not used unless you wish to configure Generic Routing Encapsulation (GRE) networks
             Added overcloud_static_ips - true/false to enable the use of static ips on the overcloud nodes. false will use dhcp
+* 6.0.0.c - Added settings for static VIPs support :
+	       . use_static_vips - true/false to enable the use of static VIPs
+	       . redis_vip        - VIP for redis on the private api network
+               . provisioning_vip - VIP for the provisioning network
+               . private_api_vip  - VIP for the private api network
+               . public_api_vip   - VIP for the public api network
+               . storage_vip      - VIP for the storage network
+               . storage_cluster_vip - VIP for the storage cluster network (must be set on the provisioning network)
+	       * see sample file comments for valid ips in the above networks
 
 #####settings.properties
 * 6.0.0.a - Initial 6.0 version
