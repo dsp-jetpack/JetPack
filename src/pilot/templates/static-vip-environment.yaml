@@ -13,7 +13,7 @@
 # limitations under the License.
 
 resource_registry:
-  OS::TripleO::Network::Ports::RedisVipPort: HOME/pilot/templates/overcloud/network/ports/from_service.yaml
+  OS::TripleO::Network::Ports::RedisVipPort: ./overcloud/network/ports/from_service.yaml
 
 parameter_defaults:
   ServiceVips:
