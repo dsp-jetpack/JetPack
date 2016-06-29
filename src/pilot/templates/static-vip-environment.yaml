@@ -21,7 +21,7 @@ parameter_defaults:
     # Private API/internal_api network.
     # Note that this IP must lie OUTSIDE the InternalApiAllocationPools range
     # specified in network-environment.yaml.
-    redis: 192.168.140.201
+    redis: 192.168.140.251
 
   # CHANGEME: Change the following to the VIP on the Provisioning network
   # Note that this IP must lie INSIDE the dhcp_start/dhcp_end range
