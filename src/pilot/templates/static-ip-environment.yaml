@@ -13,23 +13,23 @@
 # limitations under the License.
 
 resource_registry:
-  OS::TripleO::Controller::Ports::ExternalPort: HOME/pilot/templates/overcloud/network/ports/external_from_pool.yaml
-  OS::TripleO::Controller::Ports::InternalApiPort: HOME/pilot/templates/overcloud/network/ports/internal_api_from_pool.yaml
-  OS::TripleO::Controller::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage_from_pool.yaml
-  OS::TripleO::Controller::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
-  OS::TripleO::Controller::Ports::TenantPort: HOME/pilot/templates/overcloud/network/ports/tenant_from_pool.yaml
+  OS::TripleO::Controller::Ports::ExternalPort: ./overcloud/network/ports/external_from_pool.yaml
+  OS::TripleO::Controller::Ports::InternalApiPort: ./overcloud/network/ports/internal_api_from_pool.yaml
+  OS::TripleO::Controller::Ports::StoragePort: ./overcloud/network/ports/storage_from_pool.yaml
+  OS::TripleO::Controller::Ports::StorageMgmtPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::Controller::Ports::TenantPort: ./overcloud/network/ports/tenant_from_pool.yaml
 
-  OS::TripleO::Compute::Ports::ExternalPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
-  OS::TripleO::Compute::Ports::InternalApiPort: HOME/pilot/templates/overcloud/network/ports/internal_api_from_pool.yaml
-  OS::TripleO::Compute::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage_from_pool.yaml
-  OS::TripleO::Compute::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
-  OS::TripleO::Compute::Ports::TenantPort: HOME/pilot/templates/overcloud/network/ports/tenant_from_pool.yaml
+  OS::TripleO::Compute::Ports::ExternalPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::Compute::Ports::InternalApiPort: ./overcloud/network/ports/internal_api_from_pool.yaml
+  OS::TripleO::Compute::Ports::StoragePort: ./overcloud/network/ports/storage_from_pool.yaml
+  OS::TripleO::Compute::Ports::StorageMgmtPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::Compute::Ports::TenantPort: ./overcloud/network/ports/tenant_from_pool.yaml
 
-  OS::TripleO::CephStorage::Ports::ExternalPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
-  OS::TripleO::CephStorage::Ports::InternalApiPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
-  OS::TripleO::CephStorage::Ports::StoragePort: HOME/pilot/templates/overcloud/network/ports/storage_from_pool.yaml
-  OS::TripleO::CephStorage::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/storage_mgmt_from_pool.yaml
-  OS::TripleO::CephStorage::Ports::TenantPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
+  OS::TripleO::CephStorage::Ports::ExternalPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::CephStorage::Ports::InternalApiPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::CephStorage::Ports::StoragePort: ./overcloud/network/ports/storage_from_pool.yaml
+  OS::TripleO::CephStorage::Ports::StorageMgmtPort: ./overcloud/network/ports/storage_mgmt_from_pool.yaml
+  OS::TripleO::CephStorage::Ports::TenantPort: ./overcloud/network/ports/noop.yaml
 
 parameter_defaults:
   # Specify the IPs for the overcloud nodes on the indicated networks below.

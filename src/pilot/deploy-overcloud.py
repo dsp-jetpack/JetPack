@@ -32,24 +32,6 @@ from update_ssh_config import main as update_ssh_config
 home_dir = os.path.expanduser('~')
 
 
-def subst_home(relative_path):
-    in_file_name = os.path.join(home_dir, relative_path)
-    out_file_name = in_file_name + '.out'
-
-    in_file = open(in_file_name, 'r')
-    out_file = open(out_file_name, 'w')
-
-    for line in in_file:
-        line = re.sub("HOME", home_dir, line)
-        out_file.write(line)
-
-    in_file.close()
-    out_file.close()
-
-    os.rename(in_file_name, in_file_name + '.bak')
-    os.rename(out_file_name, in_file_name)
-
-
 def create_volume_types():
     print 'Creating cinder volume types...'
     # Add ceph by default
@@ -181,12 +163,6 @@ def main():
 
     os_auth_url, os_tenant_name, os_username, os_password = \
         CredentialHelper.get_undercloud_creds()
-
-    # Replace HOME with the actual home directory in a few files
-    subst_home('pilot/templates/dell-environment.yaml')
-    subst_home('pilot/templates/static-ip-environment.yaml')
-    subst_home('pilot/templates/static-vip-environment.yaml')
-    subst_home('pilot/templates/network-environment.yaml')
 
     # Apply any patches required on the Director itself. This is done each time
     # the overcloud is deployed (instead of once, after the Director is

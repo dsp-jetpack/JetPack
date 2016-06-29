@@ -13,12 +13,12 @@
 # limitations under the License.
 
 resource_registry:
-  OS::TripleO::Compute::Net::SoftwareConfig: HOME/pilot/templates/nic-configs/compute.yaml
-  OS::TripleO::Controller::Net::SoftwareConfig: HOME/pilot/templates/nic-configs/controller.yaml
-  OS::TripleO::CephStorage::Net::SoftwareConfig: HOME/pilot/templates/nic-configs/ceph-storage.yaml
+  OS::TripleO::Compute::Net::SoftwareConfig: ./nic-configs/compute.yaml
+  OS::TripleO::Controller::Net::SoftwareConfig: ./nic-configs/controller.yaml
+  OS::TripleO::CephStorage::Net::SoftwareConfig: ./nic-configs/ceph-storage.yaml
 
-  OS::TripleO::Network::Ports::StorageMgmtVipPort: HOME/pilot/templates/overcloud/network/ports/ctlplane_vip.yaml
-  OS::TripleO::Controller::Ports::StorageMgmtPort: HOME/pilot/templates/overcloud/network/ports/noop.yaml
+  OS::TripleO::Network::Ports::StorageMgmtVipPort: ./overcloud/network/ports/ctlplane_vip.yaml
+  OS::TripleO::Controller::Ports::StorageMgmtPort: ./overcloud/network/ports/noop.yaml
 
 
 parameter_defaults:
