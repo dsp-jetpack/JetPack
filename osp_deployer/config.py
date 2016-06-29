@@ -166,6 +166,16 @@ class Settings():
             self.overcloud_static_ips = True
         else:
             self.overcloud_static_ips = False
+        if cluster['use_static_vips'].lower() == 'true':
+            self.use_static_vips = True
+            self.redis_vip = cluster['redis_vip']
+            self.provisioning_vip = cluster['provisioning_vip']
+	    self.private_api_vip = cluster['private_api_vip']
+            self.public_api_vip = cluster['public_api_vip']
+            self.storage_vip = cluster['storage_vip']
+            self.storage_cluster_vip = cluster['storage_cluster_vip']
+        else:
+            self.use_static_vips = False
         if cluster['enable_version_locking'].lower() == 'true':
             self.version_locking_enabled = True
         else:
@@ -308,6 +318,8 @@ class Settings():
             '/pilot/templates/nic-configs/compute.yaml'
         self.static_ips_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/static-ip-environment.yaml'
+	self.static_vip_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/static-vip-environment.yaml'
         self.controller_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/nic-configs/controller.yaml'
         self.ipxe_rpm = self.foreman_configuration_scripts + \
