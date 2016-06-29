@@ -48,10 +48,6 @@ ROLES = {
 }
 
 
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-
-
 def get_fqdd(doc, namespace):
     return utils.find_xml(doc, 'FQDD', namespace).text
 
@@ -141,93 +137,103 @@ def select_os_disk(ironic_client, drac_client, node_uuid, debug):
 
 def main():
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("ip_or_mac",
-                        help="Either the IP address of the iDRAC, or the MAC "
-                        "address of the interface on the provisioning network")
-    parser.add_argument("role",
-                        help="The role that the node will play with an optional index that indicates placement order in the rack.  Valid choices are: controller[-<index>], compute[-<index>], and storage[-<index>]")
-    parser.add_argument("--file",
-                        help="Name of json file containing the node being set",
-                        default="instackenv.json")
-    parser.add_argument("--debug", action='store_true', default=False)
-    args = parser.parse_args()
+    try:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("ip_or_mac",
+                            help="Either the IP address of the iDRAC, or the "
+                                 "MAC address of the interface on the "
+                                 "provisioning network")
+        parser.add_argument("role",
+                            help="The role that the node will play with an "
+                                 "optional index that indicates placement "
+                                 "order in the rack.  Valid choices are: "
+                                 "controller[-<index>], compute[-<index>], "
+                                 "and storage[-<index>]")
+        parser.add_argument("--file",
+                            help="Name of json file containing the node being "
+                                 "set",
+                            default="instackenv.json")
+        parser.add_argument("--debug", action='store_true', default=False)
+        args = parser.parse_args()
 
-    role = args.role
-    index = None
-    if args.role.find"-") != -1:
-        role_tokens = role.split("-")
-        role = role_tokens[0]
-        index = role_tokens[1]
+        role = args.role
+        index = None
+        if args.role.find("-") != -1:
+            role_tokens = role.split("-")
+            role = role_tokens[0]
+            index = role_tokens[1]
 
-    if role in ROLES.keys():
-        flavor = ROLES[role]
-    else
-        eprint("Error: {} is not a valid role.  Valid roles are: {}".format(role, str(ROLES.keys)))
+        if role in ROLES.keys():
+            flavor = ROLES[role]
+        else:
+            raise ValueError("Error: {} is not a valid role.  Valid roles "
+                             "are: {}".format(role, str(ROLES.keys())))
+
+        if index and not index.isdigit():
+            raise ValueError("Error: {} is not a valid role index.  Valid "
+                             "role indexes are numbers.".format(index))
+
+        os_auth_url, os_tenant_name, os_username, os_password = \
+            CredentialHelper.get_undercloud_creds()
+
+        # Get the UUID of the node
+        kwargs = {'os_username': os_username,
+                  'os_password': os_password,
+                  'os_auth_url': os_auth_url,
+                  'os_tenant_name': os_tenant_name}
+        ironic_client = ironicclient.client.get_client(1, **kwargs)
+
+        node_uuid = None
+        if ":" in args.ip_or_mac:
+            try:
+                port = ironic_client.port.get_by_address(args.ip_or_mac)
+                node_uuid = port.node_uuid
+            except NotFound:
+                pass
+        else:
+            nodes = ironic_client.node.list(fields=["uuid", "driver_info"])
+            for node in nodes:
+                drac_ip, drac_user = \
+                    CredentialHelper.get_drac_ip_and_user(node)
+
+                if drac_ip == args.ip_or_mac:
+                    node_uuid = node.uuid
+                    break
+
+        if node_uuid is None:
+            raise ValueError("Error:  Unable to find node {}".format(
+                args.ip_or_mac))
+
+        # Assign the role to the node
+        print "Setting role for {} to {}, flavor {}".format(
+            args.ip_or_mac, args.role, flavor)
+
+        value = "profile:{},boot_option:local".format(flavor)
+
+        if index:
+            value = "node:{}-{},{}".format(flavor, index, value)
+
+        patch = [{'op': 'add',
+                  'value': value,
+                  'path': '/properties/capabilities'}]
+        node = ironic_client.node.update(node_uuid, patch)
+
+        # Are we assigning the storage role to this node?
+        if role == "storage":
+            # Get the model of the server from the DRAC
+            drac_ip, drac_user, drac_password = \
+                CredentialHelper.get_drac_creds_from_node(node, args.file)
+            drac_client = wsman.Client(drac_ip, drac_user, drac_password)
+            doc = drac_client.enumerate(DCIM_SystemView)
+            model = utils.find_xml(doc, 'Model', DCIM_SystemView).text
+
+            # Select the disk for the OS to be installed on.  Note that this
+            # is only necessary for storage nodes because the other node types
+            # are configured to have 1 huge volume created by the DTK.
+            select_os_disk(ironic_client, drac_client, node_uuid, args.debug)
+    except ValueError as err:
+        print >> sys.stderr, err
         sys.exit(1)
-
-    if index and !index.isnumeric():
-        eprint("Error: {} is not a valid role index.  Valid role indexes are numbers.".format(index))
-        sys.exit(1)
-
-    os_auth_url, os_tenant_name, os_username, os_password = \
-        CredentialHelper.get_undercloud_creds()
-
-    # Get the UUID of the node
-    kwargs = {'os_username': os_username,
-              'os_password': os_password,
-              'os_auth_url': os_auth_url,
-              'os_tenant_name': os_tenant_name}
-    ironic_client = ironicclient.client.get_client(1, **kwargs)
-
-    node_uuid = None
-    if ":" in args.ip_or_mac:
-        try:
-            port = ironic_client.port.get_by_address(args.ip_or_mac)
-            node_uuid = port.node_uuid
-        except NotFound:
-            pass
-    else:
-        nodes = ironic_client.node.list(fields=["uuid", "driver_info"])
-        for node in nodes:
-            drac_ip, drac_user = CredentialHelper.get_drac_ip_and_user(node)
-
-            if drac_ip == args.ip_or_mac:
-                node_uuid = node.uuid
-                break
-
-    if node_uuid is None:
-        eprint("Error:  Unable to find node {}".format(args.ip_or_mac))
-        sys.exit(1)
-
-    # Assign the role to the node
-    print "Setting role for {} to {}, flavor {}".format(
-        args.ip_or_mac, args.role, flavor)
-
-    # If an index was specified then use baremetal as the flavor
-    if index:
-        value = "node:{}-{},profile:baremetal,boot_option:local".format(flavor, index),
-    else
-        value = "profile:{},boot_option:local".format(flavor),
-
-    patch = [{'op': 'add',
-              'value': value,
-              'path': '/properties/capabilities'}]
-    node = ironic_client.node.update(node_uuid, patch)
-
-    # Are we assigning the storage role to this node?
-    if role == "storage":
-        # Get the model of the server from the DRAC
-        drac_ip, drac_user, drac_password = \
-            CredentialHelper.get_drac_creds_from_node(node, args.file)
-        drac_client = wsman.Client(drac_ip, drac_user, drac_password)
-        doc = drac_client.enumerate(DCIM_SystemView)
-        model = utils.find_xml(doc, 'Model', DCIM_SystemView).text
-
-        # Select the disk for the OS to be installed on.  Note that this
-        # is only necessary for storage nodes because the other node types
-        # are configured to have 1 huge volume created by the DTK.
-        select_os_disk(ironic_client, drac_client, node_uuid, args.debug)
 
 
 if __name__ == "__main__":

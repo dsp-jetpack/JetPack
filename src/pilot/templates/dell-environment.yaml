@@ -13,8 +13,8 @@
 # limitations under the License.
 
 resource_registry:
-    OS::TripleO::NodeUserData: HOME/pilot/templates/first-boot.yaml
-    OS::TripleO::NodeExtraConfigPost: HOME/pilot/templates/post-deploy.yaml
+    OS::TripleO::NodeUserData: ./first-boot.yaml
+    OS::TripleO::NodeExtraConfigPost: ./post-deploy.yaml
 
 parameter_defaults:
   # To customize the domain name of the overcloud nodes, change "localdomain"
