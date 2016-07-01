@@ -22,7 +22,7 @@ import logging
 import os.path
 import urllib2
 import socket
-
+import collections
 
 logger = logging.getLogger("osp_deployer")
 
@@ -33,6 +33,8 @@ class DeployerSanity():
 
     @staticmethod
     def is_valid_ip(address):
+        if type(address) is not str:
+            return False
         try:
             socket.inet_aton(address)
             ip = True
@@ -209,6 +211,19 @@ class DeployerSanity():
                     raise AssertionError(each.storage_cluster_ip + " in .properties is in" \
                                    "the storage cluster allocation pool range definied in the .ini")
 
+    def check_duplicate_ips(self):
+        # Check for duplicate ip adresses in .properties and .ini
+        ips = []
+        for each in self.settings.__dict__:
+            if "ip" in each and type(getattr(self.settings, each)) is str:
+                ips.append(getattr(self.settings, each))
+	for each in self.settings.nodes:
+            for att in each.__dict__: 
+                if self.is_valid_ip(str(getattr(each, att))):
+                    ips.append(getattr(each, att))
+        dups = [item for item, count in collections.Counter(ips).items() if count > 1]
+        if len(dups) > 0:
+             raise AssertionError("Duplicate ips found in your .properties/.ini :" + ', '.join(dups))
 
 
     def check_network_settings(self):
