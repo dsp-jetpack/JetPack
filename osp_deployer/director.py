@@ -285,32 +285,32 @@ class Director(InfraHost):
         for node in self.settings.controller_nodes:
             out = self.run_tty(self.source_stackrc +
                                "cd ~/pilot;./assign_role.py " +
-                               node.provisioning_mac_address +
+                               node.idrac_ip +
                                " controller")
             if "Not Found" in out[0]:
                 raise AssertionError(
                     "Failed to assign Controller node role to mac " +
-                    node.provisioning_mac_address)
+                    node.idrac_ip)
 
         for node in self.settings.compute_nodes:
             out = self.run_tty(self.source_stackrc +
                                "cd ~/pilot;./assign_role.py " +
-                               node.provisioning_mac_address +
+                               node.idrac_ip +
                                " compute")
             if "Not Found" in out[0]:
                 raise AssertionError(
                     "Failed to assign Compute node role to mac " +
-                    node.provisioning_mac_address)
+                    node.idrac_ip)
 
         for node in self.settings.ceph_nodes:
             out = self.run_tty(self.source_stackrc +
                                "cd ~/pilot;./assign_role.py " +
-                               node.provisioning_mac_address +
+                               node.idrac_ip +
                                " storage")
             if "Not Found" in out[0]:
                 raise AssertionError(
                     "Failed to assign Storage node role to mac " +
-                    node.provisioning_mac_address)
+                    node.idrac_ip)
 
     def setup_templates(self):
         # Re-upload the yaml files in case we're trying to leave the undercloud
