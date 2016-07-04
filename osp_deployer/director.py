@@ -291,7 +291,7 @@ class Director(InfraHost):
             index += 1
             if "Not Found" in out[0]:
                 raise AssertionError(
-                    "Failed to assign Controller node role to mac " +
+                    "Failed to assign Controller node role to ip " +
                     node.idrac_ip)
 
         index = 0
@@ -303,7 +303,7 @@ class Director(InfraHost):
             index += 1
             if "Not Found" in out[0]:
                 raise AssertionError(
-                    "Failed to assign Compute node role to mac " +
+                    "Failed to assign Compute node role to ip " +
                     node.idrac_ip)
 
         index= 0
@@ -315,7 +315,7 @@ class Director(InfraHost):
             index += 1
             if "Not Found" in out[0]:
                 raise AssertionError(
-                    "Failed to assign Storage node role to mac " +
+                    "Failed to assign Storage node role to ip " +
                     node.idrac_ip)
 
     def setup_templates(self):
