@@ -227,7 +227,7 @@ class DeployerSanity():
     def check_network_settings(self):
         # Verify SAH node network definition
         logger.debug("verifying sah network settings")
-        shouldhaveattributes = [ 'idrac_ip', 'root_password',
+        shouldhaveattributes = [ 'hostname', 'idrac_ip', 'root_password',
                                 'anaconda_ip', 'anaconda_iface',
                                 'external_bond', 'external_slaves',
                                 'external_ip',
@@ -250,7 +250,7 @@ class DeployerSanity():
 
         # Verify director network definition
         logger.debug("verifying director vm network settings")
-        shouldhaveattributes = [ 'root_password', 'external_ip',
+        shouldhaveattributes = ['hostname', 'root_password', 'external_ip',
                                 'provisioning_ip',
                                 'managment_ip', 'public_api_ip',
                                 'private_api_ip']
@@ -268,7 +268,7 @@ class DeployerSanity():
 
         # Verify Ceph vm node network definition
         logger.debug("verifying ceph vm network settings")
-        shouldhaveattributes = [ 'root_password', 'external_ip',
+        shouldhaveattributes = [ 'hostname', 'root_password', 'external_ip',
                                 'storage_ip']
         for each in shouldhaveattributes:
             assert hasattr(self.settings.ceph_node, each), \
