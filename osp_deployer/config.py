@@ -91,10 +91,10 @@ class Settings():
             'provisioning_net_dhcp_end']
         self.discovery_ip_range = cluster[
             'discovery_ip_range']
-	self.tenant_network = cluster['tenant_network']
-	self.tenant_network_allocation_pool_start = cluster['tenant_network_allocation_pool_start']
-	self.tenant_network_allocation_pool_end = cluster['tenant_network_allocation_pool_end']
-        self.tenant_vlan_range = cluster['tenant_vlan_range']
+        self.tenant_network = cluster.get('tenant_network')
+        self.tenant_network_allocation_pool_start = cluster.get('tenant_network_allocation_pool_start')
+        self.tenant_network_allocation_pool_end = cluster.get('tenant_network_allocation_pool_end')
+        self.tenant_vlan_range = cluster.get('tenant_vlan_range')
         self.director_install_account_user = cluster[
             'director_install_user']
         self.director_install_account_pwd = cluster[

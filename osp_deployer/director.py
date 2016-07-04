@@ -645,15 +645,18 @@ class Director(InfraHost):
             self.settings.storage_cluster_vlanid + '|" ' + network_yaml,
             'sed -i "s|ExternalNetworkVlanID:.*|ExternalNetworkVlanID: ' +
             self.settings.public_api_vlanid + '|" ' + network_yaml,
-
-	    'sed -i "s|TenantNetCidr:.*|TenantNetCidr: ' +
-            self.settings.tenant_network + '|" ' + network_yaml,
-	    'sed -i "s|TenantAllocationPools:.*|TenantAllocationPools: ' +
-            "[{'start': '" + self.settings.tenant_network_allocation_pool_start +
-            "', 'end': '" +
-            self.settings.tenant_network_allocation_pool_end + "'}]"   '|" ' +
-            network_yaml,
         ]
+
+        if self.settings.tenant_network:
+            cmds += [
+                'sed -i "s|TenantNetCidr:.*|TenantNetCidr: ' +
+                self.settings.tenant_network + '|" ' + network_yaml,
+                'sed -i "s|TenantAllocationPools:.*|TenantAllocationPools: ' +
+                "[{'start': '" + self.settings.tenant_network_allocation_pool_start +
+                "', 'end': '" +
+                self.settings.tenant_network_allocation_pool_end + "'}]"   '|" ' +
+                network_yaml,
+            ]
         for cmd in cmds:
             self.run_tty(cmd)
 
