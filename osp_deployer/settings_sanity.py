@@ -33,8 +33,6 @@ class DeployerSanity():
 
     @staticmethod
     def is_valid_ip(address):
-        if type(address) is not str:
-            return False
         try:
             socket.inet_aton(address)
             ip = True
@@ -126,9 +124,9 @@ class DeployerSanity():
                                     self.settings.ipmi_password,
                                     node.idrac_ip)
                 logger.debug(
-                    node.hostname + " :: " + ipmi_session.get_power_state())
+                    " :: " + ipmi_session.get_power_state())
             except:
-                raise AssertionError("Could not impi to host " + node.hostname)
+                raise AssertionError("Could not impi to host " + node.idrac_ip)
     
     def check_network_overlaps(self):
 	# Verify the dhcp ranges defined in the ini don't overlap with static ips
@@ -215,7 +213,7 @@ class DeployerSanity():
         # Check for duplicate ip adresses in .properties and .ini
         ips = []
         for each in self.settings.__dict__:
-            if "ip" in each and type(getattr(self.settings, each)) is str:
+            if "ip" in each and type(getattr(self.settings, each)) is str and self.is_valid_ip(getattr(self.settings, each)):
                 ips.append(getattr(self.settings, each))
 	for each in self.settings.nodes:
             for att in each.__dict__: 
@@ -229,7 +227,7 @@ class DeployerSanity():
     def check_network_settings(self):
         # Verify SAH node network definition
         logger.debug("verifying sah network settings")
-        shouldhaveattributes = ['hostname', 'idrac_ip', 'root_password',
+        shouldhaveattributes = [ 'idrac_ip', 'root_password',
                                 'anaconda_ip', 'anaconda_iface',
                                 'external_bond', 'external_slaves',
                                 'external_ip',
@@ -252,7 +250,7 @@ class DeployerSanity():
 
         # Verify director network definition
         logger.debug("verifying director vm network settings")
-        shouldhaveattributes = ['hostname', 'root_password', 'external_ip',
+        shouldhaveattributes = [ 'root_password', 'external_ip',
                                 'provisioning_ip',
                                 'managment_ip', 'public_api_ip',
                                 'private_api_ip']
@@ -270,7 +268,7 @@ class DeployerSanity():
 
         # Verify Ceph vm node network definition
         logger.debug("verifying ceph vm network settings")
-        shouldhaveattributes = ['hostname', 'root_password', 'external_ip',
+        shouldhaveattributes = [ 'root_password', 'external_ip',
                                 'storage_ip']
         for each in shouldhaveattributes:
             assert hasattr(self.settings.ceph_node, each), \
@@ -284,8 +282,7 @@ class DeployerSanity():
         # Verify Controller nodes network definitioncls
         logger.debug("verifying controller nodes network settings")
         for controller in self.settings.controller_nodes:
-            shouldhaveattributes = ['hostname', 'idrac_ip',
-                                    'provisioning_mac_address']
+            shouldhaveattributes = ['idrac_ip']
             shouldbbevalidips = ['idrac_ip']
 	    if self.settings.overcloud_static_ips is True:
 	        shouldhaveattributes.extend(["public_api_ip","private_api_ip",
@@ -294,48 +291,43 @@ class DeployerSanity():
                                            "storage_ip", "storage_cluster_ip", "tenant_ip"])
             for each in shouldhaveattributes:
                 assert hasattr(controller, each), \
-                    controller.hostname + " node has no " + each + " attribute"
+                    " node has no " + each + " attribute"
             for each in shouldbbevalidips:
                 assert self.is_valid_ip(
                     getattr(controller, each)), \
-                    controller.hostname +\
                     " node " + each + " is not a valid ip"
 
         # Verify Compute nodes network definition
         logger.debug("verifying compute nodes network settings")
         for compute in self.settings.compute_nodes:
-            shouldhaveattributes = ['hostname', 'idrac_ip',
-                                    'provisioning_mac_address']
+            shouldhaveattributes = [ 'idrac_ip']
 	    shouldbbevalidips = ['idrac_ip']
             if self.settings.overcloud_static_ips is True:
                 shouldhaveattributes.extend(["private_api_ip", "storage_ip", "tenant_ip"])
                 shouldbbevalidips.extend(["private_api_ip", "storage_ip", "tenant_ip"])
             for each in shouldhaveattributes:
                 assert hasattr(compute, each), \
-                    compute.hostname + \
                     " node has no " + each + " attribute"
             shouldbbevalidips = ['idrac_ip']
             for each in shouldbbevalidips:
                 assert self.is_valid_ip(
                     getattr(compute, each)), \
-                    compute.hostname + " node " \
+ " node " \
                     + each + " is not a valid ip"
 
         # Verify Storage nodes network definition
         logger.debug("verifying storage nodes network settings")
         for storage in self.settings.ceph_nodes:
-            shouldhaveattributes = ['hostname', 'idrac_ip',
-                                    'provisioning_mac_address', 'osd_disks']
+            shouldhaveattributes = ['idrac_ip',
+                                    'osd_disks']
 	    shouldbbevalidips = ['idrac_ip', ]
 	    if self.settings.overcloud_static_ips is True:
                 shouldhaveattributes.extend(["storage_ip", "storage_cluster_ip"])
                 shouldbbevalidips.extend(["storage_ip", "storage_cluster_ip"])
             for each in shouldhaveattributes:
-                assert hasattr(storage, each),\
-                    storage.hostname +\
+                assert hasattr(storage, each), +\
                     " node has no " + each + " attribute"
             for each in shouldbbevalidips:
                 assert self.is_valid_ip(
-                    getattr(storage, each)),\
-                    storage.hostname + " node " +\
+                    getattr(storage, each)), + " node " +\
                     each + " is not a valid ip"

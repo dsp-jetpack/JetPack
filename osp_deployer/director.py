@@ -282,31 +282,37 @@ class Director(InfraHost):
 
         logger.debug("Assigning roles to nodes")
 
+	index = 0
         for node in self.settings.controller_nodes:
             out = self.run_tty(self.source_stackrc +
                                "cd ~/pilot;./assign_role.py " +
                                node.idrac_ip +
-                               " controller")
+                               " controller-" + str(index))
+            index += 1
             if "Not Found" in out[0]:
                 raise AssertionError(
                     "Failed to assign Controller node role to mac " +
                     node.idrac_ip)
 
+        index = 0
         for node in self.settings.compute_nodes:
             out = self.run_tty(self.source_stackrc +
                                "cd ~/pilot;./assign_role.py " +
                                node.idrac_ip +
-                               " compute")
+                               " compute-" + str(index))
+            index += 1
             if "Not Found" in out[0]:
                 raise AssertionError(
                     "Failed to assign Compute node role to mac " +
                     node.idrac_ip)
 
+        index= 0
         for node in self.settings.ceph_nodes:
             out = self.run_tty(self.source_stackrc +
                                "cd ~/pilot;./assign_role.py " +
                                node.idrac_ip +
-                               " storage")
+                               " storage-" + str(index))
+            index += 1
             if "Not Found" in out[0]:
                 raise AssertionError(
                     "Failed to assign Storage node role to mac " +
@@ -838,6 +844,8 @@ class Director(InfraHost):
             cmd += " --static_ips"
         if self.settings.use_static_vips is True:
             cmd += " --static_vips"
+        # Making the following non optional; and  order applied is the one nodes are defined in in the .properties
+        cmd+= " --node_placement"
 	
 	cmd += " > overcloud_deploy_out.log"
         
