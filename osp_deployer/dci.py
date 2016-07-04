@@ -153,7 +153,7 @@ if r.status_code == 412:
 job_full_data = dcijob.get_full_data(dci_context, dci_context.last_job_id)
 upload_configuration_files(dci_context, nspace.settings)
 
-with open('/var/www/html/RH7-RHOS-8.0.repo', 'w') as f:
+with open('/var/www/html/RH7-RHOS-OSP-DCI.repo', 'w') as f:
     for component in job_full_data['components']:
         f.write(repo_entry.format(
             rhos_mirror=dci_conf['rhos_mirror'],
