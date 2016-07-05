@@ -52,5 +52,6 @@
 	    . Storage nodes
         	storage_ip
 	        storage_cluster_ip
-
+* 6.0.0.c - Removed provisioning_mac_address properties on all overcloud nodes - no longer required
+	    Removed hostname from overcloud nodes - not in use anymore (nodes get named controller-x, compute-x, cephstorage-x)
 
