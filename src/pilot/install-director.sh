@@ -82,18 +82,15 @@ echo "## Done."
 source $HOME/stackrc
 
 echo
+images_tar_path='.'
 if [ ! -d $HOME/pilot/images ];
 then
-  echo "## Downloading images..."
-  sudo yum install rhosp-director-images -y
+  sudo yum install rhosp-director-images rhosp-director-images-ipa -y
   mkdir $HOME/pilot/images
-  ln -sf /usr/share/rhosp-director-images/overcloud-full-latest-8.0.tar $HOME/pilot/images/overcloud-full.tar
-  ln -sf /usr/share/rhosp-director-images/ironic-python-agent-latest-8.0.tar $HOME/pilot/images/ironic-python-agent.tar
+  images_tar_path='/usr/share/rhosp-director-images'
 fi
-
-echo "## Extracting images..."
 cd $HOME/pilot/images
-for image in ./*.tar; do tar xvf $image; done
+find ${images_tar_path} -name '*.tar' -exec tar xfv {} \;
 echo "## Done."
 
 echo
