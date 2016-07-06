@@ -198,7 +198,7 @@ class NICManagement(object):
         :raises: WSManRequestFailure on request failures
         :raises: WSManInvalidResponse when receiving invalid response
         """
-        return self._list_nics_common(sort)
+        return self._list_nics_common(sort=sort)
 
     def _get_nic_property(self, drac_nic, property_name):
         return utils.get_wsman_resource_attr(drac_nic,
@@ -601,9 +601,25 @@ class NICConfiguration(object):
 
         return settings[attribute_name]
 
+    def is_nic_legacy_boot_protocol_none(self, nic_id):
+        """Return true if the legacy, non-UEFI, boot protocol of a NIC is NONE,
+        false otherwise.
+
+        :param nic_id: id of the network interface controller (NIC)
+        :returns: boolean indicating whether or not the legacy,
+                  non-UEFI, boot protocol is NONE
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the iDRAC
+                 interface
+        :raises: NotFound when no settings for NIC found
+        """
+        return self.get_nic_legacy_boot_protocol(
+            nic_id).current_value == 'NONE'
+
     def is_nic_legacy_boot_protocol_pxe(self, nic_id):
         """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE,
-           false otherwise.
+        false otherwise.
 
         :param nic_id: id of the network interface controller (NIC)
         :returns: boolean indicating whether or not the legacy,
