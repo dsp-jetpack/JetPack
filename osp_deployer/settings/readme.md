@@ -13,7 +13,7 @@
 [//]: # (See the License for the specific language governing permissions and)
 [//]: # (limitations under the License.)
 
-##Change Log
+#####Change Log
 
 #####This is a change log for the settings.ini and settings.properties file
 
