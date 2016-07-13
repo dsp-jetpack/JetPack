@@ -27,8 +27,10 @@ from subprocess import check_output
 from oslo_utils import units
 from credential_helper import CredentialHelper
 import requests
-from ironicclient.openstack.common.apiclient.exceptions import NotFound
-
+try:  # OSP8
+    from ironicclient.openstack.common.apiclient.exceptions import NotFound
+except ImportError:  # OSP9
+    from ironicclient.common.apiclient.exceptions import NotFound
 
 requests.packages.urllib3.disable_warnings()
 
