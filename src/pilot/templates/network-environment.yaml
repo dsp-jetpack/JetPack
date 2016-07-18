@@ -119,12 +119,14 @@ parameter_defaults:
   ServiceNetMap:
     NeutronTenantNetwork: tenant
     CeilometerApiNetwork: internal_api
+    AodhApiNetwork: internal_api
+    GnocchiApiNetwork: internal_api
     MongoDbNetwork: internal_api
     CinderApiNetwork: internal_api
     CinderIscsiNetwork: storage
     GlanceApiNetwork: storage
     GlanceRegistryNetwork: internal_api
-    KeystoneAdminApiNetwork: ctlplane # Admin connection for Undercloud
+    KeystoneAdminApiNetwork: ctlplane # allows undercloud to config endpoints
     KeystonePublicApiNetwork: internal_api
     NeutronApiNetwork: internal_api
     HeatApiNetwork: internal_api
@@ -133,6 +135,7 @@ parameter_defaults:
     NovaVncProxyNetwork: internal_api
     SwiftMgmtNetwork: storage # Changed from storage_mgmt
     SwiftProxyNetwork: storage
+    SaharaApiNetwork: internal_api
     HorizonNetwork: internal_api
     MemcachedNetwork: internal_api
     RabbitMqNetwork: internal_api
