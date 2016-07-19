@@ -183,11 +183,11 @@ class DeployerSanity():
                     raise AssertionError(each.provisioning_ip + " in .properties is in" \
                                    "the provisioning dhcp  allocation pool range definied in the .ini")
         if self.settings.use_static_vips is True:
-            if not int(start) <= int(self.settings.storage_cluster_vip.split(".")[-1]) <= int(end):
-                raise AssertionError("storage_cluster_vip should be within the provisioning  allocation pool range")
+            if not int(start) < int(self.settings.storage_cluster_vip.split(".")[-1]) <= int(end):
+                raise AssertionError("storage_cluster_vip should be within the provisioning allocation pool range, but cannot be the first IP in that range")
         if self.settings.use_static_vips is True:
-            if not int(start) <= int(self.settings.provisioning_vip.split(".")[-1]) <= int(end):
-                raise AssertionError("provisioning_vip should be within the provisioning  allocation pool range")
+            if not int(start) < int(self.settings.provisioning_vip.split(".")[-1]) <= int(end):
+                raise AssertionError("provisioning_vip should be within the provisioning allocation pool range, but cannot be the first IP in that range")
 
         # discovery_ip_range (provisioning network)
         start = self.settings.discovery_ip_range.split(",")[0].split(".")[-1]
