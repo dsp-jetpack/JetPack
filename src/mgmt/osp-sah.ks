@@ -509,8 +509,6 @@ subscription-manager register --username ${SMUser} --password ${SMPassword} ${Pr
        subscription-manager attach --auto
      )
 
-yum -y update
-
 systemctl disable NetworkManager
 systemctl disable firewalld
 systemctl disable chronyd
