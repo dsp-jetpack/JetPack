@@ -107,7 +107,7 @@ init(){
       STACK_NAME=$(heat stack-list | grep UPDATE_ | awk -F\| '{print $3}' | tr -d ' ')
   [ "${STACK_NAME}" ] ||  \
       fatal "### '${STACK_NAME}' is required and could not be found!  Aborting sanity test"
-      
+    
   source ~/${STACK_NAME}rc
 
   info "### PCS Status "
