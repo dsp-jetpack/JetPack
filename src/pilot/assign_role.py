@@ -88,9 +88,9 @@ def select_os_disk(ironic_client, drac_client, node_uuid, debug):
                 raid1_physical_disk_ids.append(raid1_physical_disk_id)
 
             if debug:
-                print ("Found RAID 1 virtual disk {} with a size of {} "
-                       "bytes comprised of physical disks:".format(
-                           fqdd, raid1_size))
+                print("Found RAID 1 virtual disk {} with a size of {} "
+                      "bytes comprised of physical disks:".format(
+                          fqdd, raid1_size))
                 for p_d_id in raid1_physical_disk_ids:
                     print "  {}".format(p_d_id)
 
@@ -116,8 +116,8 @@ def select_os_disk(ironic_client, drac_client, node_uuid, debug):
 
             if physical_disk_size == raid1_size:
                 if debug:
-                    print ("Physical disk {} has the same size ({}) "
-                           "as the RAID 1".format(fqdd, physical_disk_size))
+                    print("Physical disk {} has the same size ({}) "
+                          "as the RAID 1".format(fqdd, physical_disk_size))
                 found_same_size_disk = True
                 break
 
@@ -129,8 +129,8 @@ def select_os_disk(ironic_client, drac_client, node_uuid, debug):
 
         # Set the root_device property in ironic to the RAID 1 size in
         # gigs
-        print ("Setting the OS disk for this node to the virtual disk "
-               "with size {} GB".format(raid1_size_gb))
+        print("Setting the OS disk for this node to the virtual disk "
+              "with size {} GB".format(raid1_size_gb))
         patch = [{'op': 'add',
                   'value': {"size": raid1_size_gb},
                   'path': '/properties/root_device'}]
