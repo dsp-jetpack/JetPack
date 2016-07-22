@@ -296,7 +296,8 @@ def main():
 
         # The network-environment.yaml must be included after the
         # network-isolation.yaml
-        env_opts = "-e ~/pilot/templates/overcloud/environments/network-isolation.yaml" \
+        env_opts = "-e ~/pilot/templates/overcloud/environments/" \
+                   "network-isolation.yaml" \
                    " -e ~/pilot/templates/network-environment.yaml"
 
         # The static-ip-environment.yaml must be included after the
@@ -314,7 +315,8 @@ def main():
 
         # The dell-environment.yaml must be included after the
         # storage-environment.yaml
-        env_opts += " -e ~/pilot/templates/overcloud/environments/storage-environment.yaml" \
+        env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+                    "storage-environment.yaml" \
                     " -e ~/pilot/templates/dell-environment.yaml" \
                     " -e /usr/share/openstack-tripleo-heat-templates/" \
                     "environments/puppet-pacemaker.yaml"
