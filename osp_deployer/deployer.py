@@ -24,7 +24,7 @@ import os
 from osp_deployer.director import Director
 from osp_deployer.sah import Sah, Settings
 from checkpoints import Checkpoints
-from auto_common import Ipmi, Ssh
+from auto_common import Ipmi, Ssh, Scp
 
 
 logger = logging.getLogger("osp_deployer")
@@ -39,7 +39,7 @@ def setup_logging():
     logging.config.fileConfig('logging.conf')
 
 
-def run_tempest():
+def get_settings():
     parser = argparse.ArgumentParser(description='Jetstream 5.x deployer')
     parser.add_argument('-s', '--settings',
                         help='ini settings file, e.g settings/acme.ini',
@@ -58,13 +58,37 @@ def run_tempest():
 
     args, ignore = parser.parse_known_args()
     settings = Settings(args.settings)
+    return settings
 
+def run_tempest():
+    settings = get_settings()
     if settings.run_tempest is True:
         logger.info("=== Running tempest ==")
         director_vm = Director()
         director_vm.run_tempest()
     else:
         logger.debug("not running tempest")
+
+
+def inject_ssh_key():
+    settings = get_settings()
+    Ssh.execute_command(settings.director_node.external_ip,
+                        "root",
+                        settings.sah_node.root_password,
+                        "mkdir -p /root/.ssh")
+    Scp.put_file(settings.director_node.external_ip,
+                 "root",
+                 settings.sah_node.root_password,
+                 "/root/.ssh/id_rsa.pub",
+                 "/root/.ssh/authorized_keys")
+    Ssh.execute_command(settings.director_node.external_ip,
+                        "root",
+                        settings.sah_node.root_password,
+                        "chmod 700 /root/.ssh")
+    Ssh.execute_command(settings.director_node.external_ip,
+                        "root",
+                        settings.sah_node.root_password,
+                        "chmod 600 /root/.ssh/authorized_keys")
 
 
 def deploy():

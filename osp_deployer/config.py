@@ -91,10 +91,10 @@ class Settings():
             'provisioning_net_dhcp_end']
         self.discovery_ip_range = cluster[
             'discovery_ip_range']
-	self.tenant_network = cluster['tenant_network']
-	self.tenant_network_allocation_pool_start = cluster['tenant_network_allocation_pool_start']
-	self.tenant_network_allocation_pool_end = cluster['tenant_network_allocation_pool_end']
-        self.tenant_vlan_range = cluster['tenant_vlan_range']
+        self.tenant_network = cluster.get('tenant_network')
+        self.tenant_network_allocation_pool_start = cluster.get('tenant_network_allocation_pool_start')
+        self.tenant_network_allocation_pool_end = cluster.get('tenant_network_allocation_pool_end')
+        self.tenant_vlan_range = cluster.get('tenant_vlan_range')
         self.director_install_account_user = cluster[
             'director_install_user']
         self.director_install_account_pwd = cluster[
@@ -331,6 +331,13 @@ class Settings():
         self.ceph_nodes = []
         self.switches = []
 	self.nodes = []
+
+        if 'rhsm_repos' in cluster:
+            self.rhsm_repos = cluster['rhsm_repos'].split(',')
+        else:
+            self.rhsm_repos = [
+                'rhel-7-server-openstack-8.0-rpms',
+                'rhel-7-server-openstack-8.0-director-rpms']
 
         with open(self.network_conf) as config_file:
             json_data = json.load(config_file)

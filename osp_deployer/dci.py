@@ -22,6 +22,7 @@ import os.path
 import traceback
 import yaml
 import ConfigParser
+import osp_deployer
 import osp_deployer.deployer
 # noinspection PyUnresolvedReferences
 from dciclient.v1.logger import DciHandler
@@ -37,6 +38,7 @@ from dciclient.v1.api import jobstate as dcijobstate
 from dciclient.v1.api import topic as dcitopic
 # noinspection PyUnresolvedReferences
 from dciclient.v1 import helper as dcihelper
+from dciclient.v1 import tripleo_helper as dci_tripleo_helper
 import sys
 import argparse
 
@@ -55,7 +57,7 @@ def setup_logging(dci_contxt):
     file_handler = logging.FileHandler(log_file_name, mode='w')
     dci_handler = DciHandler(dci_contxt, info_as_jobstate=True)
 
-    for logger_name in ('osp_deployer', 'auto_common.ipmi', 'auto_common.ssh'):
+    for logger_name in ('osp_deployer', 'auto_common.ipmi', 'auto_common.ssh', 'tripleohelper'):
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.DEBUG)
         logger.addHandler(stream_handler)
@@ -65,11 +67,40 @@ def setup_logging(dci_contxt):
 
 
 def upload_configuration_files(dci_contxt, jetstream_ini_file):
-    jetstream_settings = ConfigParser.RawConfigParser()
-    jetstream_settings.read(jetstream_ini_file)
-    dcihelper.upload_file(dci_contxt,
-                          jetstream_ini_file,
-                          dci_context.last_job_id)
+    r = dcihelper.upload_file(dci_contxt,
+                              path=jetstream_ini_file,
+                              job_id=dci_context.last_job_id)
+
+
+def deploy_openstack(log_file_name):
+    # noinspection PyBroadException
+    try:
+        osp_deployer.deployer.deploy()
+        osp_deployer.deployer.inject_ssh_key()
+    except:
+        print " somebody set us up the bomb "
+        dcijobstate.create(
+            dci_context,
+            'failure',
+            'failure',
+            dci_context.last_job_id)
+        e = sys.exc_info()[0]
+        error_msg = '%s\n%s' % (e, traceback.format_exc())
+        dcifile.create(
+            dci_context,
+            'failure',
+            error_msg,
+            mime='text/plain',
+            job_id=dci_context.last_job_id)
+        print(error_msg)
+    finally:
+        with open(log_file_name, 'r') as f:
+            dcifile.create(
+            dci_context,
+                'deployment.log',
+                f.read(),
+                mime='text/plain',
+                job_id=dci_context.last_jobstate_id)
 
 
 parser_dci = argparse.ArgumentParser(
@@ -108,14 +139,12 @@ gpgcheck=0
 priority=0
 
 """
-tempest_file = '/auto_results/tempest.xml'
-
 pprint(dci_conf)
 
 if not dci_conf['rhos_mirror'].startswith('http'):
     print('RHOS mirror should be an URL')
     exit(1)
-topic = dcitopic.get(dci_context, dci_conf.get('topic', 'default')).json()[
+topic = dcitopic.get(dci_context, dci_conf.get('topic', 'OSP8')).json()[
     'topic']
 r = dcijob.schedule(dci_context, remoteci_id=dci_conf['remoteci_id'],
                       topic_id=topic['id'])
@@ -124,14 +153,7 @@ if r.status_code == 412:
 job_full_data = dcijob.get_full_data(dci_context, dci_context.last_job_id)
 upload_configuration_files(dci_context, nspace.settings)
 
-if job_full_data['test']['name'] != 'tempest':
-    print('invalid test')
-    exit(0)
-
-if os.path.isfile(tempest_file):
-    ok.unlink(tempest_file)
-
-with open('/var/www/html/RH7-RHOS-8.0.repo', 'w') as f:
+with open('/var/www/html/RH7-RHOS-OSP-DCI.repo', 'w') as f:
     for component in job_full_data['components']:
         f.write(repo_entry.format(
             rhos_mirror=dci_conf['rhos_mirror'],
@@ -146,48 +168,9 @@ dcijobstate.create(dci_context,
                    'Running deployment',
                    dci_context.last_job_id)
 
-# noinspection PyBroadException
-try:
-    osp_deployer.deployer.deploy()
-    dcijobstate.create(dci_context,
-                       'post-run',
-                       'Running tempest',
-                       dci_context.last_job_id)
-    osp_deployer.deployer.run_tempest()
-    # noinspection PyBroadException
-    try:
-        with open('/auto_results/tempest.xml', 'r') as f:
-            dcifile.create(
-                dci_context,
-                'tempest_result.xml',
-                f.read(),
-                'application/xml',
-                dci_context.last_jobstate_id)
-    except:
-        pass
-    dcijobstate.create(dci_context,
-                       'success',
-                       'All done',
-                       dci_context.last_job_id)
-except:
-    print " somebody set us up the bomb "
-    dcijobstate.create(dci_context, 'failure', 'failure',
-                       dci_context.last_job_id)
-    e = sys.exc_info()[0]
-    print e
-    print traceback.format_exc()
-finally:
-    with open(log_file_name, 'r') as f:
-        dcifile.create(
-	    dci_context,
-            'deployment.log',
-            f.read(),
-            'text/plain',
-            dci_context.last_jobstate_id)
-    with open(tempest_file, 'r') as f:
-        dcifile.create(
-	    dci_context,
-            'tempest.xml',
-            f.read(),
-            'application/junit',
-            dci_context.last_jobstate_id)
+deploy_openstack(log_file_name)
+settings = osp_deployer.Settings.settings
+dci_tripleo_helper.run_tests(
+    dci_context,
+    undercloud_ip=settings.director_node.external_ip,
+    key_filename='/root/.ssh/id_rsa')
