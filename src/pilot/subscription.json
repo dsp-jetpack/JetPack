@@ -16,8 +16,6 @@
             "pool_ids": [ "CHANGEME_openstack_pool_id" ],
             "repos": [ "rhel-7-server-rpms",
                        "rhel-7-server-extras-rpms",
-                       "rhel-7-server-openstack-8-rpms",
-                       "rhel-7-server-openstack-8-director-rpms",
                        "rhel-7-server-rh-common-rpms",
                        "rhel-ha-for-rhel-7-server-rpms",
                        "rhel-7-server-rhceph-1.3-mon-rpms" ]
@@ -26,8 +24,6 @@
             "pool_ids": [ "CHANGEME_openstack_pool_id" ],
             "repos": [ "rhel-7-server-rpms",
                        "rhel-7-server-extras-rpms",
-                       "rhel-7-server-openstack-8-rpms",
-                       "rhel-7-server-openstack-8-director-rpms",
                        "rhel-7-server-rh-common-rpms",
                        "rhel-ha-for-rhel-7-server-rpms" ]
         },
@@ -36,8 +32,6 @@
                           "CHANGEME_ceph_pool_id" ],
             "repos": [ "rhel-7-server-rpms",
                        "rhel-7-server-extras-rpms",
-                       "rhel-7-server-openstack-8-rpms",
-                       "rhel-7-server-openstack-8-director-rpms",
                        "rhel-7-server-rh-common-rpms",
                        "rhel-ha-for-rhel-7-server-rpms",
                        "rhel-7-server-rhceph-1.3-osd-rpms" ]
