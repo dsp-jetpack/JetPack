@@ -24,10 +24,11 @@ import re
 import socket
 import subprocess
 import novaclient.client as nova_client
+import ironicclient.client as ironic_client
 from netaddr import IPNetwork
 
-pilot_dir = os.path.join(os.path.expanduser('~'), 'pilot')
-sys.path.append(pilot_dir)
+pilot_dir = os.path.join(os.path.expanduser('~'), 'pilot') # noqa
+sys.path.append(pilot_dir) # noqa
 
 from credential_helper import CredentialHelper
 from network_helper import NetworkHelper
@@ -96,10 +97,11 @@ class NetworkValidation(object):
 
         logger.debug("network_to_subnet map is:")
         for network in self.network_to_subnet.keys():
-            logger.debug("    " + network + " => " + str(self.network_to_subnet[network]))
+            logger.debug("    " + network + " => " +
+                         str(self.network_to_subnet[network]))
 
     def build_node_list(self):
-        self.nodes=[]
+        self.nodes = []
 
         # Pull in the nodes that nova doesn't know about in our json file
         for server_name in self.network_config["nodes"].keys():
@@ -123,10 +125,16 @@ class NetworkValidation(object):
                   'os_tenant_name': os_tenant_name}
 
         nova = nova_client.Client('2',  # API version
-                                   os_username,
-                                   os_password,
-                                   os_tenant_name,
-                                   os_auth_url)
+                                  os_username,
+                                  os_password,
+                                  os_tenant_name,
+                                  os_auth_url)
+
+        ironic = ironic_client.Client('1',  # API version
+                                      os_username,
+                                      os_password,
+                                      os_tenant_name,
+                                      os_auth_url)
 
         # Build up a map that maps flavor ids to flavor names
         flavor_map = {}
@@ -142,8 +150,22 @@ class NetworkValidation(object):
         tmp_nodes = []
         nova_servers = nova.servers.list()
         for nova_server in nova_servers:
+            if nova_server.flavor["id"]:
+                flavor_name = flavor_map[nova_server.flavor["id"]]
+            else:
+                ironic_server = ironic.node.get_by_instance_uuid(
+                    nova_server["id"])
+                capabilities = ironic_server.properties["capabilities"]
+
+                match = re.search("node:([a-zA-Z])+-\d+", capabilities)
+                if match:
+                    flavor_name = match.group(1)
+                else:
+                    logger.error("Unable to find flavor name for "
+                                 "node {}".format(nova_server.name))
+                    sys.exit(1)
+
             # From the flavor, get the networks
-            flavor_name = flavor_map[nova_server.flavor["id"]]
             networks = self.network_config["flavors_to_networks"][flavor_name]
 
             node = self.Node(nova_server.name,
@@ -205,7 +227,7 @@ class NetworkValidation(object):
         for node in self.nodes:
             node.resolve_networks(self.network_to_subnet)
             logger.debug("    " + str(node))
- 
+
     class Node:
         def __init__(self, name, ip, user, networks):
             self.name = name
@@ -235,17 +257,21 @@ class NetworkValidation(object):
                 if match:
                     self.network_to_ip[network] = match.group(1)
                 else:
-                    logger.error("Unable to find IP on subnet {} on node {}".format(subnet, self.name))
+                    logger.error("Unable to find IP on subnet {} on "
+                                 "node {}".format(subnet, self.name))
                     sys.exit(1)
 
         def __str__(self):
-            return "name: " + self.name + ", ip: " + self.ip + ",user: " + self.user + ", networks: " + str(self.networks) + ", network_to_ip: " + str(self.network_to_ip)
+            return "name: " + self.name + ", ip: " + self.ip + ",user: " + \
+                self.user + ", networks: " + str(self.networks) + \
+                ", network_to_ip: " + str(self.network_to_ip)
 
     def validate(self):
         logger.debug("Validating network communication")
 
         for source_node in self.nodes:
-            logger.info("  From {} ({}):".format(source_node.name, source_node.ip))
+            logger.info("  From {} ({}):".format(source_node.name,
+                                                 source_node.ip))
 
             for network in source_node.networks:
                 logger.info("    Pinging {} network: ".format(network))
@@ -254,10 +280,12 @@ class NetworkValidation(object):
                         continue
 
                     if network in destination_node.networks:
-                        destination_ip = destination_node.network_to_ip[network]
+                        destination_ip = \
+                            destination_node.network_to_ip[network]
 
                         cmd = ["ssh",
-                               "{}@{}".format(source_node.user, source_node.ip),
+                               "{}@{}".format(source_node.user,
+                                              source_node.ip),
                                "ping -c 1 -w 2 {}".format(destination_ip)]
                         process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
                         stdout = process.stdout.read()
@@ -266,13 +294,14 @@ class NetworkValidation(object):
                                               destination_ip), stdout)
 
                         if match:
-                            logger.info("      Pinged {0: <20} - {1: <15} ({2} ms)".
-                                        format(destination_node.name,
-                                               destination_ip,
-                                               match.group(1)))
+                            logger.info("      Pinged {0: <20} - {1: <15} "
+                                        "({2} ms)".format(
+                                            destination_node.name,
+                                            destination_ip,
+                                            match.group(1)))
                         else:
-                            logger.warn("      FAILED {0: <20} - {1: <15} ({2})"
-                                        "network {2}!".format(
+                            logger.warn("      FAILED {0: <20} - {1: <15} "
+                                        "({2}) network {2}!".format(
                                             destination_node.name,
                                             destination_ip,
                                             network))

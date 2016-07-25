@@ -107,7 +107,7 @@ init(){
       STACK_NAME=$(heat stack-list | grep UPDATE_ | awk -F\| '{print $3}' | tr -d ' ')
   [ "${STACK_NAME}" ] ||  \
       fatal "### '${STACK_NAME}' is required and could not be found!  Aborting sanity test"
-    
+
   source ~/${STACK_NAME}rc
 
   info "### PCS Status "
@@ -121,11 +121,11 @@ init(){
   ssh heat-admin@$CONTROLLER 'ps -ef | grep mariadb'
 
   info "### Verify OpenStack services are running."
-  execute_command "ssh heat-admin@$CONTROLLER sudo nova-manage service list"
-  execute_command "ssh heat-admin@$CONTROLLER sudo cinder-manage service list"
-  execute_command "ssh heat-admin@$CONTROLLER systemctl status openstack-keystone"
-  execute_command "ssh heat-admin@$CONTROLLER systemctl status openstack-glance-api"
-  execute_command "ssh heat-admin@$CONTROLLER systemctl status openstack-glance-registry"
+  #execute_command "ssh heat-admin@$CONTROLLER sudo nova-manage service list"
+  #execute_command "ssh heat-admin@$CONTROLLER sudo cinder-manage service list"
+  #execute_command "ssh heat-admin@$CONTROLLER systemctl status openstack-keystone"
+  #execute_command "ssh heat-admin@$CONTROLLER systemctl status openstack-glance-api"
+  #execute_command "ssh heat-admin@$CONTROLLER systemctl status openstack-glance-registry"
 }
 
 

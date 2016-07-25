@@ -19,7 +19,7 @@ subscription_manager_pass="$2"
 subcription_manager_poolid="$3"
 
 declare -a install_packages=("ceph-radosgw" "diamond" "salt-minion --selinux-relabel")
-declare -a enable_repos=("rhel-7-server-rhceph-1.3-mon-rpms" "rhel-7-server-rhceph-1.3-tools-rpms")
+declare -a enable_repos=("rhel-7-server-rhceph-1.3-mon-rpms" "rhel-7-server-rhceph-1.3-tools-rpms" "rhel-7-server-rhceph-1.3-osd-rpms")
 
 if [ "$#" -ne 3 ]; then
   echo "Usage: $0  <subscription manager user> <subscription manager password> <subscription pool id>"

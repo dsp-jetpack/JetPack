@@ -25,19 +25,21 @@ import time
 
 home_dir = os.path.expanduser('~')
 
-def subst_bkup (relative_path):
-  in_file_name = os.path.join(home_dir, relative_path)
-  os.rename (in_file_name, in_file_name + '.mido.bak')
- 
+
+def subst_bkup(relative_path):
+    in_file_name = os.path.join(home_dir, relative_path)
+    os.rename(in_file_name, in_file_name + '.mido.bak')
+
 subst_bkup('pilot/templates/nic-configs/compute.yaml')
 subst_bkup('pilot/templates/nic-configs/controller.yaml')
 subst_bkup('pilot/templates/nic-configs/ceph-storage.yaml')
-subst_bkup ('pilot/templates/network-environment.yaml')
+subst_bkup('pilot/templates/network-environment.yaml')
 subst_bkup('pilot/deploy-overcloud.py')
-#copy midonet files into the right dir
+# copy midonet files into the right dir
 nic_dir = os.path.join(home_dir, 'pilot/templates/nic-configs')
-pilot_dir = os.path.join(home_dir,'pilot')
-templates_dir = os.path.join (home_dir,'pilot/templates')
+pilot_dir = os.path.join(home_dir, 'pilot')
+templates_dir = os.path.join(home_dir, 'pilot/templates')
 distutils.dir_util.copy_tree('./templates/nic-configs', nic_dir)
-distutils.file_util.copy_file('./deploy-overcloud.py',pilot_dir)
-distutils.file_util.copy_file('./templates/network-environment.yaml',templates_dir)
+distutils.file_util.copy_file('./deploy-overcloud.py', pilot_dir)
+distutils.file_util.copy_file('./templates/network-environment.yaml',
+                              templates_dir)

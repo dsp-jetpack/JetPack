@@ -21,11 +21,13 @@ parameter_defaults:
     # Private API/internal_api network.
     # Note that this IP must lie OUTSIDE the InternalApiAllocationPools range
     # specified in network-environment.yaml.
-    redis: 192.168.140.201
+    redis: 192.168.140.251
 
   # CHANGEME: Change the following to the VIP on the Provisioning network
   # Note that this IP must lie INSIDE the dhcp_start/dhcp_end range
-  # specified in undercloud.conf.
+  # specified in undercloud.conf, but it cannot be the first IP in the range.
+  # This is because Neutron uses the first IP in the range for the undercloud
+  # Neutron DHCP server.
   ControlFixedIPs: [{'ip_address':'192.168.120.250'}]
 
   # CHANGEME: Change the following to the VIP on the Private API network.

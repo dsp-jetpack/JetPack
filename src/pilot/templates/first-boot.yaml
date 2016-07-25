@@ -39,7 +39,7 @@ resources:
               continue
             fi
             echo "Partitioning disk: ${disk}"
-            sgdisk -og ${device}
+            wipefs -a ${device}
             echo
           done
           parted -lm

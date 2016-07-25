@@ -206,8 +206,6 @@ EOFPW
   subscription-manager repos --disable=*
   subscription-manager repos --enable=rhel-7-server-rpms
   subscription-manager repos --enable=rhel-7-server-extras-rpms
-  subscription-manager repos --enable=rhel-7-server-openstack-8-rpms
-  subscription-manager repos --enable=rhel-7-server-openstack-8-director-rpms
   subscription-manager repos --enable=rhel-7-server-rh-common-rpms
 
   mkdir /tmp/mnt
@@ -221,14 +219,11 @@ EOFPW
   yum -y install yum-plugin-priorities
   yum -y install yum-utils
 
-  yum-config-manager --enable rhel-7-server-openstack-8-rpms --setopt="rhel-7-server-openstack-8-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-rpms --setopt="rhel-7-server-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-extras-rpms --setopt="rhel-7-server-extras-rpms.priority=1"
-  yum-config-manager --enable rhel-7-server-openstack-8-director-rpms --setopt="rhel-7-server-openstack-8-director-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-rh-common-rpms --setopt="rhel-7-server-rh-common-rpms.priority=1"
 
   yum -y update
-  yum -y install python-rdomanager-oscplugin
 
   # Firewall rules to allow traffic for the http, https, dns, and tftp services and tcp port 8140.
   # Also accept all traffic from eth4 to pass through to eth0 and become NAT'd on the way out of eth0.

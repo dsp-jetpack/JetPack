@@ -21,6 +21,7 @@ import re
 import subprocess
 import sys
 import time
+import ironicclient.client as ironic_client
 
 from credential_helper import CredentialHelper
 from subprocess import check_output
@@ -30,6 +31,77 @@ from identify_nodes import main as identify_nodes
 from update_ssh_config import main as update_ssh_config
 
 home_dir = os.path.expanduser('~')
+
+
+# Check to see if the sequence contains numbers that increase by 1
+def is_coherent(seq):
+    return seq == range(seq[0], seq[-1]+1)
+
+
+def validate_node_placement():
+    print 'Validating node placement...'
+
+    # For each role/flavor, node indices must start at 0 and increase by 1
+    os_auth_url, os_tenant_name, os_username, os_password = \
+        CredentialHelper.get_undercloud_creds()
+
+    kwargs = {'os_username': os_username,
+              'os_password': os_password,
+              'os_auth_url': os_auth_url,
+              'os_tenant_name': os_tenant_name}
+    ironic = ironic_client.get_client(1, **kwargs)
+
+    flavor_to_indices = {}
+    for node in ironic.node.list(detail=True):
+        # Skip nodes that are in maintenance mode
+        if node.maintenance:
+            continue
+
+        # Get the value of the "node" capability
+        node_capability = None
+        capabilities = node.properties["capabilities"]
+        for capability in capabilities.split(","):
+            (key, val) = capability.split(":")
+            if key == "node":
+                node_capability = val
+
+        # If the node capability was not set then error out
+        if not node_capability:
+            raise ValueError("Error: Node {} has not been assigned a node "
+                             "placement index.  Run assign_role for this "
+                             "node and specify a role with the "
+                             "<role>-<index> format".format(
+                                 node.driver_info["ipmi_address"]))
+
+        hyphen = node_capability.rfind("-")
+        flavor = node_capability[0:hyphen]
+        index = node_capability[hyphen + 1]
+
+        # Build up a dict that maps a flavor name to a sequence of placment
+        # indices
+        if flavor not in flavor_to_indices:
+            flavor_to_indices[flavor] = []
+
+        flavor_to_indices[flavor].append(int(index))
+
+    # Validate that the sequence starts at zero and is coherent
+    error_msg = ''
+    for flavor in flavor_to_indices.keys():
+        flavor_to_indices[flavor].sort()
+        seq = flavor_to_indices[flavor]
+        if seq[0] != 0:
+            error_msg += "Error: There must be a node with flavor \"{}\" " \
+                "that has node placement index 0.  Current nodes placement " \
+                "indices are {}\n".format(flavor, str(seq))
+
+        if not is_coherent(seq):
+            error_msg += "Error: Nodes that have been assigned the \"{}\" " \
+                "flavor do not have node placement indices that increase by " \
+                "1.  Current node indices are {}\n".format(flavor, str(seq))
+
+    # If any errors were detected then bail
+    if error_msg:
+        raise ValueError(error_msg)
 
 
 def create_volume_types():
@@ -119,157 +191,198 @@ def finalize_overcloud():
     create_volume_types()
     update_swift_endpoint(keystone_client)
 
-    #horizon_service = keystone_client.services.find(**{'name': 'horizon'})
-    #horizon_endpoint = keystone_client.endpoints.find(
-    #    **{'service_id': horizon_service.id})
-    #return horizon_endpoint.publicurl
+    # horizon_service = keystone_client.services.find(**{'name': 'horizon'})
+    # horizon_endpoint = keystone_client.endpoints.find(
+    #     **{'service_id': horizon_service.id})
+    # return horizon_endpoint.publicurl
     return None
 
 
 def main():
-    global args
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--controllers", dest="num_controllers", type=int,
-                        default=3, help="The number of controller nodes")
-    parser.add_argument("--computes", dest="num_computes", type=int,
-                        required=True, help="The number of compute nodes")
-    parser.add_argument("--storage", dest="num_storage", type=int,
-                        required=True, help="The number of storage nodes")
-    parser.add_argument("--vlans", dest="vlan_range", required=True,
-                        help="The VLAN range to use for Neutron in xxx:yyy "
-                             "format")
-    parser.add_argument("--ntp", dest="ntp_server_fqdn",
-                        default="0.centos.pool.ntp.org",
-                        help="The FQDN of the ntp server to use")
-    parser.add_argument("--timeout", default="120",
-                        help="The amount of time in minutes to allow the "
-                             "overcloud to deploy")
-    parser.add_argument("--overcloud_name", default=None,
-                        help="The name of the overcloud")
-    parser.add_argument('--enable_eqlx', action='store_true', default=False,
-                        help="Enable cinder Dell Eqlx backend")
-    parser.add_argument('--enable_dellsc', action='store_true', default=False,
-                        help="Enable cinder Dell Storage Center backend")
-    parser.add_argument('--static_ips', action='store_true', default=False,
-                        help="Specify the IPs on the overcloud nodes")
-    parser.add_argument('--static_vips', action='store_true', default=False,
-                        help="Specify the VIPs for the networks")
-    args = parser.parse_args()
-    p = re.compile('\d+:\d+')
-    if not p.match(args.vlan_range):
-        print("Error: The VLAN range must be a number followed by a colon, "
-              "followed by another number")
+    try:
+        global args
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--controllers",
+                            dest="num_controllers",
+                            type=int,
+                            default=3,
+                            help="The number of controller nodes")
+        parser.add_argument("--computes",
+                            dest="num_computes",
+                            type=int,
+                            required=True,
+                            help="The number of compute nodes")
+        parser.add_argument("--storage",
+                            dest="num_storage",
+                            type=int,
+                            required=True,
+                            help="The number of storage nodes")
+        parser.add_argument("--vlans",
+                            dest="vlan_range",
+                            required=True,
+                            help="The VLAN range to use for Neutron in "
+                                 " xxx:yyy format")
+        parser.add_argument("--ntp",
+                            dest="ntp_server_fqdn",
+                            default="0.centos.pool.ntp.org",
+                            help="The FQDN of the ntp server to use")
+        parser.add_argument("--timeout",
+                            default="120",
+                            help="The amount of time in minutes to allow the "
+                                 "overcloud to deploy")
+        parser.add_argument("--overcloud_name",
+                            default=None,
+                            help="The name of the overcloud")
+        parser.add_argument('--enable_eqlx',
+                            action='store_true',
+                            default=False,
+                            help="Enable cinder Dell Eqlx backend")
+        parser.add_argument('--enable_dellsc',
+                            action='store_true',
+                            default=False,
+                            help="Enable cinder Dell Storage Center backend")
+        parser.add_argument('--static_ips',
+                            action='store_true',
+                            default=False,
+                            help="Specify the IPs on the overcloud nodes")
+        parser.add_argument('--static_vips',
+                            action='store_true',
+                            default=False,
+                            help="Specify the VIPs for the networks")
+        parser.add_argument('--node_placement',
+                            action='store_true',
+                            default=False,
+                            help="Control which physical server is assigned "
+                                 "which instance")
+        args = parser.parse_args()
+        p = re.compile('\d+:\d+')
+        if not p.match(args.vlan_range):
+            raise ValueError("Error: The VLAN range must be a number followed "
+                             "by a colon, followed by another number")
+
+        os_auth_url, os_tenant_name, os_username, os_password = \
+            CredentialHelper.get_undercloud_creds()
+
+        if args.node_placement:
+            validate_node_placement()
+
+        # Apply any patches required on the Director itself. This is done each
+        # time the overcloud is deployed (instead of once, after the Director
+        # is installed) in order to ensure an update to the Director doesn't
+        # overwrite the patch.
+        print 'Applying patches to director...'
+        cmd = os.path.join(home_dir, 'pilot', 'patch-director.sh')
+        status = os.system(cmd)
+        if status != 0:
+            raise ValueError("\nError: {} failed, unable to continue.  See "
+                             "the comments in that file for additional "
+                             "information".format(cmd))
+
+        # Recursively copy pilot/templates/overrides to
+        # pilot/templates/overcloud
+        print 'Installing overrides...'
+        overrides_dir = os.path.join(home_dir, 'pilot/templates/overrides')
+        overcloud_dir = os.path.join(home_dir, 'pilot/templates/overcloud')
+        distutils.dir_util.copy_tree(overrides_dir, overcloud_dir)
+
+        # Launch the deployment
+
+        overcloud_name_opt = ""
+        if args.overcloud_name is not None:
+            overcloud_name_opt = "--stack " + args.overcloud_name
+
+        # The order of the environment files is important as a later inclusion
+        # overrides resources defined in prior inclusions.
+
+        # The network-environment.yaml must be included after the
+        # network-isolation.yaml
+        env_opts = "-e ~/pilot/templates/overcloud/environments/" \
+                   "network-isolation.yaml" \
+                   " -e ~/pilot/templates/network-environment.yaml"
+
+        # The static-ip-environment.yaml must be included after the
+        # network-environment.yaml
+        if args.static_ips:
+            env_opts += " -e ~/pilot/templates/static-ip-environment.yaml"
+
+        # The static-vip-environment.yaml must be included after the
+        # network-environment.yaml
+        if args.static_vips:
+            env_opts += " -e ~/pilot/templates/static-vip-environment.yaml"
+
+        if args.node_placement:
+            env_opts += " -e ~/pilot/templates/node-placement.yaml"
+
+        # The dell-environment.yaml must be included after the
+        # storage-environment.yaml
+        env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+                    "storage-environment.yaml" \
+                    " -e ~/pilot/templates/dell-environment.yaml" \
+                    " -e /usr/share/openstack-tripleo-heat-templates/" \
+                    "environments/puppet-pacemaker.yaml"
+
+        if args.enable_dellsc | args.enable_eqlx:
+            env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
+
+        cmd = "cd ; openstack overcloud deploy" \
+              " --debug" \
+              " --log-file ~/pilot/overcloud_deployment.log" \
+              " -t {}" \
+              " {}" \
+              " --templates ~/pilot/templates/overcloud" \
+              " {}" \
+              " --control-flavor control" \
+              " --compute-flavor compute" \
+              " --ceph-storage-flavor ceph-storage" \
+              " --swift-storage-flavor swift-storage" \
+              " --block-storage-flavor block-storage" \
+              " --neutron-public-interface bond1" \
+              " --neutron-network-type vlan" \
+              " --neutron-disable-tunneling" \
+              " --os-auth-url {}" \
+              " --os-project-name {}" \
+              " --os-user-id {}" \
+              " --os-password {}" \
+              " --control-scale {}" \
+              " --compute-scale {}" \
+              " --ceph-storage-scale {}" \
+              " --ntp-server {}" \
+              " --neutron-network-vlan-ranges physint:{},physext" \
+              " --neutron-bridge-mappings physint:br-tenant,physext:br-ex" \
+              "".format(args.timeout,
+                        overcloud_name_opt,
+                        env_opts,
+                        os_auth_url,
+                        os_tenant_name,
+                        os_username,
+                        os_password,
+                        args.num_controllers,
+                        args.num_computes,
+                        args.num_storage,
+                        args.ntp_server_fqdn,
+                        args.vlan_range)
+
+        print cmd
+        start = time.time()
+        status = os.system(cmd)
+        end = time.time()
+        print '\nExecution time: {} (hh:mm:ss)'.format(
+            time.strftime('%H:%M:%S', time.gmtime(end - start)))
+        if status == 0:
+            horizon_url = finalize_overcloud()
+        else:
+            horizon_url = None
+
+        print 'Fetching SSH keys...'
+        update_ssh_config()
+        print 'Overcloud nodes:'
+        identify_nodes()
+
+        if horizon_url:
+            print '\nHorizon Dashboard URL: {}\n'.format(horizon_url)
+    except ValueError as err:
+        print >> sys.stderr, err
         sys.exit(1)
-
-    os_auth_url, os_tenant_name, os_username, os_password = \
-        CredentialHelper.get_undercloud_creds()
-
-    # Apply any patches required on the Director itself. This is done each time
-    # the overcloud is deployed (instead of once, after the Director is
-    # installed) in order to ensure an update to the Director doesn't overwrite
-    # the patch.
-    cmd = os.path.join(home_dir, 'pilot', 'patch-director.sh')
-    status = os.system(cmd)
-    if status != 0:
-        print("\nError: {} failed, unable to continue".format(cmd))
-        print("See the comments in that file for additional information")
-        sys.exit(1)
-
-    # Recursively copy pilot/templates/overrides to pilot/templates/overcloud
-    overrides_dir = os.path.join(home_dir, 'pilot/templates/overrides')
-    overcloud_dir = os.path.join(home_dir, 'pilot/templates/overcloud')
-    distutils.dir_util.copy_tree(overrides_dir, overcloud_dir)
-
-    # Launch the deployment
-
-    overcloud_name_opt = ""
-    if args.overcloud_name is not None:
-        overcloud_name_opt = "--stack " + args.overcloud_name
-
-    # The order of the environment files is important as a later inclusion
-    # overrides resources defined in prior inclusions.
-
-    # The network-environment.yaml must be included after the
-    # network-isolation.yaml
-    env_opts = "-e ~/pilot/templates/overcloud/environments/network-isolation.yaml" \
-               " -e ~/pilot/templates/network-environment.yaml"
-
-    # The static-ip-environment.yaml must be included after the
-    # network-environment.yaml
-    if args.static_ips:
-        env_opts += " -e ~/pilot/templates/static-ip-environment.yaml"
-
-    # The static-vip-environment.yaml must be included after the
-    # network-environment.yaml
-    if args.static_vips:
-        env_opts += " -e ~/pilot/templates/static-vip-environment.yaml"
-
-    # The dell-environment.yaml must be included after the
-    # storage-environment.yaml
-    env_opts += " -e ~/pilot/templates/overcloud/environments/storage-environment.yaml" \
-                " -e ~/pilot/templates/dell-environment.yaml" \
-                " -e /usr/share/openstack-tripleo-heat-templates/" \
-                "environments/puppet-pacemaker.yaml"
-
-    if args.enable_dellsc | args.enable_eqlx:
-        env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
-
-    cmd = "cd ; openstack overcloud deploy" \
-          " --debug" \
-          " --log-file ~/pilot/overcloud_deployment.log" \
-          " -t {}" \
-          " {}" \
-          " --templates ~/pilot/templates/overcloud" \
-          " {}" \
-          " --control-flavor control" \
-          " --compute-flavor compute" \
-          " --ceph-storage-flavor ceph-storage" \
-          " --swift-storage-flavor swift-storage" \
-          " --block-storage-flavor block-storage" \
-          " --neutron-public-interface bond1" \
-          " --neutron-network-type vlan" \
-          " --neutron-disable-tunneling" \
-          " --os-auth-url {}" \
-          " --os-project-name {}" \
-          " --os-user-id {}" \
-          " --os-password {}" \
-          " --control-scale {}" \
-          " --compute-scale {}" \
-          " --ceph-storage-scale {}" \
-          " --ntp-server {}" \
-          " --neutron-network-vlan-ranges physint:{},physext" \
-          " --neutron-bridge-mappings physint:br-tenant,physext:br-ex" \
-          "".format(args.timeout,
-                    overcloud_name_opt,
-                    env_opts,
-                    os_auth_url,
-                    os_tenant_name,
-                    os_username,
-                    os_password,
-                    args.num_controllers,
-                    args.num_computes,
-                    args.num_storage,
-                    args.ntp_server_fqdn,
-                    args.vlan_range)
-
-    print cmd
-    start = time.time()
-    status = os.system(cmd)
-    end = time.time()
-    print '\nExecution time: {} (hh:mm:ss)'.format(time.strftime('%H:%M:%S',
-                                                   time.gmtime(end - start)))
-    if status == 0:
-        horizon_url = finalize_overcloud()
-    else:
-        horizon_url = None
-
-    print 'Fetching SSH keys...'
-    update_ssh_config()
-    print 'Overcloud nodes:'
-    identify_nodes()
-
-    if horizon_url:
-        print '\nHorizon Dashboard URL: {}\n'.format(horizon_url)
 
 if __name__ == "__main__":
     main()
