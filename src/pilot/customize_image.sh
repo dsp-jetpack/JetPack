@@ -18,7 +18,7 @@ subscription_manager_user="$1"
 subscription_manager_pass="$2"
 subcription_manager_poolid="$3"
 
-declare -a install_packages=("ceph-radosgw" "diamond" "salt-minion --selinux-relabel")
+declare -a install_packages=("ceph-radosgw" "diamond" "ceph-selinux" "salt-minion --selinux-relabel")
 declare -a enable_repos=("rhel-7-server-rhceph-1.3-mon-rpms" "rhel-7-server-rhceph-1.3-tools-rpms" "rhel-7-server-rhceph-1.3-osd-rpms")
 
 if [ "$#" -ne 3 ]; then
