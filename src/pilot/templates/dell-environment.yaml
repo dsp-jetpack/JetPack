@@ -45,6 +45,7 @@ parameter_defaults:
     # Additional entries added to /etc/ceph/ceph.conf
     ceph_tuning:
       max_open_files: 131072
+    ceph_osd_selinux_permissive: false
 
   # Additional hiera data for controller nodes
   controllerExtraConfig:
