@@ -101,11 +101,8 @@ JSON_FORMAT_INDENT_LEVEL = 2
 JSON_FORMAT_SEPARATORS = (',', ': ')
 
 # Red Hat OpenStack Platform (OSP) Director node definition template
-# attributes. They are documented in "Red Hat OpenStack Platform 8 Director
-# Installation and Usage"
-# (https://access.redhat.com/documentation/en/red-hat-openstack-platform/version-8/director-installation-and-usage/),
-# section 5.1, "Registering Nodes for the Overcloud". Search for
-# "instackenv.json".
+# attributes. They are documented in the "Red Hat OpenStack Platform Director
+# Installation and Usage" document. Search for "instackenv.json".
 #
 # The abbreviation 'PM' represents "platform management" or "power
 # management".
