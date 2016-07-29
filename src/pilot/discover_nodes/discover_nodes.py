@@ -100,20 +100,12 @@ IDRAC_FACTORY_ADMIN_USER_CREDENTIALS = {
 JSON_FORMAT_INDENT_LEVEL = 2
 JSON_FORMAT_SEPARATORS = (',', ': ')
 
-# Red Hat Enterprise Linux OpenStack Platform (OSP) Director node
-# definition template attributes. They are documented in "Red Hat
-# Enterprise Linux OpenStack Platform 7 Director Installation and Usage"
-# (https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux_OpenStack_Platform/7/html/Director_Installation_and_Usage),
-# section 6.1.1, "Registering Nodes for the Basic Overcloud". Search for
-# "instackenv.json".
+# Red Hat OpenStack Platform (OSP) Director node definition template
+# attributes. They are documented in the "Red Hat OpenStack Platform Director
+# Installation and Usage" document. Search for "instackenv.json".
 #
 # The abbreviation 'PM' represents "platform management" or "power
 # management".
-OSPD_NODE_TEMPLATE_ATTRIBUTE_ARCHITECTURE = 'arch'
-OSPD_NODE_TEMPLATE_ATTRIBUTE_CPU = 'cpu'
-OSPD_NODE_TEMPLATE_ATTRIBUTE_DISK = 'disk'
-OSPD_NODE_TEMPLATE_ATTRIBUTE_MAC = 'mac'
-OSPD_NODE_TEMPLATE_ATTRIBUTE_MEMORY = 'memory'
 OSPD_NODE_TEMPLATE_ATTRIBUTE_NODES = 'nodes'
 OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_ADDR = 'pm_addr'
 OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_PASSWORD = 'pm_password'
@@ -138,12 +130,7 @@ class NotSupported(BaseException):
 # describes the use of collections.namedtuple to implement C-like
 # structures in Python.
 NodeInfo = namedtuple('NodeInfo',
-                      [OSPD_NODE_TEMPLATE_ATTRIBUTE_ARCHITECTURE,
-                       OSPD_NODE_TEMPLATE_ATTRIBUTE_CPU,
-                       OSPD_NODE_TEMPLATE_ATTRIBUTE_DISK,
-                       OSPD_NODE_TEMPLATE_ATTRIBUTE_MAC,
-                       OSPD_NODE_TEMPLATE_ATTRIBUTE_MEMORY,
-                       OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_ADDR,
+                      [OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_ADDR,
                        OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_PASSWORD,
                        OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_TYPE,
                        OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_USER,
@@ -373,21 +360,7 @@ def scan_one(scan_info):
                                                   scan_info.user_name,
                                                   scan_info.password)
 
-    # Testing determined that Ironic introspection fails for a node
-    # definition template that does not contain the 'arch', 'cpu',
-    # 'disk', and 'memory' attributes. This contradicts the
-    # documentation, which describes them as optional, as well as
-    # information received from Red Hat engineers that they are not
-    # needed. Empty string values for those attributes are sufficient.
-    #
-    # The documentation is identified at the beginning of this file.
-
     # Initialize the values of the attributes.
-    architecture = ''
-    cpu = None
-    disk = None
-    mac = None
-    memory = None
     pm_address = scan_info.ip_address
     pm_password = scan_info.password
     pm_type = OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IPMI
@@ -431,21 +404,8 @@ def scan_one(scan_info):
         # fixed.
         pm_address += ' '
         pm_address += OSPD_NODE_TEMPLATE_VALUE_USER_INTERVENTION_REQUIRED
-    else:
-        # Obtain the values of the attributes. By contract, none of the
-        # following functions may raise an exception. None of them
-        # interact with the iDRAC.
-        cpu = get_cpu(client)
-        disk = get_disk(client)
-        mac = get_mac(client, scan_info.provisioning_nics)
-        memory = get_memory(client)
 
     kwargs = {
-        OSPD_NODE_TEMPLATE_ATTRIBUTE_ARCHITECTURE: architecture,
-        OSPD_NODE_TEMPLATE_ATTRIBUTE_CPU: cpu,
-        OSPD_NODE_TEMPLATE_ATTRIBUTE_DISK: disk,
-        OSPD_NODE_TEMPLATE_ATTRIBUTE_MAC: mac,
-        OSPD_NODE_TEMPLATE_ATTRIBUTE_MEMORY: memory,
         OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_ADDR: pm_address,
         OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_PASSWORD: pm_password,
         OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_TYPE: pm_type,
@@ -531,35 +491,6 @@ def is_idrac(client):
         doc,
         DCIM_iDRACCardView,
         'DeviceDescription') == 'iDRAC'
-
-
-def get_cpu(client):
-    # An empty string value for the node definition template 'cpu's
-    # attribute is sufficient, because Ironic introspection determines
-    # its value and overwrites what is in the template.
-    return ''
-
-
-def get_disk(client):
-    # An empty string value for the node definition template 'disk'
-    # attribute is sufficient, because Ironic introspection determines
-    # its value and overwrites what is in the template.
-    return ''
-
-
-def get_mac(client, provisioning_nics):
-    # An empty list value for the node definition template 'mac'
-    # attribute is sufficient, because Ironic introspection determines
-    # its value and overwrites what is in the template.
-    return []
-
-
-def get_memory(client):
-    # An empty string value for the node definition template 'memory'
-    # attribute is sufficient, because Ironic introspection determines
-    # its value and overwrites what is in the template.
-    return ''
-
 
 if __name__ == '__main__':
     main()
