@@ -59,7 +59,6 @@ resources:
           echo "Patching ${file}..."
           sed -i "s|ports             => '8080'|ports             => '7480'|" ${file}
         } > /root/patch-rgw.txt 2>&1
-        fi
 
 outputs:
   OS::stack_id:

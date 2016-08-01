@@ -39,12 +39,27 @@ parameter_defaults:
       "images",
       ".rgw.buckets"
     ]
+    # Additional entries added to /etc/ceph/ceph.conf
+    ceph::conf::args:
+      global/max_open_files:
+        value: 131072
+      client.radosgw.gateway/rgw_keystone_url:
+        value: "%{hiera('swift::proxy::authtoken::identity_uri')}"
+      client.radosgw.gateway/rgw_keystone_admin_token:
+        value: "%{hiera('keystone::admin_token')}"
+      client.radosgw.gateway/rgw_keystone_accepted_roles:
+        value: "_member_, Member, admin, swift"
+      client.radosgw.gateway/rgw_keystone_token_cache size:
+        value: 500
+      client.radosgw.gateway/rgw_keystone_revocation_interval:
+        value: 600
+      client.radosgw.gateway/rgw_keystone_make_new_tenants:
+        value: true
+      client.radosgw.gateway/rgw_s3_auth_use_keystone:
+        value: true
 
   # Additional hiera data for storage nodes
   CephStorageExtraConfig:
-    # Additional entries added to /etc/ceph/ceph.conf
-    ceph_tuning:
-      max_open_files: 131072
     ceph_osd_selinux_permissive: false
 
   # Additional hiera data for controller nodes
@@ -52,12 +67,3 @@ parameter_defaults:
     swift::service::enabled: false
     ceph::profile::params::enable_rgw: true
     ceph::profile::params::rgw_frontends: "civetweb port=7480"
-    # Additional entries added to /etc/ceph/ceph.conf
-    ceph_tuning:
-      rgw_keystone_url: RGW_KEYSTONE_URL
-      rgw_keystone_admin_token: RGW_KEYSTONE_ADMIN_TOKEN
-      rgw_keystone_accepted_roles: "_member_, Member, admin, swift"
-      rgw_keystone_token_cache size: 500
-      rgw_keystone_revocation_interval: 600
-      rgw_keystone_make_new_tenants: true
-      rgw_s3_auth_use_keystone: true
