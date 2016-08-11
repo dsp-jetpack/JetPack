@@ -94,21 +94,18 @@ init(){
       fatal "### '${update_ssh_config}' is required but missing!  Aborting sanity test"
   execute_command "${update_ssh_config}"
 
-  # Find the IP for controller0 from the undercloud
-  CONTROLLER_0_NAME=$(nova list | grep '\-controller-0' | awk -F\| '{print $3}'| tr -d ' ')
-  CONTROLLER=$(nova show ${CONTROLLER_0_NAME} |grep "ctlplane network"| awk -F\| '{print $3}'| tr -d ' ')
-
-  # Get a list of the IPs of all the controller nodes for later use
-  CONTROLLERS=$(nova list | grep '\-controller-' | awk -F\| '{print $7}' | awk -F= '{print $2}')
+  # Get a list of the IPs of all the controller nodes for later use, as well as 
+  # the IP for a single controller
+  CONTROLLERS=$(openstack server list --flavor control -c Networks -f value | tr -d 'cntlplane=')
+  CONTROLLER=($CONTROLLERS)
 
   # Now switch to point the OpenStack commands at the overcloud
-  STACK_NAME=$(heat stack-list | grep CREATE_ | awk -F\| '{print $3}' | tr -d ' ')
+  STACK_NAME=$(openstack stack list -c 'Stack Name' -f value)
   [ "${STACK_NAME}" ] ||  \
-      STACK_NAME=$(heat stack-list | grep UPDATE_ | awk -F\| '{print $3}' | tr -d ' ')
-  [ "${STACK_NAME}" ] ||  \
-      fatal "### '${STACK_NAME}' is required and could not be found!  Aborting sanity test"
+      fatal "### ${STACK_NAME} is required and could not be found!  Aborting sanity test"
 
   source ~/${STACK_NAME}rc
+  info "### sourcing ~/${STACK_NAME}rc"
 
   info "### PCS Status "
   ssh heat-admin@$CONTROLLER 'sudo /usr/sbin/pcs status'
@@ -164,7 +161,7 @@ get_unique_name (){
 
 set_unique_names(){
   info "###get_unique-name"
-  inst_exists=$(nova list | grep $NOVA_INSTANCE_NAME |  head -n 1  | awk '{print $4}')
+  inst_exists=$(openstack server list --name "$NOVA_INSTANCE_NAME" -c Name -f value)
   if [ "$inst_exists" == "$NOVA_INSTANCE_NAME" ]
   then
      info "$NOVA_INSTANCE_NAME instance exists, creating new set"
@@ -184,15 +181,15 @@ set_unique_names(){
 create_the_networks(){
   info "### Creating the Networks ####"
  
-  net_exists=$(neutron net-list | grep $TENANT_NETWORK_NAME |  head -n 1  | awk '{print $4}')
+  net_exists=$(openstack network list -c Name -f value | grep "$TENANT_NETWORK_NAME")
   if [ "$net_exists" != "$TENANT_NETWORK_NAME" ]
   then 
-    execute_command "neutron net-create $TENANT_NETWORK_NAME --shared"
+    execute_command "openstack network create --share $TENANT_NETWORK_NAME"
   else
     info "#----- Tenant network '$TENANT_NETWORK_NAME' exists. Skipping"
   fi
   
-  subnet_exists=$(neutron subnet-list | grep $VLAN_NAME |  head -n 1  | awk '{print $4}')
+  subnet_exists=$(openstack subnet list -c Name -f value | grep "$VLAN_NAME")
   if [ "$subnet_exists" != "$VLAN_NAME" ]
   then
     execute_command "neutron subnet-create $TENANT_NETWORK_NAME $VLAN_NETWORK --name $VLAN_NAME"
@@ -200,7 +197,7 @@ create_the_networks(){
     info "#-----VLAN Network subnet '$VLAN_NETWORK' exists. Skipping"
   fi
 
-  router_exists=$(neutron router-list | grep $TENANT_ROUTER_NAME | head -n 1  |  awk '{print $4}')
+  router_exists=$(openstack router list -c Name -f value | grep "$TENANT_ROUTER_NAME")
   if [ "$router_exists" != "$TENANT_ROUTER_NAME" ]
   then
     execute_command "neutron router-create $TENANT_ROUTER_NAME"
@@ -214,7 +211,7 @@ create_the_networks(){
 
   execute_command "ssh heat-admin@$CONTROLLER sudo grep network_vlan_ranges /etc/neutron/plugin.ini"
 
-  ext_net_exists=$(neutron net-list | grep $EXTERNAL_NETWORK_NAME |  head -n 1  | awk '{print $4}')
+  ext_net_exists=$(openstack network list -c Name -f value | grep "$EXTERNAL_NETWORK_NAME")
   if [ "$ext_net_exists" != "$EXTERNAL_NETWORK_NAME" ]
   then
     execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external --provider:network_type vlan --provider:physical_network physext --provider:segmentation_id $EXTERNAL_VLAN"
@@ -224,14 +221,14 @@ create_the_networks(){
   fi
 
 
-  execute_command "neutron net-list"
+  execute_command "openstack network list"
 
-  execute_command "neutron router-list"
+  execute_command "openstack router list"
 
   # Use external network name
   execute_command "neutron router-gateway-set $TENANT_ROUTER_NAME $EXTERNAL_NETWORK_NAME"
 
-  neutron security-group-list | grep -q $SECURITY_GROUP_NAME
+  openstack  security group list -c Name -f value | grep -q $SECURITY_GROUP_NAME
   if [[ "$?" == 0 ]];
   then 
     info "#----- Security group '$SECURITY_GROUP_NAME' exists. Skipping"
@@ -265,19 +262,17 @@ setup_glance(){
     info "#----- Cirros image exists. Skipping"
   fi
 
-  image_exists=$(glance image-list | grep $IMAGE_NAME |  head -n 1  | awk '{print $4}')
+  image_exists=$(openstack image list -c Name -f value | grep -x $IMAGE_NAME)
   if [ "$image_exists" != "$IMAGE_NAME" ]
   then
-     execute_command "glance image-create --name  $IMAGE_NAME --disk-format qcow2 --container-format bare --file cirros-0.3.3-x86_64-disk.img"
+    execute_command "openstack image create --disk-format qcow2 --container-format bare --file cirros-0.3.3-x86_64-disk.img $IMAGE_NAME"
   else
     info "#----- Image '$IMAGE_NAME' exists. Skipping"
   fi
 
-  execute_command "glance image-list"
+  execute_command "openstack image list"
  
-  execute_command "nova flavor-list"
-
-  execute_command "nova image-list"
+  execute_command "openstack flavor list"
 }
 
 
@@ -291,11 +286,11 @@ setup_nova (){
     info "#----- Key '$KEY_NAME' exists. Skipping"
   fi
 
-  tenant_net_id=$(neutron net-list | grep $TENANT_NETWORK_NAME | head  -n 1  | awk '{print $2}')
+  tenant_net_id=$(openstack network list -f value | grep "$TENANT_NETWORK_NAME" | awk '{print $1}')
 
-  image_id=$(glance image-list | grep $IMAGE_NAME | head -n 1  | awk '{print $2}')
+  image_id=$(openstack image list -f value | grep "$IMAGE_NAME" | awk '{print $1}')
 
-  execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor 2 --key_name $KEY_NAME --image $image_id --nic net-id=$tenant_net_id $NOVA_INSTANCE_NAME"
+  execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor 2 --key-name $KEY_NAME --image $image_id --nic net-id=$tenant_net_id $NOVA_INSTANCE_NAME"
 
   info "### Waiting for the instance to be built..."
   instance_status=$(nova list | grep "$NOVA_INSTANCE_NAME" | awk '{print $6}')
@@ -434,11 +429,11 @@ radosgw_cleanup(){
 setup_project(){
   info "### Setting up new project"
 
-  pro_exists=$(keystone tenant-list | grep $PROJECT_NAME |  head -n 1  | awk '{print $4}')
+  pro_exists=$(openstack project list -c Name -f value | grep "$PROJECT_NAME")
   if [ "$pro_exists" != "$PROJECT_NAME" ]
   then
-    execute_command "keystone tenant-create --name $PROJECT_NAME"
-    execute_command "keystone user-create --name $USER_NAME --tenant $PROJECT_NAME --pass $PASSWORD --email $EMAIL"
+    execute_command "openstack project create $PROJECT_NAME"
+    execute_command "openstack user create --project $PROJECT_NAME --password $PASSWORD --email $EMAIL $USER_NAME"
   else
     info "#Project $PROJECT_NAME exists ---- Skipping"
   fi
