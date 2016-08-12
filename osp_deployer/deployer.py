@@ -329,7 +329,7 @@ def deploy():
         director_vm.retreive_nodes_ips()
         tester.verify_computes_virtualization_enabled()
         tester.verify_backends_connectivity()
-        cmd = "source ~/stackrc;heat stack-list | grep "+ settings.overcloud_name +" |" \
+        cmd = "source ~/stackrc;openstack stack list | grep "+ settings.overcloud_name +" |" \
               " awk '{print $6}'"
         overcloud_status = \
             Ssh.execute_command_tty(settings.director_node.external_ip,
