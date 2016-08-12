@@ -855,15 +855,8 @@ class Director(InfraHost):
 
         logger.debug("Deleting the overcloud stack")
         self.run_tty(self.source_stackrc +
-                     "heat stack-delete " +
-                     self.settings.overcloud_name + 
-                     " -y")
-        while 1:
-            if self.settings.overcloud_name in self.run_tty(self.source_stackrc +
-                                           "heat stack-list")[0]:
-                time.sleep(60)
-            else:
-                break
+                     "openstack stack delete --yes --wait " +
+                     self.settings.overcloud_name)
         # Unregister the nodes from Ironic
         re = self.run_tty(self.source_stackrc + "ironic node-list | grep None")
         ls_nodes = re[0].split("\n")
