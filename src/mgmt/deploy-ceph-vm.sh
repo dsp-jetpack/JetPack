@@ -177,12 +177,7 @@ chvt 8
          subscription-manager attach --auto
          )
 
-  subscription-manager repos --disable=*
-  subscription-manager repos --enable=rhel-7-server-rpms 
-  subscription-manager repos --enable=rhel-7-server-rhceph-1.3-calamari-rpms 
-  subscription-manager repos --enable=rhel-7-server-rhceph-1.3-installer-rpms 
-  subscription-manager repos --enable=rhel-7-server-rhceph-1.3-mon-rpms 
-  subscription-manager repos --enable=rhel-7-server-rhceph-1.3-osd-rpms
+  subscription-manager repos --disable=* --enable=rhel-7-server-rpms --enable=rhel-7-server-rhceph-1.3-calamari-rpms --enable=rhel-7-server-rhceph-1.3-installer-rpms --enable=rhel-7-server-rhceph-1.3-mon-rpms --enable=rhel-7-server-rhceph-1.3-osd-rpms
 
   cat <<EOIP > /etc/sysconfig/iptables
 *filter
