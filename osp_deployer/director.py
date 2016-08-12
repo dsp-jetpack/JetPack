@@ -79,7 +79,6 @@ class Director(InfraHost):
 
         cmds += [
             'yum remove python-rdomanager-oscplugin -y',
-            'yum remove ahc-tools -y',
             'yum clean all',
             'yum makecache',
             'yum repolist all',
