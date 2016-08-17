@@ -169,7 +169,7 @@ def logging_level(string):
         raise argparse.ArgumentTypeError(
             "Unknown logging level: {}".format(string_level))
 
-    if not isinstance(numeric_level, (int, long)):
+    if not isinstance(numeric_level, (int, long)) or int(numeric_level) < 0:
         raise argparse.ArgumentTypeError(
             "Logging level not a nonnegative integer: {!r}".format(
                 numeric_level))
