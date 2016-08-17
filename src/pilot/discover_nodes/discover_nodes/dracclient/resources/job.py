@@ -87,15 +87,7 @@ class JobManagement(ironic_job.JobManagement):
                                  selectors, properties,
                                  expected_return_value=utils.RET_CREATED)
 
-        query = (
-            './/{%(namespace)s}%(item)s[@%(attribute_name)s='
-            '"%(attribute_value)s"]' % {
-                'namespace': wsman.NS_WSMAN,
-                'item': 'Selector',
-                'attribute_name': 'Name',
-                'attribute_value': 'InstanceID'})
-        job_id = doc.find(query).text
-        return job_id
+        return self._get_job_id(doc)
 
     def create_reboot_job(self,
                           reboot_type='graceful_reboot_with_forced_shutdown'):
@@ -133,15 +125,7 @@ class JobManagement(ironic_job.JobManagement):
                                  properties,
                                  expected_return_value=utils.RET_CREATED)
 
-        query = (
-            './/{%(namespace)s}%(item)s[@%(attribute_name)s='
-            '"%(attribute_value)s"]' % {
-                'namespace': wsman.NS_WSMAN,
-                'item': 'Selector',
-                'attribute_name': 'Name',
-                'attribute_value': 'InstanceID'})
-        job_id = doc.find(query).text
-        return job_id
+        return self._get_job_id(doc)
 
     def schedule_job_execution(self, job_ids, start_time='TIME_NOW'):
         """Schedules jobs for execution in a specified order.
@@ -174,3 +158,14 @@ class JobManagement(ironic_job.JobManagement):
                            selectors,
                            properties,
                            expected_return_value=utils.RET_SUCCESS)
+
+    def _get_job_id(self, doc):
+        query = (
+            './/{%(namespace)s}%(item)s[@%(attribute_name)s='
+            '"%(attribute_value)s"]' % {
+                'namespace': wsman.NS_WSMAN,
+                'item': 'Selector',
+                'attribute_name': 'Name',
+                'attribute_value': 'InstanceID'})
+        job_id = doc.find(query).text
+        return job_id
