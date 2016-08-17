@@ -83,17 +83,17 @@ system-config-firewall-base
 # (in this case, the entire string including the example should be replaced)
 
 # FQDN of server
-HostName="CHANGEME e.g. sah.example.org"
+HostName="sah.cwdg720xd01.org"
 
 # Root password of server
-SystemPassword="CHANGEME"
+SystemPassword="QaCl0ud"
 
 # Subscription Manager credentials and pool to connect to.
 # If the pool is not specified, the kickstart will try to subscribe to
 # the first subcription specified as "Red Hat Enterprise Linux Server"
-SubscriptionManagerUser="CHANGEME"
-SubscriptionManagerPassword="CHANGEME"
-SubscriptionManagerPool="CHANGEME"
+SubscriptionManagerUser="dellcloudsol"
+SubscriptionManagerPassword="cr0wBar!"
+SubscriptionManagerPool="8a85f9814b7ed22d014b949b757e47ec"
 SubscriptionManagerProxy=""
 SubscriptionManagerProxyPort=""
 SubscriptionManagerProxyUser=""
@@ -101,70 +101,70 @@ SubscriptionManagerProxyPassword=""
 
 
 # Network configuration
-Gateway="CHANGEME e.g. 10.148.44.254"
-NameServers="CHANGEME e.g. 10.148.44.11"
+Gateway="10.21.148.1"
+NameServers="8.8.8.8"
 NTPServers="0.centos.pool.ntp.org"
-TimeZone="UTC"
+TimeZone="America/Chicago"
 
 # Installation interface configuration
 # Format is "ip/netmask interface no"
-anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 em2 no"
+anaconda_interface="10.21.148.134/255.255.255.0 em4 no"
 
 # Bonding and Bridge configuration. These variables are bash associative arrays and take the form of array[key]="value".
 # Specifying a key more than once will overwrite the first key. For example:
 
 # Define the bonds
 # Bond to handle external traffic
-extern_bond_name="CHANGEME e.g. bond1"
+extern_bond_name="bond1"
 extern_boot_opts="onboot none"
 extern_bond_opts="mode=802.3ad miimon=100"
-extern_ifaces="CHANGEME e.g. em2 p1p2"
+extern_ifaces="p4p2 p6p2"
 
 # Bond to handle internal traffic
-internal_bond_name="CHANGEME e.g. bond0"
+internal_bond_name="bond0"
 internal_boot_opts="onboot none"
 internal_bond_opts="mode=802.3ad miimon=100"
-internal_ifaces="CHANGEME e.g. em1 p1p1"
+internal_ifaces="p4p1 p6p1"
 
 # Management
-mgmt_bond_name="CHANGEME e.g. bond0.110"
+mgmt_bond_name=bond0."110"
 mgmt_boot_opts="onboot none vlan"
 
 # Provisioning
-prov_bond_name="CHANGEME e.g. bond0.120"
+prov_bond_name=bond0."120"
 prov_boot_opts="onboot none vlan"
 
 # Storage
-stor_bond_name="CHANGEME e.g. bond0.170"
+stor_bond_name=bond0."170"
 stor_boot_opts="onboot none vlan"
 
 # Public API
-pub_api_bond_name="CHANGEME e.g. bond0.190"
+pub_api_bond_name=bond0."190"
 pub_api_boot_opts="onboot none vlan"
 
 # Private API
-priv_api_bond_name="CHANGEME e.g. bond0.140"
+priv_api_bond_name=bond0."140"
 priv_api_boot_opts="onboot none vlan"
 
 
 # Define the bridges
 # External bridge options
-br_extern_boot_opts="CHANGEME e.g. onboot static 10.148.44.12/255.255.255.0"
+br_extern_boot_opts="onboot static 10.21.148.111/255.255.255.0"
 
 # Management bridge options
-br_mgmt_boot_opts="onboot static 192.168.110.12/255.255.255.0"
+br_mgmt_boot_opts="onboot static 192.168.110.124/255.255.255.0"
 
 # Provisioning bridge options
-br_prov_boot_opts="CHANGEME e.g. onboot static 192.168.120.12/255.255.255.0"
+br_prov_boot_opts="onboot static 192.168.120.111/255.255.255.0"
 
 # Storage bridge options
-br_stor_boot_opts="CHANGEME e.g. onboot static 192.168.170.12/255.255.255.0"
+br_stor_boot_opts="onboot static 192.168.170.111/255.255.255.0"
 
 # Public API bridge options
-br_pub_api_boot_opts="CHANGEME e.g. onboot static 192.168.190.12/255.255.255.0"
+br_pub_api_boot_opts="onboot static 192.168.190.111/255.255.255.0"
 
 # Private API bridge options
-br_priv_api_boot_opts="CHANGEME e.g. onboot static 192.168.140.12/255.255.255.0"
+br_priv_api_boot_opts="onboot static 192.168.140.111/255.255.255.0"
 
 ################### END of CHANGEME
 
@@ -513,6 +513,15 @@ systemctl disable chronyd
 
 mkdir -p /store/data/images
 mkdir -p /store/data/iso
+
+yum install -y gcc libffi-devel python-devel openssl-devel python-setuptools
+easy_install paramiko
+easy_install selenium
+yum install -y ipmitool
+curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
+python get-pip.py
+pip install paramiko
+
 
 chvt 1
 
