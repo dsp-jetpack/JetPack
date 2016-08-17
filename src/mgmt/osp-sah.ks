@@ -518,6 +518,7 @@ yum install -y gcc libffi-devel python-devel openssl-devel python-setuptools
 easy_install paramiko
 easy_install selenium
 yum install -y ipmitool
+yum install -y tmux
 curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
 python get-pip.py
 pip install paramiko
