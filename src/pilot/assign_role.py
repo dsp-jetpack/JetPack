@@ -513,11 +513,12 @@ def wait_for_job_completions(drac_client, job_ids):
 def determine_job_is_complete(drac_client, job_id):
     job_state = drac_client.get_job(job_id).state
 
-    return job_state == 'Completed' or \
-        job_state == 'Completed with Errors' or \
-        job_state == 'Failed' or \
-        job_state == 'Reboot Completed' or \
-        job_state == 'Reboot Failed'
+    return job_state in [
+        'Completed',
+        'Completed with Errors',
+        'Failed',
+        'Reboot Completed',
+        'Reboot Failed']
 
 
 def determine_job_outcomes(drac_client, job_ids):
