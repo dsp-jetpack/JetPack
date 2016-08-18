@@ -22,7 +22,7 @@ subscription_manager_user="$2"
 subscription_manager_pass="$3"
 subcription_manager_poolid="$4"
 
-if [ "$#" -ne 3 ]; then
+if [ "$#" -lt 3 ]; then
   echo "Usage: $0 <dns_ip> <subscription_manager_user> <subscription_manager_pass> [<subcription_manager_poolid>]"
   exit 1
 fi
