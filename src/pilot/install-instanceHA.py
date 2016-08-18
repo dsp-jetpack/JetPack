@@ -122,10 +122,7 @@ def create_nova_evacuate_resource(overcloudrc_name, first_controller_node_ip):
   # to provide the auth_url, username, tenant and password values
   print "INFO: Create the nova-evacuate active/passive resource."
 
-  overcloud_auth_url = get_overcloud_auth_url(overcloudrc_name)
-  overcloud_username = get_overcloud_username(overcloudrc_name)
-  overcloud_password = get_overcloud_password(overcloudrc_name)
-  overcloud_tenant_name = get_overcloud_tenant_name(overcloudrc_name)
+  overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_creds(overcloudrc_name)
   
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs resource create nova-evacuate ocf:openstack:NovaEvacuate auth_url=" + overcloud_auth_url + " username=" + overcloud_username + " password=" + overcloud_password + " tenant_name=" + overcloud_tenant_name)
@@ -255,10 +252,7 @@ def populate_compute_nodes_resources(first_controller_node_ip, overcloudrc_name)
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint colocation add ceilometer-compute-clone with libvirtd-compute-clone")
 
-  overcloud_auth_url = get_overcloud_auth_url(overcloudrc_name)
-  overcloud_username = get_overcloud_username(overcloudrc_name)
-  overcloud_password = get_overcloud_password(overcloudrc_name)
-  overcloud_tenant_name = get_overcloud_tenant_name(overcloudrc_name)
+  overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_creds(overcloudrc_name)
 
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs resource create nova-compute-checkevacuate ocf:openstack:nova-compute-wait auth_url=" + overcloud_auth_url + " username=" + overcloud_username + " password=" + overcloud_password + " tenant_name=" + overcloud_tenant_name + " op start timeout=300 --clone interleave=true --disabled --force")
@@ -331,10 +325,7 @@ def create_fence_nova_device(first_controller_node_ip, overcloudrc_name):
   # Create a seperate fence-nova stonith device.
   print "INFO: Create a seperate fence-nova stonith device."
 
-  overcloud_auth_url = get_overcloud_auth_url(overcloudrc_name)
-  overcloud_username = get_overcloud_username(overcloudrc_name)
-  overcloud_password = get_overcloud_password(overcloudrc_name)
-  overcloud_tenant_name = get_overcloud_tenant_name(overcloudrc_name)
+  overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_creds(overcloudrc_name)
   
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs stonith create fence-nova fence_compute auth_url=" + overcloud_auth_url + " username=" + overcloud_username + " password=" + overcloud_password + " tenant_name=" + overcloud_tenant_name + " record-only=1 --force")
