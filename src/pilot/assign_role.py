@@ -41,7 +41,7 @@ discover_nodes_path = os.path.join(os.path.expanduser('~'),
                                    'pilot/discover_nodes')
 sys.path.append(discover_nodes_path)
 
-from discover_nodes.dracclient import client as discover_nodes_dracclient
+from discover_nodes.dracclient import client as discover_nodes_dracclient  # noqa
 
 requests.packages.urllib3.disable_warnings()
 
