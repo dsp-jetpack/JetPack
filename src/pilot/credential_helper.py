@@ -59,15 +59,14 @@ class CredentialHelper:
             CredentialHelper.get_overcloudrc_name())
 
     @staticmethod
-    def get_drac_creds(ironic_client, node_uuid,
-                       instackenv_file="instackenv.json"):
+    def get_drac_creds(ironic_client, node_uuid):
         # Get the DRAC IP, username, and password
         node = ironic_client.node.get(node_uuid, ["driver_info"])
 
         return CredentialHelper.get_drac_creds_from_node(node)
 
     @staticmethod
-    def get_drac_creds_from_node(node, instackenv_file="instackenv.json"):
+    def get_drac_creds_from_node(node, instackenv_file="~/instackenv.json"):
         drac_ip, drac_user = CredentialHelper.get_drac_ip_and_user(node)
 
         # Can't get the password out of ironic, so dig it out of the
@@ -97,7 +96,7 @@ class CredentialHelper:
 
     @staticmethod
     def get_drac_password(ip, instackenv_file):
-        json_file = os.path.join(os.path.expanduser('~'), instackenv_file)
+        json_file = os.path.expanduser(instackenv_file)
         instackenv_json = open(json_file, 'r')
         instackenv = json.load(instackenv_json)
 

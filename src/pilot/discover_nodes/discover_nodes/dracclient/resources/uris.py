@@ -17,6 +17,9 @@ Schema definitions and resource URIs for the classes implemented by the
 DRAC WS-Man API.
 """
 
+DCIM_JobService = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
+                   'DCIM_JobService')
+
 DCIM_NICEnumeration = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
                        'DCIM_NICEnumeration')
 

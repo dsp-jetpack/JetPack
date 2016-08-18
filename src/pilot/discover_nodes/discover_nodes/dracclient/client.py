@@ -21,7 +21,9 @@ from __future__ import print_function
 
 import dracclient.client as ironic_client
 
+from .resources import job
 from .resources import nic
+from .resources import system
 from .resources import uris
 # import discover_nodes.dracclient.resources.nic as nic
 
@@ -64,6 +66,7 @@ class DRACClient(ironic_client.DRACClient):
                                          port,
                                          path,
                                          protocol)
+        self._job_mgmt = job.JobManagement(self.client)
         self._nic_cfg = nic.NICConfiguration(self.client)
         self._nic_mgmt = nic.NICManagement(self.client)
 
@@ -101,6 +104,96 @@ class DRACClient(ironic_client.DRACClient):
             cim_name='DCIM:NICService',
             target=nic_id,
             reboot=reboot)
+
+    def create_config_job(self,
+                          resource_uri,
+                          cim_creation_class_name,
+                          cim_name,
+                          target,
+                          cim_system_creation_class_name='DCIM_ComputerSystem',
+                          cim_system_name='DCIM:ComputerSystem',
+                          reboot=False,
+                          start_time='TIME_NOW'):
+        """Creates a configuration job.
+
+        In CIM (Common Information Model), weak association is used to name an
+        instance of one class in the context of an instance of another class.
+        SystemName and SystemCreationClassName are the attributes of the
+        scoping system, while Name and CreationClassName are the attributes of
+        the instance of the class, on which the CreateTargetedConfigJob method
+        is invoked.
+
+        :param resource_uri: URI of resource to invoke
+        :param cim_creation_class_name: creation class name of the CIM object
+        :param cim_name: name of the CIM object
+        :param target: target device
+        :param cim_system_creation_class_name: creation class name of the
+                                               scoping system
+        :param cim_system_name: name of the scoping system
+        :param reboot: indicates whether or not a RebootJob should also be
+                       created
+        :param start_time: start time for job execution in format
+                           yyyymmddhhmmss; the string 'TIME_NOW' means
+                           immediately and None means unspecified
+        :returns: id of the created job
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the iDRAC
+                 interface
+        :raises: DRACUnexpectedReturnValue on return value mismatch
+        """
+        return self._job_mgmt.create_config_job(
+            resource_uri,
+            cim_creation_class_name,
+            cim_name,
+            target,
+            cim_system_creation_class_name,
+            cim_system_name,
+            reboot,
+            start_time)
+
+    def create_nic_config_job(
+            self,
+            nic_id,
+            reboot=False,
+            start_time='TIME_NOW'):
+        """Creates a configuration job for applying all pending changes to a
+        NIC.
+
+        :param nic_id: id of the network interface controller (NIC)
+        :param reboot: indication of whether to also create a reboot job
+        :param start_time: start time for job execution in format
+                           yyyymmddhhmmss; the string 'TIME_NOW' means
+                           immediately and None means unspecified
+        :returns: id of the created configuration job
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the iDRAC
+                 interface
+        :raises: DRACUnexpectedReturnValue on return value mismatch
+        """
+        return self._job_mgmt.create_config_job(
+            resource_uri=uris.DCIM_NICService,
+            cim_creation_class_name='DCIM_NICService',
+            cim_name='DCIM:NICService',
+            target=nic_id,
+            reboot=reboot,
+            start_time=start_time)
+
+    def create_reboot_job(self,
+                          reboot_type='graceful_reboot_with_forced_shutdown'):
+        """Creates a reboot job.
+
+        :param reboot_type: type of reboot
+        :returns id of the created job
+        :raises: InvalidParameterValue on invalid reboot type
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the iDRAC
+                 interface
+        :raises: DRACUnexpectedReturnValue on return value mismatch
+        """
+        return self._job_mgmt.create_reboot_job(reboot_type)
 
     def get_nic_legacy_boot_protocol(self, nic_id):
         """Obtain the legacy, non-UEFI, boot protocol of a NIC.
@@ -149,9 +242,32 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_mgmt.get_nic_statistics(nic_id)
 
+    def get_system_model_name(self):
+        """Return the system model name.
+
+        :returns: system model name
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        """
+        return system.SystemManagement(self.client).get_system_model_name()
+
+    def is_nic_legacy_boot_protocol_none(self, nic_id):
+        """Return true if the legacy, non-UEFI, boot protocol of a NIC is NONE,
+        false otherwise.
+
+        :param nic_id: id of the network interface controller (NIC)
+        :returns: boolean indicating whether or not the legacy,
+                  non-UEFI, boot protocol is NONE
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the iDRAC
+                 interface
+        """
+        return self._nic_cfg.is_nic_legacy_boot_protocol_none(nic_id)
+
     def is_nic_legacy_boot_protocol_pxe(self, nic_id):
         """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE,
-           false otherwise.
+        false otherwise.
 
         :param nic_id: id of the network interface controller (NIC)
         :returns: boolean indicating whether or not the legacy,
@@ -210,6 +326,21 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_mgmt.list_nics(sort)
 
+    def schedule_job_execution(self, job_ids, start_time='TIME_NOW'):
+        """Schedules jobs for execution in a specified order.
+
+        :param job_ids: list of job identifiers
+        :param start_time: start time for job execution in format
+                           yyyymmddhhmmss; the string 'TIME_NOW' means
+                           immediately
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the iDRAC
+                 interface
+        :raises: DRACUnexpectedReturnValue on return value mismatch
+        """
+        return self._job_mgmt.schedule_job_execution(job_ids, start_time)
+
     def set_nic_legacy_boot_protocol(self, nic_id, value):
         """Set the legacy, non-UEFI, boot protocol of a NIC.
 
@@ -229,6 +360,25 @@ class DRACClient(ironic_client.DRACClient):
                  interface
         """
         return self._nic_cfg.set_nic_legacy_boot_protocol(nic_id, value)
+
+    def set_nic_legacy_boot_protocol_none(self, nic_id):
+        """Set the legacy, non-UEFI, boot protocol of a NIC to NONE.
+
+        If successful, the pending value of the NIC's legacy boot
+        protocol attribute is set. For the new value to be applied, a
+        configuration job must be created and the node must be rebooted.
+
+        :param nic_id: id of the network interface controller (NIC)
+        :returns: dictionary containing a 'commit_required' key with a
+                  boolean value indicating whether a configuration job
+                  must be created for the new legacy boot protocol
+                  setting to be applied
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the iDRAC
+                 interface
+        """
+        return self._nic_cfg.set_nic_legacy_boot_protocol(nic_id, 'NONE')
 
     def set_nic_legacy_boot_protocol_pxe(self, nic_id):
         """Set the legacy, non-UEFI, boot protocol of a NIC to PXE.
