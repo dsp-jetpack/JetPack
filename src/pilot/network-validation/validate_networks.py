@@ -27,8 +27,8 @@ import novaclient.client as nova_client
 import ironicclient.client as ironic_client
 from netaddr import IPNetwork
 
-pilot_dir = os.path.join(os.path.expanduser('~'), 'pilot') # noqa
-sys.path.append(pilot_dir) # noqa
+pilot_dir = os.path.join(os.path.expanduser('~'), 'pilot')  # noqa
+sys.path.append(pilot_dir)  # noqa
 
 from credential_helper import CredentialHelper
 from network_helper import NetworkHelper
