@@ -16,54 +16,11 @@ import paramiko
 # Dell utilities
 from identify_nodes import main as identify_nodes
 from credential_helper import CredentialHelper
-from misc_helper import MiscHelper
 from update_ssh_config import main as update_ssh_config
 
 # CONSTANTS
 
 # METHOD DEFINITION
-
-def get_overcloud_auth_url(overcloudrc_name):
-  os.system("source {}".format(overcloudrc_name))
-
-  # Get OVERCLOUD_OS_AUTH_URL
-  p1 = subprocess.Popen(['cat', overcloudrc_name], stdout=subprocess.PIPE)
-  p2 = subprocess.Popen(shlex.split('grep "OS_AUTH_URL"'),stdin=p1.stdout,
-                          stdout=subprocess.PIPE)
-  p3 = subprocess.Popen(shlex.split('cut -d\= -f2'),stdin=p2.stdout,
-                          stdout=subprocess.PIPE)
-  overcloud_auth_url = p3.communicate()[0].rstrip()
-  return overcloud_auth_url
-
-def get_overcloud_username(overcloudrc_name):
-  # Get OVERCLOUD_USERNAME
-  p1 = subprocess.Popen(['cat', overcloudrc_name], stdout=subprocess.PIPE)
-  p2 = subprocess.Popen(shlex.split('grep "OS_USERNAME"'),stdin=p1.stdout,
-                          stdout=subprocess.PIPE)
-  p3 = subprocess.Popen(shlex.split('cut -d\= -f2'),stdin=p2.stdout,
-                          stdout=subprocess.PIPE)
-  overcloud_username = p3.communicate()[0].rstrip()
-  return overcloud_username
-
-def get_overcloud_password(overcloudrc_name):
-  # Get OVERCLOUD_PASSWORD
-  p1 = subprocess.Popen(['cat', overcloudrc_name], stdout=subprocess.PIPE)
-  p2 = subprocess.Popen(shlex.split('grep "OS_PASSWORD"'),stdin=p1.stdout,
-                          stdout=subprocess.PIPE)
-  p3 = subprocess.Popen(shlex.split('cut -d\= -f2'),stdin=p2.stdout,
-                          stdout=subprocess.PIPE)
-  overcloud_password = p3.communicate()[0].rstrip()
-  return overcloud_password
-
-def get_overcloud_tenant_name(overcloudrc_name):
-  # Get OVERCLOUD_TENANT_NAME
-  p1 = subprocess.Popen(['cat', overcloudrc_name], stdout=subprocess.PIPE)
-  p2 = subprocess.Popen(shlex.split('grep "OS_TENANT_NAME"'),stdin=p1.stdout,
-                          stdout=subprocess.PIPE)
-  p3 = subprocess.Popen(shlex.split('cut -d\= -f2'),stdin=p2.stdout,
-                          stdout=subprocess.PIPE)
-  overcloud_tenant_name = p3.communicate()[0].rstrip()
-  return overcloud_tenant_name
 
 def ssh_cmd(address, user, command):
   try:
@@ -539,11 +496,8 @@ def main():
                           stdout=subprocess.PIPE)
   compute_nova_names = p2.communicate()[0].split() 
 
-  overcloud_auth_url = get_overcloud_auth_url(overcloudrc_name)
-  overcloud_username = get_overcloud_username(overcloudrc_name)
-  overcloud_password = get_overcloud_password(overcloudrc_name)
-  overcloud_tenant_name = get_overcloud_tenant_name(overcloudrc_name)
-
+  overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_creds(overcloudrc_name)
+  
   if args.debug == True:
     print ""
     print "***  Dumping Global Variable Definitions  ***"
