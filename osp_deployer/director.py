@@ -53,6 +53,8 @@ class Director(InfraHost):
 
     def apply_internal_repos(self):
         # Add the internal repo. if going down that road,
+        # Pull the target rpm's
+        cmds = []
         if self.settings.internal_repos is True:
             logger.debug(
                 "Applying internal repo's to the "
@@ -69,24 +71,22 @@ class Director(InfraHost):
                                  "/etc/yum.repos.d/internal_" +
                                  str(count) + ".repo")
                 count += 1
-
-            cmds = []
+        else
             for repo in self.settings.rhsm_repos:
                 cmds += [
                     'subscription-manager repos '
                     '--enable=' + repo]
 
-            cmds += [
-                'yum remove python-rdomanager-oscplugin -y',
-                'yum remove ahc-tools -y',
-                'yum clean all',
-                'yum makecache',
-                'yum repolist all',
-                'yum install python-rdomanager-oscplugin -y',
-                'yum update -y',
-            ]
-            for cmd in cmds:
-                self.run_as_root(cmd)
+        cmds += [
+            'yum remove python-rdomanager-oscplugin -y',
+            'yum clean all',
+            'yum makecache',
+            'yum repolist all',
+            'yum install python-rdomanager-oscplugin -y',
+            'yum update -y',
+        ]
+        for cmd in cmds:
+            self.run_as_root(cmd)
 
     def upload_update_conf_files(self):
 
