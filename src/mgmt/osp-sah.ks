@@ -523,7 +523,7 @@ curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
 python get-pip.py
 pip install paramiko
 
-echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/mnt/JetStream/deploy-auto' >> /root/.bashrct 
+echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/mnt/JetStream/deploy-auto' >> /root/.bashrc 
 
 chvt 1
 
