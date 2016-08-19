@@ -47,11 +47,7 @@ def awk_it(instring,index,delimiter=" "):
 def check_ip_validity(ipaddr):
     ValidIpAddressRegex = '^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
     ip_match = re.search(ValidIpAddressRegex,ipaddr)
-    if ip_match:
-       ip = 1
-    else:
-       ip = 0
-    return ip
+    return ip_match
 
 def stop_disable_openstack_services(compute_nodes_ip):
   # Stop and disable openstack-service and libvirtd on all Compute nodes
@@ -76,9 +72,9 @@ def create_authkey(first_compute_node_ip):
   ssh_cmd(first_compute_node_ip, "heat-admin",
           "sudo dd if=/dev/urandom of=/etc/pacemaker/authkey bs=4096 count=1")
   ssh_cmd(first_compute_node_ip, "heat-admin", 
-          "sudo cp /etc/pacemaker/authkey ~heat-admin/")
+          "sudo cp /etc/pacemaker/authkey ~/")
   ssh_cmd(first_compute_node_ip, "heat-admin", 
-          "sudo chown heat-admin:heat-admin ~heat-admin/authkey")
+          "sudo chown heat-admin:heat-admin ~/authkey")
 
   # Copy authkey to back to local node 
   cmd =  "scp heat-admin@" + first_compute_node_ip + ":~/authkey ~/authkey" 
@@ -536,10 +532,10 @@ def main():
 
   if args.compute_node_ip != '':
     compute_node_ip = args.compute_node_ip.rstrip()
-    print "***  Adding a compute node {} to Instance HA configuration  ***".format(compute_node_ip)
-    print ""
-
     if check_ip_validity(compute_node_ip):
+      print "***  Adding a compute node {} to Instance HA configuration  ***".format(compute_node_ip)
+      print ""
+
       if args.debug == True:
         print "***  Dumping local Variable Definitions  ***"
         print "INFO: compute_nodes_ip: {}".format( compute_nodes_ip )
@@ -562,10 +558,10 @@ def main():
 
   if args.controller_node_ip != '':
     controller_node_ip = args.controller_node_ip.rstrip()
-    print "***  Adding a controller node {} to Instance HA configuration  ***".format(controller_node_ip)
-    print ""
-
     if check_ip_validity(controller_node_ip):
+      print "***  Adding a controller node {} to Instance HA configuration  ***".format(controller_node_ip)
+      print ""
+
       if args.debug == True:
         print "***  Dumping local Variable Definitions  ***"
         print "INFO: controller_node_ip: {}".format( controller_node_ip )
