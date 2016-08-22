@@ -25,7 +25,6 @@ from update_ssh_config import main as update_ssh_config
 def ssh_cmd(address, user, command):
   try:
     cmd = "ssh " + user + "@" + address + " \"" + command + "\""
-    #  print "CommandStr: \"{}\"".format( cmd )
     client = paramiko.SSHClient()
     client.load_system_host_keys()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -113,12 +112,12 @@ def enable_start_compute_pacemaker(compute_node_ip):
   ssh_cmd(compute_node_ip, "heat-admin", 
           "sudo systemctl start pacemaker_remote")
 
-def create_nova_evacuate_resource(overcloudrc_name, first_controller_node_ip):
+def create_nova_evacuate_resource(first_controller_node_ip):
   # Create a NovaEvacuate active/passive resource using the overcloudrc file 
   # to provide the auth_url, username, tenant and password values
   print "INFO: Create the nova-evacuate active/passive resource."
 
-  overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_creds(overcloudrc_name)
+  overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_overcloud_creds()
   
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs resource create nova-evacuate ocf:openstack:NovaEvacuate auth_url=" + overcloud_auth_url + " username=" + overcloud_username + " password=" + overcloud_password + " tenant_name=" + overcloud_tenant_name)
@@ -208,7 +207,7 @@ def tag_the_control_plane(first_controller_node_ip):
       ssh_cmd(first_controller_node_ip, "heat-admin", 
               "sudo pcs constraint location " + res + " rule resource-discovery=exclusive score=0 osprole eq controller")
 
-def populate_compute_nodes_resources(first_controller_node_ip, overcloudrc_name):
+def populate_compute_nodes_resources(first_controller_node_ip):
   # Populate the Compute node resources within pacemaker, starting with neutron-openvswitch-agent:  
   print "INFO: Populate the compute node resources within pacemaker."
  
@@ -248,7 +247,7 @@ def populate_compute_nodes_resources(first_controller_node_ip, overcloudrc_name)
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint colocation add ceilometer-compute-clone with libvirtd-compute-clone")
 
-  overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_creds(overcloudrc_name)
+  overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_overcloud_creds()
 
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs resource create nova-compute-checkevacuate ocf:openstack:nova-compute-wait auth_url=" + overcloud_auth_url + " username=" + overcloud_username + " password=" + overcloud_password + " tenant_name=" + overcloud_tenant_name + " op start timeout=300 --clone interleave=true --disabled --force")
@@ -317,11 +316,11 @@ def add_compute_node_stonith_devices(compute_node_ip, undercloud_config, first_c
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs stonith create ipmilan-" + nova_compute_name + " fence_ipmilan pcmk_host_list=" + crm_node_name + " ipaddr=" + compute_node_drac_ip + " login=" + drac_user + " passwd=" + drac_password + " lanplus=1 cipher=1 op monitor interval=60s")
 
-def create_fence_nova_device(first_controller_node_ip, overcloudrc_name):
+def create_fence_nova_device(first_controller_node_ip):
   # Create a seperate fence-nova stonith device.
   print "INFO: Create a seperate fence-nova stonith device."
 
-  overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_creds(overcloudrc_name)
+  overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_overcloud_creds()
   
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs stonith create fence-nova fence_compute auth_url=" + overcloud_auth_url + " username=" + overcloud_username + " password=" + overcloud_password + " tenant_name=" + overcloud_tenant_name + " record-only=1 --force")
@@ -404,14 +403,10 @@ def main():
 
   home_dir = os.path.expanduser('~')
   undercloudrc_name =  os.path.join(home_dir, 'stackrc')
-  overcloudrc_name = CredentialHelper.get_overcloudrc_name()
   overcloud_stack_name = CredentialHelper.get_stack_name()
   ssh_config = os.path.join(home_dir, '.ssh/config')
   undercloud_config = os.path.join(home_dir, 'undercloud_nodes.txt')
   instack_file = os.path.join(home_dir, args.file)
-
-  # Source ~/stackrc
-  os.system("source {}".format(undercloudrc_name))
 
   # Run ~/pilot/update_ssh_config.py
   cmd = os.path.join(home_dir, 'pilot/update_ssh_config.py')
@@ -435,12 +430,6 @@ def main():
                           stdout=subprocess.PIPE)
   first_controller_node_ip = p3.communicate()[0].rstrip()
 
-  # Get CONTROLLER_NODES
-  p1 = subprocess.Popen(['cat', ssh_config], stdout=subprocess.PIPE)
-  p2 = subprocess.Popen(shlex.split('awk \'/cntl/ {print $2}\''),stdin=p1.stdout,
-                          stdout=subprocess.PIPE)
-  controller_nodes = p2.communicate()[0].split() 
-
   # Get COMPUTE_NODES_IP
   p1 = subprocess.Popen(['cat', ssh_config], stdout=subprocess.PIPE)
   p2 = subprocess.Popen(shlex.split('grep -A1 "cntl"'),stdin=p1.stdout,
@@ -463,12 +452,6 @@ def main():
                           stdout=subprocess.PIPE)
   first_compute_node_ip = p3.communicate()[0].rstrip()
 
-  # Get COMPUTE_NODES
-  p1 = subprocess.Popen(['cat', ssh_config], stdout=subprocess.PIPE)
-  p2 = subprocess.Popen(shlex.split('awk \'/nova/ || /compute/ {print $2}\''),stdin=p1.stdout,
-                          stdout=subprocess.PIPE)
-  compute_nodes = p2.communicate()[0].split()
-
   # Get COMPUTE_NODES_IP
   p1 = subprocess.Popen(['cat', ssh_config], stdout=subprocess.PIPE)
   p2 = subprocess.Popen(shlex.split('egrep -A1 -h "nova|compute"'),stdin=p1.stdout,
@@ -483,14 +466,13 @@ def main():
                           stdout=subprocess.PIPE)
   compute_nova_names = p2.communicate()[0].split() 
 
-  overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_creds(overcloudrc_name)
+  overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_overcloud_creds()
   
   if args.debug == True:
     print ""
     print "***  Dumping Global Variable Definitions  ***"
     print ""
     print "INFO: home_dir: {}".format( home_dir )
-    print "INFO: overcloudrc_name: {}".format( overcloudrc_name )
     print "INFO: overcloud_stack_name: {}".format( overcloud_stack_name )
     print "INFO: overcloud_auth_url: {}".format( overcloud_auth_url )
     print "INFO: overcloud_username: {}".format( overcloud_username )
@@ -499,12 +481,10 @@ def main():
     print ""
     print "INFO: first_controller_node: {}".format( first_controller_node )
     print "INFO: first_controller_node_ip: {}".format( first_controller_node_ip )
-    print "INFO: controller_nodes: {}".format( controller_nodes )
     print "INFO: controller_nodes_ip: {}".format( controller_nodes_ip )
     print ""
     print "INFO: first_compute_node: {}".format( first_compute_node )
     print "INFO: first_compute_node_ip: {}".format( first_compute_node_ip )
-    print "INFO: compute_nodes: {}".format( compute_nodes )
     print "INFO: compute_nodes_ip: {}".format( compute_nodes_ip )
     print "INFO: compute_nova_names: {}".format( compute_nova_names )
     print ""
@@ -517,14 +497,14 @@ def main():
     create_authkey(first_compute_node_ip)
     distribute_all_authkey(compute_nodes_ip, controller_nodes_ip)
     enable_start_pacemaker(compute_nodes_ip)
-    create_nova_evacuate_resource(overcloudrc_name, first_controller_node_ip)
+    create_nova_evacuate_resource(first_controller_node_ip)
     confirm_nova_evacuate_resource(first_controller_node_ip)
     disable_all_openstack_resource(first_controller_node_ip)
     tag_controllers_with_osprole(first_controller_node_ip)
     tag_the_control_plane(first_controller_node_ip)
-    populate_compute_nodes_resources(first_controller_node_ip, overcloudrc_name)
+    populate_compute_nodes_resources(first_controller_node_ip)
     add_compute_nodes_stonith_devices(compute_nodes_ip, undercloud_config, first_controller_node_ip, instack_file)
-    create_fence_nova_device(first_controller_node_ip, overcloudrc_name)
+    create_fence_nova_device(first_controller_node_ip)
     enable_compute_nodes_recovery(first_controller_node_ip)
     create_compute_nodes_resources(compute_nodes_ip, first_controller_node_ip)
     enable_control_plane_services(first_controller_node_ip)
