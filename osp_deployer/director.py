@@ -71,7 +71,7 @@ class Director(InfraHost):
                                  "/etc/yum.repos.d/internal_" +
                                  str(count) + ".repo")
                 count += 1
-        else
+        else:
             for repo in self.settings.rhsm_repos:
                 cmds += [
                     'subscription-manager repos '
