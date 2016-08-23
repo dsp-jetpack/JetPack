@@ -493,12 +493,12 @@ class Checkpoints():
                 cmd = "ssh heat-admin@" + each +\
                       " sshpass -p " + self.settings.eqlx_san_password +\
                       " ssh -o StrictHostKeyChecking=no " + self.settings.eqlx_san_login + "@" +\
-                      self.settings.eqlx_san_ip + " 'logout'"
+                      self.settings.eqlx_san_ip + " 'uname -a'"
                 re = Ssh.execute_command_tty(setts.director_node.external_ip,
                                             setts.director_install_account_user,
                                              setts.director_install_account_pwd,
                                              cmd)
-                if "Unsupported command: logout" not in re[0]:
+                if "NetBSD" not in re[0]:
                     raise AssertionError(each +
                                          " not able to ssh to EQL san ip " +
                                          self.settings.eqlx_san_ip)
