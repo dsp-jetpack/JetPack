@@ -1,4 +1,19 @@
 #!/usr/bin/python
+
+# (c) 2016 Dell
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License
+
 ######################################################################################
 # This script should be run from the director node as the director's admin user. 
 # This script assumes the update_ssh_config.py is present and has not been modified.
@@ -12,16 +27,18 @@ import subprocess
 import shlex
 import re
 import paramiko
+import logging
 
 # Dell utilities
 from identify_nodes import main as identify_nodes
 from credential_helper import CredentialHelper
 from update_ssh_config import main as update_ssh_config
 
-# CONSTANTS
+FORMAT = '%(levelname)s: %(message)s'
+logging.basicConfig(format=FORMAT)
+LOG = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
-# METHOD DEFINITION
-
+# Global method definition
 def ssh_cmd(address, user, command):
   try:
     cmd = "ssh " + user + "@" + address + " \"" + command + "\""
@@ -33,7 +50,7 @@ def ssh_cmd(address, user, command):
     r_out, r_err = ss_stdout.read(), ss_stderr.read()
     client.close()
   except IOError:
-    print ".. host " + address + " is not up"
+    LOG.error( ".. host " + address + " is not up")
     return "host not up"
   return r_out, r_err
 
@@ -48,9 +65,30 @@ def check_ip_validity(ipaddr):
     ip_match = re.search(ValidIpAddressRegex,ipaddr)
     return ip_match
 
+def logging_level(string):
+    string_level = string
+
+    try:
+        # Convert to upper case to allow the user to specify
+        # --logging-level=DEBUG or --logging-level=debug.
+        numeric_level = getattr(logging, string_level.upper())
+    except AttributeError:
+        raise argparse.ArgumentTypeError(
+            "Unknown logging level: {}".format(string_level))
+
+    if not isinstance(numeric_level, (int, long)) or int(numeric_level) < 0:
+        raise argparse.ArgumentTypeError(
+            "Logging level not a nonnegative integer: {!r}".format(
+                numeric_level))
+
+    return numeric_level
+
+
+# Instance HA Specific Methods
+
+# Stop and disable openstack-service and libvirtd on all Compute nodes
 def stop_disable_openstack_services(compute_nodes_ip):
-  # Stop and disable openstack-service and libvirtd on all Compute nodes
-  print "INFO: Disable compute node libvirtd and openstack services."
+  LOG.info("Disable compute node libvirtd and openstack services.")
 
   for compute_node_ip in compute_nodes_ip:
     ssh_cmd(compute_node_ip, "heat-admin",
@@ -62,9 +100,10 @@ def stop_disable_openstack_services(compute_nodes_ip):
     ssh_cmd(compute_node_ip, "heat-admin", 
             "sudo systemctl disable libvirtd")
 
+
+# Create auth_key on first compute node and copy authkey to back to local node 
 def create_authkey(first_compute_node_ip):
-  # Create auth_key on first compute node 
-  print "INFO: Create auth_key on node: {}".format( first_compute_node_ip )
+  LOG.info("Create auth_key on node: {}".format( first_compute_node_ip ))
 
   ssh_cmd(first_compute_node_ip, "heat-admin", 
           "sudo mkdir -p /etc/pacemaker")
@@ -74,21 +113,21 @@ def create_authkey(first_compute_node_ip):
           "sudo cp /etc/pacemaker/authkey ~/")
   ssh_cmd(first_compute_node_ip, "heat-admin", 
           "sudo chown heat-admin:heat-admin ~/authkey")
-
-  # Copy authkey to back to local node 
   cmd =  "scp heat-admin@" + first_compute_node_ip + ":~/authkey ~/authkey" 
   os.system(cmd)
 
+
+# Distribute authkey to all nodes
 def distribute_all_authkey(compute_nodes_ip, controller_nodes_ip):
   for compute_node_ip in compute_nodes_ip:
     distribute_node_authkey(compute_node_ip)
-
   for controller_node_ip in controller_nodes_ip:
     distribute_node_authkey(controller_node_ip)
 
+
+# Distribute authkey to node 
 def distribute_node_authkey(node_ip):
-  # Then distribute authkey to node 
-  print "INFO: Distribute auth_key to node {}.".format(node_ip)
+  LOG.info("Distribute auth_key to node {}.".format(node_ip))
 
   cmd = "scp ~/authkey heat-admin@" + node_ip + ":~/authkey" 
   os.system(cmd)
@@ -99,33 +138,38 @@ def distribute_node_authkey(node_ip):
   ssh_cmd(node_ip,"heat-admin", 
           "sudo chown root:root /etc/pacemaker/authkey")
 
+
+# Enable and start pacemaker remote on all compute nodes 
 def enable_start_pacemaker(compute_nodes_ip):
   for compute_node_ip in compute_nodes_ip:
     enable_start_compute_pacemaker(compute_node_ip)
 
+
+# Enable and start pacemaker remote on a compute node 
 def enable_start_compute_pacemaker(compute_node_ip):
-  # Enable and start pacemaker remote on compute nodes 
-  print "INFO: Enable and start pacemaker_remote service on compute node {}.".format(compute_node_ip)
+  LOG.info("Enable and start pacemaker_remote service on compute node {}.".format(compute_node_ip))
   
   ssh_cmd(compute_node_ip, "heat-admin", 
           "sudo sudo systemctl enable pacemaker_remote")
   ssh_cmd(compute_node_ip, "heat-admin", 
           "sudo systemctl start pacemaker_remote")
 
+
+# Create a NovaEvacuate active/passive resource using the overcloudrc file 
+# to provide the auth_url, username, tenant and password values
 def create_nova_evacuate_resource(first_controller_node_ip):
-  # Create a NovaEvacuate active/passive resource using the overcloudrc file 
-  # to provide the auth_url, username, tenant and password values
-  print "INFO: Create the nova-evacuate active/passive resource."
+  LOG.info("Create the nova-evacuate active/passive resource.")
 
   overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_overcloud_creds()
   
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs resource create nova-evacuate ocf:openstack:NovaEvacuate auth_url=" + overcloud_auth_url + " username=" + overcloud_username + " password=" + overcloud_password + " tenant_name=" + overcloud_tenant_name)
 
+
+# Confirm that nova-evacuate is started after the floating IP resources, and the Image Service (glance), 
+# OpenStack Networking (neutron), Compute (nova) services
 def confirm_nova_evacuate_resource(first_controller_node_ip):
-  # Confirm that nova-evacuate is started after the floating IP resources, and the Image Service (glance), 
-  # OpenStack Networking (neutron), Compute (nova) services
-  print "INFO: Confirm nova-evacuate is started after glance, neutron and nova services."
+  LOG.info("Confirm nova-evacuate is started after glance, neutron and nova services.")
 
   # Get IP list from PCS cluster 
   out, err = ssh_cmd(first_controller_node_ip, "heat-admin", 
@@ -141,18 +185,20 @@ def confirm_nova_evacuate_resource(first_controller_node_ip):
   for res in resource_list: 
     ssh_cmd(first_controller_node_ip, "heat-admin", 
             "sudo pcs constraint order start " + res + " then nova-evacuate require-all=false")
+
   
+# Disable all OpenStack resources across the control plane.
 def disable_all_openstack_resource(first_controller_node_ip):
-  # Disable all OpenStack resources across the control plane.
-  print "INFO: Disable all OpenStack resources across the control plane."
+  LOG.info("Disable all OpenStack resources across the control plane.")
   
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs resource disable openstack-keystone --wait=1000s")
 
+
+# Create a list of the current controllers using cibadmin data.
+# Use this list to tag these nodes as controllers with the osprole=controller property.
 def tag_controllers_with_osprole(first_controller_node_ip):
-  # Create a list of the current controllers using cibadmin data.
-  # Use this list to tag these nodes as controllers with the osprole=controller property.
-  print "INFO: Get a list of current controllers & tag them with the osprole=controller property."
+  LOG.info("Get a list of current controllers & tag them with the osprole=controller property.")
   
   out, err = ssh_cmd(first_controller_node_ip, "heat-admin", 
                    "sudo cibadmin -Q -o nodes | grep uname")
@@ -163,11 +209,12 @@ def tag_controllers_with_osprole(first_controller_node_ip):
     ssh_cmd(first_controller_node_ip, "heat-admin", 
             "sudo pcs property set --node " + controller[0] + " osprole=controller")
 
+
+# Build a list of stonith devices already present in the environment.
+# Tag the control plane services to make sure they only run on the controllers identified above, 
+# skipping any stonith devices listed.
 def tag_the_control_plane(first_controller_node_ip):
-  # Build a list of stonith devices already present in the environment.
-  # Tag the control plane services to make sure they only run on the controllers identified above, 
-  # skipping any stonith devices listed.
-  print "INFO: Get a list of stonith devices & tag the control plane services."
+  LOG.info("Get a list of stonith devices & tag the control plane services.")
   
   # Build stonithdevs list
   stonithdevs = []
@@ -181,7 +228,7 @@ def tag_the_control_plane(first_controller_node_ip):
       stonithdevs.append(y)
   
   if not stonithdevs:
-    print "ERROR: No stonith devices found, please ensure fencing is enabled."
+    LOG.error("No stonith devices found, please ensure fencing is enabled.")
     exit (-1)
 
   # Build resources list
@@ -203,88 +250,70 @@ def tag_the_control_plane(first_controller_node_ip):
       if  stdev == res:  
         found = 1
     if found == 0: 
-      #print "INSIDE found == 0: {} ".format(res)
+      LOG.debug("INSIDE found == 0: {} ".format(res))
       ssh_cmd(first_controller_node_ip, "heat-admin", 
               "sudo pcs constraint location " + res + " rule resource-discovery=exclusive score=0 osprole eq controller")
 
+
+# Populate the Compute node resources within pacemaker, starting with neutron-openvswitch-agent:  
 def populate_compute_nodes_resources(first_controller_node_ip):
-  # Populate the Compute node resources within pacemaker, starting with neutron-openvswitch-agent:  
-  print "INFO: Populate the compute node resources within pacemaker."
+  LOG.info("Populate the compute node resources within pacemaker.")
  
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs resource create neutron-openvswitch-agent-compute systemd:neutron-openvswitch-agent --clone interleave=true --disabled --force")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint location neutron-openvswitch-agent-compute-clone rule resource-discovery=exclusive score=0 osprole eq compute")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint order start neutron-server-clone then neutron-openvswitch-agent-compute-clone require-all=false")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs resource create libvirtd-compute systemd:libvirtd --clone interleave=true --disabled --force")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint location libvirtd-compute-clone rule resource-discovery=exclusive score=0 osprole eq compute")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint order start neutron-openvswitch-agent-compute-clone then libvirtd-compute-clone")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint colocation add libvirtd-compute-clone with neutron-openvswitch-agent-compute-clone")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs resource create ceilometer-compute systemd:openstack-ceilometer-compute --clone interleave=true --disabled --force")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint location ceilometer-compute-clone rule resource-discovery=exclusive score=0 osprole eq compute")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint order start openstack-ceilometer-notification-clone then ceilometer-compute-clone require-all=false")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint order start libvirtd-compute-clone then ceilometer-compute-clone")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint colocation add ceilometer-compute-clone with libvirtd-compute-clone")
-
   overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_overcloud_creds()
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs resource create nova-compute-checkevacuate ocf:openstack:nova-compute-wait auth_url=" + overcloud_auth_url + " username=" + overcloud_username + " password=" + overcloud_password + " tenant_name=" + overcloud_tenant_name + " op start timeout=300 --clone interleave=true --disabled --force")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint location nova-compute-checkevacuate-clone rule resource-discovery=exclusive score=0 osprole eq compute")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint order start openstack-nova-conductor-clone then nova-compute-checkevacuate-clone require-all=false")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs resource create nova-compute systemd:openstack-nova-compute --clone interleave=true --disabled --force")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint location nova-compute-clone rule resource-discovery=exclusive score=0 osprole eq compute")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint order start nova-compute-checkevacuate-clone then nova-compute-clone require-all=true")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint order start nova-compute-clone then nova-evacuate require-all=false")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint order start libvirtd-compute-clone then nova-compute-clone")
-
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs constraint colocation add nova-compute-clone with libvirtd-compute-clone")
 
+
+# Add stonith devices for all compute nodes. Replace the ipaddr, login and passwd values to 
+# suit your IPMI device. Run ~/pilot/identify_nodes.sh  to see which idrac is associated 
+# with which host and crm_node -n to get the hostname. 
 def add_compute_nodes_stonith_devices(compute_nodes_ip, undercloud_config, first_controller_node_ip, instack_file):
-  # Add stonith devices for the compute nodes. Replace the ipaddr, login and passwd values to 
-  # suit your IPMI device. Run ~/pilot/identify_nodes.sh  to see which idrac is associated 
-  # with which host and crm_node -n to get the hostname. 
   for compute_node_ip in compute_nodes_ip:
     add_compute_node_stonith_devices(compute_node_ip, undercloud_config, first_controller_node_ip, instack_file)
 
+# Add stonith devices for a compute nodes. 
 def add_compute_node_stonith_devices(compute_node_ip, undercloud_config, first_controller_node_ip, instack_file):
-  print "INFO: Add stonith devices for the compute node {}.".format(compute_node_ip)
+  LOG.info("Add stonith devices for the compute node {}.".format(compute_node_ip))
 
   out, err = ssh_cmd(compute_node_ip, "heat-admin", 
                      "sudo crm_node -n")
@@ -316,9 +345,10 @@ def add_compute_node_stonith_devices(compute_node_ip, undercloud_config, first_c
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs stonith create ipmilan-" + nova_compute_name + " fence_ipmilan pcmk_host_list=" + crm_node_name + " ipaddr=" + compute_node_drac_ip + " login=" + drac_user + " passwd=" + drac_password + " lanplus=1 cipher=1 op monitor interval=60s")
 
+
+# Create a seperate fence-nova stonith device.
 def create_fence_nova_device(first_controller_node_ip):
-  # Create a seperate fence-nova stonith device.
-  print "INFO: Create a seperate fence-nova stonith device."
+  LOG.info("Create a seperate fence-nova stonith device.")
 
   overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_overcloud_creds()
   
@@ -326,25 +356,25 @@ def create_fence_nova_device(first_controller_node_ip):
           "sudo pcs stonith create fence-nova fence_compute auth_url=" + overcloud_auth_url + " username=" + overcloud_username + " password=" + overcloud_password + " tenant_name=" + overcloud_tenant_name + " record-only=1 --force")
 
 
-
+# Make certain the Compute nodes are able to recover after fencing. 
 def enable_compute_nodes_recovery(first_controller_node_ip):
-  # Make certain the Compute nodes are able to recover after fencing. 
-  print "INFO: Ensure the Compute nodes are able to recover after fencing."
+  LOG.info("Ensure the Compute nodes are able to recover after fencing.")
   
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs property set cluster-recheck-interval=1min")
 
 
+# Create all compute node resources and set the stonith level 1 to include both the nodes's physical 
+# fence device and fence-nova.
 def create_compute_nodes_resources(compute_nodes_ip, first_controller_node_ip):
-  # Create Compute node resources and set the stonith level 1 to include both the nodes's physical 
-  # fence device and fence-nova.
   for compute_node_ip in compute_nodes_ip:
     create_compute_node_resources(compute_node_ip, first_controller_node_ip)
 
+
+# Create a compute node resources and set the stonith level 1 to include both the nodes's physical 
+# fence device and fence-nova.
 def create_compute_node_resources(compute_node_ip, first_controller_node_ip):
-  # Create Compute node resources and set the stonith level 1 to include both the nodes's physical 
-  # fence device and fence-nova.
-  print "INFO: Create Compute node:{} resources and set the stonith level 1.".format(compute_node_ip)
+  LOG.info("Create Compute node:{} resources and set the stonith level 1.".format(compute_node_ip))
 
   out, err = ssh_cmd(compute_node_ip, "heat-admin", 
                      "sudo crm_node -n")
@@ -359,9 +389,10 @@ def create_compute_node_resources(compute_node_ip, first_controller_node_ip):
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs stonith")
   
+
+# Enable the control and Compute plane services. 
 def enable_control_plane_services(first_controller_node_ip):
-  # Enable the control and Compute plane services. 
-  print "INFO: Enable the control and Compute plane services."
+  LOG.info("Enable the control and Compute plane services.")
   
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs resource enable openstack-keystone")
@@ -376,9 +407,10 @@ def enable_control_plane_services(first_controller_node_ip):
   ssh_cmd(first_controller_node_ip, "heat-admin", 
           "sudo pcs resource enable nova-compute-checkevacuate")
 
+
+# Allow some time for the environment to settle before cleaning up any failed resources. 
 def final_resource_cleanup(first_controller_node_ip):
-  # Allow some time for the environment to settle before cleaning up any failed resources. 
-  print "INFO: Clean up any failed resources."
+  LOG.info("Clean up any failed resources.")
   
   os.system("sleep 60")
   ssh_cmd(first_controller_node_ip, "heat-admin", 
@@ -389,16 +421,21 @@ def final_resource_cleanup(first_controller_node_ip):
           "sudo pcs property set stonith-enabled=true")
 
 
-# MAIN 
+# Main Routine
 def main():
 
   parser = argparse.ArgumentParser()
   group = parser.add_mutually_exclusive_group()
   group.add_argument("-compute", "--compute", dest="compute_node_ip", action="store", default='')
-  group.add_argument("-controller", "--controller", dest="controller_node_ip", action="store", default='')
+  group.add_argument("-controller", "--controller", dest="controller_node_ip", 
+                       action="store", default='')
   parser.add_argument('-f', '--file', help='name of json file containing the node being set',
-                      default='instackenv.json')
+                        default='instackenv.json')
   parser.add_argument('-d', '--debug', action='store_true', default=False)
+  parser.add_argument("-l", "--logging-level", default="INFO", type=logging_level,
+                        help="""logging level defined by the logging module;
+                                choices include CRITICAL, ERROR, WARNING, INFO,
+                                and DEBUG""", metavar="LEVEL")
   args = parser.parse_args()
 
   home_dir = os.path.expanduser('~')
@@ -407,6 +444,7 @@ def main():
   ssh_config = os.path.join(home_dir, '.ssh/config')
   undercloud_config = os.path.join(home_dir, 'undercloud_nodes.txt')
   instack_file = os.path.join(home_dir, args.file)
+
 
   # Run ~/pilot/update_ssh_config.py
   cmd = os.path.join(home_dir, 'pilot/update_ssh_config.py')
@@ -467,31 +505,26 @@ def main():
   compute_nova_names = p2.communicate()[0].split() 
 
   overcloud_auth_url, overcloud_tenant_name, overcloud_username, overcloud_password = CredentialHelper.get_overcloud_creds()
-  
-  if args.debug == True:
-    print ""
-    print "***  Dumping Global Variable Definitions  ***"
-    print ""
-    print "INFO: home_dir: {}".format( home_dir )
-    print "INFO: overcloud_stack_name: {}".format( overcloud_stack_name )
-    print "INFO: overcloud_auth_url: {}".format( overcloud_auth_url )
-    print "INFO: overcloud_username: {}".format( overcloud_username )
-    print "INFO: overcloud_password: {}".format( overcloud_password )
-    print "INFO: overcloud_tenant_name: {}".format( overcloud_tenant_name )
-    print ""
-    print "INFO: first_controller_node: {}".format( first_controller_node )
-    print "INFO: first_controller_node_ip: {}".format( first_controller_node_ip )
-    print "INFO: controller_nodes_ip: {}".format( controller_nodes_ip )
-    print ""
-    print "INFO: first_compute_node: {}".format( first_compute_node )
-    print "INFO: first_compute_node_ip: {}".format( first_compute_node_ip )
-    print "INFO: compute_nodes_ip: {}".format( compute_nodes_ip )
-    print "INFO: compute_nova_names: {}".format( compute_nova_names )
-    print ""
 
+  LOG.setLevel(args.logging_level)
+
+  # Install RA instanceHA Configuration 
   if args.compute_node_ip == '' and args.controller_node_ip == '':
-    print "***  Configuring Instance HA for stack {}  ***".format( overcloud_stack_name )
-    print ""
+    LOG.info("***  Configuring Instance HA for stack {}  ***".format( overcloud_stack_name ))
+
+    LOG.debug("home_dir: {}".format( home_dir ) )
+    LOG.debug("overcloud_stack_name: {}".format( overcloud_stack_name ) )
+    LOG.debug("overcloud_auth_url: {}".format( overcloud_auth_url ) )
+    LOG.debug("overcloud_username: {}".format( overcloud_username ) )
+    LOG.debug("overcloud_password: {}".format( overcloud_password ) )
+    LOG.debug("overcloud_tenant_name: {}".format( overcloud_tenant_name ) )
+    LOG.debug("first_controller_node: {}".format( first_controller_node ) )
+    LOG.debug("first_controller_node_ip: {}".format( first_controller_node_ip ) )
+    LOG.debug("controller_nodes_ip: {}".format( controller_nodes_ip ) )
+    LOG.debug("first_compute_node: {}".format( first_compute_node ) )
+    LOG.debug("first_compute_node_ip: {}".format( first_compute_node_ip ) )
+    LOG.debug("compute_nodes_ip: {}".format( compute_nodes_ip ) )
+    LOG.debug("compute_nova_names: {}".format( compute_nova_names ) )
 
     stop_disable_openstack_services(compute_nodes_ip)
     create_authkey(first_compute_node_ip)
@@ -510,19 +543,17 @@ def main():
     enable_control_plane_services(first_controller_node_ip)
     final_resource_cleanup(first_controller_node_ip)
 
+  # Execute Compute node addition
   if args.compute_node_ip != '':
     compute_node_ip = args.compute_node_ip.rstrip()
     if check_ip_validity(compute_node_ip):
-      print "***  Adding a compute node {} to Instance HA configuration  ***".format(compute_node_ip)
-      print ""
+      LOG.info("***  Adding a compute node {} to Instance HA configuration  ***".format(compute_node_ip))
 
-      if args.debug == True:
-        print "***  Dumping local Variable Definitions  ***"
-        print "INFO: compute_nodes_ip: {}".format( compute_nodes_ip )
-        print "INFO: compute_node_ip: {}".format( compute_node_ip )
-        print "INFO: first_controller_node_ip: {}".format( first_controller_node_ip )
-        print "INFO: undercloud_config: {}".format( undercloud_config )
-        print "INFO: instack_file: {}".format( instack_file )
+      LOG.debug("compute_nodes_ip: {}".format( compute_nodes_ip ))
+      LOG.debug("compute_node_ip: {}".format( compute_node_ip ))
+      LOG.debug("first_controller_node_ip: {}".format( first_controller_node_ip ))
+      LOG.debug("undercloud_config: {}".format( undercloud_config ))
+      LOG.debug("instack_file: {}".format( instack_file ))
 
       stop_disable_openstack_services(compute_nodes_ip)
       distribute_node_authkey(compute_node_ip)
@@ -533,27 +564,25 @@ def main():
       final_resource_cleanup(first_controller_node_ip)
 
     else:
-      print "!!! - Fatal Error: Invalid IP address: {}".format( compute_node_ip )
+      LOG.critical("!!! - Fatal Error: Invalid IP address: {}".format( compute_node_ip ))
       exit (-1)
 
+  # Execute Controller node addition
   if args.controller_node_ip != '':
     controller_node_ip = args.controller_node_ip.rstrip()
     if check_ip_validity(controller_node_ip):
-      print "***  Adding a controller node {} to Instance HA configuration  ***".format(controller_node_ip)
-      print ""
+      LOG.info("***  Adding a controller node {} to Instance HA configuration  ***".format(controller_node_ip))
 
-      if args.debug == True:
-        print "***  Dumping local Variable Definitions  ***"
-        print "INFO: controller_node_ip: {}".format( controller_node_ip )
-        print "INFO: first_controller_node_ip: {}".format( first_controller_node_ip )
+      LOG.debug("controller_node_ip: {}".format( controller_node_ip ))
+      LOG.debug("first_controller_node_ip: {}".format( first_controller_node_ip ))
 
       distribute_node_authkey(controller_node_ip)
       tag_controllers_with_osprole(first_controller_node_ip)
       final_resource_cleanup(first_controller_node_ip)
 
     else:
-      print "!!! - Fatal Error: Invalid IP address: {}".format( controller_node_ip )
-      exit (-1)
+      LOG.critical("!!! - Fatal Error: Invalid IP address: {}".format( controller_node_ip ))
+      sys.exit(-1)
   
 exit
 
