@@ -332,7 +332,7 @@ class Settings():
         self.switches = []
 	self.nodes = []
 
-        if 'rhsm_repos' in cluster:
+        if len(cluster['rhsm_repos'].split(',')) > 0:
             self.rhsm_repos = cluster['rhsm_repos'].split(',')
         else:
             self.rhsm_repos = [
