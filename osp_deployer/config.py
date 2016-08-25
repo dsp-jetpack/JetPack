@@ -332,9 +332,11 @@ class Settings():
         self.switches = []
 	self.nodes = []
 
-        if 'rhsm_repos' in cluster:
+        if len(cluster['rhsm_repos']) > 0:
+            logger.info( "using ini repo setting")
             self.rhsm_repos = cluster['rhsm_repos'].split(',')
         else:
+            logger.info( "using default repo settings")
             self.rhsm_repos = [
                 'rhel-7-server-openstack-9-rpms',
                 'rhel-7-server-openstack-9-director-rpms']
