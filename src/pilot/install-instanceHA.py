@@ -592,7 +592,7 @@ def main():
 
     home_dir = os.path.expanduser('~')
     undercloudrc_name = os.path.join(home_dir, 'stackrc')
-    oc_stack_name = CredentialHelper.get_stack_name()
+    oc_stack_name = CredentialHelper.get_overcloud_name()
     ssh_config = os.path.join(home_dir, '.ssh/config')
     undercloud_config = os.path.join(home_dir, 'undercloud_nodes.txt')
     instack_file = os.path.join(home_dir, args.file)
