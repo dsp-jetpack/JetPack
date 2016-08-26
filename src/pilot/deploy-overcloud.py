@@ -172,7 +172,7 @@ def update_swift_endpoint(keystone_client):
 
 
 def run_deploy_command(cmd):
-    status = os.command(cmd)
+    status = os.system(cmd)
 
     if status == 0:
         stack = CredentialHelper.get_overcloud_stack()
