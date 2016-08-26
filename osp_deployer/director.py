@@ -1112,8 +1112,5 @@ class Director(InfraHost):
                 logger.error("Fencing NOT enabled, this is required for instance_ha")
             cmd = 'cd ' + \
                   self.pilot_dir + \
-                  ';./install_instanceHA.sh ' + \
-                  self.settings.ipmi_user + \
-                  ' ' + \
-                  self.settings.ipmi_password
+                  ';./install-instanceHA.py '
             self.run_tty(cmd)
