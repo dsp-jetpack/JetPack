@@ -22,4 +22,4 @@
 * 7.0.0.a - Initial 7.0 version
 
 #####settings.properties
-* 7.0.0.a - Initial 7.0 version. Added optional property for specifying the PXE NIC for overcloud nodes, pxe_nic. Its value should be a NIC fully qualified device descriptor (FQDD), e.g., NIC.Integrated.1-3. Used if overcloud's networking does not conform to the Reference Architecture. It is disregarded when in the configuration of the SAH or an undercloud node.
+* 7.0.0.a - Initial 7.0 version. Added optional property for specifying the PXE NIC for overcloud nodes, pxe_nic. Its value should be a NIC fully qualified device descriptor (FQDD), e.g., NIC.Integrated.1-3. For use when the overcloud's networking does not conform to the Reference Architecture. It is disregarded when in the configuration of the SAH or an undercloud node.
