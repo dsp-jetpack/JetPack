@@ -18,13 +18,11 @@ import argparse
 import distutils.dir_util
 import os
 import re
-import subprocess
 import sys
 import time
 import ironicclient.client as ironic_client
 
 from credential_helper import CredentialHelper
-from subprocess import check_output
 
 # Dell utilities
 from identify_nodes import main as identify_nodes
@@ -173,8 +171,19 @@ def update_swift_endpoint(keystone_client):
                                      internalurl=swift_endpoint.internalurl)
 
 
+def run_deploy_command(cmd):
+    status = os.command(cmd)
+
+    if status == 0:
+        stack = CredentialHelper.get_overcloud_stack()
+        if not stack or 'FAILED' in stack.stack_status:
+            print '\nDeployment failed even though command returned success.'
+            status = 1
+
+    return status
+
+
 def finalize_overcloud():
-    from credential_helper import CredentialHelper
     from os_cloud_config.utils import clients
 
     os_auth_url, os_tenant_name, os_username, os_password = \
@@ -364,7 +373,7 @@ def main():
 
         print cmd
         start = time.time()
-        status = os.system(cmd)
+        status = run_deploy_command(cmd)
         end = time.time()
         print '\nExecution time: {} (hh:mm:ss)'.format(
             time.strftime('%H:%M:%S', time.gmtime(end - start)))
