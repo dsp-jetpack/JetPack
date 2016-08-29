@@ -19,39 +19,7 @@
 
 
 #####settings.ini:
-* 6.0.0.a - Initial 6.0 version
-* 6.0.0.b - Added tenant network related settings :
-               . tenant_network
-	       . tenant_network_allocation_pool_start
-	       . tenant_network_allocation_pool_end
-               * note : Not used unless you wish to configure Generic Routing Encapsulation (GRE) networks
-            Added overcloud_static_ips - true/false to enable the use of static ips on the overcloud nodes. false will use dhcp
-* 6.0.0.c - Added settings for static VIPs support :
-	       . use_static_vips - true/false to enable the use of static VIPs
-	       . redis_vip        - VIP for redis on the private api network
-               . provisioning_vip - VIP for the provisioning network
-               . private_api_vip  - VIP for the private api network
-               . public_api_vip   - VIP for the public api network
-               . storage_vip      - VIP for the storage network
-               . storage_cluster_vip - VIP for the storage cluster network (must be set on the provisioning network)
-	       * see sample file comments for valid ips in the above networks
+* 7.0.0.a - Initial 7.0 version
 
 #####settings.properties
-* 6.0.0.a - Initial 6.0 version
-* 6.0.0.b - Added optional static ip propertis for the overcloud nodes (to be used in conjunction with .ini overcloud_static_ips)
-	    . Controllers nodes:
-        	public_api_ip
-	        private_api_ip
-        	storage_ip
-	        storage_cluster_ip
-        	tenant_ip
-	    . Computes nodes
-		private_api_ip
-		storage_ip
-		tenant_ip
-	    . Storage nodes
-        	storage_ip
-	        storage_cluster_ip
-* 6.0.0.c - Removed provisioning_mac_address properties on all overcloud nodes - no longer required
-	    Removed hostname from overcloud nodes - not in use anymore (nodes get named controller-x, compute-x, cephstorage-x)
-
+* 7.0.0.a - Initial 7.0 version. Added optional property for specifying the PXE NIC for overcloud nodes, pxe_nic. Its value should be a NIC fully qualified device descriptor (FQDD), e.g., NIC.Integrated.1-3. For use when the overcloud's networking does not conform to the Reference Architecture. It is disregarded when in the configuration of the SAH or an undercloud node.

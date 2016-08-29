@@ -281,10 +281,12 @@ class Director(InfraHost):
 
 	index = 0
         for node in self.settings.controller_nodes:
+            assign_role_command = self._create_assign_role_command(
+                node,
+                "controller",
+                index)
             out = self.run_tty(self.source_stackrc +
-                               "cd ~/pilot;./assign_role.py " +
-                               node.idrac_ip +
-                               " controller-" + str(index))
+                               "cd ~/pilot;" + assign_role_command)
             index += 1
             if "Not Found" in out[0]:
                 raise AssertionError(
@@ -293,10 +295,12 @@ class Director(InfraHost):
 
         index = 0
         for node in self.settings.compute_nodes:
+            assign_role_command = self._create_assign_role_command(
+                node,
+                "compute",
+                index)
             out = self.run_tty(self.source_stackrc +
-                               "cd ~/pilot;./assign_role.py " +
-                               node.idrac_ip +
-                               " compute-" + str(index))
+                               "cd ~/pilot;" + assign_role_command)
             index += 1
             if "Not Found" in out[0]:
                 raise AssertionError(
@@ -305,10 +309,12 @@ class Director(InfraHost):
 
         index= 0
         for node in self.settings.ceph_nodes:
+            assign_role_command = self._create_assign_role_command(
+                node,
+                "storage",
+                index)
             out = self.run_tty(self.source_stackrc +
-                               "cd ~/pilot;./assign_role.py " +
-                               node.idrac_ip +
-                               " storage-" + str(index))
+                               "cd ~/pilot;" + assign_role_command)
             index += 1
             if "Not Found" in out[0]:
                 raise AssertionError(
@@ -1117,3 +1123,16 @@ class Director(InfraHost):
                   ' ' + \
                   self.settings.ipmi_password
             self.run_tty(cmd)
+
+    def _create_assign_role_command(self, node, role, index):
+        if hasattr(node, 'pxe_nic'):
+            return './assign_role.py --pxe-nic {} {} {}-{}'.format(
+                node.pxe_nic,
+                node.idrac_ip,
+                role,
+                str(index))
+        else:
+            return './assign_role.py {} {}-{}'.format(
+                node.idrac_ip,
+                role,
+                str(index))
