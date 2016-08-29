@@ -59,11 +59,6 @@ create_flavor()
   fi
 }
 
-echo
-echo "## Installing probe-idrac utility..."
-~/pilot/install_probe_idrac.sh
-echo "## Done."
-
 cd
 
 echo
@@ -77,6 +72,11 @@ echo
 echo "## Installing Director"
 sudo yum -y install python-rdomanager-oscplugin
 openstack undercloud install
+echo "## Done."
+
+echo
+echo "## Installing probe-idrac utility..."
+~/pilot/install_probe_idrac.sh
 echo "## Done."
 
 source $HOME/stackrc
