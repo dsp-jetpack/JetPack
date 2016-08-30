@@ -57,6 +57,8 @@ parameter_defaults:
         value: true
       client.radosgw.gateway/rgw_s3_auth_use_keystone:
         value: true
+      client.radosgw.gateway/rgw_init_timeout:
+        value: 1200
 
   # Additional hiera data for storage nodes
   CephStorageExtraConfig:
