@@ -368,16 +368,6 @@ class Checkpoints():
                 "Director & Undercloud did not install properly,"
                 " check /pilot/install-director.log for details")
 
-        cmd = "cat "\
-              "~/pilot/install-director.log"
-        re = Ssh.execute_command_tty(setts.director_node.external_ip,
-                                     setts.director_install_account_user,
-                                     setts.director_install_account_pwd,
-                                     cmd)
-        if "There are no enabled repos" in re[0]:
-            raise AssertionError(
-                "Ceph Pool ID is invalid")
-
     def verify_computes_virtualization_enabled(self):
         logger.debug("*** Verify the Compute nodes have KVM enabled *** ")
         cmd = "source ~/stackrc;nova list | grep compute"
