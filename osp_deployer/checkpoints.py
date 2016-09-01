@@ -498,7 +498,7 @@ class Checkpoints():
                                             setts.director_install_account_user,
                                              setts.director_install_account_pwd,
                                              cmd)
-                if "EQL.PSS" not in re[0] and “Unsupported command:” not in re[0]:
+                if "NetBSD" not in re[0]:
                     raise AssertionError(each +
                                          " not able to ssh to EQL san ip " +
                                          self.settings.eqlx_san_ip)
