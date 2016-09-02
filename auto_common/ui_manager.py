@@ -14,9 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from selenium import webdriver
-from selenium.webdriver.support.select import Select
-from selenium.webdriver.common.keys import Keys
+try:
+    from selenium import webdriver
+    from selenium.webdriver.support.select import Select
+    from selenium.webdriver.common.keys import Keys
+except ImportError: pass
 
 import time
 

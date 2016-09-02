@@ -150,14 +150,6 @@ def deploy():
 
         if args.skip_sah is False:
             logger.info("=== Unregister the hosts")
-            Ssh.execute_command(settings.sah_node.external_ip,
-                                "root",
-                                settings.sah_node.root_password,
-                                "subscription-manager remove --all")
-            Ssh.execute_command(settings.sah_node.external_ip,
-                                "root",
-                                settings.sah_node.root_password,
-                                "subscription-manager unregister")
 
             Ssh.execute_command(settings.ceph_node.external_ip,
                                 "root",
@@ -176,69 +168,10 @@ def deploy():
                                 "root",
                                 settings.sah_node.root_password,
                                 "subscription-manager unregister")
-
-            logger.info("preparing the SAH installation")
-
-            logger.debug("=== powering down the SAH node & all the nodes")
-            ipmi_sah = Ipmi(settings.cygwin_installdir,
-                            settings.ipmi_user,
-                            settings.ipmi_password,
-                            settings.sah_node.idrac_ip)
-            ipmi_sah.power_off()
-
-            logger.info("=== updating the sah kickstart based on settings")
-
-            sah_node.update_kickstart()
-
-            logger.debug("=== starting the tftp service & power on the admin")
-            logger.debug(subprocess.check_output("service tftp start",
-                                                 stderr=subprocess.STDOUT,
-                                                 shell=True))
-            time.sleep(60)
-
-            logger.debug("=== enabling and starting dhcpd service")
-            logger.debug(subprocess.check_output("systemctl enable dhcpd",
-                                                 stderr=subprocess.STDOUT,
-                                                 shell=True))
-            logger.debug(subprocess.check_output("systemctl start dhcpd",
-                                                 stderr=subprocess.STDOUT,
-                                                 shell=True))
-
-            logger.debug(
-                "=== power on the admin node & wait for the system "
-                "to start installing")
-            ipmi_sah.set_boot_to_pxe()
-            ipmi_sah.power_on()
-            time.sleep(400)
-
-            logger.debug("=== stopping tftp service")
-            logger.debug(subprocess.check_output("service tftp stop",
-                                                 stderr=subprocess.STDOUT,
-                                                 shell=True))
-
-            logger.debug("=== stopping and disabling dhcpd service")
-            logger.debug(subprocess.check_output("systemctl stop dhcpd",
-                                                 stderr=subprocess.STDOUT,
-                                                 shell=True))
-            logger.debug(subprocess.check_output("systemctl disable dhcpd",
-                                                 stderr=subprocess.STDOUT,
-                                                 shell=True))
-
-            logger.info("=== Installing the SAH node")
-            while "root" not in \
-                    Ssh.execute_command(settings.sah_node.external_ip,
-                                        "root",
-                                        settings.sah_node.root_password,
-                                        "whoami")[0]:
-                logger.debug("...")
-                time.sleep(100)
-            logger.debug("sahh node is up @ " + settings.sah_node.external_ip)
 
             tester.sah_health_check()
 
             logger.info("Uploading configs/iso/scripts..")
-            logger.debug("=== uploading iso's to the sah node")
-            sah_node.upload_iso()
 
             if settings.version_locking_enabled is True:
                 logger.debug(
@@ -246,6 +179,8 @@ def deploy():
                 sah_node.upload_lock_files()
 
             logger.debug("=== uploading the director vm sh script")
+            
+            sah_node.upload_iso()
             sah_node.upload_director_scripts()
 
             logger.debug("=== Done with the solution admin host")

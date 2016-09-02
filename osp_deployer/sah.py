@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from osp_deployer.config import Settings
+from osp_deployer.settings.config import Settings
 from infra_host import InfraHost
 from auto_common import Scp, FileHelper
 import logging
@@ -36,17 +36,11 @@ class Sah(InfraHost):
         self.pwd = self.settings.sah_node.root_password
         self.root_pwd = self.settings.sah_node.root_password
 
-    def update_kickstart(self):
+    def update_kickstart_usb(self):
         sets = self.settings
-        shutil.copyfile(sets.sah_ks, sets.sah_kickstart)
-        FileHelper.replace_expression(sets.sah_kickstart,
-                                      "^cdrom",
-                                      'url --url=' +
-                                      sets.rhel_install_location)
-        FileHelper.replace_expression(sets.sah_kickstart,
-                                      '^url --url=.*',
-                                      'url --url=' +
-                                      sets.rhel_install_location)
+        shutil.copyfile(sets.sah_kickstart, sets.cloud_repo_dir + "/../osp-sah.ks")
+        sets.sah_kickstart = sets.cloud_repo_dir + "/../osp-sah.ks"
+
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^HostName=.*',
                                       'HostName="' +
@@ -173,7 +167,7 @@ class Sah(InfraHost):
                                       sets.private_api_netmask + '"')
 
     def upload_iso(self):
-        self.upload_file(self.settings.rhl72_iso,
+        shutil.copyfile(self.settings.rhl72_iso,
                          "/store/data/iso/RHEL7.iso")
 
     def upload_lock_files(self):
@@ -230,8 +224,8 @@ class Sah(InfraHost):
                      "' >> " +
                      director_conf)
         remote_file = "sh /root/deploy-director-vm.sh " + \
-                      director_conf + \
-                      " /store/data/iso/RHEL7.iso"
+                      director_conf + " " + \
+                      "/store/data/iso/RHEL7.iso"
         re = self.run_tty(remote_file)
         startVM = True
         for ln in re[0].split("\n"):
@@ -289,7 +283,7 @@ class Sah(InfraHost):
 
         re = self.run_tty("sh " +
                  remote_file +
-                 " /root/ceph.cfg /store/data/iso/RHEL7.iso")
+                 " /root/ceph.cfg " + "/store/data/iso/RHEL7.iso")
         startVM = True
         for ln in re[0].split("\n"):
             if "Restarting guest" in ln:

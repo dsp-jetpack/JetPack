@@ -16,10 +16,10 @@
 
 import ConfigParser
 import sys
-from osp_deployer import NodeConf
 import logging
 import os
 import json
+from osp_deployer.node_conf import NodeConf
 
 logger = logging.getLogger("osp_deployer")
 
@@ -239,9 +239,6 @@ class Settings():
 
         self.bastion_settings_map = self.get_settings_section(
             "Bastion Settings")
-        self.rhel_install_location = self.bastion_settings_map[
-            'rhel_install_location']
-        self.sah_kickstart = self.bastion_settings_map['sah_kickstart']
         self.cloud_repo_dir = self.bastion_settings_map['cloud_repo_dir']
         
         if self.bastion_settings_map['pull_images_from_cdn'].lower() == 'true':
@@ -292,12 +289,12 @@ class Settings():
 
         self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
         self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
+        
+        self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
         self.director_deploy_sh = self.foreman_configuration_scripts +\
             '/mgmt/deploy-director-vm.sh'
         self.undercloud_conf = self.foreman_configuration_scripts +\
             '/pilot/undercloud.conf'
-        self.sah_ks = self.foreman_configuration_scripts +\
-            "/mgmt/osp-sah.ks"
         self.ceph_deploy_sh = self.foreman_configuration_scripts +\
             '/mgmt/deploy-ceph-vm.sh'
         self.install_director_sh = self.foreman_configuration_scripts +\
@@ -332,14 +329,12 @@ class Settings():
         self.switches = []
 	self.nodes = []
 
-        if len(cluster['rhsm_repos']) > 0:
-            logger.info( "using ini repo setting")
+        if 'rhsm_repos' in cluster:
             self.rhsm_repos = cluster['rhsm_repos'].split(',')
         else:
-            logger.info( "using default repo settings")
             self.rhsm_repos = [
-                'rhel-7-server-openstack-9-rpms',
-                'rhel-7-server-openstack-9-director-rpms']
+                'rhel-7-server-openstack-8.0-rpms',
+                'rhel-7-server-openstack-8.0-director-rpms']
 
         with open(self.network_conf) as config_file:
             json_data = json.load(config_file)
