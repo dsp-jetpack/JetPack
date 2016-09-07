@@ -279,7 +279,7 @@ class Director(InfraHost):
 
         logger.debug("Assigning roles to nodes")
 
-	index = 0
+        index = 0
         for node in self.settings.controller_nodes:
             out = self.run_tty(self.source_stackrc +
                                "cd ~/pilot;./assign_role.py " +
@@ -303,7 +303,7 @@ class Director(InfraHost):
                     "Failed to assign Compute node role to ip " +
                     node.idrac_ip)
 
-        index= 0
+        index = 0
         for node in self.settings.ceph_nodes:
             out = self.run_tty(self.source_stackrc +
                                "cd ~/pilot;./assign_role.py " +
@@ -422,7 +422,6 @@ class Director(InfraHost):
         self.upload_file(tmp_name,
                          dst_name)
         os.remove(tmp_name)
-		
 
     def setup_dell_storage(self):
         # Re - Upload the yaml files in case we're trying to
@@ -432,105 +431,106 @@ class Director(InfraHost):
         self.upload_file(self.settings.dell_storage_yaml,
                          dell_storage_yaml)
         # Backup before modifying
-        self.run_tty("cp " + dell_storage_yaml + " " + dell_storage_yaml + ".bak")
+        self.run_tty("cp " + dell_storage_yaml +
+                     " " + dell_storage_yaml + ".bak")
 
         self.setup_eqlx(dell_storage_yaml)
         self.setup_dellsc(dell_storage_yaml)
         enabled_backends = "["
         if self.settings.enable_eqlx_backend is True:
-           index = 1
-           eqlx_san_ip_array = self.settings.eqlx_san_ip.split(",")
-	   for san_ip in eqlx_san_ip_array:
-	       enabled_backends += "'eqlx" + str(index) + "'," 
-	       index = index +1	
-				
+            index = 1
+            eqlx_san_ip_array = self.settings.eqlx_san_ip.split(",")
+        for san_ip in eqlx_san_ip_array:
+            enabled_backends += "'eqlx" + str(index) + "',"
+            index = index + 1
+
         if self.settings.enable_dellsc_backend is True:
-            enabled_backends += "'dellsc'" 
-                
+            enabled_backends += "'dellsc'"
+
         enabled_backends += "]"
-		
-        cmd = 'sed -i "s|cinder_user_enabled_backends:.*|cinder_user_enabled_backends: ' + \
-        enabled_backends +  '|" ' + dell_storage_yaml
+
+        cmd = 'sed -i \
+        "s|cinder_user_enabled_backends:.*|cinder_user_enabled_backends: ' +
+        enabled_backends + '|" ' + dell_storage_yaml
         self.run_tty(cmd)
 
-
-
-    def setup_eqlx(self,dell_storage_yaml):
+    def setup_eqlx(self, dell_storage_yaml):
 
         if self.settings.enable_eqlx_backend is False:
             logger.debug("not setting up eqlx backend")
             return
 
         logger.debug("configuring eql backend")
-	eqlx_san_ip_array = self.settings.eqlx_san_ip.split(",")
-	eqlx_san_login_array  = self.settings.eqlx_san_login.split(",")
-	eqlx_san_password_array  = self.settings.eqlx_san_password.split(",")
-	eqlx_thin_provisioning_array  = self.settings.eqlx_thin_provisioning.split(",")
-	eqlx_group_n_array  = self.settings.eqlx_group_n.split(",")
-	eqlx_pool_array  = self.settings.eqlx_pool.split(",")
-	eqlx_use_chap_array  = self.settings.eqlx_use_chap.split(",")
-	eqlx_ch_login_array  = self.settings.eqlx_ch_login.split(",")
-	eqlx_ch_pass_array  = self.settings.eqlx_ch_pass.split(",")
-		
-	if( len(eqlx_san_ip_array) < len(eqlx_san_login_array) or
-	   len(eqlx_san_ip_array) < len(eqlx_san_password_array) or
-	   len(eqlx_san_ip_array) < len(eqlx_thin_provisioning_array) or
-	   len(eqlx_san_ip_array) < len(eqlx_group_n_array) or
-	   len(eqlx_san_ip_array) < len(eqlx_pool_array) or
-	   len(eqlx_san_ip_array) < len(eqlx_use_chap_array) or
-	   len(eqlx_san_ip_array) < len(eqlx_ch_login_array) or
-	   len(eqlx_san_ip_array) < len(eqlx_ch_pass_array)) :
-	        self.settings.enable_eqlx_backend = false
-	        logger.debug("not setting up eqlx backend, data missing")
-                return
-			
-	eqlx_configs = ""
-        index = 0		
-	for san_ip in eqlx_san_ip_array:
-	    eqlx_config = """
-      eqlx/volume_backend_name:
-        value: {}	
-      eqlx/volume_driver:
-        value: cinder.volume.drivers.eqlx.DellEQLSanISCSIDriver		
-      eqlx/san_ip:
-        value: {}
-      eqlx/san_login:
-        value: {}
-      eqlx/san_password:
-        value: {}
-      eqlx/san_thin_provision:
-        value: {}     
-      eqlx/eqlx_group_name:
-        value: {}  
-      eqlx/eqlx_pool:
-        value: {}     
-      eqlx/eqlx_use_chap:
-        value: {}     	
-      eqlx/eqlx_chap_login:
-        value: {}     
-      eqlx/eqlx_chap_password:
-        value: {}""".format("eqlx" +str(index+1),
-			      eqlx_san_ip_array[index],
-			      eqlx_san_login_array[index],
-			      eqlx_san_password_array[index],
-			      eqlx_thin_provisioning_array[index],
-			      eqlx_group_n_array[index],
-			      eqlx_pool_array[index],
-			      eqlx_use_chap_array[index],
-			      eqlx_ch_login_array[index],
-			      eqlx_ch_pass_array[index]
-			)
-            eql_backend = "eqlx" + str(index+1) 
-            pattern = re.compile("eqlx\/", re.MULTILINE|re.DOTALL)
-            eqlx_config = pattern.sub(eql_backend+"/",eqlx_config)
-            eqlx_configs += eqlx_config	           
-            index = index +1		
-	
+        eqlx_san_ip_array = self.settings.eqlx_san_ip.split(",")
+        eqlx_san_login_array = self.settings.eqlx_san_login.split(",")
+        eqlx_san_password_array = self.settings.eqlx_san_password.split(",")
+        eqlx_thin_provisioning_array =
+        self.settings.eqlx_thin_provisioning.split(",")
+        eqlx_group_n_array = self.settings.eqlx_group_n.split(",")
+        eqlx_pool_array = self.settings.eqlx_pool.split(",")
+        eqlx_use_chap_array = self.settings.eqlx_use_chap.split(",")
+        eqlx_ch_login_array = self.settings.eqlx_ch_login.split(",")
+        eqlx_ch_pass_array = self.settings.eqlx_ch_pass.split(",")
+
+        if(len(eqlx_san_ip_array) < len(eqlx_san_login_array) or
+           len(eqlx_san_ip_array) < len(eqlx_san_password_array) or
+           len(eqlx_san_ip_array) < len(eqlx_thin_provisioning_array) or
+           len(eqlx_san_ip_array) < len(eqlx_group_n_array) or
+           len(eqlx_san_ip_array) < len(eqlx_pool_array) or
+           len(eqlx_san_ip_array) < len(eqlx_use_chap_array) or
+           len(eqlx_san_ip_array) < len(eqlx_ch_login_array) or
+           len(eqlx_san_ip_array) < len(eqlx_ch_pass_array)):
+            self.settings.enable_eqlx_backend = false
+            logger.debug("not setting up eqlx backend, data missing")
+            return
+
+        eqlx_configs = ""
+        index = 0
+        for san_ip in eqlx_san_ip_array:
+            eqlx_config = """
+            eqlx/volume_backend_name:
+                value: {}
+            eqlx/volume_driver:
+                value: cinder.volume.drivers.eqlx.DellEQLSanISCSIDriver
+            eqlx/san_ip:
+                value: {}
+            eqlx/san_login:
+                value: {}
+            eqlx/san_password:
+                value: {}
+            eqlx/san_thin_provision:
+                value: {}
+            eqlx/eqlx_group_name:
+                value: {}
+            eqlx/eqlx_pool:
+                value: {}
+            eqlx/eqlx_use_chap:
+                value: {}
+            eqlx/eqlx_chap_login:
+                value: {}
+            eqlx/eqlx_chap_password:
+                value: {}""".format("eqlx" + str(index+1),
+                                    eqlx_san_ip_array[index],
+                                    eqlx_san_login_array[index],
+                                    eqlx_san_password_array[index],
+                                    eqlx_thin_provisioning_array[index],
+                                    eqlx_group_n_array[index],
+                                    eqlx_pool_array[index],
+                                    eqlx_use_chap_array[index],
+                                    eqlx_ch_login_array[index],
+                                    eqlx_ch_pass_array[index]
+                                    )
+            eql_backend = "eqlx" + str(index+1)
+            pattern = re.compile("eqlx\/", re.MULTILINE | re.DOTALL)
+            eqlx_config = pattern.sub(eql_backend+"/", eqlx_config)
+            eqlx_configs += eqlx_config
+            index = index + 1
+
         eqlx_configs = "#EQLX" + eqlx_configs + "\n      #EQLX-END"
         logger.info("****EQLX Config:\n" + eqlx_configs)
-        self.run_ssh_edit(dell_storage_yaml,"#EQLX.*?#EQLX-END",eqlx_configs)
+        self.run_ssh_edit(dell_storage_yaml, "#EQLX.*?#EQLX-END", eqlx_configs)
 
-    def setup_dellsc(self,dell_storage_yaml):
+    def setup_dellsc(self, dell_storage_yaml):
 
         if self.settings.enable_dellsc_backend is False:
             logger.debug("not setting up dellsc backend")
@@ -539,16 +539,24 @@ class Director(InfraHost):
         logger.debug("configuring dell sc backend")
 
         cmds = [
-            'sed -i "s|<dellsc_san_ip>|' + self.settings.dellsc_san_ip + '|" ' + dell_storage_yaml,
-            'sed -i "s|<dellsc_san_login>|' + self.settings.dellsc_san_login + '|" ' + dell_storage_yaml,
-            'sed -i "s|<dellsc_san_password>|' + self.settings.dellsc_san_password + '|" ' + dell_storage_yaml,
-            'sed -i "s|<dellsc_sc_ssn>|' + self.settings.dellsc_ssn + '|" ' + dell_storage_yaml,
-            'sed -i "s|<dellsc_iscsi_ip_address>|' + self.settings.dellsc_iscsi_ip_address + '|" ' + dell_storage_yaml,
-            'sed -i "s|<dellsc_iscsi_port>|' + self.settings.dellsc_iscsi_port + '|" ' + dell_storage_yaml,
-            'sed -i "s|<dellsc_sc_api_port>|' + self.settings.dellsc_api_port + '|" ' + dell_storage_yaml,
-            'sed -i "s|dellsc_osp8_server_folder|' + self.settings.dellsc_server_folder + '|" ' + dell_storage_yaml,
-            'sed -i "s|dellsc_osp8_volume_folder|' + self.settings.dellsc_volume_folder + '|" ' + dell_storage_yaml,
-
+            'sed -i "s|<dellsc_san_ip>|' +
+            self.settings.dellsc_san_ip + '|" ' + dell_storage_yaml,
+            'sed -i "s|<dellsc_san_login>|' +
+            self.settings.dellsc_san_login + '|" ' + dell_storage_yaml,
+            'sed -i "s|<dellsc_san_password>|' +
+            self.settings.dellsc_san_password + '|" ' + dell_storage_yaml,
+            'sed -i "s|<dellsc_sc_ssn>|' +
+            self.settings.dellsc_ssn + '|" ' + dell_storage_yaml,
+            'sed -i "s|<dellsc_iscsi_ip_address>|' +
+            self.settings.dellsc_iscsi_ip_address + '|" ' + dell_storage_yaml,
+            'sed -i "s|<dellsc_iscsi_port>|' +
+            self.settings.dellsc_iscsi_port + '|" ' + dell_storage_yaml,
+            'sed -i "s|<dellsc_sc_api_port>|' +
+            self.settings.dellsc_api_port + '|" ' + dell_storage_yaml,
+            'sed -i "s|dellsc_osp8_server_folder|' +
+            self.settings.dellsc_server_folder + '|" ' + dell_storage_yaml,
+            'sed -i "s|dellsc_osp8_volume_folder|' +
+            self.settings.dellsc_volume_folder + '|" ' + dell_storage_yaml,
         ]
         for cmd in cmds:
             self.run_tty(cmd)
@@ -562,7 +570,7 @@ class Director(InfraHost):
         compute_yaml = self.nic_configs_dir + "/compute.yaml"
         controller_yaml = self.nic_configs_dir + "/controller.yaml"
         static_ips_yaml = self.templates_dir + "/static-ip-environment.yaml"
-	static_vip_yaml = self.templates_dir + "/static-vip-environment.yaml"
+        static_vip_yaml = self.templates_dir + "/static-vip-environment.yaml"
 
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy
@@ -575,7 +583,7 @@ class Director(InfraHost):
         self.upload_file(self.settings.controller_yaml,
                          controller_yaml)
         self.upload_file(self.settings.static_ips_yaml, static_ips_yaml)
-	self.upload_file(self.settings.static_vip_yaml, static_vip_yaml)
+        self.upload_file(self.settings.static_vip_yaml, static_vip_yaml)
 
         cmds = [
             'sed -i "s|ControlPlaneDefaultRoute:.*|' +
@@ -652,10 +660,11 @@ class Director(InfraHost):
                 'sed -i "s|TenantNetCidr:.*|TenantNetCidr: ' +
                 self.settings.tenant_network + '|" ' + network_yaml,
                 'sed -i "s|TenantAllocationPools:.*|TenantAllocationPools: ' +
-                "[{'start': '" + self.settings.tenant_network_allocation_pool_start +
+                "[{'start': '" +
+                self.settings.tenant_network_allocation_pool_start +
                 "', 'end': '" +
-                self.settings.tenant_network_allocation_pool_end + "'}]"   '|" ' +
-                network_yaml,
+                self.settings.tenant_network_allocation_pool_end +
+                "'}]"   '|" ' + network_yaml,
             ]
         for cmd in cmds:
             self.run_tty(cmd)
@@ -756,63 +765,98 @@ class Director(InfraHost):
                 ]
         for cmd in cmds:
             self.run_tty(cmd)
-        
+
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
-            #static_ips_yaml
+            # static_ips_yaml
             control_external_ips = ''
             control_private_ips = ''
             control_storage_ips = ''
             control_storage_cluster_ips = ''
             control_tenant_ips = ''
             for node in self.settings.controller_nodes:
-                control_external_ips +=  "    - " + node.public_api_ip + "\\n"
-                control_private_ips +=  "    - " + node.private_api_ip + "\\n"
-                control_storage_ips +=  "    - " + node.storage_ip + "\\n"
-                control_storage_cluster_ips += "    - " + node.storage_cluster_ip + "\\n"
+                control_external_ips += "    - " + node.public_api_ip + "\\n"
+                control_private_ips += "    - " + node.private_api_ip + "\\n"
+                control_storage_ips += "    - " + node.storage_ip + "\\n"
+                control_storage_cluster_ips += "    - " +
+                node.storage_cluster_ip + "\\n"
                 control_tenant_ips += "    - " + node.tenant_ip + "\\n"
 
             compute_tenant_ips = ''
             compute_private_ips = ''
             compute_storage_ips = ''
-	    for node in self.settings.compute_nodes:
-	        compute_tenant_ips += "    - " + node.tenant_ip + "\\n"
-	        compute_private_ips += "    - " + node.private_api_ip + "\\n"
-	        compute_storage_ips += "    - " + node.storage_ip + "\\n"
 
-	    storage_storgage_ip = ''
-	    storage_cluster_ip = ''
-	    for node in self.settings.ceph_nodes:
-	        storage_storgage_ip += "    - " + node.storage_ip + "\\n"
-	        storage_cluster_ip += "    - "  + node.storage_cluster_ip + "\\n"
+        for node in self.settings.compute_nodes:
+            compute_tenant_ips += "    - " + node.tenant_ip + "\\n"
+            compute_private_ips += "    - " + node.private_api_ip + "\\n"
+            compute_storage_ips += "    - " + node.storage_ip + "\\n"
 
+        storage_storgage_ip = ''
+        storage_cluster_ip = ''
+        for node in self.settings.ceph_nodes:
+            storage_storgage_ip += "    - " + node.storage_ip + "\\n"
+            storage_cluster_ip += "    - " + node.storage_cluster_ip + "\\n"
 
-            cmds = [ 'sed -i "/192.168/d" '+ static_ips_yaml,
-	             'sed -i "/ControllerIPs/,/NovaComputeIPs/ s/tenant:/tenant: \\n'+ control_tenant_ips+"/\" " +static_ips_yaml,
-                     'sed -i "/ControllerIPs/,/NovaComputeIPs/ s/external:/external: \\n'+ control_external_ips+"/\" " +static_ips_yaml,
-                     'sed -i "/ControllerIPs/,/NovaComputeIPs/ s/internal_api:/internal_api: \\n'+ control_private_ips+"/\" " +static_ips_yaml,
-                     'sed -i "/ControllerIPs/,/NovaComputeIPs/ s/storage:/storage: \\n'+ control_storage_ips+"/\" " +static_ips_yaml,
-                     'sed -i "/ControllerIPs/,/NovaComputeIPs/ s/storage_mgmt:/storage_mgmt: \\n'+ control_storage_cluster_ips+"/\" " +static_ips_yaml,
-	             'sed -i "/NovaComputeIPs/,/CephStorageIPs/ s/tenant:/tenant: \\n'+ compute_tenant_ips +"/\" " +static_ips_yaml,
-	             'sed -i "/NovaComputeIPs/,/CephStorageIPs/ s/internal_api:/internal_api: \\n'+ compute_private_ips +"/\" " +static_ips_yaml,
-	             'sed -i "/NovaComputeIPs/,/CephStorageIPs/ s/storage:/storage: \\n'+ compute_storage_ips +"/\" " +static_ips_yaml,	
-	             'sed -i "/CephStorageIPs/,/$p/ s/storage:/storage: \\n'+ storage_storgage_ip +"/\" " +static_ips_yaml,
-	             'sed -i "/CephStorageIPs/,/$p/ s/storage_mgmt:/storage_mgmt: \\n'+ storage_cluster_ip +"/\" " +static_ips_yaml
-                     ]
+            cmds = ['sed -i "/192.168/d" ' + static_ips_yaml,
+                    'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
+                    s/tenant:/tenant: \\n' +
+                    control_tenant_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
+                    s/external:/external: \\n' +
+                    control_external_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
+                    s/internal_api:/internal_api: \\n' +
+                    control_private_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
+                    s/storage:/storage: \\n' +
+                    control_storage_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
+                    s/storage_mgmt:/storage_mgmt: \\n' +
+                    control_storage_cluster_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/NovaComputeIPs/,/CephStorageIPs/ \
+                    s/tenant:/tenant: \\n' +
+                    compute_tenant_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/NovaComputeIPs/,/CephStorageIPs/ \
+                    s/internal_api:/internal_api: \\n' +
+                    compute_private_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/NovaComputeIPs/,/CephStorageIPs/ \
+                    s/storage:/storage: \\n' +
+                    compute_storage_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/CephStorageIPs/,/$p/ s/storage:/storage: \\n' +
+                    storage_storgage_ip + "/\" " + static_ips_yaml,
+                    'sed -i "/CephStorageIPs/,/$p/ \
+                    s/storage_mgmt:/storage_mgmt: \\n' +
+                    storage_cluster_ip + "/\" " + static_ips_yaml
+                    ]
+
             for cmd in cmds:
-                self.run_tty(cmd)    
-        
+                self.run_tty(cmd)
+
         if self.settings.use_static_vips is True:
             logger.debug("Updating static vip yaml")
-            cmds =['sed -i "s/redis: .*/redis: '+ self.settings.redis_vip +'/" ' + static_vip_yaml,
-                   'sed -i "s/ControlFixedIPs: .*/ControlFixedIPs: [{\'ip_address\':\''+ self.settings.provisioning_vip +'\'}]/" ' + static_vip_yaml,
-                   'sed -i "s/InternalApiVirtualFixedIPs: .*/InternalApiVirtualFixedIPs: [{\'ip_address\':\''+ self.settings.private_api_vip +'\'}]/" ' + static_vip_yaml,
-                   'sed -i "s/PublicVirtualFixedIPs: .*/PublicVirtualFixedIPs: [{\'ip_address\':\''+ self.settings.public_api_vip +'\'}]/" ' + static_vip_yaml,
-                   'sed -i "s/StorageVirtualFixedIPs: .*/StorageVirtualFixedIPs: [{\'ip_address\':\''+ self.settings.storage_vip +'\'}]/" ' + static_vip_yaml,
-                   'sed -i "s/StorageMgmtVirtualFixedIPs: .*/StorageMgmtVirtualFixedIPs: [{\'ip_address\':\''+ self.settings.storage_cluster_vip +'\'}]/" ' + static_vip_yaml
-                   ]
+            cmds = ['sed -i "s/redis: .*/redis: ' +
+                    self.settings.redis_vip + '/" ' + static_vip_yaml,
+                    'sed -i "s/ControlFixedIPs: .*/ControlFixedIPs: \
+                    [{\'ip_address\':\'' +
+                    self.settings.provisioning_vip + '\'}]/" ' +
+                    static_vip_yaml,
+                    'sed -i "s/InternalApiVirtualFixedIPs: \
+                    .*/InternalApiVirtualFixedIPs: [{\'ip_address\':\'' +
+                    self.settings.private_api_vip + '\'}]/" ' +
+                    static_vip_yaml,
+                    'sed -i "s/PublicVirtualFixedIPs: \
+                    .*/PublicVirtualFixedIPs: [{\'ip_address\':\'' +
+                    self.settings.public_api_vip + '\'}]/" ' + static_vip_yaml,
+                    'sed -i "s/StorageVirtualFixedIPs: \
+                    .*/StorageVirtualFixedIPs: [{\'ip_address\':\'' +
+                    self.settings.storage_vip + '\'}]/" ' + static_vip_yaml,
+                    'sed -i "s/StorageMgmtVirtualFixedIPs: \
+                    .*/StorageMgmtVirtualFixedIPs: [{\'ip_address\':\'' +
+                    self.settings.storage_cluster_vip + '\'}]/" ' +
+                    static_vip_yaml
+                    ]
             for cmd in cmds:
-                self.run_tty(cmd) 
+                self.run_tty(cmd)
 
     def deploy_overcloud(self):
 
@@ -832,7 +876,7 @@ class Director(InfraHost):
                                     " --vlan " + \
                                     self.settings.tenant_vlan_range + \
                                     " --overcloud_name " + \
-                                    self.settings.overcloud_name  
+                                    self.settings.overcloud_name
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \
                    + self.settings.overcloud_deploy_timeout
@@ -844,12 +888,13 @@ class Director(InfraHost):
             cmd += " --static_ips"
         if self.settings.use_static_vips is True:
             cmd += " --static_vips"
-        # Making the following non optional; and  order applied is the one nodes are defined in in the .properties
-        cmd+= " --node_placement"
-	
-	cmd += " > overcloud_deploy_out.log"
-        
-	self.run_tty(cmd)
+        # Making the following non optional; and order applied
+        # is the one nodes arei defined in in the .properties
+        cmd += " --node_placement"
+
+    cmd += " > overcloud_deploy_out.log"
+
+    self.run_tty(cmd)
 
     def delete_overcloud(self):
 
@@ -986,15 +1031,20 @@ class Director(InfraHost):
 
             # noinspection PyBroadException
             try:
-               overcloud_endpoint = self.run_tty(
-                    'grep "OS_AUTH_URL=" ~/' + self.settings.overcloud_name + 'rc')[0].split('=')[1].replace(':5000/v2.0/', '')
-               overcloud_pass = self.run(
-                                                        'grep "OS_PASSWORD=" ~/' + self.settings.overcloud_name + 'rc')[0].split('=')[1]
-               ip_info.append("OverCloud Horizon        : " +
-                              overcloud_endpoint)
-               ip_info.append("OverCloud admin password : " + overcloud_pass)
+                overcloud_endpoint = self.run_tty('grep "OS_AUTH_URL=" ~/' +
+                                                  self.settings.
+                                                  overcloud_name +
+                                                  'rc')[0].split('=')[1]\
+                                                  .replace(':5000/v2.0/', '')
+                overcloud_pass = self.run('grep "OS_PASSWORD=" ~/' +
+                                          self.settings.overcloud_name +
+                                          'rc')[0].split('=')[1]
+                ip_info.append("OverCloud Horizon        : " +
+                               overcloud_endpoint)
+                ip_info.append("OverCloud admin password : " +
+                               overcloud_pass)
             except:
-                 pass
+                pass
             ip_info.append("====================================")
         except:
             logger.debug(" Failed to retreive the nodes ip information ")
@@ -1031,7 +1081,8 @@ class Director(InfraHost):
         setts = self.settings
         cmds = [
             'source ~/' + self.settings.overcloud_name + 'rc;'
-            "sudo ip route add `neutron subnet-list | grep external_sub | awk '{print $6;}'` dev eth4",
+            "sudo ip route add `neutron subnet-list |
+            grep external_sub | awk '{print $6;}'` dev eth4",
             'source ~/' + self.settings.overcloud_name + 'rc;'
             'keystone role-create --name heat_stack_owner',
             "source ~/" + self.settings.overcloud_name + "rc;mkdir -p /home/" +
@@ -1039,27 +1090,31 @@ class Director(InfraHost):
             "/tempest",
             'source ~/' + self.settings.overcloud_name + 'rc;cd '
             '~/tempest;/usr/share/openstack-tempest-liberty/tools/'
-            'configure-tempest-directory',        
-            'source ~/' + self.settings.overcloud_name + 'rc;cd ~/tempest;tools/config_tempest.py '
+            'configure-tempest-directory',
+            'source ~/' + self.settings.overcloud_name +
+            'rc;cd ~/tempest;tools/config_tempest.py '
             '--create --deployer-input '
             '~/tempest-deployer-input.conf --debug '
-            'service_available.swift False object-storage-feature-enabled.discoverability False '
+            'service_available.swift False '
+            'object-storage-feature-enabled.discoverability False '
             ' identity.uri $OS_AUTH_URL '
             'identity-feature-enabled.api_v3 False '
             'identity.admin_username $OS_USERNAME '
             'identity.admin_password $OS_PASSWORD '
             'identity.admin_tenant_name $OS_TENANT_NAME',
-	    'source ~/' + self.settings.overcloud_name + 'rc;cd '
+            'source ~/' + self.settings.overcloud_name + 'rc;cd '
             '~/tempest;'
-	    'tempest cleanup --init-saved-state'
-        ]
+            'tempest cleanup --init-saved-state'
+            ]
         for cmd in cmds:
             self.run_tty(cmd)
         if setts.tempest_smoke_only is True:
             cmd = "source ~/" + self.settings.overcloud_name + "rc;cd " \
                   "~/tempest;tools/run-tests.sh  '.*smoke' --concurrency=4"
         else:
-            cmd = "source ~/" + self.settings.overcloud_name + "rc;cd ~/tempest;tools/run-tests.sh --concurrency=4"
+            cmd = "source ~/" +
+            self.settings.overcloud_name +
+            "rc;cd ~/tempest;tools/run-tests.sh --concurrency=4"
         self.run_tty(cmd)
         Scp.get_file(setts.director_node.external_ip,
                      setts.director_install_account_user,
@@ -1074,16 +1129,14 @@ class Director(InfraHost):
                      "/home/" + setts.director_install_account_user +
                      "/tempest/tempest.log")
         logger.debug("Finished running tempest")
-	logger.debug("Tempest clean up")
-        cmds = [
-            'source ~/' + self.settings.overcloud_name + 'rc;cd '
-            '~/tempest;tempest cleanup --dry-run',
-            'source ~/' + self.settings.overcloud_name + 'rc;cd '
-            '~/tempest;tempest cleanup'
-        ]
+        logger.debug("Tempest clean up")
+        cmds = ['source ~/' + self.settings.overcloud_name + 'rc;cd '
+                '~/tempest;tempest cleanup --dry-run',
+                'source ~/' + self.settings.overcloud_name + 'rc;cd '
+                '~/tempest;tempest cleanup'
+                ]
         for cmd in cmds:
             self.run_tty(cmd)
-
 
     def configure_calamari(self):
         logger.info("Configure Calamari")
@@ -1109,7 +1162,8 @@ class Director(InfraHost):
         if self.settings.enable_instance_ha is True:
             logger.info("Enabling instance HA")
             if self.settings.enable_fencing is False:
-                logger.error("Fencing NOT enabled, this is required for instance_ha")
+                logger.error("Fencing NOT enabled, this is \
+                             required for instance_ha")
             cmd = 'cd ' + \
                   self.pilot_dir + \
                   ';./install-instanceHA.py '
