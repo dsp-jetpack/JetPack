@@ -1,0 +1,43 @@
+# Clone the repos:
+mkdir ~/JetStream
+cd ~/JetStream
+git clone https://github.com/dell-esg/deploy-auto
+git clone https://github.com/dell-esg/cloud_repo
+
+#Download RHEL .iso
+place in ~/Jetstream
+mv /pathto/iso ~/JetStream/rhel72.iso
+
+# Copy sample config files 
+cp ~/deploy-auto/osp_deployer/settings/sample.properties ~/JetStream/acme.properties
+cp ~/deploy-auto/osp_deployer/settings/settings_sample.ini ~/JetStream/acme.ini
+
+Edit the content of the configuration files to match your envirnment - use full paths where paths are required
+
+# Update the python path
+export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:~/JetStream/deploy-auto
+
+# Run the setup scripts to update the kickstart passing in the path to your .ini file 
+# NOTE : use full path to the .ini file , not ../ or ~..
+
+cd ~/JetStream/deploy-auto/setup
+python setup_usb_idrac.py -s /root/JetStream/acme.ini
+
+# Install RHEL ... mounting USB img file created above & pointing installation to Kickstart as per deployment guide 
+eg :  ks=hd:sdb:/JetStream/osp-sah.ks
+
+
+# Once the install i complete, log in r ssh into the host and mount the usb media :
+mount /dev/sdb /mnt
+
+# Copy all the files locally 
+cp -rf /mnt/JetStream /root
+
+
+#and run the deployment :: .........
+cd /root/JetStream/deploy-auto/osp_deployer
+python deployer.py -s /root/JetStream/acme.ini
+
+
+
+

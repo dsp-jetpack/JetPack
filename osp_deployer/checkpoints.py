@@ -13,9 +13,11 @@
 # limitations under the License.
 
 from auto_common import Ssh
-from osp_deployer import Settings, DeployerSanity
+from osp_deployer.settings.config import Settings
+from osp_deployer.settings_sanity import DeployerSanity
 import time
 import logging
+import subprocess
 logger = logging.getLogger("osp_deployer")
 
 
@@ -37,6 +39,7 @@ class Checkpoints():
     @staticmethod
     def verify_subscription_status(external_ip, user, password, retries):
         i = 0
+
         subscription_status = Ssh.execute_command(
             external_ip,
             user,

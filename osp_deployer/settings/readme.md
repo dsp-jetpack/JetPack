@@ -35,6 +35,10 @@
                . storage_vip      - VIP for the storage network
                . storage_cluster_vip - VIP for the storage cluster network (must be set on the provisioning network)
 	       * see sample file comments for valid ips in the above networks
+* 6.0.0.d - Removed settings :
+               . sah_kickstart
+               . rhel_install_location
+               . rhl72_iso
 
 #####settings.properties
 * 6.0.0.a - Initial 6.0 version

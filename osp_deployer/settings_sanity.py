@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from auto_common import Ipmi
-from osp_deployer import Settings
+from osp_deployer.settings.config import Settings
 import sys
 import subprocess
 import logging
@@ -98,17 +98,11 @@ class DeployerSanity():
             self.settings.install_director_sh), \
             self.settings.install_director_sh +\
             " file doesn't seem to exist"
+        assert os.path.isfile(
+            self.settings.rhl72_iso), \
+            self.settings.rhl72_iso +\
+            " file doesn't seem to exist"
 
-        try:
-            urllib2.urlopen(
-                self.settings.rhel_install_location + "/EULA").read()
-        except:
-            raise AssertionError(
-                                 self.settings.rhel_install_location +
-                                 "/EULA is not reachable")
-        subprocess.check_output("service tftp stop",
-                                stderr=subprocess.STDOUT,
-                                shell=True)
 
     def check_ipmi_to_nodes(self):
         hdw_nodes = (self.settings.controller_nodes +
