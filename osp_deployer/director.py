@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from osp_deployer.config import Settings
+from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from infra_host import InfraHost
 from auto_common import Scp, Ipmi
