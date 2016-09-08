@@ -38,7 +38,8 @@ class Sah(InfraHost):
 
     def update_kickstart_usb(self):
         sets = self.settings
-        shutil.copyfile(sets.sah_kickstart, sets.cloud_repo_dir + "/../osp-sah.ks")
+        shutil.copyfile(sets.sah_kickstart, sets.cloud_repo_dir +
+                        "/../osp-sah.ks")
         sets.sah_kickstart = sets.cloud_repo_dir + "/../osp-sah.ks"
 
         FileHelper.replace_expression(sets.sah_kickstart,
@@ -168,7 +169,7 @@ class Sah(InfraHost):
 
     def upload_iso(self):
         shutil.copyfile(self.settings.rhl72_iso,
-                         "/store/data/iso/RHEL7.iso")
+                        "/store/data/iso/RHEL7.iso")
 
     def upload_lock_files(self):
 
@@ -231,7 +232,7 @@ class Sah(InfraHost):
         for ln in re[0].split("\n"):
             if "Restarting guest" in ln:
                 startVM = False
-        if startVM :
+        if startVM:
             logger.debug(
                 "=== wait for the director vm install "
                 "to be complete")
@@ -282,17 +283,19 @@ class Sah(InfraHost):
         logger.debug("=== kick off the ceph vm deployment")
 
         re = self.run_tty("sh " +
-                 remote_file +
-                 " /root/ceph.cfg " + "/store/data/iso/RHEL7.iso")
+                          remote_file +
+                          " /root/ceph.cfg " +
+                          "/store/data/iso/RHEL7.iso")
         startVM = True
         for ln in re[0].split("\n"):
             if "Restarting guest" in ln:
                 startVM = False
-        if startVM :
+        if startVM:
             logger.debug(
-                "=== wait for the ceph vm install to be complete & power it on")
-            while "shut off" not in \
-                self.run("virsh list --all | grep ceph")[0]:
+                "=== wait for the ceph vm install to be complete \
+                & power it on")
+            while "shut off" \
+                  not in self.run("virsh list --all | grep ceph")[0]:
                 time.sleep(60)
             logger.debug("=== power on the ceph VM ")
             self.run("virsh start ceph")

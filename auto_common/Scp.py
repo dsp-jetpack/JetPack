@@ -16,7 +16,8 @@
 
 try:
     import paramiko
-except ImportError: pass
+except ImportError:
+    pass
 
 
 # noinspection PyClassHasNoInit

@@ -17,7 +17,8 @@
 
 try:
     import paramiko
-except ImportError: pass
+except ImportError:
+    pass
 import logging
 import re
 

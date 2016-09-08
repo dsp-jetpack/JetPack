@@ -57,7 +57,8 @@ def setup_logging(dci_contxt):
     file_handler = logging.FileHandler(log_file_name, mode='w')
     dci_handler = DciHandler(dci_contxt)
 
-    for logger_name in ('osp_deployer', 'auto_common.ipmi', 'auto_common.ssh', 'tripleohelper'):
+    for logger_name in ('osp_deployer', 'auto_common.ipmi',
+                        'auto_common.ssh', 'tripleohelper'):
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.DEBUG)
         logger.addHandler(stream_handler)
@@ -96,7 +97,7 @@ def deploy_openstack(log_file_name):
     finally:
         with open(log_file_name, 'r') as f:
             dcifile.create(
-            dci_context,
+                dci_context,
                 'deployment.log',
                 f.read(),
                 mime='text/plain',
@@ -147,7 +148,7 @@ if not dci_conf['rhos_mirror'].startswith('http'):
 topic = dcitopic.get(dci_context, dci_conf.get('topic', 'OSP8')).json()[
     'topic']
 r = dcijob.schedule(dci_context, remoteci_id=dci_conf['remoteci_id'],
-                      topic_id=topic['id'])
+                    topic_id=topic['id'])
 if r.status_code == 412:
     exit(0)
 components = dcijob.get_components(

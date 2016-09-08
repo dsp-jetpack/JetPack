@@ -60,6 +60,7 @@ def get_settings():
     settings = Settings(args.settings)
     return settings
 
+
 def run_tempest():
     settings = get_settings()
     if settings.run_tempest is True:
@@ -179,7 +180,7 @@ def deploy():
                 sah_node.upload_lock_files()
 
             logger.debug("=== uploading the director vm sh script")
-            
+
             sah_node.upload_iso()
             sah_node.upload_director_scripts()
 
@@ -264,8 +265,8 @@ def deploy():
         director_vm.retreive_nodes_ips()
         tester.verify_computes_virtualization_enabled()
         tester.verify_backends_connectivity()
-        cmd = "source ~/stackrc;openstack stack list | grep "+ settings.overcloud_name +" |" \
-              " awk '{print $6}'"
+        cmd = "source ~/stackrc; openstack stack list | grep " \
+              + settings.overcloud_name + " | awk '{print $6}'"
         overcloud_status = \
             Ssh.execute_command_tty(settings.director_node.external_ip,
                                     settings.director_install_account_user,
@@ -285,7 +286,7 @@ def deploy():
         director_vm.enable_fencing()
         director_vm.enable_instance_ha()
         director_vm.run_sanity_test()
-        logger.info("Depoyment summary info; usefull ip's etc.. " + \
+        logger.info("Depoyment summary info; usefull ip's etc.. " +
                     "/auto_results/deployment_summary.log")
 
     except:

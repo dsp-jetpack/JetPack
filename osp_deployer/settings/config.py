@@ -92,8 +92,10 @@ class Settings():
         self.discovery_ip_range = cluster[
             'discovery_ip_range']
         self.tenant_network = cluster.get('tenant_network')
-        self.tenant_network_allocation_pool_start = cluster.get('tenant_network_allocation_pool_start')
-        self.tenant_network_allocation_pool_end = cluster.get('tenant_network_allocation_pool_end')
+        self.tenant_network_allocation_pool_start = cluster.get(
+                                      'tenant_network_allocation_pool_start')
+        self.tenant_network_allocation_pool_end = cluster.get(
+                                      'tenant_network_allocation_pool_end')
         self.tenant_vlan_range = cluster.get('tenant_vlan_range')
         self.director_install_account_user = cluster[
             'director_install_user']
@@ -170,7 +172,7 @@ class Settings():
             self.use_static_vips = True
             self.redis_vip = cluster['redis_vip']
             self.provisioning_vip = cluster['provisioning_vip']
-	    self.private_api_vip = cluster['private_api_vip']
+            self.private_api_vip = cluster['private_api_vip']
             self.public_api_vip = cluster['public_api_vip']
             self.storage_vip = cluster['storage_vip']
             self.storage_cluster_vip = cluster['storage_cluster_vip']
@@ -240,7 +242,7 @@ class Settings():
         self.bastion_settings_map = self.get_settings_section(
             "Bastion Settings")
         self.cloud_repo_dir = self.bastion_settings_map['cloud_repo_dir']
-        
+
         if self.bastion_settings_map['pull_images_from_cdn'].lower() == 'true':
             self.pull_images_from_cnd = True
         else:
@@ -289,7 +291,7 @@ class Settings():
 
         self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
         self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
-        
+
         self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
         self.director_deploy_sh = self.foreman_configuration_scripts +\
             '/mgmt/deploy-director-vm.sh'
@@ -315,7 +317,7 @@ class Settings():
             '/pilot/templates/nic-configs/compute.yaml'
         self.static_ips_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/static-ip-environment.yaml'
-	self.static_vip_yaml = self.foreman_configuration_scripts + \
+        self.static_vip_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/static-vip-environment.yaml'
         self.controller_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/nic-configs/controller.yaml'
@@ -327,7 +329,7 @@ class Settings():
         self.compute_nodes = []
         self.ceph_nodes = []
         self.switches = []
-	self.nodes = []
+        self.nodes = []
 
         if 'rhsm_repos' in cluster:
             self.rhsm_repos = cluster['rhsm_repos'].split(',')
@@ -380,8 +382,8 @@ class Settings():
                     if node.is_switch == "true":
                         self.switches.append(node)
                 except AttributeError:
-		    self.nodes.append(node)
-		    pass
+                    self.nodes.append(node)
+                    pass
 
         Settings.settings = self
 

@@ -27,11 +27,10 @@ import logging
 import traceback
 import argparse
 import os
-from osp_deployer.settings.config import Settings 
+from osp_deployer.settings.config import Settings
 from osp_deployer.sah import Sah
 
 logger = logging.getLogger("osp_deployer")
-
 
 
 def setup_networking():
@@ -53,37 +52,39 @@ def setup_networking():
         logger.info("Settings .properties " + settings.network_conf)
 
         # Check to verify ~/JetStream/rhel72.iso exists
-        assert os.path.isfile("/root/JetStream/rhel72.iso"),"~/JetStream/rhel72.iso file is not present"
+        assert os.path.isfile("/root/JetStream/rhel72.iso"), "~/JetStream/\
+                              rhel72.iso file is not present"
 
         sah = Sah()
         sah.update_kickstart_usb()
 
-        # Create the usb Media & update path references 
+        # Create the usb Media & update path references
         # Create the usb image (todo move to script ?)
-        
-        current_path = subprocess.check_output("cd ~;pwd", stderr=subprocess.STDOUT, shell=True).strip()
+
+        current_path = subprocess.check_output("cd ~;pwd",
+                                               stderr=subprocess.STDOUT,
+                                               shell=True).strip()
         target_ini = settings.settings_file.replace(current_path, "/mnt/usb")
         cmds = ['cd ~;rm -f osp_ks.img',
-               'cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=5000',
-               'cd ~;mkfs ext3 -F osp_ks.img',
-               'mkdir -p /mnt/usb',
-               'cd ~;mount -o loop osp_ks.img /mnt/usb',
-               'cd ~;cp -R ~/JetStream /mnt/usb',
-               "sed -i 's|" + current_path + "|/root|' " + target_ini,
-               'sync; umount /mnt/usb']
+                'cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=5000',
+                'cd ~;mkfs ext3 -F osp_ks.img',
+                'mkdir -p /mnt/usb',
+                'cd ~;mount -o loop osp_ks.img /mnt/usb',
+                'cd ~;cp -R ~/JetStream /mnt/usb',
+                "sed -i 's|" + current_path + "|/root|' " + target_ini,
+                'sync; umount /mnt/usb']
         for cmd in cmds:
             print "> " + cmd
             print subprocess.check_output(cmd,
                                           stderr=subprocess.STDOUT,
-                                          shell=True) 
+                                          shell=True)
 
-        #TODO: copy custom overcloud image if applicable ? do we still want to support this ?
+        # TODO: copy custom overcloud image if applicable
+        # ? do we still want to support this ?
 
-        print "All done - please attach ~/osp_ks.img to the node & continue with the setup.... "
+        print "All done - please attach ~/osp_ks.img to the node & continue \
+        with the setup.... "
 
-
-       
-         
     except:
         logger.error(traceback.format_exc())
         e = sys.exc_info()[0]
@@ -96,5 +97,3 @@ def setup_networking():
 if __name__ == "__main__":
     setup_networking()
     #####
-
-

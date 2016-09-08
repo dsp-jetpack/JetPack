@@ -18,7 +18,8 @@ try:
     from selenium import webdriver
     from selenium.webdriver.support.select import Select
     from selenium.webdriver.common.keys import Keys
-except ImportError: pass
+except ImportError:
+    pass
 
 import time
 

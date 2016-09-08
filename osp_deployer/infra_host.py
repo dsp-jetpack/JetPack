@@ -16,6 +16,7 @@
 
 from auto_common import Ssh, Scp
 
+
 class InfraHost():
 
     def __init__(self):
@@ -50,14 +51,13 @@ class InfraHost():
                                    self.root_pwd,
                                    command)
 
-    def run_ssh_edit(self, remotefile,find,replace):
+    def run_ssh_edit(self, remotefile, find, replace):
         return Ssh.ssh_edit_file(self.ip,
                                  self.user,
                                  self.pwd,
                                  remotefile,
                                  find,
                                  replace)
-
 
     def upload_file(self, local_file, remote_file):
         Scp.put_file(self.ip,

@@ -337,7 +337,7 @@ class Checkpoints():
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
-        #TODO :: i fnode failed introspection - set to to PXE - reboot
+        # TODO :: i fnode failed introspection - set to to PXE - reboot
         ls_nodes = re[0].split("\n")
         ls_nodes.pop()
         for node in ls_nodes:
@@ -379,7 +379,8 @@ class Checkpoints():
                                      cmd)
         if "There are no enabled repos" in re[0]:
             raise AssertionError(
-                "Unable to attach to pool ID while updating the overcloud image")
+                "Unable to attach to pool ID while updating the overcloud\
+                image")
 
     def verify_computes_virtualization_enabled(self):
         logger.debug("*** Verify the Compute nodes have KVM enabled *** ")
@@ -452,7 +453,7 @@ class Checkpoints():
                                          setts.director_install_account_user,
                                          setts.director_install_account_pwd,
                                          cmd)
-            ls =  re[0].split("\n")
+            ls = re[0].split("\n")
             ls.pop()
             compute_node_ip = ls[0].split("|")[6].split("=")[1]
 
@@ -470,10 +471,10 @@ class Checkpoints():
 
             logger.debug("Verify Controller nodes can ping the san ip")
             cmd = "ssh heat-admin@" + controller_node_ip +\
-                  " ping " + self.settings.dellsc_san_ip  +\
+                  " ping " + self.settings.dellsc_san_ip +\
                   " -c 1 -w 30 "
             re = Ssh.execute_command_tty(setts.director_node.external_ip,
-                                        setts.director_install_account_user,
+                                         setts.director_install_account_user,
                                          setts.director_install_account_pwd,
                                          cmd)
             if self.ping_success not in re[0]:
@@ -481,36 +482,43 @@ class Checkpoints():
                                      " cannot ping the dellsc san ip " +
                                      self.settings.dellsc_san_ip)
 
-            logger.debug("Verify Make sure ISCSI access work from Compute & Controller nodes")
-            for each in compute_node_ip, controller_node_ip :
+            logger.debug("Verify Make sure ISCSI access work from Compute \
+                         & Controller nodes")
+            for each in compute_node_ip, controller_node_ip:
                 cmd = "ssh heat-admin@" + each +\
                       " sudo iscsiadm -m discovery -t sendtargets -p " +\
                       self.settings.dellsc_iscsi_ip_address +\
                       ":" + self.settings.dellsc_iscsi_port
-                re = Ssh.execute_command_tty(setts.director_node.external_ip,
-                                        setts.director_install_account_user,
-                                         setts.director_install_account_pwd,
-                                         cmd)
+                re = Ssh.execute_command_tty(
+                                   setts.director_node.external_ip,
+                                   setts.director_install_account_user,
+                                   setts.director_install_account_pwd,
+                                   cmd)
                 if "com.compellent" not in re[0]:
-                   raise AssertionError(each +
-                                        " not able to validate ISCSI access to " +
-                                        self.settings.dellsc_iscsi_ip_address +
-                                        ":" + self.settings.dellsc_iscsi_port)
+                    raise AssertionError(
+                                   each +
+                                   " not able to validate ISCSI access to " +
+                                   self.settings.dellsc_iscsi_ip_address +
+                                   ":" + self.settings.dellsc_iscsi_port)
 
         if self.settings.enable_eqlx_backend:
             logger.debug("Verifying eql backend connectivity")
 
-            logger.debug("Verify ssh access to the san ip from Compute & Controller nodes")
+            logger.debug("Verify ssh access to the san ip from Compute\
+            & Controller nodes")
 
-            for each in compute_node_ip, controller_node_ip :
-                cmd = "ssh heat-admin@" + each +\
-                      " sshpass -p " + self.settings.eqlx_san_password +\
-                      " ssh -o StrictHostKeyChecking=no " + self.settings.eqlx_san_login + "@" +\
-                      self.settings.eqlx_san_ip + " 'uname -a'"
-                re = Ssh.execute_command_tty(setts.director_node.external_ip,
-                                            setts.director_install_account_user,
-                                             setts.director_install_account_pwd,
-                                             cmd)
+            for each in compute_node_ip, controller_node_ip:
+                cmd = "ssh heat-admin@" + each + \
+                       " sshpass -p " + \
+                       self.settings.eqlx_san_password + \
+                       " ssh -o StrictHostKeyChecking=no " + \
+                       self.settings.eqlx_san_login + "@" + \
+                       self.settings.eqlx_san_ip + " 'uname -a'"
+                re = Ssh.execute_command_tty(
+                                    setts.director_node.external_ip,
+                                    setts.director_install_account_user,
+                                    setts.director_install_account_pwd,
+                                    cmd)
                 if "EQL.PSS" not in re[0] and "Unsupported command:" not in re[0]:
                     raise AssertionError(each +
                                          " not able to ssh to EQL san ip " +
