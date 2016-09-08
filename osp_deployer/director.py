@@ -440,9 +440,9 @@ class Director(InfraHost):
         if self.settings.enable_eqlx_backend is True:
             index = 1
             eqlx_san_ip_array = self.settings.eqlx_san_ip.split(",")
-        for san_ip in eqlx_san_ip_array:
-            enabled_backends += "'eqlx" + str(index) + "',"
-            index = index + 1
+            for san_ip in eqlx_san_ip_array:
+                enabled_backends += "'eqlx" + str(index) + "',"
+                index = index + 1
 
         if self.settings.enable_dellsc_backend is True:
             enabled_backends += "'dellsc'"
