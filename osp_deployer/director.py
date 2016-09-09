@@ -784,16 +784,16 @@ class Director(InfraHost):
             compute_private_ips = ''
             compute_storage_ips = ''
 
-        for node in self.settings.compute_nodes:
-            compute_tenant_ips += "    - " + node.tenant_ip + "\\n"
-            compute_private_ips += "    - " + node.private_api_ip + "\\n"
-            compute_storage_ips += "    - " + node.storage_ip + "\\n"
+            for node in self.settings.compute_nodes:
+                compute_tenant_ips += "    - " + node.tenant_ip + "\\n"
+                compute_private_ips += "    - " + node.private_api_ip + "\\n"
+                compute_storage_ips += "    - " + node.storage_ip + "\\n"
 
-        storage_storgage_ip = ''
-        storage_cluster_ip = ''
-        for node in self.settings.ceph_nodes:
-            storage_storgage_ip += "    - " + node.storage_ip + "\\n"
-            storage_cluster_ip += "    - " + node.storage_cluster_ip + "\\n"
+            storage_storgage_ip = ''
+            storage_cluster_ip = ''
+            for node in self.settings.ceph_nodes:
+                storage_storgage_ip += "    - " + node.storage_ip + "\\n"
+                storage_cluster_ip += "    - " + node.storage_cluster_ip + "\\n"
 
             cmds = ['sed -i "/192.168/d" ' + static_ips_yaml,
                     'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
