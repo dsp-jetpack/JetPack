@@ -450,7 +450,8 @@ class Director(InfraHost):
         enabled_backends += "]"
 
         cmd = 'sed -i ' + \
-            '"s|cinder_user_enabled_backends:.*|cinder_user_enabled_backends: ' + \
+            '"s|cinder_user_enabled_backends:.*|' + \
+            'cinder_user_enabled_backends: ' + \
             enabled_backends + '|" ' + dell_storage_yaml
         self.run_tty(cmd)
 
@@ -464,7 +465,8 @@ class Director(InfraHost):
         eqlx_san_ip_array = self.settings.eqlx_san_ip.split(",")
         eqlx_san_login_array = self.settings.eqlx_san_login.split(",")
         eqlx_san_password_array = self.settings.eqlx_san_password.split(",")
-        eqlx_thin_provisioning_array = self.settings.eqlx_thin_provisioning.split(",")
+        eqlx_thin_pa = self.settings.eqlx_thin_provisioning.split(",")
+        eqlx_thin_provisioning_array = eqlx_thin_pa
         eqlx_group_n_array = self.settings.eqlx_group_n.split(",")
         eqlx_pool_array = self.settings.eqlx_pool.split(",")
         eqlx_use_chap_array = self.settings.eqlx_use_chap.split(",")
@@ -777,7 +779,9 @@ class Director(InfraHost):
                 control_external_ips += "    - " + node.public_api_ip + "\\n"
                 control_private_ips += "    - " + node.private_api_ip + "\\n"
                 control_storage_ips += "    - " + node.storage_ip + "\\n"
-                control_storage_cluster_ips += "    - " + node.storage_cluster_ip + "\\n"
+                control_storage_cluster_ips += "    - " \
+                                               + node.storage_cluster_ip \
+                                               + "\\n"
                 control_tenant_ips += "    - " + node.tenant_ip + "\\n"
 
             compute_tenant_ips = ''
@@ -792,8 +796,10 @@ class Director(InfraHost):
             storage_storgage_ip = ''
             storage_cluster_ip = ''
             for node in self.settings.ceph_nodes:
-                storage_storgage_ip += "    - " + node.storage_ip + "\\n"
-                storage_cluster_ip += "    - " + node.storage_cluster_ip + "\\n"
+                storage_storgage_ip += "    - " \
+                                       + node.storage_ip + "\\n"
+                storage_cluster_ip += "    - " \
+                                      + node.storage_cluster_ip + "\\n"
 
             cmds = ['sed -i "/192.168/d" ' + static_ips_yaml,
                     'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
@@ -1111,8 +1117,8 @@ class Director(InfraHost):
                   "~/tempest;tools/run-tests.sh  '.*smoke' --concurrency=4"
         else:
             cmd = "source ~/" + \
-            self.settings.overcloud_name + \
-            "rc;cd ~/tempest;tools/run-tests.sh --concurrency=4"
+                  self.settings.overcloud_name + \
+                  "rc;cd ~/tempest;tools/run-tests.sh --concurrency=4"
         self.run_tty(cmd)
         Scp.get_file(setts.director_node.external_ip,
                      setts.director_install_account_user,

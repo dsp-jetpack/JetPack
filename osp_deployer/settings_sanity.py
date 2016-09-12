@@ -232,7 +232,9 @@ class DeployerSanity():
         # Check for duplicate ip adresses in .properties and .ini
         ips = []
         for each in self.settings.__dict__:
-            if "ip" in each and type(getattr(self.settings, each)) is str and self.is_valid_ip(getattr(self.settings, each)):
+            if ("ip" in each and
+                    type(getattr(self.settings, each)) is str and
+                    self.is_valid_ip(getattr(self.settings, each))):
                 ips.append(getattr(self.settings, each))
         for each in self.settings.nodes:
             for att in each.__dict__:

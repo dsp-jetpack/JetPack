@@ -446,7 +446,9 @@ class Checkpoints():
             buff += resp
 
     def verify_backends_connectivity(self):
-        if self.settings.enable_dellsc_backend or self.settings.enable_eqlx_backend:
+        dellsc_be = self.settings.enable_dellsc_backend
+        eqlx_be = self.settings.enable_eqlx_backend
+        if dellsc_be or eqlx_be:
             setts = self.settings
             cmd = "source ~/stackrc;nova list | grep compute"
             re = Ssh.execute_command_tty(setts.director_node.external_ip,
@@ -519,7 +521,8 @@ class Checkpoints():
                                     setts.director_install_account_user,
                                     setts.director_install_account_pwd,
                                     cmd)
-                if "EQL.PSS" not in re[0] and "Unsupported command:" not in re[0]:
+                errmsge = "Unsupported command:"
+                if "EQL.PSS" not in re[0] and errmsge not in re[0]:
                     raise AssertionError(each +
                                          " not able to ssh to EQL san ip " +
                                          self.settings.eqlx_san_ip)
