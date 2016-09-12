@@ -170,21 +170,6 @@ def deploy():
                                 settings.sah_node.root_password,
                                 "subscription-manager unregister")
 
-            tester.sah_health_check()
-
-            logger.info("Uploading configs/iso/scripts..")
-
-            if settings.version_locking_enabled is True:
-                logger.debug(
-                    "Uploading version locking files for director & ceph vm's")
-                sah_node.upload_lock_files()
-
-            logger.debug("=== uploading the director vm sh script")
-
-            sah_node.upload_iso()
-            sah_node.upload_director_scripts()
-
-            logger.debug("=== Done with the solution admin host")
         else:
             logger.info("=== Skipped SAH install")
             if args.skip_undercloud is False:
@@ -200,6 +185,16 @@ def deploy():
                                     "subscription-manager unregister")
 
                 sah_node.delete_director_vm()
+        
+        tester.sah_health_check()
+        logger.info("Uploading configs/iso/scripts..")
+        if settings.version_locking_enabled is True:
+            logger.debug(
+                "Uploading version locking files for director & ceph vm's")
+            sah_node.upload_lock_files()
+        sah_node.upload_iso()
+        sah_node.upload_director_scripts()
+        
 
         if args.skip_undercloud is False:
             logger.info("=== create the director vm")
