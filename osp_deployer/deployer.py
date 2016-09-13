@@ -185,7 +185,7 @@ def deploy():
                                     "subscription-manager unregister")
 
                 sah_node.delete_director_vm()
-        
+
         tester.sah_health_check()
         logger.info("Uploading configs/iso/scripts..")
         if settings.version_locking_enabled is True:
@@ -194,7 +194,6 @@ def deploy():
             sah_node.upload_lock_files()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
-        
 
         if args.skip_undercloud is False:
             logger.info("=== create the director vm")
