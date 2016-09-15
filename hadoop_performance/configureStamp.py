@@ -27,6 +27,7 @@ class ConfigStamp():
                         each.update_config(config_cluster.hdfs_snn_config)
 
             if cs.name == 'yarn':
+                print 'configuring yarn'	
                 yarn_groups = cs.get_all_role_config_groups()
                 for each in yarn_groups:
                     if each.name == 'yarn-NODEMANAGER-BASE':
@@ -47,10 +48,10 @@ class ConfigStamp():
 
         for s in CLUSTER.get_all_services():
             print s
-            if s.name == 'mapreduce':
-                print "Found mapreduce running - how dare it... stopping Mapreduce"
+            if s.name == 'mapreduce' or s.name == 'zookeeper' or s.name == 'spark_on_yarn' or s.name == 'hive':
+                print "Found " + str(s.name) +" running - how dare it... stopping " + str(s.name)
                 s.stop().wait()
-                print "Mapreduce stopped"
+                print str(s.name) + " stopped"
 
 def main():
 
