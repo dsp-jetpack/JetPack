@@ -703,19 +703,24 @@ class Director(InfraHost):
 
         logger.debug("updating controller yaml")
         cmds = [
-            'sed -i "s|em1|' +
+            'sed -i "s|em1|changeme1|" ' + controller_yaml,
+            'sed -i "s|changeme1|' +
             self.settings.controller_bond0_interfaces.split(" ")[
                 0] + '|" ' + controller_yaml,
-            'sed -i "s|p3p1|' +
+            'sed -i "s|p3p1|changeme2|" ' + controller_yaml,
+            'sed -i "s|changeme2|' +
             self.settings.controller_bond0_interfaces.split(" ")[
                 1] + '|" ' + controller_yaml,
-            'sed -i "s|em2|' +
+            'sed -i "s|em2|changeme3|" ' + controller_yaml,
+            'sed -i "s|changeme3|' +
             self.settings.controller_bond1_interfaces.split(" ")[
                 0] + '|" ' + controller_yaml,
-            'sed -i "s|p3p2|' +
+            'sed -i "s|p3p2|changeme4|" ' + controller_yaml,
+            'sed -i "s|changeme4|' +
             self.settings.controller_bond1_interfaces.split(" ")[
                 1] + '|" ' + controller_yaml,
-            'sed -i "s|em3|' +
+            'sed -i "s|em3|changeme5|" ' + controller_yaml,
+            'sed -i "s|changeme5|' +
             self.settings.controller_provisioning_interface +
             '|" ' + controller_yaml,
             'sed -i "s|192.168.110.0/24|' +
@@ -727,19 +732,24 @@ class Director(InfraHost):
             self.run_tty(cmd)
 
         logger.debug("updating compute yaml")
-        cmds = ['sed -i "s|em1|' +
+        cmds = ['sed -i "s|em1|changeme1|" ' + compute_yaml,
+                'sed -i "s|changeme1|' +
                 self.settings.compute_bond0_interfaces.split(" ")[
                     0] + '|" ' + compute_yaml,
-                'sed -i "s|p3p1|' +
+                'sed -i "s|p3p1|changeme2|" ' + compute_yaml,
+                'sed -i "s|changeme2|' +
                 self.settings.compute_bond0_interfaces.split(" ")[
                     1] + '|" ' + compute_yaml,
-                'sed -i "s|em2|' +
+                'sed -i "s|em2|changeme3|" ' + compute_yaml,
+                'sed -i "s|changeme3|' +
                 self.settings.compute_bond1_interfaces.split(" ")[
                     0] + '|" ' + compute_yaml,
-                'sed -i "s|p3p2|' +
+                'sed -i "s|p3p2|changeme4|" ' + compute_yaml,
+                'sed -i "s|changeme4|' +
                 self.settings.compute_bond1_interfaces.split(" ")[
                     1] + '|" ' + compute_yaml,
-                'sed -i "s|em3|' +
+                'sed -i "s|em3|changeme5|" ' + compute_yaml,
+                'sed -i "s|changeme5|' +
                 self.settings.compute_provisioning_interface + '|" ' +
                 compute_yaml
                 ]
@@ -747,19 +757,24 @@ class Director(InfraHost):
             self.run_tty(cmd)
 
         logger.debug("updating storage yaml")
-        cmds = ['sed -i "s|em1|' +
+        cmds = ['sed -i "s|em1|changeme1|" ' + storage_yaml,
+                'sed -i "s|changeme1|' +
                 self.settings.storage_bond0_interfaces.split(" ")[
                     0] + '|" ' + storage_yaml,
-                'sed -i "s|p2p1|' +
+                'sed -i "s|p2p1|changeme2|" ' + storage_yaml,
+                'sed -i "s|changeme2|' +
                 self.settings.storage_bond0_interfaces.split(" ")[
                     1] + '|" ' + storage_yaml,
-                'sed -i "s|em2|' +
+                'sed -i "s|em2|changeme3|" ' + storage_yaml,
+                'sed -i "s|changeme3|' +
                 self.settings.storage_bond1_interfaces.split(" ")[
                     0] + '|" ' + storage_yaml,
-                'sed -i "s|p2p2|' +
+                'sed -i "s|p2p2|changeme4|" ' + storage_yaml,
+                'sed -i "s|changeme4|' +
                 self.settings.storage_bond1_interfaces.split(" ")[
                     1] + '|" ' + storage_yaml,
-                'sed -i "s|em3|' +
+                'sed -i "s|em3|changeme5|" ' + storage_yaml,
+                'sed -i "s|changeme5|' +
                 self.settings.storage_provisioning_interface + '|" ' +
                 storage_yaml
                 ]
