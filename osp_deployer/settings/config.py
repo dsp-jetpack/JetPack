@@ -244,9 +244,9 @@ class Settings():
         self.cloud_repo_dir = self.bastion_settings_map['cloud_repo_dir']
 
         if self.bastion_settings_map['pull_images_from_cdn'].lower() == 'true':
-            self.pull_images_from_cnd = True
+            self.pull_images_from_cdn = True
         else:
-            self.pull_images_from_cnd = False
+            self.pull_images_from_cdn = False
             self.discovery_ram_disk_image = self.bastion_settings_map[
                 'discovery_ram_disk_image']
             self.overcloud_image = self.bastion_settings_map['overcloud_image']

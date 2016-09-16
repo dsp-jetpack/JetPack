@@ -85,7 +85,7 @@ class DeployerSanity():
                 self.settings.custom_instack_json),\
                 self.settings.custom_instack_json + \
                 " file doesn't seem to exist"
-        if self.settings.pull_images_from_cnd is False:
+        if self.settings.pull_images_from_cdn is False:
             assert os.path.isfile(
                 self.settings.discovery_ram_disk_image),\
                 self.settings.discovery_ram_disk_image +\

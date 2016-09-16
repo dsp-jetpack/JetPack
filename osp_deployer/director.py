@@ -140,7 +140,7 @@ class Director(InfraHost):
         tester.verify_undercloud_installed()
 
     def upload_cloud_images(self):
-        if self.settings.pull_images_from_cnd is False:
+        if self.settings.pull_images_from_cdn is False:
             logger.debug("Uploading cloud images to the Director vm")
             self.run("mkdir -p " + self.images_dir)
 
