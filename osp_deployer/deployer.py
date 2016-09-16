@@ -40,16 +40,12 @@ def setup_logging():
 
 
 def get_settings():
-    parser = argparse.ArgumentParser(description='Jetstream 5.x deployer')
+    parser = argparse.ArgumentParser(description='Jetstream 6.x deployer')
     parser.add_argument('-s', '--settings',
                         help='ini settings file, e.g settings/acme.ini',
                         required=True)
-    parser.add_argument('-skip_sah', '--skip_sah',
-                        help='Do not reinstall the SAH node',
-                        action='store_true',
-                        required=False)
-    parser.add_argument('-skip_undercloud', '--skip_undercloud',
-                        help='Do not reinstall the SAH or Undercloud',
+    parser.add_argument('-overcloud_only', '--overcloud_only',
+                        help='Only reinstall the overcloud',
                         action='store_true', required=False)
     parser.add_argument('-skip_ceph_vm', '--skip_ceph_vm',
                         help='Do not reinstall the ceph vm',
@@ -100,16 +96,12 @@ def deploy():
         logger.info("=== Starting up ...")
         logger.debug("=================================")
 
-        parser = argparse.ArgumentParser(description='Jetstream 5.x deployer')
+        parser = argparse.ArgumentParser(description='Jetstream 6.x deployer')
         parser.add_argument('-s', '--settings',
                             help='ini settings file, e.g settings/acme.ini',
                             required=True)
-        parser.add_argument('-skip_sah', '--skip_sah',
-                            help='Do not reinstall the SAH node',
-                            action='store_true',
-                            required=False)
-        parser.add_argument('-skip_undercloud', '--skip_undercloud',
-                            help='Do not reinstall the SAH or Undercloud',
+        parser.add_argument('-overcloud_only', '--overcloud_only',
+                            help='Only reinstall the overcloud',
                             action='store_true', required=False)
         parser.add_argument('-skip_ceph_vm', '--skip_ceph_vm',
                             help='Do not reinstall the ceph vm',
@@ -117,11 +109,8 @@ def deploy():
                             required=False)
         args, ignore = parser.parse_known_args()
 
-        if args.skip_undercloud is True:
-            logger.info("Skipping SAH & Undercloud install")
-            args.skip_sah = True
-        if args.skip_sah is True:
-            logger.info("Skipping SAH install")
+        if args.overcloud_only is True:
+            logger.info("Only redeploying the overcloud")
         if args.skip_ceph_vm is True:
             logger.info("Skipping ceph vm install")
 
@@ -149,43 +138,6 @@ def deploy():
             ipmi_session.set_boot_to_pxe()
         sah_node = Sah()
 
-        if args.skip_sah is False:
-            logger.info("=== Unregister the hosts")
-
-            Ssh.execute_command(settings.ceph_node.external_ip,
-                                "root",
-                                settings.sah_node.root_password,
-                                "subscription-manager remove --all")
-            Ssh.execute_command(settings.ceph_node.external_ip,
-                                "root",
-                                settings.sah_node.root_password,
-                                "subscription-manager unregister")
-
-            Ssh.execute_command(settings.director_node.external_ip,
-                                "root",
-                                settings.sah_node.root_password,
-                                "subscription-manager remove --all")
-            Ssh.execute_command(settings.director_node.external_ip,
-                                "root",
-                                settings.sah_node.root_password,
-                                "subscription-manager unregister")
-
-        else:
-            logger.info("=== Skipped SAH install")
-            if args.skip_undercloud is False:
-                logger.debug("Delete the Director VM")
-
-                Ssh.execute_command(settings.director_node.external_ip,
-                                    "root",
-                                    settings.sah_node.root_password,
-                                    "subscription-manager remove --all")
-                Ssh.execute_command(settings.director_node.external_ip,
-                                    "root",
-                                    settings.sah_node.root_password,
-                                    "subscription-manager unregister")
-
-                sah_node.delete_director_vm()
-
         tester.sah_health_check()
         logger.info("Uploading configs/iso/scripts..")
         if settings.version_locking_enabled is True:
@@ -195,17 +147,24 @@ def deploy():
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
 
-        if args.skip_undercloud is False:
+
+        if args.overcloud_only is False:
+            Ssh.execute_command(settings.director_node.external_ip,
+                                "root",
+                                settings.director_node.root_password,
+                                "subscription-manager remove --all")
+            Ssh.execute_command(settings.director_node.external_ip,
+                                "root",
+                                settings.director_node.root_password,
+                                "subscription-manager unregister")
+            sah_node.delete_director_vm()
+
             logger.info("=== create the director vm")
             sah_node.create_director_vm()
 
             tester.director_vm_health_check()
 
             logger.info("Preparing the Director VM")
-            # Temporary till packages are available on
-            # the CDN and installed by the kickstart
-            logger.debug(
-                " *** install RDO bits since not available on the cdn yet")
             director_vm = Director()
             director_vm.apply_internal_repos()
 
@@ -225,19 +184,18 @@ def deploy():
             director_vm.delete_overcloud()
 
         if args.skip_ceph_vm is False:
-            if args.skip_sah is True:
-                logger.debug("Delete the ceph VM")
-                logger.debug(
-                    Ssh.execute_command(settings.ceph_node.external_ip,
-                                        "root",
-                                        settings.ceph_node.root_password,
-                                        "subscription-manager remove --all"))
+            logger.debug("Delete the ceph VM")
+            logger.debug(
                 Ssh.execute_command(settings.ceph_node.external_ip,
                                     "root",
                                     settings.ceph_node.root_password,
-                                    "subscription-manager unregister")
+                                    "subscription-manager remove --all"))
+            Ssh.execute_command(settings.ceph_node.external_ip,
+                                "root",
+                                settings.ceph_node.root_password,
+                                "subscription-manager unregister")
 
-                sah_node.delete_ceph_vm()
+            sah_node.delete_ceph_vm()
 
             logger.info("=== creating ceph VM")
             sah_node.create_ceph_vm()
