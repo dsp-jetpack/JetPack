@@ -854,22 +854,22 @@ class Director(InfraHost):
             logger.debug("Updating static vip yaml")
             cmds = ['sed -i "s/redis: .*/redis: ' +
                     self.settings.redis_vip + '/" ' + static_vip_yaml,
-                    'sed -i "s/ControlFixedIPs: .*/ControlFixedIPs: \
-                    [{\'ip_address\':\'' +
+                    'sed -i "s/ControlFixedIPs: .*/ControlFixedIPs: ' +
+                    '[{\'ip_address\':\'' +
                     self.settings.provisioning_vip + '\'}]/" ' +
                     static_vip_yaml,
-                    'sed -i "s/InternalApiVirtualFixedIPs: \
-                    .*/InternalApiVirtualFixedIPs: [{\'ip_address\':\'' +
+                    'sed -i "s/InternalApiVirtualFixedIPs: ' +
+                    '.*/InternalApiVirtualFixedIPs: [{\'ip_address\':\'' +
                     self.settings.private_api_vip + '\'}]/" ' +
                     static_vip_yaml,
-                    'sed -i "s/PublicVirtualFixedIPs: \
-                    .*/PublicVirtualFixedIPs: [{\'ip_address\':\'' +
+                    'sed -i "s/PublicVirtualFixedIPs: ' +
+                    '.*/PublicVirtualFixedIPs: [{\'ip_address\':\'' +
                     self.settings.public_api_vip + '\'}]/" ' + static_vip_yaml,
-                    'sed -i "s/StorageVirtualFixedIPs: \
-                    .*/StorageVirtualFixedIPs: [{\'ip_address\':\'' +
+                    'sed -i "s/StorageVirtualFixedIPs: ' +
+                    '.*/StorageVirtualFixedIPs: [{\'ip_address\':\'' +
                     self.settings.storage_vip + '\'}]/" ' + static_vip_yaml,
-                    'sed -i "s/StorageMgmtVirtualFixedIPs: \
-                    .*/StorageMgmtVirtualFixedIPs: [{\'ip_address\':\'' +
+                    'sed -i "s/StorageMgmtVirtualFixedIPs: ' +
+                    '.*/StorageMgmtVirtualFixedIPs: [{\'ip_address\':\'' +
                     self.settings.storage_cluster_vip + '\'}]/" ' +
                     static_vip_yaml
                     ]
