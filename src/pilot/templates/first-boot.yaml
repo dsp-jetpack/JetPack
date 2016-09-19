@@ -42,6 +42,7 @@ resources:
             sgdisk -og ${device}
             echo
           done
+          partprobe
           parted -lm
         } > /root/wipe-disk.txt 2>&1
         fi
