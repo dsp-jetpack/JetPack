@@ -52,7 +52,9 @@ virt-customize -a overcloud-full.qcow2 \
             --enable=rhel-7-server-rhceph-1.3-tools-rpms"
 
 echo "## Add required packages"
-virt-customize -v -x -m 2000 -a overcloud-full.qcow2 --install ceph-radosgw,diamond,salt-minion,ceph-selinux --selinux-relabel
+virt-customize -a overcloud-full.qcow2 --upload ../patch_rpms/python-novaclient-3.3.2-1.el7ost.noarch.rpm:/tmp/python-novaclient-3.3.2-1.el7ost.noarch.rpm &> /tmp/out
+virt-customize -a overcloud-full.qcow2 --run-command 'rpm -Uvh /tmp/python-novaclient-3.3.2-1.el7ost.noarch.rpm' --selinux-relabel &>>/tmp/out
+virt-customize -v -x -m 2000 -a overcloud-full.qcow2 --install ceph-radosgw,diamond,salt-minion,ceph-selinux --selinux-relabel &>/tmp/out2
 
 echo "## Unregister from subscription manager"
 virt-customize -a overcloud-full.qcow2 --run-command 'subscription-manager remove --all' --run-command 'subscription-manager unregister'
