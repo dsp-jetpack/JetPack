@@ -327,8 +327,8 @@ def main():
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "storage-environment.yaml" \
                     " -e ~/pilot/templates/dell-environment.yaml" \
-                    " -e /usr/share/openstack-tripleo-heat-templates/" \
-                    "environments/puppet-pacemaker.yaml"
+                    " -e ~/pilot/templates/overcloud/environments/" \
+                    "puppet-pacemaker.yaml"
 
         if args.enable_dellsc | args.enable_eqlx:
             env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
