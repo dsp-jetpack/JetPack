@@ -65,6 +65,7 @@ eula --agreed
 @virtualization-client
 @virtualization-hypervisor
 @virtualization-tools
+dhcp
 ntp
 ntpdate
 -chrony
