@@ -939,6 +939,16 @@ class Director(InfraHost):
             logger.debug("retreiving node ip details ..")
             ip_info.append("====================================")
             ip_info.append("### nodes ip information ###")
+
+            priv_ = self.settings.private_api_network.rsplit(".", 1)[0]
+            priv_.replace(".", '\.')
+            pub_ = self.settings.public_api_network.rsplit(".", 1)[0]
+            pub_.replace(".", '\.')
+            stor_ = self.settings.storage_network.rsplit(".", 1)[0]
+            stor_.replace(".", '\.')
+            clus_ = self.settings.storage_cluster_network.rsplit(".", 1)[0]
+            clus_.replace(".", '\.')
+
             re = self.run_tty(self.source_stackrc +
                               "nova list | grep controller")
             ip_info.append("### Controllers ###")
@@ -952,7 +962,7 @@ class Director(InfraHost):
                 re = self.run_tty("ssh heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
-                                  self.settings.private_api_vlanid +
+                                  priv_ +
                                   ".*netmask " +
                                   self.settings.private_api_netmask +
                                   ".*\" | awk '{print $2}'")
@@ -961,7 +971,7 @@ class Director(InfraHost):
                 re = self.run_tty("ssh heat-admin@" +
                                   provisioning_ip +
                                   "/sbin/ifconfig | grep \"inet.*" +
-                                  self.settings.public_api_vlanid +
+                                  pub_ +
                                   ".*netmask " +
                                   self.settings.public_api_netmask +
                                   ".*\" | awk '{print $2}'")
@@ -970,7 +980,7 @@ class Director(InfraHost):
                 re = self.run_tty("ssh heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
-                                  self.settings.storage_vlanid +
+                                  stor_ +
                                   ".*netmask " +
                                   self.settings.storage_netmask +
                                   ".*\" | awk '{print $2}'")
@@ -994,7 +1004,7 @@ class Director(InfraHost):
                 re = self.run_tty("ssh heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
-                                  self.settings.private_api_vlanid +
+                                  priv_ +
                                   ".*netmask " +
                                   self.settings.private_api_netmask +
                                   ".*\" | awk '{print $2}'")
@@ -1003,7 +1013,7 @@ class Director(InfraHost):
                 re = self.run_tty("ssh heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
-                                  self.settings.storage_vlanid +
+                                  stor_ +
                                   ".*netmask " +
                                   self.settings.storage_netmask +
                                   ".*\" | awk '{print $2}'")
@@ -1026,7 +1036,7 @@ class Director(InfraHost):
                 re = self.run_tty("ssh heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
-                                  self.settings.storage_cluster_vlanid +
+                                  clus_ +
                                   ".*netmask 255.255.255.0.*\""
                                   " | awk '{print $2}'")
                 cluster_ip = re[0].split("\n")[0]
@@ -1034,7 +1044,7 @@ class Director(InfraHost):
                 re = self.run_tty("ssh heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
-                                  self.settings.storage_vlanid +
+                                  stor_ +
                                   ".*netmask " +
                                   self.settings.storage_netmask +
                                   ".*\" | awk '{print $2}'")

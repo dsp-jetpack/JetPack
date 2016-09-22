@@ -147,7 +147,6 @@ def deploy():
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
 
-
         if args.overcloud_only is False:
             Ssh.execute_command(settings.director_node.external_ip,
                                 "root",
