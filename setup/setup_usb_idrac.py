@@ -29,12 +29,17 @@ logger = logging.getLogger("osp_deployer")
 
 def setup_networking():
     try:
-
-        logger.debug("=================================")
-        logger.info("=== Setting up  ...")
-        logger.debug("=================================")
-
-        parser = argparse.ArgumentParser(description='Jetstream 5.x deployer')
+        hdlr = logging.FileHandler('setup_usb_idrac.log')
+        formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+        hdlr.setFormatter(formatter)
+        logger.addHandler(hdlr)
+        logger.setLevel(logging.DEBUG)
+        out = logging.StreamHandler(sys.stdout)
+        out.setLevel(logging.INFO)
+        logger.addHandler(out)
+        logger.info("* Creating the SAH node usb image.")
+        parser = argparse.ArgumentParser(description='Jetstream 6.x usb ' +
+                                                     ' image  prep.')
         parser.add_argument('-s', '--settings',
                             help='ini settings file, e.g settings/acme.ini',
                             required=True)
@@ -53,8 +58,6 @@ def setup_networking():
         sah.update_kickstart_usb()
 
         # Create the usb Media & update path references
-        # Create the usb image (todo move to script ?)
-
         current_path = subprocess.check_output("cd ~;pwd",
                                                stderr=subprocess.STDOUT,
                                                shell=True).strip()
@@ -68,16 +71,13 @@ def setup_networking():
                 "sed -i 's|" + current_path + "|/root|' " + target_ini,
                 'sync; umount /mnt/usb']
         for cmd in cmds:
-            print "> " + cmd
-            print subprocess.check_output(cmd,
-                                          stderr=subprocess.STDOUT,
-                                          shell=True)
+            logger.debug("running " + cmd)
+            logger.debug(subprocess.check_output(cmd,
+                                                 stderr=subprocess.STDOUT,
+                                                 shell=True))
 
-        # TODO: copy custom overcloud image if applicable
-        # ? do we still want to support this ?
-
-        print "All done - please attach ~/osp_ks.img to the node & continue \
-        with the setup.... "
+        logger.info("All done - attach ~/osp_ks.img to the sah node" +
+                    " & continue with the deployment ...")
 
     except:
         logger.error(traceback.format_exc())
@@ -85,9 +85,7 @@ def setup_networking():
         logger.error(e)
         print e
         print traceback.format_exc()
-    logger.info("log : /auto_results/ ")
 
 
 if __name__ == "__main__":
     setup_networking()
-    #####
