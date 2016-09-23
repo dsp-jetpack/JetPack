@@ -35,7 +35,8 @@ import requests
 try:  # OSP8
     from ironicclient.openstack.common.apiclient.exceptions import NotFound
 except ImportError:  # OSP9
-    from ironicclient.common.apiclient.exceptions import NotFound
+    from ironicclient.common.apiclient.exceptions import InternalServerError, \
+        NotFound
 
 discover_nodes_path = os.path.join(os.path.expanduser('~'),
                                    'pilot/discover_nodes')
@@ -118,6 +119,11 @@ def parse_arguments():
                                including FQDD of network interface to PXE boot
                                from""",
                        metavar="FILENAME")
+    parser.add_argument("-f",
+                        "--flavor-settings",
+                        default="~/pilot/flavors_settings.json",
+                        help="file that contains flavor settings",
+                        metavar="FILENAME")
     parser.add_argument("-l",
                         "--logging-level",
                         default="INFO",
@@ -127,7 +133,7 @@ def parse_arguments():
                                 and DEBUG""",
                         metavar="LEVEL")
     parser.add_argument("-n",
-                        "--node",
+                        "--node-definition",
                         default="~/instackenv.json",
                         help="""node definition template file that defines the
                                 node being assigned""",
@@ -184,24 +190,85 @@ def get_model_properties(fqdd, json_filename):
     if fqdd is not None:
         return None
 
+    model_properties = None
     expanded_filename = os.path.expanduser(json_filename)
 
     try:
         with open(expanded_filename, 'r') as f:
             try:
-                models = json.load(f)
+                model_properties = json.load(f)
             except ValueError:
                 LOG.exception(
                     "Could not deserialize model properties file {}".format(
                         expanded_filename))
-                return None
     except IOError:
         LOG.exception(
             "Could not open model properties file {}".format(
                 expanded_filename))
+
+    return model_properties
+
+
+def get_flavor_settings(json_filename):
+    flavor_settings = None
+
+    try:
+        with open(json_filename, 'r') as f:
+            try:
+                flavor_settings = json.load(f)
+            except ValueError:
+                LOG.exception(
+                    "Could not deserialize flavor settings file {}".format(
+                        json_filename))
+    except IOError:
+        LOG.exception(
+            "Could not open flavor settings file {}".format(json_filename))
+
+    return flavor_settings
+
+
+def calculate_bios_settings(role, flavor_settings, json_filename):
+    return calculate_category_settings_for_role(
+        'bios',
+        role,
+        flavor_settings,
+        json_filename)
+
+
+def calculate_category_settings_for_role(
+        category,
+        role,
+        flavor_settings,
+        json_filename):
+    default = {}
+
+    if 'default' in flavor_settings and category in flavor_settings['default']:
+        default = flavor_settings['default'][category]
+
+    flavor = ROLES[role]
+    flavor_specific = {}
+
+    if flavor in flavor_settings and category in flavor_settings[flavor]:
+        flavor_specific = flavor_settings[flavor][category]
+
+    # Flavor-specific settings take precedence over default settings.
+    category_settings = merge_two_dicts(default, flavor_specific)
+
+    if not category_settings:
+        LOG.critical(
+            'File {} does not contain "{}" settings for flavor "{}"'.format(
+                json_filename,
+                category,
+                flavor))
         return None
 
-    return models
+    return category_settings
+
+
+def merge_two_dicts(x, y):
+    z = x.copy()
+    z.update(y)
+    return z
 
 
 def get_ironic_client():
@@ -215,8 +282,8 @@ def get_ironic_client():
     return ironicclient.client.get_client(1, **kwargs)
 
 
-def get_ironic_node_uuid(ironic_client, ip_or_mac):
-    node_uuid = None
+def get_ironic_node(ironic_client, ip_or_mac):
+    node = None
 
     if ":" in ip_or_mac:
         try:
@@ -224,23 +291,26 @@ def get_ironic_node_uuid(ironic_client, ip_or_mac):
         except NotFound:
             pass
         else:
-            node_uuid = port.node_uuid
+            node = ironic_client.node.get(port.node_uuid)
     else:
-        for node in ironic_client.node.list(fields=["uuid", "driver_info"]):
-            drac_ip, _ = CredentialHelper.get_drac_ip_and_user(node)
+        for n in ironic_client.node.list(
+            fields=[
+                "driver",
+                "driver_info",
+                "uuid"]):
+            drac_ip, _ = CredentialHelper.get_drac_ip_and_user(n)
 
             if drac_ip == ip_or_mac:
-                node_uuid = node.uuid
+                node = n
                 break
 
-    if node_uuid is None:
+    if node is None:
         LOG.critical("Unable to find node {}".format(ip_or_mac))
 
-    return node_uuid
+    return node
 
 
-def get_drac_client(node_definition_filename, ironic_client, node_uuid):
-    node = ironic_client.node.get(node_uuid)
+def get_drac_client(node_definition_filename, node):
     drac_ip, drac_user, drac_password = \
         CredentialHelper.get_drac_creds_from_node(node,
                                                   node_definition_filename)
@@ -284,16 +354,16 @@ def get_pxe_nic_fqdd(fqdd, model_properties, drac_client):
     return pxe_nic_fqdd
 
 
-def get_pxe_nic_fqdd_from_model_properties(models, drac_client):
-    if models is None:
+def get_pxe_nic_fqdd_from_model_properties(model_properties, drac_client):
+    if model_properties is None:
         return None
 
     model_name = drac_client.get_system_model_name()
 
     # If the model does not have an entry in the model properties JSON file,
     # return None, instead of raising a KeyError exception.
-    if model_name in models:
-        return models[model_name]['pxe_nic']
+    if model_name in model_properties:
+        return model_properties[model_name]['pxe_nic']
     else:
         return None
 
@@ -486,7 +556,61 @@ def configure_nics_boot_settings(drac_client, pxe_nic_id):
 
     drac_client.schedule_job_execution(job_ids, start_time='TIME_NOW')
 
+    LOG.info(
+        "Waiting for NIC configuration to complete; this may take some time")
+    LOG.info("Do not power off the node")
     wait_for_job_completions(drac_client, job_ids)
+    LOG.info("Completed NIC configuration")
+
+    return determine_job_outcomes(drac_client, job_ids)
+
+
+def configure_bios(node, ironic_client, settings, drac_client):
+    LOG.info("Configuring BIOS")
+
+    if 'drac' not in node.driver:
+        LOG.critical("Node is not being managed by an iDRAC driver")
+        return False
+
+    # Filter out settings that are unknown.
+    response = ironic_client.node.vendor_passthru(
+        node.uuid,
+        'get_bios_config',
+        http_method='GET')
+
+    unknown_attribs = set(settings).difference(response.__dict__)
+
+    if unknown_attribs:
+        LOG.warning(
+            "Disregarding unknown BIOS settings {}".format(
+                ', '.join(unknown_attribs)))
+
+        for attr in unknown_attribs:
+            del settings[attr]
+
+    response = ironic_client.node.vendor_passthru(
+        node.uuid,
+        'set_bios_config',
+        args=settings,
+        http_method='POST')
+
+    if not response.commit_required:
+        return True
+
+    LOG.info("Rebooting the node to apply BIOS configuration")
+    args = {'reboot': True}
+    response = ironic_client.node.vendor_passthru(
+        node.uuid,
+        'commit_bios_config',
+        args=args,
+        http_method='POST')
+
+    LOG.info(
+        "Waiting for BIOS configuration to complete; this may take some time")
+    LOG.info("Do not power off the node")
+    job_ids = [response.job_id]
+    wait_for_job_completions(drac_client, job_ids)
+    LOG.info("Completed BIOS configuration")
 
     return determine_job_outcomes(drac_client, job_ids)
 
@@ -494,10 +618,6 @@ def configure_nics_boot_settings(drac_client, pxe_nic_id):
 def wait_for_job_completions(drac_client, job_ids):
     if not job_ids:
         return
-
-    LOG.info(
-        "Waiting for NIC configuration to complete; this may take some time")
-    LOG.info("Do not power off the node")
 
     incomplete_job_ids = list(job_ids)
 
@@ -507,7 +627,16 @@ def wait_for_job_completions(drac_client, job_ids):
             job_id for job_id in incomplete_job_ids if not
             determine_job_is_complete(drac_client, job_id)]
 
-    LOG.info("Completed NIC configuration")
+    # Wait for any other jobs to complete, such as the 'Exporting System
+    # Configuration Profile XML file' job. This prevents an attempt to change
+    # the configuration that may follow from failing because an unfinished
+    # configuration job exists.
+    #
+    # Methods in the ironic DRAC driver that change the configuration first
+    # validate the job queue is empty. The validation raises an exception if it
+    # is not empty.
+    while drac_client.list_jobs(only_unfinished=True):
+        sleep(10)
 
 
 def determine_job_is_complete(drac_client, job_id):
@@ -532,8 +661,8 @@ def determine_job_outcomes(drac_client, job_ids):
 
         all_succeeded = False
         LOG.error(
-            "NIC configuration job {} encountered issues; its final state is "
-            "{}".format(job_state))
+            "Configuration job {} encountered issues; its final state is "
+            "{}".format(job_id, job_state))
 
     return all_succeeded
 
@@ -565,6 +694,8 @@ def ensure_node_is_powered_off(drac_client):
 def main():
 
     try:
+        drac_client = None
+
         args = parse_arguments()
 
         LOG.setLevel(args.logging_level)
@@ -573,14 +704,28 @@ def main():
             args.pxe_nic,
             args.model_properties)
 
-        ironic_client = get_ironic_client()
+        flavor_settings_filename = os.path.expanduser(args.flavor_settings)
+        flavor_settings = get_flavor_settings(flavor_settings_filename)
 
-        node_uuid = get_ironic_node_uuid(ironic_client, args.ip_or_mac)
-
-        if node_uuid is None:
+        if flavor_settings is None:
             sys.exit(1)
 
-        drac_client = get_drac_client(args.node, ironic_client, node_uuid)
+        bios_settings = calculate_bios_settings(
+            args.role_index.role,
+            flavor_settings,
+            flavor_settings_filename)
+
+        if bios_settings is None:
+            sys.exit(1)
+
+        ironic_client = get_ironic_client()
+
+        node = get_ironic_node(ironic_client, args.ip_or_mac)
+
+        if node is None:
+            sys.exit(1)
+
+        drac_client = get_drac_client(args.node_definition, node)
 
         pxe_nic_fqdd = get_pxe_nic_fqdd(
             args.pxe_nic,
@@ -592,7 +737,7 @@ def main():
 
         assign_role(
             args.ip_or_mac,
-            node_uuid,
+            node.uuid,
             args.role_index,
             ironic_client,
             drac_client)
@@ -602,11 +747,17 @@ def main():
         if not succeeded:
             sys.exit(1)
 
-        # Leave the node powered off.
-        ensure_node_is_powered_off(drac_client)
-    except (DRACOperationFailed, DRACUnexpectedReturnValue, KeyError,
-            TypeError, ValueError, WSManInvalidResponse,
-            WSManRequestFailure):
+        succeeded = configure_bios(
+            node,
+            ironic_client,
+            bios_settings,
+            drac_client)
+
+        if not succeeded:
+            sys.exit(1)
+    except (DRACOperationFailed, DRACUnexpectedReturnValue,
+            InternalServerError, KeyError, TypeError, ValueError,
+            WSManInvalidResponse, WSManRequestFailure):
         LOG.exception("")
         sys.exit(1)
     except SystemExit:
@@ -614,6 +765,10 @@ def main():
     except:  # Catch all exceptions.
         LOG.exception("Unexpected error")
         raise
+    finally:
+        # Leave the node powered off.
+        if drac_client is not None:
+            ensure_node_is_powered_off(drac_client)
 
 
 if __name__ == "__main__":
