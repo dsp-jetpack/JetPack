@@ -39,7 +39,11 @@ def get_nodes():
         stack_name + '-cephstorage': 'stor'
     }
 
-    for line in subprocess.check_output(['nova', 'list']).split('\n'):
+    # Ensure 'nova list' is performed on the undercloud!
+    undercloudrc = CredentialHelper.get_undercloudrc_name()
+    nova_list_cmd = 'source {} && nova list'.format(undercloudrc)
+
+    for line in subprocess.check_output(nova_list_cmd, shell=True).split('\n'):
         # Create a match object that chops up the "nova list" output so we
         # can extract the pieces we need.
         m = re.search('(.+ \| )(\S+)(-)(\d+)( .+ctlplane=)(\S+)( .+)', line)
