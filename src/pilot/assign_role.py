@@ -578,8 +578,15 @@ def configure_bios(node, ironic_client, settings, drac_client):
         'get_bios_config',
         http_method='GET')
 
-    for unknown_attr in set(settings).difference(response.__dict__):
-        del settings[unknown_attr]
+    unknown_attribs = set(settings).difference(response.__dict__)
+
+    if unknown_attribs:
+        LOG.warning(
+            "Disregarding unknown BIOS settings {}".format(
+                ', '.join(unknown_attribs)))
+
+        for attr in unknown_attribs:
+            del settings[attr]
 
     response = ironic_client.node.vendor_passthru(
         node.uuid,
