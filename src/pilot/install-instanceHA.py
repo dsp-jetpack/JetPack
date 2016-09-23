@@ -171,7 +171,7 @@ def enable_start_compute_pacemaker(compute_node_ip):
              .format(compute_node_ip))
 
     ssh_cmd(compute_node_ip, "heat-admin",
-            "sudo sudo systemctl enable pacemaker_remote")
+            "sudo systemctl enable pacemaker_remote")
 
     ssh_cmd(compute_node_ip, "heat-admin",
             "sudo systemctl start pacemaker_remote")
