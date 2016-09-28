@@ -28,7 +28,7 @@
 # Use absence of "::ceph::profile::rgw" to indicate whether the file needs
 # to be patched.
 
-file="~/pilot/templates/overcloud/puppet/manifests/overcloud_controller_pacemaker.pp"
+file="./templates/overcloud/puppet/manifests/overcloud_controller_pacemaker.pp"
 
 if ! grep -q "::ceph::profile::rgw" ${file}; then
     echo "Applying patches for Ceph radosgw..."
