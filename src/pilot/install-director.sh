@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# (c) 2016 Dell
+# Copyright (c) 2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ subscription_manager_user="$2"
 subscription_manager_pass="$3"
 subcription_manager_poolid="$4"
 
-if [ "$#" -ne 4 ]; then
-  echo "Usage: $0 <dns_ip> <subscription_manager_user> <subscription_manager_pass> <subcription_manager_poolid>"
+if [ "$#" -lt 3 ]; then
+  echo "Usage: $0 <dns_ip> <subscription_manager_user> <subscription_manager_pass> [<subcription_manager_poolid>]"
   exit 1
 fi
 
@@ -59,11 +59,6 @@ create_flavor()
   fi
 }
 
-echo
-echo "## Installing probe-idrac utility..."
-~/pilot/install_probe_idrac.sh
-echo "## Done."
-
 cd
 
 echo
@@ -77,6 +72,11 @@ echo
 echo "## Installing Director"
 sudo yum -y install python-rdomanager-oscplugin
 openstack undercloud install
+echo "## Done."
+
+echo
+echo "## Installing probe-idrac utility..."
+~/pilot/install_probe_idrac.sh
 echo "## Done."
 
 source $HOME/stackrc

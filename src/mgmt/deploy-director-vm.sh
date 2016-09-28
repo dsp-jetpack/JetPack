@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# (c) 2014-2016 Dell
+# Copyright (c) 2014-2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -203,10 +203,7 @@ EOFPW
          subscription-manager attach --auto
          )
 
-  subscription-manager repos --disable=*
-  subscription-manager repos --enable=rhel-7-server-rpms
-  subscription-manager repos --enable=rhel-7-server-extras-rpms
-  subscription-manager repos --enable=rhel-7-server-rh-common-rpms
+  subscription-manager repos '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt

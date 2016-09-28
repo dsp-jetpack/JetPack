@@ -1,4 +1,4 @@
-# (c) 2016 Dell
+# Copyright (c) 2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -57,6 +57,8 @@ parameter_defaults:
         value: true
       client.radosgw.gateway/rgw_s3_auth_use_keystone:
         value: true
+      client.radosgw.gateway/rgw_init_timeout:
+        value: 1200
 
   # Additional hiera data for storage nodes
   CephStorageExtraConfig:
