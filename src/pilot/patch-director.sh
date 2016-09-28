@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# (c) 2016 Dell
+# Copyright (c) 2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@
 # Use absence of "::ceph::profile::rgw" to indicate whether the file needs
 # to be patched.
 
-file="/usr/share/openstack-tripleo-heat-templates/puppet/manifests/overcloud_controller_pacemaker.pp"
+file="./templates/overcloud/puppet/manifests/overcloud_controller_pacemaker.pp"
 
 if ! grep -q "::ceph::profile::rgw" ${file}; then
     echo "Applying patches for Ceph radosgw..."

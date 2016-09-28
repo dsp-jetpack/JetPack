@@ -109,7 +109,7 @@ TimeZone="UTC"
 
 # Installation interface configuration
 # Format is "ip/netmask interface no"
-anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 em2 no"
+anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 em4 no"
 
 # Bonding and Bridge configuration. These variables are bash associative arrays and take the form of array[key]="value".
 # Specifying a key more than once will overwrite the first key. For example:
@@ -508,12 +508,25 @@ subscription-manager register --username ${SMUser} --password ${SMPassword} ${Pr
        subscription-manager attach --auto
      )
 
+subscription-manager repos '--disable=*' --enable=rhel-7-server-rpms
+
 systemctl disable NetworkManager
 systemctl disable firewalld
 systemctl disable chronyd
 
 mkdir -p /store/data/images
 mkdir -p /store/data/iso
+
+yum install -y gcc libffi-devel python-devel openssl-devel python-setuptools
+easy_install paramiko
+easy_install selenium
+yum install -y ipmitool
+yum install -y tmux
+curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
+python get-pip.py
+pip install paramiko
+
+echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/root/JetStream/deploy-auto' >> /root/.bashrc 
 
 chvt 1
 

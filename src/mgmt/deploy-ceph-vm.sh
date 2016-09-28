@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# (c) 2014-2016 Dell
+# Copyright (c) 2014-2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -177,12 +177,7 @@ chvt 8
          subscription-manager attach --auto
          )
 
-  subscription-manager repos --disable=*
-  subscription-manager repos --enable=rhel-7-server-rpms 
-  subscription-manager repos --enable=rhel-7-server-rhceph-1.3-calamari-rpms 
-  subscription-manager repos --enable=rhel-7-server-rhceph-1.3-installer-rpms 
-  subscription-manager repos --enable=rhel-7-server-rhceph-1.3-mon-rpms 
-  subscription-manager repos --enable=rhel-7-server-rhceph-1.3-osd-rpms
+  subscription-manager repos --disable=* --enable=rhel-7-server-rpms --enable=rhel-7-server-rhceph-1.3-calamari-rpms --enable=rhel-7-server-rhceph-1.3-installer-rpms --enable=rhel-7-server-rhceph-1.3-mon-rpms --enable=rhel-7-server-rhceph-1.3-osd-rpms
 
   cat <<EOIP > /etc/sysconfig/iptables
 *filter

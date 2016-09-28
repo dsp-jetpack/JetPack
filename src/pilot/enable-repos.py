@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 # Copyright (c) 2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,11 +14,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The order of packages is significant, because pip processes them in the order
-# of appearance. Changing the order has an impact on the overall integration
-# process, which may cause wedges in the gate later.
+import os
+import sys
 
-lxml>=2.3
-pbr>=1.8
-requests>=2.5.2
-python-dracclient>=0.0.4
+
+repos = [
+    "rhel-7-server-openstack-9-rpms",
+    "rhel-7-server-openstack-9-director-rpms"]
+
+
+def execute(cmd):
+    print cmd
+    return_code = os.system(cmd)
+    if return_code != 0:
+        sys.exit(return_code)
+
+
+for repo in repos:
+    execute("subscription-manager repos --enable=%s" % repo)
+    execute("yum-config-manager --enable %s --setopt=%s.priority=1" %
+            (repo, repo))

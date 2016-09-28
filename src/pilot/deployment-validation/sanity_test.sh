@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# (c) 2015-2016 Dell
+# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
 # limitations under the License.
 
 #exit on failure
-#set -e 
-
+#set -e
 #Variables
+
 VLAN_NETWORK="192.168.201.0/24"
 EXTERNAL_NETWORK_NAME="public"
 EXTERNAL_SUBNET_NAME="external_sub"
@@ -31,7 +31,6 @@ KEY_FILE="$KEY_NAME.pem"
 IMAGE_NAME="cirros"
 PASSWORD="cr0wBar!"
 EMAIL="ce-cloud@dell.com"
-
 BASE_SECURITY_GROUP_NAME="sanity_security_group"
 BASE_TENANT_NETWORK_NAME="tenant_net"
 BASE_TENANT_ROUTER_NAME="tenant_201_router"
@@ -49,7 +48,6 @@ NOVA_INSTANCE_NAME="$BASE_NOVA_INSTANCE_NAME"
 VOLUME_NAME="$BASE_VOLUME_NAME"
 PROJECT_NAME="$BASE_PROJECT_NAME"
 USER_NAME="$BASE_USER_NAME"
-
 shopt -s nullglob
 
 LOG_FILE=./sanity_test.log
@@ -77,10 +75,22 @@ warn() { [[ $WARN -le $LOG_LEVEL ]] && log "WARN: $@"; }
 info() { [[ $INFO -le $LOG_LEVEL ]] && log "INFO: $@"; }
 debug() { [[ $DEBUG -le $LOG_LEVEL ]] && log "DEBUG: $@"; }
 
-
 ######## Functions ############
+set_admin_scope(){
+  info "setting admin scope with: ~/${STACK_NAME}rc."
+  source ~/${STACK_NAME}rc
+  info "### sourcing ~/${STACK_NAME}rc"
+}
+
+set_tenant_scope(){
+  info "Setting tenant scope."
+  export OS_USERNAME=$USER_NAME
+  export OS_PASSWORD=$PASSWORD
+  export OS_TENANT_NAME=$PROJECT_NAME
+}
 
 init(){
+
   info "### Random init stuff "
   cd ~
 
@@ -94,21 +104,17 @@ init(){
       fatal "### '${update_ssh_config}' is required but missing!  Aborting sanity test"
   execute_command "${update_ssh_config}"
 
-  # Find the IP for controller0 from the undercloud
-  CONTROLLER_0_NAME=$(nova list | grep '\-controller-0' | awk -F\| '{print $3}'| tr -d ' ')
-  CONTROLLER=$(nova show ${CONTROLLER_0_NAME} |grep "ctlplane network"| awk -F\| '{print $3}'| tr -d ' ')
-
-  # Get a list of the IPs of all the controller nodes for later use
-  CONTROLLERS=$(nova list | grep '\-controller-' | awk -F\| '{print $7}' | awk -F= '{print $2}')
+  # Get a list of the IPs of all the controller nodes for later use, as well as
+  # the IP for a single controller
+  CONTROLLERS=$(openstack server list --flavor control -c Networks -f value | tr -d 'cntlplane=')
+  CONTROLLER=($CONTROLLERS)
 
   # Now switch to point the OpenStack commands at the overcloud
-  STACK_NAME=$(heat stack-list | grep CREATE_ | awk -F\| '{print $3}' | tr -d ' ')
+  STACK_NAME=$(openstack stack list -c 'Stack Name' -f value)
   [ "${STACK_NAME}" ] ||  \
-      STACK_NAME=$(heat stack-list | grep UPDATE_ | awk -F\| '{print $3}' | tr -d ' ')
-  [ "${STACK_NAME}" ] ||  \
-      fatal "### '${STACK_NAME}' is required and could not be found!  Aborting sanity test"
+      fatal "### ${STACK_NAME} is required and could not be found!  Aborting sanity test"
 
-  source ~/${STACK_NAME}rc
+  set_admin_scope
 
   info "### PCS Status "
   ssh heat-admin@$CONTROLLER 'sudo /usr/sbin/pcs status'
@@ -150,7 +156,7 @@ get_unique_name (){
 
   for i in {1..25}
   do
-    name="$tmp$i"    
+    name="$tmp$i"
     name_exists=$($cmd | grep $name | head -n 1 | awk '{print $4}')
     echo $name_exists , $cmd , $tmp, $name
     if [ "$name_exists" != "$name"  ]
@@ -164,7 +170,7 @@ get_unique_name (){
 
 set_unique_names(){
   info "###get_unique-name"
-  inst_exists=$(nova list | grep $NOVA_INSTANCE_NAME |  head -n 1  | awk '{print $4}')
+  inst_exists=$(openstack server list --name "$NOVA_INSTANCE_NAME" -c Name -f value)
   if [ "$inst_exists" == "$NOVA_INSTANCE_NAME" ]
   then
      info "$NOVA_INSTANCE_NAME instance exists, creating new set"
@@ -183,16 +189,16 @@ set_unique_names(){
 
 create_the_networks(){
   info "### Creating the Networks ####"
- 
-  net_exists=$(neutron net-list | grep $TENANT_NETWORK_NAME |  head -n 1  | awk '{print $4}')
+  set_admin_scope
+  net_exists=$(openstack network list -c Name -f value | grep "$TENANT_NETWORK_NAME")
   if [ "$net_exists" != "$TENANT_NETWORK_NAME" ]
-  then 
-    execute_command "neutron net-create $TENANT_NETWORK_NAME --shared"
+  then
+    execute_command "openstack network create --share $TENANT_NETWORK_NAME"
   else
     info "#----- Tenant network '$TENANT_NETWORK_NAME' exists. Skipping"
   fi
-  
-  subnet_exists=$(neutron subnet-list | grep $VLAN_NAME |  head -n 1  | awk '{print $4}')
+
+  subnet_exists=$(openstack subnet list -c Name -f value | grep "$VLAN_NAME")
   if [ "$subnet_exists" != "$VLAN_NAME" ]
   then
     execute_command "neutron subnet-create $TENANT_NETWORK_NAME $VLAN_NETWORK --name $VLAN_NAME"
@@ -200,11 +206,11 @@ create_the_networks(){
     info "#-----VLAN Network subnet '$VLAN_NETWORK' exists. Skipping"
   fi
 
-  router_exists=$(neutron router-list | grep $TENANT_ROUTER_NAME | head -n 1  |  awk '{print $4}')
+  router_exists=$(openstack router list -c Name -f value | grep "$TENANT_ROUTER_NAME")
   if [ "$router_exists" != "$TENANT_ROUTER_NAME" ]
   then
     execute_command "neutron router-create $TENANT_ROUTER_NAME"
-    
+
     subnet_id=$(neutron net-list | grep $TENANT_NETWORK_NAME | head -n 1 | awk '{print $6}')
 
     execute_command "neutron router-interface-add $TENANT_ROUTER_NAME $subnet_id"
@@ -214,49 +220,51 @@ create_the_networks(){
 
   execute_command "ssh heat-admin@$CONTROLLER sudo grep network_vlan_ranges /etc/neutron/plugin.ini"
 
-  ext_net_exists=$(neutron net-list | grep $EXTERNAL_NETWORK_NAME |  head -n 1  | awk '{print $4}')
+  ext_net_exists=$(openstack network list -c Name -f value | grep "$EXTERNAL_NETWORK_NAME")
   if [ "$ext_net_exists" != "$EXTERNAL_NETWORK_NAME" ]
   then
     execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external --provider:network_type vlan --provider:physical_network physext --provider:segmentation_id $EXTERNAL_VLAN"
-    execute_command "neutron subnet-create --name $EXTERNAL_SUBNET_NAME --allocation-pool start=$STARTIP,end=$ENDIP --gateway $GATEWAY_IP --disable-dhcp $EXTERNAL_NETWORK_NAME $EXTERNAL_VLAN_NETWORK"  
+    execute_command "neutron subnet-create --name $EXTERNAL_SUBNET_NAME --allocation-pool start=$STARTIP,end=$ENDIP --gateway $GATEWAY_IP --disable-dhcp $EXTERNAL_NETWORK_NAME $EXTERNAL_VLAN_NETWORK"
   else
     info "#----- External network '$EXTERNAL_NETWORK_NAME' exists. Skipping"
   fi
 
 
-  execute_command "neutron net-list"
+  execute_command "openstack network list"
 
-  execute_command "neutron router-list"
+  execute_command "openstack router list"
 
   # Use external network name
   execute_command "neutron router-gateway-set $TENANT_ROUTER_NAME $EXTERNAL_NETWORK_NAME"
-
-  neutron security-group-list | grep -q $SECURITY_GROUP_NAME
+  
+  # switch to tenant context
+  set_tenant_scope
+  openstack security group list -c Name -f value | grep -q $SECURITY_GROUP_NAME
   if [[ "$?" == 0 ]];
-  then 
+  then
     info "#----- Security group '$SECURITY_GROUP_NAME' exists. Skipping"
   else
     info "### Creating a Security Group ####"
     execute_command "neutron security-group-create $SECURITY_GROUP_NAME"
 
     # Allow all inbound and outbound ICMP
-    execute_command "neutron security-group-rule-create --tenant-id sanity --direction ingress --ethertype IPv4 --protocol icmp --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
-    execute_command "neutron security-group-rule-create --tenant-id sanity --direction egress --ethertype IPv4 --protocol icmp --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "neutron security-group-rule-create --direction ingress --ethertype IPv4 --protocol icmp --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "neutron security-group-rule-create --direction egress --ethertype IPv4 --protocol icmp --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
 
     # Allow all inbound and outbound TCP
-    execute_command "neutron security-group-rule-create --tenant-id sanity --direction ingress --ethertype IPv4 --protocol tcp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
-    execute_command "neutron security-group-rule-create --tenant-id sanity --direction egress --ethertype IPv4 --protocol tcp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "neutron security-group-rule-create --direction ingress --ethertype IPv4 --protocol tcp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "neutron security-group-rule-create --direction egress --ethertype IPv4 --protocol tcp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
 
     # Allow all inbound and outbound UDP
-    execute_command "neutron security-group-rule-create --tenant-id sanity --direction ingress --ethertype IPv4 --protocol udp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
-    execute_command "neutron security-group-rule-create --tenant-id sanity --direction egress --ethertype IPv4 --protocol udp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "neutron security-group-rule-create --direction ingress --ethertype IPv4 --protocol udp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "neutron security-group-rule-create --direction egress --ethertype IPv4 --protocol udp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
   fi
 }
 
 
 setup_glance(){
-
   info "### Setting up glance"""
+  set_admin_scope
 
   if [ ! -f ./cirros-0.3.3-x86_64-disk.img ]; then
     sleep 5 #HACK: a timing issue exists on some stamps -- 5 seconds seems sufficient to fix it
@@ -265,37 +273,35 @@ setup_glance(){
     info "#----- Cirros image exists. Skipping"
   fi
 
-  image_exists=$(glance image-list | grep $IMAGE_NAME |  head -n 1  | awk '{print $4}')
+  image_exists=$(openstack image list -c Name -f value | grep -x $IMAGE_NAME)
   if [ "$image_exists" != "$IMAGE_NAME" ]
   then
-     execute_command "glance image-create --name  $IMAGE_NAME --disk-format qcow2 --container-format bare --file cirros-0.3.3-x86_64-disk.img"
+    execute_command "openstack image create --disk-format qcow2 --container-format bare --file cirros-0.3.3-x86_64-disk.img $IMAGE_NAME --public"
   else
     info "#----- Image '$IMAGE_NAME' exists. Skipping"
   fi
 
-  execute_command "glance image-list"
- 
-  execute_command "nova flavor-list"
+  execute_command "openstack image list"
 
-  execute_command "nova image-list"
+  execute_command "openstack flavor list"
 }
 
 
 setup_nova (){
   info "### Setup Nova"""
-
+  set_tenant_scope
   info "creating keypair $KEY_NAME"
   if [ ! -f "$KEY_FILE" ]; then
-    nova keypair-add $KEY_NAME  > "$KEY_FILE" 
+    nova keypair-add $KEY_NAME  > "$KEY_FILE"
   else
     info "#----- Key '$KEY_NAME' exists. Skipping"
   fi
 
-  tenant_net_id=$(neutron net-list | grep $TENANT_NETWORK_NAME | head  -n 1  | awk '{print $2}')
+  tenant_net_id=$(openstack network list -f value | grep "$TENANT_NETWORK_NAME" | awk '{print $1}')
 
-  image_id=$(glance image-list | grep $IMAGE_NAME | head -n 1  | awk '{print $2}')
+  image_id=$(openstack image list -f value | grep "$IMAGE_NAME" | awk '{print $1}')
 
-  execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor 2 --key_name $KEY_NAME --image $image_id --nic net-id=$tenant_net_id $NOVA_INSTANCE_NAME"
+  execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor 2 --key-name $KEY_NAME --image $image_id --nic net-id=$tenant_net_id $NOVA_INSTANCE_NAME"
 
   info "### Waiting for the instance to be built..."
   instance_status=$(nova list | grep "$NOVA_INSTANCE_NAME" | awk '{print $6}')
@@ -341,7 +347,7 @@ ping_from_netns(){
 
 
 test_neutron_networking (){
-
+  set_tenant_scope
   private_ip=$(nova show $NOVA_INSTANCE_NAME | grep "$TENANT_NETWORK_NAME network" | awk -F\| '{print $3}' | tr -d " ")
 
   net_ids=$(neutron net-show -F id -F subnets $TENANT_NETWORK_NAME | grep -E 'id|subnets' | awk '{print $4}')
@@ -357,10 +363,12 @@ test_neutron_networking (){
   floating_ip=$(neutron floatingip-show $floating_ip_id | grep floating_ip_address | awk '{print $4}')
 
   # Find the port to associate it with
+  set_admin_scope
   port_id=$(neutron port-list | grep $subnet_id | grep $private_ip | awk '{print $2}')
   router_id=$(neutron router-show -F id $TENANT_ROUTER_NAME | grep "id" | awk '{print $4}')
 
   # And finally associate the floating IP with the instance
+  set_tenant_scope
   execute_command "neutron floatingip-associate $floating_ip_id $port_id"
 
   sleep 3
@@ -373,7 +381,7 @@ test_neutron_networking (){
 
 setup_cinder(){
   info "### Cinder test"""
-
+  set_tenant_scope
   execute_command "cinder list"
 
   vol_exists=$(cinder list | grep $VOLUME_NAME |  head -n 1  | awk '{print $6}')
@@ -406,27 +414,28 @@ setup_cinder(){
 
 
 radosgw_test(){
-  info "### RadosGW test"""
+  info "### RadosGW test"
+  set_tenant_scope
 
   execute_command "swift post container"
 
   execute_command "swift list"
 
-  execute_command "swift upload container keystonerc_admin"
+  touch test_file
+  execute_command "swift upload container test_file"
 
   execute_command "swift list container"
 }
 
 
 radosgw_cleanup(){
-  info "### RadosGW test"""
-
-  execute_command "swift delete container keystonerc_admin"
-
-  execute_command "swift list container"
-
-  execute_command "swift delete container"
-
+  info "### RadosGW cleanup"
+  set_tenant_scope
+  rm -f test_file
+  container_id=$(swift list | grep container | head -n 1 | awk '{print $1}')
+  if [ "$container_id" == "container" ]; then
+   execute_command "swift delete container"
+  fi
   execute_command "swift list"
 }
 
@@ -434,11 +443,11 @@ radosgw_cleanup(){
 setup_project(){
   info "### Setting up new project"
 
-  pro_exists=$(keystone tenant-list | grep $PROJECT_NAME |  head -n 1  | awk '{print $4}')
+  pro_exists=$(openstack project list -c Name -f value | grep "$PROJECT_NAME")
   if [ "$pro_exists" != "$PROJECT_NAME" ]
   then
-    execute_command "keystone tenant-create --name $PROJECT_NAME"
-    execute_command "keystone user-create --name $USER_NAME --tenant $PROJECT_NAME --pass $PASSWORD --email $EMAIL"
+    execute_command "openstack project create $PROJECT_NAME"
+    execute_command "openstack user create --project $PROJECT_NAME --password $PASSWORD --email $EMAIL $USER_NAME"
   else
     info "#Project $PROJECT_NAME exists ---- Skipping"
   fi
@@ -446,7 +455,7 @@ setup_project(){
 
 
 end(){
-  info "#####VALIDATION SUCCESS#####" 
+  info "#####VALIDATION SUCCESS#####"
 }
 
 
@@ -460,8 +469,8 @@ then
   arg="$1"
   if [[ "$arg" == "clean" ]]
   then
-    info "### CLEANING MODE"  
-
+    info "### CLEANING MODE"
+    set_tenant_scope
     info "### Deleting the floating ips"
     private_ips=$(nova list | grep "$BASE_NOVA_INSTANCE_NAME" | awk '{print $12}' | awk -F= '{print $2}')
     for private_ip in $private_ips
@@ -479,6 +488,7 @@ then
 
     info "### Waiting for the instance to be deleted..."
     num_instances=$(nova list | grep $NOVA_INSTANCE_NAME | wc -l)
+    info "num instance: $num_instances"
     while [ "$num_instances" -gt 0 ]; do
       info "#### ${num_instances} remain.  Sleeping..."
       sleep 3
@@ -487,6 +497,7 @@ then
 
     info   "#### Deleting the volumes"
     volume_ids=$(cinder list | grep $VOLUME_NAME | awk '{print $2}')
+    info   "volume ids: $volume_ids"
     [[ $volume_ids ]] && echo $volume_ids | xargs -n1 cinder delete
 
     info "### Waiting for the volumes to be deleted..."
@@ -498,17 +509,19 @@ then
     done
 
     info   "#### Deleting the images"
+	set_admin_scope
     image_ids=$(glance image-list | grep $IMAGE_NAME | awk '{print $2}')
     [[ $image_ids ]] && echo $image_ids | xargs -n1 glance image-delete
 
     info   "#### Deleting the security groups and key_file"
+	set_tenant_scope
     security_group_ids=$(neutron security-group-list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
     [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 neutron security-group-delete
 
     rm -f $KEY_FILE
 
     info "### Deleting networks"
-
+    set_admin_scope
     # Pick up all of the subnets in the tenants and the external subnet
     subnet_ids=$(neutron subnet-list | grep -E "$BASE_VLAN_NAME|$EXTERNAL_SUBNET_NAME" | awk '{print $2}')
     for subnet_id in $subnet_ids
@@ -530,6 +543,8 @@ then
       neutron net-delete $network_id
     done
   fi
+  radosgw_cleanup
+  info "########### CLEANUP SUCCESSFUL ############"
   exit 1
 else
   #### EXECUTE
@@ -554,9 +569,8 @@ else
 
   setup_cinder
 
-  #radosgw_test
-  #radosgw_cleanup
- 
+  radosgw_test
+
   end
 
   info "##### Done #####"

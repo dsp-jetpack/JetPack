@@ -1,4 +1,4 @@
-# (c) 2016 Dell
+# Copyright (c) 2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ import os
 import json
 from subprocess import check_output
 from os_cloud_config.utils import clients
-from heatclient.client import Client as HeatClient
+from heatclient.v1.client import Client as HeatClient
 
 
 class CredentialHelper:
@@ -115,35 +115,39 @@ class CredentialHelper:
     @staticmethod
     def get_overcloudrc_name():
         home_dir = os.path.expanduser('~')
-        overcloudrc_name = "{}rc".format(CredentialHelper.get_stack_name())
+        overcloudrc_name = "{}rc".format(CredentialHelper.get_overcloud_name())
 
         return os.path.join(home_dir, overcloudrc_name)
 
     @staticmethod
-    def get_stack_name():
+    def get_overcloud_name():
+        stack = CredentialHelper.get_overcloud_stack()
+        if stack:
+            return stack.stack_name
+
+        return None
+
+    @staticmethod
+    def get_overcloud_stack():
         os_auth_url, os_tenant_name, os_username, os_password = \
             CredentialHelper.get_undercloud_creds()
 
-        keystone_client = clients.get_keystone_client(os_username,
-                                                      os_password,
-                                                      os_tenant_name,
-                                                      os_auth_url)
+        try:
+            keystone_client = clients.get_keystone_client(os_username,
+                                                          os_password,
+                                                          os_tenant_name,
+                                                          os_auth_url)
 
-        heat_url = keystone_client.service_catalog.url_for(
-            service_type='orchestration',
-            endpoint_type='publicURL')
+            heat_url = keystone_client.service_catalog.url_for(
+                service_type='orchestration',
+                endpoint_type='publicURL')
 
-        heat_client = HeatClient('1',
-                                 endpoint=heat_url,
-                                 token=keystone_client.auth_token)
+            heat_client = HeatClient(endpoint=heat_url,
+                                     token=keystone_client.auth_token)
 
-        stacks = heat_client.stacks.list()
+            # There can be only one overcloud stack, so if there is one it
+            # will be the first in the list.
+            return next(heat_client.stacks.list(), None)
 
-        # There can be only one overcloud stack, so get the name from the
-        # first one if there is one
-        stack_name = None
-        stack = next(stacks, None)
-        if stack:
-            stack_name = stack.stack_name
-
-        return stack_name
+        except:
+            return None
