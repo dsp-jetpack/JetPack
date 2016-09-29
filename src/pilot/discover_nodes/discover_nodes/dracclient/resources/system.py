@@ -41,3 +41,19 @@ class SystemManagement(object):
                                     filter_query=filter_query)
 
         return utils.find_xml(doc, 'Model', uris.DCIM_SystemView).text
+
+    def get_system_service_tag(self):
+        """Return the system service tag.
+
+        :returns: system service tag
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        """
+        filter_query = ('select ChassisServiceTag '
+                        'from DCIM_SystemView')
+        doc = self.client.enumerate(uris.DCIM_SystemView,
+                                    filter_query=filter_query)
+
+        return utils.find_xml(doc,
+                              'ChassisServiceTag',
+                              uris.DCIM_SystemView).text
