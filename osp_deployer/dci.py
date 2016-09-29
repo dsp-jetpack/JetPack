@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# (c) 2015-2016 Dell
+# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -55,9 +55,10 @@ def setup_logging(dci_contxt):
     log_file_name = datetime.now().strftime(
         '/auto_results/deployment-%Y.%m.%d-%H.%M.log')
     file_handler = logging.FileHandler(log_file_name, mode='w')
-    dci_handler = DciHandler(dci_contxt, info_as_jobstate=True)
+    dci_handler = DciHandler(dci_contxt)
 
-    for logger_name in ('osp_deployer', 'auto_common.ipmi', 'auto_common.ssh', 'tripleohelper'):
+    for logger_name in ('osp_deployer', 'auto_common.ipmi',
+                        'auto_common.ssh', 'tripleohelper'):
         logger = logging.getLogger(logger_name)
         logger.setLevel(logging.DEBUG)
         logger.addHandler(stream_handler)
@@ -96,7 +97,7 @@ def deploy_openstack(log_file_name):
     finally:
         with open(log_file_name, 'r') as f:
             dcifile.create(
-            dci_context,
+                dci_context,
                 'deployment.log',
                 f.read(),
                 mime='text/plain',
@@ -126,7 +127,7 @@ parser_dci.add_argument('-skip_ceph_vm', '--skip_ceph_vm',
 nspace, others = parser_dci.parse_known_args()
 dci_conf = yaml.load(open(nspace.dci_conf, 'r'))
 dci_context = dcicontext.build_dci_context(
-    'http://46.231.133.44',
+    'https://api.distributed-ci.io/',
     dci_conf['login'],
     dci_conf['password'])
 
@@ -147,14 +148,15 @@ if not dci_conf['rhos_mirror'].startswith('http'):
 topic = dcitopic.get(dci_context, dci_conf.get('topic', 'OSP8')).json()[
     'topic']
 r = dcijob.schedule(dci_context, remoteci_id=dci_conf['remoteci_id'],
-                      topic_id=topic['id'])
+                    topic_id=topic['id'])
 if r.status_code == 412:
     exit(0)
-job_full_data = dcijob.get_full_data(dci_context, dci_context.last_job_id)
+components = dcijob.get_components(
+    dci_context, dci_context.last_job_id).json()['components']
 upload_configuration_files(dci_context, nspace.settings)
 
 with open('/var/www/html/RH7-RHOS-OSP-DCI.repo', 'w') as f:
-    for component in job_full_data['components']:
+    for component in components:
         f.write(repo_entry.format(
             rhos_mirror=dci_conf['rhos_mirror'],
             name=component['data']['repo_name'],
@@ -173,4 +175,5 @@ settings = osp_deployer.Settings.settings
 dci_tripleo_helper.run_tests(
     dci_context,
     undercloud_ip=settings.director_node.external_ip,
-    key_filename='/root/.ssh/id_rsa')
+    key_filename='/root/.ssh/id_rsa',
+    remoteci_id=dci_conf['remoteci_id'])

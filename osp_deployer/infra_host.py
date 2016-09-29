@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# (c) 2015-2016 Dell
+# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,14 +51,13 @@ class InfraHost():
                                    self.root_pwd,
                                    command)
 
-    def run_ssh_edit(self, remotefile,find,replace):
+    def run_ssh_edit(self, remotefile, find, replace):
         return Ssh.ssh_edit_file(self.ip,
                                  self.user,
                                  self.pwd,
                                  remotefile,
                                  find,
                                  replace)
-
 
     def upload_file(self, local_file, remote_file):
         Scp.put_file(self.ip,

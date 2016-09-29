@@ -19,26 +19,27 @@
 # 2	    yarn.app.mapreduce.am.resource.mb
 # 1.6	yarn.app.mapreduce.am.command-opts
 
-yarn_nodemanager_resource_memory_mb	=	49152
-yarn_nodemanager_resource_cpu_vcores	=	48
-yarn_scheduler_minimum_allocation_mb	=	1024
-yarn_scheduler_minimum_allocation_vcores	=	1
-yarn_scheduler_increment_allocation_mb	=	512
-yarn_scheduler_increment_allocation_vcores	=	1
-yarn_scheduler_maximum_allocation_mb	=	49152
-yarn_scheduler_maximum_allocation_vcores	=	48
-mapreduce_map_memory_mb	=	1024
-mapreduce_map_cpu_vcores	=	1
-mapreduce_reduce_memory_mb	=	2048
-mapreduce_reduce_cpu_vcores	=	1
-mapreduce_map_java_opts_max_heap	=	858993459
-mapreduce_reduce_java_opts_max_heap	=	1717986918
-yarn_app_mapreduce_am_resource_mb	=	2048
-yarn_app_mapreduce_am_max_heap	=	1717986918
+
+yarn_nodemanager_resource_memory_mb	=	57344		#	56
+yarn_nodemanager_resource_cpu_vcores	=	56		#	56
+yarn_scheduler_minimum_allocation_mb	=	1024		#	1
+yarn_scheduler_minimum_allocation_vcores	=	1		#	1
+yarn_scheduler_increment_allocation_mb	=	512		#	512
+yarn_scheduler_increment_allocation_vcores	=	1		#	1
+yarn_scheduler_maximum_allocation_mb	=	57344		#	56
+yarn_scheduler_maximum_allocation_vcores	=	56		#	56
+mapreduce_map_memory_mb	=	1024		#	1
+mapreduce_map_cpu_vcores	=	1		#	1
+mapreduce_reduce_memory_mb	=	2048		#	2
+mapreduce_reduce_cpu_vcores	=	1		#	1
+mapreduce_map_java_opts_max_heap	=	858993459		#	0.8
+mapreduce_reduce_java_opts_max_heap	=	1717986918		#	1.6
+yarn_app_mapreduce_am_resource_mb	=	2048		#	2
+yarn_app_mapreduce_am_max_heap	=	1717986918		#	1.6
 
 
-mapred_reduce_tasks = 240 # 240 # 480 # 576 # mapreduce.job.reduces
-mapred_reduce_slowstart_completed_maps = 0.05
+mapred_reduce_tasks = 672 # 240 # 480 # 576 # mapreduce.job.reduces
+mapred_reduce_slowstart_completed_maps = 0.8
 
 dfs_block_size = 1073741824 # 536870912 # 1073741824
 datanode_java_heapsize = 2147483648 # 1073741824 # 2147483648

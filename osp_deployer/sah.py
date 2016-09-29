@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# (c) 2015-2016 Dell
+# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from osp_deployer.config import Settings
+from osp_deployer.settings.config import Settings
 from infra_host import InfraHost
 from auto_common import Scp, FileHelper
 import logging
@@ -36,17 +36,12 @@ class Sah(InfraHost):
         self.pwd = self.settings.sah_node.root_password
         self.root_pwd = self.settings.sah_node.root_password
 
-    def update_kickstart(self):
+    def update_kickstart_usb(self):
         sets = self.settings
-        shutil.copyfile(sets.sah_ks, sets.sah_kickstart)
-        FileHelper.replace_expression(sets.sah_kickstart,
-                                      "^cdrom",
-                                      'url --url=' +
-                                      sets.rhel_install_location)
-        FileHelper.replace_expression(sets.sah_kickstart,
-                                      '^url --url=.*',
-                                      'url --url=' +
-                                      sets.rhel_install_location)
+        shutil.copyfile(sets.sah_kickstart, sets.cloud_repo_dir +
+                        "/../osp-sah.ks")
+        sets.sah_kickstart = sets.cloud_repo_dir + "/../osp-sah.ks"
+
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^HostName=.*',
                                       'HostName="' +
@@ -173,8 +168,8 @@ class Sah(InfraHost):
                                       sets.private_api_netmask + '"')
 
     def upload_iso(self):
-        self.upload_file(self.settings.rhl72_iso,
-                         "/store/data/iso/RHEL7.iso")
+        shutil.copyfile(self.settings.rhl72_iso,
+                        "/store/data/iso/RHEL7.iso")
 
     def upload_lock_files(self):
 
@@ -230,14 +225,14 @@ class Sah(InfraHost):
                      "' >> " +
                      director_conf)
         remote_file = "sh /root/deploy-director-vm.sh " + \
-                      director_conf + \
-                      " /store/data/iso/RHEL7.iso"
+                      director_conf + " " + \
+                      "/store/data/iso/RHEL7.iso"
         re = self.run_tty(remote_file)
         startVM = True
         for ln in re[0].split("\n"):
             if "Restarting guest" in ln:
                 startVM = False
-        if startVM :
+        if startVM:
             logger.debug(
                 "=== wait for the director vm install "
                 "to be complete")
@@ -288,17 +283,19 @@ class Sah(InfraHost):
         logger.debug("=== kick off the ceph vm deployment")
 
         re = self.run_tty("sh " +
-                 remote_file +
-                 " /root/ceph.cfg /store/data/iso/RHEL7.iso")
+                          remote_file +
+                          " /root/ceph.cfg " +
+                          "/store/data/iso/RHEL7.iso")
         startVM = True
         for ln in re[0].split("\n"):
             if "Restarting guest" in ln:
                 startVM = False
-        if startVM :
+        if startVM:
             logger.debug(
-                "=== wait for the ceph vm install to be complete & power it on")
-            while "shut off" not in \
-                self.run("virsh list --all | grep ceph")[0]:
+                "=== wait for the ceph vm install to be complete \
+                & power it on")
+            while "shut off" \
+                  not in self.run("virsh list --all | grep ceph")[0]:
                 time.sleep(60)
             logger.debug("=== power on the ceph VM ")
             self.run("virsh start ceph")

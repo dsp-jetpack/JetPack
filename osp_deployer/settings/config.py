@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# (c) 2015-2016 Dell
+# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 import ConfigParser
 import sys
-from osp_deployer import NodeConf
 import logging
 import os
 import json
+from osp_deployer.node_conf import NodeConf
 
 logger = logging.getLogger("osp_deployer")
 
@@ -92,8 +92,10 @@ class Settings():
         self.discovery_ip_range = cluster[
             'discovery_ip_range']
         self.tenant_network = cluster.get('tenant_network')
-        self.tenant_network_allocation_pool_start = cluster.get('tenant_network_allocation_pool_start')
-        self.tenant_network_allocation_pool_end = cluster.get('tenant_network_allocation_pool_end')
+        self.tenant_network_allocation_pool_start = cluster.get(
+                                      'tenant_network_allocation_pool_start')
+        self.tenant_network_allocation_pool_end = cluster.get(
+                                      'tenant_network_allocation_pool_end')
         self.tenant_vlan_range = cluster.get('tenant_vlan_range')
         self.director_install_account_user = cluster[
             'director_install_user']
@@ -170,7 +172,7 @@ class Settings():
             self.use_static_vips = True
             self.redis_vip = cluster['redis_vip']
             self.provisioning_vip = cluster['provisioning_vip']
-	    self.private_api_vip = cluster['private_api_vip']
+            self.private_api_vip = cluster['private_api_vip']
             self.public_api_vip = cluster['public_api_vip']
             self.storage_vip = cluster['storage_vip']
             self.storage_cluster_vip = cluster['storage_cluster_vip']
@@ -239,15 +241,12 @@ class Settings():
 
         self.bastion_settings_map = self.get_settings_section(
             "Bastion Settings")
-        self.rhel_install_location = self.bastion_settings_map[
-            'rhel_install_location']
-        self.sah_kickstart = self.bastion_settings_map['sah_kickstart']
         self.cloud_repo_dir = self.bastion_settings_map['cloud_repo_dir']
-        
+
         if self.bastion_settings_map['pull_images_from_cdn'].lower() == 'true':
-            self.pull_images_from_cnd = True
+            self.pull_images_from_cdn = True
         else:
-            self.pull_images_from_cnd = False
+            self.pull_images_from_cdn = False
             self.discovery_ram_disk_image = self.bastion_settings_map[
                 'discovery_ram_disk_image']
             self.overcloud_image = self.bastion_settings_map['overcloud_image']
@@ -292,12 +291,12 @@ class Settings():
 
         self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
         self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
+
+        self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
         self.director_deploy_sh = self.foreman_configuration_scripts +\
             '/mgmt/deploy-director-vm.sh'
         self.undercloud_conf = self.foreman_configuration_scripts +\
             '/pilot/undercloud.conf'
-        self.sah_ks = self.foreman_configuration_scripts +\
-            "/mgmt/osp-sah.ks"
         self.ceph_deploy_sh = self.foreman_configuration_scripts +\
             '/mgmt/deploy-ceph-vm.sh'
         self.install_director_sh = self.foreman_configuration_scripts +\
@@ -318,7 +317,7 @@ class Settings():
             '/pilot/templates/nic-configs/compute.yaml'
         self.static_ips_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/static-ip-environment.yaml'
-	self.static_vip_yaml = self.foreman_configuration_scripts + \
+        self.static_vip_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/static-vip-environment.yaml'
         self.controller_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/nic-configs/controller.yaml'
@@ -330,14 +329,14 @@ class Settings():
         self.compute_nodes = []
         self.ceph_nodes = []
         self.switches = []
-	self.nodes = []
+        self.nodes = []
 
         if 'rhsm_repos' in cluster:
             self.rhsm_repos = cluster['rhsm_repos'].split(',')
         else:
             self.rhsm_repos = [
-                'rhel-7-server-openstack-8.0-rpms',
-                'rhel-7-server-openstack-8.0-director-rpms']
+                'rhel-7-server-openstack-9.0-rpms',
+                'rhel-7-server-openstack-9.0-director-rpms']
 
         with open(self.network_conf) as config_file:
             json_data = json.load(config_file)
@@ -383,8 +382,8 @@ class Settings():
                     if node.is_switch == "true":
                         self.switches.append(node)
                 except AttributeError:
-		    self.nodes.append(node)
-		    pass
+                    self.nodes.append(node)
+                    pass
 
         Settings.settings = self
 

@@ -20,7 +20,7 @@ class ReportBuilder():
         textfile = open(results_file)
         # Read the headers from the first line of the input file.
         line1 = textfile.readline()
-        print line1
+        #print line1
         ma = re.search("\[\[\[(.+)\]\]\]", line1)
         if ma:
             headers = ma.group(1)
@@ -29,24 +29,24 @@ class ReportBuilder():
         
     def copyJobHistoryFiles(self, job_history_ip, history_location, job_id):
         cmd = 'sudo -u hdfs hadoop fs -get '+history_location+'' + job_id + '_conf.xml /tmp/'+job_id
-        print cmd
+        #print cmd
         cmd1 = 'mkdir /tmp/'+job_id
         cmd2 = 'chmod 777 /tmp/'+job_id
         out, err = Ssh.execute_command(job_history_ip, 'root', 'Ignition01', cmd1)
-        print cmd1
+        #print cmd1
         out, err = Ssh.execute_command(job_history_ip, 'root', 'Ignition01', cmd2)
-        print cmd2
+        #print cmd2
         out, err = Ssh.execute_command(job_history_ip, 'root', 'Ignition01', cmd)
-        print cmd
+        #print cmd
         
         remotefile = '/tmp/'+job_id+'/'+job_id+'_conf.xml'
-        print remotefile
+        #print remotefile
         localfile = job_id+'_conf.xml'
-        print localfile
+        #print localfile
         
         Scp.get_file(job_history_ip, 'root', 'Ignition01', localfile, remotefile)
-        print out
-        print err
+        #print out
+        #print err
         
     def copyTPCLogFile(self, tpc_location_ip, tpc_file_name):
         Scp.get_file(tpc_location_ip, 'root', 'Ignition01', tpc_file_name, tpc_file_name)
@@ -55,7 +55,7 @@ class ReportBuilder():
     def getConfigParams(self, job_id, params):
         config_params = []
         my_file = job_id+'_conf.xml'
-        print my_file
+        #print my_file
         
         textfile = open(my_file)
         #params = config.params
@@ -79,14 +79,14 @@ class ReportBuilder():
             worksheet.write(row, 1, str(each.values()[0]))
             row += 1
 
-    def writeJobLogInfo(self, job_ids, worksheet):
+    def writeJobLogInfo(self, job_ids, worksheet, containers):
     
         job_file = open('jobLog.log')
         #row, col = 0
         #rows = ['B30', 'B31', 'B32']
         row = 29
-        print job_file
-        print job_ids
+        #print job_file
+        #print job_ids
         for line in job_file:
             #print line
             for job in job_ids:
@@ -94,13 +94,13 @@ class ReportBuilder():
                 if job in line:
                     #print line
                     row_data = line.split(' ')
-                    print row_data
+                    #print row_data
                     for each in row_data:
-                        print each
+                        #print each
                         if row_data.index(each) == 0:
-                            row_data[0] = each + ' ' + str('(max containers = )')
-                            print each
-                    print row_data
+                            row_data[0] = each + ' ' + str('(max containers = '+containers[job_ids.index(job)]+')')
+                            #print each
+                    #print row_data
                     worksheet.write_row(row, 0, row_data)
                     row += 1
     @staticmethod
@@ -109,7 +109,7 @@ class ReportBuilder():
         sf_int = []
         textfile = open(results_log)
         for line in textfile:
-            print line
+            #print line
             #time.sleep(1)
             if 'Performance Metric' in line:
                 time.sleep(3)
@@ -122,7 +122,7 @@ class ReportBuilder():
                     else:
                         sf_int.append(sf_result)
                         run_results.append(str(sf_result) + ' @' + sf)
-        print run_results
+        #print run_results
         # start_line = 36
         # row = start_line
         # for each in run_results:
@@ -162,6 +162,7 @@ class ReportBuilder():
         time_info = []
         job_info = []
         job_ids = []
+        containers = []
 
         textfile = open(results_file)
         for line in textfile:
@@ -205,7 +206,7 @@ class ReportBuilder():
                 ma = re.search("\((.+) seconds", runtime)
                 if ma:
                     runtime = ma.group(1)
-                    print runtime
+                    #print runtime
                 time_info.append(runtime)
             if 'runtime' in line and ('Sort' in line or 'sort' in line):
                 line = line.split(' | ')
@@ -213,7 +214,7 @@ class ReportBuilder():
                 ma = re.search("\((.+) seconds", runtime)
                 if ma:
                     runtime = ma.group(1)
-                    print runtime
+                    #print runtime
                 time_info.append(runtime)
             if 'runtime' in line and ('Validate' in line or 'validate' in line):
                 line = line.split(' | ')
@@ -221,10 +222,15 @@ class ReportBuilder():
                 ma = re.search("\((.+) seconds", runtime)
                 if ma:
                     runtime = ma.group(1)
-                    print runtime
+                    #print runtime
                 time_info.append(runtime)
-       
-        return time_info, job_info, job_ids
+
+            if '| Max Containers |' in line:
+                line = line.split(' | ')
+                value = line[-1]
+                containers.append(value)
+
+        return time_info, job_info, job_ids, containers
 
 
     def getMetric(self, job, node, metric, results_file):
@@ -239,7 +245,7 @@ class ReportBuilder():
                 #for each in row_data:
                 #    print each
                     #value.append(each)
-                print row_data[-1]
+                #print row_data[-1]
                 value.append(row_data[-1])
             
         return value
@@ -250,13 +256,13 @@ class ReportBuilder():
         location = config.report_location
         value = []
         #results_file = '/'+ location + '/' + results_file
-        print results_file
+        #print results_file
         textfile = open(results_file)
         for line in textfile:
             if job in line and node in line and metric in line:
                 # Split the input data based on 'bar'.
                 row_data = line.split(' | ')
-                print row_data[2]
+                #print row_data[2]
                 value.append(row_data[2])
             
         return value[0]
@@ -280,8 +286,8 @@ class ReportBuilder():
         
     def getResourceMetrics(self, worksheet, results_file):
         node = 'r3s1xd8.ignition.dell.'
-        jobs = ('TPC-HSGen', 'TPC-HSSort', 'TPC-HSValidate')
-        #jobs = ('gen', 'sort', 'validate')
+        #jobs = ('TPC-HSGen', 'TPC-HSSort', 'TPC-HSValidate')
+        jobs = ('gen', 'sort', 'validate')
         metrics = ('CPU Total', 'bytes_in', 'bytes_out', 'physical_memory_used', 'total_read_bytes_rate_across_disks', 'total_write_bytes_rate_across_disks')
 
         row = 36
@@ -291,6 +297,8 @@ class ReportBuilder():
                 bytes = ['bytes', 'KBs', 'MBs', 'GBs', 'TBs']
                 size = 0
                 value = float(self.getMetric(job, node, metric, results_file)[0])
+                print metric
+                print value
                 if metric != 'CPU Total':
                     while float(value) > 1024:
                         value = value/1024
@@ -388,7 +396,7 @@ class ReportBuilder():
         worksheet = workbook.add_worksheet()
         
         headers = bob.getHeaders(results_file)
-        print headers
+        #print headers
      
         bold = workbook.add_format({'bold': 1})
         left_format = workbook.add_format({'align': 'left'})
@@ -401,11 +409,11 @@ class ReportBuilder():
         start_line = 36
         row = start_line
         for each in sf_value:
-            print each
+            #print each
             worksheet.write(row, 5, str(each))  
             row += 1
 
-        print job_id
+        #print job_id
         #node = config.node # = 'r3s1xd8.ignition.dell.'
         history_location = config.history_location #'hdfs:///user/history/done/2016/01/20/000000/'
         print 'H loc: ' + str(history_location)
@@ -417,12 +425,12 @@ class ReportBuilder():
         bob.writeConfigParams(config_params, worksheet)
 
         bob.writeMetrics(worksheet)
-        print results_file
+        #print results_file
         a, b, = bob.getResourceMetrics(worksheet, results_file)
         worksheet.write(27, 0, a, bold)
         worksheet.write_row('B35', b, bold)
         
-        time_info, job_info, job_ids = bob.getJobInformation(results_file)
+        time_info, job_info, job_ids, containers = bob.getJobInformation(results_file)
         worksheet.write_row('B36', time_info)
 
         tsph = 0
@@ -431,7 +439,7 @@ class ReportBuilder():
         tsph = 30*3600/tsph
         worksheet.write(35, 5, tsph, left_format)
 
-        bob.writeJobLogInfo(job_ids, worksheet)
+        bob.writeJobLogInfo(job_ids, worksheet, containers)
 
         worksheet.set_column('A:A', 50)
         worksheet.set_column('B28:B38', 24)
@@ -463,7 +471,7 @@ class ReportBuilder():
         file_2 = 'File_2.log'
         results_log = open(results_log)
         header = results_log.readline()
-        print header
+        #print header
         a = open(file_1, 'w+')
         a.write(header + "\n")
         b = open(file_2, 'w+')
@@ -473,7 +481,7 @@ class ReportBuilder():
 
         # write the contents from the results log into file_1 and file_2
         for line in results_log:
-            print line
+            #print line
             if second_file == False:
                 a = open(file_1, 'a')
                 a.write(line)# + "\n")

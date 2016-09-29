@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# (c) 2015-2016 Dell
+# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,9 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from selenium import webdriver
-from selenium.webdriver.support.select import Select
-from selenium.webdriver.common.keys import Keys
+try:
+    from selenium import webdriver
+    from selenium.webdriver.support.select import Select
+    from selenium.webdriver.common.keys import Keys
+except ImportError:
+    pass
 
 import time
 
