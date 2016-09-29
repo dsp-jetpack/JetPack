@@ -71,3 +71,13 @@ class NetworkHelper:
     def get_management_network():
         net_envt = NetworkHelper._get_net_envt()
         return IPNetwork(net_envt['parameter_defaults']['ManagementNetCidr'])
+
+    @staticmethod
+    def get_management_network_pools():
+        net_envt = NetworkHelper._get_net_envt()
+        return net_envt['parameter_defaults']['ManagementAllocationPools']
+
+    @staticmethod
+    def get_management_network_gateway():
+        net_envt = NetworkHelper._get_net_envt()
+        return net_envt['parameter_defaults']['ManagementNetworkGateway']

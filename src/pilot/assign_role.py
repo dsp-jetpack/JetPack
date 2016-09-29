@@ -31,6 +31,7 @@ from dracclient.exceptions import DRACOperationFailed, \
     DRACUnexpectedReturnValue, WSManInvalidResponse, WSManRequestFailure
 from oslo_utils import units
 from credential_helper import CredentialHelper
+from logging_helper import LoggingHelper
 import requests
 try:  # OSP8
     from ironicclient.openstack.common.apiclient.exceptions import NotFound
@@ -124,20 +125,13 @@ def parse_arguments():
                         default="~/pilot/flavors_settings.json",
                         help="file that contains flavor settings",
                         metavar="FILENAME")
-    parser.add_argument("-l",
-                        "--logging-level",
-                        default="INFO",
-                        type=logging_level,
-                        help="""logging level defined by the logging module;
-                                choices include CRITICAL, ERROR, WARNING, INFO,
-                                and DEBUG""",
-                        metavar="LEVEL")
     parser.add_argument("-n",
                         "--node-definition",
                         default="~/instackenv.json",
                         help="""node definition template file that defines the
                                 node being assigned""",
                         metavar="FILENAME")
+    LoggingHelper.add_argument(parser)
 
     return parser.parse_args()
 
@@ -162,25 +156,6 @@ def role_index(string):
             "{} is not a valid role index; it must be a number".format(index))
 
     return RoleIndex(role, index)
-
-
-def logging_level(string):
-    string_level = string
-
-    try:
-        # Convert to upper case to allow the user to specify
-        # --logging-level=DEBUG or --logging-level=debug.
-        numeric_level = getattr(logging, string_level.upper())
-    except AttributeError:
-        raise argparse.ArgumentTypeError(
-            "Unknown logging level: {}".format(string_level))
-
-    if not isinstance(numeric_level, (int, long)) or int(numeric_level) < 0:
-        raise argparse.ArgumentTypeError(
-            "Logging level not a nonnegative integer: {!r}".format(
-                numeric_level))
-
-    return numeric_level
 
 
 def get_model_properties(fqdd, json_filename):
