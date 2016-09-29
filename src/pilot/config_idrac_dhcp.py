@@ -30,7 +30,7 @@ logging.basicConfig()
 LOG = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
 
-def parse_arguments():
+def parse_arguments(sah_user):
     parser = argparse.ArgumentParser(
         description="Configures DHCP server on SAH node for use by iDRACs.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -39,24 +39,26 @@ def parse_arguments():
                                 provisioning network""")
     parser.add_argument("-p",
                         "--password",
-                        help="The root password of the SAH node")
+                        help="The {} password of the SAH node".format(
+                             sah_user))
     LoggingHelper.add_argument(parser)
 
     return parser.parse_args()
 
 
 def main():
-    args = parse_arguments()
+    sah_user = "root"
+    args = parse_arguments(sah_user)
 
     root_logger = logging.getLogger()
     root_logger.setLevel(args.logging_level)
     paramiko_logger = logging.getLogger("paramiko")
     paramiko_logger.setLevel(logging.WARN)
 
-    sah_user = "root"
     sah_password = args.password
     if not sah_password:
-        sah_password = getpass("Enter the root password of the SAH node: ")
+        sah_password = getpass("Enter the password for the "
+                               "{} user of the SAH node: ".format(sah_user))
 
     management_net = NetworkHelper.get_management_network()
 
@@ -94,15 +96,19 @@ def main():
     file_text = re.sub("[ \t]*range[ \t]+POOL_START[ \t]+POOL_END;\n",
                        range_lines, file_text)
 
-    with open(dhcp_conf, 'w') as file:
-        file.write(file_text)
+    try:
+        with open(dhcp_conf, 'w') as file:
+            file.write(file_text)
+    except IOError:
+        LOG.exception("Could not open {} for writing.".format(dhcp_conf))
+        sys.exit(1)
 
     # scp dhcp.conf to the SAH
     dest_dhcp_conf = "/etc/dhcp/dhcpd.conf"
     LOG.info("Copying {} to {}@{}:{}".format(dhcp_conf, sah_user, args.sah_ip,
              dest_dhcp_conf))
     Scp.put_file(args.sah_ip, dhcp_conf, dest_dhcp_conf,
-                 user="root", password=sah_password)
+                 user=sah_user, password=sah_password)
 
     # The dhcp service will not start without an existing leases file,
     # so touch it to make sure it exists before starting the service
@@ -111,7 +117,7 @@ def main():
     exit_code, std_out, std_err = Ssh.execute_command(
         args.sah_ip,
         "touch " + dhcp_leases,
-        user="root",
+        user=sah_user,
         password=sah_password)
     if exit_code != 0:
         LOG.error("Unable to touch {}:{}: {}".format(args.sah_ip,
@@ -124,7 +130,7 @@ def main():
     exit_code, std_out, std_err = Ssh.execute_command(
         args.sah_ip,
         "systemctl enable dhcpd",
-        user="root",
+        user=sah_user,
         password=sah_password)
     if exit_code != 0:
         LOG.error("Unable to enable dhcpd on {}: {}".format(args.sah_ip,
@@ -135,7 +141,7 @@ def main():
     exit_code, std_out, std_err = Ssh.execute_command(
         args.sah_ip,
         "systemctl restart dhcpd",
-        user="root",
+        user=sah_user,
         password=sah_password)
     if exit_code != 0:
         LOG.error("Unable to restart dhcpd on {}: {}".format(args.sah_ip,
