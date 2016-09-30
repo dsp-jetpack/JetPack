@@ -26,6 +26,7 @@ class NodeConf():
         self.is_switch = False
         self.hostname = None
         self.idrac_ip = None
+        self.service_tag = None
         self.root_password = None
         self.external_ip = None
         self.public_api_gateway = None

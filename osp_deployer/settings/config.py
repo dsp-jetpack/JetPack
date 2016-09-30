@@ -82,6 +82,11 @@ class Settings():
             'management_network']
         self.managment_vlanid = cluster['managment_vlanid']
         self.managment_netmask = cluster['managment_netmask']
+        self.management_gateway = cluster['management_gateway']
+        self.management_allocation_pool_start = cluster[
+            'management_allocation_pool_start']
+        self.management_allocation_pool_end = cluster[
+            'management_allocation_pool_end']
         self.name_server = cluster['name_server']
         self.storage_cluster_vlanid = cluster[
             'storage_cluster_vlanid']
@@ -93,9 +98,9 @@ class Settings():
             'discovery_ip_range']
         self.tenant_network = cluster.get('tenant_network')
         self.tenant_network_allocation_pool_start = cluster.get(
-                                      'tenant_network_allocation_pool_start')
+            'tenant_network_allocation_pool_start')
         self.tenant_network_allocation_pool_end = cluster.get(
-                                      'tenant_network_allocation_pool_end')
+            'tenant_network_allocation_pool_end')
         self.tenant_vlan_range = cluster.get('tenant_vlan_range')
         self.director_install_account_user = cluster[
             'director_install_user']
