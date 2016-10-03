@@ -16,6 +16,7 @@
 
 import logging
 import paramiko
+import subprocess
 
 logger = logging.getLogger(__name__)
 
@@ -66,15 +67,33 @@ class Ssh():
 
             client.connect(address, username=user, password=password,
                            pkey=pkey)
-            stdin, ss_stdout, ss_stderr = client.exec_command(command)
-            r_out, r_err = ss_stdout.read(), ss_stderr.read()
-            exit_code = ss_stdout.channel.recv_exit_status()
+            stdin_stream, stdout_stream, stderr_stream = client.exec_command(command)
+            stdout, stderr = stdout_stream.read(), stderr_stream.read()
+            exit_code = stdout_stream.channel.recv_exit_status()
             logger.debug("exit_code: " + str(exit_code))
-            logger.debug("stdout: " + r_out)
-            logger.debug("stderr: " + r_err)
+            logger.debug("stdout: " + stdout)
+            logger.debug("stderr: " + stderr)
             client.close()
         except IOError:
             logger.warning(".. host " + address + " is not up")
             return "host not up"
 
-        return exit_code, r_out, r_err
+        return exit_code, stdout, stderr
+
+
+class Exec():
+
+    @staticmethod
+    def execute_command(cmd):
+        logger.debug("Executing command: " + str(cmd))
+        process = subprocess.Popen(cmd,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+        stdout, stderr = process.communicate()
+        exit_code = process.returncode
+        logger.debug("Got back:\n" +
+                     "    returncode=" + str(process.returncode) + "\n"
+                     "    stdout=" + stdout +
+                     "    stderr=" + stderr)
+
+        return exit_code, stdout, stderr

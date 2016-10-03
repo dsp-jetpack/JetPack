@@ -24,7 +24,6 @@ from command_helper import Ssh
 from getpass import getpass
 from logging_helper import LoggingHelper
 from network_helper import NetworkHelper
-from paramiko import RSAKey
 
 logging.basicConfig()
 LOG = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])

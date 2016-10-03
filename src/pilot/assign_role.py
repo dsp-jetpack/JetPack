@@ -31,7 +31,9 @@ from dracclient.exceptions import DRACOperationFailed, \
     DRACUnexpectedReturnValue, WSManInvalidResponse, WSManRequestFailure
 from oslo_utils import units
 from credential_helper import CredentialHelper
+from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
+import network_helper
 import requests
 try:  # OSP8
     from ironicclient.openstack.common.apiclient.exceptions import NotFound
@@ -43,7 +45,7 @@ discover_nodes_path = os.path.join(os.path.expanduser('~'),
                                    'pilot/discover_nodes')
 sys.path.append(discover_nodes_path)
 
-from discover_nodes.dracclient import client as discover_nodes_dracclient  # noqa
+from discover_nodes.dracclient.client import DRACClient # noqa
 
 requests.packages.urllib3.disable_warnings()
 
@@ -96,9 +98,10 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Assigns role to Overcloud node.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("ip_or_mac",
-                        help="""IP address of the iDRAC or MAC address of the
-                                interface on the provisioning network""",
+    parser.add_argument("ip_mac_service_tag",
+                        help="""IP address of the iDRAC, or MAC address of the
+                                interface on the provisioning network,
+                                or service tag of the node""",
                         metavar="ADDRESS")
     parser.add_argument("role_index",
                         type=role_index,
@@ -246,52 +249,11 @@ def merge_two_dicts(x, y):
     return z
 
 
-def get_ironic_client():
-    os_auth_url, os_tenant_name, os_username, os_password = \
-        CredentialHelper.get_undercloud_creds()
-
-    kwargs = {'os_username': os_username,
-              'os_password': os_password,
-              'os_auth_url': os_auth_url,
-              'os_tenant_name': os_tenant_name}
-    return ironicclient.client.get_client(1, **kwargs)
-
-
-def get_ironic_node(ironic_client, ip_or_mac):
-    node = None
-
-    if ":" in ip_or_mac:
-        try:
-            port = ironic_client.port.get_by_address(ip_or_mac)
-        except NotFound:
-            pass
-        else:
-            node = ironic_client.node.get(port.node_uuid)
-    else:
-        for n in ironic_client.node.list(
-            fields=[
-                "driver",
-                "driver_info",
-                "uuid"]):
-            drac_ip, _ = CredentialHelper.get_drac_ip_and_user(n)
-
-            if drac_ip == ip_or_mac:
-                node = n
-                break
-
-    if node is None:
-        LOG.critical("Unable to find node {}".format(ip_or_mac))
-
-    return node
-
-
 def get_drac_client(node_definition_filename, node):
     drac_ip, drac_user, drac_password = \
         CredentialHelper.get_drac_creds_from_node(node,
                                                   node_definition_filename)
-    drac_client = discover_nodes_dracclient.DRACClient(drac_ip,
-                                                       drac_user,
-                                                       drac_password)
+    drac_client = DRACClient(drac_ip, drac_user, drac_password)
     # TODO: Validate the IP address is an iDRAC.
     #
     #       This could detect an error by an off-roading user who provided an
@@ -343,12 +305,13 @@ def get_pxe_nic_fqdd_from_model_properties(model_properties, drac_client):
         return None
 
 
-def assign_role(ip_or_mac, node_uuid, role_index, ironic_client, drac_client):
+def assign_role(ip_mac_service_tag, node_uuid, role_index, ironic_client,
+                drac_client):
     flavor = ROLES[role_index.role]
 
     LOG.info(
         "Setting role for {} to {}, flavor {}".format(
-            ip_or_mac,
+            ip_mac_service_tag,
             role_index.role,
             flavor))
 
@@ -693,11 +656,12 @@ def main():
         if bios_settings is None:
             sys.exit(1)
 
-        ironic_client = get_ironic_client()
+        ironic_client = IronicHelper.get_ironic_client()
 
-        node = get_ironic_node(ironic_client, args.ip_or_mac)
-
+        node = IronicHelper.get_ironic_node(ironic_client,
+                                            args.ip_mac_service_tag)
         if node is None:
+            LOG.critical("Unable to find node {}".format(ip_mac_service_tag))
             sys.exit(1)
 
         drac_client = get_drac_client(args.node_definition, node)
@@ -711,7 +675,7 @@ def main():
             sys.exit(1)
 
         assign_role(
-            args.ip_or_mac,
+            args.ip_mac_service_tag,
             node.uuid,
             args.role_index,
             ironic_client,
