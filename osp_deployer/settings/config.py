@@ -19,6 +19,8 @@ import sys
 import logging
 import os
 import json
+import subprocess
+import os
 from osp_deployer.node_conf import NodeConf
 
 logger = logging.getLogger("osp_deployer")
@@ -399,3 +401,33 @@ class Settings():
                 logger.debug("exception on %s!" % option)
                 dictr[option] = None
         return dictr
+
+    def get_version_info(self):
+        # Grab the source version info from either built .tar or git
+        try:
+            deploy_release_txt = "/root/JetStream/deploy-auto/release.txt"
+            if os.path.isfile(deploy_release_txt):
+                d_a = open(deploy_release_txt, 'r').read()
+            else:
+                cmd = "cd /root/JetStream/deploy-auto;" + \
+                      "git log | grep -m 1 'commit'"
+                d_a = subprocess.check_output(cmd,
+                                              stderr=subprocess.STDOUT,
+                                              shell=True).rstrip()
+            cloud_repo_release_txt = "/root/JetStream/cloud_repo/release.txt"
+            if os.path.isfile(cloud_repo_release_txt):
+                c_r = open(cloud_repo_release_txt, 'r').read()
+            else:
+                cmd = "cd /root/JetStream/cloud_repo;" + \
+                      "git log | grep -m 1 'commit'"
+                c_r = subprocess.check_output(cmd,
+                                              stderr=subprocess.STDOUT,
+                                              shell=True).rstrip()
+
+            self.deploy_auto_version = d_a
+            self.cloud_repo_version = c_r
+        except:
+            logger.debug("unconventional setup...can t" +
+                         " pick source version info")
+            self.deploy_auto_version = "????"
+            self.cloud_repo_version = "????"

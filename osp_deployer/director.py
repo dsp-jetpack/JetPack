@@ -1071,6 +1071,10 @@ class Director(InfraHost):
                                overcloud_endpoint)
                 ip_info.append("OverCloud admin password : " +
                                overcloud_pass)
+                ip_info.append("cloud_repo # " +
+                               self.settings.cloud_repo_version)
+                ip_info.append("deploy-auto # " +
+                               self.settings.deploy_auto_version)
             except:
                 pass
             ip_info.append("====================================")
