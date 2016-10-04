@@ -118,6 +118,9 @@ def deploy():
         settings = Settings(args.settings)
         logger.info("Settings .ini: " + settings.settings_file)
         logger.info("Settings .properties " + settings.network_conf)
+        settings.get_version_info()
+        logger.info("cloud_repo # : " + settings.cloud_repo_version)
+        logger.info("deploy-auto # : " + settings.deploy_auto_version)
 
         tester = Checkpoints()
         tester.verify_deployer_settings()
