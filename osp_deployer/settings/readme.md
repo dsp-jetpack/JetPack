@@ -38,7 +38,6 @@
 * 6.0.0.d - Removed settings :
                . sah_kickstart
                . rhel_install_location
-               . rhl72_iso
 
 #####settings.properties
 * 6.0.0.a - Initial 6.0 version
