@@ -67,7 +67,7 @@ class Ssh():
 
             client.connect(address, username=user, password=password,
                            pkey=pkey)
-            stdin_stream, stdout_stream, stderr_stream = client.exec_command(command)
+            _, stdout_stream, stderr_stream = client.exec_command(command)
             stdout, stderr = stdout_stream.read(), stderr_stream.read()
             exit_code = stdout_stream.channel.recv_exit_status()
             logger.debug("exit_code: " + str(exit_code))
@@ -92,8 +92,8 @@ class Exec():
         stdout, stderr = process.communicate()
         exit_code = process.returncode
         logger.debug("Got back:\n" +
-                     "    returncode=" + str(process.returncode) + "\n"
-                     "    stdout=" + stdout +
-                     "    stderr=" + stderr)
+                     "    returncode={}".format(str(process.returncode)) + "\n"
+                     "    stdout={}".format(stdout) +
+                     "    stderr={}".format(stderr))
 
         return exit_code, stdout, stderr
