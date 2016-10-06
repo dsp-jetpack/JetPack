@@ -32,7 +32,6 @@ from oslo_utils import units
 from credential_helper import CredentialHelper
 from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
-import network_helper
 import requests
 try:  # OSP8
     from ironicclient.openstack.common.apiclient.exceptions import NotFound

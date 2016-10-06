@@ -91,9 +91,10 @@ class Exec():
                                    stderr=subprocess.PIPE)
         stdout, stderr = process.communicate()
         exit_code = process.returncode
-        logger.debug("Got back:\n" +
-                     "    returncode={}".format(str(process.returncode)) + "\n"
-                     "    stdout={}".format(stdout) +
-                     "    stderr={}".format(stderr))
+        logger.debug("Got back:\n"
+                     "    returncode={}\n"
+                     "    stdout={}\n"
+                     "    stderr={}".format(str(process.returncode),
+                                            stdout, stderr))
 
         return exit_code, stdout, stderr
