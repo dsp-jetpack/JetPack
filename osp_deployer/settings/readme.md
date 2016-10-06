@@ -20,6 +20,8 @@
 
 #####settings.ini:
 * 7.0.0.a - Initial 7.0 version
+* 7.0.0.b - Added management network related settings : management_gateway, management_allocation_pool_start, management_allocation_pool_end
 
 #####settings.properties
 * 7.0.0.a - Initial 7.0 version. Added optional property for specifying the PXE NIC for overcloud nodes, pxe_nic. Its value should be a NIC fully qualified device descriptor (FQDD), e.g., NIC.Integrated.1-3. For use when the overcloud's networking does not conform to the Reference Architecture. It is disregarded when in the configuration of the SAH or an undercloud node.
+* 7.0.0.b - Added option service_tag property for use when putting servers in that have iDRACs configured to use DHCP
