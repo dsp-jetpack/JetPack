@@ -29,7 +29,7 @@ logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Loads nodes into Ironic.",
+        description="Loads nodes into ironic.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     instackenv_path = os.path.join(os.path.expanduser('~'),
@@ -55,9 +55,9 @@ def main():
     urllib3_logger.setLevel(logging.WARN)
 
     # Load the nodes into ironic
-    logger.info("Importing {} into Ironic".format(args.node_definition))
-    cmd=["openstack", "baremetal", "import", "--json", args.node_definition]
-    exit_code, stdout, stderr = Exec.execute_command(cmd)
+    logger.info("Importing {} into ironic".format(args.node_definition))
+    cmd = ["openstack", "baremetal", "import", "--json", args.node_definition]
+    exit_code, _, stderr = Exec.execute_command(cmd)
     if exit_code != 0:
         logger.error("Failed to import nodes into ironic: {}".format(stderr))
         sys.exit(1)
@@ -65,11 +65,11 @@ def main():
     # Load the instack file
     try:
         json_file = os.path.expanduser(args.node_definition)
-        instackenv_json = open(json_file, 'r')
-        instackenv = json.load(instackenv_json)
-        instackenv_json.close()
-    except IOError:
-        logger.exception("Failed to load node definition file {}".format(args.node_definition))
+        with open(json_file, 'r') as instackenv_json:
+            instackenv = json.load(instackenv_json)
+    except IOError, ValueError:
+        logger.exception("Failed to load node definition file {}".format(
+                         args.node_definition))
         sys.exit(1)
 
     nodes = instackenv["nodes"]
@@ -78,7 +78,8 @@ def main():
     for node in nodes:
         # Find the node in ironic
         ironic_client = IronicHelper.get_ironic_client()
-        ironic_node = IronicHelper.get_ironic_node(ironic_client, node["pm_addr"])
+        ironic_node = IronicHelper.get_ironic_node(ironic_client,
+                                                   node["pm_addr"])
 
         # Set the model and service tag on the node
         logger.info("Setting model ({}) and service tag ({}) on {}".format(

@@ -24,7 +24,6 @@ import os
 import sys
 from time import sleep
 
-import ironicclient
 from dracclient import utils
 from dracclient.constants import POWER_OFF
 from dracclient.exceptions import DRACOperationFailed, \
@@ -33,7 +32,6 @@ from oslo_utils import units
 from credential_helper import CredentialHelper
 from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
-import network_helper
 import requests
 try:  # OSP8
     from ironicclient.openstack.common.apiclient.exceptions import NotFound
@@ -45,7 +43,7 @@ discover_nodes_path = os.path.join(os.path.expanduser('~'),
                                    'pilot/discover_nodes')
 sys.path.append(discover_nodes_path)
 
-from discover_nodes.dracclient.client import DRACClient # noqa
+from discover_nodes.dracclient.client import DRACClient  # noqa
 
 requests.packages.urllib3.disable_warnings()
 
@@ -99,7 +97,7 @@ def parse_arguments():
         description="Assigns role to Overcloud node.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("ip_mac_service_tag",
-                        help="""IP address of the iDRAC, or MAC address of the
+                        help="""IP address of the iDRAC, MAC address of the
                                 interface on the provisioning network,
                                 or service tag of the node""",
                         metavar="ADDRESS")
@@ -661,7 +659,8 @@ def main():
         node = IronicHelper.get_ironic_node(ironic_client,
                                             args.ip_mac_service_tag)
         if node is None:
-            LOG.critical("Unable to find node {}".format(ip_mac_service_tag))
+            LOG.critical("Unable to find node {}".format(
+                         args.ip_mac_service_tag))
             sys.exit(1)
 
         drac_client = get_drac_client(args.node_definition, node)
