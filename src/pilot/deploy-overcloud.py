@@ -371,6 +371,10 @@ def main():
                         args.ntp_server_fqdn,
                         args.vlan_range)
 
+        with open(os.path.join(home_dir, 'pilot', 'overcloud_deploy_cmd.log'),
+                  'w') as f:
+            f.write(cmd.replace(' -', ' \\\n -'))
+            f.write('\n')
         print cmd
         start = time.time()
         status = run_deploy_command(cmd)
