@@ -29,6 +29,34 @@ resources:
         #!/bin/bash
         if [[ $HOSTNAME =~ "cephstorage" ]]; then
         {
+          # LVM partitions are always in use by the kernel.  Destroy all of the
+          # LVM components here so the disks are not in use and sgdisk and
+          # partprobe can do their thing
+
+          # Destroy all the logical volumes
+          lvs --noheadings -o lv_name | awk '{print $1}' | while read lv;
+          do
+              cmd="lvremove -f $lv"
+              echo $cmd
+              $cmd
+          done
+
+          # Destroy all the volume groups
+          vgs --noheadings -o vg_name | awk '{print $1}' | while read lvg;
+          do
+              cmd="vgremove -f $lvg"
+              echo $cmd
+              $cmd
+          done
+
+          # Destroy all the physical volumes
+          pvs --noheadings -o pv_name | awk '{print $1}' | while read pv;
+          do
+              cmd="pvremove -ff $pv"
+              echo $cmd
+              $cmd
+          done
+
           lsblk -dno NAME,TYPE | \
           while read disk type; do
             # Skip if the device type isn't "disk" or if it's mounted
