@@ -11,10 +11,17 @@ from reportbuilder import ReportBuilder
 
 bob = ReportBuilder()
  
-tpc_size = '30TB'
-report_job_id = 'job_1460938781401_0284'
-results_file = 'Results-100GB T26.log'
-scale_factor = '100GB'#convertToSF(tpc_size)
+tpc_size = '1TB'
+#report_job_id = 'job_1475246076038_0050'
+report_job_id = 'job_1475246076038_0083'
+
+#results_file = 'Results-10000000000 T3.log'
+#results_file = 'Results-SF1 T5.log'
+#results_file = 'TPCx-HS-result-1TB.log'
+results_file = 'Results-1TB T1.log'
+
+
+scale_factor = '1TB'#convertToSF(tpc_size)
 
 print report_job_id
 print results_file

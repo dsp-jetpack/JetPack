@@ -15,13 +15,14 @@ from cm_api.api_client import ApiResource
 import dateutil.parser
 from datetime import timedelta
 from auto_common import *
-from sandbox import ConfigStamp, ReportBuilder
+from hadoop_performance import ConfigStamp, ReportBuilder
 from shutil import copyfile
 
 def getMaxContainers(start, finish):
-    cm_api_ip = '172.16.14.156'
+    cm_api_ip = '172.16.30.13'
     session = ApiResource(cm_api_ip, 7180, 'admin', 'admin', version=6)
-    offset_hours = datetime.timedelta(hours=4)
+    #offset_hours = datetime.timedelta(hours=4)
+    offset_hours = datetime.timedelta(hours=5)
     start = start - offset_hours
     finish = finish - offset_hours
     print start
@@ -245,7 +246,8 @@ def get_other_cpu_stats(timestamp, host):
     cm_api_ip = config.cm_api_ip
     clustername = config.cluster_name
     offset = config.time_offset
-    offset = 4
+    #offset = 4
+    offset = 5
     cpu_stats = ('cpu_soft_irq_rate', 'cpu_iowait_rate', 'cpu_irq_rate', 'cpu_system_rate')
     session = ApiResource(cm_api_ip, 7180, 'admin', 'admin', version=5)
     data = []
@@ -416,6 +418,8 @@ def teragen(rowNumber, folderName):
     print 'Running ' + cmd
     debugLog(cmd)
     cl_stdoutd, cl_stderrd = Ssh.execute_command(hadoop_ip, usr, pwd, cmd)
+    print cl_stdoutd
+    print 'out-err: ' + str(cl_stderrd) 
     return (cl_stdoutd, cl_stderrd)
 
 
@@ -478,10 +482,12 @@ def tpc_benchmark(tpc_size):
     usr = 'root'
     pwd = 'Ignition01'
     cl_stdoutd, cl_stderrd = Ssh.execute_command(tpc_node_ip, usr, pwd, cmd)
+    #Ssh.execute_command(tpc_node_ip, usr, pwd, cmd)
     print cmd
-    print 'TPC error: ' + str(cl_stderrd)
-    print 'TPC output: ' + str(cl_stdoutd)
-    return (cl_stdoutd, cl_stderrd)
+    #print 'TPC error: ' + str(cl_stderrd)
+    #print 'TPC output: ' + str(cl_stdoutd)
+
+    return cl_stdoutd, cl_stderrd
 
 
 def convertToSF(tpc_size):
@@ -552,7 +558,8 @@ def renameFile(old_name, new_name):
 def get_cloudera_dataNodesAverage(cm_api_ip, dataNodes, stat, time_start, time_end, cluster_name):
     config = importlib.import_module('config_cdh5')
     offset = config.time_offset
-    offset = 4
+    #offset = 4
+    offset = 5
     session = ApiResource(cm_api_ip, 7180, 'admin', 'admin', version=6)
     avg = 0.0
     DataNodesCount = 0
@@ -659,12 +666,13 @@ def get_ganglia_datanodesAverage(dataNodes, stat, start_epoch, end_epoch, crowba
 def rrdtoolXtract(start, end, metric, host, crowbar_admin_ip, time_offset):
     config = importlib.import_module('config_cdh5')
     location = config.ganglia_stat_locations
+    #time_offset = 5
     time_offset = 5
     offset = time_offset * 60 * 60
     start = start - offset
     end = end - offset
     usr = 'root'
-    pwd = 'DellCloud'
+    pwd = 'Ignition01'
     cmd = 'rrdtool fetch ' + location + '' + str(host) + '/' + metric + '.rrd AVERAGE -s ' + str(start) + ' -e ' + str(end)
     cl_stdoutd, cl_stderrd = Ssh.execute_command(crowbar_admin_ip, usr, pwd, cmd)
     return (cl_stdoutd, cl_stderrd)
@@ -730,7 +738,8 @@ def getJobStartFinishTimes(job_id, start_time, end_time):
 
 def run_teragen_job(rowCount):
     randFolderName = str(uuid.uuid4())
-    offset = datetime.timedelta(seconds=3600)
+    #offset = datetime.timedelta(seconds=3600)
+    offset = datetime.timedelta(seconds=0)
     timeA = datetime.datetime.now() + offset
     bla = teragen(rowCount, randFolderName)
     time.sleep(80)
@@ -754,7 +763,8 @@ def run_teragen_job(rowCount):
 
 def run_terasort_job(target_folder):
     print 'run_TS'
-    offset = datetime.timedelta(seconds=3600)
+    #offset = datetime.timedelta(seconds=3600)
+    offset = datetime.timedelta(seconds=0)
     timeA = datetime.datetime.now() + offset
     print timeA
     bla = terasort(target_folder)
@@ -776,8 +786,10 @@ def run_terasort_job(target_folder):
 
 def run_teravalidate_job(target_folder):
     print 'run_TV'
-    offset = datetime.timedelta(seconds=3600)
-    offset2 = datetime.timedelta(seconds=3600)
+    #offset = datetime.timedelta(seconds=3600)
+    offset = datetime.timedelta(seconds=0)
+    #offset2 = datetime.timedelta(seconds=3600)
+    offset2 = datetime.timedelta(seconds=0)
     timeA = datetime.datetime.now() + offset
     print timeA
     bla = teravalidate(target_folder)
@@ -827,10 +839,7 @@ def run_tpc_benchmark(tpc_size):
         finish_times.append(finish)
         job_names.append(job_name)
 
-    return (job_ids,
-     job_names,
-     start_times,
-     finish_times)
+    return job_ids, job_names, start_times, finish_times
 
 
 def logStats(arch_file, job_type, data_nodes, start, finish, rowCount, start_epoch, finish_epoch):
@@ -907,6 +916,8 @@ def main():
     stamp = ConfigStamp()
     print 'Connected to CM host on ' + cm_api_ip
     CLUSTER = API.get_cluster(cluster_name)
+    #stamp.updateConfig(CLUSTER)
+    #stamp.restartCluster(CLUSTER)
     log(arch_file, '[[[ Teragen tests ]]]')
     for rowCount in rowCountsBatchValues:
         log(arch_file, '[[ Teragen Row Count Cycle  ' + str(rowCount) + ']]')
@@ -985,7 +996,7 @@ def main():
             log(arch_file, job_name + ' | Cloudera | ' + str(tpc_size) + ' | job | runtime | ' + str(run_time) + ' (' + str(runTime) + ' seconds)')
             logStats(arch_file, job_name, data_nodes, start, finish, tpc_size, start_epoch, finish_epoch)
             max_containers = getMaxContainers(start, finish)
-            log(arch_file, 'Max Containers: ' + max_containers)
+            log(arch_file, job_name + ' | Cloudera | Max Containers | ' + str(max_containers))
             if job_ids.index(job) == 2:
                 log(arch_file, '**********  end of run one   ***********')
 

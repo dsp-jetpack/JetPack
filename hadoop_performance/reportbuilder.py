@@ -43,7 +43,8 @@ class ReportBuilder():
         #print remotefile
         localfile = job_id+'_conf.xml'
         #print localfile
-        
+
+        #** put this back in after Report testing.
         Scp.get_file(job_history_ip, 'root', 'Ignition01', localfile, remotefile)
         #print out
         #print err
@@ -84,23 +85,24 @@ class ReportBuilder():
         job_file = open('jobLog.log')
         #row, col = 0
         #rows = ['B30', 'B31', 'B32']
+        print containers
         row = 29
-        #print job_file
-        #print job_ids
+        print job_file
+        print job_ids
         for line in job_file:
-            #print line
+            print line
             for job in job_ids:
-                #print 'job: ' + str(job)
+                print 'job: ' + str(job)
                 if job in line:
-                    #print line
+                    print line
                     row_data = line.split(' ')
-                    #print row_data
+                    print row_data
                     for each in row_data:
-                        #print each
+                        print each
                         if row_data.index(each) == 0:
                             row_data[0] = each + ' ' + str('(max containers = '+containers[job_ids.index(job)]+')')
-                            #print each
-                    #print row_data
+                            print each
+                    print row_data
                     worksheet.write_row(row, 0, row_data)
                     row += 1
     @staticmethod
@@ -226,9 +228,14 @@ class ReportBuilder():
                 time_info.append(runtime)
 
             if '| Max Containers |' in line:
+                print line
+                time.sleep(2)
                 line = line.split(' | ')
                 value = line[-1]
                 containers.append(value)
+            #else:
+            #    if containers
+            #    containers.append('0.0')
 
         return time_info, job_info, job_ids, containers
 
@@ -238,16 +245,44 @@ class ReportBuilder():
         # results_file = config.results_file # 'SF1-3 resultsB.txt'
         value = []
         textfile = open(results_file)
+
         for line in textfile:
+            print line
+            #time.sleep(1)
             if job in line and node in line and metric in line:
+                print 'found string'
+                print line
+                #time.sleep(3)
+                print job, node, metric
+                #else:
                 # Split the input data based on 'bar'.
                 row_data = line.split(' | ')
                 #for each in row_data:
                 #    print each
                     #value.append(each)
                 #print row_data[-1]
+                value = []
                 value.append(row_data[-1])
-            
+                print row_data[-1]
+                print len(value)
+                #time.sleep(1)
+                print 'value: ' +str(value)
+                #return value
+
+            else:
+                if len(value) == 0:
+                    #print line
+                    print 'empty line'
+                    value = [0]
+                    #print job, node, metric
+                    #return value
+
+             #print len(value)
+
+             #if len(value) > 0:
+             #   return value
+             #else:
+             #    value.append(0)
         return value
 
     def getSF(self, job, node, metric, results_file):
@@ -258,8 +293,14 @@ class ReportBuilder():
         #results_file = '/'+ location + '/' + results_file
         #print results_file
         textfile = open(results_file)
+        time.sleep(1)
+        print 'searching for SF in: '
+        print job, node, metric, results_file
+        time.sleep(1)
         for line in textfile:
             if job in line and node in line and metric in line:
+                print line
+                time.sleep(1)
                 # Split the input data based on 'bar'.
                 row_data = line.split(' | ')
                 #print row_data[2]
@@ -285,11 +326,19 @@ class ReportBuilder():
         return row_size
         
     def getResourceMetrics(self, worksheet, results_file):
-        node = 'r3s1xd8.ignition.dell.'
-        #jobs = ('TPC-HSGen', 'TPC-HSSort', 'TPC-HSValidate')
-        jobs = ('gen', 'sort', 'validate')
+        cdh_config = importlib.import_module('config_cdh5')
+        config = importlib.import_module('config_reports')
+        tpc_flag = cdh_config.tpc_flag
+        node = config.node
+        xbb_flag = cdh_config.xbb_flag
+        if tpc_flag == 'true':
+            jobs = ('TPC-HSGen', 'TPC-HSSort', 'TPC-HSValidate')
+        elif xbb_flag == 'true':
+            jobs = ('to', 'be', 'decided')
+        else:
+            jobs = ('gen', 'sort', 'validate')
         metrics = ('CPU Total', 'bytes_in', 'bytes_out', 'physical_memory_used', 'total_read_bytes_rate_across_disks', 'total_write_bytes_rate_across_disks')
-
+        
         row = 36
         for metric in metrics:
             col = 1
@@ -313,7 +362,9 @@ class ReportBuilder():
                 worksheet.write(row, col, str(value))
                 col += 1
             row += 1
-
+        time.sleep(3)
+        print job, node, metric, results_file
+        time.sleep(3)
         scale_factor = self.getSF(job, node, metric, results_file)
 
         if scale_factor == '100GB':
@@ -505,6 +556,7 @@ class ReportBuilder():
         #scale_factor = '100GB'
         remote_file = tpc_file_location + 'TPCx-HS-result-' + scale_factor + '.log'
         local_file = 'TPCx-HS-result-' + str(scale_factor) + '.log'
+        print 'finding: ' + remote_file
         Scp.get_file(tpc_location_ip, 'root', 'Ignition01', local_file, remote_file)
 
 

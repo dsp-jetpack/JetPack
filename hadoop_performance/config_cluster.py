@@ -47,7 +47,7 @@ namenode_java_heapsize = 4294967296 # 2695091978 # 4294967296
 secondary_namenode_java_heapsize = namenode_java_heapsize
 
 #cloudera manager api IP address
-cm_api_ip = "172.16.14.156"
+cm_api_ip = "172.16.30.13"
 
 cluster_name = "Cluster 1"
 

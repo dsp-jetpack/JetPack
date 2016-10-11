@@ -5,15 +5,11 @@ from cm_api.api_client import ApiResource
 import dateutil.parser
 from datetime import timedelta
 
-edge_node_ip = "172.16.14.101"
+edge_node_ip = "172.16.30.13"
 session = ApiResource(edge_node_ip,  7180, "admin", "admin", version=6)
 
-id = 'job_201504160841_0028'
-id = 'job_201504160841_0033'
-id = 'job_201504160841_0092'
-id = 'job_201504160841_0169'
-id = 'job_201504160841_0193'
-id = 'job_1450127588408_0353'
+
+id = 'job_1475246076038_0019'
 #id = '1434992149266_0007'
 
 #start = 2015-06-25 13:03:20.864000
@@ -24,11 +20,11 @@ id = 'job_1450127588408_0353'
 #timeA = (2015, 12, 19, 11, 25, 13, 6, 61, 0)
 #timeB = (2015, 12, 21, 07, 34, 59, 7, 21, 0)
 
-timeA = datetime.datetime.now()-datetime.timedelta(hours=1)
+timeA = datetime.datetime.now()-datetime.timedelta(minutes=5) #hours=1)
 timeB = datetime.datetime.now()
 
 #tsquery = 'select cpu_user_rate / 48 *100 where hostname = "r3s1xd1.ignition.dell.com" and category = Host'
-tsquery = 'select physical_memory_used where hostname = "r3s1xd9.ignition.dell.com" and category = Host'
+tsquery = 'select physical_memory_used where hostname = "datanode3-r6a.ignition.dell.com" and category = Host'
 
  
 cdh4 = None
@@ -123,7 +119,7 @@ for job in ac.applications:
         print ob.endTime
 
 offset = datetime.timedelta(hours=0)
-offset2 = datetime.timedelta(hours=6)
+offset2 = datetime.timedelta(hours=5)
 time_start = ob.startTime
 time_finish = ob.endTime
 #Rolling back both start and end times by 5 hours

@@ -25,9 +25,9 @@ report_location = 'ResultLogArch'
 
 #results_file = 'Results-300000000000 T6.log'
 tpc_log = 'tpc_log.log'
-tpc_location_ip = '172.16.14.97'
+tpc_location_ip = '172.16.31.10'
 
-job_history_ip = '172.16.14.97'
+job_history_ip = '172.16.31.10'
 
 date = time.strftime('%Y/%m/%d')
 history_location = 'hdfs:///user/history/done/'+date+'/000000/'
@@ -36,7 +36,7 @@ history_location = 'hdfs:///user/history/done/'+date+'/000000/'
 #job_id = 'job_1453363483287_0002'
 #job_id = 'job_1459243785029_0002'
 
-node = 'r3s1xd8.ignition.dell.'
+node = 'datanode4-r6a.ignition.dell.com'
 
 params = ('dfs.replication',
             'dfs.blocksize',

@@ -29,13 +29,13 @@
 #    Defaults:root   !requiretty
 
 # Edge node ip address 
-edge_node_ip = "172.16.14.156"
+edge_node_ip = "172.16.30.13"
 
 #cloudera manager api IP address
-cm_api_ip = "172.16.14.156"
+cm_api_ip = "172.16.30.13"
 
 #ganglia server IP address
-ganglia_ip = "172.16.14.156"
+ganglia_ip = "172.16.30.13"
 ganglia_stat_locations = '/var/lib/ganglia/rrds/13g\ Performance\ Stamp/'
 
 #point to ganglia node
@@ -44,12 +44,12 @@ crowbar_admin_ip = "172.16.14.156" #101" #
 time_offset = 0 #hours
 cluster_name = "Cluster 1"
 
-hadoop_ip = "172.16.14.97"
-name_node_ip = "172.16.14.97"
-teragen_ip = '172.16.14.97'
+hadoop_ip = "172.16.31.10"
+name_node_ip = "172.16.31.10"
+teragen_ip = '172.16.31.10'
 
-tpc_node_ip = "172.16.14.97"
-clean_up_ip = "172.16.14.97"
+tpc_node_ip = "172.16.31.10"
+clean_up_ip = "172.16.31.10"
 
 #run_id = 'terasort_Nicholas_repeat test5 & mapred.child.ulimit=2GB'
 #run_id = 'TPC kit-1TB v1.3 kit 256GB RAM VMware params; map/red.max=48/48 map/red tasks=576/320= T22'
@@ -59,13 +59,13 @@ clean_up_ip = "172.16.14.97"
 #run_id = 'command-am 1024 test'
 # run_id = 'SF10 - 48 containers - repeatability 2a dfs.rep=3 - RAM per container = 1; mapreduce.job.reduce=240; additional params: '
 #run_id = 'IRQ testing - balance off - run 2 - SF1'
-run_id = 'Default CPU governor test SF3'
+run_id = 'Rack 5 perf tool test'
 
 
 #**Commenton***No Comments*******
 # CDH-5.6.0-1.cdh5.6.0.p0.45
 # CDH-5.6.1-1.cdh5.6.1.p0.3
-teragen_jar_location = '/opt/cloudera/parcels/CDH-5.6.0-1.cdh5.6.0.p0.45/lib/hadoop-mapreduce'
+teragen_jar_location = '/opt/cloudera/parcels/CDH-5.8.0-1.cdh5.8.0.p0.42/lib/hadoop-mapreduce'
 teragen_jar_filename = 'hadoop-mapreduce-examples.jar'
 #run_id = 'config2_Test4_3_iv_MAX'
 #run_id = 'config1_MAX-mr2_high-perf-mr1_test2'
@@ -107,7 +107,7 @@ teravalidate_parameters = '-D dfs.replication=3 -D mapreduce.job.reduces=672' #2
 
 run_id = run_id + ' ' + teragen_parameters
 
-teragen_row_counts = (#3500000000,
+teragen_row_counts = (400000000, # polka 1 minute run
                       #350000000,
                       #500000000,
                       #950000000,
@@ -115,7 +115,7 @@ teragen_row_counts = (#3500000000,
                      #1000000000,
                        #2500000000,
                       #4000000000,
-                      10000000000, #-1TB
+                      #10000000000, #-1TB
                       #20000000000, #-2TB
                       #30000000000, # -3TB
                       #60000000000, # -6TB
@@ -408,3 +408,6 @@ SLEEP_BETWEEN_RUNS= '60'
 
 #job_id = 'job_1459243785029_0002'
 #results_file = 'Results-300000000000 T6.log'
+
+
+xbb_flag = 'ntrue'
