@@ -114,7 +114,7 @@ class ReportBuilder():
             #print line
             #time.sleep(1)
             if 'Performance Metric' in line:
-                time.sleep(3)
+                #time.sleep(3)
                 ma = re.search(": (.+) ", line)
                 if ma:
                     sf_result = ma.group(1)
@@ -229,7 +229,7 @@ class ReportBuilder():
 
             if '| Max Containers |' in line:
                 #print line
-                time.sleep(2)
+                #time.sleep(2)
                 line = line.split(' | ')
                 value = line[-1]
                 containers.append(value)
@@ -293,14 +293,14 @@ class ReportBuilder():
         #results_file = '/'+ location + '/' + results_file
         #print results_file
         textfile = open(results_file)
-        time.sleep(1)
+        #time.sleep(1)
         print 'searching for SF in: '
         #print job, node, metric, results_file
-        time.sleep(1)
+        #time.sleep(1)
         for line in textfile:
             if job in line and node in line and metric in line:
                 #print line
-                time.sleep(1)
+                #time.sleep(1)
                 # Split the input data based on 'bar'.
                 row_data = line.split(' | ')
                 #print row_data[2]
@@ -362,9 +362,9 @@ class ReportBuilder():
                 worksheet.write(row, col, str(value))
                 col += 1
             row += 1
-        time.sleep(3)
+        #time.sleep(3)
         #print job, node, metric, results_file
-        time.sleep(3)
+        #time.sleep(3)
         scale_factor = self.getSF(job, node, metric, results_file)
 
         if scale_factor == '100GB':
