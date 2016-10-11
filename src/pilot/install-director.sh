@@ -70,8 +70,8 @@ echo "## Done."
 
 echo
 echo "## Installing Director"
-sudo yum -y install python-rdomanager-oscplugin
-openstack undercloud install
+sudo yum -y install python-tripleoclient
+yes "" | openstack undercloud install
 echo "## Done."
 
 echo
@@ -90,12 +90,17 @@ then
   images_tar_path='/usr/share/rhosp-director-images'
 fi
 cd $HOME/pilot/images
-find ${images_tar_path} -name '*.tar' -exec tar xfv {} \;
+
+for i in /usr/share/rhosp-director-images/overcloud-full-latest-10.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-10.0.tar;
+do
+  tar -xvf $i;
+done
 echo "## Done."
 
 echo
-echo "## Customizing the overcloud image & upload images"
-~/pilot/customize_image.sh $subscription_manager_user $subscription_manager_pass $subcription_manager_poolid
+echo "## Customizing the overcloud image & uploading images"
+#~/pilot/customize_image.sh $subscription_manager_user $subscription_manager_pass $subcription_manager_poolid
+openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
 echo "## Done"
 
 echo

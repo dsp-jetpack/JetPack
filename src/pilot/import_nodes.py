@@ -91,6 +91,7 @@ def main():
                   'value': node["model"],
                   'path': '/properties/model'}]
         ironic_client.node.update(ironic_node.uuid, patch)
+        ironic_client.node.set_provision_state(ironic_node.uuid, 'manage')
 
 
 if __name__ == "__main__":

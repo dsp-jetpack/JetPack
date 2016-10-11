@@ -48,6 +48,14 @@ parameters:
     default: ''
     description: IP address/subnet on the management network
     type: string
+  ExternalNetworkVlanID:
+    default: 10
+    description: Vlan ID for the external network traffic.
+    type: number
+  InternalApiNetworkVlanID:
+    default: 20
+    description: Vlan ID for the internal_api network traffic.
+    type: number
   StorageNetworkVlanID:
     default: 30
     description: Vlan ID for the storage network traffic.
@@ -55,6 +63,10 @@ parameters:
   StorageMgmtNetworkVlanID:
     default: 40
     description: Vlan ID for the storage mgmt network traffic.
+    type: number
+  TenantNetworkVlanID:
+    default: 50
+    description: Vlan ID for the tenant network traffic.
     type: number
   ManagementNetworkVlanID:
     default: 60
@@ -66,6 +78,14 @@ parameters:
     type: string
   ControlPlaneDefaultRoute: # Override this via parameter_defaults
     description: The default route of the control plane network.
+    type: string
+  ExternalInterfaceDefaultRoute: # Not used by default in this template
+    default: '10.0.0.1'
+    description: The default route of the external network.
+    type: string
+  ManagementInterfaceDefaultRoute: # Commented out by default in this template
+    default: unset
+    description: The default route of the management network.
     type: string
   DnsServers: # Override this via parameter_defaults
     default: []
