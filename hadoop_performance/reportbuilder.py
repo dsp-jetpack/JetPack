@@ -85,24 +85,24 @@ class ReportBuilder():
         job_file = open('jobLog.log')
         #row, col = 0
         #rows = ['B30', 'B31', 'B32']
-        print containers
+        #print containers
         row = 29
-        print job_file
-        print job_ids
+        #print job_file
+        #print job_ids
         for line in job_file:
-            print line
+            #print line
             for job in job_ids:
-                print 'job: ' + str(job)
+                #print 'job: ' + str(job)
                 if job in line:
-                    print line
+                    #print line
                     row_data = line.split(' ')
-                    print row_data
+                    #print row_data
                     for each in row_data:
-                        print each
+                        #print each
                         if row_data.index(each) == 0:
                             row_data[0] = each + ' ' + str('(max containers = '+containers[job_ids.index(job)]+')')
-                            print each
-                    print row_data
+                            #print each
+                    #print row_data
                     worksheet.write_row(row, 0, row_data)
                     row += 1
     @staticmethod
@@ -228,7 +228,7 @@ class ReportBuilder():
                 time_info.append(runtime)
 
             if '| Max Containers |' in line:
-                print line
+                #print line
                 time.sleep(2)
                 line = line.split(' | ')
                 value = line[-1]
@@ -247,13 +247,13 @@ class ReportBuilder():
         textfile = open(results_file)
 
         for line in textfile:
-            print line
+            #print line
             #time.sleep(1)
             if job in line and node in line and metric in line:
-                print 'found string'
-                print line
+                #print 'found string'
+                #print line
                 #time.sleep(3)
-                print job, node, metric
+                #print job, node, metric
                 #else:
                 # Split the input data based on 'bar'.
                 row_data = line.split(' | ')
@@ -263,16 +263,16 @@ class ReportBuilder():
                 #print row_data[-1]
                 value = []
                 value.append(row_data[-1])
-                print row_data[-1]
-                print len(value)
+                #print row_data[-1]
+                #print len(value)
                 #time.sleep(1)
-                print 'value: ' +str(value)
+                #print 'value: ' +str(value)
                 #return value
 
             else:
                 if len(value) == 0:
                     #print line
-                    print 'empty line'
+                    #print 'empty line'
                     value = [0]
                     #print job, node, metric
                     #return value
@@ -295,11 +295,11 @@ class ReportBuilder():
         textfile = open(results_file)
         time.sleep(1)
         print 'searching for SF in: '
-        print job, node, metric, results_file
+        #print job, node, metric, results_file
         time.sleep(1)
         for line in textfile:
             if job in line and node in line and metric in line:
-                print line
+                #print line
                 time.sleep(1)
                 # Split the input data based on 'bar'.
                 row_data = line.split(' | ')
@@ -346,8 +346,8 @@ class ReportBuilder():
                 bytes = ['bytes', 'KBs', 'MBs', 'GBs', 'TBs']
                 size = 0
                 value = float(self.getMetric(job, node, metric, results_file)[0])
-                print metric
-                print value
+                #print metric
+                #print value
                 if metric != 'CPU Total':
                     while float(value) > 1024:
                         value = value/1024
@@ -363,7 +363,7 @@ class ReportBuilder():
                 col += 1
             row += 1
         time.sleep(3)
-        print job, node, metric, results_file
+        #print job, node, metric, results_file
         time.sleep(3)
         scale_factor = self.getSF(job, node, metric, results_file)
 
@@ -391,7 +391,7 @@ class ReportBuilder():
         else:
             scale_factor = 'SF - not found'
             sf = 'SF-not Found'
-        print scale_factor
+        #print scale_factor
         #worksheet.write(27, 0, scale_factor, bold)
 
         if len(scale_factor) > 5:
