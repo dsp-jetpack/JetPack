@@ -477,7 +477,7 @@
 0:python-pbr-1.8.1-2.el7ost.*
 1:dbus-1.6.12-14.el7_2.*
 0:python-tooz-1.34.0-1.el7ost.*
-1:openstack-tempest-10.0.0-2.b4a056dgit.el7ost.*
+1:openstack-tempest-10.0.0-3.b4a056dgit.el7ost.*
 0:scrub-2.5.2-5.el7.*
 0:fontpackages-filesystem-1.44-8.el7.*
 0:usermode-1.111-5.el7.*
