@@ -165,6 +165,14 @@ class Director(InfraHost):
                              remote_file)
         else:
             # self.check_idracs()
+
+            # In 13g servers, the iDRAC sends out a DHCP req every 3 seconds
+            # for 1 minute.  If it still hasn't received a response, it sleeps
+            # for 20 seconds and then repeats.  As a result, we sleep for 30
+            # seconds here to make sure that every iDRAC has had a chance to
+            # get a DHCP address prior to launching node discovery.
+            time.sleep(30)
+
             setts = self.settings
             cmd = "cd ~/pilot/discover_nodes;./discover_nodes.py  -u " + \
                   setts.ipmi_user + \
