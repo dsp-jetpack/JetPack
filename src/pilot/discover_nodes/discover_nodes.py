@@ -372,7 +372,7 @@ def scan_one(scan_info):
     # Initialize the values of the attributes.
     pm_address = scan_info.ip_address
     pm_password = scan_info.password
-    pm_type = OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IPMI
+    pm_type = OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IDRAC
     pm_user = scan_info.user_name
 
     try:
