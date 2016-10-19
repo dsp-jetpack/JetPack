@@ -348,6 +348,7 @@ def main():
               " --neutron-public-interface bond1" \
               " --neutron-network-type vlan" \
               " --neutron-disable-tunneling" \
+              " --libvirt-type kvm" \
               " --os-auth-url {}" \
               " --os-project-name {}" \
               " --os-user-id {}" \

@@ -28,26 +28,26 @@ parameter_defaults:
   # specified in undercloud.conf, but it cannot be the first IP in the range.
   # This is because Neutron uses the first IP in the range for the undercloud
   # Neutron DHCP server.
-  ControlFixedIPs: [{'ip_address':'192.168.120.250'}]
+  ControlPlaneIP: 192.168.120.250
 
   # CHANGEME: Change the following to the VIP on the Private API network.
   # Note that this IP must lie INSIDE the InternalApiAllocationPools range
   # specified in network-environment.yaml.
-  InternalApiVirtualFixedIPs: [{'ip_address':'192.168.140.250'}]
+  InternalApiNetworkVip: 192.168.140.250
 
   # CHANGEME: Change the following to the VIP on the Public API network.
   # Note that this IP must lie INSIDE the ExternalAllocationPools range
   # specified in network-environment.yaml.
-  PublicVirtualFixedIPs: [{'ip_address':'192.168.190.250'}]
+  ExternalNetworkVip: 192.168.190.250
 
   # CHANGEME: Change the following to the VIP on the Storage network
   # Note that this IP must lie INSIDE the StorageAllocationPools range
   # specified in network-environment.yaml.
-  StorageVirtualFixedIPs: [{'ip_address':'192.168.170.250'}]
+  StorageNetworkVip: 192.168.170.250
 
   # CHANGEME: Change the following to the VIP on the Provisioning network.
   # The Storage Clustering network is not connected to the controller nodes,
   # so the VIP for this network must be mapped to the provisioning network.
   # Note that this IP must lie INSIDE the dhcp_start/dhcp_end range
   # specified in undercloud.conf.
-  StorageMgmtVirtualFixedIPs: [{'ip_address':'192.168.120.249'}]
+  StorageMgmtNetworkVip: 192.168.120.249

@@ -59,9 +59,4 @@ virt-customize -v -x -m 2000 -a overcloud-full.qcow2 --install ceph-radosgw,diam
 echo "## Unregister from subscription manager"
 virt-customize -a overcloud-full.qcow2 --run-command 'subscription-manager remove --all' --run-command 'subscription-manager unregister'
 
-# upload the image to the overcloud
-openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
-
-
 echo "## Done updating the overcloud image"
-
