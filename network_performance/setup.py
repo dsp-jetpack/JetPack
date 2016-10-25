@@ -1,22 +1,19 @@
 """A setuptools based setup module for Dell network validation tools.
 
 """
-#
-# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
-#
-# This file is free software:  you can redistribute it and or modify
-# it under the terms of the GNU General Public License, as published
-# by the Free Software Foundation, version 3 of the license or any
-# later version.
-#
-# This file is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this software.  If not, see <http://www.gnu.org/licenses/>.
-
+# Copyright 2014-2016 Dell, Inc. or it's subsidiaries.
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#  http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
@@ -70,7 +67,7 @@ setup(
     author_email='michael.pittaro@dell.com',
 
     # Choose your license
-    license='GPL3',
+    license='Apache Software License',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -85,7 +82,7 @@ setup(
         'Topic :: Software Development :: Build Tools',
 
         # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: Apache Software License',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
