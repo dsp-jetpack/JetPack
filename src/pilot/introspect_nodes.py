@@ -48,7 +48,9 @@ def transition_to_state(ironic_client, transition, target_provision_state):
                         "state".format(node.uuid, target_provision_state))
             ironic_client.node.set_provision_state(node.uuid, transition)
 
-    # Wait until all the nodes transition to the managable state
+    # Wait until all the nodes transition to the target provisioning state
+    logger.info("Waiting for all nodes to transition to the {} state".format(
+        target_provision_state))
     waiting_for_nodes = True
     while waiting_for_nodes:
         all_nodes_transitioned = True
@@ -86,8 +88,7 @@ def main():
         return_code = os.system("openstack baremetal node inspect " +
                                 node.uuid)
         if return_code != 0:
-            logger.error("Failed to introspection node {}: {}".format(
-                node.uuid, std_err))
+            logger.error("Failed to introspection node {}".format(node.uuid))
             sys.exit(1)
 
     # Transition all nodes into available

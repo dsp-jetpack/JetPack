@@ -53,13 +53,16 @@ def main():
         # Power off the node
         cmd = "ipmitool -H {} -I lanplus -U {} -P '{}' chassis " \
             "power off".format(ip, username, password)
-        logger.info(cmd)
+        logger.info("Powering off {}".format(ip))
+        logger.info("    {}".format(cmd))
         os.system(cmd)
 
         # Set the first boot device to PXE
         cmd = "ipmitool -H {} -I lanplus -U {} -P '{}' chassis " \
             "bootdev pxe options=persistent".format(ip, username, password)
-        logger.info(cmd)
+        logger.info("Setting the provisioning NIC to PXE boot on {}".format(
+            ip))
+        logger.info("    {}".format(cmd))
         os.system(cmd)
 
     cmd = "openstack baremetal configure boot"
