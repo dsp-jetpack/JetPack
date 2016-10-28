@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# (c) 2016 Dell
+# Copyright (c) 2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -171,7 +171,7 @@ def enable_start_compute_pacemaker(compute_node_ip):
              .format(compute_node_ip))
 
     ssh_cmd(compute_node_ip, "heat-admin",
-            "sudo sudo systemctl enable pacemaker_remote")
+            "sudo systemctl enable pacemaker_remote")
 
     ssh_cmd(compute_node_ip, "heat-admin",
             "sudo systemctl start pacemaker_remote")
