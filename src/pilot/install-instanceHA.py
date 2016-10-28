@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# (c) 2016 Dell
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -171,7 +171,7 @@ def enable_start_compute_pacemaker(compute_node_ip):
              .format(compute_node_ip))
 
     ssh_cmd(compute_node_ip, "heat-admin",
-            "sudo systemctl enable pacemaker_remote")
+            "sudo sudo systemctl enable pacemaker_remote")
 
     ssh_cmd(compute_node_ip, "heat-admin",
             "sudo systemctl start pacemaker_remote")
@@ -495,6 +495,25 @@ def create_compute_nodes_resources(compute_nodes_ip, first_controller_node_ip):
                                       first_controller_node_ip)
 
 
+# Create a controller node resource
+def create_controller_node_resource(controller_node_ip,
+                                    first_controller_node_ip):
+    LOG.info("Create Controller node:{} resource."
+             .format(controller_node_ip))
+
+    out, err = ssh_cmd(controller_node_ip, "heat-admin",
+                       "sudo crm_node -n")
+    crm_node_name = out.strip()
+    crm_node_sname = awk_it(crm_node_name, 1, ".")
+
+    LOG.info("Node: {} to be added."
+             .format(crm_node_sname))
+
+    ssh_cmd(first_controller_node_ip, "heat-admin",
+            "sudo pcs cluster node add " + crm_node_sname +
+            " --start --enable")
+
+
 # Create a compute node resources and set the stonith level 1 to include
 # both the nodes's physical fence device and fence-nova.
 def create_compute_node_resources(compute_node_ip, first_controller_node_ip):
@@ -596,10 +615,6 @@ def main():
     ssh_config = os.path.join(home_dir, '.ssh/config')
     undercloud_config = os.path.join(home_dir, 'undercloud_nodes.txt')
     instack_file = os.path.join(home_dir, args.file)
-
-    # Run ~/pilot/update_ssh_config.py
-    cmd = os.path.join(home_dir, 'pilot/update_ssh_config.py')
-    os.system(cmd)
 
     # Run ~/pilot/identify_nodes.py > ~/undercloud_nodes.txt
     cmd = os.path.join(home_dir,
@@ -758,7 +773,9 @@ def main():
                       .format(first_controller_node_ip))
 
             distribute_node_authkey(controller_node_ip)
-            tag_controllers_with_osprole(first_controller_node_ip)
+            create_controller_node_resource(controller_node_ip,
+                                            first_controller_node_ip)
+            enable_control_plane_services(first_controller_node_ip)
             final_resource_cleanup(first_controller_node_ip)
 
         else:
