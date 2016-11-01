@@ -65,7 +65,19 @@ def main():
         logger.info("    {}".format(cmd))
         os.system(cmd)
 
-    cmd = "openstack baremetal configure boot"
+    os_auth_url, os_tenant_name, os_username, os_password = \
+        CredentialHelper.get_undercloud_creds()
+
+    cmd = "openstack baremetal configure boot " \
+        "--os-auth-url {} " \
+        "--os-project-name {} " \
+        "--os-username {} " \
+        "--os-password {} " \
+        "".format(os_auth_url,
+                  os_tenant_name,
+                  os_username,
+                  os_password)
+
     logger.info(cmd)
     os.system(cmd)
 
