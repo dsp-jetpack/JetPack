@@ -67,7 +67,7 @@ def main():
         json_file = os.path.expanduser(args.node_definition)
         with open(json_file, 'r') as instackenv_json:
             instackenv = json.load(instackenv_json)
-    except IOError, ValueError:
+    except (IOError, ValueError):
         logger.exception("Failed to load node definition file {}".format(
                          args.node_definition))
         sys.exit(1)
