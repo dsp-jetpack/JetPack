@@ -67,7 +67,7 @@ def main():
         json_file = os.path.expanduser(args.node_definition)
         with open(json_file, 'r') as instackenv_json:
             instackenv = json.load(instackenv_json)
-    except IOError, ValueError:
+    except (IOError, ValueError):
         logger.exception("Failed to load node definition file {}".format(
                          args.node_definition))
         sys.exit(1)
@@ -91,7 +91,6 @@ def main():
                   'value': node["model"],
                   'path': '/properties/model'}]
         ironic_client.node.update(ironic_node.uuid, patch)
-        ironic_client.node.set_provision_state(ironic_node.uuid, 'manage')
 
 
 if __name__ == "__main__":
