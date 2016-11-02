@@ -256,7 +256,7 @@ class Settings():
                 'discovery_ram_disk_image']
             self.overcloud_image = self.bastion_settings_map['overcloud_image']
 
-        self.rhl72_iso = self.bastion_settings_map['rhl72_iso']
+        self.rhel_iso = self.bastion_settings_map['rhel_iso']
 
         if sys.platform.startswith('linux'):
             self.cygwin_installdir = 'n/a'

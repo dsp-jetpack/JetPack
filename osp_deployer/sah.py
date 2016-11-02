@@ -168,7 +168,7 @@ class Sah(InfraHost):
                                       sets.private_api_netmask + '"')
 
     def upload_iso(self):
-        shutil.copyfile(self.settings.rhl72_iso,
+        shutil.copyfile(self.settings.rhel_iso,
                         "/store/data/iso/RHEL7.iso")
 
     def upload_lock_files(self):

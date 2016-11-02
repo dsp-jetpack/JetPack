@@ -66,9 +66,10 @@ def setup():
         logger.info("Settings .ini: " + settings.settings_file)
         logger.info("Settings .properties " + settings.network_conf)
 
-        # Check to verify ~/JetStream/rhel72.iso exists
-        assert os.path.isfile("/root/JetStream/rhel72.iso"), "~/JetStream/\
-                              rhel72.iso file is not present"
+        # Check to verify RHEL ISO exists
+        rhel_iso = settings.rhel_iso
+        assert os.path.isfile(settings.rhel_iso), settings.rhel_iso + \
+                              " ISO file is not present"
 
         sah = Sah()
         sah.update_kickstart_usb()

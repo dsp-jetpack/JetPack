@@ -18,11 +18,12 @@ from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from infra_host import InfraHost
 from auto_common import Scp, Ipmi
+import errno
 import logging
-import time
 import os
 import re
-import errno
+import sys
+import time
 
 logger = logging.getLogger("osp_deployer")
 
@@ -54,7 +55,6 @@ class Director(InfraHost):
     def apply_internal_repos(self):
         # Add the internal repo. if going down that road,
         # Pull the target rpm's
-        cmds = []
         if self.settings.internal_repos is True:
             logger.debug(
                 "Applying internal repo's to the "
@@ -73,20 +73,12 @@ class Director(InfraHost):
                 count += 1
         else:
             for repo in self.settings.rhsm_repos:
-                cmds += [
-                    'subscription-manager repos '
-                    '--enable=' + repo]
-
-        cmds += [
-            'yum remove python-rdomanager-oscplugin -y',
-            'yum clean all',
-            'yum makecache',
-            'yum repolist all',
-            'yum install python-rdomanager-oscplugin -y',
-            'yum update -y',
-        ]
-        for cmd in cmds:
-            self.run_as_root(cmd)
+                _, std_err = self.run_as_root('subscription-manager repos '
+                                              '--enable=' + repo)
+                if std_err:
+                    logger.error("Unable to enable repo {}: {}".format(
+                        repo, std_err))
+                    sys.exit(1)
 
     def upload_update_conf_files(self):
 
@@ -100,6 +92,10 @@ class Director(InfraHost):
         self.run('cd;tar zxvf pilot.tar.gz -C pilot')
 
         cmds = [
+            'sed -i "s|undercloud_hostname = .*|undercloud_hostname = ' +
+            self.settings.director_node.hostname + "." +
+            self.settings.domain +
+            '|" pilot/undercloud.conf',
             'sed -i "s|local_ip = .*|local_ip = ' +
             self.settings.director_node.provisioning_ip +
             '/24|" pilot/undercloud.conf',
@@ -228,13 +224,13 @@ class Director(InfraHost):
             raise AssertionError("An error occurred while running "
                                  "prep_overcloud_nodes: {}".format(stderr))
 
-        cmd = self.source_stackrc + "openstack" \
-                                    " baremetal configure boot"
-        self.run_tty(cmd)
+        stdout, stderr = self.run_tty(self.source_stackrc +
+                                      "~/pilot/introspect_nodes.py")
+        logger.debug("Introspected nodes, stdout=" + stdout)
+        if stderr:
+            raise AssertionError("Unable to introspect nodes: ".format(
+                                 stderr))
 
-        cmd = self.source_stackrc + "openstack " \
-                                    "baremetal introspection bulk start"
-        self.run_tty(cmd)
         tester.verify_introspection_sucessfull()
 
     def check_idracs(self):
@@ -874,24 +870,20 @@ class Director(InfraHost):
             logger.debug("Updating static vip yaml")
             cmds = ['sed -i "s/redis: .*/redis: ' +
                     self.settings.redis_vip + '/" ' + static_vip_yaml,
-                    'sed -i "s/ControlFixedIPs: .*/ControlFixedIPs: ' +
-                    '[{\'ip_address\':\'' +
-                    self.settings.provisioning_vip + '\'}]/" ' +
-                    static_vip_yaml,
-                    'sed -i "s/InternalApiVirtualFixedIPs: ' +
-                    '.*/InternalApiVirtualFixedIPs: [{\'ip_address\':\'' +
-                    self.settings.private_api_vip + '\'}]/" ' +
-                    static_vip_yaml,
-                    'sed -i "s/PublicVirtualFixedIPs: ' +
-                    '.*/PublicVirtualFixedIPs: [{\'ip_address\':\'' +
-                    self.settings.public_api_vip + '\'}]/" ' + static_vip_yaml,
-                    'sed -i "s/StorageVirtualFixedIPs: ' +
-                    '.*/StorageVirtualFixedIPs: [{\'ip_address\':\'' +
-                    self.settings.storage_vip + '\'}]/" ' + static_vip_yaml,
-                    'sed -i "s/StorageMgmtVirtualFixedIPs: ' +
-                    '.*/StorageMgmtVirtualFixedIPs: [{\'ip_address\':\'' +
-                    self.settings.storage_cluster_vip + '\'}]/" ' +
-                    static_vip_yaml
+                    'sed -i "s/ControlPlaneIP: .*/ControlPlaneIP: ' +
+                    self.settings.provisioning_vip + '/" ' + static_vip_yaml,
+                    'sed -i "s/InternalApiNetworkVip: ' +
+                    '.*/InternalApiNetworkVip: ' +
+                    self.settings.private_api_vip + '/" ' + static_vip_yaml,
+                    'sed -i "s/ExternalNetworkVip: ' +
+                    '.*/ExternalNetworkVip: ' +
+                    self.settings.public_api_vip + '/" ' + static_vip_yaml,
+                    'sed -i "s/StorageNetworkVip: ' +
+                    '.*/StorageNetworkVip: ' +
+                    self.settings.storage_vip + '/" ' + static_vip_yaml,
+                    'sed -i "s/StorageMgmtNetworkVip: ' +
+                    '.*/StorageMgmtNetworkVip: ' +
+                    self.settings.storage_cluster_vip + '/" ' + static_vip_yaml
                     ]
             for cmd in cmds:
                 self.run_tty(cmd)

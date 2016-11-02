@@ -73,8 +73,8 @@ class DeployerSanity():
                 getattr(self.settings, each)
 
         assert os.path.isfile(
-            self.settings.rhl72_iso), \
-            self.settings.rhl72_iso + \
+            self.settings.rhel_iso), \
+            self.settings.rhel_iso + \
             "ISO doesn't seem to exist"
         assert os.path.isfile(
             self.settings.director_deploy_sh), \
@@ -103,8 +103,8 @@ class DeployerSanity():
             self.settings.install_director_sh +\
             " file doesn't seem to exist"
         assert os.path.isfile(
-            self.settings.rhl72_iso), \
-            self.settings.rhl72_iso +\
+            self.settings.rhel_iso), \
+            self.settings.rhel_iso +\
             " file doesn't seem to exist"
 
     def check_ipmi_to_nodes(self):
