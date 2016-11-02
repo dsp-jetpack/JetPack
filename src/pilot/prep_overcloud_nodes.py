@@ -54,7 +54,7 @@ def main():
         cmd = "ipmitool -H {} -I lanplus -U {} -P '{}' chassis " \
             "power off".format(ip, username, password)
         logger.info("Powering off {}".format(ip))
-        logger.info("    {}".format(cmd))
+        logger.debug("    {}".format(cmd))
         os.system(cmd)
 
         # Set the first boot device to PXE
@@ -62,7 +62,7 @@ def main():
             "bootdev pxe options=persistent".format(ip, username, password)
         logger.info("Setting the provisioning NIC to PXE boot on {}".format(
             ip))
-        logger.info("    {}".format(cmd))
+        logger.debug("    {}".format(cmd))
         os.system(cmd)
 
     os_auth_url, os_tenant_name, os_username, os_password = \
@@ -78,7 +78,8 @@ def main():
                   os_username,
                   os_password)
 
-    logger.info(cmd)
+    logger.info("Assigning the kernel and ramdisk image to all nodes")
+    logger.debug(cmd)
     os.system(cmd)
 
 
