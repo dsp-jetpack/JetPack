@@ -421,7 +421,11 @@ def select_os_disk(ironic_client, drac_client, node_uuid):
         ironic_client.node.update(node_uuid, patch)
 
 
-def configure_nics_boot_settings(drac_client, pxe_nic_id):
+def configure_nics_boot_settings(
+        drac_client,
+        pxe_nic_id,
+        ironic_client,
+        node_uuid):
     LOG.info("Configuring NIC {} to PXE boot".format(pxe_nic_id))
 
     job_ids = []
@@ -495,7 +499,7 @@ def configure_nics_boot_settings(drac_client, pxe_nic_id):
     LOG.info(
         "Waiting for NIC configuration to complete; this may take some time")
     LOG.info("Do not power off the node")
-    wait_for_job_completions(drac_client, job_ids)
+    wait_for_job_completions(ironic_client, node_uuid)
     LOG.info("Completed NIC configuration")
 
     return determine_job_outcomes(drac_client, job_ids)
@@ -531,6 +535,7 @@ def configure_bios(node, ironic_client, settings, drac_client):
         http_method='POST')
 
     if not response.commit_required:
+        LOG.info("Completed BIOS configuration")
         return True
 
     LOG.info("Rebooting the node to apply BIOS configuration")
@@ -545,60 +550,33 @@ def configure_bios(node, ironic_client, settings, drac_client):
         "Waiting for BIOS configuration to complete; this may take some time")
     LOG.info("Do not power off the node")
     job_ids = [response.job_id]
-    wait_for_job_completions(drac_client, job_ids)
+    wait_for_job_completions(ironic_client, node.uuid)
     LOG.info("Completed BIOS configuration")
 
     return determine_job_outcomes(drac_client, job_ids)
 
 
-def wait_for_job_completions(drac_client, job_ids):
-    if not job_ids:
-        return
-
-    incomplete_job_ids = list(job_ids)
-
-    while incomplete_job_ids:
+def wait_for_job_completions(ironic_client, node_uuid):
+    while ironic_client.node.vendor_passthru(
+            node_uuid,
+            'list_unfinished_jobs',
+            http_method='GET').unfinished_jobs:
         sleep(10)
-        incomplete_job_ids[:] = [
-            job_id for job_id in incomplete_job_ids if not
-            determine_job_is_complete(drac_client, job_id)]
-
-    # Wait for any other jobs to complete, such as the 'Exporting System
-    # Configuration Profile XML file' job. This prevents an attempt to change
-    # the configuration that may follow from failing because an unfinished
-    # configuration job exists.
-    #
-    # Methods in the ironic DRAC driver that change the configuration first
-    # validate the job queue is empty. The validation raises an exception if it
-    # is not empty.
-    while drac_client.list_jobs(only_unfinished=True):
-        sleep(10)
-
-
-def determine_job_is_complete(drac_client, job_id):
-    job_state = drac_client.get_job(job_id).state
-
-    return job_state in [
-        'Completed',
-        'Completed with Errors',
-        'Failed',
-        'Reboot Completed',
-        'Reboot Failed']
 
 
 def determine_job_outcomes(drac_client, job_ids):
     all_succeeded = True
 
     for job_id in job_ids:
-        job_state = drac_client.get_job(job_id).state
+        job_status = drac_client.get_job(job_id).status
 
-        if job_state == 'Completed' or job_state == 'Reboot Completed':
+        if job_status == 'Completed' or job_status == 'Reboot Completed':
             continue
 
         all_succeeded = False
         LOG.error(
-            "Configuration job {} encountered issues; its final state is "
-            "{}".format(job_id, job_state))
+            "Configuration job {} encountered issues; its final status is "
+            "{}".format(job_id, job_status))
 
     return all_succeeded
 
@@ -680,7 +658,11 @@ def main():
             ironic_client,
             drac_client)
 
-        succeeded = configure_nics_boot_settings(drac_client, pxe_nic_fqdd)
+        succeeded = configure_nics_boot_settings(
+            drac_client,
+            pxe_nic_fqdd,
+            ironic_client,
+            node.uuid)
 
         if not succeeded:
             sys.exit(1)
