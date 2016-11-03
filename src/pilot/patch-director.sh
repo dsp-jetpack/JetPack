@@ -39,11 +39,3 @@ sudo systemctl restart openstack-nova-cert.service || exit 1
 sudo systemctl restart openstack-nova-compute.service || exit 1
 sudo systemctl restart openstack-nova-conductor.service || exit 1
 sudo systemctl restart openstack-nova-scheduler.service || exit 1
-
-# This hacks in a patch that has been merged to upstream already, but is not
-# currently present in OSP10.  We will need to remove this after the fix
-# appears in OSP10.
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/vendor_passthru.py ~/pilot/vendor_passthru.patch)
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/vendor_passthru.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/vendor_passthru.pyo
-sudo systemctl restart openstack-ironic-conductor.service || exit 1
