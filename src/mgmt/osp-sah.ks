@@ -508,7 +508,7 @@ subscription-manager register --username ${SMUser} --password ${SMPassword} ${Pr
        subscription-manager attach --auto
      )
 
-subscription-manager repos '--disable=*' --enable=rhel-7-server-beta-rpms
+subscription-manager repos '--disable=*' --enable=rhel-7-server-rpms
 
 systemctl disable NetworkManager
 systemctl disable firewalld

@@ -203,7 +203,7 @@ EOFPW
          subscription-manager attach --auto
          )
 
-  subscription-manager repos '--disable=*' --enable=rhel-7-server-beta-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-beta-rpms --enable=rhel-7-fast-datapath-rpms
+  subscription-manager repos '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-rpms --enable=rhel-7-fast-datapath-rpms
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -216,10 +216,10 @@ EOFPW
   yum -y install yum-plugin-priorities
   yum -y install yum-utils
 
-  yum-config-manager --enable rhel-7-server-beta-rpms --setopt="rhel-7-server-beta-rpms.priority=1"
+  yum-config-manager --enable rhel-7-server-rpms --setopt="rhel-7-server-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-extras-rpms --setopt="rhel-7-server-extras-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-rh-common-rpms --setopt="rhel-7-server-rh-common-rpms.priority=1"
-  yum-config-manager --enable rhel-ha-for-rhel-7-server-beta-rpms --setopt="rhel-ha-for-rhel-7-server-beta-rpms.priority=1"
+  yum-config-manager --enable rhel-ha-for-rhel-7-server-rpms --setopt="rhel-ha-for-rhel-7-server-rpms.priority=1"
   yum-config-manager --enable rhel-7-fast-datapath-rpms --setopt="rhel-7-fast-datapath-rpms.priority=1"
 
   yum -y update
