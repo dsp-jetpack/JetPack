@@ -33,7 +33,7 @@ def parse_arguments():
 
     LoggingHelper.add_argument(parser)
 
-    parser.add_argument("-i", "--in_band",
+    parser.add_argument("-i", "--in-band",
                         help="Use in-band (PXE booting) introspection",
                         action="store_true")
 
