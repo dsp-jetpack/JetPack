@@ -108,6 +108,7 @@
 0:redhat-logos-70.0.3-4.el7.*
 0:rhosp-director-images-9.0-20160818.1.el7ost.*
 0:system-config-firewall-base-1.2.29-10.el7.*
+0:firewalld-0.3.9-14.el7.*
 0:perl-HTTP-Cookies-6.01-5.el7.*
 0:openstack-swift-container-2.7.0-2.el7ost.*
 4:perl-macros-5.16.3-286.el7.*
