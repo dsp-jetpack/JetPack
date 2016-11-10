@@ -224,8 +224,11 @@ class Director(InfraHost):
             raise AssertionError("An error occurred while running "
                                  "prep_overcloud_nodes: {}".format(stderr))
 
-        stdout, stderr = self.run_tty(self.source_stackrc +
-                                      "~/pilot/introspect_nodes.py")
+        introspection_cmd = self.source_stackrc + "~/pilot/introspect_nodes.py"
+        if setts.use_in_band_introspection is True:
+            introspection_cmd += " -i"
+
+        stdout, stderr = self.run_tty(introspection_cmd)
         logger.debug("Introspected nodes, stdout=" + stdout)
         if stderr:
             raise AssertionError("Unable to introspect nodes: ".format(

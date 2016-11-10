@@ -193,6 +193,11 @@ class Settings():
         else:
             self.use_ipmi_driver = False
 
+        if cluster['use_in_band_introspection'].lower() == 'true':
+            self.use_in_band_introspection = True
+        else:
+            self.use_in_band_introspection = False
+
         if cluster['enable_eqlx_backend'].lower() == 'true':
             self.enable_eqlx_backend = True
             self.eqlx_san_ip = cluster['eqlx_san_ip']
