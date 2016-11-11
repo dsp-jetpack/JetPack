@@ -33,6 +33,10 @@ def parse_arguments():
 
     LoggingHelper.add_argument(parser)
 
+    parser.add_argument("-i", "--in-band",
+                        help="Use in-band (PXE booting) introspection",
+                        action="store_true")
+
     return parser.parse_args()
 
 
@@ -41,11 +45,11 @@ def transition_to_state(ironic_client, transition, target_provision_state):
         target_provision_state))
     for node in ironic_client.node.list(fields=["uuid", "provision_state"]):
         if node.provision_state == target_provision_state:
-            logger.info("Node {} is already in the {} state".format(
+            logger.debug("Node {} is already in the {} state".format(
                 node.uuid, target_provision_state))
         else:
-            logger.info("Transitioning node {} into the {} "
-                        "state".format(node.uuid, target_provision_state))
+            logger.debug("Transitioning node {} into the {} "
+                         "state".format(node.uuid, target_provision_state))
             ironic_client.node.set_provision_state(node.uuid, transition)
 
     # Wait until all the nodes transition to the target provisioning state
@@ -76,24 +80,45 @@ def main():
     urllib3_logger = logging.getLogger("requests.packages.urllib3")
     urllib3_logger.setLevel(logging.WARN)
 
+    out_of_band = True
+
+    # What driver are we using?  Assume all nodes use the same one
     ironic_client = IronicHelper.get_ironic_client()
+    driver = ironic_client.node.list(fields=["driver"])[0].driver
 
-    # Transition all nodes into manageable
-    transition_to_state(ironic_client, 'manage', 'manageable')
+    if args.in_band:
+        # All drivers support in-band introspection
+        out_of_band = False
+    elif driver == "pxe_ipmitool":
+        # Can't do in-band introspection with the IPMI driver
+        logger.warn("The Ironic IPMI driver does not support out-of-band "
+                    "introspection.  Using in-band introspection")
+        out_of_band = False
 
-    # Launch OOB introspection
-    logger.info("Introspecting nodes")
-    for node in ironic_client.node.list(fields=["uuid"]):
-        logger.info("Introspecting node {}".format(node.uuid))
-        return_code = os.system("openstack baremetal node inspect " +
-                                node.uuid)
+    if out_of_band:
+        logger.info("Starting Out-Of-Band introspection")
+
+        # Transition all nodes into manageable
+        transition_to_state(ironic_client, 'manage', 'manageable')
+
+        # Launch OOB introspection
+        for node in ironic_client.node.list(fields=["uuid"]):
+            logger.info("Introspecting node {}".format(node.uuid))
+            return_code = os.system("openstack baremetal node inspect " +
+                                    node.uuid)
+            if return_code != 0:
+                logger.error("Failed to introspection node {}".format(
+                    node.uuid))
+                sys.exit(1)
+
+        # Transition all nodes into available
+        transition_to_state(ironic_client, 'provide', 'available')
+    else:
+        logger.info("Starting In-Band introspection")
+        return_code = os.system("openstack baremetal introspection bulk start")
         if return_code != 0:
-            logger.error("Failed to introspection node {}".format(node.uuid))
+            logger.error("Introspection failed")
             sys.exit(1)
-
-    # Transition all nodes into available
-    transition_to_state(ironic_client, 'provide', 'available')
-
 
 if __name__ == "__main__":
     main()
