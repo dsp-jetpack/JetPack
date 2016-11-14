@@ -86,9 +86,9 @@ resources:
         # END workaround for BZ 1283721
         if [[ $HOSTNAME =~ "controller" ]]; then
         {
-          echo "Restarting RGW..."
-          chkconfig --add ceph-radosgw
-          systemctl restart ceph-radosgw
+          #echo "Restarting RGW..."
+          #chkconfig --add ceph-radosgw
+          #systemctl restart ceph-radosgw
         } >> /root/post-deploy.txt 2>&1
         fi
 
