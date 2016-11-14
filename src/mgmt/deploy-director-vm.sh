@@ -187,27 +187,27 @@ EOFPW
 # Register the system using Subscription Manager
 [[ ${SMProxy} ]] && {
 
-	ProxyInfo="--proxy ${SMProxy}"
+    ProxyInfo="--proxy ${SMProxy}"
 
-	[[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
-	[[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
+    [[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
+    [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
 
-	Proxy_Creds=""
-	[[ ${SMProxyUser} && ${SMProxyPassword} ]] && Proxy_Creds="${SMProxyUser}:${SMProxyPassword}@"
+    Proxy_Creds=""
+    [[ ${SMProxyUser} && ${SMProxyPassword} ]] && Proxy_Creds="${SMProxyUser}:${SMProxyPassword}@"
 
-	HTTP_Proxy="http://${Proxy_Creds}${SMProxy}"
-	ip_addresses=$(ip addr | grep -Po 'inet \K[\d.]+')
-	no_proxy_list=$(echo $ip_addresses | tr ' ' ',')
+    HTTP_Proxy="http://${Proxy_Creds}${SMProxy}"
+    ip_addresses=$(ip addr | grep -Po 'inet \K[\d.]+')
+    no_proxy_list=$(echo $ip_addresses | tr ' ' ',')
 
-	export no_proxy=$no_proxy_list
-	export http_proxy=${HTTP_Proxy}
-	export https_proxy=${HTTP_Proxy}
+    export no_proxy=$no_proxy_list
+    export http_proxy=${HTTP_Proxy}
+    export https_proxy=${HTTP_Proxy}
 	
-	# Add file so proxy environment variables are maintaned with sudo commands
-	echo 'Defaults env_keep += "http_proxy https_proxy no_proxy"' > /etc/sudoers.d/proxy
-	chmod 0440 /etc/sudoers.d/proxy
+    # Add file so proxy environment variables are maintaned with sudo commands
+    echo 'Defaults env_keep += "http_proxy https_proxy no_proxy"' > /etc/sudoers.d/proxy
+    chmod 0440 /etc/sudoers.d/proxy
 
-	}
+    }
 
   subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
 

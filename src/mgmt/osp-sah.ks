@@ -492,23 +492,23 @@ echo "----------------------"
 # Register the system using Subscription Manager
 [[ ${SMProxy} ]] && {
 
-	ProxyInfo="--proxy ${SMProxy}:${SMProxyPort}"
+    ProxyInfo="--proxy ${SMProxy}:${SMProxyPort}"
 
-	[[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
-	[[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
+    [[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
+    [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
 
-	Proxy_Creds=""
-	[[ ${SMProxyUser} && ${SMProxyPassword} ]] && Proxy_Creds="${SMProxyUser}:${SMProxyPassword}@"
+    Proxy_Creds=""
+    [[ ${SMProxyUser} && ${SMProxyPassword} ]] && Proxy_Creds="${SMProxyUser}:${SMProxyPassword}@"
 
-	HTTP_Proxy="http://${Proxy_Creds}${SMProxy}:${SMProxyPort}"
+    HTTP_Proxy="http://${Proxy_Creds}${SMProxy}:${SMProxyPort}"
     ip_addresses=$(ip addr | grep -Po 'inet \K[\d.]+')
     no_proxy_list=$(echo $ip_addresses | tr ' ' ',')
 
     export no_proxy=$no_proxy_list
-	export http_proxy=${HTTP_Proxy}
-	export https_proxy=${HTTP_Proxy}
+    export http_proxy=${HTTP_Proxy}
+    export https_proxy=${HTTP_Proxy}
 
-	}
+    }
 
 subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
 

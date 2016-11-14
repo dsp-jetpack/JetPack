@@ -165,16 +165,16 @@ chvt 8
     [[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
     [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
 	
-	Proxy_Creds=""
-	[[ ${SMProxyUser} && ${SMProxyPassword} ]] && Proxy_Creds="${SMProxyUser}:${SMProxyPassword}@"
+    Proxy_Creds=""
+    [[ ${SMProxyUser} && ${SMProxyPassword} ]] && Proxy_Creds="${SMProxyUser}:${SMProxyPassword}@"
 
-	HTTP_Proxy="http://${Proxy_Creds}${SMProxy}"
+    HTTP_Proxy="http://${Proxy_Creds}${SMProxy}"
     ip_addresses=$(ip addr | grep -Po 'inet \K[\d.]+')
     no_proxy_list=$(echo $ip_addresses | tr ' ' ',')
 
     export no_proxy=$no_proxy_list
-	export http_proxy=${HTTP_Proxy}
-	export https_proxy=${HTTP_Proxy}
+    export http_proxy=${HTTP_Proxy}
+    export https_proxy=${HTTP_Proxy}
 	
     }
 
