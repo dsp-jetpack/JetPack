@@ -65,11 +65,12 @@ def validate_node_placement():
 
         # If the node capability was not set then error out
         if not node_capability:
+            ip, _ = CredentialHelper.get_drac_ip_and_user(node)
+
             raise ValueError("Error: Node {} has not been assigned a node "
                              "placement index.  Run assign_role for this "
                              "node and specify a role with the "
-                             "<role>-<index> format".format(
-                                 node.driver_info["ipmi_address"]))
+                             "<role>-<index> format".format(ip))
 
         hyphen = node_capability.rfind("-")
         flavor = node_capability[0:hyphen]
