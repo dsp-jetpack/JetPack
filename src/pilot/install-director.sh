@@ -21,9 +21,10 @@ dns_ip="$1"
 subscription_manager_user="$2"
 subscription_manager_pass="$3"
 subcription_manager_poolid="$4"
+proxy="$5"
 
 if [ "$#" -lt 3 ]; then
-  echo "Usage: $0 <dns_ip> <subscription_manager_user> <subscription_manager_pass> [<subcription_manager_poolid>]"
+  echo "Usage: $0 <dns_ip> <subscription_manager_user> <subscription_manager_pass> [<subcription_manager_poolid>] [<proxy>]"
   exit 1
 fi
 
@@ -60,6 +61,19 @@ create_flavor()
 }
 
 cd
+
+if [ ! -z $proxy ];
+then
+  echo
+  echo "## Configuring proxy"
+  ip_addresses=$(ip addr | grep -Po 'inet \K[\d.]+')
+  no_proxy_list=$(echo $ip_addresses | tr ' ' ',')
+  export no_proxy=$no_proxy_list
+  export http_proxy=$proxy
+  export https_proxy=$proxy
+  export -p 
+  echo "## Done."
+fi
 
 echo
 echo "## Configuring paths..."

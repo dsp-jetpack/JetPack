@@ -185,25 +185,42 @@ EOFPW
   echo "----------------------"
 
 # Register the system using Subscription Manager
-  [[ ${SMProxy} ]] && {
-    ProxyInfo="--proxy ${SMProxy}"
+[[ ${SMProxy} ]] && {
 
-    [[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
-    [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
-    }
+	ProxyInfo="--proxy ${SMProxy}"
+
+	[[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
+	[[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
+
+	Proxy_Creds=""
+	[[ ${SMProxyUser} && ${SMProxyPassword} ]] && Proxy_Creds="${SMProxyUser}:${SMProxyPassword}@"
+
+	HTTP_Proxy="http://${Proxy_Creds}${SMProxy}"
+	ip_addresses=$(ip addr | grep -Po 'inet \K[\d.]+')
+	no_proxy_list=$(echo $ip_addresses | tr ' ' ',')
+
+	export no_proxy=$no_proxy_list
+	export http_proxy=${HTTP_Proxy}
+	export https_proxy=${HTTP_Proxy}
+	
+	# Add file so proxy environment variables are maintaned with sudo commands
+	echo 'Defaults env_keep += "http_proxy https_proxy no_proxy"' > /etc/sudoers.d/proxy
+	chmod 0440 /etc/sudoers.d/proxy
+
+	}
 
   subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
 
   [[ x${SMPool} = x ]] \
-    && SMPool=$( subscription-manager list --available | awk '/OpenStack/,/Pool/ {pool = $3} END {print pool}' )
+    && SMPool=$( subscription-manager list --available ${ProxyInfo} | awk '/OpenStack/,/Pool/ {pool = $3} END {print pool}' )
 
   [[ -n ${SMPool} ]] \
-    && subscription-manager attach --pool ${SMPool} \
+    && subscription-manager attach --pool ${SMPool} ${ProxyInfo} \
     || ( echo "Could not find an OpenStack pool to attach to. - Auto-attaching to any pool." \
-         subscription-manager attach --auto
+         subscription-manager attach --auto ${ProxyInfo}
          )
 
-  subscription-manager repos '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-rpms --enable=rhel-7-fast-datapath-rpms
+  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-rpms --enable=rhel-7-fast-datapath-rpms
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt

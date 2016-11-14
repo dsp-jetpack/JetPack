@@ -17,7 +17,6 @@
 import os
 import sys
 
-
 repos = [
     "rhel-7-server-openstack-9-rpms",
     "rhel-7-server-openstack-9-director-rpms"]
@@ -29,6 +28,10 @@ def execute(cmd):
     if return_code != 0:
         sys.exit(return_code)
 
+if len(sys.argv)>1:
+    proxy = sys.argv[1]
+    os.environ["http_proxy"]=proxy
+    os.environ["https_proxy"]=proxy
 
 for repo in repos:
     execute("subscription-manager repos --enable=%s" % repo)
