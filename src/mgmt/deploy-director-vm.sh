@@ -284,9 +284,6 @@ EOIP
   echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
   sysctl -p
 
-  # no longer needed, but this is how you'd disable...
-  #sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
-
   # Configure the ntp daemon
   systemctl enable ntpd
   sed -i -e "/^server /d" /etc/ntp.conf
@@ -299,6 +296,9 @@ EOIP
   systemctl disable NetworkManager
   systemctl disable firewalld
   systemctl disable chronyd
+
+  # Put selinux into permissive mode
+  sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
 
 ) 2>&1 | /usr/bin/tee -a /root/director-posts.log
 

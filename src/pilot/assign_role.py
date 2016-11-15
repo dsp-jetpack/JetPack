@@ -313,10 +313,12 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index, ironic_client,
             role_index.role,
             flavor))
 
-    value = "profile:{},boot_option:local".format(flavor)
+    role = "profile:{}".format(flavor)
 
     if role_index.index:
-        value = "node:{}-{},{}".format(flavor, role_index.index, value)
+        role = "node:{}-{}".format(flavor, role_index.index)
+
+    value = "{},boot_option:local".format(role)
 
     patch = [{'op': 'add',
               'value': value,
