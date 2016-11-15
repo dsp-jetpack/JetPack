@@ -164,20 +164,32 @@ chvt 8
 
     [[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
     [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
+	
+    Proxy_Creds=""
+    [[ ${SMProxyUser} && ${SMProxyPassword} ]] && Proxy_Creds="${SMProxyUser}:${SMProxyPassword}@"
+
+    HTTP_Proxy="http://${Proxy_Creds}${SMProxy}"
+    ip_addresses=$(ip addr | grep -Po 'inet \K[\d.]+')
+    no_proxy_list=$(echo $ip_addresses | tr ' ' ',')
+
+    export no_proxy=$no_proxy_list
+    export http_proxy=${HTTP_Proxy}
+    export https_proxy=${HTTP_Proxy}
+	
     }
 
   subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
 
   [[ x${SMPool} = x ]] \
-    && SMPool=$( subscription-manager list --available | awk '/Red Hat Enterprise Linux Server/,/Pool/ {pool = $3} END {print pool}' )
+    && SMPool=$( subscription-manager list --available ${ProxyInfo} | awk '/Red Hat Enterprise Linux Server/,/Pool/ {pool = $3} END {print pool}' )
 
   [[ -n ${SMPool} ]] \
-    && subscription-manager attach --pool ${SMPool} \
+    && subscription-manager attach --pool ${SMPool} ${ProxyInfo} \
     || ( echo "Could not find a Red Hat Enterprise Linux Server pool to attach to. - Auto-attaching to any pool." \
-         subscription-manager attach --auto
+         subscription-manager attach --auto ${ProxyInfo}
          )
 
-  subscription-manager repos --disable=* --enable=rhel-7-server-rpms --enable=rhel-7-server-rhceph-1.3-calamari-rpms --enable=rhel-7-server-rhceph-1.3-installer-rpms --enable=rhel-7-server-rhceph-1.3-mon-rpms --enable=rhel-7-server-rhceph-1.3-osd-rpms
+  subscription-manager repos ${ProxyInfo} --disable=* --enable=rhel-7-server-rpms --enable=rhel-7-server-rhceph-1.3-calamari-rpms --enable=rhel-7-server-rhceph-1.3-installer-rpms --enable=rhel-7-server-rhceph-1.3-mon-rpms --enable=rhel-7-server-rhceph-1.3-osd-rpms
 
   cat <<EOIP > /etc/sysconfig/iptables
 *filter

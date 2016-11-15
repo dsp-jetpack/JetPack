@@ -17,10 +17,22 @@
 subscription_manager_user="$1"
 subscription_manager_pass="$2"
 subscription_manager_poolid="$3"
+proxy="$4"
 
 if [ "$#" -lt 2 ]; then
-  echo "Usage: $0  <subscription manager user> <subscription manager password> [<subscription pool id>]"
+  echo "Usage: $0  <subscription manager user> <subscription manager password> [<subscription pool id>] [<proxy>]"
   exit 1
+fi
+
+if [ ! -z $proxy ];
+then
+  echo "## Configuring proxy"
+  ip_addresses=$(ip addr | grep -Po 'inet \K[\d.]+')
+  no_proxy_list=$(echo $ip_addresses | tr ' ' ',')
+
+  export no_proxy=$no_proxy_list
+  export http_proxy=$proxy
+  export https_proxy=$proxy
 fi
 
 echo "## install libguestfs-tools"
@@ -60,3 +72,4 @@ echo "## Unregister from subscription manager"
 virt-customize -a overcloud-full.qcow2 --run-command 'subscription-manager remove --all' --run-command 'subscription-manager unregister'
 
 echo "## Done updating the overcloud image"
+

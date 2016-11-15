@@ -16,12 +16,16 @@
 
 import os
 import sys
+import argparse
 
+args_parser = argparse.ArgumentParser()
+args_parser.add_argument("--proxy", help="proxy address formatted as 'http://<proxy_user>:<proxy_password>@<proxy_address>:<proxy_port>'")
+
+args = args_parser.parse_args()
 
 repos = [
     "rhel-7-server-openstack-9-rpms",
     "rhel-7-server-openstack-9-director-rpms"]
-
 
 def execute(cmd):
     print cmd
@@ -29,6 +33,10 @@ def execute(cmd):
     if return_code != 0:
         sys.exit(return_code)
 
+if args.proxy:
+    proxy = args.proxy
+    os.environ["http_proxy"]=proxy
+    os.environ["https_proxy"]=proxy
 
 for repo in repos:
     execute("subscription-manager repos --enable=%s" % repo)
