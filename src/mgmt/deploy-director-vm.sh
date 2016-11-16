@@ -276,9 +276,7 @@ EOIP
     echo "server ${ntps}" >> /etc/ntp.conf
   done
 
-  systemctl disable NetworkManager
   systemctl disable firewalld
-  systemctl disable chronyd
 
   # Put selinux into permissive mode
   sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
