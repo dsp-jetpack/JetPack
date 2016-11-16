@@ -160,7 +160,7 @@ class Sah(InfraHost):
                                       '^br_pub_api_boot_opts=.*',
                                       'br_pub_api_boot_opts="onboot static ' +
                                       sets.sah_node.public_api_ip + '/' +
-                                      sets.external_netmask + '"')
+                                      sets.public_api_netmask + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^br_priv_api_boot_opts=.*',
                                       'br_priv_api_boot_opts="onboot static ' +
