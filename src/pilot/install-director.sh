@@ -85,7 +85,7 @@ echo "## Done."
 echo
 echo "## Installing Director"
 sudo yum -y install python-tripleoclient
-yes "" | openstack undercloud install
+openstack undercloud install
 echo "## Done."
 
 echo
