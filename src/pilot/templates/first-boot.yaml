@@ -56,9 +56,9 @@ resources:
           file="/usr/share/openstack-puppet/modules/ceph/manifests/profile/rgw.pp"
           echo "Patching ${file}..."
           sed -i "s|\${name}|radosgw.gateway|g" ${file}
-          file="/usr/share/openstack-puppet/modules/tripleo/manifests/loadbalancer.pp"
-          echo "Patching ${file}..."
-          sed -i "s|ports             => '8080'|ports             => '7480'|" ${file}
+          #file="/usr/share/openstack-puppet/modules/tripleo/manifests/loadbalancer.pp"
+          #echo "Patching ${file}..."
+          #sed -i "s|ports             => '8080'|ports             => '7480'|" ${file}
         } > /root/patch-rgw.txt 2>&1
 
 outputs:
