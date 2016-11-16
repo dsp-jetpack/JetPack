@@ -128,14 +128,6 @@ def deploy():
                          settings.compute_nodes +
                          settings.ceph_nodes)
 
-        logger.debug("=== powering the nodes")
-        for each in non_sah_nodes:
-            ipmi_session = Ipmi(settings.cygwin_installdir,
-                                settings.ipmi_user,
-                                settings.ipmi_password,
-                                each.idrac_ip)
-            ipmi_session.power_off()
-            ipmi_session.set_boot_to_pxe()
         sah_node = Sah()
 
         tester.sah_health_check()
@@ -206,6 +198,10 @@ def deploy():
 
         logger.info("=== Preparing the overcloud ===")
 
+        # The network-environment.yaml must be setup for use during DHCP
+        # server configuration
+        director_vm.setup_net_envt()
+        director_vm.configure_dhcp_server()
         director_vm.node_discovery()
         director_vm.assign_node_roles()
 
