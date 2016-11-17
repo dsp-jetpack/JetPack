@@ -1,4 +1,0 @@
-# Cluster Class
-
-class Cluster
-
