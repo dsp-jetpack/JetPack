@@ -1,0 +1,121 @@
+{
+  "nodes": [
+    {
+      "pm_type": "pxe_ipmitool",
+      "pm_user": "root",
+      "pm_password": "1S0lut1on!",
+      "pm_addr": "192.168.110.103",
+      "mac": [
+        "b8:ca:3a:67:43:6c"
+      ],
+      "cpu": "20",
+      "memory": "131072",
+      "disk": "931",
+      "arch": "x86_64"
+    },
+    {
+      "pm_type": "pxe_ipmitool",
+      "pm_user": "root",
+      "pm_password": "1S0lut1on!",
+      "pm_addr": "192.168.110.104",
+      "mac": [
+        "b8:ca:3a:68:67:68"
+      ],
+      "cpu": "20",
+      "memory": "131072",
+      "disk": "931",
+      "arch": "x86_64"
+    },
+    {
+      "pm_type": "pxe_ipmitool",
+      "pm_user": "root",
+      "pm_password": "1S0lut1on!",
+      "pm_addr": "192.168.110.106",
+      "mac": [
+        "b8:ca:3a:67:3d:c8"
+      ],
+      "cpu": "20",
+      "memory": "131072",
+      "disk": "931",
+      "arch": "x86_64"
+    },
+    {
+      "pm_type": "pxe_ipmitool",
+      "pm_user": "root",
+      "pm_password": "1S0lut1on!",
+      "pm_addr": "192.168.110.107",
+      "mac": [
+        "b8:ca:3a:67:3f:68"
+      ],
+      "cpu": "20",
+      "memory": "131072",
+      "disk": "931",
+      "arch": "x86_64"
+    },
+    {
+      "pm_type": "pxe_ipmitool",
+      "pm_user": "root",
+      "pm_password": "1S0lut1on!",
+      "pm_addr": "192.168.110.105",
+      "mac": [
+        "b8:ca:3a:68:67:54"
+      ],
+      "cpu": "20",
+      "memory": "131072",
+      "disk": "931",
+      "arch": "x86_64"
+    },
+    {
+      "pm_type": "pxe_ipmitool",
+      "pm_user": "root",
+      "pm_password": "1S0lut1on!",
+      "pm_addr": "192.168.110.108",
+      "mac": [
+        "b8:ca:3a:67:3c:d0"
+      ],
+      "cpu": "20",
+      "memory": "131072",
+      "disk": "931",
+      "arch": "x86_64"
+    },
+    {
+      "pm_type": "pxe_ipmitool",
+      "pm_user": "root",
+      "pm_password": "1S0lut1on!",
+      "pm_addr": "192.168.110.111",
+      "mac": [
+        "bc:30:5b:f1:55:08"
+      ],
+      "cpu": "16",
+      "memory": "65536",
+      "disk": "931",
+      "arch": "x86_64"
+    },
+    {
+      "pm_type": "pxe_ipmitool",
+      "pm_user": "root",
+      "pm_password": "1S0lut1on!",
+      "pm_addr": "192.168.110.110",
+      "mac": [
+        "b8:ca:3a:67:0c:7c"
+      ],
+      "cpu": "20",
+      "memory": "131072",
+      "disk": "931",
+      "arch": "x86_64"
+    },
+    {
+      "pm_type": "pxe_ipmitool",
+      "pm_user": "root",
+      "pm_password": "1S0lut1on!",
+      "pm_addr": "192.168.110.109",
+      "mac": [
+        "b8:ca:3a:67:17:4c"
+      ],
+      "cpu": "20",
+      "memory": "131072",
+      "disk": "931",
+      "arch": "x86_64"
+    }
+  ]
+}
