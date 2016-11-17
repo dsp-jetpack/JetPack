@@ -1,0 +1,289 @@
+{                                                         
+        "start":        {                                 
+                "connected":    [{                        
+                                "socket":       4,        
+                                "local_host":   "::1",    
+                                "local_port":   38103,    
+                                "remote_host":  "::1",    
+                                "remote_port":  5201      
+                        }],                               
+                "version":      "iperf 3.0.11",           
+                "system_info":  "Linux anvil3 2.6.32-573.12.1.el6.x86_64 #1 SMP Tue Dec 15 21:19:08 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux\n",                                                         
+                "timestamp":    {                                                                   
+                        "time": "Wed, 17 Feb 2016 00:25:40 GMT",                                    
+                        "timesecs":     1455668740                                                  
+                },                                                                                  
+                "connecting_to":        {                                                           
+                        "host": "localhost",                                                        
+                        "port": 5201                                                                
+                },                                                                                  
+                "cookie":       "anvil3.1455668740.451766.715deaaf1de",                             
+                "tcp_mss_default":      32768,                                                      
+                "test_start":   {                                                                   
+                        "protocol":     "TCP",                                                      
+                        "num_streams":  1,                                                          
+                        "blksize":      131072,                                                     
+                        "omit": 0,                                                                  
+                        "duration":     10,                                                         
+                        "bytes":        0,                                                          
+                        "blocks":       0,                                                          
+                        "reverse":      0                                                           
+                }                                                                                   
+        },                                                                                          
+        "intervals":    [{                                                                          
+                        "streams":      [{                                                          
+                                        "socket":       4,                                          
+                                        "start":        0,                                          
+                                        "end":  1.00009,                                            
+                                        "seconds":      1.00009,                                    
+                                        "bytes":        5050989152,                                 
+                                        "bits_per_second":      4.04044e+10,                        
+                                        "retransmits":  0,                                          
+                                        "snd_cwnd":     1112888,                                    
+                                        "omitted":      false                                       
+                                }],                                                                 
+                        "sum":  {                                                                   
+                                "start":        0,                                                  
+                                "end":  1.00009,                                                    
+                                "seconds":      1.00009,                                            
+                                "bytes":        5050989152,                                         
+                                "bits_per_second":      4.04044e+10,                                
+                                "retransmits":  0,                                                  
+                                "omitted":      false                                               
+                        }                                                                           
+                }, {                                                                                
+                        "streams":      [{                                                          
+                                        "socket":       4,                                          
+                                        "start":        1.00009,                                    
+                                        "end":  2.00026,                                            
+                                        "seconds":      1.00017,                                    
+                                        "bytes":        5006423952,                                 
+                                        "bits_per_second":      4.00447e+10,                        
+                                        "retransmits":  0,                                          
+                                        "snd_cwnd":     1178352,                                    
+                                        "omitted":      false                                       
+                                }],                                                                 
+                        "sum":  {                                                                   
+                                "start":        1.00009,                                            
+                                "end":  2.00026,                                                    
+                                "seconds":      1.00017,                                            
+                                "bytes":        5006423952,                                         
+                                "bits_per_second":      4.00447e+10,                                
+                                "retransmits":  0,                                                  
+                                "omitted":      false                                               
+                        }                                                                           
+                }, {                                                                                
+                        "streams":      [{                                                          
+                                        "socket":       4,                                          
+                                        "start":        2.00026,                                    
+                                        "end":  3.00005,                                            
+                                        "seconds":      0.999793,                                   
+                                        "bytes":        4934067168,                                 
+                                        "bits_per_second":      3.94807e+10,                        
+                                        "retransmits":  0,                                          
+                                        "snd_cwnd":     1309280,                                    
+                                        "omitted":      false                                       
+                                }],                                                                 
+                        "sum":  {                                                                   
+                                "start":        2.00026,                                            
+                                "end":  3.00005,                                                    
+                                "seconds":      0.999793,                                           
+                                "bytes":        4934067168,                                         
+                                "bits_per_second":      3.94807e+10,                                
+                                "retransmits":  0,                                                  
+                                "omitted":      false                                               
+                        }                                                                           
+                }, {                                                                                
+                        "streams":      [{                                                          
+                                        "socket":       4,                                          
+                                        "start":        3.00005,                                    
+                                        "end":  4.00016,                                            
+                                        "seconds":      1.00011,                                    
+                                        "bytes":        4920442880,                                 
+                                        "bits_per_second":      3.93591e+10,                        
+                                        "retransmits":  0,                                          
+                                        "snd_cwnd":     1309280,                                    
+                                        "omitted":      false                                       
+                                }],                                                                 
+                        "sum":  {                                                                   
+                                "start":        3.00005,                                            
+                                "end":  4.00016,                                                    
+                                "seconds":      1.00011,                                            
+                                "bytes":        4920442880,                                         
+                                "bits_per_second":      3.93591e+10,                                
+                                "retransmits":  0,                                                  
+                                "omitted":      false                                               
+                        }                                                                           
+                }, {                                                                                
+                        "streams":      [{                                                          
+                                        "socket":       4,                                          
+                                        "start":        4.00016,                                    
+                                        "end":  5.00007,                                            
+                                        "seconds":      0.999911,                                   
+                                        "bytes":        4989911040,                                 
+                                        "bits_per_second":      3.99228e+10,                        
+                                        "retransmits":  0,                                          
+                                        "snd_cwnd":     1374744,                                    
+                                        "omitted":      false                                       
+                                }],                                                                 
+                        "sum":  {                                                                   
+                                "start":        4.00016,                                            
+                                "end":  5.00007,                                                    
+                                "seconds":      0.999911,                                           
+                                "bytes":        4989911040,                                         
+                                "bits_per_second":      3.99228e+10,                                
+                                "retransmits":  0,                                                  
+                                "omitted":      false                                               
+                        }                                                                           
+                }, {                                                                                
+                        "streams":      [{                                                          
+                                        "socket":       4,                                          
+                                        "start":        5.00007,                                    
+                                        "end":  6.00015,                                            
+                                        "seconds":      1.00008,                                    
+                                        "bytes":        4908646400,                                 
+                                        "bits_per_second":      3.92662e+10,                        
+                                        "retransmits":  0,                                          
+                                        "snd_cwnd":     1374744,                                    
+                                        "omitted":      false                                       
+                                }],                                                                 
+                        "sum":  {                                                                   
+                                "start":        5.00007,                                            
+                                "end":  6.00015,                                                    
+                                "seconds":      1.00008,                                            
+                                "bytes":        4908646400,                                         
+                                "bits_per_second":      3.92662e+10,                                
+                                "retransmits":  0,                                                  
+                                "omitted":      false                                               
+                        }                                                                           
+                }, {                                                                                
+                        "streams":      [{                                                          
+                                        "socket":       4,                                          
+                                        "start":        6.00015,                                    
+                                        "end":  7.00061,                                            
+                                        "seconds":      1.00046,                                    
+                                        "bytes":        4968939520,                                 
+                                        "bits_per_second":      3.97331e+10,                        
+                                        "retransmits":  0,                                          
+                                        "snd_cwnd":     1374744,                                    
+                                        "omitted":      false                                       
+                                }],                                                                 
+                        "sum":  {                                                                   
+                                "start":        6.00015,                                            
+                                "end":  7.00061,                                                    
+                                "seconds":      1.00046,                                            
+                                "bytes":        4968939520,                                         
+                                "bits_per_second":      3.97331e+10,                                
+                                "retransmits":  0,                                                  
+                                "omitted":      false                                               
+                        }                                                                           
+                }, {                                                                                
+                        "streams":      [{                                                          
+                                        "socket":       4,                                          
+                                        "start":        7.00061,                                    
+                                        "end":  8.00005,                                            
+                                        "seconds":      0.999435,                                   
+                                        "bytes":        4233625600,                                 
+                                        "bits_per_second":      3.38882e+10,                        
+                                        "retransmits":  0,                                          
+                                        "snd_cwnd":     1963920,                                    
+                                        "omitted":      false                                       
+                                }],                                                                 
+                        "sum":  {                                                                   
+                                "start":        7.00061,                                            
+                                "end":  8.00005,                                                    
+                                "seconds":      0.999435,                                           
+                                "bytes":        4233625600,                                         
+                                "bits_per_second":      3.38882e+10,                                
+                                "retransmits":  0,                                                  
+                                "omitted":      false                                               
+                        }                                                                           
+                }, {                                                                                
+                        "streams":      [{                                                          
+                                        "socket":       4,                                          
+                                        "start":        8.00005,                                    
+                                        "end":  9.00021,                                            
+                                        "seconds":      1.00016,                                    
+                                        "bytes":        4828692480,                                 
+                                        "bits_per_second":      3.86233e+10,                        
+                                        "retransmits":  0,                                          
+                                        "snd_cwnd":     1963920,                                    
+                                        "omitted":      false                                       
+                                }],                                                                 
+                        "sum":  {                                                                   
+                                "start":        8.00005,                                            
+                                "end":  9.00021,                                                    
+                                "seconds":      1.00016,                                            
+                                "bytes":        4828692480,                                         
+                                "bits_per_second":      3.86233e+10,                                
+                                "retransmits":  0,                                                  
+                                "omitted":      false                                               
+                        }                                                                           
+                }, {
+                        "streams":      [{
+                                        "socket":       4,
+                                        "start":        9.00021,
+                                        "end":  10.0003,
+                                        "seconds":      1.00006,
+                                        "bytes":        4649123840,
+                                        "bits_per_second":      3.71907e+10,
+                                        "retransmits":  0,
+                                        "snd_cwnd":     1963920,
+                                        "omitted":      false
+                                }],
+                        "sum":  {
+                                "start":        9.00021,
+                                "end":  10.0003,
+                                "seconds":      1.00006,
+                                "bytes":        4649123840,
+                                "bits_per_second":      3.71907e+10,
+                                "retransmits":  0,
+                                "omitted":      false
+                        }
+                }],
+        "end":  {
+                "streams":      [{
+                                "sender":       {
+                                        "socket":       4,
+                                        "start":        0,
+                                        "end":  10.0003,
+                                        "seconds":      10.0003,
+                                        "bytes":        48490862032,
+                                        "bits_per_second":      3.87917e+10,
+                                        "retransmits":  0
+                                },
+                                "receiver":     {
+                                        "socket":       4,
+                                        "start":        0,
+                                        "end":  10.0003,
+                                        "seconds":      10.0003,
+                                        "bytes":        48490862032,
+                                        "bits_per_second":      3.87917e+10
+                                }
+                        }],
+                "sum_sent":     {
+                        "start":        0,
+                        "end":  10.0003,
+                        "seconds":      10.0003,
+                        "bytes":        48490862032,
+                        "bits_per_second":      3.87917e+10,
+                        "retransmits":  0
+                },
+                "sum_received": {
+                        "start":        0,
+                        "end":  10.0003,
+                        "seconds":      10.0003,
+                        "bytes":        48490862032,
+                        "bits_per_second":      3.87917e+10
+                },
+                "cpu_utilization_percent":      {
+                        "host_total":   98.3713,
+                        "host_user":    0.882427,
+                        "host_system":  97.6128,
+                        "remote_total": 18.3258,
+                        "remote_user":  0.246731,
+                        "remote_system":        18.0744
+                }
+        }
+}
+
