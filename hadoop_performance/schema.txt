@@ -1,8 +1,0 @@
-CREATE TABLE `results` (
-  `run_id` varchar(255) NOT NULL,
-  `test_type` varchar(45) NOT NULL,
-  `test_data` varchar(255) NOT NULL,
-  `result_type` varchar(45) NOT NULL,
-  `result_identifier` varchar(255) NOT NULL,
-  `result_datapoint` varchar(255) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
