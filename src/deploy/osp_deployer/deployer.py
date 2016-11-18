@@ -40,7 +40,7 @@ def setup_logging():
 
 
 def get_settings():
-    parser = argparse.ArgumentParser(description='Jetstream 6.x deployer')
+    parser = argparse.ArgumentParser(description='CHANGEME_wHEN_WE_HAVE_A_NAME 7.x deployer')
     parser.add_argument('-s', '--settings',
                         help='ini settings file, e.g settings/acme.ini',
                         required=True)
@@ -96,7 +96,7 @@ def deploy():
         logger.info("=== Starting up ...")
         logger.debug("=================================")
 
-        parser = argparse.ArgumentParser(description='Jetstream 6.x deployer')
+        parser = argparse.ArgumentParser(description='CHANGEME_wHEN_WE_HAVE_A_NAME 7.x deployer')
         parser.add_argument('-s', '--settings',
                             help='ini settings file, e.g settings/acme.ini',
                             required=True)
