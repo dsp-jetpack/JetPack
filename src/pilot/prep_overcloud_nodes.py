@@ -15,38 +15,72 @@
 # limitations under the License.
 
 import argparse
-import json
+import logging
 import os
-from ironicclient import client
-from subprocess import check_output
+import sys
+from ironic_helper import IronicHelper
+from logging_helper import LoggingHelper
 from credential_helper import CredentialHelper
+
+logging.basicConfig()
+logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Prepares the overcloud nodes.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    LoggingHelper.add_argument(parser)
+
+    return parser.parse_args()
 
 
 def main():
-    os_auth_url, os_tenant_name, os_username, os_password = \
-        CredentialHelper.get_undercloud_creds()
+    args = parse_arguments()
 
-    kwargs = {'os_username': os_username,
-              'os_password': os_password,
-              'os_auth_url': os_auth_url,
-              'os_tenant_name': os_tenant_name}
-    ironic = client.get_client(1, **kwargs)
+    root_logger = logging.getLogger()
+    root_logger.setLevel(args.logging_level)
+    urllib3_logger = logging.getLogger("requests.packages.urllib3")
+    urllib3_logger.setLevel(logging.WARN)
 
-    for node in ironic.node.list(detail=True):
+    ironic_client = IronicHelper.get_ironic_client()
+
+    for node in ironic_client.node.list(detail=True):
         ip, username, password = \
             CredentialHelper.get_drac_creds_from_node(node)
 
         # Power off the node
         cmd = "ipmitool -H {} -I lanplus -U {} -P '{}' chassis " \
             "power off".format(ip, username, password)
-        print cmd
+        logger.info("Powering off {}".format(ip))
+        logger.debug("    {}".format(cmd))
         os.system(cmd)
 
         # Set the first boot device to PXE
         cmd = "ipmitool -H {} -I lanplus -U {} -P '{}' chassis " \
             "bootdev pxe options=persistent".format(ip, username, password)
-        print cmd
+        logger.info("Setting the provisioning NIC to PXE boot on {}".format(
+            ip))
+        logger.debug("    {}".format(cmd))
         os.system(cmd)
+
+    os_auth_url, os_tenant_name, os_username, os_password = \
+        CredentialHelper.get_undercloud_creds()
+
+    cmd = "openstack baremetal configure boot " \
+        "--os-auth-url {} " \
+        "--os-project-name {} " \
+        "--os-username {} " \
+        "--os-password {} " \
+        "".format(os_auth_url,
+                  os_tenant_name,
+                  os_username,
+                  os_password)
+
+    logger.info("Assigning the kernel and ramdisk image to all nodes")
+    logger.debug(cmd)
+    os.system(cmd)
 
 
 if __name__ == "__main__":

@@ -40,6 +40,10 @@ parameter_defaults:
   # CHANGEME: Change the following to the CIDR for the External network
   ExternalNetCidr: 192.168.190.0/24
 
+  # CHANGEME: Change the following to the DHCP ranges for the iDRACs to use on
+  # the Management network
+  ManagementAllocationPools: [{'start': '192.168.110.10', 'end': '192.168.110.149'}]
+
   # The allocation pools below are used to dynamically assign DHCP IP addresses
   # to the various networks on the overcloud nodes as they are provisioned.  If
   # using static IPs instead, see static-ip-environment.yaml.
@@ -66,6 +70,9 @@ parameter_defaults:
 
   # CHANGEME: Set to the router gateway on the external network
   ExternalInterfaceDefaultRoute: 192.168.190.1
+
+  # CHANGEME: Set to the router gateway on the management network
+  ManagementNetworkGateway: 192.168.110.1
 
   # CHANGEME: Set to the IP of the gateway on the provisioning network which
   # will allow access to the management network

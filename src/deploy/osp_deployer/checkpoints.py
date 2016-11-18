@@ -131,7 +131,7 @@ class Checkpoints():
         test = self.ping_host(self.settings.sah_node.external_ip,
                               "root",
                               self.settings.sah_node.root_password,
-                              self.settings.controller_nodes[0].idrac_ip)
+                              self.settings.sah_node.idrac_ip)
         if self.ping_success not in test:
             raise AssertionError(
                 "SAH cannot ping idrac networkn (ip) : " + test)
@@ -230,7 +230,7 @@ class Checkpoints():
         test = self.ping_host(setts.director_node.external_ip,
                               "root",
                               setts.director_node.root_password,
-                              setts.controller_nodes[0].idrac_ip)
+                              setts.sah_node.idrac_ip)
         if self.ping_success not in test:
             raise AssertionError(
                 "Director VM cannot ping idrac network (ip) : " + test)
@@ -327,7 +327,7 @@ class Checkpoints():
             raise AssertionError(
                 "Expected amount of nodes registered in Ironic "
                 "does not add up " +
-                str(len(list)) + "/" + str(expected_nodes))
+                str(len(ls_nodes)) + "/" + str(expected_nodes))
 
     def verify_introspection_sucessfull(self):
         logger.debug("Verify the introspection did not encounter any errors")

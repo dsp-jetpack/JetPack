@@ -65,6 +65,7 @@ eula --agreed
 @virtualization-client
 @virtualization-hypervisor
 @virtualization-tools
+dhcp
 ntp
 ntpdate
 -chrony
@@ -490,24 +491,37 @@ echo "----------------------"
 
 # Register the system using Subscription Manager
 [[ ${SMProxy} ]] && {
-  ProxyInfo="--proxy ${SMProxy}"
 
-  [[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
-  [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
-  }
+    ProxyInfo="--proxy ${SMProxy}:${SMProxyPort}"
+
+    [[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
+    [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
+
+    Proxy_Creds=""
+    [[ ${SMProxyUser} && ${SMProxyPassword} ]] && Proxy_Creds="${SMProxyUser}:${SMProxyPassword}@"
+
+    HTTP_Proxy="http://${Proxy_Creds}${SMProxy}:${SMProxyPort}"
+    ip_addresses=$(ip addr | grep -Po 'inet \K[\d.]+')
+    no_proxy_list=$(echo $ip_addresses | tr ' ' ',')
+
+    export no_proxy=$no_proxy_list
+    export http_proxy=${HTTP_Proxy}
+    export https_proxy=${HTTP_Proxy}
+
+    }
 
 subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
 
-[[ x${SMPool} = x ]] \
-  && SMPool=$( subscription-manager list --available | awk '/Red Hat Enterprise Linux Server/,/Pool/ {pool = $3} END {print pool}' )
+  [[ x${SMPool} = x ]] \
+    && SMPool=$( subscription-manager list --available ${ProxyInfo} | awk '/Red Hat Enterprise Linux Server/,/Pool/ {pool = $3} END {print pool}' )
 
-[[ -n ${SMPool} ]] \
-  && subscription-manager attach --pool ${SMPool} \
-  || ( echo "Could not find a Red Hat Enterprise Linux Server pool to attach to. - Auto-attaching to any pool." \
-       subscription-manager attach --auto
-     )
+  [[ -n ${SMPool} ]] \
+    && subscription-manager attach --pool ${SMPool} ${ProxyInfo} \
+    || ( echo "Could not find a Red Hat Enterprise Linux Server pool to attach to. - Auto-attaching to any pool." \
+         subscription-manager attach --auto ${ProxyInfo}
+         )
 
-subscription-manager repos '--disable=*' --enable=rhel-7-server-rpms
+subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms
 
 systemctl disable NetworkManager
 systemctl disable firewalld
@@ -525,7 +539,7 @@ curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
 python get-pip.py
 pip install paramiko
 
-echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/root/JetStream/deploy-auto' >> /root/.bashrc 
+echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/root/temp_name/something_not_jetstream/src/deploy/' >> /root/.bashrc 
 
 chvt 1
 

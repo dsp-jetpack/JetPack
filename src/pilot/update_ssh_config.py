@@ -122,7 +122,10 @@ def update_etc_hosts(overcloud):
 
     # Generate a clean hosts file with old entries removed
     for line in etc_file.readlines():
-        if line == marker or line.split()[1] in overcloud.keys():
+        words = line.split()
+        if ((line == marker) or
+            (len(words) == 2 and words[1] in overcloud.keys())):
+
             continue
         new_file.write(line)
 
@@ -136,6 +139,7 @@ def update_etc_hosts(overcloud):
     new_file.close()
     os.chmod(new_hosts, 0644)
     os.system('sudo mv {} {}'.format(new_hosts, etc_hosts))
+    os.system('sudo chown root:root {}'.format(etc_hosts))
 
 
 def main():
