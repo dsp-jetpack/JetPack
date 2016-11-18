@@ -14,28 +14,64 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
+
 import argparse
+from collections import namedtuple
 import json
+import logging
 import os
 import sys
+from time import sleep
 
-import lxml
-from lxml import etree as ElementTree
-import ironicclient
-from dracclient import wsman, utils
-from subprocess import check_output
+from dracclient import utils
+from dracclient.constants import POWER_OFF
+from dracclient.exceptions import DRACOperationFailed, \
+    DRACUnexpectedReturnValue, WSManInvalidResponse, WSManRequestFailure
 from oslo_utils import units
 from credential_helper import CredentialHelper
+from ironic_helper import IronicHelper
+from logging_helper import LoggingHelper
 import requests
 try:  # OSP8
     from ironicclient.openstack.common.apiclient.exceptions import NotFound
 except ImportError:  # OSP9
-    from ironicclient.common.apiclient.exceptions import NotFound
+    from ironicclient.common.apiclient.exceptions import InternalServerError, \
+        NotFound
+
+discover_nodes_path = os.path.join(os.path.expanduser('~'),
+                                   'pilot/discover_nodes')
+sys.path.append(discover_nodes_path)
+
+from discover_nodes.dracclient.client import DRACClient  # noqa
 
 requests.packages.urllib3.disable_warnings()
 
-DCIM_SystemView = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
-                   'DCIM_SystemView')
+# Perform basic configuration of the logging system, which configures the root
+# logger. It creates a StreamHandler with a default Formatter and adds it to
+# the root logger. Log messages are directed to stderr. This configuration
+# applies to the log messages emitted by this script and the modules in the
+# packages it uses, such as ironicclient and dracclient.
+#
+# Notably, the effective logging levels of this module and the packages it uses
+# are configured to be different. The packages' is WARNING, because theirs is
+# obtained from their ancestor, the root logger. This script's is INFO by
+# default. That can be changed by an optional command-line argument.
+logging.basicConfig()
+
+# Create this script's logger. Give it a more friendly name than __main__.
+LOG = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
+
+# Create a factory function for creating tuple-like objects that contain the
+# role that the node will play and an optional index that indicates placement
+# order in the rack.
+#
+# The article
+# http://stackoverflow.com/questions/35988/c-like-structures-in-python
+# describes the use of collections.namedtuple to implement C-like structures in
+# Python.
+RoleIndex = namedtuple('RoleIndex', ['role', 'index', ])
+
 DCIM_VirtualDiskView = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
                         'DCIM_VirtualDiskView')
 DCIM_PhysicalDiskView = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
@@ -49,6 +85,253 @@ ROLES = {
     'storage': 'ceph-storage'
 }
 
+# TODO: Use the OpenStack Oslo logging library, instead of the Python standard
+#       library logging facility.
+#
+#       This would have value if this code is contributed to ironic upstream
+#       and ironic is using the Oslo logging library.
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Assigns role to Overcloud node.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("ip_mac_service_tag",
+                        help="""IP address of the iDRAC, MAC address of the
+                                interface on the provisioning network,
+                                or service tag of the node""",
+                        metavar="ADDRESS")
+    parser.add_argument("role_index",
+                        type=role_index,
+                        help="""role that the node will play, with an optional
+                                index that indicates placement order in the
+                                rack; choices are controller[-<index>],
+                                compute[-<index>], and storage[-<index>]""",
+                        metavar="ROLE")
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-p",
+                       "--pxe-nic",
+                       help="""fully qualified device descriptor (FQDD) of
+                               network interface to PXE boot from""",
+                       metavar="FQDD")
+    group.add_argument("-m",
+                       "--model-properties",
+                       default="~/pilot/dell_systems.json",
+                       help="""file that defines Dell system model properties,
+                               including FQDD of network interface to PXE boot
+                               from""",
+                       metavar="FILENAME")
+    parser.add_argument("-f",
+                        "--flavor-settings",
+                        default="~/pilot/flavors_settings.json",
+                        help="file that contains flavor settings",
+                        metavar="FILENAME")
+    parser.add_argument("-n",
+                        "--node-definition",
+                        default="~/instackenv.json",
+                        help="""node definition template file that defines the
+                                node being assigned""",
+                        metavar="FILENAME")
+    LoggingHelper.add_argument(parser)
+
+    return parser.parse_args()
+
+
+def role_index(string):
+    role = string
+    index = None
+
+    if string.find("-") != -1:
+        role_tokens = role.split("-")
+        role = role_tokens[0]
+        index = role_tokens[1]
+
+    if role not in ROLES.keys():
+        raise argparse.ArgumentTypeError(
+            "{} is not a valid role; choices are {}".format(
+                role, str(
+                    ROLES.keys())))
+
+    if index and not index.isdigit():
+        raise argparse.ArgumentTypeError(
+            "{} is not a valid role index; it must be a number".format(index))
+
+    return RoleIndex(role, index)
+
+
+def get_model_properties(fqdd, json_filename):
+    # Explicitly specifying the network interface controller (NIC) fully
+    # qualified device descriptor (FQDD) takes precedence over determining the
+    # PXE NIC by the node's system model.
+    if fqdd is not None:
+        return None
+
+    model_properties = None
+    expanded_filename = os.path.expanduser(json_filename)
+
+    try:
+        with open(expanded_filename, 'r') as f:
+            try:
+                model_properties = json.load(f)
+            except ValueError:
+                LOG.exception(
+                    "Could not deserialize model properties file {}".format(
+                        expanded_filename))
+    except IOError:
+        LOG.exception(
+            "Could not open model properties file {}".format(
+                expanded_filename))
+
+    return model_properties
+
+
+def get_flavor_settings(json_filename):
+    flavor_settings = None
+
+    try:
+        with open(json_filename, 'r') as f:
+            try:
+                flavor_settings = json.load(f)
+            except ValueError:
+                LOG.exception(
+                    "Could not deserialize flavor settings file {}".format(
+                        json_filename))
+    except IOError:
+        LOG.exception(
+            "Could not open flavor settings file {}".format(json_filename))
+
+    return flavor_settings
+
+
+def calculate_bios_settings(role, flavor_settings, json_filename):
+    return calculate_category_settings_for_role(
+        'bios',
+        role,
+        flavor_settings,
+        json_filename)
+
+
+def calculate_category_settings_for_role(
+        category,
+        role,
+        flavor_settings,
+        json_filename):
+    default = {}
+
+    if 'default' in flavor_settings and category in flavor_settings['default']:
+        default = flavor_settings['default'][category]
+
+    flavor = ROLES[role]
+    flavor_specific = {}
+
+    if flavor in flavor_settings and category in flavor_settings[flavor]:
+        flavor_specific = flavor_settings[flavor][category]
+
+    # Flavor-specific settings take precedence over default settings.
+    category_settings = merge_two_dicts(default, flavor_specific)
+
+    if not category_settings:
+        LOG.critical(
+            'File {} does not contain "{}" settings for flavor "{}"'.format(
+                json_filename,
+                category,
+                flavor))
+        return None
+
+    return category_settings
+
+
+def merge_two_dicts(x, y):
+    z = x.copy()
+    z.update(y)
+    return z
+
+
+def get_drac_client(node_definition_filename, node):
+    drac_ip, drac_user, drac_password = \
+        CredentialHelper.get_drac_creds_from_node(node,
+                                                  node_definition_filename)
+    drac_client = DRACClient(drac_ip, drac_user, drac_password)
+    # TODO: Validate the IP address is an iDRAC.
+    #
+    #       This could detect an error by an off-roading user who provided an
+    #       incorrect IP address for the iDRAC.
+    #
+    #       A to be developed dracclient API should be used to perform the
+    #       validation.
+
+    return drac_client
+
+
+def get_pxe_nic_fqdd(fqdd, model_properties, drac_client):
+    # Explicitly specifying the network interface controller (NIC) fully
+    # qualified device descriptor (FQDD) takes precedence over determining the
+    # PXE NIC by the node's system model.
+    if fqdd is None:
+        pxe_nic_fqdd = get_pxe_nic_fqdd_from_model_properties(
+            model_properties,
+            drac_client)
+    else:
+        pxe_nic_fqdd = fqdd
+
+    # Ensure the identified PXE NIC FQDD exists in the system.
+
+    nic_fqdds = [nic.id for nic in drac_client.list_nics(sort=True)]
+
+    if pxe_nic_fqdd not in nic_fqdds:
+        LOG.critical(
+            "NIC to PXE boot from, {}, does not exist; available NICs are "
+            "{}".format(
+                pxe_nic_fqdd,
+                ', '.join(nic_fqdds)))
+        return None
+
+    return pxe_nic_fqdd
+
+
+def get_pxe_nic_fqdd_from_model_properties(model_properties, drac_client):
+    if model_properties is None:
+        return None
+
+    model_name = drac_client.get_system_model_name()
+
+    # If the model does not have an entry in the model properties JSON file,
+    # return None, instead of raising a KeyError exception.
+    if model_name in model_properties:
+        return model_properties[model_name]['pxe_nic']
+    else:
+        return None
+
+
+def assign_role(ip_mac_service_tag, node_uuid, role_index, ironic_client,
+                drac_client):
+    flavor = ROLES[role_index.role]
+
+    LOG.info(
+        "Setting role for {} to {}, flavor {}".format(
+            ip_mac_service_tag,
+            role_index.role,
+            flavor))
+
+    role = "profile:{}".format(flavor)
+
+    if role_index.index:
+        role = "node:{}-{}".format(flavor, role_index.index)
+
+    value = "{},boot_option:local".format(role)
+
+    patch = [{'op': 'add',
+              'value': value,
+              'path': '/properties/capabilities'}]
+    ironic_client.node.update(node_uuid, patch)
+
+    # Are we assigning the storage role to this node?
+    if role_index.role == "storage":
+        # Select the disk for the OS to be installed on.  Note that this is
+        # only necessary for storage nodes because the other node types are
+        # configured to have 1 huge volume created by the DTK.
+        select_os_disk(ironic_client, drac_client.client, node_uuid)
+
 
 def get_fqdd(doc, namespace):
     return utils.find_xml(doc, 'FQDD', namespace).text
@@ -58,7 +341,7 @@ def get_size_in_bytes(doc, namespace):
     return utils.find_xml(doc, 'SizeInBytes', namespace).text
 
 
-def select_os_disk(ironic_client, drac_client, node_uuid, debug):
+def select_os_disk(ironic_client, drac_client, node_uuid):
     # Get the virtual disks
     virtual_disk_view_doc = drac_client.enumerate(DCIM_VirtualDiskView)
     virtual_disk_docs = utils.find_xml(virtual_disk_view_doc,
@@ -87,12 +370,12 @@ def select_os_disk(ironic_client, drac_client, node_uuid, debug):
                 raid1_physical_disk_id = raid1_physical_disk_doc.text
                 raid1_physical_disk_ids.append(raid1_physical_disk_id)
 
-            if debug:
-                print("Found RAID 1 virtual disk {} with a size of {} "
-                      "bytes comprised of physical disks:".format(
-                          fqdd, raid1_size))
-                for p_d_id in raid1_physical_disk_ids:
-                    print "  {}".format(p_d_id)
+            LOG.debug(
+                "Found RAID 1 virtual disk {} with a size of {} bytes "
+                "comprised of physical disks:\n  {}".format(
+                    fqdd,
+                    raid1_size,
+                    "\n  ".join(raid1_physical_disk_ids)))
 
             break
 
@@ -115,9 +398,11 @@ def select_os_disk(ironic_client, drac_client, node_uuid, debug):
                 physical_disk_doc, DCIM_PhysicalDiskView)
 
             if physical_disk_size == raid1_size:
-                if debug:
-                    print("Physical disk {} has the same size ({}) "
-                          "as the RAID 1".format(fqdd, physical_disk_size))
+                LOG.debug(
+                    "Physical disk {} has the same size ({}) as the RAID "
+                    "1".format(
+                        fqdd,
+                        physical_disk_size))
                 found_same_size_disk = True
                 break
 
@@ -129,113 +414,283 @@ def select_os_disk(ironic_client, drac_client, node_uuid, debug):
 
         # Set the root_device property in ironic to the RAID 1 size in
         # gigs
-        print("Setting the OS disk for this node to the virtual disk "
-              "with size {} GB".format(raid1_size_gb))
+        LOG.info(
+            "Setting the OS disk for this node to the virtual disk with size "
+            "{} GB".format(raid1_size_gb))
         patch = [{'op': 'add',
                   'value': {"size": raid1_size_gb},
                   'path': '/properties/root_device'}]
-        node = ironic_client.node.update(node_uuid, patch)
+        ironic_client.node.update(node_uuid, patch)
+
+
+def configure_nics_boot_settings(
+        drac_client,
+        pxe_nic_id,
+        ironic_client,
+        node_uuid):
+    LOG.info("Configuring NIC {} to PXE boot".format(pxe_nic_id))
+
+    job_ids = []
+    reboot_required = False
+
+    for nic_id in [nic.id for nic in drac_client.list_nics(sort=True)]:
+        result = None
+
+        # Compare the NIC IDs case insensitively. Assume ASCII strings.
+        if nic_id.lower() == pxe_nic_id.lower():
+            if not drac_client.is_nic_legacy_boot_protocol_pxe(nic_id):
+                result = drac_client.set_nic_legacy_boot_protocol_pxe(nic_id)
+        else:
+            if not drac_client.is_nic_legacy_boot_protocol_none(nic_id):
+                result = drac_client.set_nic_legacy_boot_protocol_none(nic_id)
+
+        if result is None:
+            continue
+
+        # TODO: Untangle the separate requirements for a configuration job and/
+        #       or reboot after setting a NIC attribute via discover_nodes's
+        #       dracclient.
+        #
+        #       Refer to the Dell Simple NIC Profile. Its discussions of the
+        #       DCIM_NICService.SetAttribute() and
+        #       DCIM_NICService.SetAttributes() methods describe their separate
+        #       output parameters, SetResult[] and RebootRequeired[]. The value
+        #       of SetResult[] is 'Set CurrentValue property' when the
+        #       attribute's current value was set and 'Set PendingValue' when
+        #       the attribute's pending value was set.
+        #
+        #       The documentation also states,
+        #
+        #       "The CreateTargetedConfigJob() method is used to apply the
+        #       pending values created by the SetAttribute and SetAttributes
+        #       methods. The successful execution of this method creates a job
+        #       for application of pending attribute values."
+        #
+        #       Therefore, the value of SetResult[] should be used instead of
+        #       RebootRequired[] to determine the need to invoke
+        #       CreateTargetedConfigJob(). And the requirement to reboot should
+        #       be communicated separately to the caller. Presently, the
+        #       requirement for both is indicated by the boolean value of the
+        #       'commit_needed' key in the returned dictionary. That key's
+        #       value is determined from RebootRequired[] only.
+        #
+        #       This applies to the ironic upstream dracclient's BIOS and RAID
+        #       resources, too. Those were used as models during the
+        #       development of the NIC resource in discover_nodes's dracclient.
+        #
+        #       This can be accomplished without breaking existing code that
+        #       uses dracclient by adding two (2) new key:value pairs to the
+        #       returned dictionary.
+        job_id = drac_client.create_nic_config_job(
+            nic_id,
+            reboot=False,
+            start_time=None)
+        job_ids.append(job_id)
+
+        if result['commit_required']:
+            reboot_required = True
+
+    if reboot_required:
+        LOG.info("Rebooting the node to apply NIC configuration")
+
+        job_id = drac_client.create_reboot_job()
+        job_ids.append(job_id)
+
+    drac_client.schedule_job_execution(job_ids, start_time='TIME_NOW')
+
+    LOG.info(
+        "Waiting for NIC configuration to complete; this may take some time")
+    LOG.info("Do not power off the node")
+    wait_for_job_completions(ironic_client, node_uuid)
+    LOG.info("Completed NIC configuration")
+
+    return determine_job_outcomes(drac_client, job_ids)
+
+
+def configure_bios(node, ironic_client, settings, drac_client):
+    LOG.info("Configuring BIOS")
+
+    if 'drac' not in node.driver:
+        LOG.critical("Node is not being managed by an iDRAC driver")
+        return False
+
+    # Filter out settings that are unknown.
+    response = ironic_client.node.vendor_passthru(
+        node.uuid,
+        'get_bios_config',
+        http_method='GET')
+
+    unknown_attribs = set(settings).difference(response.__dict__)
+
+    if unknown_attribs:
+        LOG.warning(
+            "Disregarding unknown BIOS settings {}".format(
+                ', '.join(unknown_attribs)))
+
+        for attr in unknown_attribs:
+            del settings[attr]
+
+    response = ironic_client.node.vendor_passthru(
+        node.uuid,
+        'set_bios_config',
+        args=settings,
+        http_method='POST')
+
+    if not response.commit_required:
+        LOG.info("Completed BIOS configuration")
+        return True
+
+    LOG.info("Rebooting the node to apply BIOS configuration")
+    args = {'reboot': True}
+    response = ironic_client.node.vendor_passthru(
+        node.uuid,
+        'commit_bios_config',
+        args=args,
+        http_method='POST')
+
+    LOG.info(
+        "Waiting for BIOS configuration to complete; this may take some time")
+    LOG.info("Do not power off the node")
+    job_ids = [response.job_id]
+    wait_for_job_completions(ironic_client, node.uuid)
+    LOG.info("Completed BIOS configuration")
+
+    return determine_job_outcomes(drac_client, job_ids)
+
+
+def wait_for_job_completions(ironic_client, node_uuid):
+    while ironic_client.node.vendor_passthru(
+            node_uuid,
+            'list_unfinished_jobs',
+            http_method='GET').unfinished_jobs:
+        sleep(10)
+
+
+def determine_job_outcomes(drac_client, job_ids):
+    all_succeeded = True
+
+    for job_id in job_ids:
+        job_status = drac_client.get_job(job_id).status
+
+        if job_status == 'Completed' or job_status == 'Reboot Completed':
+            continue
+
+        all_succeeded = False
+        LOG.error(
+            "Configuration job {} encountered issues; its final status is "
+            "{}".format(job_id, job_status))
+
+    return all_succeeded
+
+
+def ensure_node_is_powered_off(drac_client):
+    # Power off the node only if it is not already powered off. The Dell Common
+    # Information Model Extensions (DCIM) method used to power off a node is
+    # not idempotent.
+    #
+    # Testing found that attempting to power off a node while it is powered off
+    # raises an exception, DRACOperationFailed with the message 'The command
+    # failed to set RequestedState'. That message is associated with a message
+    # ID output parameter of the DCIM_ComputerSystem.RequestStateChange()
+    # method. The message ID is SYS021. This is documented in the Base Server
+    # and Physical Asset Profile, Version 1.2.0
+    # (http://en.community.dell.com/techcenter/extras/m/white_papers/20440458/download).
+    # See section 8.1 DCIM_ComputerSystem.RequestStateChange(), beginning on p.
+    # 22 of 25.
+    #
+    # An alternative approach was considered, unconditionally powering off the
+    # node, catching the DRACOperationFailed exception, and ignoring it.
+    # However, because neither the documentation nor exception provides details
+    # about the cause, that approach could mask an interesting error condition.
+    if drac_client.get_power_state() is not POWER_OFF:
+        LOG.info("Powering off the node")
+        drac_client.set_power_state(POWER_OFF)
 
 
 def main():
 
     try:
-        parser = argparse.ArgumentParser()
-        parser.add_argument("ip_or_mac",
-                            help="Either the IP address of the iDRAC, or the "
-                                 "MAC address of the interface on the "
-                                 "provisioning network")
-        parser.add_argument("role",
-                            help="The role that the node will play with an "
-                                 "optional index that indicates placement "
-                                 "order in the rack.  Valid choices are: "
-                                 "controller[-<index>], compute[-<index>], "
-                                 "and storage[-<index>]")
-        parser.add_argument("--file",
-                            help="Name of json file containing the node being "
-                                 "set",
-                            default="instackenv.json")
-        parser.add_argument("--debug", action='store_true', default=False)
-        args = parser.parse_args()
+        drac_client = None
 
-        role = args.role
-        index = None
-        if args.role.find("-") != -1:
-            role_tokens = role.split("-")
-            role = role_tokens[0]
-            index = role_tokens[1]
+        args = parse_arguments()
 
-        if role in ROLES.keys():
-            flavor = ROLES[role]
-        else:
-            raise ValueError("Error: {} is not a valid role.  Valid roles "
-                             "are: {}".format(role, str(ROLES.keys())))
+        LOG.setLevel(args.logging_level)
 
-        if index and not index.isdigit():
-            raise ValueError("Error: {} is not a valid role index.  Valid "
-                             "role indexes are numbers.".format(index))
+        model_properties = get_model_properties(
+            args.pxe_nic,
+            args.model_properties)
 
-        os_auth_url, os_tenant_name, os_username, os_password = \
-            CredentialHelper.get_undercloud_creds()
+        flavor_settings_filename = os.path.expanduser(args.flavor_settings)
+        flavor_settings = get_flavor_settings(flavor_settings_filename)
 
-        # Get the UUID of the node
-        kwargs = {'os_username': os_username,
-                  'os_password': os_password,
-                  'os_auth_url': os_auth_url,
-                  'os_tenant_name': os_tenant_name}
-        ironic_client = ironicclient.client.get_client(1, **kwargs)
+        if flavor_settings is None:
+            sys.exit(1)
 
-        node_uuid = None
-        if ":" in args.ip_or_mac:
-            try:
-                port = ironic_client.port.get_by_address(args.ip_or_mac)
-                node_uuid = port.node_uuid
-            except NotFound:
-                pass
-        else:
-            nodes = ironic_client.node.list(fields=["uuid", "driver_info"])
-            for node in nodes:
-                drac_ip, drac_user = \
-                    CredentialHelper.get_drac_ip_and_user(node)
+        bios_settings = calculate_bios_settings(
+            args.role_index.role,
+            flavor_settings,
+            flavor_settings_filename)
 
-                if drac_ip == args.ip_or_mac:
-                    node_uuid = node.uuid
-                    break
+        if bios_settings is None:
+            sys.exit(1)
 
-        if node_uuid is None:
-            raise ValueError("Error:  Unable to find node {}".format(
-                args.ip_or_mac))
+        ironic_client = IronicHelper.get_ironic_client()
 
-        # Assign the role to the node
-        print "Setting role for {} to {}, flavor {}".format(
-            args.ip_or_mac, args.role, flavor)
+        node = IronicHelper.get_ironic_node(ironic_client,
+                                            args.ip_mac_service_tag)
+        if node is None:
+            LOG.critical("Unable to find node {}".format(
+                         args.ip_mac_service_tag))
+            sys.exit(1)
 
-        value = "profile:{},boot_option:local".format(flavor)
+        drac_client = get_drac_client(args.node_definition, node)
 
-        if index:
-            value = "node:{}-{},{}".format(flavor, index, value)
+        pxe_nic_fqdd = get_pxe_nic_fqdd(
+            args.pxe_nic,
+            model_properties,
+            drac_client)
 
-        patch = [{'op': 'add',
-                  'value': value,
-                  'path': '/properties/capabilities'}]
-        node = ironic_client.node.update(node_uuid, patch)
+        if pxe_nic_fqdd is None:
+            sys.exit(1)
 
-        # Are we assigning the storage role to this node?
-        if role == "storage":
-            # Get the model of the server from the DRAC
-            drac_ip, drac_user, drac_password = \
-                CredentialHelper.get_drac_creds_from_node(node, args.file)
-            drac_client = wsman.Client(drac_ip, drac_user, drac_password)
-            doc = drac_client.enumerate(DCIM_SystemView)
-            model = utils.find_xml(doc, 'Model', DCIM_SystemView).text
+        assign_role(
+            args.ip_mac_service_tag,
+            node.uuid,
+            args.role_index,
+            ironic_client,
+            drac_client)
 
-            # Select the disk for the OS to be installed on.  Note that this
-            # is only necessary for storage nodes because the other node types
-            # are configured to have 1 huge volume created by the DTK.
-            select_os_disk(ironic_client, drac_client, node_uuid, args.debug)
-    except ValueError as err:
-        print >> sys.stderr, err
+        succeeded = configure_nics_boot_settings(
+            drac_client,
+            pxe_nic_fqdd,
+            ironic_client,
+            node.uuid)
+
+        if not succeeded:
+            sys.exit(1)
+
+        succeeded = configure_bios(
+            node,
+            ironic_client,
+            bios_settings,
+            drac_client)
+
+        if not succeeded:
+            sys.exit(1)
+    except (DRACOperationFailed, DRACUnexpectedReturnValue,
+            InternalServerError, KeyError, TypeError, ValueError,
+            WSManInvalidResponse, WSManRequestFailure):
+        LOG.exception("")
         sys.exit(1)
+    except SystemExit:
+        raise
+    except:  # Catch all exceptions.
+        LOG.exception("Unexpected error")
+        raise
+    finally:
+        # Leave the node powered off.
+        if drac_client is not None:
+            ensure_node_is_powered_off(drac_client)
 
 
 if __name__ == "__main__":

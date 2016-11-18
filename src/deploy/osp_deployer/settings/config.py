@@ -84,6 +84,11 @@ class Settings():
             'management_network']
         self.managment_vlanid = cluster['managment_vlanid']
         self.managment_netmask = cluster['managment_netmask']
+        self.management_gateway = cluster['management_gateway']
+        self.management_allocation_pool_start = cluster[
+            'management_allocation_pool_start']
+        self.management_allocation_pool_end = cluster[
+            'management_allocation_pool_end']
         self.name_server = cluster['name_server']
         self.storage_cluster_vlanid = cluster[
             'storage_cluster_vlanid']
@@ -95,9 +100,9 @@ class Settings():
             'discovery_ip_range']
         self.tenant_network = cluster.get('tenant_network')
         self.tenant_network_allocation_pool_start = cluster.get(
-                                      'tenant_network_allocation_pool_start')
+            'tenant_network_allocation_pool_start')
         self.tenant_network_allocation_pool_end = cluster.get(
-                                      'tenant_network_allocation_pool_end')
+            'tenant_network_allocation_pool_end')
         self.tenant_vlan_range = cluster.get('tenant_vlan_range')
         self.director_install_account_user = cluster[
             'director_install_user']
@@ -190,6 +195,11 @@ class Settings():
         else:
             self.use_ipmi_driver = False
 
+        if cluster['use_in_band_introspection'].lower() == 'true':
+            self.use_in_band_introspection = True
+        else:
+            self.use_in_band_introspection = False
+
         if cluster['enable_eqlx_backend'].lower() == 'true':
             self.enable_eqlx_backend = True
             self.eqlx_san_ip = cluster['eqlx_san_ip']
@@ -253,7 +263,7 @@ class Settings():
                 'discovery_ram_disk_image']
             self.overcloud_image = self.bastion_settings_map['overcloud_image']
 
-        self.rhl72_iso = self.bastion_settings_map['rhl72_iso']
+        self.rhel_iso = self.bastion_settings_map['rhel_iso']
 
         if sys.platform.startswith('linux'):
             self.cygwin_installdir = 'n/a'

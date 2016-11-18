@@ -112,6 +112,13 @@ OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_PASSWORD = 'pm_password'
 OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_TYPE = 'pm_type'
 OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_USER = 'pm_user'
 
+# The following attributes are not supported by OSP Director, but
+# are provided to allow the user to determine which node is which
+# in the case where the nodes are using DHCP.
+
+NODE_TEMPLATE_ATTRIBUTE_MODEL = 'model'
+NODE_TEMPLATE_ATTRIBUTE_SERVICE_TAG = 'service_tag'
+
 OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IDRAC = 'pxe_drac'
 OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IPMI = 'pxe_ipmitool'
 OSPD_NODE_TEMPLATE_VALUE_USER_INTERVENTION_REQUIRED = \
@@ -134,6 +141,8 @@ NodeInfo = namedtuple('NodeInfo',
                        OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_PASSWORD,
                        OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_TYPE,
                        OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_USER,
+                       NODE_TEMPLATE_ATTRIBUTE_MODEL,
+                       NODE_TEMPLATE_ATTRIBUTE_SERVICE_TAG
                        ])
 
 # Create a factory function for creating tuple-like objects that contain
@@ -363,7 +372,7 @@ def scan_one(scan_info):
     # Initialize the values of the attributes.
     pm_address = scan_info.ip_address
     pm_password = scan_info.password
-    pm_type = OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IPMI
+    pm_type = OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IDRAC
     pm_user = scan_info.user_name
 
     try:
@@ -373,6 +382,9 @@ def scan_one(scan_info):
         if not is_idrac(client):
             LOG.info('IP address is not an iDRAC')
             return None
+
+        model = client.get_system_model_name()
+        service_tag = client.get_system_service_tag()
     except dracclient.exceptions.WSManInvalidResponse:
         # Most likely the user credentials are unauthorized.
 
@@ -410,6 +422,8 @@ def scan_one(scan_info):
         OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_PASSWORD: pm_password,
         OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_TYPE: pm_type,
         OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_USER: pm_user,
+        NODE_TEMPLATE_ATTRIBUTE_MODEL: model,
+        NODE_TEMPLATE_ATTRIBUTE_SERVICE_TAG: service_tag
     }
     return NodeInfo(**kwargs)
 

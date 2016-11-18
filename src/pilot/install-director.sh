@@ -21,9 +21,10 @@ dns_ip="$1"
 subscription_manager_user="$2"
 subscription_manager_pass="$3"
 subcription_manager_poolid="$4"
+proxy="$5"
 
 if [ "$#" -lt 3 ]; then
-  echo "Usage: $0 <dns_ip> <subscription_manager_user> <subscription_manager_pass> [<subcription_manager_poolid>]"
+  echo "Usage: $0 <dns_ip> <subscription_manager_user> <subscription_manager_pass> [<subcription_manager_poolid>] [<proxy>]"
   exit 1
 fi
 
@@ -61,6 +62,19 @@ create_flavor()
 
 cd
 
+if [ ! -z $proxy ];
+then
+  echo
+  echo "## Configuring proxy"
+  ip_addresses=$(ip addr | grep -Po 'inet \K[\d.]+')
+  no_proxy_list=$(echo $ip_addresses | tr ' ' ',')
+  export no_proxy=$no_proxy_list
+  export http_proxy=$proxy
+  export https_proxy=$proxy
+  export -p 
+  echo "## Done."
+fi
+
 echo
 echo "## Configuring paths..."
 ESCAPED_HOME=${HOME//\//\\/}
@@ -70,7 +84,7 @@ echo "## Done."
 
 echo
 echo "## Installing Director"
-sudo yum -y install python-rdomanager-oscplugin
+sudo yum -y install python-tripleoclient
 openstack undercloud install
 echo "## Done."
 
@@ -90,12 +104,17 @@ then
   images_tar_path='/usr/share/rhosp-director-images'
 fi
 cd $HOME/pilot/images
-find ${images_tar_path} -name '*.tar' -exec tar xfv {} \;
+
+for i in /usr/share/rhosp-director-images/overcloud-full-latest-10.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-10.0.tar;
+do
+  tar -xvf $i;
+done
 echo "## Done."
 
 echo
-echo "## Customizing the overcloud image & upload images"
-~/pilot/customize_image.sh $subscription_manager_user $subscription_manager_pass $subcription_manager_poolid
+echo "## Customizing the overcloud image & uploading images"
+#~/pilot/customize_image.sh $subscription_manager_user $subscription_manager_pass $subcription_manager_poolid
+openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
 echo "## Done"
 
 echo
@@ -121,6 +140,25 @@ echo "## Done."
 echo
 echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
+echo "## Done."
+
+# This hacks in a patch that has been merged to upstream already, but is not
+# currently present in OSP10.  We will need to remove this after the fix
+# appears in OSP10.
+echo
+echo "## Patching Ironic vendor passthru..."
+OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/vendor_passthru.py ~/pilot/vendor_passthru.patch)
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/vendor_passthru.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/vendor_passthru.pyo
+sudo systemctl restart openstack-ironic-conductor.service
+echo "## Done."
+
+# This hacks in a workaround to fix in-band introspection.  A fix has been
+# made to NetworkManager upstream, but is not currently present in OSP10.
+# We will need to remove this after the fix appears in OSP10.
+echo
+echo "## Patching Ironic in-band introspection..."
+sudo sed -i 's/initrd=agent.ramdisk /initrd=agent.ramdisk net.ifnames=0 biosdevname=0 /' /httpboot/inspector.ipxe
 echo "## Done."
 
 echo

@@ -30,6 +30,8 @@ from update_ssh_config import main as update_ssh_config
 
 home_dir = os.path.expanduser('~')
 
+BAREMETAL_FLAVOR = "baremetal"
+
 
 # Check to see if the sequence contains numbers that increase by 1
 def is_coherent(seq):
@@ -65,11 +67,12 @@ def validate_node_placement():
 
         # If the node capability was not set then error out
         if not node_capability:
+            ip, _ = CredentialHelper.get_drac_ip_and_user(node)
+
             raise ValueError("Error: Node {} has not been assigned a node "
                              "placement index.  Run assign_role for this "
                              "node and specify a role with the "
-                             "<role>-<index> format".format(
-                                 node.driver_info["ipmi_address"]))
+                             "<role>-<index> format".format(ip))
 
         hyphen = node_capability.rfind("-")
         flavor = node_capability[0:hyphen]
@@ -272,8 +275,23 @@ def main():
         os_auth_url, os_tenant_name, os_username, os_password = \
             CredentialHelper.get_undercloud_creds()
 
+        # Set up the default flavors
+        control_flavor = "control"
+        compute_flavor = "compute"
+        ceph_storage_flavor = "ceph-storage"
+        swift_storage_flavor = "swift-storage"
+        block_storage_flavor = "block-storage"
+
         if args.node_placement:
             validate_node_placement()
+
+            # If node-placement is specified, then the baremetal flavor must
+            # be used
+            control_flavor = BAREMETAL_FLAVOR
+            compute_flavor = BAREMETAL_FLAVOR
+            ceph_storage_flavor = BAREMETAL_FLAVOR
+            swift_storage_flavor = BAREMETAL_FLAVOR
+            block_storage_flavor = BAREMETAL_FLAVOR
 
         # Apply any patches required on the Director itself. This is done each
         # time the overcloud is deployed (instead of once, after the Director
@@ -340,14 +358,15 @@ def main():
               " {}" \
               " --templates ~/pilot/templates/overcloud" \
               " {}" \
-              " --control-flavor control" \
-              " --compute-flavor compute" \
-              " --ceph-storage-flavor ceph-storage" \
-              " --swift-storage-flavor swift-storage" \
-              " --block-storage-flavor block-storage" \
+              " --control-flavor {}" \
+              " --compute-flavor {}" \
+              " --ceph-storage-flavor {}" \
+              " --swift-storage-flavor {}" \
+              " --block-storage-flavor {}" \
               " --neutron-public-interface bond1" \
               " --neutron-network-type vlan" \
               " --neutron-disable-tunneling" \
+              " --libvirt-type kvm" \
               " --os-auth-url {}" \
               " --os-project-name {}" \
               " --os-user-id {}" \
@@ -361,6 +380,11 @@ def main():
               "".format(args.timeout,
                         overcloud_name_opt,
                         env_opts,
+                        control_flavor,
+                        compute_flavor,
+                        ceph_storage_flavor,
+                        swift_storage_flavor,
+                        block_storage_flavor,
                         os_auth_url,
                         os_tenant_name,
                         os_username,

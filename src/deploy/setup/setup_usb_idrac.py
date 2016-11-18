@@ -38,7 +38,7 @@ def setup():
         out.setLevel(logging.INFO)
         logger.addHandler(out)
         logger.info("* Creating the SAH node usb image.")
-        parser = argparse.ArgumentParser(description='Jetstream 6.x usb ' +
+        parser = argparse.ArgumentParser(description='CHANGEME_wHEN_WE_HAVE_A_NAME 6.x usb ' +
                                                      ' image  prep.')
         parser.add_argument('-s', '--settings',
                             help='ini settings file, e.g settings/acme.ini',
@@ -66,9 +66,10 @@ def setup():
         logger.info("Settings .ini: " + settings.settings_file)
         logger.info("Settings .properties " + settings.network_conf)
 
-        # Check to verify ~/JetStream/rhel72.iso exists
-        assert os.path.isfile("/root/JetStream/rhel72.iso"), "~/JetStream/\
-                              rhel72.iso file is not present"
+        # Check to verify RHEL ISO exists
+        rhel_iso = settings.rhel_iso
+        assert os.path.isfile(settings.rhel_iso), settings.rhel_iso + \
+                              " ISO file is not present"
 
         sah = Sah()
         sah.update_kickstart_usb()
@@ -85,7 +86,8 @@ def setup():
                     'cd ~;mkfs ext3 -F osp_ks.img',
                     'mkdir -p /mnt/usb',
                     'cd ~;mount -o loop osp_ks.img /mnt/usb',
-                    'cd ~;cp -R ~/JetStream /mnt/usb',
+                    #CHANGEME_wHEN_WE_HAVE_A_NAME
+                    'cd ~;cp -R ~/temp_name /mnt/usb',
                     "sed -i 's|" + current_path + "|/root|' " + target_ini,
                     'sync; umount /mnt/usb']
         else:
@@ -93,7 +95,7 @@ def setup():
                     'mkdir -p /mnt/usb',
                     'cd ~;mount -o loop ' + args.usb_key +
                     ' /mnt/usb',
-                    'cd ~;cp -R ~/JetStream /mnt/usb',
+                    'cd ~;cp -R ~/temp_name /mnt/usb',
                     "sed -i 's|" + current_path + "|/root|' " + target_ini,
                     'sync; umount /mnt/usb']
 

@@ -30,7 +30,8 @@ class Ssh():
     @staticmethod
     def execute_command(address, usr, pwd, command):
         try:
-            logger.debug("ssh @" + address + ", running : " + command)
+            logger.debug("ssh " + usr + "@" + address + ", running : " +
+                         command)
             client = paramiko.SSHClient()
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -53,7 +54,8 @@ class Ssh():
     @staticmethod
     def execute_command_readlines(address, usr, pwd, command):
         try:
-            logger.debug("ssh @" + address + ", running : " + command)
+            logger.debug("ssh " + usr + "@" + address + ", running : " +
+                         command)
             client = paramiko.SSHClient()
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -76,7 +78,8 @@ class Ssh():
     @staticmethod
     def execute_command_tty(address, usr, pwd, command):
         try:
-            logger.debug("ssh @" + address + ", running : " + command)
+            logger.debug("ssh " + usr + "@" + address + ", running : " +
+                         command)
             client = paramiko.SSHClient()
             client.load_system_host_keys()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())

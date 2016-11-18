@@ -18,11 +18,12 @@ from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from infra_host import InfraHost
 from auto_common import Scp, Ipmi
+import errno
 import logging
-import time
 import os
 import re
-import errno
+import sys
+import time
 
 logger = logging.getLogger("osp_deployer")
 
@@ -54,7 +55,6 @@ class Director(InfraHost):
     def apply_internal_repos(self):
         # Add the internal repo. if going down that road,
         # Pull the target rpm's
-        cmds = []
         if self.settings.internal_repos is True:
             logger.debug(
                 "Applying internal repo's to the "
@@ -73,20 +73,12 @@ class Director(InfraHost):
                 count += 1
         else:
             for repo in self.settings.rhsm_repos:
-                cmds += [
-                    'subscription-manager repos '
-                    '--enable=' + repo]
-
-        cmds += [
-            'yum remove python-rdomanager-oscplugin -y',
-            'yum clean all',
-            'yum makecache',
-            'yum repolist all',
-            'yum install python-rdomanager-oscplugin -y',
-            'yum update -y',
-        ]
-        for cmd in cmds:
-            self.run_as_root(cmd)
+                _, std_err = self.run_as_root('subscription-manager repos '
+                                              '--enable=' + repo)
+                if std_err:
+                    logger.error("Unable to enable repo {}: {}".format(
+                        repo, std_err))
+                    sys.exit(1)
 
     def upload_update_conf_files(self):
 
@@ -100,6 +92,10 @@ class Director(InfraHost):
         self.run('cd;tar zxvf pilot.tar.gz -C pilot')
 
         cmds = [
+            'sed -i "s|undercloud_hostname = .*|undercloud_hostname = ' +
+            self.settings.director_node.hostname + "." +
+            self.settings.domain +
+            '|" pilot/undercloud.conf',
             'sed -i "s|local_ip = .*|local_ip = ' +
             self.settings.director_node.provisioning_ip +
             '/24|" pilot/undercloud.conf',
@@ -164,15 +160,31 @@ class Director(InfraHost):
             self.upload_file(setts.custom_instack_json,
                              remote_file)
         else:
-            self.check_idracs()
+            # self.check_idracs()
+
+            # In 13g servers, the iDRAC sends out a DHCP req every 3 seconds
+            # for 1 minute.  If it still hasn't received a response, it sleeps
+            # for 20 seconds and then repeats.  As a result, we sleep for 30
+            # seconds here to make sure that every iDRAC has had a chance to
+            # get a DHCP address prior to launching node discovery.
+            time.sleep(30)
+
             setts = self.settings
             cmd = "cd ~/pilot/discover_nodes;./discover_nodes.py  -u " + \
                   setts.ipmi_user + \
                   " -p '" + setts.ipmi_password + "'"
+
+            # Discover the nodes using DHCP for the iDRAC
+            cmd += ' ' + setts.management_allocation_pool_start + "-" + \
+                setts.management_allocation_pool_end
+
+            # Discover the nodes using static IPs for the iDRAC
             for node in (self.settings.controller_nodes +
                          self.settings.compute_nodes +
                          self.settings.ceph_nodes):
-                cmd += ' ' + node.idrac_ip
+                if hasattr(node, "idrac_ip"):
+                    cmd += ' ' + node.idrac_ip
+
             cmd += '> ~/instackenv.json'
 
             self.run_tty(cmd)
@@ -191,35 +203,37 @@ class Director(InfraHost):
             else:
                 logger.debug("nodes appear to have been picked up")
 
-        for node in (setts.controller_nodes +
-                     setts.compute_nodes +
-                     setts.ceph_nodes):
-            ipmi_session = Ipmi(setts.cygwin_installdir,
-                                setts.ipmi_user,
-                                setts.ipmi_password,
-                                node.idrac_ip)
-            ipmi_session.power_off()
-            time.sleep(60)
-
         if setts.use_ipmi_driver is True:
             logger.debug("Using pxe_ipmi driver")
             cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ~/instackenv.json'
             self.run_tty(cmd)
 
-        cmd = self.source_stackrc + "openstack " \
-                                    "baremetal import --json ~/instackenv.json"
-        logger.debug(
-            self.run_tty(cmd))
+        stdout, stderr = self.run_tty(self.source_stackrc +
+                                      "~/pilot/import_nodes.py")
+        logger.debug("Attempted to import nodes into Ironic: " + stdout)
+        if stderr:
+            raise AssertionError("Unable to import nodes into Ironic: ".format(
+                                 stderr))
+
         tester = Checkpoints()
         tester.verify_nodes_registered_in_ironic()
 
-        cmd = self.source_stackrc + "openstack" \
-                                    " baremetal configure boot"
-        self.run_tty(cmd)
+        stdout, stderr = self.run_tty("~/pilot/prep_overcloud_nodes.py")
+        logger.debug(stdout)
+        if stderr:
+            raise AssertionError("An error occurred while running "
+                                 "prep_overcloud_nodes: {}".format(stderr))
 
-        cmd = self.source_stackrc + "openstack " \
-                                    "baremetal introspection bulk start"
-        self.run_tty(cmd)
+        introspection_cmd = self.source_stackrc + "~/pilot/introspect_nodes.py"
+        if setts.use_in_band_introspection is True:
+            introspection_cmd += " -i"
+
+        stdout, stderr = self.run_tty(introspection_cmd)
+        logger.debug("Introspected nodes, stdout=" + stdout)
+        if stderr:
+            raise AssertionError("Unable to introspect nodes: ".format(
+                                 stderr))
+
         tester.verify_introspection_sucessfull()
 
     def check_idracs(self):
@@ -249,12 +263,10 @@ class Director(InfraHost):
                     # depending on the state of the node
                     out = self.run_tty(cmd)[0]
                     if ("FIXME" in out) or ("WSMan request failed" in out):
-                        logger.warning(
-                                       node.hostname +
+                        logger.warning(node.hostname +
                                        " did not get discovered properly")
                         logger.debug("reseting idrac")
-                        ipmi_session = Ipmi(
-                                            self.settings.cygwin_installdir,
+                        ipmi_session = Ipmi(self.settings.cygwin_installdir,
                                             self.settings.ipmi_user,
                                             self.settings.ipmi_password,
                                             node.idrac_ip)
@@ -275,45 +287,28 @@ class Director(InfraHost):
                     else:
                         break
 
-    def assign_node_roles(self):
+    def assign_roles(self, nodes, role):
+        index = 0
+        for node in nodes:
+            assign_role_command = self._create_assign_role_command(
+                node, role, index)
+            out = self.run_tty(self.source_stackrc +
+                               "cd ~/pilot;" + assign_role_command)
+            index += 1
+            if "Not Found" in out[0]:
+                if hasattr(node, 'service_tag'):
+                    node_identifier = " service tag " + node.service_tag
+                else:
+                    node_identifier = " ip " + node.idrac_ip
+                raise AssertionError(
+                    "Failed to assign " + role + " role to " + node_identifier)
 
+    def assign_node_roles(self):
         logger.debug("Assigning roles to nodes")
 
-        index = 0
-        for node in self.settings.controller_nodes:
-            out = self.run_tty(self.source_stackrc +
-                               "cd ~/pilot;./assign_role.py " +
-                               node.idrac_ip +
-                               " controller-" + str(index))
-            index += 1
-            if "Not Found" in out[0]:
-                raise AssertionError(
-                    "Failed to assign Controller node role to ip " +
-                    node.idrac_ip)
-
-        index = 0
-        for node in self.settings.compute_nodes:
-            out = self.run_tty(self.source_stackrc +
-                               "cd ~/pilot;./assign_role.py " +
-                               node.idrac_ip +
-                               " compute-" + str(index))
-            index += 1
-            if "Not Found" in out[0]:
-                raise AssertionError(
-                    "Failed to assign Compute node role to ip " +
-                    node.idrac_ip)
-
-        index = 0
-        for node in self.settings.ceph_nodes:
-            out = self.run_tty(self.source_stackrc +
-                               "cd ~/pilot;./assign_role.py " +
-                               node.idrac_ip +
-                               " storage-" + str(index))
-            index += 1
-            if "Not Found" in out[0]:
-                raise AssertionError(
-                    "Failed to assign Storage node role to ip " +
-                    node.idrac_ip)
+        self.assign_roles(self.settings.controller_nodes, "controller")
+        self.assign_roles(self.settings.compute_nodes, "compute")
+        self.assign_roles(self.settings.ceph_nodes, "storage")
 
     def setup_templates(self):
         # Re-upload the yaml files in case we're trying to leave the undercloud
@@ -561,29 +556,14 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
 
-    def setup_networking(self):
+    def setup_net_envt(self):
 
-        logger.debug("Configuring network settings for overcloud")
+        logger.debug("Configuring network-environment.yaml for overcloud")
 
         network_yaml = self.templates_dir + "/network-environment.yaml"
-        storage_yaml = self.nic_configs_dir + "/ceph-storage.yaml"
-        compute_yaml = self.nic_configs_dir + "/compute.yaml"
-        controller_yaml = self.nic_configs_dir + "/controller.yaml"
-        static_ips_yaml = self.templates_dir + "/static-ip-environment.yaml"
-        static_vip_yaml = self.templates_dir + "/static-vip-environment.yaml"
 
-        # Re - Upload the yaml files in case we're trying to
-        # leave the undercloud intact but want to redeploy
-        # with a different config
         self.upload_file(self.settings.network_env_yaml,
                          network_yaml)
-        self.upload_file(self.settings.ceph_storage_yaml,
-                         storage_yaml)
-        self.upload_file(self.settings.compute_yaml, compute_yaml)
-        self.upload_file(self.settings.controller_yaml,
-                         controller_yaml)
-        self.upload_file(self.settings.static_ips_yaml, static_ips_yaml)
-        self.upload_file(self.settings.static_vip_yaml, static_vip_yaml)
 
         cmds = [
             'sed -i "s|ControlPlaneDefaultRoute:.*|' +
@@ -601,6 +581,11 @@ class Director(InfraHost):
             self.settings.storage_cluster_network + '|" ' + network_yaml,
             'sed -i "s|ExternalNetCidr:.*|ExternalNetCidr: ' +
             self.settings.public_api_network + '|" ' + network_yaml,
+            'sed -i "s|ManagementAllocationPools:.*|'
+            'ManagementAllocationPools: ' +
+            "[{'start': '" + self.settings.management_allocation_pool_start +
+            "', 'end': '" + self.settings.management_allocation_pool_end +
+            "'}]"   '|" ' + network_yaml,
             'sed -i "s|InternalApiAllocationPools:.*|'
             'InternalApiAllocationPools: ' +
             "[{'start': '" + self.settings.private_api_allocation_pool_start +
@@ -626,6 +611,9 @@ class Director(InfraHost):
             'sed -i "s|ExternalInterfaceDefaultRoute:.*|'
             'ExternalInterfaceDefaultRoute: ' +
             self.settings.public_api_gateway + '|" ' + network_yaml,
+            'sed -i "s|ManagementNetworkGateway:.*|'
+            'ManagementNetworkGateway: ' +
+            self.settings.management_gateway + '|" ' + network_yaml,
             'sed -i "s|ManagementNetCidr:.*|ManagementNetCidr: ' +
             self.settings.management_network + '|" ' + network_yaml,
             'sed -i "s|ProvisioningNetworkGateway:.*|'
@@ -668,6 +656,37 @@ class Director(InfraHost):
             ]
         for cmd in cmds:
             self.run_tty(cmd)
+
+    def configure_dhcp_server(self):
+        cmd = 'cd ' + self.pilot_dir + ';./config_idrac_dhcp.py ' + \
+            self.settings.sah_node.provisioning_ip + \
+            ' -p ' + self.settings.sah_node.root_password
+        stdout, stderr = self.run_tty(cmd)
+        if stderr:
+            raise AssertionError(
+                "Failed to configure DHCP on the SAH node: " + stderr)
+
+    def setup_networking(self):
+
+        logger.debug("Configuring network settings for overcloud")
+
+        network_yaml = self.templates_dir + "/network-environment.yaml"
+        storage_yaml = self.nic_configs_dir + "/ceph-storage.yaml"
+        compute_yaml = self.nic_configs_dir + "/compute.yaml"
+        controller_yaml = self.nic_configs_dir + "/controller.yaml"
+        static_ips_yaml = self.templates_dir + "/static-ip-environment.yaml"
+        static_vip_yaml = self.templates_dir + "/static-vip-environment.yaml"
+
+        # Re - Upload the yaml files in case we're trying to
+        # leave the undercloud intact but want to redeploy
+        # with a different config
+        self.upload_file(self.settings.ceph_storage_yaml,
+                         storage_yaml)
+        self.upload_file(self.settings.compute_yaml, compute_yaml)
+        self.upload_file(self.settings.controller_yaml,
+                         controller_yaml)
+        self.upload_file(self.settings.static_ips_yaml, static_ips_yaml)
+        self.upload_file(self.settings.static_vip_yaml, static_vip_yaml)
 
         if self.settings.controller_bond_opts == \
            self.settings.compute_bond_opts \
@@ -854,24 +873,20 @@ class Director(InfraHost):
             logger.debug("Updating static vip yaml")
             cmds = ['sed -i "s/redis: .*/redis: ' +
                     self.settings.redis_vip + '/" ' + static_vip_yaml,
-                    'sed -i "s/ControlFixedIPs: .*/ControlFixedIPs: ' +
-                    '[{\'ip_address\':\'' +
-                    self.settings.provisioning_vip + '\'}]/" ' +
-                    static_vip_yaml,
-                    'sed -i "s/InternalApiVirtualFixedIPs: ' +
-                    '.*/InternalApiVirtualFixedIPs: [{\'ip_address\':\'' +
-                    self.settings.private_api_vip + '\'}]/" ' +
-                    static_vip_yaml,
-                    'sed -i "s/PublicVirtualFixedIPs: ' +
-                    '.*/PublicVirtualFixedIPs: [{\'ip_address\':\'' +
-                    self.settings.public_api_vip + '\'}]/" ' + static_vip_yaml,
-                    'sed -i "s/StorageVirtualFixedIPs: ' +
-                    '.*/StorageVirtualFixedIPs: [{\'ip_address\':\'' +
-                    self.settings.storage_vip + '\'}]/" ' + static_vip_yaml,
-                    'sed -i "s/StorageMgmtVirtualFixedIPs: ' +
-                    '.*/StorageMgmtVirtualFixedIPs: [{\'ip_address\':\'' +
-                    self.settings.storage_cluster_vip + '\'}]/" ' +
-                    static_vip_yaml
+                    'sed -i "s/ControlPlaneIP: .*/ControlPlaneIP: ' +
+                    self.settings.provisioning_vip + '/" ' + static_vip_yaml,
+                    'sed -i "s/InternalApiNetworkVip: ' +
+                    '.*/InternalApiNetworkVip: ' +
+                    self.settings.private_api_vip + '/" ' + static_vip_yaml,
+                    'sed -i "s/ExternalNetworkVip: ' +
+                    '.*/ExternalNetworkVip: ' +
+                    self.settings.public_api_vip + '/" ' + static_vip_yaml,
+                    'sed -i "s/StorageNetworkVip: ' +
+                    '.*/StorageNetworkVip: ' +
+                    self.settings.storage_vip + '/" ' + static_vip_yaml,
+                    'sed -i "s/StorageMgmtNetworkVip: ' +
+                    '.*/StorageMgmtNetworkVip: ' +
+                    self.settings.storage_cluster_vip + '/" ' + static_vip_yaml
                     ]
             for cmd in cmds:
                 self.run_tty(cmd)
@@ -886,8 +901,7 @@ class Director(InfraHost):
                                     " --computes " + \
                                     str(len(self.settings.compute_nodes)) + \
                                     " --controllers " + \
-                                    str(len(
-                                            self.settings.controller_nodes
+                                    str(len(self.settings.controller_nodes
                                             )) + \
                                     " --storage " + \
                                     str(len(self.settings.ceph_nodes)) + \
@@ -1060,10 +1074,8 @@ class Director(InfraHost):
             # noinspection PyBroadException
             try:
                 overcloud_endpoint = self.run_tty('grep "OS_AUTH_URL=" ~/' +
-                                                  self.settings.
-                                                  overcloud_name +
-                                                  'rc')[0].split('=')[1]\
-                                                  .replace(':5000/v2.0/', '')
+                                                  self.settings.overcloud_name + 'rc')[0] \
+                    .split('=')[1].replace(':5000/v2.0/', '')
                 overcloud_pass = self.run('grep "OS_PASSWORD=" ~/' +
                                           self.settings.overcloud_name +
                                           'rc')[0].split('=')[1]
@@ -1200,3 +1212,20 @@ class Director(InfraHost):
                   self.pilot_dir + \
                   ';./install-instanceHA.py '
             self.run_tty(cmd)
+
+    def _create_assign_role_command(self, node, role, index):
+        pxe_nic = ""
+        if hasattr(node, 'pxe_nic'):
+            pxe_nic = '--pxe-nic {}'.format(node.pxe_nic)
+
+        node_identifier = ""
+        if hasattr(node, 'service_tag'):
+            node_identifier = node.service_tag
+        else:
+            node_identifier = node.idrac_ip
+
+        return './assign_role.py {} {} {}-{}'.format(
+            pxe_nic,
+            node_identifier,
+            role,
+            str(index))

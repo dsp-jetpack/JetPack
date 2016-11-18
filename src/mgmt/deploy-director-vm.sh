@@ -185,25 +185,42 @@ EOFPW
   echo "----------------------"
 
 # Register the system using Subscription Manager
-  [[ ${SMProxy} ]] && {
+[[ ${SMProxy} ]] && {
+
     ProxyInfo="--proxy ${SMProxy}"
 
     [[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
     [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
+
+    Proxy_Creds=""
+    [[ ${SMProxyUser} && ${SMProxyPassword} ]] && Proxy_Creds="${SMProxyUser}:${SMProxyPassword}@"
+
+    HTTP_Proxy="http://${Proxy_Creds}${SMProxy}"
+    ip_addresses=$(ip addr | grep -Po 'inet \K[\d.]+')
+    no_proxy_list=$(echo $ip_addresses | tr ' ' ',')
+
+    export no_proxy=$no_proxy_list
+    export http_proxy=${HTTP_Proxy}
+    export https_proxy=${HTTP_Proxy}
+	
+    # Add file so proxy environment variables are maintaned with sudo commands
+    echo 'Defaults env_keep += "http_proxy https_proxy no_proxy"' > /etc/sudoers.d/proxy
+    chmod 0440 /etc/sudoers.d/proxy
+
     }
 
   subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
 
   [[ x${SMPool} = x ]] \
-    && SMPool=$( subscription-manager list --available | awk '/OpenStack/,/Pool/ {pool = $3} END {print pool}' )
+    && SMPool=$( subscription-manager list --available ${ProxyInfo} | awk '/OpenStack/,/Pool/ {pool = $3} END {print pool}' )
 
   [[ -n ${SMPool} ]] \
-    && subscription-manager attach --pool ${SMPool} \
+    && subscription-manager attach --pool ${SMPool} ${ProxyInfo} \
     || ( echo "Could not find an OpenStack pool to attach to. - Auto-attaching to any pool." \
-         subscription-manager attach --auto
+         subscription-manager attach --auto ${ProxyInfo}
          )
 
-  subscription-manager repos '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms
+  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-rpms --enable=rhel-7-fast-datapath-rpms
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -219,6 +236,8 @@ EOFPW
   yum-config-manager --enable rhel-7-server-rpms --setopt="rhel-7-server-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-extras-rpms --setopt="rhel-7-server-extras-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-rh-common-rpms --setopt="rhel-7-server-rh-common-rpms.priority=1"
+  yum-config-manager --enable rhel-ha-for-rhel-7-server-rpms --setopt="rhel-ha-for-rhel-7-server-rpms.priority=1"
+  yum-config-manager --enable rhel-7-fast-datapath-rpms --setopt="rhel-7-fast-datapath-rpms.priority=1"
 
   yum -y update
 
@@ -265,9 +284,6 @@ EOIP
   echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
   sysctl -p
 
-  # no longer needed, but this is how you'd disable...
-  #sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
-
   # Configure the ntp daemon
   systemctl enable ntpd
   sed -i -e "/^server /d" /etc/ntp.conf
@@ -277,9 +293,10 @@ EOIP
     echo "server ${ntps}" >> /etc/ntp.conf
   done
 
-  systemctl disable NetworkManager
   systemctl disable firewalld
-  systemctl disable chronyd
+
+  # Put selinux into permissive mode
+  sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
 
 ) 2>&1 | /usr/bin/tee -a /root/director-posts.log
 

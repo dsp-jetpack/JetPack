@@ -57,7 +57,11 @@ class DeployerSanity():
             'provisioning_net_dhcp_end', 'provisioning_gateway',
             'storage_cluster_allocation_pool_start',
             'storage_cluster_allocation_pool_end',
-            'managment_netmask', 'name_server',
+            'managment_netmask',
+            'management_gateway',
+            'management_allocation_pool_start',
+            'management_allocation_pool_end',
+            'name_server',
         ]
         for ip in getattr(self.settings, 'discovery_ip_range').split(","):
             self.is_valid_ip(ip),\
@@ -69,8 +73,8 @@ class DeployerSanity():
                 getattr(self.settings, each)
 
         assert os.path.isfile(
-            self.settings.rhl72_iso), \
-            self.settings.rhl72_iso + \
+            self.settings.rhel_iso), \
+            self.settings.rhel_iso + \
             "ISO doesn't seem to exist"
         assert os.path.isfile(
             self.settings.director_deploy_sh), \
@@ -99,8 +103,8 @@ class DeployerSanity():
             self.settings.install_director_sh +\
             " file doesn't seem to exist"
         assert os.path.isfile(
-            self.settings.rhl72_iso), \
-            self.settings.rhl72_iso +\
+            self.settings.rhel_iso), \
+            self.settings.rhel_iso +\
             " file doesn't seem to exist"
 
     def check_ipmi_to_nodes(self):
@@ -110,16 +114,18 @@ class DeployerSanity():
 
         hdw_nodes.append(self.settings.sah_node)
         for node in hdw_nodes:
-            try:
-                logger.debug(node.idrac_ip)
-                ipmi_session = Ipmi(self.settings.cygwin_installdir,
-                                    self.settings.ipmi_user,
-                                    self.settings.ipmi_password,
-                                    node.idrac_ip)
-                logger.debug(
-                    " :: " + ipmi_session.get_power_state())
-            except:
-                raise AssertionError("Could not impi to host " + node.idrac_ip)
+            if hasattr(node, "idrac_ip"):
+                try:
+                    logger.debug(node.idrac_ip)
+                    ipmi_session = Ipmi(self.settings.cygwin_installdir,
+                                        self.settings.ipmi_user,
+                                        self.settings.ipmi_password,
+                                        node.idrac_ip)
+                    logger.debug(
+                        " :: " + ipmi_session.get_power_state())
+                except:
+                    raise AssertionError("Could not ipmi to host " +
+                                         node.idrac_ip)
 
     def check_network_overlaps(self):
         # Verify the dhcp ranges defined in the ini don't overlap with static
@@ -217,7 +223,7 @@ class DeployerSanity():
 
         # storage cluster allocation pool
         start = self.settings.storage_cluster_allocation_pool_start.split(
-                ".")[-1]
+            ".")[-1]
         end = self.settings.storage_cluster_allocation_pool_end.split(".")[-1]
         for each in self.settings.nodes:
             if hasattr(each, 'storage_cluster_ip'):
@@ -227,6 +233,21 @@ class DeployerSanity():
                                          .properties is in the storage \
                                          cluster allocation pool range \
                                          defined in the .ini")
+
+        # management allocation pool
+        start = self.settings.management_allocation_pool_start.split(
+            ".")[-1]
+        end = self.settings.management_allocation_pool_end.split(".")[-1]
+        management_gateway = self.settings.management_gateway.split(".")[-1]
+        if int(start) <= int(management_gateway) <= int(end):
+            raise AssertionError("management_gateway in .ini is in the "
+                                 "management_allocation_pool range "
+                                 "defined in the .ini")
+        sah_management_ip = self.settings.sah_node.managment_ip.split(".")[-1]
+        if int(start) <= int(sah_management_ip) <= int(end):
+            raise AssertionError("SAH management_ip in .properties is in "
+                                 "the management_allocation_pool range "
+                                 "defined in the .ini")
 
     def check_duplicate_ips(self):
         # Check for duplicate ip adresses in .properties and .ini
@@ -246,22 +267,49 @@ class DeployerSanity():
             raise AssertionError("Duplicate ips found in your \
                                  .properties/.ini :" + ', '.join(dups))
 
+    def check_net_attrs(self, node, should_have_attributes,
+                        should_be_valid_ips):
+        for each in should_have_attributes:
+            assert hasattr(node, each), \
+                " node has no " + each + " attribute"
+        for each in should_be_valid_ips:
+            if hasattr(node, "service_tag"):
+                node_identifier = node.service_tag
+            elif hasattr(node, "hostname"):
+                node_identifier = node.hostname
+            else:
+                node_identifier = node.idrac_ip
+            assert self.is_valid_ip(getattr(node, each)), \
+                "Node " + node_identifier + " does not have a valid ip"
+
+    def check_overcloud_node_net_attrs(self, node, should_have_attributes,
+                                       should_be_valid_ips):
+        if hasattr(node, "idrac_ip"):
+            should_be_valid_ips.append("idrac_ip")
+        else:
+            assert hasattr(node, "service_tag"), \
+                " node must have either the idrac_ip or service_tag attribute"
+
+        self.check_net_attrs(node, should_have_attributes, should_be_valid_ips)
+
     def check_network_settings(self):
         # Verify SAH node network definition
         logger.debug("verifying sah network settings")
-        shouldhaveattributes = ['hostname', 'idrac_ip', 'root_password',
-                                'anaconda_ip', 'anaconda_iface',
-                                'external_bond', 'external_slaves',
+        shouldhaveattributes = ['hostname',
+                                'idrac_ip',
+                                'root_password',
+                                'anaconda_ip',
+                                'anaconda_iface',
+                                'external_bond',
+                                'external_slaves',
                                 'external_ip',
-                                'private_bond', 'private_slaves',
-                                'provisioning_ip', 'storage_ip',
-                                'public_api_ip', 'private_api_ip',
+                                'private_bond',
+                                'private_slaves',
+                                'provisioning_ip',
+                                'storage_ip',
+                                'public_api_ip',
+                                'private_api_ip',
                                 'managment_ip']
-        for each in shouldhaveattributes:
-            assert hasattr(self.settings.sah_node, each),\
-                self.settings.network_conf + \
-                " SAH node has no " + each + " attribute"
-
         shouldbbevalidips = ['idrac_ip',
                              'anaconda_ip',
                              'external_ip',
@@ -270,10 +318,9 @@ class DeployerSanity():
                              'public_api_ip',
                              'private_api_ip',
                              'managment_ip']
-        for each in shouldbbevalidips:
-            assert self.is_valid_ip(getattr(self.settings.sah_node,
-                                            each)), "SAH node " + each \
-                                                    + " is not a valid ip"
+        self.check_net_attrs(self.settings.sah_node,
+                             shouldhaveattributes,
+                             shouldbbevalidips)
 
         # Verify director network definition
         logger.debug("verifying director vm network settings")
@@ -284,19 +331,14 @@ class DeployerSanity():
                                 'managment_ip',
                                 'public_api_ip',
                                 'private_api_ip']
-        for each in shouldhaveattributes:
-            assert hasattr(self.settings.director_node, each),\
-                self.settings.network_conf \
-                + " director node has no " + each + " attribute"
-            shouldbbevalidips = ['external_ip',
-                                 'provisioning_ip',
-                                 'managment_ip',
-                                 'public_api_ip',
-                                 'private_api_ip']
-        for each in shouldbbevalidips:
-            assert self.is_valid_ip(
-                getattr(self.settings.director_node, each)), \
-                "director_node node " + each + " is not a valid ip"
+        shouldbbevalidips = ['external_ip',
+                             'provisioning_ip',
+                             'managment_ip',
+                             'public_api_ip',
+                             'private_api_ip']
+        self.check_net_attrs(self.settings.director_node,
+                             shouldhaveattributes,
+                             shouldbbevalidips)
 
         # Verify Ceph vm node network definition
         logger.debug("verifying ceph vm network settings")
@@ -304,72 +346,59 @@ class DeployerSanity():
                                 'root_password',
                                 'external_ip',
                                 'storage_ip']
-        for each in shouldhaveattributes:
-            assert hasattr(self.settings.ceph_node, each), \
-                self.settings.network_conf + " Ceph Vm node has no " +\
-                each + " attribute"
         shouldbbevalidips = ['external_ip', 'storage_ip']
-        for each in shouldbbevalidips:
-            assert hasattr(self.settings.ceph_node, each), \
-                self.settings.network_conf +\
-                " Ceph Vm node has no " + each + " attribute"
+
+        self.check_net_attrs(self.settings.ceph_node,
+                             shouldhaveattributes,
+                             shouldbbevalidips)
+
         # Verify Controller nodes network definitioncls
         logger.debug("verifying controller nodes network settings")
         for controller in self.settings.controller_nodes:
-            shouldhaveattributes = ['idrac_ip']
-            shouldbbevalidips = ['idrac_ip']
-        if self.settings.overcloud_static_ips is True:
-            shouldhaveattributes.extend(["public_api_ip",
-                                         "private_api_ip",
-                                         "storage_ip",
-                                         "storage_cluster_ip",
-                                         "tenant_ip"])
-            shouldbbevalidips.extend(["public_api_ip",
-                                      "private_api_ip",
-                                      "storage_ip",
-                                      "storage_cluster_ip",
-                                      "tenant_ip"])
-            for each in shouldhaveattributes:
-                assert hasattr(controller, each), \
-                    " node has no " + each + " attribute"
-            for each in shouldbbevalidips:
-                assert self.is_valid_ip(
-                    getattr(controller, each)), \
-                    " node " + each + " is not a valid ip"
+            shouldhaveattributes = []
+            shouldbbevalidips = []
+
+            if self.settings.overcloud_static_ips is True:
+                shouldhaveattributes.extend(["public_api_ip",
+                                             "private_api_ip",
+                                             "storage_ip",
+                                             "storage_cluster_ip",
+                                             "tenant_ip"])
+                shouldbbevalidips.extend(["public_api_ip",
+                                          "private_api_ip",
+                                          "storage_ip",
+                                          "storage_cluster_ip",
+                                          "tenant_ip"])
+            self.check_overcloud_node_net_attrs(controller,
+                                                shouldhaveattributes,
+                                                shouldbbevalidips)
 
         # Verify Compute nodes network definition
         logger.debug("verifying compute nodes network settings")
         for compute in self.settings.compute_nodes:
-            shouldhaveattributes = ['idrac_ip']
-            shouldbbevalidips = ['idrac_ip']
+            shouldhaveattributes = []
+            shouldbbevalidips = []
             if self.settings.overcloud_static_ips is True:
                 shouldhaveattributes.extend(["private_api_ip",
-                                             "storage_ip", "tenant_ip"])
+                                             "storage_ip",
+                                             "tenant_ip"])
                 shouldbbevalidips.extend(["private_api_ip",
-                                          "storage_ip", "tenant_ip"])
-            for each in shouldhaveattributes:
-                assert hasattr(compute, each), \
-                    " node has no " + each + " attribute"
-            shouldbbevalidips = ['idrac_ip']
-            for each in shouldbbevalidips:
-                assert self.is_valid_ip(getattr(compute, each)),\
-                     " node " + each + " is not a valid ip"
+                                          "storage_ip",
+                                          "tenant_ip"])
+            self.check_overcloud_node_net_attrs(compute,
+                                                shouldhaveattributes,
+                                                shouldbbevalidips)
 
         # Verify Storage nodes network definition
         logger.debug("verifying storage nodes network settings")
         for storage in self.settings.ceph_nodes:
-            shouldhaveattributes = ['idrac_ip',
-                                    'osd_disks']
-        shouldbbevalidips = ['idrac_ip', ]
-        if self.settings.overcloud_static_ips is True:
+            shouldhaveattributes = ['osd_disks']
+            shouldbbevalidips = []
+            if self.settings.overcloud_static_ips is True:
                 shouldhaveattributes.extend(["storage_ip",
                                              "storage_cluster_ip"])
                 shouldbbevalidips.extend(["storage_ip",
                                           "storage_cluster_ip"])
-                for each in shouldhaveattributes:
-                    assert hasattr(storage, each),\
-                         + " node has no " + each + " attribute"
-                for each in shouldbbevalidips:
-                    assert self.is_valid_ip(
-                        getattr(storage, each)), + " node " +\
-                                each + " is not a valid ip"
+            self.check_overcloud_node_net_attrs(storage,
+                                                shouldhaveattributes,
+                                                shouldbbevalidips)
