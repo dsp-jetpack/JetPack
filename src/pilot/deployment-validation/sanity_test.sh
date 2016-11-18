@@ -106,7 +106,7 @@ init(){
 
   # Get a list of the IPs of all the controller nodes for later use, as well as
   # the IP for a single controller
-  CONTROLLERS=$(openstack server list --flavor control -c Networks -f value | tr -d 'cntlplane=')
+  CONTROLLERS=$(openstack server list -c Name -c Networks -f value | grep r131-controller | awk '{print $2}' | tr -d 'cntlplane=')
   CONTROLLER=($CONTROLLERS)
 
   # Now switch to point the OpenStack commands at the overcloud
@@ -121,7 +121,6 @@ init(){
   ssh heat-admin@$CONTROLLER 'sudo /usr/sbin/pcs status|grep -i stopped'
 
   info "###Ensure db and rabbit services are in the active state"
-  execute_command "openstack-service status"
   ssh heat-admin@$CONTROLLER 'sudo ps aux | grep rabbit'
   ssh heat-admin@$CONTROLLER 'ps -ef | grep mysqld'
   ssh heat-admin@$CONTROLLER 'ps -ef | grep mariadb'
@@ -543,7 +542,7 @@ then
       neutron net-delete $network_id
     done
   fi
-  radosgw_cleanup
+  #radosgw_cleanup
   info "########### CLEANUP SUCCESSFUL ############"
   exit 1
 else
@@ -569,7 +568,7 @@ else
 
   setup_cinder
 
-  radosgw_test
+  #radosgw_test
 
   end
 

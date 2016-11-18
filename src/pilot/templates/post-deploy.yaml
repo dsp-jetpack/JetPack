@@ -84,13 +84,13 @@ resources:
         } >> /root/post-deploy.txt 2>&1
         fi
         # END workaround for BZ 1283721
-        if [[ $HOSTNAME =~ "controller" ]]; then
-        {
+        #if [[ $HOSTNAME =~ "controller" ]]; then
+        #{
           #echo "Restarting RGW..."
           #chkconfig --add ceph-radosgw
           #systemctl restart ceph-radosgw
-        } >> /root/post-deploy.txt 2>&1
-        fi
+        #} >> /root/post-deploy.txt 2>&1
+        #fi
 
   ExtraDeployments:
     type: OS::Heat::SoftwareDeployments
