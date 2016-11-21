@@ -73,8 +73,9 @@ mk_bundle() {
 # make bundles
 # mk_bundle <tar-file-name> <tar-root-dir-name> <src-dirs> <vlock-files>
 mk_bundle dell-mgmt-node pilot mgmt ceph_vm.vlock director_vm.vlock
-mk_bundle dell-pilot-deploy pilot pilot 
+mk_bundle dell-pilot pilot pilot 
 mk_bundle midonet_pilot midonet midonet
+mk_bundle dell-deploy deploy deploy
 
 # checksum the base directory files
 (cd $dest; sha256sum * > ${checksum_file})
