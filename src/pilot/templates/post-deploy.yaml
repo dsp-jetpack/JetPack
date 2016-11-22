@@ -84,6 +84,7 @@ resources:
         } >> /root/post-deploy.txt 2>&1
         fi
         # END workaround for BZ 1283721
+        print 'FIXME RADOSGW: Skipping radosgw service restart'
         #if [[ $HOSTNAME =~ "controller" ]]; then
         #{
           #echo "Restarting RGW..."

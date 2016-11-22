@@ -106,7 +106,7 @@ init(){
 
   # Get a list of the IPs of all the controller nodes for later use, as well as
   # the IP for a single controller
-  CONTROLLERS=$(openstack server list -c Name -c Networks -f value | grep r131-controller | awk '{print $2}' | tr -d 'cntlplane=')
+  CONTROLLERS=$(openstack server list -c Name -c Networks -f value | grep controller | awk '{print $2}' | tr -d 'cntlplane=')
   CONTROLLER=($CONTROLLERS)
 
   # Now switch to point the OpenStack commands at the overcloud
@@ -542,6 +542,8 @@ then
       neutron net-delete $network_id
     done
   fi
+
+  print 'FIXME RADOSGW: Skipping radosgw cleanup'
   #radosgw_cleanup
   info "########### CLEANUP SUCCESSFUL ############"
   exit 1

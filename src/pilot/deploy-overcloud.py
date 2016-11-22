@@ -151,8 +151,9 @@ def update_swift_endpoint(keystone_client):
 
     # Delete the current Swift endpoint, and recreate it with with URLs for the
     # Ceph radosgw.
-    #print 'Updating Swift endpoint for Ceph radosgw...'
-    #keystone_client.endpoints.delete(swift_endpoint.id)
+    print 'FIXME RADOSGW: Skipping updating Swift endpoint for Ceph radosgw...'
+    # print 'Updating Swift endpoint for Ceph radosgw...'
+    # keystone_client.endpoints.delete(swift_endpoint.id)
 
     # Convert the Swift URLs to a Ceph radogw URLs. Trim everything after "/v1"
     # (including any "/AUTH_%(tenant_id)s" suffix), and append the radosgw
