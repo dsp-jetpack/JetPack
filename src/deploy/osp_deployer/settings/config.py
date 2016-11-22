@@ -415,29 +415,17 @@ class Settings():
     def get_version_info(self):
         # Grab the source version info from either built .tar or git
         try:
-            deploy_release_txt = "/root/JetStream/deploy-auto/release.txt"
-            if os.path.isfile(deploy_release_txt):
-                d_a = open(deploy_release_txt, 'r').read()
+            repo_release_txt = self.cloud_repo_dir + "/release.txt"
+            if os.path.isfile(repo_release_txt):
+                re_ = open(repo_release_txt, 'r').read()
             else:
-                cmd = "cd /root/JetStream/deploy-auto;" + \
+                cmd = "cd " + self.cloud_repo_dir + ";" + \
                       "git log | grep -m 1 'commit'"
-                d_a = subprocess.check_output(cmd,
+                re_ = subprocess.check_output(cmd,
                                               stderr=subprocess.STDOUT,
                                               shell=True).rstrip()
-            cloud_repo_release_txt = "/root/JetStream/cloud_repo/release.txt"
-            if os.path.isfile(cloud_repo_release_txt):
-                c_r = open(cloud_repo_release_txt, 'r').read()
-            else:
-                cmd = "cd /root/JetStream/cloud_repo;" + \
-                      "git log | grep -m 1 'commit'"
-                c_r = subprocess.check_output(cmd,
-                                              stderr=subprocess.STDOUT,
-                                              shell=True).rstrip()
-
-            self.deploy_auto_version = d_a
-            self.cloud_repo_version = c_r
+            self.source_version = re_
         except:
             logger.debug("unconventional setup...can t" +
                          " pick source version info")
-            self.deploy_auto_version = "????"
-            self.cloud_repo_version = "????"
+            self.source_version = "????"
