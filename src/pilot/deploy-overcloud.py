@@ -20,7 +20,8 @@ import os
 import re
 import sys
 import time
-import ironicclient.client as ironic_client
+import novaclient.client as nova_client
+from ironic_helper import IronicHelper
 
 from credential_helper import CredentialHelper
 
@@ -42,14 +43,7 @@ def validate_node_placement():
     print 'Validating node placement...'
 
     # For each role/flavor, node indices must start at 0 and increase by 1
-    os_auth_url, os_tenant_name, os_username, os_password = \
-        CredentialHelper.get_undercloud_creds()
-
-    kwargs = {'os_username': os_username,
-              'os_password': os_password,
-              'os_auth_url': os_auth_url,
-              'os_tenant_name': os_tenant_name}
-    ironic = ironic_client.get_client(1, **kwargs)
+    ironic = IronicHelper.get_ironic_client()
 
     flavor_to_indices = {}
     for node in ironic.node.list(detail=True):
@@ -103,6 +97,44 @@ def validate_node_placement():
     # If any errors were detected then bail
     if error_msg:
         raise ValueError(error_msg)
+
+
+def create_flavors():
+    print 'Creating overcloud flavors...'
+
+    flavors = [
+        {"id": "1", "name": "m1.tiny",   "memory": 512,   "disk": 1,
+         "cpus": 1},
+        {"id": "2", "name": "m1.small",  "memory": 2048,  "disk": 20,
+         "cpus": 1},
+        {"id": "3", "name": "m1.medium", "memory": 4096,  "disk": 40,
+         "cpus": 2},
+        {"id": "4", "name": "m1.large",  "memory": 8192,  "disk": 80,
+         "cpus": 4},
+        {"id": "5", "name": "m1.xlarge", "memory": 16384, "disk": 160,
+         "cpus": 8}]
+
+    os_auth_url, os_tenant_name, os_username, os_password = \
+        CredentialHelper.get_overcloud_creds()
+
+    kwargs = {'username': os_username,
+              'password': os_password,
+              'auth_url': os_auth_url,
+              'project_id': os_tenant_name}
+    n_client = nova_client.Client(2, **kwargs)
+
+    existing_flavor_ids = []
+    for existing_flavor in n_client.flavors.list(detailed=False):
+        existing_flavor_ids.append(existing_flavor.id)
+
+    for flavor in flavors:
+        if flavor["id"] not in existing_flavor_ids:
+            print '    Creating ' + flavor["name"]
+            n_client.flavors.create(flavor["name"], flavor["memory"],
+                                    flavor["cpus"], flavor["disk"],
+                                    flavorid=flavor["id"])
+        else:
+            print '    Flavor ' + flavor["name"] + " already exists"
 
 
 def create_volume_types():
@@ -201,6 +233,7 @@ def finalize_overcloud():
     except:
         return None
 
+    create_flavors()
     create_volume_types()
     update_swift_endpoint(keystone_client)
 

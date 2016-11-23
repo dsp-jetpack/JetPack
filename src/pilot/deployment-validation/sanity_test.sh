@@ -29,6 +29,7 @@ GATEWAY_IP=192.168.191.1
 KEY_NAME="key_name"
 KEY_FILE="$KEY_NAME.pem"
 IMAGE_NAME="cirros"
+FLAVOR_NAME="sanity_flavor"
 PASSWORD="s@n1ty"
 EMAIL="ce-cloud@dell.com"
 BASE_SECURITY_GROUP_NAME="sanity_security_group"
@@ -281,13 +282,19 @@ setup_glance(){
   fi
 
   execute_command "openstack image list"
-
-  execute_command "openstack flavor list"
 }
 
 
 setup_nova (){
   info "### Setup Nova"""
+  openstack flavor show $FLAVOR_NAME > /dev/null 2>&1
+  if [ $? -ne 0 ]
+  then
+    execute_command "openstack flavor create --ram 2048 --vcpus 1 --disk 20 $FLAVOR_NAME"
+  else
+    info "#----- Flavor '$FLAVOR_NAME' exists. Skipping"
+  fi
+
   set_tenant_scope
   info "creating keypair $KEY_NAME"
   if [ ! -f "$KEY_FILE" ]; then
@@ -508,12 +515,19 @@ then
     done
 
     info   "#### Deleting the images"
-	set_admin_scope
+    set_admin_scope
     image_ids=$(glance image-list | grep $IMAGE_NAME | awk '{print $2}')
     [[ $image_ids ]] && echo $image_ids | xargs -n1 glance image-delete
 
+    info "### Deleting the flavor"
+    openstack flavor show $FLAVOR_NAME > /dev/null 2>&1
+    if [ $? -eq 0 ]
+    then
+        openstack flavor delete $FLAVOR_NAME
+    fi
+
     info   "#### Deleting the security groups and key_file"
-	set_tenant_scope
+    set_tenant_scope
     security_group_ids=$(neutron security-group-list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
     [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 neutron security-group-delete
 
@@ -543,7 +557,7 @@ then
     done
   fi
 
-  print 'FIXME RADOSGW: Skipping radosgw cleanup'
+  echo 'FIXME RADOSGW: Skipping radosgw cleanup'
   #radosgw_cleanup
   info "########### CLEANUP SUCCESSFUL ############"
   exit 1
