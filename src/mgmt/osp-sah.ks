@@ -480,7 +480,8 @@ done
 
 [[ ${AnacondaIface_noboot} ]] && { 
   sed -i -e '/DEFROUTE=/d' /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_device} 
-  sed -i -e '/ONBOOT=/d' -e '$aONBOOT=no' /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_device} 
+  sed -i -e '/ONBOOT=/d' /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_device} 
+  echo "ONBOOT=no" >> /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_device} 
   }
 
 
