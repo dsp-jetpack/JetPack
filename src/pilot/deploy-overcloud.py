@@ -339,13 +339,6 @@ def main():
                              "the comments in that file for additional "
                              "information".format(cmd))
 
-        # Recursively copy pilot/templates/overrides to
-        # pilot/templates/overcloud
-        print 'Installing overrides...'
-        overrides_dir = os.path.join(home_dir, 'pilot/templates/overrides')
-        overcloud_dir = os.path.join(home_dir, 'pilot/templates/overcloud')
-        distutils.dir_util.copy_tree(overrides_dir, overcloud_dir)
-
         # Launch the deployment
 
         overcloud_name_opt = ""
