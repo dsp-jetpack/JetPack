@@ -39,6 +39,50 @@ parameter_defaults:
       "images",
       ".rgw.buckets"
     ]
+    ceph::profile::params::osd_journal_size: 10000
+    ceph::profile::params::osd_pool_default_min_size: 2
+    # CHANGEME:
+    # Modify the 'osds' parameter to reflect the list of drives to be used as
+    # OSDs. A configuration that colocates Ceph journals on every OSD should
+    # look like this:
+    # ceph::profile::params::osds:
+    #   '/dev/sdb': {}
+    #   '/dev/sdc': {}
+    #   ... and so on.
+    # A configuration that places Ceph journals on dedicated drives (such as
+    # SSDs) should look like this:
+    # ceph::profile::params::osds:
+    #   '/dev/sde':
+    #     journal: '/dev/sdb'
+    #   '/dev/sdf':
+    #     journal: '/dev/sdb'
+    #   ... and so on.
+    ceph::profile::params::osds:
+      '/dev/sdd':
+        journal: '/dev/sda'
+      '/dev/sde':
+        journal: '/dev/sda'
+      '/dev/sdf':
+        journal: '/dev/sda'
+      '/dev/sdg':
+        journal: '/dev/sda'
+      '/dev/sdh':
+        journal: '/dev/sdb'
+      '/dev/sdi':
+        journal: '/dev/sdb'
+      '/dev/sdj':
+        journal: '/dev/sdb'
+      '/dev/sdk':
+        journal: '/dev/sdb'
+      '/dev/sdl':
+        journal: '/dev/sdc'
+      '/dev/sdm':
+        journal: '/dev/sdc'
+      '/dev/sdn':
+        journal: '/dev/sdc'
+      '/dev/sdo':
+        journal: '/dev/sdc'
+
     # Additional entries added to /etc/ceph/ceph.conf
     ceph::conf::args:
       global/max_open_files:
