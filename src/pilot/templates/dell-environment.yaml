@@ -15,6 +15,10 @@
 resource_registry:
     OS::TripleO::NodeUserData: ./first-boot.yaml
     OS::TripleO::NodeExtraConfigPost: ./post-deploy.yaml
+    # These resources disable Swift
+    OS::TripleO::Services::SwiftProxy: OS::Heat::None
+    OS::TripleO::Services::SwiftStorage: OS::Heat::None
+    OS::TripleO::Services::SwiftRingBuilder: OS::Heat::None
 
 parameter_defaults:
   # To customize the domain name of the overcloud nodes, change "localdomain"
@@ -24,9 +28,6 @@ parameter_defaults:
   # Set to true to enable Nova usage of Ceph for ephemeral storage.
   # If set to false, Nova uses the storage local to the compute.
   NovaEnableRbdBackend: true
-
-  # Set false in order to use use Ceph radosgw for object storage.
-  ControllerEnableSwiftStorage: false
 
   # Configure Ceph Placement Group (PG) values for the indicated pools
   CephPools:
@@ -119,6 +120,5 @@ parameter_defaults:
 
   # Additional hiera data for controller nodes
   controllerExtraConfig:
-    swift::service::enabled: false
     ceph::profile::params::enable_rgw: true
     ceph::profile::params::rgw_frontends: "civetweb port=7480"
