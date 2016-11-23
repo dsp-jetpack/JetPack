@@ -24,7 +24,7 @@ import re
 import socket
 import subprocess
 import novaclient.client as nova_client
-import ironicclient.client as ironic_client
+import ironicclient
 from netaddr import IPNetwork
 
 pilot_dir = os.path.join(os.path.expanduser('~'), 'pilot')  # noqa
@@ -130,11 +130,7 @@ class NetworkValidation(object):
                                   os_tenant_name,
                                   os_auth_url)
 
-        ironic = ironic_client.Client('1',  # API version
-                                      os_username,
-                                      os_password,
-                                      os_tenant_name,
-                                      os_auth_url)
+        ironic = ironicclient.client.get_client(1, **kwargs)
 
         # Build up a map that maps flavor ids to flavor names
         flavor_map = {}
@@ -150,14 +146,18 @@ class NetworkValidation(object):
         tmp_nodes = []
         nova_servers = nova.servers.list()
         for nova_server in nova_servers:
+            flavor_name = None
             if nova_server.flavor["id"]:
                 flavor_name = flavor_map[nova_server.flavor["id"]]
-            else:
+                if flavor_name == "baremetal":
+                    flavor_name = None
+
+            if not flavor_name:
                 ironic_server = ironic.node.get_by_instance_uuid(
-                    nova_server["id"])
+                    nova_server.id)
                 capabilities = ironic_server.properties["capabilities"]
 
-                match = re.search("node:([a-zA-Z])+-\d+", capabilities)
+                match = re.search("node:([a-zA-Z-]+)-\d+", capabilities)
                 if match:
                     flavor_name = match.group(1)
                 else:
