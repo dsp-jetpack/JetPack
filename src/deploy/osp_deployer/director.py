@@ -23,6 +23,7 @@ import logging
 import os
 import re
 import sys
+import tempfile
 import time
 
 logger = logging.getLogger("osp_deployer")
@@ -315,35 +316,10 @@ class Director(InfraHost):
         # intact but want to redeploy with a different config.
 
         self.setup_networking()
-        self.setup_storage()
         self.setup_dell_storage()
         self.setup_environment()
 
     def setup_environment(self):
-
-        env_yaml = os.path.join(self.templates_dir + "/dell-environment.yaml")
-
-        # reupload the file if this is an overcloud only install
-        self.upload_file(self.settings.dell_env_yaml,
-                         env_yaml)
-        self.run_tty('sed -i "s|CloudDomain: .*|'
-                     'CloudDomain: ' +
-                     str(self.settings.domain).lower() +
-                     '|" ' +
-                     env_yaml)
-        self.run_tty('sed -i "s|NovaEnableRbdBackend: .*|'
-                     'NovaEnableRbdBackend: ' +
-                     str(self.settings.enable_rbd_backend).lower() +
-                     '|" ' +
-                     env_yaml)
-
-    def setup_storage(self):
-        if len(self.settings.ceph_nodes) == 0:
-            logger.debug(
-                "Skipping Ceph storage setup because there are no "
-                "storage nodes")
-            return
-
         logger.debug("Configuring Ceph storage settings for overcloud")
 
         # Set up the Ceph OSDs using the 'osd_disks' defined for the first
@@ -351,17 +327,19 @@ class Director(InfraHost):
         # supports more than a single, global OSD configuration.
         osd_disks = self.settings.ceph_nodes[0].osd_disks
 
-        ceph_yaml = os.path.join("pilot", "templates", "overrides", "puppet",
-                                 "hieradata", "ceph.yaml")
-        src_name = os.path.join(self.settings.foreman_configuration_scripts,
-                                ceph_yaml)
-        src_file = open(src_name, 'r')
+        src_file = open(self.settings.dell_env_yaml, 'r')
 
-        # Temporary local file used to stage the modified ceph.yaml file
-        tmp_name = src_name + ".tmp"
-        tmp_file = open(tmp_name, 'w')
+        # Temporary local file used to stage the modified environment file
+        tmp_fd, tmp_name = tempfile.mkstemp()
+        tmp_file = os.fdopen(tmp_fd, 'w')
 
-        osds_param = 'ceph::profile::params::osds:'
+        # Leading whitespace for these variables is critical !!!
+        osds_param = "    ceph::profile::params::osds:"
+        osd_separate_journal = "      '{}':\n        journal: '{}'\n"
+        osd_colocated_journal = "      '{}': {{}}\n"
+        domain_param = "  CloudDomain:"
+        rbd_backend_param = "  NovaEnableRbdBackend:"
+
         found_osds_param = False
         for line in src_file:
             if line.startswith(osds_param):
@@ -390,12 +368,11 @@ class Director(InfraHost):
 
                     if len(tokens) == 3:
                         # This OSD specifies a separate journal drive
-                        tmp_file.write(
-                            "  '{}':\n    journal: '{}'\n".format(tokens[1],
-                                                                  tokens[2]))
+                        tmp_file.write(osd_separate_journal.format(tokens[1],
+                                                                   tokens[2]))
                     elif len(tokens) == 2:
                         # This OSD does not specify a separate journal
-                        tmp_file.write("  '{}': {{}}\n".format(tokens[1]))
+                        tmp_file.write(osd_colocated_journal.format(tokens[1]))
                     else:
                         logger.warning(
                             "Bad entry in osd_disks: {}".format(osd))
@@ -404,18 +381,22 @@ class Director(InfraHost):
                 tmp_file.write(line)
                 found_osds_param = False
 
+            elif line.startswith(domain_param):
+                value = str(self.settings.domain).lower()
+                tmp_file.write("{} {}\n".format(domain_param, value))
+
+            elif line.startswith(rbd_backend_param):
+                value = str(self.settings.enable_rbd_backend).lower()
+                tmp_file.write("{} {}\n".format(rbd_backend_param, value))
+
             else:
                 tmp_file.write(line)
 
         src_file.close()
         tmp_file.close()
 
-        install_admin_user = self.user
-
-        dst_name = os.path.join(
-            os.path.join("/home", install_admin_user, ceph_yaml))
-        self.upload_file(tmp_name,
-                         dst_name)
+        env_name = os.path.join(self.templates_dir, "dell-environment.yaml")
+        self.upload_file(tmp_name, env_name)
         os.remove(tmp_name)
 
     def setup_dell_storage(self):

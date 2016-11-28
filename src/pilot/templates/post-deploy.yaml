@@ -28,62 +28,6 @@ resources:
       group: script
       config: |
         #!/bin/bash
-        # BEGIN workaround for BZ 1283721
-        if [[ $HOSTNAME =~ "cephstorage-0" ]]; then
-        {
-          echo "Checking Ceph pools pg_num..."
-          sleep 10
-          hiera ceph_pool_pgs {} | HOME="/root" python -c "
-        import re, subprocess, sys, time, yaml
-        def issue_cmd(cmd):
-            print(cmd)
-            for i in range(1, 10):
-                try:
-                    return subprocess.check_output(cmd.split(), stderr=subprocess.STDOUT)
-                except subprocess.CalledProcessError as e:
-                    if 'EBUSY' in e.output:
-                        print '  Cluster is busy, retrying...'
-                        time.sleep(5)
-                    else:
-                        print '{}\nAborting due to fatal error.'.format(e.output)
-                        sys.exit(1)
-        
-            print 'Aborting due to excessive retries.'
-            sys.exit(1)
-        
-        def set_pg_num(pool, pg_num):
-            out = issue_cmd('ceph osd pool get {} pg_num'.format(pool))
-            print(out)
-            m = re.search('(\S*)(pg_num: )(\d+)(\S*)', out)
-            if not m:
-                print 'Aborting due to error reading current pg_num.'
-                sys.exit(1)
-            
-            pg_cur = int(m.group(3))
-            if pg_cur == pg_num:
-                print 'Pool \'{}\' pg_num already set to {}'.format(pool, pg_num)
-            elif pg_cur > pg_num:
-                print 'Cannot decrease pool \'{}\' pg_num from {} to {}'.format(pool, pg_cur, pg_num)
-            else:
-                print 'Increasing pool \'{}\' pg_num from {} to {}'.format(pool, pg_cur, pg_num)
-                while pg_cur < pg_num:
-                    pg_cur *= 2
-                    if pg_cur > pg_num:
-                        pg_cur = pg_num
-        
-                    issue_cmd('ceph osd pool set {} pg_num {}'.format(pool, pg_cur))
-                    time.sleep(10)
-        
-                issue_cmd('ceph osd pool set {} pgp_num {}'.format(pool, pg_num))
-        
-        input = ' '.join(map(str.strip, sys.stdin.readlines()))
-        pool_pgs = yaml.load(input.replace('=>', ': '))
-        for pool in pool_pgs:
-            set_pg_num(pool, pool_pgs[pool])
-        "
-        } >> /root/post-deploy.txt 2>&1
-        fi
-        # END workaround for BZ 1283721
         echo 'FIXME RADOSGW: Skipping radosgw service restart'
         #if [[ $HOSTNAME =~ "controller" ]]; then
         #{

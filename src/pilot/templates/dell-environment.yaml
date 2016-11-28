@@ -15,6 +15,10 @@
 resource_registry:
     OS::TripleO::NodeUserData: ./first-boot.yaml
     OS::TripleO::NodeExtraConfigPost: ./post-deploy.yaml
+    # These resources disable Swift
+    OS::TripleO::Services::SwiftProxy: OS::Heat::None
+    OS::TripleO::Services::SwiftStorage: OS::Heat::None
+    OS::TripleO::Services::SwiftRingBuilder: OS::Heat::None
 
 parameter_defaults:
   # To customize the domain name of the overcloud nodes, change "localdomain"
@@ -25,20 +29,70 @@ parameter_defaults:
   # If set to false, Nova uses the storage local to the compute.
   NovaEnableRbdBackend: true
 
-  # Set false in order to use use Ceph radosgw for object storage.
-  ControllerEnableSwiftStorage: false
+  # Configure Ceph Placement Group (PG) values for the indicated pools
+  CephPools:
+    volumes:
+      pg_num: 1024
+      pgp_num: 1024
+    backups:
+      pg_num: 512
+      pgp_num: 512
+    vms:
+      pg_num: 256
+      pgp_num: 256
+    images:
+      pg_num: 128
+      pgp_num: 128
+    .rgw.buckets:
+      pg_num: 512
+      pgp_num: 512
 
   # Additional hiera data for all nodes
-  # Override ceph_pools so the .rgw.buckets pool is created during deployment.
-  # Place this in ExtraConfig rather than CephStorageExtraConfig so the list
-  # of default pools is available on all nodes.
   ExtraConfig:
-    ceph_pools: [
-      "volumes",
-      "vms",
-      "images",
-      ".rgw.buckets"
-    ]
+    ceph::profile::params::osd_journal_size: 10000
+    ceph::profile::params::osd_pool_default_min_size: 2
+    # CHANGEME:
+    # Modify the 'osds' parameter to reflect the list of drives to be used as
+    # OSDs. A configuration that colocates Ceph journals on every OSD should
+    # look like this:
+    # ceph::profile::params::osds:
+    #   '/dev/sdb': {}
+    #   '/dev/sdc': {}
+    #   ... and so on.
+    # A configuration that places Ceph journals on dedicated drives (such as
+    # SSDs) should look like this:
+    # ceph::profile::params::osds:
+    #   '/dev/sde':
+    #     journal: '/dev/sdb'
+    #   '/dev/sdf':
+    #     journal: '/dev/sdb'
+    #   ... and so on.
+    ceph::profile::params::osds:
+      '/dev/sdd':
+        journal: '/dev/sda'
+      '/dev/sde':
+        journal: '/dev/sda'
+      '/dev/sdf':
+        journal: '/dev/sda'
+      '/dev/sdg':
+        journal: '/dev/sda'
+      '/dev/sdh':
+        journal: '/dev/sdb'
+      '/dev/sdi':
+        journal: '/dev/sdb'
+      '/dev/sdj':
+        journal: '/dev/sdb'
+      '/dev/sdk':
+        journal: '/dev/sdb'
+      '/dev/sdl':
+        journal: '/dev/sdc'
+      '/dev/sdm':
+        journal: '/dev/sdc'
+      '/dev/sdn':
+        journal: '/dev/sdc'
+      '/dev/sdo':
+        journal: '/dev/sdc'
+
     # Additional entries added to /etc/ceph/ceph.conf
     ceph::conf::args:
       global/max_open_files:
@@ -66,6 +120,5 @@ parameter_defaults:
 
   # Additional hiera data for controller nodes
   controllerExtraConfig:
-    swift::service::enabled: false
     ceph::profile::params::enable_rgw: true
     ceph::profile::params::rgw_frontends: "civetweb port=7480"
