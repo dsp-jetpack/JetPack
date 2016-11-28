@@ -170,6 +170,10 @@ def create_volume_types():
 
 
 def update_swift_endpoint(keystone_client):
+    if True:
+        print 'FIXME RADOSGW: Skip updating Swift endpoint for Ceph radosgw...'
+        return
+
     swift_service = keystone_client.services.find(**{'name': 'swift'})
     swift_endpoint = keystone_client.endpoints.find(
         **{'service_id': swift_service.id})
@@ -183,9 +187,8 @@ def update_swift_endpoint(keystone_client):
 
     # Delete the current Swift endpoint, and recreate it with with URLs for the
     # Ceph radosgw.
-    print 'FIXME RADOSGW: Skipping updating Swift endpoint for Ceph radosgw...'
-    # print 'Updating Swift endpoint for Ceph radosgw...'
-    # keystone_client.endpoints.delete(swift_endpoint.id)
+    print 'Updating Swift endpoint for Ceph radosgw...'
+    keystone_client.endpoints.delete(swift_endpoint.id)
 
     # Convert the Swift URLs to a Ceph radogw URLs. Trim everything after "/v1"
     # (including any "/AUTH_%(tenant_id)s" suffix), and append the radosgw
@@ -432,13 +435,12 @@ def main():
         end = time.time()
         print '\nExecution time: {} (hh:mm:ss)'.format(
             time.strftime('%H:%M:%S', time.gmtime(end - start)))
+        print 'Fetching SSH keys...'
+        update_ssh_config()
         if status == 0:
             horizon_url = finalize_overcloud()
         else:
             horizon_url = None
-
-        print 'Fetching SSH keys...'
-        update_ssh_config()
         print 'Overcloud nodes:'
         identify_nodes()
 
