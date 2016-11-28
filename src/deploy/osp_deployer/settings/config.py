@@ -103,6 +103,7 @@ class Settings():
             'tenant_network_allocation_pool_start')
         self.tenant_network_allocation_pool_end = cluster.get(
             'tenant_network_allocation_pool_end')
+        self.tenant_vlanid = cluster.get('tenant_network_vlanid')
         self.tenant_vlan_range = cluster.get('tenant_vlan_range')
         self.director_install_account_user = cluster[
             'director_install_user']

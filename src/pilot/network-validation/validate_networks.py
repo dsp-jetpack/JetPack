@@ -89,6 +89,8 @@ class NetworkValidation(object):
             NetworkHelper.get_management_network()
         self.network_to_subnet["provisioning"] = \
             NetworkHelper.get_provisioning_network()
+        self.network_to_subnet["tenant"] = \
+            NetworkHelper.get_tenant_network()
 
         # Pull in custom networks from the json
         for network in self.network_config["networks"].keys():
