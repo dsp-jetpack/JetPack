@@ -7,12 +7,14 @@
             "provisioning",
             "private_api",
             "storage",
-            "public_api"
+            "public_api",
+            "tenant"
         ],
         "compute": [
             "provisioning",
             "private_api",
-            "storage"
+            "storage",
+            "tenant"
         ],
         "ceph-storage": [
             "provisioning",

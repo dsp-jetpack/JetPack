@@ -622,6 +622,8 @@ class Director(InfraHost):
             self.settings.storage_cluster_vlanid + '|" ' + network_yaml,
             'sed -i "s|ExternalNetworkVlanID:.*|ExternalNetworkVlanID: ' +
             self.settings.public_api_vlanid + '|" ' + network_yaml,
+            'sed -i "s|TenantNetworkVlanID:.*|TenantNetworkVlanID: ' +
+            self.settings.tenant_vlanid + '|" ' + network_yaml,
         ]
 
         if self.settings.tenant_network:
