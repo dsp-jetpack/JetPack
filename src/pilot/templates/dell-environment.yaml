@@ -114,10 +114,6 @@ parameter_defaults:
       client.radosgw.gateway/rgw_init_timeout:
         value: 1200
 
-  # Additional hiera data for storage nodes
-  CephStorageExtraConfig:
-    ceph_osd_selinux_permissive: false
-
   # Additional hiera data for controller nodes
   controllerExtraConfig:
     ceph::profile::params::enable_rgw: true
