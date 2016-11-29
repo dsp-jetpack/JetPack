@@ -33,6 +33,12 @@ def parse_arguments():
 
     LoggingHelper.add_argument(parser)
 
+    parser.add_argument('-s', '--skip',
+                        action='store_true',
+                        default=False,
+                        help="Skip assigning the kernel and ramdisk images to "
+                             "all nodes")
+
     return parser.parse_args()
 
 
@@ -78,9 +84,10 @@ def main():
                   os_username,
                   os_password)
 
-    logger.info("Assigning the kernel and ramdisk image to all nodes")
-    logger.debug(cmd)
-    os.system(cmd)
+    if not args.skip:
+        logger.info("Assigning the kernel and ramdisk image to all nodes")
+        logger.debug(cmd)
+        os.system(cmd)
 
 
 if __name__ == "__main__":
