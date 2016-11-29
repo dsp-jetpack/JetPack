@@ -71,20 +71,20 @@ def main():
         logger.debug("    {}".format(cmd))
         os.system(cmd)
 
-    os_auth_url, os_tenant_name, os_username, os_password = \
-        CredentialHelper.get_undercloud_creds()
-
-    cmd = "openstack baremetal configure boot " \
-        "--os-auth-url {} " \
-        "--os-project-name {} " \
-        "--os-username {} " \
-        "--os-password {} " \
-        "".format(os_auth_url,
-                  os_tenant_name,
-                  os_username,
-                  os_password)
-
     if not args.skip:
+        os_auth_url, os_tenant_name, os_username, os_password = \
+            CredentialHelper.get_undercloud_creds()
+
+        cmd = "openstack baremetal configure boot " \
+            "--os-auth-url {} " \
+            "--os-project-name {} " \
+            "--os-username {} " \
+            "--os-password {} " \
+            "".format(os_auth_url,
+                      os_tenant_name,
+                      os_username,
+                      os_password)
+
         logger.info("Assigning the kernel and ramdisk image to all nodes")
         logger.debug(cmd)
         os.system(cmd)
