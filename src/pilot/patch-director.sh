@@ -24,18 +24,17 @@
 ### updated to work with the new Director code.
 ###
 
-# The following file needs to be patched in order to enable the Ceph radosgw.
-# Use absence of "::ceph::profile::rgw" to indicate whether the file needs
-# to be patched.
-
-# Hack the domain name into nova.conf and restart nova
 domain_name=$(grep CloudDomain ~/pilot/templates/dell-environment.yaml | awk -F: '{print$2}' | tr -d '[:space:]')
 
-sudo sed -i.bak "s/^dhcp_domain=.*/dhcp_domain=${domain_name}/" /etc/nova/nova.conf || exit 1
+sudo grep -q ^dhcp_domain=${domain_name}\$ /etc/nova/nova.conf
+if [ $? -ne 0  ] ; then
+    echo "Patching CloudDomain (${domain_name}) into nova.conf and restarting nova..."
+    sudo sed -i.bak "s/^dhcp_domain=.*/dhcp_domain=${domain_name}/" /etc/nova/nova.conf || exit 1
 
-# Restart all of nova
-sudo systemctl restart openstack-nova-api.service || exit 1
-sudo systemctl restart openstack-nova-cert.service || exit 1
-sudo systemctl restart openstack-nova-compute.service || exit 1
-sudo systemctl restart openstack-nova-conductor.service || exit 1
-sudo systemctl restart openstack-nova-scheduler.service || exit 1
+    # Restart all of nova
+    sudo systemctl restart openstack-nova-api.service || exit 1
+    sudo systemctl restart openstack-nova-cert.service || exit 1
+    sudo systemctl restart openstack-nova-compute.service || exit 1
+    sudo systemctl restart openstack-nova-conductor.service || exit 1
+    sudo systemctl restart openstack-nova-scheduler.service || exit 1
+fi
