@@ -557,8 +557,7 @@ then
     done
   fi
 
-  echo 'FIXME RADOSGW: Skipping radosgw cleanup'
-  #radosgw_cleanup
+  radosgw_cleanup
   info "########### CLEANUP SUCCESSFUL ############"
   exit 1
 else
@@ -584,7 +583,7 @@ else
 
   setup_cinder
 
-  #radosgw_test
+  radosgw_test
 
   end
 
