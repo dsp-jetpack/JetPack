@@ -24,7 +24,7 @@ if [ "$#" -lt 2 ]; then
   exit 1
 fi
 
-if [ ! -z $proxy ];
+if [ ! -z "$proxy" ];
 then
   echo "## Configuring proxy"
   ip_addresses=$(ip addr | grep -Po 'inet \K[\d.]+')
@@ -57,16 +57,11 @@ fi
 
 virt-customize -a overcloud-full.qcow2 \
     --run-command "subscription-manager attach --pool=${subscription_manager_poolid}" \
-    --run-command "\
-        subscription-manager repos '--disable=*' --enable=rhel-7-server-rpms \
-            --enable=rhel-7-server-rhceph-1.3-calamari-rpms --enable=rhel-7-server-rhceph-1.3-installer-rpms \
-            --enable=rhel-7-server-rhceph-1.3-mon-rpms --enable=rhel-7-server-rhceph-1.3-osd-rpms \
-            --enable=rhel-7-server-rhceph-1.3-tools-rpms"
+    --run-command "subscription-manager repos '--disable=*' --enable=rhel-7-server-rpms"
 
 echo "## Add required packages"
 virt-customize -a overcloud-full.qcow2 --upload ../patch_rpms/python-novaclient-3.3.2-1.el7ost.noarch.rpm:/tmp/python-novaclient-3.3.2-1.el7ost.noarch.rpm &> ~/pilot/customize_image.log
 virt-customize -a overcloud-full.qcow2 --run-command 'rpm -Uvh /tmp/python-novaclient-3.3.2-1.el7ost.noarch.rpm' --selinux-relabel &>> ~/pilot/customize_image.log
-virt-customize -v -x -m 2000 -a overcloud-full.qcow2 --install ceph-radosgw,diamond,salt-minion,ceph-selinux --selinux-relabel &>> ~/pilot/customize_image.log
 
 echo "## Unregister from subscription manager"
 virt-customize -a overcloud-full.qcow2 --run-command 'subscription-manager remove --all' --run-command 'subscription-manager unregister'
