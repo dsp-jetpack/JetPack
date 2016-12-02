@@ -219,6 +219,9 @@ class Director(InfraHost):
         tester = Checkpoints()
         tester.verify_nodes_registered_in_ironic()
 
+    def node_introspection(self):
+        setts = self.settings
+
         stdout, stderr = self.run_tty("~/pilot/prep_overcloud_nodes.py")
         logger.debug(stdout)
         if stderr:
@@ -235,6 +238,7 @@ class Director(InfraHost):
             raise AssertionError("Unable to introspect nodes: ".format(
                                  stderr))
 
+        tester = Checkpoints()
         tester.verify_introspection_sucessfull()
 
     def check_idracs(self):

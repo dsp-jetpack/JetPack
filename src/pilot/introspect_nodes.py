@@ -18,6 +18,7 @@ import argparse
 import logging
 import os
 import sys
+from credential_helper import CredentialHelper
 from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
 from time import sleep
@@ -98,6 +99,22 @@ def main():
     if out_of_band:
         logger.info("Starting Out-Of-Band introspection")
 
+        # Check to see if assign_role has been run on all the nodes
+        bad_nodes = []
+        for node in ironic_client.node.list(fields=["uuid", "driver_info",
+                                                    "properties"]):
+            if "provisioning_mac" not in node.properties:
+                bad_nodes.append(node)
+
+        if bad_nodes:
+            ips = [CredentialHelper.get_drac_ip(node) for node in bad_nodes]
+            fail_msg = "\n".join(ips)
+
+            logger.error("The following nodes must have assign_role.py run "
+                         "on them before running out-of-band introspection:"
+                         "\n{}".format(fail_msg))
+            sys.exit(1)
+
         # Transition all nodes into manageable
         transition_to_state(ironic_client, 'manage', 'manageable')
 
@@ -113,6 +130,17 @@ def main():
 
         # Transition all nodes into available
         transition_to_state(ironic_client, 'provide', 'available')
+
+        logger.info("Deleting all non-PXE ports from ironic nodes...")
+
+        for node in ironic_client.node.list(fields=["uuid", "driver_info",
+                                                    "properties"]):
+            for port in ironic_client.node.list_ports(node.uuid):
+                if port.address.lower() != node.properties["provisioning_mac"]:
+                    logger.info("Deleting port {} {}".format(
+                        CredentialHelper.get_drac_ip(node),
+                        port.address.lower()))
+                    ironic_client.port.delete(port.uuid)
     else:
         logger.info("Starting In-Band introspection")
         return_code = os.system("openstack baremetal introspection bulk start")

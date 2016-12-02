@@ -40,7 +40,8 @@ def setup_logging():
 
 
 def get_settings():
-    parser = argparse.ArgumentParser(description='CHANGEME_wHEN_WE_HAVE_A_NAME 7.x deployer')
+    parser = argparse.ArgumentParser(
+        description='CHANGEME_wHEN_WE_HAVE_A_NAME 7.x deployer')
     parser.add_argument('-s', '--settings',
                         help='ini settings file, e.g settings/acme.ini',
                         required=True)
@@ -96,7 +97,8 @@ def deploy():
         logger.info("=== Starting up ...")
         logger.debug("=================================")
 
-        parser = argparse.ArgumentParser(description='CHANGEME_wHEN_WE_HAVE_A_NAME 7.x deployer')
+        parser = argparse.ArgumentParser(
+            description='CHANGEME_wHEN_WE_HAVE_A_NAME 7.x deployer')
         parser.add_argument('-s', '--settings',
                             help='ini settings file, e.g settings/acme.ini',
                             required=True)
@@ -205,6 +207,7 @@ def deploy():
         director_vm.configure_dhcp_server()
         director_vm.node_discovery()
         director_vm.assign_node_roles()
+        director_vm.node_introspection()
 
         director_vm.setup_templates()
         logger.info("=== Installing the overcloud ")

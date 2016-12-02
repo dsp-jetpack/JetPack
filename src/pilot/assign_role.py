@@ -433,11 +433,20 @@ def configure_nics_boot_settings(
     job_ids = []
     reboot_required = False
 
-    for nic_id in [nic.id for nic in drac_client.list_nics(sort=True)]:
+    for nic in drac_client.list_nics(sort=True):
         result = None
+        nic_id = nic.id
 
         # Compare the NIC IDs case insensitively. Assume ASCII strings.
         if nic_id.lower() == pxe_nic_id.lower():
+
+            # Set the MAC for the provisioning/PXE interface on the node for
+            # use by the OOB introspection workaround
+            patch = [{'op': 'add',
+                      'value': nic.mac_address.lower(),
+                      'path': '/properties/provisioning_mac'}]
+            ironic_client.node.update(node_uuid, patch)
+
             if not drac_client.is_nic_legacy_boot_protocol_pxe(nic_id):
                 result = drac_client.set_nic_legacy_boot_protocol_pxe(nic_id)
         else:
