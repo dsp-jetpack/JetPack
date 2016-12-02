@@ -106,7 +106,7 @@ def main():
             if "provisioning_mac" not in node.properties:
                 bad_nodes.append(node)
 
-        if len(bad_nodes) > 0:
+        if bad_nodes:
             ips = [CredentialHelper.get_drac_ip(node) for node in bad_nodes]
             fail_msg = "\n".join(ips)
 
