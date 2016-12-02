@@ -33,8 +33,6 @@
       "ProcCores": "All",
       "ProcExecuteDisable": "Enabled",
       "ProcHwPrefetcher": "Enabled",
-      "ProcPwrPerf": "MaxPerf",
-      "ProcTurboMode": "Enabled",
       "ProcVirtualization": "Disabled",
       "QpiSpeed": "MaxDataRate",
       "RtidSetting": "Disabled",
