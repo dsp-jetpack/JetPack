@@ -309,10 +309,11 @@ EOFKS
 
 [[ ! -e /store/data/images ]] && mkdir -p /store/data/images
 
+[[ -e /tmp/floppy-director.img ]] && rm -f /tmp/floppy-director.img
+rm -f /store/data/images/director.img
 
 [[ -e director_vm.vlock ]] && {
 
-  [[ -e /tmp/floppy-director.img ]] && rm -rf /tmp/floppy-director.img
   mkfs.vfat -C /tmp/floppy-director.img 1440
   mkdir /tmp/mnt-director
   mount -o loop /tmp/floppy-director.img /tmp/mnt-director
@@ -320,9 +321,6 @@ EOFKS
   sync
   umount /tmp/mnt-director
   rmdir /tmp/mnt-director
-
-  # If the VM image file already exists, then remove it
-  rm -f /store/data/images/director.img
 
   virt-install --name director \
     --ram 32768 \
