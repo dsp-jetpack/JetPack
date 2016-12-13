@@ -82,8 +82,8 @@ class Settings():
             'private_api_netmask']
         self.management_network = cluster[
             'management_network']
-        self.managment_vlanid = cluster['managment_vlanid']
-        self.managment_netmask = cluster['managment_netmask']
+        self.management_vlanid = cluster['management_vlanid']
+        self.management_netmask = cluster['management_netmask']
         self.management_gateway = cluster['management_gateway']
         self.management_allocation_pool_start = cluster[
             'management_allocation_pool_start']
