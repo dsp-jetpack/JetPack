@@ -114,10 +114,8 @@ resources:
         os_net_config:
           network_config:
             -
-              type: interface
-              # CHANGEME: Change the interface name on the following
-              # line to the interface on the provisioning network
-              name: em3
+              type: ovs_bridge
+              name: br-bond0
               use_dhcp: false
               dns_servers: {get_param: DnsServers}
               addresses:
@@ -134,9 +132,7 @@ resources:
                 -
                   default: true
                   next_hop: {get_param: ControlPlaneDefaultRoute}
-            -
-              type: ovs_bridge
-              name: br-bond0
+
               addresses:
                 -
                   ip_netmask: {get_param: StorageIpSubnet}
@@ -156,7 +152,7 @@ resources:
                       type: interface
                       # CHANGEME: Change the interface name on the following
                       # line to an interface to include in bond0
-                      name: p2p1
+                      name: em3
             -
               type: ovs_bridge
               name: br-bond1
@@ -179,7 +175,7 @@ resources:
                       type: interface
                       # CHANGEME: Change the interface name on the following
                       # line to an interface to include in bond1
-                      name: p2p2
+                      name: em4
 
 outputs:
   OS::stack_id:
