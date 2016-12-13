@@ -1,4 +1,4 @@
-# (c) 2016 Dell
+# Copyright (c) 2016 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,16 +72,20 @@ parameters:
     default: 60
     description: Vlan ID for the management network traffic.
     type: number
+  ControlPlaneDefaultRoute: # Override this via parameter_defaults
+    description: The default route of the control plane network.
+    type: string
   ExternalInterfaceDefaultRoute:
     default: '10.0.0.1'
     description: default route for the external network
     type: string
+  ManagementInterfaceDefaultRoute: # Commented out by default in this template
+    default: unset
+    description: The default route of the management network.
+    type: string
   ControlPlaneSubnetCidr: # Override this via parameter_defaults
     default: '24'
     description: The subnet CIDR of the control plane network.
-    type: string
-  ControlPlaneDefaultRoute: # Override this via parameter_defaults
-    description: The default route of the control plane network.
     type: string
   DnsServers: # Override this via parameter_defaults
     default: []
@@ -117,32 +121,43 @@ resources:
         os_net_config:
           network_config:
             -
-              type: ovs_bridge
-              name: br-tenant
-              dns_servers: {get_param: DnsServers}
-              # mtu: 9216
+              type: interface
+              # CHANGEME: Change the interface name on the following
+              # line to the interface on the provisioning network
+              name: em3
+              use_dhcp: false
               addresses:
-                  -
-                    ip_netmask:
-                      list_join:
-                        - '/'
-                        - - {get_param: ControlPlaneIp}
-                          - {get_param: ControlPlaneSubnetCidr}
+                -
+                  ip_netmask:
+                    list_join:
+                      - '/'
+                      - - {get_param: ControlPlaneIp}
+                        - {get_param: ControlPlaneSubnetCidr}
               routes:
                 -
                   ip_netmask: 169.254.169.254/32
                   next_hop: {get_param: EC2MetadataIp}
+                # CHANGEME: The following route is used to route from the
+                # provisioning network to the management network.  If the
+                # iDRACs are on the provisioning network, then remove this
+                # route.
                 -
                   ip_netmask: {get_param: ManagementNetCidr}
                   next_hop: {get_param: ProvisioningNetworkGateway}
+                # CHANGEME: The following sets the default route on the
+                # controller nodes to be the IP of the Director node on
+                # the provisioning network.  This can be changed to a
+                # gateway IP on the external network if available.
                 -
                   default: true
                   next_hop: {get_param: ControlPlaneDefaultRoute}
+            -
+              type: ovs_bridge
+              name: br-tenant
               members:
                 -
                   type: linux_bond
                   name: bond0
-                  # mtu: 9216
                   bonding_options: {get_param: BondInterfaceOptions}
                   members:
                     -
@@ -151,18 +166,22 @@ resources:
                       # line to an interface to include in bond0
                       name: em1
                       primary: true
-                      # mtu: 9216
                     -
                       type: interface
                       # CHANGEME: Change the interface name on the following
                       # line to an interface to include in bond0
-                      name: em3
-                      # mtu: 9216
+                      name: p3p1
+                -
+                  type: vlan
+                  device: bond0
+                  vlan_id: {get_param: TenantNetworkVlanID}
+                  addresses:
+                  -
+                    ip_netmask: {get_param: TenantIpSubnet}
                 -
                   type: vlan
                   device: bond0
                   vlan_id: {get_param: InternalApiNetworkVlanID}
-                  # mtu: 9216
                   addresses:
                   -
                     ip_netmask: {get_param: InternalApiIpSubnet}
@@ -170,46 +189,41 @@ resources:
                   type: vlan
                   device: bond0
                   vlan_id: {get_param: StorageNetworkVlanID}
-                  # mtu: 9216
                   addresses:
                   -
                     ip_netmask: {get_param: StorageIpSubnet}
             -
               type: ovs_bridge
-              name: br-ext
-              # mtu: 9216
+              name: {get_input: bridge_name}
+              dns_servers: {get_param: DnsServers}
               members:
                 -
                   type: linux_bond
                   name: bond1
-                  # mtu: 9216
                   bonding_options: {get_param: BondInterfaceOptions}
                   members:
                     -
                       type: interface
                       # CHANGEME: Change the interface name on the following
-                      # line to an interface to include in bond0
+                      # line to an interface to include in bond1
                       name: em2
                       primary: true
-                      # mtu: 9216
                     -
                       type: interface
                       # CHANGEME: Change the interface name on the following
-                      # line to an interface to include in bond0
-                      name: em4
-                      # mtu: 9216
+                      # line to an interface to include in bond1
+                      name: p3p2
                 -
                   type: vlan
                   device: bond1
                   vlan_id: {get_param: ExternalNetworkVlanID}
-                  # mtu: 9216
                   addresses:
                     -
                       ip_netmask: {get_param: ExternalIpSubnet}
                   routes:
                     -
                       ip_netmask: 0.0.0.0/0
-                      next_hop: {get_param: ExternalInterfaceDefaultRoute}                      
+                      next_hop: {get_param: ExternalInterfaceDefaultRoute}
 
 outputs:
   OS::stack_id:
