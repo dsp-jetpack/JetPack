@@ -348,8 +348,8 @@ class Settings():
             self.rhsm_repos = cluster['rhsm_repos'].split(',')
         else:
             self.rhsm_repos = [
-                'rhel-7-server-openstack-9.0-rpms',
-                'rhel-7-server-openstack-9.0-director-rpms']
+                'rhel-7-server-openstack-10-rpms',
+                'rhel-7-server-openstack-10-devtools-rpms']
 
         with open(self.network_conf) as config_file:
             json_data = json.load(config_file)

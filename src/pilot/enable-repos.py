@@ -24,8 +24,8 @@ args_parser.add_argument("--proxy", help="proxy address formatted as 'http://<pr
 args = args_parser.parse_args()
 
 repos = [
-    "rhel-7-server-openstack-9-rpms",
-    "rhel-7-server-openstack-9-director-rpms"]
+    "rhel-7-server-openstack-10-rpms",
+    "rhel-7-server-openstack-10-devtools-rpms"]
 
 def execute(cmd):
     print cmd
