@@ -126,7 +126,7 @@ class Sah(InfraHost):
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^mgmt_bond_name=.*',
                                       'mgmt_bond_name=bond0."' +
-                                      sets.managment_vlanid + '"')
+                                      sets.management_vlanid + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^pub_api_bond_name=.*',
                                       'pub_api_bond_name=bond0."' +
@@ -153,8 +153,8 @@ class Sah(InfraHost):
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^br_mgmt_boot_opts=.*',
                                       'br_mgmt_boot_opts="onboot static ' +
-                                      sets.sah_node.managment_ip + '/' +
-                                      sets.managment_netmask + '"')
+                                      sets.sah_node.management_ip + '/' +
+                                      sets.management_netmask + '"')
 
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^br_pub_api_boot_opts=.*',
@@ -212,8 +212,8 @@ class Sah(InfraHost):
                 "     " + self.settings.external_netmask,
                 "eth1        " + self.settings.director_node.provisioning_ip +
                 "    " + self.settings.provisioning_netmask,
-                "eth2        " + self.settings.director_node.managment_ip +
-                "    " + self.settings.managment_netmask,
+                "eth2        " + self.settings.director_node.management_ip +
+                "    " + self.settings.management_netmask,
                 "eth3        " + self.settings.director_node.private_api_ip +
                 "    " + self.settings.private_api_netmask,
                 "eth4        " + self.settings.director_node.public_api_ip +

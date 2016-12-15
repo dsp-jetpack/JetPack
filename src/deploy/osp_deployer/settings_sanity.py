@@ -57,7 +57,7 @@ class DeployerSanity():
             'provisioning_net_dhcp_end', 'provisioning_gateway',
             'storage_cluster_allocation_pool_start',
             'storage_cluster_allocation_pool_end',
-            'managment_netmask',
+            'management_netmask',
             'management_gateway',
             'management_allocation_pool_start',
             'management_allocation_pool_end',
@@ -243,7 +243,7 @@ class DeployerSanity():
             raise AssertionError("management_gateway in .ini is in the "
                                  "management_allocation_pool range "
                                  "defined in the .ini")
-        sah_management_ip = self.settings.sah_node.managment_ip.split(".")[-1]
+        sah_management_ip = self.settings.sah_node.management_ip.split(".")[-1]
         if int(start) <= int(sah_management_ip) <= int(end):
             raise AssertionError("SAH management_ip in .properties is in "
                                  "the management_allocation_pool range "
@@ -309,7 +309,7 @@ class DeployerSanity():
                                 'storage_ip',
                                 'public_api_ip',
                                 'private_api_ip',
-                                'managment_ip']
+                                'management_ip']
         shouldbbevalidips = ['idrac_ip',
                              'anaconda_ip',
                              'external_ip',
@@ -317,7 +317,7 @@ class DeployerSanity():
                              'storage_ip',
                              'public_api_ip',
                              'private_api_ip',
-                             'managment_ip']
+                             'management_ip']
         self.check_net_attrs(self.settings.sah_node,
                              shouldhaveattributes,
                              shouldbbevalidips)
@@ -328,12 +328,12 @@ class DeployerSanity():
                                 'root_password',
                                 'external_ip',
                                 'provisioning_ip',
-                                'managment_ip',
+                                'management_ip',
                                 'public_api_ip',
                                 'private_api_ip']
         shouldbbevalidips = ['external_ip',
                              'provisioning_ip',
-                             'managment_ip',
+                             'management_ip',
                              'public_api_ip',
                              'private_api_ip']
         self.check_net_attrs(self.settings.director_node,
