@@ -220,7 +220,7 @@ EOFPW
          subscription-manager attach --auto ${ProxyInfo}
          )
 
-  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-rpms --enable=rhel-7-fast-datapath-rpms
+  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-rpms
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -237,7 +237,6 @@ EOFPW
   yum-config-manager --enable rhel-7-server-extras-rpms --setopt="rhel-7-server-extras-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-rh-common-rpms --setopt="rhel-7-server-rh-common-rpms.priority=1"
   yum-config-manager --enable rhel-ha-for-rhel-7-server-rpms --setopt="rhel-ha-for-rhel-7-server-rpms.priority=1"
-  yum-config-manager --enable rhel-7-fast-datapath-rpms --setopt="rhel-7-fast-datapath-rpms.priority=1"
 
   yum -y update
 
