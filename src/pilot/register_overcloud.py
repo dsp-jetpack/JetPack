@@ -177,12 +177,20 @@ class RegisterOvercloud:
                 continue
 
             capabilities = node.properties["capabilities"]
+            capabilities = dict(c.split(':') for c in capabilities.split(','))
 
-            for key_val in capabilities.split(","):
-                split = key_val.split(":")
-                key = split[0]
-                if key == "profile":
-                    role = split[1]
+            # Role is the 'profile' capability when node placement is not
+            # in use. Otherwise it's encoded in the 'node' capability.
+            if 'profile' in capabilities:
+                role = capabilities['profile']
+            elif 'node' in capabilities:
+                role = capabilities['node']
+                # Trim the trailing "-N" where N is the node number
+                role = role[:role.rindex('-')]
+            else:
+                self.logger.error("Failed to determine role of node {}".format(
+                    node))
+                sys.exit(1)
 
             server = n_client.servers.get(instance_uuid)
             for address in server.addresses["ctlplane"]:
