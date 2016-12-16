@@ -169,47 +169,6 @@ def create_volume_types():
               "cinder extra-specs-list".format(overcloudrc_name))
 
 
-def update_swift_endpoint(keystone_client):
-    if True:
-        print 'FIXME RADOSGW: Skip updating Swift endpoint for Ceph radosgw...'
-        return
-
-    swift_service = keystone_client.services.find(**{'name': 'swift'})
-    swift_endpoint = keystone_client.endpoints.find(
-        **{'service_id': swift_service.id})
-
-    # The radosgw uses this suffix for all Swift endpoint URLs
-    radosgw_url_suffix = '/swift/v1'
-
-    if swift_endpoint.publicurl.endswith(radosgw_url_suffix):
-        print 'Swift endpoint is already configured for Ceph radosgw.'
-        return
-
-    # Delete the current Swift endpoint, and recreate it with with URLs for the
-    # Ceph radosgw.
-    print 'Updating Swift endpoint for Ceph radosgw...'
-    keystone_client.endpoints.delete(swift_endpoint.id)
-
-    # Convert the Swift URLs to a Ceph radogw URLs. Trim everything after "/v1"
-    # (including any "/AUTH_%(tenant_id)s" suffix), and append the radosgw
-    # suffix.
-
-    url = swift_endpoint.publicurl
-    swift_endpoint.publicurl = url[:url.rfind('/v1'):] + radosgw_url_suffix
-
-    url = swift_endpoint.adminurl
-    swift_endpoint.adminurl = url[:url.rfind('/v1'):] + radosgw_url_suffix
-
-    url = swift_endpoint.internalurl
-    swift_endpoint.internalurl = url[:url.rfind('/v1'):] + radosgw_url_suffix
-
-    keystone_client.endpoints.create(region=swift_endpoint.region,
-                                     service_id=swift_service.id,
-                                     publicurl=swift_endpoint.publicurl,
-                                     adminurl=swift_endpoint.adminurl,
-                                     internalurl=swift_endpoint.internalurl)
-
-
 def run_deploy_command(cmd):
     status = os.system(cmd)
 
@@ -238,7 +197,6 @@ def finalize_overcloud():
 
     create_flavors()
     create_volume_types()
-    update_swift_endpoint(keystone_client)
 
     # horizon_service = keystone_client.services.find(**{'name': 'horizon'})
     # horizon_endpoint = keystone_client.endpoints.find(
@@ -371,9 +329,11 @@ def main():
             env_opts += " -e ~/pilot/templates/node-placement.yaml"
 
         # The dell-environment.yaml must be included after the
-        # storage-environment.yaml
+        # storage-environment.yaml and ceph-radosgw.yaml
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "storage-environment.yaml" \
+                    " -e ~/pilot/templates/overcloud/environments/" \
+                    "ceph-radosgw.yaml" \
                     " -e ~/pilot/templates/dell-environment.yaml" \
                     " -e ~/pilot/templates/overcloud/environments/" \
                     "puppet-pacemaker.yaml"
