@@ -45,6 +45,9 @@ def get_settings():
     parser.add_argument('-s', '--settings',
                         help='ini settings file, e.g settings/acme.ini',
                         required=True)
+    parser.add_argument('-undercloud_only', '--undercloud_only',
+                        help='Only reinstall the undercloud',
+                        action='store_true', required=False)
     parser.add_argument('-overcloud_only', '--overcloud_only',
                         help='Only reinstall the overcloud',
                         action='store_true', required=False)
@@ -102,6 +105,9 @@ def deploy():
         parser.add_argument('-s', '--settings',
                             help='ini settings file, e.g settings/acme.ini',
                             required=True)
+        parser.add_argument('-undercloud_only', '--undercloud_only',
+                            help='Only reinstall the undercloud',
+                            action='store_true', required=False)
         parser.add_argument('-overcloud_only', '--overcloud_only',
                             help='Only reinstall the overcloud',
                             action='store_true', required=False)
@@ -171,6 +177,8 @@ def deploy():
             director_vm.upload_cloud_images()
             director_vm.install_director()
             tester.verify_undercloud_installed()
+            if args.undercloud_only:
+                return
         else:
             logger.info("=== Skipped Director VM/Undercloud install")
             director_vm = Director()
