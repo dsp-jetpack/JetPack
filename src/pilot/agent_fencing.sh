@@ -33,8 +33,7 @@ SSH_CMD="ssh -l heat-admin"
 
 function enable_stonith {
   # For all controller nodes (select by flavor rather than name)
-  for i in $(nova list --flavor control --fields networks | awk ' /ctlplane/ { print $4 } ' | cut -f2 -d=)
-  # original: nova list | awk ' /controller/ { print $12 } ' | cut -f2 -d=)
+  for i in $(nova list | awk ' /controller/ && /ctlplane/ { print $12 } ' | cut -f2 -d=)
   do
     # create the fence device
     IPADDR=`$SSH_CMD $i 'sudo ipmitool lan print 1 | grep -v Source | grep "IP Address " | cut -d: -f2' | tr -d ' '` 
