@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,11 +28,13 @@ from dracclient.constants import POWER_OFF
 from dracclient.exceptions import DRACOperationFailed, \
     DRACUnexpectedReturnValue, WSManInvalidResponse, WSManRequestFailure
 from oslo_utils import units
+from arg_helper import ArgHelper
 from credential_helper import CredentialHelper
 from ironic_helper import IronicHelper
 from job_helper import JobHelper
 from logging_helper import LoggingHelper
-import requests
+import requests.packages
+from ironicclient.common.apiclient.exceptions import InternalServerError
 
 discover_nodes_path = os.path.join(os.path.expanduser('~'),
                                    'pilot/discover_nodes')
@@ -108,12 +110,9 @@ def parse_arguments():
                         default="~/pilot/flavors_settings.json",
                         help="file that contains flavor settings",
                         metavar="FILENAME")
-    parser.add_argument("-n",
-                        "--node-definition",
-                        default="~/instackenv.json",
-                        help="""node definition template file that defines the
-                                node being assigned""",
-                        metavar="FILENAME")
+
+    ArgHelper.add_instack_arg(parser)
+
     LoggingHelper.add_argument(parser)
 
     return parser.parse_args()
@@ -422,6 +421,8 @@ def main():
         args = parse_arguments()
 
         LOG.setLevel(args.logging_level)
+        urllib3_logger = logging.getLogger("requests.packages.urllib3")
+        urllib3_logger.setLevel(logging.WARN)
 
         flavor_settings_filename = os.path.expanduser(args.flavor_settings)
         flavor_settings = get_flavor_settings(flavor_settings_filename)

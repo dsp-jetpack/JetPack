@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,9 @@ import logging
 import os
 import requests.packages
 import sys
+from arg_helper import ArgHelper
 from logging_helper import LoggingHelper
+from utils import Utils
 
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being made
@@ -35,12 +37,9 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Performs initial configuration of iDRACs.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-n",
-                        "--node-definition",
-                        default="~/instackenv.json",
-                        help="""node definition template file that defines the
-                                node being assigned""",
-                        metavar="FILENAME")
+
+    ArgHelper.add_instack_arg(parser)
+    ArgHelper.add_model_properties_arg(parser)
 
     LoggingHelper.add_argument(parser)
 
@@ -64,12 +63,33 @@ def main():
                       args.node_definition))
         sys.exit(1)
 
-    # Configure all the nodes
-    for node in instackenv["nodes"]:
-        ip_service_tag = node["pm_addr"]
+    try:
+        model_properties = Utils.get_model_properties(args.model_properties)
 
-        config_idrac.config_idrac(ip_service_tag, args.node_definition)
+        # Configure all the nodes
+        if "nodes" not in instackenv:
+            raise ValueError("{} must contain an array of "
+                             "\"nodes\"".format(args.node_definition))
 
+        for node in instackenv["nodes"]:
+            if "pm_addr" not in node:
+                raise ValueError("Each node in {} must have a \"pm_addr\" "
+                                 "attribute".format(args.node_definition))
+
+            ip_service_tag = node["pm_addr"]
+
+            succeeded = config_idrac.config_idrac(ip_service_tag,
+                                                  args.node_definition,
+                                                  model_properties)
+            if not succeeded:
+                sys.exit(1)
+
+    except ValueError as ex:
+        LOG.error(ex)
+        sys.exit(1)
+    except Exception as ex:
+        LOG.exception(ex.message)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

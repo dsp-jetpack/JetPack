@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import sys
+from arg_helper import ArgHelper
 from command_helper import Exec
 from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
@@ -32,15 +33,8 @@ def parse_arguments():
         description="Loads nodes into ironic.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    instackenv_path = os.path.join(os.path.expanduser('~'),
-                                   'instackenv.json')
+    ArgHelper.add_instack_arg(parser)
 
-    parser.add_argument("-n",
-                        "--node-definition",
-                        default=instackenv_path,
-                        help="""node definition template file that defines the
-                                node being assigned""",
-                        metavar="FILENAME")
     LoggingHelper.add_argument(parser)
 
     return parser.parse_args()

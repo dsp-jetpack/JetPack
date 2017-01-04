@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,15 +15,16 @@
 # limitations under the License.
 
 import argparse
-import json
 import logging
 import os
 import requests.packages
 import sys
+from arg_helper import ArgHelper
 from credential_helper import CredentialHelper
 from ironic_helper import IronicHelper
 from job_helper import JobHelper
 from logging_helper import LoggingHelper
+from utils import Utils
 
 discover_nodes_path = os.path.join(os.path.expanduser('~'),
                                    'pilot/discover_nodes')
@@ -40,60 +41,24 @@ LOG = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Performs initial configuration of iDRACs.",
+        description="Performs initial configuration of an iDRAC.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("ip_service_tag",
-                        help="""IP address of the iDRAC,
+                        help="""IP address of the iDRAC
                                 or service tag of the node""",
                         metavar="ADDRESS")
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("-p",
-                       "--pxe-nic",
-                       help="""fully qualified device descriptor (FQDD) of
-                               network interface to PXE boot from""",
-                       metavar="FQDD")
-    group.add_argument("-m",
-                       "--model-properties",
-                       help="""file that defines Dell system model properties,
-                               including FQDD of network interface to PXE boot
-                               from""",
-                       metavar="FILENAME")
-    parser.add_argument("-n",
-                        "--node-definition",
-                        default="~/instackenv.json",
-                        help="""node definition template file that defines the
-                                node being assigned""",
-                        metavar="FILENAME")
+    parser.add_argument("-p",
+                        "--pxe-nic",
+                        help="""fully qualified device descriptor (FQDD) of
+                                network interface to PXE boot from""",
+                        metavar="FQDD")
+
+    ArgHelper.add_instack_arg(parser)
+    ArgHelper.add_model_properties_arg(parser)
 
     LoggingHelper.add_argument(parser)
 
     return parser.parse_args()
-
-
-def get_model_properties(fqdd, json_filename):
-    # Explicitly specifying the network interface controller (NIC) fully
-    # qualified device descriptor (FQDD) takes precedence over determining the
-    # PXE NIC by the node's system model.
-    if fqdd is not None:
-        return None
-
-    model_properties = None
-    expanded_filename = os.path.expanduser(json_filename)
-
-    try:
-        with open(expanded_filename, 'r') as f:
-            try:
-                model_properties = json.load(f)
-            except ValueError:
-                LOG.exception(
-                    "Could not deserialize model properties file {}".format(
-                        expanded_filename))
-    except IOError:
-        LOG.exception(
-            "Could not open model properties file {}".format(
-                expanded_filename))
-
-    return model_properties
 
 
 def get_drac_client(node_definition_filename, node):
@@ -119,12 +84,10 @@ def get_pxe_nic_fqdd(fqdd, model_properties, drac_client):
     nic_fqdds = [nic.id for nic in drac_client.list_nics(sort=True)]
 
     if pxe_nic_fqdd not in nic_fqdds:
-        LOG.critical(
-            "NIC to PXE boot from, {}, does not exist; available NICs are "
-            "{}".format(
-                pxe_nic_fqdd,
-                ', '.join(nic_fqdds)))
-        return None
+        raise ValueError("NIC to PXE boot from, {}, does not exist; "
+                         "available NICs are {}".format(
+                             pxe_nic_fqdd,
+                             ', '.join(nic_fqdds)))
 
     return pxe_nic_fqdd
 
@@ -169,6 +132,8 @@ def configure_nics_boot_settings(
                       'path': '/properties/provisioning_mac'}]
             ironic_client.node.update(node.uuid, patch)
 
+            # This is the NIC we want to PXE boot, so set it to PXE if it's
+            # not set to PXE already
             if not drac_client.is_nic_legacy_boot_protocol_pxe(nic_id):
                 result = drac_client.set_nic_legacy_boot_protocol_pxe(nic_id)
         else:
@@ -239,20 +204,14 @@ def configure_nics_boot_settings(
 
 
 def config_idrac(ip_service_tag, node_definition,
-                 model_properties_filename="~/pilot/dell_systems.json",
+                 model_properties,
                  pxe_nic=None):
-    model_properties = get_model_properties(
-        pxe_nic,
-        model_properties_filename)
-
     ironic_client = IronicHelper.get_ironic_client()
 
     node = IronicHelper.get_ironic_node(ironic_client,
                                         ip_service_tag)
     if node is None:
-        LOG.critical("Unable to find node {}".format(
-                     ip_service_tag))
-        sys.exit(1)
+        raise ValueError("Unable to find node {}".format(ip_service_tag))
 
     drac_client = get_drac_client(node_definition, node)
 
@@ -260,9 +219,6 @@ def config_idrac(ip_service_tag, node_definition,
         pxe_nic,
         model_properties,
         drac_client)
-
-    if pxe_nic_fqdd is None:
-        sys.exit(1)
 
     return configure_nics_boot_settings(
         drac_client,
@@ -279,16 +235,20 @@ def main():
     urllib3_logger = logging.getLogger("requests.packages.urllib3")
     urllib3_logger.setLevel(logging.WARN)
 
-    qwargs = {"ip_service_tag": args.ip_service_tag,
-              "node_definition": args.node_definition,
-              "pxe_nic": args.pxe_nic}
+    try:
+        model_properties = Utils.get_model_properties(args.model_properties)
 
-    if args.model_properties:
-        qwargs["model_properties_filename"] = args.model_properties
-
-    succeeded = config_idrac(**qwargs)
-
-    if not succeeded:
+        succeeded = config_idrac(args.ip_service_tag,
+                                 args.node_definition,
+                                 model_properties,
+                                 args.pxe_nic)
+        if not succeeded:
+            sys.exit(1)
+    except ValueError as ex:
+        LOG.error(ex)
+        sys.exit(1)
+    except Exception as ex:
+        LOG.exception(ex.message)
         sys.exit(1)
 
 
