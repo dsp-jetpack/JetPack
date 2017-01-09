@@ -91,12 +91,16 @@ class Checkpoints():
 
         logger.info("SAH node health check")
         logger.debug("*** Verify the SAH node registered properly ***")
-        subscription_status = self.verify_subscription_status(
-            self.settings.sah_node.external_ip,
-            "root",
-            self.settings.sah_node.root_password,
-            self.settings.subscription_check_retries)
-        if "Current" not in subscription_status:
+        for _ in range(60):
+            subscription_status = self.verify_subscription_status(
+                self.settings.sah_node.external_ip,
+                "root",
+                self.settings.sah_node.root_password,
+                self.settings.subscription_check_retries)
+            if "Current" in subscription_status:
+                break
+            time.sleep(2)
+        else:
             raise AssertionError(
                 "SAH did not register properly : " + subscription_status)
 
