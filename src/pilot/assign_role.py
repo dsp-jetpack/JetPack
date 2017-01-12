@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,22 +22,19 @@ import json
 import logging
 import os
 import sys
-from time import sleep
 
 from dracclient import utils
 from dracclient.constants import POWER_OFF
 from dracclient.exceptions import DRACOperationFailed, \
     DRACUnexpectedReturnValue, WSManInvalidResponse, WSManRequestFailure
 from oslo_utils import units
+from arg_helper import ArgHelper
 from credential_helper import CredentialHelper
 from ironic_helper import IronicHelper
+from job_helper import JobHelper
 from logging_helper import LoggingHelper
-import requests
-try:  # OSP8
-    from ironicclient.openstack.common.apiclient.exceptions import NotFound
-except ImportError:  # OSP9
-    from ironicclient.common.apiclient.exceptions import InternalServerError, \
-        NotFound
+import requests.packages
+from ironicclient.common.apiclient.exceptions import InternalServerError
 
 discover_nodes_path = os.path.join(os.path.expanduser('~'),
                                    'pilot/discover_nodes')
@@ -108,30 +105,14 @@ def parse_arguments():
                                 rack; choices are controller[-<index>],
                                 compute[-<index>], and storage[-<index>]""",
                         metavar="ROLE")
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument("-p",
-                       "--pxe-nic",
-                       help="""fully qualified device descriptor (FQDD) of
-                               network interface to PXE boot from""",
-                       metavar="FQDD")
-    group.add_argument("-m",
-                       "--model-properties",
-                       default="~/pilot/dell_systems.json",
-                       help="""file that defines Dell system model properties,
-                               including FQDD of network interface to PXE boot
-                               from""",
-                       metavar="FILENAME")
     parser.add_argument("-f",
                         "--flavor-settings",
                         default="~/pilot/flavors_settings.json",
                         help="file that contains flavor settings",
                         metavar="FILENAME")
-    parser.add_argument("-n",
-                        "--node-definition",
-                        default="~/instackenv.json",
-                        help="""node definition template file that defines the
-                                node being assigned""",
-                        metavar="FILENAME")
+
+    ArgHelper.add_instack_arg(parser)
+
     LoggingHelper.add_argument(parser)
 
     return parser.parse_args()
@@ -157,32 +138,6 @@ def role_index(string):
             "{} is not a valid role index; it must be a number".format(index))
 
     return RoleIndex(role, index)
-
-
-def get_model_properties(fqdd, json_filename):
-    # Explicitly specifying the network interface controller (NIC) fully
-    # qualified device descriptor (FQDD) takes precedence over determining the
-    # PXE NIC by the node's system model.
-    if fqdd is not None:
-        return None
-
-    model_properties = None
-    expanded_filename = os.path.expanduser(json_filename)
-
-    try:
-        with open(expanded_filename, 'r') as f:
-            try:
-                model_properties = json.load(f)
-            except ValueError:
-                LOG.exception(
-                    "Could not deserialize model properties file {}".format(
-                        expanded_filename))
-    except IOError:
-        LOG.exception(
-            "Could not open model properties file {}".format(
-                expanded_filename))
-
-    return model_properties
 
 
 def get_flavor_settings(json_filename):
@@ -261,46 +216,6 @@ def get_drac_client(node_definition_filename, node):
     #       validation.
 
     return drac_client
-
-
-def get_pxe_nic_fqdd(fqdd, model_properties, drac_client):
-    # Explicitly specifying the network interface controller (NIC) fully
-    # qualified device descriptor (FQDD) takes precedence over determining the
-    # PXE NIC by the node's system model.
-    if fqdd is None:
-        pxe_nic_fqdd = get_pxe_nic_fqdd_from_model_properties(
-            model_properties,
-            drac_client)
-    else:
-        pxe_nic_fqdd = fqdd
-
-    # Ensure the identified PXE NIC FQDD exists in the system.
-
-    nic_fqdds = [nic.id for nic in drac_client.list_nics(sort=True)]
-
-    if pxe_nic_fqdd not in nic_fqdds:
-        LOG.critical(
-            "NIC to PXE boot from, {}, does not exist; available NICs are "
-            "{}".format(
-                pxe_nic_fqdd,
-                ', '.join(nic_fqdds)))
-        return None
-
-    return pxe_nic_fqdd
-
-
-def get_pxe_nic_fqdd_from_model_properties(model_properties, drac_client):
-    if model_properties is None:
-        return None
-
-    model_name = drac_client.get_system_model_name()
-
-    # If the model does not have an entry in the model properties JSON file,
-    # return None, instead of raising a KeyError exception.
-    if model_name in model_properties:
-        return model_properties[model_name]['pxe_nic']
-    else:
-        return None
 
 
 def assign_role(ip_mac_service_tag, node_uuid, role_index, ironic_client,
@@ -423,99 +338,6 @@ def select_os_disk(ironic_client, drac_client, node_uuid):
         ironic_client.node.update(node_uuid, patch)
 
 
-def configure_nics_boot_settings(
-        drac_client,
-        pxe_nic_id,
-        ironic_client,
-        node_uuid):
-    LOG.info("Configuring NIC {} to PXE boot".format(pxe_nic_id))
-
-    job_ids = []
-    reboot_required = False
-
-    for nic in drac_client.list_nics(sort=True):
-        result = None
-        nic_id = nic.id
-
-        # Compare the NIC IDs case insensitively. Assume ASCII strings.
-        if nic_id.lower() == pxe_nic_id.lower():
-
-            # Set the MAC for the provisioning/PXE interface on the node for
-            # use by the OOB introspection workaround
-            patch = [{'op': 'add',
-                      'value': nic.mac_address.lower(),
-                      'path': '/properties/provisioning_mac'}]
-            ironic_client.node.update(node_uuid, patch)
-
-            if not drac_client.is_nic_legacy_boot_protocol_pxe(nic_id):
-                result = drac_client.set_nic_legacy_boot_protocol_pxe(nic_id)
-        else:
-            if not drac_client.is_nic_legacy_boot_protocol_none(nic_id):
-                result = drac_client.set_nic_legacy_boot_protocol_none(nic_id)
-
-        if result is None:
-            continue
-
-        # TODO: Untangle the separate requirements for a configuration job and/
-        #       or reboot after setting a NIC attribute via discover_nodes's
-        #       dracclient.
-        #
-        #       Refer to the Dell Simple NIC Profile. Its discussions of the
-        #       DCIM_NICService.SetAttribute() and
-        #       DCIM_NICService.SetAttributes() methods describe their separate
-        #       output parameters, SetResult[] and RebootRequeired[]. The value
-        #       of SetResult[] is 'Set CurrentValue property' when the
-        #       attribute's current value was set and 'Set PendingValue' when
-        #       the attribute's pending value was set.
-        #
-        #       The documentation also states,
-        #
-        #       "The CreateTargetedConfigJob() method is used to apply the
-        #       pending values created by the SetAttribute and SetAttributes
-        #       methods. The successful execution of this method creates a job
-        #       for application of pending attribute values."
-        #
-        #       Therefore, the value of SetResult[] should be used instead of
-        #       RebootRequired[] to determine the need to invoke
-        #       CreateTargetedConfigJob(). And the requirement to reboot should
-        #       be communicated separately to the caller. Presently, the
-        #       requirement for both is indicated by the boolean value of the
-        #       'commit_needed' key in the returned dictionary. That key's
-        #       value is determined from RebootRequired[] only.
-        #
-        #       This applies to the ironic upstream dracclient's BIOS and RAID
-        #       resources, too. Those were used as models during the
-        #       development of the NIC resource in discover_nodes's dracclient.
-        #
-        #       This can be accomplished without breaking existing code that
-        #       uses dracclient by adding two (2) new key:value pairs to the
-        #       returned dictionary.
-        job_id = drac_client.create_nic_config_job(
-            nic_id,
-            reboot=False,
-            start_time=None)
-        job_ids.append(job_id)
-
-        if result['commit_required']:
-            reboot_required = True
-
-    if reboot_required:
-        LOG.info("Rebooting the node to apply NIC configuration")
-
-        job_id = drac_client.create_reboot_job()
-        job_ids.append(job_id)
-
-    drac_client.schedule_job_execution(job_ids, start_time='TIME_NOW')
-
-    LOG.info(
-        "Waiting for NIC configuration to complete; this may take some time")
-    LOG.info("Do not power off the node")
-    wait_for_job_completions(ironic_client, node_uuid)
-    LOG.info("Completed NIC configuration")
-
-    return determine_job_outcomes(drac_client, job_ids)
-
-
 def configure_bios(node, ironic_client, settings, drac_client):
     LOG.info("Configuring BIOS")
 
@@ -561,35 +383,10 @@ def configure_bios(node, ironic_client, settings, drac_client):
         "Waiting for BIOS configuration to complete; this may take some time")
     LOG.info("Do not power off the node")
     job_ids = [response.job_id]
-    wait_for_job_completions(ironic_client, node.uuid)
+    JobHelper.wait_for_job_completions(ironic_client, node.uuid)
     LOG.info("Completed BIOS configuration")
 
-    return determine_job_outcomes(drac_client, job_ids)
-
-
-def wait_for_job_completions(ironic_client, node_uuid):
-    while ironic_client.node.vendor_passthru(
-            node_uuid,
-            'list_unfinished_jobs',
-            http_method='GET').unfinished_jobs:
-        sleep(10)
-
-
-def determine_job_outcomes(drac_client, job_ids):
-    all_succeeded = True
-
-    for job_id in job_ids:
-        job_status = drac_client.get_job(job_id).status
-
-        if job_status == 'Completed' or job_status == 'Reboot Completed':
-            continue
-
-        all_succeeded = False
-        LOG.error(
-            "Configuration job {} encountered issues; its final status is "
-            "{}".format(job_id, job_status))
-
-    return all_succeeded
+    return JobHelper.determine_job_outcomes(drac_client, job_ids)
 
 
 def ensure_node_is_powered_off(drac_client):
@@ -624,10 +421,8 @@ def main():
         args = parse_arguments()
 
         LOG.setLevel(args.logging_level)
-
-        model_properties = get_model_properties(
-            args.pxe_nic,
-            args.model_properties)
+        urllib3_logger = logging.getLogger("requests.packages.urllib3")
+        urllib3_logger.setLevel(logging.WARN)
 
         flavor_settings_filename = os.path.expanduser(args.flavor_settings)
         flavor_settings = get_flavor_settings(flavor_settings_filename)
@@ -654,29 +449,12 @@ def main():
 
         drac_client = get_drac_client(args.node_definition, node)
 
-        pxe_nic_fqdd = get_pxe_nic_fqdd(
-            args.pxe_nic,
-            model_properties,
-            drac_client)
-
-        if pxe_nic_fqdd is None:
-            sys.exit(1)
-
         assign_role(
             args.ip_mac_service_tag,
             node.uuid,
             args.role_index,
             ironic_client,
             drac_client)
-
-        succeeded = configure_nics_boot_settings(
-            drac_client,
-            pxe_nic_fqdd,
-            ironic_client,
-            node.uuid)
-
-        if not succeeded:
-            sys.exit(1)
 
         succeeded = configure_bios(
             node,
