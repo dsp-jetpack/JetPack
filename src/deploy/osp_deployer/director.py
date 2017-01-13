@@ -1201,18 +1201,13 @@ class Director(InfraHost):
             self.run_tty(cmd)
 
     def _create_assign_role_command(self, node, role, index):
-        pxe_nic = ""
-        if hasattr(node, 'pxe_nic'):
-            pxe_nic = '--pxe-nic {}'.format(node.pxe_nic)
-
         node_identifier = ""
         if hasattr(node, 'service_tag'):
             node_identifier = node.service_tag
         else:
             node_identifier = node.idrac_ip
 
-        return './assign_role.py {} {} {}-{}'.format(
-            pxe_nic,
+        return './assign_role.py {} {}-{}'.format(
             node_identifier,
             role,
             str(index))
