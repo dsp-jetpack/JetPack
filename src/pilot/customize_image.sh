@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -41,30 +41,42 @@ sudo yum install libguestfs-tools -y
 
 export LIBGUESTFS_BACKEND=direct
 
-echo "## Register the image with subscription manager & enable repos"
-virt-customize -a overcloud-full.qcow2 --run-command "\
-    subscription-manager register --username=${subscription_manager_user} --password=${subscription_manager_pass}"
-
 if [ -z "${subscription_manager_poolid}" ]; then
     subscription_manager_poolid=$(sudo subscription-manager list --available --matches='Red Hat Ceph Storage' --pool-only|tail -n1)
+    if [ -z "${subscription_manager_poolid}" ]; then
+        echo "subscription_manager_poolid is empty."
+        exit 1
+    fi
     echo "Red Hat Ceph Storage pool: ${subscription_manager_poolid}"
 fi
 
-if [ -z "${subscription_manager_poolid}" ]; then
-    echo "subscription_manager_poolid is empty."
-    exit 1
-fi
 
-virt-customize -a overcloud-full.qcow2 \
-    --run-command "subscription-manager attach --pool=${subscription_manager_poolid}" \
-    --run-command "subscription-manager repos '--disable=*' --enable=rhel-7-server-rpms"
+repos=(
+    rhel-7-server-rpms
+    rhel-7-server-rhscon-2-agent-rpms
+    rhel-7-server-rhceph-2-mon-rpms
+)
 
-echo "## Add required packages"
-virt-customize -a overcloud-full.qcow2 --upload ../patch_rpms/python-novaclient-3.3.2-1.el7ost.noarch.rpm:/tmp/python-novaclient-3.3.2-1.el7ost.noarch.rpm &> ~/pilot/customize_image.log
-virt-customize -a overcloud-full.qcow2 --run-command 'rpm -Uvh /tmp/python-novaclient-3.3.2-1.el7ost.noarch.rpm' --selinux-relabel &>> ~/pilot/customize_image.log
+packages=(
+    calamari-server
+    rhscon-agent
+)
 
-echo "## Unregister from subscription manager"
-virt-customize -a overcloud-full.qcow2 --run-command 'subscription-manager remove --all' --run-command 'subscription-manager unregister'
+function join { local IFS="$1"; shift; echo "$*"; }
+
+echo "## Updating the overcloud image"
+
+virt-customize \
+    --memsize 2000 \
+    --add overcloud-full.qcow2 \
+    --sm-credentials "${subscription_manager_user}:password:${subscription_manager_pass}" \
+    --sm-register \
+    --sm-attach "pool:${subscription_manager_poolid}" \
+    --run-command "subscription-manager repos --disable='*' ${repos[*]/#/--enable=}" \
+    --install $(join "," ${packages[*]}) \
+    --sm-remove \
+    --sm-unregister \
+    --selinux-relabel 2>&1 | tee -a ~/pilot/customize_image.log
 
 echo "## Done updating the overcloud image"
 
