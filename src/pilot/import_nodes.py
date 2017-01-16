@@ -51,9 +51,9 @@ def main():
     # Load the nodes into ironic
     logger.info("Importing {} into ironic".format(args.node_definition))
     cmd = ["openstack", "baremetal", "import", "--json", args.node_definition]
-    exit_code, _, stderr = Exec.execute_command(cmd)
+    exit_code, stdin, stderr = Exec.execute_command(cmd)
     if exit_code != 0:
-        logger.error("Failed to import nodes into ironic: {}".format(stderr))
+        logger.error("Failed to import nodes into ironic: {}, {}".format(stdin, stderr))
         sys.exit(1)
 
     # Load the instack file
@@ -76,14 +76,20 @@ def main():
                                                    node["pm_addr"])
 
         # Set the model and service tag on the node
-        logger.info("Setting model ({}) and service tag ({}) on {}".format(
-            node["model"], node["service_tag"], node["pm_addr"]))
+        logger.info("Setting model ({}), service tag ({}), and provisioning "
+                    "MAC ({}) on {}".format(node["model"],
+                                            node["service_tag"],
+                                            node["provisioning_mac"],
+                                            node["pm_addr"]))
         patch = [{'op': 'add',
                   'value': node["service_tag"],
                   'path': '/properties/service_tag'},
                  {'op': 'add',
                   'value': node["model"],
-                  'path': '/properties/model'}]
+                  'path': '/properties/model'},
+                 {'op': 'add',
+                  'value': node["provisioning_mac"],
+                  'path': '/properties/provisioning_mac'}]
         ironic_client.node.update(ironic_node.uuid, patch)
 
 

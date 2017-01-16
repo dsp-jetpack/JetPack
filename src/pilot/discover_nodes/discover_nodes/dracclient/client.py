@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import dracclient.client as ironic_client
 
+from .resources import idrac_card
 from .resources import job
 from .resources import nic
 from .resources import system
@@ -67,8 +68,90 @@ class DRACClient(ironic_client.DRACClient):
                                          path,
                                          protocol)
         self._job_mgmt = job.JobManagement(self.client)
+        self._idrac_cfg = idrac_card.iDRACCardConfiguration(self.client)
         self._nic_cfg = nic.NICConfiguration(self.client)
         self._nic_mgmt = nic.NICManagement(self.client)
+
+    def list_idrac_settings(self):
+        """List the iDRAC configuration settings
+
+        :returns: a dictionary with the iDRAC settings using its name as the
+                  key. The attributes are either iDRACCArdEnumerableAttribute,
+                  iDRACCardStringAttribute or iDRACCardIntegerAttribute
+                  objects.
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the DRAC
+                 interface
+        """
+        return self._idrac_cfg.list_idrac_settings()
+
+    def set_idrac_settings(self, settings, idrac_fqdd='iDRAC.Embedded.1'):
+        """Sets the iDRAC configuration settings
+
+        To be more precise, it sets the pending_value parameter for each of the
+        attributes passed in. For the values to be applied, a config job must
+        be created and the node must be rebooted.
+
+        :param settings: a dictionary containing the proposed values, with
+                         each key being the name of attribute and the value
+                         being the proposed value.
+        :param idrac_fqdd: the FQDD of the iDRAC.
+        :returns: a dictionary containing the commit_needed key with a boolean
+                  value indicating whether a config job must be created for the
+                  values to be applied.
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the DRAC
+                 interface
+        :raises: DRACUnexpectedReturnValue on return value mismatch
+        :raises: InvalidParameterValue on invalid attribute
+        """
+        return self._idrac_cfg.set_idrac_settings(idrac_fqdd, settings)
+
+    def commit_pending_idrac_changes(
+            self,
+            idrac_fqdd='iDRAC.Embedded.1',
+            reboot=False,
+            start_time='TIME_NOW'):
+        """Creates a configuration job for applying all pending changes to an
+        iDRAC.
+
+        :param idrac_fqdd: the FQDD of the iDRAC.
+        :param reboot: indication of whether to also create a reboot job
+        :param start_time: start time for job execution in format
+                           yyyymmddhhmmss; the string 'TIME_NOW' means
+                           immediately and None means unspecified
+        :returns: id of the created configuration job
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the iDRAC
+                 interface
+        :raises: DRACUnexpectedReturnValue on return value mismatch
+        """
+        return self._job_mgmt.create_config_job(
+            resource_uri=uris.DCIM_iDRACCardService,
+            cim_creation_class_name='DCIM_iDRACCardService',
+            cim_name='DCIM:iDRACCardService',
+            target=idrac_fqdd,
+            reboot=reboot,
+            start_time=start_time)
+
+    def abandon_pending_idrac_changes(self, idrac_fqdd):
+        """Abandon all pending changes to a NIC.
+
+        :param idrac_fqdd: the FQDD of the iDRAC.
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the iDRAC
+                 interface
+        :raises: DRACUnexpectedReturnValue on return value mismatch
+        """
+        self._job_mgmt.delete_pending_config(
+            resource_uri=uris.DCIM_iDRACCardService,
+            cim_creation_class_name='DCIM_iDRACCardService',
+            cim_name='DCIM:iDRACCardService',
+            target=idrac_fqdd)
 
     def abandon_pending_nic_changes(self, nic_id):
         """Abandon all pending changes to a NIC.

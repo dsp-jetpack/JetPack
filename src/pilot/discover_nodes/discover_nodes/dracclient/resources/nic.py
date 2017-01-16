@@ -24,6 +24,7 @@ import dracclient.utils as utils
 import dracclient.wsman as wsman
 
 from .. import exceptions
+from .. import utils_additional
 from . import uris
 
 LOG = logging.getLogger(__name__)
@@ -783,9 +784,10 @@ class NICConfiguration(object):
                                  selectors,
                                  properties)
 
-        return {'commit_required': utils.is_reboot_required(
-            doc,
-            uris.DCIM_NICService)}
+        return {'reboot_required': utils.is_reboot_required(
+            doc, uris.DCIM_NICService),
+                'commit_required': utils_additional.is_commit_required(
+            doc, uris.DCIM_NICService)}
 
     def _get_config(self,
                     resource,

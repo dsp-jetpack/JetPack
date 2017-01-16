@@ -18,7 +18,6 @@ from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from infra_host import InfraHost
 from auto_common import Scp, Ipmi
-import errno
 import logging
 import os
 import re
@@ -209,6 +208,28 @@ class Director(InfraHost):
             cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ~/instackenv.json'
             self.run_tty(cmd)
 
+    def configure_idracs(self):
+        nodes = list(self.settings.controller_nodes)
+        nodes.extend(self.settings.compute_nodes)
+        nodes.extend(self.settings.ceph_nodes)
+
+        for node in nodes:
+            cmd = "~/pilot/config_idrac.py "
+            if hasattr(node, 'idrac_ip'):
+                cmd += node.idrac_ip
+            else:
+                cmd += node.service_tag
+
+            if hasattr(node, 'pxe_nic'):
+                cmd += ' -p ' + node.pxe_nic
+
+            stdout, stderr = self.run_tty(cmd)
+            logger.debug(stdout)
+            if stderr:
+                raise AssertionError("An error occurred while running "
+                                     "config_idracs: {}".format(stderr))
+
+    def import_nodes(self):
         stdout, stderr = self.run_tty(self.source_stackrc +
                                       "~/pilot/import_nodes.py")
         logger.debug("Attempted to import nodes into Ironic: " + stdout)
@@ -461,7 +482,7 @@ class Director(InfraHost):
            len(eqlx_san_ip_array) < len(eqlx_use_chap_array) or
            len(eqlx_san_ip_array) < len(eqlx_ch_login_array) or
            len(eqlx_san_ip_array) < len(eqlx_ch_pass_array)):
-            self.settings.enable_eqlx_backend = false
+            self.settings.enable_eqlx_backend = False
             logger.debug("not setting up eqlx backend, data missing")
             return
 
@@ -648,7 +669,7 @@ class Director(InfraHost):
         cmd = 'cd ' + self.pilot_dir + ';./config_idrac_dhcp.py ' + \
             self.settings.sah_node.provisioning_ip + \
             ' -p ' + self.settings.sah_node.root_password
-        stdout, stderr = self.run_tty(cmd)
+        _, stderr = self.run_tty(cmd)
         if stderr:
             raise AssertionError(
                 "Failed to configure DHCP on the SAH node: " + stderr)
@@ -1060,9 +1081,9 @@ class Director(InfraHost):
 
             # noinspection PyBroadException
             try:
-                overcloud_endpoint = self.run_tty('grep "OS_AUTH_URL=" ~/' +
-                                                  self.settings.overcloud_name + 'rc')[0] \
-                    .split('=')[1].replace(':5000/v2.0/', '')
+                overcloud_endpoint = self.run_tty(
+                    'grep "OS_AUTH_URL=" ~/' + self.settings.overcloud_name +
+                    'rc')[0].split('=')[1].replace(':5000/v2.0/', '')
                 overcloud_pass = self.run('grep "OS_PASSWORD=" ~/' +
                                           self.settings.overcloud_name +
                                           'rc')[0].split('=')[1]

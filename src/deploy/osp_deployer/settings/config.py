@@ -20,7 +20,6 @@ import logging
 import os
 import json
 import subprocess
-import os
 from osp_deployer.node_conf import NodeConf
 
 logger = logging.getLogger("osp_deployer")

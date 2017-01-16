@@ -39,7 +39,7 @@ class JobHelper:
         for job_id in job_ids:
             job_status = drac_client.get_job(job_id).status
 
-            if job_status == 'Completed' or job_status == 'Reboot Completed':
+            if JobHelper.job_succeeded(job_status):
                 continue
 
             all_succeeded = False
@@ -48,3 +48,7 @@ class JobHelper:
                 "{}".format(job_id, job_status))
 
         return all_succeeded
+
+    @staticmethod
+    def job_succeeded(job_status):
+        return job_status == 'Completed' or job_status == 'Reboot Completed'
