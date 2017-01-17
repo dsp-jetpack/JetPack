@@ -21,7 +21,9 @@ from auto_common import Scp, Ipmi
 import errno
 import logging
 import os
+import os.path
 import re
+import subprocess
 import sys
 import tempfile
 import time
@@ -1084,6 +1086,18 @@ class Director(InfraHost):
                 logger.debug(each)
                 fi.write(each + "\n")
             fi.close()
+
+    def inject_ssh_key(self):
+        if not os.path.exists('/root/.ssh/id_rsa.pub'):
+            subprocess.call('ssh-keygen -f /root/.ssh/id_rsa -t rsa -N ""', shell=True)
+        self.run_tty("mkdir /home/" + self.user + "/.ssh")
+        self.upload_file("/root/.ssh/id_rsa.pub", "/home/" + self.user + "/.ssh/authorized_keys")
+	self.run_tty("sudo chown %s:%s /home/%s/.ssh/authorized_keys" % (self.user, self.user, self.user))
+	self.run_tty("chmod 700 /home/" + self.user + "/.ssh")
+	self.run_tty("chmod 600 /home/" + self.user + "/.ssh/authorized_keys")
+        self.run_tty("sudo cp -Rv /home/" + self.user + "/.ssh /root")
+        self.run_tty("sudo chmod 700 /root/.ssh")
+        self.run_tty("sudo chmod 600 /root/.ssh/authorized_keys")
 
     def run_sanity_test(self):
         if self.settings.run_sanity is True:

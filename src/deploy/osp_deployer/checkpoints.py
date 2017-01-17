@@ -91,12 +91,16 @@ class Checkpoints():
 
         logger.info("SAH node health check")
         logger.debug("*** Verify the SAH node registered properly ***")
-        subscription_status = self.verify_subscription_status(
-            self.settings.sah_node.external_ip,
-            "root",
-            self.settings.sah_node.root_password,
-            self.settings.subscription_check_retries)
-        if "Current" not in subscription_status:
+        for _ in range(60):
+            subscription_status = self.verify_subscription_status(
+                self.settings.sah_node.external_ip,
+                "root",
+                self.settings.sah_node.root_password,
+                self.settings.subscription_check_retries)
+            if "Current" in subscription_status:
+                break
+            time.sleep(2)
+        else:
             raise AssertionError(
                 "SAH did not register properly : " + subscription_status)
 
@@ -510,19 +514,16 @@ class Checkpoints():
             & Controller nodes")
 
             for each in compute_node_ip, controller_node_ip:
-                cmd = "ssh heat-admin@" + each + \
-                       " sshpass -p " + \
-                       self.settings.eqlx_san_password + \
-                       " ssh -o StrictHostKeyChecking=no " + \
-                       self.settings.eqlx_san_login + "@" + \
-                       self.settings.eqlx_san_ip + " 'uname -a'"
+                cmd = (
+                    'ssh heat-admin@%s ssh -v -oBatchMode=yes  '
+                    '%s 2>&1') % (
+                        each, self.settings.eqlx_san_ip)
                 re = Ssh.execute_command_tty(
                                     setts.director_node.external_ip,
                                     setts.director_install_account_user,
                                     setts.director_install_account_pwd,
                                     cmd)
-                errmsge = "Unsupported command:"
-                if "EQL.PSS" not in re[0] and errmsge not in re[0]:
+                if "NetBSD_Secure_Shell" not in "\n".join(re):
                     raise AssertionError(each +
                                          " not able to ssh to EQL san ip " +
                                          self.settings.eqlx_san_ip)

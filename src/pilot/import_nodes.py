@@ -76,6 +76,8 @@ def main():
                                                    node["pm_addr"])
 
         # Set the model and service tag on the node
+        if "model" not in node:
+            continue
         logger.info("Setting model ({}) and service tag ({}) on {}".format(
             node["model"], node["service_tag"], node["pm_addr"]))
         patch = [{'op': 'add',
