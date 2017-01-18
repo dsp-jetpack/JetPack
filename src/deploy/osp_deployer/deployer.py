@@ -45,6 +45,9 @@ def get_settings():
     parser.add_argument('-s', '--settings',
                         help='ini settings file, e.g settings/acme.ini',
                         required=True)
+    parser.add_argument('-undercloud_only', '--undercloud_only',
+                        help='Only reinstall the undercloud',
+                        action='store_true', required=False)
     parser.add_argument('-overcloud_only', '--overcloud_only',
                         help='Only reinstall the overcloud',
                         action='store_true', required=False)
@@ -68,27 +71,6 @@ def run_tempest():
         logger.debug("not running tempest")
 
 
-def inject_ssh_key():
-    settings = get_settings()
-    Ssh.execute_command(settings.director_node.external_ip,
-                        "root",
-                        settings.sah_node.root_password,
-                        "mkdir -p /root/.ssh")
-    Scp.put_file(settings.director_node.external_ip,
-                 "root",
-                 settings.sah_node.root_password,
-                 "/root/.ssh/id_rsa.pub",
-                 "/root/.ssh/authorized_keys")
-    Ssh.execute_command(settings.director_node.external_ip,
-                        "root",
-                        settings.sah_node.root_password,
-                        "chmod 700 /root/.ssh")
-    Ssh.execute_command(settings.director_node.external_ip,
-                        "root",
-                        settings.sah_node.root_password,
-                        "chmod 600 /root/.ssh/authorized_keys")
-
-
 def deploy():
     # noinspection PyBroadException
     try:
@@ -102,6 +84,9 @@ def deploy():
         parser.add_argument('-s', '--settings',
                             help='ini settings file, e.g settings/acme.ini',
                             required=True)
+        parser.add_argument('-undercloud_only', '--undercloud_only',
+                            help='Only reinstall the undercloud',
+                            action='store_true', required=False)
         parser.add_argument('-overcloud_only', '--overcloud_only',
                             help='Only reinstall the overcloud',
                             action='store_true', required=False)
@@ -168,9 +153,12 @@ def deploy():
             director_vm.upload_update_conf_files()
 
             logger.info("=== installing the director & undercloud ===")
+            director_vm.inject_ssh_key()
             director_vm.upload_cloud_images()
             director_vm.install_director()
             tester.verify_undercloud_installed()
+            if args.undercloud_only:
+                return
         else:
             logger.info("=== Skipped Director VM/Undercloud install")
             director_vm = Director()

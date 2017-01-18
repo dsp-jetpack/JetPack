@@ -74,13 +74,14 @@ def main():
         ironic_client = IronicHelper.get_ironic_client()
         ironic_node = IronicHelper.get_ironic_node(ironic_client,
                                                    node["pm_addr"])
-
+        if "model" not in node:
+            continue
         # Set the model and service tag on the node
         logger.info("Setting model ({}), service tag ({}), and provisioning "
                     "MAC ({}) on {}".format(node["model"],
                                             node["service_tag"],
                                             node["provisioning_mac"],
-                                            node["pm_addr"]))
+                                            node["pm_addr"])) 
         patch = [{'op': 'add',
                   'value': node["service_tag"],
                   'path': '/properties/service_tag'},
