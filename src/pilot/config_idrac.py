@@ -225,9 +225,9 @@ def config_idrac(ip_service_tag,
         if password:
             new_drac_client = DRACClient(drac_ip, drac_user, password)
 
-            # Try 3 times over 30 seconds to connect with the new creds
+            # Try every 10 seconds over 2 minutes to connect with the new creds
             success = False
-            retries = 3
+            retries = 12
             while not success and retries > 0:
                 try:
                     LOG.debug("Attempting to access the iDRAC with the new "
@@ -252,20 +252,28 @@ def config_idrac(ip_service_tag,
                 LOG.debug("Success.  Switching to the new password")
                 drac_client = new_drac_client
             else:
+                # Grab the unfinished_jobs list using the original creds
                 LOG.warn("Failed to change the password")
-
+                unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
         else:
             unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
 
-        # Wait for the unfinished jobs to run
-        while unfinished_jobs:
+        # Wait up to 10 minutes for the unfinished jobs to run
+        retries = 60
+        while unfinished_jobs and retries > 0:
             LOG.debug("{} jobs remain to complete".format(
                 len(unfinished_jobs)))
-            sleep(10)
-            unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
+            retries -= 1
+            if retries > 0:
+                sleep(10)
+                unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
 
-        LOG.debug("All jobs have completed")
-        success = JobHelper.determine_job_outcomes(drac_client, job_ids)
+        if retries > 0:
+            LOG.debug("All jobs have completed")
+            success = JobHelper.determine_job_outcomes(drac_client, job_ids)
+        else:
+            LOG.error("Timed out while waiting for jobs to complete")
+            success = False
 
     # We always want to update the password for the node in the instack file
     # if the user requested a password change and the iDRAC config job was

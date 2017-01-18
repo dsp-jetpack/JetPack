@@ -87,9 +87,8 @@ class CredentialHelper:
     def _load_instack(instackenv_file):
         if not CredentialHelper.instackenv:
             json_file = os.path.expanduser(instackenv_file)
-            instackenv_json = open(json_file, 'r')
-            CredentialHelper.instackenv = json.load(instackenv_json)
-            instackenv_json.close()
+            with open(json_file, 'r') as instackenv_json:
+                CredentialHelper.instackenv = json.load(instackenv_json)
 
     @staticmethod
     def get_node_from_instack(
@@ -143,10 +142,9 @@ class CredentialHelper:
 
         try:
             json_file = os.path.expanduser(instackenv_file)
-            instackenv_json = open(json_file, 'w')
-            json.dump(CredentialHelper.instackenv, instackenv_json,
-                      sort_keys=True, indent=2, separators=(',', ': '))
-            instackenv_json.close()
+            with open(json_file, 'w') as instackenv_json:
+                json.dump(CredentialHelper.instackenv, instackenv_json,
+                          sort_keys=True, indent=2, separators=(',', ': '))
         except Exception as instack_ex:
             instack_ex.message = "Unable to save {}: {}".format(
                 instackenv_file,

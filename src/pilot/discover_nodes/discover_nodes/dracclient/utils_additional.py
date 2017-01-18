@@ -53,24 +53,24 @@ def set_settings(client,
         else:
             validation_msg = current_settings[attr].validate(
                 new_settings[attr])
-            if validation_msg is None:
-                attrib_names.append(attr)
-            else:
+            if validation_msg:
                 invalid_attribs_msgs.append(validation_msg)
+            else:
+                attrib_names.append(attr)
 
     if unchanged_attribs:
         LOG.debug('Ignoring unchanged attributes: %r', unchanged_attribs)
 
-        if invalid_attribs_msgs or read_only_keys:
-            if read_only_keys:
-                read_only_msg = ['Cannot set read-only attributes: %r.'
-                                 % read_only_keys]
-            else:
-                read_only_msg = []
+    if invalid_attribs_msgs or read_only_keys:
+        if read_only_keys:
+            read_only_msg = ['Cannot set read-only attributes: %r.'
+                             % read_only_keys]
+        else:
+            read_only_msg = []
 
-            drac_messages = '\n'.join(invalid_attribs_msgs + read_only_msg)
-            raise exceptions.DRACOperationFailed(
-                drac_messages=drac_messages)
+        drac_messages = '\n'.join(invalid_attribs_msgs + read_only_msg)
+        raise exceptions.DRACOperationFailed(
+            drac_messages=drac_messages)
 
     if not attrib_names:
         return {'commit_required': False,
