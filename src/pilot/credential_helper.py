@@ -22,31 +22,20 @@ from heatclient.v1.client import Client as HeatClient
 class CredentialHelper:
     @staticmethod
     def get_creds(filename):
-        creds_file = open(filename, 'r')
+        command = ['bash', '-c', 'source %s && env' % filename]
+        ret = check_output(command)
+        env_keys = {}
+        for line in ret.split('\n'):
+            if line:
+                (key, value) = line.split("=")[0:2]
+                env_keys[key] = value
 
-        for line in creds_file:
-            prefix = "export"
-            if line.startswith(prefix):
-                line = line[len(prefix):]
-
-            line = line.strip()
-            key, val = line.split('=', 2)
-            key = key.lower()
-
-            if key == 'os_username':
-                os_username = val
-            elif key == 'os_auth_url':
-                os_auth_url = val
-            elif key == 'os_tenant_name':
-                os_tenant_name = val
-            elif key == 'os_password':
-                os_password = val
-
-        if 'hiera' in os_password:
-            os_password = check_output(['sudo', 'hiera',
-                                       'admin_password']).strip()
-
-        return os_auth_url, os_tenant_name, os_username, os_password
+        if 'hiera' in env_keys['OS_PASSWORD']:
+            env_keys['OS_PASSWORD'] = check_output(['sudo', 'hiera',
+			    'admin_password']).strip()
+        return \
+            env_keys['OS_AUTH_URL'], env_keys['OS_TENANT_NAME'], \
+            env_keys['OS_USERNAME'], env_keys['OS_PASSWORD']
 
     @staticmethod
     def get_undercloud_creds():
