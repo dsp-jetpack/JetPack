@@ -162,7 +162,7 @@ def config_idrac_settings(drac_client, password, node):
         }
 
     if password:
-        LOG.warn("Setting the password to: '" + password + "'")
+        LOG.warn("Updating the password")
         idrac_settings["Users.2#Password"] = password
 
     # Set the iDRAC card attributes
@@ -251,6 +251,9 @@ def config_idrac(ip_service_tag,
             if success:
                 LOG.debug("Success.  Switching to the new password")
                 drac_client = new_drac_client
+            else:
+                LOG.warn("Failed to change the password")
+
         else:
             unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
 
