@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -113,7 +113,7 @@ echo "## Done."
 
 echo
 echo "## Customizing the overcloud image & uploading images"
-#~/pilot/customize_image.sh $subscription_manager_user $subscription_manager_pass $subcription_manager_poolid
+~/pilot/customize_image.sh $subscription_manager_user $subscription_manager_pass $subcription_manager_poolid $proxy
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
 echo "## Done"
 
