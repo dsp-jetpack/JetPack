@@ -78,12 +78,9 @@ def main():
 
             ip_service_tag = node["pm_addr"]
 
-            succeeded = config_idrac.config_idrac(ip_service_tag,
-                                                  args.node_definition,
-                                                  model_properties)
-            if not succeeded:
-                sys.exit(1)
-
+            config_idrac.config_idrac(ip_service_tag,
+                                      args.node_definition,
+                                      model_properties)
     except ValueError as ex:
         LOG.error(ex)
         sys.exit(1)

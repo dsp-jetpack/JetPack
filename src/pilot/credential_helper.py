@@ -12,14 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+import logging
 import json
+import os
+import sys
+from constants import Constants
 from subprocess import check_output
 from os_cloud_config.utils import clients
 from heatclient.v1.client import Client as HeatClient
 
 
 class CredentialHelper:
+    LOG = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
+    instackenv = None
+
     @staticmethod
     def get_creds(filename):
         creds_file = open(filename, 'r')
@@ -66,7 +72,8 @@ class CredentialHelper:
         return CredentialHelper.get_drac_creds_from_node(node)
 
     @staticmethod
-    def get_drac_creds_from_node(node, instackenv_file="~/instackenv.json"):
+    def get_drac_creds_from_node(
+            node, instackenv_file=Constants.INSTACKENV_FILENAME):
         drac_ip, drac_user = CredentialHelper.get_drac_ip_and_user(node)
 
         # Can't get the password out of ironic, so dig it out of the
@@ -75,6 +82,28 @@ class CredentialHelper:
             drac_ip, instackenv_file)
 
         return drac_ip, drac_user, drac_password
+
+    @staticmethod
+    def _load_instack(instackenv_file):
+        if not CredentialHelper.instackenv:
+            json_file = os.path.expanduser(instackenv_file)
+            with open(json_file, 'r') as instackenv_json:
+                CredentialHelper.instackenv = json.load(instackenv_json)
+
+    @staticmethod
+    def get_node_from_instack(
+            ip_service_tag,
+            instackenv_file=Constants.INSTACKENV_FILENAME):
+        CredentialHelper._load_instack(instackenv_file)
+
+        nodes = CredentialHelper.instackenv["nodes"]
+
+        for node in nodes:
+            if node["pm_addr"] == ip_service_tag or \
+                    node["service_tag"] == ip_service_tag:
+                return node
+
+        return None
 
     @staticmethod
     def get_drac_ip_and_user(node):
@@ -90,23 +119,37 @@ class CredentialHelper:
 
     @staticmethod
     def get_drac_ip(node):
-        drac_ip, drac_user = CredentialHelper.get_drac_ip_and_user(node)
+        drac_ip, _ = CredentialHelper.get_drac_ip_and_user(node)
 
         return drac_ip
 
     @staticmethod
     def get_drac_password(ip, instackenv_file):
-        json_file = os.path.expanduser(instackenv_file)
-        instackenv_json = open(json_file, 'r')
-        instackenv = json.load(instackenv_json)
+        CredentialHelper._load_instack(instackenv_file)
 
-        nodes = instackenv["nodes"]
+        nodes = CredentialHelper.instackenv["nodes"]
 
         for node in nodes:
             if node["pm_addr"] == ip:
                 return node["pm_password"]
 
         return None
+
+    @staticmethod
+    def save_instack(instackenv_file):
+        if not CredentialHelper.instackenv:
+            raise RuntimeError("No instackenv.json was loaded")
+
+        try:
+            json_file = os.path.expanduser(instackenv_file)
+            with open(json_file, 'w') as instackenv_json:
+                json.dump(CredentialHelper.instackenv, instackenv_json,
+                          sort_keys=True, indent=2, separators=(',', ': '))
+        except Exception as instack_ex:
+            instack_ex.message = "Unable to save {}: {}".format(
+                instackenv_file,
+                instack_ex.message)
+            raise
 
     @staticmethod
     def get_undercloudrc_name():

@@ -194,8 +194,10 @@ def deploy():
         director_vm.setup_net_envt()
         director_vm.configure_dhcp_server()
         director_vm.node_discovery()
-        director_vm.assign_node_roles()
+        director_vm.configure_idracs()
+        director_vm.import_nodes()
         director_vm.node_introspection()
+        director_vm.assign_node_roles()
 
         director_vm.setup_templates()
         logger.info("=== Installing the overcloud ")

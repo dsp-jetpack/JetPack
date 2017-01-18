@@ -24,6 +24,7 @@ import dracclient.utils as utils
 import dracclient.wsman as wsman
 
 from .. import exceptions
+from .. import utils_additional
 from . import uris
 
 LOG = logging.getLogger(__name__)
@@ -716,7 +717,9 @@ class NICConfiguration(object):
                          value being the proposed value
         :returns: dictionary containing a 'commit_required' key with a
                   boolean value indicating whether a configuration job
-                  must be created for the new settings to be applied
+                  must be created for the new settings to be applied and
+                  also containing a 'reboot_required' key with a boolean
+                  value indicating whether or not a reboot is required
         :raises: WSManRequestFailure on request failures
         :raises: WSManInvalidResponse when receiving invalid response
         :raises: DRACOperationFailed on error reported back by the iDRAC
@@ -783,9 +786,10 @@ class NICConfiguration(object):
                                  selectors,
                                  properties)
 
-        return {'commit_required': utils.is_reboot_required(
-            doc,
-            uris.DCIM_NICService)}
+        return {'reboot_required': utils.is_reboot_required(
+            doc, uris.DCIM_NICService),
+                'commit_required': utils_additional.is_commit_required(
+            doc, uris.DCIM_NICService)}
 
     def _get_config(self,
                     resource,

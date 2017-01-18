@@ -30,6 +30,7 @@ import paramiko
 import logging
 
 # Dell utilities
+from constants import Constants
 from identify_nodes import main as identify_nodes
 from credential_helper import CredentialHelper
 from update_ssh_config import main as update_ssh_config
@@ -599,7 +600,7 @@ def main():
     parser.add_argument('-f',
                         '--file',
                         help='name of json file containing the node being set',
-                        default='instackenv.json')
+                        default=Constants.INSTACKENV_FILENAME)
     parser.add_argument("-l",
                         "--logging-level",
                         default="INFO",
@@ -614,7 +615,7 @@ def main():
     oc_stack_name = CredentialHelper.get_overcloud_name()
     ssh_config = os.path.join(home_dir, '.ssh/config')
     undercloud_config = os.path.join(home_dir, 'undercloud_nodes.txt')
-    instack_file = os.path.join(home_dir, args.file)
+    instack_file = os.path.expanduser(args.file)
 
     # Run ~/pilot/identify_nodes.py > ~/undercloud_nodes.txt
     cmd = os.path.join(home_dir,
