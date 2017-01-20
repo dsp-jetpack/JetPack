@@ -147,6 +147,22 @@ def configure_nics_boot_settings(
     return reboot_required, job_ids
 
 
+def config_legacy_boot_setting(drac_client, node):
+    LOG.info("Setting the iDRAC on {} to legacy boot".format(
+        node["pm_addr"]))
+    settings = {"BootMode": "Bios"}
+    response = drac_client.set_bios_settings(settings)
+
+    job_id = None
+    if response['commit_required']:
+        job_id = drac_client.commit_pending_bios_changes(reboot=False,
+                                                         start_time=None)
+
+    # Note that "commit_required" is actually "reboot_required" under the
+    # covers
+    return response['commit_required'], job_id
+
+
 def config_idrac_settings(drac_client, password, node):
     LOG.info("Configuring initial iDRAC settings on {}".format(
         node["pm_addr"]))
@@ -197,17 +213,31 @@ def config_idrac(ip_service_tag,
         model_properties,
         drac_client)
 
+    reboot_required = False
+
+    # Configure the NIC port to PXE boot or not
     reboot_required_nic, job_ids = configure_nics_boot_settings(drac_client,
                                                                 pxe_nic_fqdd,
                                                                 node)
+    reboot_required = reboot_required or reboot_required_nic
 
+    # Configure the system to legacy boot
+    reboot_required_legacy, legacy_job_id = config_legacy_boot_setting(
+        drac_client, node)
+    reboot_required = reboot_required or reboot_required_legacy
+    if legacy_job_id:
+        job_ids.append(legacy_job_id)
+
+    # Do initial idrac configuration
     reboot_required_idrac, idrac_job_id = config_idrac_settings(drac_client,
                                                                 password,
                                                                 node)
+    reboot_required = reboot_required or reboot_required_idrac
     if idrac_job_id:
         job_ids.append(idrac_job_id)
 
-    if reboot_required_nic or reboot_required_idrac:
+    # If we need to reboot, then add a job for it
+    if reboot_required:
         LOG.info("Rebooting the node to apply configuration")
 
         job_id = drac_client.create_reboot_job()

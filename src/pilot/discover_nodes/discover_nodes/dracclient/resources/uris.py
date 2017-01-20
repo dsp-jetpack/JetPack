@@ -17,6 +17,9 @@ Schema definitions and resource URIs for the classes implemented by the
 DRAC WS-Man API.
 """
 
+DCIM_BIOSService = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
+                    'DCIM_BIOSService')
+
 DCIM_iDRACCardEnumeration = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/'
                              '2/DCIM_iDRACCardEnumeration')
 

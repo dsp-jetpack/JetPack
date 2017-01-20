@@ -16,14 +16,21 @@
 
 import argparse
 import dracclient.wsman
+import logging
 import lxml
+import os
+import requests.packages
+import sys
+
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being made.
 # See
 # https://urllib3.readthedocs.org/en/latest/security.html#disabling-warnings.
 # It emanates from the urllib3 instance inside of the requests package.
-import requests
 requests.packages.urllib3.disable_warnings()
+
+logging.basicConfig()
+logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
 
 def main():
@@ -31,7 +38,7 @@ def main():
     parser = argparse.ArgumentParser(description='Probe iDRACs.')
     parser.add_argument("idrac", nargs='+', help='IP addresses of iDRACs')
     parser.add_argument(
-        "-l",
+        "-n",
         "--login-name",
         default='',
         help='user to login as')
@@ -39,7 +46,20 @@ def main():
     parser.add_argument("-m", "--mofs", default='',
                         help='A comma separated list of MOFs to retrieve')
 
+    parser.add_argument("-l",
+                        "--logging-level",
+                        default="INFO",
+                        choices=["CRITICAL", "ERROR", "WARNING",
+                                 "INFO", "DEBUG"],
+                        help="""logging level defined by the logging
+                                module; choices include CRITICAL, ERROR,
+                                WARNING, INFO, and DEBUG""",
+                        metavar="LEVEL")
+
     args = parser.parse_args()
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(args.logging_level)
 
     # List of Dell Common Information Models (DCIM) to enumerate.
     #

@@ -16,7 +16,6 @@
   },
   "default": {
     "bios": {
-      "BootMode": "Bios",
       "BootSeqRetry": "Enabled",
       "DcuIpPrefetcher": "Enabled",
       "DcuStreamerPrefetcher": "Enabled",
