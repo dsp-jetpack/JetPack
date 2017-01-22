@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,45 +28,40 @@ class Scp():
                  user=None, password=None, pkey=None):
         logger.debug("Copying {}@{}:{} to {}".format(user, address, remotefile,
                      localfile))
-        client = paramiko.SSHClient()
-        client.load_system_host_keys()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        trans = paramiko.Transport((address, 22))
-        trans.connect(username=user, password=password, pkey=pkey)
-        sftp = paramiko.SFTPClient.from_transport(trans)
+        client = Ssh.get_client(address, user, password, pkey)
+        sftp = client.open_sftp()
         sftp.get(remotefile, localfile)
         sftp.close()
-        trans.close()
+        client.close()
 
     @staticmethod
     def put_file(address, localfile, remotefile,
                  user=None, password=None, pkey=None):
         logger.debug("Copying {} to {}@{}:{}".format(localfile, user, address,
                      remotefile))
-        client = paramiko.SSHClient()
-        client.load_system_host_keys()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        trans = paramiko.Transport((address, 22))
-        trans.connect(username=user, password=password, pkey=pkey)
-        sftp = paramiko.SFTPClient.from_transport(trans)
+        client = Ssh.get_client(address, user, password, pkey)
+        sftp = client.open_sftp()
         sftp.put(localfile, remotefile)
         sftp.close()
-        trans.close()
+        client.close()
 
 
 class Ssh():
+
+    @staticmethod
+    def get_client(address, user=None, password=None, pkey=None):
+        client = paramiko.SSHClient()
+        client.load_system_host_keys()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(address, username=user, password=password, pkey=pkey)
+        return client
 
     @staticmethod
     def execute_command(address, command, user=None, password=None, pkey=None):
         try:
             logger.debug("ssh {}@{}, running: {}".format(user, address,
                          command))
-            client = paramiko.SSHClient()
-            client.load_system_host_keys()
-            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-            client.connect(address, username=user, password=password,
-                           pkey=pkey)
+            client = Ssh.get_client(address, user, password, pkey)
             _, stdout_stream, stderr_stream = client.exec_command(command)
             stdout, stderr = stdout_stream.read(), stderr_stream.read()
             exit_code = stdout_stream.channel.recv_exit_status()
