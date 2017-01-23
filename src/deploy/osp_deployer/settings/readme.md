@@ -1,5 +1,5 @@
 
-[//]: # ((c) 2015-2016 Dell)
+[//]: # ((c) 2015-2017 Dell)
 [//]: # ( )
 [//]: # (Licensed under the Apache License, Version 2.0 (the "License");)
 [//]: # (you may not use this file except in compliance with the License.)
@@ -38,6 +38,7 @@
 * 6.0.0.d - Removed settings :
                . sah_kickstart
                . rhel_install_location
+* 7.0.0.a - Initial 7.0 version
 
 #####settings.properties
 * 6.0.0.a - Initial 6.0 version
@@ -57,4 +58,4 @@
 	        storage_cluster_ip
 * 6.0.0.c - Removed provisioning_mac_address properties on all overcloud nodes - no longer required
 	    Removed hostname from overcloud nodes - not in use anymore (nodes get named controller-x, compute-x, cephstorage-x)
-
+* 7.0.0.a - Initial 7.0 version : Rename is_ceph node to is_rhscon, and change its hostname to "rhscon"

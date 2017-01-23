@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -239,79 +239,86 @@ class Checkpoints():
             raise AssertionError(
                 "Director VM cannot ping idrac network (ip) : " + test)
 
-    def ceph_vm_health_check(self):
-        logger.info("Ceph VM health checks")
-        logger.debug("*** Verify the Ceph VM registered properly ***")
+    def rhscon_vm_health_check(self):
+        logger.info("Storage Console VM health checks")
+        logger.debug(
+            "*** Verify the Storage Console VM registered properly ***")
         subscription_status = self.verify_subscription_status(
-            self.settings.ceph_node.external_ip,
+            self.settings.rhscon_node.external_ip,
             "root",
-            self.settings.ceph_node.root_password,
+            self.settings.rhscon_node.root_password,
             self.settings.subscription_check_retries)
         if "Current" not in subscription_status:
             raise AssertionError(
-                "Ceph VM did not register properly : " + subscription_status)
+                "Storage Console VM did not register properly : "
+                + subscription_status)
 
-        logger.debug("*** Verify the Ceph VM can ping its public gateway")
-        test = self.ping_host(self.settings.ceph_node.external_ip,
+        logger.debug(
+            "*** Verify the Storage Console VM can ping its public gateway")
+        test = self.ping_host(self.settings.rhscon_node.external_ip,
                               "root",
-                              self.settings.ceph_node.root_password,
+                              self.settings.rhscon_node.root_password,
                               self.settings.external_gateway)
         if self.ping_success not in test:
             raise AssertionError(
-                "Ceph VM cannot ping its public gateway : " + test)
+                "Storage Console VM cannot ping its public gateway : " + test)
 
-        logger.debug("*** Verify the Ceph VM can ping the outside world (ip)")
-        test = self.ping_host(self.settings.ceph_node.external_ip,
+        logger.debug(
+            "*** Verify the Storage Console VM can ping the outside world (IP)")
+        test = self.ping_host(self.settings.rhscon_node.external_ip,
                               "root",
-                              self.settings.ceph_node.root_password,
+                              self.settings.rhscon_node.root_password,
                               "8.8.8.8")
         if self.ping_success not in test:
             raise AssertionError(
-                "Ceph VM cannot ping the outside world (ip) : " + test)
+                "Storage Console VM cannot ping the outside world (IP) : "
+                + test)
 
-        logger.debug("*** Verify the Ceph VM can ping the outside world (dns)")
-        test = self.ping_host(self.settings.ceph_node.external_ip,
+        logger.debug("*** Verify the Storage Console VM can ping "
+                     "the outside world (DNS)")
+        test = self.ping_host(self.settings.rhscon_node.external_ip,
                               "root",
-                              self.settings.ceph_node.root_password,
+                              self.settings.rhscon_node.root_password,
                               "google.com")
         if self.ping_success not in test:
             raise AssertionError(
-                "Ceph VM cannot ping the outside world (dns) : " + test)
+                "Storage Console VM cannot ping the outside world (DNS) : "
+                + test)
 
         logger.debug(
-            "*** Verify the Ceph VM can ping the SAH node "
+            "*** Verify the Storage Console VM can ping the SAH node "
             "through the storage network")
-        test = self.ping_host(self.settings.ceph_node.external_ip,
+        test = self.ping_host(self.settings.rhscon_node.external_ip,
                               "root",
-                              self.settings.ceph_node.root_password,
+                              self.settings.rhscon_node.root_password,
                               self.settings.sah_node.storage_ip)
         if self.ping_success not in test:
             raise AssertionError(
-                "Ceph VM cannot ping the SAH node "
+                "Storage Console VM cannot ping the SAH node "
                 "through the storage network : " + test)
 
         logger.debug(
-            "*** Verify the Ceph VM can ping the SAH "
+            "*** Verify the Storage Console VM can ping the SAH "
             "node through the public network")
-        test = self.ping_host(self.settings.ceph_node.external_ip,
+        test = self.ping_host(self.settings.rhscon_node.external_ip,
                               "root",
-                              self.settings.ceph_node.root_password,
+                              self.settings.rhscon_node.root_password,
                               self.settings.sah_node.external_ip)
         if self.ping_success not in test:
             raise AssertionError(
-                "Ceph VM cannot ping the SAH node through "
+                "Storage Console VM cannot ping the SAH node through "
                 "the public network : " + test)
 
         logger.debug(
-            "*** Verify the Ceph VM can ping the Director VM "
+            "*** Verify the Storage Console VM can ping the Director VM "
             "through the public network")
-        test = self.ping_host(self.settings.ceph_node.external_ip,
+        test = self.ping_host(self.settings.rhscon_node.external_ip,
                               "root",
-                              self.settings.ceph_node.root_password,
+                              self.settings.rhscon_node.root_password,
                               self.settings.director_node.external_ip)
         if self.ping_success not in test:
             raise AssertionError(
-                "Ceph VM cannot ping the Director VM through "
+                "Storage Console VM cannot ping the Director VM through "
                 "the provisioning network : " + test)
 
     def verify_nodes_registered_in_ironic(self):

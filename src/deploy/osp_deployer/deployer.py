@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -51,8 +51,8 @@ def get_settings():
     parser.add_argument('-overcloud_only', '--overcloud_only',
                         help='Only reinstall the overcloud',
                         action='store_true', required=False)
-    parser.add_argument('-skip_ceph_vm', '--skip_ceph_vm',
-                        help='Do not reinstall the ceph vm',
+    parser.add_argument('-skip_rhscon_vm', '--skip_rhscon_vm',
+                        help='Do not reinstall the Storage Console VM',
                         action='store_true',
                         required=False)
 
@@ -90,16 +90,16 @@ def deploy():
         parser.add_argument('-overcloud_only', '--overcloud_only',
                             help='Only reinstall the overcloud',
                             action='store_true', required=False)
-        parser.add_argument('-skip_ceph_vm', '--skip_ceph_vm',
-                            help='Do not reinstall the ceph vm',
+        parser.add_argument('-skip_rhscon_vm', '--skip_rhscon_vm',
+                            help='Do not reinstall the Storage Console VM',
                             action='store_true',
                             required=False)
         args, ignore = parser.parse_known_args()
 
         if args.overcloud_only is True:
             logger.info("Only redeploying the overcloud")
-        if args.skip_ceph_vm is True:
-            logger.info("Skipping ceph vm install")
+        if args.skip_rhscon_vm is True:
+            logger.info("Skipping Storage Console VM install")
 
         logger.debug("loading settings files " + args.settings)
         settings = Settings(args.settings)
@@ -122,7 +122,7 @@ def deploy():
         logger.info("Uploading configs/iso/scripts..")
         if settings.version_locking_enabled is True:
             logger.debug(
-                "Uploading version locking files for director & ceph vm's")
+                "Uploading version locking files for director & rhscon VMs")
             sah_node.upload_lock_files()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
@@ -165,27 +165,27 @@ def deploy():
             logger.debug("Deleting overcloud stack")
             director_vm.delete_overcloud()
 
-        if args.skip_ceph_vm is False:
-            logger.debug("Delete the ceph VM")
+        if args.skip_rhscon_vm is False:
+            logger.debug("Delete the Storage Console VM")
             logger.debug(
-                Ssh.execute_command(settings.ceph_node.external_ip,
+                Ssh.execute_command(settings.rhscon_node.external_ip,
                                     "root",
-                                    settings.ceph_node.root_password,
+                                    settings.rhscon_node.root_password,
                                     "subscription-manager remove --all"))
-            Ssh.execute_command(settings.ceph_node.external_ip,
+            Ssh.execute_command(settings.rhscon_node.external_ip,
                                 "root",
-                                settings.ceph_node.root_password,
+                                settings.rhscon_node.root_password,
                                 "subscription-manager unregister")
 
-            sah_node.delete_ceph_vm()
+            sah_node.delete_rhscon_vm()
 
-            logger.info("=== creating ceph VM")
-            sah_node.create_ceph_vm()
+            logger.info("=== creating Storage Console VM")
+            sah_node.create_rhscon_vm()
 
-            tester.ceph_vm_health_check()
+            tester.rhscon_vm_health_check()
 
         else:
-            logger.info("Skipped the ceph vm install")
+            logger.info("Skipped the Storage Console VM install")
 
         logger.info("=== Preparing the overcloud ===")
 
@@ -222,8 +222,8 @@ def deploy():
         if "CREATE_COMPLETE" not in overcloud_status:
             raise AssertionError(
                 "OverCloud did not install properly : " + overcloud_status)
-        if args.skip_ceph_vm is False:
-            director_vm.configure_calamari()
+        if args.skip_rhscon_vm is False:
+            director_vm.configure_rhscon()
         director_vm.enable_fencing()
         director_vm.enable_instance_ha()
         director_vm.run_sanity_test()

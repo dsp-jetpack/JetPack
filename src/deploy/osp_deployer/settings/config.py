@@ -309,8 +309,8 @@ class Settings():
             '/mgmt/deploy-director-vm.sh'
         self.undercloud_conf = self.foreman_configuration_scripts +\
             '/pilot/undercloud.conf'
-        self.ceph_deploy_sh = self.foreman_configuration_scripts +\
-            '/mgmt/deploy-ceph-vm.sh'
+        self.rhscon_deploy_py = self.foreman_configuration_scripts +\
+            '/mgmt/deploy-rhscon-vm.py'
         self.install_director_sh = self.foreman_configuration_scripts +\
             '/pilot/install-director.sh'
         self.deploy_overcloud_sh = self.foreman_configuration_scripts + \
@@ -365,8 +365,8 @@ class Settings():
                 except AttributeError:
                     pass
                 try:
-                    if node.is_ceph == "true":
-                        self.ceph_node = node
+                    if node.is_rhscon == "true":
+                        self.rhscon_node = node
                 except AttributeError:
                     pass
                 try:
