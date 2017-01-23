@@ -68,3 +68,4 @@ parameter_defaults:
         value: dellsc_osp8_volume_folder
       #DELLSC-END
     cinder_user_enabled_backends: ['eqlx','dellsc']
+  CinderEnableRbdBackend: <enable_rbd_backend>
