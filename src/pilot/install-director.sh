@@ -31,6 +31,16 @@ fi
 flavors="control compute ceph-storage"
 subnet_name="ctlplane"
 
+# Configure a cleaning network so that the Bare Metal service, ironic, can use
+# node cleaning.
+configure_cleaning_network()
+{
+  network_name="$1"
+  network_uuid=$(neutron net-list | grep "${network_name}" | awk '{print $2}')
+  sudo sed -i.bak "s/^.*cleaning_network_uuid.*$/cleaning_network_uuid\ =\ $network_uuid/" /etc/ironic/ironic.conf
+  sudo systemctl restart openstack-ironic-conductor.service
+}
+
 # Create the requested flavor if it does not exist.
 # Set the properties of the flavor regardless.
 create_flavor()
@@ -159,6 +169,12 @@ echo "## Done."
 echo
 echo "## Patching Ironic in-band introspection..."
 sudo sed -i 's/initrd=agent.ramdisk /initrd=agent.ramdisk net.ifnames=0 biosdevname=0 /' /httpboot/inspector.ipxe
+echo "## Done."
+
+network="ctlplane"
+echo
+echo "## Configuring neutron network ${network} as a cleaning network"
+configure_cleaning_network $network
 echo "## Done."
 
 echo
