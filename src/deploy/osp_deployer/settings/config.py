@@ -189,7 +189,10 @@ class Settings():
             self.version_locking_enabled = True
         else:
             self.version_locking_enabled = False
-
+        if cluster['hardware'].lower() == 'fx2':
+            self.is_fx2 = True
+        else:
+            self.is_fx2 = False
         if cluster['use_ipmi_driver'].lower() == 'true':
             self.use_ipmi_driver = True
         else:
@@ -304,7 +307,10 @@ class Settings():
         self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
         self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
 
-        self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
+        if self.is_fx2 is True:
+            self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah-fx2.ks"
+        else:
+            self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
         self.director_deploy_sh = self.foreman_configuration_scripts +\
             '/mgmt/deploy-director-vm.sh'
         self.undercloud_conf = self.foreman_configuration_scripts +\

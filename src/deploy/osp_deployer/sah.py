@@ -116,30 +116,36 @@ class Sah(InfraHost):
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^prov_bond_name=.*',
-                                      'prov_bond_name=bond0."' +
+                                      'prov_bond_name="bond0.' +
                                       sets.provisioning_vlanid +
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^stor_bond_name=.*',
-                                      'stor_bond_name=bond0."' +
+                                      'stor_bond_name="bond0.' +
                                       sets.storage_vlanid + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^mgmt_bond_name=.*',
-                                      'mgmt_bond_name=bond0."' +
+                                      'mgmt_bond_name="bond0.' +
                                       sets.management_vlanid + '"')
-        FileHelper.replace_expression(sets.sah_kickstart,
-                                      '^pub_api_bond_name=.*',
-                                      'pub_api_bond_name=bond0."' +
-                                      sets.public_api_vlanid + '"')
+        if sets.is_fx2 is True:
+            FileHelper.replace_expression(sets.sah_kickstart,
+                                          '^pub_api_bond_name=.*',
+                                          'pub_api_bond_name="bond1"')
+        else:
+            FileHelper.replace_expression(sets.sah_kickstart,
+                                          '^pub_api_bond_name=.*',
+                                          'pub_api_bond_name="bond0.' +
+                                          sets.public_api_vlanid + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^priv_api_bond_name=.*',
-                                      'priv_api_bond_name=bond0."' +
+                                      'priv_api_bond_name="bond0.' +
                                       sets.private_api_vlanid + '"')
-        FileHelper.replace_expression(sets.sah_kickstart,
-                                      '^br_extern_boot_opts=.*',
-                                      'br_extern_boot_opts="onboot static ' +
-                                      sets.sah_node.external_ip + '/' +
-                                      sets.external_netmask + '"')
+        if sets.is_fx2 is False:
+            FileHelper.replace_expression(sets.sah_kickstart,
+                                          '^br_extern_boot_opts=.*',
+                                          'br_extern_boot_opts="onboot static ' +
+                                          sets.sah_node.external_ip + '/' +
+                                          sets.external_netmask + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^br_prov_boot_opts=.*',
                                       'br_prov_boot_opts="onboot static ' +
