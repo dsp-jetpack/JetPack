@@ -326,16 +326,18 @@ class DeployerSanity():
         logger.debug("verifying director vm network settings")
         shouldhaveattributes = ['hostname',
                                 'root_password',
-                                'external_ip',
                                 'provisioning_ip',
                                 'management_ip',
                                 'public_api_ip',
                                 'private_api_ip']
-        shouldbbevalidips = ['external_ip',
-                             'provisioning_ip',
+        if self.settings.is_fx2 is False:
+            shouldhaveattributes.append('external_ip')
+        shouldbbevalidips = ['provisioning_ip',
                              'management_ip',
                              'public_api_ip',
                              'private_api_ip']
+        if self.settings.is_fx2 is False:
+            shouldbbevalidips.append('external_ip')
         self.check_net_attrs(self.settings.director_node,
                              shouldhaveattributes,
                              shouldbbevalidips)

@@ -213,18 +213,27 @@ class Sah(InfraHost):
                 "ntpserver " + self.settings.ntp_server,
                 "user " + self.settings.director_install_account_user,
                 "password " + self.settings.director_install_account_pwd,
-                "# Iface     IP               NETMASK    ",
-                "eth0        " + self.settings.director_node.external_ip +
-                "     " + self.settings.external_netmask,
-                "eth1        " + self.settings.director_node.provisioning_ip +
-                "    " + self.settings.provisioning_netmask,
-                "eth2        " + self.settings.director_node.management_ip +
-                "    " + self.settings.management_netmask,
-                "eth3        " + self.settings.director_node.private_api_ip +
-                "    " + self.settings.private_api_netmask,
-                "eth4        " + self.settings.director_node.public_api_ip +
-                "    " + self.settings.public_api_netmask
-                )
+                "# Iface     IP               NETMASK    ",)
+        if self.settings.is_fx2 is True:
+            conf = conf + ("eth0        " + self.settings.director_node.public_api_ip +
+                "    " + self.settings.public_api_netmask,)
+            conf = conf + ("eth1        " + self.settings.director_node.provisioning_ip +
+                "    " + self.settings.provisioning_netmask,)
+            conf = conf + ("eth2        " + self.settings.director_node.management_ip +
+                "    " + self.settings.management_netmask,)
+            conf = conf + ("eth3        " + self.settings.director_node.private_api_ip +
+                "    " + self.settings.private_api_netmask,)
+        else:
+            conf = conf + ("eth0        " + self.settings.director_node.external_ip +
+                "     " + self.settings.external_netmask,)
+            conf = conf + ("eth1        " + self.settings.director_node.provisioning_ip +
+                "    " + self.settings.provisioning_netmask,)
+            conf = conf + ("eth2        " + self.settings.director_node.management_ip +
+                "    " + self.settings.management_netmask,)
+            conf = conf + ("eth3        " + self.settings.director_node.private_api_ip +
+                "    " + self.settings.private_api_netmask,)
+            conf = conf + ("eth4        " + self.settings.director_node.public_api_ip +
+                "    " + self.settings.public_api_netmask,)
         for line in conf:
             self.run("echo '" +
                      line +

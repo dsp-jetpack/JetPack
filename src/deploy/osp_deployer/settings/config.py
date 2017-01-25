@@ -309,10 +309,12 @@ class Settings():
 
         if self.is_fx2 is True:
             self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah-fx2.ks"
+            self.director_deploy_sh = self.foreman_configuration_scripts +\
+                '/mgmt/deploy-director-vm-fx2.sh'
         else:
             self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
-        self.director_deploy_sh = self.foreman_configuration_scripts +\
-            '/mgmt/deploy-director-vm.sh'
+            self.director_deploy_sh = self.foreman_configuration_scripts +\
+                '/mgmt/deploy-director-vm.sh'
         self.undercloud_conf = self.foreman_configuration_scripts +\
             '/pilot/undercloud.conf'
         self.rhscon_deploy_py = self.foreman_configuration_scripts +\
@@ -366,11 +368,15 @@ class Settings():
                 try:
                     if node.is_sah == "true":
                         self.sah_node = node
+                        if self.is_fx2 is True:
+                            self.sah_node.external_ip = self.sah_node.public_api_ip 
                 except AttributeError:
                     pass
                 try:
                     if node.is_director == "true":
                         self.director_node = node
+                        if self.is_fx2 is True:
+                            self.director_node.external_ip = self.director_node.public_api_ip
                 except AttributeError:
                     pass
                 try:

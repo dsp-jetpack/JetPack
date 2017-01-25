@@ -108,7 +108,7 @@ def deploy():
         settings.get_version_info()
         logger.info("source version # : " + settings.source_version)
         tester = Checkpoints()
-        tester.verify_deployer_settings()
+        #tester.verify_deployer_settings()
         if settings.retreive_switches_config is True:
             tester.retreive_switches_config()
 
@@ -118,7 +118,7 @@ def deploy():
 
         sah_node = Sah()
 
-        tester.sah_health_check()
+        #tester.sah_health_check()
         logger.info("Uploading configs/iso/scripts..")
         if settings.version_locking_enabled is True:
             logger.debug(
