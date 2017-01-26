@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import dracclient.client as ironic_client
+import dracclient.resources.uris as ironic_uris
 
 from .resources import idrac_card
 from .resources import job
@@ -169,7 +170,7 @@ class DRACClient(ironic_client.DRACClient):
         :raises: DRACUnexpectedReturnValue on return value mismatch
         """
         return self._job_mgmt.create_config_job(
-            resource_uri=uris.DCIM_BIOSService,
+            resource_uri=ironic_uris.DCIM_BIOSService,
             cim_creation_class_name='DCIM_BIOSService',
             cim_name='DCIM:BIOSService',
             target=self.BIOS_DEVICE_FQDD,

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,9 +18,7 @@ import argparse
 import dracclient.wsman
 import logging
 import lxml
-import os
 import requests.packages
-import sys
 
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being made.
@@ -30,19 +28,20 @@ import sys
 requests.packages.urllib3.disable_warnings()
 
 logging.basicConfig()
-logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
 
 def main():
     # Parse the command line arguments.
     parser = argparse.ArgumentParser(description='Probe iDRACs.')
     parser.add_argument("idrac", nargs='+', help='IP addresses of iDRACs')
-    parser.add_argument(
-        "-n",
-        "--login-name",
-        default='',
-        help='user to login as')
-    parser.add_argument("-p", "--password", default='', help='password')
+    parser.add_argument("-u",
+                        "--username",
+                        default='',
+                        help='username for accessing the iDRACs')
+    parser.add_argument("-p",
+                        "--password",
+                        default='',
+                        help='password for accessing the iDRACs')
     parser.add_argument("-m", "--mofs", default='',
                         help='A comma separated list of MOFs to retrieve')
 
@@ -84,7 +83,7 @@ def main():
         print i + ':'
 
         # Create client for talking to the iDRAC over the WSMan protocol.
-        client = dracclient.wsman.Client(i, args.login_name, args.password)
+        client = dracclient.wsman.Client(i, args.username, args.password)
 
         # Enumerate and pretty print each DCIM in the list.
         for d in dcims:
