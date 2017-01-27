@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -174,7 +174,7 @@ class Sah(InfraHost):
     def upload_lock_files(self):
 
         files = [
-            'ceph_vm.vlock',
+            'rhscon_vm.vlock',
             'director_vm.vlock',
         ]
         for eachone in files:
@@ -254,37 +254,37 @@ class Sah(InfraHost):
             self.run("virsh undefine director")
             time.sleep(20)
 
-    def create_ceph_vm(self):
-        remote_file = "/root/deploy-ceph-vm.sh"
-        self.upload_file(self.settings.ceph_deploy_sh,
+    def create_rhscon_vm(self):
+        remote_file = "/root/deploy-rhscon-vm.py"
+        self.upload_file(self.settings.rhscon_deploy_py,
                          remote_file)
 
-        logger.debug("=== create ceph.cfg")
-        ceph_conf = "/root/ceph.cfg"
-        self.run("rm " + ceph_conf + " -f")
-        conf = ("rootpassword " + self.settings.ceph_node.root_password,
+        logger.debug("=== create rhscon.cfg")
+        rhscon_conf = "/root/rhscon.cfg"
+        self.run("rm " + rhscon_conf + " -f")
+        conf = ("rootpassword " + self.settings.rhscon_node.root_password,
                 "timezone " + self.settings.time_zone,
                 "smuser " + self.settings.subscription_manager_user,
                 "smpassword " + self.settings.subscription_manager_password,
                 "smpool " + self.settings.subscription_manager_vm_ceph,
-                "hostname " + self.settings.ceph_node.hostname + "." +
+                "hostname " + self.settings.rhscon_node.hostname + "." +
                 self.settings.domain,
                 "gateway " + self.settings.external_gateway,
                 "nameserver " + self.settings.name_server,
                 "ntpserver " + self.settings.ntp_server,
                 "# Iface     IP               NETMASK    ",
-                "eth0        " + self.settings.ceph_node.external_ip +
+                "eth0        " + self.settings.rhscon_node.external_ip +
                 "     " + self.settings.external_netmask,
-                "eth1        " + self.settings.ceph_node.storage_ip +
+                "eth1        " + self.settings.rhscon_node.storage_ip +
                 "    " + self.settings.storage_netmask,
                 )
         for comd in conf:
-            self.run("echo '" + comd + "' >> " + ceph_conf)
-        logger.debug("=== kick off the ceph vm deployment")
+            self.run("echo '" + comd + "' >> " + rhscon_conf)
+        logger.debug("=== kick off the Storage Console VM deployment")
 
-        re = self.run_tty("sh " +
+        re = self.run_tty("python " +
                           remote_file +
-                          " /root/ceph.cfg " +
+                          " /root/rhscon.cfg " +
                           "/store/data/iso/RHEL7.iso")
         startVM = True
         for ln in re[0].split("\n"):
@@ -292,22 +292,29 @@ class Sah(InfraHost):
                 startVM = False
         if startVM:
             logger.debug(
-                "=== wait for the ceph vm install to be complete \
+                "=== wait for the Storage Console VM install to be complete \
                 & power it on")
             while "shut off" \
-                  not in self.run("virsh list --all | grep ceph")[0]:
+                  not in self.run("virsh list --all | grep rhscon")[0]:
                 time.sleep(60)
-            logger.debug("=== power on the ceph VM ")
-            self.run("virsh start ceph")
+            logger.debug("=== power on the Storage Console VM ")
+            self.run("virsh start rhscon")
         while "root" not in \
                 self.run("whoami")[0]:
             time.sleep(40)
-        logger.debug("ceph host is up")
+        logger.debug("Storage Console VM is up")
 
-    def delete_ceph_vm(self):
-        if "ceph" in \
-                self.run("virsh list --all | grep ceph")[0]:
-            self.run("virsh destroy ceph")
-            time.sleep(20)
-            self.run("virsh undefine ceph")
-            time.sleep(20)
+    def delete_rhscon_vm(self):
+        # Also delete any leftover "ceph" VM so that it cannot interfere
+        # with the new "rhscon" VM that replaces it.
+        for vm in "ceph", "rhscon":
+            if vm in self.run("virsh list --all | grep {}".format(vm))[0]:
+                if vm == "ceph":
+                    logger.info("=== deleting deprecated ceph VM")
+
+                if "running" in self.run("virsh domstate {}".format(vm))[0]:
+                    self.run("virsh destroy {}".format(vm))
+                    time.sleep(20)
+
+                self.run("virsh undefine {}".format(vm))
+                time.sleep(20)

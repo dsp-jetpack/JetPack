@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ class NodeConf():
     def __init__(self, json):
         self.is_sah = False
         self.is_foreman = False
-        self.is_ceph = False
+        self.is_rhscon = False
         self.is_director = False
         self.is_ceph_storage = False
         self.is_switch = False

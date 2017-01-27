@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -340,15 +340,15 @@ class DeployerSanity():
                              shouldhaveattributes,
                              shouldbbevalidips)
 
-        # Verify Ceph vm node network definition
-        logger.debug("verifying ceph vm network settings")
+        # Verify Storage Console VM node network definition
+        logger.debug("verifying Storage Console VM network settings")
         shouldhaveattributes = ['hostname',
                                 'root_password',
                                 'external_ip',
                                 'storage_ip']
         shouldbbevalidips = ['external_ip', 'storage_ip']
 
-        self.check_net_attrs(self.settings.ceph_node,
+        self.check_net_attrs(self.settings.rhscon_node,
                              shouldhaveattributes,
                              shouldbbevalidips)
 

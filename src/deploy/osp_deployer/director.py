@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1204,13 +1204,13 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
 
-    def configure_calamari(self):
-        logger.info("Configure Calamari")
+    def configure_rhscon(self):
+        logger.info("Configure Storage Console")
         self.run_tty(self.source_stackrc + 'cd ' +
                      self.pilot_dir +
-                     ';./config_calamari_nodes.sh ' +
-                     self.settings.ceph_node.external_ip +
-                     ' ' + self.settings.ceph_node.root_password)
+                     ';./config_rhscon.py ' +
+                     self.settings.rhscon_node.external_ip +
+                     ' ' + self.settings.rhscon_node.root_password)
 
     def enable_fencing(self):
         if self.settings.enable_fencing is True:
