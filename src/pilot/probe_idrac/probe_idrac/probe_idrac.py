@@ -59,6 +59,8 @@ def main():
 
     root_logger = logging.getLogger()
     root_logger.setLevel(args.logging_level)
+    urllib3_logger = logging.getLogger("requests.packages.urllib3")
+    urllib3_logger.setLevel(logging.WARN)
 
     # List of Dell Common Information Models (DCIM) to enumerate.
     #
