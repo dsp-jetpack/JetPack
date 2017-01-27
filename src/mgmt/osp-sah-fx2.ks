@@ -535,6 +535,8 @@ yum install -y ipmitool
 yum install -y tmux
 curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
 python get-pip.py
+#WOrkaround for https://github.com/pypa/setuptools/issues/944
+pip install --upgrade setuptools
 pip install paramiko
 
 echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/root/temp_name/something_not_jetstream/src/deploy/' >> /root/.bashrc
