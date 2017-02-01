@@ -457,6 +457,11 @@ class Director(InfraHost):
             'cinder_user_enabled_backends: ' + \
             enabled_backends + '|" ' + dell_storage_yaml
         self.run_tty(cmd)
+        cmd = 'sed -i "s|<enable_rbd_backend>|' + \
+            str(self.settings.enable_rbd_backend) + \
+            '|" ' + dell_storage_yaml
+        self.run_tty(cmd)
+
 
     def setup_eqlx(self, dell_storage_yaml):
 
@@ -926,6 +931,8 @@ class Director(InfraHost):
             cmd += " --enable_eqlx"
         if self.settings.enable_dellsc_backend is True:
             cmd += " --enable_dellsc"
+        if self.settings.enable_rbd_backend is False:
+            cmd += " --disable_rbd"
         if self.settings.overcloud_static_ips is True:
             cmd += " --static_ips"
         if self.settings.use_static_vips is True:

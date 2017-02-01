@@ -139,8 +139,9 @@ def create_flavors():
 
 def create_volume_types():
     print 'Creating cinder volume types...'
-    # Add ceph by default
-    types = [["rbd_backend", "tripleo_ceph"]]
+    types = []
+    if not args.disable_rbd:
+        types.append(["rbd_backend", "tripleo_ceph"])
 
     if args.enable_eqlx or args.enable_dellsc:
         cinder_file = open(home_dir +
@@ -248,6 +249,10 @@ def main():
                             action='store_true',
                             default=False,
                             help="Enable cinder Dell Storage Center backend")
+        parser.add_argument('--disable_rbd',
+                            action='store_true',
+                            default=False,
+                            help="Disabe cinder Ceph and rbd backend")
         parser.add_argument('--static_ips',
                             action='store_true',
                             default=False,
