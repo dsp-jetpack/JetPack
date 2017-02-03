@@ -565,16 +565,24 @@ def check_bz_1403576(rhscon_node, ceph_node):
     if ceph_ansible_version.startswith("2."):
         return
 
-    # Check the registration status on a node (caution: this assumes if one
-    # node is registered then they all are registered).
-    status, _, _ = ceph_node.execute("sudo subscription-manager status")
-    if int(status) != 0:
-        LOG.error("Unable to continue unless Overcloud nodes are registered")
-        LOG.error("See https://bugzilla.redhat.com/show_bug.cgi?id=1403576"
-                  " for details")
-        # Do not raise exception or exit with an error code so that
-        # automated deployments don't abort.
-        sys.exit(0)
+    LOG.warn("Patching /usr/share/ceph-ansible on {}".format(rhscon_node.fqdn))
+    LOG.warn("See https://bugzilla.redhat.com/show_bug.cgi?id=1403576"
+             " for details")
+    rhscon_node.run("yum -y install patch")
+    rhscon_node.run("""
+cat << EOF | patch -b -d /usr/share/ceph-ansible/roles/ceph-agent/tasks
+--- pre_requisite.yml.orig	2017-02-03 13:39:38.603353421 +0000
++++ pre_requisite.yml	2017-02-03 13:42:45.072695069 +0000
+@@ -2,6 +2,7 @@
+ - name: determine if node is registered with subscription-manager.
+   command: subscription-manager identity
+   register: subscription
++  ignore_errors: true
+   changed_when: false
+   when:
+     ansible_os_family == 'RedHat'
+EOF
+""")
 
 
 def main():
