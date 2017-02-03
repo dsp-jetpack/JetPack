@@ -218,6 +218,179 @@ def get_drac_client(node_definition_filename, node):
     return drac_client
 
 
+def define_target_raid_config(role, drac_client):
+    if role == 'controller':
+        logical_disks = define_controller_logical_disks(drac_client)
+    elif role == 'compute':
+        logical_disks = define_compute_logical_disks(drac_client)
+    elif role == 'storage':
+        logical_disks = define_storage_logical_disks(drac_client)
+    else:
+        LOG.critical(
+            'Cannot define target RAID configuration for role "{}"').format(
+                role)
+        return None
+
+    return {'logical_disks': logical_disks} if logical_disks else None
+
+
+def define_controller_logical_disks(drac_client):
+    logical_disks = list()
+    logical_disks.append(define_single_raid_10_logical_disk(drac_client))
+
+    return logical_disks
+
+
+def define_compute_logical_disks(drac_client):
+    logical_disks = list()
+    logical_disks.append(define_single_raid_10_logical_disk(drac_client))
+
+    return logical_disks
+
+
+def define_single_raid_10_logical_disk(drac_client):
+    raid_controller_name = get_raid_controller_id(drac_client)
+
+    if not raid_controller_name:
+        return None
+
+    physical_disk_names = get_raid_controller_physical_disk_ids(
+        drac_client,
+        raid_controller_name)
+
+    if not physical_disk_names:
+        LOG.critical(
+            "Found no physical disks connected to RAID controller {}".format(
+                raid_controller_name))
+        return None
+
+    logical_disk = {
+        'size_gb': 'MAX',
+        'raid_level': '1+0',
+        'is_root_volume': True,
+        'controller': raid_controller_name,
+        'physical_disks': physical_disk_names}
+
+    return logical_disk
+
+
+def define_storage_logical_disks(drac_client):
+    '''TODO: Flesh out this stub.'''
+    return list()
+
+
+def get_raid_controller_id(drac_client):
+    disk_controllers = drac_client.list_raid_controllers()
+
+    raid_controller_ids = [
+        c.id for c in disk_controllers if c.id.startswith('RAID.Integrated.')]
+
+    number_raid_controllers = len(raid_controller_ids)
+
+    if number_raid_controllers == 1:
+        return raid_controller_ids[0]
+    elif number_raid_controllers == 0:
+        LOG.critical("Found no RAID controllers")
+        return None
+    else:
+        LOG.critical(
+            "Found more than one RAID controller:\n  {}".format(
+                "\n  ".join(raid_controller_ids)))
+        return None
+
+
+def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
+    physical_disks = drac_client.list_physical_disks()
+
+    return [
+        d.id for d in physical_disks if d.id.endswith(raid_controller_fqdd)]
+
+
+def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
+    '''TODO: After support for all roles, including 'storage', has been
+    implemented, ensuring that a target RAID configuration was passed in
+    will not be needed. Instead, this function will be able to assume
+    that it is not None and valid. Remove this if statement.'''
+    if not target_raid_config:
+        return True
+
+    LOG.info("Configuring RAID")
+
+    # To manually clean the ironic node, it must be in the manageable state.
+    ironic_client.node.set_provision_state(node_uuid, 'manage')
+    ironic_client.node.wait_for_provision_state(node_uuid, 'manageable')
+
+    # Set the target RAID configuration on the ironic node.
+    ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
+
+    # To facilitate workarounds to bugs in the ironic DRAC driver's
+    # implementation of cleaning, execute manual cleaning twice (2),
+    # first to delete the configuration and then to create it. The
+    # workarounds are inserted in-between.
+
+    '''TODO: After those upstream bugs have been resolved, perform both
+    cleaning steps, delete_configurtion() and create_configuration(),
+    during one (1) manual cleaning.'''
+
+    LOG.info(
+        "Manually cleaning the node to delete the existing RAID configuration")
+    clean_steps = [{'interface': 'raid', 'step': 'delete_configuration'}]
+    ironic_client.node.set_provision_state(
+        node_uuid,
+        'clean',
+        cleansteps=clean_steps)
+    LOG.info(
+        "Waiting for manual cleaning to complete; this may take some time")
+    LOG.info("Do not power off the node")
+    ironic_client.node.wait_for_provision_state(node_uuid, 'manageable')
+
+    # Work around the bugs in the ironic DRAC driver's cleaning.
+
+    '''TODO: After the upstream bugs have been resolved, remove the
+    workarounds.'''
+
+    raid_controller_fqdd = get_raid_controller_id(drac_client)
+
+    '''TODO: Workaround 1:
+    Reset the RAID controller to delete all virtual disks and unassign
+    all hot spare physical disks.'''
+
+    '''TODO: Workaround 2:
+    Prepare any foreign physical disks for inclusion in the local RAID
+    configuration.'''
+
+    '''TODO: Workaround 3:
+    Attempt to convert all of the physical disks to JBOD mode. This may
+    succeed, fail, or the controller may not have the capability.'''
+
+    physical_disk_fqdds = get_raid_controller_physical_disk_ids(
+        drac_client,
+        raid_controller_fqdd)
+
+    '''TODO: Workaround 4:
+    Attempt to convert all of the physical disks in the target RAID
+    configuration to RAID mode. This may succeed, fail, or the
+    controller may not have the capability.'''
+
+    LOG.info("Manually cleaning the node to apply the new RAID configuration")
+    clean_steps = [{'interface': 'raid', 'step': 'create_configuration'}]
+    ironic_client.node.set_provision_state(
+        node_uuid,
+        'clean',
+        cleansteps=clean_steps)
+    LOG.info(
+        "Waiting for manual cleaning to complete; this may take some time")
+    LOG.info("Do not power off the node")
+    ironic_client.node.wait_for_provision_state(node_uuid, 'manageable')
+
+    # Return the ironic node to the available state.
+    ironic_client.node.set_provision_state(node_uuid, 'provide')
+    ironic_client.node.wait_for_provision_state(node_uuid, 'available')
+    LOG.info("Completed RAID configuration")
+
+    return True
+
+
 def assign_role(ip_mac_service_tag, node_uuid, role_index, ironic_client,
                 drac_client):
     flavor = ROLES[role_index.role]
@@ -242,9 +415,9 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index, ironic_client,
 
     # Are we assigning the storage role to this node?
     if role_index.role == "storage":
-        # Select the disk for the OS to be installed on.  Note that this is
-        # only necessary for storage nodes because the other node types are
-        # configured to have 1 huge volume created by the DTK.
+        # Select the disk for the OS to be installed on.  Note that this
+        # is only necessary for storage nodes because the other node
+        # types are configured to have 1 huge volume created by the DTK.
         select_os_disk(ironic_client, drac_client.client, node_uuid)
 
 
@@ -448,6 +621,23 @@ def main():
             sys.exit(1)
 
         drac_client = get_drac_client(args.node_definition, node)
+
+        target_raid_config = define_target_raid_config(
+            args.role_index.role,
+            drac_client)
+
+        '''TODO: After support for all roles, including 'storage', has
+        been implemented, ensure that the target RAID configuration is
+        not None. If it is, exit with an exit status of one (1).'''
+
+        succeeded = configure_raid(
+            ironic_client,
+            node.uuid,
+            target_raid_config,
+            drac_client)
+
+        if not succeeded:
+            sys.exit(1)
 
         assign_role(
             args.ip_mac_service_tag,
