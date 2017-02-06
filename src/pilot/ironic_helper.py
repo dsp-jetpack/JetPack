@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@
 import ironicclient
 from credential_helper import CredentialHelper
 
-from ironicclient.common.apiclient.exceptions import InternalServerError, \
-    NotFound
+from ironicclient.common.apiclient.exceptions import NotFound
 
 
 class IronicHelper:
+
     @staticmethod
     def get_ironic_client():
         os_auth_url, os_tenant_name, os_username, os_password = \
@@ -30,7 +30,8 @@ class IronicHelper:
         kwargs = {'os_username': os_username,
                   'os_password': os_password,
                   'os_auth_url': os_auth_url,
-                  'os_tenant_name': os_tenant_name}
+                  'os_tenant_name': os_tenant_name,
+                  'os_ironic_api_version': '1.15'}
         return ironicclient.client.get_client(1, **kwargs)
 
     @staticmethod
