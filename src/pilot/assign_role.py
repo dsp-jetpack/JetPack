@@ -413,6 +413,100 @@ def ensure_node_is_powered_off(drac_client):
         drac_client.set_power_state(POWER_OFF)
 
 
+def change_physical_disk_state_wait(node, ironic_client, drac_client, mode,
+                                    controllers_to_physical_disk_ids=None):
+    reboot_required, job_ids = change_physical_disk_state(
+        drac_client, mode, controllers_to_physical_disk_ids)
+
+    result = True
+    if job_ids:
+        if reboot_required:
+            LOG.info("Rebooting the node to apply configuration")
+
+            job_id = drac_client.create_reboot_job()
+            job_ids.append(job_id)
+
+        drac_client.schedule_job_execution(job_ids, start_time='TIME_NOW')
+
+        LOG.info("Waiting for physical disk configuration to complete; "
+                 "this may take some time")
+        LOG.info("Do not power off the node")
+        JobHelper.wait_for_job_completions(ironic_client, node.uuid)
+        result = JobHelper.determine_job_outcomes(drac_client, job_ids)
+
+    LOG.info("Completed physical disk configuration")
+
+    return result
+
+
+# mode is either "RAID" or "JBOD"
+# controllers_to_physical_disk_ids is a dictionary with the keys being the
+# FQDD of RAID controllers, and the value being an array of physical disk
+# FQDDs
+def change_physical_disk_state(drac_client, mode,
+                               controllers_to_physical_disk_ids=None):
+    physical_disks = drac_client.list_physical_disks()
+    p_disk_id_to_state = {}
+    for physical_disk in physical_disks:
+        p_disk_id_to_state[physical_disk.id] = physical_disk.raid_status
+
+    if not controllers_to_physical_disk_ids:
+        controllers_to_physical_disk_ids = {}
+
+        for physical_disk in physical_disks:
+            if physical_disk.controller not in \
+                    controllers_to_physical_disk_ids:
+                physical_disk_ids = []
+                controllers_to_physical_disk_ids[physical_disk.controller] = \
+                    physical_disk_ids
+            else:
+                physical_disk_ids = controllers_to_physical_disk_ids[
+                    physical_disk.controller]
+
+            physical_disk_ids.append(physical_disk.id)
+
+    # Weed out disks that are already in the mode we want
+    for controller in controllers_to_physical_disk_ids.keys():
+        final_physical_disk_ids = []
+        physical_disk_ids = controllers_to_physical_disk_ids[controller]
+        for physical_disk_id in physical_disk_ids:
+            raid_status = p_disk_id_to_state[physical_disk_id]
+            if (mode == "JBOD" and raid_status == "non-RAID") or \
+                    (mode == "RAID" and raid_status == "ready"):
+                continue
+            elif (mode == "JBOD" and
+                  raid_status != "ready" and
+                  raid_status != "non-RAID"):
+                raise ValueError("Can't change {} to JBOD because it's in a "
+                                 "RAID".format(physical_disk_id))
+
+            final_physical_disk_ids.append(physical_disk_id)
+
+        controllers_to_physical_disk_ids[controller] = final_physical_disk_ids
+
+    job_ids = []
+    reboot_required = False
+    for controller in controllers_to_physical_disk_ids.keys():
+        physical_disk_ids = controllers_to_physical_disk_ids[controller]
+        if physical_disk_ids:
+            LOG.debug("Converting the following disks to {} on RAID "
+                      "controller {}: {}".format(
+                          mode, controller, str(physical_disk_ids)))
+            result = drac_client.convert_physical_disks(
+                controller,
+                physical_disk_ids,
+                mode == "RAID")
+
+            job_id = drac_client.commit_pending_raid_changes(controller,
+                                                             reboot=False,
+                                                             start_time=None)
+            job_ids.append(job_id)
+            if result['commit_required']:
+                reboot_required = True
+
+    return reboot_required, job_ids
+
+
 def main():
 
     try:
@@ -464,6 +558,9 @@ def main():
 
         if not succeeded:
             sys.exit(1)
+
+        # success = change_physical_disk_state_wait(node, ironic_client,
+        #                                           drac_client, "RAID")
     except (DRACOperationFailed, DRACUnexpectedReturnValue,
             InternalServerError, KeyError, TypeError, ValueError,
             WSManInvalidResponse, WSManRequestFailure):
