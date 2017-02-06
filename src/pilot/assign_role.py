@@ -236,14 +236,22 @@ def define_target_raid_config(role, drac_client):
 
 def define_controller_logical_disks(drac_client):
     logical_disks = list()
-    logical_disks.append(define_single_raid_10_logical_disk(drac_client))
+
+    raid_10_logical_disk = define_single_raid_10_logical_disk(drac_client)
+
+    if raid_10_logical_disk:
+        logical_disks.append(raid_10_logical_disk)
 
     return logical_disks
 
 
 def define_compute_logical_disks(drac_client):
     logical_disks = list()
-    logical_disks.append(define_single_raid_10_logical_disk(drac_client))
+
+    raid_10_logical_disk = define_single_raid_10_logical_disk(drac_client)
+
+    if raid_10_logical_disk:
+        logical_disks.append(raid_10_logical_disk)
 
     return logical_disks
 
@@ -252,6 +260,7 @@ def define_single_raid_10_logical_disk(drac_client):
     raid_controller_name = get_raid_controller_id(drac_client)
 
     if not raid_controller_name:
+        LOG.critical("Found no RAID controller")
         return None
 
     physical_disk_names = get_raid_controller_physical_disk_ids(
@@ -307,6 +316,9 @@ def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
 
 
 def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
+    '''TODO: Add some selective exception handling so we can determine
+    when RAID configuration failed and return False. Further testing
+    should uncover interesting error conditions.'''
     '''TODO: After support for all roles, including 'storage', has been
     implemented, ensuring that a target RAID configuration was passed in
     will not be needed. Instead, this function will be able to assume
@@ -630,14 +642,20 @@ def main():
         been implemented, ensure that the target RAID configuration is
         not None. If it is, exit with an exit status of one (1).'''
 
-        succeeded = configure_raid(
-            ironic_client,
-            node.uuid,
-            target_raid_config,
-            drac_client)
+        # Unconditionally disable RAID configuration until RAID/JBOD physical
+        # disk conversion is dealt with.
+        '''TODO: After RAID/JBOD physical disk conversion becomes
+        available and is utilized by configure_raid(), perform RAID
+        configuration.'''
+        if False:
+            succeeded = configure_raid(
+                ironic_client,
+                node.uuid,
+                target_raid_config,
+                drac_client)
 
-        if not succeeded:
-            sys.exit(1)
+            if not succeeded:
+                sys.exit(1)
 
         assign_role(
             args.ip_mac_service_tag,
