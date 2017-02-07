@@ -17,6 +17,7 @@
 from __future__ import absolute_import
 
 import argparse
+from collections import defaultdict
 from collections import namedtuple
 import json
 import logging
@@ -441,8 +442,7 @@ def change_physical_disk_state_wait(node, ironic_client, drac_client, mode,
 
 # mode is either "RAID" or "JBOD"
 # controllers_to_physical_disk_ids is a dictionary with the keys being the
-# FQDD of RAID controllers, and the value being an array of physical disk
-# FQDDs
+# FQDD of RAID controllers, and the value being a list of physical disk FQDDs
 def change_physical_disk_state(drac_client, mode,
                                controllers_to_physical_disk_ids=None):
     physical_disks = drac_client.list_physical_disks()
@@ -451,21 +451,16 @@ def change_physical_disk_state(drac_client, mode,
         p_disk_id_to_state[physical_disk.id] = physical_disk.raid_status
 
     if not controllers_to_physical_disk_ids:
-        controllers_to_physical_disk_ids = {}
+        controllers_to_physical_disk_ids = defaultdict(list)
 
         for physical_disk in physical_disks:
-            if physical_disk.controller not in \
-                    controllers_to_physical_disk_ids:
-                physical_disk_ids = []
-                controllers_to_physical_disk_ids[physical_disk.controller] = \
-                    physical_disk_ids
-            else:
-                physical_disk_ids = controllers_to_physical_disk_ids[
-                    physical_disk.controller]
+            physical_disk_ids = controllers_to_physical_disk_ids[
+                physical_disk.controller]
 
             physical_disk_ids.append(physical_disk.id)
 
     # Weed out disks that are already in the mode we want
+    bad_disks = []
     for controller in controllers_to_physical_disk_ids.keys():
         final_physical_disk_ids = []
         physical_disk_ids = controllers_to_physical_disk_ids[controller]
@@ -477,12 +472,15 @@ def change_physical_disk_state(drac_client, mode,
             elif (mode == "JBOD" and
                   raid_status != "ready" and
                   raid_status != "non-RAID"):
-                raise ValueError("Can't change {} to JBOD because it's in a "
-                                 "RAID".format(physical_disk_id))
+                bad_disks.append(physical_disk_id)
 
             final_physical_disk_ids.append(physical_disk_id)
 
         controllers_to_physical_disk_ids[controller] = final_physical_disk_ids
+
+    if bad_disks:
+        raise ValueError("Can't change the following disks to JBOD because "
+                         "they are in a RAID: {}".format(", ".join(bad_disks)))
 
     job_ids = []
     reboot_required = False
