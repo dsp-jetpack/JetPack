@@ -549,7 +549,7 @@ def start_calamari_server(rhscon_node, calamari_node):
 
 
 def check_bz_1403576(rhscon_node, ceph_node):
-    """ Checks whethere BZ 1403576 will prevent installing the console agent
+    """ Checks whether BZ 1403576 will prevent installing the console agent
 
     Check the ceph-ansible version on the Storage Console. If it's old
     (pre-2.0) then there will be a problem installing the Storage Console agent
