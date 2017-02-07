@@ -501,7 +501,6 @@ def install_console_agent(rhscon_node, ceph_nodes):
             LOG.debug("Waiting for the installation to complete ({})...".
                       format(i))
 
-
         # The final summary provided by Ansible will indicate the number
         # of commands that failed, and we need to be sure none of them did.
         if "failed=0" not in result:
@@ -510,7 +509,7 @@ def install_console_agent(rhscon_node, ceph_nodes):
                           node.fqdn, node.storage_ip))
             LOG.error("Run this command for hints on what may have happened:")
             LOG.error("  ssh {}@{} {}".format(
-                          node.username, node.address, check_task_cmd))
+                      node.username, node.address, check_task_cmd))
             raise RhsconException(
                 "Error or timeout installing the Storage Console agent")
 
@@ -550,7 +549,7 @@ def start_calamari_server(rhscon_node, calamari_node):
 
 
 def check_bz_1403576(rhscon_node, ceph_node):
-    """ Checks whether BZ 1403576 will prevent installing the console agent
+    """ Checks whethere BZ 1403576 will prevent installing the console agent
 
     Check the ceph-ansible version on the Storage Console. If it's old
     (pre-2.0) then there will be a problem installing the Storage Console agent
@@ -565,14 +564,21 @@ def check_bz_1403576(rhscon_node, ceph_node):
     if ceph_ansible_version.startswith("2."):
         return
 
-    LOG.warn("Patching /usr/share/ceph-ansible on {}".format(rhscon_node.fqdn))
-    LOG.warn("See https://bugzilla.redhat.com/show_bug.cgi?id=1403576"
-             " for details")
-    rhscon_node.run("yum -y install patch")
-    rhscon_node.run("""
+    _, stdout, _ = rhscon_node.execute("sudo grep ignore_errors " +
+                                       "/usr/share/ceph-ansible/" +
+                                       "roles/ceph-agent/tasks/" +
+                                       "pre_requisite.yml")
+
+    if "ignore_errors" not in stdout:
+        LOG.warn("Patching /usr/share/ceph-ansible on {}".format(
+            rhscon_node.fqdn))
+        LOG.warn("See https://bugzilla.redhat.com/show_bug.cgi?id=1403576"
+                 " for details")
+        rhscon_node.run("yum -y install patch")
+        rhscon_node.run("""
 cat << EOF | patch -b -d /usr/share/ceph-ansible/roles/ceph-agent/tasks
---- pre_requisite.yml.orig	2017-02-03 13:39:38.603353421 +0000
-+++ pre_requisite.yml	2017-02-03 13:42:45.072695069 +0000
+--- pre_requisite.yml.orig
++++ pre_requisite.yml
 @@ -2,6 +2,7 @@
  - name: determine if node is registered with subscription-manager.
    command: subscription-manager identity
