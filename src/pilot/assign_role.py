@@ -468,19 +468,26 @@ def change_physical_disk_state(drac_client, mode,
             raid_status = p_disk_id_to_state[physical_disk_id]
             if (mode == "JBOD" and raid_status == "non-RAID") or \
                     (mode == "RAID" and raid_status == "ready"):
+                # This means the disk is already in the desired state,
+                # so skip it
                 continue
-            elif (mode == "JBOD" and
-                  raid_status != "ready" and
-                  raid_status != "non-RAID"):
-                bad_disks.append(physical_disk_id)
-
-            final_physical_disk_ids.append(physical_disk_id)
+            elif (mode == "JBOD" and raid_status == "ready") or \
+                    (mode == "RAID" and raid_status == "non-RAID"):
+                # This disk is moving from a state we expect to RAID or JBOD,
+                # so keep it
+                final_physical_disk_ids.append(physical_disk_id)
+            else:
+                # This disk is in one of many states that we don't know what
+                # to do with, so pitch it
+                bad_disks.append("{} ({})".format(physical_disk_id,
+                                                  raid_status))
 
         controllers_to_physical_disk_ids[controller] = final_physical_disk_ids
 
     if bad_disks:
-        raise ValueError("Can't change the following disks to JBOD because "
-                         "they are in a RAID: {}".format(", ".join(bad_disks)))
+        raise ValueError("Can't change the state of the following disks "
+                         "because their state is not ready or non-RAID: "
+                         "{}".format(", ".join(bad_disks)))
 
     job_ids = []
     reboot_required = False
@@ -556,9 +563,6 @@ def main():
 
         if not succeeded:
             sys.exit(1)
-
-        # success = change_physical_disk_state_wait(node, ironic_client,
-        #                                           drac_client, "RAID")
     except (DRACOperationFailed, DRACUnexpectedReturnValue,
             InternalServerError, KeyError, TypeError, ValueError,
             WSManInvalidResponse, WSManRequestFailure):
