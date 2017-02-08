@@ -30,6 +30,7 @@ import paramiko
 import logging
 
 # Dell utilities
+from constants import Constants
 from identify_nodes import main as identify_nodes
 from credential_helper import CredentialHelper
 from update_ssh_config import main as update_ssh_config
@@ -183,7 +184,7 @@ def enable_start_compute_pacemaker(compute_node_ip):
              .format(compute_node_ip))
 
     ssh_cmd(compute_node_ip, "heat-admin",
-            "sudo sudo systemctl enable pacemaker_remote")
+            "sudo systemctl enable pacemaker_remote")
 
     ssh_cmd(compute_node_ip, "heat-admin",
             "sudo systemctl start pacemaker_remote")
@@ -505,7 +506,6 @@ def create_compute_node_resources(compute_node_ip, first_controller_node_ip):
                        "sudo crm_node -n")
     crm_node_name = out.strip()
     crm_node_sname = awk_it(crm_node_name, 1, ".")
-#    crm_node_sname = crm_node_name.partition('.')[0]
 
     ssh_cmd(first_controller_node_ip, "heat-admin",
             "sudo pcs resource create " + crm_node_name +
@@ -572,7 +572,7 @@ def main():
     parser.add_argument('-f',
                         '--file',
                         help='name of json file containing the node being set',
-                        default='instackenv.json')
+                        default=Constants.INSTACKENV_FILENAME)
     parser.add_argument("-l",
                         "--logging-level",
                         default="INFO",
