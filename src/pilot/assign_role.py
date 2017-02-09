@@ -625,6 +625,49 @@ def change_physical_disk_state_wait(node, ironic_client, drac_client, mode,
     return result
 
 
+def is_jbod_capable(drac_client):
+    is_jbod_capable = False
+    physical_disks = drac_client.list_physical_disks()
+
+    # If there is a disk in the Non-RAID state, then the controller is JBOD
+    # capable
+    ready_disk = None
+    for physical_disk in physical_disks:
+        if physical_disk.raid_status == 'non-RAID':
+            is_jbod_capable = True
+            break
+        elif not ready_disk and physical_disk.raid_status == 'ready':
+            ready_disk = physical_disk
+
+    if not is_jbod_capable:
+        if not ready_disk:
+            raise RuntimeError("Unable to find a disk in the Ready state")
+
+        # Try moving a disk in the Ready state to JBOD mode
+        try:
+            drac_client.convert_physical_disks(
+                ready_disk.controller,
+                [ready_disk.id],
+                False)
+
+            is_jbod_capable = True
+
+            # Flip the disk back to the Ready state.  This results in the
+            # pending value being reset to nothing, so it effectively
+            # undoes the last command and makes the check non-destructive
+            drac_client.convert_physical_disks(
+                ready_disk.controller,
+                [ready_disk.id],
+                True)
+        except DRACOperationFailed as ex:
+            if "This operation is not supported on this device" in ex.message:
+                pass
+            else:
+                raise
+
+    return is_jbod_capable
+
+
 # mode is either "RAID" or "JBOD"
 # controllers_to_physical_disk_ids is a dictionary with the keys being the
 # FQDD of RAID controllers, and the value being a list of physical disk FQDDs
@@ -704,7 +747,8 @@ def main():
 
         args = parse_arguments()
 
-        LOG.setLevel(args.logging_level)
+        root_logger = logging.getLogger()
+        root_logger.setLevel(args.logging_level)
         urllib3_logger = logging.getLogger("requests.packages.urllib3")
         urllib3_logger.setLevel(logging.WARN)
 
