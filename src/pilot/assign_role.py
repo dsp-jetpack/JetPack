@@ -647,7 +647,7 @@ def is_jbod_capable(drac_client):
         try:
             drac_client.convert_physical_disks(
                 ready_disk.controller,
-                ready_disk.id,
+                [ready_disk.id],
                 False)
 
             is_jbod_capable = True
@@ -657,7 +657,7 @@ def is_jbod_capable(drac_client):
             # undoes the last command and makes the check non-destructive
             drac_client.convert_physical_disks(
                 ready_disk.controller,
-                ready_disk.id,
+                [ready_disk.id],
                 True)
         except DRACOperationFailed as ex:
             if "This operation is not supported on this device" in ex.message:
