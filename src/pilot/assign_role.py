@@ -268,18 +268,46 @@ def define_single_raid_10_logical_disk(drac_client):
         drac_client,
         raid_controller_name)
 
-    if not physical_disk_names:
+    number_physical_disks = len(physical_disk_names)
+
+    if number_physical_disks >= 4:
+        LOG.info(
+            "Defining RAID 10 on the following physical disks, and marking it "
+            "the root volume:\n  {}".format(
+                "\n  ".join(physical_disk_names)))
+        logical_disk = define_logical_disk(
+            'MAX',
+            '1+0',
+            raid_controller_name,
+            physical_disk_names,
+            is_root_volume=True)
+    elif number_physical_disks == 3 or number_physical_disks == 2:
+        two_physical_disk_names = physical_disk_names[0:2]
+        LOG.warning(
+            "Did not find enough disks for RAID 10; defining RAID 1 on the "
+            "following physical disks, and marking it the root volume:"
+            "\n  {}".format(
+                "\n  ".join(two_physical_disk_names)))
+        logical_disk = define_logical_disk(
+            'MAX',
+            '1',
+            raid_controller_name,
+            two_physical_disk_names,
+            is_root_volume=True)
+    elif number_physical_disks == 1:
+        LOG.warning(
+            "Did not find enough disks for RAID; setting physical disk {} to "
+            "JBOD mode".format(
+                physical_disk_names[0]))
+        logical_disk = make_jbod_or_define_raid_0_logical_disk(
+            raid_controller_name,
+            physical_disk_names[0],
+            is_root_volume=True)
+    else:
         LOG.critical(
             "Found no physical disks connected to RAID controller {}".format(
                 raid_controller_name))
         return None
-
-    logical_disk = {
-        'size_gb': 'MAX',
-        'raid_level': '1+0',
-        'is_root_volume': True,
-        'controller': raid_controller_name,
-        'physical_disks': physical_disk_names}
 
     return logical_disk
 
@@ -287,6 +315,37 @@ def define_single_raid_10_logical_disk(drac_client):
 def define_storage_logical_disks(drac_client):
     '''TODO: Flesh out this stub.'''
     return list()
+
+
+def make_jbod_or_define_raid_0_logical_disk(
+        raid_controller_name,
+        physical_disk_name,
+        is_root_volume=False):
+    '''TODO: Flesh out this stub'''
+    return define_logical_disk(
+        'MAX',
+        '0',
+        raid_controller_name,
+        [physical_disk_name],
+        is_root_volume=is_root_volume)
+
+
+def define_logical_disk(
+        size_gb,
+        raid_level,
+        controller_name,
+        physical_disk_names,
+        is_root_volume=False):
+    logical_disk = dict(
+        size_gb=size_gb,
+        raid_level=raid_level,
+        controller=controller_name,
+        physical_disks=physical_disk_names)
+
+    if is_root_volume:
+        logical_disk['is_root_volume'] = is_root_volume
+
+    return logical_disk
 
 
 def get_raid_controller_id(drac_client):
@@ -313,17 +372,15 @@ def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
     physical_disks = drac_client.list_physical_disks()
 
     return [
-        d.id for d in physical_disks if d.id.endswith(raid_controller_fqdd)]
+        d.id for d in physical_disks if d.controller == raid_controller_fqdd]
 
 
 def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
     '''TODO: Add some selective exception handling so we can determine
     when RAID configuration failed and return False. Further testing
     should uncover interesting error conditions.'''
-    '''TODO: After support for all roles, including 'storage', has been
-    implemented, ensuring that a target RAID configuration was passed in
-    will not be needed. Instead, this function will be able to assume
-    that it is not None and valid. Remove this if statement.'''
+
+    # Nothing to do?
     if not target_raid_config:
         return True
 
@@ -781,10 +838,6 @@ def main():
             args.role_index.role,
             drac_client)
 
-        '''TODO: After support for all roles, including 'storage', has
-        been implemented, ensure that the target RAID configuration is
-        not None. If it is, exit with an exit status of one (1).'''
-
         # Unconditionally disable RAID configuration until RAID/JBOD physical
         # disk conversion is dealt with.
         '''TODO: After RAID/JBOD physical disk conversion becomes
@@ -824,7 +877,7 @@ def main():
         raise
     except:  # Catch all exceptions.
         LOG.exception("Unexpected error")
-        raise
+        sys.exit(1)
     finally:
         # Leave the node powered off.
         if drac_client is not None:
