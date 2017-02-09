@@ -50,11 +50,6 @@ requests.packages.urllib3.disable_warnings()
 # the root logger. Log messages are directed to stderr. This configuration
 # applies to the log messages emitted by this script and the modules in the
 # packages it uses, such as ironicclient and dracclient.
-#
-# Notably, the effective logging levels of this module and the packages it uses
-# are configured to be different. The packages' is WARNING, because theirs is
-# obtained from their ancestor, the root logger. This script's is INFO by
-# default. That can be changed by an optional command-line argument.
 logging.basicConfig()
 
 # Create this script's logger. Give it a more friendly name than __main__.
@@ -111,6 +106,12 @@ def parse_arguments():
                         default="~/pilot/flavors_settings.json",
                         help="file that contains flavor settings",
                         metavar="FILENAME")
+
+    parser.add_argument('-s',
+                        '--skip_raid_config',
+                        action='store_true',
+                        default=True,
+                        help="Skip configuring RAID")
 
     ArgHelper.add_instack_arg(parser)
 
@@ -733,20 +734,21 @@ def main():
 
         drac_client = get_drac_client(args.node_definition, node)
 
-        target_raid_config = define_target_raid_config(
-            args.role_index.role,
-            drac_client)
+        if not args.skip_raid_config:
+            target_raid_config = define_target_raid_config(
+                args.role_index.role,
+                drac_client)
 
-        '''TODO: After support for all roles, including 'storage', has
-        been implemented, ensure that the target RAID configuration is
-        not None. If it is, exit with an exit status of one (1).'''
+            '''TODO: After support for all roles, including 'storage', has
+            been implemented, ensure that the target RAID configuration is
+            not None. If it is, exit with an exit status of one (1).'''
 
-        # Unconditionally disable RAID configuration until RAID/JBOD physical
-        # disk conversion is dealt with.
-        '''TODO: After RAID/JBOD physical disk conversion becomes
-        available and is utilized by configure_raid(), perform RAID
-        configuration.'''
-        if False:
+            # Unconditionally disable RAID configuration until RAID/JBOD
+            # physical disk conversion is dealt with.
+            '''TODO: After RAID/JBOD physical disk conversion becomes
+            available and is utilized by configure_raid(), perform RAID
+            configuration.'''
+
             succeeded = configure_raid(
                 ironic_client,
                 node.uuid,

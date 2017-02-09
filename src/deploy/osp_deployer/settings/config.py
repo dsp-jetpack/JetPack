@@ -396,6 +396,12 @@ class Settings():
                 except AttributeError:
                     self.nodes.append(node)
                     pass
+                try:
+                    if node.skip_raid_config == "true":
+                        node.skip_raid_config = True
+                except AttributeError:
+                    node.skip_raid_config = False
+                    pass
 
         Settings.settings = self
 
