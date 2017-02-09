@@ -477,7 +477,7 @@ def create_fence_nova_device(first_controller_node_ip, domainname):
     ssh_cmd(first_controller_node_ip, "heat-admin",
             "sudo pcs constraint location" +
             " fence-nova rule resource-discovery=never score=0" +
-            " osprole eq controller"
+            " osprole eq controller")
 
 
 # 17) Make certain the Compute nodes are able to recover after fencing.
