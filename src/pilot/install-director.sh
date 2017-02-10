@@ -21,7 +21,7 @@ USAGE="$0 --dns <dns_ip> --sm_user <subscription_manager_user> --sm_pwd <subscri
 
 
 
-TEMP=`getopt -o h --long dns:,sm_user:,sm_pwd:,sm_pool:,proxy:,nodes_pwd: -n 'test.sh' -- "$@"`
+TEMP=`getopt -o h --long dns:,sm_user:,sm_pwd:,sm_pool:,proxy:,nodes_pwd: -n 'install-director.sh' -- "$@"`
 eval set -- "$TEMP"
 
 # extract options and their arguments into variables.
