@@ -20,7 +20,6 @@ from infra_host import InfraHost
 from auto_common import Scp, Ipmi
 import logging
 import os
-import os.path
 import re
 import subprocess
 import sys
@@ -443,7 +442,7 @@ class Director(InfraHost):
         if self.settings.enable_eqlx_backend is True:
             index = 1
             eqlx_san_ip_array = self.settings.eqlx_san_ip.split(",")
-            for san_ip in eqlx_san_ip_array:
+            for _ in eqlx_san_ip_array:
                 enabled_backends += "'eqlx" + str(index) + "',"
                 index = index + 1
 
@@ -461,7 +460,6 @@ class Director(InfraHost):
             str(self.settings.enable_rbd_backend) + \
             '|" ' + dell_storage_yaml
         self.run_tty(cmd)
-
 
     def setup_eqlx(self, dell_storage_yaml):
 
@@ -495,7 +493,7 @@ class Director(InfraHost):
 
         eqlx_configs = ""
         index = 0
-        for san_ip in eqlx_san_ip_array:
+        for _ in eqlx_san_ip_array:
             eqlx_config = """
       eqlx/volume_backend_name:
         value: {}
@@ -1117,12 +1115,15 @@ class Director(InfraHost):
 
     def inject_ssh_key(self):
         if not os.path.exists('/root/.ssh/id_rsa.pub'):
-            subprocess.call('ssh-keygen -f /root/.ssh/id_rsa -t rsa -N ""', shell=True)
+            subprocess.call('ssh-keygen -f /root/.ssh/id_rsa -t rsa -N ""',
+                            shell=True)
         self.run_tty("mkdir /home/" + self.user + "/.ssh")
-        self.upload_file("/root/.ssh/id_rsa.pub", "/home/" + self.user + "/.ssh/authorized_keys")
-	self.run_tty("sudo chown %s:%s /home/%s/.ssh/authorized_keys" % (self.user, self.user, self.user))
-	self.run_tty("chmod 700 /home/" + self.user + "/.ssh")
-	self.run_tty("chmod 600 /home/" + self.user + "/.ssh/authorized_keys")
+        self.upload_file("/root/.ssh/id_rsa.pub",
+                         "/home/" + self.user + "/.ssh/authorized_keys")
+        self.run_tty("sudo chown %s:%s /home/%s/.ssh/authorized_keys" %
+                     (self.user, self.user, self.user))
+        self.run_tty("chmod 700 /home/" + self.user + "/.ssh")
+        self.run_tty("chmod 600 /home/" + self.user + "/.ssh/authorized_keys")
         self.run_tty("sudo cp -Rv /home/" + self.user + "/.ssh /root")
         self.run_tty("sudo chmod 700 /root/.ssh")
         self.run_tty("sudo chmod 600 /root/.ssh/authorized_keys")
@@ -1249,7 +1250,12 @@ class Director(InfraHost):
         else:
             node_identifier = node.idrac_ip
 
-        return './assign_role.py {} {}-{}'.format(
+        skip_raid_config = ""
+        if node.skip_raid_config:
+            skip_raid_config = "-s"
+
+        return './assign_role.py {} {} {}-{}'.format(
+            skip_raid_config,
             node_identifier,
             role,
             str(index))

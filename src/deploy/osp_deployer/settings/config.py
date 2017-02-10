@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -395,6 +395,12 @@ class Settings():
                         self.switches.append(node)
                 except AttributeError:
                     self.nodes.append(node)
+                    pass
+                try:
+                    if node.skip_raid_config == "true":
+                        node.skip_raid_config = True
+                except AttributeError:
+                    node.skip_raid_config = False
                     pass
 
         Settings.settings = self
