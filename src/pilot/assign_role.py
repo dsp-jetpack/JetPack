@@ -371,8 +371,8 @@ def get_raid_controller_id(drac_client):
 def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
     physical_disks = drac_client.list_physical_disks()
 
-    return [
-        d.id for d in physical_disks if d.controller == raid_controller_fqdd]
+    return sorted(
+        (d.id for d in physical_disks if d.controller == raid_controller_fqdd))
 
 
 def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
