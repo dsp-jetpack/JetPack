@@ -106,10 +106,14 @@ def parse_arguments():
                         default="~/pilot/flavors_settings.json",
                         help="file that contains flavor settings",
                         metavar="FILENAME")
-
     parser.add_argument('-s',
                         '--skip_raid_config',
                         action='store_true',
+                        # Note that the default below is intentionally set to
+                        # True to force RAID configuration to be disabled by
+                        # default.
+                        # TODO: Change this to False when we are ready to
+                        # submit RAID config for testing.
                         default=True,
                         help="Skip configuring RAID")
 
@@ -742,12 +746,6 @@ def main():
             '''TODO: After support for all roles, including 'storage', has
             been implemented, ensure that the target RAID configuration is
             not None. If it is, exit with an exit status of one (1).'''
-
-            # Unconditionally disable RAID configuration until RAID/JBOD
-            # physical disk conversion is dealt with.
-            '''TODO: After RAID/JBOD physical disk conversion becomes
-            available and is utilized by configure_raid(), perform RAID
-            configuration.'''
 
             succeeded = configure_raid(
                 ironic_client,

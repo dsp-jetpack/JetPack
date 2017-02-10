@@ -19,7 +19,7 @@ from checkpoints import Checkpoints
 from infra_host import InfraHost
 from auto_common import Scp, Ipmi
 import logging
-import os.path
+import os
 import re
 import subprocess
 import sys
