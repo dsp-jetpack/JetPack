@@ -126,12 +126,14 @@ class Director(InfraHost):
 
     def install_director(self):
         logger.debug("uploading & executing sh script")
-
-        self.run_tty('~/pilot/install-director.sh ' +
-                     self.settings.name_server + " " +
-                     self.settings.subscription_manager_user + " " +
-                     self.settings.subscription_manager_password + " " +
-                     self.settings.subscription_manager_vm_ceph)
+        cmd = '~/pilot/install-director.sh --dns ' + \
+                     self.settings.name_server + " --sm_user " + \
+                     self.settings.subscription_manager_user + " --sm_pwd " + \
+                     self.settings.subscription_manager_password + " --sm_pool " + \
+                     self.settings.subscription_manager_vm_ceph
+        if len(self.settings.overcloud_nodes_pwd) > 0 :
+            cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
+        self.run_tty(cmd)
 
         tester = Checkpoints()
         tester.verify_undercloud_installed()

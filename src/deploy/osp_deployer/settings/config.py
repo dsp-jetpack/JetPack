@@ -343,6 +343,7 @@ class Settings():
         self.switches = []
         self.nodes = []
 
+        self.overcloud_nodes_pwd = cluster['overcloud_nodes_pwd']
         if 'rhsm_repos' in cluster:
             self.rhsm_repos = cluster['rhsm_repos'].split(',')
         else:

@@ -17,16 +17,42 @@
 exec > >(tee $HOME/pilot/install-director.log)
 exec 2>&1
 
-dns_ip="$1"
-subscription_manager_user="$2"
-subscription_manager_pass="$3"
-subcription_manager_poolid="$4"
-proxy="$5"
+USAGE="$0 --dns <dns_ip> --sm_user <subscription_manager_user> --sm_pwd <subscription_manager_pass> [-- sm_pool <subcription_manager_poolid>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>]"
 
-if [ "$#" -lt 3 ]; then
-  echo "Usage: $0 <dns_ip> <subscription_manager_user> <subscription_manager_pass> [<subcription_manager_poolid>] [<proxy>]"
-  exit 1
+
+
+TEMP=`getopt -o h --long dns:,sm_user:,sm_pwd:,sm_pool:,proxy:,nodes_pwd: -n 'install-director.sh' -- "$@"`
+eval set -- "$TEMP"
+
+# extract options and their arguments into variables.
+while true ; do
+    case "$1" in
+        -h|help)
+            echo "$USAGE "
+            exit 1
+            ;;
+        --dns)
+            dns_ip=$2 ; shift 2 ;;
+        --sm_user)
+                subscription_manager_user=$2 ; shift 2 ;;
+        --sm_pwd)
+                subscription_manager_pass=$2 ; shift 2 ;;
+        --sm_pool)
+                subcription_manager_poolid=$2; shift 2 ;; 
+        --proxy)
+                proxy=$2; shift 2 ;;
+        --nodes_pwd)
+                overcloud_nodes_pwd=$2; shift 2 ;;
+        --) shift ; break ;;
+        *) echo "$USAGE" ; exit 1 ;;
+    esac
+done
+
+if [ -z "${dns_ip}" ] || [ -z "${subscription_manager_user}" ] || [ -z "${subscription_manager_pass}" ]; then
+    echo $USAGE
+    exit 1
 fi
+
 
 flavors="control compute ceph-storage"
 subnet_name="ctlplane"
@@ -121,11 +147,19 @@ do
 done
 echo "## Done."
 
-echo
+echo 
 echo "## Customizing the overcloud image & uploading images"
 ~/pilot/customize_image.sh $subscription_manager_user $subscription_manager_pass $subcription_manager_poolid $proxy
+echo
+if [ -n "${overcloud_nodes_pwd}" ]; then
+    echo "# Setting overcloud nodes password"
+    virt-customize -a overcloud-full.qcow2 --root-password password:$overcloud_nodes_pwd
+fi
+
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
 echo "## Done"
+
+
 
 echo
 echo "## Creating flavors..."
