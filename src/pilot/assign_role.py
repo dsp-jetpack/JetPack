@@ -630,9 +630,13 @@ def change_physical_disk_state_wait(node, ironic_client, drac_client, mode,
     return result
 
 
-def is_jbod_capable(drac_client):
+def is_jbod_capable(drac_client, raid_controller_fqdd):
     is_jbod_capable = False
-    physical_disks = drac_client.list_physical_disks()
+
+    # Grab all the disks associated with the RAID controller
+    all_physical_disks = drac_client.list_physical_disks()
+    physical_disks = [physical_disk for physical_disk in all_physical_disks
+                      if physical_disk.controller == raid_controller_fqdd]
 
     # If there is a disk in the Non-RAID state, then the controller is JBOD
     # capable
