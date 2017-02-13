@@ -377,7 +377,42 @@ def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
     physical_disks = drac_client.list_physical_disks()
 
     return sorted(
-        (d.id for d in physical_disks if d.controller == raid_controller_fqdd))
+        (d.id for d in physical_disks if d.controller == raid_controller_fqdd),
+        key=physical_disk_id_to_key)
+
+
+def physical_disk_id_to_key(disk_id):
+    components = disk_id.split(':')
+
+    disk_subcomponents = components[0].split('.')
+    enclosure_subcomponents = components[1].split('.')
+    controller_subcomponents = components[2].split('.')
+
+    disk_connection_type = disk_subcomponents[1]
+    disk_number = int(disk_subcomponents[2])
+
+    enclosure_type = enclosure_subcomponents[1]
+    enclosure_numbers = enclosure_subcomponents[2].split('-')
+
+    enclosure_major_number = int(enclosure_numbers[0])
+    enclosure_minor_number = int(enclosure_numbers[1])
+
+    controller_type = controller_subcomponents[0]
+    controller_location = controller_subcomponents[1]
+    controller_numbers = controller_subcomponents[2].split('-')
+
+    controller_major_number = int(controller_numbers[0])
+    controller_minor_number = int(controller_numbers[1])
+
+    return tuple([controller_type,
+                  controller_location,
+                  controller_major_number,
+                  controller_minor_number,
+                  enclosure_type,
+                  enclosure_major_number,
+                  enclosure_minor_number,
+                  disk_connection_type,
+                  disk_number])
 
 
 def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
