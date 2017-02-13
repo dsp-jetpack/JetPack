@@ -207,6 +207,8 @@ def config_idrac(ip_service_tag,
     drac_password = node["pm_password"]
 
     drac_client = DRACClient(drac_ip, drac_user, drac_password)
+    LOG.info("Clearing the job queue")
+    drac_client.clear_all_jobs()
 
     pxe_nic_fqdd = get_pxe_nic_fqdd(
         pxe_nic,

@@ -302,6 +302,17 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._job_mgmt.create_reboot_job(reboot_type)
 
+    def clear_all_jobs(self):
+        """Clears all jobs.
+
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the iDRAC
+                 interface
+        :raises: DRACUnexpectedReturnValue on non-success
+        """
+        return self._job_mgmt.clear_all_jobs()
+
     def get_nic_legacy_boot_protocol(self, nic_id):
         """Obtain the legacy, non-UEFI, boot protocol of a NIC.
 
