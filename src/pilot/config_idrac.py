@@ -192,6 +192,17 @@ def config_idrac_settings(drac_client, password, node):
     return response['reboot_required'], job_id
 
 
+def clear_job_queue(drac_client):
+    LOG.info("Clearing the job queue")
+    drac_client.delete_jobs()
+
+    # It takes a second or two for the iDRAC to switch from the ready state to
+    # the not-ready state, so wait for this transition to happen
+    sleep(5)
+
+    drac_client.wait_until_idrac_is_ready()
+
+
 def config_idrac(ip_service_tag,
                  node_definition,
                  model_properties,
@@ -207,8 +218,10 @@ def config_idrac(ip_service_tag,
     drac_password = node["pm_password"]
 
     drac_client = DRACClient(drac_ip, drac_user, drac_password)
-    LOG.info("Clearing the job queue")
-    drac_client.clear_all_jobs()
+
+    # Clear out any pending jobs in the job queue and fix the condition where
+    # there are no pending jobs, but the iDRAC thinks there are
+    clear_job_queue(drac_client)
 
     pxe_nic_fqdd = get_pxe_nic_fqdd(
         pxe_nic,
