@@ -56,11 +56,13 @@ def get_nodes():
             addr = m.group(6)
             if node_type in node_names:
                 node = node_names[node_type] + node_num
+                full_name = node_type + "-" + node_num
             else:
                 node = node_type + node_num
+                full_name = node_type + "-" + node_num
         except IndexError:
             pass
-        yield node, addr
+        yield node, addr, full_name
 
 
 def update_known_hosts(host_addrs):
@@ -111,7 +113,6 @@ def update_etc_hosts(overcloud):
     """
     Rewrites /etc/hosts, adding fresh entries for each overcloud node.
     """
-
     etc_hosts = '/etc/hosts'
     etc_file = open(etc_hosts, 'r')
 
@@ -124,7 +125,7 @@ def update_etc_hosts(overcloud):
     for line in etc_file.readlines():
         words = line.split()
         if ((line == marker) or
-            (len(words) == 2 and words[1] in overcloud.keys())):
+            (len(words) == 3 and words[2] in overcloud.keys())):
 
             continue
         new_file.write(line)
@@ -134,7 +135,7 @@ def update_etc_hosts(overcloud):
     # Add new entries for the overcloud nodes
     new_file.write(marker)
     for node in sorted(overcloud.keys()):
-        new_file.write('{}\t{}\n'.format(overcloud[node], node))
+        new_file.write('{} {}\n'.format(overcloud[node], node))
 
     new_file.close()
     os.chmod(new_hosts, 0644)
@@ -156,13 +157,13 @@ def main():
 
     ssh_config = os.path.join(os.path.expanduser('~'), '.ssh', 'config')
     with open(ssh_config, 'w') as f:
-        for node, addr in get_nodes():
-            overcloud[node] = addr
-            f.write("Host {}\n".format(node))
+        for node, addr, full_name in get_nodes():
+            overcloud[node] = addr + " " + full_name
+            f.write("Host {} {}\n".format(node, full_name))
             f.write("  Hostname {}\n".format(addr))
             f.write("  User heat-admin\n\n")
     os.chmod(ssh_config, 0600)
-
+    
     update_known_hosts(overcloud.values())
     update_etc_hosts(overcloud)
 
