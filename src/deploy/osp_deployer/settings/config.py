@@ -344,9 +344,11 @@ class Settings():
         self.nodes = []
 
         self.overcloud_nodes_pwd = cluster['overcloud_nodes_pwd']
-        if 'rhsm_repos' in cluster:
+        if len(cluster['rhsm_repos']) > 0:
+            logger.info("Using ini repo settings")
             self.rhsm_repos = cluster['rhsm_repos'].split(',')
         else:
+            logger.info("using default repo settings")
             self.rhsm_repos = [
                 'rhel-7-server-openstack-10-rpms',
                 'rhel-7-server-openstack-10-devtools-rpms']
