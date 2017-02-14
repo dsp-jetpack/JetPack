@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -169,3 +169,25 @@ class JobManagement(ironic_job.JobManagement):
                 'attribute_value': 'InstanceID'})
         job_id = doc.find(query).text
         return job_id
+
+    def clear_all_jobs(self):
+        """Clears all jobs.
+
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the iDRAC
+                 interface
+        :raises: DRACUnexpectedReturnValue on non-success
+        """
+        selectors = {'SystemCreationClassName': 'DCIM_ComputerSystem',
+                     'SystemName': 'idrac',
+                     'CreationClassName': 'DCIM_JobService',
+                     'Name': 'JobService'}
+
+        properties = {'JobID': 'JID_CLEARALL_FORCE'}
+
+        self.client.invoke(uris.DCIM_JobService,
+                           'DeleteJobQueue',
+                           selectors,
+                           properties,
+                           expected_return_value=utils.RET_SUCCESS)
