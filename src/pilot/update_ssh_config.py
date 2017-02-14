@@ -163,7 +163,7 @@ def main():
             f.write("  Hostname {}\n".format(addr))
             f.write("  User heat-admin\n\n")
     os.chmod(ssh_config, 0600)
-    
+
     update_known_hosts(overcloud.values())
     update_etc_hosts(overcloud)
 
