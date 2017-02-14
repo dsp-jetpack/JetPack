@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -184,7 +184,7 @@ class JobManagement(ironic_job.JobManagement):
                      'CreationClassName': 'DCIM_JobService',
                      'Name': 'JobService'}
 
-        properties = {'JobID': 'JID_CLEARALL'}
+        properties = {'JobID': 'JID_CLEARALL_FORCE'}
 
         self.client.invoke(uris.DCIM_JobService,
                            'DeleteJobQueue',
