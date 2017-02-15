@@ -170,8 +170,9 @@ class JobManagement(ironic_job.JobManagement):
         job_id = doc.find(query).text
         return job_id
 
-    def clear_all_jobs(self):
-        """Clears all jobs.
+    def delete_jobs(self, job_ids=['JID_CLEARALL_FORCE']):
+        """Deletes the given jobs.  If no jobs are given, all jobs are
+            deleted.
 
         :raises: WSManRequestFailure on request failures
         :raises: WSManInvalidResponse when receiving invalid response
@@ -184,10 +185,11 @@ class JobManagement(ironic_job.JobManagement):
                      'CreationClassName': 'DCIM_JobService',
                      'Name': 'JobService'}
 
-        properties = {'JobID': 'JID_CLEARALL_FORCE'}
+        for job_id in job_ids:
+            properties = {'JobID': job_id}
 
-        self.client.invoke(uris.DCIM_JobService,
-                           'DeleteJobQueue',
-                           selectors,
-                           properties,
-                           expected_return_value=utils.RET_SUCCESS)
+            self.client.invoke(uris.DCIM_JobService,
+                               'DeleteJobQueue',
+                               selectors,
+                               properties,
+                               expected_return_value=utils.RET_SUCCESS)
