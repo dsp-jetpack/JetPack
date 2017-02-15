@@ -72,6 +72,8 @@ DCIM_PhysicalDiskView = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
 
 RAID1 = "4"
 
+NOT_SUPPORTED_MSG = "This operation is not supported on this device"
+
 ROLES = {
     'controller': 'control',
     'compute': 'compute',
@@ -761,7 +763,7 @@ def is_jbod_capable(drac_client, raid_controller_fqdd):
                 [ready_disk.id],
                 True)
         except DRACOperationFailed as ex:
-            if "This operation is not supported on this device" in ex.message:
+            if NOT_SUPPORTED_MSG in ex.message:
                 pass
             else:
                 raise
@@ -820,23 +822,37 @@ def change_physical_disk_state(drac_client, mode,
 
     job_ids = []
     reboot_required = False
-    for controller in controllers_to_physical_disk_ids.keys():
-        physical_disk_ids = controllers_to_physical_disk_ids[controller]
-        if physical_disk_ids:
-            LOG.debug("Converting the following disks to {} on RAID "
-                      "controller {}: {}".format(
-                          mode, controller, str(physical_disk_ids)))
-            result = drac_client.convert_physical_disks(
-                controller,
-                physical_disk_ids,
-                mode == "RAID")
-
-            job_id = drac_client.commit_pending_raid_changes(controller,
-                                                             reboot=False,
-                                                             start_time=None)
-            job_ids.append(job_id)
-            if result['commit_required']:
-                reboot_required = True
+    try:
+        for controller in controllers_to_physical_disk_ids.keys():
+            physical_disk_ids = controllers_to_physical_disk_ids[controller]
+            if physical_disk_ids:
+                LOG.debug("Converting the following disks to {} on RAID "
+                          "controller {}: {}".format(
+                              mode, controller, str(physical_disk_ids)))
+                try:
+                    result = drac_client.convert_physical_disks(
+                        controller,
+                        physical_disk_ids,
+                        mode == "RAID")
+                except DRACOperationFailed as ex:
+                    if NOT_SUPPORTED_MSG in ex.message:
+                        LOG.debug("Controller {} does not support "
+                                  "JBOD mode".format(controller))
+                        pass
+                    else:
+                        raise
+                else:
+                    job_id = drac_client.commit_pending_raid_changes(
+                        controller, reboot=False, start_time=None)
+                    job_ids.append(job_id)
+                    if result['commit_required']:
+                        reboot_required = True
+    except:
+        # If any exception (except Not Supported) occurred during the
+        # conversion, then roll back all the changes for this node so we don't
+        # leave pending config jobs in the job queue
+        drac_client.delete_jobs(job_ids)
+        raise
 
     return reboot_required, job_ids
 
