@@ -72,6 +72,8 @@ DCIM_PhysicalDiskView = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
 
 RAID1 = "4"
 
+NOT_SUPPORTED_MSG = "This operation is not supported on this device"
+
 ROLES = {
     'controller': 'control',
     'compute': 'compute',
@@ -273,18 +275,46 @@ def define_single_raid_10_logical_disk(drac_client):
         drac_client,
         raid_controller_name)
 
-    if not physical_disk_names:
+    number_physical_disks = len(physical_disk_names)
+
+    if number_physical_disks >= 4:
+        LOG.info(
+            "Defining RAID 10 on the following physical disks, and marking it "
+            "the root volume:\n  {}".format(
+                "\n  ".join(physical_disk_names)))
+        logical_disk = define_logical_disk(
+            'MAX',
+            '1+0',
+            raid_controller_name,
+            physical_disk_names,
+            is_root_volume=True)
+    elif number_physical_disks == 3 or number_physical_disks == 2:
+        two_physical_disk_names = physical_disk_names[0:2]
+        LOG.warning(
+            "Did not find enough disks for RAID 10; defining RAID 1 on the "
+            "following physical disks, and marking it the root volume:"
+            "\n  {}".format(
+                "\n  ".join(two_physical_disk_names)))
+        logical_disk = define_logical_disk(
+            'MAX',
+            '1',
+            raid_controller_name,
+            two_physical_disk_names,
+            is_root_volume=True)
+    elif number_physical_disks == 1:
+        LOG.warning(
+            "Did not find enough disks for RAID; setting physical disk {} to "
+            "JBOD mode".format(
+                physical_disk_names[0]))
+        logical_disk = make_jbod_or_define_raid_0_logical_disk(
+            raid_controller_name,
+            physical_disk_names[0],
+            is_root_volume=True)
+    else:
         LOG.critical(
             "Found no physical disks connected to RAID controller {}".format(
                 raid_controller_name))
         return None
-
-    logical_disk = {
-        'size_gb': 'MAX',
-        'raid_level': '1+0',
-        'is_root_volume': True,
-        'controller': raid_controller_name,
-        'physical_disks': physical_disk_names}
 
     return logical_disk
 
@@ -292,6 +322,37 @@ def define_single_raid_10_logical_disk(drac_client):
 def define_storage_logical_disks(drac_client):
     '''TODO: Flesh out this stub.'''
     return list()
+
+
+def make_jbod_or_define_raid_0_logical_disk(
+        raid_controller_name,
+        physical_disk_name,
+        is_root_volume=False):
+    '''TODO: Flesh out this stub'''
+    return define_logical_disk(
+        'MAX',
+        '0',
+        raid_controller_name,
+        [physical_disk_name],
+        is_root_volume=is_root_volume)
+
+
+def define_logical_disk(
+        size_gb,
+        raid_level,
+        controller_name,
+        physical_disk_names,
+        is_root_volume=False):
+    logical_disk = dict(
+        size_gb=size_gb,
+        raid_level=raid_level,
+        controller=controller_name,
+        physical_disks=physical_disk_names)
+
+    if is_root_volume:
+        logical_disk['is_root_volume'] = is_root_volume
+
+    return logical_disk
 
 
 def get_raid_controller_id(drac_client):
@@ -317,18 +378,51 @@ def get_raid_controller_id(drac_client):
 def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
     physical_disks = drac_client.list_physical_disks()
 
-    return [
-        d.id for d in physical_disks if d.id.endswith(raid_controller_fqdd)]
+    return sorted(
+        (d.id for d in physical_disks if d.controller == raid_controller_fqdd),
+        key=physical_disk_id_to_key)
+
+
+def physical_disk_id_to_key(disk_id):
+    components = disk_id.split(':')
+
+    disk_subcomponents = components[0].split('.')
+    enclosure_subcomponents = components[1].split('.')
+    controller_subcomponents = components[2].split('.')
+
+    disk_connection_type = disk_subcomponents[1]
+    disk_number = int(disk_subcomponents[2])
+
+    enclosure_type = enclosure_subcomponents[1]
+    enclosure_numbers = enclosure_subcomponents[2].split('-')
+
+    enclosure_major_number = int(enclosure_numbers[0])
+    enclosure_minor_number = int(enclosure_numbers[1])
+
+    controller_type = controller_subcomponents[0]
+    controller_location = controller_subcomponents[1]
+    controller_numbers = controller_subcomponents[2].split('-')
+
+    controller_major_number = int(controller_numbers[0])
+    controller_minor_number = int(controller_numbers[1])
+
+    return tuple([controller_type,
+                  controller_location,
+                  controller_major_number,
+                  controller_minor_number,
+                  enclosure_type,
+                  enclosure_major_number,
+                  enclosure_minor_number,
+                  disk_connection_type,
+                  disk_number])
 
 
 def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
     '''TODO: Add some selective exception handling so we can determine
     when RAID configuration failed and return False. Further testing
     should uncover interesting error conditions.'''
-    '''TODO: After support for all roles, including 'storage', has been
-    implemented, ensuring that a target RAID configuration was passed in
-    will not be needed. Instead, this function will be able to assume
-    that it is not None and valid. Remove this if statement.'''
+
+    # Nothing to do?
     if not target_raid_config:
         return True
 
@@ -669,7 +763,7 @@ def is_jbod_capable(drac_client, raid_controller_fqdd):
                 [ready_disk.id],
                 True)
         except DRACOperationFailed as ex:
-            if "This operation is not supported on this device" in ex.message:
+            if NOT_SUPPORTED_MSG in ex.message:
                 pass
             else:
                 raise
@@ -728,23 +822,37 @@ def change_physical_disk_state(drac_client, mode,
 
     job_ids = []
     reboot_required = False
-    for controller in controllers_to_physical_disk_ids.keys():
-        physical_disk_ids = controllers_to_physical_disk_ids[controller]
-        if physical_disk_ids:
-            LOG.debug("Converting the following disks to {} on RAID "
-                      "controller {}: {}".format(
-                          mode, controller, str(physical_disk_ids)))
-            result = drac_client.convert_physical_disks(
-                controller,
-                physical_disk_ids,
-                mode == "RAID")
-
-            job_id = drac_client.commit_pending_raid_changes(controller,
-                                                             reboot=False,
-                                                             start_time=None)
-            job_ids.append(job_id)
-            if result['commit_required']:
-                reboot_required = True
+    try:
+        for controller in controllers_to_physical_disk_ids.keys():
+            physical_disk_ids = controllers_to_physical_disk_ids[controller]
+            if physical_disk_ids:
+                LOG.debug("Converting the following disks to {} on RAID "
+                          "controller {}: {}".format(
+                              mode, controller, str(physical_disk_ids)))
+                try:
+                    result = drac_client.convert_physical_disks(
+                        controller,
+                        physical_disk_ids,
+                        mode == "RAID")
+                except DRACOperationFailed as ex:
+                    if NOT_SUPPORTED_MSG in ex.message:
+                        LOG.debug("Controller {} does not support "
+                                  "JBOD mode".format(controller))
+                        pass
+                    else:
+                        raise
+                else:
+                    job_id = drac_client.commit_pending_raid_changes(
+                        controller, reboot=False, start_time=None)
+                    job_ids.append(job_id)
+                    if result['commit_required']:
+                        reboot_required = True
+    except:
+        # If any exception (except Not Supported) occurred during the
+        # conversion, then roll back all the changes for this node so we don't
+        # leave pending config jobs in the job queue
+        drac_client.delete_jobs(job_ids)
+        raise
 
     return reboot_required, job_ids
 
@@ -791,10 +899,6 @@ def main():
                 args.role_index.role,
                 drac_client)
 
-            '''TODO: After support for all roles, including 'storage', has
-            been implemented, ensure that the target RAID configuration is
-            not None. If it is, exit with an exit status of one (1).'''
-
             succeeded = configure_raid(
                 ironic_client,
                 node.uuid,
@@ -828,7 +932,7 @@ def main():
         raise
     except:  # Catch all exceptions.
         LOG.exception("Unexpected error")
-        raise
+        sys.exit(1)
     finally:
         # Leave the node powered off.
         if drac_client is not None:

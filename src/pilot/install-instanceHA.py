@@ -201,14 +201,43 @@ def distribute_all_patch(compute_nodes_ip, controller_nodes_ip):
 # 6b) Distribute NovaEvacuate-patch to all nodes
 def distribute_node_patch(node_ip):
     LOG.info("Distribute NovaEvacuate-patch to all nodes {}.".format(node_ip))
+    os.system("""
+cat << EOF > ~/pilot/NovaEvacuate-patch.txt
+--- NovaEvacuate
++++ /tmp/NovaEvacuate
+@@ -166,7 +166,8 @@
+ 	    ocf_log notice "Initiating evacuation of \$node"
+ 
+ 	    fence_compute \${fence_options} -o status -n \${node}
+-	    if [ \$? != 0 ]; then
++	    rc=\$?
++	    if [ \$rc != 0 -a \$rc != 2 ]; then
+ 		ocf_log info "Nova does not know about \${node}"
+ 		# Dont mark as no because perhaps nova is unavailable right now
+ 		continue
+EOF
+""")
 
-    cmd = "scp ~/pilot/NovaEvacuate-patch.txt heat-admin@" \
-          + node_ip + ":~/patch.txt"
-    os.system(cmd)
+    out, err = ssh_cmd(node_ip, "heat-admin",
+                       "grep 'rc != 2' /usr/lib/ocf/" +
+                       "resource.d/openstack/NovaEvacuate")
+    stdout = out.strip('\n')
+
+    if "rc != 2" not in stdout:
+        LOG.info("Applying patch to NovaEvacuate.")
+
+        cmd = "scp ~/pilot/NovaEvacuate-patch.txt heat-admin@" \
+               + node_ip + ":~/patch.txt"
+        os.system(cmd)
+
+        ssh_cmd(node_ip, "heat-admin",
+                "sudo patch -s -b /usr/lib/ocf/resource.d/" + 
+                "openstack/NovaEvacuate<~/patch.txt")
+    else:
+        LOG.info("Patch already applied to NovaEvacuate.")
 
     ssh_cmd(node_ip, "heat-admin",
-            "sudo patch -s  \
-             /usr/lib/ocf/resource.d/openstack/NovaEvacuate <~/patch.txt")
+            "rm ~/patch.txt")
 
 
 # 7) Create a NovaEvacuate active/passive resource using the overcloudrc file
@@ -508,12 +537,12 @@ def create_compute_node_resources(compute_node_ip, first_controller_node_ip):
     crm_node_sname = awk_it(crm_node_name, 1, ".")
 
     ssh_cmd(first_controller_node_ip, "heat-admin",
-            "sudo pcs resource create " + crm_node_name +
+            "sudo pcs resource create " + crm_node_sname +
             " ocf:pacemaker:remote reconnect_interval=60 op" +
             " monitor interval=20")
 
     ssh_cmd(first_controller_node_ip, "heat-admin",
-            "sudo pcs property set --node " + crm_node_name +
+            "sudo pcs property set --node " + crm_node_sname +
             " osprole=compute")
 
     ssh_cmd(first_controller_node_ip, "heat-admin",
