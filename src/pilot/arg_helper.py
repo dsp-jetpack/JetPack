@@ -19,6 +19,13 @@ from constants import Constants
 
 class ArgHelper:
     @staticmethod
+    def add_ip_service_tag(parser):
+        parser.add_argument("ip_service_tag",
+                            help="""IP address of the iDRAC
+                                    or service tag of the node""",
+                            metavar="ADDRESS")
+
+    @staticmethod
     def add_model_properties_arg(parser):
         parser.add_argument("-m",
                             "--model-properties",
