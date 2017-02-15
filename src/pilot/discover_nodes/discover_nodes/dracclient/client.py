@@ -604,6 +604,10 @@ class DRACClient(ironic_client.DRACClient):
             reboot=reboot,
             start_time=start_time)
 
+    def is_idrac_ready(self):
+        return lifecycle_controller.LifecycleControllerManagement(
+            self.client).is_idrac_ready()
+
     def wait_until_idrac_is_ready(self):
         """ Waits until the iDRAC is in a ready state
 
@@ -619,8 +623,7 @@ class DRACClient(ironic_client.DRACClient):
         retries = 12
         while not ready and retries > 0:
             LOG.debug("Checking to see if the iDRAC is ready")
-            ready = lifecycle_controller.LifecycleControllerManagement(
-                self.client).is_idrac_ready()
+            ready = self.is_idrac_ready()
             if not ready:
                 LOG.debug("The iDRAC is not ready")
                 retries -= 1

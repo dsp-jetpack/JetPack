@@ -44,10 +44,9 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Performs initial configuration of an iDRAC.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("ip_service_tag",
-                        help="""IP address of the iDRAC
-                                or service tag of the node""",
-                        metavar="ADDRESS")
+
+    ArgHelper.add_ip_service_tag(parser)
+
     parser.add_argument("-p",
                         "--pxe-nic",
                         help="""fully qualified device descriptor (FQDD) of
