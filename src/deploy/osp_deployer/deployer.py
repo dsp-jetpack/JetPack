@@ -118,7 +118,7 @@ def deploy():
 
         sah_node = Sah()
 
-        #tester.sah_health_check()
+        tester.sah_health_check()
         logger.info("Uploading configs/iso/scripts..")
         if settings.version_locking_enabled is True:
             logger.debug(

@@ -119,12 +119,12 @@ resources:
               use_dhcp: false
               dns_servers: {get_param: DnsServers}
               addresses:
-                -
-                  ip_netmask:
-                    list_join:
-                      - '/'
-                      - - {get_param: ControlPlaneIp}
-                        - {get_param: ControlPlaneSubnetCidr}
+                  -
+                    ip_netmask:
+                      list_join:
+                        - '/'
+                        - - {get_param: ControlPlaneIp}
+                          - {get_param: ControlPlaneSubnetCidr}
               routes:
                 -
                   ip_netmask: 169.254.169.254/32
@@ -133,9 +133,6 @@ resources:
                   default: true
                   next_hop: {get_param: ControlPlaneDefaultRoute}
 
-              addresses:
-                -
-                  ip_netmask: {get_param: StorageIpSubnet}
               members:
                 -
                   type: linux_bond
@@ -153,12 +150,17 @@ resources:
                       # CHANGEME: Change the interface name on the following
                       # line to an interface to include in bond0
                       name: em3
+                -
+                  type: vlan
+                  device: bond0
+                  vlan_id: {get_param: StorageNetworkVlanID}
+                  # mtu: 9216
+                  addresses:
+                  -
+                    ip_netmask: {get_param: StorageIpSubnet}
             -
               type: ovs_bridge
               name: br-bond1
-              addresses:
-                -
-                  ip_netmask: {get_param: StorageMgmtIpSubnet}
               members:
                 -
                   type: linux_bond
@@ -176,8 +178,17 @@ resources:
                       # CHANGEME: Change the interface name on the following
                       # line to an interface to include in bond1
                       name: em4
+                -
+                  type: vlan
+                  device: bond1
+                  vlan_id: {get_param: StorageMgmtNetworkVlanID}
+                  # mtu: 9216
+                  addresses:
+                    -
+                      ip_netmask: {get_param: StorageMgmtIpSubnet}
 
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.
     value: {get_resource: OsNetConfigImpl}
+

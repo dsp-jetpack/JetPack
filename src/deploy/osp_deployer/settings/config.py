@@ -331,16 +331,24 @@ class Settings():
             '/pilot/templates/dell-cinder-backends.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
-        self.ceph_storage_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/nic-configs/ceph-storage.yaml'
-        self.compute_yaml = self.foreman_configuration_scripts + \
+        if self.is_fx2 is True:
+            self.controller_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/nic-configs-fx2/controller.yaml'
+            self.compute_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/nic-configs-fx2/compute.yaml'
+            self.ceph_storage_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/nic-configs-fx2/ceph-storage.yaml'
+        else:
+            self.controller_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/nic-configs/controller.yaml'
+            self.compute_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/nic-configs/compute.yaml'
+            self.ceph_storage_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/nic-configs/ceph-storage.yaml'
         self.static_ips_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/static-ip-environment.yaml'
         self.static_vip_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/static-vip-environment.yaml'
-        self.controller_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/nic-configs/controller.yaml'
         self.ipxe_rpm = self.foreman_configuration_scripts + \
             '/pilot/ipxe/ipxe-bootimgs-20151005-1.git6847232.el7.' \
             'test.noarch.rpm'

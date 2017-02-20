@@ -105,10 +105,14 @@ class Checkpoints():
                 "SAH did not register properly : " + subscription_status)
 
         logger.debug("*** Verify the SAH can ping its public gateway")
+        if self.settings.is_fx2 is True:
+            gateway = self.settings.public_api_gateway
+        else:
+            gateway = self.settings.external_gateway
         test = self.ping_host(self.settings.sah_node.external_ip,
                               "root",
                               self.settings.sah_node.root_password,
-                              self.settings.external_gateway)
+                              gateway)
         if self.ping_success not in test:
             raise AssertionError(
                 "SAH cannot ping its public gateway : " + test)
@@ -255,13 +259,15 @@ class Checkpoints():
 
         logger.debug(
             "*** Verify the Storage Console VM can ping its public gateway")
-        test = self.ping_host(self.settings.rhscon_node.external_ip,
-                              "root",
-                              self.settings.rhscon_node.root_password,
-                              self.settings.external_gateway)
-        if self.ping_success not in test:
-            raise AssertionError(
-                "Storage Console VM cannot ping its public gateway : " + test)
+        
+        if self.settings.is_fx2 is False:
+            test = self.ping_host(self.settings.rhscon_node.external_ip,
+                                  "root",
+                                  self.settings.rhscon_node.root_password,
+                                  self.settings.external_gateway)
+            if self.ping_success not in test:
+                raise AssertionError(
+                    "Storage Console VM cannot ping its public gateway : " + test)
 
         logger.debug(
             "*** Verify the Storage Console VM can ping the outside world (IP)")

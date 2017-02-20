@@ -33,6 +33,7 @@ class DeployerSanity():
 
     @staticmethod
     def is_valid_ip(address):
+        print "checking " + address
         try:
             socket.inet_aton(address)
             ip = True
@@ -63,6 +64,8 @@ class DeployerSanity():
             'management_allocation_pool_end',
             'name_server',
         ]
+        if self.settings.is_fx2 is True:
+            shouldbbevalidips.remove('external_netmask')
         for ip in getattr(self.settings, 'discovery_ip_range').split(","):
             self.is_valid_ip(ip),\
                 "Setting for discovery_ip_range " + \

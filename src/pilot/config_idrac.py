@@ -217,6 +217,8 @@ def config_idrac(ip_service_tag,
     drac_password = node["pm_password"]
 
     drac_client = DRACClient(drac_ip, drac_user, drac_password)
+    LOG.info("Clearing the job queue")
+    drac_client.clear_all_jobs()
 
     # Clear out any pending jobs in the job queue and fix the condition where
     # there are no pending jobs, but the iDRAC thinks there are
