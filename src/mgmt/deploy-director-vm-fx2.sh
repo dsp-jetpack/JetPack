@@ -121,9 +121,6 @@ do
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
     }
 
-  [[ ${iface} == eth4 ]] && {
-    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
-    }
 
 done <<< "$( grep -Ev "^#|^;|^\s*$" ${cfg_file} )"
 } >> /tmp/director.ks
