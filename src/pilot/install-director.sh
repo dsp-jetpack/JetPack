@@ -195,7 +195,6 @@ echo "## Patching Ironic vendor passthru..."
 OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/vendor_passthru.py ~/pilot/vendor_passthru.patch)
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/vendor_passthru.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/vendor_passthru.pyo
-sudo systemctl restart openstack-ironic-conductor.service
 echo "## Done."
 
 # This hacks in a patch to fix correct querying WSMAN Enumerations that have
@@ -207,6 +206,19 @@ echo "## Patching Ironic iDRAC driver WSMAN library..."
 OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ~/pilot/wsman.patch)
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
+echo "## Done."
+
+# This hacks in a patch to work around a known issue where Ironic is unable to
+# retrieve the power state from a node.  Note that this patch must be here
+# because we use this code prior to deploying the director.
+echo
+echo "## Patching Ironic iDRAC driver power state retrieval..."
+OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/bios.py ~/pilot/bios.patch)
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/bios.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/bios.pyo
+echo "## Done."
+
+echo "## Restarting openstack-ironic-conductor.service..."
 sudo systemctl restart openstack-ironic-conductor.service
 echo "## Done."
 
