@@ -546,7 +546,7 @@ def create_compute_node_resources(compute_node_ip, first_controller_node_ip):
             " osprole=compute")
 
     ssh_cmd(first_controller_node_ip, "heat-admin",
-            "sudo pcs stonith level add 1 " + crm_node_name +
+            "sudo pcs stonith level add 1 " + crm_node_sname +
             " ipmilan-" + crm_node_sname + ",fence-nova")
 
 
