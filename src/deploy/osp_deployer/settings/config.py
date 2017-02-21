@@ -385,7 +385,7 @@ class Settings():
                         self.director_node = node
                         if self.is_fx2 is True:
                             self.director_node.external_ip = self.director_node.public_api_ip
-                            self.director_node_external_gatewat = self.director_node.public_api_gateway
+                            self.director_node_external_gateway = self.director_node.public_api_gateway
                 except AttributeError:
                     pass
                 try:
