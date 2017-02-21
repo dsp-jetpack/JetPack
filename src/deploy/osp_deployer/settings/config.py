@@ -191,6 +191,7 @@ class Settings():
             self.version_locking_enabled = False
         if cluster['hardware'].lower() == 'fx2':
             self.is_fx2 = True
+            self.external_gateway = self.public_api_gateway
         else:
             self.is_fx2 = False
         if cluster['use_ipmi_driver'].lower() == 'true':
@@ -385,7 +386,6 @@ class Settings():
                         self.director_node = node
                         if self.is_fx2 is True:
                             self.director_node.external_ip = self.director_node.public_api_ip
-                            self.director_node_external_gateway = self.director_node.public_api_gateway
                 except AttributeError:
                     pass
                 try:
