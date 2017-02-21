@@ -53,12 +53,11 @@ class iDRACCardConfiguration(object):
 
     def _get_config(self, resource, attr_cls, by_name):
         result = {}
-        # Namespaces can have 283 unique items as of iDRAC Card Profile 1.5.0
-        doc = self.client.enumerate(resource, max_elems=285, auto_pull=False)
+        doc = self.client.enumerate(resource)
 
         items = doc.find('.//{%s}Items' % wsman.NS_WSMAN)
 
-        if items is not None:
+        if items:
             for item in items:
                 attribute = attr_cls.parse(item)
                 if by_name:
@@ -108,11 +107,15 @@ class iDRACCardAttribute(object):
         """Creates iDRACCardAttribute object
 
         :param name: name of the iDRACCard attribute
+        :param instance_id: InstanceID of the iDRACCard attribute
         :param current_value: current value of the iDRACCard attribute
         :param pending_value: pending value of the iDRACCard attribute,
                 reflecting an unprocessed change (eg. config job not completed)
         :param read_only: indicates whether this iDRACCard attribute can be
                 changed
+        :param fqdd: Fully Qualified Device Description of the iDRACCard
+                Attribute
+        :param group_id: GroupID of the iDRACCard Attribute
         """
         self.name = name
         self.instance_id = instance_id
@@ -138,7 +141,7 @@ class iDRACCardAttribute(object):
         pending_value = utils.get_wsman_resource_attr(
             idrac_attr_xml, namespace, 'PendingValue', nullable=True)
         read_only = utils.get_wsman_resource_attr(
-            idrac_attr_xml, namespace, 'IsReadOnly')
+            idrac_attr_xml, namespace, 'IsReadOnly').lower()
         fqdd = utils.get_wsman_resource_attr(
             idrac_attr_xml, namespace, 'FQDD')
         group_id = utils.get_wsman_resource_attr(
@@ -158,11 +161,15 @@ class iDRACCardEnumerableAttribute(iDRACCardAttribute):
         """Creates iDRACCardEnumerableAttribute object
 
         :param name: name of the iDRACCard attribute
+        :param instance_id: InstanceID of the iDRACCard attribute
         :param current_value: current value of the iDRACCard attribute
         :param pending_value: pending value of the iDRACCard attribute,
                 reflecting an unprocessed change (eg. config job not completed)
         :param read_only: indicates whether this iDRACCard attribute can be
                 changed
+        :param fqdd: Fully Qualified Device Description of the iDRACCard
+                Attribute
+        :param group_id: GroupID of the iDRACCard Attribute
         :param possible_values: list containing the allowed values for the
                                 iDRACCard attribute
         """
@@ -209,11 +216,15 @@ class iDRACCardStringAttribute(iDRACCardAttribute):
         """Creates iDRACCardStringAttribute object
 
         :param name: name of the iDRACCard attribute
+        :param instance_id: InstanceID of the iDRACCard attribute
         :param current_value: current value of the iDRACCard attribute
         :param pending_value: pending value of the iDRACCard attribute,
                 reflecting an unprocessed change (eg. config job not completed)
         :param read_only: indicates whether this iDRACCard attribute can be
                 changed
+        :param fqdd: Fully Qualified Device Description of the iDRACCard
+                Attribute
+        :param group_id: GroupID of the iDRACCard Attribute
         :param min_length: minimum length of the string
         :param max_length: maximum length of the string
         """
@@ -264,13 +275,17 @@ class iDRACCardIntegerAttribute(iDRACCardAttribute):
         """Creates iDRACCardIntegerAttribute object
 
         :param name: name of the iDRACCard attribute
+        :param instance_id: InstanceID of the iDRACCard attribute
         :param current_value: current value of the iDRACCard attribute
         :param pending_value: pending value of the iDRACCard attribute,
                 reflecting an unprocessed change (eg. config job not completed)
         :param read_only: indicates whether this iDRACCard attribute can be
                 changed
+        :param fqdd: Fully Qualified Device Description of the iDRACCard
+                Attribute
+        :param group_id: GroupID of the iDRACCard Attribute
         :param lower_bound: minimum value for the iDRACCard attribute
-        :param upper_bound: maximum value for the BOIS attribute
+        :param upper_bound: maximum value for the iDRACCard attribute
         """
         super(iDRACCardIntegerAttribute, self).__init__(name, instance_id,
                                                         current_value,

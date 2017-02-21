@@ -1,0 +1,12 @@
+--- /usr/lib/python2.7/site-packages/dracclient/resources/bios.py	2017-02-21 16:28:36.745362385 +0000
++++ bios.py	2017-02-21 16:00:12.748928342 +0000
+@@ -74,8 +74,7 @@
+                  interface
+         """
+ 
+-        filter_query = ('select EnabledState from '
+-                        'DCIM_ComputerSystem where Name="srv:system"')
++        filter_query = ('select EnabledState from DCIM_ComputerSystem')
+         doc = self.client.enumerate(uris.DCIM_ComputerSystem,
+                                     filter_query=filter_query)
+         enabled_state = utils.find_xml(doc, 'EnabledState',

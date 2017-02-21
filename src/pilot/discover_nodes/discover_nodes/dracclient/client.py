@@ -21,12 +21,17 @@ from __future__ import print_function
 
 import dracclient.client as ironic_client
 import dracclient.resources.uris as ironic_uris
+from dracclient import exceptions
 
+import logging
+
+from time import sleep
 from .resources import idrac_card
 from .resources import job
 from .resources import nic
 from .resources import system
 from .resources import uris
+from .resources import lifecycle_controller
 # import discover_nodes.dracclient.resources.nic as nic
 
 LINK_SPEED_UNKNOWN = nic.LINK_SPEED_UNKNOWN
@@ -40,6 +45,8 @@ LINK_SPEED_25_GBPS = nic.LINK_SPEED_25_GBPS
 LINK_SPEED_40_GBPS = nic.LINK_SPEED_40_GBPS
 LINK_SPEED_50_GBPS = nic.LINK_SPEED_50_GBPS
 LINK_SPEED_100_GBPS = nic.LINK_SPEED_100_GBPS
+
+LOG = logging.getLogger(__name__)
 
 
 class DRACClient(ironic_client.DRACClient):
@@ -301,6 +308,18 @@ class DRACClient(ironic_client.DRACClient):
         :raises: DRACUnexpectedReturnValue on return value mismatch
         """
         return self._job_mgmt.create_reboot_job(reboot_type)
+
+    def delete_jobs(self, job_ids=['JID_CLEARALL_FORCE']):
+        """Deletes the given jobs.  If no jobs are given, all jobs are
+            deleted.
+
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the iDRAC
+                 interface
+        :raises: DRACUnexpectedReturnValue on non-success
+        """
+        return self._job_mgmt.delete_jobs(job_ids)
 
     def get_nic_legacy_boot_protocol(self, nic_id):
         """Obtain the legacy, non-UEFI, boot protocol of a NIC.
@@ -584,3 +603,36 @@ class DRACClient(ironic_client.DRACClient):
             target=raid_controller,
             reboot=reboot,
             start_time=start_time)
+
+    def is_idrac_ready(self):
+        return lifecycle_controller.LifecycleControllerManagement(
+            self.client).is_idrac_ready()
+
+    def wait_until_idrac_is_ready(self):
+        """ Waits until the iDRAC is in a ready state
+
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on error reported back by the DRAC
+                 interface or timeout
+        :raises: DRACUnexpectedReturnValue on return value mismatch
+        """
+        ready = False
+
+        # Try every 10 seconds over 2 minutes for the iDRAC to become ready
+        retries = 12
+        while not ready and retries > 0:
+            LOG.debug("Checking to see if the iDRAC is ready")
+            ready = self.is_idrac_ready()
+            if not ready:
+                LOG.debug("The iDRAC is not ready")
+                retries -= 1
+                if retries > 0:
+                    sleep(10)
+            else:
+                LOG.debug("The iDRAC is ready")
+
+        if retries == 0:
+            raise exceptions.DRACOperationFailed(drac_messages="Timed out "
+                                                 "waiting for the iDRAC to "
+                                                 "become ready")

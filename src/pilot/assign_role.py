@@ -72,6 +72,8 @@ DCIM_PhysicalDiskView = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
 
 RAID1 = "4"
 
+NOT_SUPPORTED_MSG = "This operation is not supported on this device"
+
 ROLES = {
     'controller': 'control',
     'compute': 'compute',
@@ -106,16 +108,23 @@ def parse_arguments():
                         default="~/pilot/flavors_settings.json",
                         help="file that contains flavor settings",
                         metavar="FILENAME")
+    """TODO: After QA has completed its testing of RAID configuration,
+    flip 'action' to 'store_true'."""
     parser.add_argument('-s',
-                        '--skip_raid_config',
-                        action='store_true',
-                        # Note that the default below is intentionally set to
-                        # True to force RAID configuration to be disabled by
-                        # default.
-                        # TODO: Change this to False when we are ready to
-                        # submit RAID config for testing.
-                        default=True,
-                        help="Skip configuring RAID")
+                        '--skip-raid-config',
+                        # Note that the 'action' below is intentionally
+                        # set to 'store_false'. That causes RAID
+                        # configuration to be disabled when this flag is
+                        # not present. When it is provided, RAID
+                        # configuration is performed. It is understood
+                        # that is the opposite of what the option's name
+                        # suggests. However, it will enable QA to test
+                        # RAID configuration without impacting the
+                        # entire team. And once it has been verified,
+                        # the 'action' can be simply flipped to
+                        # 'store_true'.
+                        action='store_false',
+                        help="skip configuring RAID")
 
     ArgHelper.add_instack_arg(parser)
 
@@ -304,7 +313,7 @@ def define_single_raid_10_logical_disk(drac_client):
             "Did not find enough disks for RAID; setting physical disk {} to "
             "JBOD mode".format(
                 physical_disk_names[0]))
-        logical_disk = make_jbod_or_define_raid_0_logical_disk(
+        logical_disk = define_jbod_or_raid_0_logical_disk(
             raid_controller_name,
             physical_disk_names[0],
             is_root_volume=True)
@@ -322,17 +331,26 @@ def define_storage_logical_disks(drac_client):
     return list()
 
 
-def make_jbod_or_define_raid_0_logical_disk(
-        raid_controller_name,
-        physical_disk_name,
-        is_root_volume=False):
-    '''TODO: Flesh out this stub'''
-    return define_logical_disk(
-        'MAX',
-        '0',
-        raid_controller_name,
-        [physical_disk_name],
-        is_root_volume=is_root_volume)
+def define_jbod_or_raid_0_logical_disk(raid_controller_name,
+                                       physical_disk_name,
+                                       is_root_volume=False):
+    if is_jbod_capable(raid_controller_name):
+        # Presently, when a RAID controller is JBOD capable, there is no
+        # need to return a logical disk definition. That will hold as
+        # long as this script executes the ironic DRAC driver RAID
+        # delete_configuration clean step before the
+        # create_configuration step, and it leaves all of the physical
+        # disks in JBOD mode.
+        '''TODO: Define a JBOD logical disk when the ironic DRAC driver
+        supports the 'raid_level' property's 'JBOD' value in the RAID
+        configuration JSON. That is a more robust approach and better
+        documents the RAID configuration on the ironic node. It would
+        also eliminate the dependency the RAID create_configuration
+        clean step has on the delete_configuration step.'''
+        return None
+    else:
+        return define_logical_disk('MAX', '0', raid_controller_name,
+                                   [physical_disk_name], is_root_volume)
 
 
 def define_logical_disk(
@@ -425,36 +443,39 @@ def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
         return True
 
     LOG.info("Configuring RAID")
+    LOG.info("Do not power off the node; configuration will take some time")
 
     # To manually clean the ironic node, it must be in the manageable state.
-    ironic_client.node.set_provision_state(node_uuid, 'manage')
-    ironic_client.node.wait_for_provision_state(node_uuid, 'manageable')
+    success = place_node_in_manageable_state(ironic_client, node_uuid)
+
+    if not success:
+        LOG.critical("Could not place node into the manageable state")
+        return False
 
     # Set the target RAID configuration on the ironic node.
     ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
 
-    # To facilitate workarounds to bugs in the ironic DRAC driver's
-    # implementation of cleaning, execute manual cleaning twice (2),
-    # first to delete the configuration and then to create it. The
-    # workarounds are inserted in-between.
+    # To facilitate workarounds to bugs in the ironic DRAC driver's RAID
+    # clean steps, execute manual cleaning twice, first to delete the
+    # configuration, and then to create it. The workarounds are inserted
+    # in-between.
 
     '''TODO: After those upstream bugs have been resolved, perform both
-    cleaning steps, delete_configurtion() and create_configuration(),
+    clean steps, delete_configurtion() and create_configuration(),
     during one (1) manual cleaning.'''
 
-    LOG.info(
-        "Manually cleaning the node to delete the existing RAID configuration")
+    LOG.info("Deleting the existing RAID configuration")
     clean_steps = [{'interface': 'raid', 'step': 'delete_configuration'}]
     ironic_client.node.set_provision_state(
         node_uuid,
         'clean',
         cleansteps=clean_steps)
-    LOG.info(
-        "Waiting for manual cleaning to complete; this may take some time")
-    LOG.info("Do not power off the node")
+    LOG.info("Waiting for deletion of the existing RAID configuration to "
+             "complete")
     ironic_client.node.wait_for_provision_state(node_uuid, 'manageable')
+    LOG.info("Completed deletion of the existing RAID configuration")
 
-    # Work around the bugs in the ironic DRAC driver's cleaning.
+    # Work around the bugs in the ironic DRAC driver's RAID clean steps.
 
     '''TODO: After the upstream bugs have been resolved, remove the
     workarounds.'''
@@ -469,34 +490,76 @@ def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
     Prepare any foreign physical disks for inclusion in the local RAID
     configuration.'''
 
-    '''TODO: Workaround 3:
-    Attempt to convert all of the physical disks to JBOD mode. This may
-    succeed, fail, or the controller may not have the capability.'''
+    # Workaround 3:
+    # Attempt to convert all of the node's physical disks to JBOD mode.
+    # This may succeed or fail. A controller's capability to do that, or
+    # lack thereof, has no bearing on success or failure.
+    LOG.info("Converting all physical disks to JBOD mode")
+    succeeded = change_physical_disk_state_wait(
+        node_uuid, ironic_client, drac_client, 'JBOD')
 
-    physical_disk_fqdds = get_raid_controller_physical_disk_ids(
-        drac_client,
-        raid_controller_fqdd)
+    if succeeded:
+        LOG.info("Completed converting all physical disks to JBOD mode")
+    else:
+        LOG.critical("Attempt to convert node's physical disks to JBOD mode "
+                     "failed")
+        return False
 
-    '''TODO: Workaround 4:
-    Attempt to convert all of the physical disks in the target RAID
-    configuration to RAID mode. This may succeed, fail, or the
-    controller may not have the capability.'''
+    # Workaround 4:
+    # Attempt to convert all of the physical disks in the target RAID
+    # configuration to RAID mode. This may succeed or fail. A
+    # controller's capability to do that, or lack thereof, has no
+    # bearing on success or failure.
+    controllers_to_physical_disk_ids = defaultdict(list)
 
-    LOG.info("Manually cleaning the node to apply the new RAID configuration")
+    for logical_disk in target_raid_config['logical_disks']:
+        # Not applicable to JBOD logical disks.
+        if logical_disk['raid_level'] == 'JBOD':
+            continue
+
+        for physical_disk_name in logical_disk['physical_disks']:
+            controllers_to_physical_disk_ids[
+                logical_disk['controller']].append(physical_disk_name)
+
+    LOG.info("Converting all physical disks configured to back RAID logical "
+             "disks to RAID mode")
+    succeeded = change_physical_disk_state_wait(
+        node_uuid, ironic_client, drac_client, 'RAID',
+        controllers_to_physical_disk_ids)
+
+    if succeeded:
+        LOG.info("Completed converting all physical disks configured to back "
+                 "RAID logical disks to RAID mode")
+    else:
+        LOG.critical("Attempt to convert all physical disks configured to "
+                     "back RAID logical disks to RAID mode failed")
+        return False
+
+    LOG.info("Applying the new RAID configuration")
     clean_steps = [{'interface': 'raid', 'step': 'create_configuration'}]
     ironic_client.node.set_provision_state(
         node_uuid,
         'clean',
         cleansteps=clean_steps)
     LOG.info(
-        "Waiting for manual cleaning to complete; this may take some time")
-    LOG.info("Do not power off the node")
+        "Waiting for application of the new RAID configuration to complete")
     ironic_client.node.wait_for_provision_state(node_uuid, 'manageable')
+    LOG.info("Completed application of the new RAID configuration")
 
     # Return the ironic node to the available state.
     ironic_client.node.set_provision_state(node_uuid, 'provide')
     ironic_client.node.wait_for_provision_state(node_uuid, 'available')
     LOG.info("Completed RAID configuration")
+
+    return True
+
+
+def place_node_in_manageable_state(ironic_client, node_uuid):
+    node = ironic_client.node.get(node_uuid, fields=['provision_state'])
+
+    if node.provision_state != 'manageable':
+        ironic_client.node.set_provision_state(node_uuid, 'manage')
+        ironic_client.node.wait_for_provision_state(node_uuid, 'manageable')
 
     return True
 
@@ -696,28 +759,25 @@ def ensure_node_is_powered_off(drac_client):
         drac_client.set_power_state(POWER_OFF)
 
 
-def change_physical_disk_state_wait(node, ironic_client, drac_client, mode,
-                                    controllers_to_physical_disk_ids=None):
+def change_physical_disk_state_wait(
+        node_uuid, ironic_client, drac_client, mode,
+        controllers_to_physical_disk_ids=None):
     reboot_required, job_ids = change_physical_disk_state(
         drac_client, mode, controllers_to_physical_disk_ids)
 
     result = True
     if job_ids:
         if reboot_required:
-            LOG.info("Rebooting the node to apply configuration")
+            LOG.debug("Rebooting the node to apply configuration")
 
             job_id = drac_client.create_reboot_job()
             job_ids.append(job_id)
 
         drac_client.schedule_job_execution(job_ids, start_time='TIME_NOW')
 
-        LOG.info("Waiting for physical disk configuration to complete; "
-                 "this may take some time")
-        LOG.info("Do not power off the node")
-        JobHelper.wait_for_job_completions(ironic_client, node.uuid)
+        LOG.info("Waiting for physical disk configuration to complete")
+        JobHelper.wait_for_job_completions(ironic_client, node_uuid)
         result = JobHelper.determine_job_outcomes(drac_client, job_ids)
-
-    LOG.info("Completed physical disk configuration")
 
     return result
 
@@ -761,7 +821,7 @@ def is_jbod_capable(drac_client, raid_controller_fqdd):
                 [ready_disk.id],
                 True)
         except DRACOperationFailed as ex:
-            if "This operation is not supported on this device" in ex.message:
+            if NOT_SUPPORTED_MSG in ex.message:
                 pass
             else:
                 raise
@@ -820,23 +880,37 @@ def change_physical_disk_state(drac_client, mode,
 
     job_ids = []
     reboot_required = False
-    for controller in controllers_to_physical_disk_ids.keys():
-        physical_disk_ids = controllers_to_physical_disk_ids[controller]
-        if physical_disk_ids:
-            LOG.debug("Converting the following disks to {} on RAID "
-                      "controller {}: {}".format(
-                          mode, controller, str(physical_disk_ids)))
-            result = drac_client.convert_physical_disks(
-                controller,
-                physical_disk_ids,
-                mode == "RAID")
-
-            job_id = drac_client.commit_pending_raid_changes(controller,
-                                                             reboot=False,
-                                                             start_time=None)
-            job_ids.append(job_id)
-            if result['commit_required']:
-                reboot_required = True
+    try:
+        for controller in controllers_to_physical_disk_ids.keys():
+            physical_disk_ids = controllers_to_physical_disk_ids[controller]
+            if physical_disk_ids:
+                LOG.debug("Converting the following disks to {} on RAID "
+                          "controller {}: {}".format(
+                              mode, controller, str(physical_disk_ids)))
+                try:
+                    result = drac_client.convert_physical_disks(
+                        controller,
+                        physical_disk_ids,
+                        mode == "RAID")
+                except DRACOperationFailed as ex:
+                    if NOT_SUPPORTED_MSG in ex.message:
+                        LOG.debug("Controller {} does not support "
+                                  "JBOD mode".format(controller))
+                        pass
+                    else:
+                        raise
+                else:
+                    job_id = drac_client.commit_pending_raid_changes(
+                        controller, reboot=False, start_time=None)
+                    job_ids.append(job_id)
+                    if result['commit_required']:
+                        reboot_required = True
+    except:
+        # If any exception (except Not Supported) occurred during the
+        # conversion, then roll back all the changes for this node so we don't
+        # leave pending config jobs in the job queue
+        drac_client.delete_jobs(job_ids)
+        raise
 
     return reboot_required, job_ids
 

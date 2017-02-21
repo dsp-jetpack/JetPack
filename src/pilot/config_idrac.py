@@ -44,10 +44,9 @@ def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Performs initial configuration of an iDRAC.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("ip_service_tag",
-                        help="""IP address of the iDRAC
-                                or service tag of the node""",
-                        metavar="ADDRESS")
+
+    ArgHelper.add_ip_service_tag(parser)
+
     parser.add_argument("-p",
                         "--pxe-nic",
                         help="""fully qualified device descriptor (FQDD) of
@@ -192,6 +191,17 @@ def config_idrac_settings(drac_client, password, node):
     return response['reboot_required'], job_id
 
 
+def clear_job_queue(drac_client):
+    LOG.info("Clearing the job queue")
+    drac_client.delete_jobs()
+
+    # It takes a second or two for the iDRAC to switch from the ready state to
+    # the not-ready state, so wait for this transition to happen
+    sleep(5)
+
+    drac_client.wait_until_idrac_is_ready()
+
+
 def config_idrac(ip_service_tag,
                  node_definition,
                  model_properties,
@@ -207,6 +217,10 @@ def config_idrac(ip_service_tag,
     drac_password = node["pm_password"]
 
     drac_client = DRACClient(drac_ip, drac_user, drac_password)
+
+    # Clear out any pending jobs in the job queue and fix the condition where
+    # there are no pending jobs, but the iDRAC thinks there are
+    clear_job_queue(drac_client)
 
     pxe_nic_fqdd = get_pxe_nic_fqdd(
         pxe_nic,
