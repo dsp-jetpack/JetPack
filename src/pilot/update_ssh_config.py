@@ -154,18 +154,20 @@ def main():
     """
 
     overcloud = {}
+    overcloud_nodes = {}
 
     ssh_config = os.path.join(os.path.expanduser('~'), '.ssh', 'config')
     with open(ssh_config, 'w') as f:
         for node, addr, full_name in get_nodes():
-            overcloud[node] = addr + " " + node + " " + full_name 
+            overcloud[node] = addr
+            overcloud_nodes[node] = addr + " " + node + " " + full_name
             f.write("Host {} {}\n".format(node, full_name))
             f.write("  Hostname {}\n".format(addr))
             f.write("  User heat-admin\n\n")
     os.chmod(ssh_config, 0600)
 
     update_known_hosts(overcloud.values())
-    update_etc_hosts(overcloud)
+    update_etc_hosts(overcloud_nodes)
 
 
 if __name__ == "__main__":
