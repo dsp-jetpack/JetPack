@@ -125,7 +125,7 @@ def update_etc_hosts(overcloud):
     for line in etc_file.readlines():
         words = line.split()
         if ((line == marker) or
-            (len(words) == 3 and words[2] in overcloud.keys())):
+            (len(words) == 3 and words[1] in overcloud.keys())):
 
             continue
         new_file.write(line)
@@ -135,7 +135,7 @@ def update_etc_hosts(overcloud):
     # Add new entries for the overcloud nodes
     new_file.write(marker)
     for node in sorted(overcloud.keys()):
-        new_file.write('{} {}\n'.format(overcloud[node], node))
+        new_file.write('{}\n'.format(overcloud[node]))
 
     new_file.close()
     os.chmod(new_hosts, 0644)
@@ -158,7 +158,7 @@ def main():
     ssh_config = os.path.join(os.path.expanduser('~'), '.ssh', 'config')
     with open(ssh_config, 'w') as f:
         for node, addr, full_name in get_nodes():
-            overcloud[node] = addr + " " + full_name
+            overcloud[node] = addr + " " + node + " " + full_name 
             f.write("Host {} {}\n".format(node, full_name))
             f.write("  Hostname {}\n".format(addr))
             f.write("  User heat-admin\n\n")
