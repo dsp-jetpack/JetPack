@@ -49,6 +49,8 @@ NOVA_INSTANCE_NAME="$BASE_NOVA_INSTANCE_NAME"
 VOLUME_NAME="$BASE_VOLUME_NAME"
 PROJECT_NAME="$BASE_PROJECT_NAME"
 USER_NAME="$BASE_USER_NAME"
+SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no"
+
 shopt -s nullglob
 
 LOG_FILE=./sanity_test.log
@@ -118,13 +120,13 @@ init(){
   set_admin_scope
 
   info "### PCS Status "
-  ssh heat-admin@$CONTROLLER 'sudo /usr/sbin/pcs status'
-  ssh heat-admin@$CONTROLLER 'sudo /usr/sbin/pcs status|grep -i stopped'
+  ssh ${SSH_OPTS} heat-admin@$CONTROLLER 'sudo /usr/sbin/pcs status'
+  ssh ${SSH_OPTS} heat-admin@$CONTROLLER 'sudo /usr/sbin/pcs status|grep -i stopped'
 
   info "###Ensure db and rabbit services are in the active state"
-  ssh heat-admin@$CONTROLLER 'sudo ps aux | grep rabbit'
-  ssh heat-admin@$CONTROLLER 'ps -ef | grep mysqld'
-  ssh heat-admin@$CONTROLLER 'ps -ef | grep mariadb'
+  ssh ${SSH_OPTS} heat-admin@$CONTROLLER 'sudo ps aux | grep rabbit'
+  ssh ${SSH_OPTS} heat-admin@$CONTROLLER 'ps -ef | grep mysqld'
+  ssh ${SSH_OPTS} heat-admin@$CONTROLLER 'ps -ef | grep mariadb'
 
   info "### Verify OpenStack services are running."
   #execute_command "ssh heat-admin@$CONTROLLER sudo nova-manage service list"
@@ -218,7 +220,7 @@ create_the_networks(){
     info "#----- $TENANT_ROUTER_NAME exists. Skipping"
   fi
 
-  execute_command "ssh heat-admin@$CONTROLLER sudo grep network_vlan_ranges /etc/neutron/plugin.ini"
+  execute_command "ssh ${SSH_OPTS} heat-admin@$CONTROLLER sudo grep network_vlan_ranges /etc/neutron/plugin.ini"
 
   ext_net_exists=$(openstack network list -c Name -f value | grep "$EXTERNAL_NETWORK_NAME")
   if [ "$ext_net_exists" != "$EXTERNAL_NETWORK_NAME" ]
@@ -334,7 +336,7 @@ ping_from_netns(){
   # Find the controller that has the IP set to an interface in the netns
   for controller in $CONTROLLERS
   do
-    ssh heat-admin@$controller "sudo /sbin/ip netns exec ${name_space} ip a" | grep -q $ip
+      ssh ${SSH_OPTS} heat-admin@$controller "sudo /sbin/ip netns exec ${name_space} ip a" | grep -q $ip
     if [[ "$?" == 0 ]]
     then
       break
@@ -342,7 +344,7 @@ ping_from_netns(){
   done
 
   info "### Pinging $ip from netns $name_space on controller $controller"
-  execute_command "ssh heat-admin@$controller sudo ip netns exec ${name_space} ping -c 1 -w 5 ${ip}"
+  execute_command "ssh ${SSH_OPTS} heat-admin@$controller sudo ip netns exec ${name_space} ping -c 1 -w 5 ${ip}"
   if [[ "$?" == 0 ]]
   then
       info "### Successfully pinged $ip from netns $name_space on controller $controller"

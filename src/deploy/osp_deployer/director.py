@@ -1039,7 +1039,11 @@ class Director(InfraHost):
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
 
-                re = self.run_tty("ssh heat-admin@" +
+                ssh_opts = (
+                    "-o StrictHostKeyChecking=no "
+                    "-o UserKnownHostsFile=/dev/null "
+                    "-o KbdInteractiveDevices=no")
+                re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
                                   priv_ +
@@ -1048,7 +1052,7 @@ class Director(InfraHost):
                                   ".*\" | awk '{print $2}'")
                 private_api = re[0].split("\n")[0]
 
-                re = self.run_tty("ssh heat-admin@" +
+                re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
                                   "/sbin/ifconfig | grep \"inet.*" +
                                   pub_ +
@@ -1057,7 +1061,7 @@ class Director(InfraHost):
                                   ".*\" | awk '{print $2}'")
                 nova_public_ip = re[0].split("\n")[0]
 
-                re = self.run_tty("ssh heat-admin@" +
+                re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
                                   stor_ +
@@ -1086,7 +1090,7 @@ class Director(InfraHost):
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
 
-                re = self.run_tty("ssh heat-admin@" +
+                re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
                                   priv_ +
@@ -1095,7 +1099,7 @@ class Director(InfraHost):
                                   ".*\" | awk '{print $2}'")
                 private_api = re[0].split("\n")[0]
 
-                re = self.run_tty("ssh heat-admin@" +
+                re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
                                   stor_ +
@@ -1123,7 +1127,7 @@ class Director(InfraHost):
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
 
-                re = self.run_tty("ssh heat-admin@" +
+                re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
                                   clus_ +
@@ -1131,7 +1135,7 @@ class Director(InfraHost):
                                   " | awk '{print $2}'")
                 cluster_ip = re[0].split("\n")[0]
 
-                re = self.run_tty("ssh heat-admin@" +
+                re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
                                   stor_ +

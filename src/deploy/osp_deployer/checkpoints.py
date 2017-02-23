@@ -412,6 +412,10 @@ class Checkpoints():
     def verify_computes_virtualization_enabled(self):
         logger.debug("*** Verify the Compute nodes have KVM enabled *** ")
         cmd = "source ~/stackrc;nova list | grep compute"
+        ssh_opts = (
+            "-o StrictHostKeyChecking=no "
+            "-o UserKnownHostsFile=/dev/null "
+            "-o KbdInteractiveDevices=no")
         setts = self.settings
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
@@ -421,7 +425,8 @@ class Checkpoints():
         computes.pop()
         for each in computes:
             provisioning_ip = each.split("|")[6].split("=")[1]
-            cmd = "ssh heat-admin@" + provisioning_ip + " \"ls -al /dev/kvm\""
+            cmd = "ssh %s heat-admin@%s 'ls -al /dev/kvm'" % (
+                ssh_opts, provisioning_ip)
             re = Ssh.execute_command_tty(
                 self.director_ip,
                 self.settings.director_install_account_user,
