@@ -308,18 +308,6 @@ class DRACClient(ironic_client.DRACClient):
         :raises: DRACUnexpectedReturnValue on return value mismatch
         """
         return self._job_mgmt.create_reboot_job(reboot_type)
-    def clear_all_jobs(self):
-        """Clears all jobs.
- 
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        :raises: DRACOperationFailed on error reported back by the iDRAC
-                 interface
-        :raises: DRACUnexpectedReturnValue on non-success
-        """
-        return self._job_mgmt.clear_all_jobs()
- 
-
 
     def delete_jobs(self, job_ids=['JID_CLEARALL_FORCE']):
         """Deletes the given jobs.  If no jobs are given, all jobs are
