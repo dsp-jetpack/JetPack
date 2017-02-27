@@ -393,8 +393,9 @@ setup_cinder(){
   vol_exists=$(cinder list | grep $VOLUME_NAME |  head -n 1  | awk '{print $6}')
   if [ "$vol_exists" != "$VOLUME_NAME" ]
   then
-    execute_command "cinder create --display-name $VOLUME_NAME 1"
-    execute_command "cinder list"
+    execute_command "cinder type-list"
+    execute_command "cinder create --display-name $VOLUME_NAME 1 --volume-type=rbd_backend"
+    execute_command "cinder list"    
 
     info "### Waiting for volume status to change to available..."
     volume_status=$(cinder list | grep "$VOLUME_NAME" | awk '{print $4}')
