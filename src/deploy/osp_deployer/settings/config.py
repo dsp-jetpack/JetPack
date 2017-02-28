@@ -309,17 +309,21 @@ class Settings():
         self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
 
         if self.is_fx2 is True:
-            self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah-fx2.ks"
+            self.sah_kickstart = self.cloud_repo_dir + \
+                "/src/mgmt/osp-sah-fx2.ks"
             self.director_deploy_sh = self.foreman_configuration_scripts +\
                 '/mgmt/deploy-director-vm-fx2.sh'
+            self.rhscon_deploy_py = self.foreman_configuration_scripts +\
+                '/mgmt/deploy-rhscon-vm-fx2.py'
         else:
             self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
             self.director_deploy_sh = self.foreman_configuration_scripts +\
                 '/mgmt/deploy-director-vm.sh'
+            self.rhscon_deploy_py = self.foreman_configuration_scripts +\
+            '/mgmt/deploy-rhscon-vm.py'
+
         self.undercloud_conf = self.foreman_configuration_scripts +\
             '/pilot/undercloud.conf'
-        self.rhscon_deploy_py = self.foreman_configuration_scripts +\
-            '/mgmt/deploy-rhscon-vm.py'
         self.install_director_sh = self.foreman_configuration_scripts +\
             '/pilot/install-director.sh'
         self.deploy_overcloud_sh = self.foreman_configuration_scripts + \
@@ -334,18 +338,18 @@ class Settings():
             '/pilot/templates/dell-environment.yaml'
         if self.is_fx2 is True:
             self.controller_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/nic-configs-fx2/controller.yaml'
+                '/pilot/templates/nic-configs-fx2/controller.yaml'
             self.compute_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/nic-configs-fx2/compute.yaml'
+                '/pilot/templates/nic-configs-fx2/compute.yaml'
             self.ceph_storage_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/nic-configs-fx2/ceph-storage.yaml'
+                '/pilot/templates/nic-configs-fx2/ceph-storage.yaml'
         else:
             self.controller_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/nic-configs/controller.yaml'
+                '/pilot/templates/nic-configs/controller.yaml'
             self.compute_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/nic-configs/compute.yaml'
+                '/pilot/templates/nic-configs/compute.yaml'
             self.ceph_storage_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/nic-configs/ceph-storage.yaml'
+                '/pilot/templates/nic-configs/ceph-storage.yaml'
         self.static_ips_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/static-ip-environment.yaml'
         self.static_vip_yaml = self.foreman_configuration_scripts + \
@@ -377,15 +381,11 @@ class Settings():
                 try:
                     if node.is_sah == "true":
                         self.sah_node = node
-                        if self.is_fx2 is True:
-                            self.sah_node.external_ip = self.sah_node.public_api_ip 
                 except AttributeError:
                     pass
                 try:
                     if node.is_director == "true":
                         self.director_node = node
-                        if self.is_fx2 is True:
-                            self.director_node.external_ip = self.director_node.public_api_ip
                 except AttributeError:
                     pass
                 try:

@@ -32,7 +32,10 @@ class Sah(InfraHost):
 
         self.settings = Settings.settings
         self.user = "root"
-        self.ip = self.settings.sah_node.external_ip
+        if self.settings.is_fx2 is False:
+            self.ip = self.settings.sah_node.external_ip
+        else:
+            self.ip = self.settings.sah_node.public_api_ip
         self.pwd = self.settings.sah_node.root_password
         self.root_pwd = self.settings.sah_node.root_password
 
@@ -141,11 +144,12 @@ class Sah(InfraHost):
                                       'priv_api_bond_name="bond0.' +
                                       sets.private_api_vlanid + '"')
         if sets.is_fx2 is False:
+            re_ = 'br_extern_boot_opts="onboot static ' +\
+                  sets.sah_node.external_ip + '/' +\
+                  sets.external_netmask + '"'
             FileHelper.replace_expression(sets.sah_kickstart,
                                           '^br_extern_boot_opts=.*',
-                                          'br_extern_boot_opts="onboot static ' +
-                                          sets.sah_node.external_ip + '/' +
-                                          sets.external_netmask + '"')
+                                          re_)
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^br_prov_boot_opts=.*',
                                       'br_prov_boot_opts="onboot static ' +
@@ -186,7 +190,7 @@ class Sah(InfraHost):
         for eachone in files:
             localfile = self.settings.lock_files_dir + "/" + eachone
             remotefile = '/root/' + eachone
-            Scp.put_file(self.settings.sah_node.external_ip,
+            Scp.put_file(self.ip,
                          "root",
                          self.settings.sah_node.root_password,
                          localfile,
@@ -215,25 +219,34 @@ class Sah(InfraHost):
                 "password " + self.settings.director_install_account_pwd,
                 "# Iface     IP               NETMASK    ",)
         if self.settings.is_fx2 is True:
-            conf = conf + ("eth0        " + self.settings.director_node.public_api_ip +
-                "    " + self.settings.public_api_netmask,)
-            conf = conf + ("eth1        " + self.settings.director_node.provisioning_ip +
-                "    " + self.settings.provisioning_netmask,)
-            conf = conf + ("eth2        " + self.settings.director_node.management_ip +
-                "    " + self.settings.management_netmask,)
-            conf = conf + ("eth3        " + self.settings.director_node.private_api_ip +
-                "    " + self.settings.private_api_netmask,)
+            conf = conf + ("eth0        " +
+                           self.settings.director_node.public_api_ip +
+                           "    " + self.settings.public_api_netmask,)
+            conf = conf + ("eth1        " +
+                           self.settings.director_node.provisioning_ip +
+                           "    " + self.settings.provisioning_netmask,)
+            conf = conf + ("eth2        " +
+                           self.settings.director_node.management_ip +
+                           "    " + self.settings.management_netmask,)
+            conf = conf + ("eth3        " +
+                           self.settings.director_node.private_api_ip +
+                           "    " + self.settings.private_api_netmask,)
         else:
-            conf = conf + ("eth0        " + self.settings.director_node.external_ip +
-                "     " + self.settings.external_netmask,)
-            conf = conf + ("eth1        " + self.settings.director_node.provisioning_ip +
-                "    " + self.settings.provisioning_netmask,)
-            conf = conf + ("eth2        " + self.settings.director_node.management_ip +
-                "    " + self.settings.management_netmask,)
-            conf = conf + ("eth3        " + self.settings.director_node.private_api_ip +
-                "    " + self.settings.private_api_netmask,)
-            conf = conf + ("eth4        " + self.settings.director_node.public_api_ip +
-                "    " + self.settings.public_api_netmask,)
+            conf = conf + ("eth0        " +
+                           self.settings.director_node.external_ip +
+                           "     " + self.settings.external_netmask,)
+            conf = conf + ("eth1        " +
+                           self.settings.director_node.provisioning_ip +
+                           "    " + self.settings.provisioning_netmask,)
+            conf = conf + ("eth2        " +
+                           self.settings.director_node.management_ip +
+                           "    " + self.settings.management_netmask,)
+            conf = conf + ("eth3        " +
+                           self.settings.director_node.private_api_ip +
+                           "    " + self.settings.private_api_netmask,)
+            conf = conf + ("eth4        " +
+                           self.settings.director_node.public_api_ip +
+                           "    " + self.settings.public_api_netmask,)
         for line in conf:
             self.run("echo '" +
                      line +
@@ -287,12 +300,21 @@ class Sah(InfraHost):
                 "gateway " + self.settings.external_gateway,
                 "nameserver " + self.settings.name_server,
                 "ntpserver " + self.settings.ntp_server,
-                "# Iface     IP               NETMASK    ",
-                "eth0        " + self.settings.rhscon_node.external_ip +
-                "     " + self.settings.external_netmask,
-                "eth1        " + self.settings.rhscon_node.storage_ip +
-                "    " + self.settings.storage_netmask,
-                )
+                "# Iface     IP               NETMASK    ",)
+        if self.settings.is_fx2 is True:
+            conf = conf + ("eth0        " +
+                           self.settings.rhscon_node.public_api_ip +
+                           "    " + self.settings.public_api_netmask,)
+            conf = conf + ("eth1        " +
+                           self.settings.rhscon_node.storage_ip +
+                           "    " + self.settings.storage_netmask,)
+        else:
+            conf = conf + ("eth0        " +
+                           self.settings.rhscon_node.external_ip +
+                           "     " + self.settings.external_netmask,)
+            conf = conf + ("eth1        " +
+                           self.settings.rhscon_node.storage_ip +
+                           "    " + self.settings.storage_netmaski,)
         for comd in conf:
             self.run("echo '" + comd + "' >> " + rhscon_conf)
         logger.debug("=== kick off the Storage Console VM deployment")
