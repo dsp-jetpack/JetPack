@@ -99,7 +99,7 @@ def main():
     if out_of_band:
         logger.info("Starting Out-Of-Band introspection")
 
-        # Check to see if assign_role has been run on all the nodes
+        # Check to see if provisioning_mac has been set on all the nodes
         bad_nodes = []
         for node in ironic_client.node.list(fields=["uuid", "driver_info",
                                                     "properties"]):
@@ -110,7 +110,7 @@ def main():
             ips = [CredentialHelper.get_drac_ip(node) for node in bad_nodes]
             fail_msg = "\n".join(ips)
 
-            logger.error("The following nodes must have assign_role.py run "
+            logger.error("The following nodes must have config_idrac.py run "
                          "on them before running out-of-band introspection:"
                          "\n{}".format(fail_msg))
             sys.exit(1)
