@@ -1078,6 +1078,11 @@ class Director(InfraHost):
                 ip_info.append("     - nova private ip  : " + private_api)
                 ip_info.append("     - nova public ip   : " + nova_public_ip)
                 ip_info.append("     - storage ip       : " + storage_ip)
+                if self.settings.is_fx2 is True:
+                    logger.debug("restarting network manager")
+                    cmd = "ssh heat-admin@" + provisioning_ip + \
+                          "sudo service NetworkManager restart"
+                    re = self.run_tty(cmd)
 
             re = self.run_tty(self.source_stackrc + "nova list | grep compute")
 
@@ -1110,6 +1115,11 @@ class Director(InfraHost):
                 ip_info.append("     - provisioning ip  : " + provisioning_ip)
                 ip_info.append("     - nova private ip  : " + private_api)
                 ip_info.append("     - storage ip       : " + storage_ip)
+                if self.settings.is_fx2 is True:
+                    logger.debug("restarting network manager")
+                    cmd = "ssh heat-admin@" + provisioning_ip + \
+                          "sudo service NetworkManager restart"
+                    re = self.run_tty(cmd)
 
             re = self.run_tty(self.source_stackrc + "nova list | grep storage")
 
@@ -1142,8 +1152,14 @@ class Director(InfraHost):
                     "     - provisioning ip    : " + provisioning_ip)
                 ip_info.append("     - storage cluster ip : " + cluster_ip)
                 ip_info.append("     - storage ip         : " + storage_ip)
-            ip_info.append("====================================")
+                if self.settings.is_fx2 is True:
+                    logger.debug("restarting network manager")
+                    cmd = "ssh heat-admin@" + provisioning_ip + \
+                          "sudo service NetworkManager restart"
+                    re = self.run_tty(cmd)
 
+            ip_info.append("====================================")
+            
             # noinspection PyBroadException
             try:
                 overcloud_endpoint = self.run_tty(
