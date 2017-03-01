@@ -1251,7 +1251,7 @@ class Director(InfraHost):
         if self.settings.is_fx2 is True:
             ip = setts.director_node.public_api_ip
         else:
-            setts.director_node.external_ip
+            ip = setts.director_node.external_ip
         Scp.get_file(ip,
                      setts.director_install_account_user,
                      setts.director_install_account_pwd,
