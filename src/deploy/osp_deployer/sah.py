@@ -314,7 +314,7 @@ class Sah(InfraHost):
                            "     " + self.settings.external_netmask,)
             conf = conf + ("eth1        " +
                            self.settings.rhscon_node.storage_ip +
-                           "    " + self.settings.storage_netmaski,)
+                           "    " + self.settings.storage_netmask,)
         for comd in conf:
             self.run("echo '" + comd + "' >> " + rhscon_conf)
         logger.debug("=== kick off the Storage Console VM deployment")
