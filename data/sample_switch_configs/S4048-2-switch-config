@@ -1,12 +1,5 @@
-! Version 9.10(0.1)
-! Last configuration change at Mon Oct 17 20:31:37 2016 by crowbar
-! Startup-config last updated at Mon Oct 17 20:30:14 2016 by crowbar
-!
-boot system stack-unit 1 primary system://A
-boot system stack-unit 1 secondary system://B
-boot system stack-unit 1 default system://A
-!
-hostname S4048-2
+
+hostname S4048-1
 ! 
 protocol lldp 
  advertise dot1-tlv port-protocol-vlan-id 
@@ -14,27 +7,22 @@ protocol lldp
  advertise management-tlv system-description system-name 
  advertise med 
 !
-redundancy auto-synchronize full
-!
-username admin password CHANGEME privilege 15
+username admin password P@ssw0rd privilege 15
 ! 
 protocol spanning-tree rstp 
  no disable 
- bridge-priority 20480 
+ bridge-priority 24576 
 ! 
 vlt domain 1 
  peer-link port-channel 100 
- back-up destination 10.0.0.191 
+ back-up destination 192.168.0.131 
  primary-priority 2 
  system-mac mac-address aa:11:22:33:44:55 
  unit-id 1 
  peer-routing 
  peer-routing-timeout 1800 
 ! 
-stack-unit 1 provision S4048-ON
-! 
 interface TenGigabitEthernet 1/1
- description SAH-10G3-bond0
  no ip address
  mtu 9216
 !  
@@ -43,8 +31,7 @@ interface TenGigabitEthernet 1/1
  no shutdown
 ! 
 interface TenGigabitEthernet 1/2
- description Controller1-10G3-bond0
- no ip address
+  no ip address
  mtu 9216
 !  
  port-channel-protocol LACP 
@@ -52,8 +39,7 @@ interface TenGigabitEthernet 1/2
  no shutdown
 ! 
 interface TenGigabitEthernet 1/3
- description Controller2-10G3-bond0
- no ip address
+  no ip address
  mtu 9216
 !  
  port-channel-protocol LACP 
@@ -61,8 +47,7 @@ interface TenGigabitEthernet 1/3
  no shutdown
 ! 
 interface TenGigabitEthernet 1/4
- description Controller3-10G3-bond0
- no ip address
+  no ip address
  mtu 9216
 !  
  port-channel-protocol LACP 
@@ -70,8 +55,7 @@ interface TenGigabitEthernet 1/4
  no shutdown
 ! 
 interface TenGigabitEthernet 1/5
- description Compute1-10G3-bond0
- no ip address
+  no ip address
  mtu 9216
 !  
  port-channel-protocol LACP 
@@ -79,8 +63,7 @@ interface TenGigabitEthernet 1/5
  no shutdown
 ! 
 interface TenGigabitEthernet 1/6
- description Compute2-10G3-bond0
- no ip address
+  no ip address
  mtu 9216
 !  
  port-channel-protocol LACP 
@@ -88,7 +71,6 @@ interface TenGigabitEthernet 1/6
  no shutdown
 ! 
 interface TenGigabitEthernet 1/7
- description Compute3-10G3-bond0
  no ip address
  mtu 9216
 !  
@@ -97,227 +79,161 @@ interface TenGigabitEthernet 1/7
  no shutdown
 ! 
 interface TenGigabitEthernet 1/8
- no ip address
- shutdown
+no ip address
+ mtu 9216
+ port-channel-protocol LACP 
+  port-channel 8 mode active 
 ! 
 interface TenGigabitEthernet 1/9
  no ip address
- shutdown
-! 
+ mtu 9216
+ port-channel-protocol LACP 
+  port-channel 9 mode active  
 interface TenGigabitEthernet 1/10
  no ip address
- shutdown
+ mtu 9216  
+ port-channel-protocol LACP 
+ port-channel 10 mode active 
 ! 
 interface TenGigabitEthernet 1/11
  no ip address
- shutdown
+ mtu 9216
+ port-channel-protocol LACP 
+  port-channel 11 mode active 
 ! 
 interface TenGigabitEthernet 1/12
- description Storage1-10G3-bond0
  no ip address
  mtu 9216
-!  
  port-channel-protocol LACP 
   port-channel 12 mode active 
  no shutdown
 ! 
 interface TenGigabitEthernet 1/13
- description Storage2-10G3-bond0
  no ip address
  mtu 9216
-!  
  port-channel-protocol LACP 
   port-channel 13 mode active 
  no shutdown
 ! 
 interface TenGigabitEthernet 1/14
- description Storage3-10G3-bond0
  no ip address
  mtu 9216
-!  
  port-channel-protocol LACP 
   port-channel 14 mode active 
  no shutdown
 ! 
 interface TenGigabitEthernet 1/15
- description Storage4-10G3-bond0
  no ip address
  mtu 9216
-!  
  port-channel-protocol LACP 
   port-channel 15 mode active 
  no shutdown
 ! 
 interface TenGigabitEthernet 1/16
  no ip address
+ mtu 9216
+ port-channel-protocol LACP 
+  port-channel 16 mode active 
  no shutdown
 ! 
 interface TenGigabitEthernet 1/17
  no ip address
+ mtu 9216
+ port-channel-protocol LACP 
+  port-channel 17 mode active 
  no shutdown
 ! 
 interface TenGigabitEthernet 1/18
  no ip address
+ mtu 9216
+ port-channel-protocol LACP 
+  port-channel 18 mode active 
  no shutdown
 ! 
 interface TenGigabitEthernet 1/19
  no ip address
- no shutdown
+ shutdown
 ! 
 interface TenGigabitEthernet 1/20
  no ip address
- no shutdown
+ shutdown
 ! 
 interface TenGigabitEthernet 1/21
  no ip address
- no shutdown
+ shutdown
 ! 
 interface TenGigabitEthernet 1/22
  no ip address
- no shutdown
+ shutdown
 ! 
 interface TenGigabitEthernet 1/23
- no ip address
- no shutdown
-! 
+  no ip address
+ shutdown
+!
 interface TenGigabitEthernet 1/24
  no ip address
- no shutdown
-! 
+ shutdown
 interface TenGigabitEthernet 1/25
- description SAH-10G4-bond1
  no ip address
- mtu 9216
-!  
- port-channel-protocol LACP 
-  port-channel 25 mode active 
- no shutdown
-! 
+ shutdown
 interface TenGigabitEthernet 1/26
- description Controller1-10G4-bond1
  no ip address
- mtu 9216
-!  
- port-channel-protocol LACP 
-  port-channel 26 mode active 
- no shutdown
-! 
+ shutdown
 interface TenGigabitEthernet 1/27
- description Controller2-10G4-bond1
- no ip address
- mtu 9216
-!  
- port-channel-protocol LACP 
-  port-channel 27 mode active 
- no shutdown
-! 
+   no ip address
+ shutdown 
 interface TenGigabitEthernet 1/28
- description Controller3-10G4-bond1
  no ip address
- mtu 9216
-!  
- port-channel-protocol LACP 
-  port-channel 28 mode active 
- no shutdown
-! 
+ shutdown
 interface TenGigabitEthernet 1/29
- description Compute1-10G4-bond1
  no ip address
- mtu 9216
-!  
- port-channel-protocol LACP 
-  port-channel 29 mode active 
- no shutdown
-! 
+ shutdown
 interface TenGigabitEthernet 1/30
- description Compute2-10G4-bond1
  no ip address
- mtu 9216
-!  
- port-channel-protocol LACP 
-  port-channel 30 mode active 
- no shutdown
-! 
+ shutdown
 interface TenGigabitEthernet 1/31
- description Compute3-10G4-bond1
- no ip address
- mtu 9216
-!  
- port-channel-protocol LACP 
-  port-channel 31 mode active 
- no shutdown
-! 
+   no ip address
+ shutdown
 interface TenGigabitEthernet 1/32
  no ip address
  shutdown
-! 
 interface TenGigabitEthernet 1/33
  no ip address
  shutdown
-! 
 interface TenGigabitEthernet 1/34
  no ip address
  shutdown
-! 
 interface TenGigabitEthernet 1/35
  no ip address
  shutdown
-! 
+!
 interface TenGigabitEthernet 1/36
- description Storage1-10G4-bond1
  no ip address
- mtu 9216
-!  
- port-channel-protocol LACP 
-  port-channel 36 mode active 
- no shutdown
-! 
+ shutdown
+!
 interface TenGigabitEthernet 1/37
- description Storage2-10G4-bond1
- no ip address
- mtu 9216
-!  
- port-channel-protocol LACP 
-  port-channel 37 mode active 
- no shutdown
-! 
-interface TenGigabitEthernet 1/38
- description Storage3-10G4-bond1
- no ip address
- mtu 9216
-!  
- port-channel-protocol LACP 
-  port-channel 38 mode active 
- no shutdown
-! 
-interface TenGigabitEthernet 1/39
- description Storage4-10G4-bond1
- no ip address
- mtu 9216
-!  
- port-channel-protocol LACP 
-  port-channel 39 mode active 
- no shutdown
-! 
-interface TenGigabitEthernet 1/40
  no ip address
  shutdown
 ! 
+interface TenGigabitEthernet 1/38
+ no ip address
+ shutdown
+!  
+interface TenGigabitEthernet 1/39
+ no ip address
+ shutdown
+!
+interface TenGigabitEthernet 1/40
+ no ip address
+ shutdown
+!
 interface TenGigabitEthernet 1/41
- description EQL_iSCSI
  no ip address
- mtu 9216
- switchport
- spanning-tree rstp edge-port 
- no shutdown
-! 
+ shutdown
+!
 interface TenGigabitEthernet 1/42
- description EQL_iSCSI
  no ip address
- mtu 9216
- switchport
- spanning-tree rstp edge-port 
- no shutdown
+ shutdown
 ! 
 interface TenGigabitEthernet 1/43
  no ip address
@@ -329,14 +245,7 @@ interface TenGigabitEthernet 1/44
 ! 
 interface TenGigabitEthernet 1/45
  no ip address
- no shutdown
-! 
-interface TenGigabitEthernet 1/46
- no ip address
- mtu 9216
- portmode hybrid
- switchport
- no shutdown
+ shutdown
 ! 
 interface TenGigabitEthernet 1/47
  description Uplink_To_Customer_Site
@@ -351,14 +260,12 @@ interface TenGigabitEthernet 1/48
  no shutdown
 ! 
 interface fortyGigE 1/49
- description VLTi-Port-Channel
  no ip address
- no shutdown
+ shutdown
 ! 
 interface fortyGigE 1/50
- description VLTi-Port-Channel
  no ip address
- no shutdown
+ shutdown
 ! 
 interface fortyGigE 1/51
  description Optional_Uplink_To_Customer_Site
@@ -370,15 +277,18 @@ interface fortyGigE 1/52
  shutdown
 ! 
 interface fortyGigE 1/53
- no ip address
- shutdown
-! 
-interface fortyGigE 1/54
+ description VLTi-Port-Channel
  no ip address
  no shutdown
+ mtu 9216
 ! 
+interface fortyGigE 1/54
+ description VLTi-Port-Channel
+ no ip address
+ no shutdown
+ mtu 9216 
 interface ManagementEthernet 1/1
- ip address 10.0.0.192/24
+ ip address 192.168.0.132/24
  no shutdown
 ! 
 interface ManagementEthernet 2/1
@@ -459,6 +369,39 @@ interface Port-channel 7
  vlt-peer-lag port-channel 7
  no shutdown
 ! 
+interface Port-channel 8
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 8
+ no shutdown
+interface Port-channel 9
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 9
+ no shutdown
+interface Port-channel 10
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 10
+ no shutdown
+interface Port-channel 11
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 11
+ no shutdown
+! 
 interface Port-channel 12
  no ip address
  mtu 9216
@@ -495,103 +438,31 @@ interface Port-channel 15
  vlt-peer-lag port-channel 15
  no shutdown
 ! 
-interface Port-channel 25
+interface Port-channel 16
  no ip address
  mtu 9216
  portmode hybrid
  switchport
  spanning-tree rstp edge-port 
- vlt-peer-lag port-channel 25
+ vlt-peer-lag port-channel 16
  no shutdown
 ! 
-interface Port-channel 26
+interface Port-channel 17
  no ip address
  mtu 9216
  portmode hybrid
  switchport
  spanning-tree rstp edge-port 
- vlt-peer-lag port-channel 26
+ vlt-peer-lag port-channel 17
  no shutdown
-! 
-interface Port-channel 27
+!
+interface Port-channel 18
  no ip address
  mtu 9216
  portmode hybrid
  switchport
  spanning-tree rstp edge-port 
- vlt-peer-lag port-channel 27
- no shutdown
-! 
-interface Port-channel 28
- no ip address
- mtu 9216
- portmode hybrid
- switchport
- spanning-tree rstp edge-port 
- vlt-peer-lag port-channel 28
- no shutdown
-! 
-interface Port-channel 29
- no ip address
- mtu 9216
- portmode hybrid
- switchport
- spanning-tree rstp edge-port 
- vlt-peer-lag port-channel 29
- no shutdown
-! 
-interface Port-channel 30
- no ip address
- mtu 9216
- portmode hybrid
- switchport
- spanning-tree rstp edge-port 
- vlt-peer-lag port-channel 30
- no shutdown
-! 
-interface Port-channel 31
- no ip address
- mtu 9216
- portmode hybrid
- switchport
- spanning-tree rstp edge-port 
- vlt-peer-lag port-channel 31
- no shutdown
-! 
-interface Port-channel 36
- no ip address
- mtu 9216
- portmode hybrid
- switchport
- spanning-tree rstp edge-port 
- vlt-peer-lag port-channel 36
- no shutdown
-! 
-interface Port-channel 37
- no ip address
- mtu 9216
- portmode hybrid
- switchport
- spanning-tree rstp edge-port 
- vlt-peer-lag port-channel 37
- no shutdown
-! 
-interface Port-channel 38
- no ip address
- mtu 9216
- portmode hybrid
- switchport
- spanning-tree rstp edge-port 
- vlt-peer-lag port-channel 38
- no shutdown
-! 
-interface Port-channel 39
- no ip address
- mtu 9216
- portmode hybrid
- switchport
- spanning-tree rstp edge-port 
- vlt-peer-lag port-channel 39
+ vlt-peer-lag port-channel 18
  no shutdown
 ! 
 interface Port-channel 47
@@ -619,17 +490,14 @@ interface Port-channel 48
 interface Port-channel 100
  description VLT port channel
  no ip address
- channel-member fortyGigE 1/49,1/50
+ channel-member fortyGigE 1/53,1/54
  no shutdown
-! 
-interface Vlan 1
-!untagged Port-channel 2-7,26-28,47-48,100
 ! 
 interface Vlan 110
  description iDRAC-OOB
  no ip address
  tagged Port-channel 1,48
- shutdown
+ no shutdown
 ! 
 interface Vlan 120
  description Provision
@@ -645,33 +513,32 @@ interface Vlan 140
 interface Vlan 170
  description Storage
  tagged Port-channel 1-4
- untagged TenGigabitEthernet 1/41-1/42
- untagged Port-channel 12-14,29-31
+ untagged Port-channel 7-9,14-15
  shutdown
 ! 
 interface Vlan 180
  description Ceph_Cluster
- untagged Port-channel 36-38
+ untagged Port-channel 16-18
  shutdown
 ! 
 interface Vlan 190
  description Public_API_Network
  ip address 192.168.190.3/24
- tagged Port-channel 1,26-28
- untagged Port-channel 25
+ tagged Port-channel 1,11-13
+ untagged Port-channel 10
 ! 
  vrrp-group 190 
-  priority 150 
+  priority 200 
   virtual-address 192.168.190.1 
  no shutdown
 ! 
 interface Vlan 191
  description VM_External_VLAN_Tenants_aka_Floating
  ip address 192.168.191.3/24
- tagged Port-channel 1,25-28
-! 
+ tagged Port-channel 1,11-13
+ ! 
  vrrp-group 191 
-  priority 150 
+  priority 200 
   virtual-address 192.168.191.1 
  no shutdown
 ! 
@@ -975,22 +842,8 @@ interface Vlan 250
  tagged Port-channel 2-7
  shutdown
 !
-management route 0.0.0.0/0 10.0.0.1 
-!
 ip ssh server enable
 !
-line console 0
-line vty 0
-line vty 1
-line vty 2
-line vty 3
-line vty 4
-line vty 5
-line vty 6
-line vty 7
-line vty 8
-line vty 9
-! 
 reload-type
  boot-type normal-reload
  config-scr-download enable
