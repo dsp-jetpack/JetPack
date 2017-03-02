@@ -1081,7 +1081,7 @@ class Director(InfraHost):
                 if self.settings.is_fx2 is True:
                     logger.debug("restarting network manager")
                     cmd = "ssh heat-admin@" + provisioning_ip + \
-                          "sudo service NetworkManager restart"
+                          "sudo systemctl restart NetworkManager.service"
                     re = self.run_tty(cmd)
 
             re = self.run_tty(self.source_stackrc + "nova list | grep compute")
