@@ -283,6 +283,7 @@ def prep_rhscon_hosts(rhscon_node, ceph_nodes):
     rhscon_node.put(tmp_hosts, tmp_hosts)
     rhscon_node.run("sudo cp {} {}.bak".format(Node.etc_hosts, Node.etc_hosts))
     rhscon_node.run("sudo mv {} {}".format(tmp_hosts, Node.etc_hosts))
+    rhscon_node.run("sudo restorecon {}".format(Node.etc_hosts))
     os.unlink(tmp_hosts)
 
 
@@ -328,6 +329,7 @@ def prep_ceph_hosts(rhscon_node, ceph_nodes):
         node.put(tmp_hosts, tmp_hosts)
         node.run("sudo cp {} {}.bak".format(Node.etc_hosts, Node.etc_hosts))
         node.run("sudo mv {} {}".format(tmp_hosts, Node.etc_hosts))
+        node.run("sudo restorecon {}".format(Node.etc_hosts))
         os.unlink(tmp_hosts)
 
 
@@ -397,6 +399,7 @@ def prep_calamari_hosts(calamari_node, ceph_nodes):
     # another backup file.
     calamari_node.put(tmp_hosts, tmp_hosts)
     calamari_node.run("sudo mv {} {}".format(tmp_hosts, Node.etc_hosts))
+    calamari_node.run("sudo restorecon {}".format(Node.etc_hosts))
     os.unlink(tmp_hosts)
 
 
