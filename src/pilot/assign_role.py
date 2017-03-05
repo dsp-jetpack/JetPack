@@ -331,6 +331,36 @@ def define_storage_logical_disks(drac_client):
     return list()
 
 
+def cardinality_of_smallest_spinning_disk_size_is_two(physical_disks):
+    # Bin the spinning physical disks (hard disk drives (HDDs)) by size
+    # in gigabytes (GB).
+    disks_by_size = defaultdict(list)
+
+    for physical_disk in physical_disks:
+        # Ignore SSD drives.
+        if physical_disk.media_type == 'hdd':
+            disks_by_size[physical_disk.size_mb / 1024].append(physical_disk)
+
+    # Order the bins by size, from smallest to largest. Since Python
+    # dictionaries are unordered, construct a sorted list of bins. Each
+    # bin is a dictionary item, which is a tuple.
+    ordered_disks_by_size = sorted(disks_by_size.items(), key=lambda t: t[0])
+
+    # Obtain the bin for the smallest size.
+    smallest_disks_bin = ordered_disks_by_size[0]
+
+    smallest_disk_size = smallest_disks_bin[0]
+    smallest_disks = smallest_disks_bin[1]
+    cardinality_of_smallest_disks = len(smallest_disks)
+
+    if cardinality_of_smallest_disks == 2:
+        sorted_smallest_disk_ids = sorted((d.id for d in smallest_disks),
+                                          key=physical_disk_id_to_key)
+        return (smallest_disk_size, sorted_smallest_disk_ids)
+    else:
+        return (0, None)
+
+
 def define_jbod_or_raid_0_logical_disk(raid_controller_name,
                                        physical_disk_name,
                                        is_root_volume=False):
