@@ -331,6 +331,12 @@ def define_storage_logical_disks(drac_client):
     return list()
 
 
+def get_raid_controller_physical_disks(drac_client, raid_controller_fqdd):
+    physical_disks = drac_client.list_physical_disks()
+
+    return [d for d in physical_disks if d.controller == raid_controller_fqdd]
+
+
 def define_storage_operating_system_logical_disk(physical_disks,
                                                  raid_controller_name):
     (os_logical_disk_size_gb,
