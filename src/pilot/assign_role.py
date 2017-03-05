@@ -350,6 +350,14 @@ def define_single_raid_10_logical_disk(drac_client, raid_controller_name):
     return logical_disk
 
 
+def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
+    physical_disks = drac_client.list_physical_disks()
+
+    return sorted(
+        (d.id for d in physical_disks if d.controller == raid_controller_fqdd),
+        key=physical_disk_id_to_key)
+
+
 def define_storage_logical_disks(drac_client, raid_controller_name):
     '''TODO: Flesh out this stub.'''
     return list()
@@ -518,14 +526,6 @@ def define_logical_disk(
         logical_disk['is_root_volume'] = is_root_volume
 
     return logical_disk
-
-
-def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
-    physical_disks = drac_client.list_physical_disks()
-
-    return sorted(
-        (d.id for d in physical_disks if d.controller == raid_controller_fqdd),
-        key=physical_disk_id_to_key)
 
 
 def physical_disk_id_to_key(disk_id):
