@@ -613,10 +613,6 @@ def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
     when RAID configuration failed and return False. Further testing
     should uncover interesting error conditions.'''
 
-    # Nothing to do?
-    if not target_raid_config:
-        return True
-
     LOG.info("Configuring RAID")
     LOG.info("Do not power off the node; configuration will take some time")
 
