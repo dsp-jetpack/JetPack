@@ -428,6 +428,24 @@ def last_two_disks_by_location(physical_disks):
     return (0, None)
 
 
+def define_jbod_logical_disks(
+        physical_disks, raid_controller_name, jbod_capable):
+    sorted_physical_disk_names = sorted((d.id for d in physical_disks),
+                                        key=physical_disk_id_to_key)
+
+    logical_disks = list()
+
+    for physical_disk_name in sorted_physical_disk_names:
+        jbod_logical_disk = define_jbod_or_raid_0_logical_disk(
+            raid_controller_name, physical_disk_name, is_root_volume=False,
+            jbod_capable=jbod_capable)
+
+        if jbod_logical_disk is not None:
+            logical_disks.append(jbod_logical_disk)
+
+    return logical_disks
+
+
 def define_jbod_or_raid_0_logical_disk(raid_controller_name,
                                        physical_disk_name,
                                        is_root_volume=False,
