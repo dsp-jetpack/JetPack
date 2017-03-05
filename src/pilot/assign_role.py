@@ -359,8 +359,51 @@ def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
 
 
 def define_storage_logical_disks(drac_client, raid_controller_name):
-    '''TODO: Flesh out this stub.'''
-    return list()
+    all_physical_disks = get_raid_controller_physical_disks(
+        drac_client, raid_controller_name)
+    number_physical_disks = len(all_physical_disks)
+
+    if number_physical_disks < 3:
+        LOG.critical(
+            "Cannot configure RAID 1 and JBOD with only {} disks; need three "
+            "(3) or more".format(
+                number_physical_disks))
+        return None
+
+    # Define a logical disk to host the operating system.
+    os_logical_disk = define_storage_operating_system_logical_disk(
+        all_physical_disks, raid_controller_name)
+
+    if os_logical_disk is None:
+        return None
+
+    # Determine the physical disks that remain for JBOD.
+    #
+    # The ironic RAID 'physical_disks' property is optional. While it is
+    # presently used by this script, it is envisioned that it will not
+    # be in the future.
+    if 'physical_disks' in os_logical_disk:
+        os_physical_disk_names = os_logical_disk['physical_disks']
+        remaining_physical_disks = [d for d in all_physical_disks
+                                    if d.id not in os_physical_disk_names]
+    else:
+        remaining_physical_disks = all_physical_disks
+
+    # Define JBOD logical disks with the remaining physical disks.
+    #
+    # A successful call returns a list, which may be empty; otherwise,
+    # None is returned.
+    jbod_capable = is_jbod_capable(drac_client, raid_controller_name)
+    jbod_logical_disks = define_jbod_logical_disks(
+        remaining_physical_disks, raid_controller_name, jbod_capable)
+
+    if jbod_logical_disks is None:
+        return None
+
+    logical_disks = [os_logical_disk]
+    logical_disks.extend(jbod_logical_disks)
+
+    return logical_disks
 
 
 def get_raid_controller_physical_disks(drac_client, raid_controller_fqdd):
