@@ -234,12 +234,21 @@ def get_drac_client(node_definition_filename, node):
 
 
 def define_target_raid_config(role, drac_client):
+    raid_controller_name = get_raid_controller_id(drac_client)
+
+    if not raid_controller_name:
+        LOG.critical("Found no RAID controller")
+        return None
+
     if role == 'controller':
-        logical_disks = define_controller_logical_disks(drac_client)
+        logical_disks = define_controller_logical_disks(drac_client,
+                                                        raid_controller_name)
     elif role == 'compute':
-        logical_disks = define_compute_logical_disks(drac_client)
+        logical_disks = define_compute_logical_disks(drac_client,
+                                                     raid_controller_name)
     elif role == 'storage':
-        logical_disks = define_storage_logical_disks(drac_client)
+        logical_disks = define_storage_logical_disks(drac_client,
+                                                     raid_controller_name)
     else:
         LOG.critical(
             'Cannot define target RAID configuration for role "{}"').format(
@@ -249,38 +258,53 @@ def define_target_raid_config(role, drac_client):
     return {'logical_disks': logical_disks} if logical_disks else None
 
 
-def define_controller_logical_disks(drac_client):
-    logical_disks = list()
+def get_raid_controller_id(drac_client):
+    disk_controllers = drac_client.list_raid_controllers()
 
-    raid_10_logical_disk = define_single_raid_10_logical_disk(drac_client)
+    raid_controller_ids = [
+        c.id for c in disk_controllers if c.id.startswith('RAID.Integrated.')]
 
-    if raid_10_logical_disk:
-        logical_disks.append(raid_10_logical_disk)
+    number_raid_controllers = len(raid_controller_ids)
 
-    return logical_disks
-
-
-def define_compute_logical_disks(drac_client):
-    logical_disks = list()
-
-    raid_10_logical_disk = define_single_raid_10_logical_disk(drac_client)
-
-    if raid_10_logical_disk:
-        logical_disks.append(raid_10_logical_disk)
-
-    return logical_disks
-
-
-def define_single_raid_10_logical_disk(drac_client):
-    raid_controller_name = get_raid_controller_id(drac_client)
-
-    if not raid_controller_name:
-        LOG.critical("Found no RAID controller")
+    if number_raid_controllers == 1:
+        return raid_controller_ids[0]
+    elif number_raid_controllers == 0:
+        LOG.critical("Found no RAID controllers")
+        return None
+    else:
+        LOG.critical(
+            "Found more than one RAID controller:\n  {}".format(
+                "\n  ".join(raid_controller_ids)))
         return None
 
+
+def define_controller_logical_disks(drac_client, raid_controller_name):
+    logical_disks = list()
+
+    raid_10_logical_disk = define_single_raid_10_logical_disk(
+        drac_client, raid_controller_name)
+
+    if raid_10_logical_disk:
+        logical_disks.append(raid_10_logical_disk)
+
+    return logical_disks
+
+
+def define_compute_logical_disks(drac_client, raid_controller_name):
+    logical_disks = list()
+
+    raid_10_logical_disk = define_single_raid_10_logical_disk(
+        drac_client, raid_controller_name)
+
+    if raid_10_logical_disk:
+        logical_disks.append(raid_10_logical_disk)
+
+    return logical_disks
+
+
+def define_single_raid_10_logical_disk(drac_client, raid_controller_name):
     physical_disk_names = get_raid_controller_physical_disk_ids(
-        drac_client,
-        raid_controller_name)
+        drac_client, raid_controller_name)
 
     number_physical_disks = len(physical_disk_names)
 
@@ -326,7 +350,7 @@ def define_single_raid_10_logical_disk(drac_client):
     return logical_disk
 
 
-def define_storage_logical_disks(drac_client):
+def define_storage_logical_disks(drac_client, raid_controller_name):
     '''TODO: Flesh out this stub.'''
     return list()
 
@@ -494,26 +518,6 @@ def define_logical_disk(
         logical_disk['is_root_volume'] = is_root_volume
 
     return logical_disk
-
-
-def get_raid_controller_id(drac_client):
-    disk_controllers = drac_client.list_raid_controllers()
-
-    raid_controller_ids = [
-        c.id for c in disk_controllers if c.id.startswith('RAID.Integrated.')]
-
-    number_raid_controllers = len(raid_controller_ids)
-
-    if number_raid_controllers == 1:
-        return raid_controller_ids[0]
-    elif number_raid_controllers == 0:
-        LOG.critical("Found no RAID controllers")
-        return None
-    else:
-        LOG.critical(
-            "Found more than one RAID controller:\n  {}".format(
-                "\n  ".join(raid_controller_ids)))
-        return None
 
 
 def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
