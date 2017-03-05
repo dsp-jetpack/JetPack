@@ -331,6 +331,68 @@ def define_storage_logical_disks(drac_client):
     return list()
 
 
+def define_storage_operating_system_logical_disk(physical_disks,
+                                                 raid_controller_name):
+    (os_logical_disk_size_gb,
+     os_physical_disk_names) = find_physical_disks_for_storage_os(
+        physical_disks)
+
+    if os_physical_disk_names is None:
+        return None
+
+    # Define a RAID 1 logical disk to host the operating system.
+    LOG.info(
+        "Defining RAID 1 logical disk of size {} GB on the following physical "
+        "disks, and marking it the root volume:\n  {}".format(
+            os_logical_disk_size_gb,
+            '\n  '.join(os_physical_disk_names)))
+    os_logical_disk = define_logical_disk(
+        os_logical_disk_size_gb,
+        '1',
+        raid_controller_name,
+        os_physical_disk_names,
+        is_root_volume=True)
+
+    return os_logical_disk
+
+
+def find_physical_disks_for_storage_os(physical_disks):
+    physical_disk_selection_strategies = [
+        (cardinality_of_smallest_spinning_disk_size_is_two,
+         'two drives of smallest hard disk drive size'),
+        (last_two_disks_by_location,
+         'last two drives by location')]
+
+    for index, (strategy, description) in enumerate(
+            physical_disk_selection_strategies):
+        os_logical_disk_size_gb, os_physical_disk_names = strategy(
+            physical_disks)
+        assert (os_logical_disk_size_gb and os_physical_disk_names) or not (
+            os_logical_disk_size_gb or os_physical_disk_names)
+
+        if os_physical_disk_names:
+            LOG.info(
+                "Strategy {} for selecting physical disks for the operating "
+                "system logical disk -- {} -- found disks:\n  {}".format(
+                    index,
+                    description,
+                    '\n  '.join(os_physical_disk_names)))
+            assert len(os_physical_disk_names) >= 2
+            break
+        else:
+            LOG.info(
+                "Strategy {} for selecting physical disks for the operating "
+                "system logical disk -- {} -- found no disks".format(
+                    index,
+                    description))
+
+    if os_physical_disk_names is None:
+        LOG.critical(
+            "Could not find physical disks for operating system logical disk")
+
+    return (os_logical_disk_size_gb, os_physical_disk_names)
+
+
 def cardinality_of_smallest_spinning_disk_size_is_two(physical_disks):
     # Bin the spinning physical disks (hard disk drives (HDDs)) by size
     # in gigabytes (GB).
