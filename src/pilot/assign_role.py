@@ -255,7 +255,8 @@ def define_target_raid_config(role, drac_client):
                 role)
         return None
 
-    return {'logical_disks': logical_disks} if logical_disks else None
+    return {
+        'logical_disks': logical_disks} if logical_disks is not None else None
 
 
 def get_raid_controller_id(drac_client):
@@ -279,25 +280,27 @@ def get_raid_controller_id(drac_client):
 
 
 def define_controller_logical_disks(drac_client, raid_controller_name):
-    logical_disks = list()
-
     raid_10_logical_disk = define_single_raid_10_logical_disk(
         drac_client, raid_controller_name)
 
-    if raid_10_logical_disk:
-        logical_disks.append(raid_10_logical_disk)
+    if raid_10_logical_disk is None:
+        return None
+
+    logical_disks = list()
+    logical_disks.append(raid_10_logical_disk)
 
     return logical_disks
 
 
 def define_compute_logical_disks(drac_client, raid_controller_name):
-    logical_disks = list()
-
     raid_10_logical_disk = define_single_raid_10_logical_disk(
         drac_client, raid_controller_name)
 
-    if raid_10_logical_disk:
-        logical_disks.append(raid_10_logical_disk)
+    if raid_10_logical_disk is None:
+        return None
+
+    logical_disks = list()
+    logical_disks.append(raid_10_logical_disk)
 
     return logical_disks
 
@@ -1135,6 +1138,9 @@ def main():
             target_raid_config = define_target_raid_config(
                 args.role_index.role,
                 drac_client)
+
+            if target_raid_config is None:
+                sys.exit(1)
 
             succeeded = configure_raid(
                 ironic_client,
