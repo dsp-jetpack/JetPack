@@ -430,8 +430,12 @@ def last_two_disks_by_location(physical_disks):
 
 def define_jbod_or_raid_0_logical_disk(raid_controller_name,
                                        physical_disk_name,
-                                       is_root_volume=False):
-    if is_jbod_capable(raid_controller_name):
+                                       is_root_volume=False,
+                                       jbod_capable=None):
+    if jbod_capable is None:
+        jbod_capable = is_jbod_capable(raid_controller_name)
+
+    if jbod_capable:
         # Presently, when a RAID controller is JBOD capable, there is no
         # need to return a logical disk definition. That will hold as
         # long as this script executes the ironic DRAC driver RAID
