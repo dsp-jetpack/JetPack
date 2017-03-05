@@ -361,6 +361,11 @@ def cardinality_of_smallest_spinning_disk_size_is_two(physical_disks):
         return (0, None)
 
 
+def last_two_disks_by_location(physical_disks):
+    '''TODO: Flesh out this stub.'''
+    return (0, None)
+
+
 def define_jbod_or_raid_0_logical_disk(raid_controller_name,
                                        physical_disk_name,
                                        is_root_volume=False):
