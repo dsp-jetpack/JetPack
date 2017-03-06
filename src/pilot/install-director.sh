@@ -214,8 +214,27 @@ echo "## Done."
 echo
 echo "## Patching Ironic iDRAC driver power state retrieval..."
 OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/bios.py ~/pilot/bios.patch)
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/bios.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/bios.pyo
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/bios.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/bios.pyo
+echo "## Done."
+
+# This hacks in a patch to work around a known issue where RAID configuration
+# fails because the iDRAC is busy running an export to XML job and is not
+# ready. Note that this patch must be here because we use this code prior to
+# deploying the director.
+echo "## Patching Ironic iDRAC driver is_ready check..."
+OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.py ~/pilot/lifecycle_controller.patch)
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyo
+OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/uris.py ~/pilot/uris.patch)
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyo
+OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ~/pilot/client.patch)
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
+OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ~/pilot/raid.patch)
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
 echo "## Done."
 
 echo "## Restarting openstack-ironic-conductor.service..."
