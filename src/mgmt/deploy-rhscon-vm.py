@@ -207,6 +207,8 @@ attach to. - Auto-attaching to any pool." ; \\
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 2003 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 4505 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 4506 -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 6789 -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 8002 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 8080 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 8181 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 10080 -j ACCEPT
