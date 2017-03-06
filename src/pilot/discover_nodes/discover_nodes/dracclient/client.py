@@ -31,7 +31,6 @@ from .resources import job
 from .resources import nic
 from .resources import system
 from .resources import uris
-from .resources import lifecycle_controller
 # import discover_nodes.dracclient.resources.nic as nic
 
 LINK_SPEED_UNKNOWN = nic.LINK_SPEED_UNKNOWN
@@ -603,36 +602,3 @@ class DRACClient(ironic_client.DRACClient):
             target=raid_controller,
             reboot=reboot,
             start_time=start_time)
-
-    def is_idrac_ready(self):
-        return lifecycle_controller.LifecycleControllerManagement(
-            self.client).is_idrac_ready()
-
-    def wait_until_idrac_is_ready(self):
-        """ Waits until the iDRAC is in a ready state
-
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        :raises: DRACOperationFailed on error reported back by the DRAC
-                 interface or timeout
-        :raises: DRACUnexpectedReturnValue on return value mismatch
-        """
-        ready = False
-
-        # Try every 10 seconds over 2 minutes for the iDRAC to become ready
-        retries = 12
-        while not ready and retries > 0:
-            LOG.debug("Checking to see if the iDRAC is ready")
-            ready = self.is_idrac_ready()
-            if not ready:
-                LOG.debug("The iDRAC is not ready")
-                retries -= 1
-                if retries > 0:
-                    sleep(10)
-            else:
-                LOG.debug("The iDRAC is ready")
-
-        if retries == 0:
-            raise exceptions.DRACOperationFailed(drac_messages="Timed out "
-                                                 "waiting for the iDRAC to "
-                                                 "become ready")

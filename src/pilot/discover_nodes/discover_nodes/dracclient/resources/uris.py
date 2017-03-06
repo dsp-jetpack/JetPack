@@ -32,9 +32,6 @@ DCIM_iDRACCardString = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
 DCIM_LCEnumeration = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
                       'DCIM_LCEnumeration')
 
-DCIM_LCService = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
-                  'DCIM_LCService')
-
 DCIM_LCString = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
                  'DCIM_LCString')
 

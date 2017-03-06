@@ -834,6 +834,13 @@ def is_jbod_capable(drac_client, raid_controller_fqdd):
 # FQDD of RAID controllers, and the value being a list of physical disk FQDDs
 def change_physical_disk_state(drac_client, mode,
                                controllers_to_physical_disk_ids=None):
+    # The node is rebooting from the last RAID config step, and when it reboots
+    # the "export to xml" job runs.  Wait until this completes so we don't blow
+    # up when trying to create a config job below
+    # TODO: Move this check into list_physical_disks along with all other iDRAC
+    #       commands
+    drac_client.wait_until_idrac_is_ready()
+
     physical_disks = drac_client.list_physical_disks()
     p_disk_id_to_state = {}
     for physical_disk in physical_disks:
