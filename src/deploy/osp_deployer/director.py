@@ -821,15 +821,11 @@ class Director(InfraHost):
             control_external_ips = ''
             control_private_ips = ''
             control_storage_ips = ''
-            control_storage_cluster_ips = ''
             control_tenant_ips = ''
             for node in self.settings.controller_nodes:
                 control_external_ips += "    - " + node.public_api_ip + "\\n"
                 control_private_ips += "    - " + node.private_api_ip + "\\n"
                 control_storage_ips += "    - " + node.storage_ip + "\\n"
-                control_storage_cluster_ips += "    - " \
-                                               + node.storage_cluster_ip \
-                                               + "\\n"
                 control_tenant_ips += "    - " + node.tenant_ip + "\\n"
 
             compute_tenant_ips = ''
@@ -862,9 +858,6 @@ class Director(InfraHost):
                     'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
                     s/storage:/storage: \\n' +
                     control_storage_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
-                    s/storage_mgmt:/storage_mgmt: \\n' +
-                    control_storage_cluster_ips + "/\" " + static_ips_yaml,
                     'sed -i "/NovaComputeIPs/,/CephStorageIPs/ \
                     s/tenant:/tenant: \\n' +
                     compute_tenant_ips + "/\" " + static_ips_yaml,

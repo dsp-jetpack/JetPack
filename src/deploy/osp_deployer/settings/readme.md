@@ -60,4 +60,5 @@
 	    Removed hostname from overcloud nodes - not in use anymore (nodes get named controller-x, compute-x, cephstorage-x)
 * 7.0.0.a - Initial 7.0 version : Rename is_ceph node to is_rhscon, and change its hostname to "rhscon
 * 7.0.0.b - Added overcloud_nodes_pwd to allow setting a root password on the overcloud nodes
+* 7.0.0.c - removed storage_cluster_ip from controller nodes
 "
