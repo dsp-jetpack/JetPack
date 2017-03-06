@@ -362,12 +362,10 @@ class DeployerSanity():
                 shouldhaveattributes.extend(["public_api_ip",
                                              "private_api_ip",
                                              "storage_ip",
-                                             "storage_cluster_ip",
                                              "tenant_ip"])
                 shouldbbevalidips.extend(["public_api_ip",
                                           "private_api_ip",
                                           "storage_ip",
-                                          "storage_cluster_ip",
                                           "tenant_ip"])
             self.check_overcloud_node_net_attrs(controller,
                                                 shouldhaveattributes,
