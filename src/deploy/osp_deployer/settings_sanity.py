@@ -33,7 +33,6 @@ class DeployerSanity():
 
     @staticmethod
     def is_valid_ip(address):
-        print "checking " + address
         try:
             socket.inet_aton(address)
             ip = True
