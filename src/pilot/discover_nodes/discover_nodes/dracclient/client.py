@@ -21,11 +21,9 @@ from __future__ import print_function
 
 import dracclient.client as ironic_client
 import dracclient.resources.uris as ironic_uris
-from dracclient import exceptions
 
 import logging
 
-from time import sleep
 from .resources import idrac_card
 from .resources import job
 from .resources import nic
