@@ -448,7 +448,7 @@ def find_physical_disks_for_storage_os(physical_disks):
          'last two drives by location')]
 
     for index, (strategy, description) in enumerate(
-            physical_disk_selection_strategies):
+            physical_disk_selection_strategies, start=1):
         os_logical_disk_size_gb, os_physical_disk_names = strategy(
             physical_disks)
         assert (os_logical_disk_size_gb and os_physical_disk_names) or not (
@@ -672,7 +672,7 @@ def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
     if succeeded:
         LOG.info("Completed converting all physical disks to JBOD mode")
     else:
-        LOG.critical("Attempt to convert node's physical disks to JBOD mode "
+        LOG.critical("Attempt to convert all physical disks to JBOD mode "
                      "failed")
         return False
 
@@ -702,8 +702,8 @@ def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
         LOG.info("Completed converting physical disks configured to back RAID "
                  "logical disks to RAID mode")
     else:
-        LOG.critical("Attempt to convert all physical disks configured to "
-                     "back RAID logical disks to RAID mode failed")
+        LOG.critical("Attempt to convert physical disks configured to back "
+                     "RAID logical disks to RAID mode failed")
         return False
 
     LOG.info("Applying the new RAID configuration")
