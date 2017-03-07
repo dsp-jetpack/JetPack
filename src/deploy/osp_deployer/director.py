@@ -37,7 +37,10 @@ class Director(InfraHost):
 
         self.settings = Settings.settings
         self.user = self.settings.director_install_account_user
-        self.ip = self.settings.director_node.external_ip
+        if self.settings.is_fx2 is False:
+            self.ip = self.settings.director_node.external_ip
+        else:
+            self.ip = self.settings.director_node.public_api_ip
         self.pwd = self.settings.director_install_account_pwd
         self.root_pwd = self.settings.director_node.root_password
 
@@ -45,7 +48,12 @@ class Director(InfraHost):
         self.pilot_dir = os.path.join(self.home_dir, "pilot")
         self.images_dir = os.path.join(self.pilot_dir, "images")
         self.templates_dir = os.path.join(self.pilot_dir, "templates")
-        self.nic_configs_dir = os.path.join(self.templates_dir, "nic-configs")
+        if self.settings.is_fx2 is True:
+            self.nic_configs_dir = os.path.join(self.templates_dir,
+                                                "nic-configs-fx2")
+        else:
+            self.nic_configs_dir = os.path.join(self.templates_dir,
+                                                "nic-configs")
         self.validation_dir = os.path.join(self.pilot_dir,
                                            "deployment-validation")
         self.source_stackrc = 'source ' + self.home_dir + "/stackrc;"
@@ -127,11 +135,11 @@ class Director(InfraHost):
     def install_director(self):
         logger.debug("uploading & executing sh script")
         cmd = '~/pilot/install-director.sh --dns ' + \
-                     self.settings.name_server + " --sm_user " + \
-                     self.settings.subscription_manager_user + " --sm_pwd " + \
-                     self.settings.subscription_manager_password + " --sm_pool " + \
-                     self.settings.subscription_manager_vm_ceph
-        if len(self.settings.overcloud_nodes_pwd) > 0 :
+              self.settings.name_server + " --sm_user " + \
+              self.settings.subscription_manager_user + " --sm_pwd " + \
+              self.settings.subscription_manager_password + " --sm_pool " + \
+              self.settings.subscription_manager_vm_ceph
+        if len(self.settings.overcloud_nodes_pwd) > 0:
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
         self.run_tty(cmd)
 
@@ -669,6 +677,10 @@ class Director(InfraHost):
                 self.settings.tenant_network_allocation_pool_end +
                 "'}]"   '|" ' + network_yaml,
             ]
+        if self.settings.is_fx2:
+            cmds += [
+                    'sed -i "s|nic-configs|nic-configs-fx2|" ' + network_yaml
+            ]
         for cmd in cmds:
             self.run_tty(cmd)
 
@@ -682,7 +694,6 @@ class Director(InfraHost):
                 "Failed to configure DHCP on the SAH node: " + stderr)
 
     def setup_networking(self):
-
         logger.debug("Configuring network settings for overcloud")
 
         network_yaml = self.templates_dir + "/network-environment.yaml"
@@ -720,98 +731,143 @@ class Director(InfraHost):
         else:
             logger.debug("applying bond mode on a per type basis")
             cmds = [
-                "sed -i '/BondInterfaceOptions:/d' " + network_yaml,
-                "sed -i '/mode=802.3ad miimon=100/d' " + network_yaml,
-                'sed -i "/BondInterfaceOptions:/{n;s/.*/    default: \'mode=' +
-                self.settings.settings.compute_bond_opts +
-                "'\\n/;}\" " + compute_yaml,
-                'sed -i "/BondInterfaceOptions:/{n;s/.*/    default: \'mode=' +
-                self.settings.controller_bond_opts + "'\\n/;}\" " +
-                controller_yaml,
-                'sed -i "/BondInterfaceOptions:/{n;s/.*/    default: \'mode=' +
-                self.settings.storage_bond_opts +
-                "'\\n/;}\" " + storage_yaml,
+                   "sed -i '/BondInterfaceOptions:/d' " + network_yaml,
+                   "sed -i '/mode=802.3ad miimon=100/d' " + network_yaml,
+                   'sed -i "/BondInterfaceOptions:/{n;s/.*/' +
+                   '    default: \'mode=' +
+                   self.settings.settings.compute_bond_opts +
+                   "'\\n/;}\" " + compute_yaml,
+                   'sed -i "/BondInterfaceOptions:/{n;s/.*/' +
+                   '    default: \'mode=' +
+                   self.settings.controller_bond_opts + "'\\n/;}\" " +
+                   controller_yaml,
+                   'sed -i "/BondInterfaceOptions:/{n;s/.*/' +
+                   '    default: \'mode=' +
+                   self.settings.storage_bond_opts +
+                   "'\\n/;}\" " + storage_yaml,
             ]
             for cmd in cmds:
                 self.run_tty(cmd)
 
         logger.debug("updating controller yaml")
-        cmds = [
-            'sed -i "s|em1|changeme1|" ' + controller_yaml,
-            'sed -i "s|changeme1|' +
-            self.settings.controller_bond0_interfaces.split(" ")[
-                0] + '|" ' + controller_yaml,
-            'sed -i "s|p3p1|changeme2|" ' + controller_yaml,
-            'sed -i "s|changeme2|' +
-            self.settings.controller_bond0_interfaces.split(" ")[
-                1] + '|" ' + controller_yaml,
-            'sed -i "s|em2|changeme3|" ' + controller_yaml,
-            'sed -i "s|changeme3|' +
-            self.settings.controller_bond1_interfaces.split(" ")[
-                0] + '|" ' + controller_yaml,
-            'sed -i "s|p3p2|changeme4|" ' + controller_yaml,
-            'sed -i "s|changeme4|' +
-            self.settings.controller_bond1_interfaces.split(" ")[
-                1] + '|" ' + controller_yaml,
-            'sed -i "s|em3|changeme5|" ' + controller_yaml,
-            'sed -i "s|changeme5|' +
-            self.settings.controller_provisioning_interface +
-            '|" ' + controller_yaml,
-            'sed -i "s|192.168.110.0/24|' +
-            self.settings.management_network + '|" ' + controller_yaml,
-            'sed -i "s|192.168.120.1|' +
-            self.settings.provisioning_gateway + '|" ' + controller_yaml
+        cmds_ = [
+                'sed -i "s|changeme1|' +
+                self.settings.controller_bond0_interfaces.split(" ")[
+                    0] + '|" ' + controller_yaml,
+                'sed -i "s|changeme2|' +
+                self.settings.controller_bond0_interfaces.split(" ")[
+                    1] + '|" ' + controller_yaml,
+                'sed -i "s|changeme3|' +
+                self.settings.controller_bond1_interfaces.split(" ")[
+                    0] + '|" ' + controller_yaml,
+                'sed -i "s|changeme4|' +
+                self.settings.controller_bond1_interfaces.split(" ")[
+                    1] + '|" ' + controller_yaml,
+                'sed -i "s|192.168.110.0/24|' +
+                self.settings.management_network + '|" ' + controller_yaml,
+                'sed -i "s|192.168.120.1|' +
+                self.settings.provisioning_gateway + '|" ' + controller_yaml
         ]
+        if self.settings.is_fx2 is True:
+            cmds = [
+                   'sed -i "s|em1|changeme1|" ' + controller_yaml,
+                   'sed -i "s|em3|changeme2|" ' + controller_yaml,
+                   'sed -i "s|em2|changeme3|" ' + controller_yaml,
+                   'sed -i "s|em4|changeme4|" ' + controller_yaml,
+            ]
+            cmds.extend(cmds_)
+        else:
+            cmds = [
+                   'sed -i "s|em1|changeme1|" ' + controller_yaml,
+                   'sed -i "s|p3p1|changeme2|" ' + controller_yaml,
+                   'sed -i "s|em2|changeme3|" ' + controller_yaml,
+                   'sed -i "s|p3p2|changeme4|" ' + controller_yaml,
+                   'sed -i "s|em3|changeme5|" ' + controller_yaml,
+            ]
+            cmds.append('sed -i "s|changeme5|' +
+                        self.settings.controller_provisioning_interface +
+                        '|" ' + controller_yaml)
+            cmds.extend(cmds_)
+
         for cmd in cmds:
             self.run_tty(cmd)
 
         logger.debug("updating compute yaml")
-        cmds = ['sed -i "s|em1|changeme1|" ' + compute_yaml,
-                'sed -i "s|changeme1|' +
-                self.settings.compute_bond0_interfaces.split(" ")[
-                    0] + '|" ' + compute_yaml,
-                'sed -i "s|p3p1|changeme2|" ' + compute_yaml,
-                'sed -i "s|changeme2|' +
-                self.settings.compute_bond0_interfaces.split(" ")[
-                    1] + '|" ' + compute_yaml,
-                'sed -i "s|em2|changeme3|" ' + compute_yaml,
-                'sed -i "s|changeme3|' +
-                self.settings.compute_bond1_interfaces.split(" ")[
-                    0] + '|" ' + compute_yaml,
-                'sed -i "s|p3p2|changeme4|" ' + compute_yaml,
-                'sed -i "s|changeme4|' +
-                self.settings.compute_bond1_interfaces.split(" ")[
-                    1] + '|" ' + compute_yaml,
-                'sed -i "s|em3|changeme5|" ' + compute_yaml,
-                'sed -i "s|changeme5|' +
-                self.settings.compute_provisioning_interface + '|" ' +
-                compute_yaml
-                ]
+        cmds_ = ['sed -i "s|changeme1|' +
+                 self.settings.compute_bond0_interfaces.split(" ")[
+                     0] + '|" ' + compute_yaml,
+                 'sed -i "s|changeme2|' +
+                 self.settings.compute_bond0_interfaces.split(" ")[
+                     1] + '|" ' + compute_yaml,
+                 'sed -i "s|changeme3|' +
+                 self.settings.compute_bond1_interfaces.split(" ")[
+                      0] + '|" ' + compute_yaml,
+                 'sed -i "s|changeme4|' +
+                 self.settings.compute_bond1_interfaces.split(" ")[
+                     1] + '|" ' + compute_yaml,
+                 'sed -i "s|192.168.110.0/24|' +
+                 self.settings.management_network + '|" ' + compute_yaml,
+                 'sed -i "s|192.168.120.1|' +
+                 self.settings.provisioning_gateway + '|" ' + compute_yaml
+                 ]
+        if self.settings.is_fx2 is True:
+            cmds = [
+               'sed -i "s|em1|changeme1|" ' + compute_yaml,
+               'sed -i "s|em3|changeme2|" ' + compute_yaml,
+               'sed -i "s|em2|changeme3|" ' + compute_yaml,
+               'sed -i "s|em4|changeme4|" ' + compute_yaml,
+            ]
+            cmds.extend(cmds_)
+        else:
+            cmds = [
+               'sed -i "s|em1|changeme1|" ' + compute_yaml,
+               'sed -i "s|p3p1|changeme2|" ' + compute_yaml,
+               'sed -i "s|em2|changeme3|" ' + compute_yaml,
+               'sed -i "s|p3p2|changeme4|" ' + compute_yaml,
+               'sed -i "s|em3|changeme5|" ' + compute_yaml,
+            ]
+            cmds.append('sed -i "s|changeme5|' +
+                        self.settings.compute_provisioning_interface +
+                        '|" ' + compute_yaml)
+            cmds.extend(cmds_)
         for cmd in cmds:
             self.run_tty(cmd)
 
         logger.debug("updating storage yaml")
-        cmds = ['sed -i "s|em1|changeme1|" ' + storage_yaml,
-                'sed -i "s|changeme1|' +
-                self.settings.storage_bond0_interfaces.split(" ")[
-                    0] + '|" ' + storage_yaml,
-                'sed -i "s|p2p1|changeme2|" ' + storage_yaml,
-                'sed -i "s|changeme2|' +
-                self.settings.storage_bond0_interfaces.split(" ")[
-                    1] + '|" ' + storage_yaml,
-                'sed -i "s|em2|changeme3|" ' + storage_yaml,
-                'sed -i "s|changeme3|' +
-                self.settings.storage_bond1_interfaces.split(" ")[
-                    0] + '|" ' + storage_yaml,
-                'sed -i "s|p2p2|changeme4|" ' + storage_yaml,
-                'sed -i "s|changeme4|' +
-                self.settings.storage_bond1_interfaces.split(" ")[
-                    1] + '|" ' + storage_yaml,
-                'sed -i "s|em3|changeme5|" ' + storage_yaml,
-                'sed -i "s|changeme5|' +
-                self.settings.storage_provisioning_interface + '|" ' +
-                storage_yaml
-                ]
+        cmds_ = ['sed -i "s|changeme1|' +
+                 self.settings.storage_bond0_interfaces.split(" ")[
+                     0] + '|" ' + storage_yaml,
+                 'sed -i "s|changeme2|' +
+                 self.settings.storage_bond0_interfaces.split(" ")[
+                     1] + '|" ' + storage_yaml,
+                 'sed -i "s|changeme3|' +
+                 self.settings.storage_bond1_interfaces.split(" ")[
+                     0] + '|" ' + storage_yaml,
+                 'sed -i "s|changeme4|' +
+                 self.settings.storage_bond1_interfaces.split(" ")[
+                     1] + '|" ' + storage_yaml,
+                 ]
+        if self.settings.is_fx2 is True:
+            cmds = [
+                   'sed -i "s|em1|changeme1|" ' + storage_yaml,
+                   'sed -i "s|em3|changeme2|" ' + storage_yaml,
+                   'sed -i "s|em2|changeme3|" ' + storage_yaml,
+                   'sed -i "s|em4|changeme4|" ' + storage_yaml
+                   ]
+            cmds.extend(cmds_)
+        else:
+            cmds = [
+                   'sed -i "s|em1|changeme1|" ' + storage_yaml,
+                   'sed -i "s|p2p1|changeme2|" ' + storage_yaml,
+                   'sed -i "s|em2|changeme3|" ' + storage_yaml,
+                   'sed -i "s|p2p2|changeme4|" ' + storage_yaml,
+                   'sed -i "s|em3|changeme5|" ' + storage_yaml
+                   ]
+            cmds.append('sed -i "s|changeme5|' +
+                        self.settings.storage_provisioning_interface +
+                        '|" ' +
+                        storage_yaml)
+            cmds.extend(cmds_)
         for cmd in cmds:
             self.run_tty(cmd)
 
@@ -1015,6 +1071,11 @@ class Director(InfraHost):
                 ip_info.append("     - nova private ip  : " + private_api)
                 ip_info.append("     - nova public ip   : " + nova_public_ip)
                 ip_info.append("     - storage ip       : " + storage_ip)
+                if self.settings.is_fx2 is True:
+                    logger.debug("restarting network manager")
+                    cmd = "ssh heat-admin@" + provisioning_ip + \
+                          "sudo systemctl restart NetworkManager.service"
+                    re = self.run_tty(cmd)
 
             re = self.run_tty(self.source_stackrc + "nova list | grep compute")
 
@@ -1047,6 +1108,11 @@ class Director(InfraHost):
                 ip_info.append("     - provisioning ip  : " + provisioning_ip)
                 ip_info.append("     - nova private ip  : " + private_api)
                 ip_info.append("     - storage ip       : " + storage_ip)
+                if self.settings.is_fx2 is True:
+                    logger.debug("restarting network manager")
+                    cmd = "ssh heat-admin@" + provisioning_ip + \
+                          "sudo service NetworkManager restart"
+                    re = self.run_tty(cmd)
 
             re = self.run_tty(self.source_stackrc + "nova list | grep storage")
 
@@ -1079,8 +1145,14 @@ class Director(InfraHost):
                     "     - provisioning ip    : " + provisioning_ip)
                 ip_info.append("     - storage cluster ip : " + cluster_ip)
                 ip_info.append("     - storage ip         : " + storage_ip)
-            ip_info.append("====================================")
+                if self.settings.is_fx2 is True:
+                    logger.debug("restarting network manager")
+                    cmd = "ssh heat-admin@" + provisioning_ip + \
+                          "sudo service NetworkManager restart"
+                    re = self.run_tty(cmd)
 
+            ip_info.append("====================================")
+            
             # noinspection PyBroadException
             try:
                 overcloud_endpoint = self.run_tty(
@@ -1185,13 +1257,17 @@ class Director(InfraHost):
                   self.settings.overcloud_name + \
                   "rc;cd ~/tempest;tools/run-tests.sh --concurrency=4"
         self.run_tty(cmd)
-        Scp.get_file(setts.director_node.external_ip,
+        if self.settings.is_fx2 is True:
+            ip = setts.director_node.public_api_ip
+        else:
+            ip = setts.director_node.external_ip
+        Scp.get_file(ip,
                      setts.director_install_account_user,
                      setts.director_install_account_pwd,
                      "/auto_results/tempest.xml",
                      "/home/" + setts.director_install_account_user +
                      "/tempest/tempest.xml")
-        Scp.get_file(setts.director_node.external_ip,
+        Scp.get_file(ip,
                      setts.director_install_account_user,
                      setts.director_install_account_pwd,
                      "/auto_results/tempest.log",
@@ -1209,10 +1285,14 @@ class Director(InfraHost):
 
     def configure_rhscon(self):
         logger.info("Configure Storage Console")
+        if self.settings.is_fx2 is True:
+            ip = self.settings.rhscon_node.public_api_ip
+        else:
+            ip = self.settings.rhscon_node.external_ip
         self.run_tty(self.source_stackrc + 'cd ' +
                      self.pilot_dir +
                      ';./config_rhscon.py ' +
-                     self.settings.rhscon_node.external_ip +
+                     ip +
                      ' ' + self.settings.rhscon_node.root_password)
 
     def enable_fencing(self):

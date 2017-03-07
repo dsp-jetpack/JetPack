@@ -126,13 +126,16 @@ def deploy():
             sah_node.upload_lock_files()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
-
+        if settings.is_fx2 is True:
+            director_ip = settings.director_node.public_api_ip
+        else:
+            director_ip = settings.director_node.external_ip
         if args.overcloud_only is False:
-            Ssh.execute_command(settings.director_node.external_ip,
+            Ssh.execute_command(director_ip,
                                 "root",
                                 settings.director_node.root_password,
                                 "subscription-manager remove --all")
-            Ssh.execute_command(settings.director_node.external_ip,
+            Ssh.execute_command(director_ip,
                                 "root",
                                 settings.director_node.root_password,
                                 "subscription-manager unregister")
@@ -167,12 +170,16 @@ def deploy():
 
         if args.skip_rhscon_vm is False:
             logger.debug("Delete the Storage Console VM")
+            if settings.is_fx2 is True:
+                rhscon_ip = settings.rhscon_node.public_api_ip
+            else:
+                rhscon_ip = settings.rhscon_node.external_ip
             logger.debug(
-                Ssh.execute_command(settings.rhscon_node.external_ip,
+                Ssh.execute_command(rhscon_ip,
                                     "root",
                                     settings.rhscon_node.root_password,
                                     "subscription-manager remove --all"))
-            Ssh.execute_command(settings.rhscon_node.external_ip,
+            Ssh.execute_command(rhscon_ip,
                                 "root",
                                 settings.rhscon_node.root_password,
                                 "subscription-manager unregister")
@@ -209,7 +216,7 @@ def deploy():
         cmd = "source ~/stackrc; openstack stack list | grep " \
               + settings.overcloud_name + " | awk '{print $6}'"
         overcloud_status = \
-            Ssh.execute_command_tty(settings.director_node.external_ip,
+            Ssh.execute_command_tty(director_ip,
                                     settings.director_install_account_user,
                                     settings.director_install_account_pwd,
                                     cmd)[0]
