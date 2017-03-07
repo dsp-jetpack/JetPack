@@ -1,6 +1,4 @@
-! Version 9.10(0.1P2)
-! Last configuration change at Mon Oct 17 20:47:45 2016 by crowbar
-! Startup-config last updated at Mon Oct 17 20:47:43 2016 by crowbar
+! Version 9.11(0.0)
 !
 boot system stack-unit 1 primary system://A
 boot system stack-unit 1 secondary system://B
@@ -381,8 +379,8 @@ interface TenGigabitEthernet 1/52
  no shutdown
 ! 
 interface ManagementEthernet 1/1
- ip address 10.0.0.193/24
- no shutdown
+ no ip address
+ shutdown
 ! 
 interface ManagementEthernet 2/1
  no shutdown
@@ -409,14 +407,14 @@ interface Port-channel 51
  no shutdown
 ! 
 interface Vlan 1
-!untagged GigabitEthernet 1/33-1/44
+!untagged GigabitEthernet 1/33-1/42
 !untagged Port-channel 51
 ! 
 interface Vlan 110
  description iDRAC-OOB
  ip address 192.168.110.1/24
  tagged Port-channel 51
- untagged GigabitEthernet 1/1-1/16
+ untagged GigabitEthernet 1/1-1/16,1/40-1/41
  no shutdown
 ! 
 interface Vlan 120
@@ -427,13 +425,10 @@ interface Vlan 120
  no shutdown
 ! 
 interface Vlan 190
- description Public_API_Network
- no ip address
+ ip address 192.168.190.5/24
  tagged Port-channel 51
- untagged GigabitEthernet 1/33-1/48
+ untagged GigabitEthernet 1/47-1/48
  no shutdown
-!
-management route 0.0.0.0/0 10.0.0.1 
 !
 ip ssh server enable
 !
