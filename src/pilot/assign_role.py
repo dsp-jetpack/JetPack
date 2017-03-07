@@ -888,7 +888,7 @@ def change_physical_disk_state(drac_client, mode,
                           "controller {}: {}".format(
                               mode, controller, str(physical_disk_ids)))
                 try:
-                    result = drac_client.convert_physical_disks(
+                    _ = drac_client.convert_physical_disks(
                         controller,
                         physical_disk_ids,
                         mode == "RAID")
@@ -900,11 +900,18 @@ def change_physical_disk_state(drac_client, mode,
                     else:
                         raise
                 else:
+                    # The iDRAC response can contain YES, NO, or OPTIONAL.
+                    # Testing has shown that when OPTIONAL is returned,
+                    # and a config job is created scheduled for TIME_NOW,
+                    # the config job fails to run unless the node is rebooted.
+                    # As a result, we always must reboot the node since if
+                    # we made it this far then at least 1 disk was converted
+                    # and either YES or OPTIONAL was returned.
+                    reboot_required = True
+
                     job_id = drac_client.commit_pending_raid_changes(
                         controller, reboot=False, start_time=None)
                     job_ids.append(job_id)
-                    if result['commit_required']:
-                        reboot_required = True
     except:
         # If any exception (except Not Supported) occurred during the
         # conversion, then roll back all the changes for this node so we don't
