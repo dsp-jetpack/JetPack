@@ -692,15 +692,15 @@ def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
             controllers_to_physical_disk_ids[
                 logical_disk['controller']].append(physical_disk_name)
 
-    LOG.info("Converting all physical disks configured to back RAID logical "
-             "disks to RAID mode")
+    LOG.info("Converting physical disks configured to back RAID logical disks "
+             "to RAID mode")
     succeeded = change_physical_disk_state_wait(
         node_uuid, ironic_client, drac_client, 'RAID',
         controllers_to_physical_disk_ids)
 
     if succeeded:
-        LOG.info("Completed converting all physical disks configured to back "
-                 "RAID logical disks to RAID mode")
+        LOG.info("Completed converting physical disks configured to back RAID "
+                 "logical disks to RAID mode")
     else:
         LOG.critical("Attempt to convert all physical disks configured to "
                      "back RAID logical disks to RAID mode failed")
@@ -946,7 +946,7 @@ def change_physical_disk_state_wait(
 
         drac_client.schedule_job_execution(job_ids, start_time='TIME_NOW')
 
-        LOG.info("Waiting for physical disk configuration to complete")
+        LOG.info("Waiting for physical disk conversion to complete")
         JobHelper.wait_for_job_completions(ironic_client, node_uuid)
         result = JobHelper.determine_job_outcomes(drac_client, job_ids)
 
