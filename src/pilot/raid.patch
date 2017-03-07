@@ -1,0 +1,26 @@
+--- /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py	2017-03-06 15:29:58.531571420 +0000
++++ raid.py	2017-03-06 15:26:15.492589954 +0000
+@@ -701,6 +701,11 @@
+         """
+         node = task.node
+ 
++        # The node is rebooting at this point, so wait for the iDRAC to
++        # enter the ready state before proceeding with cleaning
++        client = drac_common.get_drac_client(node)
++        client.wait_until_idrac_is_ready()
++
+         logical_disks = node.target_raid_config['logical_disks']
+         for disk in logical_disks:
+             if (disk['size_gb'] == 'MAX' and 'physical_disks' not in disk):
+@@ -751,6 +756,11 @@
+         """
+         node = task.node
+ 
++        # The node is rebooting at this point, so wait for the iDRAC to
++        # enter the ready state before proceeding with cleaning
++        client = drac_common.get_drac_client(node)
++        client.wait_until_idrac_is_ready()
++
+         controllers = set()
+         for disk in list_virtual_disks(node):
+             controllers.add(disk.controller)

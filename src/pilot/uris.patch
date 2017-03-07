@@ -1,0 +1,12 @@
+--- /usr/lib/python2.7/site-packages/dracclient/resources/uris.py	2017-03-06 15:32:35.547374780 +0000
++++ uris.py	2017-03-06 15:24:47.540020139 +0000
+@@ -43,6 +43,9 @@
+ DCIM_CPUView = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
+                 'DCIM_CPUView')
+ 
++DCIM_LCService = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
++                  'DCIM_LCService')
++
+ DCIM_LifecycleJob = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
+                      'DCIM_LifecycleJob')
+ 

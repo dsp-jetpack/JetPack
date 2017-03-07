@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,15 +28,6 @@ DCIM_iDRACCardService = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
 
 DCIM_iDRACCardString = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
                         'DCIM_iDRACCardString')
-
-DCIM_LCEnumeration = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
-                      'DCIM_LCEnumeration')
-
-DCIM_LCService = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
-                  'DCIM_LCService')
-
-DCIM_LCString = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
-                 'DCIM_LCString')
 
 DCIM_JobService = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
                    'DCIM_JobService')
