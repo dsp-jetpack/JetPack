@@ -234,53 +234,80 @@ def get_drac_client(node_definition_filename, node):
 
 
 def define_target_raid_config(role, drac_client):
-    if role == 'controller':
-        logical_disks = define_controller_logical_disks(drac_client)
-    elif role == 'compute':
-        logical_disks = define_compute_logical_disks(drac_client)
-    elif role == 'storage':
-        logical_disks = define_storage_logical_disks(drac_client)
-    else:
-        LOG.critical(
-            'Cannot define target RAID configuration for role "{}"').format(
-                role)
-        return None
-
-    return {'logical_disks': logical_disks} if logical_disks else None
-
-
-def define_controller_logical_disks(drac_client):
-    logical_disks = list()
-
-    raid_10_logical_disk = define_single_raid_10_logical_disk(drac_client)
-
-    if raid_10_logical_disk:
-        logical_disks.append(raid_10_logical_disk)
-
-    return logical_disks
-
-
-def define_compute_logical_disks(drac_client):
-    logical_disks = list()
-
-    raid_10_logical_disk = define_single_raid_10_logical_disk(drac_client)
-
-    if raid_10_logical_disk:
-        logical_disks.append(raid_10_logical_disk)
-
-    return logical_disks
-
-
-def define_single_raid_10_logical_disk(drac_client):
     raid_controller_name = get_raid_controller_id(drac_client)
 
     if not raid_controller_name:
         LOG.critical("Found no RAID controller")
         return None
 
+    if role == 'controller':
+        logical_disks = define_controller_logical_disks(drac_client,
+                                                        raid_controller_name)
+    elif role == 'compute':
+        logical_disks = define_compute_logical_disks(drac_client,
+                                                     raid_controller_name)
+    elif role == 'storage':
+        logical_disks = define_storage_logical_disks(drac_client,
+                                                     raid_controller_name)
+    else:
+        LOG.critical(
+            'Cannot define target RAID configuration for role "{}"').format(
+                role)
+        return None
+
+    return {
+        'logical_disks': logical_disks} if logical_disks is not None else None
+
+
+def get_raid_controller_id(drac_client):
+    disk_controllers = drac_client.list_raid_controllers()
+
+    raid_controller_ids = [
+        c.id for c in disk_controllers if c.id.startswith('RAID.Integrated.')]
+
+    number_raid_controllers = len(raid_controller_ids)
+
+    if number_raid_controllers == 1:
+        return raid_controller_ids[0]
+    elif number_raid_controllers == 0:
+        LOG.critical("Found no RAID controllers")
+        return None
+    else:
+        LOG.critical(
+            "Found more than one RAID controller:\n  {}".format(
+                "\n  ".join(raid_controller_ids)))
+        return None
+
+
+def define_controller_logical_disks(drac_client, raid_controller_name):
+    raid_10_logical_disk = define_single_raid_10_logical_disk(
+        drac_client, raid_controller_name)
+
+    if raid_10_logical_disk is None:
+        return None
+
+    logical_disks = list()
+    logical_disks.append(raid_10_logical_disk)
+
+    return logical_disks
+
+
+def define_compute_logical_disks(drac_client, raid_controller_name):
+    raid_10_logical_disk = define_single_raid_10_logical_disk(
+        drac_client, raid_controller_name)
+
+    if raid_10_logical_disk is None:
+        return None
+
+    logical_disks = list()
+    logical_disks.append(raid_10_logical_disk)
+
+    return logical_disks
+
+
+def define_single_raid_10_logical_disk(drac_client, raid_controller_name):
     physical_disk_names = get_raid_controller_physical_disk_ids(
-        drac_client,
-        raid_controller_name)
+        drac_client, raid_controller_name)
 
     number_physical_disks = len(physical_disk_names)
 
@@ -326,15 +353,191 @@ def define_single_raid_10_logical_disk(drac_client):
     return logical_disk
 
 
-def define_storage_logical_disks(drac_client):
+def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
+    physical_disks = drac_client.list_physical_disks()
+
+    return sorted(
+        (d.id for d in physical_disks if d.controller == raid_controller_fqdd),
+        key=physical_disk_id_to_key)
+
+
+def define_storage_logical_disks(drac_client, raid_controller_name):
+    all_physical_disks = get_raid_controller_physical_disks(
+        drac_client, raid_controller_name)
+    number_physical_disks = len(all_physical_disks)
+
+    if number_physical_disks < 3:
+        LOG.critical(
+            "Cannot configure RAID 1 and JBOD with only {} disks; need three "
+            "(3) or more".format(
+                number_physical_disks))
+        return None
+
+    # Define a logical disk to host the operating system.
+    os_logical_disk = define_storage_operating_system_logical_disk(
+        all_physical_disks, raid_controller_name)
+
+    if os_logical_disk is None:
+        return None
+
+    # Determine the physical disks that remain for JBOD.
+    #
+    # The ironic RAID 'physical_disks' property is optional. While it is
+    # presently used by this script, it is envisioned that it will not
+    # be in the future.
+    if 'physical_disks' in os_logical_disk:
+        os_physical_disk_names = os_logical_disk['physical_disks']
+        remaining_physical_disks = [d for d in all_physical_disks
+                                    if d.id not in os_physical_disk_names]
+    else:
+        remaining_physical_disks = all_physical_disks
+
+    # Define JBOD logical disks with the remaining physical disks.
+    #
+    # A successful call returns a list, which may be empty; otherwise,
+    # None is returned.
+    jbod_capable = is_jbod_capable(drac_client, raid_controller_name)
+    jbod_logical_disks = define_jbod_logical_disks(
+        remaining_physical_disks, raid_controller_name, jbod_capable)
+
+    if jbod_logical_disks is None:
+        return None
+
+    logical_disks = [os_logical_disk]
+    logical_disks.extend(jbod_logical_disks)
+
+    return logical_disks
+
+
+def get_raid_controller_physical_disks(drac_client, raid_controller_fqdd):
+    physical_disks = drac_client.list_physical_disks()
+
+    return [d for d in physical_disks if d.controller == raid_controller_fqdd]
+
+
+def define_storage_operating_system_logical_disk(physical_disks,
+                                                 raid_controller_name):
+    (os_logical_disk_size_gb,
+     os_physical_disk_names) = find_physical_disks_for_storage_os(
+        physical_disks)
+
+    if os_physical_disk_names is None:
+        return None
+
+    # Define a RAID 1 logical disk to host the operating system.
+    LOG.info(
+        "Defining RAID 1 logical disk of size {} GB on the following physical "
+        "disks, and marking it the root volume:\n  {}".format(
+            os_logical_disk_size_gb,
+            '\n  '.join(os_physical_disk_names)))
+    os_logical_disk = define_logical_disk(
+        os_logical_disk_size_gb,
+        '1',
+        raid_controller_name,
+        os_physical_disk_names,
+        is_root_volume=True)
+
+    return os_logical_disk
+
+
+def find_physical_disks_for_storage_os(physical_disks):
+    physical_disk_selection_strategies = [
+        (cardinality_of_smallest_spinning_disk_size_is_two,
+         'two drives of smallest hard disk drive size'),
+        (last_two_disks_by_location,
+         'last two drives by location')]
+
+    for index, (strategy, description) in enumerate(
+            physical_disk_selection_strategies):
+        os_logical_disk_size_gb, os_physical_disk_names = strategy(
+            physical_disks)
+        assert (os_logical_disk_size_gb and os_physical_disk_names) or not (
+            os_logical_disk_size_gb or os_physical_disk_names)
+
+        if os_physical_disk_names:
+            LOG.info(
+                "Strategy {} for selecting physical disks for the operating "
+                "system logical disk -- {} -- found disks:\n  {}".format(
+                    index,
+                    description,
+                    '\n  '.join(os_physical_disk_names)))
+            assert len(os_physical_disk_names) >= 2
+            break
+        else:
+            LOG.info(
+                "Strategy {} for selecting physical disks for the operating "
+                "system logical disk -- {} -- found no disks".format(
+                    index,
+                    description))
+
+    if os_physical_disk_names is None:
+        LOG.critical(
+            "Could not find physical disks for operating system logical disk")
+
+    return (os_logical_disk_size_gb, os_physical_disk_names)
+
+
+def cardinality_of_smallest_spinning_disk_size_is_two(physical_disks):
+    # Bin the spinning physical disks (hard disk drives (HDDs)) by size
+    # in gigabytes (GB).
+    disks_by_size = defaultdict(list)
+
+    for physical_disk in physical_disks:
+        # Ignore SSD drives.
+        if physical_disk.media_type == 'hdd':
+            disks_by_size[physical_disk.size_mb / 1024].append(physical_disk)
+
+    # Order the bins by size, from smallest to largest. Since Python
+    # dictionaries are unordered, construct a sorted list of bins. Each
+    # bin is a dictionary item, which is a tuple.
+    ordered_disks_by_size = sorted(disks_by_size.items(), key=lambda t: t[0])
+
+    # Obtain the bin for the smallest size.
+    smallest_disks_bin = ordered_disks_by_size[0]
+
+    smallest_disk_size = smallest_disks_bin[0]
+    smallest_disks = smallest_disks_bin[1]
+    cardinality_of_smallest_disks = len(smallest_disks)
+
+    if cardinality_of_smallest_disks == 2:
+        sorted_smallest_disk_ids = sorted((d.id for d in smallest_disks),
+                                          key=physical_disk_id_to_key)
+        return (smallest_disk_size, sorted_smallest_disk_ids)
+    else:
+        return (0, None)
+
+
+def last_two_disks_by_location(physical_disks):
     '''TODO: Flesh out this stub.'''
-    return list()
+    return (0, None)
+
+
+def define_jbod_logical_disks(
+        physical_disks, raid_controller_name, jbod_capable):
+    sorted_physical_disk_names = sorted((d.id for d in physical_disks),
+                                        key=physical_disk_id_to_key)
+
+    logical_disks = list()
+
+    for physical_disk_name in sorted_physical_disk_names:
+        jbod_logical_disk = define_jbod_or_raid_0_logical_disk(
+            raid_controller_name, physical_disk_name, is_root_volume=False,
+            jbod_capable=jbod_capable)
+
+        if jbod_logical_disk is not None:
+            logical_disks.append(jbod_logical_disk)
+
+    return logical_disks
 
 
 def define_jbod_or_raid_0_logical_disk(raid_controller_name,
                                        physical_disk_name,
-                                       is_root_volume=False):
-    if is_jbod_capable(raid_controller_name):
+                                       is_root_volume=False,
+                                       jbod_capable=None):
+    if jbod_capable is None:
+        jbod_capable = is_jbod_capable(raid_controller_name)
+
+    if jbod_capable:
         # Presently, when a RAID controller is JBOD capable, there is no
         # need to return a logical disk definition. That will hold as
         # long as this script executes the ironic DRAC driver RAID
@@ -369,34 +572,6 @@ def define_logical_disk(
         logical_disk['is_root_volume'] = is_root_volume
 
     return logical_disk
-
-
-def get_raid_controller_id(drac_client):
-    disk_controllers = drac_client.list_raid_controllers()
-
-    raid_controller_ids = [
-        c.id for c in disk_controllers if c.id.startswith('RAID.Integrated.')]
-
-    number_raid_controllers = len(raid_controller_ids)
-
-    if number_raid_controllers == 1:
-        return raid_controller_ids[0]
-    elif number_raid_controllers == 0:
-        LOG.critical("Found no RAID controllers")
-        return None
-    else:
-        LOG.critical(
-            "Found more than one RAID controller:\n  {}".format(
-                "\n  ".join(raid_controller_ids)))
-        return None
-
-
-def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
-    physical_disks = drac_client.list_physical_disks()
-
-    return sorted(
-        (d.id for d in physical_disks if d.controller == raid_controller_fqdd),
-        key=physical_disk_id_to_key)
 
 
 def physical_disk_id_to_key(disk_id):
@@ -437,10 +612,6 @@ def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
     '''TODO: Add some selective exception handling so we can determine
     when RAID configuration failed and return False. Further testing
     should uncover interesting error conditions.'''
-
-    # Nothing to do?
-    if not target_raid_config:
-        return True
 
     LOG.info("Configuring RAID")
     LOG.info("Do not power off the node; configuration will take some time")
@@ -521,15 +692,15 @@ def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
             controllers_to_physical_disk_ids[
                 logical_disk['controller']].append(physical_disk_name)
 
-    LOG.info("Converting all physical disks configured to back RAID logical "
-             "disks to RAID mode")
+    LOG.info("Converting physical disks configured to back RAID logical disks "
+             "to RAID mode")
     succeeded = change_physical_disk_state_wait(
         node_uuid, ironic_client, drac_client, 'RAID',
         controllers_to_physical_disk_ids)
 
     if succeeded:
-        LOG.info("Completed converting all physical disks configured to back "
-                 "RAID logical disks to RAID mode")
+        LOG.info("Completed converting physical disks configured to back RAID "
+                 "logical disks to RAID mode")
     else:
         LOG.critical("Attempt to convert all physical disks configured to "
                      "back RAID logical disks to RAID mode failed")
@@ -775,7 +946,7 @@ def change_physical_disk_state_wait(
 
         drac_client.schedule_job_execution(job_ids, start_time='TIME_NOW')
 
-        LOG.info("Waiting for physical disk configuration to complete")
+        LOG.info("Waiting for physical disk conversion to complete")
         JobHelper.wait_for_job_completions(ironic_client, node_uuid)
         result = JobHelper.determine_job_outcomes(drac_client, job_ids)
 
@@ -963,6 +1134,9 @@ def main():
             target_raid_config = define_target_raid_config(
                 args.role_index.role,
                 drac_client)
+
+            if target_raid_config is None:
+                sys.exit(1)
 
             succeeded = configure_raid(
                 ironic_client,
