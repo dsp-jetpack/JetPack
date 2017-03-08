@@ -522,7 +522,7 @@ def last_two_disks_by_location(physical_disks):
     if last_two_disks[0].size_mb == last_two_disks[1].size_mb:
         # They are of equal size.
         logical_disk_size_mb = last_two_disks[0].size_mb
-    elif last_two_disks[0] < last_two_disks[1]:
+    elif last_two_disks[0].size_mb < last_two_disks[1].size_mb:
         # The first disk is smaller.
         logical_disk_size_mb = last_two_disks[0].size_mb
     else:
@@ -535,7 +535,7 @@ def last_two_disks_by_location(physical_disks):
     # of Linux logical volumes.
 
     # We only need to consider the other disks, those that are not the
-    # last twp (2).
+    # last two (2).
     other_disks = disks_by_location[:-2]
     other_disks_by_size_gb = bin_physical_disks_by_size_gb(other_disks)
 
