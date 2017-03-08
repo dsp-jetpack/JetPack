@@ -293,8 +293,8 @@ lvscan
 
 %post --log=/root/sah-post-ks.log
 
-exec < /dev/tty8 > /dev/tty8
-chvt 8
+# exec < /dev/tty8 > /dev/tty8
+# chvt 8
 
 # Source the variables from the %pre section
 . /root/ks_post_include.txt
@@ -303,6 +303,7 @@ chvt 8
 sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
 
 # Configure the system files
+echo "POST: Configure the system files..."
 echo "HOSTNAME=${HostName}" >> /etc/sysconfig/network
 echo "GATEWAY=${Gateway}" >> /etc/sysconfig/network
 
@@ -487,7 +488,7 @@ done
 
 echo "----------------------"
 ip addr
-echo "subscription-manager register --username ${SMUser} --password *********"
+echo "POST: subscription-manager register --username ${SMUser} --password *********"
 echo "----------------------"
 
 # Register the system using Subscription Manager
@@ -518,7 +519,7 @@ subscription-manager register --username ${SMUser} --password ${SMPassword} ${Pr
 
   [[ -n ${SMPool} ]] \
     && subscription-manager attach --pool ${SMPool} ${ProxyInfo} \
-    || ( echo "Could not find a Red Hat Enterprise Linux Server pool to attach to. - Auto-attaching to any pool." \
+    || ( echo "POST: Could not find a Red Hat Enterprise Linux Server pool to attach to. - Auto-attaching to any pool." \
          subscription-manager attach --auto ${ProxyInfo}
          )
 
@@ -531,19 +532,21 @@ systemctl disable chronyd
 mkdir -p /store/data/images
 mkdir -p /store/data/iso
 
-yum install -y gcc libffi-devel python-devel openssl-devel python-setuptools
-easy_install paramiko
-easy_install selenium
-yum install -y ipmitool
-yum install -y tmux
+echo "POST: Install other rerquired packages, paramiko, ..."
+yum install -y gcc libffi-devel python-devel openssl-devel python-setuptools ipmitool tmux
+
+echo "POST: get and install pip"
 curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
 python get-pip.py
 # temporary workaround for CES-7248 
+echo "POST: upgrade setuptools"
 pip install --upgrade setuptools
 pip install paramiko
+pip install selenium
+echo "POST: Done installing extra packages"
 
 echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/root/temp_name/something_not_jetstream/src/deploy/' >> /root/.bashrc 
 
-chvt 1
+# chvt 1
 
 %end
