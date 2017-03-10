@@ -291,8 +291,10 @@ def configure_access(ceph_nodes):
     running uses port 8002 for access to the Calamari REST-based API.
     """
     for node in ceph_nodes:
-        node.run("sudo iptables -A INPUT -p tcp  --sport 6789 -j ACCEPT")
-        node.run("sudo iptables -A INPUT -p tcp  --sport 8002 -j ACCEPT")
+        node.run("sudo iptables -I INPUT -p tcp -s 0.0.0.0/0 --dport 4505 -j ACCEPT")
+        node.run("sudo iptables -I INPUT -p tcp -s 0.0.0.0/0 --dport 4506 -j ACCEPT")
+        node.run("sudo iptables -I INPUT -p tcp -s 0.0.0.0/0 --dport 6789 -j ACCEPT")
+        node.run("sudo iptables -I INPUT -p tcp -s 0.0.0.0/0 --dport 8002 -j ACCEPT")
         node.run("sudo service iptables save")
 
 def prep_ceph_hosts(rhscon_node, ceph_nodes):
