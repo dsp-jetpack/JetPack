@@ -916,6 +916,9 @@ def configure_bios(node, ironic_client, settings, drac_client):
         LOG.critical("Node is not being managed by an iDRAC driver")
         return False
 
+    # Make sure the iDRAC is ready before configuring BIOS
+    drac_client.wait_until_idrac_is_ready()
+
     # Filter out settings that are unknown.
     response = ironic_client.node.vendor_passthru(
         node.uuid,
