@@ -1220,7 +1220,7 @@ class Director(InfraHost):
         cmds = [
             'source ~/' + self.settings.overcloud_name + 'rc;'
             "sudo ip route add `neutron subnet-list | " +
-            "grep external_sub | awk '{print $6;}'` dev eth4",
+            "grep external_sub | awk '{print $6;}'` dev eth0",
             'source ~/' + self.settings.overcloud_name + 'rc;'
             'keystone role-create --name heat_stack_owner',
             "source ~/" + self.settings.overcloud_name + "rc;mkdir -p /home/" +
