@@ -1231,7 +1231,7 @@ class Director(InfraHost):
             setts.director_install_account_user +
             "/tempest",
             'source ~/' + self.settings.overcloud_name + 'rc;cd '
-            '~/tempest;/usr/share/openstack-tempest-10.0.0/tools/'
+            '~/tempest;/usr/share/openstack-tempest-13.0.0/tools/'
             'configure-tempest-directory',
             'source ~/' + self.settings.overcloud_name +
             'rc;cd ~/tempest;tools/config_tempest.py '
