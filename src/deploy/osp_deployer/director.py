@@ -37,10 +37,7 @@ class Director(InfraHost):
 
         self.settings = Settings.settings
         self.user = self.settings.director_install_account_user
-        if self.settings.is_fx2 is False:
-            self.ip = self.settings.director_node.external_ip
-        else:
-            self.ip = self.settings.director_node.public_api_ip
+        self.ip = self.settings.director_node.public_api_ip
         self.pwd = self.settings.director_install_account_pwd
         self.root_pwd = self.settings.director_node.root_password
 
@@ -1152,7 +1149,7 @@ class Director(InfraHost):
                     re = self.run_tty(cmd)
 
             ip_info.append("====================================")
-            
+
             # noinspection PyBroadException
             try:
                 overcloud_endpoint = self.run_tty(
@@ -1257,10 +1254,8 @@ class Director(InfraHost):
                   self.settings.overcloud_name + \
                   "rc;cd ~/tempest;tools/run-tests.sh --concurrency=4"
         self.run_tty(cmd)
-        if self.settings.is_fx2 is True:
-            ip = setts.director_node.public_api_ip
-        else:
-            ip = setts.director_node.external_ip
+        ip = setts.director_node.public_api_ip
+
         Scp.get_file(ip,
                      setts.director_install_account_user,
                      setts.director_install_account_pwd,
@@ -1285,10 +1280,8 @@ class Director(InfraHost):
 
     def configure_rhscon(self):
         logger.info("Configure Storage Console")
-        if self.settings.is_fx2 is True:
-            ip = self.settings.rhscon_node.public_api_ip
-        else:
-            ip = self.settings.rhscon_node.external_ip
+        ip = self.settings.rhscon_node.public_api_ip
+
         self.run_tty(self.source_stackrc + 'cd ' +
                      self.pilot_dir +
                      ';./config_rhscon.py ' +

@@ -126,10 +126,8 @@ def deploy():
             sah_node.upload_lock_files()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
-        if settings.is_fx2 is True:
-            director_ip = settings.director_node.public_api_ip
-        else:
-            director_ip = settings.director_node.external_ip
+
+        director_ip = settings.director_node.public_api_ip
         if args.overcloud_only is False:
             Ssh.execute_command(director_ip,
                                 "root",
@@ -170,10 +168,7 @@ def deploy():
 
         if args.skip_rhscon_vm is False:
             logger.debug("Delete the Storage Console VM")
-            if settings.is_fx2 is True:
-                rhscon_ip = settings.rhscon_node.public_api_ip
-            else:
-                rhscon_ip = settings.rhscon_node.external_ip
+            rhscon_ip = settings.rhscon_node.public_api_ip
             logger.debug(
                 Ssh.execute_command(rhscon_ip,
                                     "root",

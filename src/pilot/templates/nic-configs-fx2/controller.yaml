@@ -146,9 +146,9 @@ resources:
                 # controller nodes to be the IP of the Director node on
                 # the provisioning network.  This can be changed to a
                 # gateway IP on the external network if available.
-                -
-                  default: true
-                  next_hop: {get_param: ControlPlaneDefaultRoute}
+                #-
+                #  default: true
+                #  next_hop: {get_param: ControlPlaneDefaultRoute}
 
               members:
                 -
