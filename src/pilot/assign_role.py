@@ -480,12 +480,8 @@ def find_physical_disks_for_storage_os(physical_disks):
 def cardinality_of_smallest_spinning_disk_size_is_two(physical_disks):
     # Bin the spinning physical disks (hard disk drives (HDDs)) by size
     # in gigabytes (GB).
-    disks_by_size = defaultdict(list)
-
-    for physical_disk in physical_disks:
-        # Ignore SSD drives.
-        if physical_disk.media_type == 'hdd':
-            disks_by_size[physical_disk.size_mb / 1024].append(physical_disk)
+    disks_by_size = bin_physical_disks_by_size_gb(physical_disks,
+                                                  media_type_filter='hdd')
 
     # Order the bins by size, from smallest to largest. Since Python
     # dictionaries are unordered, construct a sorted list of bins. Each
@@ -508,8 +504,62 @@ def cardinality_of_smallest_spinning_disk_size_is_two(physical_disks):
 
 
 def last_two_disks_by_location(physical_disks):
-    '''TODO: Flesh out this stub.'''
-    return (0, None)
+    assert len(physical_disks) >= 2
+    disks_by_location = sorted((d for d in physical_disks),
+                               key=physical_disk_to_key)
+
+    last_two_disks = disks_by_location[-2:]
+
+    # The two disks (2) must be of the same media type, hard disk drive
+    # (HDD) spinner or solid state drive (SSD).
+    if last_two_disks[0].media_type != last_two_disks[1].media_type:
+        return (0, None)
+
+    # Determine the smallest size of the two (2) disks, in gigabytes.
+
+    logical_disk_size_mb = 0
+
+    if last_two_disks[0].size_mb == last_two_disks[1].size_mb:
+        # They are of equal size.
+        logical_disk_size_mb = last_two_disks[0].size_mb
+    elif last_two_disks[0].size_mb < last_two_disks[1].size_mb:
+        # The first disk is smaller.
+        logical_disk_size_mb = last_two_disks[0].size_mb
+    else:
+        # The second disk is smaller.
+        logical_disk_size_mb = last_two_disks[1].size_mb
+
+    logical_disk_size_gb = logical_disk_size_mb / 1024
+
+    # Ensure that the logical disk size is unique from the perspective
+    # of Linux logical volumes.
+
+    # We only need to consider the other disks, those that are not the
+    # last two (2).
+    other_disks = disks_by_location[:-2]
+    other_disks_by_size_gb = bin_physical_disks_by_size_gb(other_disks)
+
+    while logical_disk_size_gb in other_disks_by_size_gb:
+        # Subtract one (1) from the logical disk size and try again.
+        logical_disk_size_gb -= 1
+    else:
+        assert logical_disk_size_gb > 0
+
+    last_two_disk_ids = [d.id for d in last_two_disks]
+
+    return (logical_disk_size_gb, last_two_disk_ids)
+
+
+def bin_physical_disks_by_size_gb(physical_disks, media_type_filter=None):
+    disks_by_size = defaultdict(list)
+
+    for physical_disk in physical_disks:
+        # Apply media type filter, if present.
+        if (media_type_filter is None or
+                physical_disk.media_type == media_type_filter):
+            disks_by_size[physical_disk.size_mb / 1024].append(physical_disk)
+
+    return disks_by_size
 
 
 def define_jbod_logical_disks(
@@ -606,6 +656,10 @@ def physical_disk_id_to_key(disk_id):
                   enclosure_minor_number,
                   disk_connection_type,
                   disk_number])
+
+
+def physical_disk_to_key(physical_disk):
+    return physical_disk_id_to_key(physical_disk.id)
 
 
 def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
@@ -861,6 +915,9 @@ def configure_bios(node, ironic_client, settings, drac_client):
     if 'drac' not in node.driver:
         LOG.critical("Node is not being managed by an iDRAC driver")
         return False
+
+    # Make sure the iDRAC is ready before configuring BIOS
+    drac_client.wait_until_idrac_is_ready()
 
     # Filter out settings that are unknown.
     response = ironic_client.node.vendor_passthru(

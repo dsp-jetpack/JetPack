@@ -72,6 +72,7 @@ def run_tempest():
 
 
 def deploy():
+    ret_code = 0
     # noinspection PyBroadException
     try:
 
@@ -238,7 +239,9 @@ def deploy():
         logger.error(e)
         print e
         print traceback.format_exc()
+        ret_code = 1
     logger.info("log : /auto_results/ ")
+    sys.exit(ret_code)
 
 
 if __name__ == "__main__":
