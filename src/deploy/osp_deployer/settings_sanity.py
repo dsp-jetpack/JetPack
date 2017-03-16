@@ -45,7 +45,7 @@ class DeployerSanity():
 
         logger.debug("Check settings ip's are valid.")
         shouldbbevalidips = [
-            'public_api_gateway', 'public_api_gateway',
+            'public_api_gateway',
             'public_api_netmask', 'public_api_allocation_pool_start',
             'public_api_allocation_pool_end',
             'private_api_vlanid', 'private_api_netmask',
@@ -307,7 +307,6 @@ class DeployerSanity():
                                 'private_slaves',
                                 'provisioning_ip',
                                 'storage_ip',
-                                'public_api_ip',
                                 'private_api_ip',
                                 'management_ip',
                                 'public_api_ip']
@@ -318,8 +317,7 @@ class DeployerSanity():
                              'storage_ip',
                              'public_api_ip',
                              'private_api_ip',
-                             'management_ip',
-                             'public_api_ip']
+                             'management_ip']
 
         self.check_net_attrs(self.settings.sah_node,
                              shouldhaveattributes,

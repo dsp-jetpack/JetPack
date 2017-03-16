@@ -259,7 +259,13 @@ class Checkpoints():
 
         logger.debug(
             "*** Verify the Storage Console VM can ping its public gateway")
-
+        test = self.ping_host(self.rhscon_ip,
+                              "root",
+                              self.settings.rhscon_node.root_password,
+                              self.settings.public_api_gateway)
+        if self.ping_success not in test:
+            raise AssertionError(
+                "RHSCON VM cannot ping its public gateway : " + test)
         logger.debug(
             "*** Verify the Storage Console VM " +
             "can ping the outside world (IP)")
