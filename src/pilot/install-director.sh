@@ -133,7 +133,7 @@ source $HOME/stackrc
 
 echo
 images_tar_path='.'
-if [ "$(find $HOME/pilot/images -type f)" == "" ];
+if [ ! -d $HOME/pilot/images ];
 then
   sudo yum install rhosp-director-images rhosp-director-images-ipa -y
   mkdir $HOME/pilot/images
@@ -141,7 +141,7 @@ then
 fi
 cd $HOME/pilot/images
 
-for i in ${images_tar_path}/overcloud-full-latest.tar ${images_tar_path}/ironic-python-agent-latest.tar;
+for i in /usr/share/rhosp-director-images/overcloud-full-latest-10.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-10.0.tar;
 do
   tar -xvf $i;
 done
