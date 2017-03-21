@@ -39,10 +39,12 @@
                . sah_kickstart
                . rhel_install_location
 * 7.0.0.a - Initial 7.0 version
+* 7.0.0.a - removed external_netmask & external_gateway settings (removed)
+          - added hardware -  Hardware type, valid options are poweredge, fx2
 
 #####settings.properties
 * 6.0.0.a - Initial 6.0 version
-* 6.0.0.b - Added optional static ip propertis for the overcloud nodes (to be used in conjunction with .ini overcloud_static_ips)
+* 6.0.0.b - Added optional static ip properties for the overcloud nodes (to be used in conjunction with .ini overcloud_static_ips)
 	    . Controllers nodes:
         	public_api_ip
 	        private_api_ip
@@ -61,4 +63,6 @@
 * 7.0.0.a - Initial 7.0 version : Rename is_ceph node to is_rhscon, and change its hostname to "rhscon
 * 7.0.0.b - Added overcloud_nodes_pwd to allow setting a root password on the overcloud nodes
 * 7.0.0.c - removed storage_cluster_ip from controller nodes
+          - removed external ips
+
 "

@@ -137,9 +137,6 @@ resources:
             -
               type: ovs_bridge
               name: br-bond0
-              addresses:
-                -
-                  ip_netmask: {get_param: StorageIpSubnet}
               members:
                 -
                   type: linux_bond
@@ -157,12 +154,16 @@ resources:
                       # CHANGEME: Change the interface name on the following
                       # line to an interface to include in bond0
                       name: p2p1
+                -
+                  type: vlan
+                  device: bond0
+                  vlan_id: {get_param: StorageNetworkVlanID}
+                  addresses:
+                    -
+                      ip_netmask: {get_param: StorageIpSubnet}
             -
               type: ovs_bridge
               name: br-bond1
-              addresses:
-                -
-                  ip_netmask: {get_param: StorageMgmtIpSubnet}
               members:
                 -
                   type: linux_bond
@@ -180,6 +181,13 @@ resources:
                       # CHANGEME: Change the interface name on the following
                       # line to an interface to include in bond1
                       name: p2p2
+                -
+                  type: vlan
+                  device: bond1
+                  vlan_id: {get_param: StorageMgmtNetworkVlanID}
+                  addresses:
+                    -
+                      ip_netmask: {get_param: StorageMgmtIpSubnet}
 
 outputs:
   OS::stack_id:

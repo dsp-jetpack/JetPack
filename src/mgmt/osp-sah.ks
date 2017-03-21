@@ -1,4 +1,4 @@
-# (c) 2014-2016 Dell
+# (c) 2014-2017 Dell
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -140,18 +140,14 @@ stor_bond_name="CHANGEME e.g. bond0.170"
 stor_boot_opts="onboot none vlan"
 
 # Public API
-pub_api_bond_name="CHANGEME e.g. bond0.190"
+pub_api_bond_name="CHANGEME e.g. bond1.190"
 pub_api_boot_opts="onboot none vlan"
 
 # Private API
 priv_api_bond_name="CHANGEME e.g. bond0.140"
 priv_api_boot_opts="onboot none vlan"
 
-
 # Define the bridges
-# External bridge options
-br_extern_boot_opts="CHANGEME e.g. onboot static 10.148.44.12/255.255.255.0"
-
 # Management bridge options
 br_mgmt_boot_opts="onboot static 192.168.110.12/255.255.255.0"
 
@@ -217,10 +213,6 @@ echo "bonds[${stor_bond_name}]=\"${stor_boot_opts}\"" >> /tmp/ks_post_include.tx
 echo "bonds[${priv_api_bond_name}]=\"${priv_api_boot_opts}\"" >> /tmp/ks_post_include.txt
 
 echo "bonds[${pub_api_bond_name}]=\"${pub_api_boot_opts}\"" >> /tmp/ks_post_include.txt
-
-
-echo "bridges[br-extern]=\"${br_extern_boot_opts}\"" >> /tmp/ks_post_include.txt
-echo "bridge_iface[br-extern]=\"${extern_bond_name}\"" >> /tmp/ks_post_include.txt
 
 echo "bridges[br-mgmt]=\"${br_mgmt_boot_opts}\"" >> /tmp/ks_post_include.txt
 echo "bridge_iface[br-mgmt]=\"${mgmt_bond_name}\"" >> /tmp/ks_post_include.txt

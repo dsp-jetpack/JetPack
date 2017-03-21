@@ -25,14 +25,9 @@ class Checkpoints():
     def __init__(self):
         self.settings = Settings.settings
         self.ping_success = "packets transmitted, 1 received"
-        if self.settings.is_fx2 is True:
-            self.director_ip = self.settings.director_node.public_api_ip
-            self.sah_ip = self.settings.sah_node.public_api_ip
-            self.rhscon_ip = self.settings.rhscon_node.public_api_ip
-        else:
-            self.director_ip = self.settings.director_node.external_ip
-            self.sah_ip = self.settings.sah_node.external_ip
-            self.rhscon_ip = self.settings.rhscon_node.external_ip
+        self.director_ip = self.settings.director_node.public_api_ip
+        self.sah_ip = self.settings.sah_node.public_api_ip
+        self.rhscon_ip = self.settings.rhscon_node.public_api_ip
 
     @staticmethod
     def verify_deployer_settings():
@@ -45,11 +40,11 @@ class Checkpoints():
         checks.check_duplicate_ips()
 
     @staticmethod
-    def verify_subscription_status(external_ip, user, password, retries):
+    def verify_subscription_status(public_api_ip, user, password, retries):
         i = 0
 
         subscription_status = Ssh.execute_command(
-            external_ip,
+            public_api_ip,
             user,
             password,
             "subscription-manager status")[0]
@@ -59,7 +54,7 @@ class Checkpoints():
                 return subscription_status
             time.sleep(60)
             subscription_status = \
-                Ssh.execute_command(external_ip,
+                Ssh.execute_command(public_api_ip,
                                     user,
                                     password,
                                     "subscription-manager status")[0]
@@ -113,10 +108,7 @@ class Checkpoints():
                 "SAH did not register properly : " + subscription_status)
 
         logger.debug("*** Verify the SAH can ping its public gateway")
-        if self.settings.is_fx2 is True:
-            gateway = self.settings.public_api_gateway
-        else:
-            gateway = self.settings.external_gateway
+        gateway = self.settings.public_api_gateway
         test = self.ping_host(self.sah_ip,
                               "root",
                               self.settings.sah_node.root_password,
@@ -267,17 +259,13 @@ class Checkpoints():
 
         logger.debug(
             "*** Verify the Storage Console VM can ping its public gateway")
-
-        if self.settings.is_fx2 is False:
-            test = self.ping_host(self.rhscon_ip,
-                                  "root",
-                                  self.settings.rhscon_node.root_password,
-                                  self.settings.external_gateway)
-            if self.ping_success not in test:
-                raise AssertionError(
-                    "Storage Console VM cannot " +
-                    "ping its public gateway : " + test)
-
+        test = self.ping_host(self.rhscon_ip,
+                              "root",
+                              self.settings.rhscon_node.root_password,
+                              self.settings.public_api_gateway)
+        if self.ping_success not in test:
+            raise AssertionError(
+                "RHSCON VM cannot ping its public gateway : " + test)
         logger.debug(
             "*** Verify the Storage Console VM " +
             "can ping the outside world (IP)")
