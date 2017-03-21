@@ -23,7 +23,11 @@ import dracclient.client as ironic_client
 import dracclient.resources.uris as ironic_uris
 
 import logging
+import os
+import sys
 
+from dracclient import exceptions
+from time import sleep
 from .resources import idrac_card
 from .resources import job
 from .resources import nic
@@ -113,6 +117,116 @@ class DRACClient(ironic_client.DRACClient):
         :raises: InvalidParameterValue on invalid attribute
         """
         return self._idrac_cfg.set_idrac_settings(idrac_fqdd, settings)
+
+    def reset_idrac(self, force=False):
+        """Resets the iDRAC
+
+        :param force: does a force reset when True and a graceful reset when
+               False
+        :returns: True on success and False on failure.
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        """
+        return self._idrac_cfg.reset_idrac(force)
+
+    def wait_until_idrac_is_reset(self, force=False):
+        """Resets the iDRAC and waits for it to become ready
+
+        :param force: does a force reset when True and a graceful reset when
+               False
+        :returns: None.
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        :raises: DRACOperationFailed on failure to reset iDRAC
+        """
+        return_value = self.reset_idrac(force)
+
+        if not return_value:
+            LOG.debug("iDRAC failed to reset")
+            raise exceptions.DRACOperationFailed(
+                drac_messages="Failed to reset iDRAC")
+        else:
+            LOG.debug("iDRAC was successfully reset")
+
+        LOG.info("Waiting for the iDRAC to become not pingable")
+        retries = 24
+        ping_fail_count = 0
+        while retries > 0:
+            response = os.system("ping -c 1 {} 2>&1 1>/dev/null".format(
+                self.client.host))
+            retries -= 1
+            if response != 0:
+                ping_fail_count += 1
+                LOG.debug("The iDRAC is not pingable, ping_fail_count="
+                          "{}".format(ping_fail_count))
+                if ping_fail_count == 3:
+                    LOG.debug("Breaking")
+                    break
+            else:
+                ping_fail_count = 0
+                LOG.debug("The iDRAC is pingable")
+
+            sleep(10)
+
+        if retries == 0 and ping_fail_count < 3:
+            raise exceptions.DRACOperationFailed(drac_messages="Timed out "
+                                                 "waiting for the iDRAC to "
+                                                 "become not pingable")
+
+        LOG.info("The iDRAC has become not pingable")
+
+        LOG.info("Waiting for the iDRAC to become pingable")
+        retries = 24
+        ping_success_count = 0
+        while retries > 0:
+            response = os.system("ping -c 1 {} 2>&1 1>/dev/null".format(
+                self.client.host))
+            retries -= 1
+            if response != 0:
+                LOG.debug("The iDRAC is not pingable")
+                ping_success_count = 0
+            else:
+                ping_success_count += 1
+                LOG.debug("The iDRAC is pingable, ping_success_count="
+                          "{}".format(ping_success_count))
+                if ping_success_count == 3:
+                    LOG.debug("Breaking")
+                    break
+
+            sleep(10)
+
+        if retries == 0 and ping_success_count < 3:
+            raise exceptions.DRACOperationFailed(drac_messages="Timed out "
+                                                 "waiting for the iDRAC to "
+                                                 "become pingable")
+
+        LOG.info("The iDRAC has become pingable")
+        sleep(30)
+
+        LOG.info("Waiting for the iDRAC to become ready")
+        retries = 24
+        while retries > 0:
+            try:
+                is_ready = self.is_idrac_ready()
+                if is_ready:
+                    LOG.info("The iDRAC is ready")
+                    break
+                else:
+                    LOG.debug("The iDRAC is not ready")
+            except:
+                # It is normal to get a series of connection errors before
+                # the iDRAC becomes ready
+                ex = sys.exc_info()[0]
+                LOG.debug("An exception occurred while checking iDRAC ready "
+                          "state. Ignoring.: {}".format(str(ex)))
+                pass
+            retries -= 1
+            sleep(10)
+
+        if retries == 0:
+            raise exceptions.DRACOperationFailed(drac_messages="Timed out "
+                                                 "waiting for the iDRAC to "
+                                                 "become ready")
 
     def commit_pending_idrac_changes(
             self,
