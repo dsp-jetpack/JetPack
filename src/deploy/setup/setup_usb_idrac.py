@@ -87,7 +87,7 @@ def setup():
                     'mkdir -p /mnt/usb',
                     'cd ~;mount -o loop osp_ks.img /mnt/usb',
                     #CHANGEME_wHEN_WE_HAVE_A_NAME
-                    'cd ~;cp -R ~/temp_name /mnt/usb',
+                    'cd ~;cp -R ~/workspace/* /mnt/usb',
                     "sed -i 's|" + current_path + "|/root|' " + target_ini,
                     'sync; umount /mnt/usb']
         else:
@@ -95,7 +95,7 @@ def setup():
                     'mkdir -p /mnt/usb',
                     'cd ~;mount -o loop ' + args.usb_key +
                     ' /mnt/usb',
-                    'cd ~;cp -R ~/temp_name /mnt/usb',
+                    'cd ~;cp -R ~/workspace/* /mnt/usb',
                     "sed -i 's|" + current_path + "|/root|' " + target_ini,
                     'sync; umount /mnt/usb']
 
