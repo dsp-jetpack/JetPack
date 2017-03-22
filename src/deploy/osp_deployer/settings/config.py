@@ -61,8 +61,6 @@ class Settings():
             'public_api_allocation_pool_start']
         self.public_api_allocation_pool_end = cluster[
             'public_api_allocation_pool_end']
-        self.external_gateway = cluster['external_gateway']
-        self.external_netmask = cluster['external_netmask']
         self.public_api_gateway = cluster['public_api_gateway']
         self.provisioning_vlanid = cluster[
             'provisioning_vlanid']
@@ -191,7 +189,6 @@ class Settings():
             self.version_locking_enabled = False
         if cluster['hardware'].lower() == 'fx2':
             self.is_fx2 = True
-            self.external_gateway = self.public_api_gateway
         else:
             self.is_fx2 = False
         if cluster['use_ipmi_driver'].lower() == 'true':
@@ -308,18 +305,10 @@ class Settings():
         self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
         self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
 
-        if self.is_fx2 is True:
-            self.sah_kickstart = self.cloud_repo_dir + \
-                "/src/mgmt/osp-sah-fx2.ks"
-            self.director_deploy_sh = self.foreman_configuration_scripts +\
-                '/mgmt/deploy-director-vm-fx2.sh'
-            self.rhscon_deploy_py = self.foreman_configuration_scripts +\
-                '/mgmt/deploy-rhscon-vm-fx2.py'
-        else:
-            self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
-            self.director_deploy_sh = self.foreman_configuration_scripts +\
-                '/mgmt/deploy-director-vm.sh'
-            self.rhscon_deploy_py = self.foreman_configuration_scripts +\
+        self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
+        self.director_deploy_sh = self.foreman_configuration_scripts +\
+            '/mgmt/deploy-director-vm.sh'
+        self.rhscon_deploy_py = self.foreman_configuration_scripts +\
             '/mgmt/deploy-rhscon-vm.py'
 
         self.undercloud_conf = self.foreman_configuration_scripts +\
