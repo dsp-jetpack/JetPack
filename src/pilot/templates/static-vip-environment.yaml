@@ -30,29 +30,32 @@ parameter_defaults:
 
   # CHANGEME: Change the following to the VIP on the Provisioning network
   # Note that this IP must lie INSIDE the dhcp_start/dhcp_end range
-  # specified in undercloud.conf, but it cannot be the first IP in the range.
-  # This is because Neutron uses the first IP in the range for the undercloud
-  # Neutron DHCP server.
+  # specified in undercloud.conf and it should be the highest IP in the range
+  # to ensure the DHCP server does not attempt to allocate the IP.
   ControlPlaneIP: 192.168.120.250
 
   # CHANGEME: Change the following to the VIP on the Private API network.
   # Note that this IP must lie INSIDE the InternalApiAllocationPools range
-  # specified in network-environment.yaml.
+  # specified in network-environment.yaml and it should be the highest IP in
+  # the range to ensure the DHCP server does not attempt to allocate the IP.
   InternalApiNetworkVip: 192.168.140.250
 
   # CHANGEME: Change the following to the VIP on the Public API network.
   # Note that this IP must lie INSIDE the ExternalAllocationPools range
-  # specified in network-environment.yaml.
+  # specified in network-environment.yaml and it should be the highest IP in
+  # the range to ensure the DHCP server does not attempt to allocate the IP.
   ExternalNetworkVip: 192.168.190.250
 
   # CHANGEME: Change the following to the VIP on the Storage network
   # Note that this IP must lie INSIDE the StorageAllocationPools range
-  # specified in network-environment.yaml.
+  # specified in network-environment.yaml and it should be the highest IP in
+  # the range to ensure the DHCP server does not attempt to allocate the IP.
   StorageNetworkVip: 192.168.170.250
 
   # CHANGEME: Change the following to the VIP on the Provisioning network.
   # The Storage Clustering network is not connected to the controller nodes,
   # so the VIP for this network must be mapped to the provisioning network.
   # Note that this IP must lie INSIDE the dhcp_start/dhcp_end range
-  # specified in undercloud.conf.
+  # specified in undercloud.conf and it should be the second highest IP in the
+  # range to ensure the DHCP server does not attempt to allocate the IP.
   StorageMgmtNetworkVip: 192.168.120.249
