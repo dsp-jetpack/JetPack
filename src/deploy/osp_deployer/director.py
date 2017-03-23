@@ -1003,11 +1003,11 @@ class Director(InfraHost):
         ls_nodes.pop()
         for node in ls_nodes:
             node_state = node.split("|")[5]
+            node_id = node.split("|")[1]            
             if "ERROR" in node_state:
                 self.run_tty(self.source_stackrc +
                              "ironic node-set-maintenance " +
                              node_id + " true")
-            node_id = node.split("|")[1]
             self.run_tty(self.source_stackrc +
                          "ironic node-delete " +
                          node_id)
