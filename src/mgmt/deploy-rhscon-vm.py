@@ -420,7 +420,7 @@ def main():
         "--os-type linux",
         "--os-variant rhel7",
         "--disk {},bus=virtio,size=16".format(rhscon_image),
-        "--network bridge=br-extern",
+        "--network bridge=br-pub-api",
         "--network bridge=br-stor",
         "--initrd-inject {}".format(ks_tmp_filename),
         "--extra-args 'ks=file:/{}'".format(ks_filename),

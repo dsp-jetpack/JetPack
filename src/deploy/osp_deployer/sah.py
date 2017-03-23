@@ -32,10 +32,7 @@ class Sah(InfraHost):
 
         self.settings = Settings.settings
         self.user = "root"
-        if self.settings.is_fx2 is False:
-            self.ip = self.settings.sah_node.external_ip
-        else:
-            self.ip = self.settings.sah_node.public_api_ip
+        self.ip = self.settings.sah_node.public_api_ip
         self.pwd = self.settings.sah_node.root_password
         self.root_pwd = self.settings.sah_node.root_password
 
@@ -73,7 +70,7 @@ class Sah(InfraHost):
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^Gateway=.*',
                                       'Gateway="' +
-                                      sets.external_gateway +
+                                      sets.public_api_gateway +
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^NameServers=.*',
@@ -94,9 +91,14 @@ class Sah(InfraHost):
                                       '^anaconda_interface=.*',
                                       'anaconda_interface="' +
                                       sets.sah_node.anaconda_ip + '/' +
-                                      sets.external_netmask + ' ' +
+                                      sets.public_api_netmask + ' ' +
                                       sets.sah_node.anaconda_iface +
                                       ' no"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^anaconda_vlanid=.*',
+                                      'anaconda_vlanid="' +
+                                      sets.public_api_vlanid +
+                                      '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^extern_bond_name=.*',
                                       'extern_bond_name="' +
@@ -130,26 +132,14 @@ class Sah(InfraHost):
                                       '^mgmt_bond_name=.*',
                                       'mgmt_bond_name="bond0.' +
                                       sets.management_vlanid + '"')
-        if sets.is_fx2 is True:
-            FileHelper.replace_expression(sets.sah_kickstart,
-                                          '^pub_api_bond_name=.*',
-                                          'pub_api_bond_name="bond1"')
-        else:
-            FileHelper.replace_expression(sets.sah_kickstart,
-                                          '^pub_api_bond_name=.*',
-                                          'pub_api_bond_name="bond0.' +
-                                          sets.public_api_vlanid + '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^pub_api_bond_name=.*',
+                                      'pub_api_bond_name="bond1.' +
+                                      sets.public_api_vlanid + '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^priv_api_bond_name=.*',
                                       'priv_api_bond_name="bond0.' +
                                       sets.private_api_vlanid + '"')
-        if sets.is_fx2 is False:
-            re_ = 'br_extern_boot_opts="onboot static ' +\
-                  sets.sah_node.external_ip + '/' +\
-                  sets.external_netmask + '"'
-            FileHelper.replace_expression(sets.sah_kickstart,
-                                          '^br_extern_boot_opts=.*',
-                                          re_)
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^br_prov_boot_opts=.*',
                                       'br_prov_boot_opts="onboot static ' +
@@ -212,41 +202,25 @@ class Sah(InfraHost):
                 "smpool " + self.settings.subscription_manager_pool_vm_rhel,
                 "hostname " + self.settings.director_node.hostname + "." +
                 self.settings.domain,
-                "gateway " + self.settings.external_gateway,
+                "gateway " + self.settings.public_api_gateway,
                 "nameserver " + self.settings.name_server,
                 "ntpserver " + self.settings.ntp_server,
                 "user " + self.settings.director_install_account_user,
                 "password " + self.settings.director_install_account_pwd,
                 "# Iface     IP               NETMASK    ",)
-        if self.settings.is_fx2 is True:
-            conf = conf + ("eth0        " +
-                           self.settings.director_node.public_api_ip +
-                           "    " + self.settings.public_api_netmask,)
-            conf = conf + ("eth1        " +
-                           self.settings.director_node.provisioning_ip +
-                           "    " + self.settings.provisioning_netmask,)
-            conf = conf + ("eth2        " +
-                           self.settings.director_node.management_ip +
-                           "    " + self.settings.management_netmask,)
-            conf = conf + ("eth3        " +
-                           self.settings.director_node.private_api_ip +
-                           "    " + self.settings.private_api_netmask,)
-        else:
-            conf = conf + ("eth0        " +
-                           self.settings.director_node.external_ip +
-                           "     " + self.settings.external_netmask,)
-            conf = conf + ("eth1        " +
-                           self.settings.director_node.provisioning_ip +
-                           "    " + self.settings.provisioning_netmask,)
-            conf = conf + ("eth2        " +
-                           self.settings.director_node.management_ip +
-                           "    " + self.settings.management_netmask,)
-            conf = conf + ("eth3        " +
-                           self.settings.director_node.private_api_ip +
-                           "    " + self.settings.private_api_netmask,)
-            conf = conf + ("eth4        " +
-                           self.settings.director_node.public_api_ip +
-                           "    " + self.settings.public_api_netmask,)
+        conf = conf + ("eth0        " +
+                       self.settings.director_node.public_api_ip +
+                       "    " + self.settings.public_api_netmask,)
+        conf = conf + ("eth1        " +
+                       self.settings.director_node.provisioning_ip +
+                       "    " + self.settings.provisioning_netmask,)
+        conf = conf + ("eth2        " +
+                       self.settings.director_node.management_ip +
+                       "    " + self.settings.management_netmask,)
+        conf = conf + ("eth3        " +
+                       self.settings.director_node.private_api_ip +
+                       "    " + self.settings.private_api_netmask,)
+
         for line in conf:
             self.run("echo '" +
                      line +
@@ -297,24 +271,17 @@ class Sah(InfraHost):
                 "smpool " + self.settings.subscription_manager_vm_ceph,
                 "hostname " + self.settings.rhscon_node.hostname + "." +
                 self.settings.domain,
-                "gateway " + self.settings.external_gateway,
+                "gateway " + self.settings.public_api_gateway,
                 "nameserver " + self.settings.name_server,
                 "ntpserver " + self.settings.ntp_server,
                 "# Iface     IP               NETMASK    ",)
-        if self.settings.is_fx2 is True:
-            conf = conf + ("eth0        " +
-                           self.settings.rhscon_node.public_api_ip +
-                           "    " + self.settings.public_api_netmask,)
-            conf = conf + ("eth1        " +
-                           self.settings.rhscon_node.storage_ip +
-                           "    " + self.settings.storage_netmask,)
-        else:
-            conf = conf + ("eth0        " +
-                           self.settings.rhscon_node.external_ip +
-                           "     " + self.settings.external_netmask,)
-            conf = conf + ("eth1        " +
-                           self.settings.rhscon_node.storage_ip +
-                           "    " + self.settings.storage_netmask,)
+        conf = conf + ("eth0        " +
+                       self.settings.rhscon_node.public_api_ip +
+                       "    " + self.settings.public_api_netmask,)
+        conf = conf + ("eth1        " +
+                       self.settings.rhscon_node.storage_ip +
+                       "    " + self.settings.storage_netmask,)
+
         for comd in conf:
             self.run("echo '" + comd + "' >> " + rhscon_conf)
         logger.debug("=== kick off the Storage Console VM deployment")

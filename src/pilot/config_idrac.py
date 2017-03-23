@@ -352,20 +352,14 @@ def config_idrac(instack_lock,
         ("provisioning_mac" in node and
          node["provisioning_mac"] != provisioning_mac):
 
-        LOG.info("new_password: " + str(new_password))
-        LOG.info("provisioning_mac in node: " +
-                  str("provisioning_mac" in node))
-        if "provisioning_mac" in node:
-            LOG.info("node provisioning_mac: " + node["provisioning_mac"])
-        LOG.info("provisioning_mac: " + provisioning_mac)
         # Synchronize to prevent thread collisions while saving the instack
         # file
         if instack_lock is not None:
-            LOG.info("Acquiring the lock")
+            LOG.debug("Acquiring the lock")
             instack_lock.acquire()
         try:
             if instack_lock is not None:
-                LOG.info("Clearing and reloading instack")
+                LOG.debug("Clearing and reloading instack")
                 # Force a reload of the instack file
                 CredentialHelper.clear_instack_cache()
                 node = CredentialHelper.get_node_from_instack(ip_service_tag,
@@ -375,11 +369,11 @@ def config_idrac(instack_lock,
 
             node["provisioning_mac"] = provisioning_mac
 
-            LOG.info("Saving instack")
+            LOG.debug("Saving instack")
             CredentialHelper.save_instack(node_definition)
         finally:
             if instack_lock is not None:
-                LOG.info("Releasing the lock")
+                LOG.debug("Releasing the lock")
                 instack_lock.release()
 
     if success:

@@ -109,9 +109,6 @@ def main():
                     if "password" in node_config.keys():
                         password = node_config["password"]
 
-            LOG.info(node["pm_addr"] + " pxe_nic: " + str(pxe_nic))
-            LOG.info(node["pm_addr"] + " password: " + str(password))
-
             thread = ThreadWithExHandling(LOG,
                                           target=config_idrac.config_idrac,
                                           args=(instack_lock,

@@ -45,7 +45,7 @@ class DeployerSanity():
 
         logger.debug("Check settings ip's are valid.")
         shouldbbevalidips = [
-            'external_netmask', 'public_api_gateway', 'public_api_gateway',
+            'public_api_gateway',
             'public_api_netmask', 'public_api_allocation_pool_start',
             'public_api_allocation_pool_end',
             'private_api_vlanid', 'private_api_netmask',
@@ -63,8 +63,7 @@ class DeployerSanity():
             'management_allocation_pool_end',
             'name_server',
         ]
-        if self.settings.is_fx2 is True:
-            shouldbbevalidips.remove('external_netmask')
+
         for ip in getattr(self.settings, 'discovery_ip_range').split(","):
             self.is_valid_ip(ip),\
                 "Setting for discovery_ip_range " + \
@@ -308,13 +307,10 @@ class DeployerSanity():
                                 'private_slaves',
                                 'provisioning_ip',
                                 'storage_ip',
-                                'public_api_ip',
                                 'private_api_ip',
-                                'management_ip']
-        if self.settings.is_fx2 is False:
-            shouldhaveattributes.append('external_ip')
-        else:
-            shouldhaveattributes.append('public_api_ip')
+                                'management_ip',
+                                'public_api_ip']
+
         shouldbbevalidips = ['idrac_ip',
                              'anaconda_ip',
                              'provisioning_ip',
@@ -322,10 +318,7 @@ class DeployerSanity():
                              'public_api_ip',
                              'private_api_ip',
                              'management_ip']
-        if self.settings.is_fx2 is False:
-            shouldbbevalidips.append('external_ip')
-        else:
-            shouldbbevalidips.append('public_api_ip')
+
         self.check_net_attrs(self.settings.sah_node,
                              shouldhaveattributes,
                              shouldbbevalidips)
@@ -338,14 +331,12 @@ class DeployerSanity():
                                 'management_ip',
                                 'public_api_ip',
                                 'private_api_ip']
-        if self.settings.is_fx2 is False:
-            shouldhaveattributes.append('external_ip')
+
         shouldbbevalidips = ['provisioning_ip',
                              'management_ip',
                              'public_api_ip',
                              'private_api_ip']
-        if self.settings.is_fx2 is False:
-            shouldbbevalidips.append('external_ip')
+
         self.check_net_attrs(self.settings.director_node,
                              shouldhaveattributes,
                              shouldbbevalidips)
@@ -354,14 +345,9 @@ class DeployerSanity():
         logger.debug("verifying Storage Console VM network settings")
         shouldhaveattributes = ['hostname',
                                 'root_password',
-                                'storage_ip']
-        shouldbbevalidips = ['storage_ip']
-        if self.settings.is_fx2 is False:
-            shouldhaveattributes.append('external_ip')
-            shouldbbevalidips.append('external_ip')
-        else:
-            shouldhaveattributes.append('public_api_ip')
-            shouldbbevalidips.append('public_api_ip')
+                                'storage_ip',
+                                'public_api_ip']
+        shouldbbevalidips = ['storage_ip', 'public_api_ip']
 
         self.check_net_attrs(self.settings.rhscon_node,
                              shouldhaveattributes,

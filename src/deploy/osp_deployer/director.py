@@ -38,10 +38,7 @@ class Director(InfraHost):
 
         self.settings = Settings.settings
         self.user = self.settings.director_install_account_user
-        if self.settings.is_fx2 is False:
-            self.ip = self.settings.director_node.external_ip
-        else:
-            self.ip = self.settings.director_node.public_api_ip
+        self.ip = self.settings.director_node.public_api_ip
         self.pwd = self.settings.director_install_account_pwd
         self.root_pwd = self.settings.director_node.root_password
 
@@ -575,9 +572,9 @@ class Director(InfraHost):
             self.settings.dellsc_iscsi_port + '|" ' + dell_storage_yaml,
             'sed -i "s|<dellsc_sc_api_port>|' +
             self.settings.dellsc_api_port + '|" ' + dell_storage_yaml,
-            'sed -i "s|dellsc_osp8_server_folder|' +
+            'sed -i "s|dellsc_server_folder|' +
             self.settings.dellsc_server_folder + '|" ' + dell_storage_yaml,
-            'sed -i "s|dellsc_osp8_volume_folder|' +
+            'sed -i "s|dellsc_volume_folder|' +
             self.settings.dellsc_volume_folder + '|" ' + dell_storage_yaml,
         ]
         for cmd in cmds:
@@ -1011,6 +1008,11 @@ class Director(InfraHost):
         ls_nodes = re[0].split("\n")
         ls_nodes.pop()
         for node in ls_nodes:
+            node_state = node.split("|")[5]
+            if "ERROR" in node_state:
+                self.run_tty(self.source_stackrc +
+                             "ironic node-set-maintenance " +
+                             node_id + " true")
             node_id = node.split("|")[1]
             self.run_tty(self.source_stackrc +
                          "ironic node-delete " +
@@ -1233,14 +1235,14 @@ class Director(InfraHost):
         cmds = [
             'source ~/' + self.settings.overcloud_name + 'rc;'
             "sudo ip route add `neutron subnet-list | " +
-            "grep external_sub | awk '{print $6;}'` dev eth4",
+            "grep external_sub | awk '{print $6;}'` dev eth0",
             'source ~/' + self.settings.overcloud_name + 'rc;'
             'keystone role-create --name heat_stack_owner',
             "source ~/" + self.settings.overcloud_name + "rc;mkdir -p /home/" +
             setts.director_install_account_user +
             "/tempest",
             'source ~/' + self.settings.overcloud_name + 'rc;cd '
-            '~/tempest;/usr/share/openstack-tempest-10.0.0/tools/'
+            '~/tempest;/usr/share/openstack-tempest-13.0.0/tools/'
             'configure-tempest-directory',
             'source ~/' + self.settings.overcloud_name +
             'rc;cd ~/tempest;tools/config_tempest.py '
@@ -1267,10 +1269,8 @@ class Director(InfraHost):
                   self.settings.overcloud_name + \
                   "rc;cd ~/tempest;tools/run-tests.sh --concurrency=4"
         self.run_tty(cmd)
-        if self.settings.is_fx2 is True:
-            ip = setts.director_node.public_api_ip
-        else:
-            ip = setts.director_node.external_ip
+        ip = setts.director_node.public_api_ip
+
         Scp.get_file(ip,
                      setts.director_install_account_user,
                      setts.director_install_account_pwd,
@@ -1295,10 +1295,8 @@ class Director(InfraHost):
 
     def configure_rhscon(self):
         logger.info("Configure Storage Console")
-        if self.settings.is_fx2 is True:
-            ip = self.settings.rhscon_node.public_api_ip
-        else:
-            ip = self.settings.rhscon_node.external_ip
+        ip = self.settings.rhscon_node.public_api_ip
+
         self.run_tty(self.source_stackrc + 'cd ' +
                      self.pilot_dir +
                      ';./config_rhscon.py ' +

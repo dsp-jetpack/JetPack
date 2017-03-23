@@ -127,10 +127,8 @@ def deploy():
             sah_node.upload_lock_files()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
-        if settings.is_fx2 is True:
-            director_ip = settings.director_node.public_api_ip
-        else:
-            director_ip = settings.director_node.external_ip
+
+        director_ip = settings.director_node.public_api_ip
         if args.overcloud_only is False:
             Ssh.execute_command(director_ip,
                                 "root",
@@ -171,10 +169,7 @@ def deploy():
 
         if args.skip_rhscon_vm is False:
             logger.debug("Delete the Storage Console VM")
-            if settings.is_fx2 is True:
-                rhscon_ip = settings.rhscon_node.public_api_ip
-            else:
-                rhscon_ip = settings.rhscon_node.external_ip
+            rhscon_ip = settings.rhscon_node.public_api_ip
             logger.debug(
                 Ssh.execute_command(rhscon_ip,
                                     "root",
@@ -211,9 +206,6 @@ def deploy():
         logger.info("=== Installing the overcloud ")
         logger.debug("installing the overcloud ... this might take a while")
         director_vm.deploy_overcloud()
-        director_vm.retreive_nodes_ips()
-        tester.verify_computes_virtualization_enabled()
-        tester.verify_backends_connectivity()
         cmd = "source ~/stackrc; openstack stack list | grep " \
               + settings.overcloud_name + " | awk '{print $6}'"
         overcloud_status = \
@@ -230,6 +222,10 @@ def deploy():
         if "CREATE_COMPLETE" not in overcloud_status:
             raise AssertionError(
                 "OverCloud did not install properly : " + overcloud_status)
+
+        director_vm.retreive_nodes_ips()
+        tester.verify_computes_virtualization_enabled()
+        tester.verify_backends_connectivity()
         if args.skip_rhscon_vm is False:
             director_vm.configure_rhscon()
         director_vm.enable_fencing()
