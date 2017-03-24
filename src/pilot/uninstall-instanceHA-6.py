@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# (c) 2017 Dell
+# Copyright (c) 2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 # limitations under the License.
 
 ###############################################################################
-# Run this script run from the director node as the director's admin user.
+# Run this script from the director node as the director's admin user.
 # This script assumes the update_ssh_config.py is present.
 ###############################################################################
 
