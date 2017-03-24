@@ -70,32 +70,37 @@ def setup():
         rhel_iso = settings.rhel_iso
         assert (os.path.isfile(settings.rhel_iso), settings.rhel_iso +
                 " ISO file is not present")
-
         sah = Sah()
         sah.update_kickstart_usb()
 
         # Create the usb Media & update path references
-        current_path = subprocess.check_output("cd ~;pwd",
-                                               stderr=subprocess.STDOUT,
-                                               shell=True).strip()
-        target_ini = settings.settings_file.replace(current_path, "/mnt/usb")
-
+        target_ini = settings.settings_file.replace('/root', "/mnt/usb")
+        iso_path = os.path.dirname(settings.rhel_iso)
         if args.idrac_vmedia_img is True:
             cmds = ['cd ~;rm -f osp_ks.img',
                     'cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=5000',
                     'cd ~;mkfs ext3 -F osp_ks.img',
                     'mkdir -p /mnt/usb',
                     'cd ~;mount -o loop osp_ks.img /mnt/usb',
-                    'cd ~;cp -R ~/temp_name /mnt/usb',
-                    "sed -i 's|" + current_path + "|/root|' " + target_ini,
+                    'cd ~;cp -R ~/JetStream /mnt/usb',
+                    'cd ~;cp ' + settings.rhel_iso + ' /mnt/usb',
+                    'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
+                    'cd ~;cp ' + settings.network_conf + ' /mnt/usb',
+                    'cd ~;cp osp-sah.ks /mnt/usb',
+                    "sed -i 's|" + iso_path + "|/root|' " + target_ini,
+                    #sed file names etc from ini
                     'sync; umount /mnt/usb']
         else:
             cmds = ['mkfs.ext3 -F ' + args.usb_key,
                     'mkdir -p /mnt/usb',
                     'cd ~;mount -o loop ' + args.usb_key +
                     ' /mnt/usb',
-                    'cd ~;cp -R ~/temp_name /mnt/usb',
-                    "sed -i 's|" + current_path + "|/root|' " + target_ini,
+                    'cd ~;cp -R ~/JetStream /mnt/usb',
+                    'cd ~;cp ' + settings.rhel_iso + ' /mnt/usb',
+                    'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
+                    'cd ~;cp ' + settings.network_conf + ' /mnt/usb',
+                    'cd ~;cp osp-sah.ks /mnt/usb',
+                    "sed -i 's|" + iso_path + "|/root|' " + target_ini,
                     'sync; umount /mnt/usb']
 
         for cmd in cmds:
