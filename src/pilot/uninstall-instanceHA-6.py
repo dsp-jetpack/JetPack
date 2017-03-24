@@ -15,7 +15,7 @@
 # limitations under the License.
 
 ###############################################################################
-# Run this script run from the director node as the director's admin user.
+# Run this script from the director node as the director's admin user.
 # This script assumes the update_ssh_config.py is present.
 ###############################################################################
 
@@ -84,9 +84,8 @@ def logging_level(string):
 
 
 def enable_openstack_services(compute_nodes_ip):
-    LOG.info("Disable compute node libvirtd and openstack services.")
-    services = ['openstack-nova-compute', 'neutron-openvswitch-agent',
-                'libvirtd']
+    LOG.info("Enable compute node libvirtd and openstack services.")
+    services = ['openstack-service', 'libvirtd']
 
     for compute_node_ip in compute_nodes_ip:
         for service in services:
@@ -146,10 +145,10 @@ def delete_compute_nodes_resources(first_controller_node_ip):
     ssh_cmd(first_controller_node_ip, "heat-admin",
             "sudo pcs resource delete libvirtd-compute --force")
 
-# Then the nova-compute resource:
+    ssh_cmd(first_controller_node_ip, "heat-admin",
+            "sudo pcs resource delete ceilometer-compute --force")
 
-    oc_auth_url, oc_tenant_name, oc_username, oc_password = \
-        CredentialHelper.get_overcloud_creds()
+# Then the nova-compute resource:
 
     ssh_cmd(first_controller_node_ip, "heat-admin",
             "sudo pcs resource delete nova-compute-checkevacuate --force")
@@ -161,33 +160,40 @@ def delete_compute_nodes_resources(first_controller_node_ip):
 def delete_compute_nodeName_resource(compute_nodes_ip,
                                      first_controller_node_ip):
     for compute_node_ip in compute_nodes_ip:
-        LOG.info("Delete Compute node:{} resources and set the \
-                 stonith level 1.".format(compute_node_ip))
+        LOG.info("Delete Compute node:{} resources.".format(compute_node_ip))
 
         out, err = ssh_cmd(compute_node_ip, "heat-admin",
                            "sudo crm_node -n")
         crm_node_name = out.strip()
         crm_node_sname = crm_node_name.partition('.')[0]
-        domainname = crm_node_name.partition('.')[2]
 
         ssh_cmd(first_controller_node_ip, "heat-admin",
-                "sudo pcs resource delete " + crm_node_sname + " --force")
+                "sudo pcs resource delete " + crm_node_name + " --force")
+
+        ssh_cmd(first_controller_node_ip, "heat-admin",
+                "sudo crm_node --force -R" + crm_node_name)
 
 
 def disable_control_plane_services(first_controller_node_ip):
     LOG.info("Disable the control and Compute plane services.")
 
     ssh_cmd(first_controller_node_ip, "heat-admin",
-            "sudo pcs resource disable nova-compute")
+            "sudo pcs resource disable openstack-keystone")
 
     ssh_cmd(first_controller_node_ip, "heat-admin",
-            "sudo pcs resource disable nova-compute-checkevacuate")
+            "sudo pcs resource disable neutron-openvswitch-agent-compute")
 
     ssh_cmd(first_controller_node_ip, "heat-admin",
             "sudo pcs resource disable libvirtd-compute")
 
     ssh_cmd(first_controller_node_ip, "heat-admin",
-            "sudo pcs resource disable neutron-openvswitch-agent-compute")
+            "sudo pcs resource disable ceilometer-compute")
+
+    ssh_cmd(first_controller_node_ip, "heat-admin",
+            "sudo pcs resource disable nova-compute")
+
+    ssh_cmd(first_controller_node_ip, "heat-admin",
+            "sudo pcs resource disable nova-compute-checkevacuate")
 
 
 # Main Routine
@@ -324,6 +330,7 @@ def main():
                   "sudo pcs property show stonith-enabled \
                   | awk '/stonith/ {print $2}'")
     result = out[0].rstrip()
+
     LOG.debug("result: {}".format(result))
 
     if result == 'true':
