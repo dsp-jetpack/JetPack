@@ -86,6 +86,7 @@ def setup():
                     'cd ~;cp ' + settings.rhel_iso + ' /mnt/usb',
                     'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
                     'cd ~;cp ' + settings.network_conf + ' /mnt/usb',
+                    'cd ~;cp osp-sah.ks /mnt/usb',
                     "sed -i 's|" + iso_path + "|/root|' " + target_ini,
                     #sed file names etc from ini
                     'sync; umount /mnt/usb']
@@ -98,6 +99,7 @@ def setup():
                     'cd ~;cp ' + settings.rhel_iso + ' /mnt/usb',
                     'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
                     'cd ~;cp ' + settings.network_conf + ' /mnt/usb',
+                    'cd ~;cp osp-sah.ks /mnt/usb',
                     "sed -i 's|" + iso_path + "|/root|' " + target_ini,
                     'sync; umount /mnt/usb']
 
