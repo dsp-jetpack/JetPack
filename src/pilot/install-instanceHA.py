@@ -452,7 +452,7 @@ def add_compute_node_stonith_devices(compute_node_ip,
     nova_compute_name = awk_it(crm_node_name, 1, ".")
 
     # Get first_compute_node_ip
-    p1 = subprocess.Popen(['grep', nova_compute_name, undercloud_config],
+    p1 = subprocess.Popen(['grep', compute_node_ip, undercloud_config],
                           stdout=subprocess.PIPE)
     p2 = subprocess.Popen(shlex.split('cut -d" " -f2'),
                           stdin=p1.stdout,

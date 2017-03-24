@@ -132,19 +132,6 @@ def delete_nova_evacuate_resource(first_controller_node_ip):
             "sudo pcs resource delete nova-evacuate --force")
 
 
-def confirm_nova_evacuate_resource(first_controller_node_ip):
-    LOG.info("Confirm nova-evacuate is started after glance,"
-             " neutron and nova services.")
-
-    resource_list = ['haproxy-clone',
-                     'galera-clone',
-                     'rabbitmq-clone']
-
-    for res in resource_list:
-        ssh_cmd(first_controller_node_ip, "heat-admin",
-                "echo resource: [" + res + "]")
-
-
 def delete_compute_nodes_resources(first_controller_node_ip):
     LOG.info("Delete the compute node resources within pacemaker.")
 
