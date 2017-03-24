@@ -283,15 +283,15 @@ def config_idrac(instack_lock,
             new_drac_client = DRACClient(drac_ip, drac_user, password)
 
             # Try every 10 seconds over 2 minutes to connect with the new creds
-            success = False
+            password_changed = False
             retries = 12
-            while not success and retries > 0:
+            while not password_changed and retries > 0:
                 try:
                     LOG.debug("Attempting to access the iDRAC on {} with the "
                               "new password".format(ip_service_tag))
                     unfinished_jobs = new_drac_client.list_jobs(
                         only_unfinished=True)
-                    success = True
+                    password_changed = True
                 except exceptions.WSManInvalidResponse as ex:
                     if "unauthorized" in ex.message.lower():
                         LOG.debug("Got an unauthorized exception on {}, so "
@@ -306,12 +306,13 @@ def config_idrac(instack_lock,
             # If the new creds were successful then use them.  If they were not
             # successful then assume the attempt to change the password failed
             # and stick with the original creds
-            if success:
+            if password_changed:
                 LOG.debug("Successfully changed the password on {}.  "
                           "Switching to the new password".format(
                               ip_service_tag))
                 drac_client = new_drac_client
             else:
+                success = False
                 # Grab the unfinished_jobs list using the original creds
                 LOG.warn("Failed to change the password on {}".format(
                     ip_service_tag))

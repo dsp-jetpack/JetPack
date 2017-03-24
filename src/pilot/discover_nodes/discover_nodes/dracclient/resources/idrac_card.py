@@ -121,12 +121,13 @@ class iDRACCardConfiguration(object):
         doc = self.client.invoke(uris.DCIM_iDRACCardService,
                                  'iDRACReset',
                                  selectors,
-                                 properties)
+                                 properties,
+                                 check_return_value=False)
 
-        return_value = utils.find_xml(doc,
-                                      'ReturnValue',
+        message_id = utils.find_xml(doc,
+                                      'MessageID',
                                       uris.DCIM_iDRACCardService).text
-        return "0" == return_value
+        return "RAC064" == message_id
 
 
 class iDRACCardAttribute(object):
