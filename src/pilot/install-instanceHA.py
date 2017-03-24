@@ -226,12 +226,12 @@ EOF
     if "rc != 2" not in stdout:
         LOG.info("Applying patch to NovaEvacuate.")
 
-        cmd = "scp ~/pilot/NovaEvacuate-patch.txt heat-admin@" \
-               + node_ip + ":~/patch.txt"
+        cmd = "scp ~/pilot/NovaEvacuate-patch.txt heat-admin@" + \
+            node_ip + ":~/patch.txt"
         os.system(cmd)
 
         ssh_cmd(node_ip, "heat-admin",
-                "sudo patch -s -b /usr/lib/ocf/resource.d/" + 
+                "sudo patch -s -b /usr/lib/ocf/resource.d/" +
                 "openstack/NovaEvacuate<~/patch.txt")
     else:
         LOG.info("Patch already applied to NovaEvacuate.")
