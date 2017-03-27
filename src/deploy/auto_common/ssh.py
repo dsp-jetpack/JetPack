@@ -37,7 +37,7 @@ class Ssh():
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
             client.connect(address, username=usr, password=pwd)
-            stdin, ss_stdout, ss_stderr = client.exec_command(command)
+            _, ss_stdout, ss_stderr = client.exec_command(command)
             r_out, r_err = ss_stdout.read(), ss_stderr.read()
             logger.debug(r_err)
             if len(r_err) > 5:
@@ -61,7 +61,7 @@ class Ssh():
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
             client.connect(address, username=usr, password=pwd)
-            stdin, ss_stdout, ss_stderr = client.exec_command(command)
+            _, ss_stdout, ss_stderr = client.exec_command(command)
             r_out, r_err = ss_stdout.readlines(), ss_stderr.read()
             logger.debug(r_err)
             if len(r_err) > 5:
@@ -85,12 +85,15 @@ class Ssh():
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
             client.connect(address, username=usr, password=pwd)
-            stdin, ss_stdout, ss_stderr = client.exec_command(
+            _, ss_stdout, ss_stderr = client.exec_command(
                 command, get_pty=True)
             r_out, r_err = ss_stdout.read(), ss_stderr.read()
-            logger.debug(r_err)
-            if len(r_err) > 5:
-                logger.error(r_err)
+            exit_status = ss_stdout.channel.recv_exit_status()
+            logger.debug("exit_status={}, stderr={}".format(exit_status,
+                                                            r_err))
+            if len(r_err) > 5 or exit_status != 0:
+                logger.error("exit_status={}, stderr={}".format(exit_status,
+                                                                r_err))
             else:
                 logger.debug(r_out)
             client.close()
@@ -98,7 +101,7 @@ class Ssh():
             logger.warning(".. host " + address + " is not up")
             return "host not up"
 
-        return r_out, r_err
+        return r_out, r_err, exit_status
 
     @staticmethod
     def ssh_edit_file(adress, user, passw, remotefile, regex, replace):

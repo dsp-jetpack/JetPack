@@ -27,6 +27,12 @@ import sys
 import tempfile
 import time
 
+common_path = os.path.join(os.path.expanduser(
+    '~/temp_name/something_not_jetstream/src'), 'common')
+sys.path.append(common_path)
+
+from thread_helper import ThreadWithExHandling
+
 logger = logging.getLogger("osp_deployer")
 
 exitFlag = 0
@@ -237,19 +243,21 @@ class Director(InfraHost):
         if json_config.items():
             cmd += "-j '{}'".format(json.dumps(json_config))
 
-        stdout, stderr = self.run_tty(cmd)
+        stdout, stderr, exit_status = self.run_tty(cmd)
         logger.debug(stdout)
-        if stderr:
+        if stderr or exit_status:
             raise AssertionError("An error occurred while running "
-                                 "config_idracs: {}".format(stderr))
+                                 "config_idracs.  exit_status: {}, "
+                                 "error: {}".format(exit_status, stderr))
 
     def import_nodes(self):
-        stdout, stderr = self.run_tty(self.source_stackrc +
-                                      "~/pilot/import_nodes.py")
+        stdout, stderr, exit_status = self.run_tty(self.source_stackrc +
+                                                   "~/pilot/import_nodes.py")
         logger.debug("Attempted to import nodes into Ironic: " + stdout)
-        if stderr:
-            raise AssertionError("Unable to import nodes into Ironic: ".format(
-                                 stderr))
+        if stderr or exit_status:
+            raise AssertionError("Unable to import nodes into Ironic.  "
+                                 "exit_status: {}, error: {}".format(
+                                     exit_status, stderr))
 
         tester = Checkpoints()
         tester.verify_nodes_registered_in_ironic()
@@ -257,21 +265,24 @@ class Director(InfraHost):
     def node_introspection(self):
         setts = self.settings
 
-        stdout, stderr = self.run_tty("~/pilot/prep_overcloud_nodes.py")
+        stdout, stderr, exit_status = self.run_tty(
+            "~/pilot/prep_overcloud_nodes.py")
         logger.debug(stdout)
-        if stderr:
+        if stderr or exit_status:
             raise AssertionError("An error occurred while running "
-                                 "prep_overcloud_nodes: {}".format(stderr))
+                                 "prep_overcloud_nodes.  exit_status: {}, "
+                                 "error: {}".format(exit_status, stderr))
 
         introspection_cmd = self.source_stackrc + "~/pilot/introspect_nodes.py"
         if setts.use_in_band_introspection is True:
             introspection_cmd += " -i"
 
-        stdout, stderr = self.run_tty(introspection_cmd)
+        stdout, stderr, exit_status = self.run_tty(introspection_cmd)
         logger.debug("Introspected nodes, stdout=" + stdout)
-        if stderr:
-            raise AssertionError("Unable to introspect nodes: ".format(
-                                 stderr))
+        if stderr or exit_status:
+            raise AssertionError("Unable to introspect nodes.  "
+                                 "exit_status: {}, error: {}".format(
+                                     exit_status, stderr))
 
         tester = Checkpoints()
         tester.verify_introspection_sucessfull()
@@ -298,7 +309,7 @@ class Director(InfraHost):
                           " -p '" + \
                           self.settings.ipmi_password + "' " + \
                           node.idrac_ip
-                    self.run_tty(cmd)[0]
+                    self.run_tty(cmd)
                     # yes, running it twice - throws errors on first attempts
                     # depending on the state of the node
                     out = self.run_tty(cmd)[0]
@@ -327,28 +338,56 @@ class Director(InfraHost):
                     else:
                         break
 
-    def assign_roles(self, nodes, role):
-        index = 0
-        for node in nodes:
-            assign_role_command = self._create_assign_role_command(
-                node, role, index)
-            out = self.run_tty(self.source_stackrc +
-                               "cd ~/pilot;" + assign_role_command)
-            index += 1
-            if "Not Found" in out[0]:
-                if hasattr(node, 'service_tag'):
-                    node_identifier = " service tag " + node.service_tag
-                else:
-                    node_identifier = " ip " + node.idrac_ip
-                raise AssertionError(
-                    "Failed to assign " + role + " role to " + node_identifier)
+    def assign_role(self, node, role, index):
+        assign_role_command = self._create_assign_role_command(
+            node, role, index)
+        _, stderr, exit_status = self.run_tty(self.source_stackrc +
+                                              "cd ~/pilot;" +
+                                              assign_role_command)
+        if exit_status:
+            if hasattr(node, 'service_tag'):
+                node_identifier = " service tag " + node.service_tag
+            else:
+                node_identifier = " ip " + node.idrac_ip
+            raise AssertionError(
+                "Failed to assign {} role to {}: {}".format(role,
+                                                            node_identifier,
+                                                            stderr))
 
     def assign_node_roles(self):
         logger.debug("Assigning roles to nodes")
 
-        self.assign_roles(self.settings.controller_nodes, "controller")
-        self.assign_roles(self.settings.compute_nodes, "compute")
-        self.assign_roles(self.settings.ceph_nodes, "storage")
+        roles_to_nodes = {}
+        roles_to_nodes["controller"] = self.settings.controller_nodes
+        roles_to_nodes["compute"] = self.settings.compute_nodes
+        roles_to_nodes["storage"] = self.settings.ceph_nodes
+
+        threads = []
+        for role in roles_to_nodes.keys():
+            index = 0
+            for node in roles_to_nodes[role]:
+
+                thread = ThreadWithExHandling(logger,
+                                              target=self.assign_role,
+                                              args=(node, role, index))
+                threads.append(thread)
+                thread.start()
+                index += 1
+
+        for thread in threads:
+            thread.join()
+
+        failed_threads = 0
+        for thread in threads:
+            if thread.ex is not None:
+                failed_threads += 1
+
+        if failed_threads == 0:
+            logger.info("Successfully assigned roles to all nodes")
+        else:
+            logger.info("assign_role failed on {} out of {} nodes".format(
+                failed_threads, len(threads)))
+            sys.exit(1)
 
     def setup_templates(self):
         # Re-upload the yaml files in case we're trying to leave the undercloud
@@ -691,10 +730,11 @@ class Director(InfraHost):
         cmd = 'cd ' + self.pilot_dir + ';./config_idrac_dhcp.py ' + \
             self.settings.sah_node.provisioning_ip + \
             ' -p ' + self.settings.sah_node.root_password
-        _, stderr = self.run_tty(cmd)
-        if stderr:
+        _, stderr, exit_status = self.run_tty(cmd)
+        if stderr or exit_status:
             raise AssertionError(
-                "Failed to configure DHCP on the SAH node: " + stderr)
+                "Failed to configure DHCP on the SAH node.  exit_status: {}, "
+                "error: {}: ".format(exit_status, stderr))
 
     def setup_networking(self):
         logger.debug("Configuring network settings for overcloud")
@@ -993,7 +1033,7 @@ class Director(InfraHost):
         # is the one nodes arei defined in in the .properties
         cmd += " --node_placement"
 
-        cmd += " > overcloud_deploy_out.log"
+        cmd += " > overcloud_deploy_out.log 2>&1"
 
         self.run_tty(cmd)
 
@@ -1009,7 +1049,7 @@ class Director(InfraHost):
         ls_nodes.pop()
         for node in ls_nodes:
             node_state = node.split("|")[5]
-            node_id = node.split("|")[1]            
+            node_id = node.split("|")[1]
             if "ERROR" in node_state:
                 self.run_tty(self.source_stackrc +
                              "ironic node-set-maintenance " +
