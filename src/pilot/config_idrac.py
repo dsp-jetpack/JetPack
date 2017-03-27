@@ -20,6 +20,7 @@ import os
 import requests.packages
 import sys
 from arg_helper import ArgHelper
+from constants import Constants
 from credential_helper import CredentialHelper
 from dracclient import exceptions
 from job_helper import JobHelper
@@ -36,7 +37,6 @@ from discover_nodes.dracclient.client import DRACClient  # noqa
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being made
 requests.packages.urllib3.disable_warnings()
 
-logging.basicConfig()
 LOG = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
 
@@ -104,13 +104,15 @@ def get_pxe_nic_fqdd_from_model_properties(model_properties, drac_client):
 
 def configure_nics_boot_settings(
         drac_client,
+        ip_service_tag,
         pxe_nic_id,
         node):
     LOG.info("Configuring NIC {} on {} to PXE boot".format(
-        pxe_nic_id, node["pm_addr"]))
+        pxe_nic_id, ip_service_tag))
 
     job_ids = []
     reboot_required = False
+    provisioning_mac = None
 
     for nic in drac_client.list_nics(sort=True):
         result = None
@@ -118,9 +120,7 @@ def configure_nics_boot_settings(
 
         # Compare the NIC IDs case insensitively. Assume ASCII strings.
         if nic_id.lower() == pxe_nic_id.lower():
-            # Set the MAC for the provisioning/PXE interface on the node for
-            # use by the OOB introspection workaround
-            node["provisioning_mac"] = nic.mac_address.lower()
+            provisioning_mac = nic.mac_address.lower()
 
             # This is the NIC we want to PXE boot, so set it to PXE if it's
             # not set to PXE already
@@ -143,12 +143,12 @@ def configure_nics_boot_settings(
         if result['reboot_required']:
             reboot_required = True
 
-    return reboot_required, job_ids
+    return reboot_required, job_ids, provisioning_mac
 
 
-def config_legacy_boot_setting(drac_client, node):
+def config_legacy_boot_setting(drac_client, ip_service_tag, node):
     LOG.info("Setting the iDRAC on {} to legacy boot".format(
-        node["pm_addr"]))
+        ip_service_tag))
     settings = {"BootMode": "Bios"}
     response = drac_client.set_bios_settings(settings)
 
@@ -162,9 +162,9 @@ def config_legacy_boot_setting(drac_client, node):
     return response['commit_required'], job_id
 
 
-def config_idrac_settings(drac_client, password, node):
+def config_idrac_settings(drac_client, ip_service_tag, password, node):
     LOG.info("Configuring initial iDRAC settings on {}".format(
-        node["pm_addr"]))
+        ip_service_tag))
 
     idrac_settings = {
         "IPMILan.1#Enable": "Enabled",
@@ -177,7 +177,7 @@ def config_idrac_settings(drac_client, password, node):
         }
 
     if password:
-        LOG.warn("Updating the password")
+        LOG.warn("Updating the password on {}".format(ip_service_tag))
         idrac_settings["Users.2#Password"] = password
 
     # Set the iDRAC card attributes
@@ -191,8 +191,8 @@ def config_idrac_settings(drac_client, password, node):
     return response['reboot_required'], job_id
 
 
-def clear_job_queue(drac_client):
-    LOG.info("Clearing the job queue")
+def clear_job_queue(drac_client, ip_service_tag):
+    LOG.info("Clearing the job queue on {}".format(ip_service_tag))
     drac_client.delete_jobs()
 
     # It takes a second or two for the iDRAC to switch from the ready state to
@@ -202,9 +202,15 @@ def clear_job_queue(drac_client):
     drac_client.wait_until_idrac_is_ready()
 
 
-def config_idrac(ip_service_tag,
-                 node_definition,
-                 model_properties,
+def reset_idrac(drac_client, ip_service_tag):
+    LOG.info('Resetting the iDRAC on {}'.format(ip_service_tag))
+    drac_client.wait_until_idrac_is_reset(False)
+
+
+def config_idrac(instack_lock,
+                 ip_service_tag,
+                 node_definition=Constants.INSTACKENV_FILENAME,
+                 model_properties=Constants.MODEL_PROPERTIES_FILENAME,
                  pxe_nic=None,
                  password=None):
     node = CredentialHelper.get_node_from_instack(ip_service_tag,
@@ -218,9 +224,11 @@ def config_idrac(ip_service_tag,
 
     drac_client = DRACClient(drac_ip, drac_user, drac_password)
 
+    reset_idrac(drac_client, ip_service_tag)
+
     # Clear out any pending jobs in the job queue and fix the condition where
     # there are no pending jobs, but the iDRAC thinks there are
-    clear_job_queue(drac_client)
+    clear_job_queue(drac_client, ip_service_tag)
 
     pxe_nic_fqdd = get_pxe_nic_fqdd(
         pxe_nic,
@@ -230,20 +238,24 @@ def config_idrac(ip_service_tag,
     reboot_required = False
 
     # Configure the NIC port to PXE boot or not
-    reboot_required_nic, job_ids = configure_nics_boot_settings(drac_client,
-                                                                pxe_nic_fqdd,
-                                                                node)
+    reboot_required_nic, job_ids, provisioning_mac = \
+        configure_nics_boot_settings(drac_client,
+                                     ip_service_tag,
+                                     pxe_nic_fqdd,
+                                     node)
+
     reboot_required = reboot_required or reboot_required_nic
 
     # Configure the system to legacy boot
     reboot_required_legacy, legacy_job_id = config_legacy_boot_setting(
-        drac_client, node)
+        drac_client, ip_service_tag, node)
     reboot_required = reboot_required or reboot_required_legacy
     if legacy_job_id:
         job_ids.append(legacy_job_id)
 
     # Do initial idrac configuration
     reboot_required_idrac, idrac_job_id = config_idrac_settings(drac_client,
+                                                                ip_service_tag,
                                                                 password,
                                                                 node)
     reboot_required = reboot_required or reboot_required_idrac
@@ -252,7 +264,7 @@ def config_idrac(ip_service_tag,
 
     # If we need to reboot, then add a job for it
     if reboot_required:
-        LOG.info("Rebooting the node to apply configuration")
+        LOG.info("Rebooting {} to apply configuration".format(ip_service_tag))
 
         job_id = drac_client.create_reboot_job()
         job_ids.append(job_id)
@@ -261,8 +273,9 @@ def config_idrac(ip_service_tag,
     if job_ids:
         drac_client.schedule_job_execution(job_ids, start_time='TIME_NOW')
 
-        LOG.info("Waiting for iDRAC configuration to complete")
-        LOG.info("Do not unplug the node")
+        LOG.info("Waiting for iDRAC configuration to complete on {}".format(
+            ip_service_tag))
+        LOG.info("Do not unplug {}".format(ip_service_tag))
 
         # If the user set the password, then we need to change creds
         unfinished_jobs = None
@@ -270,19 +283,20 @@ def config_idrac(ip_service_tag,
             new_drac_client = DRACClient(drac_ip, drac_user, password)
 
             # Try every 10 seconds over 2 minutes to connect with the new creds
-            success = False
+            password_changed = False
             retries = 12
-            while not success and retries > 0:
+            while not password_changed and retries > 0:
                 try:
-                    LOG.debug("Attempting to access the iDRAC with the new "
-                              "password")
+                    LOG.debug("Attempting to access the iDRAC on {} with the "
+                              "new password".format(ip_service_tag))
                     unfinished_jobs = new_drac_client.list_jobs(
                         only_unfinished=True)
-                    success = True
+                    password_changed = True
                 except exceptions.WSManInvalidResponse as ex:
                     if "unauthorized" in ex.message.lower():
-                        LOG.debug("Got an unauthorized exception, so sleeping "
-                                  "and trying again")
+                        LOG.debug("Got an unauthorized exception on {}, so "
+                                  "sleeping and trying again".format(
+                                      ip_service_tag))
                         retries -= 1
                         if retries > 0:
                             sleep(10)
@@ -292,12 +306,16 @@ def config_idrac(ip_service_tag,
             # If the new creds were successful then use them.  If they were not
             # successful then assume the attempt to change the password failed
             # and stick with the original creds
-            if success:
-                LOG.debug("Success.  Switching to the new password")
+            if password_changed:
+                LOG.debug("Successfully changed the password on {}.  "
+                          "Switching to the new password".format(
+                              ip_service_tag))
                 drac_client = new_drac_client
             else:
+                success = False
                 # Grab the unfinished_jobs list using the original creds
-                LOG.warn("Failed to change the password")
+                LOG.warn("Failed to change the password on {}".format(
+                    ip_service_tag))
                 unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
         else:
             unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
@@ -305,33 +323,63 @@ def config_idrac(ip_service_tag,
         # Wait up to 10 minutes for the unfinished jobs to run
         retries = 60
         while unfinished_jobs and retries > 0:
-            LOG.debug("{} jobs remain to complete".format(
-                len(unfinished_jobs)))
+            LOG.debug("{} jobs remain to complete on {}".format(
+                len(unfinished_jobs), ip_service_tag))
             retries -= 1
             if retries > 0:
                 sleep(10)
                 unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
 
         if retries > 0:
-            LOG.debug("All jobs have completed")
+            LOG.debug("All jobs have completed on {}".format(ip_service_tag))
             success = JobHelper.determine_job_outcomes(drac_client, job_ids)
         else:
-            LOG.error("Timed out while waiting for jobs to complete")
+            LOG.error("Timed out while waiting for jobs to complete on "
+                      "{}".format(ip_service_tag))
             success = False
 
     # We always want to update the password for the node in the instack file
     # if the user requested a password change and the iDRAC config job was
     # successful regardless of if the other jobs succeeded or not.
+    new_password = None
     if password:
         job_status = drac_client.get_job(idrac_job_id).status
 
         if JobHelper.job_succeeded(job_status):
-            node["pm_password"] = password
+            new_password = password
 
-    CredentialHelper.save_instack(node_definition)
+    if new_password is not None or \
+        "provisioning_mac" not in node or \
+        ("provisioning_mac" in node and
+         node["provisioning_mac"] != provisioning_mac):
+
+        # Synchronize to prevent thread collisions while saving the instack
+        # file
+        if instack_lock is not None:
+            LOG.debug("Acquiring the lock")
+            instack_lock.acquire()
+        try:
+            if instack_lock is not None:
+                LOG.debug("Clearing and reloading instack")
+                # Force a reload of the instack file
+                CredentialHelper.clear_instack_cache()
+                node = CredentialHelper.get_node_from_instack(ip_service_tag,
+                                                              node_definition)
+            if new_password is not None:
+                node["pm_password"] = new_password
+
+            node["provisioning_mac"] = provisioning_mac
+
+            LOG.debug("Saving instack")
+            CredentialHelper.save_instack(node_definition)
+        finally:
+            if instack_lock is not None:
+                LOG.debug("Releasing the lock")
+                instack_lock.release()
 
     if success:
-        LOG.info("Completed iDRAC configuration")
+        LOG.info("Completed configuration of the iDRAC on {}".format(
+            ip_service_tag))
     else:
         raise RuntimeError("An error occurred while configuring the iDRAC "
                            "on {}".format(drac_ip))
@@ -348,18 +396,22 @@ def main():
     try:
         model_properties = Utils.get_model_properties(args.model_properties)
 
-        config_idrac(args.ip_service_tag,
+        config_idrac(None,
+                     args.ip_service_tag,
                      args.node_definition,
                      model_properties,
                      args.pxe_nic,
                      args.change_password)
     except ValueError as ex:
-        LOG.error(ex)
+        LOG.error("An error occurred while configuring iDRAC {}: {}".format(
+            args.ip_service_tag, ex.message))
         sys.exit(1)
     except Exception as ex:
-        LOG.exception(ex.message)
+        LOG.exception("An error occurred while configuring iDRAC {}: "
+                      "{}".format(args.ip_service_tag, ex.message))
         sys.exit(1)
 
 
 if __name__ == "__main__":
+    logging.basicConfig()
     main()

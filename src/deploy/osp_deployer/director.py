@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from osp_deployer.settings.config import Settings
+from settings.config import Settings
 from checkpoints import Checkpoints
 from infra_host import InfraHost
 from auto_common import Scp, Ipmi
+import json
 import logging
 import os
 import re
@@ -221,21 +222,26 @@ class Director(InfraHost):
         nodes.extend(self.settings.compute_nodes)
         nodes.extend(self.settings.ceph_nodes)
 
+        cmd = "~/pilot/config_idracs.py "
+
+        json_config = {}
         for node in nodes:
-            cmd = "~/pilot/config_idrac.py "
             if hasattr(node, 'idrac_ip'):
-                cmd += node.idrac_ip
+                node_id = node.idrac_ip
             else:
-                cmd += node.service_tag
+                node_id = node.service_tag
 
             if hasattr(node, 'pxe_nic'):
-                cmd += ' -p ' + node.pxe_nic
+                json_config[node_id] = {"pxe_nic": node.pxe_nic}
 
-            stdout, stderr = self.run_tty(cmd)
-            logger.debug(stdout)
-            if stderr:
-                raise AssertionError("An error occurred while running "
-                                     "config_idracs: {}".format(stderr))
+        if json_config.items():
+            cmd += "-j '{}'".format(json.dumps(json_config))
+
+        stdout, stderr = self.run_tty(cmd)
+        logger.debug(stdout)
+        if stderr:
+            raise AssertionError("An error occurred while running "
+                                 "config_idracs: {}".format(stderr))
 
     def import_nodes(self):
         stdout, stderr = self.run_tty(self.source_stackrc +
