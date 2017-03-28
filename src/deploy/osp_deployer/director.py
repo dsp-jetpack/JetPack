@@ -97,11 +97,11 @@ class Director(InfraHost):
         logger.debug("tar up the required pilot files")
         os.system("cd " +
                   self.settings.foreman_configuration_scripts +
-                  "/pilot/;tar -zcvf /root/pilot.tar.gz *")
+                  ";tar -zcvf /root/pilot.tar.gz pilot common")
         self.upload_file("/root/pilot.tar.gz",
                          self.home_dir + "/pilot.tar.gz")
 
-        self.run('cd;tar zxvf pilot.tar.gz -C pilot')
+        self.run('cd;tar zxvf pilot.tar.gz')
 
         cmds = [
             'sed -i "s|undercloud_hostname = .*|undercloud_hostname = ' +
