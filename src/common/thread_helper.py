@@ -30,5 +30,5 @@ class ThreadWithExHandling(threading.Thread):
         try:
             threading.Thread.run(self)
         except:
-            self.logger.exception('')
             self.ex = sys.exc_info()[0]
+            self.logger.exception(self.ex.message)

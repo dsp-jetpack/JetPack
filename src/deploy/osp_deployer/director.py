@@ -340,18 +340,21 @@ class Director(InfraHost):
     def assign_role(self, node, role, index):
         assign_role_command = self._create_assign_role_command(
             node, role, index)
-        _, stderr, exit_status = self.run_tty(self.source_stackrc +
-                                              "cd ~/pilot;" +
-                                              assign_role_command)
+        stdout, stderr, exit_status = self.run_tty(self.source_stackrc +
+                                                   "cd ~/pilot;" +
+                                                   assign_role_command)
         if exit_status:
             if hasattr(node, 'service_tag'):
-                node_identifier = " service tag " + node.service_tag
+                node_identifier = "service tag " + node.service_tag
             else:
-                node_identifier = " ip " + node.idrac_ip
-            raise AssertionError(
-                "Failed to assign {} role to {}: {}".format(role,
-                                                            node_identifier,
-                                                            stderr))
+                node_identifier = "ip " + node.idrac_ip
+            raise AssertionError("Failed to assign {} role to {}: stdout={}, "
+                                 "stderr={}, exit_status={}".format(
+                                     role,
+                                     node_identifier,
+                                     stdout,
+                                     stderr,
+                                     exit_status))
 
     def assign_node_roles(self):
         logger.debug("Assigning roles to nodes")
