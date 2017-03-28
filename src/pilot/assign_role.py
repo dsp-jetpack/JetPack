@@ -110,22 +110,9 @@ def parse_arguments():
                         default="~/pilot/flavors_settings.json",
                         help="file that contains flavor settings",
                         metavar="FILENAME")
-    """TODO: After QA has completed its testing of RAID configuration,
-    flip 'action' to 'store_true'."""
     parser.add_argument('-s',
                         '--skip-raid-config',
-                        # Note that the 'action' below is intentionally
-                        # set to 'store_false'. That causes RAID
-                        # configuration to be disabled when this flag is
-                        # not present. When it is provided, RAID
-                        # configuration is performed. It is understood
-                        # that is the opposite of what the option's name
-                        # suggests. However, it will enable QA to test
-                        # RAID configuration without impacting the
-                        # entire team. And once it has been verified,
-                        # the 'action' can be simply flipped to
-                        # 'store_true'.
-                        action='store_false',
+                        action='store_true',
                         help="skip configuring RAID")
 
     ArgHelper.add_instack_arg(parser)
