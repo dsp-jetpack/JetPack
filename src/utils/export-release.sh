@@ -65,7 +65,7 @@ mk_bundle() {
       cp -r src/${src_dir} ${target_dir}
     fi
   done
-  (cd $target_dir; sha256sum $(find . type f -print) >${target_dir}/${checksum_file})
+  (cd $target_dir; sha256sum $(find . -type f -print) >${target_dir}/${checksum_file})
   (cd $target_dir; tar zcvf $dest/${archive_name}.tgz $src_dirs LICENSE ${checksum_file}; zip -r $dest/${archive_name} $src_dirs LICENSE ${checksum_file})
   rm -rf ${target_root_dir}
 }
