@@ -1172,14 +1172,6 @@ def main():
         if flavor_settings is None:
             sys.exit(1)
 
-        bios_settings = calculate_bios_settings(
-            args.role_index.role,
-            flavor_settings,
-            flavor_settings_filename)
-
-        if bios_settings is None:
-            sys.exit(1)
-
         ironic_client = IronicHelper.get_ironic_client()
 
         node = IronicHelper.get_ironic_node(ironic_client,
@@ -1191,18 +1183,36 @@ def main():
 
         drac_client = get_drac_client(args.node_definition, node)
 
-        if not args.skip_raid_config:
-            target_raid_config = define_target_raid_config(
+        if node.driver == "pxe_drac":
+            bios_settings = calculate_bios_settings(
                 args.role_index.role,
-                drac_client)
+                flavor_settings,
+                flavor_settings_filename)
 
-            if target_raid_config is None:
+            if bios_settings is None:
                 sys.exit(1)
 
-            succeeded = configure_raid(
+            if not args.skip_raid_config:
+                target_raid_config = define_target_raid_config(
+                    args.role_index.role,
+                    drac_client)
+
+                if target_raid_config is None:
+                    sys.exit(1)
+
+                succeeded = configure_raid(
+                    ironic_client,
+                    node.uuid,
+                    target_raid_config,
+                    drac_client)
+
+                if not succeeded:
+                    sys.exit(1)
+
+            succeeded = configure_bios(
+                node,
                 ironic_client,
-                node.uuid,
-                target_raid_config,
+                bios_settings,
                 drac_client)
 
             if not succeeded:
@@ -1215,14 +1225,6 @@ def main():
             ironic_client,
             drac_client)
 
-        succeeded = configure_bios(
-            node,
-            ironic_client,
-            bios_settings,
-            drac_client)
-
-        if not succeeded:
-            sys.exit(1)
     except (DRACOperationFailed, DRACUnexpectedReturnValue,
             InternalServerError, KeyError, TypeError, ValueError,
             WSManInvalidResponse, WSManRequestFailure):
