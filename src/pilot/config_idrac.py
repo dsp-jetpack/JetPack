@@ -221,6 +221,19 @@ def config_idrac(instack_lock,
     drac_ip = node["pm_addr"]
     drac_user = node["pm_user"]
     drac_password = node["pm_password"]
+    ironic_driver = node["pm_type"]
+
+    if ironic_driver != "pxe_drac":
+        LOG.info("{} is using the {} driver.  No iDRAC configuration is "
+                 "possible.".format(ip_service_tag, ironic_driver))
+
+        if pxe_nic:
+            LOG.warn("Ignoring specified PXE NIC ({})".format(pxe_nic))
+
+        if password:
+            LOG.warn("Ignoring specified password")
+
+        return
 
     drac_client = DRACClient(drac_ip, drac_user, drac_password)
 
