@@ -16,6 +16,7 @@
 
 from settings.config import Settings
 from checkpoints import Checkpoints
+from collections import defaultdict
 from infra_host import InfraHost
 from auto_common import Scp, Ipmi
 import json
@@ -30,7 +31,7 @@ import time
 common_path = os.path.join(os.path.expanduser('~/JetStream/src'), 'common')
 sys.path.append(common_path)
 
-from thread_helper import ThreadWithExHandling
+from thread_helper import ThreadWithExHandling  # noqa
 
 logger = logging.getLogger("osp_deployer")
 
@@ -229,7 +230,7 @@ class Director(InfraHost):
 
         cmd = "~/pilot/config_idracs.py "
 
-        json_config = {}
+        json_config = defaultdict(dict)
         for node in nodes:
             if hasattr(node, 'idrac_ip'):
                 node_id = node.idrac_ip
@@ -237,7 +238,11 @@ class Director(InfraHost):
                 node_id = node.service_tag
 
             if hasattr(node, 'pxe_nic'):
-                json_config[node_id] = {"pxe_nic": node.pxe_nic}
+                json_config[node_id]["pxe_nic"] = node.pxe_nic
+
+            new_ipmi_password = self.settings.new_ipmi_password
+            if new_ipmi_password:
+                json_config[node_id]["password"] = new_ipmi_password
 
         if json_config.items():
             cmd += "-j '{}'".format(json.dumps(json_config))

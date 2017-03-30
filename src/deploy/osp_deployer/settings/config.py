@@ -129,8 +129,11 @@ class Settings():
         self.network_conf = cluster[
             'cluster_nodes_configuration_file']
         self.domain = cluster['domain']
+        self.sah_ipmi_user = cluster['sah_ipmi_user']
+        self.sah_ipmi_password = cluster['sah_ipmi_password']
         self.ipmi_user = cluster['ipmi_user']
         self.ipmi_password = cluster['ipmi_password']
+        self.new_ipmi_password = cluster['new_ipmi_password']
         self.subscription_manager_user = cluster[
             'subscription_manager_user']
         self.subscription_manager_password = cluster[
