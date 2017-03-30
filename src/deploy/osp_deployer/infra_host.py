@@ -33,12 +33,18 @@ class InfraHost():
                                    self.pwd,
                                    command)
 
+    # WARNING: Do not use this method unless absolutely necessary.  Use the
+    # run command above.  See the description of get_pty in
+    # execute_command_tty.
     def run_tty(self, command):
         return Ssh.execute_command_tty(self.ip,
                                        self.user,
                                        self.pwd,
                                        command)
 
+    # WARNING: Do not use this method unless absolutely necessary.  Use the
+    # run command above.  See the description of get_pty in
+    # execute_command_tty.
     def run_tty_as_root(self, command):
         return Ssh.execute_command_tty(self.ip,
                                        "root",

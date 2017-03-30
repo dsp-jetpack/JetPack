@@ -247,21 +247,22 @@ class Director(InfraHost):
         if json_config.items():
             cmd += "-j '{}'".format(json.dumps(json_config))
 
-        stdout, stderr, exit_status = self.run_tty(cmd)
-        logger.debug(stdout)
-        if stderr or exit_status:
+        stdout, stderr, exit_status = self.run(cmd)
+        if exit_status:
             raise AssertionError("An error occurred while running "
                                  "config_idracs.  exit_status: {}, "
-                                 "error: {}".format(exit_status, stderr))
+                                 "error: {}, stdout: {}".format(exit_status,
+                                                                stderr,
+                                                                stdout))
 
     def import_nodes(self):
-        stdout, stderr, exit_status = self.run_tty(self.source_stackrc +
-                                                   "~/pilot/import_nodes.py")
-        logger.debug("Attempted to import nodes into Ironic: " + stdout)
-        if stderr or exit_status:
+        stdout, stderr, exit_status = self.run(self.source_stackrc +
+                                               "~/pilot/import_nodes.py")
+        if exit_status:
             raise AssertionError("Unable to import nodes into Ironic.  "
-                                 "exit_status: {}, error: {}".format(
-                                     exit_status, stderr))
+                                 "exit_status: {}, error: {}, "
+                                 "stdout: {}".format(
+                                     exit_status, stderr, stdout))
 
         tester = Checkpoints()
         tester.verify_nodes_registered_in_ironic()
@@ -269,24 +270,25 @@ class Director(InfraHost):
     def node_introspection(self):
         setts = self.settings
 
-        stdout, stderr, exit_status = self.run_tty(
+        stdout, stderr, exit_status = self.run(
             "~/pilot/prep_overcloud_nodes.py")
-        logger.debug(stdout)
-        if stderr or exit_status:
+        if exit_status:
             raise AssertionError("An error occurred while running "
                                  "prep_overcloud_nodes.  exit_status: {}, "
-                                 "error: {}".format(exit_status, stderr))
+                                 "error: {}, stdout: {}".format(exit_status,
+                                                                stderr,
+                                                                stdout))
 
         introspection_cmd = self.source_stackrc + "~/pilot/introspect_nodes.py"
         if setts.use_in_band_introspection is True:
             introspection_cmd += " -i"
 
-        stdout, stderr, exit_status = self.run_tty(introspection_cmd)
-        logger.debug("Introspected nodes, stdout=" + stdout)
-        if stderr or exit_status:
+        stdout, stderr, exit_status = self.run(introspection_cmd)
+        if exit_status:
             raise AssertionError("Unable to introspect nodes.  "
-                                 "exit_status: {}, error: {}".format(
-                                     exit_status, stderr))
+                                 "exit_status: {}, error: {}, "
+                                 "stdout: {}".format(
+                                     exit_status, stderr, stdout))
 
         tester = Checkpoints()
         tester.verify_introspection_sucessfull()
@@ -345,9 +347,9 @@ class Director(InfraHost):
     def assign_role(self, node, role, index):
         assign_role_command = self._create_assign_role_command(
             node, role, index)
-        stdout, stderr, exit_status = self.run_tty(self.source_stackrc +
-                                                   "cd ~/pilot;" +
-                                                   assign_role_command)
+        stdout, stderr, exit_status = self.run(self.source_stackrc +
+                                               "cd ~/pilot;" +
+                                               assign_role_command)
         if exit_status:
             if hasattr(node, 'service_tag'):
                 node_identifier = "service tag " + node.service_tag
@@ -737,11 +739,11 @@ class Director(InfraHost):
         cmd = 'cd ' + self.pilot_dir + ';./config_idrac_dhcp.py ' + \
             self.settings.sah_node.provisioning_ip + \
             ' -p ' + self.settings.sah_node.root_password
-        _, stderr, exit_status = self.run_tty(cmd)
-        if stderr or exit_status:
+        stdout, stderr, exit_status = self.run(cmd)
+        if exit_status:
             raise AssertionError(
                 "Failed to configure DHCP on the SAH node.  exit_status: {}, "
-                "error: {}: ".format(exit_status, stderr))
+                "error: {}, stdout: {}".format(exit_status, stderr, stdout))
 
     def setup_networking(self):
         logger.debug("Configuring network settings for overcloud")
