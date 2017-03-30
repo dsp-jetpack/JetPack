@@ -33,6 +33,7 @@ discover_nodes_path = os.path.join(os.path.expanduser('~'),
 sys.path.append(discover_nodes_path)
 
 from discover_nodes.dracclient.client import DRACClient  # noqa
+from discover_nodes.dracclient.exceptions import NotFound  # noqa
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being made
 requests.packages.urllib3.disable_warnings()
@@ -127,8 +128,14 @@ def configure_nics_boot_settings(
             if not drac_client.is_nic_legacy_boot_protocol_pxe(nic_id):
                 result = drac_client.set_nic_legacy_boot_protocol_pxe(nic_id)
         else:
-            if not drac_client.is_nic_legacy_boot_protocol_none(nic_id):
-                result = drac_client.set_nic_legacy_boot_protocol_none(nic_id)
+            try:
+                if not drac_client.is_nic_legacy_boot_protocol_none(nic_id):
+                    result = drac_client.set_nic_legacy_boot_protocol_none(
+                        nic_id)
+            except NotFound:
+                LOG.warn("Unable to check the legacy boot protocol of NIC {} "
+                         "on {}, and so cannot set it to None".format(
+                             nic_id, ip_service_tag))
 
         if result is None:
             continue
