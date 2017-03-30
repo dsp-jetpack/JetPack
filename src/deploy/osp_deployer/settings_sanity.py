@@ -109,24 +109,32 @@ class DeployerSanity():
             " file doesn't seem to exist"
 
     def check_ipmi_to_nodes(self):
+        self.check_ipmi_to_node(self.settings.sah_node.idrac_ip,
+                                self.settings.sah_ipmi_user,
+                                self.settings.sah_ipmi_password)
+
         hdw_nodes = (self.settings.controller_nodes +
                      self.settings.compute_nodes +
                      self.settings.ceph_nodes)
 
-        hdw_nodes.append(self.settings.sah_node)
         for node in hdw_nodes:
             if hasattr(node, "idrac_ip"):
-                try:
-                    logger.debug(node.idrac_ip)
-                    ipmi_session = Ipmi(self.settings.cygwin_installdir,
+                self.check_ipmi_to_node(node.idrac_ip,
                                         self.settings.ipmi_user,
-                                        self.settings.ipmi_password,
-                                        node.idrac_ip)
-                    logger.debug(
-                        " :: " + ipmi_session.get_power_state())
-                except:
-                    raise AssertionError("Could not ipmi to host " +
-                                         node.idrac_ip)
+                                        self.settings.ipmi_password)
+
+    def check_ipmi_to_node(self, idrac_ip, ipmi_user, ipmi_password):
+        try:
+            logger.debug(idrac_ip)
+            ipmi_session = Ipmi(self.settings.cygwin_installdir,
+                                ipmi_user,
+                                ipmi_password,
+                                idrac_ip)
+            logger.debug(
+                " :: " + ipmi_session.get_power_state())
+        except:
+            raise AssertionError("Could not ipmi to host " +
+                                 idrac_ip)
 
     def check_network_overlaps(self):
         # Verify the dhcp ranges defined in the ini don't overlap with static
