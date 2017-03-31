@@ -46,7 +46,7 @@ class InfraHost():
     # run command above.  See the description of get_pty in
     # execute_command_tty.
     def run_tty_as_root(self, command):
-        return Ssh.execute_command_tty(self.ip,
+        return Ssh.execute_command_readlines(self.ip,
                                        "root",
                                        self.root_pwd,
                                        command)
