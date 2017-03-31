@@ -33,6 +33,7 @@ class FileHelper():
         with codecs.open(fileref, 'wbU', encoding='utf8') as f:
             for line in updated:
                 f.write(line)
+        f.close()
 
     @staticmethod
     def replace_expression_txt(fileref, search_exp, replace_exp):

@@ -20,6 +20,7 @@ from auto_common import Scp, FileHelper
 import logging
 import time
 import shutil
+import os 
 
 logger = logging.getLogger("osp_deployer")
 
@@ -166,14 +167,15 @@ class Sah(InfraHost):
                                       'br_priv_api_boot_opts="onboot static ' +
                                       sets.sah_node.private_api_ip + '/' +
                                       sets.private_api_netmask + '"')
+        time.sleep(3)
         if self.settings.is_fx2 is True:
-            cmds = ["sed -is 's/{AnacondaIface_device}/{AnacondaIface_device}." +
+            cmds = ["sed -i 's/{AnacondaIface_device}/{AnacondaIface_device}." +
                     self.settings.public_api_vlanid +
                     "/' " + sets.sah_kickstart,
                     "sed -i 's/bootproto=static/vlanid=" +
-                    self.settings.public_api_vlanid + " --bootproto=static/'" + sets.sah_kickstart]
-        for cmd in cmds:
-            self.run(cmd)
+                    self.settings.public_api_vlanid + " --bootproto=static/' " + sets.sah_kickstart]
+            for cmd in cmds:
+                os.system(cmd)
 
     def upload_iso(self):
         shutil.copyfile(self.settings.rhel_iso,
