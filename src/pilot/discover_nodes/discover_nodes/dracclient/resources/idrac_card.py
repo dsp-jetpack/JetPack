@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from . import uris
 from .. import utils_additional
 from dracclient import utils
 from dracclient import wsman
+
+LOG = logging.getLogger(__name__)
 
 
 class iDRACCardConfiguration(object):
@@ -97,6 +101,33 @@ class iDRACCardConfiguration(object):
                                              "DCIM_iDRACCardService",
                                              "DCIM:iDRACCardService",
                                              idrac_fqdd)
+
+    def reset_idrac(self, force=False):
+        """Resets the iDRAC
+
+        :param force: does a force reset when True and a graceful reset when
+               False.
+        :returns: True on success and False on failure.
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        """
+        selectors = {'CreationClassName': "DCIM_iDRACCardService",
+                     'Name': "DCIM:iDRACCardService",
+                     'SystemCreationClassName': 'DCIM_ComputerSystem',
+                     'SystemName': 'DCIM:ComputerSystem'}
+
+        properties = {'Force': "1" if force else "0"}
+
+        doc = self.client.invoke(uris.DCIM_iDRACCardService,
+                                 'iDRACReset',
+                                 selectors,
+                                 properties,
+                                 check_return_value=False)
+
+        message_id = utils.find_xml(doc,
+                                      'MessageID',
+                                      uris.DCIM_iDRACCardService).text
+        return "RAC064" == message_id
 
 
 class iDRACCardAttribute(object):

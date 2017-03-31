@@ -201,10 +201,11 @@ class NICManagement(object):
         """
         return self._list_nics_common(sort=sort)
 
-    def _get_nic_property(self, drac_nic, property_name):
+    def _get_nic_property(self, drac_nic, property_name, nullable=False):
         return utils.get_wsman_resource_attr(drac_nic,
                                              uris.DCIM_NICView,
-                                             property_name)
+                                             property_name,
+                                             nullable=nullable)
 
     def _get_nic_statistics_property(self, drac_nic_statistics, property_name):
         return utils.get_wsman_resource_attr(drac_nic_statistics,
@@ -272,7 +273,8 @@ class NICManagement(object):
                                                        'PCIVendorID'),
                    model=self._get_nic_property(drac_nic, 'ProductName'),
                    firmware_version=self._get_nic_property(drac_nic,
-                                                           'FamilyVersion'),
+                                                           'FamilyVersion',
+                                                           nullable=True),
                    is_integrated=(
                        drac_instance_id.find('NIC.Integrated.') == 0),
                    mac_address=self._get_nic_property(drac_nic,

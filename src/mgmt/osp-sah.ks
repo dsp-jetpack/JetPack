@@ -525,7 +525,7 @@ mkdir -p /store/data/images
 mkdir -p /store/data/iso
 
 echo "POST: Install other rerquired packages, paramiko, ..."
-yum install -y gcc libffi-devel python-devel openssl-devel python-setuptools ipmitool tmux
+yum install -y gcc libffi-devel python-devel openssl-devel python-setuptools ipmitool tmux git
 
 echo "POST: get and install pip"
 curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
@@ -537,7 +537,7 @@ pip install paramiko
 pip install selenium
 echo "POST: Done installing extra packages"
 
-echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/root/temp_name/something_not_jetstream/src/deploy/' >> /root/.bashrc 
+echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/root/JetStream/src/deploy/' >> /root/.bashrc 
 
 # chvt 1
 

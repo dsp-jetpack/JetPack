@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,36 +46,36 @@ mkdir -p $dest
 
 mk_bundle() {
   local archive_name=$1
-  shift
   local root_dir=$2
   shift
+  shift
+  first_dir=$1
   local src_dirs="$@"
 
   local target_root_dir="$dest/stage"
   local target_dir="$target_root_dir/$root_dir"
 
-  echo "Creating $(echo $src_dirs|awk '{print $1}') node bundles"
+  echo "Creating $root_dir bundle"
   mkdir -p ${target_dir}
   cp LICENSE ${target_dir}
   for src_dir in ${src_dirs}; do
-  if [[ $src_dir =~ "vlock" ]]; then
-    cp data/vlock_files/$src_dir ${target_dir}
-  else
-    cp -r src/${src_dir}/* ${target_dir}
-  fi
+    if [[ $src_dir =~ "vlock" ]]; then
+      cp data/vlock_files/$src_dir ${target_dir}/${first_dir}
+    else
+      cp -r src/${src_dir} ${target_dir}
+    fi
   done
-  (cd $target_dir; sha256sum * >${target_dir}/${checksum_file})
-  (cd $target_root_dir; tar zcvf $dest/${archive_name}.tgz $root_dir; zip -r $dest/${archive_name} $root_dir)
+  (cd $target_dir; sha256sum $(find . -type f -print) >${target_dir}/${checksum_file})
+  (cd $target_dir; tar zcvf $dest/${archive_name}.tgz $src_dirs LICENSE ${checksum_file}; zip -r $dest/${archive_name} $src_dirs LICENSE ${checksum_file})
   rm -rf ${target_root_dir}
 }
 
 
 # make bundles
 # mk_bundle <tar-file-name> <tar-root-dir-name> <src-dirs> <vlock-files>
-mk_bundle dell-mgmt-node pilot mgmt ceph_vm.vlock director_vm.vlock
-mk_bundle dell-pilot pilot pilot 
-mk_bundle midonet_pilot midonet midonet
-mk_bundle dell-deploy deploy deploy
+mk_bundle dell-mgmt-node sah mgmt rhscon_vm.vlock director_vm.vlock
+mk_bundle dell-pilot manual pilot common
+mk_bundle dell-deploy automated deploy common
 
 # checksum the base directory files
 (cd $dest; sha256sum * > ${checksum_file})

@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ class CredentialHelper:
 
         if 'hiera' in env_keys['OS_PASSWORD']:
             env_keys['OS_PASSWORD'] = check_output(['sudo', 'hiera',
-			    'admin_password']).strip()
+                                                    'admin_password']).strip()
         return \
             env_keys['OS_AUTH_URL'], env_keys['OS_TENANT_NAME'], \
             env_keys['OS_USERNAME'], env_keys['OS_PASSWORD']
@@ -71,6 +71,10 @@ class CredentialHelper:
             drac_ip, instackenv_file)
 
         return drac_ip, drac_user, drac_password
+
+    @staticmethod
+    def clear_instack_cache():
+        CredentialHelper.instackenv = None
 
     @staticmethod
     def _load_instack(instackenv_file):
