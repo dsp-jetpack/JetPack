@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,38 +24,33 @@ parameter_defaults:
   ServiceVips:
     # CHANGEME: Change the following to the VIP for the redis service on the
     # Private API/internal_api network.
-    # Note that this IP must lie OUTSIDE the InternalApiAllocationPools range
+    # Note that this IP must lie outside the InternalApiAllocationPools range
     # specified in network-environment.yaml.
     redis: 192.168.140.251
 
   # CHANGEME: Change the following to the VIP on the Provisioning network
-  # Note that this IP must lie INSIDE the dhcp_start/dhcp_end range
-  # specified in undercloud.conf and it should be the highest IP in the range
-  # to ensure the DHCP server does not attempt to allocate the IP.
+  # Note that this IP must lie outside the dhcp_start/dhcp_end range
+  # specified in undercloud.conf.
   ControlPlaneIP: 192.168.120.250
 
   # CHANGEME: Change the following to the VIP on the Private API network.
-  # Note that this IP must lie INSIDE the InternalApiAllocationPools range
-  # specified in network-environment.yaml and it should be the highest IP in
-  # the range to ensure the DHCP server does not attempt to allocate the IP.
+  # Note that this IP must lie outside the InternalApiAllocationPools range
+  # specified in network-environment.yaml.
   InternalApiNetworkVip: 192.168.140.250
 
   # CHANGEME: Change the following to the VIP on the Public API network.
-  # Note that this IP must lie INSIDE the ExternalAllocationPools range
-  # specified in network-environment.yaml and it should be the highest IP in
-  # the range to ensure the DHCP server does not attempt to allocate the IP.
+  # Note that this IP must lie outside the ExternalAllocationPools range
+  # specified in network-environment.yaml.
   ExternalNetworkVip: 192.168.190.250
 
   # CHANGEME: Change the following to the VIP on the Storage network
-  # Note that this IP must lie INSIDE the StorageAllocationPools range
-  # specified in network-environment.yaml and it should be the highest IP in
-  # the range to ensure the DHCP server does not attempt to allocate the IP.
+  # Note that this IP must lie outside the StorageAllocationPools range
+  # specified in network-environment.yaml.
   StorageNetworkVip: 192.168.170.250
 
   # CHANGEME: Change the following to the VIP on the Provisioning network.
   # The Storage Clustering network is not connected to the controller nodes,
   # so the VIP for this network must be mapped to the provisioning network.
-  # Note that this IP must lie INSIDE the dhcp_start/dhcp_end range
-  # specified in undercloud.conf and it should be the second highest IP in the
-  # range to ensure the DHCP server does not attempt to allocate the IP.
+  # Note that this IP must lie outside the dhcp_start/dhcp_end range
+  # specified in undercloud.conf.
   StorageMgmtNetworkVip: 192.168.120.249
