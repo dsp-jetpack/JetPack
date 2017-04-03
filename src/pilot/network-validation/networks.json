@@ -1,6 +1,5 @@
 {
     "networks": {
-        "external": "10.148.44.0/24"
     },
     "flavors_to_networks": {
         "control": [
@@ -31,8 +30,7 @@
                 "management",
                 "private_api",
                 "storage",
-                "public_api",
-                "external"
+                "public_api"
             ]
         },
         "director_vm": {
@@ -42,17 +40,17 @@
                 "provisioning",
                 "management",
                 "private_api",
-                "public_api",
-                "external"
+                "public_api"
             ]
         },
         "ceph_vm": {
             "user": "root",
             "ip" : "10.148.44.14",
             "networks": [
-                "external",
+                "public_api",
                 "storage"
             ]
         }
     }
 }
+
