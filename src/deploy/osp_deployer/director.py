@@ -86,8 +86,8 @@ class Director(InfraHost):
                 count += 1
         else:
             for repo in self.settings.rhsm_repos:
-                _, std_err = self.run_as_root('subscription-manager repos '
-                                              '--enable=' + repo)
+                _, std_err, _ = self.run_as_root('subscription-manager repos '
+                                                 '--enable=' + repo)
                 if std_err:
                     logger.error("Unable to enable repo {}: {}".format(
                         repo, std_err))
