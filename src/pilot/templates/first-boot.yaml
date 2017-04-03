@@ -32,17 +32,13 @@ resources:
           # LVM components here so the disks are not in use and sgdisk and
           # partprobe can do their thing
 
-          # Destroy all the logical volumes
-          lvs --noheadings -o lv_name | awk '{print $1}' | while read lv;
-          do
-              cmd="lvremove -f $lv"
-              echo $cmd
-              $cmd
-          done
-
-          # Destroy all the volume groups
+          # Destroy all the logical volumes and volume groups
           vgs --noheadings -o vg_name | awk '{print $1}' | while read lvg;
           do
+              cmd="lvremove -f $lvg"
+              echo $cmd
+              $cmd
+
               cmd="vgremove -f $lvg"
               echo $cmd
               $cmd
@@ -65,8 +61,29 @@ resources:
               echo "Skipping ${device} because it's mounted"
               continue
             fi
+
+            # Delete all of the partitions on the disk
+            partitions=$(parted -sm $device print|tail -n +3|awk -F: '{print $1}')
+            for partition in $partitions; do
+                cmd="parted -s $device rm $partition"
+                echo $cmd
+                $cmd
+            done
+
+            # In case the disk has a non-gpt partition type, convert it to gpt
+            cmd="parted -s $device mklabel gpt"
+            echo $cmd
+            $cmd
+
+            # Zap the disk for good measure
+            cmd="sgdisk -Z $device"
+            echo $cmd
+            $cmd
+
             echo "Partitioning disk: ${disk}"
-            sgdisk -og ${device}
+            cmd="sgdisk -og ${device}"
+            echo $cmd
+            $cmd
             echo
           done
           partprobe
