@@ -222,6 +222,7 @@ echo "## Done."
 # fails because the iDRAC is busy running an export to XML job and is not
 # ready. Note that this patch must be here because we use this code prior to
 # deploying the director.
+echo
 echo "## Patching Ironic iDRAC driver is_ready check..."
 OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.py ~/pilot/lifecycle_controller.patch)
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyc
@@ -237,6 +238,18 @@ sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
 echo "## Done."
 
+# This hacks in a patch to work around a known issue where a RAID-10 virtual
+# disk cannot be created from more than 16 backing physical disks.  Note that
+# this code must be here because we use this code prior to deploying the
+# director.
+echo
+echo "## Patching Ironic iDRAC driver RAID library..."
+OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ~/pilot/dracclient_raid.patch)
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
+echo "## Done."
+
+echo
 echo "## Restarting openstack-ironic-conductor.service..."
 sudo systemctl restart openstack-ironic-conductor.service
 echo "## Done."

@@ -1,0 +1,24 @@
+--- /usr/lib/python2.7/site-packages/dracclient/resources/raid.py	2016-11-22 00:22:21.000000000 +0000
++++ raid.py	2017-04-04 16:24:18.278053344 +0000
+@@ -388,13 +388,19 @@
+             virtual_disk_prop_names.append('VirtualDiskName')
+             virtual_disk_prop_values.append(disk_name)
+ 
+-        if span_depth is not None:
++        # Do not provide optional 'SpanDepth' argument for RAID 10 when
++        # there are more than 16 backing physical disks (HDD).
++        if (span_depth is not None and not (raid_level == '1+0' and
++                                            len(physical_disks) > 16)):
+             utils.validate_integer_value(span_depth, 'span_depth', error_msgs)
+ 
+             virtual_disk_prop_names.append('SpanDepth')
+             virtual_disk_prop_values.append(str(span_depth))
+ 
+-        if span_length is not None:
++        # Do not provide optional 'SpanLength' argument for RAID 10 when
++        # there are more than 16 backing physical disks (HDD).
++        if (span_length is not None and not (raid_level == '1+0' and
++                                             len(physical_disks) > 16)):
+             utils.validate_integer_value(span_length, 'span_length',
+                                          error_msgs)
+ 

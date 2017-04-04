@@ -72,8 +72,6 @@ DCIM_PhysicalDiskView = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
 
 RAID1 = "4"
 
-MAX_NUMBER_RAID_10_BACKING_PHYSICAL_DISKS = 16
-
 NOT_SUPPORTED_MSG = "This operation is not supported on this device"
 
 ROLES = {
@@ -301,23 +299,15 @@ def define_single_raid_10_logical_disk(drac_client, raid_controller_name):
     number_physical_disks = len(physical_disk_names)
 
     if number_physical_disks >= 4:
-        # Limit the number of physical disks (HDD) that back a RAID 10
-        # logical disk.
-        '''TODO: Update or remove the limit after we determine if
-        there's a way to exceed the limit defined by
-        MAX_NUMBER_RAID_10_BACKING_PHYSICAL_DISKS.'''
-        capped_physical_disk_names = physical_disk_names[
-            :MAX_NUMBER_RAID_10_BACKING_PHYSICAL_DISKS]
-
         LOG.info(
             "Defining RAID 10 on the following physical disks, and marking it "
             "the root volume:\n  {}".format(
-                "\n  ".join(capped_physical_disk_names)))
+                "\n  ".join(physical_disk_names)))
         logical_disk = define_logical_disk(
             'MAX',
             '1+0',
             raid_controller_name,
-            capped_physical_disk_names,
+            physical_disk_names,
             is_root_volume=True)
     elif number_physical_disks == 3 or number_physical_disks == 2:
         two_physical_disk_names = physical_disk_names[0:2]
