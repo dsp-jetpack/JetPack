@@ -35,7 +35,7 @@ class Checkpoints():
         checks = DeployerSanity()
         checks.check_network_settings()
         checks.check_files()
-        checks.check_ipmi_to_nodes()
+        #checks.check_ipmi_to_nodes()
         checks.check_network_overlaps()
         checks.check_duplicate_ips()
 
