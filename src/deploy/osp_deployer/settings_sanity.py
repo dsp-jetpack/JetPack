@@ -252,6 +252,11 @@ class DeployerSanity():
             raise AssertionError("SAH management_ip in .properties is in "
                                  "the management_allocation_pool range "
                                  "defined in the .ini")
+        sah_drac_ip = self.settings.sah_node.idrac_ip.split(".")[-1]
+        if int(start) <= int(sah_drac_ip) <= int(end):
+            raise AssertionError("SAH idrac_ip in .properties is in "
+                                 "the management_allocation_pool range "
+                                 "defined in the .ini")
 
     def check_duplicate_ips(self):
         # Check for duplicate ip adresses in .properties and .ini
