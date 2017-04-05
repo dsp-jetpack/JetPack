@@ -271,6 +271,14 @@ class DeployerSanity():
             raise AssertionError("Duplicate ips found in your \
                                  .properties/.ini :" + ', '.join(dups))
 
+    def verify_overcloud_name(self):
+        # Do not allow a _ in the overcloud name
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1380099
+        if "_" in self.settings.overcloud_name:
+            raise AssertionError(" _ character is not allowed " \
+                                 + "in the .ini overcloud_name setting")
+
+
     def check_net_attrs(self, node, should_have_attributes,
                         should_be_valid_ips):
         for each in should_have_attributes:

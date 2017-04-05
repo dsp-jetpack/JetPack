@@ -38,6 +38,7 @@ class Checkpoints():
         checks.check_ipmi_to_nodes()
         checks.check_network_overlaps()
         checks.check_duplicate_ips()
+        checks.verify_overcloud_name()
 
     @staticmethod
     def verify_subscription_status(public_api_ip, user, password, retries):
