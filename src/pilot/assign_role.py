@@ -688,7 +688,7 @@ def configure_raid(ironic_client, node_uuid, role, drac_client):
         role, drac_client)
 
     if target_raid_config is None:
-        sys.exit(1)
+        return False
 
     # Set the target RAID configuration on the ironic node.
     ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
