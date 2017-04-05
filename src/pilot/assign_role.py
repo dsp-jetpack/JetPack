@@ -649,7 +649,7 @@ def physical_disk_to_key(physical_disk):
     return physical_disk_id_to_key(physical_disk.id)
 
 
-def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
+def configure_raid(ironic_client, node_uuid, role, drac_client):
     '''TODO: Add some selective exception handling so we can determine
     when RAID configuration failed and return False. Further testing
     should uncover interesting error conditions.'''
@@ -663,9 +663,6 @@ def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
     if not success:
         LOG.critical("Could not place node into the manageable state")
         return False
-
-    # Set the target RAID configuration on the ironic node.
-    ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
 
     # To facilitate workarounds to bugs in the ironic DRAC driver's RAID
     # clean steps, execute manual cleaning twice, first to delete the
@@ -686,6 +683,15 @@ def configure_raid(ironic_client, node_uuid, target_raid_config, drac_client):
              "complete")
     ironic_client.node.wait_for_provision_state(node_uuid, 'manageable')
     LOG.info("Completed deletion of the existing RAID configuration")
+
+    target_raid_config = define_target_raid_config(
+        role, drac_client)
+
+    if target_raid_config is None:
+        return False
+
+    # Set the target RAID configuration on the ironic node.
+    ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
 
     # Work around the bugs in the ironic DRAC driver's RAID clean steps.
 
@@ -1183,17 +1189,10 @@ def main():
                 sys.exit(1)
 
             if not args.skip_raid_config:
-                target_raid_config = define_target_raid_config(
-                    args.role_index.role,
-                    drac_client)
-
-                if target_raid_config is None:
-                    sys.exit(1)
-
                 succeeded = configure_raid(
                     ironic_client,
                     node.uuid,
-                    target_raid_config,
+                    args.role_index.role,
                     drac_client)
 
                 if not succeeded:
