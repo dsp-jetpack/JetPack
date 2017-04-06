@@ -1073,7 +1073,7 @@ class Director(InfraHost):
         ip_info = []
         fi = open(deployment_log, "wb")
         try:
-            logger.debug("retreiving node ip details ..")
+            logger.debug("retrieving node ip details ..")
             ip_info.append("====================================")
             ip_info.append("### nodes ip information ###")
 
@@ -1134,7 +1134,7 @@ class Director(InfraHost):
                 ip_info.append("     - storage ip       : " + storage_ip)
                 if self.settings.is_fx2 is True:
                     logger.debug("restarting network manager")
-                    cmd = "ssh heat-admin@" + provisioning_ip + \
+                    cmd = "ssh " + ssh_opts + "heat-admin@" + provisioning_ip + \
                           "sudo systemctl restart NetworkManager.service"
                     re = self.run_tty(cmd)
 
@@ -1147,6 +1147,10 @@ class Director(InfraHost):
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
 
+                ssh_opts = (
+                    "-o StrictHostKeyChecking=no "
+                    "-o UserKnownHostsFile=/dev/null "
+                    "-o KbdInteractiveDevices=no")
                 re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
@@ -1171,8 +1175,8 @@ class Director(InfraHost):
                 ip_info.append("     - storage ip       : " + storage_ip)
                 if self.settings.is_fx2 is True:
                     logger.debug("restarting network manager")
-                    cmd = "ssh heat-admin@" + provisioning_ip + \
-                          "sudo service NetworkManager restart"
+                    cmd = "ssh " + ssh_opts + "heat-admin@" + provisioning_ip + \
+                          "sudo systemctl restart NetworkManager.service"
                     re = self.run_tty(cmd)
 
             re = self.run_tty(self.source_stackrc + "nova list | grep storage")
@@ -1184,6 +1188,10 @@ class Director(InfraHost):
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
 
+                ssh_opts = (
+                    "-o StrictHostKeyChecking=no "
+                    "-o UserKnownHostsFile=/dev/null "
+                    "-o KbdInteractiveDevices=no")
                 re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
@@ -1208,8 +1216,8 @@ class Director(InfraHost):
                 ip_info.append("     - storage ip         : " + storage_ip)
                 if self.settings.is_fx2 is True:
                     logger.debug("restarting network manager")
-                    cmd = "ssh heat-admin@" + provisioning_ip + \
-                          "sudo service NetworkManager restart"
+                    cmd = "ssh " + ssh_opts + "heat-admin@" + provisioning_ip + \
+                          "sudo systemctl restart NetworkManager.service"
                     re = self.run_tty(cmd)
 
             ip_info.append("====================================")
