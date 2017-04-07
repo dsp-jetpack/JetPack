@@ -422,7 +422,7 @@ class Director(InfraHost):
         cmds = [
              "sed -i 's/.*MaxStartups.*/#MaxStartups 10:30:100/'" +
              " /etc/ssh/sshd_config",
-             "sed -i 's/.*MaxSession.*/MaxSession 10/' /etc/ssh/sshd_config",
+             "sed -i 's/.*MaxSession.*/#MaxSession 10/' /etc/ssh/sshd_config",
              "/sbin/service sshd restart",
              "grep max -i /etc/ssh/sshd_config"
         ]
