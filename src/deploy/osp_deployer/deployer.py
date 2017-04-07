@@ -200,7 +200,9 @@ def deploy():
         director_vm.configure_idracs()
         director_vm.import_nodes()
         director_vm.node_introspection()
+        director_vm.update_sshd_conf()
         director_vm.assign_node_roles()
+        director_vm.revert_sshd_conf
 
         director_vm.setup_templates()
         logger.info("=== Installing the overcloud ")
