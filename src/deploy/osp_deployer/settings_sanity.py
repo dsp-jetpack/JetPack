@@ -379,11 +379,11 @@ class DeployerSanity():
                 shouldhaveattributes.extend(["public_api_ip",
                                              "private_api_ip",
                                              "storage_ip",
-                                             "tenant_tunnel_ip"])
+                                             "tenant_ip"])
                 shouldbbevalidips.extend(["public_api_ip",
                                           "private_api_ip",
                                           "storage_ip",
-                                          "tenant_tunnel_ip"])
+                                          "tenant_ip"])
             self.check_overcloud_node_net_attrs(controller,
                                                 shouldhaveattributes,
                                                 shouldbbevalidips)
@@ -396,10 +396,10 @@ class DeployerSanity():
             if self.settings.overcloud_static_ips is True:
                 shouldhaveattributes.extend(["private_api_ip",
                                              "storage_ip",
-                                             "tenant_tunnel_ip"])
+                                             "tenant_ip"])
                 shouldbbevalidips.extend(["private_api_ip",
                                           "storage_ip",
-                                          "tenant_tunnel_ip"])
+                                          "tenant_ip"])
             self.check_overcloud_node_net_attrs(compute,
                                                 shouldhaveattributes,
                                                 shouldbbevalidips)

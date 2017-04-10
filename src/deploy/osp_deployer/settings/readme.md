@@ -60,9 +60,9 @@
 	        storage_cluster_ip
 * 6.0.0.c - Removed provisioning_mac_address properties on all overcloud nodes - no longer required
 	    Removed hostname from overcloud nodes - not in use anymore (nodes get named controller-x, compute-x, cephstorage-x)
-* 10.0.0.a - Initial 7.0 version : Rename is_ceph node to is_rhscon, and change its hostname to "rhscon
-* 10.0.0.b - Added overcloud_nodes_pwd to allow setting a root password on the overcloud nodes
-* 10.0.0.c - removed storage_cluster_ip from controller nodes
+* 7.0.0.a - Initial 7.0 version : Rename is_ceph node to is_rhscon, and change its hostname to "rhscon
+* 7.0.0.b - Added overcloud_nodes_pwd to allow setting a root password on the overcloud nodes
+* 7.0.0.c - removed storage_cluster_ip from controller nodes
           - removed external ips
-* 10.0.1.a - renamned tenant_ip to tenant_tunnel_ip
+
 "

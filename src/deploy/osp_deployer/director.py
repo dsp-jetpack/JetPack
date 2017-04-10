@@ -929,19 +929,19 @@ class Director(InfraHost):
             control_external_ips = ''
             control_private_ips = ''
             control_storage_ips = ''
-            control_tenant_tunnel_ips = ''
+            control_tenant_ips = ''
             for node in self.settings.controller_nodes:
                 control_external_ips += "    - " + node.public_api_ip + "\\n"
                 control_private_ips += "    - " + node.private_api_ip + "\\n"
                 control_storage_ips += "    - " + node.storage_ip + "\\n"
-                control_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip + "\\n"
+                control_tenant_ips += "    - " + node.tenant_ip + "\\n"
 
-            compute_tenant_tunnel_ips = ''
+            compute_tenant_ips = ''
             compute_private_ips = ''
             compute_storage_ips = ''
 
             for node in self.settings.compute_nodes:
-                compute_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip + "\\n"
+                compute_tenant_ips += "    - " + node.tenant_ip + "\\n"
                 compute_private_ips += "    - " + node.private_api_ip + "\\n"
                 compute_storage_ips += "    - " + node.storage_ip + "\\n"
 
@@ -956,7 +956,7 @@ class Director(InfraHost):
             cmds = ['sed -i "/192.168/d" ' + static_ips_yaml,
                     'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
                     s/tenant:/tenant: \\n' +
-                    control_tenant_tunnel_ips + "/\" " + static_ips_yaml,
+                    control_tenant_ips + "/\" " + static_ips_yaml,
                     'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
                     s/external:/external: \\n' +
                     control_external_ips + "/\" " + static_ips_yaml,
@@ -968,7 +968,7 @@ class Director(InfraHost):
                     control_storage_ips + "/\" " + static_ips_yaml,
                     'sed -i "/NovaComputeIPs/,/CephStorageIPs/ \
                     s/tenant:/tenant: \\n' +
-                    compute_tenant_tunnel_ips + "/\" " + static_ips_yaml,
+                    compute_tenant_ips + "/\" " + static_ips_yaml,
                     'sed -i "/NovaComputeIPs/,/CephStorageIPs/ \
                     s/internal_api:/internal_api: \\n' +
                     compute_private_ips + "/\" " + static_ips_yaml,
