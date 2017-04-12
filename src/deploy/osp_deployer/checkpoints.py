@@ -540,7 +540,7 @@ class Checkpoints():
                                     setts.director_install_account_user,
                                     setts.director_install_account_pwd,
                                     cmd)
-                if "NetBSD_Secure_Shell" not in "\n".join(re):
+                if "NetBSD_Secure_Shell" not in re[0]:
                     raise AssertionError(each +
                                          " not able to ssh to EQL san ip " +
                                          self.settings.eqlx_san_ip)
