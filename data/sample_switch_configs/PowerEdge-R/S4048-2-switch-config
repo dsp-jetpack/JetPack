@@ -4,6 +4,13 @@ boot system stack-unit 1 primary system://A
 boot system stack-unit 1 secondary system://B
 boot system stack-unit 1 default system://A
 !
+logging coredump stack-unit  1 
+logging coredump stack-unit  2 
+logging coredump stack-unit  3 
+logging coredump stack-unit  4 
+logging coredump stack-unit  5 
+logging coredump stack-unit  6 
+!
 hostname S4048-2
 ! 
 protocol lldp 
@@ -18,11 +25,11 @@ username admin password CHANGEME privilege 15
 ! 
 protocol spanning-tree rstp 
  no disable 
- bridge-priority 20480
+ bridge-priority 20480 
 ! 
 vlt domain 1 
  peer-link port-channel 100 
- back-up destination 192.168.110.191 
+ back-up destination 192.168.110.2 
  primary-priority 2 
  system-mac mac-address aa:11:22:33:44:55 
  unit-id 1 
@@ -32,7 +39,7 @@ vlt domain 1
 stack-unit 1 provision S4048-ON
 ! 
 interface TenGigabitEthernet 1/1
- description SAH-Pxp1-bond0
+ description SAH-PXp1-bond0
  no ip address
  mtu 9216
 !  
@@ -41,7 +48,7 @@ interface TenGigabitEthernet 1/1
  no shutdown
 ! 
 interface TenGigabitEthernet 1/2
- description Controller0-Pxp1-bond0
+ description Controller0-PXp1-bond0
  no ip address
  mtu 9216
 !  
@@ -50,7 +57,7 @@ interface TenGigabitEthernet 1/2
  no shutdown
 ! 
 interface TenGigabitEthernet 1/3
- description Controller1-Pxp1-bond0
+ description Controller1-PXp1-bond0
  no ip address
  mtu 9216
 !  
@@ -59,7 +66,7 @@ interface TenGigabitEthernet 1/3
  no shutdown
 ! 
 interface TenGigabitEthernet 1/4
- description Controller2-Pxp1-bond0
+ description Controller2-PXp1-bond0
  no ip address
  mtu 9216
 !  
@@ -68,7 +75,7 @@ interface TenGigabitEthernet 1/4
  no shutdown
 ! 
 interface TenGigabitEthernet 1/5
- description Compute0-Pxp1-bond0
+ description Compute0-PXp1-bond0
  no ip address
  mtu 9216
 !  
@@ -77,7 +84,7 @@ interface TenGigabitEthernet 1/5
  no shutdown
 ! 
 interface TenGigabitEthernet 1/6
- description Compute1-Pxp1-bond0
+ description Compute1-PXp1-bond0
  no ip address
  mtu 9216
 !  
@@ -86,7 +93,7 @@ interface TenGigabitEthernet 1/6
  no shutdown
 ! 
 interface TenGigabitEthernet 1/7
- description Compute2-Pxp1-bond0
+ description Compute2-PXp1-bond0
  no ip address
  mtu 9216
 !  
@@ -111,7 +118,7 @@ interface TenGigabitEthernet 1/11
  shutdown
 ! 
 interface TenGigabitEthernet 1/12
- description Storage0-Pxp1-bond0
+ description Storage0-PXp1-bond0
  no ip address
  mtu 9216
 !  
@@ -120,7 +127,7 @@ interface TenGigabitEthernet 1/12
  no shutdown
 ! 
 interface TenGigabitEthernet 1/13
- description Storage1-Pxp1-bond0
+ description Storage1-PXp1-bond0
  no ip address
  mtu 9216
 !  
@@ -129,7 +136,7 @@ interface TenGigabitEthernet 1/13
  no shutdown
 ! 
 interface TenGigabitEthernet 1/14
- description Storage2-Pxp1-bond0
+ description Storage2-PXp1-bond0
  no ip address
  mtu 9216
 !  
@@ -178,7 +185,7 @@ interface TenGigabitEthernet 1/24
  shutdown
 ! 
 interface TenGigabitEthernet 1/25
- description SAH-Pxp2-bond1
+ description SAH-PXp2-bond1
  no ip address
  mtu 9216
 !  
@@ -187,7 +194,7 @@ interface TenGigabitEthernet 1/25
  no shutdown
 ! 
 interface TenGigabitEthernet 1/26
- description Controller0-Pxp2-bond1
+ description Controller0-PXp2-bond1
  no ip address
  mtu 9216
 !  
@@ -196,7 +203,7 @@ interface TenGigabitEthernet 1/26
  no shutdown
 ! 
 interface TenGigabitEthernet 1/27
- description Controller1-Pxp2-bond1
+ description Controller1-PXp2-bond1
  no ip address
  mtu 9216
 !  
@@ -205,7 +212,7 @@ interface TenGigabitEthernet 1/27
  no shutdown
 ! 
 interface TenGigabitEthernet 1/28
- description Controller2-Pxp2-bond1
+ description Controller2-PXp2-bond1
  no ip address
  mtu 9216
 !  
@@ -214,7 +221,7 @@ interface TenGigabitEthernet 1/28
  no shutdown
 ! 
 interface TenGigabitEthernet 1/29
- description Compute0-Pxp2-bond1
+ description Compute0-PXp2-bond1
  no ip address
  mtu 9216
 !  
@@ -223,7 +230,7 @@ interface TenGigabitEthernet 1/29
  no shutdown
 ! 
 interface TenGigabitEthernet 1/30
- description Compute1-Pxp2-bond1
+ description Compute1-PXp2-bond1
  no ip address
  mtu 9216
 !  
@@ -232,7 +239,7 @@ interface TenGigabitEthernet 1/30
  no shutdown
 ! 
 interface TenGigabitEthernet 1/31
- description Compute2-Pxp2-bond1
+ description Compute2-PXp2-bond1
  no ip address
  mtu 9216
 !  
@@ -257,7 +264,7 @@ interface TenGigabitEthernet 1/35
  shutdown
 ! 
 interface TenGigabitEthernet 1/36
- description Storage0-Pxp2-bond1
+ description Storage0-PXp2-bond1
  no ip address
  mtu 9216
 !  
@@ -266,7 +273,7 @@ interface TenGigabitEthernet 1/36
  no shutdown
 ! 
 interface TenGigabitEthernet 1/37
- description Storage1-Pxp2-bond1
+ description Storage1-PXp2-bond1
  no ip address
  mtu 9216
 !  
@@ -275,7 +282,7 @@ interface TenGigabitEthernet 1/37
  no shutdown
 ! 
 interface TenGigabitEthernet 1/38
- description Storage2-Pxp2-bond1
+ description Storage2-PXp2-bond1
  no ip address
  mtu 9216
 !  
@@ -292,7 +299,7 @@ interface TenGigabitEthernet 1/40
  shutdown
 ! 
 interface TenGigabitEthernet 1/41
- description EQL_iSCSI
+ description EQL-CML_iSCSI
  no ip address
  mtu 9216
  switchport
@@ -300,7 +307,7 @@ interface TenGigabitEthernet 1/41
  no shutdown
 ! 
 interface TenGigabitEthernet 1/42
- description EQL_iSCSI
+ description EQL-CML_iSCSI
  no ip address
  mtu 9216
  switchport
@@ -322,7 +329,7 @@ interface TenGigabitEthernet 1/45
 interface TenGigabitEthernet 1/46
  no ip address
  shutdown
-! 
+ ! 
 interface TenGigabitEthernet 1/47
  description Uplink_To_Customer_Site
  no ip address
@@ -364,7 +371,7 @@ interface fortyGigE 1/54
  shutdown
 ! 
 interface ManagementEthernet 1/1
- ip address 192.168.110.192/24
+ ip address 192.168.110.3/24
  no shutdown
 ! 
 interface ManagementEthernet 2/1
@@ -561,7 +568,7 @@ interface Port-channel 38
  spanning-tree rstp edge-port 
  vlt-peer-lag port-channel 38
  no shutdown
-! 
+!
 interface Port-channel 47
  description Uplink_To_Customer_Site
  no ip address
@@ -600,7 +607,7 @@ interface Port-channel 100
  no shutdown
 ! 
 interface Vlan 1
-!untagged Port-channel 1-7,26-28,48,51,100
+!untagged Port-channel 1-7,12-14,25-31,36-38,48,51,100
 ! 
 interface Vlan 110
  description iDRAC-OOB
@@ -622,13 +629,14 @@ interface Vlan 130
 ! 
 interface Vlan 140
  description Private_API
+ no ip address
  tagged Port-channel 1-7
  shutdown
 ! 
 interface Vlan 170
  description Storage
  no ip address
- tagged Port-channel 1-4,12-15,29-31
+ tagged Port-channel 1-4,12-14,29-31
  untagged TenGigabitEthernet 1/41-1/42
  shutdown
 ! 
@@ -639,317 +647,317 @@ interface Vlan 180
  shutdown
 !
 interface Vlan 190
- description Public-Horizon
+ description Cloud-Public
  ip address 192.168.190.4/24
- tagged Port-channel 1,25-28,47-48,51
+ tagged Port-channel 25-28,47-48,51
  no shutdown
 ! 
 interface Vlan 191
- description VM_External-Floating
+ description VM_External-Floating-IPs
  ip address 192.168.191.4/24
- tagged Port-channel 26-28,47,51
+ tagged Port-channel 25-28,51
  no shutdown 
 !
 interface Vlan 201
  description Tenant_Networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 202
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 203
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 204
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 205
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 206
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 207
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 208
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 209
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 210
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 211
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 212
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 213
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 214
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 215
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 216
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 217
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 218
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 219
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 220
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 221
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 222
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 223
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 224
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 225
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 226
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 227
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 228
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 229
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 230
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 231
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 232
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 233
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 234
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 235
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 236
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 237
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 238
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 239
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 240
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 241
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 242
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 243
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 244
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 245
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 246
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 247
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 248
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 249
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
 ! 
 interface Vlan 250
  description Tenant_networks
  no ip address
- tagged Port-channel 1-7
+ tagged Port-channel 2-7
  shutdown
-! 
+!
 management route 0.0.0.0/0 192.168.110.1 
 !
 ip ssh server enable
