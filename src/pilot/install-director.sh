@@ -123,7 +123,9 @@ echo "## Installing Director"
 sudo yum -y install python-tripleoclient
 openstack undercloud install
 echo "## Install Tempest plugin dependencies"
+
 sudo yum -y install python-*-tests
+
 echo "## Done."
 
 echo
