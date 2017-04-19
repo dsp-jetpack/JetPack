@@ -28,6 +28,7 @@ class Checkpoints():
         self.director_ip = self.settings.director_node.public_api_ip
         self.sah_ip = self.settings.sah_node.public_api_ip
         self.rhscon_ip = self.settings.rhscon_node.public_api_ip
+        self.verify_rhsm_status = self.settings.verify_rhsm_status
 
     @staticmethod
     def verify_deployer_settings():
@@ -94,19 +95,20 @@ class Checkpoints():
     def sah_health_check(self):
 
         logger.info("SAH node health check")
-        logger.debug("*** Verify the SAH node registered properly ***")
-        for _ in range(60):
-            subscription_status = self.verify_subscription_status(
-                self.sah_ip,
-                "root",
-                self.settings.sah_node.root_password,
-                self.settings.subscription_check_retries)
-            if "Current" in subscription_status:
-                break
-            time.sleep(2)
-        else:
-            raise AssertionError(
-                "SAH did not register properly : " + subscription_status)
+        if self.verify_rhsm_status:
+            logger.debug("*** Verify the SAH node registered properly ***")
+            for _ in range(60):
+                subscription_status = self.verify_subscription_status(
+                    self.sah_ip,
+                    "root",
+                    self.settings.sah_node.root_password,
+                    self.settings.subscription_check_retries)
+                if "Current" in subscription_status:
+                    break
+                time.sleep(2)
+            else:
+                raise AssertionError(
+                    "SAH did not register properly : " + subscription_status)
 
         logger.debug("*** Verify the SAH can ping its public gateway")
         gateway = self.settings.public_api_gateway
@@ -160,16 +162,17 @@ class Checkpoints():
     def director_vm_health_check(self):
         setts = self.settings
         logger.info("Director VM health checks")
-        logger.debug("*** Verify the Director VM registered properly ***")
-        subscription_status = self.verify_subscription_status(
-            self.director_ip,
-            "root",
-            setts.director_node.root_password,
-            setts.subscription_check_retries)
-        if "Current" not in subscription_status:
-            raise AssertionError(
-                "Director VM did not register properly : " +
-                subscription_status)
+        if self.verify_rhsm_status:
+            logger.debug("*** Verify the Director VM registered properly ***")
+            subscription_status = self.verify_subscription_status(
+                self.director_ip,
+                "root",
+                setts.director_node.root_password,
+                setts.subscription_check_retries)
+            if "Current" not in subscription_status:
+                raise AssertionError(
+                    "Director VM did not register properly : " +
+                    subscription_status)
 
         logger.debug(
             "*** Verify all pools registered & repositories subscribed ***")
@@ -246,17 +249,18 @@ class Checkpoints():
 
     def rhscon_vm_health_check(self):
         logger.info("Storage Console VM health checks")
-        logger.debug(
-            "*** Verify the Storage Console VM registered properly ***")
-        subscription_status = self.verify_subscription_status(
-            self.rhscon_ip,
-            "root",
-            self.settings.rhscon_node.root_password,
-            self.settings.subscription_check_retries)
-        if "Current" not in subscription_status:
-            raise AssertionError(
-                "Storage Console VM did not register properly : " +
-                subscription_status)
+        if self.verify_rhsm_status:
+            logger.debug(
+                "*** Verify the Storage Console VM registered properly ***")
+            subscription_status = self.verify_subscription_status(
+                self.rhscon_ip,
+                "root",
+                self.settings.rhscon_node.root_password,
+                self.settings.subscription_check_retries)
+            if "Current" not in subscription_status:
+                raise AssertionError(
+                    "Storage Console VM did not register properly : " +
+                    subscription_status)
 
         logger.debug(
             "*** Verify the Storage Console VM can ping its public gateway")

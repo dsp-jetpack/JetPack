@@ -304,6 +304,13 @@ class Settings():
         except KeyError:
             self.run_tempest = False
             self.tempest_smoke_only = False
+        try:
+            if self.bastion_settings_map['verify_rhsm_status'].lower() == 'true':
+                self.verify_rhsm_status = True
+            else:
+                self.verify_rhsm_status = False
+        except KeyError:
+            self.verify_rhsm_status = True
 
         self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
         self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
