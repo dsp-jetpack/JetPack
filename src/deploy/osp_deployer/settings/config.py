@@ -245,6 +245,11 @@ class Settings():
         else:
             self.enable_rbd_backend = False
 
+        if cluster['enable_rbd_nova_backend'].lower() == 'true':
+            self.enable_rbd_nova_backend = True
+        else:
+            self.enable_rbd_nova_backend = False
+
         if cluster['enable_fencing'].lower() == 'true':
             self.enable_fencing = True
         else:
