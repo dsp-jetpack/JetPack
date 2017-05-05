@@ -52,9 +52,9 @@ class Director(InfraHost):
         self.pilot_dir = os.path.join(self.home_dir, "pilot")
         self.images_dir = os.path.join(self.pilot_dir, "images")
         self.templates_dir = os.path.join(self.pilot_dir, "templates")
-        if self.settings.is_fx2 is True:
+        if self.settings.is_fx is True:
             self.nic_configs_dir = os.path.join(self.templates_dir,
-                                                "nic-configs-fx2")
+                                                "nic-configs-fx")
         else:
             self.nic_configs_dir = os.path.join(self.templates_dir,
                                                 "nic-configs")
@@ -728,9 +728,9 @@ class Director(InfraHost):
                 self.settings.tenant_network_allocation_pool_end +
                 "'}]"   '|" ' + network_yaml,
             ]
-        if self.settings.is_fx2:
+        if self.settings.is_fx:
             cmds += [
-                    'sed -i "s|nic-configs|nic-configs-fx2|" ' + network_yaml
+                    'sed -i "s|nic-configs|nic-configs-fx|" ' + network_yaml
             ]
         for cmd in cmds:
             self.run_tty(cmd)
@@ -820,7 +820,7 @@ class Director(InfraHost):
                 'sed -i "s|192.168.120.1|' +
                 self.settings.provisioning_gateway + '|" ' + controller_yaml
         ]
-        if self.settings.is_fx2 is True:
+        if self.settings.is_fx is True:
             cmds = [
                    'sed -i "s|em1|changeme1|" ' + controller_yaml,
                    'sed -i "s|em3|changeme2|" ' + controller_yaml,
@@ -862,7 +862,7 @@ class Director(InfraHost):
                  'sed -i "s|192.168.120.1|' +
                  self.settings.provisioning_gateway + '|" ' + compute_yaml
                  ]
-        if self.settings.is_fx2 is True:
+        if self.settings.is_fx is True:
             cmds = [
                'sed -i "s|em1|changeme1|" ' + compute_yaml,
                'sed -i "s|em3|changeme2|" ' + compute_yaml,
@@ -899,7 +899,7 @@ class Director(InfraHost):
                  self.settings.storage_bond1_interfaces.split(" ")[
                      1] + '|" ' + storage_yaml,
                  ]
-        if self.settings.is_fx2 is True:
+        if self.settings.is_fx is True:
             cmds = [
                    'sed -i "s|em1|changeme1|" ' + storage_yaml,
                    'sed -i "s|em3|changeme2|" ' + storage_yaml,
@@ -1132,7 +1132,7 @@ class Director(InfraHost):
                 ip_info.append("     - nova private ip  : " + private_api)
                 ip_info.append("     - nova public ip   : " + nova_public_ip)
                 ip_info.append("     - storage ip       : " + storage_ip)
-                if self.settings.is_fx2 is True:
+                if self.settings.is_fx is True:
                     logger.debug("restarting network manager")
                     cmd = "ssh heat-admin@" + provisioning_ip + \
                           "sudo systemctl restart NetworkManager.service"
@@ -1169,7 +1169,7 @@ class Director(InfraHost):
                 ip_info.append("     - provisioning ip  : " + provisioning_ip)
                 ip_info.append("     - nova private ip  : " + private_api)
                 ip_info.append("     - storage ip       : " + storage_ip)
-                if self.settings.is_fx2 is True:
+                if self.settings.is_fx is True:
                     logger.debug("restarting network manager")
                     cmd = "ssh heat-admin@" + provisioning_ip + \
                           "sudo service NetworkManager restart"
@@ -1206,7 +1206,7 @@ class Director(InfraHost):
                     "     - provisioning ip    : " + provisioning_ip)
                 ip_info.append("     - storage cluster ip : " + cluster_ip)
                 ip_info.append("     - storage ip         : " + storage_ip)
-                if self.settings.is_fx2 is True:
+                if self.settings.is_fx is True:
                     logger.debug("restarting network manager")
                     cmd = "ssh heat-admin@" + provisioning_ip + \
                           "sudo service NetworkManager restart"

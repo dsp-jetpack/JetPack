@@ -40,7 +40,7 @@
                . rhel_install_location
 * 7.0.0.a - Initial 7.0 version
 * 7.0.0.a - removed external_netmask & external_gateway settings (removed)
-          - added hardware -  Hardware type, valid options are poweredge, fx2
+          - added hardware -  Hardware type, valid options are poweredge, fx
 
 #####settings.properties
 * 6.0.0.a - Initial 6.0 version
