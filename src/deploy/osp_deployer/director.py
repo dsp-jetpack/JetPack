@@ -473,7 +473,7 @@ class Director(InfraHost):
                 tmp_file.write("{} {}\n".format(domain_param, value))
 
             elif line.startswith(rbd_backend_param):
-                value = str(self.settings.enable_rbd_backend).lower()
+                value = str(self.settings.enable_rbd_nova_backend).lower()
                 tmp_file.write("{} {}\n".format(rbd_backend_param, value))
 
             else:
