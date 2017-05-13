@@ -89,6 +89,7 @@ debug() { [[ $DEBUG -le $LOG_LEVEL ]] && log "DEBUG: $@"; }
 set_admin_scope(){
   info "setting admin scope with: ~/${STACK_NAME}rc."
   source ~/${STACK_NAME}rc
+  [ -n "$OS_TENANT_NAME" ] && export OS_PROJECT_NAME=$OS_TENANT_NAME
   info "### sourcing ~/${STACK_NAME}rc"
 }
 
@@ -97,6 +98,7 @@ set_tenant_scope(){
   export OS_USERNAME=$USER_NAME
   export OS_PASSWORD=$SANITY_USER_PASSWORD
   export OS_TENANT_NAME=$PROJECT_NAME
+  export OS_PROJECT_NAME=$PROJECT_NAME
 }
 
 generate_sanity_rc(){
@@ -108,6 +110,7 @@ generate_sanity_rc(){
   sed -i "s/${USERNAMEREPL}/export OS_USERNAME=${USER_NAME}/g" ${SANITYRC}
   sed -i "s/${PASSWORDREPL}/export OS_PASSWORD=${SANITY_USER_PASSWORD}/g" ${SANITYRC}
   sed -i "s/${TENANTNAMEREPL}/export OS_TENANT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
+  sed -i "s/${TENANTNAMEREPL}/export OS_PROJECT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
 }
 
 init(){
@@ -116,6 +119,7 @@ init(){
   cd ~
 
   source ~/stackrc
+  [ -n "$OS_TENANT_NAME" ] && export OS_PROJECT_NAME=$OS_TENANT_NAME
 
   # Collect the SSH keys from all of the overcloud nodes
   info "### Collecting SSH keys... ###"
