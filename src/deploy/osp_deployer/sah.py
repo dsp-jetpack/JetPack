@@ -168,7 +168,7 @@ class Sah(InfraHost):
                                       sets.sah_node.private_api_ip + '/' +
                                       sets.private_api_netmask + '"')
         time.sleep(3)
-        if self.settings.is_fx2 is True:
+        if self.settings.is_fx is True:
             cmds = ["sed -i 's/{AnacondaIface_device}/{AnacondaIface_device}." +
                     self.settings.public_api_vlanid +
                     "/' " + sets.sah_kickstart,

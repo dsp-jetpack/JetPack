@@ -190,10 +190,10 @@ class Settings():
             self.version_locking_enabled = True
         else:
             self.version_locking_enabled = False
-        if cluster['hardware'].lower() == 'fx2':
-            self.is_fx2 = True
+        if cluster['hardware'].lower() == 'fx':
+            self.is_fx = True
         else:
-            self.is_fx2 = False
+            self.is_fx = False
         if cluster['use_ipmi_driver'].lower() == 'true':
             self.use_ipmi_driver = True
         else:
@@ -333,13 +333,13 @@ class Settings():
             '/pilot/templates/dell-cinder-backends.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
-        if self.is_fx2 is True:
+        if self.is_fx is True:
             self.controller_yaml = self.foreman_configuration_scripts + \
-                '/pilot/templates/nic-configs-fx2/controller.yaml'
+                '/pilot/templates/nic-configs-fx/controller.yaml'
             self.compute_yaml = self.foreman_configuration_scripts + \
-                '/pilot/templates/nic-configs-fx2/compute.yaml'
+                '/pilot/templates/nic-configs-fx/compute.yaml'
             self.ceph_storage_yaml = self.foreman_configuration_scripts + \
-                '/pilot/templates/nic-configs-fx2/ceph-storage.yaml'
+                '/pilot/templates/nic-configs-fx/ceph-storage.yaml'
         else:
             self.controller_yaml = self.foreman_configuration_scripts + \
                 '/pilot/templates/nic-configs/controller.yaml'
