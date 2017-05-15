@@ -249,6 +249,13 @@ sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
 echo "## Done."
 
+# This hacks in a patch to work around an issue where lock contention on the
+# nodes in ironic can occur during RAID cleaning.
+echo
+echo "## Patching ironic.conf for locking..."
+sudo sed -i 's/#node_locked_retry_attempts = 3/node_locked_retry_attempts = 15/' /etc/ironic/ironic.conf
+echo "## Done."
+
 echo
 echo "## Restarting openstack-ironic-conductor.service..."
 sudo systemctl restart openstack-ironic-conductor.service
