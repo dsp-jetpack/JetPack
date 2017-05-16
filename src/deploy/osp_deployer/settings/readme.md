@@ -26,7 +26,7 @@
 	       . tenant_network_allocation_pool_end
                * note : Not used unless you wish to configure Generic Routing Encapsulation (GRE) networks
             Added overcloud_static_ips - true/false to enable the use of static ips on the overcloud nodes. false will use dhcp
-* 6.0.0.c - Added settings for static VIPs support :
+* 6.0.0.c - Added settings for static VIPs support : 
 	       . use_static_vips - true/false to enable the use of static VIPs
 	       . redis_vip        - VIP for redis on the private api network
                . provisioning_vip - VIP for the provisioning network
@@ -40,7 +40,7 @@
                . rhel_install_location
 * 7.0.0.a - Initial 7.0 version
 * 7.0.0.a - removed external_netmask & external_gateway settings (removed)
-          - added hardware -  Hardware type, valid options are poweredge, fx2
+          - added hardware -  Hardware type, valid options are poweredge, fx
 
 #####settings.properties
 * 6.0.0.a - Initial 6.0 version
@@ -60,9 +60,11 @@
 	        storage_cluster_ip
 * 6.0.0.c - Removed provisioning_mac_address properties on all overcloud nodes - no longer required
 	    Removed hostname from overcloud nodes - not in use anymore (nodes get named controller-x, compute-x, cephstorage-x)
-* 7.0.0.a - Initial 7.0 version : Rename is_ceph node to is_rhscon, and change its hostname to "rhscon
-* 7.0.0.b - Added overcloud_nodes_pwd to allow setting a root password on the overcloud nodes
-* 7.0.0.c - removed storage_cluster_ip from controller nodes
+* 10.0.0.a - Initial 7.0 version : Rename is_ceph node to is_rhscon, and change its hostname to "rhscon
+* 10.0.0.b - Added overcloud_nodes_pwd to allow setting a root password on the overcloud nodes
+* 10.0.0.c - removed storage_cluster_ip from controller nodes
           - removed external ips
-
+* 10.0.1.a - renamned tenant_ip to tenant_tunnel_ip
+* 10.0.1.b - Added enable_rbd_nova_backend to support nova rbd/ceph as ephemeral backend independant of 
+             enable_rbd_backend which is used for cinder
 "

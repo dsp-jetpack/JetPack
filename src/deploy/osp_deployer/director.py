@@ -52,9 +52,9 @@ class Director(InfraHost):
         self.pilot_dir = os.path.join(self.home_dir, "pilot")
         self.images_dir = os.path.join(self.pilot_dir, "images")
         self.templates_dir = os.path.join(self.pilot_dir, "templates")
-        if self.settings.is_fx2 is True:
+        if self.settings.is_fx is True:
             self.nic_configs_dir = os.path.join(self.templates_dir,
-                                                "nic-configs-fx2")
+                                                "nic-configs-fx")
         else:
             self.nic_configs_dir = os.path.join(self.templates_dir,
                                                 "nic-configs")
@@ -504,7 +504,7 @@ class Director(InfraHost):
                 tmp_file.write("{} {}\n".format(domain_param, value))
 
             elif line.startswith(rbd_backend_param):
-                value = str(self.settings.enable_rbd_backend).lower()
+                value = str(self.settings.enable_rbd_nova_backend).lower()
                 tmp_file.write("{} {}\n".format(rbd_backend_param, value))
 
             else:
@@ -759,9 +759,9 @@ class Director(InfraHost):
                 self.settings.tenant_network_allocation_pool_end +
                 "'}]"   '|" ' + network_yaml,
             ]
-        if self.settings.is_fx2:
+        if self.settings.is_fx:
             cmds += [
-                    'sed -i "s|nic-configs|nic-configs-fx2|" ' + network_yaml
+                    'sed -i "s|nic-configs|nic-configs-fx|" ' + network_yaml
             ]
         for cmd in cmds:
             self.run_tty(cmd)
@@ -851,7 +851,7 @@ class Director(InfraHost):
                 'sed -i "s|192.168.120.1|' +
                 self.settings.provisioning_gateway + '|" ' + controller_yaml
         ]
-        if self.settings.is_fx2 is True:
+        if self.settings.is_fx is True:
             cmds = [
                    'sed -i "s|em1|changeme1|" ' + controller_yaml,
                    'sed -i "s|em3|changeme2|" ' + controller_yaml,
@@ -893,7 +893,7 @@ class Director(InfraHost):
                  'sed -i "s|192.168.120.1|' +
                  self.settings.provisioning_gateway + '|" ' + compute_yaml
                  ]
-        if self.settings.is_fx2 is True:
+        if self.settings.is_fx is True:
             cmds = [
                'sed -i "s|em1|changeme1|" ' + compute_yaml,
                'sed -i "s|em3|changeme2|" ' + compute_yaml,
@@ -930,7 +930,7 @@ class Director(InfraHost):
                  self.settings.storage_bond1_interfaces.split(" ")[
                      1] + '|" ' + storage_yaml,
                  ]
-        if self.settings.is_fx2 is True:
+        if self.settings.is_fx is True:
             cmds = [
                    'sed -i "s|em1|changeme1|" ' + storage_yaml,
                    'sed -i "s|em3|changeme2|" ' + storage_yaml,
@@ -960,19 +960,19 @@ class Director(InfraHost):
             control_external_ips = ''
             control_private_ips = ''
             control_storage_ips = ''
-            control_tenant_ips = ''
+            control_tenant_tunnel_ips = ''
             for node in self.settings.controller_nodes:
                 control_external_ips += "    - " + node.public_api_ip + "\\n"
                 control_private_ips += "    - " + node.private_api_ip + "\\n"
                 control_storage_ips += "    - " + node.storage_ip + "\\n"
-                control_tenant_ips += "    - " + node.tenant_ip + "\\n"
+                control_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip + "\\n"
 
-            compute_tenant_ips = ''
+            compute_tenant_tunnel_ips = ''
             compute_private_ips = ''
             compute_storage_ips = ''
 
             for node in self.settings.compute_nodes:
-                compute_tenant_ips += "    - " + node.tenant_ip + "\\n"
+                compute_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip + "\\n"
                 compute_private_ips += "    - " + node.private_api_ip + "\\n"
                 compute_storage_ips += "    - " + node.storage_ip + "\\n"
 
@@ -987,7 +987,7 @@ class Director(InfraHost):
             cmds = ['sed -i "/192.168/d" ' + static_ips_yaml,
                     'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
                     s/tenant:/tenant: \\n' +
-                    control_tenant_ips + "/\" " + static_ips_yaml,
+                    control_tenant_tunnel_ips + "/\" " + static_ips_yaml,
                     'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
                     s/external:/external: \\n' +
                     control_external_ips + "/\" " + static_ips_yaml,
@@ -999,7 +999,7 @@ class Director(InfraHost):
                     control_storage_ips + "/\" " + static_ips_yaml,
                     'sed -i "/NovaComputeIPs/,/CephStorageIPs/ \
                     s/tenant:/tenant: \\n' +
-                    compute_tenant_ips + "/\" " + static_ips_yaml,
+                    compute_tenant_tunnel_ips + "/\" " + static_ips_yaml,
                     'sed -i "/NovaComputeIPs/,/CephStorageIPs/ \
                     s/internal_api:/internal_api: \\n' +
                     compute_private_ips + "/\" " + static_ips_yaml,
@@ -1163,7 +1163,7 @@ class Director(InfraHost):
                 ip_info.append("     - nova private ip  : " + private_api)
                 ip_info.append("     - nova public ip   : " + nova_public_ip)
                 ip_info.append("     - storage ip       : " + storage_ip)
-                if self.settings.is_fx2 is True:
+                if self.settings.is_fx is True:
                     logger.debug("restarting network manager")
                     cmd = "ssh " + ssh_opts + "heat-admin@" + provisioning_ip + \
                           "sudo systemctl restart NetworkManager.service"
@@ -1204,7 +1204,7 @@ class Director(InfraHost):
                 ip_info.append("     - provisioning ip  : " + provisioning_ip)
                 ip_info.append("     - nova private ip  : " + private_api)
                 ip_info.append("     - storage ip       : " + storage_ip)
-                if self.settings.is_fx2 is True:
+                if self.settings.is_fx is True:
                     logger.debug("restarting network manager")
                     cmd = "ssh " + ssh_opts + "heat-admin@" + provisioning_ip + \
                           "sudo systemctl restart NetworkManager.service"
@@ -1245,7 +1245,7 @@ class Director(InfraHost):
                     "     - provisioning ip    : " + provisioning_ip)
                 ip_info.append("     - storage cluster ip : " + cluster_ip)
                 ip_info.append("     - storage ip         : " + storage_ip)
-                if self.settings.is_fx2 is True:
+                if self.settings.is_fx is True:
                     logger.debug("restarting network manager")
                     cmd = "ssh " + ssh_opts + "heat-admin@" + provisioning_ip + \
                           "sudo systemctl restart NetworkManager.service"
