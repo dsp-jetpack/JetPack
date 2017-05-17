@@ -45,7 +45,9 @@ class Checkpoints():
         i = 0
         is_registered = False
 
-        while i < int(retries):
+        while 1:
+            logger.debug(
+                "checking registration status " + str(i + 1) + "/" + str(retries))
             subscription_status = \
                 Ssh.execute_command(public_api_ip,
                                     user,
@@ -54,9 +56,10 @@ class Checkpoints():
             if "repolist: 0" not in subscription_status:
                 return True
             i += 1
-            logger.debug("retrying " + str(i) + "/" + str(retries))
-            time.sleep(60)
-        return is_registered
+            if i < int(retries):
+                time.sleep(60)
+            else:
+                return is_registered
 
     @staticmethod
     def verify_pools_attached(ip_addr, user, password, logfile):
