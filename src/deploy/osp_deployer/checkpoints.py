@@ -46,7 +46,6 @@ class Checkpoints():
         is_registered = False
 
         while i < int(retries):
-            time.sleep(60)
             subscription_status = \
                 Ssh.execute_command(public_api_ip,
                                     user,
@@ -56,6 +55,7 @@ class Checkpoints():
                 return True
             i += 1
             logger.debug("retrying " + str(i) + "/" + str(retries))
+            time.sleep(60)
         return is_registered
 
     @staticmethod
