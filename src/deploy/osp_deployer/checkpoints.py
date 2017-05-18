@@ -41,26 +41,25 @@ class Checkpoints():
         checks.verify_overcloud_name()
 
     @staticmethod
-    def verify_subscription_status(public_api_ip, user, password, retries):
+    def is_host_registered(public_api_ip, user, password, retries):
         i = 0
+        is_registered = False
 
-        subscription_status = Ssh.execute_command(
-            public_api_ip,
-            user,
-            password,
-            "subscription-manager status")[0]
-
-        while "Current" not in subscription_status and i < retries:
-            if "Unknown" in subscription_status:
-                return subscription_status
-            time.sleep(60)
+        while 1:
+            logger.debug(
+                "checking registration status " + str(i + 1) + "/" + str(retries))
             subscription_status = \
                 Ssh.execute_command(public_api_ip,
                                     user,
                                     password,
-                                    "subscription-manager status")[0]
+                                    "yum repolist")[0]
+            if "repolist: 0" not in subscription_status:
+                return True
             i += 1
-        return subscription_status
+            if i < int(retries):
+                time.sleep(60)
+            else:
+                return is_registered
 
     @staticmethod
     def verify_pools_attached(ip_addr, user, password, logfile):
@@ -96,17 +95,17 @@ class Checkpoints():
         logger.info("SAH node health check")
         logger.debug("*** Verify the SAH node registered properly ***")
         for _ in range(60):
-            subscription_status = self.verify_subscription_status(
+            subscription_status = is_host_registered(
                 self.sah_ip,
                 "root",
                 self.settings.sah_node.root_password,
                 self.settings.subscription_check_retries)
-            if "Current" in subscription_status:
+            if subscription_status is True:
                 break
             time.sleep(2)
         else:
             raise AssertionError(
-                "SAH did not register properly : " + subscription_status)
+                "SAH did not register properly")
 
         logger.debug("*** Verify the SAH can ping its public gateway")
         gateway = self.settings.public_api_gateway
@@ -161,15 +160,14 @@ class Checkpoints():
         setts = self.settings
         logger.info("Director VM health checks")
         logger.debug("*** Verify the Director VM registered properly ***")
-        subscription_status = self.verify_subscription_status(
+        subscription_status = self.is_host_registered(
             self.director_ip,
             "root",
             setts.director_node.root_password,
             setts.subscription_check_retries)
-        if "Current" not in subscription_status:
+        if subscription_status is False:
             raise AssertionError(
-                "Director VM did not register properly : " +
-                subscription_status)
+                "Director VM did not register properly")
 
         logger.debug(
             "*** Verify all pools registered & repositories subscribed ***")
@@ -248,15 +246,14 @@ class Checkpoints():
         logger.info("Storage Console VM health checks")
         logger.debug(
             "*** Verify the Storage Console VM registered properly ***")
-        subscription_status = self.verify_subscription_status(
+        subscription_status = self.is_host_registered(
             self.rhscon_ip,
             "root",
             self.settings.rhscon_node.root_password,
             self.settings.subscription_check_retries)
-        if "Current" not in subscription_status:
+        if subscription_status is False:
             raise AssertionError(
-                "Storage Console VM did not register properly : " +
-                subscription_status)
+                "Storage Console VM did not register properly")
 
         logger.debug(
             "*** Verify the Storage Console VM can ping its public gateway")
