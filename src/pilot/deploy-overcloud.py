@@ -252,7 +252,7 @@ def main():
         parser.add_argument('--disable_rbd',
                             action='store_true',
                             default=False,
-                            help="Disabe cinder Ceph and rbd backend")
+                            help="Disable cinder Ceph and rbd backend")
         parser.add_argument('--static_ips',
                             action='store_true',
                             default=False,
@@ -266,6 +266,11 @@ def main():
                             default=False,
                             help="Control which physical server is assigned "
                                  "which instance")
+        parser.add_argument("--debug",
+                            default=False,
+                            action='store_true',
+                            help="Indicates if the deploy-overcloud script "
+                                 "should be run in debug mode")
         args = parser.parse_args()
         p = re.compile('\d+:\d+')
         if not p.match(args.vlan_range):
@@ -311,6 +316,10 @@ def main():
         if args.overcloud_name is not None:
             overcloud_name_opt = "--stack " + args.overcloud_name
 
+        debug = ""
+        if args.debug:
+            debug = "--debug"
+            
         # The order of the environment files is important as a later inclusion
         # overrides resources defined in prior inclusions.
 
@@ -347,7 +356,7 @@ def main():
             env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
 
         cmd = "cd ; openstack overcloud deploy" \
-              " --debug" \
+              " {}" \
               " --log-file ~/pilot/overcloud_deployment.log" \
               " -t {}" \
               " {}" \
@@ -372,7 +381,8 @@ def main():
               " --ntp-server {}" \
               " --neutron-network-vlan-ranges physint:{},physext" \
               " --neutron-bridge-mappings physint:br-tenant,physext:br-ex" \
-              "".format(args.timeout,
+              "".format(debug,
+                        args.timeout,
                         overcloud_name_opt,
                         env_opts,
                         control_flavor,
