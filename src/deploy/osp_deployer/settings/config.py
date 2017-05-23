@@ -373,7 +373,7 @@ class Settings():
         self.nodes = []
 
         self.overcloud_nodes_pwd = cluster['overcloud_nodes_pwd']
-        if len(cluster['rhsm_repos']) > 0:
+        if 'rhsm_repos' in cluster and len(cluster['rhsm_repos']) > 0:
             logger.info("Using ini repo settings")
             self.rhsm_repos = cluster['rhsm_repos'].split(',')
         else:
