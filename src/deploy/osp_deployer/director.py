@@ -1073,6 +1073,9 @@ class Director(InfraHost):
         # is the one nodes arei defined in in the .properties
         cmd += " --node_placement"
 
+        if self.settings.deploy_overcloud_debug:
+            cmd += " --debug"
+
         cmd += " > overcloud_deploy_out.log 2>&1"
 
         self.run_tty(cmd)

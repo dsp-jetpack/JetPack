@@ -37,6 +37,10 @@ class Settings():
         self.settings_file = settings_file
         cluster = self.get_settings_section(
             "Cluster Settings")
+        if cluster['deploy_overcloud_debug'].lower() == 'true':
+            self.deploy_overcloud_debug = True
+        else:
+            self.deploy_overcloud_debug = False
         self.storage_network = cluster['storage_network']
         self.storage_cluster_network = cluster[
             'storage_cluster_network']

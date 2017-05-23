@@ -65,6 +65,8 @@
 * 10.0.0.c - removed storage_cluster_ip from controller nodes
           - removed external ips
 * 10.0.1.a - renamned tenant_ip to tenant_tunnel_ip
-* 10.0.1.b - Added enable_rbd_nova_backend to support nova rbd/ceph as ephemeral backend independant of 
+* 10.0.1.b - Added enable_rbd_nova_backend to support nova rbd/ceph as ephemeral backend independent of 
              enable_rbd_backend which is used for cinder
+* 10.0.1.c - Added deploy_overcloud_debug to allow optionally running
+             deploy_overcloud script in debug mode
 "
