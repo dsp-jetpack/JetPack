@@ -328,6 +328,7 @@ def define_single_raid_10_logical_disk(drac_client, raid_controller_name):
             "JBOD mode".format(
                 physical_disk_names[0]))
         logical_disk = define_jbod_or_raid_0_logical_disk(
+            drac_client,
             raid_controller_name,
             physical_disk_names[0],
             is_root_volume=True)
@@ -385,7 +386,8 @@ def define_storage_logical_disks(drac_client, raid_controller_name):
     # None is returned.
     jbod_capable = is_jbod_capable(drac_client, raid_controller_name)
     jbod_logical_disks = define_jbod_logical_disks(
-        remaining_physical_disks, raid_controller_name, jbod_capable)
+        drac_client, remaining_physical_disks, raid_controller_name,
+        jbod_capable)
 
     if jbod_logical_disks is None:
         return None
@@ -550,7 +552,7 @@ def bin_physical_disks_by_size_gb(physical_disks, media_type_filter=None):
 
 
 def define_jbod_logical_disks(
-        physical_disks, raid_controller_name, jbod_capable):
+        drac_client, physical_disks, raid_controller_name, jbod_capable):
     sorted_physical_disk_names = sorted((d.id for d in physical_disks),
                                         key=physical_disk_id_to_key)
 
@@ -558,8 +560,8 @@ def define_jbod_logical_disks(
 
     for physical_disk_name in sorted_physical_disk_names:
         jbod_logical_disk = define_jbod_or_raid_0_logical_disk(
-            raid_controller_name, physical_disk_name, is_root_volume=False,
-            jbod_capable=jbod_capable)
+            drac_client, raid_controller_name, physical_disk_name,
+            is_root_volume=False, jbod_capable=jbod_capable)
 
         if jbod_logical_disk is not None:
             logical_disks.append(jbod_logical_disk)
@@ -567,12 +569,13 @@ def define_jbod_logical_disks(
     return logical_disks
 
 
-def define_jbod_or_raid_0_logical_disk(raid_controller_name,
+def define_jbod_or_raid_0_logical_disk(drac_client,
+                                       raid_controller_name,
                                        physical_disk_name,
                                        is_root_volume=False,
                                        jbod_capable=None):
     if jbod_capable is None:
-        jbod_capable = is_jbod_capable(raid_controller_name)
+        jbod_capable = is_jbod_capable(drac_client, raid_controller_name)
 
     if jbod_capable:
         # Presently, when a RAID controller is JBOD capable, there is no
