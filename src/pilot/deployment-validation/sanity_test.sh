@@ -49,6 +49,7 @@ NOVA_INSTANCE_NAME="$BASE_NOVA_INSTANCE_NAME"
 VOLUME_NAME="$BASE_VOLUME_NAME"
 PROJECT_NAME="$BASE_PROJECT_NAME"
 USER_NAME="$BASE_USER_NAME"
+SANITYRC=~/${BASE_PROJECT_NAME}rc
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no"
 
 shopt -s nullglob
@@ -91,16 +92,17 @@ set_tenant_scope(){
   export OS_PASSWORD=$PASSWORD
   export OS_TENANT_NAME=$PROJECT_NAME
 
-  # Generate sanityrc file
-  info "Generating sanityrc file."
-  SANITYRC=~/sanityrc
-  cp ~/${STACK_NAME}rc ${SANITYRC}
-  USERNAMEREPL=`grep OS_USERNAME ~/${STACK_NAME}rc`
-  PASSWORDREPL=`grep OS_PASSWORD ~/${STACK_NAME}rc`
-  TENANTNAMEREPL=`grep OS_TENANT_NAME ~/${STACK_NAME}rc`
-  sed -i "s/${USERNAMEREPL}/export OS_USERNAME=${USER_NAME}/g" ${SANITYRC}
-  sed -i "s/${PASSWORDREPL}/export OS_PASSWORD=${PASSWORD}/g" ${SANITYRC}
-  sed -i "s/${TENANTNAMEREPL}/export OS_TENANT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
+  if [ ! -f ${SANITYRC} ]; then
+    # Generate sanityrc file
+    info "Generating sanityrc file."
+    cp ~/${STACK_NAME}rc ${SANITYRC}
+    USERNAMEREPL=`grep OS_USERNAME ~/${STACK_NAME}rc`
+    PASSWORDREPL=`grep OS_PASSWORD ~/${STACK_NAME}rc`
+    TENANTNAMEREPL=`grep OS_TENANT_NAME ~/${STACK_NAME}rc`
+    sed -i "s/${USERNAMEREPL}/export OS_USERNAME=${USER_NAME}/g" ${SANITYRC}
+    sed -i "s/${PASSWORDREPL}/export OS_PASSWORD=${PASSWORD}/g" ${SANITYRC}
+    sed -i "s/${TENANTNAMEREPL}/export OS_TENANT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
+  fi
 }
 
 init(){
@@ -493,6 +495,7 @@ then
 
     if [ -f "$KEY_FILE" ]; then
       rm -f $KEY_FILE
+      nova keypair-delete $KEY_FILE
     fi
 
     set_tenant_scope
