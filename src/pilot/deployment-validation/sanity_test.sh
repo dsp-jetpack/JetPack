@@ -495,7 +495,7 @@ then
 
     if [ -f "$KEY_FILE" ]; then
       rm -f $KEY_FILE
-      nova keypair-delete $KEY_FILE
+      nova keypair-delete $KEY_NAME
     fi
 
     set_tenant_scope
