@@ -103,12 +103,12 @@ class Sah(InfraHost):
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^extern_bond_name=.*',
                                       'extern_bond_name="' +
-                                      sets.sah_node.external_bond +
+                                      sets.sah_node.public_bond +
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^extern_ifaces=.*',
                                       'extern_ifaces="' +
-                                      sets.sah_node.external_slaves +
+                                      sets.sah_node.public_slaves +
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^internal_bond_name=.*',
