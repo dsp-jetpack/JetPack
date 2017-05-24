@@ -30,11 +30,11 @@ class NodeConf():
         self.root_password = None
         self.external_ip = None
         self.public_api_gateway = None
-        self.external_bond = None
+        self.public_bond = None
         self.public_api_ip = None
         self.external_ip = None
         self.external_netmask = None
-        self.external_slaves = None
+        self.public_slaves = None
         self.provisioning_ip = None
         self.provisioning_gateway = None
         self.provisioning_bond = None
