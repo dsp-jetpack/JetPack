@@ -21,8 +21,8 @@
 VLAN_NETWORK="192.168.201.0/24"
 EXTERNAL_NETWORK_NAME="public"
 EXTERNAL_SUBNET_NAME="external_sub"
-STARTIP="192.168.191.2"
-ENDIP="192.168.191.30"
+STARTIP="192.168.191.20"
+ENDIP="192.168.191.59"
 EXTERNAL_VLAN="191"
 EXTERNAL_VLAN_NETWORK="192.168.191.0/24"
 GATEWAY_IP=192.168.191.1
@@ -90,6 +90,17 @@ set_tenant_scope(){
   export OS_USERNAME=$USER_NAME
   export OS_PASSWORD=$PASSWORD
   export OS_TENANT_NAME=$PROJECT_NAME
+
+  # Generate sanityrc file
+  info "Generating sanityrc file."
+  SANITYRC=~/sanityrc
+  cp ~/${STACK_NAME}rc ${SANITYRC}
+  USERNAMEREPL=`grep OS_USERNAME ~/${STACK_NAME}rc`
+  PASSWORDREPL=`grep OS_PASSWORD ~/${STACK_NAME}rc`
+  TENANTNAMEREPL=`grep OS_TENANT_NAME ~/${STACK_NAME}rc`
+  sed -i "s/${USERNAMEREPL}/export OS_USERNAME=${USER_NAME}/g" ${SANITYRC}
+  sed -i "s/${PASSWORDREPL}/export OS_PASSWORD=${PASSWORD}/g" ${SANITYRC}
+  sed -i "s/${TENANTNAMEREPL}/export OS_TENANT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
 }
 
 init(){
@@ -479,6 +490,11 @@ then
   if [[ "$arg" == "clean" ]]
   then
     info "### CLEANING MODE"
+
+    if [ ! -f "$KEY_FILE" ]; then
+      rm -f $KEY_FILE
+    fi
+
     set_tenant_scope
     info "### Deleting the floating ips"
     private_ips=$(nova list | grep "$BASE_NOVA_INSTANCE_NAME" | awk '{print $12}' | awk -F= '{print $2}')
@@ -533,8 +549,6 @@ then
     set_tenant_scope
     security_group_ids=$(neutron security-group-list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
     [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 neutron security-group-delete
-
-    rm -f $KEY_FILE
 
     info "### Deleting networks"
     set_admin_scope
