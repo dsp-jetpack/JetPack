@@ -491,7 +491,7 @@ then
   then
     info "### CLEANING MODE"
 
-    if [ ! -f "$KEY_FILE" ]; then
+    if [ -f "$KEY_FILE" ]; then
       rm -f $KEY_FILE
     fi
 
