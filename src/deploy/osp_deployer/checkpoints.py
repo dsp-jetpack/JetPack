@@ -401,6 +401,17 @@ class Checkpoints():
             raise AssertionError(
                 "Unable to attach to pool ID while updating the overcloud\
                 image")
+       
+        cmd = "source ~/stackrc;glance image-list"
+        re = Ssh.execute_command_tty(self.director_ip,
+                                     setts.director_install_account_user,
+                                     setts.director_install_account_pwd,
+                                     cmd)
+        if "overcloud-full" not in re[0]:
+            raise AssertionError(
+                "Unable to find the overcloud image in glance - "
+                "check the install-director.log for possible package"
+                "download errors")
 
     def verify_computes_virtualization_enabled(self):
         logger.debug("*** Verify the Compute nodes have KVM enabled *** ")
