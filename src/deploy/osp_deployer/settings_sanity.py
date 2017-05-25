@@ -135,7 +135,8 @@ class DeployerSanity():
 
     def check_network_overlaps(self):
         # Verify the dhcp ranges defined in the ini don't overlap with static
-        # ips defined in the .properties or with the VIPs if used.
+        # ips defined in the .properties or with the VIPs if used & that vips 
+        # are sitting on the right networks.
 
         # public_api network allocation pool
         start = self.settings.public_api_allocation_pool_start.split(".")[-1]
@@ -153,6 +154,11 @@ class DeployerSanity():
                     self.settings.public_api_vip.split(".")[-1]) <= int(end):
                 raise AssertionError("public_api_vip should be outside the \
                                      public api allocation pool range")
+            net = ".".join(self.settings.public_api_network.split(".")[:-1])
+            if net not in self.settings.public_api_vip:
+                raise AssertionError("public_api_vip setting appears to  "
+                                     "be on the wrong network, should be "
+                                     "on the public api network")
 
         # private_api network allocation pool
         start = self.settings.private_api_allocation_pool_start.split(".")[-1]
@@ -166,6 +172,7 @@ class DeployerSanity():
                                          api allocation pool range defined \
                                          in the .ini")
         if self.settings.use_static_vips is True:
+            net = ".".join(self.settings.private_api_network.split(".")[:-1])
             if int(start) <= int(
                     self.settings.redis_vip.split(".")[-1]) <= int(end):
                 raise AssertionError("redis_vip should be outside the \
@@ -174,6 +181,14 @@ class DeployerSanity():
                     self.settings.private_api_vip.split(".")[-1]) <= int(end):
                 raise AssertionError("private_api_vip should be outside the \
                                      private api allocation pool range")
+            if net not in self.settings.redis_vip:
+                raise AssertionError("redis_vip setting appears to  "
+                                     "be on the wrong network, should be "
+                                     "on the private api network")
+            if net not in self.settings.private_api_vip:
+                raise AssertionError("private_api_vip setting appears to  "
+                                     "be on the wrong network, should be "
+                                     "on the private api network")
 
         # storage_network allocation pool
         start = self.settings.storage_allocation_pool_start.split(".")[-1]
@@ -191,6 +206,11 @@ class DeployerSanity():
                     self.settings.storage_vip.split(".")[-1]) <= int(end):
                 raise AssertionError("storage_vip should be outside the \
                                      storage allocation pool range")
+            net = ".".join(self.settings.storage_network.split(".")[:-1])
+            if net not in self.settings.storage_vip:
+                raise AssertionError("storage_vip setting appears to  "
+                                     "be on the wrong network, should be "
+                                     "on the storage network")
 
         # provisioning network allocation pool
         start = self.settings.provisioning_net_dhcp_start.split(".")[-1]
@@ -203,16 +223,30 @@ class DeployerSanity():
                                          .properties is in the provisioning \
                                          dhcp allocation pool range defined \
                                          in the .ini")
+
+        net = ".".join(self.settings.provisioning_network.split(".")[:-1])
+
         if self.settings.use_static_vips is True:
             if int(start) <= int(
                self.settings.storage_cluster_vip.split(".")[-1]) <= int(end):
                 raise AssertionError("storage_cluster_vip should be outside \
                                      the provisioning allocation pool range")
+            if net not in self.settings.storage_cluster_vip:
+                raise AssertionError("storage_cluster_vip setting appears to  "
+                                     "be on the wrong network, should be "
+                                     "on the provisioning  network")
+
         if self.settings.use_static_vips is True:
             if int(start) <= int(
                self.settings.provisioning_vip.split(".")[-1]) <= int(end):
                 raise AssertionError("provisioning_vip should be outside the \
                                      provisioning allocation pool range")
+
+            if net not in self.settings.provisioning_vip:
+                raise AssertionError("provisioning_vip setting appears to  "
+                                     "be on the wrong network, should be "
+                                     "on the provisioning  network")
+
 
         # discovery_ip_range (provisioning network)
         start = self.settings.discovery_ip_range.split(",")[0].split(".")[-1]
