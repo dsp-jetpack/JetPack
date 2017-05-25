@@ -122,6 +122,8 @@ echo
 echo "## Installing Director"
 sudo yum -y install python-tripleoclient
 openstack undercloud install
+echo "## Install Tempest plugin dependencies"
+sudo yum -y install python-*-tests
 echo "## Done."
 
 echo
@@ -184,17 +186,6 @@ echo "## Done."
 echo
 echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
-echo "## Done."
-
-# This hacks in a patch that has been merged to upstream already, but is not
-# currently present in OSP10.  We will need to remove this after the fix
-# appears in OSP10.  Note that this patch must be here because we use this
-# code prior to deploying the director.
-echo
-echo "## Patching Ironic vendor passthru..."
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/vendor_passthru.py ~/pilot/vendor_passthru.patch)
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/vendor_passthru.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/vendor_passthru.pyo
 echo "## Done."
 
 # This hacks in a patch to fix correct querying WSMAN Enumerations that have

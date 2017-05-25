@@ -43,7 +43,7 @@
                 "public_api"
             ]
         },
-        "ceph_vm": {
+        "rhscon_vm": {
             "user": "root",
             "ip" : "10.148.44.14",
             "networks": [

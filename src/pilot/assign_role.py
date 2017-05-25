@@ -328,6 +328,7 @@ def define_single_raid_10_logical_disk(drac_client, raid_controller_name):
             "JBOD mode".format(
                 physical_disk_names[0]))
         logical_disk = define_jbod_or_raid_0_logical_disk(
+            drac_client,
             raid_controller_name,
             physical_disk_names[0],
             is_root_volume=True)
@@ -385,7 +386,8 @@ def define_storage_logical_disks(drac_client, raid_controller_name):
     # None is returned.
     jbod_capable = is_jbod_capable(drac_client, raid_controller_name)
     jbod_logical_disks = define_jbod_logical_disks(
-        remaining_physical_disks, raid_controller_name, jbod_capable)
+        drac_client, remaining_physical_disks, raid_controller_name,
+        jbod_capable)
 
     if jbod_logical_disks is None:
         return None
@@ -550,7 +552,7 @@ def bin_physical_disks_by_size_gb(physical_disks, media_type_filter=None):
 
 
 def define_jbod_logical_disks(
-        physical_disks, raid_controller_name, jbod_capable):
+        drac_client, physical_disks, raid_controller_name, jbod_capable):
     sorted_physical_disk_names = sorted((d.id for d in physical_disks),
                                         key=physical_disk_id_to_key)
 
@@ -558,8 +560,8 @@ def define_jbod_logical_disks(
 
     for physical_disk_name in sorted_physical_disk_names:
         jbod_logical_disk = define_jbod_or_raid_0_logical_disk(
-            raid_controller_name, physical_disk_name, is_root_volume=False,
-            jbod_capable=jbod_capable)
+            drac_client, raid_controller_name, physical_disk_name,
+            is_root_volume=False, jbod_capable=jbod_capable)
 
         if jbod_logical_disk is not None:
             logical_disks.append(jbod_logical_disk)
@@ -567,12 +569,13 @@ def define_jbod_logical_disks(
     return logical_disks
 
 
-def define_jbod_or_raid_0_logical_disk(raid_controller_name,
+def define_jbod_or_raid_0_logical_disk(drac_client,
+                                       raid_controller_name,
                                        physical_disk_name,
                                        is_root_volume=False,
                                        jbod_capable=None):
     if jbod_capable is None:
-        jbod_capable = is_jbod_capable(raid_controller_name)
+        jbod_capable = is_jbod_capable(drac_client, raid_controller_name)
 
     if jbod_capable:
         # Presently, when a RAID controller is JBOD capable, there is no
@@ -1077,6 +1080,7 @@ def change_physical_disk_state(drac_client, mode,
             physical_disk_ids.append(physical_disk.id)
 
     # Weed out disks that are already in the mode we want
+    failed_disks = []
     bad_disks = []
     for controller in controllers_to_physical_disk_ids.keys():
         final_physical_disk_ids = []
@@ -1093,6 +1097,8 @@ def change_physical_disk_state(drac_client, mode,
                 # This disk is moving from a state we expect to RAID or JBOD,
                 # so keep it
                 final_physical_disk_ids.append(physical_disk_id)
+            elif raid_status == "failed":
+                failed_disks.append(physical_disk_id)
             else:
                 # This disk is in one of many states that we don't know what
                 # to do with, so pitch it
@@ -1101,10 +1107,25 @@ def change_physical_disk_state(drac_client, mode,
 
         controllers_to_physical_disk_ids[controller] = final_physical_disk_ids
 
-    if bad_disks:
-        raise ValueError("Can't change the state of the following disks "
-                         "because their state is not ready or non-RAID: "
-                         "{}".format(", ".join(bad_disks)))
+    if failed_disks or bad_disks:
+        error_msg = ""
+
+        if failed_disks:
+            error_msg += "The following drives have failed: " \
+                "{failed_disks}.  Manually check the status of all drives " \
+                "and replace as necessary, then run the installation " \
+                "again.".format(failed_disks=" ".join(failed_disks))
+
+        if bad_disks:
+            if failed_disks:
+                error_msg += "\n"
+            error_msg += "Unable to change the state of the following " \
+                "drives because their status is not ready or non-RAID: {}.  " \
+                "Bring up the RAID controller GUI on this node and change " \
+                "the drives' state to ready or non-RAID.".format(
+                    ", ".join(bad_disks))
+
+        raise ValueError(error_msg)
 
     job_ids = []
     reboot_required = False

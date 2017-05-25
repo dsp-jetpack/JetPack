@@ -38,8 +38,8 @@
 * 6.0.0.d - Removed settings :
                . sah_kickstart
                . rhel_install_location
-* 7.0.0.a - Initial 7.0 version
-* 7.0.0.a - removed external_netmask & external_gateway settings (removed)
+* 10.0.0.a - Initial 10.0 version
+* 10.0.0.a - removed external_netmask & external_gateway settings (removed)
           - added hardware -  Hardware type, valid options are poweredge, fx
 
 #####settings.properties
@@ -65,6 +65,9 @@
 * 10.0.0.c - removed storage_cluster_ip from controller nodes
           - removed external ips
 * 10.0.1.a - renamned tenant_ip to tenant_tunnel_ip
-* 10.0.1.b - Added enable_rbd_nova_backend to support nova rbd/ceph as ephemeral backend independant of 
+* 10.0.1.b - Added enable_rbd_nova_backend to support nova rbd/ceph as ephemeral backend independent of 
              enable_rbd_backend which is used for cinder
+* 10.0.1.c - Added deploy_overcloud_debug to allow optionally running
+             deploy_overcloud script in debug mode
+* 10.0.1.c - Renamed external_bond to public_bond & external_slaves to public_slaves
 "

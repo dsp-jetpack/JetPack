@@ -379,8 +379,8 @@ interface TenGigabitEthernet 1/52
  no shutdown
 ! 
 interface ManagementEthernet 1/1
- no ip address
- shutdown
+ ip address 192.168.109.5/24
+ no shutdown
 ! 
 interface ManagementEthernet 2/1
  no shutdown
@@ -407,7 +407,7 @@ interface Port-channel 51
  no shutdown
 ! 
 interface Vlan 1
-!untagged GigabitEthernet 1/33-1/42
+!untagged GigabitEthernet 1/33-1/40
 !untagged Port-channel 51
 ! 
 interface Vlan 110
@@ -425,10 +425,12 @@ interface Vlan 120
  no shutdown
 ! 
 interface Vlan 190
- ip address 192.168.190.5/24
+ no ip address
  tagged Port-channel 51
- untagged GigabitEthernet 1/47-1/48
- no shutdown
+ untagged GigabitEthernet 1/43-1/48
+ shutdown
+!
+management route 0.0.0.0/0 192.168.109.1 
 !
 ip ssh server enable
 !

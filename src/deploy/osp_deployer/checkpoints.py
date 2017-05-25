@@ -28,6 +28,7 @@ class Checkpoints():
         self.director_ip = self.settings.director_node.public_api_ip
         self.sah_ip = self.settings.sah_node.public_api_ip
         self.rhscon_ip = self.settings.rhscon_node.public_api_ip
+        self.verify_rhsm_status = self.settings.verify_rhsm_status
 
     @staticmethod
     def verify_deployer_settings():
@@ -41,25 +42,26 @@ class Checkpoints():
         checks.verify_overcloud_name()
 
     @staticmethod
-    def is_host_registered(public_api_ip, user, password, retries):
+    def verify_subscription_status(public_api_ip, user, password, retries):
         i = 0
-        is_registered = False
 
-        while 1:
-            logger.debug(
-                "checking registration status " + str(i + 1) + "/" + str(retries))
+        subscription_status = Ssh.execute_command(
+            public_api_ip,
+            user,
+            password,
+            "subscription-manager status")[0]
+
+        while "Current" not in subscription_status and i < retries:
+            if "Unknown" in subscription_status:
+                return subscription_status
+            time.sleep(60)
             subscription_status = \
                 Ssh.execute_command(public_api_ip,
                                     user,
                                     password,
-                                    "yum repolist")[0]
-            if "repolist: 0" not in subscription_status:
-                return True
+                                    "subscription-manager status")[0]
             i += 1
-            if i < int(retries):
-                time.sleep(60)
-            else:
-                return is_registered
+        return subscription_status
 
     @staticmethod
     def verify_pools_attached(ip_addr, user, password, logfile):
@@ -93,19 +95,20 @@ class Checkpoints():
     def sah_health_check(self):
 
         logger.info("SAH node health check")
-        logger.debug("*** Verify the SAH node registered properly ***")
-        for _ in range(60):
-            subscription_status = is_host_registered(
-                self.sah_ip,
-                "root",
-                self.settings.sah_node.root_password,
-                self.settings.subscription_check_retries)
-            if subscription_status is True:
-                break
-            time.sleep(2)
-        else:
-            raise AssertionError(
-                "SAH did not register properly")
+        if self.verify_rhsm_status:
+            logger.debug("*** Verify the SAH node registered properly ***")
+            for _ in range(60):
+                subscription_status = self.verify_subscription_status(
+                    self.sah_ip,
+                    "root",
+                    self.settings.sah_node.root_password,
+                    self.settings.subscription_check_retries)
+                if "Current" in subscription_status:
+                    break
+                time.sleep(2)
+            else:
+                raise AssertionError(
+                    "SAH did not register properly : " + subscription_status)
 
         logger.debug("*** Verify the SAH can ping its public gateway")
         gateway = self.settings.public_api_gateway
@@ -159,15 +162,17 @@ class Checkpoints():
     def director_vm_health_check(self):
         setts = self.settings
         logger.info("Director VM health checks")
-        logger.debug("*** Verify the Director VM registered properly ***")
-        subscription_status = self.is_host_registered(
-            self.director_ip,
-            "root",
-            setts.director_node.root_password,
-            setts.subscription_check_retries)
-        if subscription_status is False:
-            raise AssertionError(
-                "Director VM did not register properly")
+        if self.verify_rhsm_status:
+            logger.debug("*** Verify the Director VM registered properly ***")
+            subscription_status = self.verify_subscription_status(
+                self.director_ip,
+                "root",
+                setts.director_node.root_password,
+                setts.subscription_check_retries)
+            if "Current" not in subscription_status:
+                raise AssertionError(
+                    "Director VM did not register properly : " +
+                    subscription_status)
 
         logger.debug(
             "*** Verify all pools registered & repositories subscribed ***")
@@ -244,16 +249,18 @@ class Checkpoints():
 
     def rhscon_vm_health_check(self):
         logger.info("Storage Console VM health checks")
-        logger.debug(
-            "*** Verify the Storage Console VM registered properly ***")
-        subscription_status = self.is_host_registered(
-            self.rhscon_ip,
-            "root",
-            self.settings.rhscon_node.root_password,
-            self.settings.subscription_check_retries)
-        if subscription_status is False:
-            raise AssertionError(
-                "Storage Console VM did not register properly")
+        if self.verify_rhsm_status:
+            logger.debug(
+                "*** Verify the Storage Console VM registered properly ***")
+            subscription_status = self.verify_subscription_status(
+                self.rhscon_ip,
+                "root",
+                self.settings.rhscon_node.root_password,
+                self.settings.subscription_check_retries)
+            if "Current" not in subscription_status:
+                raise AssertionError(
+                    "Storage Console VM did not register properly : " +
+                    subscription_status)
 
         logger.debug(
             "*** Verify the Storage Console VM can ping its public gateway")
@@ -394,6 +401,17 @@ class Checkpoints():
             raise AssertionError(
                 "Unable to attach to pool ID while updating the overcloud\
                 image")
+       
+        cmd = "source ~/stackrc;glance image-list"
+        re = Ssh.execute_command_tty(self.director_ip,
+                                     setts.director_install_account_user,
+                                     setts.director_install_account_pwd,
+                                     cmd)
+        if "overcloud-full" not in re[0]:
+            raise AssertionError(
+                "Unable to find the overcloud image in glance - "
+                "check the install-director.log for possible package"
+                "download errors")
 
     def verify_computes_virtualization_enabled(self):
         logger.debug("*** Verify the Compute nodes have KVM enabled *** ")
@@ -537,7 +555,7 @@ class Checkpoints():
                                     setts.director_install_account_user,
                                     setts.director_install_account_pwd,
                                     cmd)
-                if "NetBSD_Secure_Shell" not in "\n".join(re):
+                if "NetBSD_Secure_Shell" not in re[0]:
                     raise AssertionError(each +
                                          " not able to ssh to EQL san ip " +
                                          self.settings.eqlx_san_ip)

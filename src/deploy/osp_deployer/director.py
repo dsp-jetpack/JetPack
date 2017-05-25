@@ -398,6 +398,37 @@ class Director(InfraHost):
                 failed_threads, len(threads)))
             sys.exit(1)
 
+    def update_sshd_conf(self):
+        # Update sshd_config to allow for more than 10 ssh sessions
+        # Required for assign_role to run threaded if stamp has > 10 nodes
+        non_sah_nodes = (self.settings.controller_nodes +
+                         self.settings.compute_nodes +
+                         self.settings.ceph_nodes)
+        # Allow for the number of nodes + a couple of sessions
+        maxSessions = len(non_sah_nodes) + 2
+        cmds = [
+             "sed -i 's/.*MaxStartups.*/MaxStartups " +
+             str(maxSessions) + "/' /etc/ssh/sshd_config",
+             "sed -i 's/.*MaxSession.*/MaxSessions " +
+             str(maxSessions) + "/' /etc/ssh/sshd_config",
+             "/sbin/service sshd restart",
+             "grep max -i /etc/ssh/sshd_config"
+        ]
+        for cmd in cmds:
+            self.run_as_root(cmd)
+
+    def revert_sshd_conf(self):
+        # Revert sshd_config to its default
+        cmds = [
+             "sed -i 's/.*MaxStartups.*/#MaxStartups 10:30:100/'" +
+             " /etc/ssh/sshd_config",
+             "sed -i 's/.*MaxSession.*/#MaxSession 10/' /etc/ssh/sshd_config",
+             "/sbin/service sshd restart",
+             "grep max -i /etc/ssh/sshd_config"
+        ]
+        for cmd in cmds:
+            self.run_as_root(cmd)
+
     def setup_templates(self):
         # Re-upload the yaml files in case we're trying to leave the undercloud
         # intact but want to redeploy with a different config.
@@ -1042,6 +1073,9 @@ class Director(InfraHost):
         # is the one nodes arei defined in in the .properties
         cmd += " --node_placement"
 
+        if self.settings.deploy_overcloud_debug:
+            cmd += " --debug"
+
         cmd += " > overcloud_deploy_out.log 2>&1"
 
         self.run_tty(cmd)
@@ -1073,7 +1107,7 @@ class Director(InfraHost):
         ip_info = []
         fi = open(deployment_log, "wb")
         try:
-            logger.debug("retreiving node ip details ..")
+            logger.debug("retrieving node ip details ..")
             ip_info.append("====================================")
             ip_info.append("### nodes ip information ###")
 
@@ -1134,7 +1168,7 @@ class Director(InfraHost):
                 ip_info.append("     - storage ip       : " + storage_ip)
                 if self.settings.is_fx is True:
                     logger.debug("restarting network manager")
-                    cmd = "ssh heat-admin@" + provisioning_ip + \
+                    cmd = "ssh " + ssh_opts + "heat-admin@" + provisioning_ip + \
                           "sudo systemctl restart NetworkManager.service"
                     re = self.run_tty(cmd)
 
@@ -1147,6 +1181,10 @@ class Director(InfraHost):
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
 
+                ssh_opts = (
+                    "-o StrictHostKeyChecking=no "
+                    "-o UserKnownHostsFile=/dev/null "
+                    "-o KbdInteractiveDevices=no")
                 re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
@@ -1171,8 +1209,8 @@ class Director(InfraHost):
                 ip_info.append("     - storage ip       : " + storage_ip)
                 if self.settings.is_fx is True:
                     logger.debug("restarting network manager")
-                    cmd = "ssh heat-admin@" + provisioning_ip + \
-                          "sudo service NetworkManager restart"
+                    cmd = "ssh " + ssh_opts + "heat-admin@" + provisioning_ip + \
+                          "sudo systemctl restart NetworkManager.service"
                     re = self.run_tty(cmd)
 
             re = self.run_tty(self.source_stackrc + "nova list | grep storage")
@@ -1184,6 +1222,10 @@ class Director(InfraHost):
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
 
+                ssh_opts = (
+                    "-o StrictHostKeyChecking=no "
+                    "-o UserKnownHostsFile=/dev/null "
+                    "-o KbdInteractiveDevices=no")
                 re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
                                   " /sbin/ifconfig | grep \"inet.*" +
@@ -1208,8 +1250,8 @@ class Director(InfraHost):
                 ip_info.append("     - storage ip         : " + storage_ip)
                 if self.settings.is_fx is True:
                     logger.debug("restarting network manager")
-                    cmd = "ssh heat-admin@" + provisioning_ip + \
-                          "sudo service NetworkManager restart"
+                    cmd = "ssh " + ssh_opts + "heat-admin@" + provisioning_ip + \
+                          "sudo systemctl restart NetworkManager.service"
                     re = self.run_tty(cmd)
 
             ip_info.append("====================================")

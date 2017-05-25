@@ -233,8 +233,6 @@ EOFPW
   yum-config-manager --enable rhel-7-server-rh-common-rpms --setopt="rhel-7-server-rh-common-rpms.priority=1"
   yum-config-manager --enable rhel-ha-for-rhel-7-server-rpms --setopt="rhel-ha-for-rhel-7-server-rpms.priority=1"
   
-  yum -y install python-*-tests
-
   yum -y update
 
   # Firewall rules to allow traffic for the http, https, dns, and tftp services and tcp port 8140.
@@ -302,14 +300,14 @@ EOFKS
 
 [[ ! -e /store/data/images ]] && mkdir -p /store/data/images
 
-[[ -e /tmp/floppy-director.img ]] && rm -f /tmp/floppy-director.img
+[[ -e /store/data/images/floppy-director.img ]] && rm -f /store/data/images/floppy-director.img
 rm -f /store/data/images/director.img
 
 [[ -e director_vm.vlock ]] && {
 
-  mkfs.vfat -C /tmp/floppy-director.img 1440
+  mkfs.vfat -C /store/data/images/floppy-director.img 1440
   mkdir /tmp/mnt-director
-  mount -o loop /tmp/floppy-director.img /tmp/mnt-director
+  mount -o loop /store/data/images/floppy-director.img /tmp/mnt-director
   cp director_vm.vlock /tmp/mnt-director/versionlock.list
   sync
   umount /tmp/mnt-director
@@ -322,7 +320,7 @@ rm -f /store/data/images/director.img
     --os-type linux \
     --os-variant rhel6 \
     --disk /store/data/images/director.img,bus=virtio,size=80 \
-    --disk /tmp/floppy-director.img,device=floppy \
+    --disk /store/data/images/floppy-director.img,device=floppy \
     --network bridge=br-pub-api \
     --network bridge=br-prov \
     --network bridge=br-mgmt \

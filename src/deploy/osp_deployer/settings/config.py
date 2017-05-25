@@ -37,6 +37,10 @@ class Settings():
         self.settings_file = settings_file
         cluster = self.get_settings_section(
             "Cluster Settings")
+        if cluster['deploy_overcloud_debug'].lower() == 'true':
+            self.deploy_overcloud_debug = True
+        else:
+            self.deploy_overcloud_debug = False
         self.storage_network = cluster['storage_network']
         self.storage_cluster_network = cluster[
             'storage_cluster_network']
@@ -309,6 +313,13 @@ class Settings():
         except KeyError:
             self.run_tempest = False
             self.tempest_smoke_only = False
+        try:
+            if self.bastion_settings_map['verify_rhsm_status'].lower() == 'true':
+                self.verify_rhsm_status = True
+            else:
+                self.verify_rhsm_status = False
+        except KeyError:
+            self.verify_rhsm_status = True
 
         self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
         self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
@@ -362,7 +373,7 @@ class Settings():
         self.nodes = []
 
         self.overcloud_nodes_pwd = cluster['overcloud_nodes_pwd']
-        if len(cluster['rhsm_repos']) > 0:
+        if 'rhsm_repos' in cluster and len(cluster['rhsm_repos']) > 0:
             logger.info("Using ini repo settings")
             self.rhsm_repos = cluster['rhsm_repos'].split(',')
         else:
