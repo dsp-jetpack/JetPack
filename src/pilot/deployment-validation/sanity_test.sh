@@ -492,13 +492,17 @@ then
   if [[ "$arg" == "clean" ]]
   then
     info "### CLEANING MODE"
-
+    cd ~
+    set_tenant_scope
+    info "### Deleting keypairs and .pem files"
     if [ -f "$KEY_FILE" ]; then
       rm -f $KEY_FILE
-      nova keypair-delete $KEY_NAME
     fi
 
-    set_tenant_scope
+    keypair_ids=$(nova keypair-list | grep $KEY_NAME | awk '{print $2}')
+    info   "keypair ids: $keypair_ids"
+    [[ $keypair_ids ]] && echo $keypair_ids | xargs -n1 nova keypair-delete
+
     info "### Deleting the floating ips"
     private_ips=$(nova list | grep "$BASE_NOVA_INSTANCE_NAME" | awk '{print $12}' | awk -F= '{print $2}')
     for private_ip in $private_ips
@@ -546,6 +550,10 @@ then
     if [ $? -eq 0 ]
     then
         openstack flavor delete $FLAVOR_NAME
+    fi
+    
+    if [ -f ./cirros-0.3.3-x86_64-disk.img ]; then
+       rm -f ./cirros-0.3.3-x86_64-disk.img   
     fi
 
     info   "#### Deleting the security groups and key_file"
