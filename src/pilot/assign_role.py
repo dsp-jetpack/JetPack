@@ -1080,6 +1080,7 @@ def change_physical_disk_state(drac_client, mode,
             physical_disk_ids.append(physical_disk.id)
 
     # Weed out disks that are already in the mode we want
+    failed_disks = []
     bad_disks = []
     for controller in controllers_to_physical_disk_ids.keys():
         final_physical_disk_ids = []
@@ -1096,6 +1097,8 @@ def change_physical_disk_state(drac_client, mode,
                 # This disk is moving from a state we expect to RAID or JBOD,
                 # so keep it
                 final_physical_disk_ids.append(physical_disk_id)
+            elif raid_status == "failed":
+                failed_disks.append(physical_disk_id)
             else:
                 # This disk is in one of many states that we don't know what
                 # to do with, so pitch it
@@ -1104,10 +1107,25 @@ def change_physical_disk_state(drac_client, mode,
 
         controllers_to_physical_disk_ids[controller] = final_physical_disk_ids
 
-    if bad_disks:
-        raise ValueError("Can't change the state of the following disks "
-                         "because their state is not ready or non-RAID: "
-                         "{}".format(", ".join(bad_disks)))
+    if failed_disks or bad_disks:
+        error_msg = ""
+
+        if failed_disks:
+            error_msg += "The following drives have failed: " \
+                "{failed_disks}.  Manually check the status of all drives " \
+                "and replace as necessary, then run the installation " \
+                "again.".format(failed_disks=" ".join(failed_disks))
+
+        if bad_disks:
+            if failed_disks:
+                error_msg += "\n"
+            error_msg += "Unable to change the state of the following " \
+                "drives because their status is not ready or non-RAID: {}.  " \
+                "Bring up the RAID controller GUI on this node and change " \
+                "the drives' state to ready or non-RAID.".format(
+                    ", ".join(bad_disks))
+
+        raise ValueError(error_msg)
 
     job_ids = []
     reboot_required = False
