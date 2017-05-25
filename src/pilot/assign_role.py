@@ -1119,8 +1119,10 @@ def change_physical_disk_state(drac_client, mode,
         if bad_disks:
             if failed_disks:
                 error_msg += "\n"
-            error_msg += "Unable to change the state of the following disks " \
-                "because their status is not ready or non-RAID: {}.".format(
+            error_msg += "Unable to change the state of the following " \
+                "drives because their status is not ready or non-RAID: {}.  " \
+                "Bring up the RAID controller GUI on this node and change " \
+                "the drives' state to ready or non-RAID.".format(
                     ", ".join(bad_disks))
 
         raise ValueError(error_msg)
