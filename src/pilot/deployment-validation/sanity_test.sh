@@ -555,6 +555,10 @@ then
     if [ -f ./cirros-0.3.3-x86_64-disk.img ]; then
        rm -f ./cirros-0.3.3-x86_64-disk.img   
     fi
+    
+    if [ ! -f ${SANITYRC} ]; then
+       rm -f ${SANITYRC}
+    fi
 
     info   "#### Deleting the security groups and key_file"
     set_tenant_scope
