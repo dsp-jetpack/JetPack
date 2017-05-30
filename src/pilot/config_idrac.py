@@ -176,6 +176,7 @@ def config_idrac_settings(drac_client, ip_service_tag, password, node):
     idrac_settings = {
         "IPMILan.1#Enable": "Enabled",
         "IPMILan.1#PrivLimit": "Administrator",
+        "VirtualMedia.1#Attached": "AutoAttach",
         "WebServer.1#Enable": "Enabled",
         "IPv4.1#Enable": "Enabled",
         "Users.2#Enable": "Enabled",
