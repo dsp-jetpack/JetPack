@@ -556,10 +556,6 @@ then
        rm -f ./cirros-0.3.3-x86_64-disk.img   
     fi
     
-    if [ ! -f ${SANITYRC} ]; then
-       rm -f ${SANITYRC}
-    fi
-
     info   "#### Deleting the security groups and key_file"
     set_tenant_scope
     security_group_ids=$(neutron security-group-list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
@@ -590,6 +586,9 @@ then
   fi
 
   radosgw_cleanup
+  if [ ! -f ${SANITYRC} ]; then
+     rm -f ${SANITYRC}
+  fi
   info "########### CLEANUP SUCCESSFUL ############"
   exit 1
 else
