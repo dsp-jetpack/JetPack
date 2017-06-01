@@ -105,23 +105,23 @@ yum-plugin-versionlock
 yum-utils
 %end
 
-%pre --log /tmp/ceph-pre.log
+%pre --log /tmp/rhscon-pre.log
 
 """
 
     ks_part_3 = """
 %end
 
-%post --nochroot --logfile /root/ceph-post.log
+%post --nochroot --logfile /root/rhscon-post.log
 # Copy the files created during the %pre section to /root of the 
 # installed system for later use.
-  cp -v /tmp/ceph-pre.log /mnt/sysimage/root
+  cp -v /tmp/rhscon-pre.log /mnt/sysimage/root
   cp -v /tmp/ks_include.txt /mnt/sysimage/root
   cp -v /tmp/ks_post_include.txt /mnt/sysimage/root
-  mkdir -p /mnt/sysimage/root/ceph-ks-logs
-  cp -v /tmp/ceph-pre.log /mnt/sysimage/root/ceph-ks-logs
-  cp -v /tmp/ks_include.txt /mnt/sysimage/root/ceph-ks-logs
-  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/ceph-ks-logs  
+  mkdir -p /mnt/sysimage/root/rhscon-ks-logs
+  cp -v /tmp/rhscon-pre.log /mnt/sysimage/root/rhscon-ks-logs
+  cp -v /tmp/ks_include.txt /mnt/sysimage/root/rhscon-ks-logs
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/rhscon-ks-logs  
 %end
 
 
@@ -257,7 +257,7 @@ EOIP
   systemctl disable chronyd
 
 
-) 2>&1 | /usr/bin/tee -a /root/ceph-post.log
+) 2>&1 | /usr/bin/tee -a /root/rhscon-post.log
 
 chvt 6
 
