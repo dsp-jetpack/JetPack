@@ -82,7 +82,7 @@ def setup():
                     'cd ~;mkfs ext3 -F osp_ks.img',
                     'mkdir -p /mnt/usb',
                     'cd ~;mount -o loop osp_ks.img /mnt/usb',
-                    'cd ~;cp -R ~/JetStream /mnt/usb',
+                    'cd ~;cp -R ~/JetPack /mnt/usb',
                     'cd ~;cp ' + settings.rhel_iso + ' /mnt/usb',
                     'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
                     'cd ~;cp ' + settings.network_conf + ' /mnt/usb',
@@ -95,7 +95,7 @@ def setup():
                     'mkdir -p /mnt/usb',
                     'cd ~;mount -o loop ' + args.usb_key +
                     ' /mnt/usb',
-                    'cd ~;cp -R ~/JetStream /mnt/usb',
+                    'cd ~;cp -R ~/JetPack /mnt/usb',
                     'cd ~;cp ' + settings.rhel_iso + ' /mnt/usb',
                     'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
                     'cd ~;cp ' + settings.network_conf + ' /mnt/usb',

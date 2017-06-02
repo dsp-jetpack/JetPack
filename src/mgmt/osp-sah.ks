@@ -537,7 +537,7 @@ pip install paramiko
 pip install selenium
 echo "POST: Done installing extra packages"
 
-echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/root/JetStream/src/deploy/' >> /root/.bashrc 
+echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/root/JetPack/src/deploy/' >> /root/.bashrc 
 
 # chvt 1
 
