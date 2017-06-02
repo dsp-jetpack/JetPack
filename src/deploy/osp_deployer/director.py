@@ -28,7 +28,7 @@ import sys
 import tempfile
 import time
 
-common_path = os.path.join(os.path.expanduser('~/JetStream/src'), 'common')
+common_path = os.path.join(os.path.expanduser('~/JetPack/src'), 'common')
 sys.path.append(common_path)
 
 from thread_helper import ThreadWithExHandling  # noqa

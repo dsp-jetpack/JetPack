@@ -41,7 +41,7 @@ def setup_logging():
 
 def get_settings():
     parser = argparse.ArgumentParser(
-        description='JetStream 10.x deployer')
+        description='JetPack 10.x deployer')
     parser.add_argument('-s', '--settings',
                         help='ini settings file, e.g settings/acme.ini',
                         required=True)
@@ -81,7 +81,7 @@ def deploy():
         logger.debug("=================================")
 
         parser = argparse.ArgumentParser(
-            description='JetStream 10.x deployer')
+            description='JetPack 10.x deployer')
         parser.add_argument('-s', '--settings',
                             help='ini settings file, e.g settings/acme.ini',
                             required=True)

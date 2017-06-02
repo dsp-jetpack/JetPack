@@ -36,9 +36,9 @@ fi
 
 if [ -n "$2" ];
 then
-  dest="${2}/releases/jetstream-${1}"
+  dest="${2}/releases/jetpack-${1}"
 else
-  dest="$(pwd)/releases/jetstream-${1}"
+  dest="$(pwd)/releases/jetpack-${1}"
 fi
 
 rm -rf ${dest}
