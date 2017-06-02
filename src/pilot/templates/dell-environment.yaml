@@ -96,3 +96,6 @@ parameter_defaults:
         value: true
       client.radosgw.gateway/rgw_init_timeout:
         value: 1200
+  NovaComputeExtraConfig:
+    nova::migration::libvirt::live_migration_completion_timeout: 800
+    nova::migration::libvirt::live_migration_progress_timeout: 150
