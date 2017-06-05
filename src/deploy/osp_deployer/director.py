@@ -436,6 +436,7 @@ class Director(InfraHost):
         self.setup_networking()
         self.setup_dell_storage()
         self.setup_environment()
+        self.setup_sanity_ini()
 
     def setup_environment(self):
         logger.debug("Configuring Ceph storage settings for overcloud")
@@ -516,6 +517,43 @@ class Director(InfraHost):
         env_name = os.path.join(self.templates_dir, "dell-environment.yaml")
         self.upload_file(tmp_name, env_name)
         os.remove(tmp_name)
+
+    def setup_sanity_ini(self):
+        # Update the remote sanity ini file with the given settings
+        cmds = [
+            'sed -i "s|floating_ip_network=.*|floating_ip_network=' +
+            self.settings.floating_ip_network +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|floating_ip_network_start_ip=.*|' +
+            'floating_ip_network_start_ip=' +
+            self.settings.floating_ip_network_start_ip +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|floating_ip_network_end_ip=.*|' +
+            'floating_ip_network_end_ip=' +
+            self.settings.floating_ip_network_end_ip +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|floating_ip_network_gateway=.*|'
+            'floating_ip_network_gateway=' +
+            self.settings.floating_ip_network_gateway +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|floating_ip_network_vlan=.*|floating_ip_network_vlan=' +
+            self.settings.floating_ip_network_vlan +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|sanity_tenant_network=.*|sanity_tenant_network=' +
+            self.settings.sanity_tenant_network +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|sanity_user_password=.*|sanity_user_password=' +
+            self.settings.sanity_user_password +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|sanity_user_email=.*|sanity_user_email=' +
+            self.settings.sanity_user_email +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|sanity_key_name=.*|sanity_key_name=' +
+            self.settings.sanity_key_name +
+            '|" pilot/deployment-validation/sanity.ini'
+        ]
+        for cmd in cmds:
+            self.run(cmd)
 
     def setup_dell_storage(self):
         # Re - Upload the yaml files in case we're trying to
