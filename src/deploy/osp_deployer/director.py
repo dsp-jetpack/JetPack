@@ -1339,12 +1339,14 @@ class Director(InfraHost):
     def run_sanity_test(self):
         if self.settings.run_sanity is True:
             logger.info("Running sanity test")
-            cmd = 'rm -f ~/key_name.pem'
+            cmd = 'rm -f ~/{}.pub'.format(self.settings.sanity_key_name)
+            self.run_tty(cmd)
+            cmd = 'rm -f ~/{}'.format(self.settings.sanity_key_name)
             self.run_tty(cmd)
             self.run_tty('wget '
                          'http://download.cirros-cloud.net/0.3.3/'
                          'cirros-0.3.3-x86_64-disk.img')
-            self.run_tty(self.validation_dir +
+            self.run_tty("cd " + self.validation_dir +
                          ';chmod ugo+x sanity_test.sh')
             re = self.run_tty("cd " + self.validation_dir +
                               ';./sanity_test.sh')
