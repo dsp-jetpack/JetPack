@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2015-2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,29 +18,42 @@
 #set -e
 #Variables
 
-VLAN_NETWORK="192.168.201.0/24"
-EXTERNAL_NETWORK_NAME="public"
-EXTERNAL_SUBNET_NAME="external_sub"
-STARTIP="192.168.191.20"
-ENDIP="192.168.191.59"
-EXTERNAL_VLAN="191"
-EXTERNAL_VLAN_NETWORK="192.168.191.0/24"
-GATEWAY_IP=192.168.191.1
-KEY_NAME="key_name"
-KEY_FILE="$KEY_NAME.pem"
-IMAGE_NAME="cirros"
-FLAVOR_NAME="sanity_flavor"
-PASSWORD="s@n1ty"
-EMAIL="ce-cloud@dell.com"
-BASE_SECURITY_GROUP_NAME="sanity_security_group"
-BASE_TENANT_NETWORK_NAME="tenant_net"
-BASE_TENANT_ROUTER_NAME="tenant_201_router"
-BASE_VLAN_NAME="tenant_201"
-BASE_NOVA_INSTANCE_NAME="cirros_test"
-BASE_VOLUME_NAME="volume_test"
-BASE_PROJECT_NAME="sanity"
-BASE_USER_NAME="sanity"
+INI_FILE=sanity.ini
 
+while getopts s: option
+do
+    case "${option}"
+    in
+    s) INI_FILE=$(OPTARG);;
+    esac
+done
+
+get_value() {
+    echo $(grep "$1=" $INI_FILE  | awk -F= '{print $2}')
+}
+
+FLOATING_IP_NETWORK=$(get_value floating_ip_network)
+FLOATING_IP_NETWORK_START_IP=$(get_value floating_ip_network_start_ip)
+FLOATING_IP_NETWORK_END=$(get_value floating_ip_network_end_ip)
+FLOATING_IP_NETWORK_GATEWAY=$(get_value floating_ip_network_gateway)
+FLOATING_IP_NETWORK_VLAN=$(get_value floating_ip_network_vlan)
+SANITY_TENANT_NETWORK=$(get_value sanity_tenant_network)
+SANITY_USER_PASSWORD=$(get_value sanity_user_password)
+SANITY_USER_EMAIL=$(get_value sanity_user_email)
+SANITY_KEY_NAME=$(get_value sanity_key_name)
+
+FLOATING_IP_NETWORK_NAME=$(get_value floating_ip_network_name)
+FLOATING_IP_SUBNET_NAME=$(get_value floating_ip_subnet_name)
+IMAGE_NAME=$(get_value image_name)
+FLAVOR_NAME=$(get_value flavor_name)
+BASE_SECURITY_GROUP_NAME=$(get_value base_security_group_name)
+BASE_TENANT_NETWORK_NAME=$(get_value base_tenant_network_name)
+BASE_TENANT_ROUTER_NAME=$(get_value base_tenant_router_name)
+BASE_VLAN_NAME=$(get_value base_vlan_name)
+BASE_NOVA_INSTANCE_NAME=$(get_value base_nova_instance_name)
+BASE_VOLUME_NAME=$(get_value base_volume_name)
+BASE_PROJECT_NAME=$(get_value base_project_name)
+BASE_USER_NAME=$(get_value base_user_name)
 SECURITY_GROUP_NAME="$BASE_SECURITY_GROUP_NAME"
 TENANT_NETWORK_NAME="$BASE_TENANT_NETWORK_NAME"
 TENANT_ROUTER_NAME="$BASE_TENANT_ROUTER_NAME"
@@ -89,20 +102,19 @@ set_admin_scope(){
 set_tenant_scope(){
   info "Setting tenant scope."
   export OS_USERNAME=$USER_NAME
-  export OS_PASSWORD=$PASSWORD
+  export OS_PASSWORD=$SANITY_USER_PASSWORD
   export OS_TENANT_NAME=$PROJECT_NAME
+}
 
-  if [ ! -f ${SANITYRC} ]; then
-    # Generate sanityrc file
-    info "Generating sanityrc file."
-    cp ~/${STACK_NAME}rc ${SANITYRC}
-    USERNAMEREPL=`grep OS_USERNAME ~/${STACK_NAME}rc`
-    PASSWORDREPL=`grep OS_PASSWORD ~/${STACK_NAME}rc`
-    TENANTNAMEREPL=`grep OS_TENANT_NAME ~/${STACK_NAME}rc`
-    sed -i "s/${USERNAMEREPL}/export OS_USERNAME=${USER_NAME}/g" ${SANITYRC}
-    sed -i "s/${PASSWORDREPL}/export OS_PASSWORD=${PASSWORD}/g" ${SANITYRC}
-    sed -i "s/${TENANTNAMEREPL}/export OS_TENANT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
-  fi
+generate_sanity_rc(){
+  info "Generating sanityrc file."
+  cp ~/${STACK_NAME}rc ${SANITYRC}
+  USERNAMEREPL=`grep OS_USERNAME ~/${STACK_NAME}rc`
+  PASSWORDREPL=`grep OS_PASSWORD ~/${STACK_NAME}rc`
+  TENANTNAMEREPL=`grep OS_TENANT_NAME ~/${STACK_NAME}rc`
+  sed -i "s/${USERNAMEREPL}/export OS_USERNAME=${USER_NAME}/g" ${SANITYRC}
+  sed -i "s/${PASSWORDREPL}/export OS_PASSWORD=${SANITY_USER_PASSWORD}/g" ${SANITYRC}
+  sed -i "s/${TENANTNAMEREPL}/export OS_TENANT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
 }
 
 init(){
@@ -185,8 +197,9 @@ get_unique_name (){
 
 set_unique_names(){
   info "###get_unique-name"
+  set_tenant_scope
   inst_exists=$(openstack server list --name "$NOVA_INSTANCE_NAME" -c Name -f value)
-  if [ "$inst_exists" == "$NOVA_INSTANCE_NAME" ]
+  if [ -n "$inst_exists" ]
   then
      info "$NOVA_INSTANCE_NAME instance exists, creating new set"
      get_unique_name "nova list" "$NOVA_INSTANCE_NAME"
@@ -216,9 +229,9 @@ create_the_networks(){
   subnet_exists=$(openstack subnet list -c Name -f value | grep "$VLAN_NAME")
   if [ "$subnet_exists" != "$VLAN_NAME" ]
   then
-    execute_command "neutron subnet-create $TENANT_NETWORK_NAME $VLAN_NETWORK --name $VLAN_NAME"
+    execute_command "neutron subnet-create $TENANT_NETWORK_NAME $SANITY_TENANT_NETWORK --name $VLAN_NAME"
   else
-    info "#-----VLAN Network subnet '$VLAN_NETWORK' exists. Skipping"
+    info "#-----VLAN Network subnet '$SANITY_TENANT_NETWORK' exists. Skipping"
   fi
 
   router_exists=$(openstack router list -c Name -f value | grep "$TENANT_ROUTER_NAME")
@@ -235,13 +248,13 @@ create_the_networks(){
 
   execute_command "ssh ${SSH_OPTS} heat-admin@$CONTROLLER sudo grep network_vlan_ranges /etc/neutron/plugin.ini"
 
-  ext_net_exists=$(openstack network list -c Name -f value | grep "$EXTERNAL_NETWORK_NAME")
-  if [ "$ext_net_exists" != "$EXTERNAL_NETWORK_NAME" ]
+  ext_net_exists=$(openstack network list -c Name -f value | grep "$FLOATING_IP_NETWORK_NAME")
+  if [ "$ext_net_exists" != "$FLOATING_IP_NETWORK_NAME" ]
   then
-    execute_command "neutron net-create $EXTERNAL_NETWORK_NAME --router:external --provider:network_type vlan --provider:physical_network physext --provider:segmentation_id $EXTERNAL_VLAN"
-    execute_command "neutron subnet-create --name $EXTERNAL_SUBNET_NAME --allocation-pool start=$STARTIP,end=$ENDIP --gateway $GATEWAY_IP --disable-dhcp $EXTERNAL_NETWORK_NAME $EXTERNAL_VLAN_NETWORK"
+    execute_command "neutron net-create $FLOATING_IP_NETWORK_NAME --router:external --provider:network_type vlan --provider:physical_network physext --provider:segmentation_id $FLOATING_IP_NETWORK_VLAN"
+    execute_command "neutron subnet-create --name $FLOATING_IP_SUBNET_NAME --allocation-pool start=$FLOATING_IP_NETWORK_START_IP,end=$FLOATING_IP_NETWORK_END --gateway $FLOATING_IP_NETWORK_GATEWAY --disable-dhcp $FLOATING_IP_NETWORK_NAME $FLOATING_IP_NETWORK"
   else
-    info "#----- External network '$EXTERNAL_NETWORK_NAME' exists. Skipping"
+    info "#----- External network '$FLOATING_IP_NETWORK_NAME' exists. Skipping"
   fi
 
 
@@ -250,7 +263,7 @@ create_the_networks(){
   execute_command "openstack router list"
 
   # Use external network name
-  execute_command "neutron router-gateway-set $TENANT_ROUTER_NAME $EXTERNAL_NETWORK_NAME"
+  execute_command "neutron router-gateway-set $TENANT_ROUTER_NAME $FLOATING_IP_NETWORK_NAME"
   
   # switch to tenant context
   set_tenant_scope
@@ -311,18 +324,19 @@ setup_nova (){
   fi
 
   set_tenant_scope
-  info "creating keypair $KEY_NAME"
-  if [ ! -f "$KEY_FILE" ]; then
-    nova keypair-add $KEY_NAME  > "$KEY_FILE"
+  if [ ! -f ~/$SANITY_KEY_NAME ]; then
+    info "creating keypair $SANITY_KEY_NAME"
+    ssh-keygen -f ~/$SANITY_KEY_NAME -t rsa -N ""
+    nova keypair-add --pub-key ~/${SANITY_KEY_NAME}.pub $SANITY_KEY_NAME
   else
-    info "#----- Key '$KEY_NAME' exists. Skipping"
+    info "using existing keypair $SANITY_KEY_NAME"
   fi
 
-  tenant_net_id=$(openstack network list -f value | grep "$TENANT_NETWORK_NAME" | awk '{print $1}')
+  tenant_net_id=$(openstack network list -f value | grep " $TENANT_NETWORK_NAME " | awk '{print $1}')
 
   image_id=$(openstack image list -f value | grep "$IMAGE_NAME" | awk '{print $1}')
 
-  execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor 2 --key-name $KEY_NAME --image $image_id --nic net-id=$tenant_net_id $NOVA_INSTANCE_NAME"
+  execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor 2 --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $NOVA_INSTANCE_NAME"
 
   info "### Waiting for the instance to be built..."
   instance_status=$(nova list | grep "$NOVA_INSTANCE_NAME" | awk '{print $6}')
@@ -380,7 +394,7 @@ test_neutron_networking (){
 
   # Allocate a floating IP
   info "Allocating floating IP"
-  floating_ip_id=$(neutron floatingip-create $EXTERNAL_NETWORK_NAME | grep " id " | awk '{print $4}')
+  floating_ip_id=$(neutron floatingip-create $FLOATING_IP_NETWORK_NAME | grep " id " | awk '{print $4}')
   floating_ip=$(neutron floatingip-show $floating_ip_id | grep floating_ip_address | awk '{print $4}')
 
   # Find the port to associate it with
@@ -464,12 +478,13 @@ radosgw_cleanup(){
 
 setup_project(){
   info "### Setting up new project"
+  set_admin_scope
 
-  pro_exists=$(openstack project list -c Name -f value | grep "$PROJECT_NAME")
+  pro_exists=$(openstack project show -c name -f value $PROJECT_NAME)
   if [ "$pro_exists" != "$PROJECT_NAME" ]
   then
     execute_command "openstack project create $PROJECT_NAME"
-    execute_command "openstack user create --project $PROJECT_NAME --password $PASSWORD --email $EMAIL $USER_NAME"
+    execute_command "openstack user create --project $PROJECT_NAME --password $SANITY_USER_PASSWORD --email $SANITY_USER_EMAIL $USER_NAME"
   else
     info "#Project $PROJECT_NAME exists ---- Skipping"
   fi
@@ -494,12 +509,12 @@ then
     info "### CLEANING MODE"
     cd ~
     set_tenant_scope
-    info "### Deleting keypairs and .pem files"
-    if [ -f "$KEY_FILE" ]; then
-      rm -f $KEY_FILE
-    fi
+    info "### Deleting key file"
+    rm -f ${SANITY_KEY_NAME}
+    rm -f ${SANITY_KEY_NAME}.pub
 
-    keypair_ids=$(nova keypair-list | grep $KEY_NAME | awk '{print $2}')
+    info "### Deleting keypairs"
+    keypair_ids=$(nova keypair-list | grep $SANITY_KEY_NAME | awk '{print $2}')
     info   "keypair ids: $keypair_ids"
     [[ $keypair_ids ]] && echo $keypair_ids | xargs -n1 nova keypair-delete
 
@@ -556,7 +571,7 @@ then
        rm -f ./cirros-0.3.3-x86_64-disk.img   
     fi
     
-    info   "#### Deleting the security groups and key_file"
+    info   "#### Deleting the security groups"
     set_tenant_scope
     security_group_ids=$(neutron security-group-list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
     [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 neutron security-group-delete
@@ -564,7 +579,7 @@ then
     info "### Deleting networks"
     set_admin_scope
     # Pick up all of the subnets in the tenants and the external subnet
-    subnet_ids=$(neutron subnet-list | grep -E "$BASE_VLAN_NAME|$EXTERNAL_SUBNET_NAME" | awk '{print $2}')
+    subnet_ids=$(neutron subnet-list | grep -E "$BASE_VLAN_NAME|$FLOATING_IP_SUBNET_NAME" | awk '{print $2}')
     for subnet_id in $subnet_ids
     do
       # Pick up all of the tenant routers
@@ -578,7 +593,7 @@ then
     done
 
     # Now delete the networks
-    network_ids=$(neutron net-list | grep -E "$BASE_TENANT_NETWORK_NAME|$EXTERNAL_NETWORK_NAME" | awk '{print $2}')
+    network_ids=$(neutron net-list | grep -E "$BASE_TENANT_NETWORK_NAME|$FLOATING_IP_NETWORK_NAME" | awk '{print $2}')
     for network_id in $network_ids
     do
       neutron net-delete $network_id
@@ -586,7 +601,7 @@ then
   fi
 
   radosgw_cleanup
-  if [ ! -f ${SANITYRC} ]; then
+  if [ -f ${SANITYRC} ]; then
      rm -f ${SANITYRC}
   fi
   info "########### CLEANUP SUCCESSFUL ############"
@@ -598,8 +613,10 @@ else
 
   set_unique_names
   echo $NAME is the new set
+  echo $NOVA_INSTANCE_NAME is the new set
 
-  ###
+  generate_sanity_rc
+
   setup_project
 
   ### Setting up Networks
