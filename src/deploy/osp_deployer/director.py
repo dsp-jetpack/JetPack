@@ -783,18 +783,18 @@ class Director(InfraHost):
             'sed -i "s|ExternalNetworkVlanID:.*|ExternalNetworkVlanID: ' +
             self.settings.public_api_vlanid + '|" ' + network_yaml,
             'sed -i "s|TenantNetworkVlanID:.*|TenantNetworkVlanID: ' +
-            self.settings.tenant_vlanid + '|" ' + network_yaml,
+            self.settings.tenant_tunnel_vlanid + '|" ' + network_yaml,
         ]
 
-        if self.settings.tenant_network:
+        if self.settings.tenant_tunnel_network:
             cmds += [
                 'sed -i "s|TenantNetCidr:.*|TenantNetCidr: ' +
-                self.settings.tenant_network + '|" ' + network_yaml,
+                self.settings.tenant_tunnel_network + '|" ' + network_yaml,
                 'sed -i "s|TenantAllocationPools:.*|TenantAllocationPools: ' +
                 "[{'start': '" +
-                self.settings.tenant_network_allocation_pool_start +
+                self.settings.tenant_tunnel_network_allocation_pool_start +
                 "', 'end': '" +
-                self.settings.tenant_network_allocation_pool_end +
+                self.settings.tenant_tunnel_network_allocation_pool_end +
                 "'}]"   '|" ' + network_yaml,
             ]
         if self.settings.is_fx:

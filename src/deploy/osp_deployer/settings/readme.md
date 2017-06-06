@@ -70,4 +70,21 @@
 * 10.0.1.c - Added deploy_overcloud_debug to allow optionally running
              deploy_overcloud script in debug mode
 * 10.0.1.c - Renamed external_bond to public_bond & external_slaves to public_slaves
+* 10.0.1.d - Added sanity test parameters:
+             floating_ip_network
+             floating_ip_network_start_ip
+             floating_ip_network_end_ip
+             floating_ip_network_gateway
+             floating_ip_network_vlan
+             sanity_tenant_network
+             sanity_user_password
+             sanity_user_email
+             sanity_key_name
+* 10.0.1.e - Renamed tenant network parameters as follows:
+             tenant_network -> tenant_tunnel_network
+             tenant_network_allocation_pool_start ->
+                 tenant_tunnel_network_allocation_pool_start
+             tenant_network_allocation_pool_end ->
+                 tenant_tunnel_network_allocation_pool_end
+             tenant_network_vlanid -> tenant_tunnel_network_vlanid
 "
