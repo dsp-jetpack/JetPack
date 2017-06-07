@@ -99,12 +99,12 @@ class Settings():
             'provisioning_net_dhcp_end']
         self.discovery_ip_range = cluster[
             'discovery_ip_range']
-        self.tenant_network = cluster.get('tenant_network')
-        self.tenant_network_allocation_pool_start = cluster.get(
-            'tenant_network_allocation_pool_start')
-        self.tenant_network_allocation_pool_end = cluster.get(
-            'tenant_network_allocation_pool_end')
-        self.tenant_vlanid = cluster.get('tenant_network_vlanid')
+        self.tenant_tunnel_network = cluster.get('tenant_tunnel_network')
+        self.tenant_tunnel_network_allocation_pool_start = cluster.get(
+            'tenant_tunnel_network_allocation_pool_start')
+        self.tenant_tunnel_network_allocation_pool_end = cluster.get(
+            'tenant_tunnel_network_allocation_pool_end')
+        self.tenant_tunnel_vlanid = cluster.get('tenant_tunnel_network_vlanid')
         self.tenant_vlan_range = cluster.get('tenant_vlan_range')
         self.director_install_account_user = cluster[
             'director_install_user']
