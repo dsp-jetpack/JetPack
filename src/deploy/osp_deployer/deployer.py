@@ -121,10 +121,7 @@ def deploy():
 
         tester.sah_health_check()
         logger.info("Uploading configs/iso/scripts..")
-        if settings.version_locking_enabled is True:
-            logger.debug(
-                "Uploading version locking files for director & rhscon VMs")
-            sah_node.upload_lock_files()
+        sah_node.handle_lock_files()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
 

@@ -181,20 +181,25 @@ class Sah(InfraHost):
         shutil.copyfile(self.settings.rhel_iso,
                         "/store/data/iso/RHEL7.iso")
 
-    def upload_lock_files(self):
-
+    def handle_lock_files(self):
         files = [
             'rhscon_vm.vlock',
             'director_vm.vlock',
         ]
+
+        # Delete any staged locking files to prevent accidental reuse
         for eachone in files:
-            localfile = self.settings.lock_files_dir + "/" + eachone
-            remotefile = '/root/' + eachone
-            Scp.put_file(self.ip,
-                         "root",
-                         self.settings.sah_node.root_password,
-                         localfile,
-                         remotefile)
+            staged_file_name = '/root/' + eachone
+            os.remove(staged_file_name)
+
+        if self.settings.version_locking_enabled is True:
+            logger.debug(
+                "Uploading version locking files for director & rhscon VMs")
+
+            for eachone in files:
+                source_file_name = self.settings.lock_files_dir + "/" + eachone
+                dest_file_name = '/root/' + eachone
+                shutil.copyfile(source_file_name, dest_file_name)
 
     def upload_director_scripts(self):
         remote_file = "/root/deploy-director-vm.sh"
