@@ -327,9 +327,17 @@ setup_nova (){
   if [ ! -f ~/$SANITY_KEY_NAME ]; then
     info "creating keypair $SANITY_KEY_NAME"
     ssh-keygen -f ~/$SANITY_KEY_NAME -t rsa -N ""
-    nova keypair-add --pub-key ~/${SANITY_KEY_NAME}.pub $SANITY_KEY_NAME
   else
     info "using existing keypair $SANITY_KEY_NAME"
+  fi
+
+  nova keypair-show $SANITY_KEY_NAME 1>/dev/null 2>&1
+  if [ $? -ne 0 ]
+  then
+    info "loading $SANITY_KEY_NAME keypair into nova"
+    nova keypair-add --pub-key ~/${SANITY_KEY_NAME}.pub $SANITY_KEY_NAME
+  else
+    info "skipping loading $SANITY_KEY_NAME keypair into nova"
   fi
 
   tenant_net_id=$(openstack network list -f value | grep " $TENANT_NETWORK_NAME " | awk '{print $1}')
@@ -510,8 +518,8 @@ then
     cd ~
     set_tenant_scope
     info "### Deleting key file"
-    rm -f ${SANITY_KEY_NAME}
-    rm -f ${SANITY_KEY_NAME}.pub
+    rm -f ~/${SANITY_KEY_NAME}
+    rm -f ~/${SANITY_KEY_NAME}.pub
 
     info "### Deleting keypairs"
     keypair_ids=$(nova keypair-list | grep $SANITY_KEY_NAME | awk '{print $2}')
