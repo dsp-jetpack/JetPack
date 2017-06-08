@@ -190,7 +190,8 @@ class Sah(InfraHost):
         # Delete any staged locking files to prevent accidental reuse
         for eachone in files:
             staged_file_name = '/root/' + eachone
-            os.remove(staged_file_name)
+            if os.path.isfile(staged_file_name):
+                os.remove(staged_file_name)
 
         if self.settings.version_locking_enabled is True:
             logger.debug(
