@@ -329,7 +329,7 @@ class Settings():
         self.floating_ip_network_gateway = sanity_settings['floating_ip_network_gateway']
         self.floating_ip_network_vlan = sanity_settings['floating_ip_network_vlan']
         self.sanity_tenant_network = sanity_settings['sanity_tenant_network']
-        self.sanity_user_password = sanity_settings['floating_ip_network_end_ip']
+        self.sanity_user_password = sanity_settings['sanity_user_password']
         self.sanity_user_email = sanity_settings['sanity_user_email']
         self.sanity_key_name = sanity_settings['sanity_key_name']
 
