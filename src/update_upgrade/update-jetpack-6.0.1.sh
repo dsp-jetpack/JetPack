@@ -238,12 +238,18 @@ update_overcloud() {
     done < "$DEPLOY_CMD_PATH"
     info "Environement variable files: ${envs[@]}"
     
-	# Build openstaack overcloud update stack command 
-	# Note we replace all "~" with value of $HOME or environment files
+    # Build openstaack overcloud update stack command 
+    # Note we replace all "~" with value of $HOME or environment files
     yes ""|openstack overcloud update stack --debug $STACK_NAME -i --templates ~/pilot/templates/overcloud -e ~/pilot/templates/overcloud/overcloud-resource-registry-puppet.yaml ${envs[@]//\~/$HOME} 
-    
+
     # if fencing was enabled, we'll ensure it is still enabled:
     [ "$STONITH_ENABLED" ] && ssh heat-admin@${C} "sudo pcs property set stonith-enabled=true"
+
+    # If heat failed updating the overcloud stack fail without creating lock file.
+    if $(openstack stack list | grep $STACK_NAME | grep -q UPDATE_FAILED); then
+      fatal "Overcloud stack: $STACK_NAME, update failed.  Please check status of the overcloud nodes and pcs status and fix any issues you find, then re-run update script."
+    fi
+
     touch ~/pilot/update-lockfiles/overcloud-updated.lock
 }
 
