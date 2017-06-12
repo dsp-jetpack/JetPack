@@ -1365,15 +1365,15 @@ class Director(InfraHost):
         setts = self.settings
         cmds = [
             'source ~/' + self.settings.overcloud_name + 'rc;'
-            "sudo ip route add `neutron subnet-list | " +
-            "grep external_sub | awk '{print $6;}'` dev eth0",
+            "sudo ip route add `openstack subnet list | " +
+            "grep external_sub | awk '{print $8;}'` dev eth0",
             'source ~/' + self.settings.overcloud_name + 'rc;'
-            'keystone role-create --name heat_stack_owner',
+            'openstack role create heat_stack_owner',
             "source ~/" + self.settings.overcloud_name + "rc;mkdir -p /home/" +
             setts.director_install_account_user +
             "/tempest",
             'source ~/' + self.settings.overcloud_name + 'rc;cd '
-            '~/tempest;/usr/share/openstack-tempest-13.0.0/tools/'
+            '~/tempest;/usr/share/openstack-tempest-*/tools/'
             'configure-tempest-directory',
             'source ~/' + self.settings.overcloud_name +
             'rc;cd ~/tempest;tools/config_tempest.py '
