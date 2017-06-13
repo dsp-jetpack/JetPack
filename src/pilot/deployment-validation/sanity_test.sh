@@ -20,11 +20,11 @@
 
 INI_FILE=sanity.ini
 
-while getopts s: option
+while getopts :s: option
 do
     case "${option}"
     in
-    s) INI_FILE=$(OPTARG);;
+    s) INI_FILE=$OPTARG;;
     esac
 done
 
@@ -41,7 +41,7 @@ SANITY_TENANT_NETWORK=$(get_value sanity_tenant_network)
 SANITY_USER_PASSWORD=$(get_value sanity_user_password)
 SANITY_USER_EMAIL=$(get_value sanity_user_email)
 SANITY_KEY_NAME=$(get_value sanity_key_name)
-
+SANITY_NUMBER_INSTANCES=$(get_value sanity_number_instances)
 FLOATING_IP_NETWORK_NAME=$(get_value floating_ip_network_name)
 FLOATING_IP_SUBNET_NAME=$(get_value floating_ip_subnet_name)
 IMAGE_NAME=$(get_value image_name)
@@ -54,15 +54,9 @@ BASE_NOVA_INSTANCE_NAME=$(get_value base_nova_instance_name)
 BASE_VOLUME_NAME=$(get_value base_volume_name)
 BASE_PROJECT_NAME=$(get_value base_project_name)
 BASE_USER_NAME=$(get_value base_user_name)
+
+BASE_CONTAINER_NAME=sanity_container
 SECURITY_GROUP_NAME="$BASE_SECURITY_GROUP_NAME"
-TENANT_NETWORK_NAME="$BASE_TENANT_NETWORK_NAME"
-TENANT_ROUTER_NAME="$BASE_TENANT_ROUTER_NAME"
-VLAN_NAME="$BASE_VLAN_NAME"
-NOVA_INSTANCE_NAME="$BASE_NOVA_INSTANCE_NAME"
-VOLUME_NAME="$BASE_VOLUME_NAME"
-PROJECT_NAME="$BASE_PROJECT_NAME"
-USER_NAME="$BASE_USER_NAME"
-SANITYRC=~/${BASE_PROJECT_NAME}rc
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no"
 
 shopt -s nullglob
@@ -80,9 +74,6 @@ DEBUG=4
 
 # Default logging level
 LOG_LEVEL=$INFO
-
-# global var
-NAME=''
 
 # Logging functions
 log() { echo -e "$(date '+%F %T'): $@" >&2; }
@@ -152,13 +143,6 @@ init(){
   ssh ${SSH_OPTS} heat-admin@$CONTROLLER 'sudo ps aux | grep rabbit'
   ssh ${SSH_OPTS} heat-admin@$CONTROLLER 'ps -ef | grep mysqld'
   ssh ${SSH_OPTS} heat-admin@$CONTROLLER 'ps -ef | grep mariadb'
-
-  info "### Verify OpenStack services are running."
-  #execute_command "ssh heat-admin@$CONTROLLER sudo nova-manage service list"
-  #execute_command "ssh heat-admin@$CONTROLLER sudo cinder-manage service list"
-  #execute_command "ssh heat-admin@$CONTROLLER systemctl status openstack-keystone"
-  #execute_command "ssh heat-admin@$CONTROLLER systemctl status openstack-glance-api"
-  #execute_command "ssh heat-admin@$CONTROLLER systemctl status openstack-glance-registry"
 }
 
 
@@ -175,43 +159,33 @@ execute_command(){
 }
 
 
-#Generates a unique name
-get_unique_name (){
-  cmd=$1
-  name=$2
-  tmp=$name
+set_unique_names(){
+  suffix=$1
 
-  for i in {1..25}
-  do
-    name="$tmp$i"
-    name_exists=$($cmd | grep $name | head -n 1 | awk '{print $4}')
-    echo $name_exists , $cmd , $tmp, $name
-    if [ "$name_exists" != "$name"  ]
-    then
-       NAME=$i
-       return
-    fi
-  done
+  PROJECT_NAME=${BASE_PROJECT_NAME}${suffix}
+  SANITYRC=~/${PROJECT_NAME}rc
+  TENANT_NETWORK_NAME="${BASE_TENANT_NETWORK_NAME}${suffix}"
+  TENANT_ROUTER_NAME="${BASE_TENANT_ROUTER_NAME}${suffix}"
+  VLAN_NAME="${BASE_VLAN_NAME}${suffix}"
+  VOLUME_NAME="${BASE_VOLUME_NAME}${suffix}"
+  USER_NAME="${BASE_USER_NAME}${suffix}"
+  SWIFT_CONTAINER_NAME=${BASE_CONTAINER_NAME}_${suffix}
 }
 
 
-set_unique_names(){
-  info "###get_unique-name"
-  set_tenant_scope
-  inst_exists=$(openstack server list --name "$NOVA_INSTANCE_NAME" -c Name -f value)
-  if [ -n "$inst_exists" ]
-  then
-     info "$NOVA_INSTANCE_NAME instance exists, creating new set"
-     get_unique_name "nova list" "$NOVA_INSTANCE_NAME"
+get_unique_names(){
+  info "### Getting unique names"
+  set_admin_scope
 
-     TENANT_NETWORK_NAME="$TENANT_NETWORK_NAME$NAME"
-     TENANT_ROUTER_NAME="$TENANT_ROUTER_NAME$NAME"
-     VLAN_NAME="$VLAN_NAME$NAME"
-     NOVA_INSTANCE_NAME="$NOVA_INSTANCE_NAME$NAME"
-     VOLUME_NAME="$VOLUME_NAME$NAME"
-     PROJECT_NAME="$PROJECT_NAME$NAME"
-     USER_NAME="$USER_NAME$NAME"
-  fi
+  index=1
+  openstack project show ${BASE_PROJECT_NAME}${index} >/dev/null 2>&1
+  while [ $? -eq 0 ]
+  do
+    index=$((index+1))
+    openstack project show ${BASE_PROJECT_NAME}${index} >/dev/null 2>&1
+  done
+
+  set_unique_names $index
 }
 
 
@@ -313,6 +287,47 @@ setup_glance(){
 }
 
 
+spin_up_instances(){
+  tenant_net_id=$(openstack network list -f value | grep " $TENANT_NETWORK_NAME " | awk '{print $1}')
+
+  image_id=$(openstack image list -f value | grep "$IMAGE_NAME" | awk '{print $1}')
+
+  info "### Initiating build of instances..."
+  declare -a instance_names
+  index=1
+  while [ $index -le $SANITY_NUMBER_INSTANCES ]; do
+    instance_name="${BASE_NOVA_INSTANCE_NAME}_$index"
+    if [ $index -eq 1 ]
+    then
+      FIRST_NOVA_INSTANCE_NAME=$instance_name
+    fi
+
+    execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor 2 --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $instance_name"
+
+    instance_names[((index-1))]=$instance_name
+    index=$((index+1))
+  done
+
+  info "### Waiting for the instances to be built..."
+
+  for instance_name in ${instance_names[*]}; do
+    instance_status=$(nova show $instance_name | grep status | awk '{print $4}')
+    while [ "$instance_status" != "ACTIVE" ]; do
+      if [ "$instance_status" != "BUILD" ]; then
+        fatal "### Instance status is: ${instance_status}!  Aborting sanity test"
+      else
+        info "### Instance status is: ${instance_status}.  Sleeping..."
+        sleep 10
+        instance_status=$(nova show $instance_name | grep status | awk '{print $4}')
+      fi
+    done
+  done
+
+  info "### Instances are successfully built"
+  execute_command "nova list"
+}
+
+
 setup_nova (){
   info "### Setup Nova"""
   openstack flavor show $FLAVOR_NAME > /dev/null 2>&1
@@ -339,27 +354,6 @@ setup_nova (){
   else
     info "skipping loading $SANITY_KEY_NAME keypair into nova"
   fi
-
-  tenant_net_id=$(openstack network list -f value | grep " $TENANT_NETWORK_NAME " | awk '{print $1}')
-
-  image_id=$(openstack image list -f value | grep "$IMAGE_NAME" | awk '{print $1}')
-
-  execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor 2 --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $NOVA_INSTANCE_NAME"
-
-  info "### Waiting for the instance to be built..."
-  instance_status=$(nova list | grep "$NOVA_INSTANCE_NAME" | awk '{print $6}')
-  while [ "$instance_status" != "ACTIVE" ]; do
-    if [ "$instance_status" != "BUILD" ]; then
-      fatal "### Instance status is: ${instance_status}!  Aborting sanity test"
-    else
-      info "### Instance status is: ${instance_status}.  Sleeping..."
-      sleep 10
-      instance_status=$(nova list | grep "$NOVA_INSTANCE_NAME" | awk '{print $6}')
-    fi
-  done
-  info "### Instance is built, status is ${instance_status}"
-
-  execute_command "nova list"
 }
 
 
@@ -391,7 +385,7 @@ ping_from_netns(){
 
 test_neutron_networking (){
   set_tenant_scope
-  private_ip=$(nova show $NOVA_INSTANCE_NAME | grep "$TENANT_NETWORK_NAME network" | awk -F\| '{print $3}' | tr -d " ")
+  private_ip=$(nova show $FIRST_NOVA_INSTANCE_NAME | grep "$TENANT_NETWORK_NAME network" | awk -F\| '{print $3}' | tr -d " ")
 
   net_ids=$(neutron net-show -F id -F subnets $TENANT_NETWORK_NAME | grep -E 'id|subnets' | awk '{print $4}')
   net_id=$(echo $net_ids | awk '{print $1}')
@@ -448,12 +442,12 @@ setup_cinder(){
     info "### Volume is ready, status is ${volume_status}"
   fi
 
-  server_id=$(nova list | grep $NOVA_INSTANCE_NAME| head -n 1 | awk '{print $2}')
+  server_id=$(nova list | grep $FIRST_NOVA_INSTANCE_NAME| head -n 1 | awk '{print $2}')
   volume_id=$(cinder list | grep $VOLUME_NAME| head -n 1 | awk '{print $2}')
 
   execute_command "nova volume-attach $server_id $volume_id /dev/vdb"
 
-  info "Volume attached, ssh into instance $NOVA_INSTANCE_NAME and verify"
+  info "Volume attached, ssh into instance $FIRST_NOVA_INSTANCE_NAME and verify"
 }
 
 
@@ -461,31 +455,27 @@ radosgw_test(){
   info "### RadosGW test"
   set_tenant_scope
 
-  execute_command "swift post container"
+  execute_command "swift post $SWIFT_CONTAINER_NAME"
 
   execute_command "swift list"
 
   touch test_file
-  execute_command "swift upload container test_file"
+  execute_command "swift upload $SWIFT_CONTAINER_NAME test_file"
 
-  execute_command "swift list container"
+  execute_command "swift list $SWIFT_CONTAINER_NAME"
 }
 
 
 radosgw_cleanup(){
   info "### RadosGW cleanup"
-  set_tenant_scope
   rm -f test_file
-  container_id=$(swift list | grep container | head -n 1 | awk '{print $1}')
-  if [ "$container_id" == "container" ]; then
-   execute_command "swift delete container"
-  fi
+  execute_command "swift delete $SWIFT_CONTAINER_NAME"
   execute_command "swift list"
 }
 
 
 setup_project(){
-  info "### Setting up new project"
+  info "### Setting up new project $PROJECT_NAME"
   set_admin_scope
 
   pro_exists=$(openstack project show -c name -f value $PROJECT_NAME)
@@ -508,22 +498,27 @@ info "###Appendix-C Openstack Operations Functional Test ###"
 
 init
 
-if [[ $# > 0 ]]
+### CLEANUP
+if [[ "$1" == "clean" ]]
 then
-  ### CLEANUP
-  arg="$1"
-  if [[ "$arg" == "clean" ]]
-  then
-    info "### CLEANING MODE"
-    cd ~
-    set_tenant_scope
-    info "### Deleting key file"
-    rm -f ~/${SANITY_KEY_NAME}
-    rm -f ~/${SANITY_KEY_NAME}.pub
+  info "### CLEANING MODE"
+  cd ~
+  set_admin_scope
 
-    info "### Deleting keypairs"
-    keypair_ids=$(nova keypair-list | grep $SANITY_KEY_NAME | awk '{print $2}')
-    info   "keypair ids: $keypair_ids"
+  index=1
+  openstack project show ${BASE_PROJECT_NAME}${index} >/dev/null 2>&1
+  while [ $? -eq 0 ]
+  do
+    set_unique_names $index
+
+    export OS_TENANT_NAME=$PROJECT_NAME
+    export OS_PASSWORD=$SANITY_USER_PASSWORD
+    export OS_USERNAME=$USER_NAME
+
+    info "### Starting deletion of $PROJECT_NAME"
+    info "### Deleting keypair"
+    keypair_id=$(nova keypair-list | grep $SANITY_KEY_NAME | awk '{print $2}')
+    info   "keypair id: $keypair_id"
     [[ $keypair_ids ]] && echo $keypair_ids | xargs -n1 nova keypair-delete
 
     info "### Deleting the floating ips"
@@ -538,16 +533,16 @@ then
     done
 
     info   "#### Deleting the instances"
-    instance_ids=$(nova list | grep $NOVA_INSTANCE_NAME | awk '{print $2}')
+    instance_ids=$(nova list | grep $BASE_NOVA_INSTANCE_NAME | awk '{print $2}')
     [[ $instance_ids ]] && echo $instance_ids | xargs -n1 nova delete
 
-    info "### Waiting for the instance to be deleted..."
-    num_instances=$(nova list | grep $NOVA_INSTANCE_NAME | wc -l)
+    info "### Waiting for the instances to be deleted..."
+    num_instances=$(nova list | grep $BASE_NOVA_INSTANCE_NAME | wc -l)
     info "num instance: $num_instances"
     while [ "$num_instances" -gt 0 ]; do
       info "#### ${num_instances} remain.  Sleeping..."
       sleep 3
-      num_instances=$(nova list | grep $NOVA_INSTANCE_NAME | wc -l)
+      num_instances=$(nova list | grep $BASE_NOVA_INSTANCE_NAME | wc -l)
     done
 
     info   "#### Deleting the volumes"
@@ -563,55 +558,72 @@ then
       num_volumes=$(cinder list | grep $VOLUME_NAME | wc -l)
     done
 
-    info   "#### Deleting the images"
-    set_admin_scope
-    image_ids=$(glance image-list | grep $IMAGE_NAME | awk '{print $2}')
-    [[ $image_ids ]] && echo $image_ids | xargs -n1 glance image-delete
+    radosgw_cleanup
 
-    info "### Deleting the flavor"
-    openstack flavor show $FLAVOR_NAME > /dev/null 2>&1
+    set_admin_scope
+    info "#### Disconnecting the router"
+    neutron router-interface-delete $TENANT_ROUTER_NAME $VLAN_NAME
+
+    info "#### Deleting the user"
+    openstack user show $USER_NAME >/dev/null 2>&1
+    if [ $? -eq 0 ]
+    then 
+      execute_command "openstack user delete $USER_NAME"
+    fi
+
+    info "#### Deleting the project"
+    openstack project show $PROJECT_NAME >/dev/null 2>&1
     if [ $? -eq 0 ]
     then
-        openstack flavor delete $FLAVOR_NAME
+      execute_command "openstack project delete $PROJECT_NAME"
     fi
-    
-    if [ -f ./cirros-0.3.3-x86_64-disk.img ]; then
-       rm -f ./cirros-0.3.3-x86_64-disk.img   
-    fi
-    
-    info   "#### Deleting the security groups"
-    set_tenant_scope
-    security_group_ids=$(neutron security-group-list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
-    [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 neutron security-group-delete
 
-    info "### Deleting networks"
-    set_admin_scope
-    # Pick up all of the subnets in the tenants and the external subnet
-    subnet_ids=$(neutron subnet-list | grep -E "$BASE_VLAN_NAME|$FLOATING_IP_SUBNET_NAME" | awk '{print $2}')
-    for subnet_id in $subnet_ids
-    do
-      # Pick up all of the tenant routers
-      router_ids=$(neutron router-list | grep $BASE_TENANT_ROUTER_NAME | awk '{print $2}')
-      for router_id in $router_ids
-      do
-        neutron router-gateway-clear $router_id
-        neutron router-interface-delete $router_id $subnet_id
-        neutron router-delete $router_id
-      done
-    done
+    index=$((index+1))
+    openstack project show ${BASE_PROJECT_NAME}${index} >/dev/null 2>&1
+  done
 
-    # Now delete the networks
-    network_ids=$(neutron net-list | grep -E "$BASE_TENANT_NETWORK_NAME|$FLOATING_IP_NETWORK_NAME" | awk '{print $2}')
-    for network_id in $network_ids
-    do
-      neutron net-delete $network_id
-    done
+  set_admin_scope
+  info   "#### Deleting the security groups"
+  security_group_ids=$(neutron security-group-list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
+  [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 neutron security-group-delete
+
+  info   "#### Deleting the images"
+  image_ids=$(glance image-list | grep $IMAGE_NAME | awk '{print $2}')
+  [[ $image_ids ]] && echo $image_ids | xargs -n1 glance image-delete
+
+  info "### Deleting the flavor"
+  openstack flavor show $FLAVOR_NAME > /dev/null 2>&1
+  if [ $? -eq 0 ]
+  then
+    openstack flavor delete $FLAVOR_NAME
   fi
-
-  radosgw_cleanup
-  if [ -f ${SANITYRC} ]; then
-     rm -f ${SANITYRC}
+  
+  if [ -f ./cirros-0.3.3-x86_64-disk.img ]; then
+     rm -f ./cirros-0.3.3-x86_64-disk.img   
   fi
+  
+  info "### Deleting routers"
+  router_ids=$(neutron router-list | grep $BASE_TENANT_ROUTER_NAME | awk '{print $2}')
+  for router_id in $router_ids
+  do
+    neutron router-gateway-clear $router_id
+    neutron router-delete $router_id
+  done
+
+  info "### Deleting networks"
+  network_ids=$(neutron net-list | grep -E "$BASE_TENANT_NETWORK_NAME|$FLOATING_IP_NETWORK_NAME" | awk '{print $2}')
+  for network_id in $network_ids
+  do
+    neutron net-delete $network_id
+  done
+
+  info "### Deleting key file"
+  rm -f ~/${SANITY_KEY_NAME}
+  rm -f ~/${SANITY_KEY_NAME}.pub
+
+  info "### Deleting ${BASE_PROJECT_NAME}rc files"
+  rm -f ~/${BASE_PROJECT_NAME}*rc
+
   info "########### CLEANUP SUCCESSFUL ############"
   exit 1
 else
@@ -619,21 +631,19 @@ else
 
   info "### CREATION MODE"
 
-  set_unique_names
-  echo $NAME is the new set
-  echo $NOVA_INSTANCE_NAME is the new set
+  get_unique_names
 
   generate_sanity_rc
 
   setup_project
-
-  ### Setting up Networks
 
   create_the_networks
 
   setup_glance
 
   setup_nova
+
+  spin_up_instances
 
   test_neutron_networking
 

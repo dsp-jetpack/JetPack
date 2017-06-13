@@ -550,6 +550,9 @@ class Director(InfraHost):
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_key_name=.*|sanity_key_name=' +
             self.settings.sanity_key_name +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|sanity_number_instances=.*|sanity_number_instances=' +
+            self.settings.sanity_number_instances +
             '|" pilot/deployment-validation/sanity.ini'
         ]
         for cmd in cmds:

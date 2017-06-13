@@ -332,6 +332,7 @@ class Settings():
         self.sanity_user_password = sanity_settings['sanity_user_password']
         self.sanity_user_email = sanity_settings['sanity_user_email']
         self.sanity_key_name = sanity_settings['sanity_key_name']
+        self.sanity_number_instances= sanity_settings['sanity_number_instances']
 
         self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
         self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
