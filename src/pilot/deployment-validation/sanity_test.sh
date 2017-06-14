@@ -42,6 +42,7 @@ SANITY_USER_PASSWORD=$(get_value sanity_user_password)
 SANITY_USER_EMAIL=$(get_value sanity_user_email)
 SANITY_KEY_NAME=$(get_value sanity_key_name)
 SANITY_NUMBER_INSTANCES=$(get_value sanity_number_instances)
+SANITY_IMAGE_URL=$(get_value image_url)
 FLOATING_IP_NETWORK_NAME=$(get_value floating_ip_network_name)
 FLOATING_IP_SUBNET_NAME=$(get_value floating_ip_subnet_name)
 IMAGE_NAME=$(get_value image_name)
@@ -54,8 +55,9 @@ BASE_NOVA_INSTANCE_NAME=$(get_value base_nova_instance_name)
 BASE_VOLUME_NAME=$(get_value base_volume_name)
 BASE_PROJECT_NAME=$(get_value base_project_name)
 BASE_USER_NAME=$(get_value base_user_name)
+BASE_CONTAINER_NAME=$(get_value base_container_name)
 
-BASE_CONTAINER_NAME=sanity_container
+IMAGE_FILE_NAME=$(basename $SANITY_IMAGE_URL)
 SECURITY_GROUP_NAME="$BASE_SECURITY_GROUP_NAME"
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no"
 
@@ -268,9 +270,9 @@ setup_glance(){
   info "### Setting up glance"""
   set_admin_scope
 
-  if [ ! -f ./cirros-0.3.3-x86_64-disk.img ]; then
+  if [ ! -f ./$IMAGE_FILE_NAME ]; then
     sleep 5 #HACK: a timing issue exists on some stamps -- 5 seconds seems sufficient to fix it
-    execute_command "wget http://download.cirros-cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img"
+    execute_command "wget $SANITY_IMAGE_URL"
   else
     info "#----- Cirros image exists. Skipping"
   fi
@@ -278,7 +280,7 @@ setup_glance(){
   image_exists=$(openstack image list -c Name -f value | grep -x $IMAGE_NAME)
   if [ "$image_exists" != "$IMAGE_NAME" ]
   then
-    execute_command "openstack image create --disk-format qcow2 --container-format bare --file cirros-0.3.3-x86_64-disk.img $IMAGE_NAME --public"
+    execute_command "openstack image create --disk-format qcow2 --container-format bare --file $IMAGE_FILE_NAME $IMAGE_NAME --public"
   else
     info "#----- Image '$IMAGE_NAME' exists. Skipping"
   fi
@@ -598,8 +600,8 @@ then
     openstack flavor delete $FLAVOR_NAME
   fi
   
-  if [ -f ./cirros-0.3.3-x86_64-disk.img ]; then
-     rm -f ./cirros-0.3.3-x86_64-disk.img   
+  if [ -f ./$IMAGE_FILE_NAME ]; then
+     rm -f ./$IMAGE_FILE_NAME
   fi
   
   info "### Deleting routers"
