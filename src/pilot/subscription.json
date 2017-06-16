@@ -26,7 +26,8 @@
                        "rhel-7-server-rhceph-2-tools-rpms" ]
         },
         "compute": {
-            "pool_ids": [ "CHANGEME_openstack_pool_id" ],
+            "pool_ids": [ "CHANGEME_openstack_pool_id",
+                          "CHANGEME_ceph_pool_id"  ],
             "repos": [ "rhel-7-server-rpms",
                        "rhel-7-server-extras-rpms",
                        "rhel-7-server-rh-common-rpms",
