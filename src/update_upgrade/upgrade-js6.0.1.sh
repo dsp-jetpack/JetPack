@@ -20,6 +20,12 @@
 # need reboot function
 # net to add cinder yaml include stuff in overcloud deploy func
 # add --force-postconfig in overcloud deloy func for aodh ONLY
+# todo: patch ceph.conf about health
+#       patch stackrc for registation
+#       clock skew info: https://blog.headup.ws/node/36
+#       
+
+
 
 # to exit on failure:
 #set -e
@@ -120,7 +126,8 @@ deploy_subscription_json() {
                        "rhel-7-server-rhceph-2-tools-rpms" ]
         },
         "compute": {
-            "pool_ids": [ "$OPENSTACK_POOL_ID" ],
+            "pool_ids": [ "$OPENSTACK_POOL_ID",
+                          "$CEPH_POOL_ID"  ],
             "repos": [ "rhel-7-server-rpms",
                        "rhel-7-server-extras-rpms",
                        "rhel-7-server-rh-common-rpms",
@@ -129,7 +136,7 @@ deploy_subscription_json() {
                        "rhel-7-server-openstack-10-devtools-rpms",
                        "rhel-7-server-rhceph-2-mon-rpms",
                        "rhel-7-server-rhceph-2-osd-rpms",
-                       "rhel-7-server-rhceph-2-tools-rpms" ]
+                       "rhel-6-server-rhceph-2-tools-rpms" ]
         },
         "ceph-storage": {
             "pool_ids": [ "$OPENSTACK_POOL_ID",
@@ -164,6 +171,18 @@ subscribe_overcloud() {
     fi
     set_completed overcloud-registered
 }
+
+
+patch_ceph_conf_for_health() {
+
+    [[ $(ssh heat-admin@$CONTROLLER 'grep mon_pg_warn_max_per_osd /etc/ceph/ceph.conf') ]] && return
+#[global]
+#mon_pg_warn_max_per_osd = 0
+
+}
+
+
+
 
 
 patch_overcloud_controller_pacemaker_pp() {
@@ -271,7 +290,11 @@ prepare_upgrade() {
 
     sudo subscription-manager repos --disable=rhel-7-server-openstack-9-rpms --disable=rhel-7-server-openstack-9-director-rpms || fatal "Could not disable current openstack-8 repos $GUIDANCE"
     sudo subscription-manager repos --enable=rhel-7-server-openstack-10-rpms || fatal "Could not enable repos $GUIDANCE"
-    # ******** Randy do we still need this yum call?
+
+    HEALTH=$(ssh heat-admin@$CONTROLLER 'sudo ceph health')
+    [[ $HEALTH != "HEALTH_OK" ]] && fatal "Ceph health check failed: $HEALTH - should be HEALTH_O
+K - $GUIDANCE"
+    # **** Don't need anymore, it causes that package hang problem with nova
     #sudo yum -y upgrade || fatal "Yum upgrade of director failed $GUIDANCE"
     set_completed upgrade-prepared
 #    info "rebooting to ensure latest kernel version running - please re-run this script after.."
@@ -555,6 +578,13 @@ upgrade_scripts() {
 upgrade_controllers() {
     completed controllers_upgraded && return
     # **** insert in controller ceph.comf?  mon_pg_warn_max_per_osd = 0
+    # check again
+    HEALTH=$(ssh heat-admin@$CONTROLLER 'sudo ceph health')
+    [[ $HEALTH != "HEALTH_OK" ]] && fatal "Ceph health check failed: $HEALTH - should be HEALTH_OK - $GUIDANCE"
+
+    # create 'metrics' ceph pool that gnocchi needs for upgrade if needed
+    [[ $(ssh heat-admin@$CONTROLLER 'sudo ceph osd lspools' | grep metrics) ]] || ssh heat-admin@$CONTROLLER 'sudo ceph osd pool create metrics 128'
+
     overcloud_deploy ~/pilot/templates/overcloud/environments/major-upgrade-pacemaker.yaml  || fatal "Controllers upgrade failed $GUIDANCE"
     # if failure do sudo pcs cluster start and re-run.
     # *** verify services are back
@@ -610,7 +640,8 @@ upgrade_storage() {
 finalize_upgrade() {
     completed upgrade_finalized && return
     
-    overcloud_deploy ~/pilot/templates/overcloud/environments/major-upgrade-pacemaker-converge.yaml --force-postconfig || fatal "Finalize upgrade failed $GUIDANCE"
+    #overcloud_deploy ~/pilot/templates/overcloud/environments/major-upgrade-pacemaker-converge.yaml --force-postconfig || fatal "Finalize upgrade failed $GUIDANCE"
+    overcloud_deploy ~/pilot/templates/overcloud/environments/major-upgrade-pacemaker-converge.yaml  || fatal "Finalize upgrade failed $GUIDANCE"
 
     # check for unmanged, repeatedly! set:
     #  ssh heat-admin@$CONTROLLER "sudo pcs property set maintenance-mode=false"
@@ -624,7 +655,7 @@ finalize_upgrade() {
 upgrade_aodh_migration() {
     completed aodh_migrated && return
 
-    overcloud_deploy ~/pilot/templates/overcloud/environments/major-upgrade-aodh-migration.yaml --force-postconfig || fatal "upgrade aodh_migration failed $GUIDANCE"
+    overcloud_deploy ~/pilot/templates/overcloud/environments/major-upgrade-aodh-migration.yaml  || fatal "upgrade aodh_migration failed $GUIDANCE"
 
     # sanity test should succeed here
     set_completed aodh_migrated
@@ -644,10 +675,10 @@ subscribe_overcloud # should already be subscribed - making sure
 upgrade_telemetry
 #patch_ha_proxy     # deprecated
 upgrade_scripts
-#upgrade_controllers
-#upgrade_storage
-#upgrade_computes
-#finalize_upgrade
+upgrade_controllers
+upgrade_storage
+upgrade_computes
+finalize_upgrade
 #upgrade_aodh_migration
 
 # OpenStack Platform 10 includes a migration script
