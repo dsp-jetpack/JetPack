@@ -50,6 +50,7 @@ class Director(InfraHost):
 
         self.home_dir = "/home/" + self.user
         self.pilot_dir = os.path.join(self.home_dir, "pilot")
+        self.sanity_dir = os.path.join(self.pilot_dir, "deployment-validation")
         self.images_dir = os.path.join(self.pilot_dir, "images")
         self.templates_dir = os.path.join(self.pilot_dir, "templates")
         if self.settings.is_fx is True:
@@ -519,6 +520,9 @@ class Director(InfraHost):
         os.remove(tmp_name)
 
     def setup_sanity_ini(self):
+        sanity_ini = self.sanity_dir + "/sanity.ini"
+        self.upload_file(self.settings.sanity_ini,
+                         sanity_ini)
         # Update the remote sanity ini file with the given settings
         cmds = [
             'sed -i "s|floating_ip_network=.*|floating_ip_network=' +
