@@ -169,7 +169,6 @@ set_unique_names(){
   TENANT_NETWORK_NAME="${BASE_TENANT_NETWORK_NAME}${suffix}"
   TENANT_ROUTER_NAME="${BASE_TENANT_ROUTER_NAME}${suffix}"
   VLAN_NAME="${BASE_VLAN_NAME}${suffix}"
-  VOLUME_NAME="${BASE_VOLUME_NAME}${suffix}"
   USER_NAME="${BASE_USER_NAME}${suffix}"
   SWIFT_CONTAINER_NAME=${BASE_CONTAINER_NAME}_${suffix}
 }
@@ -299,10 +298,6 @@ spin_up_instances(){
   index=1
   while [ $index -le $SANITY_NUMBER_INSTANCES ]; do
     instance_name="${BASE_NOVA_INSTANCE_NAME}_$index"
-    if [ $index -eq 1 ]
-    then
-      FIRST_NOVA_INSTANCE_NAME=$instance_name
-    fi
 
     execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor 2 --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $instance_name"
 
@@ -384,37 +379,44 @@ ping_from_netns(){
   fi
 }
 
-
 test_neutron_networking (){
-  set_tenant_scope
-  private_ip=$(nova show $FIRST_NOVA_INSTANCE_NAME | grep "$TENANT_NETWORK_NAME network" | awk -F\| '{print $3}' | tr -d " ")
+  set_admin_scope
+  router_id=$(neutron router-show -F id $TENANT_ROUTER_NAME | grep "id" | awk '{print $4}')
 
+  set_tenant_scope
   net_ids=$(neutron net-show -F id -F subnets $TENANT_NETWORK_NAME | grep -E 'id|subnets' | awk '{print $4}')
   net_id=$(echo $net_ids | awk '{print $1}')
   subnet_id=$(echo $net_ids | awk '{print $2}')
 
-  # Test pinging the private IP of the instance from the network namespace
-  ping_from_netns $private_ip "qdhcp-${net_id}"
+  floating_ips=()
+  for private_ip in $(openstack server list -c Networks -f value | awk -F= '{print $2}')
+  do
+      # Test pinging the private IP of the instance from the network namespace
+      ping_from_netns $private_ip "qdhcp-${net_id}"
 
-  # Allocate a floating IP
-  info "Allocating floating IP"
-  floating_ip_id=$(neutron floatingip-create $FLOATING_IP_NETWORK_NAME | grep " id " | awk '{print $4}')
-  floating_ip=$(neutron floatingip-show $floating_ip_id | grep floating_ip_address | awk '{print $4}')
+      # Allocate a floating IP
+      info "Allocating floating IP"
+      floating_ip_id=$(neutron floatingip-create $FLOATING_IP_NETWORK_NAME | grep " id " | awk '{print $4}')
+      floating_ip=$(neutron floatingip-show $floating_ip_id | grep floating_ip_address | awk '{print $4}')
+      floating_ips+=($floating_ip)
 
-  # Find the port to associate it with
-  set_admin_scope
-  port_id=$(neutron port-list | grep $subnet_id | grep $private_ip | awk '{print $2}')
-  router_id=$(neutron router-show -F id $TENANT_ROUTER_NAME | grep "id" | awk '{print $4}')
+      # Find the port to associate it with
+      set_admin_scope
+      port_id=$(neutron port-list | grep $subnet_id | grep $private_ip | awk '{print $2}')
 
-  # And finally associate the floating IP with the instance
-  set_tenant_scope
-  execute_command "neutron floatingip-associate $floating_ip_id $port_id"
+      # And finally associate the floating IP with the instance
+      set_tenant_scope
+      execute_command "neutron floatingip-associate $floating_ip_id $port_id"
+  done
 
   sleep 3
 
-  # Test pinging the floating IP of the instance from the virtual router
-  # network namespace
-  ping_from_netns $floating_ip "qrouter-${router_id}"
+  for floating_ip in ${floating_ips[@]}
+  do
+    # Test pinging the floating IP of the instance from the virtual router
+    # network namespace
+    ping_from_netns $floating_ip "qrouter-${router_id}"
+  done
 }
 
 
@@ -423,33 +425,59 @@ setup_cinder(){
   set_tenant_scope
   execute_command "cinder list"
 
-  vol_exists=$(cinder list | grep $VOLUME_NAME |  head -n 1  | awk '{print $6}')
-  if [ "$vol_exists" != "$VOLUME_NAME" ]
-  then
-    execute_command "cinder type-list"
-    execute_command "cinder create --display-name $VOLUME_NAME 1 --volume-type=rbd_backend"
-    execute_command "cinder list"    
+  info "### Kicking off volume creation..."
+  volumes=()
+  openstack server list -c ID -c Name -f value | while read line
+  do
+    server_id=$(echo $line | awk '{print $1}')
+    server_name=$(echo $line | awk '{print $2}')
+    server_index=$(echo $server_name | awk -F_ '{print $3}')
 
-    info "### Waiting for volume status to change to available..."
-    volume_status=$(cinder list | grep "$VOLUME_NAME" | awk '{print $4}')
+    volume_name=${BASE_VOLUME_NAME}_${server_index}
+    vol_exists=$(cinder list | grep $volume_name |  head -n 1  | awk '{print $6}')
+    if [ "$vol_exists" != "$volume_name" ]
+    then
+      info "### Creating volume ${volume_name}"
+      execute_command "cinder type-list"
+      execute_command "cinder create --display-name $volume_name 1 --volume-type=rbd_backend"
+      volumes+=($volume_name)
+    else
+      info "### Volume $volume_name already exists.  Skipping creation"
+    fi
+  done
+
+  execute_command "cinder list"    
+
+  info "### Waiting for volumes status to change to available..."
+  for volume_name in ${volumes[@]}
+  do
+    volume_status=$(cinder list | grep "$volume_name" | awk '{print $4}')
     while [ "$volume_status" != "available" ]; do
       if [ "$volume_status" != "creating" ]; then
         fatal "### Volume status is: ${volume_status}!  Aborting sanity test"
       else
         info "### Volume status is: ${volume_status}.  Sleeping..."
         sleep 5
-        volume_status=$(cinder list | grep "$VOLUME_NAME" | awk '{print $4}')
+        volume_status=$(cinder list | grep "$volume_name" | awk '{print $4}')
       fi
     done
-    info "### Volume is ready, status is ${volume_status}"
-  fi
+    info "### Volume $volume_name is ready, status is $volume_status"
+  done
 
-  server_id=$(nova list | grep $FIRST_NOVA_INSTANCE_NAME| head -n 1 | awk '{print $2}')
-  volume_id=$(cinder list | grep $VOLUME_NAME| head -n 1 | awk '{print $2}')
+  info "### Attaching volumes to instances..."
+  openstack server list -c ID -c Name -f value | while read line
+  do
+    server_id=$(echo $line | awk '{print $1}')
+    server_name=$(echo $line | awk '{print $2}')
+    server_index=$(echo $server_name | awk -F_ '{print $3}')
+    volume_name=${BASE_VOLUME_NAME}_${server_index}
 
-  execute_command "nova volume-attach $server_id $volume_id /dev/vdb"
+    volume_id=$(cinder list | grep $volume_name | head -n 1 | awk '{print $2}')
 
-  info "Volume attached, ssh into instance $FIRST_NOVA_INSTANCE_NAME and verify"
+    execute_command "nova volume-attach $server_id $volume_id /dev/vdb"
+
+    info "Volume $volume_name attached to $server_name.  ssh in and verify"
+  done
 }
 
 
@@ -471,7 +499,7 @@ radosgw_test(){
 radosgw_cleanup(){
   info "### RadosGW cleanup"
   rm -f test_file
-  execute_command "swift delete $SWIFT_CONTAINER_NAME"
+  swift delete $SWIFT_CONTAINER_NAME
   execute_command "swift list"
 }
 
@@ -547,17 +575,17 @@ then
       num_instances=$(nova list | grep $BASE_NOVA_INSTANCE_NAME | wc -l)
     done
 
-    info   "#### Deleting the volumes"
-    volume_ids=$(cinder list | grep $VOLUME_NAME | awk '{print $2}')
-    info   "volume ids: $volume_ids"
+    info "#### Deleting the volumes"
+    volume_ids=$(cinder list | grep $BASE_VOLUME_NAME | awk '{print $2}')
+    info "volume ids: $volume_ids"
     [[ $volume_ids ]] && echo $volume_ids | xargs -n1 cinder delete
 
     info "### Waiting for the volumes to be deleted..."
-    num_volumes=$(cinder list | grep $VOLUME_NAME | wc -l)
+    num_volumes=$(cinder list | grep $BASE_VOLUME_NAME | wc -l)
     while [ "$num_volumes" -gt 0 ]; do
       info "#### ${num_volumes} remain.  Sleeping..."
       sleep 3
-      num_volumes=$(cinder list | grep $VOLUME_NAME | wc -l)
+      num_volumes=$(cinder list | grep $BASE_VOLUME_NAME | wc -l)
     done
 
     radosgw_cleanup
