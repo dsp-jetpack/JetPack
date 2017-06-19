@@ -376,6 +376,8 @@ class Settings():
             '/pilot/templates/static-ip-environment.yaml'
         self.static_vip_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/static-vip-environment.yaml'
+        self.sanity_ini = self.foreman_configuration_scripts + \
+            '/pilot/deployment-validation/sanity.ini'
         self.ipxe_rpm = self.foreman_configuration_scripts + \
             '/pilot/ipxe/ipxe-bootimgs-20151005-1.git6847232.el7.' \
             'test.noarch.rpm'
