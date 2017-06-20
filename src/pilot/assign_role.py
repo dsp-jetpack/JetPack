@@ -70,7 +70,19 @@ DCIM_VirtualDiskView = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
 DCIM_PhysicalDiskView = ('http://schemas.dell.com/wbem/wscim/1/cim-schema/2/'
                          'DCIM_PhysicalDiskView')
 
-RAID1 = "4"
+NORAID = "1"
+RAID0 = "2"
+
+RAID_TYPE_TO_DESCRIPTION = {
+    NORAID:  "No RAID",
+    RAID0:   "RAID0",
+    "4":     "RAID1",
+    "64":    "RAID5",
+    "128":   "RAID6",
+    "2048":  "RAID10",
+    "8192":  "RAID50",
+    "16384": "RAID60"
+}
 
 NOT_SUPPORTED_MSG = "This operation is not supported on this device"
 
@@ -807,12 +819,8 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index, ironic_client,
               'path': '/properties/capabilities'}]
     ironic_client.node.update(node_uuid, patch)
 
-    # Are we assigning the storage role to this node?
-    if role_index.role == "storage":
-        # Select the disk for the OS to be installed on.  Note that this
-        # is only necessary for storage nodes because the other node
-        # types are configured to have 1 huge volume created by the DTK.
-        select_os_disk(ironic_client, drac_client.client, node_uuid)
+    # Select the disk for the OS to be installed on
+    select_os_disk(ironic_client, drac_client.client, node_uuid)
 
 
 def get_fqdd(doc, namespace):
@@ -831,33 +839,35 @@ def select_os_disk(ironic_client, drac_client, node_uuid):
                                        DCIM_VirtualDiskView,
                                        True)
 
-    # Find the RAID 1 that the DTK created
+    # Look for a RAID of any type other than RAID0 and assume we want to
+    # install the OS on that volume.  The first non-RAID0 found will be used.
     for virtual_disk_doc in virtual_disk_docs:
         fqdd = get_fqdd(virtual_disk_doc, DCIM_VirtualDiskView)
         raid_type = utils.find_xml(virtual_disk_doc, 'RAIDTypes',
                                    DCIM_VirtualDiskView).text
 
-        if raid_type == RAID1:
+        if raid_type != NORAID and raid_type != RAID0:
             # Get the size
-            raid1_size = get_size_in_bytes(virtual_disk_doc,
-                                           DCIM_VirtualDiskView)
+            raid_size = get_size_in_bytes(virtual_disk_doc,
+                                          DCIM_VirtualDiskView)
 
-            # Get the physical disks that back this RAID 1
-            raid1_physical_disk_docs = utils.find_xml(virtual_disk_doc,
-                                                      'PhysicalDiskIDs',
-                                                      DCIM_VirtualDiskView,
-                                                      True)
-            raid1_physical_disk_ids = []
-            for raid1_physical_disk_doc in raid1_physical_disk_docs:
-                raid1_physical_disk_id = raid1_physical_disk_doc.text
-                raid1_physical_disk_ids.append(raid1_physical_disk_id)
+            # Get the physical disks that back this RAID
+            raid_physical_disk_docs = utils.find_xml(virtual_disk_doc,
+                                                     'PhysicalDiskIDs',
+                                                     DCIM_VirtualDiskView,
+                                                     True)
+            raid_physical_disk_ids = []
+            for raid_physical_disk_doc in raid_physical_disk_docs:
+                raid_physical_disk_id = raid_physical_disk_doc.text
+                raid_physical_disk_ids.append(raid_physical_disk_id)
 
             LOG.debug(
-                "Found RAID 1 virtual disk {} with a size of {} bytes "
+                "Found RAID {} virtual disk {} with a size of {} bytes "
                 "comprised of physical disks:\n  {}".format(
+                    RAID_TYPE_TO_DESCRIPTION[raid_type],
                     fqdd,
-                    raid1_size,
-                    "\n  ".join(raid1_physical_disk_ids)))
+                    raid_size,
+                    "\n  ".join(raid_physical_disk_ids)))
 
             break
 
@@ -875,14 +885,14 @@ def select_os_disk(ironic_client, drac_client, node_uuid):
     found_same_size_disk = False
     for physical_disk_doc in physical_disk_docs:
         fqdd = get_fqdd(physical_disk_doc, DCIM_PhysicalDiskView)
-        if fqdd not in raid1_physical_disk_ids:
+        if fqdd not in raid_physical_disk_ids:
             physical_disk_size = get_size_in_bytes(
                 physical_disk_doc, DCIM_PhysicalDiskView)
 
-            if physical_disk_size == raid1_size:
-                LOG.debug(
-                    "Physical disk {} has the same size ({}) as the RAID "
-                    "1".format(
+            if physical_disk_size == raid_size:
+                LOG.warning(
+                    "Physical disk {} has the same size ({}) as the "
+                    "RAID.  Unable to specify the OS disk to Ironic.".format(
                         fqdd,
                         physical_disk_size))
                 found_same_size_disk = True
@@ -892,15 +902,14 @@ def select_os_disk(ironic_client, drac_client, node_uuid):
     # size to ironic is pointless, so let whatever happens, happen
     if not found_same_size_disk:
         # Otherwise...
-        raid1_size_gb = int(raid1_size) / units.Gi
+        raid_size_gb = int(raid_size) / units.Gi
 
-        # Set the root_device property in ironic to the RAID 1 size in
-        # gigs
+        # Set the root_device property in ironic to the RAID size in gigs
         LOG.info(
-            "Setting the OS disk for this node to the virtual disk with size "
-            "{} GB".format(raid1_size_gb))
+            "Setting the OS disk for this node to the {} with size "
+            "{} GB".format(RAID_TYPE_TO_DESCRIPTION[raid_type], raid_size_gb))
         patch = [{'op': 'add',
-                  'value': {"size": raid1_size_gb},
+                  'value': {"size": raid_size_gb},
                   'path': '/properties/root_device'}]
         ironic_client.node.update(node_uuid, patch)
 
