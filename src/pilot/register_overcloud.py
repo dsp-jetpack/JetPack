@@ -338,7 +338,7 @@ class RegisterOvercloud:
                               "the " + role + " role")
             sys.exit(1)
 
-        pool_ids = self.subscriptions["roles"][role]["pool_ids"]
+        pool_ids = set(self.subscriptions["roles"][role]["pool_ids"])
         for pool_id in pool_ids:
             # Check to see if this node is already attached to this pool ID
             if pool_id in consumed_pool_ids:
