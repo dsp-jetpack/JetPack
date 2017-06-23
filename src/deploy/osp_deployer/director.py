@@ -1395,7 +1395,7 @@ class Director(InfraHost):
             'identity-feature-enabled.api_v3 False '
             'identity.admin_username $OS_USERNAME '
             'identity.admin_password $OS_PASSWORD '
-            'identity.admin_tenant_name $OS_TENANT_NAME',
+            'identity.admin_tenant_name $OS_PROJECT_NAME',
             'source ~/' + self.settings.overcloud_name + 'rc;cd '
             '~/tempest;'
             'tempest cleanup --init-saved-state'
