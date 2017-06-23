@@ -106,11 +106,18 @@ generate_sanity_rc(){
   cp ~/${STACK_NAME}rc ${SANITYRC}
   USERNAMEREPL=`grep OS_USERNAME ~/${STACK_NAME}rc`
   PASSWORDREPL=`grep OS_PASSWORD ~/${STACK_NAME}rc`
-  TENANTNAMEREPL=`grep OS_PROJECT_NAME ~/${STACK_NAME}rc`
+  PROJECTNAMEREPL=`grep OS_PROJECT_NAME ~/${STACK_NAME}rc`
+  TENANTNAMEREPL=`grep OS_TENANT_NAME ~/${STACK_NAME}rc`
   sed -i "s/${USERNAMEREPL}/export OS_USERNAME=${USER_NAME}/g" ${SANITYRC}
   sed -i "s/${PASSWORDREPL}/export OS_PASSWORD=${SANITY_USER_PASSWORD}/g" ${SANITYRC}
-  sed -i "s/${TENANTNAMEREPL}/export OS_TENANT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
-  sed -i "s/${TENANTNAMEREPL}/export OS_PROJECT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
+  sed -i "s/${PROJECTNAMEREPL}/export OS_PROJECT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
+  grep OS_TENANT_NAME $SANITYRC >/dev/null 2>&1
+  if [ $? -eq 0 ]
+  then
+    sed -i "s/${TENANTNAMEREPL}/export OS_TENANT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
+  else
+    sed -i "\$ a export OS_TENANT_NAME=${PROJECT_NAME}" ${SANITYRC}
+  fi
 }
 
 init(){
@@ -546,6 +553,7 @@ then
     set_unique_names $index
 
     export OS_TENANT_NAME=$PROJECT_NAME
+    export OS_PROJECT_NAME=$PROJECT_NAME
     export OS_PASSWORD=$SANITY_USER_PASSWORD
     export OS_USERNAME=$USER_NAME
 
@@ -622,8 +630,8 @@ then
   [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 neutron security-group-delete
 
   info   "#### Deleting the images"
-  image_ids=$(glance image-list | grep $IMAGE_NAME | awk '{print $2}')
-  [[ $image_ids ]] && echo $image_ids | xargs -n1 glance image-delete
+  image_ids=$(openstack image list | grep $IMAGE_NAME | awk '{print $2}')
+  [[ $image_ids ]] && echo $image_ids | xargs -n1 openstack image delete
 
   info "### Deleting the flavor"
   openstack flavor show $FLAVOR_NAME > /dev/null 2>&1
