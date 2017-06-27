@@ -18,8 +18,10 @@ import ConfigParser
 import sys
 import logging
 import os
+import inspect
 import json
 import subprocess
+import ConfigParser
 from osp_deployer.node_conf import NodeConf
 
 logger = logging.getLogger("osp_deployer")
@@ -32,8 +34,51 @@ class Settings():
 
         assert os.path.isfile(
             settings_file), settings_file + " file does not exist"
-        self.conf = ConfigParser.ConfigParser()
-        self.conf.read(settings_file)
+
+        sample_ini = os.path.dirname(inspect.getfile(Settings)) + "/sample.ini"
+
+        conf = ConfigParser.ConfigParser()
+        conf.read(sample_ini)
+
+        your_ini = settings_file
+        yourConf = ConfigParser.ConfigParser()
+        yourConf.read(your_ini)
+
+        error_msg = ""
+
+        for stanza in conf.sections():
+            if yourConf.has_section(stanza):
+                for setting in conf.options(stanza):
+                    if yourConf.has_option(stanza, setting):
+                        pass
+                    else:
+                        error_msg = error_msg + "Missing \"" +\
+                                    setting + "\" setting in you ini file [" +\
+                                    stanza + "] section \n"
+            else:
+                error_msg = error_msg + "Missing [" + stanza + "] " +\
+                            "section in you ini file \n"
+
+        for stanza in yourConf.sections():
+            if conf.has_section(stanza):
+                for setting in yourConf.options(stanza):
+                    if conf.has_option(stanza, setting):
+                        pass
+                    else:
+                        error_msg = error_msg + "\"" + setting + \
+                                    "\" setting in you ini file [" + \
+                                    stanza + "] section is deprecated and " +\
+                                    "should be removed\n"
+            else:
+                error_msg = error_msg + "Section [" + stanza + \
+                            "] in you ini file is deprecated and should be " +\
+                            "removed\n"
+
+        if len(error_msg) > 0:
+            raise AssertionError("\n" + error_msg)
+
+        self.conf = yourConf
+
         self.settings_file = settings_file
         cluster = self.get_settings_section(
             "Cluster Settings")
@@ -314,7 +359,8 @@ class Settings():
             self.run_tempest = False
             self.tempest_smoke_only = False
         try:
-            if self.bastion_settings_map['verify_rhsm_status'].lower() == 'true':
+            if self.bastion_settings_map['verify_rhsm_status'].lower() \
+                    == 'true':
                 self.verify_rhsm_status = True
             else:
                 self.verify_rhsm_status = False
@@ -324,15 +370,20 @@ class Settings():
         sanity_settings = self.get_settings_section(
             "Sanity Test Settings")
         self.floating_ip_network = sanity_settings['floating_ip_network']
-        self.floating_ip_network_start_ip = sanity_settings['floating_ip_network_start_ip']
-        self.floating_ip_network_end_ip = sanity_settings['floating_ip_network_end_ip']
-        self.floating_ip_network_gateway = sanity_settings['floating_ip_network_gateway']
-        self.floating_ip_network_vlan = sanity_settings['floating_ip_network_vlan']
+        self.floating_ip_network_start_ip = \
+            sanity_settings['floating_ip_network_start_ip']
+        self.floating_ip_network_end_ip = \
+            sanity_settings['floating_ip_network_end_ip']
+        self.floating_ip_network_gateway = \
+            sanity_settings['floating_ip_network_gateway']
+        self.floating_ip_network_vlan = \
+            sanity_settings['floating_ip_network_vlan']
         self.sanity_tenant_network = sanity_settings['sanity_tenant_network']
         self.sanity_user_password = sanity_settings['sanity_user_password']
         self.sanity_user_email = sanity_settings['sanity_user_email']
         self.sanity_key_name = sanity_settings['sanity_key_name']
-        self.sanity_number_instances= sanity_settings['sanity_number_instances']
+        self.sanity_number_instances = \
+            sanity_settings['sanity_number_instances']
         self.sanity_image_url = sanity_settings['sanity_image_url']
 
         self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
