@@ -242,6 +242,7 @@ def prep_host_files(rhscon_node, ceph_nodes, calamari_node):
     prep_ceph_hosts(rhscon_node, ceph_nodes)
     prep_calamari_hosts(calamari_node, ceph_nodes)
 
+
 def prep_rhscon_hosts(rhscon_node, ceph_nodes):
     """ Prepares the /etc/hosts file on the Storage Console
 
@@ -285,17 +286,23 @@ def prep_rhscon_hosts(rhscon_node, ceph_nodes):
     rhscon_node.run("sudo restorecon {}".format(Node.etc_hosts))
     os.unlink(tmp_hosts)
 
+
 def configure_access(ceph_nodes):
-    """For Ceph 2.0 Monitor nodes use port 6789 for communication 
-    within the Ceph cluster. The monitor where the calamari-lite is 
+    """For Ceph 2.0 Monitor nodes use port 6789 for communication
+    within the Ceph cluster. The monitor where the calamari-lite is
     running uses port 8002 for access to the Calamari REST-based API.
     """
     for node in ceph_nodes:
-        node.run("sudo iptables -I INPUT -p tcp -s 0.0.0.0/0 --dport 4505 -j ACCEPT")
-        node.run("sudo iptables -I INPUT -p tcp -s 0.0.0.0/0 --dport 4506 -j ACCEPT")
-        node.run("sudo iptables -I INPUT -p tcp -s 0.0.0.0/0 --dport 6789 -j ACCEPT")
-        node.run("sudo iptables -I INPUT -p tcp -s 0.0.0.0/0 --dport 8002 -j ACCEPT")
+        node.run("sudo iptables -I INPUT -p tcp " +
+                 "-s 0.0.0.0/0 --dport 4505 -j ACCEPT")
+        node.run("sudo iptables -I INPUT -p tcp " +
+                 "-s 0.0.0.0/0 --dport 4506 -j ACCEPT")
+        node.run("sudo iptables -I INPUT -p tcp " +
+                 "-s 0.0.0.0/0 --dport 6789 -j ACCEPT")
+        node.run("sudo iptables -I INPUT -p tcp " +
+                 "-s 0.0.0.0/0 --dport 8002 -j ACCEPT")
         node.run("sudo service iptables save")
+
 
 def prep_ceph_hosts(rhscon_node, ceph_nodes):
     """ Prepares the /etc/hosts file on the Ceph nodes
@@ -342,7 +349,7 @@ def prep_ceph_hosts(rhscon_node, ceph_nodes):
         node.run("sudo restorecon {}".format(Node.etc_hosts))
         os.unlink(tmp_hosts)
 
-    #configure access now 
+    # configure access now
     configure_access(ceph_nodes)
 
 

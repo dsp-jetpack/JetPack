@@ -212,9 +212,9 @@ cat << EOF > ~/pilot/NovaEvacuate-patch.txt
 -	    if [ \$? != 0 ]; then
 +	    rc=\$?
 +	    if [ \$rc != 0 -a \$rc != 2 ]; then
- 		ocf_log info "Nova does not know about \${node}"
- 		# Dont mark as no because perhaps nova is unavailable right now
- 		continue
+        ocf_log info "Nova does not know about \${node}"
+        # Dont mark as no because perhaps nova is unavailable right now
+        continue
 EOF
 """)
 
