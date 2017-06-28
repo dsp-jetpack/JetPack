@@ -1010,19 +1010,26 @@ class Director(InfraHost):
             control_storage_ips = ''
             control_tenant_tunnel_ips = ''
             for node in self.settings.controller_nodes:
-                control_external_ips += "    - " + node.public_api_ip + "\\n"
-                control_private_ips += "    - " + node.private_api_ip + "\\n"
-                control_storage_ips += "    - " + node.storage_ip + "\\n"
-                control_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip + "\\n"
+                control_external_ips += "    - " +\
+                                        node.public_api_ip + "\\n"
+                control_private_ips += "    - " +\
+                                       node.private_api_ip + "\\n"
+                control_storage_ips += "    - " +\
+                                       node.storage_ip + "\\n"
+                control_tenant_tunnel_ips += "    - " +\
+                                             node.tenant_tunnel_ip + "\\n"
 
             compute_tenant_tunnel_ips = ''
             compute_private_ips = ''
             compute_storage_ips = ''
 
             for node in self.settings.compute_nodes:
-                compute_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip + "\\n"
-                compute_private_ips += "    - " + node.private_api_ip + "\\n"
-                compute_storage_ips += "    - " + node.storage_ip + "\\n"
+                compute_tenant_tunnel_ips += "    - " +\
+                                             node.tenant_tunnel_ip + "\\n"
+                compute_private_ips += "    - " +\
+                                       node.private_api_ip + "\\n"
+                compute_storage_ips += "    - " +\
+                                       node.storage_ip + "\\n"
 
             storage_storgage_ip = ''
             storage_cluster_ip = ''
@@ -1216,7 +1223,8 @@ class Director(InfraHost):
                 ip_info.append("     - storage ip       : " + storage_ip)
                 if self.settings.is_fx is True:
                     logger.debug("restarting network manager")
-                    cmd = "ssh " + ssh_opts + "heat-admin@" + provisioning_ip + \
+                    cmd = "ssh " + ssh_opts + "heat-admin@" +\
+                          provisioning_ip + \
                           "sudo systemctl restart NetworkManager.service"
                     re = self.run_tty(cmd)
 
@@ -1257,7 +1265,8 @@ class Director(InfraHost):
                 ip_info.append("     - storage ip       : " + storage_ip)
                 if self.settings.is_fx is True:
                     logger.debug("restarting network manager")
-                    cmd = "ssh " + ssh_opts + "heat-admin@" + provisioning_ip + \
+                    cmd = "ssh " + ssh_opts + "heat-admin@" +\
+                          provisioning_ip + \
                           "sudo systemctl restart NetworkManager.service"
                     re = self.run_tty(cmd)
 
@@ -1298,7 +1307,8 @@ class Director(InfraHost):
                 ip_info.append("     - storage ip         : " + storage_ip)
                 if self.settings.is_fx is True:
                     logger.debug("restarting network manager")
-                    cmd = "ssh " + ssh_opts + "heat-admin@" + provisioning_ip + \
+                    cmd = "ssh " + ssh_opts + "heat-admin@" + \
+                          provisioning_ip + \
                           "sudo systemctl restart NetworkManager.service"
                     re = self.run_tty(cmd)
 

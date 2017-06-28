@@ -20,7 +20,7 @@ from auto_common import Scp, FileHelper
 import logging
 import time
 import shutil
-import os 
+import os
 
 logger = logging.getLogger("osp_deployer")
 
@@ -169,11 +169,14 @@ class Sah(InfraHost):
                                       sets.private_api_netmask + '"')
         time.sleep(3)
         if self.settings.is_fx is True:
-            cmds = ["sed -i 's/{AnacondaIface_device}/{AnacondaIface_device}." +
+            cmds = ["sed -i 's/{AnacondaIface_device}/{" +
+                    "AnacondaIface_device}." +
                     self.settings.public_api_vlanid +
                     "/' " + sets.sah_kickstart,
                     "sed -i 's/bootproto=static/vlanid=" +
-                    self.settings.public_api_vlanid + " --bootproto=static/' " + sets.sah_kickstart]
+                    self.settings.public_api_vlanid +
+                    " --bootproto=static/' " +
+                    sets.sah_kickstart]
             for cmd in cmds:
                 os.system(cmd)
 
