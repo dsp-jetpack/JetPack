@@ -25,11 +25,11 @@ import threading
 from arg_helper import ArgHelper
 from logging_helper import LoggingHelper
 from utils import Utils
-from thread_helper import ThreadWithExHandling
 
 common_path = os.path.join(os.path.expanduser('~'), 'common')
 sys.path.append(common_path)
 
+from thread_helper import ThreadWithExHandling
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being made
 requests.packages.urllib3.disable_warnings()
 
