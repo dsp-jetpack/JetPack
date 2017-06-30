@@ -88,7 +88,6 @@ def setup():
                     'cd ~;cp ' + settings.network_conf + ' /mnt/usb',
                     'cd ~;cp osp-sah.ks /mnt/usb',
                     "sed -i 's|" + iso_path + "|/root|' " + target_ini,
-                    #sed file names etc from ini
                     'sync; umount /mnt/usb']
         else:
             cmds = ['mkfs.ext3 -F ' + args.usb_key,

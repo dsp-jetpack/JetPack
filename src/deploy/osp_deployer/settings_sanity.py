@@ -135,7 +135,7 @@ class DeployerSanity():
 
     def check_network_overlaps(self):
         # Verify the dhcp ranges defined in the ini don't overlap with static
-        # ips defined in the .properties or with the VIPs if used & that vips 
+        # ips defined in the .properties or with the VIPs if used & that vips
         # are sitting on the right networks.
 
         # public_api network allocation pool
@@ -247,7 +247,6 @@ class DeployerSanity():
                                      "be on the wrong network, should be "
                                      "on the provisioning  network")
 
-
         # discovery_ip_range (provisioning network)
         start = self.settings.discovery_ip_range.split(",")[0].split(".")[-1]
         end = self.settings.discovery_ip_range.split(",")[1].split(".")[-1]
@@ -314,9 +313,8 @@ class DeployerSanity():
         # Do not allow a _ in the overcloud name
         # https://bugzilla.redhat.com/show_bug.cgi?id=1380099
         if "_" in self.settings.overcloud_name:
-            raise AssertionError(" _ character is not allowed " \
-                                 + "in the .ini overcloud_name setting")
-
+            raise AssertionError(" _ character is not allowed " +
+                                 "in the .ini overcloud_name setting")
 
     def check_net_attrs(self, node, should_have_attributes,
                         should_be_valid_ips):

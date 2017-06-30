@@ -401,7 +401,7 @@ class Checkpoints():
             raise AssertionError(
                 "Unable to attach to pool ID while updating the overcloud\
                 image")
-       
+
         cmd = "source ~/stackrc;glance image-list"
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,

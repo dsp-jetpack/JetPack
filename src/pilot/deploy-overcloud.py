@@ -319,7 +319,7 @@ def main():
         debug = ""
         if args.debug:
             debug = "--debug"
-            
+
         # The order of the environment files is important as a later inclusion
         # overrides resources defined in prior inclusions.
 
