@@ -190,56 +190,6 @@ def enable_start_compute_pacemaker(compute_node_ip):
             "sudo systemctl start pacemaker_remote")
 
 
-# 6a) Distribute authkey to all nodes
-def distribute_all_patch(compute_nodes_ip, controller_nodes_ip):
-    for compute_node_ip in compute_nodes_ip:
-        distribute_node_patch(compute_node_ip)
-    for controller_node_ip in controller_nodes_ip:
-        distribute_node_patch(controller_node_ip)
-
-
-# 6b) Distribute NovaEvacuate-patch to all nodes
-def distribute_node_patch(node_ip):
-    LOG.info("Distribute NovaEvacuate-patch to all nodes {}.".format(node_ip))
-    os.system("""
-cat << EOF > ~/pilot/NovaEvacuate-patch.txt
---- NovaEvacuate
-+++ /tmp/NovaEvacuate
-@@ -166,7 +166,8 @@
- 	    ocf_log notice "Initiating evacuation of \$node"
- 
- 	    fence_compute \${fence_options} -o status -n \${node}
--	    if [ \$? != 0 ]; then
-+	    rc=\$?
-+	    if [ \$rc != 0 -a \$rc != 2 ]; then
- 		ocf_log info "Nova does not know about \${node}"
- 		# Dont mark as no because perhaps nova is unavailable right now
- 		continue
-EOF
-""")
-
-    out, err = ssh_cmd(node_ip, "heat-admin",
-                       "grep 'rc != 2' /usr/lib/ocf/" +
-                       "resource.d/openstack/NovaEvacuate")
-    stdout = out.strip('\n')
-
-    if "rc != 2" not in stdout:
-        LOG.info("Applying patch to NovaEvacuate.")
-
-        cmd = "scp ~/pilot/NovaEvacuate-patch.txt heat-admin@" + \
-            node_ip + ":~/patch.txt"
-        os.system(cmd)
-
-        ssh_cmd(node_ip, "heat-admin",
-                "sudo patch -s -b /usr/lib/ocf/resource.d/" +
-                "openstack/NovaEvacuate<~/patch.txt")
-    else:
-        LOG.info("Patch already applied to NovaEvacuate.")
-
-    ssh_cmd(node_ip, "heat-admin",
-            "rm ~/patch.txt")
-
-
 # 7) Create a NovaEvacuate active/passive resource using the overcloudrc file
 # to provide the auth_url, username, tenant and password values
 def create_nova_evacuate_resource(first_controller_node_ip, domainname):
@@ -720,7 +670,6 @@ def main():
         stop_disable_openstack_services(compute_nodes_ip)
         create_authkey(first_compute_node_ip)
         distribute_all_authkey(compute_nodes_ip, controller_nodes_ip)
-        distribute_all_patch(compute_nodes_ip, controller_nodes_ip)
         enable_start_pacemaker(compute_nodes_ip)
         create_nova_evacuate_resource(first_controller_node_ip,
                                       domainname)
