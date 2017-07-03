@@ -55,7 +55,9 @@ def get_settings():
                         help='Do not reinstall the Storage Console VM',
                         action='store_true',
                         required=False)
-
+    parser.add_argument('-validate_settings_only', '--validate_settings_only',
+                        help='Only validate ini and properties files (no deployment)',
+                        action='store_true', required=False)
     args, ignore = parser.parse_known_args()
     settings = Settings(args.settings)
     return settings
@@ -95,12 +97,19 @@ def deploy():
                             help='Do not reinstall the Storage Console VM',
                             action='store_true',
                             required=False)
+        parser.add_argument('-validate_only', '--validate_only',
+                            help='No deployment - just validate config values',
+                            action='store_true',
+                            required=False)
         args, ignore = parser.parse_known_args()
 
-        if args.overcloud_only is True:
-            logger.info("Only redeploying the overcloud")
-        if args.skip_rhscon_vm is True:
-            logger.info("Skipping Storage Console VM install")
+        if args.validate_only is True:
+            logger.info("Only validating ini/properties config values")
+        else:
+            if args.overcloud_only is True:
+                logger.info("Only redeploying the overcloud")
+            if args.skip_rhscon_vm is True:
+                logger.info("Skipping Storage Console VM install")
 
         logger.debug("loading settings files " + args.settings)
         settings = Settings(args.settings)
@@ -109,7 +118,11 @@ def deploy():
         settings.get_version_info()
         logger.info("source version # : " + settings.source_version)
         tester = Checkpoints()
-        tester.verify_deployer_settings()
+        tester.verify_deployer_settings(verify_network_connectivity=not args.validate_only)
+        if args.validate_only is True:
+            print("Settings validated")
+            sys.exit(0) 
+
         if settings.retreive_switches_config is True:
             tester.retreive_switches_config()
 

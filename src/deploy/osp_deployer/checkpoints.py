@@ -31,12 +31,13 @@ class Checkpoints():
         self.verify_rhsm_status = self.settings.verify_rhsm_status
 
     @staticmethod
-    def verify_deployer_settings():
+    def verify_deployer_settings(verify_network_connectivity=True):
         logger.info("==== Running environment sanity tests")
         checks = DeployerSanity()
         checks.check_network_settings()
         checks.check_files()
-        checks.check_ipmi_to_nodes()
+        if verify_network_connectivity:
+            checks.check_ipmi_to_nodes()
         checks.check_network_overlaps()
         checks.check_duplicate_ips()
         checks.verify_overcloud_name()
@@ -401,7 +402,7 @@ class Checkpoints():
             raise AssertionError(
                 "Unable to attach to pool ID while updating the overcloud\
                 image")
-
+       
         cmd = "source ~/stackrc;glance image-list"
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
