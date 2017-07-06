@@ -1,0 +1,66 @@
+--- /usr/lib/python2.7/site-packages/dracclient/wsman.py	2017-03-01 16:12:40.000000000 +0000
++++ wsman.py	2017-07-06 15:01:45.028736752 +0000
+@@ -15,7 +15,6 @@
+ import uuid
+ 
+ from lxml import etree as ElementTree
+-import requests
+ import requests.exceptions
+ 
+ from dracclient import exceptions
+@@ -36,6 +35,8 @@
+ FILTER_DIALECT_MAP = {'cql': 'http://schemas.dmtf.org/wbem/cql/1/dsp0202.pdf',
+                       'wql': 'http://schemas.microsoft.com/wbem/wsman/1/WQL'}
+ 
++RETRIES = 3
++
+ 
+ class Client(object):
+     """Simple client for talking over WSMan protocol."""
+@@ -58,16 +59,36 @@
+         payload = payload.build()
+         LOG.debug('Sending request to %(endpoint)s: %(payload)s',
+                   {'endpoint': self.endpoint, 'payload': payload})
+-        try:
+-            resp = requests.post(
+-                self.endpoint,
+-                auth=requests.auth.HTTPBasicAuth(self.username, self.password),
+-                data=payload,
+-                # TODO(ifarkas): enable cert verification
+-                verify=False)
+-        except requests.exceptions.RequestException:
+-            LOG.exception('Request failed')
+-            raise exceptions.WSManRequestFailure()
++
++        retries = 1
++        while retries <= RETRIES:
++            try:
++                resp = requests.post(
++                    self.endpoint,
++                    auth=requests.auth.HTTPBasicAuth(self.username,
++                                                     self.password),
++                    data=payload,
++                    # TODO(ifarkas): enable cert verification
++                    verify=False)
++                break
++            except (requests.exceptions.ConnectionError,
++                    requests.exceptions.SSLError) as ex:
++                LOG.warn("A {} error occurred while communicating"
++                         " with {}, attempt {} of {}".format(
++                             type(ex).__name__,
++                             self.host,
++                             retries,
++                             RETRIES))
++
++                if retries == RETRIES:
++                    LOG.exception('Request failed')
++                    raise exceptions.WSManRequestFailure()
++
++                retries += 1
++
++            except requests.exceptions.RequestException:
++                LOG.exception('Request failed')
++                raise exceptions.WSManRequestFailure()
+ 
+         LOG.debug('Received response from %(endpoint)s: %(payload)s',
+                   {'endpoint': self.endpoint, 'payload': resp.content})
