@@ -34,10 +34,11 @@ SUBSCRIPTION_MGR_USER="$5"
 SUBSCRIPTION_MGR_PASSWORD="$6"
 OPENSTACK_POOL_ID="$7"
 CEPH_POOL_ID="$8"
+SAH_IP="$9"
 
-if [ "$#" -lt 8 ]; then
+if [ "$#" -lt 9 ]; then
     echo "Usage: $0 <control_scale> <compute_scale> <ceph_scale> <vlan_range> \
-<subscription_mgr_user> <subscription_mgr_password> <ceph_pool_id> <openstack_pool_id> <ceph_pool_id"
+<subscription_mgr_user> <subscription_mgr_password> <ceph_pool_id> <openstack_pool_id> <ceph_pool_id> <sah_ip_address>"
     exit 1         
 fi
 
@@ -158,6 +159,12 @@ patch_stack_rc_format() {
     perl -pi -e "s/^([^\s]+=.*)/export \1/g" ~/stackrc
     # remove exports without assignments
     perl -pi -e "s/^export [^=]+$//g" ~/stackrc
+    # insert "unset" loop to protect against OS_<attrs> defined elsewhere
+    grep 'unset $key' ~/stackrc >/dev/null 2>&1 
+    if [ $? -ne 0 ]
+    then
+      sed -i '1ifor key in $( set | awk '"'"'{FS="="}  /^OS_/ {print $1}'"'"' ); do unset $key ; done' ~/stackrc
+    fi
 }
 
 
@@ -172,14 +179,6 @@ subscribe_overcloud() {
         fatal "Could not successfully register overcloud - please fix issue and re-run update script"
     fi
     set_completed overcloud-registered
-}
-
-
-patch_stack_rc_format() {
-    # convert assignments to exports with assignments
-    perl -pi -e "s/^([^\s]+=.*)/export \1/g" ~/stackrc
-    # remove exports without assignments	
-    perl -pi -e "s/^export [^=]+$//g" ~/stackrc
 }
 
 
@@ -334,7 +333,7 @@ upgrade_overcloud_images() {
     for i in ~/pilot/images/overcloud-full.tar ~/pilot/images/ironic-python-agent.tar; do tar -xvf $i; done
     
     # customize the images and upload them
-    ~/customize_image.sh $SUBSCRIPTION_MGR_USER $SUBSCRIPTION_MGR_PASSWORD $CEPH_POOL_ID || fatal "overcloud images were not successfully customized $GUIDANCE"
+    ~/update_upgrade/customize_image.sh $SUBSCRIPTION_MGR_USER $SUBSCRIPTION_MGR_PASSWORD $CEPH_POOL_ID || fatal "overcloud images were not successfully customized $GUIDANCE"
     # you should see messages that the images have been uploaded
 
     cd ~
@@ -538,6 +537,9 @@ upgrade_controllers() {
     [[ $health != "HEALTH_OK" ]] && fatal "Ceph health check failed: $health - should be HEALTH_OK - $GUIDANCE"
 
     # create 'metrics' ceph pool that gnocchi needs for upgrade if needed
+    # from BZ: https://bugzilla.redhat.com/show_bug.cgi?id=1467704
+    # ceph osd pool create metrics 8 8
+    # ceph auth get-or-create client.gnocchi mon "allow r" osd "allow rwx pool=metrics"
     [[ $(ssh heat-admin@$CONTROLLER 'sudo ceph osd lspools' | grep metrics) ]] || ssh heat-admin@$CONTROLLER 'sudo ceph osd pool create metrics 128'
 
     overcloud_deploy ~/pilot/templates/overcloud/environments/major-upgrade-pacemaker.yaml  || fatal "Controllers upgrade failed $GUIDANCE"
@@ -617,27 +619,59 @@ upgrade_aodh_migration() {
 }
 
 
+ceph_upgrade_sah() {
+    #completed ceph_upgraded_sah
+
+    sudo scp -o StrictHostKeyChecking=no ~/update_upgrade/ceph_upgrade_sah.sh ~/update_upgrade/deploy-rhscon-vm.py root@${SAH_IP}:/tmp
+    ceph_ip=$(sudo ssh root@${SAH_IP} grep eth0 ceph.cfg | awk -F ' ' '{ print $2 }')
+    ceph_pw=$(sudo ssh root@${SAH_IP} grep rootpassword ceph.cfg | awk -F ' ' '{ print $2 }')
+    [[ $ceph_ip == "" ]] || [[ $ceph_pw == "" ]] && \
+        fatal "Could not retrieve Ceph VM IP address from SAH node. $GUIDANCE"
+    #sudo ssh root@${SAH_IP} /tmp/ceph_upgade_sah.sh
+
+    #set_completed ceph_upgraded_sah
+}
+
+
+ceph_upgrade_director() {
+    
+    echo "$ceph_ip  $ceph_pw"
+    #ceph_upgrade_director.sh "$ceph_ip" "$ceph_pw"
+
+
+}
+
+
+copy_auth_keys_to_sah() {
+    completed auth_keys_copied
+    info "Please provide root password for SAH node so allow authorized_keys info to be sent"
+    info "This provide access for Ceph upgrade to the RH Ceph console. Control-C to exit."
+    sudo scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no  /root/.ssh/authorized_keys ${SAH_IP}:~/.ssh/
+    set_completed auth_keys_copied
+}
+
 
 # --------------- main
 cd ~  
 
+#copy_auth_keys_to_sah
 deploy_subscription_json
 prepare_upgrade
 upgrade_undercloud
 check_undercloud_upgrade
-
 patch_ceph_conf_for_health
-
 upgrade_overcloud_images
 subscribe_overcloud # should already be subscribed - making sure
 upgrade_telemetry
 #patch_ha_proxy     # deprecated
 upgrade_scripts
 upgrade_controllers
-#upgrade_storage
-#upgrade_computes
-#finalize_upgrade
-#upgrade_aodh_migration
+upgrade_storage
+upgrade_computes
+finalize_upgrade
+upgrade_aodh_migration
+#ceph_upgrade_sah
+#ceph_upgrade_director
 
 # OpenStack Platform 10 includes a migration script
 # (aodh-data-migration) to move to composite alarms. This guide contains
