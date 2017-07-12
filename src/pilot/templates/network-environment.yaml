@@ -155,3 +155,5 @@ parameter_defaults:
     BlockStorageHostnameResolveNetwork: internal_api
     ObjectStorageHostnameResolveNetwork: internal_api
     CephStorageHostnameResolveNetwork: storage
+    NovaColdMigrationNetwork: internal_api
+    NovaLibvirtNetwork: internal_api
