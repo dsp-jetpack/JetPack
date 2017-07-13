@@ -230,7 +230,7 @@ def deploy():
         director_vm.enable_fencing()
         director_vm.enable_instance_ha()
         director_vm.run_sanity_test()
-        logger.info("Deployment summary info; usefull ip's etc.. " +
+        logger.info("Deployment summary info; useful ip's etc.. " +
                     "/auto_results/deployment_summary.log")
 
     except:
