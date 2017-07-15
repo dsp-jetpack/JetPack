@@ -16,8 +16,8 @@
 
 # NOTES: 
 # need cluster reboot function?
-# TODO: patch clock skew info: https://blog.headup.ws/node/36 into ceph health
-#       integrate ceph 1.3-2.0 upgrade
+# TODO: 
+#   - patch clock skew info: https://blog.headup.ws/node/36 into ceph health
 
 # to exit on failure:
 #set -e
@@ -38,7 +38,7 @@ SAH_IP="$9"
 
 if [ "$#" -lt 9 ]; then
     echo "Usage: $0 <control_scale> <compute_scale> <ceph_scale> <vlan_range> \
-<subscription_mgr_user> <subscription_mgr_password> <ceph_pool_id> <openstack_pool_id> <ceph_pool_id> <sah_ip_address>"
+<subscription_mgr_user> <subscription_mgr_password> <openstack_pool_id> <ceph_pool_id> <sah_ip_address>"
     exit 1         
 fi
 
@@ -116,7 +116,8 @@ deploy_subscription_json() {
                        "rhel-7-server-openstack-10-devtools-rpms",
                        "rhel-7-server-rhceph-2-mon-rpms",
                        "rhel-7-server-rhceph-2-osd-rpms",
-                       "rhel-7-server-rhceph-2-tools-rpms" ]
+                       "rhel-7-server-rhceph-2-tools-rpms",
+                       "rhel-7-server-rhscon-2-agent-rpms"  ]
         },
         "compute": {
             "pool_ids": [ "$OPENSTACK_POOL_ID",
@@ -167,6 +168,22 @@ patch_stack_rc_format() {
     fi
 }
 
+
+patch_network_environment_yaml() {
+    grep -q "NovaColdMigrationNetwork: internal_api" ~/pilot/templates/network-environment.yaml && return  # already patched
+
+    sed -i.bak 's/^  ServiceNetMap:/  ServiceNetMap:\
+    NovaColdMigrationNetwork: internal_api\
+    NovaLibvirtNetwork: internal_api/' ~/pilot/templates/network-environment.yaml
+}
+
+
+patch_ironic() {
+    completed ironic-patched && return
+    ~/update_upgrade/patch_ironic.sh || fatal "ironic patch failed. $GUIDANCE"
+    set_completed ironic-patched
+
+}
 
 subscribe_overcloud() {
     # subscribe the overcloud nodes
@@ -277,6 +294,8 @@ upgrade_undercloud() {
     # cp ~/pilot/templates/overrides/puppet/hieradata/ceph.yaml ~/pilot/templates/overcloud/puppet/hieradata/ceph.yaml
     patch_ceph_conf_for_health
     patch_post_deploy_yaml
+    patch_network_environment_yaml
+    patch_ironic
 
     # informational..
     diff -Nary /usr/share/openstack-heat-templates/ /home/pilot/templates/overcloud >upgrade-template-diff.txt
@@ -612,7 +631,7 @@ finalize_upgrade() {
 upgrade_aodh_migration() {
     completed aodh_migrated && return
 
-    overcloud_deploy ~/pilot/templates/overcloud/environments/major-upgrade-aodh-migration.yaml  || fatal "upgrade aodh_migration failed $GUIDANCE"
+    overcloud_deploy ~/pilot/templates/overcloud/environments/major-upgrade-aodh-migration.yaml  || fatal "Upgrade aodh_migration failed $GUIDANCE"
 
     # sanity test should succeed here
     set_completed aodh_migrated
@@ -620,33 +639,39 @@ upgrade_aodh_migration() {
 
 
 ceph_upgrade_sah() {
-    #completed ceph_upgraded_sah
+    completed ceph_upgraded_sah && return
 
     sudo scp -o StrictHostKeyChecking=no ~/update_upgrade/ceph_upgrade_sah.sh ~/update_upgrade/deploy-rhscon-vm.py root@${SAH_IP}:/tmp
     ceph_ip=$(sudo ssh root@${SAH_IP} grep eth0 ceph.cfg | awk -F ' ' '{ print $2 }')
     ceph_pw=$(sudo ssh root@${SAH_IP} grep rootpassword ceph.cfg | awk -F ' ' '{ print $2 }')
     [[ $ceph_ip == "" ]] || [[ $ceph_pw == "" ]] && \
-        fatal "Could not retrieve Ceph VM IP address from SAH node. $GUIDANCE"
-    #sudo ssh root@${SAH_IP} /tmp/ceph_upgade_sah.sh
+        fatal "Could not retrieve Ceph VM IP address or password from SAH node. $GUIDANCE"
+    sudo ssh root@${SAH_IP} '/tmp/ceph_upgrade_sah.sh' || fatal "Ceph upgrade SAH failed - $GUIDANCE"
 
-    #set_completed ceph_upgraded_sah
+    set_completed ceph_upgraded_sah
 }
 
 
 ceph_upgrade_director() {
-    
-    echo "$ceph_ip  $ceph_pw"
-    #ceph_upgrade_director.sh "$ceph_ip" "$ceph_pw"
+    completed ceph_upgrade_director && return
+    ceph_ip=$(sudo ssh root@${SAH_IP} grep eth0 ceph.cfg | awk -F ' ' '{ print $2 }')
+    ceph_pw=$(sudo ssh root@${SAH_IP} grep rootpassword ceph.cfg | awk -F ' ' '{ print $2 }')
+    [[ $ceph_ip == "" ]] || [[ $ceph_pw == "" ]] && \
+        fatal "Could not retrieve Ceph VM IP address or password from SAH node. $GUIDANCE"
+    info "Upgrading ceph on director node:  $ceph_ip  $ceph_pw"
+    cd ~/update_upgrade
+    ./ceph_upgrade_director.sh "$ceph_ip" "$ceph_pw"  || fatal "Ceph upgrade Director failed - $GUIDANCE"
 
-
+    set_completed ceph_upgrade_director
 }
 
 
 copy_auth_keys_to_sah() {
-    completed auth_keys_copied
+    completed auth_keys_copied && return
     info "Please provide root password for SAH node so allow authorized_keys info to be sent"
     info "This provide access for Ceph upgrade to the RH Ceph console. Control-C to exit."
-    sudo scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no  /root/.ssh/authorized_keys ${SAH_IP}:~/.ssh/
+    sudo scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no  /root/.ssh/authorized_keys ${SAH_IP}:~/.ssh/  || fatal "Ceph copy auth keys to SAH failed - $GUIDANCE"
+
     set_completed auth_keys_copied
 }
 
@@ -654,27 +679,23 @@ copy_auth_keys_to_sah() {
 # --------------- main
 cd ~  
 
-#copy_auth_keys_to_sah
+# most of these stages of upgrade have associated lock-files that indicate whether 
+# they have been sucessfully executed. See ~/pilot/upgrade-lockfiles. To force a
+# re-run of a stage, delete it's lock file.
+
+copy_auth_keys_to_sah
 deploy_subscription_json
 prepare_upgrade
 upgrade_undercloud
 check_undercloud_upgrade
-patch_ceph_conf_for_health
 upgrade_overcloud_images
 subscribe_overcloud # should already be subscribed - making sure
 upgrade_telemetry
-#patch_ha_proxy     # deprecated
 upgrade_scripts
 upgrade_controllers
 upgrade_storage
 upgrade_computes
 finalize_upgrade
 upgrade_aodh_migration
-#ceph_upgrade_sah
-#ceph_upgrade_director
-
-# OpenStack Platform 10 includes a migration script
-# (aodh-data-migration) to move to composite alarms. This guide contains
-# instructions for migrating this data in Section 3.4.10, “Migrating the
-# OpenStack Telemetry Alarming Database”. Make sure to run this script
-# and convert your alarms to composite.
+ceph_upgrade_sah
+ceph_upgrade_director

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# (c) 2016-2017 Dell
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,12 +15,6 @@
 # limitations under the License.
 
 # NOTES: 
-# https://bugzilla.redhat.com/show_bug.cgi?id=1385143  blocker, no fix known
-# https://bugzilla.redhat.com/show_bug.cgi?id=1383780  fix in script (timeout for messaging)
-# https://bugzilla.redhat.com/show_bug.cgi?id=1336952  domain name N.A.
-# https://bugzilla.redhat.com/show_bug.cgi?id=1394894  OVS bridge -by-hand at this time
-# https://bugzilla.redhat.com/show_bug.cgi?id=1455224  Overcloud update fails
-# outstanding config issues for RGW
 
 # to exit on failure:
 #set -e
@@ -88,6 +82,15 @@ update_subscription_json() {
     cp ~/pilot/subscription.json subscription.json.orig
     sed -i "s/CHANGEME_openstack_pool_id/$OPENSTACK_POOL_ID/" ~/pilot/subscription.json 
     sed -i "s/CHANGEME_ceph_pool_id/$CEPH_POOL_ID/" ~/pilot/subscription.json 
+}
+
+
+patch_network_environment_yaml() {
+    grep -q "NovaColdMigrationNetwork: internal_api" ~/pilot/templates/network-environment.yaml && return  # already patched
+
+    sed -i.bak 's/^  ServiceNetMap:/  ServiceNetMap:\
+    NovaColdMigrationNetwork: internal_api\
+    NovaLibvirtNetwork: internal_api/' ~/pilot/templates/network-environment.yaml
 }
 
 
@@ -192,6 +195,8 @@ prepare_overcloud() {
     # copy upgraded templates into template dir
 
     cp -r /usr/share/openstack-tripleo-heat-templates ~/pilot/templates/overcloud
+
+    patch_network_environment_yaml
 
     #TBD -  patch ~/pilot/templates/overcloud/puppet/manifests/overcloud_controller_pacemaker.pp
     #### just a TEMPORARY patch

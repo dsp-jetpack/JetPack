@@ -14,16 +14,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-+# This hacks in a patch to fix correct querying WSMAN Enumerations that have
- +# more than 100 entries.  We will need to remove this after the fix appears
- +# in OSP10.  Note that this patch must be here because we use this code prior
- +# to deploying the director.
- +echo
- +echo "## Patching Ironic iDRAC driver WSMAN library..."
- +OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ~/pilot/wsman.patch)
- +sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
- +sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
- +echo "## Done." 
+# Configure a cleaning network so that the Bare Metal service, ironic, can use
+# node cleaning.
+configure_cleaning_network()
+{
+  network_name="$1"
+  network_uuid=$(neutron net-list | grep "${network_name}" | awk '{print $2}')
+  sudo sed -i.bak "s/^.*cleaning_network_uuid.*$/cleaning_network_uuid\ =\ $network_uuid/" /etc/ironic/ironic.conf
+  sudo systemctl restart openstack-ironic-conductor.service
+}
+
+
+# This hacks in a patch to fix correct querying WSMAN Enumerations that have
+# more than 100 entries.  We will need to remove this after the fix appears
+# in OSP10.  Note that this patch must be here because we use this code prior
+# to deploying the director.
+echo
+echo "## Patching Ironic iDRAC driver WSMAN library..."
+OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ~/update_upgrade/wsman.patch)
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
+echo "## Done." 
 
 # This hacks in a patch to work around a known issue where RAID configuration
 # fails because the iDRAC is busy running an export to XML job and is not
@@ -31,16 +42,16 @@
 # deploying the director.
 echo
 echo "## Patching Ironic iDRAC driver is_ready check..."
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.py ~/pilot/lifecycle_controller.patch)
+OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.py ~/update_upgrade/lifecycle_controller.patch)
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyo
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/uris.py ~/pilot/uris.patch)
+OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/uris.py ~/update_upgrade/uris.patch)
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyo
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ~/pilot/client.patch)
+OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ~/update_upgrade/client.patch)
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ~/pilot/raid.patch)
+OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ~/update_upgrade/raid.patch)
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
 echo "## Done."
@@ -51,7 +62,7 @@ echo "## Done."
 # director.
 echo
 echo "## Patching Ironic iDRAC driver RAID library..."
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ~/pilot/dracclient_raid.patch)
+OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ~/update_upgrade/dracclient_raid.patch)
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
 echo "## Done."
