@@ -89,6 +89,7 @@ debug() { [[ $DEBUG -le $LOG_LEVEL ]] && log "DEBUG: $@"; }
 set_admin_scope(){
   info "setting admin scope with: ~/${STACK_NAME}rc."
   source ~/${STACK_NAME}rc
+  [ -n "$OS_TENANT_NAME" ] && export OS_PROJECT_NAME=$OS_TENANT_NAME
   info "### sourcing ~/${STACK_NAME}rc"
 }
 
@@ -97,6 +98,7 @@ set_tenant_scope(){
   export OS_USERNAME=$USER_NAME
   export OS_PASSWORD=$SANITY_USER_PASSWORD
   export OS_TENANT_NAME=$PROJECT_NAME
+  export OS_PROJECT_NAME=$PROJECT_NAME
 }
 
 generate_sanity_rc(){
@@ -104,10 +106,18 @@ generate_sanity_rc(){
   cp ~/${STACK_NAME}rc ${SANITYRC}
   USERNAMEREPL=`grep OS_USERNAME ~/${STACK_NAME}rc`
   PASSWORDREPL=`grep OS_PASSWORD ~/${STACK_NAME}rc`
+  PROJECTNAMEREPL=`grep OS_PROJECT_NAME ~/${STACK_NAME}rc`
   TENANTNAMEREPL=`grep OS_TENANT_NAME ~/${STACK_NAME}rc`
   sed -i "s/${USERNAMEREPL}/export OS_USERNAME=${USER_NAME}/g" ${SANITYRC}
   sed -i "s/${PASSWORDREPL}/export OS_PASSWORD=${SANITY_USER_PASSWORD}/g" ${SANITYRC}
-  sed -i "s/${TENANTNAMEREPL}/export OS_TENANT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
+  sed -i "s/${PROJECTNAMEREPL}/export OS_PROJECT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
+  grep OS_TENANT_NAME $SANITYRC >/dev/null 2>&1
+  if [ $? -eq 0 ]
+  then
+    sed -i "s/${TENANTNAMEREPL}/export OS_TENANT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
+  else
+    sed -i "\$ a export OS_TENANT_NAME=${PROJECT_NAME}" ${SANITYRC}
+  fi
 }
 
 init(){
@@ -116,6 +126,7 @@ init(){
   cd ~
 
   source ~/stackrc
+  [ -n "$OS_TENANT_NAME" ] && export OS_PROJECT_NAME=$OS_TENANT_NAME
 
   # Collect the SSH keys from all of the overcloud nodes
   info "### Collecting SSH keys... ###"
@@ -299,7 +310,7 @@ spin_up_instances(){
   while [ $index -le $SANITY_NUMBER_INSTANCES ]; do
     instance_name="${BASE_NOVA_INSTANCE_NAME}_$index"
 
-    execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor 2 --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $instance_name"
+    execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $instance_name"
 
     instance_names[((index-1))]=$instance_name
     index=$((index+1))
@@ -542,6 +553,7 @@ then
     set_unique_names $index
 
     export OS_TENANT_NAME=$PROJECT_NAME
+    export OS_PROJECT_NAME=$PROJECT_NAME
     export OS_PASSWORD=$SANITY_USER_PASSWORD
     export OS_USERNAME=$USER_NAME
 
@@ -618,8 +630,8 @@ then
   [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 neutron security-group-delete
 
   info   "#### Deleting the images"
-  image_ids=$(glance image-list | grep $IMAGE_NAME | awk '{print $2}')
-  [[ $image_ids ]] && echo $image_ids | xargs -n1 glance image-delete
+  image_ids=$(openstack image list | grep $IMAGE_NAME | awk '{print $2}')
+  [[ $image_ids ]] && echo $image_ids | xargs -n1 openstack image delete
 
   info "### Deleting the flavor"
   openstack flavor show $FLAVOR_NAME > /dev/null 2>&1
