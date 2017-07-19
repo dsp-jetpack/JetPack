@@ -131,6 +131,17 @@ echo "## Installing probe-idrac utility..."
 ~/pilot/install_probe_idrac.sh
 echo "## Done."
 
+echo
+grep 'unset $key' ~/stackrc >/dev/null 2>&1 
+if [ $? -ne 0 ]
+then
+  echo "## Updating stackrc..."
+  sed -i '1ifor key in $( set | awk '"'"'{FS="="}  /^OS_/ {print $1}'"'"' ); do unset $key ; done' ~/stackrc
+  echo "## Done."
+else
+  echo "## stackrc has already been updated.  Skipping update."
+fi
+
 source $HOME/stackrc
 
 echo
@@ -197,17 +208,7 @@ echo "## Patching Ironic iDRAC driver WSMAN library..."
 OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ~/pilot/wsman.patch)
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
-echo "## Done."
-
-# This hacks in a patch to work around a known issue where Ironic is unable to
-# retrieve the power state from a node.  Note that this patch must be here
-# because we use this code prior to deploying the director.
-echo
-echo "## Patching Ironic iDRAC driver power state retrieval..."
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/bios.py ~/pilot/bios.patch)
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/bios.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/bios.pyo
-echo "## Done."
+echo "## Done." 
 
 # This hacks in a patch to work around a known issue where RAID configuration
 # fails because the iDRAC is busy running an export to XML job and is not
