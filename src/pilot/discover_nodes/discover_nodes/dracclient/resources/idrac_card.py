@@ -125,8 +125,8 @@ class iDRACCardConfiguration(object):
                                  check_return_value=False)
 
         message_id = utils.find_xml(doc,
-                                      'MessageID',
-                                      uris.DCIM_iDRACCardService).text
+                                    'MessageID',
+                                    uris.DCIM_iDRACCardService).text
         return "RAC064" == message_id
 
 

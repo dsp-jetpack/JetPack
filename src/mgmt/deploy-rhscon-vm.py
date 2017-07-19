@@ -20,6 +20,7 @@ import shutil
 import subprocess
 import sys
 
+
 def parse_arguments():
     """ Parses the input argments
     """
@@ -113,7 +114,7 @@ yum-utils
 %end
 
 %post --nochroot --logfile /root/rhscon-post.log
-# Copy the files created during the %pre section to /root of the 
+# Copy the files created during the %pre section to /root of the
 # installed system for later use.
   cp -v /tmp/rhscon-pre.log /mnt/sysimage/root
   cp -v /tmp/ks_include.txt /mnt/sysimage/root
@@ -121,7 +122,7 @@ yum-utils
   mkdir -p /mnt/sysimage/root/rhscon-ks-logs
   cp -v /tmp/rhscon-pre.log /mnt/sysimage/root/rhscon-ks-logs
   cp -v /tmp/ks_include.txt /mnt/sysimage/root/rhscon-ks-logs
-  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/rhscon-ks-logs  
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/rhscon-ks-logs
 %end
 
 
@@ -159,7 +160,7 @@ sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
 
     [[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
     [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
-	
+
     Proxy_Creds=""
     [[ ${SMProxyUser} && ${SMProxyPassword} ]] && \\
       Proxy_Creds="${SMProxyUser}:${SMProxyPassword}@"
@@ -171,7 +172,7 @@ sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
     export no_proxy=$no_proxy_list
     export http_proxy=${HTTP_Proxy}
     export https_proxy=${HTTP_Proxy}
-	
+
     }
 
   subscription-manager register --username ${SMUser} --password ${SMPassword} \
@@ -232,17 +233,17 @@ EOIP
     echo "server ${ntps}" >> /etc/ntp.conf
   done
 
-  # Add heat user for remote/manual installation steps of integrating 
+  # Add heat user for remote/manual installation steps of integrating
   # Storage Console to RDO based OSP
   /usr/sbin/groupadd -g 1000 heat-admin
   /usr/sbin/useradd -d /home/heat-admin -s /bin/bash -u 1000 -g 1000 heat-admin
 
-  # Add heat-admin to sudoers 
+  # Add heat-admin to sudoers
   echo "heat-admin ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/heat-admin
   echo "Defaults:heat-admin !requiretty" >> /etc/sudoers.d/heat-admin
 
   /usr/bin/yum install -y rhscon-core rhscon-ceph rhscon-ui
-  
+
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
   [[ -e /tmp/mnt/versionlock.list ]] && {
@@ -279,7 +280,7 @@ chvt 6
         nameservers = ""
         gateway = ""
 
-        for line in cfg_lines:            
+        for line in cfg_lines:
             if line.startswith("#") or line.startswith(";") or len(line) == 0:
                 continue
             tokens = line.split()
@@ -306,7 +307,7 @@ chvt 6
                 gateway = tokens[1]
                 ks.write("echo Gateway='{}' >> {}\n".
                          format(gateway, ks_post_include))
-        
+
             elif tokens[0] == "ntpserver":
                 ks.write("echo NTPServers='{}' >> {}\n".
                          format(tokens[1], ks_post_include))
@@ -362,7 +363,7 @@ chvt 6
 
         # Write part 3, and we're done
         ks.write(ks_part_3)
-    
+
 
 def create_floppy_image(vlock_filename, floppy_image):
     """ Creates the floppy image used to install the vlock file
@@ -434,7 +435,8 @@ def main():
     vlock_filename = "rhscon_vm.vlock"
     if os.access(vlock_filename, os.R_OK):
         create_floppy_image(vlock_filename, floppy_image)
-        virt_install_args.append("--disk {},device=floppy".format(floppy_image))
+        virt_install_args.append("--disk {},device=floppy".format(
+            floppy_image))
 
     return subprocess.call(" ".join(virt_install_args), shell=True)
 

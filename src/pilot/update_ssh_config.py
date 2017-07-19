@@ -125,7 +125,7 @@ def update_etc_hosts(overcloud):
     for line in etc_file.readlines():
         words = line.split()
         if ((line == marker) or
-            (len(words) == 3 and words[1] in overcloud.keys())):
+                (len(words) == 3 and words[1] in overcloud.keys())):
 
             continue
         new_file.write(line)
