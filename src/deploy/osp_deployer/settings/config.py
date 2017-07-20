@@ -45,7 +45,7 @@ class Settings():
         yourConf.read(your_ini)
 
         error_msg = ""
-
+        warning_msg = ""
         for stanza in conf.sections():
             if yourConf.has_section(stanza):
                 for setting in conf.options(stanza):
@@ -65,17 +65,19 @@ class Settings():
                     if conf.has_option(stanza, setting):
                         pass
                     else:
-                        error_msg = error_msg + "\"" + setting + \
+                        warning_msg = warning_msg + "\"" + setting + \
                                     "\" setting in your ini file [" + \
                                     stanza + "] section is deprecated and " +\
                                     "should be removed\n"
             else:
-                error_msg = error_msg + "Section [" + stanza + \
+                warning_msg = warning_msg + "Section [" + stanza + \
                             "] in your ini file is deprecated and should be " +\
                             "removed\n"
 
         if len(error_msg) > 0:
             raise AssertionError("\n" + error_msg)
+        if len(warning_msg) > 0:
+            logger.info("\n" + warning_msg)
 
         self.conf = yourConf
 
