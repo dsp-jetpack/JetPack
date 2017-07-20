@@ -163,6 +163,11 @@ br_pub_api_boot_opts="CHANGEME e.g. onboot static 192.168.190.12/255.255.255.0"
 # Private API bridge options
 br_priv_api_boot_opts="CHANGEME e.g. onboot static 192.168.140.12/255.255.255.0"
 
+# Provisioning Network for NTP settings
+prov_network="CHANGEME e.g 192.168.120.0"
+prov_netmask="CHANGEME e.g 255.255.255.0"
+
+
 ################### END of CHANGEME
 
 # Create the files that will be used by the installation environment and %post environment
@@ -189,6 +194,8 @@ echo "HostName=\"${HostName}\"" >> /tmp/ks_post_include.txt
 echo "Gateway=\"${Gateway}\"" >> /tmp/ks_post_include.txt
 echo "NameServers=\"${NameServers}\"" >> /tmp/ks_post_include.txt
 echo "NTPServers=\"${NTPServers}\"" >> /tmp/ks_post_include.txt
+echo "NTPSettings=\"${prov_network} netmask ${prov_netmask}\"" >> /tmp/ks_post_include.txt
+
 
 echo "declare -A bonds" >> /tmp/ks_post_include.txt
 echo "declare -A bond_opts" >> /tmp/ks_post_include.txt
@@ -316,6 +323,17 @@ for ntps in ${NTPServers//,/ }
 do
   echo "server ${ntps}" >> /etc/ntp.conf
 done
+
+********************
+
+
+echo "restrict ${NTPSettings} nomodify notrap" >> /etc/ntp.conf
+echo "server  127.127.1.0 # local clock" >> /etc/ntp.conf
+echo "server  127.127.1.0 # local clock" >> /etc/ntp.conf
+
+
+********************
+
 
 
 # Configure Bonding and VLANS
