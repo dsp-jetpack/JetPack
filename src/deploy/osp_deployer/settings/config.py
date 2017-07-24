@@ -53,11 +53,11 @@ class Settings():
                         pass
                     else:
                         error_msg = error_msg + "Missing \"" +\
-                                    setting + "\" setting in your ini file [" +\
-                                    stanza + "] section \n"
+                            setting + "\" setting in your ini file [" +\
+                            stanza + "] section \n"
             else:
                 error_msg = error_msg + "Missing [" + stanza + "] " +\
-                            "section in your ini file \n"
+                    "section in your ini file \n"
 
         for stanza in yourConf.sections():
             if conf.has_section(stanza):
@@ -66,13 +66,13 @@ class Settings():
                         pass
                     else:
                         error_msg = error_msg + "\"" + setting + \
-                                    "\" setting in your ini file [" + \
-                                    stanza + "] section is deprecated and " +\
-                                    "should be removed\n"
+                            "\" setting in your ini file [" + \
+                            stanza + "] section is deprecated and " +\
+                            "should be removed\n"
             else:
                 error_msg = error_msg + "Section [" + stanza + \
-                            "] in your ini file is deprecated and should be " +\
-                            "removed\n"
+                    "] in your ini file is deprecated and should be " +\
+                    "removed\n"
 
         if len(error_msg) > 0:
             raise AssertionError("\n" + error_msg)
