@@ -149,6 +149,7 @@ class DRACClient(ironic_client.DRACClient):
             LOG.debug("iDRAC was successfully reset")
 
         LOG.info("Waiting for the iDRAC to become not pingable")
+        required_ping_fail_count = 2
         retries = 24
         ping_fail_count = 0
         while retries > 0:
@@ -159,7 +160,7 @@ class DRACClient(ironic_client.DRACClient):
                 ping_fail_count += 1
                 LOG.debug("The iDRAC is not pingable, ping_fail_count="
                           "{}".format(ping_fail_count))
-                if ping_fail_count == 3:
+                if ping_fail_count == required_ping_fail_count:
                     LOG.debug("Breaking")
                     break
             else:
@@ -168,7 +169,7 @@ class DRACClient(ironic_client.DRACClient):
 
             sleep(10)
 
-        if retries == 0 and ping_fail_count < 3:
+        if retries == 0 and ping_fail_count < required_ping_fail_count:
             raise exceptions.DRACOperationFailed(drac_messages="Timed out "
                                                  "waiting for the iDRAC to "
                                                  "become not pingable")
