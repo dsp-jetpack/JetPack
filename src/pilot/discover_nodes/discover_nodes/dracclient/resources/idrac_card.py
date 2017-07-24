@@ -348,7 +348,7 @@ class iDRACCardIntegerAttribute(iDRACCardAttribute):
         return cls(idrac_attr.name, idrac_attr.instance_id,
                    idrac_attr.current_value, idrac_attr.pending_value,
                    idrac_attr.read_only, idrac_attr.fqdd, idrac_attr.group_id,
-                   int(lower_bound), int(upper_bound))
+                   lower_bound, upper_bound)
 
     def validate(self, new_value):
         """Validates new value"""
