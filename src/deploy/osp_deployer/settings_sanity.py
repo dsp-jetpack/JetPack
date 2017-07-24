@@ -316,6 +316,25 @@ class DeployerSanity():
             raise AssertionError(" _ character is not allowed " +
                                  "in the .ini overcloud_name setting")
 
+    def check_os_volume_size(self):
+        hdw_nodes = (self.settings.controller_nodes +
+                     self.settings.compute_nodes +
+                     self.settings.ceph_nodes)
+
+        for node in hdw_nodes:
+            if hasattr(node, "os_volume_size_gb"):
+                try:
+                    os_volume_size_gb = int(node.os_volume_size_gb)
+                except ValueError:
+                    raise AssertionError("os_volume_size_gb of "
+                        "\"{}\" on node {} is not an integer".format(
+                            node.os_volume_size_gb, node.idrac_ip))
+
+                if os_volume_size_gb <= 0:
+                    raise AssertionError("os_volume_size_gb of "
+                        "\"{}\" on node {} is not a positive integer".format(
+                            node.os_volume_size_gb, node.idrac_ip))
+
     def check_net_attrs(self, node, should_have_attributes,
                         should_be_valid_ips):
         for each in should_have_attributes:

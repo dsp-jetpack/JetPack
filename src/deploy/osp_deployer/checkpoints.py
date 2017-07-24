@@ -34,6 +34,7 @@ class Checkpoints():
     def verify_deployer_settings():
         logger.info("==== Running environment sanity tests")
         checks = DeployerSanity()
+        checks.check_os_volume_size()
         checks.check_network_settings()
         checks.check_files()
         checks.check_ipmi_to_nodes()
