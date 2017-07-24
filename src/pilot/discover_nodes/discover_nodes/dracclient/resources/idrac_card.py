@@ -332,9 +332,13 @@ class iDRACCardIntegerAttribute(iDRACCardAttribute):
 
         idrac_attr = iDRACCardAttribute.parse(cls.namespace, idrac_attr_xml)
         lower_bound = utils.get_wsman_resource_attr(
-            idrac_attr_xml, cls.namespace, 'LowerBound')
+            idrac_attr_xml, cls.namespace, 'LowerBound', nullable=True)
+        if lower_bound is not None:
+            lower_bound = int(lower_bound)
         upper_bound = utils.get_wsman_resource_attr(
-            idrac_attr_xml, cls.namespace, 'UpperBound')
+            idrac_attr_xml, cls.namespace, 'UpperBound', nullable=True)
+        if upper_bound is not None:
+            upper_bound = int(upper_bound)
 
         if idrac_attr.current_value:
             idrac_attr.current_value = int(idrac_attr.current_value)
@@ -348,6 +352,9 @@ class iDRACCardIntegerAttribute(iDRACCardAttribute):
 
     def validate(self, new_value):
         """Validates new value"""
+
+        if self.lower_bound is None or self.upper_bound is None:
+            return
 
         val = int(new_value)
         if val < self.lower_bound or val > self.upper_bound:
