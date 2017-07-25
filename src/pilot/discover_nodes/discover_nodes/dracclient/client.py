@@ -421,7 +421,7 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._job_mgmt.create_reboot_job(reboot_type)
 
-    def delete_jobs(self, job_ids=['JID_CLEARALL_FORCE']):
+    def delete_jobs(self, job_ids=['JID_CLEARALL']):
         """Deletes the given jobs.  If no jobs are given, all jobs are
             deleted.
 
