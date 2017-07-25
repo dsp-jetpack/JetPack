@@ -120,7 +120,7 @@ def deploy():
         tester = Checkpoints()
         tester.verify_deployer_settings(verify_network_connectivity=not args.validate_only)
         if args.validate_only is True:
-            print("Settings validated")
+            logger.info("Settings validated")
             sys.exit(0) 
 
         if settings.retreive_switches_config is True:
