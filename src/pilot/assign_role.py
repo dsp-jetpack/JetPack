@@ -274,7 +274,6 @@ def get_raid_controller_id(drac_client):
     if number_raid_controllers == 1:
         return raid_controller_ids[0]
     elif number_raid_controllers == 0:
-        LOG.critical("Found no RAID controllers")
         return None
     else:
         LOG.critical(
@@ -674,6 +673,10 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
     '''TODO: Add some selective exception handling so we can determine
     when RAID configuration failed and return False. Further testing
     should uncover interesting error conditions.'''
+
+    if get_raid_controller_id(drac_client) is None:
+        LOG.info("No RAID controller is present.  Skipping RAID configuration")
+        return True
 
     LOG.info("Configuring RAID")
     LOG.info("Do not power off the node; configuration will take some time")
