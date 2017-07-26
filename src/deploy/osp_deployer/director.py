@@ -1488,7 +1488,12 @@ class Director(InfraHost):
         if node.skip_raid_config:
             skip_raid_config = "-s"
 
-        return './assign_role.py {} {} {}-{}'.format(
+        os_volume_size_gb = ""
+        if hasattr(node, 'os_volume_size_gb'):
+            os_volume_size_gb = "-o {}".format(node.os_volume_size_gb)
+
+        return './assign_role.py {} {} {} {}-{}'.format(
+            os_volume_size_gb,
             skip_raid_config,
             node_identifier,
             role,

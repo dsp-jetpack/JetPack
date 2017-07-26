@@ -124,6 +124,11 @@ def parse_arguments():
                         '--skip-raid-config',
                         action='store_true',
                         help="skip configuring RAID")
+    parser.add_argument('-o',
+                        '--os-volume-size-gb',
+                        help="the size of the volume to install the OS on "
+                             "in GB",
+                        metavar="OSVOLUMESIZEGB")
 
     ArgHelper.add_instack_arg(parser)
 
@@ -664,7 +669,8 @@ def physical_disk_to_key(physical_disk):
     return physical_disk_id_to_key(physical_disk.id)
 
 
-def configure_raid(ironic_client, node_uuid, role, drac_client):
+def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
+                   drac_client):
     '''TODO: Add some selective exception handling so we can determine
     when RAID configuration failed and return False. Further testing
     should uncover interesting error conditions.'''
@@ -699,21 +705,10 @@ def configure_raid(ironic_client, node_uuid, role, drac_client):
     ironic_client.node.wait_for_provision_state(node_uuid, 'manageable')
     LOG.info("Completed deletion of the existing RAID configuration")
 
-    target_raid_config = define_target_raid_config(
-        role, drac_client)
-
-    if target_raid_config is None:
-        return False
-
-    # Set the target RAID configuration on the ironic node.
-    ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
-
     # Work around the bugs in the ironic DRAC driver's RAID clean steps.
 
     '''TODO: After the upstream bugs have been resolved, remove the
     workarounds.'''
-
-    raid_controller_fqdd = get_raid_controller_id(drac_client)
 
     '''TODO: Workaround 1:
     Reset the RAID controller to delete all virtual disks and unassign
@@ -737,6 +732,22 @@ def configure_raid(ironic_client, node_uuid, role, drac_client):
         LOG.critical("Attempt to convert all physical disks to JBOD mode "
                      "failed")
         return False
+
+    # If the user specified the volume to install the OS on, and they told
+    # us to configure RAID, then we delete any existing RAID volumes, convert
+    # the disks to JBOD mode, and call it good since we don't know what RAID
+    # config to apply.
+    if os_volume_size_gb is not None:
+        return True
+
+    target_raid_config = define_target_raid_config(
+        role, drac_client)
+
+    if target_raid_config is None:
+        return False
+
+    # Set the target RAID configuration on the ironic node.
+    ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
 
     # Workaround 4:
     # Attempt to convert all of the physical disks in the target RAID
@@ -797,8 +808,8 @@ def place_node_in_manageable_state(ironic_client, node_uuid):
     return True
 
 
-def assign_role(ip_mac_service_tag, node_uuid, role_index, ironic_client,
-                drac_client):
+def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
+                ironic_client, drac_client):
     flavor = ROLES[role_index.role]
 
     LOG.info(
@@ -819,8 +830,9 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index, ironic_client,
               'path': '/properties/capabilities'}]
     ironic_client.node.update(node_uuid, patch)
 
-    # Select the disk for the OS to be installed on
-    select_os_disk(ironic_client, drac_client.client, node_uuid)
+    # Select the volume for the OS to be installed on
+    select_os_volume(os_volume_size_gb, ironic_client, drac_client.client,
+                     node_uuid)
 
 
 def get_fqdd(doc, namespace):
@@ -831,87 +843,94 @@ def get_size_in_bytes(doc, namespace):
     return utils.find_xml(doc, 'SizeInBytes', namespace).text
 
 
-def select_os_disk(ironic_client, drac_client, node_uuid):
-    # Get the virtual disks
-    virtual_disk_view_doc = drac_client.enumerate(DCIM_VirtualDiskView)
-    virtual_disk_docs = utils.find_xml(virtual_disk_view_doc,
-                                       'DCIM_VirtualDiskView',
-                                       DCIM_VirtualDiskView,
-                                       True)
+def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
+    if os_volume_size_gb is None:
+        # Get the virtual disks
+        virtual_disk_view_doc = drac_client.enumerate(DCIM_VirtualDiskView)
+        virtual_disk_docs = utils.find_xml(virtual_disk_view_doc,
+                                           'DCIM_VirtualDiskView',
+                                           DCIM_VirtualDiskView,
+                                           True)
 
-    # Look for a RAID of any type other than RAID0 and assume we want to
-    # install the OS on that volume.  The first non-RAID0 found will be used.
-    for virtual_disk_doc in virtual_disk_docs:
-        fqdd = get_fqdd(virtual_disk_doc, DCIM_VirtualDiskView)
-        raid_type = utils.find_xml(virtual_disk_doc, 'RAIDTypes',
-                                   DCIM_VirtualDiskView).text
+        # Look for a RAID of any type other than RAID0 and assume we want to
+        # install the OS on that volume.  The first non-RAID0 found will be
+        # used.
+        for virtual_disk_doc in virtual_disk_docs:
+            fqdd = get_fqdd(virtual_disk_doc, DCIM_VirtualDiskView)
+            raid_type = utils.find_xml(virtual_disk_doc, 'RAIDTypes',
+                                       DCIM_VirtualDiskView).text
 
-        if raid_type != NORAID and raid_type != RAID0:
-            # Get the size
-            raid_size = get_size_in_bytes(virtual_disk_doc,
-                                          DCIM_VirtualDiskView)
+            if raid_type != NORAID and raid_type != RAID0:
+                # Get the size
+                raid_size = get_size_in_bytes(virtual_disk_doc,
+                                              DCIM_VirtualDiskView)
+                raid_size_gb = int(raid_size) / units.Gi
 
-            # Get the physical disks that back this RAID
-            raid_physical_disk_docs = utils.find_xml(virtual_disk_doc,
-                                                     'PhysicalDiskIDs',
-                                                     DCIM_VirtualDiskView,
-                                                     True)
-            raid_physical_disk_ids = []
-            for raid_physical_disk_doc in raid_physical_disk_docs:
-                raid_physical_disk_id = raid_physical_disk_doc.text
-                raid_physical_disk_ids.append(raid_physical_disk_id)
+                # Get the physical disks that back this RAID
+                raid_physical_disk_docs = utils.find_xml(virtual_disk_doc,
+                                                         'PhysicalDiskIDs',
+                                                         DCIM_VirtualDiskView,
+                                                         True)
+                raid_physical_disk_ids = []
+                for raid_physical_disk_doc in raid_physical_disk_docs:
+                    raid_physical_disk_id = raid_physical_disk_doc.text
+                    raid_physical_disk_ids.append(raid_physical_disk_id)
 
-            LOG.debug(
-                "Found RAID {} virtual disk {} with a size of {} bytes "
-                "comprised of physical disks:\n  {}".format(
-                    RAID_TYPE_TO_DESCRIPTION[raid_type],
-                    fqdd,
-                    raid_size,
-                    "\n  ".join(raid_physical_disk_ids)))
-
-            break
-
-    # Now check to see if we have any physical disks that don't back
-    # the RAID that are the same size as the RAID
-
-    # Get the physical disks
-    physical_disk_view_doc = drac_client.enumerate(
-        DCIM_PhysicalDiskView)
-    physical_disk_docs = utils.find_xml(physical_disk_view_doc,
-                                        'DCIM_PhysicalDiskView',
-                                        DCIM_PhysicalDiskView,
-                                        True)
-
-    found_same_size_disk = False
-    for physical_disk_doc in physical_disk_docs:
-        fqdd = get_fqdd(physical_disk_doc, DCIM_PhysicalDiskView)
-        if fqdd not in raid_physical_disk_ids:
-            physical_disk_size = get_size_in_bytes(
-                physical_disk_doc, DCIM_PhysicalDiskView)
-
-            if physical_disk_size == raid_size:
-                LOG.warning(
-                    "Physical disk {} has the same size ({}) as the "
-                    "RAID.  Unable to specify the OS disk to Ironic.".format(
+                LOG.debug(
+                    "Found RAID {} virtual disk {} with a size of {} bytes "
+                    "comprised of physical disks:\n  {}".format(
+                        RAID_TYPE_TO_DESCRIPTION[raid_type],
                         fqdd,
-                        physical_disk_size))
-                found_same_size_disk = True
+                        raid_size,
+                        "\n  ".join(raid_physical_disk_ids)))
+
                 break
 
-    # If we did find a disk that's the same size, then passing a disk
-    # size to ironic is pointless, so let whatever happens, happen
-    if not found_same_size_disk:
-        # Otherwise...
-        raid_size_gb = int(raid_size) / units.Gi
+        # Now check to see if we have any physical disks that don't back
+        # the RAID that are the same size as the RAID
 
-        # Set the root_device property in ironic to the RAID size in gigs
-        LOG.info(
-            "Setting the OS disk for this node to the {} with size "
-            "{} GB".format(RAID_TYPE_TO_DESCRIPTION[raid_type], raid_size_gb))
-        patch = [{'op': 'add',
-                  'value': {"size": raid_size_gb},
-                  'path': '/properties/root_device'}]
-        ironic_client.node.update(node_uuid, patch)
+        # Get the physical disks
+        physical_disk_view_doc = drac_client.enumerate(
+            DCIM_PhysicalDiskView)
+        physical_disk_docs = utils.find_xml(physical_disk_view_doc,
+                                            'DCIM_PhysicalDiskView',
+                                            DCIM_PhysicalDiskView,
+                                            True)
+
+        for physical_disk_doc in physical_disk_docs:
+            fqdd = get_fqdd(physical_disk_doc, DCIM_PhysicalDiskView)
+            if fqdd not in raid_physical_disk_ids:
+                physical_disk_size = get_size_in_bytes(
+                    physical_disk_doc, DCIM_PhysicalDiskView)
+                physical_disk_size_gb = int(physical_disk_size) / units.Gi
+
+                if physical_disk_size_gb == raid_size_gb:
+                    # If we did find a disk that's the same size as the located
+                    # RAID (in GB), then we can't tell Ironic what volume to
+                    # install the OS on.  Abort the install at this point
+                    # instead of having the OS installed on a random volume.
+                    raise RuntimeError(
+                        "Physical disk {} has the same size in GB ({}) as the "
+                        "RAID.  Unable to specify the OS disk to "
+                        "Ironic.".format(fqdd, physical_disk_size_gb))
+
+    if os_volume_size_gb is not None:
+        # If os_volume_size_gb was specified then just blindly use that
+        raid_size_gb = os_volume_size_gb
+        volume_type = "volume"
+    else:
+        # If we didn't find a disk the same size as the located RAID, then use
+        # the size of the RAID set above
+        volume_type = RAID_TYPE_TO_DESCRIPTION[raid_type]
+
+    # Set the root_device property in ironic to the volume size in gigs
+    LOG.info(
+        "Setting the OS volume for this node to the {} with size "
+        "{} GB".format(volume_type, raid_size_gb))
+    patch = [{'op': 'add',
+              'value': {"size": raid_size_gb},
+              'path': '/properties/root_device'}]
+    ironic_client.node.update(node_uuid, patch)
 
 
 def configure_bios(node, ironic_client, settings, drac_client):
@@ -1223,6 +1242,7 @@ def main():
                     ironic_client,
                     node.uuid,
                     args.role_index.role,
+                    args.os_volume_size_gb,
                     drac_client)
 
                 if not succeeded:
@@ -1241,6 +1261,7 @@ def main():
             args.ip_mac_service_tag,
             node.uuid,
             args.role_index,
+            args.os_volume_size_gb,
             ironic_client,
             drac_client)
 

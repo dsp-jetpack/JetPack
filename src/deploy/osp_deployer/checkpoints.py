@@ -34,6 +34,7 @@ class Checkpoints():
     def verify_deployer_settings(verify_network_connectivity=True):
         logger.info("==== Running environment sanity tests")
         checks = DeployerSanity()
+        checks.check_os_volume_size()
         checks.check_network_settings()
         checks.check_files()
         if verify_network_connectivity:
