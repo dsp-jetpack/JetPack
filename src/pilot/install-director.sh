@@ -148,7 +148,32 @@ echo
 images_tar_path='.'
 if [ ! -d $HOME/pilot/images ];
 then
-  sudo yum install rhosp-director-images rhosp-director-images-ipa -y
+  sudo yum install rhosp-director-images-ipa -y
+
+  # It's not uncommon to get connection reset errors when installing this 1.2G
+  # RPM.  Keep retrying to complete the download
+  echo "Downloading and installing rhosp-director-image"
+  while :
+  do
+    yum_out=$(sudo yum install rhosp-director-images -y 2>&1)
+    yum_rc=$?
+    echo $yum_out
+    if [ $yum_rc -eq 1 ]
+    then
+        if [[ $yum_out == *"TCP connection reset by peer"* ]];
+        then
+          echo "Got a TCP connection reset.  Retrying..."
+          continue
+        else
+          echo "Failed to download and install rhosp-director-image"
+          exit 1
+        fi
+    else
+      echo "Successfully downloaded and installed rhosp-director-image"
+      break
+    fi
+  done
+
   mkdir $HOME/pilot/images
   images_tar_path='/usr/share/rhosp-director-images'
 fi
