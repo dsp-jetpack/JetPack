@@ -796,7 +796,7 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
     LOG.info("Completed application of the new RAID configuration")
 
     # Return the ironic node to the available state.
-    place_node_in_available_state(ironic_client, node_uuid):
+    place_node_in_available_state(ironic_client, node_uuid)
 
     LOG.info("Completed RAID configuration")
 
