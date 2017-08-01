@@ -374,6 +374,8 @@ def scan_one(scan_info):
     pm_password = scan_info.password
     pm_type = OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IDRAC
     pm_user = scan_info.user_name
+    model = ''
+    service_tag = ''
 
     try:
         # Determine if the IP address is a WS-Man endpoint and an iDRAC.
