@@ -1,0 +1,12 @@
+--- /usr/lib/python2.7/site-packages/dracclient/resources/job.py	2017-03-01 16:12:40.000000000 +0000
++++ /home/stack/job.py	2017-07-31 21:10:45.626150568 +0000
+@@ -70,7 +70,8 @@
+                             'JobStatus != "Reboot Completed" and '
+                             'JobStatus != "Completed" and '
+                             'JobStatus != "Completed with Errors" and '
+-                            'JobStatus != "Failed"')
++                            'JobStatus != "Failed" and '
++                            'JobStatus != "Reboot Failed"')
+ 
+         doc = self.client.enumerate(uris.DCIM_LifecycleJob,
+                                     filter_query=filter_query)
