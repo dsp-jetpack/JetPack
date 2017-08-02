@@ -675,7 +675,7 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
     should uncover interesting error conditions.'''
 
     if get_raid_controller_id(drac_client) is None:
-        LOG.info("No RAID controller is present.  Skipping RAID configuration")
+        LOG.warning("No RAID controller is present.  Skipping RAID configuration")
         return True
 
     LOG.info("Configuring RAID")
@@ -741,6 +741,8 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
     # the disks to JBOD mode, and call it good since we don't know what RAID
     # config to apply.
     if os_volume_size_gb is not None:
+        # Return the ironic node to the available state.
+        place_node_in_available_state(ironic_client, node_uuid)
         return True
 
     target_raid_config = define_target_raid_config(
@@ -794,8 +796,8 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
     LOG.info("Completed application of the new RAID configuration")
 
     # Return the ironic node to the available state.
-    ironic_client.node.set_provision_state(node_uuid, 'provide')
-    ironic_client.node.wait_for_provision_state(node_uuid, 'available')
+    place_node_in_available_state(ironic_client, node_uuid)
+
     LOG.info("Completed RAID configuration")
 
     return True
@@ -810,6 +812,10 @@ def place_node_in_manageable_state(ironic_client, node_uuid):
 
     return True
 
+def place_node_in_available_state(ironic_client, node_uuid):
+    # Return the ironic node to the available state.
+    ironic_client.node.set_provision_state(node_uuid, 'provide')
+    ironic_client.node.wait_for_provision_state(node_uuid, 'available')
 
 def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
                 ironic_client, drac_client):
@@ -860,6 +866,7 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
         # Look for a RAID of any type other than RAID0 and assume we want to
         # install the OS on that volume.  The first non-RAID0 found will be
         # used.
+        raid_size_gb = 0
         for virtual_disk_doc in virtual_disk_docs:
             fqdd = get_fqdd(virtual_disk_doc, DCIM_VirtualDiskView)
             raid_type = utils.find_xml(virtual_disk_doc, 'RAIDTypes',
@@ -889,6 +896,11 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                         "\n  ".join(raid_physical_disk_ids)))
 
                 break
+
+        if raid_size_gb == 0:
+            raise RuntimeError("There must be either a virtual disk that is "
+                               "not a RAID 0 to install the OS on, or "
+                               "os-volume-size-gb must be specified")
 
         # Now check to see if we have any physical disks that don't back
         # the RAID that are the same size as the RAID
