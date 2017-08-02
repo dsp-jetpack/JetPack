@@ -266,6 +266,14 @@ sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
 echo "## Done."
 
+# This hacks in a patch to work around a known issue where waiting for job
+# completion will never return if a failed reboot job is present.
+echo
+echo "## Patching Ironic iDRAC driver job library..."
+OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/job.py ~/pilot/job.patch)
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
+
 # This hacks in a patch to work around an issue where lock contention on the
 # nodes in ironic can occur during RAID cleaning.
 echo

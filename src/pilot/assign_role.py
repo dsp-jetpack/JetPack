@@ -861,6 +861,8 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                                            DCIM_VirtualDiskView,
                                            True)
 
+        raid_physical_disk_ids = []
+
         # Look for a RAID of any type other than RAID0 and assume we want to
         # install the OS on that volume.  The first non-RAID0 found will be
         # used.
@@ -881,7 +883,6 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                                                          'PhysicalDiskIDs',
                                                          DCIM_VirtualDiskView,
                                                          True)
-                raid_physical_disk_ids = []
                 for raid_physical_disk_doc in raid_physical_disk_docs:
                     raid_physical_disk_id = raid_physical_disk_doc.text
                     raid_physical_disk_ids.append(raid_physical_disk_id)
