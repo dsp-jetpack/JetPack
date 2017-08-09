@@ -17,7 +17,7 @@ from osp_deployer.settings.config import Settings
 from osp_deployer.settings_sanity import DeployerSanity
 import time
 import logging
-import subprocessvali
+import subprocess
 logger = logging.getLogger("osp_deployer")
 
 
