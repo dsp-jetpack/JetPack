@@ -319,7 +319,7 @@ done
 systemctl enable ntpd
 sed -i -e "/^server /d" /etc/ntp.conf
 
-for ntps in ${NTPServers//,/ }
+for ntps in ${NTPServers//;/ }
 do
   echo "server ${ntps}" >> /etc/ntp.conf
 done

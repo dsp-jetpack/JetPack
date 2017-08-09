@@ -167,6 +167,16 @@ class Sah(InfraHost):
                                       'br_priv_api_boot_opts="onboot static ' +
                                       sets.sah_node.private_api_ip + '/' +
                                       sets.private_api_netmask + '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^prov_network=.*',
+                                      'prov_network="' +
+                                      sets.provisioning_network.split("/")[0] +
+                                      '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^prov_netmask=.*',
+                                      'prov_netmask="' +
+                                      sets.provisioning_netmask +
+                                      '"')
         time.sleep(3)
         if self.settings.is_fx is True:
             cmds = ["sed -i 's/{AnacondaIface_device}/{" +
