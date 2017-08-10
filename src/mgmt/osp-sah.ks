@@ -329,7 +329,6 @@ done
 
 echo "restrict ${NTPSettings} nomodify notrap" >> /etc/ntp.conf
 echo "server  127.127.1.0 # local clock" >> /etc/ntp.conf
-echo "server  127.127.1.0 # local clock" >> /etc/ntp.conf
 
 
 ********************
