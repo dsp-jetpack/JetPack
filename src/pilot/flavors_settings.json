@@ -34,6 +34,7 @@
       "ProcHwPrefetcher": "Enabled",
       "ProcVirtualization": "Disabled",
       "QpiSpeed": "MaxDataRate",
+      "CpuInterconnectBusSpeed": "MaxDataRate",
       "RtidSetting": "Disabled",
       "SriovGlobalEnable": "Enabled",
       "SysProfile": "PerfOptimized"
