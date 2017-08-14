@@ -167,6 +167,16 @@ class Sah(InfraHost):
                                       'br_priv_api_boot_opts="onboot static ' +
                                       sets.sah_node.private_api_ip + '/' +
                                       sets.private_api_netmask + '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^prov_network=.*',
+                                      'prov_network="' +
+                                      sets.provisioning_network.split("/")[0] +
+                                      '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^prov_netmask=.*',
+                                      'prov_netmask="' +
+                                      sets.provisioning_netmask +
+                                      '"')
         time.sleep(3)
         if self.settings.is_fx is True:
             cmds = ["sed -i 's/{AnacondaIface_device}/{" +
@@ -223,7 +233,7 @@ class Sah(InfraHost):
                 self.settings.domain,
                 "gateway " + self.settings.public_api_gateway,
                 "nameserver " + self.settings.name_server,
-                "ntpserver " + self.settings.ntp_server,
+                "ntpserver " + self.settings.sah_node.provisioning_ip,
                 "user " + self.settings.director_install_account_user,
                 "password " + self.settings.director_install_account_pwd,
                 "# Iface     IP               NETMASK    ",)
@@ -292,7 +302,7 @@ class Sah(InfraHost):
                 self.settings.domain,
                 "gateway " + self.settings.public_api_gateway,
                 "nameserver " + self.settings.name_server,
-                "ntpserver " + self.settings.ntp_server,
+                "ntpserver " + self.settings.sah_node.provisioning_ip,
                 "# Iface     IP               NETMASK    ",)
         conf = conf + ("eth0        " +
                        self.settings.rhscon_node.public_api_ip +
