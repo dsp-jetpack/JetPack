@@ -319,20 +319,14 @@ done
 systemctl enable ntpd
 sed -i -e "/^server /d" /etc/ntp.conf
 
-for ntps in ${NTPServers//;/ }
+for ntps in ${NTPServers//,/ }
 do
   echo "server ${ntps}" >> /etc/ntp.conf
 done
 
-********************
-
 
 echo "restrict ${NTPSettings} nomodify notrap" >> /etc/ntp.conf
 echo "server  127.127.1.0 # local clock" >> /etc/ntp.conf
-
-
-********************
-
 
 
 # Configure Bonding and VLANS
