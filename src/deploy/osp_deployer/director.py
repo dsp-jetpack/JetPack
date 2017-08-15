@@ -1154,6 +1154,13 @@ class Director(InfraHost):
                 self.run_tty(self.source_stackrc +
                              "ironic node-set-maintenance " +
                              node_id + " true")
+            if "clean failed" in node_state:
+                self.run_tty(self.source_stackrc +
+                             "ironic node-set-maintenance " +
+                             node_id + " False")
+                self.run_tty(self.source_stackrc +
+                             "ironic node-set-provision-state " +
+                             node_id + " manage")
             self.run_tty(self.source_stackrc +
                          "ironic node-delete " +
                          node_id)
