@@ -1,23 +1,54 @@
 --- /usr/lib/python2.7/site-packages/dracclient/wsman.py	2017-03-01 16:12:40.000000000 +0000
-+++ wsman.py	2017-07-06 15:01:45.028736752 +0000
-@@ -15,7 +15,6 @@
++++ wsman.py	2017-08-17 14:04:19.083379441 +0000
+@@ -12,12 +12,13 @@
+ #    under the License.
+ 
+ import logging
++import time
  import uuid
  
  from lxml import etree as ElementTree
 -import requests
  import requests.exceptions
  
++from dracclient import constants
  from dracclient import exceptions
-@@ -36,6 +35,8 @@
- FILTER_DIALECT_MAP = {'cql': 'http://schemas.dmtf.org/wbem/cql/1/dsp0202.pdf',
-                       'wql': 'http://schemas.microsoft.com/wbem/wsman/1/WQL'}
  
-+RETRIES = 3
-+
- 
- class Client(object):
+ LOG = logging.getLogger(__name__)
+@@ -41,13 +42,31 @@
      """Simple client for talking over WSMan protocol."""
-@@ -58,16 +59,36 @@
+ 
+     def __init__(self, host, username, password, port=443, path='/wsman',
+-                 protocol='https'):
++                 protocol='https',
++                 ssl_retries=constants.DEFAULT_WSMAN_SSL_ERROR_RETRIES,
++                 ssl_retry_delay=(
++                     constants.DEFAULT_WSMAN_SSL_ERROR_RETRY_DELAY_SEC)):
++        """Creates client object
++
++        :param host: hostname or IP of the DRAC interface
++        :param username: username for accessing the DRAC interface
++        :param password: password for accessing the DRAC interface
++        :param port: port for accessing the DRAC interface
++        :param path: path for accessing the DRAC interface
++        :param protocol: protocol for accessing the DRAC interface
++        :param ssl_retries: number of resends to attempt on SSL failures
++        :param ssl_retry_delay: number of seconds to wait between
++                                retries on SSL failures
++        """
++
+         self.host = host
+         self.username = username
+         self.password = password
+         self.port = port
+         self.path = path
+         self.protocol = protocol
++        self.ssl_retries = ssl_retries
++        self.ssl_retry_delay = ssl_retry_delay
+         self.endpoint = ('%(protocol)s://%(host)s:%(port)s%(path)s' % {
+             'protocol': self.protocol,
+             'host': self.host,
+@@ -58,16 +77,52 @@
          payload = payload.build()
          LOG.debug('Sending request to %(endpoint)s: %(payload)s',
                    {'endpoint': self.endpoint, 'payload': payload})
@@ -32,8 +63,8 @@
 -            LOG.exception('Request failed')
 -            raise exceptions.WSManRequestFailure()
 +
-+        retries = 1
-+        while retries <= RETRIES:
++        num_tries = 1
++        while num_tries <= self.ssl_retries:
 +            try:
 +                resp = requests.post(
 +                    self.endpoint,
@@ -45,22 +76,38 @@
 +                break
 +            except (requests.exceptions.ConnectionError,
 +                    requests.exceptions.SSLError) as ex:
-+                LOG.warn("A {} error occurred while communicating"
-+                         " with {}, attempt {} of {}".format(
-+                             type(ex).__name__,
-+                             self.host,
-+                             retries,
-+                             RETRIES))
 +
-+                if retries == RETRIES:
-+                    LOG.exception('Request failed')
-+                    raise exceptions.WSManRequestFailure()
++                error_msg = "A {error_type} error occurred while " \
++                    " communicating with {host}, attempt {num_tries} of " \
++                    "{retries}".format(
++                        error_type=type(ex).__name__,
++                        host=self.host,
++                        num_tries=num_tries,
++                        retries=self.ssl_retries)
 +
-+                retries += 1
++                if num_tries == self.ssl_retries:
++                    LOG.error(error_msg)
++                    raise exceptions.WSManRequestFailure(
++                        "A {error_type} error occurred while communicating "
++                        "with {host}: {error}".format(
++                            error_type=type(ex).__name__,
++                            host=self.host,
++                            error=ex))
++                else:
++                    LOG.warning(error_msg)
 +
-+            except requests.exceptions.RequestException:
-+                LOG.exception('Request failed')
-+                raise exceptions.WSManRequestFailure()
++                num_tries += 1
++                if self.ssl_retry_delay > 0 and num_tries <= self.ssl_retries:
++                    time.sleep(self.ssl_retry_delay)
++
++            except requests.exceptions.RequestException as ex:
++                error_msg = "A {error_type} error occurred while " \
++                    "communicating with {host}: {error}".format(
++                        error_type=type(ex).__name__,
++                        host=self.host,
++                        error=ex)
++                LOG.error(error_msg)
++                raise exceptions.WSManRequestFailure(error_msg)
  
          LOG.debug('Received response from %(endpoint)s: %(payload)s',
                    {'endpoint': self.endpoint, 'payload': resp.content})
