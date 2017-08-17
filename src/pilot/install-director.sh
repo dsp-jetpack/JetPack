@@ -96,6 +96,18 @@ create_flavor()
   fi
 }
 
+apply_patch(){
+  cmd="$1"
+
+  echo "Executing: $cmd"
+
+  $cmd
+  if [ $? -ne 0 ]; then
+    echo "patch failed"
+    exit 1
+  fi
+}
+
 cd
 
 if [ ! -z $proxy ];
@@ -230,7 +242,7 @@ echo "## Done."
 # to deploying the director.
 echo
 echo "## Patching Ironic iDRAC driver WSMAN library..."
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ~/pilot/wsman.patch)
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
 echo "## Done." 
@@ -241,16 +253,16 @@ echo "## Done."
 # deploying the director.
 echo
 echo "## Patching Ironic iDRAC driver is_ready check..."
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.py ~/pilot/lifecycle_controller.patch)
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.py ${HOME}/pilot/lifecycle_controller.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyo
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/uris.py ~/pilot/uris.patch)
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/uris.py ${HOME}/pilot/uris.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyo
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ~/pilot/client.patch)
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ~/pilot/raid.patch)
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
 echo "## Done."
@@ -261,7 +273,7 @@ echo "## Done."
 # director.
 echo
 echo "## Patching Ironic iDRAC driver RAID library..."
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ~/pilot/dracclient_raid.patch)
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
 echo "## Done."
@@ -270,7 +282,7 @@ echo "## Done."
 # completion will never return if a failed reboot job is present.
 echo
 echo "## Patching Ironic iDRAC driver job library..."
-OUT=$(sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/job.py ~/pilot/job.patch)
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/job.py ${HOME}/pilot/job.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
 
@@ -278,7 +290,7 @@ sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
 # nodes in ironic can occur during RAID cleaning.
 echo
 echo "## Patching ironic.conf for locking..."
-sudo sed -i 's/#node_locked_retry_attempts = 3/node_locked_retry_attempts = 15/' /etc/ironic/ironic.conf
+apply_patch "sudo patch -b -s /etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
 echo "## Done."
 
 echo
@@ -291,7 +303,7 @@ echo "## Done."
 # We will need to remove this after the fix appears in OSP10.
 echo
 echo "## Patching Ironic in-band introspection..."
-sudo sed -i 's/initrd=agent.ramdisk /initrd=agent.ramdisk net.ifnames=0 biosdevname=0 /' /httpboot/inspector.ipxe
+apply_patch "sudo patch -b -s /httpboot/inspector.ipxe ${HOME}/pilot/inspector.patch"
 echo "## Done."
 
 network="ctlplane"
