@@ -149,7 +149,7 @@ class Director(InfraHost):
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
             raise AssertionError("Director/Undercloud did not install properly " +
-                                 "- see check /pilot/install-director.log for details")
+                                 "- see /pilot/install-director.log for details")
 
         tester = Checkpoints()
         tester.verify_undercloud_installed()
