@@ -1392,15 +1392,16 @@ class Director(InfraHost):
             logger.info("NOT running sanity test")
             pass
 
-    def run_tempest(self):
-        logger.debug("running tempest")
+    def configure_tempest(self):
+        logger.debug("configuring tempest")
         setts = self.settings
         cmds = [
             'source ~/' + self.settings.overcloud_name + 'rc;'
             "sudo ip route add `openstack subnet list | " +
             "grep external_sub | awk '{print $8;}'` dev eth0",
             'source ~/' + self.settings.overcloud_name + 'rc;'
-            'openstack role create heat_stack_owner',
+            'openstack role create heat_stack_owner;'
+            'openstack role create swiftoperator',
             "source ~/" + self.settings.overcloud_name + "rc;mkdir -p /home/" +
             setts.director_install_account_user +
             "/tempest",
@@ -1418,12 +1419,19 @@ class Director(InfraHost):
             'identity.admin_username $OS_USERNAME '
             'identity.admin_password $OS_PASSWORD '
             'identity.admin_tenant_name $OS_PROJECT_NAME',
-            'source ~/' + self.settings.overcloud_name + 'rc;cd '
-            '~/tempest;'
-            'tempest cleanup --init-saved-state'
             ]
         for cmd in cmds:
             self.run_tty(cmd)
+
+    def run_tempest(self):
+        logger.debug("running tempest")
+        setts = self.settings
+        cmd = 'source ~/' + self.settings.overcloud_name + 'rc;cd ' + \
+            '~/tempest;' + \
+            'tempest cleanup --init-saved-state'
+
+        self.run_tty(cmd)
+
         if setts.tempest_smoke_only is True:
             cmd = "source ~/" + self.settings.overcloud_name + "rc;cd " \
                   "~/tempest;tools/run-tests.sh  '.*smoke' --concurrency=4"
