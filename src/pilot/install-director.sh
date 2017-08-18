@@ -303,7 +303,7 @@ echo "## Done."
 # We will need to remove this after the fix appears in OSP10.
 echo
 echo "## Patching Ironic in-band introspection..."
-apply_patch "sudo patch -b -s /httpboot/inspector.ipxe ${HOME}/pilot/inspector.patch"
+sudo sed -i 's/initrd=agent.ramdisk /initrd=agent.ramdisk net.ifnames=0 biosdevname=0 /' /httpboot/inspector.ipxe
 echo "## Done."
 
 network="ctlplane"
