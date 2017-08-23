@@ -288,7 +288,7 @@ class NetworkValidation(object):
                         cmd = ["ssh",
                                "{}@{}".format(source_node.user,
                                               source_node.ip),
-                               "ping -c 1 -w 2 {}".format(destination_ip)]
+                               "sudo ping -c 1 -w 2 {}".format(destination_ip)]
                         process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
                         stdout = process.stdout.read()
                         match = re.search("64 bytes from {0}: icmp_.eq=\d+ "
