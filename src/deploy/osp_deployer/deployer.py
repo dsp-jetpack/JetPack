@@ -242,7 +242,9 @@ def deploy():
             director_vm.configure_rhscon()
         director_vm.enable_fencing()
         director_vm.enable_instance_ha()
+        director_vm.configure_tempest()
         director_vm.run_sanity_test()
+        run_tempest()
         logger.info("Deployment summary info; useful ip's etc.. " +
                     "/auto_results/deployment_summary.log")
 
@@ -260,4 +262,3 @@ def deploy():
 if __name__ == "__main__":
     setup_logging()
     deploy()
-    run_tempest()
