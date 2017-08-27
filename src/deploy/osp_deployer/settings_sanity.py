@@ -30,13 +30,20 @@ class DeployerSanity():
 
     @staticmethod
     def is_valid_ip(address):
+        valid = True
+        octets = address.split('.')
+        if len(octets) != 4:
+            valid = False
         try:
-            socket.inet_aton(address)
-            ip = True
-        except socket.error:
-            ip = False
+            for octet in octets:
+                octet_num = int(octet)
+                if octet_num < 0 or octet_num > 255:
+                    valid = False
+                    break
+        except ValueError:
+            valid = False
 
-        return ip
+        return valid
 
     def check_files(self):
 
@@ -45,7 +52,7 @@ class DeployerSanity():
             'public_api_gateway',
             'public_api_netmask', 'public_api_allocation_pool_start',
             'public_api_allocation_pool_end',
-            'private_api_vlanid', 'private_api_netmask',
+            'private_api_netmask',
             'private_api_allocation_pool_start',
             'private_api_allocation_pool_end',
             'storage_netmask', 'storage_allocation_pool_start',
