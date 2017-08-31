@@ -272,10 +272,18 @@ class Sah(InfraHost):
                 time.sleep(60)
             logger.debug("=== power on the director VM ")
             self.run("virsh start director")
-        while "root" not in \
-                self.run("whoami")[0]:
-            time.sleep(30)
+        logger.debug("=== waiting for the director vm to boot up")
+        self.wait_for_vm_to_come_up(self.settings.director_node.public_api_ip)
         logger.debug("director host is up")
+
+    def wait_for_vm_to_come_up(self, ping_target):
+        while True:
+            _, _, return_code = self.run("ping " + ping_target + " -c 1 -w 30")
+            if not return_code:
+                break
+
+            logger.debug("vm is not up.  Sleeping...")
+            time.sleep(5)
 
     def delete_director_vm(self):
         while "director" in \
@@ -332,9 +340,8 @@ class Sah(InfraHost):
                 time.sleep(60)
             logger.debug("=== power on the Storage Console VM ")
             self.run("virsh start rhscon")
-        while "root" not in \
-                self.run("whoami")[0]:
-            time.sleep(40)
+        logger.debug("=== waiting for the Storage Console vm to boot up")
+        self.wait_for_vm_to_come_up(self.settings.rhscon_node.public_api_ip)
         logger.debug("Storage Console VM is up")
 
     def delete_rhscon_vm(self):
