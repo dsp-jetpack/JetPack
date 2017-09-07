@@ -1,195 +1,34 @@
---- /usr/lib/python2.7/site-packages/dracclient/client.py.orig	2017-03-01 16:12:40.000000000 +0000
-+++ client.py	2017-08-17 15:13:10.235146050 +0000
-@@ -16,7 +16,9 @@
- """
- 
- import logging
-+import time
- 
-+from dracclient import constants
- from dracclient import exceptions
- from dracclient.resources import bios
- from dracclient.resources import idrac_card
-@@ -28,6 +30,8 @@
- from dracclient import utils
- from dracclient import wsman
- 
-+IDRAC_IS_READY = "LC061"
-+
- LOG = logging.getLogger(__name__)
- 
- 
-@@ -36,8 +40,14 @@
- 
-     BIOS_DEVICE_FQDD = 'BIOS.Setup.1-1'
- 
--    def __init__(self, host, username, password, port=443, path='/wsman',
--                 protocol='https'):
-+    def __init__(
-+            self, host, username, password, port=443, path='/wsman',
-+            protocol='https',
-+            ssl_retries=constants.DEFAULT_WSMAN_SSL_ERROR_RETRIES,
-+            ssl_retry_delay=constants.DEFAULT_WSMAN_SSL_ERROR_RETRY_DELAY_SEC,
-+            ready_retries=constants.DEFAULT_IDRAC_IS_READY_RETRIES,
-+            ready_retry_delay=(
-+                constants.DEFAULT_IDRAC_IS_READY_RETRY_DELAY_SEC)):
-         """Creates client object
- 
-         :param host: hostname or IP of the DRAC interface
-@@ -46,9 +56,17 @@
-         :param port: port for accessing the DRAC interface
-         :param path: path for accessing the DRAC interface
-         :param protocol: protocol for accessing the DRAC interface
-+        :param ssl_retries: number of resends to attempt on SSL failures
-+        :param ssl_retry_delay: number of seconds to wait between
-+                                retries on SSL failures
-+        :param ready_retries: number of times to check if the iDRAC is
-+                              ready
-+        :param ready_retry_delay: number of seconds to wait between
-+                                  checks if the iDRAC is ready
+--- client.py	2017-09-07 16:30:19.177633538 +0000
++++ client.py.final	2017-09-07 17:04:43.248499027 +0000
+@@ -626,15 +626,14 @@
+         :raises: WSManInvalidResponse when receiving invalid response
          """
-         self.client = WSManClient(host, username, password, port, path,
--                                  protocol)
-+                                  protocol, ssl_retries, ssl_retry_delay,
-+                                  ready_retries, ready_retry_delay)
-         self._job_mgmt = job.JobManagement(self.client)
-         self._power_mgmt = bios.PowerManagement(self.client)
-         self._boot_mgmt = bios.BootManagement(self.client)
-@@ -496,12 +514,111 @@
- 
-         return self._inventory_mgmt.list_nics()
- 
-+    def is_idrac_ready(self):
-+        """Indicates if the iDRAC is ready to accept commands
-+
-+           Returns a boolean indicating if the iDRAC is ready to accept
-+           commands.
-+
-+        :returns: Boolean indicating iDRAC readiness
-+        :raises: WSManRequestFailure on request failures
-+        :raises: WSManInvalidResponse when receiving invalid response
-+        :raises: DRACOperationFailed on error reported back by the DRAC
-+                 interface
-+        :raises: DRACUnexpectedReturnValue on return value mismatch
-+        """
-+
-+        return self.client.is_idrac_ready()
-+
-+    def wait_until_idrac_is_ready(self, retries=None, retry_delay=None):
-+        """Waits until the iDRAC is in a ready state
-+
-+        :param retries: The number of times to check if the iDRAC is
-+                        ready. If None, the value of ready_retries that
-+                        was provided when the object was created is
-+                        used.
-+        :param retry_delay: The number of seconds to wait between
-+                            retries. If None, the value of
-+                            ready_retry_delay that was provided
-+                            when the object was created is used.
-+        :raises: WSManRequestFailure on request failures
-+        :raises: WSManInvalidResponse when receiving invalid response
-+        :raises: DRACOperationFailed on error reported back by the DRAC
-+                 interface or timeout
-+        :raises: DRACUnexpectedReturnValue on return value mismatch
-+        """
-+
-+        return self.client.wait_until_idrac_is_ready(retries, retry_delay)
-+
- 
- class WSManClient(wsman.Client):
--    """Wrapper for wsman.Client with return value checking"""
-+    """Wrapper for wsman.Client that can wait until iDRAC is ready
-+
-+       Additionally, the Invoke operation offers return value checking.
-+    """
-+
-+    def __init__(
-+            self, host, username, password, port=443, path='/wsman',
-+            protocol='https',
-+            ssl_retries=constants.DEFAULT_WSMAN_SSL_ERROR_RETRIES,
-+            ssl_retry_delay=constants.DEFAULT_WSMAN_SSL_ERROR_RETRY_DELAY_SEC,
-+            ready_retries=constants.DEFAULT_IDRAC_IS_READY_RETRIES,
-+            ready_retry_delay=(
-+                constants.DEFAULT_IDRAC_IS_READY_RETRY_DELAY_SEC)):
-+        """Creates client object
-+
-+        :param host: hostname or IP of the DRAC interface
-+        :param username: username for accessing the DRAC interface
-+        :param password: password for accessing the DRAC interface
-+        :param port: port for accessing the DRAC interface
-+        :param path: path for accessing the DRAC interface
-+        :param protocol: protocol for accessing the DRAC interface
-+        :param ssl_retries: number of resends to attempt on SSL failures
-+        :param ssl_retry_delay: number of seconds to wait between
-+                                retries on SSL failures
-+        :param ready_retries: number of times to check if the iDRAC is
-+                              ready
-+        :param ready_retry_delay: number of seconds to wait between
-+                                  checks if the iDRAC is ready
-+        """
-+        super(WSManClient, self).__init__(host, username, password,
-+                                          port, path, protocol, ssl_retries,
-+                                          ssl_retry_delay)
-+
-+        self._ready_retries = ready_retries
-+        self._ready_retry_delay = ready_retry_delay
-+
-+    def enumerate(self, resource_uri, optimization=True, max_elems=100,
-+                  auto_pull=True, filter_query=None, filter_dialect='cql',
-+                  wait_for_idrac=True):
-+        """Executes enumerate operation over WS-Man
-+
-+        :param resource_uri: URI of resource to enumerate
-+        :param optimization: flag to enable enumeration optimization. If
-+                             disabled, the enumeration returns only an
-+                             enumeration context.
-+        :param max_elems: maximum number of elements returned by the operation
-+        :param auto_pull: flag to enable automatic pull on the enumeration
-+                          context, merging the items returned
-+        :param filter_query: filter query string
-+        :param filter_dialect: filter dialect. Valid options are: 'cql' and
-+                               'wql'.
-+        :param wait_for_idrac: indicates whether or not to wait for the
-+            iDRAC to be ready to accept commands before issuing the
-+            command
-+        :returns: an lxml.etree.Element object of the response received
-+        :raises: WSManRequestFailure on request failures
-+        :raises: WSManInvalidResponse when receiving invalid response
-+        """
-+        if wait_for_idrac:
+         if wait_for_idrac:
+-            self.wait_until_idrac_is_ready(self._ready_retries,
+-                                           self._ready_retry_delay)
 +            self.wait_until_idrac_is_ready()
-+
-+        return super(WSManClient, self).enumerate(resource_uri, optimization,
-+                                                  max_elems, auto_pull,
-+                                                  filter_query, filter_dialect)
+ 
+         return super(WSManClient, self).enumerate(resource_uri, optimization,
+                                                   max_elems, auto_pull,
+                                                   filter_query, filter_dialect)
  
      def invoke(self, resource_uri, method, selectors=None, properties=None,
--               expected_return_value=None):
+-               expected_return_value=None, wait_for_idrac=True):
 +               expected_return_value=None, check_return_value=True, wait_for_idrac=True):
          """Invokes a remote WS-Man method
  
          :param resource_uri: URI of the resource
-@@ -512,6 +629,9 @@
-             the DRAC card. For return value codes check the profile
-             documentation of the resource used in the method call. If not set,
-             return value checking is skipped.
-+        :param wait_for_idrac: indicates whether or not to wait for the
-+            iDRAC to be ready to accept commands before issuing the
-+            command
-         :returns: an lxml.etree.Element object of the response received
-         :raises: WSManRequestFailure on request failures
-         :raises: WSManInvalidResponse when receiving invalid response
-@@ -519,6 +639,9 @@
-                  interface
+@@ -656,8 +655,7 @@
          :raises: DRACUnexpectedReturnValue on return value mismatch
          """
-+        if wait_for_idrac:
+         if wait_for_idrac:
+-            self.wait_until_idrac_is_ready(self._ready_retries,
+-                                           self._ready_retry_delay)
 +            self.wait_until_idrac_is_ready()
-+
+ 
          if selectors is None:
              selectors = {}
- 
-@@ -528,16 +651,91 @@
+@@ -668,17 +666,18 @@
          resp = super(WSManClient, self).invoke(resource_uri, method, selectors,
                                                 properties)
  
@@ -218,77 +57,4 @@
 +                    actual_return_value=return_value)
  
          return resp
-+
-+    def is_idrac_ready(self):
-+        """Indicates if the iDRAC is ready to accept commands
-+
-+           Returns a boolean indicating if the iDRAC is ready to accept
-+           commands.
-+
-+        :returns: Boolean indicating iDRAC readiness
-+        :raises: WSManRequestFailure on request failures
-+        :raises: WSManInvalidResponse when receiving invalid response
-+        :raises: DRACOperationFailed on error reported back by the DRAC
-+                 interface
-+        :raises: DRACUnexpectedReturnValue on return value mismatch
-+        """
-+
-+        selectors = {'SystemCreationClassName': 'DCIM_ComputerSystem',
-+                     'SystemName': 'DCIM:ComputerSystem',
-+                     'CreationClassName': 'DCIM_LCService',
-+                     'Name': 'DCIM:LCService'}
-+
-+        result = self.invoke(uris.DCIM_LCService,
-+                             'GetRemoteServicesAPIStatus',
-+                             selectors,
-+                             {},
-+                             expected_return_value=utils.RET_SUCCESS,
-+                             wait_for_idrac=False)
-+
-+        message_id = utils.find_xml(result,
-+                                    'MessageID',
-+                                    uris.DCIM_LCService).text
-+
-+        return message_id == IDRAC_IS_READY
-+
-+    def wait_until_idrac_is_ready(self, retries=None, retry_delay=None):
-+        """Waits until the iDRAC is in a ready state
-+
-+        :param retries: The number of times to check if the iDRAC is
-+                        ready. If None, the value of ready_retries that
-+                        was provided when the object was created is
-+                        used.
-+        :param retry_delay: The number of seconds to wait between
-+                            retries. If None, the value of
-+                            ready_retry_delay that was provided when the
-+                            object was created is used.
-+        :raises: WSManRequestFailure on request failures
-+        :raises: WSManInvalidResponse when receiving invalid response
-+        :raises: DRACOperationFailed on error reported back by the DRAC
-+                 interface or timeout
-+        :raises: DRACUnexpectedReturnValue on return value mismatch
-+        """
-+
-+        if retries is None:
-+            retries = self._ready_retries
-+
-+        if retry_delay is None:
-+            retry_delay = self._ready_retry_delay
-+
-+        # Try every 10 seconds over 4 minutes for the iDRAC to become ready
-+        while retries > 0:
-+            LOG.debug("Checking to see if the iDRAC is ready")
-+
-+            if self.is_idrac_ready():
-+                LOG.debug("The iDRAC is ready")
-+                return
-+
-+            LOG.debug("The iDRAC is not ready")
-+            retries -= 1
-+            if retries > 0:
-+                time.sleep(retry_delay)
-+
-+        if retries == 0:
-+            err_msg = "Timed out waiting for the iDRAC to become ready"
-+            LOG.error(err_msg)
-+            raise exceptions.DRACOperationFailed(drac_messages=err_msg)
+ 
