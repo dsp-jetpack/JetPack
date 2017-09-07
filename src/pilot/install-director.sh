@@ -248,9 +248,6 @@ sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyo
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/constants.py ${HOME}/pilot/constants.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyo
 echo "## Done."
 
 # This hacks in a patch to work around a known issue where a RAID-10 virtual
