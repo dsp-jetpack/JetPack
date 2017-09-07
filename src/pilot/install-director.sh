@@ -242,9 +242,6 @@ echo "## Done."
 # deploying the director.
 echo
 echo "## Patching Ironic iDRAC driver is_ready check..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/uris.py ${HOME}/pilot/uris.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyo
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
