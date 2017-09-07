@@ -236,17 +236,6 @@ echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
-# This hacks in a patch to fix correct querying WSMAN Enumerations that have
-# more than 100 entries.  We will need to remove this after the fix appears
-# in OSP10.  Note that this patch must be here because we use this code prior
-# to deploying the director.
-echo
-echo "## Patching Ironic iDRAC driver WSMAN library..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
-echo "## Done." 
-
 # This hacks in a patch to work around a known issue where RAID configuration
 # fails because the iDRAC is busy running an export to XML job and is not
 # ready. Note that this patch must be here because we use this code prior to
