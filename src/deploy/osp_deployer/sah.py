@@ -16,7 +16,7 @@
 
 from osp_deployer.settings.config import Settings
 from infra_host import InfraHost
-from auto_common import Scp, FileHelper
+from auto_common import Scp, Ssh, FileHelper
 import logging
 import time
 import shutil
@@ -273,17 +273,24 @@ class Sah(InfraHost):
             logger.debug("=== power on the director VM ")
             self.run("virsh start director")
         logger.debug("=== waiting for the director vm to boot up")
-        self.wait_for_vm_to_come_up(self.settings.director_node.public_api_ip)
+        self.wait_for_vm_to_come_up(self.settings.director_node.public_api_ip,
+                                    "root",
+                                    self.settings.director_node.root_password)
         logger.debug("director host is up")
 
-    def wait_for_vm_to_come_up(self, ping_target):
+    def wait_for_vm_to_come_up(self, target_ip, user, password):
         while True:
-            _, _, return_code = self.run("ping " + ping_target + " -c 1 -w 30")
-            if not return_code:
+            status = Ssh.execute_command(
+                target_ip,
+                user,
+                password,
+                "ps")[0]
+
+            if status != "host not up":
                 break
 
             logger.debug("vm is not up.  Sleeping...")
-            time.sleep(5)
+            time.sleep(10)
 
     def delete_director_vm(self):
         while "director" in \

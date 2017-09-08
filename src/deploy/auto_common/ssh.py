@@ -47,7 +47,7 @@ class Ssh():
             client.close()
         except IOError:
             logger.warning(".. host " + address + " is not up")
-            return "host not up"
+            return "host not up", "host not up"
 
         return r_out, r_err
 
@@ -103,7 +103,7 @@ class Ssh():
             client.close()
         except IOError:
             logger.warning(".. host " + address + " is not up")
-            return "host not up"
+            return "host not up", "host not up", -1
 
         return r_out, r_err, exit_status
 
