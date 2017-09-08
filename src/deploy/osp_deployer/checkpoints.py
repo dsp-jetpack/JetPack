@@ -485,8 +485,7 @@ class Checkpoints():
 
     def verify_backends_connectivity(self):
         dellsc_be = self.settings.enable_dellsc_backend
-        eqlx_be = self.settings.enable_eqlx_backend
-        if dellsc_be or eqlx_be:
+        if dellsc_be:
             setts = self.settings
             cmd = "source ~/stackrc;nova list | grep compute"
             re = Ssh.execute_command_tty(self.director_ip,
@@ -541,23 +540,3 @@ class Checkpoints():
                                    self.settings.dellsc_iscsi_ip_address +
                                    ":" + self.settings.dellsc_iscsi_port)
 
-        if self.settings.enable_eqlx_backend:
-            logger.debug("Verifying eql backend connectivity")
-
-            logger.debug("Verify ssh access to the san ip from Compute\
-            & Controller nodes")
-
-            for each in compute_node_ip, controller_node_ip:
-                cmd = (
-                    'ssh heat-admin@%s ssh -v -oBatchMode=yes  '
-                    '%s 2>&1') % (
-                        each, self.settings.eqlx_san_ip)
-                re = Ssh.execute_command_tty(
-                                    self.director_ip,
-                                    setts.director_install_account_user,
-                                    setts.director_install_account_pwd,
-                                    cmd)
-                if "NetBSD_Secure_Shell" not in re[0]:
-                    raise AssertionError(each +
-                                         " not able to ssh to EQL san ip " +
-                                         self.settings.eqlx_san_ip)

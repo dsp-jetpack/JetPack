@@ -255,22 +255,6 @@ class Settings():
         else:
             self.use_in_band_introspection = False
 
-        if cluster['enable_eqlx_backend'].lower() == 'true':
-            self.enable_eqlx_backend = True
-            self.eqlx_san_ip = cluster['eqlx_san_ip']
-            self.eqlx_san_login = cluster['eqlx_san_login']
-            self.eqlx_san_password = cluster[
-                'eqlx_san_password']
-            self.eqlx_ch_login = cluster['eqlx_ch_login']
-            self.eqlx_ch_pass = cluster['eqlx_ch_pass']
-            self.eqlx_group_n = cluster['eqlx_group_n']
-            self.eqlx_thin_provisioning = cluster[
-                'eqlx_thin_provisioning']
-            self.eqlx_pool = cluster['eqlx_pool']
-            self.eqlx_use_chap = cluster['eqlx_use_chap']
-        else:
-            self.enable_eqlx_backend = False
-
         if cluster['enable_dellsc_backend'].lower() == 'true':
             self.enable_dellsc_backend = True
             self.dellsc_san_ip = cluster['dellsc_san_ip']
