@@ -1208,7 +1208,7 @@ class Director(InfraHost):
                                   ".*netmask " +
                                   self.settings.private_api_netmask +
                                   ".*\" | awk '{print $2}'")
-                private_api = re[0].split("\n")[0]
+                private_api = re[0].split("\n")[1]
 
                 re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
@@ -1217,7 +1217,7 @@ class Director(InfraHost):
                                   ".*netmask " +
                                   self.settings.public_api_netmask +
                                   ".*\" | awk '{print $2}'")
-                nova_public_ip = re[0].split("\n")[0]
+                nova_public_ip = re[0].split("\n")[1]
 
                 re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
@@ -1226,7 +1226,7 @@ class Director(InfraHost):
                                   ".*netmask " +
                                   self.settings.storage_netmask +
                                   ".*\" | awk '{print $2}'")
-                storage_ip = re[0].split("\n")[0]
+                storage_ip = re[0].split("\n")[1]
 
                 ip_info.append(hostname + ":")
                 ip_info.append("     - provisioning ip  : " + provisioning_ip)
@@ -1260,7 +1260,7 @@ class Director(InfraHost):
                                   ".*netmask " +
                                   self.settings.private_api_netmask +
                                   ".*\" | awk '{print $2}'")
-                private_api = re[0].split("\n")[0]
+                private_api = re[0].split("\n")[1]
 
                 re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
@@ -1269,7 +1269,7 @@ class Director(InfraHost):
                                   ".*netmask " +
                                   self.settings.storage_netmask +
                                   ".*\" | awk '{print $2}'")
-                storage_ip = re[0].split("\n")[0]
+                storage_ip = re[0].split("\n")[1]
 
                 ip_info.append(hostname + ":")
                 ip_info.append("     - provisioning ip  : " + provisioning_ip)
@@ -1301,7 +1301,7 @@ class Director(InfraHost):
                                   clus_ +
                                   ".*netmask 255.255.255.0.*\""
                                   " | awk '{print $2}'")
-                cluster_ip = re[0].split("\n")[0]
+                cluster_ip = re[0].split("\n")[1]
 
                 re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
@@ -1310,7 +1310,7 @@ class Director(InfraHost):
                                   ".*netmask " +
                                   self.settings.storage_netmask +
                                   ".*\" | awk '{print $2}'")
-                storage_ip = re[0].split("\n")[0]
+                storage_ip = re[0].split("\n")[1]
 
                 ip_info.append(hostname + ":")
                 ip_info.append(
