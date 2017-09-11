@@ -348,7 +348,9 @@ class Sah(InfraHost):
             logger.debug("=== power on the Storage Console VM ")
             self.run("virsh start rhscon")
         logger.debug("=== waiting for the Storage Console vm to boot up")
-        self.wait_for_vm_to_come_up(self.settings.rhscon_node.public_api_ip)
+        self.wait_for_vm_to_come_up(self.settings.rhscon_node.public_api_ip,
+                                    "root",
+                                    self.settings.rhscon_node.root_password)
         logger.debug("Storage Console VM is up")
 
     def delete_rhscon_vm(self):
