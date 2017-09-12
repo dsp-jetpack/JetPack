@@ -26,7 +26,6 @@ from osp_deployer.sah import Sah, Settings
 from checkpoints import Checkpoints
 from auto_common import Ipmi, Ssh, Scp
 
-
 logger = logging.getLogger("osp_deployer")
 
 
@@ -152,7 +151,6 @@ def deploy():
 
             logger.info("=== create the director vm")
             sah_node.create_director_vm()
-
             tester.director_vm_health_check()
 
             logger.info("Preparing the Director VM")

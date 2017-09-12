@@ -143,7 +143,7 @@ def create_volume_types():
     if not args.disable_rbd:
         types.append(["rbd_backend", "tripleo_ceph"])
 
-    if args.enable_eqlx or args.enable_dellsc:
+    if args.enable_dellsc:
         cinder_file = open(home_dir +
                            '/pilot/templates/dell-cinder-backends.yaml', 'r')
         for line in cinder_file:
@@ -241,10 +241,6 @@ def main():
         parser.add_argument("--overcloud_name",
                             default=None,
                             help="The name of the overcloud")
-        parser.add_argument('--enable_eqlx',
-                            action='store_true',
-                            default=False,
-                            help="Enable cinder Dell Eqlx backend")
         parser.add_argument('--enable_dellsc',
                             action='store_true',
                             default=False,
@@ -352,7 +348,7 @@ def main():
                     " -e ~/pilot/templates/overcloud/environments/" \
                     "puppet-pacemaker.yaml"
 
-        if args.enable_dellsc | args.enable_eqlx:
+        if args.enable_dellsc:
             env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
 
         cmd = "cd ; openstack overcloud deploy" \
