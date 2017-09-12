@@ -17,6 +17,7 @@
 
 parameter_defaults:
   ExtraConfig:
+    cinder::config::cinder_config:
       #DELLSC
       dellsc/volume_backend_name:
         value: dellsc
