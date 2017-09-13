@@ -75,7 +75,8 @@ class DRACClient(ironic_client.DRACClient):
                                          password,
                                          port,
                                          path,
-                                         protocol)
+                                         protocol,
+                                         ready_retries=48)
         self._job_mgmt = job.JobManagement(self.client)
         self._idrac_cfg = idrac_card.iDRACCardConfiguration(self.client)
         self._nic_cfg = nic.NICConfiguration(self.client)
