@@ -119,7 +119,7 @@ parameter_defaults:
   # delete the following two lines and specify the bonding options per role
   # type in the nic-configs files.
   BondInterfaceOptions:
-      "802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1"
+      "mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1"
 
   # CHANGEME: Set to empty string for External VLAN, br-ex if on native VLAN of br-ex
   NeutronExternalNetworkBridge: "''"
