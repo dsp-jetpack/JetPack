@@ -118,7 +118,7 @@ def deploy():
         settings.get_version_info()
         logger.info("source version # : " + settings.source_version)
         tester = Checkpoints()
-        tester.verify_deployer_settings(verify_network_connectivity=not args.validate_only)
+        tester.verify_deployer_settings()
         if args.validate_only is True:
             logger.info("Settings validated")
             sys.exit(0)

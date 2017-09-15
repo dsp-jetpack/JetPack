@@ -179,7 +179,6 @@ class Director(InfraHost):
             self.upload_file(setts.custom_instack_json,
                              remote_file)
         else:
-            # self.check_idracs()
 
             # In 13g servers, the iDRAC sends out a DHCP req every 3 seconds
             # for 1 minute.  If it still hasn't received a response, it sleeps
@@ -296,57 +295,6 @@ class Director(InfraHost):
 
         tester = Checkpoints()
         tester.verify_introspection_sucessfull()
-
-    def check_idracs(self):
-        # Idrac doesn't always play nice ..
-        # working around cases where nic's dont get detected
-        for node in (self.settings.controller_nodes +
-                     self.settings.compute_nodes +
-                     self.settings.ceph_nodes):
-                while 1:
-                    cmd = 'ipmitool -I lanplus -H ' + \
-                          self.settings.controller_nodes[0].idrac_ip + \
-                          ' -U ' + \
-                          self.settings.ipmi_user + \
-                          ' -P ' + \
-                          self.settings.ipmi_password + \
-                          ' power status'
-
-                    self.run_tty(cmd)
-                    cmd = "cd ~/pilot/discover_nodes;./discover_nodes.py" \
-                          " -u " + \
-                          self.settings.ipmi_user + \
-                          " -p '" + \
-                          self.settings.ipmi_password + "' " + \
-                          node.idrac_ip
-                    self.run_tty(cmd)
-                    # yes, running it twice - throws errors on first attempts
-                    # depending on the state of the node
-                    out = self.run_tty(cmd)[0]
-                    if ("FIXME" in out) or ("WSMan request failed" in out):
-                        logger.warning(node.hostname +
-                                       " did not get discovered properly")
-                        logger.debug("reseting idrac")
-                        ipmi_session = Ipmi(self.settings.cygwin_installdir,
-                                            self.settings.ipmi_user,
-                                            self.settings.ipmi_password,
-                                            node.idrac_ip)
-                        ipmi_session.drac_reset()
-                        time.sleep(120)
-                        back2life = False
-                        while back2life is False:
-                            try:
-                                ipmi_session.get_power_state()
-                                back2life = True
-                                time.sleep(20)
-                            except:
-                                pass
-                        ipmi_session.power_on()
-                        time.sleep(120)
-                        ipmi_session.set_boot_to_pxe()
-                        time.sleep(120)
-                    else:
-                        break
 
     def assign_role(self, node, role, index):
         assign_role_command = self._create_assign_role_command(
@@ -1477,12 +1425,17 @@ class Director(InfraHost):
     def enable_fencing(self):
         if self.settings.enable_fencing is True:
             logger.info("enabling fencing")
+            new_ipmi_password = self.settings.new_ipmi_password
+            if new_ipmi_password:
+                passwd = new_ipmi_password
+            else:
+                passwd = self.settings.ipmi_password
             cmd = 'cd ' + \
                   self.pilot_dir + \
                   ';./agent_fencing.sh ' + \
                   self.settings.ipmi_user + \
                   ' ' + \
-                  self.settings.ipmi_password + \
+                  passwd + \
                   ' enable'
             self.run_tty(cmd)
 
