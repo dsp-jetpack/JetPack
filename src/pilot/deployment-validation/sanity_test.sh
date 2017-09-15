@@ -302,7 +302,7 @@ setup_glance(){
 spin_up_instances(){
   tenant_net_id=$(openstack network list -f value | grep " $TENANT_NETWORK_NAME " | awk '{print $1}')
 
-  image_id=$(openstack image list -f value | grep "$IMAGE_NAME" | awk '{print $1}')
+  image_id=$(openstack image list -f value | grep "$IMAGE_NAME" | awk 'NR==1{print $1}')
 
   info "### Initiating build of instances..."
   declare -a instance_names
