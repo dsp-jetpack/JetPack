@@ -172,7 +172,9 @@ class DRACClient(ironic_client.DRACClient):
 
         if retries == 0 and ping_fail_count < required_ping_fail_count:
             raise exceptions.DRACOperationFailed(drac_messages="Timed out "
-                                                 "waiting for the iDRAC to "
+                                                 "waiting for the " +
+                                                 self.client.host +
+                                                 " iDRAC to "
                                                  "become not pingable")
 
         LOG.info("The iDRAC has become not pingable")
@@ -199,7 +201,9 @@ class DRACClient(ironic_client.DRACClient):
 
         if retries == 0 and ping_success_count < 3:
             raise exceptions.DRACOperationFailed(drac_messages="Timed out "
-                                                 "waiting for the iDRAC to "
+                                                 "waiting for the " +
+                                                 self.client.host +
+                                                 " iDRAC to "
                                                  "become pingable")
 
         LOG.info("The iDRAC has become pingable")
@@ -227,7 +231,9 @@ class DRACClient(ironic_client.DRACClient):
 
         if retries == 0:
             raise exceptions.DRACOperationFailed(drac_messages="Timed out "
-                                                 "waiting for the iDRAC to "
+                                                 "waiting for the " +
+                                                 self.client.host +
+                                                 " iDRAC to "
                                                  "become ready")
 
     def commit_pending_idrac_changes(
