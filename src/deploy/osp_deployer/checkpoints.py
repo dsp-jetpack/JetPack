@@ -31,14 +31,12 @@ class Checkpoints():
         self.verify_rhsm_status = self.settings.verify_rhsm_status
 
     @staticmethod
-    def verify_deployer_settings(verify_network_connectivity=True):
+    def verify_deployer_settings():
         logger.info("==== Running environment sanity tests")
         checks = DeployerSanity()
         checks.check_os_volume_size()
         checks.check_network_settings()
         checks.check_files()
-        if verify_network_connectivity:
-            checks.check_ipmi_to_nodes()
         checks.check_network_overlaps()
         checks.check_duplicate_ips()
         checks.verify_overcloud_name()
