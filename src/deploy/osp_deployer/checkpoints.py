@@ -508,7 +508,7 @@ class Checkpoints():
 
             logger.debug("Verify Controller nodes can ping the san ip")
             cmd = "ssh heat-admin@" + controller_node_ip +\
-                  " ping " + self.settings.dellsc_san_ip +\
+                  " sudo ping " + self.settings.dellsc_san_ip +\
                   " -c 1 -w 30 "
             re = Ssh.execute_command_tty(self.director_ip,
                                          setts.director_install_account_user,
