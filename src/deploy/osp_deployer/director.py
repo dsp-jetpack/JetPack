@@ -221,6 +221,19 @@ class Director(InfraHost):
             else:
                 logger.debug("nodes appear to have been picked up")
 
+        logger.debug("Verify the number of nodes picked match up to settings")
+        expected_nodes = len(self.settings.controller_nodes) + len(
+            self.settings.compute_nodes) + len(
+            self.settings.ceph_nodes)
+        found = self.run_tty("grep pm_addr ~/instackenv.json | wc -l")[0].rstrip()
+        logger.debug("Found " + found + " Expected : " + str(expected_nodes))
+        if int(found) == expected_nodes:
+            pass
+        else:
+            raise AssertionError(
+                 "Number of nodes in instackenv.json does not add up"
+                 " to the number of nodes defined in .properties file") 
+
         if setts.use_ipmi_driver is True:
             logger.debug("Using pxe_ipmi driver")
             cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ~/instackenv.json'
