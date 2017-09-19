@@ -258,6 +258,14 @@ sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
 echo "## Done."
 
+# This patch increases the is_ready timeout retries from 24 to 48
+echo
+echo "## Patching Ironic iDRAC driver is_ready timeout value..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/constants.py ${HOME}/pilot/constants.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyo
+echo "## Done."
+
 # This hacks in a patch to work around a known issue where waiting for job
 # completion will never return if a failed reboot job is present.
 echo
