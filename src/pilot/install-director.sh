@@ -143,17 +143,6 @@ echo "## Installing probe-idrac utility..."
 ~/pilot/install_probe_idrac.sh
 echo "## Done."
 
-echo
-grep 'unset $key' ~/stackrc >/dev/null 2>&1 
-if [ $? -ne 0 ]
-then
-  echo "## Updating stackrc..."
-  sed -i '1ifor key in $( set | awk '"'"'{FS="="}  /^OS_/ {print $1}'"'"' ); do unset $key ; done' ~/stackrc
-  echo "## Done."
-else
-  echo "## stackrc has already been updated.  Skipping update."
-fi
-
 source $HOME/stackrc
 
 echo
