@@ -286,14 +286,6 @@ echo "## Restarting openstack-ironic-conductor.service..."
 sudo systemctl restart openstack-ironic-conductor.service
 echo "## Done."
 
-# This hacks in a workaround to fix in-band introspection.  A fix has been
-# made to NetworkManager upstream, but is not currently present in OSP10.
-# We will need to remove this after the fix appears in OSP10.
-echo
-echo "## Patching Ironic in-band introspection..."
-sudo sed -i 's/initrd=agent.ramdisk /initrd=agent.ramdisk net.ifnames=0 biosdevname=0 /' /httpboot/inspector.ipxe
-echo "## Done."
-
 network="ctlplane"
 echo
 echo "## Configuring neutron network ${network} as a cleaning network"
