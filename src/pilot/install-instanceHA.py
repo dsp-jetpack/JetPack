@@ -102,6 +102,16 @@ def logging_level(string):
     return numeric_level
 
 
+def verify_fencing(first_controller_node_ip):
+    out, err = ssh_cmd(first_controller_node_ip, "heat-admin",
+                       "sudo pcs property show | grep stonith-enable")
+    stonith_property = out.strip()
+    LOG.debug("stonith_property: {}".format(stonith_property))
+    stonith_enabled = stonith_property.partition(': ')[2]
+    LOG.debug("stonith_enabled: {}".format(stonith_enabled))
+    return stonith_enabled
+
+
 # Instance HA Specific Methods
 
 # 1) Stop and disable openstack services Compute nodes
@@ -666,6 +676,13 @@ def main():
         LOG.debug("compute_nodes_ip: {}".format(compute_nodes_ip))
         LOG.debug("compute_nova_names: {}".format(compute_nova_names))
         LOG.debug("domainname: {}".format(domainname))
+
+        if (verify_fencing(first_controller_node_ip) != "false" ):
+            LOG.debug("Stonith is enabled.")
+        else:
+            LOG.critical("!!! - Error: Fencing must be enabled.")
+            LOG.info("Use agent_fencing.sh script to enable fencing.")
+            sys.exit(-1)
 
         stop_disable_openstack_services(compute_nodes_ip)
         create_authkey(first_compute_node_ip)

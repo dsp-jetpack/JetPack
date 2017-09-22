@@ -52,7 +52,7 @@ function enable_stonith {
 }
 
 function disable_stonith {
-  for i in $(nova list --flavor control --fields networks | awk ' /ctlplane/ { print $4 } ' | cut -f2 -d=)
+  for i in $(nova list | awk ' /controller/ && /ctlplane/ { print $12 } ' | cut -f2 -d=)
   do
     STONITH_NAME=`$SSH_CMD $i 'echo "$(hostname -s)-ipmi"'`
     $SSH_CMD $i "sudo pcs stonith delete $STONITH_NAME"
