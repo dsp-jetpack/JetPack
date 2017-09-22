@@ -19,6 +19,7 @@ import distutils.dir_util
 import os
 import re
 import sys
+import subprocess
 import time
 import novaclient.client as nova_client
 from ironic_helper import IronicHelper
@@ -160,11 +161,21 @@ def create_volume_types():
     overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 
     for type in types:
-        cmd = "source {} && " \
-              "cinder type-create {} && " \
-              "cinder type-key {} set volume_backend_name={}" \
-              "".format(overcloudrc_name, type[0], type[0], type[1])
-        os.system(cmd)
+        type_name= type[0]
+        cmd = "source {} && cinder type-list | grep ' {} ' | awk '{{print $4}}'".format(overcloudrc_name, type_name)
+        proc = subprocess.Popen([cmd], stdout=subprocess.PIPE, shell=True)
+        return_output = proc.communicate()[0].strip()
+
+        if type_name == return_output:
+            print "Cinder type exists, skipping {}".format(type[0])
+            continue
+        else:
+            print "Creating cinder type {}".format(type[0])
+            cmd = "source {} && " \
+                  "cinder type-create {} && " \
+                  "cinder type-key {} set volume_backend_name={}" \
+                  "".format(overcloudrc_name, type[0], type[0], type[1])
+            os.system(cmd)
 
     os.system("source {} && "
               "cinder extra-specs-list".format(overcloudrc_name))
