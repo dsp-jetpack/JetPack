@@ -1,15 +1,6 @@
---- client.py	2017-09-07 16:30:19.177633538 +0000
-+++ client.py.final	2017-09-07 17:04:43.248499027 +0000
-@@ -626,15 +626,14 @@
-         :raises: WSManInvalidResponse when receiving invalid response
-         """
-         if wait_for_idrac:
--            self.wait_until_idrac_is_ready(self._ready_retries,
--                                           self._ready_retry_delay)
-+            self.wait_until_idrac_is_ready()
- 
-         return super(WSManClient, self).enumerate(resource_uri, optimization,
-                                                   max_elems, auto_pull,
+--- client.py	2017-08-01 10:32:16.000000000 -0500
++++ client.new	2017-09-22 07:37:17.845971024 -0500
+@@ -633,7 +633,7 @@
                                                    filter_query, filter_dialect)
  
      def invoke(self, resource_uri, method, selectors=None, properties=None,
@@ -18,17 +9,7 @@
          """Invokes a remote WS-Man method
  
          :param resource_uri: URI of the resource
-@@ -656,8 +655,7 @@
-         :raises: DRACUnexpectedReturnValue on return value mismatch
-         """
-         if wait_for_idrac:
--            self.wait_until_idrac_is_ready(self._ready_retries,
--                                           self._ready_retry_delay)
-+            self.wait_until_idrac_is_ready()
- 
-         if selectors is None:
-             selectors = {}
-@@ -668,17 +666,18 @@
+@@ -666,17 +666,18 @@
          resp = super(WSManClient, self).invoke(resource_uri, method, selectors,
                                                 properties)
  
@@ -58,3 +39,9 @@
  
          return resp
  
+@@ -753,3 +754,4 @@
+             err_msg = "Timed out waiting for the iDRAC to become ready"
+             LOG.error(err_msg)
+             raise exceptions.DRACOperationFailed(drac_messages=err_msg)
++
+
