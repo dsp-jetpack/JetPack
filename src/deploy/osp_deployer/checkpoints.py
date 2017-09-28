@@ -40,6 +40,7 @@ class Checkpoints():
         checks.check_network_overlaps()
         checks.check_duplicate_ips()
         checks.verify_overcloud_name()
+        checks.verify_iha_dependency_on_fencing()
 
     @staticmethod
     def verify_subscription_status(public_api_ip, user, password, retries):

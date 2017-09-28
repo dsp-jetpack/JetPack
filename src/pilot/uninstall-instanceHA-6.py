@@ -25,9 +25,11 @@ import os
 import sys
 import subprocess
 import shlex
+import shutil
 import re
 import paramiko
 import logging
+import tempfile
 
 # Dell utilities
 from identify_nodes import main as identify_nodes
@@ -62,6 +64,38 @@ def awk_it(instring, index, delimiter=" "):
                 instring.split(delimiter)[index-1]][max(0, min(1, index))]
     except:
         return ""
+
+
+def sed_inplace(filename, pattern, repl):
+    pattern_compiled = re.compile(pattern)
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp_file:
+        with open(filename) as src_file:
+            for line in src_file:
+                tmp_file.write(pattern_compiled.sub(repl, line))
+    shutil.copystat(filename, tmp_file.name)
+    shutil.os.system('sudo mv "{}" "{}"'.format(tmp_file.name, filename))
+    shutil.os.system('sudo chown root:root "{}"'.format(filename))
+
+
+def apply_paramiko_patch(file, search_term, repl_term):
+    LOG.debug("Applying patch to transport.py")
+    shutil.os.system('sudo cp "{}" "{}"'.format(file, file + ".new"))
+    # The next line ensures compiled python file is refreshed
+    shutil.os.system('sudo cp "{}" "{}"'.format(file + "c" , file + "c.new"))
+    sed_inplace(file, search_term, repl_term)
+
+
+def patch_paramiko():
+
+    search_term = "iv, counter\)"
+    repl_term = "'', counter)"
+    f = "/usr/lib/python2.7/site-packages/paramiko/transport.py"
+
+    for line in open(f, 'r'):
+        if re.search(search_term, line):
+            line = line.strip()
+            LOG.debug("Matching line found: " + line)
+            apply_paramiko_patch(f, search_term, repl_term)
 
 
 def logging_level(string):
@@ -224,6 +258,8 @@ def main():
                        'pilot/identify_nodes.py > ~/undercloud_nodes.txt')
     os.system(cmd)
 
+    patch_paramiko()
+
     # Get first_controller_node
     p1 = subprocess.Popen(['cat', ssh_config], stdout=subprocess.PIPE)
     p2 = subprocess.Popen(shlex.split('awk \'/cntl0/ {print $2}\''),
@@ -325,7 +361,7 @@ def main():
 
     cmd = "source {} ".format(undercloudrc_name)
     os.system(cmd)
-
+ 
     out = ssh_cmd(first_controller_node_ip, "heat-admin",
                   "sudo pcs property show stonith-enabled \
                   | awk '/stonith/ {print $2}'")
