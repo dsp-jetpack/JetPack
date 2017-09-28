@@ -736,7 +736,7 @@ class Director(InfraHost):
                 self.settings.settings.compute_bond_opts +
                 " bond mode to all the nodes (network-environment.yaml)")
             cmds = [
-                'sed -i "s|      \\"mode=802.3ad miimon=100\\"' +
+                'sed -i "s|      \\"mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1\\"' +
                 '|      \\"mode=' +
                 self.settings.compute_bond_opts + '\\"|" ' + network_yaml]
             for cmd in cmds:
@@ -745,7 +745,7 @@ class Director(InfraHost):
             logger.debug("applying bond mode on a per type basis")
             cmds = [
                    "sed -i '/BondInterfaceOptions:/d' " + network_yaml,
-                   "sed -i '/mode=802.3ad miimon=100/d' " + network_yaml,
+                   "sed -i '/mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1/d' " + network_yaml,
                    'sed -i "/BondInterfaceOptions:/{n;s/.*/' +
                    '    default: \'mode=' +
                    self.settings.settings.compute_bond_opts +

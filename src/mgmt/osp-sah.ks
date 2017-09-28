@@ -118,13 +118,13 @@ anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 em4 no"
 # Bond to handle external traffic
 extern_bond_name="CHANGEME e.g. bond1"
 extern_boot_opts="onboot none"
-extern_bond_opts="mode=802.3ad miimon=100"
+extern_bond_opts="mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1"
 extern_ifaces="CHANGEME e.g. em2 p1p2"
 
 # Bond to handle internal traffic
 internal_bond_name="CHANGEME e.g. bond0"
 internal_boot_opts="onboot none"
-internal_bond_opts="mode=802.3ad miimon=100"
+internal_bond_opts="mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1"
 internal_ifaces="CHANGEME e.g. em1 p1p1"
 
 # Management
