@@ -1006,8 +1006,9 @@ class Director(InfraHost):
             cmd += " --static_ips"
         if self.settings.use_static_vips is True:
             cmd += " --static_vips"
-        # Making the following non optional; and order applied
-        # is the one nodes arei defined in in the .properties
+        # Node placement is required in an automated install.  The index order
+        # of the nodes is the order in which they are defined in the
+        # .properties file
         cmd += " --node_placement"
 
         if self.settings.deploy_overcloud_debug:
