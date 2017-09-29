@@ -31,17 +31,16 @@ class Checkpoints():
         self.verify_rhsm_status = self.settings.verify_rhsm_status
 
     @staticmethod
-    def verify_deployer_settings(verify_network_connectivity=True):
+    def verify_deployer_settings():
         logger.info("==== Running environment sanity tests")
         checks = DeployerSanity()
         checks.check_os_volume_size()
         checks.check_network_settings()
         checks.check_files()
-        if verify_network_connectivity:
-            checks.check_ipmi_to_nodes()
         checks.check_network_overlaps()
         checks.check_duplicate_ips()
         checks.verify_overcloud_name()
+        checks.verify_iha_dependency_on_fencing()
 
     @staticmethod
     def verify_subscription_status(public_api_ip, user, password, retries):
@@ -485,8 +484,7 @@ class Checkpoints():
 
     def verify_backends_connectivity(self):
         dellsc_be = self.settings.enable_dellsc_backend
-        eqlx_be = self.settings.enable_eqlx_backend
-        if dellsc_be or eqlx_be:
+        if dellsc_be:
             setts = self.settings
             cmd = "source ~/stackrc;nova list | grep compute"
             re = Ssh.execute_command_tty(self.director_ip,
@@ -511,7 +509,7 @@ class Checkpoints():
 
             logger.debug("Verify Controller nodes can ping the san ip")
             cmd = "ssh heat-admin@" + controller_node_ip +\
-                  " ping " + self.settings.dellsc_san_ip +\
+                  " sudo ping " + self.settings.dellsc_san_ip +\
                   " -c 1 -w 30 "
             re = Ssh.execute_command_tty(self.director_ip,
                                          setts.director_install_account_user,
@@ -541,23 +539,3 @@ class Checkpoints():
                                    self.settings.dellsc_iscsi_ip_address +
                                    ":" + self.settings.dellsc_iscsi_port)
 
-        if self.settings.enable_eqlx_backend:
-            logger.debug("Verifying eql backend connectivity")
-
-            logger.debug("Verify ssh access to the san ip from Compute\
-            & Controller nodes")
-
-            for each in compute_node_ip, controller_node_ip:
-                cmd = (
-                    'ssh heat-admin@%s ssh -v -oBatchMode=yes  '
-                    '%s 2>&1') % (
-                        each, self.settings.eqlx_san_ip)
-                re = Ssh.execute_command_tty(
-                                    self.director_ip,
-                                    setts.director_install_account_user,
-                                    setts.director_install_account_pwd,
-                                    cmd)
-                if "NetBSD_Secure_Shell" not in re[0]:
-                    raise AssertionError(each +
-                                         " not able to ssh to EQL san ip " +
-                                         self.settings.eqlx_san_ip)

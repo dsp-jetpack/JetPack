@@ -179,7 +179,6 @@ class Director(InfraHost):
             self.upload_file(setts.custom_instack_json,
                              remote_file)
         else:
-            # self.check_idracs()
 
             # In 13g servers, the iDRAC sends out a DHCP req every 3 seconds
             # for 1 minute.  If it still hasn't received a response, it sleeps
@@ -221,6 +220,19 @@ class Director(InfraHost):
 
             else:
                 logger.debug("nodes appear to have been picked up")
+
+        logger.debug("Verify the number of nodes picked match up to settings")
+        expected_nodes = len(self.settings.controller_nodes) + len(
+            self.settings.compute_nodes) + len(
+            self.settings.ceph_nodes)
+        found = self.run_tty("grep pm_addr ~/instackenv.json | wc -l")[0].rstrip()
+        logger.debug("Found " + found + " Expected : " + str(expected_nodes))
+        if int(found) == expected_nodes:
+            pass
+        else:
+            raise AssertionError(
+                 "Number of nodes in instackenv.json does not add up"
+                 " to the number of nodes defined in .properties file") 
 
         if setts.use_ipmi_driver is True:
             logger.debug("Using pxe_ipmi driver")
@@ -296,57 +308,6 @@ class Director(InfraHost):
 
         tester = Checkpoints()
         tester.verify_introspection_sucessfull()
-
-    def check_idracs(self):
-        # Idrac doesn't always play nice ..
-        # working around cases where nic's dont get detected
-        for node in (self.settings.controller_nodes +
-                     self.settings.compute_nodes +
-                     self.settings.ceph_nodes):
-                while 1:
-                    cmd = 'ipmitool -I lanplus -H ' + \
-                          self.settings.controller_nodes[0].idrac_ip + \
-                          ' -U ' + \
-                          self.settings.ipmi_user + \
-                          ' -P ' + \
-                          self.settings.ipmi_password + \
-                          ' power status'
-
-                    self.run_tty(cmd)
-                    cmd = "cd ~/pilot/discover_nodes;./discover_nodes.py" \
-                          " -u " + \
-                          self.settings.ipmi_user + \
-                          " -p '" + \
-                          self.settings.ipmi_password + "' " + \
-                          node.idrac_ip
-                    self.run_tty(cmd)
-                    # yes, running it twice - throws errors on first attempts
-                    # depending on the state of the node
-                    out = self.run_tty(cmd)[0]
-                    if ("FIXME" in out) or ("WSMan request failed" in out):
-                        logger.warning(node.hostname +
-                                       " did not get discovered properly")
-                        logger.debug("reseting idrac")
-                        ipmi_session = Ipmi(self.settings.cygwin_installdir,
-                                            self.settings.ipmi_user,
-                                            self.settings.ipmi_password,
-                                            node.idrac_ip)
-                        ipmi_session.drac_reset()
-                        time.sleep(120)
-                        back2life = False
-                        while back2life is False:
-                            try:
-                                ipmi_session.get_power_state()
-                                back2life = True
-                                time.sleep(20)
-                            except:
-                                pass
-                        ipmi_session.power_on()
-                        time.sleep(120)
-                        ipmi_session.set_boot_to_pxe()
-                        time.sleep(120)
-                    else:
-                        break
 
     def assign_role(self, node, role, index):
         assign_role_command = self._create_assign_role_command(
@@ -579,15 +540,8 @@ class Director(InfraHost):
         self.run_tty("cp " + dell_storage_yaml +
                      " " + dell_storage_yaml + ".bak")
 
-        self.setup_eqlx(dell_storage_yaml)
         self.setup_dellsc(dell_storage_yaml)
         enabled_backends = "["
-        if self.settings.enable_eqlx_backend is True:
-            index = 1
-            eqlx_san_ip_array = self.settings.eqlx_san_ip.split(",")
-            for _ in eqlx_san_ip_array:
-                enabled_backends += "'eqlx" + str(index) + "',"
-                index = index + 1
 
         if self.settings.enable_dellsc_backend is True:
             enabled_backends += "'dellsc'"
@@ -603,81 +557,6 @@ class Director(InfraHost):
             str(self.settings.enable_rbd_backend) + \
             '|" ' + dell_storage_yaml
         self.run_tty(cmd)
-
-    def setup_eqlx(self, dell_storage_yaml):
-
-        if self.settings.enable_eqlx_backend is False:
-            logger.debug("not setting up eqlx backend")
-            return
-
-        logger.debug("configuring eql backend")
-        eqlx_san_ip_array = self.settings.eqlx_san_ip.split(",")
-        eqlx_san_login_array = self.settings.eqlx_san_login.split(",")
-        eqlx_san_password_array = self.settings.eqlx_san_password.split(",")
-        eqlx_thin_pa = self.settings.eqlx_thin_provisioning.split(",")
-        eqlx_thin_provisioning_array = eqlx_thin_pa
-        eqlx_group_n_array = self.settings.eqlx_group_n.split(",")
-        eqlx_pool_array = self.settings.eqlx_pool.split(",")
-        eqlx_use_chap_array = self.settings.eqlx_use_chap.split(",")
-        eqlx_ch_login_array = self.settings.eqlx_ch_login.split(",")
-        eqlx_ch_pass_array = self.settings.eqlx_ch_pass.split(",")
-
-        if(len(eqlx_san_ip_array) < len(eqlx_san_login_array) or
-           len(eqlx_san_ip_array) < len(eqlx_san_password_array) or
-           len(eqlx_san_ip_array) < len(eqlx_thin_provisioning_array) or
-           len(eqlx_san_ip_array) < len(eqlx_group_n_array) or
-           len(eqlx_san_ip_array) < len(eqlx_pool_array) or
-           len(eqlx_san_ip_array) < len(eqlx_use_chap_array) or
-           len(eqlx_san_ip_array) < len(eqlx_ch_login_array) or
-           len(eqlx_san_ip_array) < len(eqlx_ch_pass_array)):
-            self.settings.enable_eqlx_backend = False
-            logger.debug("not setting up eqlx backend, data missing")
-            return
-
-        eqlx_configs = ""
-        index = 0
-        for _ in eqlx_san_ip_array:
-            eqlx_config = """
-      eqlx/volume_backend_name:
-        value: {}
-      eqlx/volume_driver:
-        value: cinder.volume.drivers.eqlx.DellEQLSanISCSIDriver
-      eqlx/san_ip:
-        value: {}
-      eqlx/san_login:
-        value: {}
-      eqlx/san_password:
-        value: {}
-      eqlx/san_thin_provision:
-        value: {}
-      eqlx/eqlx_group_name:
-        value: {}
-      eqlx/eqlx_pool:
-        value: {}
-      eqlx/eqlx_use_chap:
-        value: {}
-      eqlx/eqlx_chap_login:
-        value: {}
-      eqlx/eqlx_chap_password:
-        value: {}""".format("eqlx" + str(index+1),
-                            eqlx_san_ip_array[index],
-                            eqlx_san_login_array[index],
-                            eqlx_san_password_array[index],
-                            eqlx_thin_provisioning_array[index],
-                            eqlx_group_n_array[index],
-                            eqlx_pool_array[index],
-                            eqlx_use_chap_array[index],
-                            eqlx_ch_login_array[index],
-                            eqlx_ch_pass_array[index])
-            eql_backend = "eqlx" + str(index+1)
-            pattern = re.compile("eqlx\/", re.MULTILINE | re.DOTALL)
-            eqlx_config = pattern.sub(eql_backend+"/", eqlx_config)
-            eqlx_configs += eqlx_config
-            index = index + 1
-
-        eqlx_configs = "#EQLX" + eqlx_configs + "\n      #EQLX-END"
-        logger.info("****EQLX Config:\n" + eqlx_configs)
-        self.run_ssh_edit(dell_storage_yaml, "#EQLX.*?#EQLX-END", eqlx_configs)
 
     def setup_dellsc(self, dell_storage_yaml):
 
@@ -857,7 +736,7 @@ class Director(InfraHost):
                 self.settings.settings.compute_bond_opts +
                 " bond mode to all the nodes (network-environment.yaml)")
             cmds = [
-                'sed -i "s|      \\"mode=802.3ad miimon=100\\"' +
+                'sed -i "s|      \\"mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1\\"' +
                 '|      \\"mode=' +
                 self.settings.compute_bond_opts + '\\"|" ' + network_yaml]
             for cmd in cmds:
@@ -866,7 +745,7 @@ class Director(InfraHost):
             logger.debug("applying bond mode on a per type basis")
             cmds = [
                    "sed -i '/BondInterfaceOptions:/d' " + network_yaml,
-                   "sed -i '/mode=802.3ad miimon=100/d' " + network_yaml,
+                   "sed -i '/mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1/d' " + network_yaml,
                    'sed -i "/BondInterfaceOptions:/{n;s/.*/' +
                    '    default: \'mode=' +
                    self.settings.settings.compute_bond_opts +
@@ -1119,8 +998,6 @@ class Director(InfraHost):
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \
                    + self.settings.overcloud_deploy_timeout
-        if self.settings.enable_eqlx_backend is True:
-            cmd += " --enable_eqlx"
         if self.settings.enable_dellsc_backend is True:
             cmd += " --enable_dellsc"
         if self.settings.enable_rbd_backend is False:
@@ -1208,7 +1085,7 @@ class Director(InfraHost):
                                   ".*netmask " +
                                   self.settings.private_api_netmask +
                                   ".*\" | awk '{print $2}'")
-                private_api = re[0].split("\n")[0]
+                private_api = re[0].split("\n")[1]
 
                 re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
@@ -1217,7 +1094,7 @@ class Director(InfraHost):
                                   ".*netmask " +
                                   self.settings.public_api_netmask +
                                   ".*\" | awk '{print $2}'")
-                nova_public_ip = re[0].split("\n")[0]
+                nova_public_ip = re[0].split("\n")[1]
 
                 re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
@@ -1226,7 +1103,7 @@ class Director(InfraHost):
                                   ".*netmask " +
                                   self.settings.storage_netmask +
                                   ".*\" | awk '{print $2}'")
-                storage_ip = re[0].split("\n")[0]
+                storage_ip = re[0].split("\n")[1]
 
                 ip_info.append(hostname + ":")
                 ip_info.append("     - provisioning ip  : " + provisioning_ip)
@@ -1260,7 +1137,7 @@ class Director(InfraHost):
                                   ".*netmask " +
                                   self.settings.private_api_netmask +
                                   ".*\" | awk '{print $2}'")
-                private_api = re[0].split("\n")[0]
+                private_api = re[0].split("\n")[1]
 
                 re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
@@ -1269,7 +1146,7 @@ class Director(InfraHost):
                                   ".*netmask " +
                                   self.settings.storage_netmask +
                                   ".*\" | awk '{print $2}'")
-                storage_ip = re[0].split("\n")[0]
+                storage_ip = re[0].split("\n")[1]
 
                 ip_info.append(hostname + ":")
                 ip_info.append("     - provisioning ip  : " + provisioning_ip)
@@ -1301,7 +1178,7 @@ class Director(InfraHost):
                                   clus_ +
                                   ".*netmask 255.255.255.0.*\""
                                   " | awk '{print $2}'")
-                cluster_ip = re[0].split("\n")[0]
+                cluster_ip = re[0].split("\n")[1]
 
                 re = self.run_tty("ssh " + ssh_opts + " heat-admin@" +
                                   provisioning_ip +
@@ -1310,7 +1187,7 @@ class Director(InfraHost):
                                   ".*netmask " +
                                   self.settings.storage_netmask +
                                   ".*\" | awk '{print $2}'")
-                storage_ip = re[0].split("\n")[0]
+                storage_ip = re[0].split("\n")[1]
 
                 ip_info.append(hostname + ":")
                 ip_info.append(
@@ -1477,12 +1354,17 @@ class Director(InfraHost):
     def enable_fencing(self):
         if self.settings.enable_fencing is True:
             logger.info("enabling fencing")
+            new_ipmi_password = self.settings.new_ipmi_password
+            if new_ipmi_password:
+                passwd = new_ipmi_password
+            else:
+                passwd = self.settings.ipmi_password
             cmd = 'cd ' + \
                   self.pilot_dir + \
                   ';./agent_fencing.sh ' + \
                   self.settings.ipmi_user + \
                   ' ' + \
-                  self.settings.ipmi_password + \
+                  passwd + \
                   ' enable'
             self.run_tty(cmd)
 

@@ -26,7 +26,6 @@ from osp_deployer.sah import Sah, Settings
 from checkpoints import Checkpoints
 from auto_common import Ipmi, Ssh, Scp
 
-
 logger = logging.getLogger("osp_deployer")
 
 
@@ -118,7 +117,7 @@ def deploy():
         settings.get_version_info()
         logger.info("source version # : " + settings.source_version)
         tester = Checkpoints()
-        tester.verify_deployer_settings(verify_network_connectivity=not args.validate_only)
+        tester.verify_deployer_settings()
         if args.validate_only is True:
             logger.info("Settings validated")
             sys.exit(0)
@@ -152,7 +151,6 @@ def deploy():
 
             logger.info("=== create the director vm")
             sah_node.create_director_vm()
-
             tester.director_vm_health_check()
 
             logger.info("Preparing the Director VM")

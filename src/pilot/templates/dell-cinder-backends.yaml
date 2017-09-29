@@ -13,36 +13,11 @@
 # limitations under the License.
 
 # A Heat environment file which can be used to enable 
-# multiple backends
-# Cinder Dell Eqlx backend and Dell Storage Center,
+# Cinder Dell Storage Center backend
 
 parameter_defaults:
   ExtraConfig:
     cinder::config::cinder_config:
-      #EQLX
-      eqlx/volume_backend_name:
-        value: eqlx
-      eqlx/volume_driver:
-        value: cinder.volume.drivers.eqlx.DellEQLSanISCSIDriver
-      eqlx/san_ip:
-        value: <eqlx_san_ip>
-      eqlx/san_login:
-        value: <eqlx_san_login>
-      eqlx/san_password:
-        value: <eqlx_san_password>
-      eqlx/san_thin_provision:
-        value: <eqlx_san_thin_provision>
-      eqlx/eqlx_group_name:
-        value: <eqlx_group_name>
-      eqlx/eqlx_pool:
-        value: <eqlx_pool>
-      eqlx/eqlx_use_chap:
-        value: <eqlx_use_chap>
-      eqlx/eqlx_chap_login:
-        value: <eqlx_chap_login>
-      eqlx/eqlx_chap_password:
-        value: <eqlx_chap_password>
-      #EQLX-END
       #DELLSC
       dellsc/volume_backend_name:
         value: dellsc
@@ -67,5 +42,5 @@ parameter_defaults:
       dellsc/dell_sc_volume_folder:
         value: dellsc_volume_folder
       #DELLSC-END
-    cinder_user_enabled_backends: ['eqlx','dellsc']
+    cinder_user_enabled_backends: ['dellsc']
   CinderEnableRbdBackend: <enable_rbd_backend>

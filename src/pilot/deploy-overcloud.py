@@ -19,6 +19,7 @@ import distutils.dir_util
 import os
 import re
 import sys
+import subprocess
 import time
 import novaclient.client as nova_client
 from ironic_helper import IronicHelper
@@ -143,7 +144,7 @@ def create_volume_types():
     if not args.disable_rbd:
         types.append(["rbd_backend", "tripleo_ceph"])
 
-    if args.enable_eqlx or args.enable_dellsc:
+    if args.enable_dellsc:
         cinder_file = open(home_dir +
                            '/pilot/templates/dell-cinder-backends.yaml', 'r')
         for line in cinder_file:
@@ -160,11 +161,21 @@ def create_volume_types():
     overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 
     for type in types:
-        cmd = "source {} && " \
-              "cinder type-create {} && " \
-              "cinder type-key {} set volume_backend_name={}" \
-              "".format(overcloudrc_name, type[0], type[0], type[1])
-        os.system(cmd)
+        type_name= type[0]
+        cmd = "source {} && cinder type-list | grep ' {} ' | awk '{{print $4}}'".format(overcloudrc_name, type_name)
+        proc = subprocess.Popen([cmd], stdout=subprocess.PIPE, shell=True)
+        return_output = proc.communicate()[0].strip()
+
+        if type_name == return_output:
+            print "Cinder type exists, skipping {}".format(type[0])
+            continue
+        else:
+            print "Creating cinder type {}".format(type[0])
+            cmd = "source {} && " \
+                  "cinder type-create {} && " \
+                  "cinder type-key {} set volume_backend_name={}" \
+                  "".format(overcloudrc_name, type[0], type[0], type[1])
+            os.system(cmd)
 
     os.system("source {} && "
               "cinder extra-specs-list".format(overcloudrc_name))
@@ -241,10 +252,6 @@ def main():
         parser.add_argument("--overcloud_name",
                             default=None,
                             help="The name of the overcloud")
-        parser.add_argument('--enable_eqlx',
-                            action='store_true',
-                            default=False,
-                            help="Enable cinder Dell Eqlx backend")
         parser.add_argument('--enable_dellsc',
                             action='store_true',
                             default=False,
@@ -353,7 +360,7 @@ def main():
                     " -e ~/pilot/templates/overcloud/environments/" \
                     "puppet-pacemaker.yaml"
 
-        if args.enable_dellsc | args.enable_eqlx:
+        if args.enable_dellsc:
             env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
 
         cmd = "cd ; openstack overcloud deploy" \

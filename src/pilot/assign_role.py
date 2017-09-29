@@ -88,7 +88,7 @@ RAID_TYPE_TO_DESCRIPTION = {
     "16384": "RAID60"
 }
 
-NOT_SUPPORTED_MSG = "This operation is not supported on this device"
+NOT_SUPPORTED_MSG = " operation is not supported on th"
 
 ROLES = {
     'controller': 'control',

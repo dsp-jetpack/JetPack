@@ -143,17 +143,6 @@ echo "## Installing probe-idrac utility..."
 ~/pilot/install_probe_idrac.sh
 echo "## Done."
 
-echo
-grep 'unset $key' ~/stackrc >/dev/null 2>&1 
-if [ $? -ne 0 ]
-then
-  echo "## Updating stackrc..."
-  sed -i '1ifor key in $( set | awk '"'"'{FS="="}  /^OS_/ {print $1}'"'"' ); do unset $key ; done' ~/stackrc
-  echo "## Done."
-else
-  echo "## stackrc has already been updated.  Skipping update."
-fi
-
 source $HOME/stackrc
 
 echo
@@ -236,35 +225,15 @@ echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
-# This hacks in a patch to fix correct querying WSMAN Enumerations that have
-# more than 100 entries.  We will need to remove this after the fix appears
-# in OSP10.  Note that this patch must be here because we use this code prior
-# to deploying the director.
-echo
-echo "## Patching Ironic iDRAC driver WSMAN library..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
-echo "## Done." 
-
 # This hacks in a patch to work around a known issue where RAID configuration
 # fails because the iDRAC is busy running an export to XML job and is not
 # ready. Note that this patch must be here because we use this code prior to
 # deploying the director.
 echo
 echo "## Patching Ironic iDRAC driver is_ready check..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.py ${HOME}/pilot/lifecycle_controller.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyo
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/uris.py ${HOME}/pilot/uris.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyo
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/constants.py ${HOME}/pilot/constants.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyo
 echo "## Done."
 
 # This hacks in a patch to work around a known issue where a RAID-10 virtual
@@ -276,6 +245,14 @@ echo "## Patching Ironic iDRAC driver RAID library..."
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
+echo "## Done."
+
+# This patch increases the is_ready timeout retries from 24 to 48
+echo
+echo "## Patching Ironic iDRAC driver is_ready timeout value..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/constants.py ${HOME}/pilot/constants.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyo
 echo "## Done."
 
 # This hacks in a patch to work around a known issue where waiting for job
@@ -296,14 +273,6 @@ echo "## Done."
 echo
 echo "## Restarting openstack-ironic-conductor.service..."
 sudo systemctl restart openstack-ironic-conductor.service
-echo "## Done."
-
-# This hacks in a workaround to fix in-band introspection.  A fix has been
-# made to NetworkManager upstream, but is not currently present in OSP10.
-# We will need to remove this after the fix appears in OSP10.
-echo
-echo "## Patching Ironic in-band introspection..."
-sudo sed -i 's/initrd=agent.ramdisk /initrd=agent.ramdisk net.ifnames=0 biosdevname=0 /' /httpboot/inspector.ipxe
 echo "## Done."
 
 network="ctlplane"
