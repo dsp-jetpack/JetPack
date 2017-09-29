@@ -896,9 +896,10 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
 
     node_data_lookup_str = \
         current_osd_configs["parameter_defaults"]["NodeDataLookup"]
-    node_data_lookup = yaml.load(node_data_lookup_str)
-    if not node_data_lookup:
+    if not node_data_lookup_str:
         node_data_lookup = {}
+    else:
+        node_data_lookup = json.loads(node_data_lookup_str)
 
     if system_id in node_data_lookup:
         current_osd_config = node_data_lookup[system_id][
@@ -913,10 +914,10 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
                          osd_config_file=osd_config_file))
             return
         else:
-            generated_config = yaml.dump(new_osd_config, default_style="'",
-                                         indent=4)
-            current_config = yaml.dump(current_osd_config, default_style="'",
-                                       indent=4)
+            generated_config = json.dumps(new_osd_config, sort_keys=True,
+                                   indent=2, separators=(',', ': '))
+            current_config = json.dumps(current_osd_config, sort_keys=True,
+                                   indent=2, separators=(',', ': '))
             raise RuntimeError("The generated OSD configuration for "
                                "{ip_mac_service_tag} ({system_id}) is "
                                "different from the one in {osd_config_file}.\n"
@@ -943,8 +944,9 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
         osd_config_file=osd_config_file))
     copyfile(osd_config_file + ".orig", osd_config_file)
     with open(osd_config_file, 'a') as stream:
-        yaml_out = yaml.dump(node_data_lookup, default_style="'", indent=4)
-        for line in yaml_out.split('\n'):
+        osd_config_str = json.dumps(node_data_lookup, sort_keys=True,
+                                    indent=2, separators=(',', ': '))
+        for line in osd_config_str.split('\n'):
             line = "    " + line + "\n"
             stream.write(line)
 
