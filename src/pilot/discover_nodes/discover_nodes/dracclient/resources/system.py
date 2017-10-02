@@ -28,6 +28,20 @@ class SystemManagement(object):
         """
         self.client = client
 
+    def get_system_id(self):
+        """Return the system id.
+
+        :returns: system model id
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        """
+        filter_query = ('select UUID '
+                        'from DCIM_SystemView')
+        doc = self.client.enumerate(uris.DCIM_SystemView,
+                                    filter_query=filter_query)
+
+        return utils.find_xml(doc, 'UUID', uris.DCIM_SystemView).text
+
     def get_system_model_name(self):
         """Return the system model name.
 

@@ -334,7 +334,8 @@ def main():
         # network-isolation.yaml
         env_opts = "-e ~/pilot/templates/overcloud/environments/" \
                    "network-isolation.yaml" \
-                   " -e ~/pilot/templates/network-environment.yaml"
+                   " -e ~/pilot/templates/network-environment.yaml" \
+                   " -e ~/pilot/templates/ceph-osd-config.yaml"
 
         # The static-ip-environment.yaml must be included after the
         # network-environment.yaml

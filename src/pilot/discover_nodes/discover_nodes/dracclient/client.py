@@ -486,6 +486,15 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_mgmt.get_nic_statistics(nic_id)
 
+    def get_system_id(self):
+        """Return the system id.
+
+        :returns: system model id
+        :raises: WSManRequestFailure on request failures
+        :raises: WSManInvalidResponse when receiving invalid response
+        """
+        return system.SystemManagement(self.client).get_system_id()
+
     def get_system_model_name(self):
         """Return the system model name.
 

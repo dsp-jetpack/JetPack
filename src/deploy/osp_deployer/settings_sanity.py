@@ -465,7 +465,7 @@ class DeployerSanity():
         # Verify Storage nodes network definition
         logger.debug("verifying storage nodes network settings")
         for storage in self.settings.ceph_nodes:
-            shouldhaveattributes = ['osd_disks']
+            shouldhaveattributes = []
             shouldbbevalidips = []
             if self.settings.overcloud_static_ips is True:
                 shouldhaveattributes.extend(["storage_ip",

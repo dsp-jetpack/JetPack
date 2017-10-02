@@ -19,10 +19,14 @@ from __future__ import absolute_import
 import argparse
 from collections import defaultdict
 from collections import namedtuple
+from constants import Constants
+from shutil import copyfile
 import json
 import logging
+import math
 import os
 import sys
+import yaml
 
 from dracclient import utils
 from dracclient.constants import POWER_OFF
@@ -675,7 +679,8 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
     should uncover interesting error conditions.'''
 
     if get_raid_controller_id(drac_client) is None:
-        LOG.warning("No RAID controller is present.  Skipping RAID configuration")
+        LOG.warning("No RAID controller is present.  Skipping RAID "
+                    "configuration")
         return True
 
     LOG.info("Configuring RAID")
@@ -812,10 +817,12 @@ def place_node_in_manageable_state(ironic_client, node_uuid):
 
     return True
 
+
 def place_node_in_available_state(ironic_client, node_uuid):
     # Return the ironic node to the available state.
     ironic_client.node.set_provision_state(node_uuid, 'provide')
     ironic_client.node.wait_for_provision_state(node_uuid, 'available')
+
 
 def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
                 ironic_client, drac_client):
@@ -842,6 +849,195 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
     # Select the volume for the OS to be installed on
     select_os_volume(os_volume_size_gb, ironic_client, drac_client.client,
                      node_uuid)
+
+    # Generate Ceph OSD/journal configuration for storage nodes
+    if flavor == "ceph-storage":
+        generate_osd_config(ip_mac_service_tag, drac_client)
+
+
+def generate_osd_config(ip_mac_service_tag, drac_client):
+    controllers = drac_client.list_raid_controllers()
+
+    found_hba = False
+    for controller in controllers:
+        if "hba330" in controller.model.lower():
+            found_hba = True
+            break
+
+    if not found_hba:
+        LOG.debug("No HBA330 found.  Not generating OSD config for "
+                  "{ip}".format(ip=ip_mac_service_tag))
+        return
+
+    LOG.info("Generating OSD config for {ip}".format(ip=ip_mac_service_tag))
+    system_id = drac_client.get_system_id().upper()
+
+    spinners, ssds = get_drives(drac_client)
+
+    new_osd_config = None
+    if len(ssds) > 0 and len(spinners) == 0:
+        # If we have an all flash config, then let Ceph colocate the journals
+        new_osd_config = generate_osd_config_without_journals(controllers,
+                                                              ssds)
+    elif len(ssds) > 0 and len(spinners) > 0:
+        # If we have a mix of flash and spinners, then use the ssds as journals
+        new_osd_config = generate_osd_config_with_journals(controllers,
+                                                           spinners,
+                                                           ssds)
+    else:
+        # We have all spinners, so let Ceph colocate the journals
+        new_osd_config = generate_osd_config_without_journals(controllers,
+                                                              spinners)
+
+    # load the osd environment file
+    osd_config_file = os.path.join(Constants.TEMPLATES, "ceph-osd-config.yaml")
+    with open(osd_config_file, 'r') as stream:
+        current_osd_configs = yaml.load(stream)
+
+    node_data_lookup_str = \
+        current_osd_configs["parameter_defaults"]["NodeDataLookup"]
+    if not node_data_lookup_str:
+        node_data_lookup = {}
+    else:
+        node_data_lookup = json.loads(node_data_lookup_str)
+
+    if system_id in node_data_lookup:
+        current_osd_config = node_data_lookup[system_id][
+            "ceph::profile::params::osds"]
+        if new_osd_config == current_osd_config:
+            LOG.info("The generated OSD configuration for "
+                     "{ip_mac_service_tag} ({system_id}) is the same as the "
+                     "one in {osd_config_file}.  Skipping OSD "
+                     "configuration.".format(
+                         ip_mac_service_tag=ip_mac_service_tag,
+                         system_id=system_id,
+                         osd_config_file=osd_config_file))
+            return
+        else:
+            generated_config = json.dumps(new_osd_config, sort_keys=True,
+                                   indent=2, separators=(',', ': '))
+            current_config = json.dumps(current_osd_config, sort_keys=True,
+                                   indent=2, separators=(',', ': '))
+            raise RuntimeError("The generated OSD configuration for "
+                               "{ip_mac_service_tag} ({system_id}) is "
+                               "different from the one in {osd_config_file}.\n"
+                               "Generated:\n{generated_config}\n\n"
+                               "Current:\n{current_config}".format(
+                                   ip_mac_service_tag=ip_mac_service_tag,
+                                   system_id=system_id,
+                                   osd_config_file=osd_config_file,
+                                   generated_config=generated_config,
+                                   current_config=current_config))
+
+    node_data_lookup[system_id] = {
+        "ceph::profile::params::osds": new_osd_config}
+
+    # make a backup copy of the file
+    osd_config_file_backup = osd_config_file + ".bak"
+    LOG.info("Backing up original OSD config file to "
+             "{osd_config_file_backup}".format(
+                 osd_config_file_backup=osd_config_file_backup))
+    copyfile(osd_config_file, osd_config_file_backup)
+
+    # save the new config
+    LOG.info("Saving new OSD config to {osd_config_file}".format(
+        osd_config_file=osd_config_file))
+    copyfile(osd_config_file + ".orig", osd_config_file)
+    with open(osd_config_file, 'a') as stream:
+        osd_config_str = json.dumps(node_data_lookup, sort_keys=True,
+                                    indent=2, separators=(',', ': '))
+        for line in osd_config_str.split('\n'):
+            line = "    " + line + "\n"
+            stream.write(line)
+
+
+def get_drives(drac_client):
+    spinners = []
+    ssds = []
+    physical_disks = drac_client.list_physical_disks()
+    for physical_disk in physical_disks:
+        # Eliminate physical disks that in a state other than non-RAID
+        if physical_disk.raid_status != "non-RAID":
+            LOG.info("Skipping disk {id}, because it has a RAID status of "
+                     "{raid_status}".format(
+                         id=physical_disk.id,
+                         raid_status=physical_disk.raid_status))
+            continue
+
+        # Eliminate physical disks that have an error status
+        if physical_disk.status == 'error':
+            LOG.warning("Not using disk {id}, because it has a status of "
+                        "{status}".format(id=physical_disk.id,
+                                          status=physical_disk.status))
+            continue
+
+        # Go ahead and use any physical drive that's not in an error state, but
+        # issue a warning if it's not in the ok or unknown state
+        if physical_disk.status != 'ok' and physical_disk.status != 'unknown':
+            LOG.warning("Using disk {id}, but it has a status of \""
+                        "{status}\"".format(id=physical_disk.id,
+                                            status=physical_disk.status))
+
+        if physical_disk.media_type == "hdd":
+            spinners.append(physical_disk)
+        else:
+            ssds.append(physical_disk)
+
+    return spinners, ssds
+
+
+def generate_osd_config_without_journals(controllers, osd_drives):
+    osd_config = {}
+    for osd_drive in osd_drives:
+        osd_drive_pci_bus_number = get_pci_bus_number(osd_drive, controllers)
+        osd_drive_device_name = get_by_path_device_name(
+            osd_drive_pci_bus_number, osd_drive)
+        osd_config[osd_drive_device_name] = {}
+
+    return osd_config
+
+
+def generate_osd_config_with_journals(controllers, osd_drives, ssds):
+    osd_config = {}
+    osd_index = 0
+    remaining_ssds = len(ssds)
+    for ssd in ssds:
+        ssd_pci_bus_number = get_pci_bus_number(ssd, controllers)
+        ssd_device_name = get_by_path_device_name(ssd_pci_bus_number, ssd)
+
+        num_osds_for_ssd = int(math.ceil((len(osd_drives)-osd_index) /
+                                         (remaining_ssds * 1.0)))
+
+        osds_for_ssd = osd_drives[osd_index:
+                                  osd_index + num_osds_for_ssd]
+        for osd_drive in osds_for_ssd:
+            osd_drive_pci_bus_number = get_pci_bus_number(osd_drive,
+                                                          controllers)
+            osd_drive_device_name = get_by_path_device_name(
+                osd_drive_pci_bus_number, osd_drive)
+
+            osd_config[osd_drive_device_name] = {"journal": ssd_device_name}
+
+        osd_index += num_osds_for_ssd
+        remaining_ssds -= 1
+
+    return osd_config
+
+
+def get_pci_bus_number(spinner, controllers):
+    bus = None
+    for controller in controllers:
+        if controller.id in spinner.id:
+            bus = controller.bus.lower()
+            break
+    return bus
+
+
+def get_by_path_device_name(pci_bus_number, physical_disk):
+    return ('/dev/disk/by-path/pci-0000:'
+            '{pci_bus_number}:00.0-sas-0x{sas_address}-lun-0').format(
+                pci_bus_number=pci_bus_number,
+                sas_address=physical_disk.sas_address.lower())
 
 
 def get_fqdd(doc, namespace):
