@@ -195,6 +195,7 @@ class Settings():
             'subscription_manager_pool_vm_rhel']
         self.subscription_manager_vm_ceph = cluster[
             'subscription_manager_vm_ceph']
+        self.sah_bond_opts = cluster['sah_bond_opts']
         self.controller_bond_opts = cluster[
             'controller_bond_opts']
         self.compute_bond_opts = cluster['compute_bond_opts']
