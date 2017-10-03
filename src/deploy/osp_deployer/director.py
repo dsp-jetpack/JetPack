@@ -28,11 +28,6 @@ import sys
 import tempfile
 import time
 
-common_path = os.path.join(os.path.expanduser('~/JetPack/src'), 'common')
-sys.path.append(common_path)
-
-from thread_helper import ThreadWithExHandling  # noqa
-
 logger = logging.getLogger("osp_deployer")
 
 exitFlag = 0
@@ -148,8 +143,10 @@ class Director(InfraHost):
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
-            raise AssertionError("Director/Undercloud did not install properly " +
-                                 "- see /pilot/install-director.log for details")
+            raise AssertionError("Director/Undercloud did not " +
+                                 "install properly - see " +
+                                 "/pilot/install-director.log" +
+                                 " for details")
 
         tester = Checkpoints()
         tester.verify_undercloud_installed()
@@ -232,7 +229,7 @@ class Director(InfraHost):
         else:
             raise AssertionError(
                  "Number of nodes in instackenv.json does not add up"
-                 " to the number of nodes defined in .properties file") 
+                 " to the number of nodes defined in .properties file")
 
         if setts.use_ipmi_driver is True:
             logger.debug("Using pxe_ipmi driver")
@@ -330,6 +327,10 @@ class Director(InfraHost):
 
     def assign_node_roles(self):
         logger.debug("Assigning roles to nodes")
+
+        common_path = os.path.join(os.path.expanduser(self.settings.cloud_repo_dir + '/src'), 'common')
+        sys.path.append(common_path)
+        from thread_helper import ThreadWithExHandling  # noqa
 
         roles_to_nodes = {}
         roles_to_nodes["controller"] = self.settings.controller_nodes
@@ -1000,7 +1001,8 @@ class Director(InfraHost):
                                     self.settings.tenant_vlan_range + \
                                     " --overcloud_name " + \
                                     self.settings.overcloud_name + \
-                                    " --ntp " + self.settings.sah_node.provisioning_ip
+                                    " --ntp " + \
+                                    self.settings.sah_node.provisioning_ip
 
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \
