@@ -107,7 +107,7 @@ class Sah(InfraHost):
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^extern_bond_opts=.*',
-                                      'extern_bond_opts="' +
+                                      'extern_bond_opts="mode=' +
                                       sets.sah_bond_opts +
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
@@ -122,7 +122,7 @@ class Sah(InfraHost):
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^internal_bond_opts=.*',
-                                      'internal_bond_opts="' +
+                                      'internal_bond_opts="mode=' +
                                       sets.sah_bond_opts +
                                       '"')
         FileHelper.replace_expression(sets.sah_kickstart,
