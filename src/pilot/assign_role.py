@@ -915,9 +915,9 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
             return
         else:
             generated_config = json.dumps(new_osd_config, sort_keys=True,
-                                   indent=2, separators=(',', ': '))
+                                          indent=2, separators=(',', ': '))
             current_config = json.dumps(current_osd_config, sort_keys=True,
-                                   indent=2, separators=(',', ': '))
+                                        indent=2, separators=(',', ': '))
             raise RuntimeError("The generated OSD configuration for "
                                "{ip_mac_service_tag} ({system_id}) is "
                                "different from the one in {osd_config_file}.\n"
@@ -998,6 +998,11 @@ def generate_osd_config_without_journals(controllers, osd_drives):
 
 
 def generate_osd_config_with_journals(controllers, osd_drives, ssds):
+    if len(osd_drives) % len(ssds) != 0:
+        LOG.warning("There is not an even mapping of OSD drives to SSD "
+                    "journals.  This will cause inconsistent performance "
+                    "characteristics.")
+
     osd_config = {}
     osd_index = 0
     remaining_ssds = len(ssds)
