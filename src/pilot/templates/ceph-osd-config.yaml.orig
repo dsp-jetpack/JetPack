@@ -17,3 +17,4 @@ resource_registry:
 
 parameter_defaults:
   NodeDataLookup: >
+    {}

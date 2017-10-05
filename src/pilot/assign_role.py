@@ -865,8 +865,8 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
             break
 
     if not found_hba:
-        LOG.debug("No HBA330 found.  Not generating OSD config for "
-                  "{ip}".format(ip=ip_mac_service_tag))
+        LOG.info("No HBA330 found.  Not generating OSD config for "
+                 "{ip}".format(ip=ip_mac_service_tag))
         return
 
     LOG.info("Generating OSD config for {ip}".format(ip=ip_mac_service_tag))
@@ -942,13 +942,20 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
     # save the new config
     LOG.info("Saving new OSD config to {osd_config_file}".format(
         osd_config_file=osd_config_file))
-    copyfile(osd_config_file + ".orig", osd_config_file)
-    with open(osd_config_file, 'a') as stream:
-        osd_config_str = json.dumps(node_data_lookup, sort_keys=True,
-                                    indent=2, separators=(',', ': '))
-        for line in osd_config_str.split('\n'):
-            line = "    " + line + "\n"
-            stream.write(line)
+
+    # Using the simple yaml.dump results in a completely unreadable file, so we
+    # do it the hard way to create something more user friendly
+    with open(osd_config_file + ".orig", 'r') as instream:
+        with open(osd_config_file, 'w') as outstream:
+            for line in instream:
+                if '{}' not in line:
+                    outstream.write(line)
+
+            osd_config_str = json.dumps(node_data_lookup, sort_keys=True,
+                                        indent=2, separators=(',', ': '))
+            for line in osd_config_str.split('\n'):
+                line = "    " + line + "\n"
+                outstream.write(line)
 
 
 def get_drives(drac_client):
