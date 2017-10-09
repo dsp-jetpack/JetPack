@@ -65,6 +65,14 @@ packages=(
 function join { local IFS="$1"; shift; echo "$*"; }
 
 echo "## Updating the overcloud image"
+cd ~/pilot
+director_ip=`grep 'network_gateway = ' undercloud.conf | awk -F" = " '{print $2}'`
+director_short=`hostname -s`
+director_long=`hostname`
+cd ~/pilot/images
+
+virt-customize -a overcloud-full.qcow2 --run-command "echo '${director_ip} ${director_short} ${director_long}' >> /etc/hosts"
+
 
 virt-customize \
     --memsize 2000 \
