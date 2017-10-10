@@ -73,6 +73,8 @@ cd ~/pilot/images
 
 virt-customize -a overcloud-full.qcow2 --run-command "echo '${director_ip} ${director_short} ${director_long}' >> /etc/hosts"
 
+#Temporary fix for Ceph-OSD not starting (BZ#1472409)
+virt-customize -a overcloud-full.qcow2 --run-command 'sed -i "s/timeout 120/timeout 10000/" /usr/lib/systemd/system/ceph-disk\@.service'
 
 virt-customize \
     --memsize 2000 \
