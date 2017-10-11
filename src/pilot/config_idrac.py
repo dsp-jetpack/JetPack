@@ -153,8 +153,8 @@ def configure_nics_boot_settings(
     return reboot_required, job_ids, provisioning_mac
 
 
-def config_legacy_boot_setting(drac_client, ip_service_tag, node):
-    LOG.info("Setting the iDRAC on {} to legacy boot".format(
+def config_legacy_boot_mode(drac_client, ip_service_tag, node):
+    LOG.info("Setting {} to legacy BIOS boot".format(
         ip_service_tag))
     settings = {"BootMode": "Bios"}
     response = drac_client.set_bios_settings(settings)
@@ -197,6 +197,67 @@ def config_idrac_settings(drac_client, ip_service_tag, password, node):
                                                           start_time=None)
 
     return response['reboot_required'], job_id
+
+
+def config_hard_disk_drive_boot_sequence(drac_client, ip_service_tag):
+    boot_devices = drac_client.list_boot_devices()
+    bcv_boot_devices = boot_devices['BCV']
+
+    # Search for a Dell Boot Optimized Server Storage (BOSS) virtual disk in
+    # the Boot Connection Vector's (BCV) boot devices list. This assumes there
+    # is no more than one (1) BOSS virtual disk. Use an index value of negative
+    # one (-1) to indicate no BOSS virtual disk was found.
+    boss_virtual_disk_index = next((i for i, device in enumerate(
+        bcv_boot_devices) if "DELLBOSS VD" in device.bios_boot_string), -1)
+
+    # If a BOSS virtual disk exists, but is not the first device in the BCV
+    # boot devices list, configure it to be.
+    if boss_virtual_disk_index > 0:
+        LOG.info("Configuring BOSS virtual disk on {} to be first hard disk "
+                 "drive to boot".format(
+                     ip_service_tag))
+        bcv_boot_devices.insert(
+            0, bcv_boot_devices.pop(boss_virtual_disk_index))
+
+        bcv_boot_device_ids = [device.id for device in bcv_boot_devices]
+        drac_client.change_boot_device_order('BCV', bcv_boot_device_ids)
+
+        LOG.info("Rebooting {} to apply configuration".format(ip_service_tag))
+        job_id = drac_client.commit_pending_bios_changes(reboot=True)
+
+        LOG.info("Waiting for iDRAC configuration to complete on {}".format(
+            ip_service_tag))
+        LOG.info("Do not unplug {}".format(ip_service_tag))
+        job_ids = [job_id]
+        success = wait_for_jobs_to_complete(
+            job_ids, drac_client, ip_service_tag)
+    else:
+        success = True
+
+    return success
+
+
+def wait_for_jobs_to_complete(job_ids, drac_client, ip_service_tag):
+    # Wait up to 10 minutes for the unfinished jobs to run
+    unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
+    retries = 60
+    while unfinished_jobs and retries > 0:
+        LOG.debug("{} jobs remain to complete on {}".format(
+            len(unfinished_jobs), ip_service_tag))
+        retries -= 1
+        if retries > 0:
+            sleep(10)
+            unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
+
+    if retries > 0:
+        LOG.debug("All jobs have completed on {}".format(ip_service_tag))
+        success = JobHelper.determine_job_outcomes(drac_client, job_ids)
+    else:
+        LOG.error("Timed out while waiting for jobs to complete on "
+                  "{}".format(ip_service_tag))
+        success = False
+
+    return success
 
 
 def clear_job_queue(drac_client, ip_service_tag):
@@ -268,7 +329,7 @@ def config_idrac(instack_lock,
     reboot_required = reboot_required or reboot_required_nic
 
     # Configure the system to legacy boot
-    reboot_required_legacy, legacy_job_id = config_legacy_boot_setting(
+    reboot_required_legacy, legacy_job_id = config_legacy_boot_mode(
         drac_client, ip_service_tag, node)
     reboot_required = reboot_required or reboot_required_legacy
     if legacy_job_id:
@@ -299,7 +360,6 @@ def config_idrac(instack_lock,
         LOG.info("Do not unplug {}".format(ip_service_tag))
 
         # If the user set the password, then we need to change creds
-        unfinished_jobs = None
         if password:
             new_drac_client = DRACClient(drac_ip, drac_user, password)
 
@@ -310,8 +370,7 @@ def config_idrac(instack_lock,
                 try:
                     LOG.debug("Attempting to access the iDRAC on {} with the "
                               "new password".format(ip_service_tag))
-                    unfinished_jobs = new_drac_client.list_jobs(
-                        only_unfinished=True)
+                    new_drac_client.is_idrac_ready()
                     password_changed = True
                 except exceptions.WSManInvalidResponse as ex:
                     if "unauthorized" in ex.message.lower():
@@ -334,30 +393,18 @@ def config_idrac(instack_lock,
                 drac_client = new_drac_client
             else:
                 success = False
-                # Grab the unfinished_jobs list using the original creds
                 LOG.warn("Failed to change the password on {}".format(
                     ip_service_tag))
-                unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
-        else:
-            unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
 
-        # Wait up to 10 minutes for the unfinished jobs to run
-        retries = 60
-        while unfinished_jobs and retries > 0:
-            LOG.debug("{} jobs remain to complete on {}".format(
-                len(unfinished_jobs), ip_service_tag))
-            retries -= 1
-            if retries > 0:
-                sleep(10)
-                unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
+        all_jobs_succeeded = wait_for_jobs_to_complete(
+            job_ids, drac_client, ip_service_tag)
 
-        if retries > 0:
-            LOG.debug("All jobs have completed on {}".format(ip_service_tag))
-            success = JobHelper.determine_job_outcomes(drac_client, job_ids)
-        else:
-            LOG.error("Timed out while waiting for jobs to complete on "
-                      "{}".format(ip_service_tag))
+        if not all_jobs_succeeded:
             success = False
+
+    if success:
+        success = config_hard_disk_drive_boot_sequence(
+            drac_client, ip_service_tag)
 
     # We always want to update the password for the node in the instack file
     # if the user requested a password change and the iDRAC config job was
