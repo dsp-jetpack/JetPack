@@ -385,7 +385,7 @@ def populate_compute_nodes_resources(first_controller_node_ip, domainname):
 
 
 # 15a) Add stonith devices for all compute nodes. Replace the ipaddr, login and
-# passwd values to suit your IPMI device. Run ~/pilot/identify_nodes.sh to see
+# passwd values to suit your IPMI device. Run identify_nodes.sh to see
 # which idrac is associated with the host and crm_node -n to get the hostname.
 def add_compute_nodes_stonith_devices(compute_nodes_ip,
                                       undercloud_config,
@@ -578,13 +578,13 @@ def main():
     undercloud_config = os.path.join(home_dir, 'undercloud_nodes.txt')
     instack_file = os.path.join(home_dir, args.file)
 
-    # Run ~/pilot/update_ssh_config.py
-    cmd = os.path.join(home_dir, 'pilot/update_ssh_config.py')
+    # Run update_ssh_config.py
+    cmd = os.path.join(os.getcwd(), 'update_ssh_config.py')
     os.system(cmd)
 
-    # Run ~/pilot/identify_nodes.py > ~/undercloud_nodes.txt
-    cmd = os.path.join(home_dir,
-                       'pilot/identify_nodes.py > ~/undercloud_nodes.txt')
+    # Run identify_nodes.py > ~/undercloud_nodes.txt
+    cmd = os.path.join(os.getcwd(),
+                       'identify_nodes.py > ~/undercloud_nodes.txt')
     os.system(cmd)
 
     # Get first_controller_node
