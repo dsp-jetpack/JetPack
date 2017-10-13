@@ -209,13 +209,13 @@ def main():
     ssh_config = os.path.join(home_dir, '.ssh/config')
     undercloud_config = os.path.join(home_dir, 'undercloud_nodes.txt')
 
-    # Run ~/pilot/update_ssh_config.py
-    cmd = os.path.join(home_dir, 'pilot/update_ssh_config.py')
+    # Run update_ssh_config.py
+    cmd = os.path.join(os.getcwd(), 'update_ssh_config.py')
     os.system(cmd)
 
-    # Run ~/pilot/identify_nodes.py > ~/undercloud_nodes.txt
-    cmd = os.path.join(home_dir,
-                       'pilot/identify_nodes.py > ~/undercloud_nodes.txt')
+    # Run identify_nodes.py > ~/undercloud_nodes.txt
+    cmd = os.path.join(os.getcwd(),
+                       'identify_nodes.py > ~/undercloud_nodes.txt')
     os.system(cmd)
 
     # Get first_controller_node
