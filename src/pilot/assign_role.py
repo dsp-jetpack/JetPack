@@ -1430,10 +1430,7 @@ def main():
 
         args = parse_arguments()
 
-        root_logger = logging.getLogger()
-        root_logger.setLevel(args.logging_level)
-        urllib3_logger = logging.getLogger("requests.packages.urllib3")
-        urllib3_logger.setLevel(logging.WARN)
+        LoggingHelper.configure_logging(args.logging_level)
 
         flavor_settings_filename = os.path.expanduser(args.flavor_settings)
         flavor_settings = get_flavor_settings(flavor_settings_filename)

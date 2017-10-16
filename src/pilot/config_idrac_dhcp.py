@@ -49,10 +49,7 @@ def main():
     sah_user = "root"
     args = parse_arguments(sah_user)
 
-    root_logger = logging.getLogger()
-    root_logger.setLevel(args.logging_level)
-    paramiko_logger = logging.getLogger("paramiko")
-    paramiko_logger.setLevel(logging.WARN)
+    LoggingHelper.configure_logging(args.logging_level, logger="paramiko")
 
     sah_password = args.password
     if not sah_password:
@@ -67,8 +64,8 @@ def main():
                                       'templates', 'dhcpd.conf')
 
     try:
-        file = open(dhcp_conf_template, 'r')
-        file_text = file.read()
+        in_file = open(dhcp_conf_template, 'r')
+        file_text = in_file.read()
     except IOError:
         LOG.exception("Could not open dhcp.conf template file {}".format(
                       dhcp_conf_template))
@@ -96,8 +93,8 @@ def main():
                        range_lines, file_text)
 
     try:
-        with open(dhcp_conf, 'w') as file:
-            file.write(file_text)
+        with open(dhcp_conf, 'w') as out_file:
+            out_file.write(file_text)
     except IOError:
         LOG.exception("Could not open {} for writing.".format(dhcp_conf))
         sys.exit(1)
@@ -113,7 +110,7 @@ def main():
     # so touch it to make sure it exists before starting the service
     dhcp_leases = "/var/lib/dhcpd/dhcpd.leases"
     LOG.info("Touching {}:{} as {}".format(args.sah_ip, dhcp_leases, sah_user))
-    exit_code, std_out, std_err = Ssh.execute_command(
+    exit_code, _, std_err = Ssh.execute_command(
         args.sah_ip,
         "touch " + dhcp_leases,
         user=sah_user,
@@ -126,7 +123,7 @@ def main():
 
     # Enable and restart the dhcp server on the SAH
     LOG.info("Enabling dhcpd on {} as {}".format(args.sah_ip, sah_user))
-    exit_code, std_out, std_err = Ssh.execute_command(
+    exit_code, _, std_err = Ssh.execute_command(
         args.sah_ip,
         "systemctl enable dhcpd",
         user=sah_user,
@@ -137,7 +134,7 @@ def main():
         sys.exit(1)
 
     LOG.info("Restarting dhcpd on {} as {}".format(args.sah_ip, sah_user))
-    exit_code, std_out, std_err = Ssh.execute_command(
+    exit_code, _, std_err = Ssh.execute_command(
         args.sah_ip,
         "systemctl restart dhcpd",
         user=sah_user,

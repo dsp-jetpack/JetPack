@@ -47,25 +47,28 @@ class IronicHelper:
             else:
                 node = ironic_client.node.get(port.node_uuid)
         elif "." in ip_mac_service_tag:
-            # Assume we're looking for the IP addres of the iDRAC
+            # Assume we're looking for the IP address of the iDRAC
             for n in ironic_client.node.list(
                 fields=[
                     "driver",
                     "driver_info",
-                    "uuid"]):
+                    "uuid",
+                    "properties",
+                    "provision_state"]):
                 drac_ip, _ = CredentialHelper.get_drac_ip_and_user(n)
 
                 if drac_ip == ip_mac_service_tag:
                     node = n
                     break
         else:
-            # Assume we're looking for the chassis service tag
+            # Assume we're looking for the service tag
             for n in ironic_client.node.list(
                 fields=[
                     "driver",
                     "driver_info",
                     "uuid",
-                    "properties"]):
+                    "properties",
+                    "provision_state"]):
                 if n.properties["service_tag"] == ip_mac_service_tag:
                     node = n
                     break
