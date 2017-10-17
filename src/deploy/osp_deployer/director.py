@@ -408,16 +408,12 @@ class Director(InfraHost):
         logger.debug("Configuring Ceph storage settings for overcloud")
 
         # If the osd_disks were not specified then just return
-        if not hasattr(self.settings.ceph_nodes[0], 'osd_disks'):
-            logger.info("osd_disks was not specified on the first storage "
-                        "node in the .properties file.  Skipping OSD "
-                        "configuration")
-            return
-
-        # Otherwise, set up the Ceph OSDs using the osd_disks defined for the
-        # first storage node. This is the best we can do until the OSP Director
-        # supports more than a single, global OSD configuration.
-        osd_disks = self.settings.ceph_nodes[0].osd_disks
+        osd_disks = None
+        if hasattr(self.settings.ceph_nodes[0], 'osd_disks'):
+            # If the OSD disks are specified on the first storage node, then
+            # use them.  This is the best we can do until the OSP Director
+            # supports more than a single, global OSD configuration.
+            osd_disks = self.settings.ceph_nodes[0].osd_disks
 
         src_file = open(self.settings.dell_env_yaml, 'r')
 
@@ -434,7 +430,7 @@ class Director(InfraHost):
 
         found_osds_param = False
         for line in src_file:
-            if line.startswith(osds_param):
+            if osd_disks and line.startswith(osds_param):
                 found_osds_param = True
 
             elif found_osds_param:
