@@ -200,37 +200,48 @@ def config_idrac_settings(drac_client, ip_service_tag, password, node):
 
 
 def config_hard_disk_drive_boot_sequence(drac_client, ip_service_tag):
+    success = False
+
     boot_devices = drac_client.list_boot_devices()
-    bcv_boot_devices = boot_devices['BCV']
 
-    # Search for a Dell Boot Optimized Server Storage (BOSS) virtual disk in
-    # the Boot Connection Vector's (BCV) boot devices list. This assumes there
-    # is no more than one (1) BOSS virtual disk. Use an index value of negative
-    # one (-1) to indicate no BOSS virtual disk was found.
-    boss_virtual_disk_index = next((i for i, device in enumerate(
-        bcv_boot_devices) if "DELLBOSS VD" in device.bios_boot_string), -1)
+    # The Boot Connection Vector (BCV) boot devices list may not exist. That
+    # has been observed when a RAID controller is reset and has no virtual
+    # disks.
+    if 'BCV' in boot_devices:
+        bcv_boot_devices = boot_devices['BCV']
 
-    # If a BOSS virtual disk exists, but is not the first device in the BCV
-    # boot devices list, configure it to be.
-    if boss_virtual_disk_index > 0:
-        LOG.info("Configuring BOSS virtual disk on {} to be first hard disk "
-                 "drive to boot".format(
-                     ip_service_tag))
-        bcv_boot_devices.insert(
-            0, bcv_boot_devices.pop(boss_virtual_disk_index))
+        # Search for a Dell Boot Optimized Server Storage (BOSS) virtual disk
+        # in the BCV boot devices list. This assumes there is no more than one
+        # (1) BOSS virtual disk. Use an index value of negative one (-1) to
+        # indicate no BOSS virtual disk was found.
+        boss_virtual_disk_index = next((i for i, device in enumerate(
+            bcv_boot_devices) if "DELLBOSS VD" in device.bios_boot_string), -1)
 
-        bcv_boot_device_ids = [device.id for device in bcv_boot_devices]
-        drac_client.change_boot_device_order('BCV', bcv_boot_device_ids)
+        # If a BOSS virtual disk exists, but is not the first device in the BCV
+        # boot devices list, configure it to be.
+        if boss_virtual_disk_index > 0:
+            LOG.info("Configuring BOSS virtual disk on {} to be first hard "
+                     "disk drive to boot".format(
+                         ip_service_tag))
+            bcv_boot_devices.insert(
+                0, bcv_boot_devices.pop(boss_virtual_disk_index))
 
-        LOG.info("Rebooting {} to apply configuration".format(ip_service_tag))
-        job_id = drac_client.commit_pending_bios_changes(reboot=True)
+            bcv_boot_device_ids = [device.id for device in bcv_boot_devices]
+            drac_client.change_boot_device_order('BCV', bcv_boot_device_ids)
 
-        LOG.info("Waiting for iDRAC configuration to complete on {}".format(
-            ip_service_tag))
-        LOG.info("Do not unplug {}".format(ip_service_tag))
-        job_ids = [job_id]
-        success = wait_for_jobs_to_complete(
-            job_ids, drac_client, ip_service_tag)
+            LOG.info("Rebooting {} to apply configuration".format(
+                ip_service_tag))
+            job_id = drac_client.commit_pending_bios_changes(reboot=True)
+
+            LOG.info("Waiting for iDRAC configuration to complete on "
+                     "{}".format(
+                         ip_service_tag))
+            LOG.info("Do not unplug {}".format(ip_service_tag))
+            job_ids = [job_id]
+            success = wait_for_jobs_to_complete(
+                job_ids, drac_client, ip_service_tag)
+        else:
+            success = True
     else:
         success = True
 
