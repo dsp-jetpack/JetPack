@@ -21,6 +21,7 @@ import logging
 import time
 import shutil
 import os
+import subprocess
 
 logger = logging.getLogger("osp_deployer")
 
@@ -203,6 +204,27 @@ class Sah(InfraHost):
     def upload_iso(self):
         shutil.copyfile(self.settings.rhel_iso,
                         "/store/data/iso/RHEL7.iso")
+
+    def clear_known_hosts(self):
+        hosts = [
+             self.settings.director_node.public_api_ip,
+             self.settings.rhscon_node.public_api_ip
+        ]
+
+        # Check wether we're running from the SAH node 
+        out = subprocess.check_output("ip addr",
+                                      stderr=subprocess.STDOUT,
+                                      shell=True)
+
+        if self.settings.sah_node.public_api_ip in out:
+            for host in hosts:
+                cmd = 'ssh-keygen -R ' + host
+                self.run(cmd)
+        else:
+            for host in hosts:
+                subprocess.check_output('ssh-keygen -R ' + host,
+                                        stderr=subprocess.STDOUT,
+                                        shell=True)
 
     def handle_lock_files(self):
         files = [

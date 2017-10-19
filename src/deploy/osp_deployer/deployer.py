@@ -133,6 +133,7 @@ def deploy():
 
         tester.sah_health_check()
         logger.info("Uploading configs/iso/scripts..")
+        sah_node.clear_known_hosts()
         sah_node.handle_lock_files()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
