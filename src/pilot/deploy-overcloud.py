@@ -71,7 +71,7 @@ def validate_node_placement():
 
         hyphen = node_capability.rfind("-")
         flavor = node_capability[0:hyphen]
-        index = node_capability[hyphen + 1]
+        index = node_capability[hyphen + 1:]
 
         # Build up a dict that maps a flavor name to a sequence of placment
         # indices
