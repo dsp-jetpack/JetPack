@@ -34,12 +34,8 @@ def parse_arguments():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     ArgHelper.add_ip_service_tag(parser)
-
+    ArgHelper.add_inband_arg(parser)
     LoggingHelper.add_argument(parser)
-
-    parser.add_argument("-i", "--in-band",
-                        help="Use in-band (PXE booting) introspection",
-                        action="store_true")
 
     return parser.parse_args()
 
@@ -52,27 +48,9 @@ def main():
     ironic_client = IronicHelper.get_ironic_client()
     node = IronicHelper.get_ironic_node(ironic_client, args.ip_service_tag)
 
-    if introspect_nodes.is_introspection_oob(args.in_band, node, logger):
-        introspect_nodes.oob_introspect_nodes(ironic_client, [node])
-    else:
-        introspect_nodes.transition_to_state(ironic_client, [node],
-                                             'manage', 'manageable')
-
-        logger.info("Starting in-band introspection on node {} ({})".format(
-            args.ip_service_tag, node.uuid))
-        return_code = os.system("openstack overcloud node introspect "
-                                "{}".format(node.uuid))
-
-        if return_code != 0:
-            logger.error("Failed to introspect node {} ({})".format(
-                args.ip_service_tag, node.uuid))
-            sys.exit(1)
-
-        introspect_nodes.transition_to_state(
-            ironic_client,
-            [ironic_client.node.get(node.uuid)],
-            'provide',
-            'available')
+    introspect_nodes.introspect_nodes(args.in_band,
+                                      ironic_client,
+                                      [node])
 
 
 if __name__ == "__main__":

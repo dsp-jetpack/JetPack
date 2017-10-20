@@ -49,7 +49,8 @@ def main():
     sah_user = "root"
     args = parse_arguments(sah_user)
 
-    LoggingHelper.configure_logging(args.logging_level, logger="paramiko")
+    LoggingHelper.configure_logging(args.logging_level,
+                                    noisy_logger="paramiko")
 
     sah_password = args.password
     if not sah_password:
