@@ -13,29 +13,23 @@
     },
     "roles": {
         "control": {
-            "pool_ids": [ "CHANGEME_openstack_pool_id",
-                          "CHANGEME_ceph_pool_id"  ],
+            "pool_ids": [ "CHANGEME_openstack_pool_id" ],
             "repos": [ "rhel-7-server-rpms",
                        "rhel-7-server-extras-rpms",
-                       "rhel-7-server-rh-common-rpms",
                        "rhel-ha-for-rhel-7-server-rpms",
                        "rhel-7-server-openstack-10-rpms",
                        "rhel-7-server-openstack-10-devtools-rpms",
                        "rhel-7-server-rhceph-2-mon-rpms",
-                       "rhel-7-server-rhceph-2-osd-rpms",
                        "rhel-7-server-rhceph-2-tools-rpms" ]
         },
         "compute": {
-            "pool_ids": [ "CHANGEME_openstack_pool_id",
-                          "CHANGEME_ceph_pool_id"  ],
+            "pool_ids": [ "CHANGEME_openstack_pool_id" ],
             "repos": [ "rhel-7-server-rpms",
                        "rhel-7-server-extras-rpms",
-                       "rhel-7-server-rh-common-rpms",
                        "rhel-ha-for-rhel-7-server-rpms",
                        "rhel-7-server-openstack-10-rpms",
                        "rhel-7-server-openstack-10-devtools-rpms",
                        "rhel-7-server-rhceph-2-mon-rpms",
-                       "rhel-7-server-rhceph-2-osd-rpms",
                        "rhel-7-server-rhceph-2-tools-rpms" ]
         },
         "ceph-storage": {
@@ -43,7 +37,6 @@
                           "CHANGEME_ceph_pool_id" ],
             "repos": [ "rhel-7-server-rpms",
                        "rhel-7-server-extras-rpms",
-                       "rhel-7-server-rh-common-rpms",
                        "rhel-ha-for-rhel-7-server-rpms",
                        "rhel-7-server-openstack-10-rpms",
                        "rhel-7-server-openstack-10-devtools-rpms",
