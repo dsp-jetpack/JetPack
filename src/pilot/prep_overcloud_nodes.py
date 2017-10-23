@@ -45,10 +45,7 @@ def parse_arguments():
 def main():
     args = parse_arguments()
 
-    root_logger = logging.getLogger()
-    root_logger.setLevel(args.logging_level)
-    urllib3_logger = logging.getLogger("requests.packages.urllib3")
-    urllib3_logger.setLevel(logging.WARN)
+    LoggingHelper.configure_logging(args.logging_level)
 
     ironic_client = IronicHelper.get_ironic_client()
 

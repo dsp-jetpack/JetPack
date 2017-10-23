@@ -43,3 +43,9 @@ class ArgHelper:
                             help="""node definition template file that defines the
                                     nodes being configured""",
                             metavar="FILENAME")
+
+    @staticmethod
+    def add_inband_arg(parser):
+        parser.add_argument("-i", "--in-band",
+                            help="Use in-band (PXE booting) introspection",
+                            action="store_true")

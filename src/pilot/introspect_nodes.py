@@ -18,10 +18,17 @@ import argparse
 import logging
 import os
 import sys
+from arg_helper import ArgHelper
 from credential_helper import CredentialHelper
 from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
 from time import sleep
+from update_ssh_config import get_nodes
+
+common_path = os.path.join(os.path.expanduser('~'), 'common')
+sys.path.append(common_path)
+
+from thread_helper import ThreadWithExHandling
 
 logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
@@ -32,121 +39,210 @@ def parse_arguments():
         description="Introspects the overcloud nodes.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+    ArgHelper.add_inband_arg(parser)
     LoggingHelper.add_argument(parser)
-
-    parser.add_argument("-i", "--in-band",
-                        help="Use in-band (PXE booting) introspection",
-                        action="store_true")
 
     return parser.parse_args()
 
 
-def transition_to_state(ironic_client, transition, target_provision_state):
-    logger.info("Transitioning nodes into the {} state".format(
-        target_provision_state))
-    for node in ironic_client.node.list(fields=["uuid", "provision_state"]):
-        if node.provision_state == target_provision_state:
-            logger.debug("Node {} is already in the {} state".format(
-                node.uuid, target_provision_state))
-        else:
-            logger.debug("Transitioning node {} into the {} "
-                         "state".format(node.uuid, target_provision_state))
-            ironic_client.node.set_provision_state(node.uuid, transition)
-
-    # Wait until all the nodes transition to the target provisioning state
-    logger.info("Waiting for all nodes to transition to the {} state".format(
-        target_provision_state))
-    waiting_for_nodes = True
-    while waiting_for_nodes:
-        all_nodes_transitioned = True
-        for node in ironic_client.node.list(fields=["uuid",
-                                                    "provision_state"]):
-            if node.provision_state != target_provision_state:
-                logger.info("Node {} is still in the {} state".format(
-                    node.uuid, node.provision_state))
-                all_nodes_transitioned = False
-                break
-
-        if not all_nodes_transitioned:
-            sleep(1)
-        else:
-            waiting_for_nodes = False
-
-
-def main():
-    args = parse_arguments()
-
-    root_logger = logging.getLogger()
-    root_logger.setLevel(args.logging_level)
-    urllib3_logger = logging.getLogger("requests.packages.urllib3")
-    urllib3_logger.setLevel(logging.WARN)
-
+def is_introspection_oob(in_band, node, logger):
     out_of_band = True
 
-    # What driver are we using?  Assume all nodes use the same one
-    ironic_client = IronicHelper.get_ironic_client()
-    driver = ironic_client.node.list(fields=["driver"])[0].driver
-
-    if args.in_band:
+    if in_band:
         # All drivers support in-band introspection
         out_of_band = False
-    elif driver == "pxe_ipmitool":
+    elif node.driver == "pxe_ipmitool":
         # Can't do in-band introspection with the IPMI driver
         logger.warn("The Ironic IPMI driver does not support out-of-band "
                     "introspection.  Using in-band introspection")
         out_of_band = False
 
-    if out_of_band:
-        logger.info("Starting Out-Of-Band introspection")
+    return out_of_band
 
-        # Check to see if provisioning_mac has been set on all the nodes
+
+def get_nodes(ironic_client):
+    return ironic_client.node.list(fields=["driver",
+                                           "driver_info",
+                                           "properties",
+                                           "provision_state",
+                                           "uuid"])
+
+
+def refresh_nodes(ironic_client, nodes):
+    node_uuids = [node.uuid for node in nodes]
+
+    tmp_nodes = get_nodes(ironic_client)
+    nodes = []
+    for tmp_node in tmp_nodes:
+        if tmp_node.uuid in node_uuids:
+            nodes.append(tmp_node)
+
+    return nodes
+
+
+def transition_to_state(ironic_client, nodes, transition,
+                        target_provision_state):
+    # Grab a new copy of the nodes to get the current provision_state
+    nodes = refresh_nodes(ironic_client, nodes)
+
+    for node in nodes:
+        if node.provision_state == target_provision_state:
+            logger.debug("Node {} ({}) is already in the {} state".format(
+                CredentialHelper.get_drac_ip(node),
+                node.uuid,
+                target_provision_state))
+        else:
+            logger.debug("Transitioning node {} ({}) into the {} "
+                         "state".format(CredentialHelper.get_drac_ip(node),
+                                        node.uuid, target_provision_state))
+            ironic_client.node.set_provision_state(node.uuid, transition)
+
+    while True:
+        all_nodes_transitioned = True
+        nodes = refresh_nodes(ironic_client, nodes)
+        for node in nodes:
+            if node.provision_state != target_provision_state:
+                logger.debug("Node {} ({}) is still in the {} "
+                             "state".format(
+                                 CredentialHelper.get_drac_ip(node),
+                                 node.uuid,
+                                 node.provision_state))
+                all_nodes_transitioned = False
+
+        if all_nodes_transitioned:
+            break
+        else:
+            sleep(1)
+
+    return nodes
+
+
+def ib_introspect(node):
+    command = "openstack overcloud node introspect " + node.uuid
+    if os.system(command) == 0:
+        logger.info("In-Band introspection succeeded on node {} ({})".format(
+            CredentialHelper.get_drac_ip(node), node.uuid))
+    else:
+        raise RuntimeError("In-Band introspection failed on node "
+                           "{} ({})".format(
+                               CredentialHelper.get_drac_ip(node), node.uuid))
+
+
+def introspect_nodes(in_band, ironic_client, nodes,
+                     transition_nodes=True):
+    # Check to see if provisioning_mac has been set on all the nodes
+    bad_nodes = []
+    for node in nodes:
+        if "provisioning_mac" not in node.properties:
+            bad_nodes.append(node)
+
+    if bad_nodes:
+        ips = [CredentialHelper.get_drac_ip(node) for node in bad_nodes]
+        fail_msg = "\n".join(ips)
+
+        logger.error("Run config_idrac.py on {} before running "
+                     "introspection".format(fail_msg))
+
+    if transition_nodes:
+        nodes = transition_to_state(ironic_client, nodes,
+                                    'manage', 'manageable')
+
+    threads = []
+    bad_nodes = []
+    for node in nodes:
+        use_oob_introspection = is_introspection_oob(in_band, node, logger)
+
+        introspection_type = "out-of-band"
+        if not use_oob_introspection:
+            introspection_type = "in-band"
+
+        logger.info("Starting {} introspection on node "
+                    "{} ({})".format(introspection_type,
+                                     CredentialHelper.get_drac_ip(node),
+                                     node.uuid))
+
+        if not use_oob_introspection:
+            thread = ThreadWithExHandling(logger,
+                                          object_identity=node,
+                                          target=ib_introspect,
+                                          args=(node,))
+            threads.append(thread)
+            thread.start()
+        else:
+            if os.system("openstack baremetal node inspect " + node.uuid) != 0:
+                bad_nodes.append(node)
+
+    for thread in threads:
+        thread.join()
+
+    for thread in threads:
+        if thread.ex is not None:
+            bad_nodes.append(thread.object_identity)
+
+    if bad_nodes:
+        ips = ["{} ({})".format(CredentialHelper.get_drac_ip(node),
+                                node.uuid) for node in bad_nodes]
+        raise RuntimeError("Failed to introspect {}".format(", ".join(ips)))
+
+    if not use_oob_introspection:
+        # The PERC H740P RAID controller only makes virtual disks visible to
+        # the host OS.  Physical disks are not visible with this controller
+        # because it does not support pass-through mode.  This results in
+        # local_gb not being set during IB introspection, which causes
+        # problems further along in the flow.
+
+        # Check to see if all nodes have local_gb defined, and if not run OOB
+        # introspection to discover local_gb.
+        nodes = refresh_nodes(ironic_client, nodes)
         bad_nodes = []
-        for node in ironic_client.node.list(fields=["uuid", "driver_info",
-                                                    "properties"]):
-            if "provisioning_mac" not in node.properties:
+        for node in nodes:
+            if 'local_gb' not in node.properties:
                 bad_nodes.append(node)
 
         if bad_nodes:
             ips = [CredentialHelper.get_drac_ip(node) for node in bad_nodes]
             fail_msg = "\n".join(ips)
 
-            logger.error("The following nodes must have config_idrac.py run "
-                         "on them before running out-of-band introspection:"
-                         "\n{}".format(fail_msg))
-            sys.exit(1)
+            logger.info("local_gb was not discovered on:  {}".format(fail_msg))
 
-        # Transition all nodes into manageable
-        transition_to_state(ironic_client, 'manage', 'manageable')
+            logger.info("Running OOB introspection to populate it.")
+            introspect_nodes(False, ironic_client, bad_nodes,
+                             transition_nodes=False)
 
-        # Launch OOB introspection
-        for node in ironic_client.node.list(fields=["uuid"]):
-            logger.info("Introspecting node {}".format(node.uuid))
-            return_code = os.system("openstack baremetal node inspect " +
-                                    node.uuid)
-            if return_code != 0:
-                logger.error("Failed to introspection node {}".format(
-                    node.uuid))
-                sys.exit(1)
+    if transition_nodes:
+        nodes = transition_to_state(ironic_client, nodes,
+                                    'provide', 'available')
 
-        # Transition all nodes into available
-        transition_to_state(ironic_client, 'provide', 'available')
+    if use_oob_introspection:
+        # FIXME: Remove this hack when OOB introspection is fixed
+        for node in nodes:
+            delete_non_pxe_ports(ironic_client, node)
 
-        logger.info("Deleting all non-PXE ports from ironic nodes...")
 
-        for node in ironic_client.node.list(fields=["uuid", "driver_info",
-                                                    "properties"]):
-            for port in ironic_client.node.list_ports(node.uuid):
-                if port.address.lower() != node.properties["provisioning_mac"]:
-                    logger.info("Deleting port {} {}".format(
-                        CredentialHelper.get_drac_ip(node),
-                        port.address.lower()))
-                    ironic_client.port.delete(port.uuid)
-    else:
-        logger.info("Starting In-Band introspection")
-        return_code = os.system("openstack baremetal introspection bulk start")
-        if return_code != 0:
-            logger.error("Introspection failed")
-            sys.exit(1)
+def delete_non_pxe_ports(ironic_client, node):
+    ip = CredentialHelper.get_drac_ip(node)
+
+    logger.info("Deleting all non-PXE ports from node {} ({})...".format(
+        ip, node.uuid))
+
+    for port in ironic_client.node.list_ports(node.uuid):
+        if port.address.lower() != \
+                node.properties["provisioning_mac"].lower():
+            logger.info("Deleting port {} ({}) {}".format(
+                ip, node.uuid, port.address.lower()))
+            ironic_client.port.delete(port.uuid)
+
+
+def main():
+    args = parse_arguments()
+
+    LoggingHelper.configure_logging(args.logging_level)
+
+    ironic_client = IronicHelper.get_ironic_client()
+    nodes = get_nodes(ironic_client)
+
+    introspect_nodes(args.in_band, ironic_client, nodes)
+
 
 if __name__ == "__main__":
     main()

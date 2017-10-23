@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
 import logging
 
 
@@ -31,3 +30,11 @@ class LoggingHelper():
                                     module; choices include CRITICAL, ERROR,
                                     WARNING, INFO, and DEBUG""",
                             metavar="LEVEL")
+
+    @staticmethod
+    def configure_logging(logging_level,
+                          noisy_logger="requests.packages.urllib3"):
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging_level)
+        logger = logging.getLogger(noisy_logger)
+        logger.setLevel(logging.WARN)

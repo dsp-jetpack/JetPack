@@ -19,12 +19,13 @@ import threading
 
 
 class ThreadWithExHandling(threading.Thread):
-    def __init__(self, logger, group=None, target=None, name=None,
-                 args=(), kwargs=None, verbose=None):
+    def __init__(self, logger, object_identity=None, group=None, target=None,
+                 name=None, args=(), kwargs=None, verbose=None):
         threading.Thread.__init__(self, group=group, target=target, name=name,
                                   args=args, kwargs=kwargs, verbose=verbose)
         self.logger = logger
         self.ex = None
+        self.object_identity = object_identity
 
     def run(self):
         try:
