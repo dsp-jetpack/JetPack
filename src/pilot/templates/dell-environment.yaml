@@ -63,31 +63,31 @@ parameter_defaults:
     #   '/dev/sdf':
     #     journal: '/dev/sdb'
     #   ... and so on.
-    #ceph::profile::params::osds:
-    #  '/dev/sdd':
-    #    journal: '/dev/sda'
-    #  '/dev/sde':
-    #    journal: '/dev/sda'
-    #  '/dev/sdf':
-    #    journal: '/dev/sda'
-    #  '/dev/sdg':
-    #    journal: '/dev/sda'
-    #  '/dev/sdh':
-    #    journal: '/dev/sdb'
-    #  '/dev/sdi':
-    #    journal: '/dev/sdb'
-    #  '/dev/sdj':
-    #    journal: '/dev/sdb'
-    #  '/dev/sdk':
-    #    journal: '/dev/sdb'
-    #  '/dev/sdl':
-    #    journal: '/dev/sdc'
-    #  '/dev/sdm':
-    #    journal: '/dev/sdc'
-    #  '/dev/sdn':
-    #    journal: '/dev/sdc'
-    #  '/dev/sdo':
-    #    journal: '/dev/sdc'
+    ceph::profile::params::osds:
+      '/dev/sdd':
+        journal: '/dev/sda'
+      '/dev/sde':
+        journal: '/dev/sda'
+      '/dev/sdf':
+        journal: '/dev/sda'
+      '/dev/sdg':
+        journal: '/dev/sda'
+      '/dev/sdh':
+        journal: '/dev/sdb'
+      '/dev/sdi':
+        journal: '/dev/sdb'
+      '/dev/sdj':
+        journal: '/dev/sdb'
+      '/dev/sdk':
+        journal: '/dev/sdb'
+      '/dev/sdl':
+        journal: '/dev/sdc'
+      '/dev/sdm':
+        journal: '/dev/sdc'
+      '/dev/sdn':
+        journal: '/dev/sdc'
+      '/dev/sdo':
+        journal: '/dev/sdc'
 
     # Additional entries added to /etc/ceph/ceph.conf
     ceph::conf::args:
