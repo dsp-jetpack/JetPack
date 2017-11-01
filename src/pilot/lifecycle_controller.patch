@@ -1,0 +1,41 @@
+--- /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.py	2017-03-01 16:12:40.000000000 +0000
++++ lifecycle_controller.py	2017-06-21 19:23:26.955511965 +0000
+@@ -44,6 +44,38 @@
+ 
+         return tuple(map(int, (lc_version_str.split('.'))))
+ 
++    def is_idrac_ready(self):
++        """Returns a boolean indicating if the iDRAC is ready to accept
++        commands
++
++        :returns: Boolean indicating iDRAC readiness
++        :raises: WSManRequestFailure on request failures
++        :raises: WSManInvalidResponse when receiving invalid response
++        :raises: DRACOperationFailed on error reported back by the DRAC
++                 interface
++        :raises: DRACUnexpectedReturnValue on return value mismatch
++        """
++
++        selectors = {'SystemCreationClassName': 'DCIM_ComputerSystem',
++                     'SystemName': 'DCIM:ComputerSystem',
++                     'CreationClassName': 'DCIM_LCService',
++                     'Name': 'DCIM:LCService'}
++
++        result = self.client.invoke(uris.DCIM_LCService,
++                                    'GetRemoteServicesAPIStatus',
++                                    selectors,
++                                    {},
++                                    expected_return_value=utils.RET_SUCCESS)
++
++        is_ready = False
++        message_id = utils.find_xml(result,
++                                    'MessageID',
++                                    uris.DCIM_LCService).text
++        if message_id == "LC061":
++            is_ready = True
++
++        return is_ready
++
+ 
+ class LCConfiguration(object):
+ 

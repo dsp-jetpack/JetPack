@@ -1,0 +1,58 @@
+From ce75b84ddcca3258f298e0fe283358ebe55bdd8d Mon Sep 17 00:00:00 2001
+From: Sofer Athlan-Guyot <sathlang@redhat.com>
+Date: Thu, 03 Aug 2017 12:49:44 +0200
+Subject: [PATCH] Adjust for new pcs output.
+
+The pcs config show command output has changed.
+
+It need to be passed the --full option in order to do its job now.
+
+So before we had:
+
+    pcs config show |  sed -n '/^Ordering Constraints:/,/^Colocation Constraints:$/p' | grep -v "Ordering Constraints:"  | awk '{print $NF}' | cut -f2 -d: |cut -f1 -d\)
+    order-ip-192.0.2.19-haproxy-clone-Optional
+    order-ip-192.0.2.20-haproxy-clone-Optional
+    ...
+
+now we have
+
+    pcs config show |  sed -n '/^Ordering Constraints:/,/^Colocation Constraints:$/p' | grep -v "Ordering Constraints:"  | awk '{print $NF}' | cut -f2 -d: |cut -f1 -d\)
+    Optional
+    Optional
+
+adding the "--full" put the id back.
+
+Closes-Bug: #1708427
+
+Change-Id: I4931cb2230e3f46d191e345cd110132d88cb1b19
+---
+
+diff --git a/extraconfig/tasks/major_upgrade_pacemaker_migrations.sh b/extraconfig/tasks/major_upgrade_pacemaker_migrations.sh
+index 7c9083a..d7b50aa 100644
+--- a/extraconfig/tasks/major_upgrade_pacemaker_migrations.sh
++++ b/extraconfig/tasks/major_upgrade_pacemaker_migrations.sh
+@@ -117,16 +117,22 @@
+     if [[ -n $(pcmk_running) ]]; then
+         pcs property set maintenance-mode=true
+ 
++        # pcs config output may require the --full option.
++        PCS_CONFIG="pcs config show"
++        if [ -z "$($PCS_CONFIG | sed -n '/^Colocation Constraints:$/,/^$/p' | grep -v 'Colocation Constraints:' | egrep -v 'ip-.*haproxy' | awk '{print $NF}' | grep colocation)" ]; then
++            PCS_CONFIG="pcs config show --full"
++        fi
++
+         # First we go through all the colocation constraints (except the ones
+         # we want to keep, i.e. the haproxy/ip ones) and we remove those
+-        COL_CONSTRAINTS=$(pcs config show | sed -n '/^Colocation Constraints:$/,/^$/p' | grep -v "Colocation Constraints:" | egrep -v "ip-.*haproxy" | awk '{print $NF}' | cut -f2 -d: |cut -f1 -d\))
++        COL_CONSTRAINTS=$($PCS_CONFIG | sed -n '/^Colocation Constraints:$/,/^$/p' | grep -v "Colocation Constraints:" | egrep -v "ip-.*haproxy" | awk '{print $NF}' | cut -f2 -d: |cut -f1 -d\))
+         for constraint in $COL_CONSTRAINTS; do
+             log_debug "Deleting colocation constraint $constraint from CIB"
+             pcs constraint remove "$constraint"
+         done
+ 
+         # Now we kill all the ordering constraints (except the haproxy/ip ones)
+-        ORD_CONSTRAINTS=$(pcs config show | sed -n '/^Ordering Constraints:/,/^Colocation Constraints:$/p' | grep -v "Ordering Constraints:"  | awk '{print $NF}' | cut -f2 -d: |cut -f1 -d\))
++        ORD_CONSTRAINTS=$($PCS_CONFIG | sed -n '/^Ordering Constraints:/,/^Colocation Constraints:$/p' | grep -v "Ordering Constraints:"  | awk '{print $NF}' | cut -f2 -d: |cut -f1 -d\))
+         for constraint in $ORD_CONSTRAINTS; do
+             log_debug "Deleting ordering constraint $constraint from CIB"
+             pcs constraint remove "$constraint"

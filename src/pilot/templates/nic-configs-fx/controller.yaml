@@ -1,0 +1,227 @@
+# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+heat_template_version: 2015-04-30
+
+description: >
+  Bond and VLAN configuration for controller nodes.
+
+# The values of the following parameters are overridden by the entries in
+# network-environment.yaml
+parameters:
+  ControlPlaneIp:
+    default: ''
+    description: IP address/subnet on the ctlplane network
+    type: string
+  ExternalIpSubnet:
+    default: ''
+    description: IP address/subnet on the external network
+    type: string
+  InternalApiIpSubnet:
+    default: ''
+    description: IP address/subnet on the internal API network
+    type: string
+  StorageIpSubnet:
+    default: ''
+    description: IP address/subnet on the storage network
+    type: string
+  StorageMgmtIpSubnet:
+    default: ''
+    description: IP address/subnet on the storage mgmt network
+    type: string
+  TenantIpSubnet:
+    default: ''
+    description: IP address/subnet on the tenant network
+    type: string
+  ManagementIpSubnet: # Only populated when including environments/network-management.yaml
+    default: ''
+    description: IP address/subnet on the management network
+    type: string
+  ExternalNetworkVlanID:
+    default: 10
+    description: Vlan ID for the external network traffic.
+    type: number
+  InternalApiNetworkVlanID:
+    default: 20
+    description: Vlan ID for the internal_api network traffic.
+    type: number
+  StorageNetworkVlanID:
+    default: 30
+    description: Vlan ID for the storage network traffic.
+    type: number
+  StorageMgmtNetworkVlanID:
+    default: 40
+    description: Vlan ID for the storage mgmt network traffic.
+    type: number
+  TenantNetworkVlanID:
+    default: 50
+    description: Vlan ID for the tenant network traffic.
+    type: number
+  ManagementNetworkVlanID:
+    default: 60
+    description: Vlan ID for the management network traffic.
+    type: number
+  ControlPlaneDefaultRoute: # Override this via parameter_defaults
+    description: The default route of the control plane network.
+    type: string
+  ExternalInterfaceDefaultRoute:
+    default: '10.0.0.1'
+    description: default route for the external network
+    type: string
+  ManagementInterfaceDefaultRoute: # Commented out by default in this template
+    default: unset
+    description: The default route of the management network.
+    type: string
+  ControlPlaneSubnetCidr: # Override this via parameter_defaults
+    default: '24'
+    description: The subnet CIDR of the control plane network.
+    type: string
+  DnsServers: # Override this via parameter_defaults
+    default: []
+    description: A list of DNS servers (2 max for some implementations) that will be added to resolv.conf.
+    type: comma_delimited_list
+  EC2MetadataIp: # Override this via parameter_defaults
+    description: The IP address of the EC2 metadata server.
+    type: string
+  ManagementNetCidr: # Override this via parameter_defaults
+    default: '192.168.110.0/24'
+    description: The CIDR of the management network.
+    type: string
+  ProvisioningNetworkGateway:
+    default: '192.168.120.1'
+    description: The IP of the gateway on the provisioning network which will
+                 allow access to the management network.
+    type: string
+  # CHANGEME: If you wish to use different bonding modes for different roles,
+  # then specify the appropriate bonding options in the "default" line below
+  # for the controller role, otherwise ignore this entry.
+  BondInterfaceOptions:
+    default: ''
+    description: The bonding_options string for the bond interface. Set things
+                 like mode=802.3ad using this option.
+    type: string
+
+resources:
+  OsNetConfigImpl:
+    type: OS::Heat::StructuredConfig
+    properties:
+      group: os-apply-config
+      config:
+        os_net_config:
+          network_config:
+            -
+              type: ovs_bridge
+              name: br-tenant
+              use_dhcp: false
+              addresses:
+                -
+                  ip_netmask:
+                    list_join:
+                      - '/'
+                      - - {get_param: ControlPlaneIp}
+                        - {get_param: ControlPlaneSubnetCidr}
+              routes:
+                -
+                  ip_netmask: 169.254.169.254/32
+                  next_hop: {get_param: EC2MetadataIp}
+                # CHANGEME: The following route is used to route from the
+                # provisioning network to the management network.  If the
+                # iDRACs are on the provisioning network, then remove this
+                # route.
+                -
+                  ip_netmask: {get_param: ManagementNetCidr}
+                  next_hop: {get_param: ProvisioningNetworkGateway}
+                # CHANGEME: The following sets the default route on the
+                # controller nodes to be the IP of the Director node on
+                # the provisioning network.  This can be changed to a
+                # gateway IP on the external network if available.
+                #-
+                #  default: true
+                #  next_hop: {get_param: ControlPlaneDefaultRoute}
+
+              members:
+                -
+                  type: linux_bond
+                  name: bond0
+                  bonding_options: {get_param: BondInterfaceOptions}
+                  members:
+                    -
+                      type: interface
+                      # CHANGEME: Change the interface name on the following
+                      # line to an interface to include in bond0
+                      name: em1
+                      primary: true
+                    -
+                      type: interface
+                      # CHANGEME: Change the interface name on the following
+                      # line to an interface to include in bond0
+                      name: em3
+                -
+                  type: vlan
+                  device: bond0
+                  vlan_id: {get_param: TenantNetworkVlanID}
+                  addresses:
+                  -
+                    ip_netmask: {get_param: TenantIpSubnet}
+                -
+                  type: vlan
+                  device: bond0
+                  vlan_id: {get_param: InternalApiNetworkVlanID}
+                  addresses:
+                  -
+                    ip_netmask: {get_param: InternalApiIpSubnet}
+                -
+                  type: vlan
+                  device: bond0
+                  vlan_id: {get_param: StorageNetworkVlanID}
+                  addresses:
+                  -
+                    ip_netmask: {get_param: StorageIpSubnet}
+            -
+              type: ovs_bridge
+              name: {get_input: bridge_name}
+              dns_servers: {get_param: DnsServers}
+              members:
+                -
+                  type: linux_bond
+                  name: bond1
+                  bonding_options: {get_param: BondInterfaceOptions}
+                  members:
+                    -
+                      type: interface
+                      # CHANGEME: Change the interface name on the following
+                      # line to an interface to include in bond1
+                      name: em2
+                      primary: true
+                    -
+                      type: interface
+                      # CHANGEME: Change the interface name on the following
+                      # line to an interface to include in bond1
+                      name: em4
+                -
+                  type: vlan
+                  device: bond1
+                  vlan_id: {get_param: ExternalNetworkVlanID}
+                  addresses:
+                    -
+                      ip_netmask: {get_param: ExternalIpSubnet}
+                  routes:
+                    -
+                      ip_netmask: 0.0.0.0/0
+                      next_hop: {get_param: ExternalInterfaceDefaultRoute}
+
+outputs:
+  OS::stack_id:
+    description: The OsNetConfigImpl resource.
+    value: {get_resource: OsNetConfigImpl}

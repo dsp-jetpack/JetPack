@@ -1,0 +1,27 @@
+{
+  "PowerEdge R430": {
+    "pxe_nic": "NIC.Embedded.3-1-1"
+  },
+  "PowerEdge R620": {
+    "pxe_nic": "NIC.Integrated.1-3-1"
+  },
+  "PowerEdge R630": {
+    "pxe_nic": "NIC.Integrated.1-3-1"
+  },
+  "PowerEdge R720": {
+    "pxe_nic": "NIC.Integrated.1-1-1"
+  },
+  "PowerEdge R720xd": {
+    "pxe_nic": "NIC.Integrated.1-1-1"
+  },
+  "PowerEdge R730": {
+    "pxe_nic": "NIC.Integrated.1-3-1"
+  },
+  "PowerEdge R730xd": {
+    "pxe_nic": "NIC.Integrated.1-3-1"
+  },
+  "PowerEdge FC630": {
+    "pxe_nic": "NIC.Integrated.1-1-1"
+  }
+
+}

@@ -1,0 +1,411 @@
+2017-08-08 15:48:02,354 INFO * Creating the SAH node usb image.
+2017-08-08 15:48:02,357 ERROR Traceback (most recent call last):
+  File "setup_usb_idrac.py", line 62, in setup
+    "an idrac virtual media image")
+AssertionError: You need to spefify the type of installation to perform 
+-usb_key devideID if using a physical key
+-idrac_vmedia_img if using an idrac virtual media image
+
+2017-08-08 15:48:02,357 ERROR <type 'exceptions.AssertionError'>
+2017-08-08 15:48:15,196 INFO * Creating the SAH node usb image.
+2017-08-08 15:48:15,199 DEBUG loading settings files /root/cwd-10.0.ini
+2017-08-08 15:48:15,213 ERROR Traceback (most recent call last):
+  File "setup_usb_idrac.py", line 65, in setup
+    settings = Settings(args.settings)
+  File "/root/JetPack/src/deploy/osp_deployer/settings/config.py", line 78, in __init__
+    raise AssertionError("\n" + error_msg)
+AssertionError: 
+Missing "rhsm_repos" setting in your ini file [Cluster Settings] section 
+
+
+2017-08-08 15:48:15,213 ERROR <type 'exceptions.AssertionError'>
+2017-08-08 15:48:48,749 INFO * Creating the SAH node usb image.
+2017-08-08 15:48:48,752 DEBUG loading settings files /root/cwd-10.0.ini
+2017-08-08 15:48:48,767 INFO Using ini repo settings
+2017-08-08 15:48:48,768 INFO Settings .ini: /root/cwd-10.0.ini
+2017-08-08 15:48:48,769 INFO Settings .properties /root/cwd-10.0.1.properties
+2017-08-08 15:48:52,009 DEBUG running cd ~;rm -f osp_ks.img
+2017-08-08 15:48:52,016 DEBUG 
+2017-08-08 15:48:52,016 DEBUG running cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=5000
+2017-08-08 15:48:54,993 DEBUG 5000+0 records in
+5000+0 records out
+5242880000 bytes (5.2 GB) copied, 2.9427 s, 1.8 GB/s
+
+2017-08-08 15:48:54,993 DEBUG running cd ~;mkfs ext3 -F osp_ks.img
+2017-08-08 15:49:02,877 DEBUG mke2fs 1.42.9 (28-Dec-2013)
+Discarding device blocks:    4096/1280000 528384/1280000               done                            
+Filesystem label=
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+320000 inodes, 1280000 blocks
+64000 blocks (5.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=1312817152
+40 block groups
+32768 blocks per group, 32768 fragments per group
+8000 inodes per group
+Superblock backups stored on blocks: 
+	32768, 98304, 163840, 229376, 294912, 819200, 884736
+
+Allocating group tables:  0/40     done                            
+Writing inode tables:  0/40     done                            
+Writing superblocks and filesystem accounting information:  0/40     done
+
+
+2017-08-08 15:49:02,877 DEBUG running mkdir -p /mnt/usb
+2017-08-08 15:49:02,884 DEBUG 
+2017-08-08 15:49:02,884 DEBUG running cd ~;mount -o loop osp_ks.img /mnt/usb
+2017-08-08 15:49:03,046 DEBUG 
+2017-08-08 15:49:03,046 DEBUG running cd ~;cp -R ~/JetPack /mnt/usb
+2017-08-08 15:49:03,176 DEBUG 
+2017-08-08 15:49:03,176 DEBUG running cd ~;cp /root/ISOs/rhel_73.iso /mnt/usb
+2017-08-08 15:49:07,042 DEBUG 
+2017-08-08 15:49:07,043 DEBUG running cd ~;cp /root/cwd-10.0.ini /mnt/usb
+2017-08-08 15:49:07,052 DEBUG 
+2017-08-08 15:49:07,052 DEBUG running cd ~;cp /root/cwd-10.0.1.properties /mnt/usb
+2017-08-08 15:49:07,056 DEBUG 
+2017-08-08 15:49:07,056 DEBUG running cd ~;cp osp-sah.ks /mnt/usb
+2017-08-08 15:49:07,060 DEBUG 
+2017-08-08 15:49:07,060 DEBUG running sed -i 's|/root/ISOs|/root|' /mnt/usb/cwd-10.0.ini
+2017-08-08 15:49:07,067 DEBUG 
+2017-08-08 15:49:07,067 DEBUG running sync; umount /mnt/usb
+2017-08-08 15:49:15,344 DEBUG 
+2017-08-08 15:49:15,344 INFO All done - attach ~/osp_ks.img to the sah node & continue with the deployment ...
+2017-08-09 10:40:26,490 INFO * Creating the SAH node usb image.
+2017-08-09 10:40:26,494 DEBUG loading settings files /root/cwd-10.0.ini
+2017-08-09 10:40:26,510 INFO Using ini repo settings
+2017-08-09 10:40:26,511 INFO Settings .ini: /root/cwd-10.0.ini
+2017-08-09 10:40:26,511 INFO Settings .properties /root/cwd-10.0.1.properties
+2017-08-09 10:40:29,754 DEBUG running cd ~;rm -f osp_ks.img
+2017-08-09 10:40:29,766 DEBUG 
+2017-08-09 10:40:29,766 DEBUG running cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=5000
+2017-08-09 10:40:32,864 DEBUG 5000+0 records in
+5000+0 records out
+5242880000 bytes (5.2 GB) copied, 3.07414 s, 1.7 GB/s
+
+2017-08-09 10:40:32,865 DEBUG running cd ~;mkfs ext3 -F osp_ks.img
+2017-08-09 10:40:41,296 DEBUG mke2fs 1.42.9 (28-Dec-2013)
+Discarding device blocks:    4096/1280000 528384/12800001052672/1280000               done                            
+Filesystem label=
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+320000 inodes, 1280000 blocks
+64000 blocks (5.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=1312817152
+40 block groups
+32768 blocks per group, 32768 fragments per group
+8000 inodes per group
+Superblock backups stored on blocks: 
+	32768, 98304, 163840, 229376, 294912, 819200, 884736
+
+Allocating group tables:  0/40     done                            
+Writing inode tables:  0/40     done                            
+Writing superblocks and filesystem accounting information:  0/40     done
+
+
+2017-08-09 10:40:41,297 DEBUG running mkdir -p /mnt/usb
+2017-08-09 10:40:41,303 DEBUG 
+2017-08-09 10:40:41,303 DEBUG running cd ~;mount -o loop osp_ks.img /mnt/usb
+2017-08-09 10:40:41,481 DEBUG 
+2017-08-09 10:40:41,481 DEBUG running cd ~;cp -R ~/JetPack /mnt/usb
+2017-08-09 10:40:41,859 DEBUG 
+2017-08-09 10:40:41,859 DEBUG running cd ~;cp /root/ISOs/rhel_73.iso /mnt/usb
+2017-08-09 10:40:47,001 DEBUG 
+2017-08-09 10:40:47,002 DEBUG running cd ~;cp /root/cwd-10.0.ini /mnt/usb
+2017-08-09 10:40:47,008 DEBUG 
+2017-08-09 10:40:47,008 DEBUG running cd ~;cp /root/cwd-10.0.1.properties /mnt/usb
+2017-08-09 10:40:47,012 DEBUG 
+2017-08-09 10:40:47,012 DEBUG running cd ~;cp osp-sah.ks /mnt/usb
+2017-08-09 10:40:47,020 DEBUG 
+2017-08-09 10:40:47,020 DEBUG running sed -i 's|/root/ISOs|/root|' /mnt/usb/cwd-10.0.ini
+2017-08-09 10:40:47,028 DEBUG 
+2017-08-09 10:40:47,028 DEBUG running sync; umount /mnt/usb
+2017-08-09 10:40:54,313 DEBUG 
+2017-08-09 10:40:54,314 INFO All done - attach ~/osp_ks.img to the sah node & continue with the deployment ...
+2017-08-09 11:00:10,702 INFO * Creating the SAH node usb image.
+2017-08-09 11:00:10,706 DEBUG loading settings files /root/cwd-10.0.ini
+2017-08-09 11:00:10,721 INFO Using ini repo settings
+2017-08-09 11:00:10,723 INFO Settings .ini: /root/cwd-10.0.ini
+2017-08-09 11:00:10,723 INFO Settings .properties /root/cwd-10.0.1.properties
+2017-08-09 11:00:10,786 ERROR Traceback (most recent call last):
+  File "setup_usb_idrac.py", line 74, in setup
+    sah.update_kickstart_usb()
+  File "/root/JetPack/src/deploy/osp_deployer/sah.py", line 84, in update_kickstart_usb
+    sets.ntp_servers +
+AttributeError: Settings instance has no attribute 'ntp_servers'
+
+2017-08-09 11:00:10,787 ERROR <type 'exceptions.AttributeError'>
+2017-08-09 11:00:28,640 INFO * Creating the SAH node usb image.
+2017-08-09 11:00:28,643 DEBUG loading settings files /root/cwd-10.0.ini
+2017-08-09 11:00:28,659 INFO Using ini repo settings
+2017-08-09 11:00:28,660 INFO Settings .ini: /root/cwd-10.0.ini
+2017-08-09 11:00:28,660 INFO Settings .properties /root/cwd-10.0.1.properties
+2017-08-09 11:00:31,903 DEBUG running cd ~;rm -f osp_ks.img
+2017-08-09 11:00:32,755 DEBUG 
+2017-08-09 11:00:32,755 DEBUG running cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=5000
+2017-08-09 11:00:35,632 DEBUG 5000+0 records in
+5000+0 records out
+5242880000 bytes (5.2 GB) copied, 2.87068 s, 1.8 GB/s
+
+2017-08-09 11:00:35,632 DEBUG running cd ~;mkfs ext3 -F osp_ks.img
+2017-08-09 11:00:43,186 DEBUG mke2fs 1.42.9 (28-Dec-2013)
+Discarding device blocks:    4096/1280000 528384/1280000               done                            
+Filesystem label=
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+320000 inodes, 1280000 blocks
+64000 blocks (5.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=1312817152
+40 block groups
+32768 blocks per group, 32768 fragments per group
+8000 inodes per group
+Superblock backups stored on blocks: 
+	32768, 98304, 163840, 229376, 294912, 819200, 884736
+
+Allocating group tables:  0/40     done                            
+Writing inode tables:  0/40     done                            
+Writing superblocks and filesystem accounting information:  0/40     done
+
+
+2017-08-09 11:00:43,186 DEBUG running mkdir -p /mnt/usb
+2017-08-09 11:00:43,192 DEBUG 
+2017-08-09 11:00:43,193 DEBUG running cd ~;mount -o loop osp_ks.img /mnt/usb
+2017-08-09 11:00:43,207 DEBUG 
+2017-08-09 11:00:43,207 DEBUG running cd ~;cp -R ~/JetPack /mnt/usb
+2017-08-09 11:00:43,505 DEBUG 
+2017-08-09 11:00:43,505 DEBUG running cd ~;cp /root/ISOs/rhel_73.iso /mnt/usb
+2017-08-09 11:00:47,626 DEBUG 
+2017-08-09 11:00:47,627 DEBUG running cd ~;cp /root/cwd-10.0.ini /mnt/usb
+2017-08-09 11:00:47,632 DEBUG 
+2017-08-09 11:00:47,632 DEBUG running cd ~;cp /root/cwd-10.0.1.properties /mnt/usb
+2017-08-09 11:00:47,636 DEBUG 
+2017-08-09 11:00:47,636 DEBUG running cd ~;cp osp-sah.ks /mnt/usb
+2017-08-09 11:00:47,642 DEBUG 
+2017-08-09 11:00:47,643 DEBUG running sed -i 's|/root/ISOs|/root|' /mnt/usb/cwd-10.0.ini
+2017-08-09 11:00:47,649 DEBUG 
+2017-08-09 11:00:47,649 DEBUG running sync; umount /mnt/usb
+2017-08-09 11:00:56,207 DEBUG 
+2017-08-09 11:00:56,208 INFO All done - attach ~/osp_ks.img to the sah node & continue with the deployment ...
+2017-08-09 11:34:48,883 INFO * Creating the SAH node usb image.
+2017-08-09 11:34:48,886 DEBUG loading settings files /root/cwd-10.0.ini
+2017-08-09 11:34:48,902 INFO Using ini repo settings
+2017-08-09 11:34:48,903 INFO Settings .ini: /root/cwd-10.0.ini
+2017-08-09 11:34:48,903 INFO Settings .properties /root/cwd-10.0.1.properties
+2017-08-09 11:34:52,133 DEBUG running cd ~;rm -f osp_ks.img
+2017-08-09 11:34:52,141 DEBUG 
+2017-08-09 11:34:52,141 DEBUG running cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=5000
+2017-08-09 11:34:55,300 DEBUG 5000+0 records in
+5000+0 records out
+5242880000 bytes (5.2 GB) copied, 3.15085 s, 1.7 GB/s
+
+2017-08-09 11:34:55,300 DEBUG running cd ~;mkfs ext3 -F osp_ks.img
+2017-08-09 11:35:03,246 DEBUG mke2fs 1.42.9 (28-Dec-2013)
+Discarding device blocks:    4096/12800001052672/1280000               done                            
+Filesystem label=
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+320000 inodes, 1280000 blocks
+64000 blocks (5.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=1312817152
+40 block groups
+32768 blocks per group, 32768 fragments per group
+8000 inodes per group
+Superblock backups stored on blocks: 
+	32768, 98304, 163840, 229376, 294912, 819200, 884736
+
+Allocating group tables:  0/40     done                            
+Writing inode tables:  0/40     done                            
+Writing superblocks and filesystem accounting information:  0/40     done
+
+
+2017-08-09 11:35:03,246 DEBUG running mkdir -p /mnt/usb
+2017-08-09 11:35:03,254 DEBUG 
+2017-08-09 11:35:03,254 DEBUG running cd ~;mount -o loop osp_ks.img /mnt/usb
+2017-08-09 11:35:03,263 DEBUG 
+2017-08-09 11:35:03,263 DEBUG running cd ~;cp -R ~/JetPack /mnt/usb
+2017-08-09 11:35:03,397 DEBUG 
+2017-08-09 11:35:03,397 DEBUG running cd ~;cp /root/ISOs/rhel_73.iso /mnt/usb
+2017-08-09 11:35:07,460 DEBUG 
+2017-08-09 11:35:07,461 DEBUG running cd ~;cp /root/cwd-10.0.ini /mnt/usb
+2017-08-09 11:35:07,466 DEBUG 
+2017-08-09 11:35:07,466 DEBUG running cd ~;cp /root/cwd-10.0.1.properties /mnt/usb
+2017-08-09 11:35:07,469 DEBUG 
+2017-08-09 11:35:07,469 DEBUG running cd ~;cp osp-sah.ks /mnt/usb
+2017-08-09 11:35:07,472 DEBUG 
+2017-08-09 11:35:07,472 DEBUG running sed -i 's|/root/ISOs|/root|' /mnt/usb/cwd-10.0.ini
+2017-08-09 11:35:07,479 DEBUG 
+2017-08-09 11:35:07,479 DEBUG running sync; umount /mnt/usb
+2017-08-09 11:35:16,097 DEBUG 
+2017-08-09 11:35:16,098 INFO All done - attach ~/osp_ks.img to the sah node & continue with the deployment ...
+2017-10-02 10:50:44,698 INFO * Creating the SAH node usb image.
+2017-10-02 10:50:44,708 ERROR Traceback (most recent call last):
+  File "setup_usb_idrac.py", line 54, in setup
+    args, ignore = parser.parse_known_args()
+  File "/usr/lib64/python2.7/argparse.py", line 1720, in parse_known_args
+    namespace, args = self._parse_known_args(args, namespace)
+  File "/usr/lib64/python2.7/argparse.py", line 1944, in _parse_known_args
+    self.error(_('argument %s is required') % name)
+  File "/usr/lib64/python2.7/argparse.py", line 2361, in error
+    self.exit(2, _('%s: error: %s\n') % (self.prog, message))
+  File "/usr/lib64/python2.7/argparse.py", line 2349, in exit
+    _sys.exit(status)
+SystemExit: 2
+
+2017-10-02 10:50:44,708 ERROR <type 'exceptions.SystemExit'>
+2017-10-02 10:51:00,054 INFO * Creating the SAH node usb image.
+2017-10-02 10:51:00,057 DEBUG loading settings files /root/cwd-10.0.ini
+2017-10-02 10:51:00,072 ERROR Traceback (most recent call last):
+  File "setup_usb_idrac.py", line 65, in setup
+    settings = Settings(args.settings)
+  File "/root/JetPack/src/deploy/osp_deployer/settings/config.py", line 78, in __init__
+    raise AssertionError("\n" + error_msg)
+AssertionError: 
+Missing "sah_bond_opts" setting in your ini file [Cluster Settings] section 
+
+
+2017-10-02 10:51:00,072 ERROR <type 'exceptions.AssertionError'>
+2017-10-02 10:51:37,626 INFO * Creating the SAH node usb image.
+2017-10-02 10:51:37,629 DEBUG loading settings files /root/cwd-10.0.ini
+2017-10-02 10:51:37,641 INFO 
+"enable_eqlx_backend" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_backend_name" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_san_ip" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_san_login" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_san_password" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_ch_login" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_ch_pass" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_group_n" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_thin_provisioning" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_pool" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_use_chap" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+
+2017-10-02 10:51:37,645 INFO using default repo settings
+2017-10-02 10:51:37,646 INFO Settings .ini: /root/cwd-10.0.ini
+2017-10-02 10:51:37,646 INFO Settings .properties /root/cwd-10.0.1.properties
+2017-10-02 10:51:40,935 DEBUG running cd ~;rm -f osp_ks.img
+2017-10-02 10:51:40,942 DEBUG 
+2017-10-02 10:51:40,943 DEBUG running cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=5000
+2017-10-02 10:51:44,009 DEBUG 5000+0 records in
+5000+0 records out
+5242880000 bytes (5.2 GB) copied, 3.05904 s, 1.7 GB/s
+
+2017-10-02 10:51:44,009 DEBUG running cd ~;mkfs ext3 -F osp_ks.img
+2017-10-02 10:51:51,974 DEBUG mke2fs 1.42.9 (28-Dec-2013)
+Discarding device blocks:    4096/1280000 528384/1280000               done                            
+Filesystem label=
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+320000 inodes, 1280000 blocks
+64000 blocks (5.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=1312817152
+40 block groups
+32768 blocks per group, 32768 fragments per group
+8000 inodes per group
+Superblock backups stored on blocks: 
+	32768, 98304, 163840, 229376, 294912, 819200, 884736
+
+Allocating group tables:  0/40     done                            
+Writing inode tables:  0/40     done                            
+Writing superblocks and filesystem accounting information:  0/40     done
+
+
+2017-10-02 10:51:51,974 DEBUG running mkdir -p /mnt/usb
+2017-10-02 10:51:51,980 DEBUG 
+2017-10-02 10:51:51,980 DEBUG running cd ~;mount -o loop osp_ks.img /mnt/usb
+2017-10-02 10:51:51,990 DEBUG 
+2017-10-02 10:51:51,990 DEBUG running cd ~;cp -R ~/JetPack /mnt/usb
+2017-10-02 10:51:52,377 DEBUG 
+2017-10-02 10:51:52,378 DEBUG running cd ~;cp /root/ISOs/rhel_73.iso /mnt/usb
+2017-10-02 10:51:56,541 DEBUG 
+2017-10-02 10:51:56,542 DEBUG running cd ~;cp /root/cwd-10.0.ini /mnt/usb
+2017-10-02 10:51:56,562 DEBUG 
+2017-10-02 10:51:56,562 DEBUG running cd ~;cp /root/cwd-10.0.1.properties /mnt/usb
+2017-10-02 10:51:56,566 DEBUG 
+2017-10-02 10:51:56,566 DEBUG running cd ~;cp osp-sah.ks /mnt/usb
+2017-10-02 10:51:56,570 DEBUG 
+2017-10-02 10:51:56,570 DEBUG running sed -i 's|/root/ISOs|/root|' /mnt/usb/cwd-10.0.ini
+2017-10-02 10:51:56,577 DEBUG 
+2017-10-02 10:51:56,578 DEBUG running sync; umount /mnt/usb
+2017-10-02 10:52:04,863 DEBUG 
+2017-10-02 10:52:04,863 INFO All done - attach ~/osp_ks.img to the sah node & continue with the deployment ...
+2017-10-02 10:53:32,551 INFO * Creating the SAH node usb image.
+2017-10-02 10:53:32,555 DEBUG loading settings files /root/cwd-10.0.ini
+2017-10-02 10:53:32,567 INFO 
+"enable_eqlx_backend" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_backend_name" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_san_ip" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_san_login" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_san_password" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_ch_login" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_ch_pass" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_group_n" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_thin_provisioning" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_pool" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+"eqlx_use_chap" setting in your ini file [Cluster Settings] section is deprecated and should be removed
+
+2017-10-02 10:53:32,570 INFO using default repo settings
+2017-10-02 10:53:32,572 INFO Settings .ini: /root/cwd-10.0.ini
+2017-10-02 10:53:32,572 INFO Settings .properties /root/cwd-10.0.1.properties
+2017-10-02 10:53:35,867 DEBUG running cd ~;rm -f osp_ks.img
+2017-10-02 10:53:36,870 DEBUG 
+2017-10-02 10:53:36,871 DEBUG running cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=5000
+2017-10-02 10:53:39,968 DEBUG 5000+0 records in
+5000+0 records out
+5242880000 bytes (5.2 GB) copied, 3.09153 s, 1.7 GB/s
+
+2017-10-02 10:53:39,968 DEBUG running cd ~;mkfs ext3 -F osp_ks.img
+2017-10-02 10:53:47,966 DEBUG mke2fs 1.42.9 (28-Dec-2013)
+Discarding device blocks:    4096/1280000 528384/1280000               done                            
+Filesystem label=
+OS type: Linux
+Block size=4096 (log=2)
+Fragment size=4096 (log=2)
+Stride=0 blocks, Stripe width=0 blocks
+320000 inodes, 1280000 blocks
+64000 blocks (5.00%) reserved for the super user
+First data block=0
+Maximum filesystem blocks=1312817152
+40 block groups
+32768 blocks per group, 32768 fragments per group
+8000 inodes per group
+Superblock backups stored on blocks: 
+	32768, 98304, 163840, 229376, 294912, 819200, 884736
+
+Allocating group tables:  0/40     done                            
+Writing inode tables:  0/40     done                            
+Writing superblocks and filesystem accounting information:  0/40     done
+
+
+2017-10-02 10:53:47,966 DEBUG running mkdir -p /mnt/usb
+2017-10-02 10:53:47,972 DEBUG 
+2017-10-02 10:53:47,972 DEBUG running cd ~;mount -o loop osp_ks.img /mnt/usb
+2017-10-02 10:53:47,984 DEBUG 
+2017-10-02 10:53:47,985 DEBUG running cd ~;cp -R ~/JetPack /mnt/usb
+2017-10-02 10:53:48,356 DEBUG 
+2017-10-02 10:53:48,356 DEBUG running cd ~;cp /root/ISOs/rhel_73.iso /mnt/usb
+2017-10-02 10:53:52,385 DEBUG 
+2017-10-02 10:53:52,385 DEBUG running cd ~;cp /root/cwd-10.0.ini /mnt/usb
+2017-10-02 10:53:52,390 DEBUG 
+2017-10-02 10:53:52,390 DEBUG running cd ~;cp /root/cwd-10.0.1.properties /mnt/usb
+2017-10-02 10:53:52,393 DEBUG 
+2017-10-02 10:53:52,393 DEBUG running cd ~;cp osp-sah.ks /mnt/usb
+2017-10-02 10:53:52,397 DEBUG 
+2017-10-02 10:53:52,397 DEBUG running sed -i 's|/root/ISOs|/root|' /mnt/usb/cwd-10.0.ini
+2017-10-02 10:53:52,400 DEBUG 
+2017-10-02 10:53:52,400 DEBUG running sync; umount /mnt/usb
+2017-10-02 10:54:00,362 DEBUG 
+2017-10-02 10:54:00,362 INFO All done - attach ~/osp_ks.img to the sah node & continue with the deployment ...

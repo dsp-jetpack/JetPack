@@ -1,0 +1,86 @@
+--- /usr/lib/python2.7/site-packages/dracclient/client.py	2017-03-24 22:30:36.106373067 +0000
++++ client.py	2017-03-24 22:21:34.279636183 +0000
+@@ -16,6 +16,7 @@
+ """
+ 
+ import logging
++from time import sleep
+ 
+ from dracclient import exceptions
+ from dracclient.resources import bios
+@@ -466,12 +467,45 @@
+ 
+         return self._inventory_mgmt.list_nics()
+ 
++    def is_idrac_ready(self):
++        return lifecycle_controller.LifecycleControllerManagement(
++            self.client).is_idrac_ready()
++
++    def wait_until_idrac_is_ready(self):
++        """ Waits until the iDRAC is in a ready state
++
++        :raises: WSManRequestFailure on request failures
++        :raises: WSManInvalidResponse when receiving invalid response
++        :raises: DRACOperationFailed on error reported back by the DRAC
++                 interface or timeout
++        :raises: DRACUnexpectedReturnValue on return value mismatch
++        """
++        ready = False
++
++        # Try every 10 seconds over 2 minutes for the iDRAC to become ready
++        retries = 12
++        while not ready and retries > 0:
++            LOG.debug("Checking to see if the iDRAC is ready")
++            ready = self.is_idrac_ready()
++            if not ready:
++                LOG.debug("The iDRAC is not ready")
++                retries -= 1
++                if retries > 0:
++                    sleep(10)
++            else:
++                LOG.debug("The iDRAC is ready")
++
++        if retries == 0:
++            raise exceptions.DRACOperationFailed(drac_messages="Timed out "
++                                                 "waiting for the iDRAC to "
++                                                 "become ready")
++
+ 
+ class WSManClient(wsman.Client):
+     """Wrapper for wsman.Client with return value checking"""
+ 
+     def invoke(self, resource_uri, method, selectors=None, properties=None,
+-               expected_return_value=None):
++               expected_return_value=None, check_return_value=True):
+         """Invokes a remote WS-Man method
+ 
+         :param resource_uri: URI of the resource
+@@ -498,16 +532,17 @@
+         resp = super(WSManClient, self).invoke(resource_uri, method, selectors,
+                                                properties)
+ 
+-        return_value = utils.find_xml(resp, 'ReturnValue', resource_uri).text
+-        if return_value == utils.RET_ERROR:
+-            message_elems = utils.find_xml(resp, 'Message', resource_uri, True)
+-            messages = [message_elem.text for message_elem in message_elems]
+-            raise exceptions.DRACOperationFailed(drac_messages=messages)
+-
+-        if (expected_return_value is not None and
+-                return_value != expected_return_value):
+-            raise exceptions.DRACUnexpectedReturnValue(
+-                expected_return_value=expected_return_value,
+-                actual_return_value=return_value)
++        if check_return_value:
++            return_value = utils.find_xml(resp, 'ReturnValue', resource_uri).text
++            if return_value == utils.RET_ERROR:
++                message_elems = utils.find_xml(resp, 'Message', resource_uri, True)
++                messages = [message_elem.text for message_elem in message_elems]
++                raise exceptions.DRACOperationFailed(drac_messages=messages)
++
++            if (expected_return_value is not None and
++                    return_value != expected_return_value):
++                raise exceptions.DRACUnexpectedReturnValue(
++                    expected_return_value=expected_return_value,
++                    actual_return_value=return_value)
+ 
+         return resp

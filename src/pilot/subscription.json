@@ -1,0 +1,55 @@
+{
+    "cdn_credentials": {
+        "cdn_username": "CHANGEME_username",
+        "cdn_password": "CHANGEME_password"
+    },
+    "_comment": [ "If using a proxy, remove the leading underscore from",
+                  "_proxy_credentials below and fill in the following proxy",
+                  "information." ],
+    "_proxy_credentials": {
+        "proxy_url": "CHANGEME_hostname:CHANGEME_port",
+        "proxy_username": "CHANGEME_username",
+        "proxy_password": "CHANGEME_password"
+    },
+    "roles": {
+        "control": {
+            "pool_ids": [ "CHANGEME_openstack_pool_id",
+                          "CHANGEME_ceph_pool_id"  ],
+            "repos": [ "rhel-7-server-rpms",
+                       "rhel-7-server-extras-rpms",
+                       "rhel-7-server-rh-common-rpms",
+                       "rhel-ha-for-rhel-7-server-rpms",
+                       "rhel-7-server-openstack-10-rpms",
+                       "rhel-7-server-openstack-10-devtools-rpms",
+                       "rhel-7-server-rhceph-2-mon-rpms",
+                       "rhel-7-server-rhceph-2-osd-rpms",
+                       "rhel-7-server-rhceph-2-tools-rpms" ]
+        },
+        "compute": {
+            "pool_ids": [ "CHANGEME_openstack_pool_id",
+                          "CHANGEME_ceph_pool_id"  ],
+            "repos": [ "rhel-7-server-rpms",
+                       "rhel-7-server-extras-rpms",
+                       "rhel-7-server-rh-common-rpms",
+                       "rhel-ha-for-rhel-7-server-rpms",
+                       "rhel-7-server-openstack-10-rpms",
+                       "rhel-7-server-openstack-10-devtools-rpms",
+                       "rhel-7-server-rhceph-2-mon-rpms",
+                       "rhel-7-server-rhceph-2-osd-rpms",
+                       "rhel-7-server-rhceph-2-tools-rpms" ]
+        },
+        "ceph-storage": {
+            "pool_ids": [ "CHANGEME_openstack_pool_id",
+                          "CHANGEME_ceph_pool_id" ],
+            "repos": [ "rhel-7-server-rpms",
+                       "rhel-7-server-extras-rpms",
+                       "rhel-7-server-rh-common-rpms",
+                       "rhel-ha-for-rhel-7-server-rpms",
+                       "rhel-7-server-openstack-10-rpms",
+                       "rhel-7-server-openstack-10-devtools-rpms",
+                       "rhel-7-server-rhceph-2-mon-rpms",
+                       "rhel-7-server-rhceph-2-osd-rpms",
+                       "rhel-7-server-rhceph-2-tools-rpms" ]
+        }
+    }
+}

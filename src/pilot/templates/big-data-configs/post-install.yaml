@@ -1,0 +1,69 @@
+# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+heat_template_version: 2014-10-16
+
+description: >
+  Extra Configurations required on Compute Nodes for NUMA enablement. The script fetches the number of available CPUs, identifies and isolates 8 sibling vCPUs for host and dedicates the rest for NOVA.
+parameters:
+  servers:
+    type: json
+
+resources:
+  ExtraDeployments:
+    type: OS::Heat::StructuredDeployments
+    properties:
+      servers:  {get_param: servers}
+      config: {get_resource: ExtraConfig}
+      # Do this on CREATE/UPDATE (which is actually the default)
+      actions: ['CREATE', 'UPDATE']
+
+  ExtraConfig:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config: |
+        #!/bin/bash
+        
+        if [[ $HOSTNAME =~ "compute" ]]; then
+        {
+            set -x
+            # echo "I'm a Compute Node"
+            let num_cpus=$(lscpu | grep CPU\(s\): | grep -v NUMA | awk '{print $2}')
+            let i=$((num_cpus/2))
+            host_vcpu_list="0,1,2,3,$i,$((i+1)),$((i+2)),$((i+3))"
+            for vcpu in `seq 4 $((i-1))` `seq $((i+4)) $((num_cpus-1))`; do
+                isolcpu+=$vcpu,
+            done
+            echo host_vcpu_list=$host_vcpu_list
+            isolcpu=$(echo $isolcpu | sed 's/,$//')
+            echo isolcpu=$isolcpu
+            crudini --set /etc/nova/nova.conf DEFAULT vcpu_pin_set $isolcpu
+            systemctl restart openstack-nova-compute
+            crudini --set /etc/cinder/cinder.conf DEFAULT storage_availability_zone $HOSTNAME
+            systemctl restart openstack-cinder-volume
+        } > /root/enable_numa.txt 2>&1
+        
+        elif [[ $HOSTNAME =~ "controller" ]]; then
+        {
+            set -x
+            # echo "I'm a Controller"
+            crudini --set /etc/nova/nova.conf DEFAULT scheduler_default_filters RetryFilter,AvailabilityZoneFilter,RamFilter,ComputeFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,CoreFilter,NUMATopologyFilter,AggregateInstanceExtraSpecsFilter
+            systemctl restart openstack-nova-scheduler
+        } > /root/enable_numa_filter.txt 2>&1
+        fi
+        
+outputs:
+  OS::stack_id:
+    value: {get_resource: userdata}

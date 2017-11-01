@@ -1,0 +1,137 @@
+# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+resource_registry:
+    OS::TripleO::NodeUserData: ./first-boot.yaml
+    OS::TripleO::NodeExtraConfigPost: ./post-install.yaml 
+    OS::TripleO::Services::SaharaApi: ./overcloud/puppet/services/sahara-api.yaml
+    OS::TripleO::Services::SaharaEngine: ./overcloud/puppet/services/sahara-engine.yaml
+
+parameter_defaults:
+  # To customize the domain name of the overcloud nodes, change "localdomain"
+  # in the following line to the desired domain name.
+  CloudDomain: oss.labs
+
+  # Set to true to enable Nova usage of Ceph for ephemeral storage.
+  # If set to false, Nova uses the storage local to the compute.
+  NovaEnableRbdBackend: false
+
+  # Configure Ceph Placement Group (PG) values for the indicated pools
+  CephPools:
+    volumes:
+      pg_num: 1024
+      pgp_num: 1024
+    backups:
+      pg_num: 512
+      pgp_num: 512
+    vms:
+      pg_num: 256
+      pgp_num: 256
+    images:
+      pg_num: 128
+      pgp_num: 128
+    .rgw.buckets:
+      pg_num: 512
+      pgp_num: 512
+
+  # Additional hiera data for all nodes
+  ExtraConfig:
+    ceph::profile::params::osd_journal_size: 10000
+    ceph::profile::params::osd_pool_default_min_size: 2
+    # CHANGEME:
+    # Modify the 'osds' parameter to reflect the list of drives to be used as
+    # OSDs. A configuration that colocates Ceph journals on every OSD should
+    # look like this:
+    # ceph::profile::params::osds:
+    #   '/dev/sdb': {}
+    #   '/dev/sdc': {}
+    #   ... and so on.
+    # A configuration that places Ceph journals on dedicated drives (such as
+    # SSDs) should look like this:
+    # ceph::profile::params::osds:
+    #   '/dev/sde':
+    #     journal: '/dev/sdb'
+    #   '/dev/sdf':
+    #     journal: '/dev/sdb'
+    #   ... and so on.
+    ceph::profile::params::osds:
+      '/dev/sda': {}
+      '/dev/sdb': {}
+      '/dev/sdc': {}
+      '/dev/sdd': {}
+      '/dev/sde': {}
+      '/dev/sdf': {}
+      '/dev/sdg': {}
+      '/dev/sdh': {}
+      '/dev/sdi': {}
+      '/dev/sdj': {}
+      '/dev/sdk': {}
+      '/dev/sdl': {}
+      '/dev/sdm': {}
+      '/dev/sdn': {}
+      '/dev/sdo': {}
+      '/dev/sdp': {}
+      '/dev/sdq': {}
+      '/dev/sdr': {}
+      '/dev/sds': {}
+      '/dev/sdt': {}
+      '/dev/sdu': {}
+      '/dev/sdv': {}
+      '/dev/sdw': {}
+      '/dev/sdx': {}
+
+    # Additional entries added to /etc/ceph/ceph.conf
+    ceph::conf::args:
+      global/max_open_files:
+        value: 131072
+      client.radosgw.gateway/rgw_keystone_make_new_tenants:
+        value: true
+      client.radosgw.gateway/rgw_init_timeout:
+        value: 1200
+  NovaComputeExtraConfig:
+    nova::migration::libvirt::live_migration_completion_timeout: 800
+    nova::migration::libvirt::live_migration_progress_timeout: 150
+    # NovaComputeExtraConfig:
+    cinder::config::cinder_config:
+      #LVM
+      lvm_backend/volume_backend_name:
+        value: lvm_backend
+      lvm_backend/volume_driver:
+        value: cinder.volume.drivers.lvm.LVMVolumeDriver
+      lvm_backend/volume_group:
+        value: cinder-volumes
+      lvm_backend/iscsi_protocol:
+        value: iscsi
+      lvm_backend/iscsi_helper:
+        value: lioadm
+      lvm_backend/volume_clear:
+        value: none
+      lvm_backend/volume_clear_size:
+        value: 50
+      #LVM-END
+    cinder_user_enabled_backends: ['lvm_backend']
+  CinderEnableRbdBackend: False
+  ControllerExtraConfig:
+    cinder::config::cinder_config:
+      #LVM
+      lvm_backend/volume_backend_name:
+        value: lvm_backend
+      lvm_backend/volume_driver:
+        value: cinder.volume.drivers.lvm.LVMVolumeDriver
+      #LVM-END
+      DEFAULT/scheduler_default_filters:
+        value: 'AvailabilityZoneFilter,CapacityFilter,CapabilitiesFilter,InstanceLocalityFilter'
+    cinder_user_enabled_backends: ['lvm_backend']
+  CinderEnableRbdBackend: True
+

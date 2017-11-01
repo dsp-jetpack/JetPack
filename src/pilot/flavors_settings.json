@@ -1,0 +1,42 @@
+{
+  "ceph-storage": {
+    "bios": {
+      "SriovGlobalEnable": "Disabled"
+    }
+  },
+  "compute": {
+    "bios": {
+      "ProcVirtualization": "Enabled"
+    }
+  },
+  "control": {
+    "bios": {
+      "SriovGlobalEnable": "Disabled"
+    }
+  },
+  "default": {
+    "bios": {
+      "BootSeqRetry": "Enabled",
+      "DcuIpPrefetcher": "Enabled",
+      "DcuStreamerPrefetcher": "Enabled",
+      "DynamicCoreAllocation": "Disabled",
+      "IntegratedRaid": "Enabled",
+      "InternalSdCard": "Off",
+      "IoatEngine": "Enabled",
+      "LogicalProc": "Enabled",
+      "MemOpMode": "OptimizerMode",
+      "MemTest": "Disabled",
+      "NodeInterleave": "Disabled",
+      "OsWatchdogTimer": "Disabled",
+      "ProcAdjCacheLine": "Enabled",
+      "ProcCores": "All",
+      "ProcExecuteDisable": "Enabled",
+      "ProcHwPrefetcher": "Enabled",
+      "ProcVirtualization": "Disabled",
+      "QpiSpeed": "MaxDataRate",
+      "RtidSetting": "Disabled",
+      "SriovGlobalEnable": "Enabled",
+      "SysProfile": "PerfOptimized"
+    }
+  }
+}
