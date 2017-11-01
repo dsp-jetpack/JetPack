@@ -1,0 +1,96 @@
+# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+heat_template_version: 2014-10-16
+
+resources:
+  userdata:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+      - config: {get_resource: wipe_disk}
+
+  wipe_disk:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      config: |
+        #!/bin/bash
+        if [[ $HOSTNAME =~ "cephstorage" ]]; then
+        {
+          # LVM partitions are always in use by the kernel.  Destroy all of the
+          # LVM components here so the disks are not in use and sgdisk and
+          # partprobe can do their thing
+
+          # Destroy all the logical volumes and volume groups
+          vgs --noheadings -o vg_name | awk '{print $1}' | while read lvg;
+          do
+              cmd="lvremove -f $lvg"
+              echo $cmd
+              $cmd
+
+              cmd="vgremove -f $lvg"
+              echo $cmd
+              $cmd
+          done
+
+          # Destroy all the physical volumes
+          pvs --noheadings -o pv_name | awk '{print $1}' | while read pv;
+          do
+              cmd="pvremove -ff $pv"
+              echo $cmd
+              $cmd
+          done
+
+          lsblk -dno NAME,TYPE | \
+          while read disk type; do
+            # Skip if the device type isn't "disk" or if it's mounted
+            [ "${type}" == "disk" ] || continue
+            device="/dev/${disk}"
+            if grep -q ^${device}[1-9] /proc/mounts; then
+              echo "Skipping ${device} because it's mounted"
+              continue
+            fi
+
+            # Delete all of the partitions on the disk
+            partitions=$(parted -sm $device print|tail -n +3|awk -F: '{print $1}')
+            for partition in $partitions; do
+                cmd="parted -s $device rm $partition"
+                echo $cmd
+                $cmd
+            done
+
+            # In case the disk has a non-gpt partition type, convert it to gpt
+            cmd="parted -s $device mklabel gpt"
+            echo $cmd
+            $cmd
+
+            # Zap the disk for good measure
+            cmd="sgdisk -Z $device"
+            echo $cmd
+            $cmd
+
+            echo "Partitioning disk: ${disk}"
+            cmd="sgdisk -og ${device}"
+            echo $cmd
+            $cmd
+            echo
+          done
+          partprobe
+          parted -lm
+        } > /root/wipe-disk.txt 2>&1
+        fi
+
+outputs:
+  OS::stack_id:
+    value: {get_resource: userdata}

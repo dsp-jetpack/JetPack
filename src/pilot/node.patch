@@ -1,0 +1,20 @@
+--- /usr/lib/python2.7/site-packages/tripleo_common/utils/nodes.py      2017-05-20 07:25:59.000000000 -0500
++++ nodes.py    2017-06-21 10:51:01.929235813 -0500
+@@ -509,11 +509,11 @@
+             failures.append(
+                 (index, 'Invalid capabilities: %s' % node.get('capabilities')))
+
+-        for field in node:
+-            converted = handler.convert_key(field)
+-            if (converted is None and field not in _NON_DRIVER_FIELDS and
+-                    field not in ('mac', 'pm_type')):
+-                failures.append((index, 'Unknown field %s' % field))
++        #for field in node:
++        #    converted = handler.convert_key(field)
++        #    if (converted is None and field not in _NON_DRIVER_FIELDS and
++        #            field not in ('mac', 'pm_type')):
++        #        failures.append((index, 'Unknown field %s' % field))
+
+     if failures:
+         raise exception.InvalidNode(
+
