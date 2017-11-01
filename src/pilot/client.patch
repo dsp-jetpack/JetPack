@@ -1,0 +1,47 @@
+--- client.py	2017-08-01 10:32:16.000000000 -0500
++++ client.new	2017-09-22 07:37:17.845971024 -0500
+@@ -633,7 +633,7 @@
+                                                   filter_query, filter_dialect)
+ 
+     def invoke(self, resource_uri, method, selectors=None, properties=None,
+-               expected_return_value=None, wait_for_idrac=True):
++               expected_return_value=None, check_return_value=True, wait_for_idrac=True):
+         """Invokes a remote WS-Man method
+ 
+         :param resource_uri: URI of the resource
+@@ -666,17 +666,18 @@
+         resp = super(WSManClient, self).invoke(resource_uri, method, selectors,
+                                                properties)
+ 
+-        return_value = utils.find_xml(resp, 'ReturnValue', resource_uri).text
+-        if return_value == utils.RET_ERROR:
+-            message_elems = utils.find_xml(resp, 'Message', resource_uri, True)
+-            messages = [message_elem.text for message_elem in message_elems]
+-            raise exceptions.DRACOperationFailed(drac_messages=messages)
+-
+-        if (expected_return_value is not None and
+-                return_value != expected_return_value):
+-            raise exceptions.DRACUnexpectedReturnValue(
+-                expected_return_value=expected_return_value,
+-                actual_return_value=return_value)
++        if check_return_value:
++            return_value = utils.find_xml(resp, 'ReturnValue', resource_uri).text
++            if return_value == utils.RET_ERROR:
++                message_elems = utils.find_xml(resp, 'Message', resource_uri, True)
++                messages = [message_elem.text for message_elem in message_elems]
++                raise exceptions.DRACOperationFailed(drac_messages=messages)
++
++            if (expected_return_value is not None and
++                    return_value != expected_return_value):
++                raise exceptions.DRACUnexpectedReturnValue(
++                    expected_return_value=expected_return_value,
++                    actual_return_value=return_value)
+ 
+         return resp
+ 
+@@ -753,3 +754,4 @@
+             err_msg = "Timed out waiting for the iDRAC to become ready"
+             LOG.error(err_msg)
+             raise exceptions.DRACOperationFailed(drac_messages=err_msg)
++
+

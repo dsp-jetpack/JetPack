@@ -1,0 +1,56 @@
+{
+    "networks": {
+    },
+    "flavors_to_networks": {
+        "control": [
+            "provisioning",
+            "private_api",
+            "storage",
+            "public_api",
+            "tenant"
+        ],
+        "compute": [
+            "provisioning",
+            "private_api",
+            "storage",
+            "tenant"
+        ],
+        "ceph-storage": [
+            "provisioning",
+            "storage",
+            "storage_clustering"
+        ]
+    },
+    "nodes": {
+        "sah": {
+            "user": "root",
+            "ip" : "192.168.120.12",
+            "networks": [
+                "provisioning",
+                "management",
+                "private_api",
+                "storage",
+                "public_api"
+            ]
+        },
+        "director_vm": {
+            "user": "stack",
+            "ip" : "192.168.120.13",
+            "networks": [
+                "provisioning",
+                "management",
+                "private_api",
+                "public_api"
+            ]
+        },
+        "rhscon_vm": {
+            "user": "root",
+            "ip" : "10.148.44.14",
+            "networks": [
+                "public_api",
+                "storage"
+            ]
+        }
+    }
+}
+

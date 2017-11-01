@@ -1,0 +1,56 @@
+# Copyright (c) 2016-2017 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+resource_registry:
+  OS::TripleO::Network::Ports::NetVipMap: ./overcloud/network/ports/net_vip_map_external.yaml
+  OS::TripleO::Network::Ports::ExternalVipPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::Network::Ports::InternalApiVipPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::Network::Ports::StorageVipPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::Network::Ports::StorageMgmtVipPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::Network::Ports::RedisVipPort: ./overcloud/network/ports/from_service.yaml
+
+parameter_defaults:
+  ServiceVips:
+    # CHANGEME: Change the following to the VIP for the redis service on the
+    # Private API/internal_api network.
+    # Note that this IP must lie outside the InternalApiAllocationPools range
+    # specified in network-environment.yaml.
+    redis: 192.168.140.251
+
+  # CHANGEME: Change the following to the VIP on the Provisioning network
+  # Note that this IP must lie outside the dhcp_start/dhcp_end range
+  # specified in undercloud.conf.
+  ControlPlaneIP: 192.168.120.250
+
+  # CHANGEME: Change the following to the VIP on the Private API network.
+  # Note that this IP must lie outside the InternalApiAllocationPools range
+  # specified in network-environment.yaml.
+  InternalApiNetworkVip: 192.168.140.250
+
+  # CHANGEME: Change the following to the VIP on the Public API network.
+  # Note that this IP must lie outside the ExternalAllocationPools range
+  # specified in network-environment.yaml.
+  ExternalNetworkVip: 192.168.190.250
+
+  # CHANGEME: Change the following to the VIP on the Storage network
+  # Note that this IP must lie outside the StorageAllocationPools range
+  # specified in network-environment.yaml.
+  StorageNetworkVip: 192.168.170.250
+
+  # CHANGEME: Change the following to the VIP on the Provisioning network.
+  # The Storage Clustering network is not connected to the controller nodes,
+  # so the VIP for this network must be mapped to the provisioning network.
+  # Note that this IP must lie outside the dhcp_start/dhcp_end range
+  # specified in undercloud.conf.
+  StorageMgmtNetworkVip: 192.168.120.249
