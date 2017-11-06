@@ -421,7 +421,7 @@ def add_compute_node_stonith_devices(compute_node_ip,
 
     # Get drac_user
     p1 = subprocess.Popen(['cat', instack_file], stdout=subprocess.PIPE)
-    p2 = subprocess.Popen(shlex.split('grep -n3 ' + compute_node_drac_ip),
+    p2 = subprocess.Popen(shlex.split('grep -A3 ' + compute_node_drac_ip),
                           stdin=p1.stdout,
                           stdout=subprocess.PIPE)
     p3 = subprocess.Popen(shlex.split('awk -F\'"\' \'/pm_user/ {print $4}\''),
@@ -431,7 +431,7 @@ def add_compute_node_stonith_devices(compute_node_ip,
 
     # Get drac_password
     p1 = subprocess.Popen(['cat', instack_file], stdout=subprocess.PIPE)
-    p2 = subprocess.Popen(shlex.split('grep -n2 ' + compute_node_drac_ip),
+    p2 = subprocess.Popen(shlex.split('grep -A3 ' + compute_node_drac_ip),
                           stdin=p1.stdout,
                           stdout=subprocess.PIPE)
     p3 = subprocess.Popen(shlex.split('awk -F\'"\' \'/pm_pass/ {print $4}\''),
