@@ -100,8 +100,13 @@ def deploy():
                             help='No deployment - just validate config values',
                             action='store_true',
                             required=False)
-        args, ignore = parser.parse_known_args()
-
+        args, others = parser.parse_known_args()
+        if len(others) > 0:
+            parser.print_help()
+            msg = "Invalid argument(s) :"
+            for each in others:
+                msg += " " + each + ";"
+            raise AssertionError(msg)
         if args.validate_only is True:
             logger.info("Only validating ini/properties config values")
         else:
