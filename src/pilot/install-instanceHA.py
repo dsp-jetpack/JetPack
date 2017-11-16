@@ -677,7 +677,7 @@ def main():
         LOG.debug("compute_nova_names: {}".format(compute_nova_names))
         LOG.debug("domainname: {}".format(domainname))
 
-        if (verify_fencing(first_controller_node_ip) != "false" ):
+        if (verify_fencing(first_controller_node_ip) != "false"):
             LOG.debug("Stonith is enabled.")
         else:
             LOG.critical("!!! - Error: Fencing must be enabled.")
