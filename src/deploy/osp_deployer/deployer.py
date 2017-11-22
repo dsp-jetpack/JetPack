@@ -126,7 +126,7 @@ def deploy():
         tester.verify_deployer_settings()
         if args.validate_only is True:
             logger.info("Settings validated")
-            sys.exit(0)
+            os._exit(0)
 
         if settings.retreive_switches_config is True:
             tester.retreive_switches_config()
