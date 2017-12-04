@@ -71,7 +71,8 @@ class Settings():
                                     "should be removed\n"
             else:
                 warning_msg = warning_msg + "Section [" + stanza + \
-                            "] in your ini file is deprecated and should be " +\
+                            "] in your ini file is deprecated" +\
+                            " and should be " +\
                             "removed\n"
 
         if len(error_msg) > 0:

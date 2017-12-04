@@ -538,4 +538,3 @@ class Checkpoints():
                                    " not able to validate ISCSI access to " +
                                    self.settings.dellsc_iscsi_ip_address +
                                    ":" + self.settings.dellsc_iscsi_port)
-
