@@ -243,7 +243,7 @@ class Sah(InfraHost):
             for eachone in files:
                 source_file_name = self.settings.lock_files_dir + "/" + eachone
                 dest_file_name = '/root/' + eachone
-                self.upload_file(source_file_name, dest_file_name) 
+                self.upload_file(source_file_name, dest_file_name)
 
     def upload_director_scripts(self):
         remote_file = "/root/deploy-director-vm.sh"
@@ -399,7 +399,7 @@ class Sah(InfraHost):
                 time.sleep(20)
 
     def is_running_from_sah(self):
-        # Check wether we're running from the SAH node
+        # Check whether we're running from the SAH node
         out = subprocess.check_output("ip addr",
                                       stderr=subprocess.STDOUT,
                                       shell=True)
