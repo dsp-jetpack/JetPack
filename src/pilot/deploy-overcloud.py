@@ -161,7 +161,7 @@ def create_volume_types():
     overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 
     for type in types:
-        type_name= type[0]
+        type_name = type[0]
         cmd = "source {} && cinder type-list | grep ' {} ' | awk '{{print $4}}'".format(overcloudrc_name, type_name)
         proc = subprocess.Popen([cmd], stdout=subprocess.PIPE, shell=True)
         return_output = proc.communicate()[0].strip()

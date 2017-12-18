@@ -476,9 +476,8 @@ class DeployerSanity():
                                                 shouldhaveattributes,
                                                 shouldbbevalidips)
 
-
     def verify_iha_dependency_on_fencing(self):
-        # IHA requires fencing 
+        # IHA requires fencing
         # verify fencing flag enabled when IHA enabled
         logger.debug("verifying fencing enabled when iha enabled")
         if (self.settings.enable_instance_ha is True

@@ -211,7 +211,7 @@ class Sah(InfraHost):
              self.settings.rhscon_node.public_api_ip
         ]
 
-        # Check wether we're running from the SAH node 
+        # Check wether we're running from the SAH node
         out = subprocess.check_output("ip addr",
                                       stderr=subprocess.STDOUT,
                                       shell=True)
