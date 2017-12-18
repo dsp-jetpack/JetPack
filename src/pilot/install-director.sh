@@ -263,10 +263,14 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resour
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
 
-# This hacks in a patch to work around an issue where lock contention on the
-# nodes in ironic can occur during RAID cleaning.
+# This patches workarounds for two issues into ironic.conf.
+# 1. node_locked_retry_attempts is increased to work around an issue where
+#    lock contention on the nodes in ironic can occur during RAID cleaning.
+# 2. sync_power_state_interval is increased to work around an issue where
+#    servers go into maintenance mode in ironic if polled for power state too
+#    aggressively.
 echo
-echo "## Patching ironic.conf for locking..."
+echo "## Patching ironic.conf..."
 apply_patch "sudo patch -b -s /etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
 echo "## Done."
 
