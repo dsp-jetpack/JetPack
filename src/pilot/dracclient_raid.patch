@@ -1,44 +1,6 @@
---- raid.py.orig	2017-06-16 07:56:01.000000000 +0000
-+++ raid.py	2017-09-22 20:56:07.018470898 +0000
-@@ -73,7 +73,7 @@
-     'PhysicalDisk',
-     ['id', 'description', 'controller', 'manufacturer', 'model', 'media_type',
-      'interface_type', 'size_mb', 'free_size_mb', 'serial_number',
--     'firmware_version', 'status', 'raid_status'])
-+     'firmware_version', 'status', 'raid_status', 'sas_address'])
- 
- 
- class PhysicalDisk(PhysicalDiskTuple):
-@@ -107,7 +107,7 @@
- 
- RAIDController = collections.namedtuple(
-     'RAIDController', ['id', 'description', 'manufacturer', 'model',
--                       'primary_status', 'firmware_version'])
-+                       'primary_status', 'firmware_version', 'bus'])
- 
- VirtualDiskTuple = collections.namedtuple(
-     'VirtualDisk',
-@@ -187,7 +187,8 @@
-                 self._get_raid_controller_attr(drac_controller,
-                                                'PrimaryStatus')],
-             firmware_version=self._get_raid_controller_attr(
--                drac_controller, 'ControllerFirmwareVersion'))
-+                drac_controller, 'ControllerFirmwareVersion'),
-+            bus=self._get_raid_controller_attr(drac_controller, 'Bus'))
- 
-     def _get_raid_controller_attr(self, drac_controller, attr_name):
-         return utils.get_wsman_resource_attr(
-@@ -300,7 +301,8 @@
-             firmware_version=self._get_physical_disk_attr(drac_disk,
-                                                           'Revision'),
-             status=constants.PRIMARY_STATUS[drac_status],
--            raid_status=DISK_RAID_STATUS[drac_raid_status])
-+            raid_status=DISK_RAID_STATUS[drac_raid_status],
-+            sas_address=self._get_physical_disk_attr(drac_disk, 'SASAddress'))
- 
-     def _get_physical_disk_attr(self, drac_disk, attr_name):
-         return utils.get_wsman_resource_attr(
-@@ -394,13 +396,19 @@
+--- /usr/lib/python2.7/site-packages/dracclient/resources/raid.py	2017-10-24 19:12:01.000000000 +0000
++++ ./raid.py	2017-12-12 22:26:48.964642422 +0000
+@@ -396,13 +396,19 @@
              virtual_disk_prop_names.append('VirtualDiskName')
              virtual_disk_prop_values.append(disk_name)
  
