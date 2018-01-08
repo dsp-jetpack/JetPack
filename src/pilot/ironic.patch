@@ -5,7 +5,7 @@
  # Interval between syncing the node power state to the
  # database, in seconds. (integer value)
 -#sync_power_state_interval = 60
-+sync_power_state_interval = 7200
++sync_power_state_interval = 70
  
  # Interval between checks of provision timeouts, in seconds.
  # (integer value)
