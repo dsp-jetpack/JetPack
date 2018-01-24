@@ -63,10 +63,11 @@ class SystemManagement(object):
         :raises: WSManRequestFailure on request failures
         :raises: WSManInvalidResponse when receiving invalid response
         """
-        filter_query = ('select ServiceTag from DCIM_SystemView')
+        filter_query = ('select ChassisServiceTag '
+                        'from DCIM_SystemView')
         doc = self.client.enumerate(uris.DCIM_SystemView,
                                     filter_query=filter_query)
 
         return utils.find_xml(doc,
-                              'ServiceTag',
+                              'ChassisServiceTag',
                               uris.DCIM_SystemView).text

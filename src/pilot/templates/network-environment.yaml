@@ -121,6 +121,16 @@ parameter_defaults:
   BondInterfaceOptions:
       "mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1"
 
+  NeutronNetworkType: vlan
+  NeutronNetworkVLANRanges: "physint:201:220,physext"
+  NeutronBridgeMappings: "physint:br-tenant,physext:br-ex"
+  NeutronPublicInterface: "bond1"
+
+  NeutronNetworkType: vlan
+  NeutronNetworkVLANRanges: "physint:201:220,physext"
+  NeutronBridgeMappings: "physint:br-tenant,physext:br-ex"
+  NeutronPublicInterface: "bond1"
+
   # CHANGEME: Set to empty string for External VLAN, br-ex if on native VLAN of br-ex
   NeutronExternalNetworkBridge: "''"
   ServiceNetMap:

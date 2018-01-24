@@ -81,7 +81,7 @@ def apply_paramiko_patch(file, search_term, repl_term):
     LOG.debug("Applying patch to transport.py")
     shutil.os.system('sudo cp "{}" "{}"'.format(file, file + ".new"))
     # The next line ensures compiled python file is refreshed
-    shutil.os.system('sudo cp "{}" "{}"'.format(file + "c", file + "c.new"))
+    shutil.os.system('sudo cp "{}" "{}"'.format(file + "c" , file + "c.new"))
     sed_inplace(file, search_term, repl_term)
 
 
@@ -361,7 +361,7 @@ def main():
 
     cmd = "source {} ".format(undercloudrc_name)
     os.system(cmd)
-
+ 
     out = ssh_cmd(first_controller_node_ip, "heat-admin",
                   "sudo pcs property show stonith-enabled \
                   | awk '/stonith/ {print $2}'")

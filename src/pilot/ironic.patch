@@ -1,14 +1,5 @@
---- /etc/ironic/ironic.conf	2017-11-13 18:46:02.757143022 +0000
-+++ /root/ironic.conf.new	2017-11-13 18:47:09.636378764 +0000
-@@ -655,7 +655,7 @@
- 
- # Interval between syncing the node power state to the
- # database, in seconds. (integer value)
--#sync_power_state_interval = 60
-+sync_power_state_interval = 70
- 
- # Interval between checks of provision timeouts, in seconds.
- # (integer value)
+--- /etc/ironic/ironic.conf	2017-08-16 06:52:33.951991823 -0500
++++ ironic.conf	2017-08-16 06:56:20.528612291 -0500
 @@ -683,7 +683,7 @@
  #periodic_max_workers = 8
  

@@ -44,4 +44,3 @@
              LOG.error(err_msg)
              raise exceptions.DRACOperationFailed(drac_messages=err_msg)
 +
-

@@ -34,6 +34,7 @@ vlt domain 1
  system-mac mac-address aa:11:22:33:44:55 
  unit-id 1 
  peer-routing 
+ peer-routing-timeout 1800 
 ! 
 stack-unit 1 provision S4048-ON
 ! 

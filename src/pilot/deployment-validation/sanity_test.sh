@@ -116,7 +116,7 @@ generate_sanity_rc(){
   then
     sed -i "s/${TENANTNAMEREPL}/export OS_TENANT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
   else
-    sed -i "\$ a export OS_TENANT_NAME=${PROJECT_NAME}" ${SANITYRC}
+    sed -i "s/${TENANTNAMEREPL}/export OS_PROJECT_NAME=${PROJECT_NAME}/g" ${SANITYRC}
   fi
 }
 
@@ -207,7 +207,7 @@ create_the_networks(){
   net_exists=$(openstack network list -c Name -f value | grep "$TENANT_NETWORK_NAME")
   if [ "$net_exists" != "$TENANT_NETWORK_NAME" ]
   then
-    execute_command "openstack network create --share $TENANT_NETWORK_NAME"
+    execute_command "openstack network create --share --external $TENANT_NETWORK_NAME"
   else
     info "#----- Tenant network '$TENANT_NETWORK_NAME' exists. Skipping"
   fi
@@ -215,19 +215,22 @@ create_the_networks(){
   subnet_exists=$(openstack subnet list -c Name -f value | grep "$VLAN_NAME")
   if [ "$subnet_exists" != "$VLAN_NAME" ]
   then
-    execute_command "neutron subnet-create $TENANT_NETWORK_NAME $SANITY_TENANT_NETWORK --name $VLAN_NAME"
+    execute_command "openstack subnet create $VLAN_NAME --network $TENANT_NETWORK_NAME --subnet-range $SANITY_TENANT_NETWORK"
   else
-    info "#-----VLAN Network subnet '$SANITY_TENANT_NETWORK' exists. Skipping"
+    info "#-----VLAN Network subnet '$VLAN_NAME' exists. Skipping"
   fi
 
   router_exists=$(openstack router list -c Name -f value | grep "$TENANT_ROUTER_NAME")
   if [ "$router_exists" != "$TENANT_ROUTER_NAME" ]
   then
-    execute_command "neutron router-create $TENANT_ROUTER_NAME"
+    execute_command "openstack router create $TENANT_ROUTER_NAME"
 
-    subnet_id=$(neutron net-list | grep $TENANT_NETWORK_NAME | head -n 1 | awk '{print $6}')
+    network_id=$(openstack network list | grep $TENANT_NETWORK_NAME | head -n 1 | awk '{print $2}')
+    router_id=$(openstack router list | grep $TENANT_ROUTER_NAME | head -n 1 | awk '{print $2}')
+    subnet_id=$(openstack subnet list | grep $VLAN_NAME | head -n 1 | awk '{print $2}')
 
-    execute_command "neutron router-interface-add $TENANT_ROUTER_NAME $subnet_id"
+    execute_command "openstack router set $router_id --external-gateway $network_id"
+
   else
     info "#----- $TENANT_ROUTER_NAME exists. Skipping"
   fi

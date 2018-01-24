@@ -180,7 +180,8 @@ then
 fi
 cd $HOME/pilot/images
 
-for i in /usr/share/rhosp-director-images/overcloud-full-latest-10.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-10.0.tar;
+rhosp_ver=$(rpm -qi rhosp-director-images|awk '/Version/ {print $3}')
+for i in /usr/share/rhosp-director-images/overcloud-full-latest-${rhosp_ver}.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-${rhosp_ver}.tar;
 do
   tar -xvf $i;
 done
@@ -236,25 +237,18 @@ sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
 echo "## Done."
 
-# This hacks in a patch to work around a known issue where a RAID-10 virtual
-# disk cannot be created from more than 16 backing physical disks.  Note that
-# this code must be here because we use this code prior to deploying the
-# director.
+# This hacks in a patch to work around a known issue where waiting for job
+# completion will never return if a failed reboot job is present.
 echo
-echo "## Patching Ironic iDRAC driver RAID library..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
-echo "## Done."
+echo "## Patching Ironic iDRAC driver job library..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/job.py ${HOME}/pilot/job.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
 
-# This patches workarounds for two issues into ironic.conf.
-# 1. node_locked_retry_attempts is increased to work around an issue where
-#    lock contention on the nodes in ironic can occur during RAID cleaning.
-# 2. sync_power_state_interval is increased to work around an issue where
-#    servers go into maintenance mode in ironic if polled for power state too
-#    aggressively.
+# This hacks in a patch to work around an issue where lock contention on the
+# nodes in ironic can occur during RAID cleaning.
 echo
-echo "## Patching ironic.conf..."
+echo "## Patching ironic.conf for locking..."
 apply_patch "sudo patch -b -s /etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
 echo "## Done."
 

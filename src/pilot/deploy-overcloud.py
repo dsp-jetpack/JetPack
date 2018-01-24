@@ -161,7 +161,7 @@ def create_volume_types():
     overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 
     for type in types:
-        type_name = type[0]
+        type_name= type[0]
         cmd = "source {} && cinder type-list | grep ' {} ' | awk '{{print $4}}'".format(overcloudrc_name, type_name)
         proc = subprocess.Popen([cmd], stdout=subprocess.PIPE, shell=True)
         return_output = proc.communicate()[0].strip()
@@ -194,13 +194,13 @@ def run_deploy_command(cmd):
 
 
 def finalize_overcloud():
-    from os_cloud_config.utils import clients
+    from keystoneclient.v3 import client
 
     os_auth_url, os_tenant_name, os_username, os_password = \
         CredentialHelper.get_overcloud_creds()
 
     try:
-        keystone_client = clients.get_keystone_client(os_username,
+        keystone_client = client.get_keystone_client(os_username,
                                                       os_password,
                                                       os_tenant_name,
                                                       os_auth_url)
@@ -236,11 +236,6 @@ def main():
                             type=int,
                             required=True,
                             help="The number of storage nodes")
-        parser.add_argument("--vlans",
-                            dest="vlan_range",
-                            required=True,
-                            help="The VLAN range to use for Neutron in "
-                                 " xxx:yyy format")
         parser.add_argument("--ntp",
                             dest="ntp_server_fqdn",
                             default="0.centos.pool.ntp.org",
@@ -279,11 +274,6 @@ def main():
                             help="Indicates if the deploy-overcloud script "
                                  "should be run in debug mode")
         args = parser.parse_args()
-        p = re.compile('\d+:\d+')
-        if not p.match(args.vlan_range):
-            raise ValueError("Error: The VLAN range must be a number followed "
-                             "by a colon, followed by another number")
-
         os_auth_url, os_tenant_name, os_username, os_password = \
             CredentialHelper.get_undercloud_creds()
 
@@ -375,9 +365,6 @@ def main():
               " --ceph-storage-flavor {}" \
               " --swift-storage-flavor {}" \
               " --block-storage-flavor {}" \
-              " --neutron-public-interface bond1" \
-              " --neutron-network-type vlan" \
-              " --neutron-disable-tunneling" \
               " --libvirt-type kvm" \
               " --os-auth-url {}" \
               " --os-project-name {}" \
@@ -387,8 +374,6 @@ def main():
               " --compute-scale {}" \
               " --ceph-storage-scale {}" \
               " --ntp-server {}" \
-              " --neutron-network-vlan-ranges physint:{},physext" \
-              " --neutron-bridge-mappings physint:br-tenant,physext:br-ex" \
               "".format(debug,
                         args.timeout,
                         overcloud_name_opt,
@@ -405,8 +390,7 @@ def main():
                         args.num_controllers,
                         args.num_computes,
                         args.num_storage,
-                        args.ntp_server_fqdn,
-                        args.vlan_range)
+                        args.ntp_server_fqdn)
 
         with open(os.path.join(home_dir, 'pilot', 'overcloud_deploy_cmd.log'),
                   'w') as f:

@@ -426,9 +426,10 @@ class Checkpoints():
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
-        computes = re[0].split("\n")
-        computes.pop()
-        for each in computes:
+        ls_nodes = re[0].split("\n")
+        ls_nodes.pop()
+        for each in ls_nodes:
+            hostname = each.split("|")[2]
             provisioning_ip = each.split("|")[6].split("=")[1]
             cmd = "ssh %s heat-admin@%s 'ls -al /dev/kvm'" % (
                 ssh_opts, provisioning_ip)

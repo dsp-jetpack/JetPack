@@ -55,8 +55,7 @@ def get_settings():
                         action='store_true',
                         required=False)
     parser.add_argument('-validate_settings_only', '--validate_settings_only',
-                        help='Only validate ini and properties files ' +
-                        '(no deployment)',
+                        help='Only validate ini and properties files (no deployment)',
                         action='store_true', required=False)
     args, ignore = parser.parse_known_args()
     settings = Settings(args.settings)
@@ -101,13 +100,8 @@ def deploy():
                             help='No deployment - just validate config values',
                             action='store_true',
                             required=False)
-        args, others = parser.parse_known_args()
-        if len(others) > 0:
-            parser.print_help()
-            msg = "Invalid argument(s) :"
-            for each in others:
-                msg += " " + each + ";"
-            raise AssertionError(msg)
+        args, ignore = parser.parse_known_args()
+
         if args.validate_only is True:
             logger.info("Only validating ini/properties config values")
         else:
@@ -126,7 +120,7 @@ def deploy():
         tester.verify_deployer_settings()
         if args.validate_only is True:
             logger.info("Settings validated")
-            os._exit(0)
+            sys.exit(0)
 
         if settings.retreive_switches_config is True:
             tester.retreive_switches_config()
