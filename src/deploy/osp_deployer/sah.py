@@ -189,17 +189,6 @@ class Sah(InfraHost):
                                       sets.provisioning_netmask +
                                       '"')
         time.sleep(3)
-        if self.settings.is_fx is True:
-            cmds = ["sed -i 's/{AnacondaIface_device}/{" +
-                    "AnacondaIface_device}." +
-                    self.settings.public_api_vlanid +
-                    "/' " + sets.sah_kickstart,
-                    "sed -i 's/bootproto=static/vlanid=" +
-                    self.settings.public_api_vlanid +
-                    " --bootproto=static/' " +
-                    sets.sah_kickstart]
-            for cmd in cmds:
-                os.system(cmd)
 
     def upload_iso(self):
         shutil.copyfile(self.settings.rhel_iso,
@@ -231,7 +220,7 @@ class Sah(InfraHost):
         for eachone in files:
             staged_file_name = '/root/' + eachone
             if self.is_running_from_sah() is False:
-                self.run ("rm -rf " + staged_file_name)
+                self.run("rm -rf " + staged_file_name)
             else:
                 if os.path.isfile(staged_file_name):
                     os.remove(staged_file_name)
