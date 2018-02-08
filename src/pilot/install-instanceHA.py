@@ -116,8 +116,10 @@ def verify_fencing(first_controller_node_ip):
 
 # 1) Stop and disable openstack services Compute nodes
 def stop_disable_openstack_services(compute_nodes_ip):
-    LOG.info("Disable openstack-nova-compute service.")
-    services = ['openstack-nova-compute']
+    LOG.info("Disable compute node libvirtd and openstack services.")
+    services = ['openstack-nova-compute',
+                'neutron-openvswitch-agent',
+                'libvirtd']
 
     for compute_node_ip in compute_nodes_ip:
         for service in services:
@@ -126,6 +128,12 @@ def stop_disable_openstack_services(compute_nodes_ip):
 
             ssh_cmd(compute_node_ip, "heat-admin",
                     "sudo systemctl disable " + service)
+
+        ssh_cmd(compute_node_ip, "heat-admin",
+                "sudo iptables -I INPUT -p tcp --dport 3121 -j ACCEPT")
+
+        ssh_cmd(compute_node_ip, "heat-admin",
+                "sudo service iptables save")
 
 
 # 2) Create auth_key on first compute node and cp authkey back to local node
@@ -191,14 +199,8 @@ def enable_start_compute_pacemaker(compute_node_ip):
     ssh_cmd(compute_node_ip, "heat-admin",
             "sudo systemctl start pacemaker_remote")
 
-    ssh_cmd(compute_node_ip, "heat-admin",
-            "sudo iptables -I INPUT 11 -p tcp --dport 3121 -j ACCEPT")
 
-    ssh_cmd(compute_node_ip, "heat-admin",
-            "sudo service iptables save")
-
-
-# 6) Create a NovaEvacuate active/passive resource using the overcloudrc file
+# 7) Create a NovaEvacuate active/passive resource using the overcloudrc file
 # to provide the auth_url, username, tenant and password values
 def create_nova_evacuate_resource(first_controller_node_ip, domainname):
     LOG.info("Create the nova-evacuate active/passive resource.")
@@ -216,17 +218,16 @@ def create_nova_evacuate_resource(first_controller_node_ip, domainname):
             " op monitor interval=60s timeout=240s --force")
 
 
-# 7) Confirm that nova-evacuate is started after the floating IP resources,
+# 8) Confirm that nova-evacuate is started after the floating IP resources,
 # and the Image Service (glance), OpenStack Networking (neutron),
 # Compute (nova) services
 def confirm_nova_evacuate_resource(first_controller_node_ip):
     LOG.info("Confirm nova-evacuate is started after haproxy-clone,"
-             " galera-master, rabbitmq-clone & redis-master services.")
+             " galera-master and rabbitmq-clone services.")
 
     resource_list = ['haproxy-clone',
                      'galera-master',
-                     'rabbitmq-clone',
-                     'redis-master']
+                     'rabbitmq-clone']
 
     for res in resource_list:
         ssh_cmd(first_controller_node_ip, "heat-admin",
@@ -234,7 +235,9 @@ def confirm_nova_evacuate_resource(first_controller_node_ip):
                 " then nova-evacuate")
 
 
-# 8) Create a list of the current controllers using cibadmin data.
+# 10) Create a list of the current controllers using cibadmin data.
+# Use this list to tag these nodes as controllers with the
+# osprole=controller property.
 def tag_controllers_with_osprole(first_controller_node_ip):
     LOG.info("Get a list of current controllers & tag them with"
              " the osprole=controller property.")
@@ -242,10 +245,6 @@ def tag_controllers_with_osprole(first_controller_node_ip):
     out, err = ssh_cmd(first_controller_node_ip, "heat-admin",
                        "sudo cibadmin -Q -o nodes | grep uname")
     out_list = out.split()
-
-
-    # 9) Use this list to tag these nodes as controllers with the
-    # osprole=controller property.
 
     controllers = [entry for entry in out_list if entry.startswith('uname')]
 
@@ -255,11 +254,10 @@ def tag_controllers_with_osprole(first_controller_node_ip):
                 "sudo pcs property set --node " + controller[0] +
                 " osprole=controller")
 
-    ssh_cmd(first_controller_node_ip, "heat-admin",
-            "sudo pcs property")
 
-
-# 10) Build a list of stonith devices already present in the environment.
+# 13) Build a list of stonith devices already present in the environment.
+# Tag the control plane services to make sure they only run on
+# the controllers identified above, skipping any stonith devices listed.
 def tag_the_control_plane(first_controller_node_ip):
     LOG.info("Get a list of stonith devices & tag the control plane services.")
     # Build stonithdevs list
@@ -290,8 +288,6 @@ def tag_the_control_plane(first_controller_node_ip):
             z = awk_it(y, 1, "']")
             resources.append(z)
 
-    # 11) Tag the control plane services to make sure they only run on
-    # the controllers identified above, skipping any stonith devices listed.
     # Process stonithdevs and resources lists -- setting constraints
     for res in resources:
         found = 0
@@ -306,9 +302,43 @@ def tag_the_control_plane(first_controller_node_ip):
                     " osprole eq controller")
 
 
-# 12) Populate the Compute node resources within pacemaker
+# 14) Populate the Compute node resources within pacemaker, starting with
+# neutron-openvswitch-agent:
 def populate_compute_nodes_resources(first_controller_node_ip, domainname):
     LOG.info("Populate the compute node resources within pacemaker.")
+
+    ssh_cmd(first_controller_node_ip, "heat-admin",
+            "sudo pcs resource create neutron-openvswitch-agent-compute" +
+            " systemd:neutron-openvswitch-agent op start timeout=200s op" +
+            " stop timeout=200s --clone interleave=true" +
+            " --disabled --force")
+
+    ssh_cmd(first_controller_node_ip, "heat-admin",
+            "sudo pcs constraint location" +
+            " neutron-openvswitch-agent-compute-clone rule" +
+            " resource-discovery=exclusive score=0 osprole eq compute")
+
+#  Then the Compute libvirtd resource:
+
+    ssh_cmd(first_controller_node_ip, "heat-admin",
+            "sudo pcs resource create libvirtd-compute systemd:libvirtd" +
+            " op start timeout=200s op stop timeout=200s" +
+            " --clone interleave=true --disabled --force")
+
+    ssh_cmd(first_controller_node_ip, "heat-admin",
+            "sudo pcs constraint location libvirtd-compute-clone rule" +
+            " resource-discovery=exclusive score=0 osprole eq compute")
+
+    ssh_cmd(first_controller_node_ip, "heat-admin",
+            "sudo pcs constraint order start" +
+            " neutron-openvswitch-agent-compute-clone" +
+            " then libvirtd-compute-clone")
+
+    ssh_cmd(first_controller_node_ip, "heat-admin",
+            "sudo pcs constraint colocation add libvirtd-compute-clone" +
+            " with neutron-openvswitch-agent-compute-clone")
+
+#  Then the nova-compute resource:
 
     oc_auth_url, oc_tenant_name, oc_username, oc_password = \
         CredentialHelper.get_overcloud_creds()
@@ -345,8 +375,16 @@ def populate_compute_nodes_resources(first_controller_node_ip, domainname):
             "sudo pcs constraint order start nova-compute-clone" +
             " then nova-evacuate require-all=false")
 
+    ssh_cmd(first_controller_node_ip, "heat-admin",
+            "sudo pcs constraint order start libvirtd-compute-clone" +
+            " then nova-compute-clone")
 
-# 13a) Add stonith devices for all compute nodes. Replace the ipaddr, login and
+    ssh_cmd(first_controller_node_ip, "heat-admin",
+            "sudo pcs constraint colocation add nova-compute-clone" +
+            " with libvirtd-compute-clone")
+
+
+# 15a) Add stonith devices for all compute nodes. Replace the ipaddr, login and
 # passwd values to suit your IPMI device. Run identify_nodes.sh to see
 # which idrac is associated with the host and crm_node -n to get the hostname.
 def add_compute_nodes_stonith_devices(compute_nodes_ip,
@@ -360,7 +398,7 @@ def add_compute_nodes_stonith_devices(compute_nodes_ip,
                                          instack_file)
 
 
-# 13b) Add stonith devices for a compute nodes.
+# 15b) Add stonith devices for a compute nodes.
 def add_compute_node_stonith_devices(compute_node_ip,
                                      undercloud_config,
                                      first_controller_node_ip,
@@ -383,7 +421,7 @@ def add_compute_node_stonith_devices(compute_node_ip,
 
     # Get drac_user
     p1 = subprocess.Popen(['cat', instack_file], stdout=subprocess.PIPE)
-    p2 = subprocess.Popen(shlex.split('grep -A3 ' + compute_node_drac_ip),
+    p2 = subprocess.Popen(shlex.split('grep -n3 ' + compute_node_drac_ip),
                           stdin=p1.stdout,
                           stdout=subprocess.PIPE)
     p3 = subprocess.Popen(shlex.split('awk -F\'"\' \'/pm_user/ {print $4}\''),
@@ -393,7 +431,7 @@ def add_compute_node_stonith_devices(compute_node_ip,
 
     # Get drac_password
     p1 = subprocess.Popen(['cat', instack_file], stdout=subprocess.PIPE)
-    p2 = subprocess.Popen(shlex.split('grep -A3 ' + compute_node_drac_ip),
+    p2 = subprocess.Popen(shlex.split('grep -n2 ' + compute_node_drac_ip),
                           stdin=p1.stdout,
                           stdout=subprocess.PIPE)
     p3 = subprocess.Popen(shlex.split('awk -F\'"\' \'/pm_pass/ {print $4}\''),
@@ -409,7 +447,7 @@ def add_compute_node_stonith_devices(compute_node_ip,
             " lanplus=1 cipher=1 op monitor interval=60s")
 
 
-# 14) Create a seperate fence-nova stonith device.
+# 16) Create a seperate fence-nova stonith device.
 def create_fence_nova_device(first_controller_node_ip, domainname):
     LOG.info("Create a seperate fence-nova stonith device.")
 
@@ -425,22 +463,13 @@ def create_fence_nova_device(first_controller_node_ip, domainname):
             " domain=" + domainname +
             " record-only=1 op monitor interval=60s timeout=180s --force")
 
-    # 15) Configure the required constraints for fence-nova
     ssh_cmd(first_controller_node_ip, "heat-admin",
             "sudo pcs constraint location" +
             " fence-nova rule resource-discovery=never score=0" +
             " osprole eq controller")
 
-    ssh_cmd(first_controller_node_ip, "heat-admin",
-            "sudo pcs constraint order" +
-            " promote galera-master then fence-nova require-all=false")
 
-    ssh_cmd(first_controller_node_ip, "heat-admin",
-            "sudo pcs constraint order" +
-            " start fence-nova then nova-compute-clone")
-
-
-# 16) Make certain the Compute nodes are able to recover after fencing.
+# 17) Make certain the Compute nodes are able to recover after fencing.
 def enable_compute_nodes_recovery(first_controller_node_ip):
     LOG.info("Ensure the Compute nodes are able to recover after fencing.")
 
@@ -448,7 +477,7 @@ def enable_compute_nodes_recovery(first_controller_node_ip):
             "sudo pcs property set cluster-recheck-interval=1min")
 
 
-# 17) Create all compute node resources and set the stonith level 1 to include
+# 18) Create all compute node resources and set the stonith level 1 to include
 # both the nodes's physical fence device and fence-nova.
 def create_compute_nodes_resources(compute_nodes_ip, first_controller_node_ip):
     for compute_node_ip in compute_nodes_ip:
@@ -459,7 +488,7 @@ def create_compute_nodes_resources(compute_nodes_ip, first_controller_node_ip):
 # Create a compute node resources and set the stonith level 1 to include
 # both the nodes's physical fence device and fence-nova.
 def create_compute_node_resources(compute_node_ip, first_controller_node_ip):
-    LOG.info("Create Compute node:{} resources and set the stonith level."
+    LOG.info("Create Compute node:{} resources and set the stonith level 1."
              .format(compute_node_ip))
 
     out, err = ssh_cmd(compute_node_ip, "heat-admin",
@@ -469,8 +498,8 @@ def create_compute_node_resources(compute_node_ip, first_controller_node_ip):
 
     ssh_cmd(first_controller_node_ip, "heat-admin",
             "sudo pcs resource create " + crm_node_sname +
-            " ocf:pacemaker:remote reconnect_interval=60" +
-            " op monitor interval=20")
+            " ocf:pacemaker:remote reconnect_interval=60 op" +
+            " monitor interval=20")
 
     ssh_cmd(first_controller_node_ip, "heat-admin",
             "sudo pcs property set --node " + crm_node_sname +
@@ -480,13 +509,16 @@ def create_compute_node_resources(compute_node_ip, first_controller_node_ip):
             "sudo pcs stonith level add 1 " + crm_node_sname +
             " ipmilan-" + crm_node_sname + ",fence-nova")
 
-    ssh_cmd(first_controller_node_ip, "heat-admin",
-            "sudo pcs stonith")
-
 
 # 19) Enable the control and Compute plane services.
 def enable_control_plane_services(first_controller_node_ip):
-    LOG.info("Enable the compute plane services.")
+    LOG.info("Enable the control and Compute plane services.")
+
+    ssh_cmd(first_controller_node_ip, "heat-admin",
+            "sudo pcs resource enable neutron-openvswitch-agent-compute")
+
+    ssh_cmd(first_controller_node_ip, "heat-admin",
+            "sudo pcs resource enable libvirtd-compute")
 
     ssh_cmd(first_controller_node_ip, "heat-admin",
             "sudo pcs resource enable nova-compute-checkevacuate")
@@ -645,7 +677,7 @@ def main():
         LOG.debug("compute_nova_names: {}".format(compute_nova_names))
         LOG.debug("domainname: {}".format(domainname))
 
-        if (verify_fencing(first_controller_node_ip) != "false"):
+        if (verify_fencing(first_controller_node_ip) != "false" ):
             LOG.debug("Stonith is enabled.")
         else:
             LOG.critical("!!! - Error: Fencing must be enabled.")

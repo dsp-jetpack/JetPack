@@ -80,14 +80,14 @@ class Director(InfraHost):
                                  "/etc/yum.repos.d/internal_" +
                                  str(count) + ".repo")
                 count += 1
-        else:
-            for repo in self.settings.rhsm_repos:
-                _, std_err, _ = self.run_as_root('subscription-manager repos '
-                                                 '--enable=' + repo)
-                if std_err:
-                    logger.error("Unable to enable repo {}: {}".format(
-                        repo, std_err))
-                    sys.exit(1)
+
+        for repo in self.settings.rhsm_repos:
+            _, std_err, _ = self.run_as_root('subscription-manager repos '
+                                             '--enable=' + repo)
+            if std_err:
+                logger.error("Unable to enable repo {}: {}".format(
+                    repo, std_err))
+                sys.exit(1)
 
     def upload_update_conf_files(self):
 
@@ -680,6 +680,9 @@ class Director(InfraHost):
             self.settings.public_api_vlanid + '|" ' + network_yaml,
             'sed -i "s|TenantNetworkVlanID:.*|TenantNetworkVlanID: ' +
             self.settings.tenant_tunnel_vlanid + '|" ' + network_yaml,
+            "sed -i 's|NeutronNetworkVLANRanges:.*|NeutronNetworkVLANRanges:" +
+            ' "physint:' + self.settings.tenant_vlan_range + ',physext"|' +
+            "' " + network_yaml,
         ]
 
         if self.settings.tenant_tunnel_network:
@@ -993,8 +996,6 @@ class Director(InfraHost):
                                             )) + \
                                     " --storage " + \
                                     str(len(self.settings.ceph_nodes)) + \
-                                    " --vlan " + \
-                                    self.settings.tenant_vlan_range + \
                                     " --overcloud_name " + \
                                     self.settings.overcloud_name + \
                                     " --ntp " + \
@@ -1131,7 +1132,6 @@ class Director(InfraHost):
             for each in ls_nodes:
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
-
                 ssh_opts = (
                     "-o StrictHostKeyChecking=no "
                     "-o UserKnownHostsFile=/dev/null "
@@ -1173,7 +1173,6 @@ class Director(InfraHost):
             for each in ls_nodes:
                 hostname = each.split("|")[2]
                 provisioning_ip = each.split("|")[6].split("=")[1]
-
                 ssh_opts = (
                     "-o StrictHostKeyChecking=no "
                     "-o UserKnownHostsFile=/dev/null "

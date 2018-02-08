@@ -39,12 +39,8 @@ class CredentialHelper:
         if 'hiera' in env_keys['OS_PASSWORD']:
             env_keys['OS_PASSWORD'] = check_output(['sudo', 'hiera',
                                                     'admin_password']).strip()
-        if 'OS_PROJECT_NAME' in env_keys:
-            project_name = env_keys['OS_PROJECT_NAME']
-        else:
-            project_name = env_keys['OS_TENANT_NAME']
         return \
-            env_keys['OS_AUTH_URL'], project_name, \
+            env_keys['OS_AUTH_URL'], env_keys['OS_TENANT_NAME'], \
             env_keys['OS_USERNAME'], env_keys['OS_PASSWORD']
 
     @staticmethod

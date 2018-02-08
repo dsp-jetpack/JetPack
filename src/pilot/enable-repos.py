@@ -27,8 +27,8 @@ args_parser.add_argument("--proxy",
 args = args_parser.parse_args()
 
 repos = [
-    "rhel-7-server-openstack-10-rpms",
-    "rhel-7-server-openstack-10-devtools-rpms"]
+    "rhel-7-server-openstack-11-rpms",
+    "rhel-7-server-openstack-11-devtools-rpms"]
 
 
 def execute(cmd):

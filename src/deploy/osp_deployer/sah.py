@@ -211,7 +211,12 @@ class Sah(InfraHost):
              self.settings.rhscon_node.public_api_ip
         ]
 
-        if self.is_running_from_sah() is True:
+        # Check wether we're running from the SAH node
+        out = subprocess.check_output("ip addr",
+                                      stderr=subprocess.STDOUT,
+                                      shell=True)
+
+        if self.settings.sah_node.public_api_ip in out:
             for host in hosts:
                 cmd = 'ssh-keygen -R ' + host
                 self.run(cmd)
@@ -230,11 +235,8 @@ class Sah(InfraHost):
         # Delete any staged locking files to prevent accidental reuse
         for eachone in files:
             staged_file_name = '/root/' + eachone
-            if self.is_running_from_sah() is False:
-                self.run ("rm -rf " + staged_file_name)
-            else:
-                if os.path.isfile(staged_file_name):
-                    os.remove(staged_file_name)
+            if os.path.isfile(staged_file_name):
+                os.remove(staged_file_name)
 
         if self.settings.version_locking_enabled is True:
             logger.debug(
@@ -243,7 +245,7 @@ class Sah(InfraHost):
             for eachone in files:
                 source_file_name = self.settings.lock_files_dir + "/" + eachone
                 dest_file_name = '/root/' + eachone
-                self.upload_file(source_file_name, dest_file_name)
+                shutil.copyfile(source_file_name, dest_file_name)
 
     def upload_director_scripts(self):
         remote_file = "/root/deploy-director-vm.sh"
@@ -397,14 +399,3 @@ class Sah(InfraHost):
 
                 self.run("virsh undefine {}".format(vm))
                 time.sleep(20)
-
-    def is_running_from_sah(self):
-        # Check whether we're running from the SAH node
-        out = subprocess.check_output("ip addr",
-                                      stderr=subprocess.STDOUT,
-                                      shell=True)
-
-        if self.settings.sah_node.public_api_ip in out:
-            return True
-        else:
-            return False
