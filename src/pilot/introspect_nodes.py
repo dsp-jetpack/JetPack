@@ -33,6 +33,8 @@ from thread_helper import ThreadWithExHandling
 logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
+INSPECTING = 'inspecting'
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -61,11 +63,7 @@ def is_introspection_oob(in_band, node, logger):
 
 
 def get_nodes(ironic_client):
-    return ironic_client.node.list(fields=["driver",
-                                           "driver_info",
-                                           "properties",
-                                           "provision_state",
-                                           "uuid"])
+    return ironic_client.node.list(detail=True)
 
 
 def refresh_nodes(ironic_client, nodes):
@@ -118,6 +116,8 @@ def transition_to_state(ironic_client, nodes, transition,
 
 
 def ib_introspect(node):
+    # Note that the in-band introspection CLI command is synchronous.  The node
+    # will be out of the "inspecting" state when this command returns.
     command = "openstack overcloud node introspect " + node.uuid
     if os.system(command) == 0:
         logger.info("In-Band introspection succeeded on node {} ({})".format(
@@ -149,6 +149,7 @@ def introspect_nodes(in_band, ironic_client, nodes,
 
     threads = []
     bad_nodes = []
+    inspecting = []
     for node in nodes:
         use_oob_introspection = is_introspection_oob(in_band, node, logger)
 
@@ -169,9 +170,30 @@ def introspect_nodes(in_band, ironic_client, nodes,
             threads.append(thread)
             thread.start()
         else:
+            # Note that this CLI command is asynchronous, so it will return
+            # immediately and Ironic conductor will begin OOB introspection in
+            # the background
             if os.system("openstack baremetal node inspect " + node.uuid) != 0:
                 bad_nodes.append(node)
+            else:
+                # Wait until the node goes into the inspecting state before
+                # continuing.  This is necessary because OOB introspection
+                # completes very quickly on some nodes.  The busy wait is
+                # intentional.
+                node = ironic_client.node.get(node.uuid)
+                logger.debug(CredentialHelper.get_drac_ip(node) +
+                             " provision_state=" + node.provision_state)
+                while node.provision_state != INSPECTING:
+                    node = ironic_client.node.get(node.uuid)
+                    logger.debug(CredentialHelper.get_drac_ip(node) +
+                                 " provision_state=" + node.provision_state)
+                logger.debug(CredentialHelper.get_drac_ip(node) +
+                             " adding to inspecting")
+                inspecting.append(node)
 
+    # Note that the in-band introspection CLI command is synchronous.  By the
+    # time all of the threads have completed, the nodes are all out of the
+    # "inspecting" state.
     for thread in threads:
         thread.join()
 
@@ -183,6 +205,40 @@ def introspect_nodes(in_band, ironic_client, nodes,
         ips = ["{} ({})".format(CredentialHelper.get_drac_ip(node),
                                 node.uuid) for node in bad_nodes]
         raise RuntimeError("Failed to introspect {}".format(", ".join(ips)))
+
+    if use_oob_introspection:
+        # Wait for the nodes to transition out of "inspecting"
+        # Allow 10 minutes to complete OOB introspection
+        logger.info("Waiting for introspection to complete...")
+        introspection_timeout = 600
+        while introspection_timeout > 0:
+            inspecting = refresh_nodes(ironic_client, inspecting)
+            for node in inspecting:
+                if node.provision_state != INSPECTING:
+                    inspecting.remove(node)
+            if len(inspecting) == 0:
+                logger.info("Introspection finished")
+                break
+            else:
+                logger.debug("Still inspecting=" + ", ".join(
+                    ["{} ({})".format(CredentialHelper.get_drac_ip(node),
+                                      node.uuid) for node in inspecting]))
+
+                introspection_timeout -= 1
+                if introspection_timeout > 0:
+                    sleep(1)
+
+        if introspection_timeout == 0:
+            error_msg = "Introspection failed."
+            if len(inspecting) > 0:
+                inspecting_ips = ["{} ({})".format(
+                    CredentialHelper.get_drac_ip(node),
+                    node.uuid) for node in inspecting]
+                error_msg += "  The following nodes never exited the " \
+                    "{} state: {}.".format(INSPECTING,
+                                           ", ".join(inspecting_ips))
+
+            raise RuntimeError(error_msg)
 
     if not use_oob_introspection:
         # The PERC H740P RAID controller only makes virtual disks visible to
