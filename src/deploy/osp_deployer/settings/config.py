@@ -240,6 +240,57 @@ class Settings():
             self.enable_instance_ha = False
         self.overcloud_nodes_pwd = deploy_settings['overcloud_nodes_pwd']
 
+        dellnfv_settings = self.get_settings_section(
+            "Dell NFV Settings")
+        self.ovs_dpdk_enable = dellnfv_settings[
+            'ovs_dpdk_enable']
+        self.ovs_dpdk_role_list = dellnfv_settings[
+            'ovs_dpdk_role_list']
+        self.ovs_dpdk_policy = dellnfv_settings[
+            'ovs_dpdk_policy']
+        self.enable_ovs_dpdk = False
+        if self.ovs_dpdk_enable == 'None':
+            pass
+        elif self.ovs_dpdk_enable == 'Tenant-networks-only':
+            self.enable_ovs_dpdk = True
+            self.ovs_dpdk_mode = 1
+        elif self.ovs_dpdk_enable == 'Tenant-and-External-networks':
+            self.enable_ovs_dpdk = True
+            self.ovs_dpdk_mode = 2
+        else:
+            raise AssertionError('Only supported values for '
+                                 'ovs_dpdk_enable are None, '
+                                 'Tenant-networks-only and '
+                                 'Tenant-and-External-networks')
+        if self.enable_ovs_dpdk:
+            if self.ovs_dpdk_policy == 'Balanced':
+                pass
+            else:
+                raise AssertionError('Only supported value for '
+                                     'ovs_dpdk_policy is Balanced')
+            if self.ovs_dpdk_role_list == 'Compute':
+                pass
+            else:
+                raise AssertionError('Only supported value for '
+                                     'ovs_dpdk_role_list is Compute')
+            compute_nics = ['em1', 'em2', 'p1p1', 'p1p2']
+            i = 0
+            while i < len(compute_nics):
+                if (compute_nics[i] in self.compute_bond0_interfaces) or \
+                        (compute_nics[i] in self.compute_bond1_interfaces):
+                    del compute_nics[i]
+                else:
+                    i += 1
+            if len(compute_nics) != 0:
+                raise AssertionError('With OVS-DPDK following compute node '
+                                     'NICs needs to be used for deployment: '
+                                     'em1 em2 p1p1 and p1p2.')
+
+            logger.info("OVS_DPDK is enabled with mode " +
+                        str(self.ovs_dpdk_mode) + ".")
+        else:
+            logger.info("OVS_DPDK is disabled.")
+
         backend_settings = self.get_settings_section(
             "Storage back-end Settings")
         if backend_settings['enable_dellsc_backend'].lower() == 'true':
@@ -392,6 +443,12 @@ class Settings():
             '/pilot/templates/dell-cinder-backends.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
+        self.neutron_ovs_dpdk_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/neutron-ovs-dpdk.yaml'
+                '/pilot/templates/nic-configs/controller.yaml'
+        if self.enable_ovs_dpdk:
+            mode = str(self.ovs_dpdk_mode)
+            compute_file_name = 'compute-ovs-dpdk-mode' + mode + '.yaml'
         self.static_ips_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/static-ip-environment.yaml'
         self.static_vip_yaml = self.foreman_configuration_scripts + \

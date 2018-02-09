@@ -508,6 +508,9 @@ class Director(InfraHost):
             'sed -i "s|floating_ip_network_vlan=.*|floating_ip_network_vlan=' +
             self.settings.floating_ip_network_vlan +
             '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|ovs_dpdk_enabled=.*|ovs_dpdk_enabled=' +
+            str(self.settings.enable_ovs_dpdk) +
+            '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_tenant_network=.*|sanity_tenant_network=' +
             self.settings.sanity_tenant_network +
             '|" pilot/deployment-validation/sanity.ini',
@@ -706,16 +709,40 @@ class Director(InfraHost):
     def setup_networking(self):
         logger.debug("Configuring network settings for overcloud")
 
+        if self.settings.enable_ovs_dpdk:
+            mode = str(self.settings.ovs_dpdk_mode)
+            compute_file_name = "compute-ovs-dpdk-mode" + mode + ".yaml"
         static_ips_yaml = self.templates_dir + "/static-ip-environment.yaml"
         static_vip_yaml = self.templates_dir + "/static-vip-environment.yaml"
+        neutron_ovs_dpdk_yaml = self.templates_dir + "/neutron-ovs-dpdk.yaml"
 
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy
         # with a different config
         self.upload_file(self.settings.static_ips_yaml, static_ips_yaml)
         self.upload_file(self.settings.static_vip_yaml, static_vip_yaml)
+        self.upload_file(self.settings.neutron_ovs_dpdk_yaml,
+                         neutron_ovs_dpdk_yaml)
 
         self.setup_nic_configuration()
+	# TODO: Format Network file for DPDK
+        if self.settings.enable_ovs_dpdk is True:
+            logger.debug("setting ovs dpdk environment")
+            cmd = "python " + self.pilot_dir + "/ovs_dpdk_setup.py" \
+                  + " --env_file " + neutron_ovs_dpdk_yaml \
+                  + " --nic_config_file " + compute_yaml \
+                  + " --mode " + str(self.settings.ovs_dpdk_mode)
+            stdout, stderr, exit_status = self.run(cmd)
+            if exit_status:
+                raise AssertionError("An error occurred while running "
+                                     "ovs_dpdk_setup exit_status: {}, "
+                                     "error: {}, "
+                                     "stdout: {}".format(exit_status,
+                                                         stderr,
+                                                         stdout))
+            else:
+                logger.debug("OVS-DPDK environment setup successful.")
+
 
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
@@ -876,7 +903,9 @@ class Director(InfraHost):
             cmd += " --static_ips"
         if self.settings.use_static_vips is True:
             cmd += " --static_vips"
-        # Node placement is required in an automated install.  The index order
+        if self.settings.enable_ovs_dpdk is True:
+            cmd += " --ovs_dpdk"
+        # Node placement is required in an automated install. The index order
         # of the nodes is the order in which they are defined in the
         # .properties file
         cmd += " --node_placement"

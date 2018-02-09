@@ -1,0 +1,55 @@
+# Copyright (c) 2017 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+## A Heat environment that can be used to deploy DPDK with OVS
+resource_registry:
+  OS::TripleO::Compute::Net::SoftwareConfig: ./nic-configs/compute-ovs-dpdk-mode1.yaml
+  OS::TripleO::Services::ComputeNeutronOvsAgent: ./overcloud/puppet/services/neutron-ovs-dpdk-agent.yaml
+  OS::TripleO::NodeUserData: ./first-boot-ovs-dpdk.yaml
+  OS::TripleO::NodeExtraConfigPost: post-install.yaml
+
+parameter_defaults:
+  ########################
+  # OVS DPDK configuration
+  ########################
+  ## NeutronDpdkCoreList and NeutronDpdkMemoryChannels are REQUIRED settings.
+  ## Attempting to deploy DPDK without appropriate values will cause deployment 
+  ## to fail or lead to unstable deployments.
+  # List of cores to be used for DPDK Poll Mode Driver
+  NeutronDpdkCoreList: "'0,2'"
+  # Number of memory channels to be used for DPDK
+  NeutronDpdkMemoryChannels: "4"
+  # NeutronDpdkSocketMemory
+  NeutronDpdkSocketMemory: "2048,2048"
+  # NeutronDpdkDriverType
+  NeutronDpdkDriverType: "vfio-pci"
+  # Datapath type for ovs bridges
+  NeutronDatapathType: "netdev"
+  # The vhost-user socket directory for OVS
+  NeutronVhostuserSocketDir: "/var/run/openvswitch"
+  DpdkInterfaces: 'p2p1,p3p1'
+  OvsDpdkBondInterfaceOptions: 'bond_mode=balance-tcp lacp=active'
+  ########################
+  # Additional settings
+  ########################
+  # Reserved RAM for host processes
+  NovaReservedHostMemory: 4096
+  # An array of filters used by Nova to filter a node.These filters will be 
+  # applied in the order they are listed,so place your most restrictive filters
+  # first to make the filtering process more efficient.
+  NovaSchedulerDefaultFilters: "RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,PciPassthroughFilter,NUMATopologyFilter"
+  HostCpusNumber: "4,4"
+  # Configure the classname of the firewall driver to use for implementing
+  # security groups.
+  NeutronOVSFirewallDriver: openvswitch
