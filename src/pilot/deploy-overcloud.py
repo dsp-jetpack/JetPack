@@ -272,6 +272,10 @@ def main():
                             action='store_true',
                             default=False,
                             help="Specify the VIPs for the networks")
+        parser.add_argument('--ovs_dpdk',
+                            action='store_true',
+                            default=False,
+                            help="Enable OVS+DPDK")
         parser.add_argument('--node_placement',
                             action='store_true',
                             default=False,
@@ -373,6 +377,8 @@ def main():
                     " -e ~/pilot/templates/dell-environment.yaml" \
                     " -e ~/pilot/templates/overcloud/environments/" \
                     "puppet-pacemaker.yaml"
+        if args.ovs_dpdk:
+            env_opts += " -e ~/pilot/templates/neutron-ovs-dpdk.yaml"
 
         if args.enable_dellsc:
             env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
