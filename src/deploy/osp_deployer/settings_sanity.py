@@ -16,6 +16,7 @@
 
 from auto_common import Ipmi
 from settings.config import Settings
+from profile import Profile
 import logging
 import os.path
 import socket
@@ -50,7 +51,7 @@ class DeployerSanity():
         logger.debug("Check settings ip's are valid.")
         shouldbbevalidips = [
             'public_api_gateway',
-            'public_api_netmask', 'public_api_allocation_pool_start',
+            'public_api_netmask', 
             'public_api_allocation_pool_end',
             'private_api_netmask',
             'private_api_allocation_pool_start',
@@ -484,3 +485,9 @@ class DeployerSanity():
             and self.settings.enable_fencing is False):
             raise AssertionError("Fencing NOT enabled, this is required" +
                                  " for IHA. Please verify this setting.")
+
+
+    def validate_profile(self):
+        self.profile = Profile()
+        self.profile.validate_configuration()
+
