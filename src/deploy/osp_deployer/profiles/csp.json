@@ -1,0 +1,48 @@
+{
+   "name": "CSP",
+   "sample_ini": "sample_csp_profile.ini",
+   "associated_settings": [
+      {
+         "Dell NFV Settings": {
+            "hpg_enable": "",
+            "hpg_size": {
+               "valid_values": [
+                  "5MB",
+                  "1GB"
+               ]
+            },
+            "hpg_flavor_name_list": "",
+            "numa_enable": "",
+            "numa_hostos_cpus": "",
+            "numa_flavor_name_list": ""
+         }
+      },
+      {
+         "Nodes Nics and Bonding Settings": {
+            "sah_bond_opts": "",
+            "controller_bond_opts": "",
+            "compute_bond_opts": "",
+            "storage_bond_opts": ""
+         }
+      },
+      {
+         "Network Settings": {
+            "public_api_gateway": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            },
+            "public_api_allocation_pool_start": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            },
+            "public_api_allocation_pool_end": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            }
+         }
+      }
+   ]
+}

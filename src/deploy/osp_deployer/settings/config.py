@@ -35,7 +35,7 @@ class Settings():
         assert os.path.isfile(
             settings_file), settings_file + " file does not exist"
 
-        sample_ini = os.path.dirname(inspect.getfile(Settings)) + "/sample.ini"
+        sample_ini = os.path.dirname(inspect.getfile(Settings)) + "/sample_xsp_profile.ini"
 
         conf = ConfigParser.ConfigParser()
         conf.read(sample_ini)
@@ -238,6 +238,8 @@ class Settings():
             self.is_fx = True
         else:
             self.is_fx = False
+        self.profile = deploy_settings['profile'].lower()
+
         if deploy_settings['enable_rbd_backend'].lower() == 'true':
             self.enable_rbd_backend = True
         else:
