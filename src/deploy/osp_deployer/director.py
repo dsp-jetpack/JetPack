@@ -849,7 +849,7 @@ class Director(InfraHost):
         self.run_tty(cmd)
         cmd = self.source_stackrc + "cd" \
                                     " ~/pilot;./deploy-overcloud.py" \
-                                    " --computes " + \
+                                    " --dell-computes " + \
                                     str(len(self.settings.compute_nodes)) + \
                                     " --controllers " + \
                                     str(len(self.settings.controller_nodes
@@ -864,6 +864,16 @@ class Director(InfraHost):
                                     self.settings.overcloud_name + \
                                     " --ntp " + \
                                     self.settings.sah_node.provisioning_ip
+
+        if self.settings.hpg_enable is True:
+            cmd += " --enable_hugepage "
+            cmd += " --hugepage_size " + self.settings.hpg_size
+            cmd += " --hugepage_flavor_list " + self.settings.hpg_flavor_name_list
+
+        if self.settings.numa_enable is True:
+            cmd += " --enable_numa "
+            cmd += " --hostos_cpus " + self.settings.numa_hostos_cpus
+            cmd += " --numa_flavor_list " + self.settings.numa_flavor_name_list
 
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \

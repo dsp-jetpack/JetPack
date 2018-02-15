@@ -1,0 +1,29 @@
+heat_template_version: 2016-04-08
+
+description: >
+  Dell NFV HugePages Feature deployment using puppet, this YAML file
+  creates the interface between the HOT template
+  and the puppet manifest that actually configure the feature
+parameters:
+  ServiceNetMap:
+    default: {}
+    description: Mapping of service_name -> network name. Typically set
+                 via parameter_defaults in the resource registry.  This
+                 mapping overrides those in ServiceNetMapDefaults.
+    type: json
+  DefaultPasswords:
+    default: {}
+    type: json
+  EndpointMap:
+    default: {}
+    description: Mapping of service endpoint -> protocol. Typically set
+                 via parameter_defaults in the resource registry.
+    type: json
+
+outputs:
+  role_data:
+    description: Role Dell NFV using composable service HugePages.
+    value:
+      service_name: hugepages
+      step_config: |
+        include ::dellnfv::hugepages
