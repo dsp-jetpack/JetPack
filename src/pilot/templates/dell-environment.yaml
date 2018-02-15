@@ -14,8 +14,19 @@
 
 resource_registry:
     OS::TripleO::NodeUserData: ./first-boot.yaml
+    OS::TripleO::Services::HugePages: overcloud/puppet/services/DellNfv/hugepages.yaml
+    OS::TripleO::Services::NUMA: overcloud/puppet/services/DellNfv/numa.yaml
+
 
 parameter_defaults:
+  ConfigDebug: True
+
+  # Flavor used as the regular compute
+  OvercloudDellComputeFlavor: baremetal
+ 
+  # Number of Dell Compute nodes 
+  DellComputeCount: 0
+
   # To customize the domain name of the overcloud nodes, change "localdomain"
   # in the following line to the desired domain name.
   CloudDomain: localdomain
@@ -44,6 +55,13 @@ parameter_defaults:
 
   # Additional hiera data for all nodes
   ExtraConfig:
+    # NFV Profile settings start here
+    dellnfv::hugepages::enable: True
+    dellnfv::hugepages::hugepagesize: 2M
+    dellnfv::hugepages::hugepagecount: 49152
+    dellnfv::numa::enable: True
+    dellnfv::numa::vcpu_pin_set: \"8-47\"
+
     ceph::profile::params::osd_journal_size: 10000
     ceph::profile::params::osd_pool_default_min_size: 2
     # CHANGEME:
@@ -88,7 +106,7 @@ parameter_defaults:
         journal: '/dev/sdc'
       '/dev/sdo':
         journal: '/dev/sdc'
-
+      
     # Additional entries added to /etc/ceph/ceph.conf
     ceph::conf::args:
       global/max_open_files:

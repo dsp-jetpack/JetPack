@@ -239,6 +239,18 @@ class Settings():
         else:
             self.enable_instance_ha = False
         self.overcloud_nodes_pwd = deploy_settings['overcloud_nodes_pwd']
+        dellnfv_settings = self.get_settings_section(
+            "Dell NFV Settings")
+        dellnfv_settings = self.get_settings_section(
+            "Dell NFV Settings")
+        if dellnfv_settings['hpg_enable'].lower() == 'true':
+            self.hpg_enable = True
+        self.hpg_flavor_name_list = dellnfv_settings['hpg_flavor_name_list']
+        self.hpg_size = dellnfv_settings['hpg_size']
+        if dellnfv_settings['numa_enable'].lower() == 'true':
+            self.numa_enable = True
+        self.numa_flavor_name_list = dellnfv_settings['numa_flavor_name_list']
+        self.numa_hostos_cpus = dellnfv_settings['numa_hostos_cpus']
 
         backend_settings = self.get_settings_section(
             "Storage back-end Settings")
