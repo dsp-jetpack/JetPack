@@ -86,7 +86,7 @@ class Profile():
                     elif validated is True:
                         pass
                     else:
-                        usr_sett = != user_config.get(str(stanza), set)
+                        usr_sett =  user_config.get(str(stanza), set)
                         if profile_config.get(str(stanza), set) != usr_sett:
                             Err = Err + "\nYour setting for " + stanza + \
                                   "::" + set + \
