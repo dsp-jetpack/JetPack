@@ -35,7 +35,8 @@ class Settings():
         assert os.path.isfile(
             settings_file), settings_file + " file does not exist"
 
-        sample_ini = os.path.dirname(inspect.getfile(Settings)) + "/sample.ini"
+        f_name = "/sample_xsp_profile.ini"
+        sample_ini = os.path.dirname(inspect.getfile(Settings)) + f_name
 
         conf = ConfigParser.ConfigParser()
         conf.read(sample_ini)
@@ -148,7 +149,8 @@ class Settings():
             'tenant_tunnel_network_allocation_pool_start']
         self.tenant_tunnel_network_allocation_pool_end = network_settings[
             'tenant_tunnel_network_allocation_pool_end']
-        self.tenant_tunnel_vlanid = network_settings['tenant_tunnel_network_vlanid']
+        self.tenant_tunnel_vlanid = network_settings[
+            'tenant_tunnel_network_vlanid']
         self.tenant_vlan_range = network_settings['tenant_vlan_range']
 
         vips_settings = self.get_settings_section(
@@ -238,6 +240,8 @@ class Settings():
             self.is_fx = True
         else:
             self.is_fx = False
+        self.profile = deploy_settings['profile'].lower()
+
         if deploy_settings['enable_rbd_backend'].lower() == 'true':
             self.enable_rbd_backend = True
         else:
@@ -362,7 +366,8 @@ class Settings():
             self.overcloud_image = dev_settings['overcloud_image']
 
         self.rhel_iso = dev_settings['rhel_iso']
-        if 'rhsm_repos' in dev_settings and len(dev_settings['rhsm_repos']) > 0:
+        repos = len(dev_settings['rhsm_repos'])
+        if 'rhsm_repos' in dev_settings and repos > 0:
             logger.info("Using ini repo settings")
             self.rhsm_repos = dev_settings['rhsm_repos'].split(',')
         else:
