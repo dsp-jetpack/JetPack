@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ConfigParser
-import sys
 import logging
 import os
 import inspect
@@ -39,42 +37,51 @@ class Settings():
         sample_ini = os.path.dirname(inspect.getfile(Settings)) + f_name
 
         conf = ConfigParser.ConfigParser()
+        # The following line makes the parser return case sensitive keys
+        conf.optionxform = str
         conf.read(sample_ini)
 
         your_ini = settings_file
         yourConf = ConfigParser.ConfigParser()
+        # The following line makes the parser return case sensitive keys
+        yourConf.optionxform = str
         yourConf.read(your_ini)
 
         error_msg = ""
         warning_msg = ""
         for stanza in conf.sections():
             if yourConf.has_section(stanza):
-                for setting in conf.options(stanza):
-                    if yourConf.has_option(stanza, setting):
-                        pass
-                    else:
-                        error_msg = error_msg + "Missing \"" +\
-                            setting + "\" setting in your ini file [" +\
-                            stanza + "] section \n"
+                # Because the NIC settings are variable, we don't check them
+                # here and instead check them during configuration validation
+                if stanza != 'Nodes Nics and Bonding Settings':
+                    for setting in conf.options(stanza):
+                        if yourConf.has_option(stanza, setting):
+                            pass
+                        else:
+                            error_msg = error_msg + "Missing \"" +\
+                                setting + "\" setting in your ini file [" +\
+                                stanza + "] section \n"
             else:
                 error_msg = error_msg + "Missing [" + stanza + "] " +\
                     "section in your ini file \n"
 
         for stanza in yourConf.sections():
             if conf.has_section(stanza):
-                for setting in yourConf.options(stanza):
-                    if conf.has_option(stanza, setting):
-                        pass
-                    else:
-                        warning_msg = warning_msg + "\"" + setting + \
-                                    "\" setting in your ini file [" + \
-                                    stanza + "] section is deprecated and " +\
-                                    "should be removed\n"
+                # Because the NIC settings are variable, we don't check them
+                # here and instead check them during configuration validation
+                if stanza != 'Nodes Nics and Bonding Settings':
+                    for setting in yourConf.options(stanza):
+                        if conf.has_option(stanza, setting):
+                            pass
+                        else:
+                            warning_msg = warning_msg + "\"" + setting + \
+                                "\" setting in your ini file [" + \
+                                stanza + "] section is deprecated and " +\
+                                "should be removed\n"
             else:
                 warning_msg = warning_msg + "Section [" + stanza + \
-                            "] in your ini file is deprecated" +\
-                            " and should be " +\
-                            "removed\n"
+                    "] in your ini file is deprecated" +\
+                    " and should be removed\n"
 
         if len(error_msg) > 0:
             raise AssertionError("\n" + error_msg)
@@ -183,32 +190,6 @@ class Settings():
                 'subscription_check_retries']
         else:
             self.subscription_check_retries = 20
-
-        nics_settings = self.get_settings_section(
-            "Nodes Nics and Bonding Settings")
-        self.controller_bond0_interfaces = nics_settings[
-            'controller_bond0_interfaces']
-        self.controller_bond1_interfaces = nics_settings[
-            'controller_bond1_interfaces']
-        self.controller_provisioning_interface = nics_settings[
-            'controller_provisioning_interface']
-        self.compute_bond0_interfaces = nics_settings[
-            'compute_bond0_interfaces']
-        self.compute_bond1_interfaces = nics_settings[
-            'compute_bond1_interfaces']
-        self.compute_provisioning_interface = nics_settings[
-            'compute_provisioning_interface']
-        self.storage_bond0_interfaces = nics_settings[
-            'storage_bond0_interfaces']
-        self.storage_bond1_interfaces = nics_settings[
-            'storage_bond1_interfaces']
-        self.storage_provisioning_interface = nics_settings[
-            'storage_provisioning_interface']
-        self.sah_bond_opts = nics_settings['sah_bond_opts']
-        self.controller_bond_opts = nics_settings[
-            'controller_bond_opts']
-        self.compute_bond_opts = nics_settings['compute_bond_opts']
-        self.storage_bond_opts = nics_settings['storage_bond_opts']
 
         ipmi_settings = self.get_settings_section(
             "IPMI credentials Settings")
@@ -411,12 +392,6 @@ class Settings():
             '/pilot/templates/dell-cinder-backends.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
-        self.controller_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/nic-configs/controller.yaml'
-        self.compute_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/nic-configs/compute.yaml'
-        self.ceph_storage_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/nic-configs/ceph-storage.yaml'
         self.static_ips_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/static-ip-environment.yaml'
         self.static_vip_yaml = self.foreman_configuration_scripts + \
@@ -426,6 +401,17 @@ class Settings():
         self.ipxe_rpm = self.foreman_configuration_scripts + \
             '/pilot/ipxe/ipxe-bootimgs-20151005-1.git6847232.el7.' \
             'test.noarch.rpm'
+
+        # The NIC configurations settings are validated after the Settings
+        # class has been instanciated.  Guard against the case where the two
+        # fixed are missing here to prevent an exception before validation
+        nics_settings = self.get_nics_settings()
+        if 'nic_env_file' in nics_settings:
+            self.nic_env_file = nics_settings['nic_env_file']
+            self.nic_env_file_path = self.foreman_configuration_scripts + \
+                '/pilot/templates/nic-configs/' + self.nic_env_file
+        if 'sah_bond_opts' in nics_settings:
+            self.sah_bond_opts = nics_settings['sah_bond_opts']
 
         self.controller_nodes = []
         self.compute_nodes = []
@@ -487,6 +473,17 @@ class Settings():
                     pass
 
         Settings.settings = self
+
+    def get_curated_nics_settings(self):
+        nics_settings = self.get_nics_settings()
+        if 'sah_bond_opts' in nics_settings:
+            del nics_settings['sah_bond_opts']
+        if 'nic_env_file' in nics_settings:
+            del nics_settings['nic_env_file']
+        return nics_settings
+
+    def get_nics_settings(self):
+        return self.get_settings_section("Nodes Nics and Bonding Settings")
 
     def get_settings_section(self, section):
         dictr = {}

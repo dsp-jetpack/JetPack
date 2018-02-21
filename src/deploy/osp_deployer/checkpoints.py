@@ -17,7 +17,7 @@ from osp_deployer.settings.config import Settings
 from osp_deployer.settings_sanity import DeployerSanity
 import time
 import logging
-import subprocess
+
 logger = logging.getLogger("osp_deployer")
 
 
@@ -36,6 +36,7 @@ class Checkpoints():
         checks = DeployerSanity()
         checks.check_os_volume_size()
         checks.check_network_settings()
+        checks.validate_nic_configs()
         checks.check_files()
         checks.check_network_overlaps()
         checks.check_duplicate_ips()

@@ -162,7 +162,8 @@ def create_volume_types():
 
     for type in types:
         type_name = type[0]
-        cmd = "source {} && cinder type-list | grep ' {} ' | awk '{{print $4}}'".format(overcloudrc_name, type_name)
+        cmd = "source {} && cinder type-list | grep ' {} ' | " \
+              "awk '{{print $4}}'".format(overcloudrc_name, type_name)
         proc = subprocess.Popen([cmd], stdout=subprocess.PIPE, shell=True)
         return_output = proc.communicate()[0].strip()
 
@@ -241,6 +242,9 @@ def main():
                             required=True,
                             help="The VLAN range to use for Neutron in "
                                  " xxx:yyy format")
+        parser.add_argument("--nic_env_file",
+                            default="5_port/nic_environment.yaml",
+                            help="The NIC environment file to use")
         parser.add_argument("--ntp",
                             dest="ntp_server_fqdn",
                             default="0.centos.pool.ntp.org",
@@ -305,6 +309,14 @@ def main():
             swift_storage_flavor = BAREMETAL_FLAVOR
             block_storage_flavor = BAREMETAL_FLAVOR
 
+        # Validate that the NIC envronment file exists
+        nic_env_file = os.path.join(home_dir,
+                                    "pilot/templates/nic-configs",
+                                    args.nic_env_file)
+        if not os.path.isfile(nic_env_file):
+            raise ValueError("\nError: The nic_env_file {} does not "
+                             "exist!".format(nic_env_file))
+
         # Apply any patches required on the Director itself. This is done each
         # time the overcloud is deployed (instead of once, after the Director
         # is installed) in order to ensure an update to the Director doesn't
@@ -335,7 +347,9 @@ def main():
         env_opts = "-e ~/pilot/templates/overcloud/environments/" \
                    "network-isolation.yaml" \
                    " -e ~/pilot/templates/network-environment.yaml" \
-                   " -e ~/pilot/templates/ceph-osd-config.yaml"
+                   " -e {}" \
+                   " -e ~/pilot/templates/ceph-osd-config.yaml" \
+                   "".format(nic_env_file)
 
         # The static-ip-environment.yaml must be included after the
         # network-environment.yaml
