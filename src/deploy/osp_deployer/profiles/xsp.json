@@ -9,12 +9,55 @@
          }
       },
       {
+         "Vips Settings": {
+            "use_static_vips" :{
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            }
+         }
+      },
+      {
          "Nodes Nics and Bonding Settings": {
             "sah_bond_opts": "",
             "controller_bond_opts": "",
             "compute_bond_opts": "",
             "storage_bond_opts": ""
          }
+      },
+      {
+         "Deployment Settings":{
+            "overcloud_static_ips" :{
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            },
+         "enable_fencing":"",
+         "enable_instance_ha": {
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            }
+         }
+      },
+      {
+         "Advanced Settings":{
+            "rhsm_repos":"",
+            "use_internal_repo":"",
+            "deploy_overcloud_debug": {
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            },
+         "use_ipmi_driver":"",
+         "use_in_band_introspection":""
+
+         }
+
       },
       {
          "Network Settings": {
