@@ -231,7 +231,7 @@ class Sah(InfraHost):
         for eachone in files:
             staged_file_name = '/root/' + eachone
             if self.is_running_from_sah() is False:
-                self.run ("rm -rf " + staged_file_name)
+                self.run("rm -rf " + staged_file_name)
             else:
                 if os.path.isfile(staged_file_name):
                     os.remove(staged_file_name)
