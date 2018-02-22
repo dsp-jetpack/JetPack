@@ -236,10 +236,17 @@ sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
 echo "## Done."
 
+echo
+echo "## Patching Ironic iDRAC driver uris.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/uris.py ${HOME}/pilot/uris.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyo
+echo "## Done."
+
 # This hacks in a patch to work around a known issue where a RAID-10 virtual
-# disk cannot be created from more than 16 backing physical disks.  Note that
-# this code must be here because we use this code prior to deploying the
-# director.
+# disk cannot be created from more than 16 backing physical disks.  This also
+# patches in support for NVMe drives.  Note that this code must be here because
+# we use this code prior to deploying the director.
 echo
 echo "## Patching Ironic iDRAC driver RAID library..."
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"

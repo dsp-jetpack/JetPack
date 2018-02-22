@@ -1,0 +1,39 @@
+{
+   "name": "XSP",
+   "sample_ini": "sample_xsp_profile.ini",
+   "associated_settings": [
+      {
+         "Dell NFV Settings": {
+            "hpg_enable": "",
+            "numa_enable": ""
+         }
+      },
+      {
+         "Nodes Nics and Bonding Settings": {
+            "sah_bond_opts": "",
+            "controller_bond_opts": "",
+            "compute_bond_opts": "",
+            "storage_bond_opts": ""
+         }
+      },
+      {
+         "Network Settings": {
+            "public_api_gateway": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            },
+            "public_api_allocation_pool_start": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            },
+            "public_api_allocation_pool_end": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            }
+         }
+      }
+   ]
+}
