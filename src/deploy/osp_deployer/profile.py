@@ -80,7 +80,7 @@ class Profile():
                                   "::" + set + \
                                   " is not valid for the profile " + \
                                   self.profile_name + \
-                                  " it should be to one of the following " + \
+                                  ".It should be set to one of the following " + \
                                   "options : " + \
                                   json.dumps(allowed_settings)
                     elif validated is True:
@@ -92,7 +92,7 @@ class Profile():
                                   "::" + set + \
                                   " is not valid for the profile " + \
                                   self.profile_name + \
-                                  " it should be to " + \
+                                  ".It should be set to " + \
                                   profile_config.get(str(stanza), set)
 
         if len(Err) > 0:
