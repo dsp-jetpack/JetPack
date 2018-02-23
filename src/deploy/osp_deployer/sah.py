@@ -189,17 +189,6 @@ class Sah(InfraHost):
                                       sets.provisioning_netmask +
                                       '"')
         time.sleep(3)
-        if self.settings.is_fx is True:
-            cmds = ["sed -i 's/{AnacondaIface_device}/{" +
-                    "AnacondaIface_device}." +
-                    self.settings.public_api_vlanid +
-                    "/' " + sets.sah_kickstart,
-                    "sed -i 's/bootproto=static/vlanid=" +
-                    self.settings.public_api_vlanid +
-                    " --bootproto=static/' " +
-                    sets.sah_kickstart]
-            for cmd in cmds:
-                os.system(cmd)
 
     def upload_iso(self):
         shutil.copyfile(self.settings.rhel_iso,
