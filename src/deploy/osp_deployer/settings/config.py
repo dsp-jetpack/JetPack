@@ -236,12 +236,7 @@ class Settings():
         else:
             self.overcloud_static_ips = False
 
-        if deploy_settings['hardware'].lower() == 'fx':
-            self.is_fx = True
-        else:
-            self.is_fx = False
         self.profile = deploy_settings['profile'].lower()
-
         if deploy_settings['enable_rbd_backend'].lower() == 'true':
             self.enable_rbd_backend = True
         else:
@@ -415,20 +410,12 @@ class Settings():
             '/pilot/templates/dell-cinder-backends.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
-        if self.is_fx is True:
-            self.controller_yaml = self.foreman_configuration_scripts + \
-                '/pilot/templates/nic-configs-fx/controller.yaml'
-            self.compute_yaml = self.foreman_configuration_scripts + \
-                '/pilot/templates/nic-configs-fx/compute.yaml'
-            self.ceph_storage_yaml = self.foreman_configuration_scripts + \
-                '/pilot/templates/nic-configs-fx/ceph-storage.yaml'
-        else:
-            self.controller_yaml = self.foreman_configuration_scripts + \
-                '/pilot/templates/nic-configs/controller.yaml'
-            self.compute_yaml = self.foreman_configuration_scripts + \
-                '/pilot/templates/nic-configs/compute.yaml'
-            self.ceph_storage_yaml = self.foreman_configuration_scripts + \
-                '/pilot/templates/nic-configs/ceph-storage.yaml'
+        self.controller_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/nic-configs/controller.yaml'
+        self.compute_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/nic-configs/compute.yaml'
+        self.ceph_storage_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/nic-configs/ceph-storage.yaml'
         self.static_ips_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/static-ip-environment.yaml'
         self.static_vip_yaml = self.foreman_configuration_scripts + \

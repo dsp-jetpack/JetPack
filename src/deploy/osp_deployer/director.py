@@ -48,12 +48,8 @@ class Director(InfraHost):
         self.sanity_dir = os.path.join(self.pilot_dir, "deployment-validation")
         self.images_dir = os.path.join(self.pilot_dir, "images")
         self.templates_dir = os.path.join(self.pilot_dir, "templates")
-        if self.settings.is_fx is True:
-            self.nic_configs_dir = os.path.join(self.templates_dir,
-                                                "nic-configs-fx")
-        else:
-            self.nic_configs_dir = os.path.join(self.templates_dir,
-                                                "nic-configs")
+        self.nic_configs_dir = os.path.join(self.templates_dir,
+                                            "nic-configs")
         self.validation_dir = os.path.join(self.pilot_dir,
                                            "deployment-validation")
         self.source_stackrc = 'source ' + self.home_dir + "/stackrc;"
@@ -694,10 +690,6 @@ class Director(InfraHost):
                 self.settings.tenant_tunnel_network_allocation_pool_end +
                 "'}]"   '|" ' + network_yaml,
             ]
-        if self.settings.is_fx:
-            cmds += [
-                    'sed -i "s|nic-configs|nic-configs-fx|" ' + network_yaml
-            ]
         for cmd in cmds:
             self.run_tty(cmd)
 
@@ -789,26 +781,17 @@ class Director(InfraHost):
                 'sed -i "s|192.168.120.1|' +
                 self.settings.provisioning_gateway + '|" ' + controller_yaml
         ]
-        if self.settings.is_fx is True:
-            cmds = [
-                   'sed -i "s|em1|changeme1|" ' + controller_yaml,
-                   'sed -i "s|em3|changeme2|" ' + controller_yaml,
-                   'sed -i "s|em2|changeme3|" ' + controller_yaml,
-                   'sed -i "s|em4|changeme4|" ' + controller_yaml,
-            ]
-            cmds.extend(cmds_)
-        else:
-            cmds = [
-                   'sed -i "s|em1|changeme1|" ' + controller_yaml,
-                   'sed -i "s|p3p1|changeme2|" ' + controller_yaml,
-                   'sed -i "s|em2|changeme3|" ' + controller_yaml,
-                   'sed -i "s|p3p2|changeme4|" ' + controller_yaml,
-                   'sed -i "s|em3|changeme5|" ' + controller_yaml,
-            ]
-            cmds.append('sed -i "s|changeme5|' +
-                        self.settings.controller_provisioning_interface +
-                        '|" ' + controller_yaml)
-            cmds.extend(cmds_)
+        cmds = [
+               'sed -i "s|em1|changeme1|" ' + controller_yaml,
+               'sed -i "s|p3p1|changeme2|" ' + controller_yaml,
+               'sed -i "s|em2|changeme3|" ' + controller_yaml,
+               'sed -i "s|p3p2|changeme4|" ' + controller_yaml,
+               'sed -i "s|em3|changeme5|" ' + controller_yaml,
+        ]
+        cmds.append('sed -i "s|changeme5|' +
+                    self.settings.controller_provisioning_interface +
+                    '|" ' + controller_yaml)
+        cmds.extend(cmds_)
 
         for cmd in cmds:
             self.run_tty(cmd)
@@ -831,26 +814,17 @@ class Director(InfraHost):
                  'sed -i "s|192.168.120.1|' +
                  self.settings.provisioning_gateway + '|" ' + compute_yaml
                  ]
-        if self.settings.is_fx is True:
-            cmds = [
-               'sed -i "s|em1|changeme1|" ' + compute_yaml,
-               'sed -i "s|em3|changeme2|" ' + compute_yaml,
-               'sed -i "s|em2|changeme3|" ' + compute_yaml,
-               'sed -i "s|em4|changeme4|" ' + compute_yaml,
-            ]
-            cmds.extend(cmds_)
-        else:
-            cmds = [
+        cmds = [
                'sed -i "s|em1|changeme1|" ' + compute_yaml,
                'sed -i "s|p3p1|changeme2|" ' + compute_yaml,
                'sed -i "s|em2|changeme3|" ' + compute_yaml,
                'sed -i "s|p3p2|changeme4|" ' + compute_yaml,
                'sed -i "s|em3|changeme5|" ' + compute_yaml,
             ]
-            cmds.append('sed -i "s|changeme5|' +
-                        self.settings.compute_provisioning_interface +
-                        '|" ' + compute_yaml)
-            cmds.extend(cmds_)
+        cmds.append('sed -i "s|changeme5|' +
+                    self.settings.compute_provisioning_interface +
+                    '|" ' + compute_yaml)
+        cmds.extend(cmds_)
         for cmd in cmds:
             self.run_tty(cmd)
 
@@ -868,27 +842,18 @@ class Director(InfraHost):
                  self.settings.storage_bond1_interfaces.split(" ")[
                      1] + '|" ' + storage_yaml,
                  ]
-        if self.settings.is_fx is True:
-            cmds = [
-                   'sed -i "s|em1|changeme1|" ' + storage_yaml,
-                   'sed -i "s|em3|changeme2|" ' + storage_yaml,
-                   'sed -i "s|em2|changeme3|" ' + storage_yaml,
-                   'sed -i "s|em4|changeme4|" ' + storage_yaml
-                   ]
-            cmds.extend(cmds_)
-        else:
-            cmds = [
-                   'sed -i "s|em1|changeme1|" ' + storage_yaml,
-                   'sed -i "s|p2p1|changeme2|" ' + storage_yaml,
-                   'sed -i "s|em2|changeme3|" ' + storage_yaml,
-                   'sed -i "s|p2p2|changeme4|" ' + storage_yaml,
-                   'sed -i "s|em3|changeme5|" ' + storage_yaml
-                   ]
-            cmds.append('sed -i "s|changeme5|' +
-                        self.settings.storage_provisioning_interface +
-                        '|" ' +
-                        storage_yaml)
-            cmds.extend(cmds_)
+        cmds = [
+               'sed -i "s|em1|changeme1|" ' + storage_yaml,
+               'sed -i "s|p2p1|changeme2|" ' + storage_yaml,
+               'sed -i "s|em2|changeme3|" ' + storage_yaml,
+               'sed -i "s|p2p2|changeme4|" ' + storage_yaml,
+               'sed -i "s|em3|changeme5|" ' + storage_yaml
+               ]
+        cmds.append('sed -i "s|changeme5|' +
+                    self.settings.storage_provisioning_interface +
+                    '|" ' +
+                    storage_yaml)
+        cmds.extend(cmds_)
         for cmd in cmds:
             self.run_tty(cmd)
 
@@ -1120,12 +1085,6 @@ class Director(InfraHost):
                 ip_info.append("     - nova private ip  : " + private_api)
                 ip_info.append("     - nova public ip   : " + nova_public_ip)
                 ip_info.append("     - storage ip       : " + storage_ip)
-                if self.settings.is_fx is True:
-                    logger.debug("restarting network manager")
-                    cmd = "ssh " + ssh_opts + "heat-admin@" +\
-                          provisioning_ip + \
-                          "sudo systemctl restart NetworkManager.service"
-                    re = self.run_tty(cmd)
 
             re = self.run_tty(self.source_stackrc + "nova list | grep compute")
 
@@ -1162,12 +1121,6 @@ class Director(InfraHost):
                 ip_info.append("     - provisioning ip  : " + provisioning_ip)
                 ip_info.append("     - nova private ip  : " + private_api)
                 ip_info.append("     - storage ip       : " + storage_ip)
-                if self.settings.is_fx is True:
-                    logger.debug("restarting network manager")
-                    cmd = "ssh " + ssh_opts + "heat-admin@" +\
-                          provisioning_ip + \
-                          "sudo systemctl restart NetworkManager.service"
-                    re = self.run_tty(cmd)
 
             re = self.run_tty(self.source_stackrc + "nova list | grep storage")
 
@@ -1204,12 +1157,6 @@ class Director(InfraHost):
                     "     - provisioning ip    : " + provisioning_ip)
                 ip_info.append("     - storage cluster ip : " + cluster_ip)
                 ip_info.append("     - storage ip         : " + storage_ip)
-                if self.settings.is_fx is True:
-                    logger.debug("restarting network manager")
-                    cmd = "ssh " + ssh_opts + "heat-admin@" + \
-                          provisioning_ip + \
-                          "sudo systemctl restart NetworkManager.service"
-                    re = self.run_tty(cmd)
 
             ip_info.append("====================================")
 
