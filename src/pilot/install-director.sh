@@ -193,6 +193,11 @@ echo
 if [ -n "${overcloud_nodes_pwd}" ]; then
     echo "# Setting overcloud nodes password"
     virt-customize -a overcloud-full.qcow2 --root-password password:$overcloud_nodes_pwd
+    if [ $? -ne 0 ]; then
+        echo "Customization of overcloud image FAILED!"
+        echo "Overcloud image will not be uploaded, aborting installation"
+        exit -1
+    fi
 fi
 
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
