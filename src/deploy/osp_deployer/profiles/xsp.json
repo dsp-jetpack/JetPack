@@ -21,9 +21,15 @@
       {
          "Nodes Nics and Bonding Settings": {
             "sah_bond_opts": "",
-            "controller_bond_opts": "",
-            "compute_bond_opts": "",
-            "storage_bond_opts": ""
+            "nic_env_file": {
+               "valid_values": [
+                  "4_port/nic_environment.yaml",
+                  "5_port/nic_environment.yaml"
+               ]
+            },
+            "ControllerBondInterfaceOptions": "",
+            "ComputeBondInterfaceOptions": "",
+            "StorageBondInterfaceOptions": ""
          }
       },
       {
