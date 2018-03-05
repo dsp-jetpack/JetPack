@@ -19,8 +19,8 @@ from settings.config import Settings
 from profile import Profile
 import logging
 import os.path
-import socket
 import collections
+import yaml
 
 logger = logging.getLogger("osp_deployer")
 
@@ -489,3 +489,59 @@ class DeployerSanity():
     def validate_profile(self):
         self.profile = Profile()
         self.profile.validate_configuration()
+
+    def validate_nic_configs(self):
+
+        # Get the user supplied NIC settings from the .ini
+        ini_nics_settings = self.settings.get_nics_settings()
+
+        missing_settings = []
+        nic_env_file_missing = False
+        if 'nic_env_file' not in ini_nics_settings:
+            nic_env_file_missing = True
+            missing_settings.append('nic_env_file')
+
+        if 'sah_bond_opts' not in ini_nics_settings:
+            missing_settings.append('sah_bond_opts')
+
+        extra_settings = set()
+        missing_variable_settings = set()
+        if not nic_env_file_missing:
+            if not os.path.isfile(self.settings.nic_env_file_path):
+                raise AssertionError("The nic_env_file {} does not exist"
+                                     "!".format(
+                                         self.settings.nic_env_file_path))
+
+            # Get the NIC settings from the NIC environment file
+            with open(self.settings.nic_env_file_path, 'r') as yaml_stream:
+                nic_yaml = yaml.load(yaml_stream)
+            nic_env_nics_settings = nic_yaml['parameter_defaults']
+
+            # Error check for extra or missing NIC settings
+            ini_settings_names = set(
+                self.settings.get_curated_nics_settings().keys())
+            nic_env_settings_names = set(nic_env_nics_settings.keys())
+
+            extra_settings = ini_settings_names - nic_env_settings_names
+            missing_variable_settings = nic_env_settings_names - \
+                ini_settings_names
+
+        missing_settings.extend(missing_variable_settings)
+
+        error_msg = ""
+        if len(extra_settings) > 0:
+            error_msg += ("The following settings in the [Nodes Nics and "
+                          "Bonding Settings] section in {} are "
+                          "unused:\n{}\n".format(
+                              self.settings.settings_file,
+                              ',\n'.join(sorted(extra_settings))))
+
+        if len(missing_settings) > 0:
+            error_msg += ("The following settings are missing from the [Nodes "
+                          "Nics and Bonding Settings] section in {}:\n"
+                          "{}".format(
+                              self.settings.settings_file,
+                              ',\n'.join(sorted(missing_settings))))
+
+        if error_msg:
+            raise AssertionError(error_msg)

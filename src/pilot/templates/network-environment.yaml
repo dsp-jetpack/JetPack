@@ -13,10 +13,6 @@
 # limitations under the License.
 
 resource_registry:
-  OS::TripleO::Compute::Net::SoftwareConfig: ./nic-configs/compute.yaml
-  OS::TripleO::Controller::Net::SoftwareConfig: ./nic-configs/controller.yaml
-  OS::TripleO::CephStorage::Net::SoftwareConfig: ./nic-configs/ceph-storage.yaml
-
   OS::TripleO::Network::Ports::StorageMgmtVipPort: ./overcloud/network/ports/ctlplane_vip.yaml
   OS::TripleO::Controller::Ports::StorageMgmtPort: ./overcloud/network/ports/noop.yaml
 
@@ -109,17 +105,6 @@ parameter_defaults:
   # CHANGEME: Change the following to the VLAN ID to use on the
   # External network
   ExternalNetworkVlanID: 190
-
-  # CHANGEME: The follow sets the bonding mode to LACP for all nodes.
-  #
-  # If you wish to use a different bonding mode for all nodes, then change the
-  # options below.
-  #
-  # If you wish to use different bonding modes for different roles, then
-  # delete the following two lines and specify the bonding options per role
-  # type in the nic-configs files.
-  BondInterfaceOptions:
-      "mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1"
 
   # CHANGEME: Set to empty string for External VLAN, br-ex if on native VLAN of br-ex
   NeutronExternalNetworkBridge: "''"

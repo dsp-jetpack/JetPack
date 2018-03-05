@@ -18,7 +18,7 @@ from settings.config import Settings
 from checkpoints import Checkpoints
 from collections import defaultdict
 from infra_host import InfraHost
-from auto_common import Scp, Ipmi
+from auto_common import Scp
 import json
 import logging
 import os
@@ -706,156 +706,16 @@ class Director(InfraHost):
     def setup_networking(self):
         logger.debug("Configuring network settings for overcloud")
 
-        network_yaml = self.templates_dir + "/network-environment.yaml"
-        storage_yaml = self.nic_configs_dir + "/ceph-storage.yaml"
-        compute_yaml = self.nic_configs_dir + "/compute.yaml"
-        controller_yaml = self.nic_configs_dir + "/controller.yaml"
         static_ips_yaml = self.templates_dir + "/static-ip-environment.yaml"
         static_vip_yaml = self.templates_dir + "/static-vip-environment.yaml"
 
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy
         # with a different config
-        self.upload_file(self.settings.ceph_storage_yaml,
-                         storage_yaml)
-        self.upload_file(self.settings.compute_yaml, compute_yaml)
-        self.upload_file(self.settings.controller_yaml,
-                         controller_yaml)
         self.upload_file(self.settings.static_ips_yaml, static_ips_yaml)
         self.upload_file(self.settings.static_vip_yaml, static_vip_yaml)
 
-        if self.settings.controller_bond_opts == \
-           self.settings.compute_bond_opts \
-           and self.settings.compute_bond_opts == \
-           self.settings.storage_bond_opts:
-            logger.debug(
-                "applying " +
-                self.settings.settings.compute_bond_opts +
-                " bond mode to all the nodes (network-environment.yaml)")
-            cmds = [
-                'sed -i "s|      \\"mode=802.3ad miimon=100' +
-                ' xmit_hash_policy=layer3+4 lacp_rate=1\\"' +
-                '|      \\"mode=' +
-                self.settings.compute_bond_opts + '\\"|" ' + network_yaml]
-            for cmd in cmds:
-                self.run_tty(cmd)
-        else:
-            logger.debug("applying bond mode on a per type basis")
-            cmds = [
-                   "sed -i '/BondInterfaceOptions:/d' " + network_yaml,
-                   "sed -i '/mode=802.3ad miimon=100" +
-                   " xmit_hash_policy=layer3+4" +
-                   " lacp_rate=1/d' " + network_yaml,
-                   'sed -i "/BondInterfaceOptions:/{n;s/.*/' +
-                   '    default: \'mode=' +
-                   self.settings.settings.compute_bond_opts +
-                   "'\\n/;}\" " + compute_yaml,
-                   'sed -i "/BondInterfaceOptions:/{n;s/.*/' +
-                   '    default: \'mode=' +
-                   self.settings.controller_bond_opts + "'\\n/;}\" " +
-                   controller_yaml,
-                   'sed -i "/BondInterfaceOptions:/{n;s/.*/' +
-                   '    default: \'mode=' +
-                   self.settings.storage_bond_opts +
-                   "'\\n/;}\" " + storage_yaml,
-            ]
-            for cmd in cmds:
-                self.run_tty(cmd)
-
-        logger.debug("updating controller yaml")
-        cmds_ = [
-                'sed -i "s|changeme1|' +
-                self.settings.controller_bond0_interfaces.split(" ")[
-                    0] + '|" ' + controller_yaml,
-                'sed -i "s|changeme2|' +
-                self.settings.controller_bond0_interfaces.split(" ")[
-                    1] + '|" ' + controller_yaml,
-                'sed -i "s|changeme3|' +
-                self.settings.controller_bond1_interfaces.split(" ")[
-                    0] + '|" ' + controller_yaml,
-                'sed -i "s|changeme4|' +
-                self.settings.controller_bond1_interfaces.split(" ")[
-                    1] + '|" ' + controller_yaml,
-                'sed -i "s|192.168.110.0/24|' +
-                self.settings.management_network + '|" ' + controller_yaml,
-                'sed -i "s|192.168.120.1|' +
-                self.settings.provisioning_gateway + '|" ' + controller_yaml
-        ]
-        cmds = [
-               'sed -i "s|em1|changeme1|" ' + controller_yaml,
-               'sed -i "s|p3p1|changeme2|" ' + controller_yaml,
-               'sed -i "s|em2|changeme3|" ' + controller_yaml,
-               'sed -i "s|p3p2|changeme4|" ' + controller_yaml,
-               'sed -i "s|em3|changeme5|" ' + controller_yaml,
-        ]
-        cmds.append('sed -i "s|changeme5|' +
-                    self.settings.controller_provisioning_interface +
-                    '|" ' + controller_yaml)
-        cmds.extend(cmds_)
-
-        for cmd in cmds:
-            self.run_tty(cmd)
-
-        logger.debug("updating compute yaml")
-        cmds_ = ['sed -i "s|changeme1|' +
-                 self.settings.compute_bond0_interfaces.split(" ")[
-                     0] + '|" ' + compute_yaml,
-                 'sed -i "s|changeme2|' +
-                 self.settings.compute_bond0_interfaces.split(" ")[
-                     1] + '|" ' + compute_yaml,
-                 'sed -i "s|changeme3|' +
-                 self.settings.compute_bond1_interfaces.split(" ")[
-                      0] + '|" ' + compute_yaml,
-                 'sed -i "s|changeme4|' +
-                 self.settings.compute_bond1_interfaces.split(" ")[
-                     1] + '|" ' + compute_yaml,
-                 'sed -i "s|192.168.110.0/24|' +
-                 self.settings.management_network + '|" ' + compute_yaml,
-                 'sed -i "s|192.168.120.1|' +
-                 self.settings.provisioning_gateway + '|" ' + compute_yaml
-                 ]
-        cmds = [
-               'sed -i "s|em1|changeme1|" ' + compute_yaml,
-               'sed -i "s|p3p1|changeme2|" ' + compute_yaml,
-               'sed -i "s|em2|changeme3|" ' + compute_yaml,
-               'sed -i "s|p3p2|changeme4|" ' + compute_yaml,
-               'sed -i "s|em3|changeme5|" ' + compute_yaml,
-            ]
-        cmds.append('sed -i "s|changeme5|' +
-                    self.settings.compute_provisioning_interface +
-                    '|" ' + compute_yaml)
-        cmds.extend(cmds_)
-        for cmd in cmds:
-            self.run_tty(cmd)
-
-        logger.debug("updating storage yaml")
-        cmds_ = ['sed -i "s|changeme1|' +
-                 self.settings.storage_bond0_interfaces.split(" ")[
-                     0] + '|" ' + storage_yaml,
-                 'sed -i "s|changeme2|' +
-                 self.settings.storage_bond0_interfaces.split(" ")[
-                     1] + '|" ' + storage_yaml,
-                 'sed -i "s|changeme3|' +
-                 self.settings.storage_bond1_interfaces.split(" ")[
-                     0] + '|" ' + storage_yaml,
-                 'sed -i "s|changeme4|' +
-                 self.settings.storage_bond1_interfaces.split(" ")[
-                     1] + '|" ' + storage_yaml,
-                 ]
-        cmds = [
-               'sed -i "s|em1|changeme1|" ' + storage_yaml,
-               'sed -i "s|p2p1|changeme2|" ' + storage_yaml,
-               'sed -i "s|em2|changeme3|" ' + storage_yaml,
-               'sed -i "s|p2p2|changeme4|" ' + storage_yaml,
-               'sed -i "s|em3|changeme5|" ' + storage_yaml
-               ]
-        cmds.append('sed -i "s|changeme5|' +
-                    self.settings.storage_provisioning_interface +
-                    '|" ' +
-                    storage_yaml)
-        cmds.extend(cmds_)
-        for cmd in cmds:
-            self.run_tty(cmd)
+        self.setup_nic_configuration()
 
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
@@ -948,6 +808,40 @@ class Director(InfraHost):
             for cmd in cmds:
                 self.run_tty(cmd)
 
+    def setup_nic_configuration(self):
+        # Upload all yaml files in the NIC config directory
+        local_nic_env_file_path = self.settings.nic_env_file_path
+        local_nic_configs_dir = os.path.dirname(local_nic_env_file_path)
+        nic_config_dirname = os.path.dirname(self.settings.nic_env_file)
+        for nic_config_file in os.listdir(local_nic_configs_dir):
+            if nic_config_file.endswith(".yaml"):
+                local_file_path = os.path.join(local_nic_configs_dir,
+                                               nic_config_file)
+                remote_file_path = os.path.join(self.nic_configs_dir,
+                                                nic_config_dirname,
+                                                nic_config_file)
+                logger.info("Uploading {} to {} on the director node".format(
+                    local_file_path, remote_file_path))
+                self.upload_file(local_file_path, remote_file_path)
+
+        # Get the user supplied NIC settings from the .ini
+        ini_nics_settings = self.settings.get_curated_nics_settings()
+
+        # Build up a series of sed commands to perform variable substitution
+        # in the NIC environment file
+        cmds = []
+        remote_file = os.path.join(self.nic_configs_dir,
+                                   self.settings.nic_env_file)
+        for setting_name, setting_value in ini_nics_settings.iteritems():
+            # The following is executing a sed command of the following format:
+            # sed -i -r 's/(^\s*StorageBond0Interface1:\s*).*/\1p1p2/'
+            cmds.append('sed -i -r \'s/(^\s*' + setting_name +
+                        ':\s*).*/\\1' + setting_value + '/\' ' + remote_file)
+
+        # Execute the commands
+        for cmd in cmds:
+            self.run(cmd)
+
     def deploy_overcloud(self):
 
         logger.debug("Configuring network settings for overcloud")
@@ -964,6 +858,8 @@ class Director(InfraHost):
                                     str(len(self.settings.ceph_nodes)) + \
                                     " --vlan " + \
                                     self.settings.tenant_vlan_range + \
+                                    " --nic_env_file " + \
+                                    self.settings.nic_env_file + \
                                     " --overcloud_name " + \
                                     self.settings.overcloud_name + \
                                     " --ntp " + \
