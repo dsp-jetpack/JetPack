@@ -264,6 +264,10 @@ def main():
                             action='store_true',
                             default=False,
                             help="Disable cinder Ceph and rbd backend")
+        parser.add_argument('--enable_dvr',
+                            action='store_true',
+                            default=False,
+                            help="Enables Distributed Virtual Routing")
         parser.add_argument('--static_ips',
                             action='store_true',
                             default=False,
@@ -360,6 +364,11 @@ def main():
         # network-environment.yaml
         if args.static_vips:
             env_opts += " -e ~/pilot/templates/static-vip-environment.yaml"
+
+        # The neutron-ovs-dvr.yaml.yaml must be included after the
+        # network-environment.yaml
+        if args.enable_dvr:
+            env_opts += " -e ~/pilot/templates/neutron-ovs-dvr.yaml"
 
         if args.node_placement:
             env_opts += " -e ~/pilot/templates/node-placement.yaml"
