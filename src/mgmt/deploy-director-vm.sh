@@ -70,7 +70,7 @@ EOFKS
 { 
 ntp=""
 
-while read iface ip mask bridge
+while read iface ip mask mtu
 do
   flag=""
 
@@ -106,19 +106,19 @@ do
   [[ ${iface} == smproxypassword ]] && echo "echo SMProxyPassword=${ip} >> /tmp/ks_post_include.txt"
 
   [[ ${iface} == eth0 ]] && {
-    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers} >> /tmp/ks_include.txt"
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers} --mtu=${mtu} >> /tmp/ks_include.txt"
     }
 
   [[ ${iface} == eth1 ]] && {
-    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
     }
 
   [[ ${iface} == eth2 ]] && {
-    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
     }
 
   [[ ${iface} == eth3 ]] && {
-    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
     }
 
 done <<< "$( grep -Ev "^#|^;|^\s*$" ${cfg_file} )"

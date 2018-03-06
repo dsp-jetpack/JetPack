@@ -159,6 +159,22 @@ class Settings():
         self.tenant_tunnel_vlanid = network_settings[
             'tenant_tunnel_network_vlanid']
         self.tenant_vlan_range = network_settings['tenant_vlan_range']
+        self.tenant_tunnel_network_mtu = network_settings[
+            'tenant_tunnel_network_mtu']
+        self.tenant_network_mtu = network_settings[
+         'tenant_network_mtu']
+        self.storage_cluster_network_mtu = network_settings[
+            'storage_cluster_network_mtu']
+        self.provisioning_network_mtu = network_settings[
+            'provisioning_network_mtu']
+        self.storage_network_mtu = network_settings[
+            'storage_network_mtu']
+        self.private_api_network_mtu = network_settings[
+            'private_api_network_mtu']
+        self.public_api_network_mtu = network_settings[
+            'public_api_network_mtu']
+        self.default_bond_mtu='9216'
+        self.management_network_mtu='1500'
 
         vips_settings = self.get_settings_section(
             "Vips Settings")
@@ -333,6 +349,7 @@ class Settings():
         else:
             self.use_in_band_introspection = False
         self.cloud_repo_dir = dev_settings['cloud_repo_dir']
+        
 
         if dev_settings['pull_images_from_cdn'].lower() == 'true':
             self.pull_images_from_cdn = True
