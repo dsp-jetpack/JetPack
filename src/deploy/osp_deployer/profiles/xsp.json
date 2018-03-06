@@ -24,7 +24,10 @@
             "nic_env_file": {
                "valid_values": [
                   "4_port/nic_environment.yaml",
-                  "5_port/nic_environment.yaml"
+                  "5_port/nic_environment.yaml",
+                  "5_port/nic_environment.yaml",
+                  "5_port/nic_dvr_environment.yaml",
+                  "7_port/nic_dvr_environment.yaml"
                ]
             },
             "ControllerBondInterfaceOptions": "",
