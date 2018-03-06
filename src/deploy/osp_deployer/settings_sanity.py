@@ -45,6 +45,12 @@ class DeployerSanity():
             valid = False
 
         return valid
+    @staticmethod
+    def is_valid_mtu(mtu_val):
+        valid = True
+        if mtu < 594 or mtu > 9217:
+            valid=False
+        return valid
 
     def check_files(self):
 
@@ -127,7 +133,22 @@ class DeployerSanity():
                 self.check_ipmi_to_node(node.idrac_ip,
                                         self.settings.ipmi_user,
                                         self.settings.ipmi_password)
-
+    
+    def check_mtu_of_networks(self):
+        shouldbbevalidmtu = [
+            'public_api_network_mtu',
+            'private_api_network_mtu',
+            'storage_network_mtu',
+            'provisioning_network_mtu',
+            'storage_cluster_network_mtu',
+            'tenant_tunnel_network_mtu',
+            'tenant_network_mtu',
+        ]
+        for each in shouldbbevalidips:
+            assert self.is_valid_mtu(getattr(self.settings, each)),\
+                "Setting for " + each + " is not a valid mtu " +\
+                getattr(self.settings, each) + "Maximum mtu size allowed = 9216 and minimum allowed =594"
+        
     def check_ipmi_to_node(self, idrac_ip, ipmi_user, ipmi_password):
         try:
             logger.debug(idrac_ip)
