@@ -507,12 +507,12 @@ class DeployerSanity():
         extra_settings = set()
         missing_variable_settings = set()
         if not nic_env_file_missing:
-            # Get the NIC settings from the NIC environment file
             if not os.path.isfile(self.settings.nic_env_file_path):
                 raise AssertionError("The nic_env_file {} does not exist"
                                      "!".format(
                                          self.settings.nic_env_file_path))
 
+            # Get the NIC settings from the NIC environment file
             with open(self.settings.nic_env_file_path, 'r') as yaml_stream:
                 nic_yaml = yaml.load(yaml_stream)
             nic_env_nics_settings = nic_yaml['parameter_defaults']
