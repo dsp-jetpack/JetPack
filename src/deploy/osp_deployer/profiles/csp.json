@@ -7,7 +7,7 @@
             "hpg_enable": "",
             "hpg_size": {
                "valid_values": [
-                  "5MB",
+                  "2MB",
                   "1GB"
                ]
             },
