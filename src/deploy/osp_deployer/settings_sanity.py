@@ -154,9 +154,9 @@ class DeployerSanity():
                 ip = each.public_api_ip.split(".")[-1]
                 if int(start) <= int(ip) <= int(end):
                     raise AssertionError(each.public_api_ip +
-                                         " in .properties is in the public \
-                                         api allocation pool range defined \
-                                         in the .ini")
+                                         " in .properties is in the public" +
+                                         " api allocation pool range defined" +
+                                         "in the .ini")
         if self.settings.use_static_vips is True:
             if int(start) <= int(
                     self.settings.public_api_vip.split(".")[-1]) <= int(end):
@@ -175,10 +175,10 @@ class DeployerSanity():
             if hasattr(each, 'private_api_ip'):
                 ip = each.private_api_ip.split(".")[-1]
                 if int(start) <= int(ip) <= int(end):
-                    raise AssertionError(each.private_api_ip + " in \
-                                         .properties is in the private \
-                                         api allocation pool range defined \
-                                         in the .ini")
+                    raise AssertionError(each.private_api_ip + " in " +
+                                         ".properties is in the private " +
+                                         "api allocation pool range defined" +
+                                         " in the .ini")
         if self.settings.use_static_vips is True:
             net = ".".join(self.settings.private_api_network.split(".")[:-1])
             if int(start) <= int(
@@ -205,10 +205,10 @@ class DeployerSanity():
             if hasattr(each, 'storage_ip'):
                 ip = each.storage_ip.split(".")[-1]
                 if int(start) <= int(ip) <= int(end):
-                    raise AssertionError(each.storage_ip + " in \
-                                         .properties is in the storage \
-                                         allocation pool range defined \
-                                         in the .ini")
+                    raise AssertionError(each.storage_ip + " in " +
+                                         ".properties is in the storage " +
+                                         "allocation pool range defined " +
+                                         "in the .ini")
         if self.settings.use_static_vips is True:
             if int(start) <= int(
                     self.settings.storage_vip.split(".")[-1]) <= int(end):
@@ -227,10 +227,10 @@ class DeployerSanity():
             if hasattr(each, 'provisioning_ip'):
                 ip = each.provisioning_ip.split(".")[-1]
                 if int(start) <= int(ip) <= int(end):
-                    raise AssertionError(each.provisioning_ip + " in \
-                                         .properties is in the provisioning \
-                                         dhcp allocation pool range defined \
-                                         in the .ini")
+                    raise AssertionError(each.provisioning_ip + " in " +
+                                         ".properties is in the provisioning" +
+                                         " dhcp allocation pool " +
+                                         "range defined in the .ini")
 
         net = ".".join(self.settings.provisioning_network.split(".")[:-1])
 
@@ -262,9 +262,9 @@ class DeployerSanity():
             if hasattr(each, 'provisioning_ip'):
                 ip = each.provisioning_ip.split(".")[-1]
                 if int(start) <= int(ip) <= int(end):
-                    raise AssertionError(each.provisioning_ip + " in \
-                                         .properties is in the discovery ip \
-                                         range defined in the .ini")
+                    raise AssertionError(each.provisioning_ip + " in " +
+                                         ".properties is in the discovery ip" +
+                                         " range defined in the .ini")
 
         # storage cluster allocation pool
         start = self.settings.storage_cluster_allocation_pool_start.split(
@@ -274,10 +274,10 @@ class DeployerSanity():
             if hasattr(each, 'storage_cluster_ip'):
                 ip = each.storage_cluster_ip.split(".")[-1]
                 if int(start) <= int(ip) <= int(end):
-                    raise AssertionError(each.storage_cluster_ip + " in \
-                                         .properties is in the storage \
-                                         cluster allocation pool range \
-                                         defined in the .ini")
+                    raise AssertionError(each.storage_cluster_ip + " in " +
+                                         ".properties is in the storage " +
+                                         "cluster allocation pool range " +
+                                         "defined in the .ini")
 
         # management allocation pool
         start = self.settings.management_allocation_pool_start.split(
