@@ -634,14 +634,14 @@ def main():
     # Make sure BZ 1403576 won't bite us. This check can be removed once
     # an upstream fix reaches CDN, and that should happen before JS-7
     # is released.
-    check_bz_1403576(rhscon_node, calamari_node)
+    #check_bz_1403576(rhscon_node, calamari_node)
 
     prep_machine_ids(ceph_nodes)
     prep_host_files(rhscon_node, ceph_nodes, calamari_node)
 
-    start_rhscon_skyring(rhscon_node)
-    install_console_agent(rhscon_node, ceph_nodes)
-    start_calamari_server(rhscon_node, calamari_node)
+    #start_rhscon_skyring(rhscon_node)
+    #install_console_agent(rhscon_node, ceph_nodes)
+    #start_calamari_server(rhscon_node, calamari_node)
 
     LOG.info("Storage Console configuration is complete")
 
