@@ -47,9 +47,9 @@ class DeployerSanity():
         return valid
     @staticmethod
     def is_valid_mtu(mtu_val):
-        valid = True
-        if mtu < 594 or mtu > 9217:
-            valid=False
+        valid = False
+        if int(mtu_val) >= 594 and int(mtu_val) <= 9216:
+            valid = True
         return valid
 
     def check_files(self):
@@ -144,7 +144,7 @@ class DeployerSanity():
             'tenant_tunnel_network_mtu',
             'tenant_network_mtu',
         ]
-        for each in shouldbbevalidips:
+        for each in shouldbbevalidmtu:
             assert self.is_valid_mtu(getattr(self.settings, each)),\
                 "Setting for " + each + " is not a valid mtu " +\
                 getattr(self.settings, each) + "Maximum mtu size allowed = 9216 and minimum allowed =594"
