@@ -173,15 +173,23 @@ prov_netmask="CHANGEME e.g 255.255.255.0"
 # Create the files that will be used by the installation environment and %post environment
 read -a itmp <<< $( tr '/' ' ' <<< ${anaconda_interface} )
 
-echo "network --activate --noipv6 --device=${itmp[2]} --bootproto=static --ip=${itmp[0]}" \
+anaconda_if_name=${itmp[2]}
+IFS='.' read anaconda_name anaconda_vlanid <<< "$anaconda_if_name"
+
+anaconda_vlanid_opt=""
+if [ -n "$anaconda_vlanid" ]; then
+    anaconda_vlanid_opt="--vlanid=${anaconda_vlanid}"
+fi
+
+echo "network --activate --noipv6 --device=${anaconda_name} ${anaconda_vlanid_opt} --bootproto=static --ip=${itmp[0]}" \
      " --netmask=${itmp[1]} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers}" \
      >> /tmp/ks_include.txt
 
 echo "rootpw ${SystemPassword}" >> /tmp/ks_include.txt
 echo "timezone ${TimeZone} --utc" >> /tmp/ks_include.txt
 
-[[ ${itmp[2]} ]] && { 
-  echo "AnacondaIface_device=\"${itmp[2]}\"" >> /tmp/ks_post_include.txt 
+[[ ${anaconda_if_name} ]] && { 
+  echo "AnacondaIface_device=\"${anaconda_if_name}\"" >> /tmp/ks_post_include.txt 
   }
 
 [[ ${itmp[3]} = no ]] && { 

@@ -97,11 +97,6 @@ class Sah(InfraHost):
                                       sets.sah_node.anaconda_iface +
                                       ' no"')
         FileHelper.replace_expression(sets.sah_kickstart,
-                                      '^anaconda_vlanid=.*',
-                                      'anaconda_vlanid="' +
-                                      sets.public_api_vlanid +
-                                      '"')
-        FileHelper.replace_expression(sets.sah_kickstart,
                                       '^extern_bond_name=.*',
                                       'extern_bond_name="' +
                                       sets.sah_node.public_bond +
