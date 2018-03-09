@@ -155,6 +155,10 @@ parameters:
     default: 1500
     description: MTU value for this network.
     type: string
+  ExternalNetworkMTU: 
+    default: 1500
+    description: MTU value for this network.
+    type: string
 
 resources:
   OsNetConfigImpl:

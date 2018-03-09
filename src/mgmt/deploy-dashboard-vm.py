@@ -142,6 +142,8 @@ chvt 8
   done
 
   echo "GATEWAY=${Gateway}" >> /etc/sysconfig/network
+  echo "MTU=${eth0}" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+  echo "MTU=${eth1}" >> /etc/sysconfig/network-scripts/ifcfg-eth1
 
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth0
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth1
@@ -339,7 +341,7 @@ chvt 6
                 ks.write("echo network --activate --onboot=true --noipv6"
                          " --device='{}' --bootproto=static --ip='{}'"
                          " --netmask='{}' --hostname='{}'"
-                         " --gateway='{}' --nameserver='{}' >> {}\n".
+                         " --gateway='{}' --nameserver='{}' --mtu='{}'>> {}\n".
                          format(
                              tokens[0],
                              tokens[1],
@@ -347,18 +349,24 @@ chvt 6
                              hostname,
                              gateway,
                              nameservers,
+                             tokens[3],
                              ks_include))
+                ks.write("echo eth0='{}' >> {}\n".
+                         format(tokens[3], ks_post_include))
 
             elif tokens[0] == "eth1":
                 ks.write("echo network --activate --onboot=true --noipv6"
                          " --device='{}' --bootproto=static --ip='{}'"
-                         " --netmask='{}' --gateway='{}' --nodefroute >> {}\n".
+                         " --netmask='{}' --gateway='{}' --nodefroute --mtu='{}' >> {}\n".
                          format(
                              tokens[0],
                              tokens[1],
                              tokens[2],
                              gateway,
+                             tokens[3],
                              ks_include))
+                ks.write("echo eth1='{}' >> {}\n".
+                         format(tokens[3], ks_post_include))
 
         # Write part 3, and we're done
         ks.write(ks_part_3)
