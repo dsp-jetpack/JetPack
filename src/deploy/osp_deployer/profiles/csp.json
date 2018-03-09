@@ -18,6 +18,16 @@
          }
       },
       {
+         "MTU Settings": {
+            "mtu_selection": {
+               "valid_values": [
+                  "global",
+                  "per_network"
+               ]
+            }
+         }
+      },
+      {
          "Nodes Nics and Bonding Settings": {
             "sah_bond_opts": "",
             "nic_env_file": {

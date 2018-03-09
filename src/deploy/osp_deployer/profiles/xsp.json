@@ -9,6 +9,16 @@
          }
       },
       {
+         "MTU_Settings": {
+            "mtu_selection": {
+               "valid_values": [
+                  "global",
+                  "per_network"
+               ]
+            }
+         }
+      },
+      {
          "Vips Settings": {
             "use_static_vips" :{
                "valid_values": [
