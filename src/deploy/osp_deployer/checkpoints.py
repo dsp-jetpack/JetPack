@@ -27,7 +27,7 @@ class Checkpoints():
         self.ping_success = "packets transmitted, 1 received"
         self.director_ip = self.settings.director_node.public_api_ip
         self.sah_ip = self.settings.sah_node.public_api_ip
-        self.rhscon_ip = self.settings.rhscon_node.public_api_ip
+        self.dashboard_ip = self.settings.dashboard_node.public_api_ip
         self.verify_rhsm_status = self.settings.verify_rhsm_status
 
     @staticmethod
@@ -250,15 +250,15 @@ class Checkpoints():
             raise AssertionError(
                 "Director VM cannot ping idrac network (ip) : " + test)
 
-    def rhscon_vm_health_check(self):
+    def dashboard_vm_health_check(self):
         logger.info("Storage Console VM health checks")
         if self.verify_rhsm_status:
             logger.debug(
                 "*** Verify the Storage Console VM registered properly ***")
             subscription_status = self.verify_subscription_status(
-                self.rhscon_ip,
+                self.dashboard_ip,
                 "root",
-                self.settings.rhscon_node.root_password,
+                self.settings.dashboard_node.root_password,
                 self.settings.subscription_check_retries)
             if "Current" not in subscription_status:
                 raise AssertionError(
@@ -267,19 +267,19 @@ class Checkpoints():
 
         logger.debug(
             "*** Verify the Storage Console VM can ping its public gateway")
-        test = self.ping_host(self.rhscon_ip,
+        test = self.ping_host(self.dashboard_ip,
                               "root",
-                              self.settings.rhscon_node.root_password,
+                              self.settings.dashboard_node.root_password,
                               self.settings.public_api_gateway)
         if self.ping_success not in test:
             raise AssertionError(
-                "RHSCON VM cannot ping its public gateway : " + test)
+                "Dashboard VM cannot ping its public gateway : " + test)
         logger.debug(
             "*** Verify the Storage Console VM " +
             "can ping the outside world (IP)")
-        test = self.ping_host(self.rhscon_ip,
+        test = self.ping_host(self.dashboard_ip,
                               "root",
-                              self.settings.rhscon_node.root_password,
+                              self.settings.dashboard_node.root_password,
                               "8.8.8.8")
         if self.ping_success not in test:
             raise AssertionError(
@@ -288,9 +288,9 @@ class Checkpoints():
 
         logger.debug("*** Verify the Storage Console VM can ping "
                      "the outside world (DNS)")
-        test = self.ping_host(self.rhscon_ip,
+        test = self.ping_host(self.dashboard_ip,
                               "root",
-                              self.settings.rhscon_node.root_password,
+                              self.settings.dashboard_node.root_password,
                               "google.com")
         if self.ping_success not in test:
             raise AssertionError(
@@ -300,9 +300,9 @@ class Checkpoints():
         logger.debug(
             "*** Verify the Storage Console VM can ping the SAH node "
             "through the storage network")
-        test = self.ping_host(self.rhscon_ip,
+        test = self.ping_host(self.dashboard_ip,
                               "root",
-                              self.settings.rhscon_node.root_password,
+                              self.settings.dashboard_node.root_password,
                               self.settings.sah_node.storage_ip)
         if self.ping_success not in test:
             raise AssertionError(
@@ -312,9 +312,9 @@ class Checkpoints():
         logger.debug(
             "*** Verify the Storage Console VM can ping the SAH "
             "node through the public network")
-        test = self.ping_host(self.rhscon_ip,
+        test = self.ping_host(self.dashboard_ip,
                               "root",
-                              self.settings.rhscon_node.root_password,
+                              self.settings.dashboard_node.root_password,
                               self.sah_ip)
         if self.ping_success not in test:
             raise AssertionError(
@@ -324,9 +324,9 @@ class Checkpoints():
         logger.debug(
             "*** Verify the Storage Console VM can ping the Director VM "
             "through the public network")
-        test = self.ping_host(self.rhscon_ip,
+        test = self.ping_host(self.dashboard_ip,
                               "root",
-                              self.settings.rhscon_node.root_password,
+                              self.settings.dashboard_node.root_password,
                               self.director_ip)
         if self.ping_success not in test:
             raise AssertionError(
