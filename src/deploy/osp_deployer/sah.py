@@ -197,7 +197,7 @@ class Sah(InfraHost):
     def clear_known_hosts(self):
         hosts = [
              self.settings.director_node.public_api_ip,
-             self.settings.rhscon_node.public_api_ip
+             self.settings.dashboard_node.public_api_ip
         ]
 
         if self.is_running_from_sah() is True:
@@ -212,7 +212,7 @@ class Sah(InfraHost):
 
     def handle_lock_files(self):
         files = [
-            'rhscon_vm.vlock',
+            'dashboard_vm.vlock',
             'director_vm.vlock',
         ]
 
@@ -227,7 +227,7 @@ class Sah(InfraHost):
 
         if self.settings.version_locking_enabled is True:
             logger.debug(
-                "Uploading version locking files for director & rhscon VMs")
+                "Uploading version locking files for director & dashboard VMs")
 
             for eachone in files:
                 source_file_name = self.settings.lock_files_dir + "/" + eachone
@@ -319,39 +319,39 @@ class Sah(InfraHost):
             self.run("virsh undefine director")
             time.sleep(20)
 
-    def create_rhscon_vm(self):
-        remote_file = "/root/deploy-rhscon-vm.py"
-        self.upload_file(self.settings.rhscon_deploy_py,
+    def create_dashboard_vm(self):
+        remote_file = "/root/deploy-dashboard-vm.py"
+        self.upload_file(self.settings.dashboard_deploy_py,
                          remote_file)
 
-        logger.debug("=== create rhscon.cfg")
-        rhscon_conf = "/root/rhscon.cfg"
-        self.run("rm " + rhscon_conf + " -f")
-        conf = ("rootpassword " + self.settings.rhscon_node.root_password,
+        logger.debug("=== create dashboard.cfg")
+        dashboard_conf = "/root/dashboard.cfg"
+        self.run("rm " + dashboard_conf + " -f")
+        conf = ("rootpassword " + self.settings.dashboard_node.root_password,
                 "timezone " + self.settings.time_zone,
                 "smuser " + self.settings.subscription_manager_user,
                 "smpassword " + self.settings.subscription_manager_password,
                 "smpool " + self.settings.subscription_manager_vm_ceph,
-                "hostname " + self.settings.rhscon_node.hostname + "." +
+                "hostname " + self.settings.dashboard_node.hostname + "." +
                 self.settings.domain,
                 "gateway " + self.settings.public_api_gateway,
                 "nameserver " + self.settings.name_server,
                 "ntpserver " + self.settings.sah_node.provisioning_ip,
                 "# Iface     IP               NETMASK    ",)
         conf = conf + ("eth0        " +
-                       self.settings.rhscon_node.public_api_ip +
+                       self.settings.dashboard_node.public_api_ip +
                        "    " + self.settings.public_api_netmask,)
         conf = conf + ("eth1        " +
-                       self.settings.rhscon_node.storage_ip +
+                       self.settings.dashboard_node.storage_ip +
                        "    " + self.settings.storage_netmask,)
 
         for comd in conf:
-            self.run("echo '" + comd + "' >> " + rhscon_conf)
+            self.run("echo '" + comd + "' >> " + dashboard_conf)
         logger.debug("=== kick off the Storage Console VM deployment")
 
         re = self.run_tty("python " +
                           remote_file +
-                          " /root/rhscon.cfg " +
+                          " /root/dashboard.cfg " +
                           "/store/data/iso/RHEL7.iso")
         startVM = True
         for ln in re[0].split("\n"):
@@ -362,20 +362,20 @@ class Sah(InfraHost):
                 "=== wait for the Storage Console VM install to be complete \
                 & power it on")
             while "shut off" \
-                  not in self.run("virsh list --all | grep rhscon")[0]:
+                  not in self.run("virsh list --all | grep dashboard")[0]:
                 time.sleep(60)
             logger.debug("=== power on the Storage Console VM ")
-            self.run("virsh start rhscon")
+            self.run("virsh start dashboard")
         logger.debug("=== waiting for the Storage Console vm to boot up")
-        self.wait_for_vm_to_come_up(self.settings.rhscon_node.public_api_ip,
+        self.wait_for_vm_to_come_up(self.settings.dashboard_node.public_api_ip,
                                     "root",
-                                    self.settings.rhscon_node.root_password)
+                                    self.settings.dashboard_node.root_password)
         logger.debug("Storage Console VM is up")
 
-    def delete_rhscon_vm(self):
+    def delete_dashboard_vm(self):
         # Also delete any leftover "ceph" VM so that it cannot interfere
-        # with the new "rhscon" VM that replaces it.
-        for vm in "ceph", "rhscon":
+        # with the new "dashboard" VM that replaces it.
+        for vm in "ceph", "dashboard":
             if vm in self.run("virsh list --all | grep {}".format(vm))[0]:
                 if vm == "ceph":
                     logger.info("=== deleting deprecated ceph VM")

@@ -53,13 +53,12 @@ fi
 
 repos=(
     rhel-7-server-rpms
-    rhel-7-server-rhscon-2-agent-rpms
     rhel-7-server-rhceph-2-mon-rpms
 )
 
 packages=(
     calamari-server
-    rhscon-agent
+    cephmetrics-collectors
 )
 
 function join { local IFS="$1"; shift; echo "$*"; }

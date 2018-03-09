@@ -1194,15 +1194,15 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
 
-    def configure_rhscon(self):
+    def configure_dashboard(self):
         logger.info("Configure Storage Console")
-        ip = self.settings.rhscon_node.public_api_ip
+        ip = self.settings.dashboard_node.public_api_ip
 
         self.run_tty(self.source_stackrc + 'cd ' +
                      self.pilot_dir +
-                     ';./config_rhscon.py ' +
+                     ';./config_dashboard.py ' +
                      ip +
-                     ' ' + self.settings.rhscon_node.root_password)
+                     ' ' + self.settings.dashboard_node.root_password)
 
     def enable_fencing(self):
         if self.settings.enable_fencing is True:

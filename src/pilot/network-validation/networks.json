@@ -43,7 +43,7 @@
                 "public_api"
             ]
         },
-        "rhscon_vm": {
+        "dashboard_vm": {
             "user": "root",
             "ip" : "10.148.44.14",
             "networks": [

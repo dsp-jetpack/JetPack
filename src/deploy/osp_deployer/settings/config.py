@@ -375,8 +375,8 @@ class Settings():
         self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
         self.director_deploy_sh = self.foreman_configuration_scripts +\
             '/mgmt/deploy-director-vm.sh'
-        self.rhscon_deploy_py = self.foreman_configuration_scripts +\
-            '/mgmt/deploy-rhscon-vm.py'
+        self.dashboard_deploy_py = self.foreman_configuration_scripts +\
+            '/mgmt/deploy-dashboard-vm.py'
 
         self.undercloud_conf = self.foreman_configuration_scripts +\
             '/pilot/undercloud.conf'
@@ -434,8 +434,8 @@ class Settings():
                 except AttributeError:
                     pass
                 try:
-                    if node.is_rhscon == "true":
-                        self.rhscon_node = node
+                    if node.is_dashboard == "true":
+                        self.dashboard_node = node
                 except AttributeError:
                     pass
                 try:

@@ -126,7 +126,7 @@ class Node:
                      password=self.password)
 
 
-def parse_arguments(rhscon_user):
+def parse_arguments(dashboard_user):
     """ Parses the input argments
     """
 
@@ -134,13 +134,13 @@ def parse_arguments(rhscon_user):
         description="Configures the Storage Console and overcloud Ceph nodes.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument("rhscon_addr",
+    parser.add_argument("dashboard_addr",
                         help="The IP address of the Storage Console on the"
                         " external network",
                         metavar="ADDR")
-    parser.add_argument("rhscon_pass",
+    parser.add_argument("dashboard_pass",
                         help="The {} password of the Storage Console".format(
-                            rhscon_user),
+                            dashboard_user),
                         metavar="PASSWORD")
 
     LoggingHelper.add_argument(parser)
@@ -230,7 +230,7 @@ def prep_machine_ids(nodes):
             node.update_machine_id()
 
 
-def prep_host_files(rhscon_node, ceph_nodes, calamari_node):
+def prep_host_files(dashboard_node, ceph_nodes, calamari_node):
     """ Prepares the /etc/hosts files on all systems
 
     The Storage Console prefers using domain names over IP addresses, and
@@ -238,12 +238,12 @@ def prep_host_files(rhscon_node, ceph_nodes, calamari_node):
     names are added to the /etc/hosts file on all relevant systems.
     """
 
-    prep_rhscon_hosts(rhscon_node, ceph_nodes)
-    prep_ceph_hosts(rhscon_node, ceph_nodes)
+    prep_dashboard_hosts(dashboard_node, ceph_nodes)
+    prep_ceph_hosts(dashboard_node, ceph_nodes)
     prep_calamari_hosts(calamari_node, ceph_nodes)
 
 
-def prep_rhscon_hosts(rhscon_node, ceph_nodes):
+def prep_dashboard_hosts(dashboard_node, ceph_nodes):
     """ Prepares the /etc/hosts file on the Storage Console
 
     Adds entries for every Ceph node so the Storage Console can access
@@ -251,10 +251,10 @@ def prep_rhscon_hosts(rhscon_node, ceph_nodes):
     """
 
     LOG.info("Preparing /etc/hosts file on Storage Console ({})".format(
-        rhscon_node.fqdn))
+        dashboard_node.fqdn))
 
-    tmp_hosts = os.path.join("/tmp", "hosts-{}".format(rhscon_node.fqdn))
-    rhscon_node.get(tmp_hosts, Node.etc_hosts)
+    tmp_hosts = os.path.join("/tmp", "hosts-{}".format(dashboard_node.fqdn))
+    dashboard_node.get(tmp_hosts, Node.etc_hosts)
 
     host_entries = []
     with open(tmp_hosts, "r") as f:
@@ -280,10 +280,10 @@ def prep_rhscon_hosts(rhscon_node, ceph_nodes):
         f.write(end_banner)
 
     # Upload the new file to the Storage Console
-    rhscon_node.put(tmp_hosts, tmp_hosts)
-    rhscon_node.run("sudo cp {} {}.bak".format(Node.etc_hosts, Node.etc_hosts))
-    rhscon_node.run("sudo mv {} {}".format(tmp_hosts, Node.etc_hosts))
-    rhscon_node.run("sudo restorecon {}".format(Node.etc_hosts))
+    dashboard_node.put(tmp_hosts, tmp_hosts)
+    dashboard_node.run("sudo cp {} {}.bak".format(Node.etc_hosts, Node.etc_hosts))
+    dashboard_node.run("sudo mv {} {}".format(tmp_hosts, Node.etc_hosts))
+    dashboard_node.run("sudo restorecon {}".format(Node.etc_hosts))
     os.unlink(tmp_hosts)
 
 
@@ -304,7 +304,7 @@ def configure_access(ceph_nodes):
         node.run("sudo service iptables save")
 
 
-def prep_ceph_hosts(rhscon_node, ceph_nodes):
+def prep_ceph_hosts(dashboard_node, ceph_nodes):
     """ Prepares the /etc/hosts file on the Ceph nodes
 
     Adds an entry to every Ceph node's host file for the Storage Console's
@@ -313,7 +313,7 @@ def prep_ceph_hosts(rhscon_node, ceph_nodes):
 
     LOG.info("Preparing /etc/hosts file on Ceph nodes")
     LOG.debug("Adding '{}\t{}'".format(
-        rhscon_node.storage_ip, rhscon_node.fqdn))
+        dashboard_node.storage_ip, dashboard_node.fqdn))
 
     beg_banner = "# Entries added for Storage Console - Start\n"
     end_banner = "# Entries added for Storage Console - End\n"
@@ -339,8 +339,8 @@ def prep_ceph_hosts(rhscon_node, ceph_nodes):
         with open(tmp_hosts, "w") as f:
             f.writelines(host_entries)
             f.write("{}{}\t{}\n{}".format(
-                beg_banner, rhscon_node.storage_ip,
-                rhscon_node.fqdn, end_banner))
+                beg_banner, dashboard_node.storage_ip,
+                dashboard_node.fqdn, end_banner))
 
         # Upload the new file to the node
         node.put(tmp_hosts, tmp_hosts)
@@ -423,7 +423,7 @@ def prep_calamari_hosts(calamari_node, ceph_nodes):
     os.unlink(tmp_hosts)
 
 
-def start_rhscon_skyring(rhscon_node):
+def start_dashboard_skyring(dashboard_node):
     """ Starts the Skyring service on the Storage Console
 
     Skyring is the name of the service that implements the Storage Console's
@@ -432,7 +432,7 @@ def start_rhscon_skyring(rhscon_node):
     """
 
     LOG.info("Starting 'skyring' on Storage Console ({})".format(
-        rhscon_node.fqdn))
+        dashboard_node.fqdn))
 
     # NOTE: "skyring-setup is a short Python script, and one of the first
     # things it does is initialize the Django database that is used to store
@@ -448,27 +448,27 @@ def start_rhscon_skyring(rhscon_node):
     #
     # Find the exact command that will run Django's "syncdb". Then run the
     # command with an additional "--noinput" argument.
-    syncdb_cmd = rhscon_node.run("grep syncdb $(which skyring-setup)")
-    rhscon_node.run("{} --noinput".format(syncdb_cmd))
+    syncdb_cmd = dashboard_node.run("grep syncdb $(which skyring-setup)")
+    dashboard_node.run("{} --noinput".format(syncdb_cmd))
 
     # Now run the "skyring-setup" and specify answers for the two questions
     # it will ask:
     #    1) The public FQDN or IP of the Storage Console
     #    2) Whether we want to create a self-signed SSL certificate
-    rhscon_node.run("skyring-setup <<EOF\n"
+    dashboard_node.run("skyring-setup <<EOF\n"
                     "{}\n"
                     "y\n"
-                    "EOF".format(rhscon_node.address))
+                    "EOF".format(dashboard_node.address))
 
     # Restart the service so it picks up the new configuration
-    rhscon_node.run("systemctl restart skyring")
+    dashboard_node.run("systemctl restart skyring")
 
     # Pause for a bit to give the service time to come up. That way it's
     # ready before we try to install the console agent on the Ceph nodes.
     time.sleep(5)
 
 
-def install_console_agent(rhscon_node, ceph_nodes):
+def install_console_agent(dashboard_node, ceph_nodes):
     """ Installs the Storage Console agent on all Ceph nodes
 
     The console agent installation is pretty clever. Each node tickles a
@@ -493,7 +493,7 @@ def install_console_agent(rhscon_node, ceph_nodes):
     # script that converts "\n" (two characters) into a single '\n' newline.
     # Note that each '\' has to be escaped for Python.
     check_task_cmd = "curl -sS http://{}:8181/api/tasks/ |" \
-                     " sed -e 's/\\\\n/\\n/g'".format(rhscon_node.storage_ip)
+                     " sed -e 's/\\\\n/\\n/g'".format(dashboard_node.storage_ip)
 
     for node in ceph_nodes:
         LOG.debug("Installing the agent on {} ({})".format(
@@ -501,7 +501,7 @@ def install_console_agent(rhscon_node, ceph_nodes):
 
         # Tickle the RESTful API to trigger the console agent installation
         node.run("curl -sS http://{}:8181/setup/agent/ | sudo bash".format(
-            rhscon_node.storage_ip))
+            dashboard_node.storage_ip))
 
         # Poll a while until the installation task completes
         result = ""
@@ -539,7 +539,7 @@ def install_console_agent(rhscon_node, ceph_nodes):
     # End of install_console_agent
 
 
-def start_calamari_server(rhscon_node, calamari_node):
+def start_calamari_server(dashboard_node, calamari_node):
     """Starts the Calamari server
 
     Runs the command that initialzes and starts the Calamari server (one
@@ -568,80 +568,32 @@ def start_calamari_server(rhscon_node, calamari_node):
     # NOTE: This is where the Calamari server credentials are hard-coded
     calamari_node.run("sudo calamari-ctl initialize --admin-username admin"
                       " --admin-password admin --admin-email admin@{}".format(
-                          rhscon_node.fqdn))
-
-
-def check_bz_1403576(rhscon_node, ceph_node):
-    """ Checks whether BZ 1403576 will prevent installing the console agent
-
-    Check the ceph-ansible version on the Storage Console. If it's old
-    (pre-2.0) then there will be a problem installing the Storage Console agent
-    on the Ceph nodes unless the Overcloud nodes are registered.
-    """
-
-    ceph_ansible_version = rhscon_node.run(
-        "yum list ceph-ansible | awk '$1 ~ /ceph-ansible/ {print $2}'")
-
-    LOG.info("Storage Console has ceph-ansible-{}".format(
-        ceph_ansible_version))
-    if ceph_ansible_version.startswith("2."):
-        return
-
-    _, stdout, _ = rhscon_node.execute("sudo grep ignore_errors " +
-                                       "/usr/share/ceph-ansible/" +
-                                       "roles/ceph-agent/tasks/" +
-                                       "pre_requisite.yml")
-
-    if "ignore_errors" not in stdout:
-        LOG.warn("Patching /usr/share/ceph-ansible on {}".format(
-            rhscon_node.fqdn))
-        LOG.warn("See https://bugzilla.redhat.com/show_bug.cgi?id=1403576"
-                 " for details")
-        rhscon_node.run("yum -y install patch")
-        rhscon_node.run("""
-cat << EOF | patch -b -d /usr/share/ceph-ansible/roles/ceph-agent/tasks
---- pre_requisite.yml.orig
-+++ pre_requisite.yml
-@@ -2,6 +2,7 @@
- - name: determine if node is registered with subscription-manager.
-   command: subscription-manager identity
-   register: subscription
-+  ignore_errors: true
-   changed_when: false
-   when:
-     ansible_os_family == 'RedHat'
-EOF
-""")
+                          dashboard_node.fqdn))
 
 
 def main():
     """ Configures the Storage Console and Ceph nodes
     """
 
-    rhscon_user = "root"
-    args = parse_arguments(rhscon_user)
+    dashboard_user = "root"
+    args = parse_arguments(dashboard_user)
     LOG.setLevel(args.logging_level)
 
-    rhscon_node = Node(args.rhscon_addr, rhscon_user, args.rhscon_pass)
-    rhscon_node.initialize()
+    dashboard_node = Node(args.dashboard_addr, dashboard_user, args.dashboard_pass)
+    dashboard_node.initialize()
 
     LOG.info("Configuring Storage Console on {} ({})".format(
-        rhscon_node.address, rhscon_node.fqdn))
+        dashboard_node.address, dashboard_node.fqdn))
 
     ceph_nodes = get_ceph_nodes(username="heat-admin")
     calamari_node = get_calamari_node(ceph_nodes)
 
-    # Make sure BZ 1403576 won't bite us. This check can be removed once
-    # an upstream fix reaches CDN, and that should happen before JS-7
-    # is released.
-    check_bz_1403576(rhscon_node, calamari_node)
-
     prep_machine_ids(ceph_nodes)
-    prep_host_files(rhscon_node, ceph_nodes, calamari_node)
+    prep_host_files(dashboard_node, ceph_nodes, calamari_node)
 
-    start_rhscon_skyring(rhscon_node)
-    install_console_agent(rhscon_node, ceph_nodes)
-    start_calamari_server(rhscon_node, calamari_node)
+    #start_dashboard_skyring(dashboard_node)
+    #install_console_agent(dashboard_node, ceph_nodes)
+    #start_calamari_server(dashboard_node, calamari_node)
 
     LOG.info("Storage Console configuration is complete")
 
