@@ -118,6 +118,11 @@ yum-utils
 # installed system for later use.
   cp -v /tmp/dashboard-pre.log /mnt/sysimage/root
   cp -v /tmp/ks_include.txt /mnt/sysimage/root
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root
+  mkdir -p /mnt/sysimage/root/dashboard-ks-logs
+  cp -v /tmp/dashboard-pre.log /mnt/sysimage/root/dashboard-ks-logs
+  cp -v /tmp/ks_include.txt /mnt/sysimage/root/dashboard-ks-logs
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/dashboard-ks-logs
 %end
 
 
