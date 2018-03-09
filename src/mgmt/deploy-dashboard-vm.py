@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2017 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2018 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -113,12 +113,11 @@ yum-utils
     ks_part_3 = """
 %end
 
-%post --nochroot --logfile /tmp/dashboard-post.log
+%post --nochroot --logfile /root/dashboard-post.log
 # Copy the files created during the %pre section to /root of the
 # installed system for later use.
-  mkdir -p /mnt/sysimage/root/dashboard-ks-logs
-  cp -v /tmp/dashboard-pre.log /mnt/sysimage/root/dashboard-ks-logs
-  cp -v /tmp/ks_include.txt /mnt/sysimage/root/dashboard-ks-logs
+  cp -v /tmp/dashboard-pre.log /mnt/sysimage/root
+  cp -v /tmp/ks_include.txt /mnt/sysimage/root
 %end
 
 
@@ -253,7 +252,7 @@ EOIP
 
   yum -y update
 
-) 2>&1 | /usr/bin/tee -a /tmp/dashboard-post.log
+) 2>&1 | /usr/bin/tee -a /root/dashboard-post.log
 
 chvt 6
 
