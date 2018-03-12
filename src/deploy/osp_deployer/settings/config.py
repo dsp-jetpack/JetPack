@@ -239,10 +239,10 @@ class Settings():
         else:
             self.enable_instance_ha = False
 
-        if deploy_settings['enable_dvr'].lower() == 'true':
-            self.enable_dvr = True
+        if deploy_settings['dvr_enable'].lower() == 'true':
+            self.dvr_enable = True
         else:
-            self.enable_dvr = False
+            self.dvr_enable = False
 
         self.overcloud_nodes_pwd = deploy_settings['overcloud_nodes_pwd']
 

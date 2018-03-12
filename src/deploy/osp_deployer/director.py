@@ -876,8 +876,8 @@ class Director(InfraHost):
             cmd += " --static_ips"
         if self.settings.use_static_vips is True:
             cmd += " --static_vips"
-        if self.settings.enable_dvr is True:
-            cmd += " --enable_dvr"
+        if self.settings.dvr_enable is True:
+            cmd += " --dvr_enable"
         # Node placement is required in an automated install.  The index order
         # of the nodes is the order in which they are defined in the
         # .properties file
