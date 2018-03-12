@@ -241,8 +241,6 @@ class Settings():
         self.overcloud_nodes_pwd = deploy_settings['overcloud_nodes_pwd']
         dellnfv_settings = self.get_settings_section(
             "Dell NFV Settings")
-        dellnfv_settings = self.get_settings_section(
-            "Dell NFV Settings")
         if dellnfv_settings['hpg_enable'].lower() == 'true':
             self.hpg_enable = True
         self.hpg_flavor_name_list = dellnfv_settings['hpg_flavor_name_list']
