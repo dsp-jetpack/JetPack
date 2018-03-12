@@ -445,7 +445,6 @@ class Settings():
             '/pilot/templates/dell-environment.yaml'
         self.neutron_ovs_dpdk_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/neutron-ovs-dpdk.yaml'
-                '/pilot/templates/nic-configs/controller.yaml'
         if self.enable_ovs_dpdk:
             mode = str(self.ovs_dpdk_mode)
             compute_file_name = 'compute-ovs-dpdk-mode' + mode + '.yaml'
