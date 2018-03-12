@@ -423,7 +423,7 @@ class NodeConfig:
             # Close the ssh connection
             self.ssh_connection.close()
 
-    def pull_file_from_remote_machine(self, remote_path, local_path):
+    def pull_file(self, remote_path, local_path):
         try:
             print "Pulling puppet log from dell nodes"
             # Create the ftp connection
@@ -444,7 +444,7 @@ class NodeConfig:
             except Exception:
                 print "Failed to create ftp connection"
 
-    def delete_file_from_remote_machine(self, file_path):
+    def delete_file(self, file_path):
         try:
             print "Deleting puppet log from dell nodes"
 
@@ -535,7 +535,7 @@ def edit_dell_environment_file(enable_hugepage,
                         "at location {}".format(file_path))
 
 
-def parse_dell_config_log_file(log_file_path):
+def parse_log(log_file_path):
     try:
         print "Parsing dell config log file"
 
@@ -607,8 +607,8 @@ def post_deployment_tasks(enable_hugepage, enable_numa):
                 print error
             print "{}".format(dell_compute_nodes)
 
-            hpg_log_file_local_path = '/tmp/dellnfv_hpg_config.log'
-            hpg_log_file_remote_path = '/tmp/dellnfv_hpg_config.log'
+            hp_logfile_local_path = '/tmp/dellnfv_hpg_config.log'
+            hp_logfile_remote_path = '/tmp/dellnfv_hpg_config.log'
 
             numa_log_file_local_path = '/tmp/dellnfv_numa_config.log'
             numa_log_file_remote_path = '/tmp/dellnfv_numa_config.log'
@@ -623,31 +623,33 @@ def post_deployment_tasks(enable_hugepage, enable_numa):
                         huge_page_status = ""
                         compute_config_obj.ssh_connect()
                         # Pull the huge page log file
-                        compute_config_obj.pull_file_from_remote_machine(hpg_log_file_remote_path, hpg_log_file_local_path)
+                        compute_config_obj.pull_file(hp_logfile_remote_path,
+                                                     hp_logfile_local_path)
                         # Parse the huge page log file
-                        huge_page_status = parse_dell_config_log_file(hpg_log_file_local_path)
+                        huge_page_status = parse_log(hp_logfile_local_path)
                         huge_page_status_dict[compute[1]] = huge_page_status
 
                     if enable_numa:
                         numa_status = ""
                         compute_config_obj.ssh_connect()
                         # Pull the numa log file
-                        compute_config_obj.pull_file_from_remote_machine(numa_log_file_remote_path, numa_log_file_local_path)
+                        compute_config_obj.pull_file(numa_log_file_remote_path,
+                                                     numa_log_file_local_path)
                         # Parse the numa log file
-                        numa_status = parse_dell_config_log_file(numa_log_file_local_path)
+                        numa_status = parse_log(numa_log_file_local_path)
                         numa_status_dict[compute[1]] = numa_status
 
                     if enable_hugepage:
                         # Delete the hugepage log file from remote machine
                         compute_config_obj.ssh_connect()
-                        compute_config_obj.delete_file_from_remote_machine(hpg_log_file_remote_path)
+                        compute_config_obj.delete_file(hp_logfile_remote_path)
                         # Delete the huge page log file from director
-                        delete_file_from_local_machine(hpg_log_file_local_path)
+                        delete_file_from_local_machine(hp_logfile_local_path)
 
                     if enable_numa:
                         # Delete the numa log file from remote machine
                         compute_config_obj.ssh_connect()
-                        compute_config_obj.delete_file_from_remote_machine(numa_log_file_remote_path)
+                        compute_config_obj.delete_file(numa_log_file_remote_path)
                         # Delete the numa log file from director
                         delete_file_from_local_machine(numa_log_file_local_path)
             else:
