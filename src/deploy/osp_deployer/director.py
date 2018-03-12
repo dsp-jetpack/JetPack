@@ -868,7 +868,8 @@ class Director(InfraHost):
         if self.settings.hpg_enable is True:
             cmd += " --enable_hugepage "
             cmd += " --hugepage_size " + self.settings.hpg_size
-            cmd += " --hugepage_flavor_list " + self.settings.hpg_flavor_name_list
+            cmd += " --hugepage_flavor_list " + \
+                   self.settings.hpg_flavor_name_list
 
         if self.settings.numa_enable is True:
             cmd += " --enable_numa "
