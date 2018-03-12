@@ -156,7 +156,7 @@ class DeployerSanity():
                     raise AssertionError(each.public_api_ip +
                                          " in .properties is in the public" +
                                          " api allocation pool range defined" +
-                                         "in the .ini")
+                                         " in the .ini")
         if self.settings.use_static_vips is True:
             if int(start) <= int(
                     self.settings.public_api_vip.split(".")[-1]) <= int(end):
