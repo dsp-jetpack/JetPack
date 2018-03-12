@@ -471,37 +471,6 @@ class NodeConfig:
                 print "Failed to create ftp connection"
 
 
-def validate_flavor_name(flavor_list):
-    print "Validating flavor name"
-    for flavor_name in flavor_list:
-        allowed_flavor_name = set(string.ascii_lowercase +
-                                  string.ascii_uppercase +
-                                  string.digits +
-                                  '.' +
-                                  '_' +
-                                  "-")
-        if set(flavor_name) <= allowed_flavor_name:
-            print "Valid flavor name {}".format(flavor_name)
-        else:
-            raise ValueError("Not a valid flavor name {}".format(flavor_name))
-
-
-def validate_hugepage_params(hugepage_size):
-    print "Validating hugepage params"
-    if hugepage_size not in valid_hpage_size:
-        raise ValueError("Invalid huge page size {}. "
-                         "Valid values are {}".format(hugepage_size,
-                                                      valid_hpage_size))
-
-
-def validate_numa_params(hostos_cpus):
-    print "Validating numa params"
-    if hostos_cpus not in valid_hostos_cpus:
-            raise ValueError("Invalid hostos_cpus value {} "
-                             "valid values are {}.".format(hostos_cpus,
-                                                           valid_hostos_cpus))
-
-
 def edit_dell_environment_file(enable_hugepage,
                                enable_numa,
                                hugepage_size,
@@ -1114,18 +1083,6 @@ def main():
         print "hugepage_flavor_list {}".format(args.hugepage_flavor_list)
         print "numa_flavor_list {}".format(args.numa_flavor_list)
         print "================================="
-
-        # Dell Nfv feature related Input validations
-        hugepage_flavor_list = []
-        if args.enable_hugepage:
-                hugepage_flavor_list = args.hugepage_flavor_list.split(',')
-                validate_hugepage_params(args.hugepage_size)
-                validate_flavor_name(hugepage_flavor_list)
-        numa_flavor_list = []
-        if args.enable_numa:
-            numa_flavor_list = args.numa_flavor_list.split(',')
-            validate_numa_params(args.hostos_cpus)
-            validate_flavor_name(numa_flavor_list)
 
         os_auth_url, os_tenant_name, os_username, os_password = \
             CredentialHelper.get_undercloud_creds()
