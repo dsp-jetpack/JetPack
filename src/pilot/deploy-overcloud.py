@@ -264,7 +264,7 @@ def main():
                             action='store_true',
                             default=False,
                             help="Disable cinder Ceph and rbd backend")
-        parser.add_argument('--enable_dvr',
+        parser.add_argument('--dvr_enable',
                             action='store_true',
                             default=False,
                             help="Enables Distributed Virtual Routing")
@@ -367,7 +367,7 @@ def main():
 
         # The neutron-ovs-dvr.yaml.yaml must be included after the
         # network-environment.yaml
-        if args.enable_dvr:
+        if args.dvr_enable:
             env_opts += " -e ~/pilot/templates/neutron-ovs-dvr.yaml"
 
         if args.node_placement:
