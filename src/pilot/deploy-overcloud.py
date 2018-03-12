@@ -369,11 +369,11 @@ class NodeConfig:
     def close_ssh_connection(self):
         self.ssh_connection.close()
 
-    def execute_command(self, command):
+    def execute_cmd(self, command):
         command = "sudo " + command
         print "Executing command {} on {}".format(command, self.ip_address)
         time.sleep(1)
-        ssh_stdin, ssh_stdout, ssh_stderr = self.ssh_connection.exec_command(command)
+        ssh_stdin, ssh_stdout, ssh_stderr = self.ssh_connection.cmd(command)
         time.sleep(1)
         return ssh_stdout.readlines(), ssh_stderr.readlines()
 
@@ -390,7 +390,7 @@ class NodeConfig:
                       "NUMATopologyFilter," \
                       "AggregateInstanceExtraSpecsFilter"
             # Execute the command to check if filters already set
-            ssh_stdout_list, ssh_stderr_list = self.execute_command(filter_cmd)
+            ssh_stdout_list, ssh_stderr_list = self.execute_cmd(filter_cmd)
             if len(ssh_stdout_list) > 0:
                 if filters in ssh_stdout_list[0]:
                     print "Nova schedular filters already exists on {} " \
@@ -400,7 +400,7 @@ class NodeConfig:
             # Execute the update filter command
             update_filter = '/usr/bin/crudini --set /etc/nova/nova.conf ' \
                             'DEFAULT scheduler_default_filters ' + filters
-            ssh_stdout_list, ssh_stderr_list = self.execute_command(update_filter)
+            ssh_stdout_list, ssh_stderr_list = self.execute_cmd(update_filter)
             if ssh_stderr_list:
                 raise Exception("Command execution failed "
                                 "with error {}".format(ssh_stderr_list))
@@ -408,7 +408,7 @@ class NodeConfig:
                 # Execute the restart scheduler service command
                 sched_cmd = "/usr/bin/systemctl " \
                             "restart openstack-nova-scheduler.service"
-                ssh_stdout_list, ssh_stderr_list = self.execute_command(sched_cmd)
+                ssh_stdout_list, ssh_stderr_list = self.execute_cmd(sched_cmd)
                 time.sleep(2)
 
                 if ssh_stderr_list:
@@ -444,7 +444,7 @@ class NodeConfig:
             except Exception:
                 print "Failed to create ftp connection"
 
-    def delete_file(self, file_path):
+    def del_file(self, file_path):
         try:
             print "Deleting puppet log from dell nodes"
 
@@ -566,7 +566,7 @@ def parse_log(log_file_path):
               "with error {}".format(log_file_path, message)
 
 
-def delete_file_from_local_machine(file_path):
+def del_file_from_local_machine(file_path):
     try:
         if not os.path.isfile(file_path):
             raise Exception("File does not exist "
@@ -577,7 +577,8 @@ def delete_file_from_local_machine(file_path):
         print "cmd: {}".format(cmd)
         if status != 0:
             raise Exception("Failed to execute the "
-                            "command {} with error code {}".format(cmd, status))
+                            "command {} with error " +
+                            "code {}".format(cmd, status))
     except Exception as error:
         message = "Exception {}: {}".format(type(error).__name__, str(error))
         print "Failed to delete the file from local machine " \
@@ -642,16 +643,16 @@ def post_deployment_tasks(enable_hugepage, enable_numa):
                     if enable_hugepage:
                         # Delete the hugepage log file from remote machine
                         compute_config_obj.ssh_connect()
-                        compute_config_obj.delete_file(hp_logfile_remote_path)
+                        compute_config_obj.del_file(hp_logfile_remote_path)
                         # Delete the huge page log file from director
-                        delete_file_from_local_machine(hp_logfile_local_path)
+                        del_file_from_local_machine(hp_logfile_local_path)
 
                     if enable_numa:
                         # Delete the numa log file from remote machine
                         compute_config_obj.ssh_connect()
-                        compute_config_obj.delete_file(numa_log_file_remote_path)
+                        compute_config_obj.del_file(numa_log_file_remote_path)
                         # Delete the numa log file from director
-                        delete_file_from_local_machine(numa_log_file_local_path)
+                        del_file_from_local_machine(numa_log_file_local_path)
             else:
                 print "Failed to get dell node details"
 
