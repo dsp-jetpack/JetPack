@@ -725,8 +725,11 @@ class Director(InfraHost):
                          neutron_ovs_dpdk_yaml)
 
         self.setup_nic_configuration()
-	# TODO: Format Network file for DPDK
+
         if self.settings.enable_ovs_dpdk is True:
+            mode = str(self.settings.ovs_dpdk_mode)
+            compute_file_name = "compute-ovs-dpdk-mode" + mode + ".yaml"
+            compute_yaml = self.nic_configs_dir + "/" + compute_file_name
             logger.debug("setting ovs dpdk environment")
             cmd = "python " + self.pilot_dir + "/ovs_dpdk_setup.py" \
                   + " --env_file " + neutron_ovs_dpdk_yaml \
@@ -742,7 +745,6 @@ class Director(InfraHost):
                                                          stdout))
             else:
                 logger.debug("OVS-DPDK environment setup successful.")
-
 
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
