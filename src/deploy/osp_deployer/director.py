@@ -866,9 +866,9 @@ class Director(InfraHost):
                                     self.settings.sah_node.provisioning_ip
 
         if self.settings.hpg_enable is True:
-            cmd += " --enable_hugepage "
-            cmd += " --hugepage_size " + self.settings.hpg_size
-            cmd += " --hugepage_flavor_list " + \
+            cmd += " --enable_hugepages "
+            cmd += " --hugepages_size " + self.settings.hpg_size
+            cmd += " --hugepages_flavor_list " + \
                    self.settings.hpg_flavor_name_list
 
         if self.settings.numa_enable is True:
