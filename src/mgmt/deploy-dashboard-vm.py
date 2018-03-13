@@ -106,23 +106,23 @@ yum-plugin-versionlock
 yum-utils
 %end
 
-%pre --log /tmp/rhscon-pre.log
+%pre --log /tmp/dashboard-pre.log
 
 """
 
     ks_part_3 = """
 %end
 
-%post --nochroot --logfile /root/rhscon-post.log
+%post --nochroot --logfile /root/dashboard-post.log
 # Copy the files created during the %pre section to /root of the
 # installed system for later use.
-  cp -v /tmp/rhscon-pre.log /mnt/sysimage/root
+  cp -v /tmp/dashboard-pre.log /mnt/sysimage/root
   cp -v /tmp/ks_include.txt /mnt/sysimage/root
   cp -v /tmp/ks_post_include.txt /mnt/sysimage/root
-  mkdir -p /mnt/sysimage/root/rhscon-ks-logs
-  cp -v /tmp/rhscon-pre.log /mnt/sysimage/root/rhscon-ks-logs
-  cp -v /tmp/ks_include.txt /mnt/sysimage/root/rhscon-ks-logs
-  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/rhscon-ks-logs
+  mkdir -p /mnt/sysimage/root/dashboard-ks-logs
+  cp -v /tmp/dashboard-pre.log /mnt/sysimage/root/dashboard-ks-logs
+  cp -v /tmp/ks_include.txt /mnt/sysimage/root/dashboard-ks-logs
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/dashboard-ks-logs
 %end
 
 
@@ -191,8 +191,9 @@ attach to. - Auto-attaching to any pool." ; \\
 
   subscription-manager repos ${ProxyInfo} --disable=* \\
     --enable=rhel-7-server-rpms \\
-    --enable=rhel-7-server-rhscon-2-main-rpms \\
-    --enable=rhel-7-server-rhscon-2-installer-rpms
+    --enable=rhel-7-server-extras-rpms \\
+    --enable=rhel-7-server-rh-common-rpms \\
+    --enable=rhel-7-server-rhceph-2-tools-rpms
 
   cat <<EOIP > /etc/sysconfig/iptables
 *filter
@@ -206,6 +207,9 @@ attach to. - Auto-attaching to any pool." ; \\
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 2003 -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 2004 -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 3000 -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 7002 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 4505 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 4506 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 6789 -j ACCEPT
@@ -242,7 +246,7 @@ EOIP
   echo "heat-admin ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/heat-admin
   echo "Defaults:heat-admin !requiretty" >> /etc/sudoers.d/heat-admin
 
-  /usr/bin/yum install -y rhscon-core rhscon-ceph rhscon-ui
+  /usr/bin/yum install -y cephmetrics-ansible libselinux-python
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -253,12 +257,7 @@ EOIP
 
   yum -y update
 
-  systemctl disable NetworkManager
-  systemctl disable firewalld
-  systemctl disable chronyd
-
-
-) 2>&1 | /usr/bin/tee -a /root/rhscon-post.log
+) 2>&1 | /usr/bin/tee -a /root/dashboard-post.log
 
 chvt 6
 
@@ -376,7 +375,7 @@ def create_floppy_image(vlock_filename, floppy_image):
     subprocess.check_call("mkfs.vfat -C {} 1440".format(floppy_image),
                           shell=True)
 
-    floppy_mnt = "/tmp/mnt-rhscon"
+    floppy_mnt = "/tmp/mnt-dashboard"
     os.mkdir(floppy_mnt)
 
     subprocess.check_call("mount -o loop {} {}".format(floppy_image,
@@ -392,13 +391,13 @@ def create_floppy_image(vlock_filename, floppy_image):
 def main():
     args = parse_arguments()
 
-    ks_filename = "rhscon.ks"
+    ks_filename = "dashboard.ks"
     ks_tmp_filename = os.path.join("/tmp", ks_filename)
     create_kickstart(ks_tmp_filename, args.cfg_filename)
 
     images_path = "/store/data/images"
-    rhscon_image = os.path.join(images_path, "rhscon.img")
-    floppy_image = os.path.join(images_path, "rhscon-floppy.img")
+    dashboard_image = os.path.join(images_path, "dashboard.img")
+    floppy_image = os.path.join(images_path, "dashboard-floppy.img")
 
     # Ensure the images directory exists
     try:
@@ -414,13 +413,13 @@ def main():
 
     virt_install_args = [
         "virt-install",
-        "--name rhscon",
+        "--name dashboard",
         "--memory 16384",
         "--vcpus 4",
         "--hvm",
         "--os-type linux",
         "--os-variant rhel7",
-        "--disk {},bus=virtio,size=16".format(rhscon_image),
+        "--disk {},bus=virtio,size=16".format(dashboard_image),
         "--network bridge=br-pub-api",
         "--network bridge=br-stor",
         "--initrd-inject {}".format(ks_tmp_filename),
@@ -432,7 +431,7 @@ def main():
     ]
 
     # If the vlock file exists then add it to the floppy image
-    vlock_filename = "rhscon_vm.vlock"
+    vlock_filename = "dashboard_vm.vlock"
     if os.access(vlock_filename, os.R_OK):
         create_floppy_image(vlock_filename, floppy_image)
         virt_install_args.append("--disk {},device=floppy".format(
