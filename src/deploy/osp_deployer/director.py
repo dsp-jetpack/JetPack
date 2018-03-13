@@ -727,9 +727,10 @@ class Director(InfraHost):
         self.setup_nic_configuration()
 
         if self.settings.enable_ovs_dpdk is True:
+            nic_config_dirname = os.path.dirname(self.settings.nic_env_file)
             mode = str(self.settings.ovs_dpdk_mode)
             compute_file_name = "compute-ovs-dpdk-mode" + mode + ".yaml"
-            compute_yaml = self.nic_configs_dir + "/" + compute_file_name
+            compute_yaml = self.nic_configs_dir + "/" + nic_config_dirname + "/" + compute_file_name
             logger.debug("setting ovs dpdk environment")
             cmd = "python " + self.pilot_dir + "/ovs_dpdk_setup.py" \
                   + " --env_file " + neutron_ovs_dpdk_yaml \
