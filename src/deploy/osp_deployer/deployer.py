@@ -50,7 +50,7 @@ def get_settings():
     parser.add_argument('-overcloud_only', '--overcloud_only',
                         help='Only reinstall the overcloud',
                         action='store_true', required=False)
-    parser.add_argument('-skip_rhscon_vm', '--skip_rhscon_vm',
+    parser.add_argument('-skip_dashboard_vm', '--skip_dashboard_vm',
                         help='Do not reinstall the Storage Console VM',
                         action='store_true',
                         required=False)
@@ -93,7 +93,7 @@ def deploy():
         parser.add_argument('-overcloud_only', '--overcloud_only',
                             help='Only reinstall the overcloud',
                             action='store_true', required=False)
-        parser.add_argument('-skip_rhscon_vm', '--skip_rhscon_vm',
+        parser.add_argument('-skip_dashboard_vm', '--skip_dashboard_vm',
                             help='Do not reinstall the Storage Console VM',
                             action='store_true',
                             required=False)
@@ -113,7 +113,7 @@ def deploy():
         else:
             if args.overcloud_only is True:
                 logger.info("Only redeploying the overcloud")
-            if args.skip_rhscon_vm is True:
+            if args.skip_dashboard_vm is True:
                 logger.info("Skipping Storage Console VM install")
 
         logger.debug("loading settings files " + args.settings)
@@ -182,25 +182,25 @@ def deploy():
             logger.debug("Deleting overcloud stack")
             director_vm.delete_overcloud()
 
-        if args.skip_rhscon_vm is False:
+        if args.skip_dashboard_vm is False:
             logger.debug("Delete the Storage Console VM")
-            rhscon_ip = settings.rhscon_node.public_api_ip
+            dashboard_ip = settings.dashboard_node.public_api_ip
             logger.debug(
-                Ssh.execute_command(rhscon_ip,
+                Ssh.execute_command(dashboard_ip,
                                     "root",
-                                    settings.rhscon_node.root_password,
+                                    settings.dashboard_node.root_password,
                                     "subscription-manager remove --all"))
-            Ssh.execute_command(rhscon_ip,
+            Ssh.execute_command(dashboard_ip,
                                 "root",
-                                settings.rhscon_node.root_password,
+                                settings.dashboard_node.root_password,
                                 "subscription-manager unregister")
 
-            sah_node.delete_rhscon_vm()
+            sah_node.delete_dashboard_vm()
 
             logger.info("=== creating Storage Console VM")
-            sah_node.create_rhscon_vm()
+            sah_node.create_dashboard_vm()
 
-            tester.rhscon_vm_health_check()
+            tester.dashboard_vm_health_check()
 
         else:
             logger.info("Skipped the Storage Console VM install")
@@ -243,8 +243,8 @@ def deploy():
         director_vm.retreive_nodes_ips()
         tester.verify_computes_virtualization_enabled()
         tester.verify_backends_connectivity()
-        if args.skip_rhscon_vm is False:
-            director_vm.configure_rhscon()
+        if args.skip_dashboard_vm is False:
+            director_vm.configure_dashboard()
         director_vm.enable_fencing()
         director_vm.enable_instance_ha()
         director_vm.configure_tempest()
