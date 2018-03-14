@@ -888,8 +888,8 @@ def main():
         # Pass the parameters required by puppet which will be used
         # to enable/disable dell nfv features
         # Edit the dellnfv_environment.yaml
-	# If disabled, default values will be set and
-	# they won't be used for configuration 
+        # If disabled, default values will be set and
+        # they won't be used for configuration
         if args.enable_hugepage or args.enable_numa:
             edit_dell_environment_file(args.enable_hugepage, args.enable_numa,
                                        args.hugepage_size, vcpu_pin_set,
