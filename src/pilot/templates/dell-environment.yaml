@@ -19,8 +19,6 @@ resource_registry:
 
 
 parameter_defaults:
-  ConfigDebug: True
-
   # Flavor used as the regular compute
   OvercloudDellComputeFlavor: baremetal
  
@@ -56,10 +54,10 @@ parameter_defaults:
   # Additional hiera data for all nodes
   ExtraConfig:
     # NFV Profile settings start here
-    dellnfv::hugepages::enable: True
+    dellnfv::hugepages::enable: False
     dellnfv::hugepages::hugepagesize: 2M
     dellnfv::hugepages::hugepagecount: 49152
-    dellnfv::numa::enable: True
+    dellnfv::numa::enable: False
     dellnfv::numa::vcpu_pin_set: \"8-47\"
 
     ceph::profile::params::osd_journal_size: 10000
