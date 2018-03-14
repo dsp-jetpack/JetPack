@@ -57,77 +57,6 @@ class ConfigOvercloud(object):
         self.nova = nova
         self.aggregate_obj = aggregates.AggregateManager(self.nova)
 
-    @classmethod
-    def get_overcloud_details(cls, overcloud_name):
-        try:
-            print "Getting overcloud details"
-
-            global UC_USERNAME, UC_PASSWORD, UC_PROJECT_ID, UC_AUTH_URL
-            file_path = home_dir + '/' + overcloud_name + "rc"
-            if not os.path.isfile(file_path):
-                raise Exception("The Overcloud rc file does \
-                                not exist {}".format(file_path))
-
-            with open(file_path) as rc_file:
-                for line in rc_file:
-                    if 'OS_USERNAME' in line:
-                        UC_USERNAME = line.split('OS_USERNAME=')[1].\
-                                                 strip("\n").strip("'")
-                    elif 'OS_PASSWORD' in line:
-                        UC_PASSWORD = line.split('OS_PASSWORD=')[1].\
-                                                 strip("\n").strip("'")
-                    elif 'OS_PROJECT_NAME' in line:
-                        UC_PROJECT_ID = line.split('OS_PROJECT_NAME=')[1].\
-                                                   strip("\n").strip("'")
-                    elif 'OS_AUTH_URL' in line:
-                        UC_AUTH_URL = line.split('OS_AUTH_URL=')[1].\
-                                                 strip("\n").strip("'")
-        except Exception as error:
-            message = "Exception {}: {}".\
-                      format(type(error).__name__, str(error))
-            print "{}".format(message)
-            raise Exception("Failed to get overcloud details \
-                            from the overcloud rc file {}".format(file_path))
-
-    @classmethod
-    def get_undercloud_details(cls):
-        try:
-            print "Getting undercloud details"
-
-            global UC_USERNAME, UC_PASSWORD, UC_PROJECT_ID, UC_AUTH_URL
-            file_path = home_dir + '/' + undercloudrc_file_name
-            if not os.path.isfile(file_path):
-                raise Exception("The Undercloud rc file \
-                      does not exist {}".format(file_path))
-
-            with open(file_path) as rc_file:
-                for line in rc_file:
-                    if 'OS_USERNAME=' in line:
-                        UC_USERNAME = line.split('OS_USERNAME=')[1].\
-                                                 strip("\n").strip("'")
-                    elif 'OS_PASSWORD=' in line:
-                        cmd = 'sudo hiera admin_password'
-                        proc = subprocess.Popen(cmd,
-                                                shell=True,
-                                                stdin=subprocess.PIPE,
-                                                stdout=subprocess.PIPE,
-                                                stderr=subprocess.PIPE)
-                        output = proc.communicate()
-                        output = output[0]
-                        UC_PASSWORD = output[:-1]
-                    elif 'OS_TENANT_NAME=' in line:
-                        UC_PROJECT_ID = line.split('OS_TENANT_NAME=')[1].\
-                                                   strip("\n").strip("'")
-                    elif 'OS_AUTH_URL=' in line:
-                        UC_AUTH_URL = line.split('OS_AUTH_URL=')[1].\
-                                                 strip("\n").strip("'")
-        except Exception as error:
-            message = "Exception {}: {}".\
-                       format(type(error).__name__, str(error))
-            print "{}".format(message)
-            raise Exception("Failed to get undercloud details \
-                  from the undercloud rc file {}".format(file_path))
-
     def create_aggregate(self, aggregate_name, availability_zone=None):
         try:
             print "Creating aggregate"
@@ -477,12 +406,18 @@ def create_aggregates(enable_hugepage, enable_numa, overcloud_name):
     try:
         if enable_hugepage or enable_numa:
             print "Creating aggregates"
-            # Get the overcloud details
-            ConfigOvercloud.get_overcloud_details(overcloud_name)
+
+            # Get overcloud details
+            os_auth_url, os_tenant_name, os_username, os_password = \
+                CredentialHelper.get_overcloud_creds()
+
+            kwargs = {'username': os_username,
+                      'password': os_password,
+                      'auth_url': os_auth_url,
+                      'project_id': os_tenant_name}
 
             # Create nova client object
-            nova = nova_client.Client(2, UC_USERNAME,
-                                      UC_PASSWORD, UC_PROJECT_ID, UC_AUTH_URL)
+            nova = nova_client.Client(2, **kwargs)
 
             # Create the ConfigOvercloud object
             config_oc_obj = ConfigOvercloud(nova)
@@ -528,11 +463,16 @@ def update_filters():
         print "Updating filters"
         # Update filters on all controller nodes
         # Get the undercloud details
-        ConfigOvercloud.get_undercloud_details()
+        os_auth_url, os_tenant_name, os_username, os_password = \
+            CredentialHelper.get_undercloud_creds()
+
+        kwargs = {'username': os_username,
+                  'password': os_password,
+                  'auth_url': os_auth_url,
+                  'project_id': os_tenant_name}
 
         # Create nova client object
-        nova = nova_client.Client(2, UC_USERNAME,
-                                  UC_PASSWORD, UC_PROJECT_ID, UC_AUTH_URL)
+        nova = nova_client.Client(2, **kwargs)
 
         # Create the ConfigOvercloud object
         config_oc_obj = ConfigOvercloud(nova)
@@ -557,12 +497,18 @@ def create_custom_flavors(overcloud_name,
     try:
         if enable_hugepage or enable_numa:
             print "Create custom flavors"
+
             # Get the overcloud details
-            ConfigOvercloud.get_overcloud_details(overcloud_name)
+            os_auth_url, os_tenant_name, os_username, os_password = \
+                CredentialHelper.get_overcloud_creds()
+
+            kwargs = {'username': os_username,
+                      'password': os_password,
+                      'auth_url': os_auth_url,
+                      'project_id': os_tenant_name}
 
             # Create nova client object
-            nova = nova_client.Client(2, UC_USERNAME,
-                                      UC_PASSWORD, UC_PROJECT_ID, UC_AUTH_URL)
+            nova = nova_client.Client(2, **kwargs)
 
             # Create the ConfigOvercloud object
             config_oc_obj = ConfigOvercloud(nova)
@@ -589,11 +535,16 @@ def create_custom_flavors(overcloud_name,
 def get_dell_compute_nodes_uuids():
     print "Getting dell compute node uuids"
     # Get the undercloud details
-    ConfigOvercloud.get_undercloud_details()
+    os_auth_url, os_tenant_name, os_username, os_password = \
+        CredentialHelper.get_undercloud_creds()
+
+    kwargs = {'username': os_username,
+              'password': os_password,
+              'auth_url': os_auth_url,
+              'project_id': os_tenant_name}
 
     # Create nova client object
-    nova = nova_client.Client(2, UC_USERNAME,
-                              UC_PASSWORD, UC_PROJECT_ID, UC_AUTH_URL)
+    nova = nova_client.Client(2, **kwargs)
 
     # Create the ConfigOvercloud object
     config_oc_obj = ConfigOvercloud(nova)
