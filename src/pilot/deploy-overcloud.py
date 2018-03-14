@@ -40,8 +40,6 @@ home_dir = os.path.expanduser('~')
 BAREMETAL_FLAVOR = "baremetal"
 
 # Dell nfv configuration global values
-valid_hpage_size = ("2MB", "1GB")
-valid_hostos_cpus = ("0,1,2,3,4,5,6,7", "0-7")
 undercloudrc_file_name = "stackrc"
 UC_USERNAME = UC_PASSWORD = UC_PROJECT_ID = UC_AUTH_URL = ''
 # Maximum possible value of cpu cores at present.
@@ -322,20 +320,6 @@ class ConfigOvercloud(object):
             raise Exception("Failed to get " +
                             "the list of dell_compute nodes uuid.")
 
-    def reboot_dell_nodes(self):
-        try:
-            print "Rebooting dell nodes"
-
-            # Create servers object
-            server_obj = servers.ServerManager(self.nova)
-            for server in server_obj.list():
-                if "dell-compute" in str(server):
-                    server_obj.reboot(server)
-        except Exception as error:
-            message = "Exception {}: {}".\
-                      format(type(error).__name__, str(error))
-            print "Failed to reboot dell odes with error {}".format(message)
-
 
 class NodeConfig:
     """
@@ -423,53 +407,6 @@ class NodeConfig:
             # Close the ssh connection
             self.ssh_connection.close()
 
-    def pull_file(self, remote_path, local_path):
-        try:
-            print "Pulling puppet log from dell nodes"
-            # Create the ftp connection
-            sftp_client = self.ssh_connection.open_sftp()
-            # Pull the log file
-            sftp_client.get(remote_path, local_path)
-        except Exception as error:
-            message = "Exception {}: {}".format(type(error).__name__,
-                                                str(error))
-            print "Failed to pull file {} with error {}".format(remote_path,
-                                                                message)
-        finally:
-            # Close the ftp connection
-            try:
-                sftp_client.close()
-                # Close the ssh connection
-                self.ssh_connection.close()
-            except Exception:
-                print "Failed to create ftp connection"
-
-    def del_file(self, file_path):
-        try:
-            print "Deleting puppet log from dell nodes"
-
-            if not os.path.isfile(file_path):
-                raise Exception("File does not exist".format(file_path))
-
-            # Create the ftp connection
-            sftp_client = self.ssh_connection.open_sftp()
-            # Delete the file
-            sftp_client.remove(file_path)
-
-        except Exception as error:
-            message = "Exception {}: {}". \
-                      format(type(error).__name__, str(error))
-            print "Failed to delete the file {} from remote machine " \
-                  "with error {}".format(file_path, message)
-        finally:
-            try:
-                # Close the ftp connection
-                sftp_client.close()
-                # Close the ssh connection
-                self.ssh_connection.close()
-            except Exception:
-                print "Failed to create ftp connection"
-
 
 def edit_dell_environment_file(enable_hugepage,
                                enable_numa,
@@ -533,142 +470,6 @@ def edit_dell_environment_file(enable_hugepage,
         print "{}".format(message)
         raise Exception("Failed to modify the dell-environment.yaml "
                         "at location {}".format(file_path))
-
-
-def parse_log(log_file_path):
-    try:
-        print "Parsing dell config log file"
-
-        if not os.path.isfile(log_file_path):
-            raise Exception("The dell_config.log does not "
-                            "exist at location {}".format(log_file_path))
-
-        with open(log_file_path) as log_file:
-            lines = log_file.readlines()
-
-        status = ""
-        for line in lines:
-            if "HugePages" in line:
-                if "SUCCESS" in line:
-                    status = "CREATE_COMPLETE"
-                elif "FAIL" in line:
-                    status = "CREATE_FAILED"
-            if "CPU Pinning" in line:
-                if "SUCCESS" in line:
-                    status = "CREATE_COMPLETE"
-                elif "FAIL" in line:
-                    status = "CREATE_FAILED"
-
-        return status
-    except Exception as error:
-        message = "Exception {}: {}".format(type(error).__name__, str(error))
-        print "Failed to parse the file {} " \
-              "with error {}".format(log_file_path, message)
-
-
-def del_file_from_local_machine(file_path):
-    try:
-        if not os.path.isfile(file_path):
-            raise Exception("File does not exist "
-                            "at location {}".format(file_path))
-
-        cmd = "rm -rf " + file_path
-        status = os.system(cmd)
-        print "cmd: {}".format(cmd)
-        if status != 0:
-            raise Exception("Failed to execute the "
-                            "command {} with error " +
-                            "code {}".format(cmd, status))
-    except Exception as error:
-        message = "Exception {}: {}".format(type(error).__name__, str(error))
-        print "Failed to delete the file from local machine " \
-              "at location {} with error {}".format(file_path, message)
-
-
-def post_deployment_tasks(enable_hugepage, enable_numa):
-    try:
-        huge_page_status_dict = {}
-        numa_status_dict = {}
-        dell_compute_nodes = []
-        if enable_hugepage or enable_numa:
-            print "Initiating post deployment tasks"
-            # Pull the log file from all the dell compute nodes and parse it.
-            # Get the undercloud details
-            ConfigOvercloud.get_undercloud_details()
-
-            # Create nova client object
-            nova = nova_client.Client(2, UC_USERNAME,
-                                      UC_PASSWORD, UC_PROJECT_ID, UC_AUTH_URL)
-
-            # Create the ConfigOvercloud object
-            config_oc_obj = ConfigOvercloud(nova)
-            try:
-                dell_compute_nodes = config_oc_obj.get_dell_compute_nodes()
-            except Exception as error:
-                print error
-            print "{}".format(dell_compute_nodes)
-
-            hp_logfile_local_path = '/tmp/dellnfv_hpg_config.log'
-            hp_logfile_remote_path = '/tmp/dellnfv_hpg_config.log'
-
-            numa_log_file_local_path = '/tmp/dellnfv_numa_config.log'
-            numa_log_file_remote_path = '/tmp/dellnfv_numa_config.log'
-
-            # Loop through the dell compute nodes here
-            # in each iteration ssh and pull
-            # the log file and parse it and then delete
-            if len(dell_compute_nodes) > 0 and '' not in dell_compute_nodes:
-                for compute in dell_compute_nodes:
-                    compute_config_obj = NodeConfig(compute[0])
-                    if enable_hugepage:
-                        huge_page_status = ""
-                        compute_config_obj.ssh_connect()
-                        # Pull the huge page log file
-                        compute_config_obj.pull_file(hp_logfile_remote_path,
-                                                     hp_logfile_local_path)
-                        # Parse the huge page log file
-                        huge_page_status = parse_log(hp_logfile_local_path)
-                        huge_page_status_dict[compute[1]] = huge_page_status
-
-                    if enable_numa:
-                        numa_status = ""
-                        compute_config_obj.ssh_connect()
-                        # Pull the numa log file
-                        compute_config_obj.pull_file(numa_log_file_remote_path,
-                                                     numa_log_file_local_path)
-                        # Parse the numa log file
-                        numa_status = parse_log(numa_log_file_local_path)
-                        numa_status_dict[compute[1]] = numa_status
-
-                    if enable_hugepage:
-                        # Delete the hugepage log file from remote machine
-                        compute_config_obj.ssh_connect()
-                        compute_config_obj.del_file(hp_logfile_remote_path)
-                        # Delete the huge page log file from director
-                        del_file_from_local_machine(hp_logfile_local_path)
-
-                    if enable_numa:
-                        # Delete the numa log file from remote machine
-                        compute_config_obj.ssh_connect()
-                        compute_config_obj.del_file(numa_log_file_remote_path)
-                        # Delete the numa log file from director
-                        del_file_from_local_machine(numa_log_file_local_path)
-            else:
-                print "Failed to get dell node details"
-
-            print "HugePageStatusDict {}".format(huge_page_status_dict)
-            print "NumaStatusDict {}".format(numa_status_dict)
-
-            # Reboot all the Dell compute nodes
-            config_oc_obj.reboot_dell_nodes()
-
-            # Wait for 5 mins to let dell nodes boot up
-            time.sleep(300)
-
-        return (huge_page_status_dict, numa_status_dict)
-    except Exception as error:
-        message = "Exception {}: {}".format(type(error).__name__, str(error))
-        print "{}".format(message)
 
 
 def create_aggregates(enable_hugepage, enable_numa, overcloud_name):
@@ -1242,7 +1043,6 @@ def main():
         update_ssh_config()
         if status == 0:
             horizon_url = finalize_overcloud()
-            huge_page_status_dict, numa_status_dict = post_deployment_tasks(args.enable_hugepage, args.enable_numa)
             print("\nDeployment Completed")
             create_aggregates(args.enable_hugepage, args.enable_numa,
                               args.overcloud_name)
