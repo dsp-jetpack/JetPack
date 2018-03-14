@@ -43,9 +43,6 @@ home_dir = os.path.expanduser('~')
 
 BAREMETAL_FLAVOR = "baremetal"
 
-# Dell nfv configuration global values
-undercloudrc_file_name = "stackrc"
-UC_USERNAME = UC_PASSWORD = UC_PROJECT_ID = UC_AUTH_URL = ''
 # Maximum possible value of cpu cores at present.
 # It can be updated as per node configuration.
 compute_cpu = "47"
@@ -264,7 +261,8 @@ class NodeConfig:
 
     def ssh_connect(self):
         try:
-            logger.info("Establishing ssh connection with {}".format(self.ip_address))
+            logger.info("Establishing ssh"
+                        "connection with {}".format(self.ip_address))
             # Initializing paramiko
             ssh_conn = paramiko.SSHClient()
             ssh_conn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -280,7 +278,8 @@ class NodeConfig:
         except Exception as error:
             message = "Exception {}: {}". \
                       format(type(error).__name__, str(error))
-            logger.error("Failed to establish SSH connection to remote machine {} "
+            logger.error("Failed to establish SSH connection "
+                         "to remote machine {} "
                          "with error {}".format(self.ip_address, message))
 
     def close_ssh_connection(self):
@@ -288,7 +287,8 @@ class NodeConfig:
 
     def execute_cmd(self, command):
         command = "sudo " + command
-        logger.info("Executing command {} on {}".format(command, self.ip_address))
+        logger.info("Executing command {} on {}"
+                    .format(command, self.ip_address))
         time.sleep(1)
         ssh_stdin, ssh_stdout, ssh_stderr = self.ssh_connection.cmd(command)
         time.sleep(1)
@@ -310,8 +310,10 @@ class NodeConfig:
             ssh_stdout_list, ssh_stderr_list = self.execute_cmd(filter_cmd)
             if len(ssh_stdout_list) > 0:
                 if filters in ssh_stdout_list[0]:
-                    logger.warning("Nova schedular filters already exists on {} "
-                                   "skipping filters update.".format(self.ip_address))
+                    logger.warning("Nova schedular filters "
+                                   "already exists on {} "
+                                   "skipping filters update."
+                                   .format(self.ip_address))
                     return
 
             # Execute the update filter command
@@ -710,7 +712,8 @@ def run_deploy_command(cmd):
     if status == 0:
         stack = CredentialHelper.get_overcloud_stack()
         if not stack or 'FAILED' in stack.stack_status:
-            logger.info("\nDeployment failed even though command returned success.")
+            logger.info("\nDeployment failed even "
+                        "though command returned success.")
             status = 1
 
     return status
@@ -838,7 +841,8 @@ def main():
         logger.info("enable_hugepage {}".format(args.enable_hugepage))
         if args.enable_hugepage:
             logger.info("hugepage_size {}".format(args.hugepage_size))
-            logger.info("hugepage_flavor_list {}".format(args.hugepage_flavor_list))
+            logger.info("hugepage_flavor_list {}"
+                        .format(args.hugepage_flavor_list))
         logger.info("enable_numa {}".format(args.enable_numa))
         if args.enable_numa:
             logger.info("hostos_cpus {}".format(args.hostos_cpus))
@@ -850,7 +854,6 @@ def main():
 
         # Set up the default flavors
         control_flavor = "control"
-        compute_flavor = "compute"
         ceph_storage_flavor = "ceph-storage"
         swift_storage_flavor = "swift-storage"
         block_storage_flavor = "block-storage"
@@ -861,7 +864,6 @@ def main():
             # If node-placement is specified, then the baremetal flavor must
             # be used
             control_flavor = BAREMETAL_FLAVOR
-            compute_flavor = BAREMETAL_FLAVOR
             ceph_storage_flavor = BAREMETAL_FLAVOR
             swift_storage_flavor = BAREMETAL_FLAVOR
             block_storage_flavor = BAREMETAL_FLAVOR
@@ -915,12 +917,12 @@ def main():
 
         # The network-environment.yaml must be included after the
         # network-isolation.yaml
-        env_opts = " -e ~/pilot/templates/overcloud/environments/" \
-                   "network-isolation.yaml" \
-                   " -e ~/pilot/templates/network-environment.yaml" \
-                   " -e {}" \
-                   " -e ~/pilot/templates/ceph-osd-config.yaml" \
-                   "".format(nic_env_file)
+        env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+                    "network-isolation.yaml" \
+                    " -e ~/pilot/templates/network-environment.yaml" \
+                    " -e {}" \
+                    " -e ~/pilot/templates/ceph-osd-config.yaml" \
+                    "".format(nic_env_file)
 
         # The static-ip-environment.yaml must be included after the
         # network-environment.yaml
@@ -1003,7 +1005,7 @@ def main():
         update_ssh_config()
         if status == 0:
             horizon_url = finalize_overcloud()
-            print("\nDeployment Completed")
+            logger.info("\nDeployment Completed")
             create_aggregates(args.enable_hugepage, args.enable_numa,
                               args.overcloud_name)
             create_custom_flavors(args.overcloud_name, args.enable_hugepage,
