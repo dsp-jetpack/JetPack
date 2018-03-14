@@ -14,7 +14,7 @@
 
 resource_registry:
   OS::TripleO::Controller::Net::SoftwareConfig: ./controller.yaml
-  OS::TripleO::Compute::Net::SoftwareConfig: ./dvr_compute.yaml
+  OS::TripleO::Compute::Net::SoftwareConfig: ./compute.yaml
   OS::TripleO::CephStorage::Net::SoftwareConfig: ./storage.yaml
 
 parameter_defaults:
@@ -33,12 +33,12 @@ parameter_defaults:
   # compute nodes provisioning interface and to include in the compute
   # nodes bonds
   ComputeProvisioningInterface: em3
-  ComputeBond0Interface1: p1p1
-  ComputeBond0Interface2: p2p2
-  ComputeBond1Interface1: p1p2
-  ComputeBond1Interface2: p3p1
-  ComputeBond2Interface1: em1
-  ComputeBond2Interface2: em2
+  ComputeBond0Interface1: em1
+  ComputeBond0Interface2: p3p1
+  ComputeBond1Interface1: em2
+  ComputeBond1Interface2: p3p2
+  ComputeBond2Interface1: p1p1
+  ComputeBond2Interface2: p2p1
   # The bonding mode to use for compute nodes
   ComputeBondInterfaceOptions: 802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
 
