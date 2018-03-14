@@ -93,7 +93,7 @@ NOT_SUPPORTED_MSG = " operation is not supported on th"
 ROLES = {
     'controller': 'control',
     'compute': 'compute',
-    'storage': 'ceph-storage',
+    'storage': 'ceph-storage'
 }
 
 # TODO: Use the OpenStack Oslo logging library, instead of the Python standard
