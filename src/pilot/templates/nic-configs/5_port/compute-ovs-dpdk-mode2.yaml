@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -90,24 +90,41 @@ parameters:
   EC2MetadataIp: # Override this via parameter_defaults
     description: The IP address of the EC2 metadata server.
     type: string
-
-  # CHANGEME: If you wish to use different bonding modes for different roles,
-  # then specify the appropriate bonding options in the "default" line below
-  # for the compute role, otherwise ignore this entry.
+  ComputeProvisioningInterface:
+    default: 'em3'
+    description: Provisioning interface name
+    type: string
+  ComputeBond0Interface1:
+    default: 'em1'
+    description: Bond 0 interface 1 name
+    type: string
+  ComputeBond0Interface2:
+    default: 'p3p1'
+    description: Bond 0 interface 2 name
+    type: string
+  ComputeBond1Interface1:
+    default: 'em2'
+    description: Bond 1 interface 1 name
+    type: string
+  ComputeBond1Interface2:
+    default: 'p3p2'
+    description: Bond 1 interface 2 name
+    type: string
+  ComputeBondInterfaceOptions:
+    default: '802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1'
+    description: The bonding_options string for the bond interface.
+    type: string
   BondInterfaceOptions:
     default: ''
     description: The bonding_options string for the bond interface. Set things
                  like mode=802.3ad using this option.
     type: string
-
-  # CHANGEME: If you wish to use different bonding modes for different roles,
-  # then specify the appropriate bonding options in the "default" line below
-  # for the compute role, otherwise ignore this entry.
   OvsDpdkBondInterfaceOptions:
     default: ''
     description: The bonding_options string for the bond interface. Set things
                  like 'bond_mode=balance-tcp lacp=active' using this option.
     type: string
+
 resources:
   OsNetConfigImpl:
     type: OS::Heat::StructuredConfig
@@ -118,9 +135,7 @@ resources:
           network_config:
             -
               type: interface
-              # CHANGEME: Change the interface name on the following
-              # line to the interface on the provisioning network
-              name: em3
+              name: {get_param: ComputeProvisioningInterface}
               use_dhcp: false
               dns_servers: {get_param: DnsServers}
               addresses:
@@ -138,65 +153,35 @@ resources:
                   default: true
                   next_hop: {get_param: ControlPlaneDefaultRoute}
             -
-              type: linux_bond
-              name: bond0
-              bonding_options: {get_param: BondInterfaceOptions}
-              members:
-                -
-                  type: interface
-                  # CHANGEME: Change the interface name on the following
-                  # line to an interface to include in bond0
-                  name: em1
-                  primary: true
-                -
-                  type: interface
-                  # CHANGEME: Change the interface name on the following
-                  # line to an interface to include in bond0
-                  name: p3p1
-            -
-              type: vlan
-              device: bond0
-              vlan_id: {get_param: TenantNetworkVlanID}
-              addresses:
-                -
-                  ip_netmask: {get_param: TenantIpSubnet}
-            -
-              type: vlan
-              device: bond0
-              vlan_id: {get_param: InternalApiNetworkVlanID}
-              addresses:
-                -
-                  ip_netmask: {get_param: InternalApiIpSubnet}
-                        
-            -
-              type: linux_bond
-              name: bond1
-              bonding_options: {get_param: BondInterfaceOptions}
-              members:
-                -
-                  type: interface
-                  # CHANGEME: Change the interface name on the following
-                  # line to an interface to include in bond1
-                  name: em2
-                  primary: true
-                -
-                  type: interface
-                  # CHANGEME: Change the interface name on the following
-                  # line to an interface to include in bond1
-                  name: p3p2
-            -
-              type: vlan
-              device: bond1
-              vlan_id: {get_param: StorageNetworkVlanID}
-              addresses:
-                -
-                  ip_netmask: {get_param: StorageIpSubnet}
-            
-            -
-              type: ovs_user_bridge
+              type: ovs_bridge
               name: br-tenant
-              use_dhcp: false
               members:
+                -
+                  type: linux_bond
+                  name: bond0
+                  bonding_options: {get_param: ComputeBondInterfaceOptions}
+                  members:
+                    -
+                      type: interface
+                      name: {get_param: ComputeBond0Interface1}
+                      primary: true
+                    -
+                      type: interface
+                      name: {get_param: ComputeBond0Interface2}
+                -
+                  type: vlan
+                  device: bond0
+                  vlan_id: {get_param: TenantNetworkVlanID}
+                  addresses:
+                    -
+                      ip_netmask: {get_param: TenantIpSubnet}
+                -
+                  type: vlan
+                  device: bond0
+                  vlan_id: {get_param: InternalApiNetworkVlanID}
+                  addresses:
+                    -
+                      ip_netmask: {get_param: InternalApiIpSubnet}
                 -
                   type: ovs_dpdk_bond
                   name: ovs_dpdk_bond10
@@ -208,34 +193,52 @@ resources:
                       members:
                         -
                           type: interface
-                          # CHANGEME: Change the interface name on the following
-                          # line to an interface to include in ovs_dpdk_bond10 (OVS-DPDK bond)
-                          name: p1p1
-                    
-                    -
+                          name: changeme1
+                    -    
                       type: ovs_dpdk_port
                       name: dpdk1
                       members:
                         -
                           type: interface
-                          # CHANGEME: Change the interface name on the following
-                          # line to an interface to include in ovs_dpdk_bond10 (OVS-DPDK bond)
-                          name: p2p1
+                          name: changeme2
+                    -
+                      type: ovs_dpdk_port
+                      name: dpdk2
+                      members:
+                        -
+                          type: interface
+                          name: changeme3
+                    -
+                      type: ovs_dpdk_port
+                      name: dpdk3
+                      members:
+                        -
+                          type: interface
+                          name: changeme4
             -
-              type: interface
-                # CHANGEME: Change the interface name on the following
-                # line to the interface that's not used for OVS-DPDK
-              name: p1p2
-              use_dhcp: false
-            -
-              type: interface
-                # CHANGEME: Change the interface name on the following
-                # line to the interface that's not used for OVS-DPDK
-              name: p2p2
-              use_dhcp: false
-                
+              type: ovs_bridge
+              name: br-bond1
+              members:
+                -
+                  type: linux_bond
+                  name: bond1
+                  bonding_options: {get_param: ComputeBondInterfaceOptions}
+                  members:
+                    -
+                      type: interface
+                      name: {get_param: ComputeBond1Interface1}
+                      primary: true
+                    -
+                      type: interface
+                      name: {get_param: ComputeBond1Interface2}
+                -
+                  type: vlan
+                  device: bond1
+                  vlan_id: {get_param: StorageNetworkVlanID}
+                  addresses:
+                    -
+                      ip_netmask: {get_param: StorageIpSubnet}
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.
     value: {get_resource: OsNetConfigImpl}
-
