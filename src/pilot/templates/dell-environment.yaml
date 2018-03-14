@@ -14,8 +14,8 @@
 
 resource_registry:
     OS::TripleO::NodeUserData: ./first-boot.yaml
-    OS::TripleO::Services::HugePages: overcloud/puppet/services/DellNfv/hugepages.yaml
-    OS::TripleO::Services::NUMA: overcloud/puppet/services/DellNfv/numa.yaml
+    OS::TripleO::Services::HugePages: overcloud/puppet/services/dellnfv/hugepages.yaml
+    OS::TripleO::Services::NUMA: overcloud/puppet/services/dellnfv/numa.yaml
 
 
 parameter_defaults:
@@ -104,7 +104,7 @@ parameter_defaults:
         journal: '/dev/sdc'
       '/dev/sdo':
         journal: '/dev/sdc'
-      
+
     # Additional entries added to /etc/ceph/ceph.conf
     ceph::conf::args:
       global/max_open_files:
