@@ -263,29 +263,6 @@ class Settings():
                                  'Tenant-networks-only and '
                                  'Tenant-and-External-networks')
         if self.enable_ovs_dpdk:
-            if self.ovs_dpdk_policy == 'Balanced':
-                pass
-            else:
-                raise AssertionError('Only supported value for '
-                                     'ovs_dpdk_policy is Balanced')
-            if self.ovs_dpdk_role_list == 'Compute':
-                pass
-            else:
-                raise AssertionError('Only supported value for '
-                                     'ovs_dpdk_role_list is Compute')
-            compute_nics = ['em1', 'em2', 'p1p1', 'p1p2']
-            i = 0
-            while i < len(compute_nics):
-                if (compute_nics[i] in self.compute_bond0_interfaces) or \
-                        (compute_nics[i] in self.compute_bond1_interfaces):
-                    del compute_nics[i]
-                else:
-                    i += 1
-            if len(compute_nics) != 0:
-                raise AssertionError('With OVS-DPDK following compute node '
-                                     'NICs needs to be used for deployment: '
-                                     'em1 em2 p1p1 and p1p2.')
-
             logger.info("OVS_DPDK is enabled with mode " +
                         str(self.ovs_dpdk_mode) + ".")
         else:
