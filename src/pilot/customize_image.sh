@@ -92,7 +92,7 @@ virt-customize \
     --run-command "cd /usr/share/openstack-puppet/modules;puppet module generate dell-dellnfv --skip-interview" \
     --run-command "mv /usr/share/openstack-puppet/modules/dell-dellnfv /usr/share/openstack-puppet/modules/dellnfv" \
     --link /usr/share/openstack-puppet/modules/dellnfv:/etc/puppet/modules/dellnfv \
-    --copy-in ~/pilot/templates/DellNfv/numa.pp:/usr/share/openstack-puppet/modules/dellnfv/manifests/ \
-    --copy-in ~/pilot/templates/DellNfv/hugepages.pp:/usr/share/openstack-puppet/modules/dellnfv/manifests/ 2>&1 | tee -a ~/pilot/customize_image.log
+    --copy-in ~/pilot/templates/dellnfv/numa.pp:/usr/share/openstack-puppet/modules/dellnfv/manifests/ \
+    --copy-in ~/pilot/templates/dellnfv/hugepages.pp:/usr/share/openstack-puppet/modules/dellnfv/manifests/ 2>&1 | tee -a ~/pilot/customize_image.log
 echo "## Done updating the overcloud image"
 
