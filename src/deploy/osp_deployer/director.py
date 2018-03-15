@@ -1064,18 +1064,22 @@ class Director(InfraHost):
                     "     - provisioning ip    : " + provisioning_ip)
                 ip_info.append("     - storage cluster ip : " + cluster_ip)
                 ip_info.append("     - storage ip         : " + storage_ip)
-            
-            if self.settings.hpg_enable or self.settings.numa_enable:
-                logger.debug("retrieving NFV features details..."
-                ip_info.append("====================================")
-                if self.settings.hpg_enable:
-                    ip_info.append("### Hugepages ###")
-                    ip_info.append("Feature enabled: " + self.settings.hpg_enable)
-                    ip_info.append("Hugepage size: " + self.settings.hpg_size)
-                if self.settings.numa_enable:
-	            ip_info.append("### NUMA ###")
-                    ip_info.append("Feature enabled: " + self.settings.numa_enable)
-                    ip_info.append("Host OS CPUs: " + self.settings.numa_hostos_cpus)
+
+                if self.settings.hpg_enable or self.settings.numa_enable:
+                    logger.debug("retrieving NFV features details...")
+                    ip_info.append("====================================")
+                    if self.settings.hpg_enable:
+                        ip_info.append("### Hugepages ###")
+                        ip_info.append(
+                            "Feature enabled: " + self.settings.hpg_enable)
+                        ip_info.append(
+                            "Hugepage size: " + self.settings.hpg_size)
+                    if self.settings.numa_enable:
+                        ip_info.append("### NUMA ###")
+                        ip_info.append(
+                            "Feature enabled: " + self.settings.numa_enable)
+                        ip_info.append(
+                            "Host OS CPUs: " + self.settings.numa_hostos_cpus)
 
             ip_info.append("====================================")
 
