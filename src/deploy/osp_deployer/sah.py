@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from osp_deployer.settings.config import Settings
+from osp_deployer.checkpoints import Checkpoints
 from infra_host import InfraHost
 from auto_common import Scp, Ssh, FileHelper
 import logging
@@ -39,6 +40,8 @@ class Sah(InfraHost):
         self.root_pwd = self.settings.sah_node.root_password
 
     def update_kickstart_usb(self):
+        tester = Checkpoints()
+        tester.verify_deployer_settings()
         sets = self.settings
         shutil.copyfile(sets.sah_kickstart, sets.cloud_repo_dir +
                         "/../osp-sah.ks")

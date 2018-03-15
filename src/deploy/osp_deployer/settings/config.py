@@ -178,14 +178,13 @@ class Settings():
             self.public_api_network_mtu = self.mtu_size_global_default
             self.floating_ip_network_mtu = self.mtu_size_global_default
         elif self.mtu_selection == 'per_network':
+            self.mtu_size_global_default='1500'
             self.tenant_tunnel_network_mtu = mtu_settings[
                 'tenant_tunnel_network_mtu']
             self.tenant_network_mtu = mtu_settings[
              'tenant_network_mtu']
             self.storage_cluster_network_mtu = mtu_settings[
                 'storage_cluster_network_mtu']
-            self.provisioning_network_mtu = mtu_settings[
-                'provisioning_network_mtu']
             self.storage_network_mtu = mtu_settings[
                 'storage_network_mtu']
             self.private_api_network_mtu = mtu_settings[

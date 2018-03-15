@@ -169,3 +169,6 @@ parameter_defaults:
     CephStorageHostnameResolveNetwork: storage
     NovaColdMigrationNetwork: internal_api
     NovaLibvirtNetwork: internal_api
+
+  ExtraConfig:
+    neutron::plugins::ml2::physical_network_mtus: physext:1500
