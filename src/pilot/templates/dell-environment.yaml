@@ -27,10 +27,10 @@ parameter_defaults:
   # This line is uncommented when using with CSP profile
   # NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','RamFilter','DiskFilter', 'ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter', 'CoreFilter', 'NUMATopologyFilter', 'AggregateInstanceExtraSpecsFilter']
 
- # List of CPUs reserver for Host OS operation
- # Disabled by default for XSP Profile
- # This line is uncommented and updated when using CSP Profile
- # NovaVcpuPinSet: ['8-47']
+  # List of CPUs reserver for Host OS operation
+  # Disabled by default for XSP Profile
+  # This line is uncommented and updated when using CSP Profile
+  # NovaVcpuPinSet: ['8-47']
  
   # Number of Dell Compute nodes 
   DellComputeCount: 0
