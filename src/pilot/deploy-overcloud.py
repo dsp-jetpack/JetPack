@@ -185,9 +185,9 @@ class ConfigOvercloud(object):
             return 1024*int(size[:-2])
 
     @classmethod
-    def get_hp_flavor_meta(cls, hugepage_size):
+    def get_hp_flavor_meta(cls, hugepages_size):
         flavor_metadata = {'aggregate_instance_extra_specs:hugepages': 'True'}
-        flavor_metadata['hw:mem_page_size'] = cls.calculate_size(hugepage_size)
+        flavor_metadata['hw:mem_page_size'] = cls.calculate_size(hugepages_size)
         return flavor_metadata
 
     def get_controller_nodes(self):
@@ -343,9 +343,9 @@ class NodeConfig:
             self.ssh_connection.close()
 
 
-def edit_dell_environment_file(enable_hugepage,
+def edit_dell_environment_file(enable_hugepages,
                                enable_numa,
-                               hugepage_size,
+                               hugepages_size,
                                vcpu_pin_set,
                                dell_compute_count):
     try:
@@ -353,16 +353,24 @@ def edit_dell_environment_file(enable_hugepage,
         file_path = home_dir + '/pilot/templates/dell-environment.yaml'
         if not os.path.isfile(file_path):
             raise Exception("The dell-environment.yaml file does not exist")
-        cmds = ['sed -i "s|dellnfv::hugepages::enable:.*|' +
-                'dellnfv::hugepages::enable: ' +
-                str(enable_hugepage) +
-                '|" ' +
-                file_path,
-                'sed -i "s|dellnfv::numa::enable:.*|' +
-                'dellnfv::numa::enable: ' +
-                str(enable_numa) +
-                '|" ' +
+
+        # Updating the filters including NUMATopologyFilter
+        # and NovaAggregateInstanceFilter
+        cmds = ['sed -i "s|  # NovaSchedulerDefaultFilters|  ' +
+                'NovaSchedulerDefaultFilters|" ' +
                 file_path]
+
+        cmds.append('sed -i "s|dellnfv::hugepages::enable:.*|' +
+                    'dellnfv::hugepages::enable: ' +
+                    str(enable_hugepages) +
+                    '|" ' +
+                    file_path)
+
+        cmds.append('sed -i "s|dellnfv::numa::enable:.*|' +
+                    'dellnfv::numa::enable: ' +
+                    str(enable_numa) +
+                    '|" ' +
+                    file_path)
 
         cmds.append('sed -i "s|DellComputeCount:.*|' +
                     'DellComputeCount: ' +
@@ -370,27 +378,25 @@ def edit_dell_environment_file(enable_hugepage,
                     '|" ' +
                     file_path)
 
-        if hugepage_size == "2MB":
-            hugepage_number = 49152
-        elif hugepage_size == "1GB":
-            hugepage_number = 96
+        if hugepages_size == "2MB":
+            hugepages_number = 49152
+        elif hugepages_size == "1GB":
+            hugepages_number = 96
 
-        if enable_hugepage:
+        if enable_hugepages:
             cmds.append('sed -i "s|dellnfv::hugepages::hugepagesize:.*|' +
                         'dellnfv::hugepages::hugepagesize: ' +
-                        hugepage_size[0:-1] +
+                        hugepages_size[0:-1] +
                         '|" ' +
                         file_path)
             cmds.append('sed -i "s|dellnfv::hugepages::hugepagecount:.*|' +
                         'dellnfv::hugepages::hugepagecount: ' +
-                        str(hugepage_number) +
+                        str(hugepages_number) +
                         '|" ' +
                         file_path)
         if enable_numa:
-            cmds.append('sed -i "s|dellnfv::numa::vcpu_pin_set:.*|' +
-                        'dellnfv::numa::vcpu_pin_set: \\\\\\\\\\"' +
-                        vcpu_pin_set +
-                        '\\\\\\\\\\"|" ' +
+            cmds.append('sed -i "s|  # NovaVcpuPinSet|  ' +
+                        'NovaVcpuPinSet|" ' +
                         file_path)
 
         for cmd in cmds:
@@ -406,10 +412,10 @@ def edit_dell_environment_file(enable_hugepage,
                         "at location {}".format(file_path))
 
 
-def create_aggregates(enable_hugepage, enable_numa, overcloud_name):
+def create_aggregates(enable_hugepages, enable_numa, overcloud_name):
     host_name_list = []
     try:
-        if enable_hugepage or enable_numa:
+        if enable_hugepages or enable_numa:
             logger.info("Creating aggregates")
 
             # Get overcloud details
@@ -440,9 +446,9 @@ def create_aggregates(enable_hugepage, enable_numa, overcloud_name):
                                                     str(error))
                 logger.error("{}".format(message))
 
-            # Create aggregate for hugepage configuration
+            # Create aggregate for hugepages configuration
             try:
-                if enable_hugepage:
+                if enable_hugepages:
                     aggregate_name = "HugePage_Aggr"
                     aggregate_meta = [{'hugepages': 'True'}]
                     config_oc_obj.configure_dell_aggregate(aggregate_name,
@@ -495,12 +501,12 @@ def update_filters():
 
 
 def create_custom_flavors(overcloud_name,
-                          enable_hugepage,
-                          enable_numa, hugepage_size,
+                          enable_hugepages,
+                          enable_numa, hugepages_size,
                           hpg_flavor_names_list,
                           numa_flavor_names_list):
     try:
-        if enable_hugepage or enable_numa:
+        if enable_hugepages or enable_numa:
             logger.info("Creating custom flavors")
 
             # Get the overcloud details
@@ -517,9 +523,9 @@ def create_custom_flavors(overcloud_name,
 
             # Create the ConfigOvercloud object
             config_oc_obj = ConfigOvercloud(nova)
-            # Create flavors for HugePage feature and set its metadata
-            if enable_hugepage:
-                metadata = ConfigOvercloud.get_hp_flavor_meta(hugepage_size)
+            # Create flavors for HugePages feature and set its metadata
+            if enable_hugepages:
+                metadata = ConfigOvercloud.get_hp_flavor_meta(hugepages_size)
                 for flavor_name in hpg_flavor_names_list:
                     flavor = config_oc_obj.create_flavor(flavor_name)
                     config_oc_obj.set_flavor_metadata(flavor, metadata)
@@ -761,10 +767,10 @@ def main():
                             type=int,
                             required=True,
                             help="The number of storage nodes")
-        parser.add_argument("--enable_hugepage",
+        parser.add_argument("--enable_hugepages",
                             action='store_true',
                             default=False,
-                            help="Enable/Disable hugepage feature")
+                            help="Enable/Disable hugepages feature")
         parser.add_argument("--enable_numa",
                             action='store_true',
                             default=False,
@@ -788,18 +794,18 @@ def main():
         parser.add_argument("--overcloud_name",
                             default=None,
                             help="The name of the overcloud")
-        parser.add_argument("--hugepage_size",
-                            dest="hugepage_size",
+        parser.add_argument("--hugepages_size",
+                            dest="hugepages_size",
                             required=False,
-                            help="HugePage size")
+                            help="HugePages size")
         parser.add_argument("--hostos_cpus",
                             dest="hostos_cpus",
                             required=False,
                             help="HostOS Cpus")
-        parser.add_argument("--hugepage_flavor_list",
-                            dest="hugepage_flavor_list",
+        parser.add_argument("--hugepages_flavor_list",
+                            dest="hugepages_flavor_list",
                             required=False,
-                            help="Hugepage Flavor list ")
+                            help="Hugepages Flavor list ")
         parser.add_argument("--numa_flavor_list",
                             dest="numa_flavor_list",
                             required=False,
@@ -837,11 +843,11 @@ def main():
                              "by a colon, followed by another number")
         logger.info("=====Dell configurations=====")
         logger.info("dell_compute {}".format(args.num_computes))
-        logger.info("enable_hugepage {}".format(args.enable_hugepage))
-        if args.enable_hugepage:
-            logger.info("hugepage_size {}".format(args.hugepage_size))
-            logger.info("hugepage_flavor_list {}"
-                        .format(args.hugepage_flavor_list))
+        logger.info("enable_hugepages {}".format(args.enable_hugepages))
+        if args.enable_hugepages:
+            logger.info("hugepages_size {}".format(args.hugepages_size))
+            logger.info("hugepages_flavor_list {}"
+                        .format(args.hugepages_flavor_list))
         logger.info("enable_numa {}".format(args.enable_numa))
         if args.enable_numa:
             logger.info("hostos_cpus {}".format(args.hostos_cpus))
@@ -891,9 +897,9 @@ def main():
         # Edit the dellnfv_environment.yaml
         # If disabled, default values will be set and
         # they won't be used for configuration
-        if args.enable_hugepage or args.enable_numa:
-            edit_dell_environment_file(args.enable_hugepage, args.enable_numa,
-                                       args.hugepage_size, vcpu_pin_set,
+        if args.enable_hugepages or args.enable_numa:
+            edit_dell_environment_file(args.enable_hugepages, args.enable_numa,
+                                       args.hugepages_size, vcpu_pin_set,
                                        args.num_computes)
 
         # Launch the deployment
@@ -1005,13 +1011,11 @@ def main():
         if status == 0:
             horizon_url = finalize_overcloud()
             logger.info("\nDeployment Completed")
-            create_aggregates(args.enable_hugepage, args.enable_numa,
+            create_aggregates(args.enable_hugepages, args.enable_numa,
                               args.overcloud_name)
-            create_custom_flavors(args.overcloud_name, args.enable_hugepage,
-                                  args.enable_numa, args.hugepage_size,
-                                  hugepage_flavor_list, numa_flavor_list)
-            if args.enable_numa or args.enable_hugepage:
-                update_filters()
+            create_custom_flavors(args.overcloud_name, args.enable_hugepages,
+                                  args.enable_numa, args.hugepages_size,
+                                  hugepages_flavor_list, numa_flavor_list)
         else:
             horizon_url = None
         logger.info('Overcloud nodes:')
