@@ -136,6 +136,7 @@ class DeployerSanity():
     
     def check_mtu_of_networks(self):
         shouldbbevalidmtu = [
+            'mtu_size_global_default',
             'public_api_network_mtu',
             'private_api_network_mtu',
             'storage_network_mtu',

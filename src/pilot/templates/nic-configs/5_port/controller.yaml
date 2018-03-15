@@ -130,35 +130,35 @@ parameters:
   InternalApiMTU: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
-    type: string
+    type: number
   StorageNetworkMTU: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
-    type: string
+    type: number
   StorageMgmtNetworkMTU: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
-    type: string
+    type: number
   TenantNetworkMTU: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
-    type: string
+    type: number
   ProvisioningNetworkMTU: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
-    type: string
+    type: number
   ManagementNetworkMTU: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
-    type: string
+    type: number
   DefaultBondMTU: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
-    type: string
+    type: number
   ExternalNetworkMTU: 
     default: 1500
     description: MTU value for this network.
-    type: string
+    type: number
 
 resources:
   OsNetConfigImpl:
