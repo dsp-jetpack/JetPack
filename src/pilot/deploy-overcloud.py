@@ -347,7 +347,7 @@ def edit_dell_environment_file(enable_hugepage,
                                enable_numa,
                                hugepage_size,
                                vcpu_pin_set,
-                               dell_compute_count=0):
+                               dell_compute_count):
     try:
         logger.info("Editing dell environment file")
         file_path = home_dir + '/pilot/templates/dell-environment.yaml'
@@ -364,12 +364,11 @@ def edit_dell_environment_file(enable_hugepage,
                 '|" ' +
                 file_path]
 
-        if dell_compute_count > 0:
-            cmds.append('sed -i "s|DellComputeCount:.*|' +
-                        'DellComputeCount: ' +
-                        str(dell_compute_count) +
-                        '|" ' +
-                        file_path)
+        cmds.append('sed -i "s|DellComputeCount:.*|' +
+                    'DellComputeCount: ' +
+                    str(dell_compute_count) +
+                    '|" ' +
+                    file_path)
 
         if hugepage_size == "2MB":
             hugepage_number = 49152
@@ -396,7 +395,7 @@ def edit_dell_environment_file(enable_hugepage,
 
         for cmd in cmds:
             status = os.system(cmd)
-            logger.info("cmd: {}".format(cmd))
+            logger.debug("cmd: {}".format(cmd))
             if status != 0:
                 raise Exception("Failed to execute the command {} "
                                 "with error code {}".format(cmd, status))
@@ -502,7 +501,7 @@ def create_custom_flavors(overcloud_name,
                           numa_flavor_names_list):
     try:
         if enable_hugepage or enable_numa:
-            logger.info("Create custom flavors")
+            logger.info("Creating custom flavors")
 
             # Get the overcloud details
             os_auth_url, os_tenant_name, os_username, os_password = \
@@ -518,14 +517,14 @@ def create_custom_flavors(overcloud_name,
 
             # Create the ConfigOvercloud object
             config_oc_obj = ConfigOvercloud(nova)
-            # Create falvors for HugePage feature and set its metadata
+            # Create flavors for HugePage feature and set its metadata
             if enable_hugepage:
                 metadata = ConfigOvercloud.get_hp_flavor_meta(hugepage_size)
                 for flavor_name in hpg_flavor_names_list:
                     flavor = config_oc_obj.create_flavor(flavor_name)
                     config_oc_obj.set_flavor_metadata(flavor, metadata)
 
-            # Create falvors for NUMA feature and set its metadata
+            # Create flavors for NUMA feature and set its metadata
             if enable_numa:
                 flavor_meta = {'aggregate_instance_extra_specs:pinned': 'True',
                                'hw:cpu_policy': 'dedicated',
@@ -555,7 +554,7 @@ def get_dell_compute_nodes_uuids():
     # Create the ConfigOvercloud object
     config_oc_obj = ConfigOvercloud(nova)
     dell_compute_nodes_uuid = config_oc_obj.get_dell_compute_nodes_uuid()
-    logger.info("{}".format(dell_compute_nodes_uuid))
+    logger.debug("dell_compute_nodes_uuid: {}".format(dell_compute_nodes_uuid))
     return dell_compute_nodes_uuid
 
 
