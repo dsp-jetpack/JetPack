@@ -1062,7 +1062,8 @@ class Director(InfraHost):
                 ip_info.append("     - storage cluster ip : " + cluster_ip)
                 ip_info.append("     - storage ip         : " + storage_ip)
 
-            if self.settings.hpg_enable is True or self.settings.numa_enable is True:
+            if (self.settings.hpg_enable is True or
+                self.settings.numa_enable is True):
                 ip_info.append("NFV features details...")
                 ip_info.append("====================================")
                 if self.settings.hpg_enable is True:
