@@ -621,7 +621,7 @@ def finalize_overcloud():
                       args.overcloud_name)
     create_custom_flavors(args.overcloud_name, args.enable_hugepages,
                           args.enable_numa, args.hugepages_size,
-                          hugepages_flavor_list, numa_flavor_list)
+                          hpg_flavor_list, numa_flavor_list)
 
 
     # horizon_service = keystone_client.services.find(**{'name': 'horizon'})
