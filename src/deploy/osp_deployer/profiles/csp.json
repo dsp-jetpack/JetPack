@@ -12,7 +12,7 @@
                ]
             },
             "numa_enable": "",
-            "numa_hostos_cpus": "",
+            "numa_hostos_cpus": ""
          }
       },
       {
