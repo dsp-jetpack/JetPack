@@ -724,18 +724,6 @@ def main():
         if not p.match(args.vlan_range):
             raise ValueError("Error: The VLAN range must be a number followed "
                              "by a colon, followed by another number")
-        logger.info("=====Dell configurations=====")
-        logger.info("dell_compute {}".format(args.num_computes))
-        logger.info("enable_hugepages {}".format(args.enable_hugepages))
-        if args.enable_hugepages:
-            logger.info("hugepages_size {}".format(args.hugepages_size))
-            logger.info("hugepages_flavor_list {}"
-                        .format(args.hugepages_flavor_list))
-        logger.info("enable_numa {}".format(args.enable_numa))
-        if args.enable_numa:
-            logger.info("hostos_cpus {}".format(args.hostos_cpus))
-            logger.info("numa_flavor_list {}".format(args.numa_flavor_list))
-        logger.info("=================================")
 
         os_auth_url, os_tenant_name, os_username, os_password = \
             CredentialHelper.get_undercloud_creds()
