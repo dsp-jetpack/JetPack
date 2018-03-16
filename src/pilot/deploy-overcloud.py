@@ -617,6 +617,12 @@ def finalize_overcloud():
 
     create_flavors()
     create_volume_types()
+    create_aggregates(args.enable_hugepages, args.enable_numa,
+                      args.overcloud_name)
+    create_custom_flavors(args.overcloud_name, args.enable_hugepages,
+                          args.enable_numa, args.hugepages_size,
+                          hugepages_flavor_list, numa_flavor_list)
+
 
     # horizon_service = keystone_client.services.find(**{'name': 'horizon'})
     # horizon_endpoint = keystone_client.endpoints.find(
@@ -888,11 +894,6 @@ def main():
         if status == 0:
             horizon_url = finalize_overcloud()
             logger.info("\nDeployment Completed")
-            create_aggregates(args.enable_hugepages, args.enable_numa,
-                              args.overcloud_name)
-            create_custom_flavors(args.overcloud_name, args.enable_hugepages,
-                                  args.enable_numa, args.hugepages_size,
-                                  hugepages_flavor_list, numa_flavor_list)
         else:
             horizon_url = None
         logger.info('Overcloud nodes:')
