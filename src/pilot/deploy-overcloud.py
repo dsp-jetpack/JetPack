@@ -524,7 +524,6 @@ def finalize_overcloud():
     create_aggregates(args.enable_hugepages, args.enable_numa,
                       args.overcloud_name)
 
-
     # horizon_service = keystone_client.services.find(**{'name': 'horizon'})
     # horizon_endpoint = keystone_client.endpoints.find(
     #     **{'service_id': horizon_service.id})
