@@ -177,7 +177,7 @@ class ConfigOvercloud(object):
                    with error {}".format(flavor_metadata, message))
 
     @classmethod
-    def calculate_size(cls, size):
+    def calc_size(cls, size):
         sizeunit = size[-2:]
         if sizeunit == 'GB':
             return 1024*1024*int(size[:-2])
@@ -187,7 +187,7 @@ class ConfigOvercloud(object):
     @classmethod
     def get_hp_flavor_meta(cls, hugepages_size):
         flavor_metadata = {'aggregate_instance_extra_specs:hugepages': 'True'}
-        flavor_metadata['hw:mem_page_size'] = cls.calculate_size(hugepages_size)
+        flavor_metadata['hw:mem_page_size'] = cls.calc_size(hugepages_size)
         return flavor_metadata
 
     def get_controller_nodes(self):
@@ -249,98 +249,6 @@ class ConfigOvercloud(object):
             logger.error("{}".format(message))
             raise Exception("Failed to get " +
                             "the list of dell_compute nodes uuid.")
-
-
-class NodeConfig:
-    """
-    Description: Class responsible for node configuration operations
-    """
-
-    def __init__(self, ip_address):
-        self.ip_address = ip_address
-
-    def ssh_connect(self):
-        try:
-            logger.info("Establishing ssh"
-                        "connection with {}".format(self.ip_address))
-            # Initializing paramiko
-            ssh_conn = paramiko.SSHClient()
-            ssh_conn.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-            # SSH into the remote host
-            ssh_conn.connect(self.ip_address, username='heat-admin')
-
-            # Save 'ssh_conn' in 'ssh_connection' class variable
-            self.ssh_connection = ssh_conn
-
-            logger.info("SSH connection to remote machine {} "
-                        "was successful".format(self.ip_address))
-        except Exception as error:
-            message = "Exception {}: {}". \
-                      format(type(error).__name__, str(error))
-            logger.error("Failed to establish SSH connection "
-                         "to remote machine {} "
-                         "with error {}".format(self.ip_address, message))
-
-    def close_ssh_connection(self):
-        self.ssh_connection.close()
-
-    def execute_cmd(self, command):
-        command = "sudo " + command
-        logger.info("Executing command {} on {}"
-                    .format(command, self.ip_address))
-        time.sleep(1)
-        ssh_stdin, ssh_stdout, ssh_stderr = self.ssh_connection.cmd(command)
-        time.sleep(1)
-        return ssh_stdout.readlines(), ssh_stderr.readlines()
-
-    def update_filter(self):
-        try:
-            logger.info("Updating filter")
-            # Check if the filters are already set
-            filter_cmd = '/usr/bin/crudini --get /etc/nova/nova.conf ' \
-                         'DEFAULT scheduler_default_filters'
-            filters = "RetryFilter,AvailabilityZoneFilter,RamFilter," \
-                      "DiskFilter,ComputeFilter,ComputeCapabilitiesFilter," \
-                      "ImagePropertiesFilter,ServerGroupAntiAffinityFilter," \
-                      "ServerGroupAffinityFilter,CoreFilter," \
-                      "NUMATopologyFilter," \
-                      "AggregateInstanceExtraSpecsFilter"
-            # Execute the command to check if filters already set
-            ssh_stdout_list, ssh_stderr_list = self.execute_cmd(filter_cmd)
-            if len(ssh_stdout_list) > 0:
-                if filters in ssh_stdout_list[0]:
-                    logger.warning("Nova schedular filters "
-                                   "already exists on {} "
-                                   "skipping filters update."
-                                   .format(self.ip_address))
-                    return
-
-            # Execute the update filter command
-            update_filter = '/usr/bin/crudini --set /etc/nova/nova.conf ' \
-                            'DEFAULT scheduler_default_filters ' + filters
-            ssh_stdout_list, ssh_stderr_list = self.execute_cmd(update_filter)
-            if ssh_stderr_list:
-                raise Exception("Command execution failed "
-                                "with error {}".format(ssh_stderr_list))
-            else:
-                # Execute the restart scheduler service command
-                sched_cmd = "/usr/bin/systemctl " \
-                            "restart openstack-nova-scheduler.service"
-                ssh_stdout_list, ssh_stderr_list = self.execute_cmd(sched_cmd)
-                time.sleep(2)
-
-                if ssh_stderr_list:
-                    logger.error("Failed to restart the scheduler service \
-                    with error".format(ssh_stderr_list))
-        except Exception as error:
-            message = "Exception {}: {}". \
-                      format(type(error).__name__, str(error))
-            logger.error("Failed to update filter on remote machine {} "
-                         "with error {}".format(self.ip_address, message))
-        finally:
-            # Close the ssh connection
-            self.ssh_connection.close()
 
 
 def edit_dell_environment_file(enable_hugepages,
@@ -464,37 +372,6 @@ def create_aggregates(enable_hugepages, enable_numa, overcloud_name):
             aggregate_meta = [{'pinned': 'False'}, {'hugepages': 'False'}]
             config_oc_obj.configure_dell_aggregate(aggregate_name,
                                                    aggregate_meta)
-    except Exception as error:
-        message = "Exception {}: {}".format(type(error).__name__, str(error))
-        logger.error("{}".format(message))
-
-
-def update_filters():
-    try:
-        logger.info("Updating filters")
-        # Update filters on all controller nodes
-        # Get the undercloud details
-        os_auth_url, os_tenant_name, os_username, os_password = \
-            CredentialHelper.get_undercloud_creds()
-
-        kwargs = {'username': os_username,
-                  'password': os_password,
-                  'auth_url': os_auth_url,
-                  'project_id': os_tenant_name}
-
-        # Create nova client object
-        nova = nova_client.Client(2, **kwargs)
-
-        # Create the ConfigOvercloud object
-        config_oc_obj = ConfigOvercloud(nova)
-        controller_ips = config_oc_obj.get_controller_nodes()
-
-        # Loop through the 'control' nodes here in
-        # each iteration ssh and update filter on each node
-        for controller in controller_ips:
-            control_config_obj = NodeConfig(controller)
-            control_config_obj.ssh_connect()
-            control_config_obj.update_filter()
     except Exception as error:
         message = "Exception {}: {}".format(type(error).__name__, str(error))
         logger.error("{}".format(message))
