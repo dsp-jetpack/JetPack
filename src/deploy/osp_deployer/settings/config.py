@@ -245,13 +245,11 @@ class Settings():
             self.hpg_enable = True
         else:
             self.hpg_enable = False
-        self.hpg_flavor_name_list = dellnfv_settings['hpg_flavor_name_list']
         self.hpg_size = dellnfv_settings['hpg_size']
         if dellnfv_settings['numa_enable'].lower() == 'true':
             self.numa_enable = True
         else:
             self.numa_enable = False
-        self.numa_flavor_name_list = dellnfv_settings['numa_flavor_name_list']
         self.numa_hostos_cpus = dellnfv_settings['numa_hostos_cpus']
 
         backend_settings = self.get_settings_section(
