@@ -137,59 +137,6 @@ class ConfigOvercloud(object):
             raise Exception("Failed to configure \
                             dell aggregate {}.".format(aggregate_name))
 
-    def create_flavor(self, flavor_name):
-        try:
-            flavor_list = self.nova.flavors.list()
-            logger.info("\n {}".format(flavor_list))
-            for flavor in flavor_list:
-                if flavor.name == flavor_name:
-                    logger.warning("Flavor already present in flavor list")
-                    return flavor
-
-            logger.info("Creating custom flavor {}".format(flavor_name))
-            new_flavor = self.nova.flavors.create(flavor_name, 4096, 4, 40)
-            return new_flavor
-        except Exception as error:
-            message = "Exception {}: {}".\
-                      format(type(error).__name__, str(error))
-            logger.error("Failed to create flavor with name \
-                   {} with error {}".format(flavor_name, message))
-
-    def set_flavor_metadata(self, flavor, flavor_metadata):
-        try:
-            logger.info("Setting flavor metadata")
-            keys = ['hw:mem_page_size']
-            if 'hw:mem_page_size' in flavor.get_keys():
-                flavor.unset_keys(keys)
-                logger.info("Flavor metadata unset successfully.")
-            for key in flavor_metadata:
-                flavor_md = {}
-                if key in flavor.get_keys():
-                    logger.warning("Flavor metadata {} already present, \
-                           skipping setting metadata.".format(str(key)))
-                else:
-                    flavor_md[key] = flavor_metadata[key]
-                    flavor.set_keys(flavor_md)
-        except Exception as error:
-            message = "Exception {}: {}".\
-                      format(type(error).__name__, str(error))
-            logger.error("Failed to set metadata {} \
-                   with error {}".format(flavor_metadata, message))
-
-    @classmethod
-    def calc_size(cls, size):
-        sizeunit = size[-2:]
-        if sizeunit == 'GB':
-            return 1024*1024*int(size[:-2])
-        elif sizeunit == 'MB':
-            return 1024*int(size[:-2])
-
-    @classmethod
-    def get_hp_flavor_meta(cls, hugepages_size):
-        flavor_metadata = {'aggregate_instance_extra_specs:hugepages': 'True'}
-        flavor_metadata['hw:mem_page_size'] = cls.calc_size(hugepages_size)
-        return flavor_metadata
-
     def get_controller_nodes(self):
         try:
             logger.info("Getting controller nodes")
@@ -372,49 +319,6 @@ def create_aggregates(enable_hugepages, enable_numa, overcloud_name):
             aggregate_meta = [{'pinned': 'False'}, {'hugepages': 'False'}]
             config_oc_obj.configure_dell_aggregate(aggregate_name,
                                                    aggregate_meta)
-    except Exception as error:
-        message = "Exception {}: {}".format(type(error).__name__, str(error))
-        logger.error("{}".format(message))
-
-
-def create_custom_flavors(overcloud_name,
-                          enable_hugepages,
-                          enable_numa, hugepages_size,
-                          hpg_flavor_names_list,
-                          numa_flavor_names_list):
-    try:
-        if enable_hugepages or enable_numa:
-            logger.info("Creating custom flavors")
-
-            # Get the overcloud details
-            os_auth_url, os_tenant_name, os_username, os_password = \
-                CredentialHelper.get_overcloud_creds()
-
-            kwargs = {'username': os_username,
-                      'password': os_password,
-                      'auth_url': os_auth_url,
-                      'project_id': os_tenant_name}
-
-            # Create nova client object
-            nova = nova_client.Client(2, **kwargs)
-
-            # Create the ConfigOvercloud object
-            config_oc_obj = ConfigOvercloud(nova)
-            # Create flavors for HugePages feature and set its metadata
-            if enable_hugepages:
-                metadata = ConfigOvercloud.get_hp_flavor_meta(hugepages_size)
-                for flavor_name in hpg_flavor_names_list:
-                    flavor = config_oc_obj.create_flavor(flavor_name)
-                    config_oc_obj.set_flavor_metadata(flavor, metadata)
-
-            # Create flavors for NUMA feature and set its metadata
-            if enable_numa:
-                flavor_meta = {'aggregate_instance_extra_specs:pinned': 'True',
-                               'hw:cpu_policy': 'dedicated',
-                               'hw:cpu_thread_policy': 'require'}
-                for flavor_name in numa_flavor_names_list:
-                    flavor = config_oc_obj.create_flavor(flavor_name)
-                    config_oc_obj.set_flavor_metadata(flavor, flavor_meta)
     except Exception as error:
         message = "Exception {}: {}".format(type(error).__name__, str(error))
         logger.error("{}".format(message))
@@ -619,9 +523,6 @@ def finalize_overcloud():
     create_volume_types()
     create_aggregates(args.enable_hugepages, args.enable_numa,
                       args.overcloud_name)
-    create_custom_flavors(args.overcloud_name, args.enable_hugepages,
-                          args.enable_numa, args.hugepages_size,
-                          hpg_flavor_list, numa_flavor_list)
 
 
     # horizon_service = keystone_client.services.find(**{'name': 'horizon'})
@@ -685,14 +586,6 @@ def main():
                             dest="hostos_cpus",
                             required=False,
                             help="HostOS Cpus")
-        parser.add_argument("--hugepages_flavor_list",
-                            dest="hugepages_flavor_list",
-                            required=False,
-                            help="Hugepages Flavor list ")
-        parser.add_argument("--numa_flavor_list",
-                            dest="numa_flavor_list",
-                            required=False,
-                            help="NUMA Flavor list")
         parser.add_argument('--enable_dellsc',
                             action='store_true',
                             default=False,

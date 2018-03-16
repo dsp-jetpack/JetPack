@@ -868,13 +868,10 @@ class Director(InfraHost):
         if self.settings.hpg_enable is True:
             cmd += " --enable_hugepages "
             cmd += " --hugepages_size " + self.settings.hpg_size
-            cmd += " --hugepages_flavor_list " + \
-                   self.settings.hpg_flavor_name_list
 
         if self.settings.numa_enable is True:
             cmd += " --enable_numa "
             cmd += " --hostos_cpus " + self.settings.numa_hostos_cpus
-            cmd += " --numa_flavor_list " + self.settings.numa_flavor_name_list
 
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \
