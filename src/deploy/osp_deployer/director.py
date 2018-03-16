@@ -1065,16 +1065,16 @@ class Director(InfraHost):
                 ip_info.append("     - storage cluster ip : " + cluster_ip)
                 ip_info.append("     - storage ip         : " + storage_ip)
 
-            if self.settings.hpg_enable or self.settings.numa_enable:
+            if self.settings.hpg_enable is True or self.settings.numa_enable is True:
                 logger.debug("retrieving NFV features details...")
                 ip_info.append("====================================")
-                if self.settings.hpg_enable:
+                if self.settings.hpg_enable is True:
                     ip_info.append("### Hugepages ###")
                     ip_info.append(
                         "Feature enabled: " + self.settings.hpg_enable)
                     ip_info.append(
                         "Hugepage size: " + self.settings.hpg_size)
-                if self.settings.numa_enable:
+                if self.settings.numa_enable is True:
                     ip_info.append("### NUMA ###")
                     ip_info.append(
                         "Feature enabled: " + self.settings.numa_enable)
