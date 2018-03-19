@@ -249,7 +249,7 @@ class Settings():
         self.ovs_dpdk_policy = dellnfv_settings[
             'ovs_dpdk_policy']
         self.enable_ovs_dpdk = False
-        if self.ovs_dpdk_enable == 'None':
+        if self.ovs_dpdk_enable.lower() == 'false':
             pass
         elif self.ovs_dpdk_enable == 'Tenant-networks-only':
             self.enable_ovs_dpdk = True
@@ -259,7 +259,7 @@ class Settings():
             self.ovs_dpdk_mode = 2
         else:
             raise AssertionError('Only supported values for '
-                                 'ovs_dpdk_enable are None, '
+                                 'ovs_dpdk_enable are false, '
                                  'Tenant-networks-only and '
                                  'Tenant-and-External-networks')
         if self.enable_ovs_dpdk:
