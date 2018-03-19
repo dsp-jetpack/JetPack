@@ -1064,7 +1064,7 @@ class Director(InfraHost):
 
             if (self.settings.hpg_enable is True or
                 self.settings.numa_enable is True):
-                ip_info.append("NFV features details...")
+                ip_info.append("### NFV features details... ###")
                 ip_info.append("====================================")
                 if self.settings.hpg_enable is True:
                     ip_info.append("### Hugepages ###")
