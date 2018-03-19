@@ -344,6 +344,7 @@ def get_dell_compute_nodes_uuids():
     logger.debug("dell_compute_nodes_uuid: {}".format(dell_compute_nodes_uuid))
     return dell_compute_nodes_uuid
 
+
 def reboot_compute_nodes():
     logger.info("Rebooting dell compute nodes")
     # Get the undercloud details
@@ -356,12 +357,13 @@ def reboot_compute_nodes():
               'project_id': os_tenant_name}
 
     n_client = nova_client.Client(2, **kwargs)
-    for compute in n_client.servers.list(detailed=False,search_opts={'name': 'compute'}):
+    for compute in n_client.servers.list(detailed=False,
+                                         search_opts={'name': 'compute'}):
         logger.info("Rebooting server with id: ".format(compute_name))
         n_client.servers.reboot(compute.id)
-        
-        # Wait for 5 mins to let dell nodes boot up	
-	time.sleep(300)
+
+        # Wait for 5 mins to let dell nodes boot up
+        time.sleep(300)
 
 
 # Check to see if the sequence contains numbers that increase by 1
