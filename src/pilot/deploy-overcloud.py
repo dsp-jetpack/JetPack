@@ -344,6 +344,25 @@ def get_dell_compute_nodes_uuids():
     logger.debug("dell_compute_nodes_uuid: {}".format(dell_compute_nodes_uuid))
     return dell_compute_nodes_uuid
 
+def reboot_compute_nodes():
+    logger.info("Rebooting dell compute nodes")
+    # Get the undercloud details
+    os_auth_url, os_tenant_name, os_username, os_password = \
+        CredentialHelper.get_undercloud_creds()
+
+    kwargs = {'username': os_username,
+              'password': os_password,
+              'auth_url': os_auth_url,
+              'project_id': os_tenant_name}
+
+    n_client = nova_client.Client(2, **kwargs)
+    for compute in n_client.servers.list(detailed=False,search_opts={'name': 'compute'}):
+        logger.info("Rebooting server with id: ".format(compute_name))
+        n_client.servers.reboot(compute.id)
+        
+        # Wait for 5 mins to let dell nodes boot up	
+	time.sleep(300)
+
 
 # Check to see if the sequence contains numbers that increase by 1
 def is_coherent(seq):
@@ -523,6 +542,7 @@ def finalize_overcloud():
     create_volume_types()
     create_aggregates(args.enable_hugepages, args.enable_numa,
                       args.overcloud_name)
+    reboot_compute_nodes()
 
     # horizon_service = keystone_client.services.find(**{'name': 'horizon'})
     # horizon_endpoint = keystone_client.endpoints.find(
