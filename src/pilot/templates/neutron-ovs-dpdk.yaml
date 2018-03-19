@@ -14,7 +14,6 @@
 
 ## A Heat environment that can be used to deploy DPDK with OVS
 resource_registry:
-  OS::TripleO::Compute::Net::SoftwareConfig: ./nic-configs/compute-ovs-dpdk-mode1.yaml
   OS::TripleO::Services::ComputeNeutronOvsAgent: ./overcloud/puppet/services/neutron-ovs-dpdk-agent.yaml
   OS::TripleO::NodeUserData: ./first-boot-ovs-dpdk.yaml
   OS::TripleO::NodeExtraConfigPost: post-install.yaml
