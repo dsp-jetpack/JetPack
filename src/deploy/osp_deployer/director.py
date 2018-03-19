@@ -709,9 +709,6 @@ class Director(InfraHost):
     def setup_networking(self):
         logger.debug("Configuring network settings for overcloud")
 
-        if self.settings.enable_ovs_dpdk:
-            mode = str(self.settings.ovs_dpdk_mode)
-            compute_file_name = "compute-ovs-dpdk-mode" + mode + ".yaml"
         static_ips_yaml = self.templates_dir + "/static-ip-environment.yaml"
         static_vip_yaml = self.templates_dir + "/static-vip-environment.yaml"
         neutron_ovs_dpdk_yaml = self.templates_dir + "/neutron-ovs-dpdk.yaml"
