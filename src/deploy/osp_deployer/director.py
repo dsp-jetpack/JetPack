@@ -1069,13 +1069,13 @@ class Director(InfraHost):
                 if self.settings.hpg_enable is True:
                     ip_info.append("### Hugepages ###")
                     ip_info.append("Feature enabled : " +
-                                   self.settings.hpg_enable)
+                                   str(self.settings.hpg_enable))
                     ip_info.append("Hugepage size : " +
                                    self.settings.hpg_size)
                 if self.settings.numa_enable is True:
                     ip_info.append("### NUMA ###")
                     ip_info.append("Feature enabled : " +
-                                   self.settings.numa_enable)
+                                   str(self.settings.numa_enable))
                     ip_info.append("Host OS CPUs : " +
                                    self.settings.numa_hostos_cpus)
 
