@@ -116,7 +116,7 @@ parameters:
     type: string
 
   ComputeBondInterfaceOptions:
-    default: '802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1'
+    default: 'mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1'
     description: The bonding_options string for the bond interface.
     type: string
 

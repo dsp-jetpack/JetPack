@@ -447,21 +447,18 @@ test_neutron_networking (){
 
   sleep 3
 
-  if [ "DVR_ENABLED" != "False"]; then
-    for floating_ip in ${floating_ips[@]}
-    do
+  for floating_ip in ${floating_ips[@]}
+  do
+    if [ "$DVR_ENABLED" == "True" ]; then
+      # Test pinging the floating IP of the instance from the snat
+      # network namespace
+      ping_from_snat_netns $floating_ip "snat-${router_id}"
+    else
       # Test pinging the floating IP of the instance from the virtual router
       # network namespace
-      ping_from_snat_netns $floating_ip "qrouter-${router_id}"
-    done
-  else
-    for floating_ip in ${floating_ips[@]}
-    do
-      # Test pinging the floating IP of the instance from the virtual router
-      # network namespace
-      ping_from_netns $floating_ip "snat-${router_id}"
-    done
-  fi
+      ping_from_netns $floating_ip "qrouter-${router_id}"
+    fi
+  done
 }
 
 

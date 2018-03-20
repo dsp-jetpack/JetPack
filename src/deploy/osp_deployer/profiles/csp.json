@@ -22,8 +22,9 @@
             "sah_bond_opts": "",
             "nic_env_file": {
                "valid_values": [
+                  "4_port/nic_environment.yaml",
                   "5_port/nic_environment.yaml",
-                  "dvr_5_port/nic_environment.yaml",
+                  "dvr_6_port/nic_environment.yaml",
                   "dvr_7_port/nic_environment.yaml"
 
                ]
