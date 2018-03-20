@@ -250,7 +250,6 @@ class Settings():
             self.numa_enable = True
         else:
             self.numa_enable = False
-        self.numa_hostos_cpus = dellnfv_settings['numa_hostos_cpus']
 
         backend_settings = self.get_settings_section(
             "Storage back-end Settings")

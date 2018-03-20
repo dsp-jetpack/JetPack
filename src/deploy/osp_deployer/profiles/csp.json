@@ -11,8 +11,7 @@
                   "1GB"
                ]
             },
-            "numa_enable": "",
-            "numa_hostos_cpus": ""
+            "numa_enable": ""
          }
       },
       {
