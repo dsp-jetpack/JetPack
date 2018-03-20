@@ -603,10 +603,6 @@ def main():
                             dest="hugepages_size",
                             required=False,
                             help="HugePages size")
-        parser.add_argument("--hostos_cpus",
-                            dest="hostos_cpus",
-                            required=False,
-                            help="HostOS Cpus")
         parser.add_argument('--enable_dellsc',
                             action='store_true',
                             default=False,
