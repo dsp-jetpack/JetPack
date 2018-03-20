@@ -696,8 +696,8 @@ class Director(InfraHost):
             'sed -i "s|NeutronGlobalPhysnetMtu:.*|NeutronGlobalPhysnetMtu: ' +
             self.settings.tenant_network_mtu + '|" ' + network_yaml,
             'sed -i "s|neutron::plugins::ml2::physical_network_mtus:.*|neutron'
-            '::plugins::ml2::physical_network_mtus: \'physext:' +
-            self.settings.floating_ip_network_mtu + '\'|" ' + network_yaml,
+            '::plugins::ml2::physical_network_mtus: [\'physext:' +
+            self.settings.floating_ip_network_mtu + '\']|" ' + network_yaml,
         ]
 
         if self.settings.tenant_tunnel_network:
