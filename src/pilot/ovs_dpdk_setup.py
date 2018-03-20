@@ -66,10 +66,6 @@ def setup_ovs_dpdk_environment(nics, config_file, env_file, mode):
         interfaces = "'" + ",".join(nics) + "'"
 
     cmds = [
-        'sed -i "s|changeme1|' + nics[0] + '|" ' + config_file,
-        'sed -i "s|changeme2|' + nics[1] + '|" ' + config_file,
-        'sed -i "s|changeme3|' + nics[2] + '|" ' + config_file,
-        'sed -i "s|changeme4|' + nics[3] + '|" ' + config_file,
         'sed -i "s|Compute::Net::SoftwareConfig:.*|' +
         'Compute::Net::SoftwareConfig: ' + config_file + '|" ' + env_file,
         'sed -i "s|DpdkInterfaces:.*|DpdkInterfaces: ' +
