@@ -871,7 +871,6 @@ class Director(InfraHost):
 
         if self.settings.numa_enable is True:
             cmd += " --enable_numa "
-            cmd += " --hostos_cpus " + self.settings.numa_hostos_cpus
 
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \
@@ -1076,8 +1075,6 @@ class Director(InfraHost):
                     ip_info.append("### NUMA ###")
                     ip_info.append("Feature enabled : " +
                                    str(self.settings.numa_enable))
-                    ip_info.append("Host OS CPUs : " +
-                                   self.settings.numa_hostos_cpus)
 
             ip_info.append("====================================")
 
