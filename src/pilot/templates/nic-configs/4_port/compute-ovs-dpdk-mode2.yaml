@@ -205,7 +205,6 @@ resources:
                       members:
                         -
                           type: interface
-<<<<<<< HEAD
                           name: {get_param: ComputeOvsDpdkInterface2}
             -
               type: interface
@@ -214,16 +213,6 @@ resources:
             -
               type: interface
               name: {get_param: ComputeOvsDpdkInterface4}
-=======
-                          name: changeme2
-            -
-              type: interface
-              name: changeme3
-              use_dhcp: false 
-            -
-              type: interface
-              name: changeme4
->>>>>>> c0d806896dfcc347373a72ac3a9a767d07ba0767
               use_dhcp: false
             -
               type: ovs_bridge
