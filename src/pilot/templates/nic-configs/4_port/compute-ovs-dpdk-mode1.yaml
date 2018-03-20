@@ -95,7 +95,7 @@ parameters:
     description: Bond 0 interface 1 name
     type: string
   ComputeBond0Interface2:
-    default: 'p3p1'
+    default: 'p1p1'
     description: Bond 0 interface 2 name
     type: string
   ComputeBond1Interface1:
@@ -103,20 +103,31 @@ parameters:
     description: Bond 1 interface 1 name
     type: string
   ComputeBond1Interface2:
-    default: 'p3p2'
+    default: 'p1p2'
     description: Bond 1 interface 2 name
     type: string
   ComputeBondInterfaceOptions:
-    default: '802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1'
+    default: 'mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1'
     description: The bonding_options string for the bond interface.
     type: string
-  BondInterfaceOptions:
-    default: ''
-    description: The bonding_options string for the bond interface. Set things
-                 like mode=802.3ad using this option.
+  ComputeOvsDpdkInterface1:
+    default: 'p2p1'
+    description: Dpdk Interface 1 name
     type: string
+  ComputeOvsDpdkInterface2:
+    default: 'p3p1'
+    description: Dpdk Interface 2 name
+    type: string
+  ComputeOvsDpdkInterface3:
+    default: 'p2p2'
+    description: Dpdk Interface 3 name
+    type: string
+  ComputeOvsDpdkInterface4:
+    default: 'p3p2'
+    description: Dpdk Interface 4 name
+    type:string
   OvsDpdkBondInterfaceOptions:
-    default: ''
+    default: 'bond_mode=balance-tcp lacp=active'
     description: The bonding_options string for the bond interface. Set things
                  like 'bond_mode=balance-tcp lacp=active' using this option.
     type: string
@@ -187,28 +198,28 @@ resources:
                       members:
                         -
                           type: interface
-                          name: changeme1
+                          name: {get_param: ComputeOvsDpdkInterface1}
                     -    
                       type: ovs_dpdk_port
                       name: dpdk1
                       members:
                         -
                           type: interface
-                          name: changeme2
+                          name: {get_param: ComputeOvsDpdkInterface2}
                     -
                       type: ovs_dpdk_port
                       name: dpdk2
                       members:
                         -
                           type: interface
-                          name: changeme3
+                          name: {get_param: ComputeOvsDpdkInterface3}
                     -
                       type: ovs_dpdk_port
                       name: dpdk3
                       members:
                         -
                           type: interface
-                          name: changeme4
+                          name: {get_param: ComputeOvsDpdkInterface4}
             -
               type: ovs_bridge
               name: br-bond1
