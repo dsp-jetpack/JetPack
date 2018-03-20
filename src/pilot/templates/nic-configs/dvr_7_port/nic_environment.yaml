@@ -34,11 +34,11 @@ parameter_defaults:
   # nodes bonds
   ComputeProvisioningInterface: em3
   ComputeBond0Interface1: em1
-  ComputeBond0Interface2: p3p1
+  ComputeBond0Interface2: p3p2
   ComputeBond1Interface1: em2
-  ComputeBond1Interface2: p3p2
-  ComputeBond2Interface1: p1p1
-  ComputeBond2Interface2: p2p1
+  ComputeBond1Interface2: p1p1
+  ComputeBond2Interface1: p3p1
+  ComputeBond2Interface2: p1p2
   # The bonding mode to use for compute nodes
   ComputeBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
 

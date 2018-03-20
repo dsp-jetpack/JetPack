@@ -95,7 +95,7 @@ parameters:
     description: Bond 0 interface 1 name
     type: string
   ComputeBond0Interface2:
-    default: 'p1p1'
+    default: 'p3p2'
     description: Bond 0 interface 2 name
     type: string
   ComputeBond1Interface1:
@@ -103,15 +103,15 @@ parameters:
     description: Bond 1 interface 1 name
     type: string
   ComputeBond1Interface2:
-    default: 'p1p2'
+    default: 'p1p1'
     description: Bond 1 interface 2 name
     type: string
   ComputeBond2Interface1:
-    default: 'p2p1'
+    default: 'p3p1'
     description: Bond 2 interface 1 name
     type: string
   ComputeBond2Interface2:
-    default: 'p3p1'
+    default: 'p1p2'
     description: Bond 2 interface 2 name
     type: string
 
