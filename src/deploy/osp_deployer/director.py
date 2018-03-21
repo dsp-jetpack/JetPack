@@ -729,14 +729,14 @@ class Director(InfraHost):
             compute_file_name = "compute-ovs-dpdk-mode" + mode + ".yaml"
             compute_yaml = self.nic_configs_dir + "/" + nic_config_dirname + "/" + compute_file_name
             logger.debug("setting ovs dpdk environment")
-            cmd = [
-                  'sed -i "s|Compute::Net::SoftwareConfig:.*|' +
-                  'Compute::Net::SoftwareConfig: ' +
-                  compute_yaml +
-                  '|" ' +
-                  self.nic_configs_dir +
+            cmd = 'sed -i ' \
+                  '"s|Compute::Net::SoftwareConfig:.*|' + \
+                  'Compute::Net::SoftwareConfig: ' + \
+                  compute_yaml + \
+                  '|" ' + \
+                  self.nic_configs_dir + \
+                  '/' + \
                   self.settings.nic_env_file
-                  ]
             self.run_tty(cmd)
 
             cmd = "python " + self.pilot_dir + "/ovs_dpdk_setup.py" \
