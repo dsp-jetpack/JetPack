@@ -201,7 +201,6 @@ resources:
             -
               type: ovs_bridge
               name: br-tenant
-              mtu: {get_param: TenantNetworkMTU}
               members:
                 -
                   type: linux_bond

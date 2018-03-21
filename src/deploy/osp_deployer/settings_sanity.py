@@ -148,7 +148,8 @@ class DeployerSanity():
         for each in shouldbbevalidmtu:
             assert self.is_valid_mtu(getattr(self.settings, each)),\
                 "Setting for " + each + " is not a valid mtu " +\
-                getattr(self.settings, each) + "Maximum mtu size allowed = 9216 and minimum allowed =594"
+                getattr(self.settings, each) + "Maximum mtu size allowed = "
+                "9216 and minimum allowed =594"
         
     def check_ipmi_to_node(self, idrac_ip, ipmi_user, ipmi_password):
         try:

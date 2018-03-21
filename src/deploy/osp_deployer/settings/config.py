@@ -158,11 +158,7 @@ class Settings():
             'tenant_tunnel_network_allocation_pool_end']
         self.tenant_tunnel_vlanid = network_settings[
             'tenant_tunnel_network_vlanid']
-        self.tenant_vlan_range = network_settings['tenant_vlan_range']
-        
-        
-        
-        
+        self.tenant_vlan_range = network_settings['tenant_vlan_range']    
         mtu_settings = self.get_settings_section(
             "MTU Settings")
         self.mtu_selection = mtu_settings[
