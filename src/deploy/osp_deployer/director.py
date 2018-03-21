@@ -27,7 +27,6 @@ import subprocess
 import sys
 import tempfile
 import time
-import ipdb
 
 logger = logging.getLogger("osp_deployer")
 
@@ -732,14 +731,13 @@ class Director(InfraHost):
             logger.debug("setting ovs dpdk environment")
             cmd = [
                   'sed -i "s|Compute::Net::SoftwareConfig:.*|' +
-		  'Compute::Net::SoftwareConfig: ' +
+                  'Compute::Net::SoftwareConfig: ' +
                   compute_yaml +
                   '|" ' +
                   self.nic_configs_dir +
                   self.settings.nic_env_file
                   ]
-            ipdb.set_trace()
-	    self.run_tty(cmd)
+            self.run_tty(cmd)
 
             cmd = "python " + self.pilot_dir + "/ovs_dpdk_setup.py" \
                   + " --env_file " + neutron_ovs_dpdk_yaml \
