@@ -45,10 +45,7 @@ class Sah(InfraHost):
         sets = self.settings
         shutil.copyfile(sets.sah_kickstart, sets.cloud_repo_dir +
                         "/../osp-sah.ks")
-        print sets.sah_kickstart
         sets.sah_kickstart = sets.cloud_repo_dir + "/../osp-sah.ks"
-        print sets.sah_kickstart
-
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^HostName=.*',
                                       'HostName="' +
@@ -249,7 +246,6 @@ class Sah(InfraHost):
                                       'br_priv_api_mtu="' +
                                       sets.private_api_network_mtu +
                                       '"')
-        print "i am here @sah.py"
         time.sleep(3)
 
     def upload_iso(self):
