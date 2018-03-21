@@ -267,11 +267,15 @@ def define_target_raid_config(role, drac_client):
         'logical_disks': logical_disks} if logical_disks is not None else None
 
 
+def is_raid_controller(fqdd):
+    return fqdd.startswith('RAID.')
+
+
 def get_raid_controller_id(drac_client):
     disk_controllers = drac_client.list_raid_controllers()
 
     raid_controller_ids = [
-        c.id for c in disk_controllers if c.id.startswith('RAID.Integrated.')]
+        c.id for c in disk_controllers if is_raid_controller(c.id)]
 
     number_raid_controllers = len(raid_controller_ids)
 
@@ -1331,10 +1335,12 @@ def change_physical_disk_state(drac_client, mode,
         controllers_to_physical_disk_ids = defaultdict(list)
 
         for physical_disk in physical_disks:
-            physical_disk_ids = controllers_to_physical_disk_ids[
-                physical_disk.controller]
+            # Weed out disks that are not attached to a RAID controller
+            if is_raid_controller(physical_disk.controller):
+                physical_disk_ids = controllers_to_physical_disk_ids[
+                    physical_disk.controller]
 
-            physical_disk_ids.append(physical_disk.id)
+                physical_disk_ids.append(physical_disk.id)
 
     # Weed out disks that are already in the mode we want
     failed_disks = []
