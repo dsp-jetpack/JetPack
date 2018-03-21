@@ -129,7 +129,7 @@ parameters:
   ComputeOvsDpdkInterface4:
     default: 'p3p2'
     description: Dpdk Interface 4 name
-    type:string
+    type: string
   OvsDpdkBondInterfaceOptions:
     default: 'bond_mode=balance-tcp lacp=active'
     description: The bonding_options string for the bond interface. Set things
