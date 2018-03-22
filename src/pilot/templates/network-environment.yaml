@@ -132,7 +132,9 @@ parameter_defaults:
   # Default Bonds MTU
   DefaultBondMTU: 1500
   
-
+  # CHANGEME: Change the following to mtu size used for the floating network
+  ExtraConfig:
+    neutron::plugins::ml2::physical_network_mtus: physext:1500
   # CHANGEME: Set to empty string for External VLAN, br-ex if on native VLAN of br-ex
   NeutronExternalNetworkBridge: "''"
   ServiceNetMap:
@@ -170,5 +172,3 @@ parameter_defaults:
     NovaColdMigrationNetwork: internal_api
     NovaLibvirtNetwork: internal_api
 
-  ExtraConfig:
-    neutron::plugins::ml2::physical_network_mtus: physext:1500

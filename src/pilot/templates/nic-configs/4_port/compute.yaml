@@ -154,6 +154,7 @@ resources:
             -
               type: ovs_bridge
               name: br-tenant
+              mtu: {get_param: ProvisioningNetworkMTU}
               use_dhcp: false
               dns_servers: {get_param: DnsServers}
               addresses:
