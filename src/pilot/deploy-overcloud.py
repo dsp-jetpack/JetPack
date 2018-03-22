@@ -25,6 +25,7 @@ import time
 import logging
 import string
 import novaclient.client as nova_client
+from command_helper import Ssh
 from novaclient.v2 import aggregates
 from novaclient.v2 import hosts
 from novaclient.v2 import servers
@@ -357,13 +358,40 @@ def reboot_compute_nodes():
               'project_id': os_tenant_name}
 
     n_client = nova_client.Client(2, **kwargs)
+
+    dell_compute = []
     for compute in n_client.servers.list(detailed=False,
                                          search_opts={'name': 'compute'}):
-        logger.info("Rebooting server with id: ".format(compute_name))
+        dell_compute.append(n_client.servers.ips(compute)['ctlplane'][0]['addr'])
+
+        logger.info("Rebooting server with id: ".format(compute_id))
         n_client.servers.reboot(compute.id)
 
-        # Wait for 5 mins to let dell nodes boot up
-        time.sleep(300)
+        retries = 32
+        ssh_success_count = 0
+
+        # Wait for 30s for the nodes to be powered cycle then do the checks
+        sleep(30)
+
+        for ip in dell_compute:
+            while retries > 0:
+                exit_code, _, std_err = Ssh.execute_command(ip,
+                                                            "pwd",
+                                                            user="heat-admin",
+                                                            )
+                retries -= 1
+                if exit_code != 0:
+                    logger.info("Server with IP: {} is not responsive".format(ip))
+                else:
+                    logger.info("Server with IP: {} is responsive".format(ip))
+                    ssh_success_count += 1
+                    break
+
+                # Waiting 10s before the next attempt
+                sleep(10)
+
+        if ssh_success_count == len(dell_compute):
+            logger.info("All compute nodes are now responsive. Continuing...")
 
 
 # Check to see if the sequence contains numbers that increase by 1
