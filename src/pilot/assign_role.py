@@ -850,6 +850,17 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
               'path': '/properties/capabilities'}]
     ironic_client.node.update(node_uuid, patch)
 
+    # Detecting BOSS Card and find the boss device size
+    drac_client = drac_client.client
+    lst_ctrls = drac_client.list_raid_controllers()
+    boss_disk = [ctrl.id for ctrl in lst_ctrls if ctrl.model == "BOSS-S1"]
+    lst_physical_disks = drac_client.list_physical_disks()
+    for disks in lst_physical_disks:
+        if disks.controller in boss_disk:
+            os_volume_size_gb = disks.size_mb/1024
+            LOG.info("Detect BOSS Card {} and volume size {}".format(
+                disks.controller,
+                os_volume_size_gb))
     # Select the volume for the OS to be installed on
     select_os_volume(os_volume_size_gb, ironic_client, drac_client.client,
                      node_uuid)
