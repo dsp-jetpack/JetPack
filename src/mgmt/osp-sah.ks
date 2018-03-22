@@ -132,12 +132,12 @@ internal_bond_mtu="CHANGEME e.g. 9216"
 # Management
 mgmt_bond_name="CHANGEME e.g. bond0.110"
 mgmt_boot_opts="onboot none vlan"
-mgmt_bond_mtu="CHANGEME e.g. 1500"
+mgmt_bond_mtu= "1500"
 
 # Provisioning
 prov_bond_name="CHANGEME e.g. bond0.120"
 prov_boot_opts="onboot none vlan"
-prov_bond_mtu="CHANGEME e.g. 1500"
+prov_bond_mtu="1500"
 
 # Storage
 stor_bond_name="CHANGEME e.g. bond0.170"
@@ -157,11 +157,11 @@ priv_api_bond_mtu="CHANGEME e.g. 9216"
 # Define the bridges
 # Management bridge options
 br_mgmt_boot_opts="CHANGEME onboot static 192.168.110.12/255.255.255.0"
-br_mgmt_mtu="CHANGEME e.g. 1500"
+br_mgmt_mtu="1500"
 
 # Provisioning bridge options
 br_prov_boot_opts="CHANGEME e.g. onboot static 192.168.120.12/255.255.255.0"
-br_prov_mtu="CHANGEME e.g. 1500"
+br_prov_mtu="1500"
 
 # Storage bridge options
 br_stor_boot_opts="CHANGEME e.g. onboot static 192.168.170.12/255.255.255.0"
