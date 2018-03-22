@@ -156,7 +156,7 @@ resources:
               name: br-bond0
               use_dhcp: false
               dns_servers: {get_param: DnsServers}
-              mtu: {get_param: StorageNetworkMTU}
+              mtu: {get_param: ProvisioningNetworkMTU}
               addresses:
                   -
                     ip_netmask:
