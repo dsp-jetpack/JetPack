@@ -185,7 +185,7 @@ class Sah(InfraHost):
                                       'prov_netmask="' +
                                       sets.provisioning_netmask +
                                       '"')
-#mtu_settings
+# mtu_settings
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^extern_bond_mtu=.*',
                                       'extern_bond_mtu="' +
@@ -254,8 +254,8 @@ class Sah(InfraHost):
 
     def clear_known_hosts(self):
         hosts = [
-             self.settings.director_node.public_api_ip,
-             self.settings.dashboard_node.public_api_ip
+            self.settings.director_node.public_api_ip,
+            self.settings.dashboard_node.public_api_ip
         ]
 
         if self.is_running_from_sah() is True:
@@ -316,7 +316,7 @@ class Sah(InfraHost):
                 "# Iface     IP               NETMASK              MTU",)
         conf = conf + ("eth0        " +
                        self.settings.director_node.public_api_ip +
-                       "    " + self.settings.public_api_netmask + 
+                       "    " + self.settings.public_api_netmask +
                        "     " + self.settings.public_api_network_mtu,)
         conf = conf + ("eth1        " +
                        self.settings.director_node.provisioning_ip +
