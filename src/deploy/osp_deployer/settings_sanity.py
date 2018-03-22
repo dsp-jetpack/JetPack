@@ -45,6 +45,7 @@ class DeployerSanity():
             valid = False
 
         return valid
+
     @staticmethod
     def is_valid_mtu(mtu_val):
         valid = False
@@ -133,7 +134,7 @@ class DeployerSanity():
                 self.check_ipmi_to_node(node.idrac_ip,
                                         self.settings.ipmi_user,
                                         self.settings.ipmi_password)
-    
+
     def check_mtu_of_networks(self):
         shouldbbevalidmtu = [
             'mtu_size_global_default',
@@ -150,7 +151,7 @@ class DeployerSanity():
                 "Setting for " + each + " is not a valid mtu " +\
                 getattr(self.settings, each) + "Maximum mtu size allowed = "
                 "9216 and minimum allowed =594"
-        
+
     def check_ipmi_to_node(self, idrac_ip, ipmi_user, ipmi_password):
         try:
             logger.debug(idrac_ip)
@@ -358,13 +359,13 @@ class DeployerSanity():
                     os_volume_size_gb = int(node.os_volume_size_gb)
                 except ValueError:
                     raise AssertionError("os_volume_size_gb of "
-                        "\"{}\" on node {} is not an integer".format(
-                            node.os_volume_size_gb, node.idrac_ip))
+                                         "\"{}\" on node {} is not an integer".format(
+                                             node.os_volume_size_gb, node.idrac_ip))
 
                 if os_volume_size_gb <= 0:
                     raise AssertionError("os_volume_size_gb of "
-                        "\"{}\" on node {} is not a positive integer".format(
-                            node.os_volume_size_gb, node.idrac_ip))
+                                         "\"{}\" on node {} is not a positive integer".format(
+                                             node.os_volume_size_gb, node.idrac_ip))
 
     def check_net_attrs(self, node, should_have_attributes,
                         should_be_valid_ips):
@@ -505,7 +506,7 @@ class DeployerSanity():
         # verify fencing flag enabled when IHA enabled
         logger.debug("verifying fencing enabled when iha enabled")
         if (self.settings.enable_instance_ha is True
-            and self.settings.enable_fencing is False):
+                and self.settings.enable_fencing is False):
             raise AssertionError("Fencing NOT enabled, this is required" +
                                  " for IHA. Please verify this setting.")
 

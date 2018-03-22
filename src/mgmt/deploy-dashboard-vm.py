@@ -357,7 +357,8 @@ chvt 6
             elif tokens[0] == "eth1":
                 ks.write("echo network --activate --onboot=true --noipv6"
                          " --device='{}' --bootproto=static --ip='{}'"
-                         " --netmask='{}' --gateway='{}' --nodefroute --mtu='{}' >> {}\n".
+                         " --netmask='{}' --gateway='{}' --nodefroute "
+                         "--mtu='{}' >> {}\n".
                          format(
                              tokens[0],
                              tokens[1],
