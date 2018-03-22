@@ -143,7 +143,7 @@ parameters:
     description: MTU value for this network.
     type: number
   DefaultBondMTU: # Override this via parameter_defaults
-    default: 1500
+    default: 9216
     description: MTU value for this network.
     type: number
 
@@ -178,7 +178,7 @@ resources:
             -
               type: ovs_bridge
               name: br-bond0
-              mtu: {get_param: StorageNetworkMTU}
+              mtu: {get_param: DefaultBondMTU}
               members:
                 -
                   type: linux_bond
@@ -206,7 +206,7 @@ resources:
             -
               type: ovs_bridge
               name: br-bond1
-              mtu: {get_param: StorageMgmtNetworkMTU}
+              mtu: {get_param: DefaultBondMTU}
               members:
                 -
                   type: linux_bond

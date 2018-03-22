@@ -152,7 +152,7 @@ parameters:
     description: MTU value for this network.
     type: number
   DefaultBondMTU: # Override this via parameter_defaults
-    default: 1500
+    default: 9216
     description: MTU value for this network.
     type: number
   ExternalNetworkMTU: 
@@ -201,6 +201,7 @@ resources:
             -
               type: ovs_bridge
               name: br-tenant
+              mtu: {get_param: DefaultBondMTU}
               members:
                 -
                   type: linux_bond
@@ -243,7 +244,7 @@ resources:
               type: ovs_bridge
               name: {get_input: bridge_name}
               dns_servers: {get_param: DnsServers}
-              mtu: {get_param: ExternalNetworkMTU}
+              mtu: {get_param: DefaultBondMTU}
               members:
                 -
                   type: linux_bond

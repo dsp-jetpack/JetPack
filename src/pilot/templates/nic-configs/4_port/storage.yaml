@@ -139,7 +139,7 @@ parameters:
     description: MTU value for this network.
     type: number
   DefaultBondMTU: # Override this via parameter_defaults
-    default: 1500
+    default: 9216
     description: MTU value for this network.
     type: number
 
@@ -193,19 +193,19 @@ resources:
                   device: bond0
                   vlan_id: {get_param: StorageNetworkVlanID}
                   mtu: {get_param: StorageNetworkMTU}
-                  # mtu: 9216
                   addresses:
                   -
                     ip_netmask: {get_param: StorageIpSubnet}
             -
               type: ovs_bridge
               name: br-bond1
+              mtu: {get_param: DefaultBondMTU}
               members:
                 -
                   type: linux_bond
                   name: bond1
                   bonding_options: {get_param: StorageBondInterfaceOptions}
-                  mtu: {get_param: StorageMgmtNetworkMTU}
+                  mtu: {get_param: DefaultBondMTU}
                   members:
                     -
                       type: interface
@@ -221,7 +221,6 @@ resources:
                   device: bond1
                   vlan_id: {get_param: StorageMgmtNetworkVlanID}
                   mtu: {get_param: StorageMgmtNetworkMTU}
-                  # mtu: 9216
                   addresses:
                     -
                       ip_netmask: {get_param: StorageMgmtIpSubnet}
