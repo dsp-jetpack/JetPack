@@ -851,7 +851,6 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
     ironic_client.node.update(node_uuid, patch)
 
     # Detecting BOSS Card and find the boss device size
-    drac_client = drac_client.client
     lst_ctrls = drac_client.list_raid_controllers()
     boss_disk = [ctrl.id for ctrl in lst_ctrls if ctrl.model == "BOSS-S1"]
     lst_physical_disks = drac_client.list_physical_disks()
