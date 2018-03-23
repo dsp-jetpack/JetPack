@@ -364,34 +364,36 @@ def reboot_compute_nodes():
                                          search_opts={'name': 'compute'}):
         dell_compute.append(n_client.servers.ips(compute)['ctlplane'][0]['addr'])
 
-        logger.info("Rebooting server with id: ".format(compute_id))
+        logger.info("Rebooting server with id: ".format(compute.id))
         n_client.servers.reboot(compute.id)
 
+    # Wait for 30s for the nodes to be powered cycle then do the checks
+    sleep(30)
+
+    ssh_success_count = 0
+
+    for ip in dell_compute:
         retries = 32
-        ssh_success_count = 0
+        while retries > 0:
+            exit_code, _, std_err = Ssh.execute_command(ip,
+                                                        "pwd",
+                                                        user="heat-admin",
+                                                        )
+            retries -= 1
+            if exit_code != 0:
+                logger.info("Server with IP: {} is not responsive".format(ip))
+            else:
+                logger.info("Server with IP: {} is responsive".format(ip))
+                ssh_success_count += 1
+                break
 
-        # Wait for 30s for the nodes to be powered cycle then do the checks
-        sleep(30)
+            # Waiting 10s before the next attempt
+            sleep(10)
 
-        for ip in dell_compute:
-            while retries > 0:
-                exit_code, _, std_err = Ssh.execute_command(ip,
-                                                            "pwd",
-                                                            user="heat-admin",
-                                                            )
-                retries -= 1
-                if exit_code != 0:
-                    logger.info("Server with IP: {} is not responsive".format(ip))
-                else:
-                    logger.info("Server with IP: {} is responsive".format(ip))
-                    ssh_success_count += 1
-                    break
-
-                # Waiting 10s before the next attempt
-                sleep(10)
-
-        if ssh_success_count == len(dell_compute):
-            logger.info("All compute nodes are now responsive. Continuing...")
+    if ssh_success_count == len(dell_compute):
+        logger.info("All compute nodes are now responsive. Continuing...")
+    else:
+        logger.error("Failed to reboot the nodes or at least one node failed to get back up")
 
 
 # Check to see if the sequence contains numbers that increase by 1
