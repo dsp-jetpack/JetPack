@@ -21,10 +21,10 @@ import re
 import sys
 import subprocess
 import paramiko
-import time
 import logging
 import string
 import novaclient.client as nova_client
+import time
 from command_helper import Ssh
 from novaclient.v2 import aggregates
 from novaclient.v2 import hosts
@@ -368,7 +368,7 @@ def reboot_compute_nodes():
         n_client.servers.reboot(compute.id)
 
     # Wait for 30s for the nodes to be powered cycle then do the checks
-    sleep(30)
+    time.sleep(30)
 
     ssh_success_count = 0
 
@@ -388,7 +388,7 @@ def reboot_compute_nodes():
                 break
 
             # Waiting 10s before the next attempt
-            sleep(10)
+            time.sleep(10)
 
     if ssh_success_count == len(dell_compute):
         logger.info("All compute nodes are now responsive. Continuing...")
