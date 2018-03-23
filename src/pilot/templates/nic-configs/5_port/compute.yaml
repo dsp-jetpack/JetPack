@@ -111,7 +111,7 @@ parameters:
     description: Bond 1 interface 2 name
     type: string
   ComputeBondInterfaceOptions:
-    default: '802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1'
+    default: 'mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1'
     description: The bonding_options string for the bond interface.
     type: string
 
@@ -174,7 +174,7 @@ resources:
                       ip_netmask: {get_param: InternalApiIpSubnet}
             -
               type: ovs_bridge
-              name: br-bond1
+              name: {get_input: bridge_name}
               members:
                 -
                   type: linux_bond
