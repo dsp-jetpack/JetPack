@@ -393,6 +393,7 @@ def reboot_compute_nodes():
     if ssh_success_count == len(dell_compute):
         logger.info("All compute nodes are now responsive. Continuing...")
     else:
+        raise Exception("At least one compute node failed to reboot")
         logger.error("Failed to reboot the nodes or at least one node failed to get back up")
 
 
@@ -829,7 +830,7 @@ def main():
 
         if horizon_url:
             logger.info('\nHorizon Dashboard URL: {}\n'.format(horizon_url))
-    except ValueError as err:
+    except Exception as err:
         print >> sys.stderr, err
         sys.exit(1)
 
