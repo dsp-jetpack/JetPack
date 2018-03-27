@@ -363,7 +363,8 @@ def reboot_compute_nodes():
     dell_compute = []
     for compute in n_client.servers.list(detailed=False,
                                          search_opts={'name': 'compute'}):
-        dell_compute.append(n_client.servers.ips(compute)['ctlplane'][0]['addr'])
+        dell_compute.append(n_client.servers.ips(
+            compute)['ctlplane'][0]['addr'])
 
         logger.info("Rebooting server with id: ".format(compute.id))
         n_client.servers.reboot(compute.id)
@@ -394,7 +395,8 @@ def reboot_compute_nodes():
     if ssh_success_count == len(dell_compute):
         logger.info("All compute nodes are now responsive. Continuing...")
     else:
-        logger.error("Failed to reboot the nodes or at least one node failed to get back up")
+        logger.error("Failed to reboot the nodes or at least one node failed "
+                     "to get back up")
         raise Exception("At least one compute node failed to reboot")
 
 
