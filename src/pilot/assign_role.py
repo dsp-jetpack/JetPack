@@ -282,6 +282,7 @@ def get_raid_controller_id(drac_client):
     if number_raid_controllers == 1:
         return raid_controller_ids[0]
     elif number_raid_controllers == 0:
+        LOG.critical("Found no RAID controllers")
         return None
     else:
         LOG.critical(

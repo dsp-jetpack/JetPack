@@ -16,7 +16,7 @@ parameter_defaults:
   ControllerSchedulerHints:
     'capabilities:node': 'control-%index%'
 
-  NovaComputeSchedulerHints:
+  DellComputeSchedulerHints:
     'capabilities:node': 'compute-%index%'
 
   CephStorageSchedulerHints:
