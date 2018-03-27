@@ -30,6 +30,7 @@ from novaclient.v2 import aggregates
 from novaclient.v2 import hosts
 from novaclient.v2 import servers
 from ironic_helper import IronicHelper
+from logging_helper import LoggingHelper
 
 from credential_helper import CredentialHelper
 
@@ -37,7 +38,7 @@ from credential_helper import CredentialHelper
 from identify_nodes import main as identify_nodes
 from update_ssh_config import main as update_ssh_config
 
-logging.basicConfig()
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
 home_dir = os.path.expanduser('~')
@@ -661,6 +662,8 @@ def main():
                             help="Indicates if the deploy-overcloud script "
                                  "should be run in debug mode")
         args = parser.parse_args()
+        LoggingHelper.add_argument(parser)
+
         p = re.compile('\d+:\d+')
         if not p.match(args.vlan_range):
             raise ValueError("Error: The VLAN range must be a number followed "
