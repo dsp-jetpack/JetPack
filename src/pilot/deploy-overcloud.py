@@ -393,8 +393,8 @@ def reboot_compute_nodes():
     if ssh_success_count == len(dell_compute):
         logger.info("All compute nodes are now responsive. Continuing...")
     else:
-        raise Exception("At least one compute node failed to reboot")
         logger.error("Failed to reboot the nodes or at least one node failed to get back up")
+        raise Exception("At least one compute node failed to reboot")
 
 
 # Check to see if the sequence contains numbers that increase by 1
