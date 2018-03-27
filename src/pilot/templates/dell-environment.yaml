@@ -14,8 +14,27 @@
 
 resource_registry:
     OS::TripleO::NodeUserData: ./first-boot.yaml
+    OS::TripleO::Services::HugePages: overcloud/puppet/services/dellnfv/hugepages.yaml
+    OS::TripleO::Services::NUMA: overcloud/puppet/services/dellnfv/numa.yaml
+
 
 parameter_defaults:
+  # Flavor used as the regular compute
+  OvercloudDellComputeFlavor: baremetal
+
+  # List of Default Filters to pass to the nova Scheduler
+  # Default filters are used if profile is set to XSP
+  # This line is uncommented when using with CSP profile
+  # NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','RamFilter','DiskFilter', 'ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter', 'CoreFilter', 'NUMATopologyFilter', 'AggregateInstanceExtraSpecsFilter']
+
+  # List of CPUs reserver for Host OS operation
+  # Disabled by default for XSP Profile
+  # This line is uncommented and updated when using CSP Profile
+  # NovaVcpuPinSet: ['8-47']
+ 
+  # Number of Dell Compute nodes 
+  DellComputeCount: 0
+
   # To customize the domain name of the overcloud nodes, change "localdomain"
   # in the following line to the desired domain name.
   CloudDomain: localdomain
@@ -44,6 +63,13 @@ parameter_defaults:
 
   # Additional hiera data for all nodes
   ExtraConfig:
+    # NFV Profile settings start here
+    dellnfv::hugepages::enable: False
+    dellnfv::hugepages::hugepagesize: 2M
+    dellnfv::hugepages::hugepagecount: 49152
+    dellnfv::numa::enable: False
+    dellnfv::numa::vcpu_pin_set: \"8-47\"
+
     ceph::profile::params::osd_journal_size: 10000
     ceph::profile::params::osd_pool_default_min_size: 2
     # CHANGEME:

@@ -849,7 +849,7 @@ class Director(InfraHost):
         self.run_tty(cmd)
         cmd = self.source_stackrc + "cd" \
                                     " ~/pilot;./deploy-overcloud.py" \
-                                    " --computes " + \
+                                    " --dell-computes " + \
                                     str(len(self.settings.compute_nodes)) + \
                                     " --controllers " + \
                                     str(len(self.settings.controller_nodes
@@ -864,6 +864,13 @@ class Director(InfraHost):
                                     self.settings.overcloud_name + \
                                     " --ntp " + \
                                     self.settings.sah_node.provisioning_ip
+
+        if self.settings.hpg_enable is True:
+            cmd += " --enable_hugepages "
+            cmd += " --hugepages_size " + self.settings.hpg_size
+
+        if self.settings.numa_enable is True:
+            cmd += " --enable_numa "
 
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \
@@ -916,7 +923,7 @@ class Director(InfraHost):
                          "ironic node-delete " +
                          node_id)
 
-    def retreive_nodes_ips(self):
+    def summarize_deployment(self):
         logger.info("**** Retreiving nodes information ")
         deployment_log = '/auto_results/deployment_summary.log'
         ip_info = []
@@ -1053,6 +1060,21 @@ class Director(InfraHost):
                     "     - provisioning ip    : " + provisioning_ip)
                 ip_info.append("     - storage cluster ip : " + cluster_ip)
                 ip_info.append("     - storage ip         : " + storage_ip)
+
+            if (self.settings.hpg_enable is True or
+                self.settings.numa_enable is True):
+                ip_info.append("### NFV features details... ###")
+                ip_info.append("====================================")
+                if self.settings.hpg_enable is True:
+                    ip_info.append("### Hugepages ###")
+                    ip_info.append("Feature enabled : " +
+                                   str(self.settings.hpg_enable))
+                    ip_info.append("Hugepage size : " +
+                                   self.settings.hpg_size)
+                if self.settings.numa_enable is True:
+                    ip_info.append("### NUMA ###")
+                    ip_info.append("Feature enabled : " +
+                                   str(self.settings.numa_enable))
 
             ip_info.append("====================================")
 
