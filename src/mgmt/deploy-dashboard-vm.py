@@ -142,8 +142,8 @@ chvt 8
   done
 
   echo "GATEWAY=${Gateway}" >> /etc/sysconfig/network
-  echo "MTU=${eth0}" >> /etc/sysconfig/network-scripts/ifcfg-eth0
-  echo "MTU=${eth1}" >> /etc/sysconfig/network-scripts/ifcfg-eth1
+  echo "MTU=${eth0_mtu}" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+  echo "MTU=${eth1_mtu}" >> /etc/sysconfig/network-scripts/ifcfg-eth1
 
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth0
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth1
@@ -351,7 +351,7 @@ chvt 6
                              nameservers,
                              tokens[3],
                              ks_include))
-                ks.write("echo eth0='{}' >> {}\n".
+                ks.write("echo eth0_mtu='{}' >> {}\n".
                          format(tokens[3], ks_post_include))
 
             elif tokens[0] == "eth1":
@@ -366,7 +366,7 @@ chvt 6
                              gateway,
                              tokens[3],
                              ks_include))
-                ks.write("echo eth1='{}' >> {}\n".
+                ks.write("echo eth1_mtu='{}' >> {}\n".
                          format(tokens[3], ks_post_include))
 
         # Write part 3, and we're done

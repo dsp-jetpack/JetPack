@@ -212,10 +212,12 @@ resources:
                     -
                       type: interface
                       name: {get_param: ControllerBond0Interface1}
+                      mtu: {get_param: DefaultBondMTU}
                       primary: true
                     -
                       type: interface
                       name: {get_param: ControllerBond0Interface2}
+                      mtu: {get_param: DefaultBondMTU}
                 -
                   type: vlan
                   device: bond0
