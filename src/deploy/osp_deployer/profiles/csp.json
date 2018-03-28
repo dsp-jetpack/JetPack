@@ -4,24 +4,31 @@
    "associated_settings": [
       {
          "Dell NFV Settings": {
+            "hpg_enable": "",
+            "hpg_size": {
+               "valid_values": [
+                  "2MB",
+                  "1GB"
+               ]
+            },
+            "numa_enable": "",
             "ovs_dpdk_enable": {
-              "valid_values": [
-                "false",
-                "Tenant-networks-only",
-                "Tenant-and-External-networks"
+               "valid_values": [
+                  "false",
+                  "Tenant-networks-only",
+                  "Tenant-and-External-networks"
               ]
             },
             "ovs_dpdk_role_list": {
-              "valid_values": [
-                "Compute"
+               "valid_values": [
+                  "Compute"
               ]
             },
             "ovs_dpdk_policy": {
-              "valid_values": [
-                "Balanced"
+               "valid_values": [
+                  "Balanced"
               ]
             }
-            "numa_enable": ""
          }
       },
       {
