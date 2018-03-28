@@ -686,7 +686,7 @@ class Director(InfraHost):
             'sed -i "s|StorageMgmtNetworkMTU:.*|StorageMgmtNetworkMTU: ' +
             self.settings.storage_cluster_network_mtu + '|" ' + network_yaml,
             'sed -i "s|TenantNetworkMTU:.*|TenantNetworkMTU: ' +
-            self.settings.tenant_network_mtu + '|" ' + network_yaml,
+            self.settings.tenant_tunnel_network_mtu + '|" ' + network_yaml,
             'sed -i "s|ProvisioningNetworkMTU:.*|ProvisioningNetworkMTU: ' +
             self.settings.provisioning_network_mtu + '|" ' + network_yaml,
             'sed -i "s|ManagementNetworkMTU:.*|ManagementNetworkMTU: ' +
