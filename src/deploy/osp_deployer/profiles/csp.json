@@ -21,6 +21,7 @@
                 "Balanced"
               ]
             }
+            "numa_enable": ""
          }
       },
       {
