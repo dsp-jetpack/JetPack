@@ -1094,9 +1094,9 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
 
             raid_physical_disk_ids = []
 
-            # Look for a RAID of any type other than RAID0 and assume we want to
-            # install the OS on that volume.  The first non-RAID0 found will be
-            # used.
+            # Look for a RAID of any type other than RAID0 and assume we want
+            # to install the OS on that volume.  The first non-RAID0 found
+            # will be used.
             raid_size_gb = 0
             for virtual_disk_doc in virtual_disk_docs:
                 fqdd = get_fqdd(virtual_disk_doc, DCIM_VirtualDiskView)
@@ -1110,17 +1110,18 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                     raid_size_gb = int(raid_size) / units.Gi
 
                     # Get the physical disks that back this RAID
-                    raid_physical_disk_docs = utils.find_xml(virtual_disk_doc,
-                                                             'PhysicalDiskIDs',
-                                                             DCIM_VirtualDiskView,
-                                                             True)
+                    raid_physical_disk_docs = utils.find_xml(
+                        virtual_disk_doc,
+                        'PhysicalDiskIDs',
+                        DCIM_VirtualDiskView,
+                        True)
                     for raid_physical_disk_doc in raid_physical_disk_docs:
                         raid_physical_disk_id = raid_physical_disk_doc.text
                         raid_physical_disk_ids.append(raid_physical_disk_id)
 
                     LOG.debug(
-                        "Found RAID {} virtual disk {} with a size of {} bytes "
-                        "comprised of physical disks:\n  {}".format(
+                        "Found RAID {} virtual disk {} with a size of {} "
+                        "bytes comprised of physical disks:\n  {}".format(
                             RAID_TYPE_TO_DESCRIPTION[raid_type],
                             fqdd,
                             raid_size,
@@ -1129,8 +1130,8 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                     break
 
             if raid_size_gb == 0:
-                raise RuntimeError("There must be either a virtual disk that is "
-                                   "not a RAID 0 to install the OS on, or "
+                raise RuntimeError("There must be either a virtual disk that "
+                                   "is not a RAID 0 to install the OS on, or "
                                    "os-volume-size-gb must be specified")
 
             # Now check to see if we have any physical disks that don't back
@@ -1152,13 +1153,14 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                     physical_disk_size_gb = int(physical_disk_size) / units.Gi
 
                     if physical_disk_size_gb == raid_size_gb:
-                        # If we did find a disk that's the same size as the located
-                        # RAID (in GB), then we can't tell Ironic what volume to
-                        # install the OS on.  Abort the install at this point
-                        # instead of having the OS installed on a random volume.
+                        # If we did find a disk that's the same size as the
+                        # located RAID (in GB), then we can't tell Ironic what
+                        # volume to install the OS on.
+                        # Abort the install at this point instead of having
+                        # the OS installed on a random volume.
                         raise RuntimeError(
-                            "Physical disk {} has the same size in GB ({}) as the "
-                            "RAID.  Unable to specify the OS disk to "
+                            "Physical disk {} has the same size in GB ({}) "
+                            "as the RAID.  Unable to specify the OS disk to "
                             "Ironic.".format(fqdd, physical_disk_size_gb))
 
     if os_volume_size_gb is not None:
