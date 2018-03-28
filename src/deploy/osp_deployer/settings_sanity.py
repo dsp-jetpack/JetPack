@@ -144,7 +144,10 @@ class DeployerSanity():
             'provisioning_network_mtu',
             'storage_cluster_network_mtu',
             'tenant_tunnel_network_mtu',
+            'floating_ip_network_mtu',
+            'management_network_mtu',
             'tenant_network_mtu',
+            'provisioning_network_mtu',
         ]
         for each in shouldbbevalidmtu:
             assert self.is_valid_mtu(getattr(self.settings, each)),\
