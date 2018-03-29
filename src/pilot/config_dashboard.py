@@ -281,7 +281,8 @@ def prep_dashboard_hosts(dashboard_node, ceph_nodes):
 
     # Upload the new file to the Storage Console
     dashboard_node.put(tmp_hosts, tmp_hosts)
-    dashboard_node.run("sudo cp {} {}.bak".format(Node.etc_hosts, Node.etc_hosts))
+    dashboard_node.run("sudo cp {} {}.bak".format(Node.etc_hosts,
+                                                  Node.etc_hosts))
     dashboard_node.run("sudo mv {} {}".format(tmp_hosts, Node.etc_hosts))
     dashboard_node.run("sudo restorecon {}".format(Node.etc_hosts))
     os.unlink(tmp_hosts)
@@ -456,9 +457,9 @@ def start_dashboard_skyring(dashboard_node):
     #    1) The public FQDN or IP of the Storage Console
     #    2) Whether we want to create a self-signed SSL certificate
     dashboard_node.run("skyring-setup <<EOF\n"
-                    "{}\n"
-                    "y\n"
-                    "EOF".format(dashboard_node.address))
+                       "{}\n"
+                       "y\n"
+                       "EOF".format(dashboard_node.address))
 
     # Restart the service so it picks up the new configuration
     dashboard_node.run("systemctl restart skyring")
@@ -493,7 +494,7 @@ def install_console_agent(dashboard_node, ceph_nodes):
     # script that converts "\n" (two characters) into a single '\n' newline.
     # Note that each '\' has to be escaped for Python.
     check_task_cmd = "curl -sS http://{}:8181/api/tasks/ |" \
-                     " sed -e 's/\\\\n/\\n/g'".format(dashboard_node.storage_ip)
+        " sed -e 's/\\\\n/\\n/g'".format(dashboard_node.storage_ip)
 
     for node in ceph_nodes:
         LOG.debug("Installing the agent on {} ({})".format(
@@ -579,7 +580,8 @@ def main():
     args = parse_arguments(dashboard_user)
     LOG.setLevel(args.logging_level)
 
-    dashboard_node = Node(args.dashboard_addr, dashboard_user, args.dashboard_pass)
+    dashboard_node = Node(args.dashboard_addr, dashboard_user,
+                          args.dashboard_pass)
     dashboard_node.initialize()
 
     LOG.info("Configuring Storage Console on {} ({})".format(
@@ -591,9 +593,9 @@ def main():
     prep_machine_ids(ceph_nodes)
     prep_host_files(dashboard_node, ceph_nodes, calamari_node)
 
-    #start_dashboard_skyring(dashboard_node)
-    #install_console_agent(dashboard_node, ceph_nodes)
-    #start_calamari_server(dashboard_node, calamari_node)
+    # start_dashboard_skyring(dashboard_node)
+    # install_console_agent(dashboard_node, ceph_nodes)
+    # start_calamari_server(dashboard_node, calamari_node)
 
     LOG.info("Storage Console configuration is complete")
 
