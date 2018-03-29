@@ -71,7 +71,7 @@ class Ssh():
             client.close()
         except IOError:
             logger.warning(".. host " + address + " is not up")
-            return "host not up"
+            return -1, "host not up", "host not up"
 
         return exit_code, stdout, stderr
 

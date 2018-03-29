@@ -11,10 +11,17 @@
                   "1GB"
                ]
             },
-            "hpg_flavor_name_list": "",
-            "numa_enable": "",
-            "numa_hostos_cpus": "",
-            "numa_flavor_name_list": ""
+            "numa_enable": ""
+         }
+      },
+      {
+         "MTU Settings": {
+            "mtu_selection": {
+               "valid_values": [
+                  "global",
+                  "per_network"
+               ]
+            }
          }
       },
       {

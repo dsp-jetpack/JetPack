@@ -14,7 +14,7 @@
 
 resource_registry:
   OS::TripleO::Controller::Net::SoftwareConfig: ./controller.yaml
-  OS::TripleO::Compute::Net::SoftwareConfig: ./compute.yaml
+  OS::TripleO::DellCompute::Net::SoftwareConfig: ./dellcompute.yaml
   OS::TripleO::CephStorage::Net::SoftwareConfig: ./storage.yaml
 
 
@@ -26,7 +26,7 @@ parameter_defaults:
   ControllerBond1Interface1: em2
   ControllerBond1Interface2: p1p2
   # The bonding mode to use for controller nodes
-  ControllerBondInterfaceOptions: 802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+  ControllerBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
 
   # CHANGEME: Change the interface names in the following lines to include in
   #           the compute nodes bonds
@@ -35,7 +35,7 @@ parameter_defaults:
   ComputeBond1Interface1: em2
   ComputeBond1Interface2: p1p2
   # The bonding mode to use for compute nodes
-  ComputeBondInterfaceOptions: 802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+  ComputeBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
 
   # CHANGEME: Change the interface names in the following lines to include in
   #           the storage nodes bonds
@@ -44,4 +44,4 @@ parameter_defaults:
   StorageBond1Interface1: em2
   StorageBond1Interface2: p4p2
   # The bonding mode to use for storage nodes
-  StorageBondInterfaceOptions: 802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+  StorageBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1

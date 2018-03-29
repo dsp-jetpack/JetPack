@@ -18,6 +18,8 @@ resource_registry:
 
 
 parameter_defaults:
+  # CHANGEME: Change the following to the desired MTU for Neutron Networks
+  NeutronGlobalPhysnetMtu: 1500
   # CHANGEME: Change the following to the CIDR for the Management network
   ManagementNetCidr: 192.168.110.0/24
 
@@ -105,7 +107,34 @@ parameter_defaults:
   # CHANGEME: Change the following to the VLAN ID to use on the
   # External network
   ExternalNetworkVlanID: 190
-
+  # CHANGEME: Change the following to the MTU value to use on the
+  # External network
+  ExternalNetworkMTU: 1500
+  # CHANGEME: Change the following to the MTU value to use on the
+  # internal network  
+  InternalApiMTU: 1500
+  # CHANGEME: Change the following to the MTU value to use on the
+  # Storage network
+  StorageNetworkMTU: 1500
+  # CHANGEME: Change the following to the MTU value to use on the
+  # StorageMgmtNetwork network
+  StorageMgmtNetworkMTU: 1500
+  # CHANGEME: Change the following to the MTU value to use on the
+  # TenantNetwork network
+  TenantNetworkMTU: 1500
+  # CHANGEME: Change the following to the MTU value to use on the
+  # Provisioning network
+  ProvisioningNetworkMTU: 1500
+  # CHANGEME: Change the following to the MTU value to use on the
+  # Management network
+  ManagementNetworkMTU: 1500
+  # CHANGEME: Change the following to the MTU value to use on the
+  # Default Bonds MTU
+  DefaultBondMTU: 9216
+  
+  # CHANGEME: Change the following to mtu size used for the floating network
+  ExtraConfig:
+    neutron::plugins::ml2::physical_network_mtus: physext:1500
   # CHANGEME: Set to empty string for External VLAN, br-ex if on native VLAN of br-ex
   NeutronExternalNetworkBridge: "''"
   ServiceNetMap:
@@ -142,3 +171,4 @@ parameter_defaults:
     CephStorageHostnameResolveNetwork: storage
     NovaColdMigrationNetwork: internal_api
     NovaLibvirtNetwork: internal_api
+

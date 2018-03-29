@@ -1,4 +1,4 @@
-# Copyright (c) 2016 Dell Inc. or its subsidiaries.
+# Copyright (c) 2018 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -90,15 +90,58 @@ parameters:
   EC2MetadataIp: # Override this via parameter_defaults
     description: The IP address of the EC2 metadata server.
     type: string
-
-  # CHANGEME: If you wish to use different bonding modes for different roles,
-  # then specify the appropriate bonding options in the "default" line below
-  # for the compute role, otherwise ignore this entry.
-  BondInterfaceOptions:
-    default: ''
-    description: The bonding_options string for the bond interface. Set things
-                 like mode=802.3ad using this option.
+  ComputeBond0Interface1:
+    default: 'em1'
+    description: Bond 0 interface 1 name
     type: string
+  ComputeBond0Interface2:
+    default: 'p1p1'
+    description: Bond 0 interface 2 name
+    type: string
+  ComputeBond1Interface1:
+    default: 'em2'
+    description: Bond 1 interface 1 name
+    type: string
+  ComputeBond1Interface2:
+    default: 'p1p2'
+    description: Bond 1 interface 2 name
+    type: string
+  ComputeBondInterfaceOptions:
+    default: 'mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1'
+    description: The bonding_options string for the bond interface.
+    type: string
+  InternalApiMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  StorageNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  StorageMgmtNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  TenantNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  ProvisioningNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  ManagementNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  DefaultBondMTU: # Override this via parameter_defaults
+    default: 9216
+    description: MTU value for this network.
+    type: number
+  ExternalNetworkMTU: 
+    default: 1500
+    description: MTU value for this network.
+    type: number
 
 resources:
   OsNetConfigImpl:
@@ -111,6 +154,7 @@ resources:
             -
               type: ovs_bridge
               name: br-tenant
+              mtu: {get_param: ProvisioningNetworkMTU}
               use_dhcp: false
               dns_servers: {get_param: DnsServers}
               addresses:
@@ -132,23 +176,23 @@ resources:
                 -
                   type: linux_bond
                   name: bond0
-                  bonding_options: {get_param: BondInterfaceOptions}
+                  bonding_options: {get_param: ComputeBondInterfaceOptions}
+                  mtu: {get_param: DefaultBondMTU}
                   members:
                     -
                       type: interface
-                      # CHANGEME: Change the interface name on the following
-                      # line to an interface to include in bond0
-                      name: em1
+                      name: {get_param: ComputeBond0Interface1}
                       primary: true
+                      mtu: {get_param: DefaultBondMTU}
                     -
                       type: interface
-                      # CHANGEME: Change the interface name on the following
-                      # line to an interface to include in bond0
-                      name: em3
+                      name: {get_param: ComputeBond0Interface2}
+                      mtu: {get_param: DefaultBondMTU}
                 -
                   type: vlan
                   device: bond0
                   vlan_id: {get_param: TenantNetworkVlanID}
+                  mtu: {get_param: TenantNetworkMTU}
                   addresses:
                     -
                       ip_netmask: {get_param: TenantIpSubnet}
@@ -156,34 +200,35 @@ resources:
                   type: vlan
                   device: bond0
                   vlan_id: {get_param: InternalApiNetworkVlanID}
+                  mtu: {get_param: InternalApiMTU}
                   addresses:
                     -
                       ip_netmask: {get_param: InternalApiIpSubnet}
             -
               type: ovs_bridge
               name: br-bond1
+              mtu: {get_param: DefaultBondMTU}
               members:
                 -
                   type: linux_bond
                   name: bond1
-                  bonding_options: {get_param: BondInterfaceOptions}
+                  bonding_options: {get_param: ComputeBondInterfaceOptions}
+                  mtu: {get_param: DefaultBondMTU}
                   members:
                     -
                       type: interface
-                      # CHANGEME: Change the interface name on the following
-                      # line to an interface to include in bond1
-                      name: em2
+                      name: {get_param: ComputeBond1Interface1}
+                      mtu: {get_param: DefaultBondMTU}
                       primary: true
                     -
                       type: interface
-                      # CHANGEME: Change the interface name on the following
-                      # line to an interface to include in bond1
-                      name: em4
+                      name: {get_param: ComputeBond1Interface2}
+                      mtu: {get_param: DefaultBondMTU}
                 -
                   type: vlan
                   device: bond1
                   vlan_id: {get_param: StorageNetworkVlanID}
-                  # mtu: 9216
+                  mtu: {get_param: StorageNetworkMTU}
                   addresses:
                     -
                       ip_netmask: {get_param: StorageIpSubnet}                      

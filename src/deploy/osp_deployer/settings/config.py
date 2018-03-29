@@ -159,6 +159,40 @@ class Settings():
         self.tenant_tunnel_vlanid = network_settings[
             'tenant_tunnel_network_vlanid']
         self.tenant_vlan_range = network_settings['tenant_vlan_range']
+        mtu_settings = self.get_settings_section(
+            "MTU Settings")
+        self.mtu_selection = mtu_settings[
+            'mtu_selection']
+        self.mtu_size_global_default = mtu_settings[
+            'mtu_size_global_default']
+        if self.mtu_selection == 'global':
+            self.tenant_tunnel_network_mtu = self.mtu_size_global_default
+            self.tenant_network_mtu = self.mtu_size_global_default
+            self.storage_cluster_network_mtu = self.mtu_size_global_default
+            self.storage_network_mtu = self.mtu_size_global_default
+            self.private_api_network_mtu = self.mtu_size_global_default
+            self.public_api_network_mtu = self.mtu_size_global_default
+            self.floating_ip_network_mtu = self.mtu_size_global_default
+        elif self.mtu_selection == 'per_network':
+            self.mtu_size_global_default = '1500'
+            self.tenant_tunnel_network_mtu = mtu_settings[
+                'tenant_tunnel_network_mtu']
+            self.tenant_network_mtu = mtu_settings[
+                'tenant_network_mtu']
+            self.storage_cluster_network_mtu = mtu_settings[
+                'storage_cluster_network_mtu']
+            self.storage_network_mtu = mtu_settings[
+                'storage_network_mtu']
+            self.private_api_network_mtu = mtu_settings[
+                'private_api_network_mtu']
+            self.public_api_network_mtu = mtu_settings[
+                'public_api_network_mtu']
+            self.floating_ip_network_mtu = mtu_settings[
+                'floating_ip_network_mtu']
+        # fixed mtu values
+        self.default_bond_mtu = '9216'
+        self.management_network_mtu = '1500'
+        self.provisioning_network_mtu = '1500'
 
         vips_settings = self.get_settings_section(
             "Vips Settings")
@@ -239,6 +273,17 @@ class Settings():
         else:
             self.enable_instance_ha = False
         self.overcloud_nodes_pwd = deploy_settings['overcloud_nodes_pwd']
+        dellnfv_settings = self.get_settings_section(
+            "Dell NFV Settings")
+        if dellnfv_settings['hpg_enable'].lower() == 'true':
+            self.hpg_enable = True
+        else:
+            self.hpg_enable = False
+        self.hpg_size = dellnfv_settings['hpg_size']
+        if dellnfv_settings['numa_enable'].lower() == 'true':
+            self.numa_enable = True
+        else:
+            self.numa_enable = False
 
         backend_settings = self.get_settings_section(
             "Storage back-end Settings")

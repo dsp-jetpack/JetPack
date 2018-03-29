@@ -218,14 +218,15 @@ class Director(InfraHost):
         expected_nodes = len(self.settings.controller_nodes) + len(
             self.settings.compute_nodes) + len(
             self.settings.ceph_nodes)
-        found = self.run_tty("grep pm_addr ~/instackenv.json | wc -l")[0].rstrip()
+        found = self.run_tty(
+            "grep pm_addr ~/instackenv.json | wc -l")[0].rstrip()
         logger.debug("Found " + found + " Expected : " + str(expected_nodes))
         if int(found) == expected_nodes:
             pass
         else:
             raise AssertionError(
-                 "Number of nodes in instackenv.json does not add up"
-                 " to the number of nodes defined in .properties file")
+                "Number of nodes in instackenv.json does not add up"
+                " to the number of nodes defined in .properties file")
 
         if setts.use_ipmi_driver is True:
             logger.debug("Using pxe_ipmi driver")
@@ -324,8 +325,8 @@ class Director(InfraHost):
     def assign_node_roles(self):
         logger.debug("Assigning roles to nodes")
 
-        common_path = os.path.join(os.path.expanduser(self.settings.cloud_repo_dir + '/src'),
-                                   'common')
+        common_path = os.path.join(os.path.expanduser(
+            self.settings.cloud_repo_dir + '/src'), 'common')
         sys.path.append(common_path)
         from thread_helper import ThreadWithExHandling  # noqa
 
@@ -370,12 +371,12 @@ class Director(InfraHost):
         # Allow for the number of nodes + a couple of sessions
         maxSessions = len(non_sah_nodes) + 2
         cmds = [
-             "sed -i 's/.*MaxStartups.*/MaxStartups " +
-             str(maxSessions) + "/' /etc/ssh/sshd_config",
-             "sed -i 's/.*MaxSession.*/MaxSessions " +
-             str(maxSessions) + "/' /etc/ssh/sshd_config",
-             "/sbin/service sshd restart",
-             "grep max -i /etc/ssh/sshd_config"
+            "sed -i 's/.*MaxStartups.*/MaxStartups " +
+            str(maxSessions) + "/' /etc/ssh/sshd_config",
+            "sed -i 's/.*MaxSession.*/MaxSessions " +
+            str(maxSessions) + "/' /etc/ssh/sshd_config",
+            "/sbin/service sshd restart",
+            "grep max -i /etc/ssh/sshd_config"
         ]
         for cmd in cmds:
             self.run_as_root(cmd)
@@ -383,11 +384,11 @@ class Director(InfraHost):
     def revert_sshd_conf(self):
         # Revert sshd_config to its default
         cmds = [
-             "sed -i 's/.*MaxStartups.*/#MaxStartups 10:30:100/'" +
-             " /etc/ssh/sshd_config",
-             "sed -i 's/.*MaxSession.*/#MaxSession 10/' /etc/ssh/sshd_config",
-             "/sbin/service sshd restart",
-             "grep max -i /etc/ssh/sshd_config"
+            "sed -i 's/.*MaxStartups.*/#MaxStartups 10:30:100/'" +
+            " /etc/ssh/sshd_config",
+            "sed -i 's/.*MaxSession.*/#MaxSession 10/' /etc/ssh/sshd_config",
+            "/sbin/service sshd restart",
+            "grep max -i /etc/ssh/sshd_config"
         ]
         for cmd in cmds:
             self.run_as_root(cmd)
@@ -677,6 +678,27 @@ class Director(InfraHost):
             self.settings.public_api_vlanid + '|" ' + network_yaml,
             'sed -i "s|TenantNetworkVlanID:.*|TenantNetworkVlanID: ' +
             self.settings.tenant_tunnel_vlanid + '|" ' + network_yaml,
+            'sed -i "s|ExternalNetworkMTU:.*|ExternalNetworkMTU: ' +
+            self.settings.public_api_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|InternalApiMTU:.*|InternalApiMTU: ' +
+            self.settings.private_api_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|StorageNetworkMTU:.*|StorageNetworkMTU: ' +
+            self.settings.storage_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|StorageMgmtNetworkMTU:.*|StorageMgmtNetworkMTU: ' +
+            self.settings.storage_cluster_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|TenantNetworkMTU:.*|TenantNetworkMTU: ' +
+            self.settings.tenant_tunnel_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|ProvisioningNetworkMTU:.*|ProvisioningNetworkMTU: ' +
+            self.settings.provisioning_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|ManagementNetworkMTU:.*|ManagementNetworkMTU: ' +
+            self.settings.management_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|DefaultBondMTU:.*|DefaultBondMTU: ' +
+            self.settings.default_bond_mtu + '|" ' + network_yaml,
+            'sed -i "s|NeutronGlobalPhysnetMtu:.*|NeutronGlobalPhysnetMtu: ' +
+            self.settings.tenant_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|neutron::plugins::ml2::physical_network_mtus:.*|neutron'
+            '::plugins::ml2::physical_network_mtus: [\'physext:' +
+            self.settings.floating_ip_network_mtu + '\']|" ' + network_yaml,
         ]
 
         if self.settings.tenant_tunnel_network:
@@ -849,7 +871,7 @@ class Director(InfraHost):
         self.run_tty(cmd)
         cmd = self.source_stackrc + "cd" \
                                     " ~/pilot;./deploy-overcloud.py" \
-                                    " --computes " + \
+                                    " --dell-computes " + \
                                     str(len(self.settings.compute_nodes)) + \
                                     " --controllers " + \
                                     str(len(self.settings.controller_nodes
@@ -864,6 +886,13 @@ class Director(InfraHost):
                                     self.settings.overcloud_name + \
                                     " --ntp " + \
                                     self.settings.sah_node.provisioning_ip
+
+        if self.settings.hpg_enable is True:
+            cmd += " --enable_hugepages "
+            cmd += " --hugepages_size " + self.settings.hpg_size
+
+        if self.settings.numa_enable is True:
+            cmd += " --enable_numa "
 
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \
@@ -916,7 +945,7 @@ class Director(InfraHost):
                          "ironic node-delete " +
                          node_id)
 
-    def retreive_nodes_ips(self):
+    def summarize_deployment(self):
         logger.info("**** Retreiving nodes information ")
         deployment_log = '/auto_results/deployment_summary.log'
         ip_info = []
@@ -1053,6 +1082,21 @@ class Director(InfraHost):
                     "     - provisioning ip    : " + provisioning_ip)
                 ip_info.append("     - storage cluster ip : " + cluster_ip)
                 ip_info.append("     - storage ip         : " + storage_ip)
+
+            if (self.settings.hpg_enable is True or
+                    self.settings.numa_enable is True):
+                ip_info.append("### NFV features details... ###")
+                ip_info.append("====================================")
+                if self.settings.hpg_enable is True:
+                    ip_info.append("### Hugepages ###")
+                    ip_info.append("Feature enabled : " +
+                                   str(self.settings.hpg_enable))
+                    ip_info.append("Hugepage size : " +
+                                   self.settings.hpg_size)
+                if self.settings.numa_enable is True:
+                    ip_info.append("### NUMA ###")
+                    ip_info.append("Feature enabled : " +
+                                   str(self.settings.numa_enable))
 
             ip_info.append("====================================")
 

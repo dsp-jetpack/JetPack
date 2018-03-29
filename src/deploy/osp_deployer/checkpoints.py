@@ -43,6 +43,7 @@ class Checkpoints():
         checks.verify_overcloud_name()
         checks.verify_iha_dependency_on_fencing()
         checks.validate_profile()
+        checks.check_mtu_of_networks()
 
     @staticmethod
     def verify_subscription_status(public_api_ip, user, password, retries):

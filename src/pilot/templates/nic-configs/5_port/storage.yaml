@@ -115,9 +115,37 @@ parameters:
     description: Bond 1 interface 2 name
     type: string
   StorageBondInterfaceOptions:
-    default: '802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1'
+    default: 'mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1'
     description: The bonding_options string for the bond interface.
     type: string
+  InternalApiMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  StorageNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  StorageMgmtNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  TenantNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  ProvisioningNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  ManagementNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  DefaultBondMTU: # Override this via parameter_defaults
+    default: 9216
+    description: MTU value for this network.
+    type: number
 
 resources:
   OsNetConfigImpl:
@@ -132,6 +160,7 @@ resources:
               name: {get_param: StorageProvisioningInterface}
               use_dhcp: false
               dns_servers: {get_param: DnsServers}
+              mtu: {get_param: ProvisioningNetworkMTU}
               addresses:
                 -
                   ip_netmask:
@@ -149,46 +178,56 @@ resources:
             -
               type: ovs_bridge
               name: br-bond0
+              mtu: {get_param: DefaultBondMTU}
               members:
                 -
                   type: linux_bond
                   name: bond0
                   bonding_options: {get_param: StorageBondInterfaceOptions}
+                  mtu: {get_param: DefaultBondMTU}
                   members:
                     -
                       type: interface
                       name: {get_param: StorageBond0Interface1}
                       primary: true
+                      mtu: {get_param: DefaultBondMTU}
                     -
                       type: interface
                       name: {get_param: StorageBond0Interface2}
+                      mtu: {get_param: DefaultBondMTU}
                 -
                   type: vlan
                   device: bond0
                   vlan_id: {get_param: StorageNetworkVlanID}
+                  mtu: {get_param: StorageNetworkMTU}
                   addresses:
                     -
                       ip_netmask: {get_param: StorageIpSubnet}
             -
               type: ovs_bridge
               name: br-bond1
+              mtu: {get_param: DefaultBondMTU}
               members:
                 -
                   type: linux_bond
                   name: bond1
                   bonding_options: {get_param: StorageBondInterfaceOptions}
+                  mtu: {get_param: DefaultBondMTU}
                   members:
                     -
                       type: interface
                       name: {get_param: StorageBond1Interface1}
                       primary: true
+                      mtu: {get_param: DefaultBondMTU}
                     -
                       type: interface
                       name: {get_param: StorageBond1Interface2}
+                      mtu: {get_param: DefaultBondMTU}
                 -
                   type: vlan
                   device: bond1
                   vlan_id: {get_param: StorageMgmtNetworkVlanID}
+                  mtu: {get_param: StorageMgmtNetworkMTU}
                   addresses:
                     -
                       ip_netmask: {get_param: StorageMgmtIpSubnet}

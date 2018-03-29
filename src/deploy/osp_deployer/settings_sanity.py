@@ -46,6 +46,13 @@ class DeployerSanity():
 
         return valid
 
+    @staticmethod
+    def is_valid_mtu(mtu_val):
+        valid = False
+        if int(mtu_val) >= 594 and int(mtu_val) <= 9216:
+            valid = True
+        return valid
+
     def check_files(self):
 
         logger.debug("Check settings ip's are valid.")
@@ -127,6 +134,25 @@ class DeployerSanity():
                 self.check_ipmi_to_node(node.idrac_ip,
                                         self.settings.ipmi_user,
                                         self.settings.ipmi_password)
+
+    def check_mtu_of_networks(self):
+        shouldbbevalidmtu = [
+            'mtu_size_global_default',
+            'public_api_network_mtu',
+            'private_api_network_mtu',
+            'storage_network_mtu',
+            'provisioning_network_mtu',
+            'storage_cluster_network_mtu',
+            'tenant_tunnel_network_mtu',
+            'floating_ip_network_mtu',
+            'management_network_mtu',
+            'tenant_network_mtu',
+        ]
+        for each in shouldbbevalidmtu:
+            assert self.is_valid_mtu(getattr(self.settings, each)),\
+                "Setting for " + each + " is not a valid mtu " +\
+                getattr(self.settings, each) + "Maximum mtu size allowed = "
+                "9216 and minimum allowed =594"
 
     def check_ipmi_to_node(self, idrac_ip, ipmi_user, ipmi_password):
         try:
@@ -334,14 +360,17 @@ class DeployerSanity():
                 try:
                     os_volume_size_gb = int(node.os_volume_size_gb)
                 except ValueError:
-                    raise AssertionError("os_volume_size_gb of "
-                        "\"{}\" on node {} is not an integer".format(
-                            node.os_volume_size_gb, node.idrac_ip))
+                    raise AssertionError("os_volume_size_gb of \"{}\" on node "
+                                         "{} is not an integer".format(
+                                             node.os_volume_size_gb,
+                                             node.idrac_ip))
 
                 if os_volume_size_gb <= 0:
-                    raise AssertionError("os_volume_size_gb of "
-                        "\"{}\" on node {} is not a positive integer".format(
-                            node.os_volume_size_gb, node.idrac_ip))
+                    raise AssertionError("os_volume_size_gb of \"{}\" on node "
+                                         "\"{}\" on node {} is not a positive "
+                                         "integer".format(
+                                             node.os_volume_size_gb,
+                                             node.idrac_ip))
 
     def check_net_attrs(self, node, should_have_attributes,
                         should_be_valid_ips):
@@ -481,8 +510,13 @@ class DeployerSanity():
         # IHA requires fencing
         # verify fencing flag enabled when IHA enabled
         logger.debug("verifying fencing enabled when iha enabled")
+<<<<<<< HEAD
         if (self.settings.enable_instance_ha is True
-            and self.settings.enable_fencing is False):
+                and self.settings.enable_fencing is False):
+=======
+        if (self.settings.enable_instance_ha is True and
+                self.settings.enable_fencing is False):
+>>>>>>> upstream/master
             raise AssertionError("Fencing NOT enabled, this is required" +
                                  " for IHA. Please verify this setting.")
 
