@@ -214,7 +214,7 @@ resources:
                 -
                   type: vlan
                   device: bond0
-                  vlan_id: {get_param: TenantNetworkVlanID
+                  vlan_id: {get_param: TenantNetworkVlanID}
                   mtu: {get_param: TenantNetworkMTU}
                   addresses:
                   -
