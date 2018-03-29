@@ -185,7 +185,7 @@ class Sah(InfraHost):
                                       'prov_netmask="' +
                                       sets.provisioning_netmask +
                                       '"')
-# mtu_settings
+        # mtu_settings
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^extern_bond_mtu=.*',
                                       'extern_bond_mtu="' +
