@@ -773,7 +773,11 @@ def main():
                     " -e ~/pilot/templates/overcloud/environments/" \
                     "puppet-pacemaker.yaml"
         if args.ovs_dpdk:
-            env_opts += " -e ~/pilot/templates/neutron-ovs-dpdk.yaml"
+            if not args.enable_hugepages or not args.enable_numa:
+                    raise ValueError("Both hugepages and numa must be" +
+                                     "enabled in order to use OVS-DPDK")
+            else:
+                env_opts += " -e ~/pilot/templates/neutron-ovs-dpdk.yaml"
 
         if args.enable_dellsc:
             env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
