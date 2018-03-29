@@ -664,6 +664,8 @@ def main():
                             help="Indicates if the deploy-overcloud script "
                                  "should be run in debug mode")
         args = parser.parse_args()
+
+        LoggingHelper.configure_logging()
         LoggingHelper.add_argument(parser)
 
         p = re.compile('\d+:\d+')
