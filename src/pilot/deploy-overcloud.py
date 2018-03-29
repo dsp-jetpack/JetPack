@@ -20,9 +20,17 @@ import os
 import re
 import sys
 import subprocess
-import time
+import paramiko
+import logging
+import string
 import novaclient.client as nova_client
+import time
+from command_helper import Ssh
+from novaclient.v2 import aggregates
+from novaclient.v2 import hosts
+from novaclient.v2 import servers
 from ironic_helper import IronicHelper
+from logging_helper import LoggingHelper
 
 from credential_helper import CredentialHelper
 
@@ -30,9 +38,366 @@ from credential_helper import CredentialHelper
 from identify_nodes import main as identify_nodes
 from update_ssh_config import main as update_ssh_config
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
+
 home_dir = os.path.expanduser('~')
 
 BAREMETAL_FLAVOR = "baremetal"
+
+# Maximum possible value of cpu cores at present.
+# It can be updated as per node configuration.
+compute_cpu = "47"
+vcpu_pin_set = "8-" + compute_cpu
+
+
+class ConfigOvercloud(object):
+    """
+    Description: Class responsible for overcloud configurations.
+    """
+
+    def __init__(self, nova):
+        self.nova = nova
+        self.aggregate_obj = aggregates.AggregateManager(self.nova)
+
+    def create_aggregate(self, aggregate_name, availability_zone=None):
+        try:
+            logger.info("Creating aggregate")
+            aggregate = self.aggregate_obj.create(aggregate_name,
+                                                  availability_zone)
+            return aggregate
+        except Exception as error:
+            message = "Exception {}: {}".\
+                      format(type(error).__name__, str(error))
+            logger.error("{}".format(message))
+            raise Exception("Failed to create \
+                  aggregate {}".format(aggregate_name))
+
+    def set_aggregate_metadata(self, aggregate_id, aggregate_metadata):
+        try:
+            logger.info("Setting aggregate metadata")
+            for metadata in aggregate_metadata:
+                self.aggregate_obj.set_metadata(aggregate_id, metadata)
+        except Exception as error:
+            message = "Exception {}: {}".\
+                      format(type(error).__name__, str(error))
+            logger.error("{}".format(message))
+            raise Exception("Failed to set aggregate metadata \
+                  for aggregate with ID {}".format(aggregate_id))
+
+    def add_hosts_to_aggregate(self, aggregate_id, host_name_list):
+        try:
+            logger.info("Adding host to aggregate")
+            for host in host_name_list:
+                self.aggregate_obj.add_host(aggregate_id, host)
+        except Exception as error:
+            message = "Exception {}: {}".\
+                      format(type(error).__name__, str(error))
+            logger.error("{}".format(message))
+            raise Exception("Failed to add hosts {} to aggregate \
+                  with ID {}".format(host_name_list, aggregate_id))
+
+    def get_dell_compute_nodes_hostnames(self):
+        try:
+            logger.info("Getting compute node hostnames")
+
+            # Create host object
+            host_obj = hosts.HostManager(self.nova)
+
+            # Get list of dell nfv nodes
+            dell_hosts = []
+            for host in host_obj.list():
+                if "dell-compute" in host.host_name:
+                    dell_hosts.append(host.host_name)
+            return dell_hosts
+        except Exception as error:
+            message = "Exception {}: {}".\
+                      format(type(error).__name__, str(error))
+            logger.error("{}".format(message))
+            raise Exception("Failed to get the Dell Compute nodes.")
+
+    def configure_dell_aggregate(self,
+                                 aggregate_name,
+                                 aggregate_metadata,
+                                 host_name_list=None):
+        try:
+            logger.info("Configuring dell aggregate")
+
+            # Create aggregate
+            aggregate_id = self.create_aggregate(aggregate_name)
+
+            # Set aggregate metadata
+            self.set_aggregate_metadata(aggregate_id, aggregate_metadata)
+
+            if host_name_list:
+                # Add hosts to aggregate
+                self.add_hosts_to_aggregate(aggregate_id, host_name_list)
+        except Exception as error:
+            message = "Exception {}: {}".\
+                      format(type(error).__name__, str(error))
+            logger.error("{}".format(message))
+            raise Exception("Failed to configure \
+                            dell aggregate {}.".format(aggregate_name))
+
+    def get_controller_nodes(self):
+        try:
+            logger.info("Getting controller nodes")
+
+            # Create servers object
+            server_obj = servers.ServerManager(self.nova)
+
+            # Get list of all controller nodes
+            controller_nodes = []
+            for server in server_obj.list():
+                if "control" in server.name:
+                    controller_nodes.append(str(server_obj.ips(server)
+                                            ['ctlplane'][0]['addr']))
+            return controller_nodes
+        except Exception as error:
+            message = "Exception {}: {}".\
+                      format(type(error).__name__, str(error))
+            logger.error("{}".format(message))
+            raise Exception("Failed to get the list of controller nodes.")
+
+    def get_dell_compute_nodes(self):
+        try:
+            logger.info("Getting dell compute nodes")
+
+            # Create servers object
+            server_obj = servers.ServerManager(self.nova)
+
+            # Get list of all dell compute nodes
+            dell_compute_nodes = []
+            for server in server_obj.list():
+                if "dell-compute" in server.name:
+                    dell_compute_nodes.append(((str(server_obj.ips(server)
+                                                ['ctlplane'][0]['addr']),
+                                                server.id)))
+
+            return dell_compute_nodes
+        except Exception as error:
+            message = "Exception {}: {}".\
+                      format(type(error).__name__, str(error))
+            logger.error("{}".format(message))
+            raise Exception("Failed to get the list of dell_compute nodes.")
+
+    def get_dell_compute_nodes_uuid(self):
+        try:
+            logger.info("Getting dell compute nodes uuid")
+            server_obj = servers.ServerManager(self.nova)
+            logger.info("Getting list of all dell compute nodes")
+            dell_compute_nodes_uuid = []
+            for server in server_obj.list():
+                if "dell-compute" in server.name:
+                    dell_compute_nodes_uuid.append(server.id)
+
+            return dell_compute_nodes_uuid
+        except Exception as error:
+            message = "Exception {}: {}".\
+                      format(type(error).__name__, str(error))
+            logger.error("{}".format(message))
+            raise Exception("Failed to get " +
+                            "the list of dell_compute nodes uuid.")
+
+
+def edit_dell_environment_file(enable_hugepages,
+                               enable_numa,
+                               hugepages_size,
+                               vcpu_pin_set,
+                               dell_compute_count):
+    try:
+        logger.info("Editing dell environment file")
+        file_path = home_dir + '/pilot/templates/dell-environment.yaml'
+        if not os.path.isfile(file_path):
+            raise Exception("The dell-environment.yaml file does not exist")
+
+        # Updating the filters including NUMATopologyFilter
+        # and NovaAggregateInstanceFilter
+        cmds = ['sed -i "s|  # NovaSchedulerDefaultFilters|  ' +
+                'NovaSchedulerDefaultFilters|" ' +
+                file_path]
+
+        cmds.append('sed -i "s|dellnfv::hugepages::enable:.*|' +
+                    'dellnfv::hugepages::enable: ' +
+                    str(enable_hugepages) +
+                    '|" ' +
+                    file_path)
+
+        cmds.append('sed -i "s|dellnfv::numa::enable:.*|' +
+                    'dellnfv::numa::enable: ' +
+                    str(enable_numa) +
+                    '|" ' +
+                    file_path)
+
+        cmds.append('sed -i "s|DellComputeCount:.*|' +
+                    'DellComputeCount: ' +
+                    str(dell_compute_count) +
+                    '|" ' +
+                    file_path)
+
+        if hugepages_size == "2MB":
+            hugepages_number = 49152
+        elif hugepages_size == "1GB":
+            hugepages_number = 96
+
+        if enable_hugepages:
+            cmds.append('sed -i "s|dellnfv::hugepages::hugepagesize:.*|' +
+                        'dellnfv::hugepages::hugepagesize: ' +
+                        hugepages_size[0:-1] +
+                        '|" ' +
+                        file_path)
+            cmds.append('sed -i "s|dellnfv::hugepages::hugepagecount:.*|' +
+                        'dellnfv::hugepages::hugepagecount: ' +
+                        str(hugepages_number) +
+                        '|" ' +
+                        file_path)
+        if enable_numa:
+            cmds.append('sed -i "s|  # NovaVcpuPinSet|  ' +
+                        'NovaVcpuPinSet|" ' +
+                        file_path)
+
+        for cmd in cmds:
+            status = os.system(cmd)
+            logger.debug("cmd: {}".format(cmd))
+            if status != 0:
+                raise Exception("Failed to execute the command {} "
+                                "with error code {}".format(cmd, status))
+    except Exception as error:
+        message = "Exception {}: {}".format(type(error).__name__, str(error))
+        logger.error("{}".format(message))
+        raise Exception("Failed to modify the dell-environment.yaml "
+                        "at location {}".format(file_path))
+
+
+def create_aggregates(enable_hugepages, enable_numa, overcloud_name):
+    host_name_list = []
+    try:
+        if enable_hugepages or enable_numa:
+            logger.info("Creating aggregates")
+
+            # Get overcloud details
+            os_auth_url, os_tenant_name, os_username, os_password = \
+                CredentialHelper.get_overcloud_creds()
+
+            kwargs = {'username': os_username,
+                      'password': os_password,
+                      'auth_url': os_auth_url,
+                      'project_id': os_tenant_name}
+
+            # Create nova client object
+            nova = nova_client.Client(2, **kwargs)
+
+            # Create the ConfigOvercloud object
+            config_oc_obj = ConfigOvercloud(nova)
+            host_name_list = config_oc_obj.get_dell_compute_nodes_hostnames()
+            # Create aggregate for numa configuration
+            try:
+                if enable_numa:
+                    aggregate_name = "Numa_Aggr"
+                    aggregate_meta = [{'pinned': 'True'}]
+                    config_oc_obj.configure_dell_aggregate(aggregate_name,
+                                                           aggregate_meta,
+                                                           host_name_list)
+            except Exception as error:
+                message = "Exception {}: {}".format(type(error).__name__,
+                                                    str(error))
+                logger.error("{}".format(message))
+
+            # Create aggregate for hugepages configuration
+            try:
+                if enable_hugepages:
+                    aggregate_name = "HugePage_Aggr"
+                    aggregate_meta = [{'hugepages': 'True'}]
+                    config_oc_obj.configure_dell_aggregate(aggregate_name,
+                                                           aggregate_meta,
+                                                           host_name_list)
+            except Exception as error:
+                message = "Exception {}: {}".format(type(error).__name__,
+                                                    str(error))
+                logger.error("{}".format(message))
+
+            # Create normal aggregate
+            aggregate_name = "Normal_Aggr"
+            aggregate_meta = [{'pinned': 'False'}, {'hugepages': 'False'}]
+            config_oc_obj.configure_dell_aggregate(aggregate_name,
+                                                   aggregate_meta)
+    except Exception as error:
+        message = "Exception {}: {}".format(type(error).__name__, str(error))
+        logger.error("{}".format(message))
+
+
+def get_dell_compute_nodes_uuids():
+    logger.info("Getting dell compute node uuids")
+    # Get the undercloud details
+    os_auth_url, os_tenant_name, os_username, os_password = \
+        CredentialHelper.get_undercloud_creds()
+
+    kwargs = {'username': os_username,
+              'password': os_password,
+              'auth_url': os_auth_url,
+              'project_id': os_tenant_name}
+
+    # Create nova client object
+    nova = nova_client.Client(2, **kwargs)
+
+    # Create the ConfigOvercloud object
+    config_oc_obj = ConfigOvercloud(nova)
+    dell_compute_nodes_uuid = config_oc_obj.get_dell_compute_nodes_uuid()
+    logger.debug("dell_compute_nodes_uuid: {}".format(dell_compute_nodes_uuid))
+    return dell_compute_nodes_uuid
+
+
+def reboot_compute_nodes():
+    logger.info("Rebooting dell compute nodes")
+    # Get the undercloud details
+    os_auth_url, os_tenant_name, os_username, os_password = \
+        CredentialHelper.get_undercloud_creds()
+
+    kwargs = {'username': os_username,
+              'password': os_password,
+              'auth_url': os_auth_url,
+              'project_id': os_tenant_name}
+
+    n_client = nova_client.Client(2, **kwargs)
+
+    dell_compute = []
+    for compute in n_client.servers.list(detailed=False,
+                                         search_opts={'name': 'compute'}):
+        dell_compute.append(n_client.servers.ips(
+            compute)['ctlplane'][0]['addr'])
+
+        logger.info("Rebooting server with id: ".format(compute.id))
+        n_client.servers.reboot(compute.id)
+
+    # Wait for 30s for the nodes to be powered cycle then do the checks
+    time.sleep(30)
+
+    ssh_success_count = 0
+
+    for ip in dell_compute:
+        retries = 32
+        while retries > 0:
+            exit_code, _, std_err = Ssh.execute_command(ip,
+                                                        "pwd",
+                                                        user="heat-admin",
+                                                        )
+            retries -= 1
+            if exit_code != 0:
+                logger.info("Server with IP: {} is not responsive".format(ip))
+            else:
+                logger.info("Server with IP: {} is responsive".format(ip))
+                ssh_success_count += 1
+                break
+
+            # Waiting 10s before the next attempt
+            time.sleep(10)
+
+    if ssh_success_count == len(dell_compute):
+        logger.info("All compute nodes are now responsive. Continuing...")
+    else:
+        logger.error("Failed to reboot the nodes or at least one node failed "
+                     "to get back up")
+        raise Exception("At least one compute node failed to reboot")
 
 
 # Check to see if the sequence contains numbers that increase by 1
@@ -41,7 +406,7 @@ def is_coherent(seq):
 
 
 def validate_node_placement():
-    print 'Validating node placement...'
+    logger.info("Validating node placement...")
 
     # For each role/flavor, node indices must start at 0 and increase by 1
     ironic = IronicHelper.get_ironic_client()
@@ -101,7 +466,7 @@ def validate_node_placement():
 
 
 def create_flavors():
-    print 'Creating overcloud flavors...'
+    logger.info("Creating overcloud flavors...")
 
     flavors = [
         {"id": "1", "name": "m1.tiny",   "memory": 512,   "disk": 1,
@@ -139,7 +504,7 @@ def create_flavors():
 
 
 def create_volume_types():
-    print 'Creating cinder volume types...'
+    logger.info("Creating cinder volume types...")
     types = []
     if not args.disable_rbd:
         types.append(["rbd_backend", "tripleo_ceph"])
@@ -168,10 +533,10 @@ def create_volume_types():
         return_output = proc.communicate()[0].strip()
 
         if type_name == return_output:
-            print "Cinder type exists, skipping {}".format(type[0])
+            logger.warning("Cinder type exists, skipping {}".format(type[0]))
             continue
         else:
-            print "Creating cinder type {}".format(type[0])
+            logger.info("Creating cinder type {}".format(type[0]))
             cmd = "source {} && " \
                   "cinder type-create {} && " \
                   "cinder type-key {} set volume_backend_name={}" \
@@ -188,7 +553,8 @@ def run_deploy_command(cmd):
     if status == 0:
         stack = CredentialHelper.get_overcloud_stack()
         if not stack or 'FAILED' in stack.stack_status:
-            print '\nDeployment failed even though command returned success.'
+            logger.info("\nDeployment failed even "
+                        "though command returned success.")
             status = 1
 
     return status
@@ -210,6 +576,9 @@ def finalize_overcloud():
 
     create_flavors()
     create_volume_types()
+    create_aggregates(args.enable_hugepages, args.enable_numa,
+                      args.overcloud_name)
+    reboot_compute_nodes()
 
     # horizon_service = keystone_client.services.find(**{'name': 'horizon'})
     # horizon_endpoint = keystone_client.endpoints.find(
@@ -227,16 +596,24 @@ def main():
                             type=int,
                             default=3,
                             help="The number of controller nodes")
-        parser.add_argument("--computes",
+        parser.add_argument("--dell-computes",
                             dest="num_computes",
                             type=int,
                             required=True,
-                            help="The number of compute nodes")
+                            help="The number of dell compute nodes")
         parser.add_argument("--storage",
                             dest="num_storage",
                             type=int,
                             required=True,
                             help="The number of storage nodes")
+        parser.add_argument("--enable_hugepages",
+                            action='store_true',
+                            default=False,
+                            help="Enable/Disable hugepages feature")
+        parser.add_argument("--enable_numa",
+                            action='store_true',
+                            default=False,
+                            help="Enable/Disable numa feature")
         parser.add_argument("--vlans",
                             dest="vlan_range",
                             required=True,
@@ -256,6 +633,10 @@ def main():
         parser.add_argument("--overcloud_name",
                             default=None,
                             help="The name of the overcloud")
+        parser.add_argument("--hugepages_size",
+                            dest="hugepages_size",
+                            required=False,
+                            help="HugePages size")
         parser.add_argument('--enable_dellsc',
                             action='store_true',
                             default=False,
@@ -283,6 +664,8 @@ def main():
                             help="Indicates if the deploy-overcloud script "
                                  "should be run in debug mode")
         args = parser.parse_args()
+        LoggingHelper.add_argument(parser)
+
         p = re.compile('\d+:\d+')
         if not p.match(args.vlan_range):
             raise ValueError("Error: The VLAN range must be a number followed "
@@ -293,7 +676,6 @@ def main():
 
         # Set up the default flavors
         control_flavor = "control"
-        compute_flavor = "compute"
         ceph_storage_flavor = "ceph-storage"
         swift_storage_flavor = "swift-storage"
         block_storage_flavor = "block-storage"
@@ -304,7 +686,6 @@ def main():
             # If node-placement is specified, then the baremetal flavor must
             # be used
             control_flavor = BAREMETAL_FLAVOR
-            compute_flavor = BAREMETAL_FLAVOR
             ceph_storage_flavor = BAREMETAL_FLAVOR
             swift_storage_flavor = BAREMETAL_FLAVOR
             block_storage_flavor = BAREMETAL_FLAVOR
@@ -321,13 +702,22 @@ def main():
         # time the overcloud is deployed (instead of once, after the Director
         # is installed) in order to ensure an update to the Director doesn't
         # overwrite the patch.
-        print 'Applying patches to director...'
+        logger.info("Applying patches to director...")
         cmd = os.path.join(home_dir, 'pilot', 'patch-director.sh')
         status = os.system(cmd)
         if status != 0:
             raise ValueError("\nError: {} failed, unable to continue.  See "
                              "the comments in that file for additional "
                              "information".format(cmd))
+        # Pass the parameters required by puppet which will be used
+        # to enable/disable dell nfv features
+        # Edit the dellnfv_environment.yaml
+        # If disabled, default values will be set and
+        # they won't be used for configuration
+        if args.enable_hugepages or args.enable_numa:
+            edit_dell_environment_file(args.enable_hugepages, args.enable_numa,
+                                       args.hugepages_size, vcpu_pin_set,
+                                       args.num_computes)
 
         # Launch the deployment
 
@@ -342,14 +732,19 @@ def main():
         # The order of the environment files is important as a later inclusion
         # overrides resources defined in prior inclusions.
 
+        # The roles_data.yaml must be included at the beginning.
+        # This is needed to enable the custome role Dell Compute.
+        # It overrides the default roles_data.yaml
+        env_opts = "-r ~/pilot/templates/roles_data.yaml"
+
         # The network-environment.yaml must be included after the
         # network-isolation.yaml
-        env_opts = "-e ~/pilot/templates/overcloud/environments/" \
-                   "network-isolation.yaml" \
-                   " -e ~/pilot/templates/network-environment.yaml" \
-                   " -e {}" \
-                   " -e ~/pilot/templates/ceph-osd-config.yaml" \
-                   "".format(nic_env_file)
+        env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+                    "network-isolation.yaml" \
+                    " -e ~/pilot/templates/network-environment.yaml" \
+                    " -e {}" \
+                    " -e ~/pilot/templates/ceph-osd-config.yaml" \
+                    "".format(nic_env_file)
 
         # The static-ip-environment.yaml must be included after the
         # network-environment.yaml
@@ -385,7 +780,6 @@ def main():
               " --templates ~/pilot/templates/overcloud" \
               " {}" \
               " --control-flavor {}" \
-              " --compute-flavor {}" \
               " --ceph-storage-flavor {}" \
               " --swift-storage-flavor {}" \
               " --block-storage-flavor {}" \
@@ -398,7 +792,6 @@ def main():
               " --os-user-id {}" \
               " --os-password {}" \
               " --control-scale {}" \
-              " --compute-scale {}" \
               " --ceph-storage-scale {}" \
               " --ntp-server {}" \
               " --neutron-network-vlan-ranges physint:{},physext" \
@@ -408,7 +801,6 @@ def main():
                         overcloud_name_opt,
                         env_opts,
                         control_flavor,
-                        compute_flavor,
                         ceph_storage_flavor,
                         swift_storage_flavor,
                         block_storage_flavor,
@@ -417,7 +809,6 @@ def main():
                         os_username,
                         os_password,
                         args.num_controllers,
-                        args.num_computes,
                         args.num_storage,
                         args.ntp_server_fqdn,
                         args.vlan_range)
@@ -430,20 +821,21 @@ def main():
         start = time.time()
         status = run_deploy_command(cmd)
         end = time.time()
-        print '\nExecution time: {} (hh:mm:ss)'.format(
-            time.strftime('%H:%M:%S', time.gmtime(end - start)))
+        logger.info('\nExecution time: {} (hh:mm:ss)'.format(
+            time.strftime('%H:%M:%S', time.gmtime(end - start))))
         print 'Fetching SSH keys...'
         update_ssh_config()
         if status == 0:
             horizon_url = finalize_overcloud()
+            logger.info("\nDeployment Completed")
         else:
             horizon_url = None
-        print 'Overcloud nodes:'
+        logger.info('Overcloud nodes:')
         identify_nodes()
 
         if horizon_url:
-            print '\nHorizon Dashboard URL: {}\n'.format(horizon_url)
-    except ValueError as err:
+            logger.info('\nHorizon Dashboard URL: {}\n'.format(horizon_url))
+    except Exception as err:
         print >> sys.stderr, err
         sys.exit(1)
 

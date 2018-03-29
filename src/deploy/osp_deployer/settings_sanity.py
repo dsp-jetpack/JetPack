@@ -360,14 +360,17 @@ class DeployerSanity():
                 try:
                     os_volume_size_gb = int(node.os_volume_size_gb)
                 except ValueError:
-                    raise AssertionError("os_volume_size_gb of "
-                                         "\"{}\" on node {} is not an integer".format(
-                                             node.os_volume_size_gb, node.idrac_ip))
+                    raise AssertionError("os_volume_size_gb of \"{}\" on node "
+                                         "{} is not an integer".format(
+                                             node.os_volume_size_gb,
+                                             node.idrac_ip))
 
                 if os_volume_size_gb <= 0:
-                    raise AssertionError("os_volume_size_gb of "
-                                         "\"{}\" on node {} is not a positive integer".format(
-                                             node.os_volume_size_gb, node.idrac_ip))
+                    raise AssertionError("os_volume_size_gb of \"{}\" on node "
+                                         "\"{}\" on node {} is not a positive "
+                                         "integer".format(
+                                             node.os_volume_size_gb,
+                                             node.idrac_ip))
 
     def check_net_attrs(self, node, should_have_attributes,
                         should_be_valid_ips):
@@ -507,8 +510,13 @@ class DeployerSanity():
         # IHA requires fencing
         # verify fencing flag enabled when IHA enabled
         logger.debug("verifying fencing enabled when iha enabled")
+<<<<<<< HEAD
         if (self.settings.enable_instance_ha is True
                 and self.settings.enable_fencing is False):
+=======
+        if (self.settings.enable_instance_ha is True and
+                self.settings.enable_fencing is False):
+>>>>>>> upstream/master
             raise AssertionError("Fencing NOT enabled, this is required" +
                                  " for IHA. Please verify this setting.")
 
