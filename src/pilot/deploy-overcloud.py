@@ -38,7 +38,7 @@ from credential_helper import CredentialHelper
 from identify_nodes import main as identify_nodes
 from update_ssh_config import main as update_ssh_config
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
 home_dir = os.path.expanduser('~')
@@ -663,10 +663,12 @@ def main():
                             action='store_true',
                             help="Indicates if the deploy-overcloud script "
                                  "should be run in debug mode")
+
+        LoggingHelper.add_argument(parser)
+
         args = parser.parse_args()
 
-        LoggingHelper.configure_logging()
-        LoggingHelper.add_argument(parser)
+        LoggingHelper.configure_logging(args.logging_level)
 
         p = re.compile('\d+:\d+')
         if not p.match(args.vlan_range):
