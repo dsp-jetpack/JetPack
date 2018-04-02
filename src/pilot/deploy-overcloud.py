@@ -718,10 +718,9 @@ def main():
         # Edit the dellnfv_environment.yaml
         # If disabled, default values will be set and
         # they won't be used for configuration
-        if args.enable_hugepages or args.enable_numa:
-            edit_dell_environment_file(args.enable_hugepages, args.enable_numa,
-                                       args.hugepages_size, vcpu_pin_set,
-                                       args.num_computes)
+        edit_dell_environment_file(args.enable_hugepages, args.enable_numa,
+                                   args.hugepages_size, vcpu_pin_set,
+                                   args.num_computes)
 
         # Launch the deployment
 
