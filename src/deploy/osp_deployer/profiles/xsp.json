@@ -6,7 +6,17 @@
          "Dell NFV Settings": {
             "ovs_dpdk_enable": {
                "valid_values": [
-                 "false"
+                  "false"
+               ]
+            },
+            "hpg_enable": {
+               "valid_values": [
+                  "false"
+               ]
+            },
+            "numa_enable": {
+               "valid_values": [
+                  "false"
                ]
             }
          }
