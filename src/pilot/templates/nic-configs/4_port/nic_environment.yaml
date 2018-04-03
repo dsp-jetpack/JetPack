@@ -45,13 +45,3 @@ parameter_defaults:
   StorageBond1Interface2: p4p2
   # The bonding mode to use for storage nodes
   StorageBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
-
-  # CHANGEME: Change the interface names in the following lines for the
-  # compute nodes provisioning interface and to include in the compute
-  # DPDK bonds
-  ComputeOvsDpdkInterface1: p2p1
-  ComputeOvsDpdkInterface2: p3p1
-  ComputeOvsDpdkInterface3: p2p2
-  ComputeOvsDpdkInterface4: p3p2
-  # The DPDK bonding mode to use for compute nodes
-  OvsDpdkBondInterfaceOptions: bond_mode=balance-tcp lacp=active
