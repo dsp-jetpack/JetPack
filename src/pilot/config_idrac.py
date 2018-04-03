@@ -182,7 +182,7 @@ def config_idrac_settings(drac_client, ip_service_tag, password, node):
         "Users.2#Enable": "Enabled",
         "Users.2#IpmiLanPrivilege": "Administrator",
         "Users.2#Privilege": 0x1ff
-        }
+    }
 
     if password:
         LOG.warn("Updating the password on {}".format(ip_service_tag))

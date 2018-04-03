@@ -30,6 +30,6 @@ class ThreadWithExHandling(threading.Thread):
     def run(self):
         try:
             threading.Thread.run(self)
-        except:
+        except BaseException:
             self.ex = sys.exc_info()[0]
             self.logger.exception(self.ex.message)

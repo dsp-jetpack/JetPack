@@ -226,6 +226,7 @@ cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overclou
 cp -r $HOME/pilot/templates/dellnfv $HOME/pilot/templates/overcloud/puppet/services/dellnfv
 cp $HOME/pilot/templates/roles_data.yaml $HOME/pilot/templates/overcloud/roles_data.yaml
 cp $HOME/pilot/templates/network-isolation.yaml $HOME/pilot/templates/overcloud/environments/network-isolation.yaml
+cp $HOME/pilot/templates/create_aggregate_environment.yaml $HOME/pilot/templates/overcloud/create_aggregate_environment.yaml
 echo "## Done."
 
 echo

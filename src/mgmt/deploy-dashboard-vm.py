@@ -406,7 +406,7 @@ def main():
     try:
         # This may fail, including when the directory already exists
         os.makedirs(images_path)
-    except:
+    except BaseException:
         pass
     finally:
         # Final check for whether the images directory is valid. We don't

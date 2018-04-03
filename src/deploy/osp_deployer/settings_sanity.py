@@ -137,7 +137,7 @@ class DeployerSanity():
                                 idrac_ip)
             logger.debug(
                 " :: " + ipmi_session.get_power_state())
-        except:
+        except BaseException:
             raise AssertionError("Could not ipmi to host " +
                                  idrac_ip)
 
@@ -304,7 +304,7 @@ class DeployerSanity():
         ips = []
         for each in self.settings.__dict__:
             if ("ip" in each and
-                    type(getattr(self.settings, each)) is str and
+                    isinstance(getattr(self.settings, each), str) and
                     self.is_valid_ip(getattr(self.settings, each))):
                 ips.append(getattr(self.settings, each))
         for each in self.settings.nodes:

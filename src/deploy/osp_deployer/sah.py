@@ -191,8 +191,8 @@ class Sah(InfraHost):
 
     def clear_known_hosts(self):
         hosts = [
-             self.settings.director_node.public_api_ip,
-             self.settings.dashboard_node.public_api_ip
+            self.settings.director_node.public_api_ip,
+            self.settings.dashboard_node.public_api_ip
         ]
 
         if self.is_running_from_sah() is True:

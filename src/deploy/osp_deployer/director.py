@@ -865,17 +865,16 @@ class Director(InfraHost):
                                     self.settings.overcloud_name + \
                                     " --ntp " + \
                                     self.settings.sah_node.provisioning_ip
-
         if self.settings.hpg_enable is True:
             cmd += " --enable_hugepages "
             cmd += " --hugepages_size " + self.settings.hpg_size
 
         if self.settings.numa_enable is True:
             cmd += " --enable_numa "
+            cmd += " --hostos_cpu_count " + self.settings.hostos_cpu_count
 
         if self.settings.overcloud_deploy_timeout != "120":
-            cmd += " --timeout " \
-                   + self.settings.overcloud_deploy_timeout
+            cmd += " --timeout " + self.settings.overcloud_deploy_timeout
         if self.settings.enable_dellsc_backend is True:
             cmd += " --enable_dellsc"
         if self.settings.enable_rbd_backend is False:
@@ -1095,10 +1094,10 @@ class Director(InfraHost):
                                self.settings.cloud_repo_version)
                 ip_info.append("deploy-auto # " +
                                self.settings.deploy_auto_version)
-            except:
+            except BaseException:
                 pass
             ip_info.append("====================================")
-        except:
+        except BaseException:
             logger.debug(" Failed to retreive the nodes ip information ")
         finally:
             for each in ip_info:
@@ -1172,7 +1171,7 @@ class Director(InfraHost):
             'identity.admin_username $OS_USERNAME '
             'identity.admin_password $OS_PASSWORD '
             'identity.admin_tenant_name $OS_PROJECT_NAME',
-            ]
+        ]
         for cmd in cmds:
             self.run_tty(cmd)
 

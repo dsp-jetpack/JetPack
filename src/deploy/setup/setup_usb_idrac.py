@@ -115,7 +115,7 @@ def setup():
             logger.info("All done - plug the usb into the sah node" +
                         " & continue with the deployment ...")
 
-    except:
+    except BaseException:
         logger.error(traceback.format_exc())
         e = sys.exc_info()[0]
         logger.error(e)

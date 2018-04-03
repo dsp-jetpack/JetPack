@@ -59,8 +59,8 @@ def ssh_cmd(address, user, command):
 def awk_it(instring, index, delimiter=" "):
     try:
         return [instring,
-                instring.split(delimiter)[index-1]][max(0, min(1, index))]
-    except:
+                instring.split(delimiter)[index - 1]][max(0, min(1, index))]
+    except BaseException:
         return ""
 
 

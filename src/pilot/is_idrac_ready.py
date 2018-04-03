@@ -75,11 +75,12 @@ def main():
         else:
             return_code = 1
             LOG.info("iDRAC is NOT ready")
-    except:
+    except BaseException:
         LOG.exception("An exception occurred:")
         return_code = 2
 
     sys.exit(return_code)
+
 
 if __name__ == "__main__":
     main()

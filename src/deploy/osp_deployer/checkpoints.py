@@ -530,13 +530,13 @@ class Checkpoints():
                       self.settings.dellsc_iscsi_ip_address +\
                       ":" + self.settings.dellsc_iscsi_port
                 re = Ssh.execute_command_tty(
-                                   self.director_ip,
-                                   setts.director_install_account_user,
-                                   setts.director_install_account_pwd,
-                                   cmd)
+                    self.director_ip,
+                    setts.director_install_account_user,
+                    setts.director_install_account_pwd,
+                    cmd)
                 if "com.compellent" not in re[0]:
                     raise AssertionError(
-                                   each +
-                                   " not able to validate ISCSI access to " +
-                                   self.settings.dellsc_iscsi_ip_address +
-                                   ":" + self.settings.dellsc_iscsi_port)
+                        each +
+                        " not able to validate ISCSI access to " +
+                        self.settings.dellsc_iscsi_ip_address +
+                        ":" + self.settings.dellsc_iscsi_port)

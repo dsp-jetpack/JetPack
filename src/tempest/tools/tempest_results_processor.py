@@ -83,14 +83,16 @@ class Results(object):
             matches.append([tc1[name], tc2[name]])
         # sort the list
         unique_1.sort(key=lambda elem: (elem['status'],
-                      elem['testcase'].getAttribute("name")),
+                                        elem['testcase'].getAttribute("name")),
                       reverse=False)
         unique_2.sort(key=lambda elem: (elem['status'],
-                      elem['testcase'].getAttribute("name")),
+                                        elem['testcase'].getAttribute("name")),
                       reverse=False)
-        matches.sort(key=lambda elem: (elem[0]['status'],
-                     elem[0]['testcase'].getAttribute("name")),
-                     reverse=False)
+        matches.sort(
+            key=lambda elem: (
+                elem[0]['status'],
+                elem[0]['testcase'].getAttribute("name")),
+            reverse=False)
 
         return unique_1, unique_2, matches
 
@@ -200,7 +202,7 @@ class Results(object):
         if indx is -1:
             trimmed = (failure[:-2])
         else:
-            trimmed = failure[indx+5:-2]
+            trimmed = failure[indx + 5:-2]
 
         return trimmed
 
@@ -219,10 +221,10 @@ class Results(object):
 
 
 def main():
-        parser = _create_parser()
-        args = parser.parse_args()
-        results = Results(args)
-        results.to_xls()
+    parser = _create_parser()
+    args = parser.parse_args()
+    results = Results(args)
+    results.to_xls()
 
 
 def _create_parser():
@@ -248,6 +250,7 @@ def _create_parser():
                         "file")
     '''
     return parser
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -60,7 +60,7 @@ class Profile():
                     try:
                         if vals['valid_values']:
                             allowed_settings = vals['valid_values']
-                    except:
+                    except BaseException:
                         pass
                     try:
                         if vals['validate']:
@@ -71,7 +71,7 @@ class Profile():
                                         Err = Err + "\nSetting for " + set + \
                                             " Should be a valid ip adress\n"
                             validated = True
-                    except:
+                    except BaseException:
                         pass
                     if len(allowed_settings) > 0:
                         if user_config.get(str(stanza), set) in \

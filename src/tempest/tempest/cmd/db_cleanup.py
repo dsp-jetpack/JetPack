@@ -124,5 +124,6 @@ def main():
     LOG.debug('Database Cleanup finished!')
     return 0
 
+
 if __name__ == "__main__":
     sys.exit(main())

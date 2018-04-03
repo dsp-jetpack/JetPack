@@ -190,7 +190,7 @@ class NetworkValidation(object):
 
         try:
             from update_ssh_config import update_known_hosts
-        except:
+        except BaseException:
             logger.error("Unable to locate 'update_ssh_config' utility in " +
                          pilot_dir)
             sys.exit(1)

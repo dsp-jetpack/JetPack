@@ -790,7 +790,7 @@ class NICConfiguration(object):
 
         return {'reboot_required': utils.is_reboot_required(
             doc, uris.DCIM_NICService),
-                'commit_required': utils_additional.is_commit_required(
+            'commit_required': utils_additional.is_commit_required(
             doc, uris.DCIM_NICService)}
 
     def _get_config(self,

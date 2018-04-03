@@ -218,7 +218,7 @@ class DRACClient(ironic_client.DRACClient):
                     break
                 else:
                     LOG.debug("The iDRAC is not ready")
-            except:
+            except BaseException:
                 # It is normal to get a series of connection errors before
                 # the iDRAC becomes ready
                 ex = sys.exc_info()[0]

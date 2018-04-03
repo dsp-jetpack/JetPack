@@ -37,6 +37,7 @@ def execute(cmd):
     if return_code != 0:
         sys.exit(return_code)
 
+
 if args.proxy:
     proxy = args.proxy
     os.environ["http_proxy"] = proxy

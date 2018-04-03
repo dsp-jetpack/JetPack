@@ -27,7 +27,7 @@ class Scp():
     def get_file(address, localfile, remotefile,
                  user=None, password=None, pkey=None):
         logger.debug("Copying {}@{}:{} to {}".format(user, address, remotefile,
-                     localfile))
+                                                     localfile))
         client = Ssh.get_client(address, user, password, pkey)
         sftp = client.open_sftp()
         sftp.get(remotefile, localfile)
@@ -38,7 +38,7 @@ class Scp():
     def put_file(address, localfile, remotefile,
                  user=None, password=None, pkey=None):
         logger.debug("Copying {} to {}@{}:{}".format(localfile, user, address,
-                     remotefile))
+                                                     remotefile))
         client = Ssh.get_client(address, user, password, pkey)
         sftp = client.open_sftp()
         sftp.put(localfile, remotefile)
@@ -60,7 +60,7 @@ class Ssh():
     def execute_command(address, command, user=None, password=None, pkey=None):
         try:
             logger.debug("ssh {}@{}, running: {}".format(user, address,
-                         command))
+                                                         command))
             client = Ssh.get_client(address, user, password, pkey)
             _, stdout_stream, stderr_stream = client.exec_command(command)
             stdout, stderr = stdout_stream.read(), stderr_stream.read()

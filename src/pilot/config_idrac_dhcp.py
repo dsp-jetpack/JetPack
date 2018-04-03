@@ -103,7 +103,7 @@ def main():
     # scp dhcp.conf to the SAH
     dest_dhcp_conf = "/etc/dhcp/dhcpd.conf"
     LOG.info("Copying {} to {}@{}:{}".format(dhcp_conf, sah_user, args.sah_ip,
-             dest_dhcp_conf))
+                                             dest_dhcp_conf))
     Scp.put_file(args.sah_ip, dhcp_conf, dest_dhcp_conf,
                  user=sah_user, password=sah_password)
 

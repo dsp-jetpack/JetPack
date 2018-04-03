@@ -89,7 +89,7 @@ def set_settings(client,
 
     return {'commit_required': is_commit_required(
         doc, resource_uri),
-            'reboot_required': utils.is_reboot_required(
+        'reboot_required': utils.is_reboot_required(
         doc, resource_uri)}
 
 

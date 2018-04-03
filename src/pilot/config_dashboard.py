@@ -266,8 +266,8 @@ def prep_dashboard_hosts(dashboard_node, ceph_nodes):
     try:
         beg = host_entries.index(beg_banner)
         end = host_entries.index(end_banner)
-        del(host_entries[beg:end+1])
-    except:
+        del(host_entries[beg:end + 1])
+    except BaseException:
         pass
 
     # Create a new hosts file with the Ceph nodes at the end
@@ -332,8 +332,8 @@ def prep_ceph_hosts(dashboard_node, ceph_nodes):
         try:
             beg = host_entries.index(beg_banner)
             end = host_entries.index(end_banner)
-            del(host_entries[beg:end+1])
-        except:
+            del(host_entries[beg:end + 1])
+        except BaseException:
             pass
 
         # Create a new hosts file with the Storage Console entry at the end
@@ -598,6 +598,7 @@ def main():
     # start_calamari_server(dashboard_node, calamari_node)
 
     LOG.info("Storage Console configuration is complete")
+
 
 if __name__ == "__main__":
     sys.exit(main())

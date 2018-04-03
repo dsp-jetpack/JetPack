@@ -74,7 +74,7 @@ def main():
     if args.json_config is not None:
         try:
             json_config = json.loads(args.json_config)
-        except:
+        except BaseException:
             LOG.exception("Failed to parse json_config data")
             sys.exit(1)
 
@@ -136,6 +136,7 @@ def main():
     except Exception as ex:
         LOG.exception(ex.message)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

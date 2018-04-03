@@ -93,5 +93,6 @@ def main():
                 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/' + d)
             print lxml.etree.tostring(response, pretty_print=True)
 
+
 if __name__ == "__main__":
     main()

@@ -189,5 +189,5 @@ class CredentialHelper:
             # will be the first in the list.
             return next(heat_client.stacks.list(), None)
 
-        except:
+        except BaseException:
             return None

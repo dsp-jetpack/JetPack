@@ -31,13 +31,13 @@ parameter_defaults:
   # Disabled by default for XSP Profile
   # This line is uncommented and updated when using CSP Profile
   # NovaVcpuPinSet: ['8-47']
- 
-  # Number of Dell Compute nodes 
+
+  # Number of Dell Compute nodes
   DellComputeCount: 0
 
   # To customize the domain name of the overcloud nodes, change "localdomain"
   # in the following line to the desired domain name.
-  CloudDomain: localdomain
+  CloudDomain: r175.nfv.lab
 
   # Set to true to enable Nova usage of Ceph for ephemeral storage.
   # If set to false, Nova uses the storage local to the compute.
@@ -73,10 +73,9 @@ parameter_defaults:
     ceph::profile::params::osd_journal_size: 10000
     ceph::profile::params::osd_pool_default_min_size: 2
     # CHANGEME:
-    # If deploying to 13G storage nodes, uncomment the
-    # "ceph::profile::params::osds:" section below and modify it to reflect the
-    # list of drives to be used as OSDs.  A configuration that colocates Ceph
-    # journals on every OSD should look like this:
+    # Modify the 'osds' parameter to reflect the list of drives to be used as
+    # OSDs. A configuration that colocates Ceph journals on every OSD should
+    # look like this:
     # ceph::profile::params::osds:
     #   '/dev/sdb': {}
     #   '/dev/sdc': {}

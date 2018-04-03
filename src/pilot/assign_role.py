@@ -78,13 +78,13 @@ NORAID = "1"
 RAID0 = "2"
 
 RAID_TYPE_TO_DESCRIPTION = {
-    NORAID:  "No RAID",
-    RAID0:   "RAID0",
-    "4":     "RAID1",
-    "64":    "RAID5",
-    "128":   "RAID6",
-    "2048":  "RAID10",
-    "8192":  "RAID50",
+    NORAID: "No RAID",
+    RAID0: "RAID0",
+    "4": "RAID1",
+    "64": "RAID5",
+    "128": "RAID6",
+    "2048": "RAID10",
+    "8192": "RAID50",
     "16384": "RAID60"
 }
 
@@ -1027,7 +1027,7 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds):
         ssd_pci_bus_number = get_pci_bus_number(ssd, controllers)
         ssd_device_name = get_by_path_device_name(ssd_pci_bus_number, ssd)
 
-        num_osds_for_ssd = int(math.ceil((len(osd_drives)-osd_index) /
+        num_osds_for_ssd = int(math.ceil((len(osd_drives) - osd_index) /
                                          (remaining_ssds * 1.0)))
 
         osds_for_ssd = osd_drives[osd_index:
@@ -1425,7 +1425,7 @@ def change_physical_disk_state(drac_client, mode,
                     job_id = drac_client.commit_pending_raid_changes(
                         controller, reboot=False, start_time=None)
                     job_ids.append(job_id)
-    except:
+    except BaseException:
         # If any exception (except Not Supported) occurred during the
         # conversion, then roll back all the changes for this node so we don't
         # leave pending config jobs in the job queue
@@ -1505,7 +1505,7 @@ def main():
         sys.exit(1)
     except SystemExit:
         raise
-    except:  # Catch all exceptions.
+    except BaseException:  # Catch all exceptions.
         LOG.exception("Unexpected error")
         sys.exit(1)
     finally:
