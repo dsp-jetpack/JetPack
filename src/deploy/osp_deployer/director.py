@@ -171,6 +171,9 @@ class Director(InfraHost):
             remote_file = self.home_dir + "/instackenv.json"
             self.upload_file(setts.custom_instack_json,
                              remote_file)
+            cmd = "sudo chown " + setts.director_install_account_user + ":" + \
+                setts.director_install_account_user + " " + remote_file
+            self.run_tty(cmd)
         else:
 
             # In 13g servers, the iDRAC sends out a DHCP req every 3 seconds
