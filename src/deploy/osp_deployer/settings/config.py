@@ -218,6 +218,7 @@ class Settings():
             self.overcloud_static_ips = False
 
         self.profile = deploy_settings['profile'].lower()
+	logger.info("Profile has been set to {}".format(self.profile))
 
         if deploy_settings['enable_rbd_backend'].lower() == 'true':
             self.enable_rbd_backend = True
