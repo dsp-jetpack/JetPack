@@ -243,7 +243,6 @@ def tag_controllers_with_osprole(first_controller_node_ip):
                        "sudo cibadmin -Q -o nodes | grep uname")
     out_list = out.split()
 
-
     # 9) Use this list to tag these nodes as controllers with the
     # osprole=controller property.
 

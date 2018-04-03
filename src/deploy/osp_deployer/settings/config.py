@@ -245,6 +245,17 @@ class Settings():
             self.dvr_enable = False
 
         self.overcloud_nodes_pwd = deploy_settings['overcloud_nodes_pwd']
+        dellnfv_settings = self.get_settings_section(
+            "Dell NFV Settings")
+        if dellnfv_settings['hpg_enable'].lower() == 'true':
+            self.hpg_enable = True
+        else:
+            self.hpg_enable = False
+        self.hpg_size = dellnfv_settings['hpg_size']
+        if dellnfv_settings['numa_enable'].lower() == 'true':
+            self.numa_enable = True
+        else:
+            self.numa_enable = False
 
         backend_settings = self.get_settings_section(
             "Storage back-end Settings")

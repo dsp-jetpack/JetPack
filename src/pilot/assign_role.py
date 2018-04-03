@@ -267,17 +267,22 @@ def define_target_raid_config(role, drac_client):
         'logical_disks': logical_disks} if logical_disks is not None else None
 
 
+def is_raid_controller(fqdd):
+    return fqdd.startswith('RAID.')
+
+
 def get_raid_controller_id(drac_client):
     disk_controllers = drac_client.list_raid_controllers()
 
     raid_controller_ids = [
-        c.id for c in disk_controllers if c.id.startswith('RAID.Integrated.')]
+        c.id for c in disk_controllers if is_raid_controller(c.id)]
 
     number_raid_controllers = len(raid_controller_ids)
 
     if number_raid_controllers == 1:
         return raid_controller_ids[0]
     elif number_raid_controllers == 0:
+        LOG.critical("Found no RAID controllers")
         return None
     else:
         LOG.critical(
@@ -847,7 +852,7 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
     ironic_client.node.update(node_uuid, patch)
 
     # Select the volume for the OS to be installed on
-    select_os_volume(os_volume_size_gb, ironic_client, drac_client.client,
+    select_os_volume(os_volume_size_gb, ironic_client, drac_client,
                      node_uuid)
 
     # Generate Ceph OSD/journal configuration for storage nodes
@@ -1067,81 +1072,97 @@ def get_size_in_bytes(doc, namespace):
 
 def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
     if os_volume_size_gb is None:
-        # Get the virtual disks
-        virtual_disk_view_doc = drac_client.enumerate(DCIM_VirtualDiskView)
-        virtual_disk_docs = utils.find_xml(virtual_disk_view_doc,
-                                           'DCIM_VirtualDiskView',
-                                           DCIM_VirtualDiskView,
-                                           True)
+        # Detect BOSS Card and find the volume size
+        lst_ctrls = drac_client.list_raid_controllers()
+        boss_disk = \
+            [ctrl.id for ctrl in lst_ctrls if ctrl.model.startswith("BOSS")]
+        if boss_disk:
+            lst_physical_disks = drac_client.list_physical_disks()
+            for disks in lst_physical_disks:
+                if disks.controller in boss_disk:
+                    os_volume_size_gb = disks.size_mb / 1024
+                    LOG.info("Detect BOSS Card {} and volume size {}".format(
+                        disks.controller,
+                        os_volume_size_gb))
+        else:
+            drac_client = drac_client.client
+            # Get the virtual disks
+            virtual_disk_view_doc = drac_client.enumerate(DCIM_VirtualDiskView)
+            virtual_disk_docs = utils.find_xml(virtual_disk_view_doc,
+                                               'DCIM_VirtualDiskView',
+                                               DCIM_VirtualDiskView,
+                                               True)
 
-        raid_physical_disk_ids = []
+            raid_physical_disk_ids = []
 
-        # Look for a RAID of any type other than RAID0 and assume we want to
-        # install the OS on that volume.  The first non-RAID0 found will be
-        # used.
-        raid_size_gb = 0
-        for virtual_disk_doc in virtual_disk_docs:
-            fqdd = get_fqdd(virtual_disk_doc, DCIM_VirtualDiskView)
-            raid_type = utils.find_xml(virtual_disk_doc, 'RAIDTypes',
-                                       DCIM_VirtualDiskView).text
+            # Look for a RAID of any type other than RAID0 and assume we want
+            # to install the OS on that volume.  The first non-RAID0 found
+            # will be used.
+            raid_size_gb = 0
+            for virtual_disk_doc in virtual_disk_docs:
+                fqdd = get_fqdd(virtual_disk_doc, DCIM_VirtualDiskView)
+                raid_type = utils.find_xml(virtual_disk_doc, 'RAIDTypes',
+                                           DCIM_VirtualDiskView).text
 
-            if raid_type != NORAID and raid_type != RAID0:
-                # Get the size
-                raid_size = get_size_in_bytes(virtual_disk_doc,
-                                              DCIM_VirtualDiskView)
-                raid_size_gb = int(raid_size) / units.Gi
+                if raid_type != NORAID and raid_type != RAID0:
+                    # Get the size
+                    raid_size = get_size_in_bytes(virtual_disk_doc,
+                                                  DCIM_VirtualDiskView)
+                    raid_size_gb = int(raid_size) / units.Gi
 
-                # Get the physical disks that back this RAID
-                raid_physical_disk_docs = utils.find_xml(virtual_disk_doc,
-                                                         'PhysicalDiskIDs',
-                                                         DCIM_VirtualDiskView,
-                                                         True)
-                for raid_physical_disk_doc in raid_physical_disk_docs:
-                    raid_physical_disk_id = raid_physical_disk_doc.text
-                    raid_physical_disk_ids.append(raid_physical_disk_id)
+                    # Get the physical disks that back this RAID
+                    raid_physical_disk_docs = utils.find_xml(
+                        virtual_disk_doc,
+                        'PhysicalDiskIDs',
+                        DCIM_VirtualDiskView,
+                        True)
+                    for raid_physical_disk_doc in raid_physical_disk_docs:
+                        raid_physical_disk_id = raid_physical_disk_doc.text
+                        raid_physical_disk_ids.append(raid_physical_disk_id)
 
-                LOG.debug(
-                    "Found RAID {} virtual disk {} with a size of {} bytes "
-                    "comprised of physical disks:\n  {}".format(
-                        RAID_TYPE_TO_DESCRIPTION[raid_type],
-                        fqdd,
-                        raid_size,
-                        "\n  ".join(raid_physical_disk_ids)))
+                    LOG.debug(
+                        "Found RAID {} virtual disk {} with a size of {} "
+                        "bytes comprised of physical disks:\n  {}".format(
+                            RAID_TYPE_TO_DESCRIPTION[raid_type],
+                            fqdd,
+                            raid_size,
+                            "\n  ".join(raid_physical_disk_ids)))
 
-                break
+                    break
 
-        if raid_size_gb == 0:
-            raise RuntimeError("There must be either a virtual disk that is "
-                               "not a RAID 0 to install the OS on, or "
-                               "os-volume-size-gb must be specified")
+            if raid_size_gb == 0:
+                raise RuntimeError("There must be either a virtual disk that "
+                                   "is not a RAID 0 to install the OS on, or "
+                                   "os-volume-size-gb must be specified")
 
-        # Now check to see if we have any physical disks that don't back
-        # the RAID that are the same size as the RAID
+            # Now check to see if we have any physical disks that don't back
+            # the RAID that are the same size as the RAID
 
-        # Get the physical disks
-        physical_disk_view_doc = drac_client.enumerate(
-            DCIM_PhysicalDiskView)
-        physical_disk_docs = utils.find_xml(physical_disk_view_doc,
-                                            'DCIM_PhysicalDiskView',
-                                            DCIM_PhysicalDiskView,
-                                            True)
+            # Get the physical disks
+            physical_disk_view_doc = drac_client.enumerate(
+                DCIM_PhysicalDiskView)
+            physical_disk_docs = utils.find_xml(physical_disk_view_doc,
+                                                'DCIM_PhysicalDiskView',
+                                                DCIM_PhysicalDiskView,
+                                                True)
 
-        for physical_disk_doc in physical_disk_docs:
-            fqdd = get_fqdd(physical_disk_doc, DCIM_PhysicalDiskView)
-            if fqdd not in raid_physical_disk_ids:
-                physical_disk_size = get_size_in_bytes(
-                    physical_disk_doc, DCIM_PhysicalDiskView)
-                physical_disk_size_gb = int(physical_disk_size) / units.Gi
+            for physical_disk_doc in physical_disk_docs:
+                fqdd = get_fqdd(physical_disk_doc, DCIM_PhysicalDiskView)
+                if fqdd not in raid_physical_disk_ids:
+                    physical_disk_size = get_size_in_bytes(
+                        physical_disk_doc, DCIM_PhysicalDiskView)
+                    physical_disk_size_gb = int(physical_disk_size) / units.Gi
 
-                if physical_disk_size_gb == raid_size_gb:
-                    # If we did find a disk that's the same size as the located
-                    # RAID (in GB), then we can't tell Ironic what volume to
-                    # install the OS on.  Abort the install at this point
-                    # instead of having the OS installed on a random volume.
-                    raise RuntimeError(
-                        "Physical disk {} has the same size in GB ({}) as the "
-                        "RAID.  Unable to specify the OS disk to "
-                        "Ironic.".format(fqdd, physical_disk_size_gb))
+                    if physical_disk_size_gb == raid_size_gb:
+                        # If we did find a disk that's the same size as the
+                        # located RAID (in GB), then we can't tell Ironic what
+                        # volume to install the OS on.
+                        # Abort the install at this point instead of having
+                        # the OS installed on a random volume.
+                        raise RuntimeError(
+                            "Physical disk {} has the same size in GB ({}) "
+                            "as the RAID.  Unable to specify the OS disk to "
+                            "Ironic.".format(fqdd, physical_disk_size_gb))
 
     if os_volume_size_gb is not None:
         # If os_volume_size_gb was specified then just blindly use that
@@ -1331,10 +1352,12 @@ def change_physical_disk_state(drac_client, mode,
         controllers_to_physical_disk_ids = defaultdict(list)
 
         for physical_disk in physical_disks:
-            physical_disk_ids = controllers_to_physical_disk_ids[
-                physical_disk.controller]
+            # Weed out disks that are not attached to a RAID controller
+            if is_raid_controller(physical_disk.controller):
+                physical_disk_ids = controllers_to_physical_disk_ids[
+                    physical_disk.controller]
 
-            physical_disk_ids.append(physical_disk.id)
+                physical_disk_ids.append(physical_disk.id)
 
     # Weed out disks that are already in the mode we want
     failed_disks = []
