@@ -1,0 +1,4 @@
+parameters:
+  aggregate_name: HugePage_Aggr
+  aggregate_metadata: {'hugepages': 'True'}
+  hosts: [director.r146.nfv.lab]

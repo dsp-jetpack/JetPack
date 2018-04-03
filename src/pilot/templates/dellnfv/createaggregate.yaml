@@ -1,0 +1,27 @@
+heat_template_version: 2016-04-08
+
+description: >
+  Creates aggregate
+parameters:
+  aggregate_name:
+    description: host aggregate name
+    type: string
+  aggregate_metadata:
+    description: metadata for aggregate in the form of key/value pair
+    type: json
+  hosts:
+    description: aggregate host names
+    type: comma_delimited_list
+  availability_zone:
+    description: nova availability zone
+    type: string
+    default: nova
+
+resources:
+  aggregate:
+    type: OS::Nova::HostAggregate
+    properties:
+      name: {get_param: aggregate_name}
+      metadata: {get_param: aggregate_metadata}
+      hosts: {get_param: hosts}
+      availability_zone: {get_param: availability_zone}

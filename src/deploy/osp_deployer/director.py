@@ -865,13 +865,13 @@ class Director(InfraHost):
                                     self.settings.overcloud_name + \
                                     " --ntp " + \
                                     self.settings.sah_node.provisioning_ip
-
         if self.settings.hpg_enable is True:
             cmd += " --enable_hugepages "
             cmd += " --hugepages_size " + self.settings.hpg_size
 
         if self.settings.numa_enable is True:
             cmd += " --enable_numa "
+            cmd += " --hostos_cpu_count " + self.settings.hostos_cpu_count
 
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \
