@@ -33,7 +33,7 @@ logging.basicConfig()
 LOG = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
 
-class RhsconException(BaseException):
+class DashboardException(BaseException):
     pass
 
 
@@ -78,7 +78,7 @@ class Node:
             msg = "Node at {} does not have an IP address on the storage" \
                   " network".format(self.address)
             LOG.error(msg)
-            raise RhsconException(msg)
+            raise DashboardException(msg)
 
     def execute(self, command):
         status, stdout, stderr = Ssh.execute_command(self.address,
@@ -102,8 +102,8 @@ class Node:
     def run(self, command, check_status=True):
         status, stdout, stderr = self.execute(command)
         if int(status) != 0 and check_status:
-            raise RhsconException("Command execution failed on {} ({})".format(
-                self.fqdn, self.address))
+            raise DashboardException("Command execution failed on {} ({})"
+                                     .format(self.fqdn, self.address))
         return stdout
 
     def put(self, localfile, remotefile):
@@ -175,10 +175,6 @@ def get_ceph_nodes(username):
         if ceph_procs:
             LOG.info("{} ({}) is a Ceph node".format(node.fqdn,
                                                      node.storage_ip))
-
-            # Note whether it's a Ceph monitor
-            node.is_monitor = ("ceph-mon" in ceph_procs)
-
             ceph_nodes.append(node)
         else:
             LOG.debug("{} ({}) is not a Ceph node".format(node.fqdn,
@@ -493,6 +489,7 @@ def prep_collectd(dashboard_node, ceph_nodes):
     collectd_dir = "/etc/collectd.d"
 
     for node in ceph_nodes:
+        collectd_restart = "False"
         collectd_files = ('network.conf', 'disk.conf')
         for file in collectd_files:
             conf_file = os.path.join(os.sep, collectd_dir, file)
@@ -503,10 +500,13 @@ def prep_collectd(dashboard_node, ceph_nodes):
             LOG.debug("STDOUT for node ({}) file ({}) = {}"
                       .format(node.fqdn, conf_file, stdout))
             if "true" in stdout:
-                node.run("mv {} {}.bak".format(conf_file, conf_file))
-                LOG.info("Restarting collectd service on node ({})"
-                         .format(node.fqdn))
-                node.run("systemctl restart collectd")
+                node.run("sudo mv {} {}.bak".format(conf_file, conf_file))
+                collectd_restart = "True"
+
+        if "True" in collectd_restart:
+            LOG.info("Restarting collectd service on node ({})"
+                     .format(node.fqdn))
+            node.run("sudo systemctl restart collectd")
 
 
 def prep_cluster_for_collection(dashboard_node, ceph_nodes):
@@ -518,6 +518,7 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes):
     sym_link = "/etc/ansible/group_vars"
     ceph_ansible_dir = "/usr/share/ceph-ansible"
     toc_yml = "take-over-existing-cluster.yml"
+    cephmetrics_ansible_dir = "/usr/share/cephmetrics-ansible"
 
     # Get ceph fsid information from a storage node
     for node in ceph_nodes:
@@ -552,12 +553,11 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes):
     dashboard_node.run("cd {}; sudo echo '        gen_conf_file' >> {}"
                        .format(ceph_ansible_dir, toc_yml))
     dashboard_node.run("cd {}; ansible-playbook {} -u root --skip-tags \
-                       'gen_conf_file'"
-                       .format(ceph_ansible_dir, toc_yml))
+                       'gen_conf_file'".format(ceph_ansible_dir, toc_yml))
 
     LOG.info("Installing the Ceph Storage Dashboard Console.")
-    dashboard_node.run("cd /usr/share/cephmetrics-ansible; \
-                        ansible-playbook -s -v playbook.yml")
+    dashboard_node.run("cd {}; sudo ansible-playbook -s -v playbook.yml"
+                       .format(cephmetrics_ansible_dir))
 
     LOG.info("Ceph Storage Dashboard Console configuration is complete")
     LOG.info("You may access the Ceph Storage Dashboard Console at:")
