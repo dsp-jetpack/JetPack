@@ -489,7 +489,7 @@ def prep_collectd(dashboard_node, ceph_nodes):
     collectd_dir = "/etc/collectd.d"
 
     for node in ceph_nodes:
-        collectd_restart = "False"
+        collectd_restart = False
         collectd_files = ('network.conf', 'disk.conf')
         for file in collectd_files:
             conf_file = os.path.join(os.sep, collectd_dir, file)
@@ -501,9 +501,9 @@ def prep_collectd(dashboard_node, ceph_nodes):
                       .format(node.fqdn, conf_file, stdout))
             if "true" in stdout:
                 node.run("sudo mv {} {}.bak".format(conf_file, conf_file))
-                collectd_restart = "True"
+                collectd_restart = True
 
-        if "True" in collectd_restart:
+        if collectd_restart:
             LOG.info("Restarting collectd service on node ({})"
                      .format(node.fqdn))
             node.run("sudo systemctl restart collectd")
