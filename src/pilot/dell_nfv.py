@@ -16,7 +16,7 @@ import novaclient.client as nova_client
 from novaclient import client as nvclient
 from ironic_helper import IronicHelper
 from dracclient import client
-logging.basicConfig(level=logging.CRITICAL)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
@@ -35,8 +35,6 @@ class ConfigOvercloud(object):
     """
     Description: Class responsible for overcloud configurations.
     """
-
-    # These are not parameters. So defined as class variables
     ironic = IronicHelper()
     ironic_client = ironic.get_ironic_client()
     nodes = ironic_client.node.list()
