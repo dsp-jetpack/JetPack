@@ -35,7 +35,7 @@ from dell_nfv import ConfigOvercloud
 # Dell utilities
 from identify_nodes import main as identify_nodes
 from update_ssh_config import main as update_ssh_config
-logging.basicConfig(level=logging.CRITICAL)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
 home_dir = os.path.expanduser('~')

@@ -83,7 +83,7 @@ class ConfigOvercloud(object):
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            print "{}".format(message)
+            logger.error("{}".format(message))
             raise Exception(
                 "Failed to get undercloud details from"
                 " the undercloud rc file {}".format(file_path))
@@ -115,14 +115,14 @@ class ConfigOvercloud(object):
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            print "{}".format(message)
+            logger.error("{}".format(message))
             raise Exception(
                 "Failed to get overcloud details from"
                 " the overcloud rc file {}".format(file_path))
 
     def reboot_dell_nfv_nodes(self):
         try:
-            print "Rebooting dellnfv nodes"
+            logger.info("Rebooting dellnfv nodes")
             ConfigOvercloud.get_undercloud_details()
             # Create servers object
             nova = nvclient.Client(
@@ -138,8 +138,8 @@ class ConfigOvercloud(object):
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            print "Failed to reboot dell nfv nodes with error {}".format(
-                message)
+            logger.error("Failed to reboot dell nfv nodes with error {}".format(
+                message))
 
     @classmethod
     def calculate_hostos_cpus(self, number_of_host_os_cpu):
@@ -167,16 +167,16 @@ class ConfigOvercloud(object):
                     if socket.ht_enabled:
                         cpu_count += socket.cores * 2
                     else:
-                        print "Hyperthreading is not enabled in " + \
-                            str(node_uuid) + ". So exiting the code execution."
+                        logger.error("Hyperthreading is not enabled in " + \
+                            str(node_uuid) + ". So exiting the code execution.")
                         sys.exit()
                 cpu_count_list.append(cpu_count)
 
             min_cpu_count = min(cpu_count_list)
             if min_cpu_count not in [40, 48, 64, 72, 128]:
-                print "CPU count should be one of these" \
+                logger.error("CPU count should be one of these" \
                     " values : [40,48,64,72,128]. But number of cpu is " + str(
-                        min_cpu_count)
+                        min_cpu_count))
                 sys.exit()
             number_of_host_os_cpu = int(number_of_host_os_cpu)
             print "host_os_cpus {}".format(
@@ -191,7 +191,7 @@ class ConfigOvercloud(object):
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            print "Failed to calculate Numa Vcpu list {}".format(message)
+            logger.error("Failed to calculate Numa Vcpu list {}".format(message))
 
     @classmethod
     def calculate_hugepage_count(self, hugepage_size):
@@ -208,7 +208,7 @@ class ConfigOvercloud(object):
                     node_details.properties['capabilities'].split(',')[
                         0].split(':')[1]
                 if 'compute' in node_properties_capabilities:
-                    # Substracting
+                    # Subtracting
                     # 16384MB = (Host Memory 12GB + Kernel Memory 4GB)
                     memory_count = (memory_count - 16384)
                     if hugepage_size == "2MB":
@@ -220,7 +220,7 @@ class ConfigOvercloud(object):
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            print "Failed to calculate hugepage count {}".format(message)
+            logger.error("Failed to calculate hugepage count {}".format(message))
 
     def edit_dell_environment_file(
             self,
@@ -327,7 +327,7 @@ class ConfigOvercloud(object):
 
     def edit_aggregate_environment_file(
             self, aggr_name, aggr_metadata, hostname_list):
-        print "Editing create aggregate environment file"
+        logger.info("Editing create aggregate environment file")
         file_path = home_dir \
             + '/pilot/templates/create_aggregate_environment.yaml'
         if not os.path.isfile(file_path):
@@ -417,7 +417,7 @@ class ConfigOvercloud(object):
             # Wait for 5 mins to let dll nfv nodes boot up
             time.sleep(300)
 
-            print "Initiating post deployment tasks"
+            logger.info("Initiating post deployment tasks")
 
             # create aggregate
             self.set_aggregate_metadata()
@@ -425,5 +425,4 @@ class ConfigOvercloud(object):
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            print
-            "{}".format(message)
+            logger.error("{}".format(message))
