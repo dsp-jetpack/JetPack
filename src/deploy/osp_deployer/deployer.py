@@ -127,7 +127,7 @@ def deploy():
                 settings.hpg_size,
                 settings.hostos_cpu_count)
         except ValueError as validation_err:
-            print validation_err
+            logger.error(validation_err)
             os._exit(0)
 
         logger.info("Settings .ini: " + settings.settings_file)

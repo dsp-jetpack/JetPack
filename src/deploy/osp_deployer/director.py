@@ -865,6 +865,7 @@ class Director(InfraHost):
                                     self.settings.overcloud_name + \
                                     " --ntp " + \
                                     self.settings.sah_node.provisioning_ip
+
         if self.settings.hpg_enable is True:
             cmd += " --enable_hugepages "
             cmd += " --hugepages_size " + self.settings.hpg_size
