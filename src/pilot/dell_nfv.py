@@ -35,8 +35,6 @@ class ConfigOvercloud(object):
     """
     Description: Class responsible for overcloud configurations.
     """
-
-    # These are not parameters. So defined as class variables
     ironic = IronicHelper()
     ironic_client = ironic.get_ironic_client()
     nodes = ironic_client.node.list()
