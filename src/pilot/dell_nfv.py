@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 # Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
