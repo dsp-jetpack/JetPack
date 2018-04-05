@@ -16,7 +16,11 @@ import novaclient.client as nova_client
 from novaclient import client as nvclient
 from ironic_helper import IronicHelper
 from dracclient import client
+<<<<<<< HEAD
 logging.basicConfig()
+=======
+logging.basicConfig()
+>>>>>>> 339ed974d500b939c3808b6bedd467374ac185b9
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
