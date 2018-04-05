@@ -1,3 +1,5 @@
+# It is a dictionary of the form {'total number of cpu cores' : {'number_of_host_os_cpu' : {'vcpu_pin_set' : 'Range of corresponding cpus', 'host_os_cpu' : 'Range of corresponding cpus'} } }
+# If 'total number of cpu cores' = 48 & 'number_of_host_os_cpu' = 4 then you can get 'vcpu_pin_set' by using sibling_info[48][4]['vcpu_pin_set']
 sibling_info = {
     40:
     {8: {'vcpu_pin_set': '4-19,24-39', 'host_os_cpu': '0-3,20-23'},
