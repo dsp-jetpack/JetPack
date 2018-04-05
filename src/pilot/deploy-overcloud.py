@@ -42,6 +42,7 @@ home_dir = os.path.expanduser('~')
 
 BAREMETAL_FLAVOR = "baremetal"
 
+
 # Check to see if the sequence contains numbers that increase by 1
 def is_coherent(seq):
     return seq == range(seq[0], seq[-1]+1)
