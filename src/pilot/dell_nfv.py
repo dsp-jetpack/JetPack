@@ -38,11 +38,6 @@ logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 home_dir = os.path.expanduser('~')
-DELL_AGGREGATE_METADATA = {
-    "Dell_Aggr": {
-        'pinned': 'False',
-        'hugepages': 'False'}}
-
 # Dell nfv configuration global values
 undercloudrc_file_name = "stackrc"
 UC_USERNAME = UC_PASSWORD = UC_PROJECT_ID = UC_AUTH_URL = ''
@@ -153,7 +148,7 @@ class ConfigOvercloud(object):
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            logger.error("Failed to reboot dell nfv nodes with error {}".format(
+            raise Exception("Failed to reboot dell nfv nodes with error {}".format(
                 message))
 
     @classmethod
@@ -182,17 +177,17 @@ class ConfigOvercloud(object):
                     if socket.ht_enabled:
                         cpu_count += socket.cores * 2
                     else:
-                        logger.error("Hyperthreading is not enabled in " + \
+			            raise Exception("Hyperthreading is not enabled in " + \
                             str(node_uuid) + ". So exiting the code execution.")
-                        sys.exit()
+                        sys.exit(0)
                 cpu_count_list.append(cpu_count)
 
             min_cpu_count = min(cpu_count_list)
             if min_cpu_count not in [40, 48, 64, 72, 128]:
-                logger.error("CPU count should be one of these" \
+			    raise Exception("CPU count should be one of these" \
                     " values : [40,48,64,72,128]. But number of cpu is " + str(
                         min_cpu_count))
-                sys.exit()
+                sys.exit(0)
             number_of_host_os_cpu = int(number_of_host_os_cpu)
             logger.info("host_os_cpus {}".format(
                 cpu_siblings.sibling_info[
@@ -205,7 +200,7 @@ class ConfigOvercloud(object):
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            logger.error("Failed to calculate Numa Vcpu list {}".format(message))
+            raise Exception("Failed to calculate Numa Vcpu list {}".format(message))
 
     @classmethod
     def calculate_hugepage_count(self, hugepage_size):
@@ -229,12 +224,12 @@ class ConfigOvercloud(object):
                         pages.append((memory_count / 2))
                     if hugepage_size == "1GB":
                         pages.append((memory_count / 1024))
-            print "hugepage_count {}".format(min(pages))
+            logger.info("hugepage_count {}".format(min(pages)))
             return min(pages)
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            logger.error("Failed to calculate hugepage count {}".format(message))
+            raise Exception("Failed to calculate hugepage count {}".format(message))
 
     def edit_dell_environment_file(
             self,
@@ -263,12 +258,11 @@ class ConfigOvercloud(object):
                 '|" ' +
                 file_path)
 
-            if dell_compute_count > 0:
-                cmds.append(
-                    'sed -i "s|DellComputeCount:.*|DellComputeCount: ' +
-                    str(dell_compute_count) +
-                    '|" ' +
-                    file_path)
+            cmds.append(
+                'sed -i "s|DellComputeCount:.*|DellComputeCount: ' +
+                str(dell_compute_count) +
+                '|" ' +
+                file_path)
 
             if enable_hugepage:
                 hugepage_number = ConfigOvercloud.calculate_hugepage_count(
@@ -340,37 +334,26 @@ class ConfigOvercloud(object):
             raise Exception("Failed to get the Dell Compute nodes.")
 
     def edit_aggregate_environment_file(
-            self, aggr_name, aggr_metadata, hostname_list):
+            self, hostname_list):
         logger.info("Editing create aggregate environment file")
         file_path = home_dir \
             + '/pilot/templates/create_aggregate_environment.yaml'
         if not os.path.isfile(file_path):
             raise Exception(
                 "The create_aggregate_environment.yaml file does not exist")
-        cmds = list()
-        cmds.append(
-            'sed -i "s|aggregate_name:.*|aggregate_name: ' +
-            str(aggr_name) +
-            '|" ' +
-            file_path)
-        cmds.append(
-            'sed -i "s|aggregate_metadata:.*|aggregate_metadata: ' +
-            str(aggr_metadata) +
-            '|" ' +
-            file_path)
-        cmds.append(
+        cmd = (
             'sed -i "s|hosts:.*|hosts: ' +
             str(hostname_list) +
             '|" ' +
             file_path)
-        for cmd in cmds:
-            status = os.system(cmd)
-            print "cmd: {}".format(cmd)
-            if status != 0:
-                raise Exception(
-                    "Failed to execute the command {}"
-                    " with error code {}".format(
-                        cmd, status))
+
+        status = os.system(cmd)
+        print "cmd: {}".format(cmd)
+        if status != 0:
+            raise Exception(
+                "Failed to execute the command {}"
+                " with error code {}".format(
+                    cmd, status))
 
     def create_aggregates(self, aggr_name):
         env_opts = \
@@ -388,14 +371,15 @@ class ConfigOvercloud(object):
         if aggregate_create_status == 0:
             logger.info("Aggregate {} created".format(aggr_name))
         else:
-            logger.error(
+            raise Exception(
                 "Aggregate {} could not be created..."
                 " Exiting post deployment tasks".format(aggr_name))
             sys.exit(0)
 
     def set_aggregate_metadata(self):
         try:
-                # Get the overcloud details
+            # Get the overcloud details
+			aggregate_name = "Dell_Aggr"
             ConfigOvercloud.get_overcloud_details(self.overcloud_name)
 
             # Create nova client object
@@ -405,20 +389,15 @@ class ConfigOvercloud(object):
                 UC_PASSWORD,
                 UC_PROJECT_ID,
                 UC_AUTH_URL)
-            aggregate_dict = dict()
             hostname_list = self.get_dell_compute_nodes_hostnames(nova)
-
-            aggregate_dict.update(DELL_AGGREGATE_METADATA)
-
-            for aggregate_name, aggregate_metadata in aggregate_dict.items():
-                self.edit_aggregate_environment_file(
-                    aggregate_name, aggregate_metadata, hostname_list)
-                self.create_aggregates(aggregate_name)
+            self.edit_aggregate_environment_file(
+                hostname_list)
+            self.create_aggregates(aggregate_name)
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
             logger.error("{}".format(message))
-            logger.error(
+            raise Exception(
                 "Unable to set aggregate metadata."
                 " Exiting post deployment task...")
             sys.exit(0)
@@ -439,4 +418,4 @@ class ConfigOvercloud(object):
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            logger.error("{}".format(message))
+            raise Exception("{}".format(message))

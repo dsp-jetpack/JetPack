@@ -13,6 +13,6 @@
 # limitations under the License.
 
 parameters:
-  aggregate_name: HugePage_Aggr
-  aggregate_metadata: {'hugepages': 'True'}
-  hosts: [director.r146.nfv.lab]
+  aggregate_name: Dell_Aggr
+  aggregate_metadata: {'pinned': 'False','hugepages': 'False'}
+  hosts:
