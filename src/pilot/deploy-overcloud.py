@@ -314,14 +314,6 @@ def main():
         if not p.match(args.vlan_range):
             raise ValueError("Error: The VLAN range must be a number followed "
                              "by a colon, followed by another number")
-
-        print "=====Dell NFV configurations====="
-        print "dell_compute {}".format(args.num_dell_computes)
-        print "enable_hugepage {}".format(args.enable_hugepages)
-        print "enable_numa {}".format(args.enable_numa)
-        print "hugepage_size {}".format(args.hugepages_size)
-        print "hostos_cpu_count {}".format(args.hostos_cpu_count)
-
         os_auth_url, os_tenant_name, os_username, os_password = \
             CredentialHelper.get_undercloud_creds()
 

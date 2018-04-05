@@ -12,7 +12,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
-# limitations under the License
+# limitations under the License.
 
 
 import cpu_siblings
@@ -194,13 +194,12 @@ class ConfigOvercloud(object):
                         min_cpu_count))
                 sys.exit()
             number_of_host_os_cpu = int(number_of_host_os_cpu)
-            print "host_os_cpus {}".format(
+            logger.info("host_os_cpus {}".format(
                 cpu_siblings.sibling_info[
-                    min_cpu_count][number_of_host_os_cpu]["host_os_cpu"])
-            print "vcpus {}".format(
+                    min_cpu_count][number_of_host_os_cpu]["host_os_cpu"]))
+            logger.info("vcpus {}".format(
                 cpu_siblings.sibling_info[
-                    min_cpu_count][number_of_host_os_cpu]["vcpu_pin_set"])
-            print "================================="
+                    min_cpu_count][number_of_host_os_cpu]["vcpu_pin_set"]))
             return cpu_siblings.sibling_info[
                 min_cpu_count][number_of_host_os_cpu]["vcpu_pin_set"]
         except Exception as error:
