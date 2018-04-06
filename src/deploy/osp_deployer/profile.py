@@ -66,34 +66,36 @@ class Profile():
                         if vals['validate']:
                             for test in vals['validate']:
                                 if 'should_be_valid_ip' in test:
-                                    if self.is_valid_ip(user_config.get(str(stanza), set)) is False:
+                                    if self.is_valid_ip(user_config.get(str(
+                                            stanza), set)) is False:
                                         Err = Err + "\nSetting for " + set + \
-                                              " Should be a valid ip adress\n"
+                                            " Should be a valid ip adress\n"
                             validated = True
                     except:
                         pass
                     if len(allowed_settings) > 0:
-                        if user_config.get(str(stanza), set) in allowed_settings:
+                        if user_config.get(str(stanza), set) in \
+                                allowed_settings:
                             pass
                         else:
                             Err = Err + "\nYour setting for " + stanza + \
-                                  "::" + set + \
-                                  " is not valid for the profile " + \
-                                  self.profile_name + \
-                                  ".It should be set to one of the following " + \
-                                  "options : " + \
-                                  json.dumps(allowed_settings)
+                                "::" + set + \
+                                " is not valid for the profile " + \
+                                self.profile_name + \
+                                ".It should be set to one of the " + \
+                                "following options : " + \
+                                json.dumps(allowed_settings)
                     elif validated is True:
                         pass
                     else:
-                        usr_sett =  user_config.get(str(stanza), set)
+                        usr_sett = user_config.get(str(stanza), set)
                         if profile_config.get(str(stanza), set) != usr_sett:
                             Err = Err + "\nYour setting for " + stanza + \
-                                  "::" + set + \
-                                  " is not valid for the profile " + \
-                                  self.profile_name + \
-                                  ".It should be set to " + \
-                                  profile_config.get(str(stanza), set)
+                                "::" + set + \
+                                " is not valid for the profile " + \
+                                self.profile_name + \
+                                ".It should be set to " + \
+                                profile_config.get(str(stanza), set)
 
         if len(Err) > 0:
             logger.info(Err)

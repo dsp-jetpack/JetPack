@@ -231,7 +231,6 @@ def deploy():
                                     settings.director_install_account_pwd,
                                     cmd)[0]
         logger.debug("=== Overcloud stack state : " + overcloud_status)
-
         logger.info("====================================")
         logger.info(" OverCloud deployment status: " + overcloud_status)
         logger.info(" log : /auto_results/ ")
@@ -240,7 +239,7 @@ def deploy():
             raise AssertionError(
                 "OverCloud did not install properly : " + overcloud_status)
 
-        director_vm.retreive_nodes_ips()
+        director_vm.summarize_deployment()
         tester.verify_computes_virtualization_enabled()
         tester.verify_backends_connectivity()
         if args.skip_dashboard_vm is False:

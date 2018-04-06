@@ -69,7 +69,7 @@ def setup():
         # Check to verify RHEL ISO exists
         rhel_iso = settings.rhel_iso
         assert os.path.isfile(settings.rhel_iso), settings.rhel_iso +\
-                " ISO file is not present"
+            " ISO file is not present"
         sah = Sah()
         sah.update_kickstart_usb()
 
