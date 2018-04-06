@@ -18,7 +18,7 @@
 # set -e
 shopt -s nullglob  # pathname expansion which match no files returns null string
 
-exec > >(tee -a $HOME/update_upgrade/update-js10.2.0.log)
+exec > >(tee -a $HOME/update/update-js10.2.0.log)
 exec 2>&1
 
 OPENSTACK_POOL_ID="$1"
@@ -74,7 +74,7 @@ if [ ${#cntls_arr[@]} -lt 3 ]; then
     fatal "You must have 3 or more controllers to perform update."
 fi
 
-mkdir -p ~/update_upgrade/update-js10.2-lockfiles
+mkdir -p ~/update/update-js10.2-lockfiles
 
 
 # Updating JS 10.1 to latest OSP 10 packages
@@ -90,7 +90,7 @@ update_subscription_json() {
 update_director_packages() {
     # on Director node as osp_admin (or whomever the stack owner is): 
     cd ~
-    [ -e ~/update_upgrade/update-js10.2-lockfiles/director-updated.lock ] && return
+    [ -e ~/update/update-js10.2-lockfiles/director-updated.lock ] && return
 
     # disable version locking
     sudo sed -i 's/enabled = 1/enabled = 0/' /etc/yum/pluginconf.d/versionlock.conf
@@ -109,7 +109,7 @@ update_director_packages() {
     info "Upgrade undercloud complete."
 
     sleep 5
-    touch ~/update_upgrade/update-js10.2-lockfiles/director-updated.lock
+    touch ~/update/update-js10.2-lockfiles/director-updated.lock
 
     # to be sure to incorporate OS updates, we should reboot - next
     # run will not update packages because of lock file
@@ -123,7 +123,7 @@ update_director_packages() {
 # See: https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/10/html-single/upgrading_red_hat_openstack_platform/#sect-Updating_Overcloud_and_Introspection_Images
 update_overcloud_images() {
 
-    [ -e ~/update_upgrade/update-js10.2-lockfiles/overcloud-images-updated.lock ] && return
+    [ -e ~/update/update-js10.2-lockfiles/overcloud-images-updated.lock ] && return
 
     info "Updating and uploading overcloud images"
     source ~/stackrc
@@ -146,13 +146,13 @@ update_overcloud_images() {
     for IMAGE in `openstack image list | tail -n+3 | awk -F "|" '{ print $2 }'` ; do openstack image show $IMAGE | grep "updated_at" ; done
     ls -l /httpboot
 
-    touch ~/update_upgrade/update-js10.2-lockfiles/overcloud-images-updated.lock
+    touch ~/update/update-js10.2-lockfiles/overcloud-images-updated.lock
 }
 
 # Update the Overcloud Subscriptions
 subscribe_overcloud() {
     # subscribe the overcloud nodes
-    [ -e ~/update_upgrade/update-js10.2-lockfiles/overcloud-registered.lock ] && return
+    [ -e ~/update/update-js10.2-lockfiles/overcloud-registered.lock ] && return
     info "Registering overcloud nodes with Red Hat Subscription Manger"
     cd ~/pilot
 
@@ -165,12 +165,12 @@ subscribe_overcloud() {
     if ! eval ${CMD} ; then
       fatal "Could not successfully register overcloud - please fix issue and re-run update script"
     fi
-    touch ~/update_upgrade/update-js10.2-lockfiles/overcloud-registered.lock
+    touch ~/update/update-js10.2-lockfiles/overcloud-registered.lock
 }
 
 # Update templates in pilot with ones laid down from "openstack undercloud upgrade", and apply any patches, if required.
 update_heat_templates() {
-    [ -e ~/update_upgrade/update-js10.2-lockfiles/heat_templates_updated.lock ] && return
+    [ -e ~/update/update-js10.2-lockfiles/heat_templates_updated.lock ] && return
     cd ~/pilot
 
     # Patch the Heat templates
@@ -187,12 +187,12 @@ update_heat_templates() {
       cp ~/pilot/templates/overrides/puppet/hieradata/ceph.yaml ~/pilot/templates/overcloud/puppet/hieradata
     fi
 
-    touch ~/update_upgrade/update-js10.2-lockfiles/heat_templates_updated.lock
+    touch ~/update/update-js10.2-lockfiles/heat_templates_updated.lock
 }
 
 # https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/10/html-single/upgrading_red_hat_openstack_platform/#sect-Updating_the_Overcloud
 update_overcloud() {
-    [ -e ~/update_upgrade/update-js10.2-lockfiles/overcloud-updated.lock ] && return
+    [ -e ~/update/update-js10.2-lockfiles/overcloud-updated.lock ] && return
     info "Updating overcloud"
     cd ~
     source ~/stackrc
@@ -244,7 +244,7 @@ update_overcloud() {
       fatal "Overcloud stack: $STACK_NAME, update failed.  Please check status of the overcloud nodes and pcs status and fix any issues you find, then re-run update script."
     fi
 
-    touch ~/update_upgrade/update-js10.2-lockfiles/overcloud-updated.lock
+    touch ~/update/update-js10.2-lockfiles/overcloud-updated.lock
 }
 
 # main 
