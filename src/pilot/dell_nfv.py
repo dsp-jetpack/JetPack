@@ -33,13 +33,11 @@ import novaclient.client as nova_client
 from novaclient import client as nvclient
 from ironic_helper import IronicHelper
 from dracclient import client
+from command_helper import Ssh
 logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-
 home_dir = os.path.expanduser('~')
-# Dell nfv configuration global values
-undercloudrc_file_name = "stackrc"
 UC_USERNAME = UC_PASSWORD = UC_PROJECT_ID = UC_AUTH_URL = ''
 
 
@@ -54,102 +52,52 @@ class ConfigOvercloud(object):
 
     def __init__(self, overcloud_name):
         self.overcloud_name = overcloud_name
-        self.source_stackrc = "source ~/stackrc;"
         self.overcloudrc = "source " + home_dir + "/"\
             + self.overcloud_name + "rc;"
 
-    @classmethod
-    def get_undercloud_details(cls):
-        try:
-            global UC_USERNAME, UC_PASSWORD, UC_PROJECT_ID, UC_AUTH_URL
-            file_path = home_dir + '/' + undercloudrc_file_name
-            if not os.path.isfile(file_path):
-                raise Exception(
-                    "The Undercloud rc file does"
-                    " not exist {}".format(file_path))
-
-            with open(file_path) as rc_file:
-                for line in rc_file:
-                    if 'OS_USERNAME=' in line:
-                        UC_USERNAME = line.split('OS_USERNAME=')[
-                            1].strip("\n").strip("'")
-                    elif 'OS_PASSWORD=' in line:
-                        cmd = 'sudo hiera admin_password'
-                        proc = subprocess.Popen(
-                            cmd,
-                            shell=True,
-                            stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-                        output = proc.communicate()
-                        output = output[0]
-                        UC_PASSWORD = output[:-1]
-                    elif 'OS_TENANT_NAME=' in line:
-                        UC_PROJECT_ID = line.split('OS_TENANT_NAME=')[
-                            1].strip("\n").strip("'")
-                    elif 'OS_AUTH_URL=' in line:
-                        UC_AUTH_URL = line.split('OS_AUTH_URL=')[
-                            1].strip("\n").strip("'")
-        except Exception as error:
-            message = "Exception {}: {}".format(
-                type(error).__name__, str(error))
-            logger.error("{}".format(message))
-            raise Exception(
-                "Failed to get undercloud details from"
-                " the undercloud rc file {}".format(file_path))
-
-    @classmethod
-    def get_overcloud_details(cls, overcloud_name):
-        try:
-            global UC_USERNAME, UC_PASSWORD, UC_PROJECT_ID, UC_AUTH_URL
-            file_path = home_dir + '/' + overcloud_name + "rc"
-            if not os.path.isfile(file_path):
-                raise Exception(
-                    "The Overcloud rc file does"
-                    " not exist {}".format(file_path))
-
-            with open(file_path) as rc_file:
-                for line in rc_file:
-                    if 'OS_USERNAME' in line:
-                        UC_USERNAME = line.split('OS_USERNAME=')[
-                            1].strip("\n").strip("'")
-                    elif 'OS_PASSWORD' in line:
-                        UC_PASSWORD = line.split('OS_PASSWORD=')[
-                            1].strip("\n").strip("'")
-                    elif 'OS_PROJECT_NAME' in line:
-                        UC_PROJECT_ID = line.split('OS_PROJECT_NAME=')[
-                            1].strip("\n").strip("'")
-                    elif 'OS_AUTH_URL' in line:
-                        UC_AUTH_URL = line.split('OS_AUTH_URL=')[
-                            1].strip("\n").strip("'")
-        except Exception as error:
-            message = "Exception {}: {}".format(
-                type(error).__name__, str(error))
-            logger.error("{}".format(message))
-            raise Exception(
-                "Failed to get overcloud details from"
-                " the overcloud rc file {}".format(file_path))
-
-    def reboot_dell_nfv_nodes(self):
-        try:
-            logger.info("Rebooting dellnfv nodes")
-            ConfigOvercloud.get_undercloud_details()
-            # Create servers object
-            nova = nvclient.Client(
-                2,
-                UC_USERNAME,
-                UC_PASSWORD,
-                UC_PROJECT_ID,
-                UC_AUTH_URL)
-            server_obj = servers.ServerManager(nova)
-            for server in server_obj.list():
-                if "dell-compute" in str(server):
-                    server_obj.reboot(server)
-        except Exception as error:
-            message = "Exception {}: {}".format(
-                type(error).__name__, str(error))
-            raise Exception("Failed to reboot dell nfv nodes with error {}".format(
-                message))
+    def reboot_compute_nodes(self):
+        logger.info("Rebooting dell compute nodes")
+        UC_AUTH_URL, UC_PROJECT_ID, UC_USERNAME, UC_PASSWORD = \
+            CredentialHelper.get_undercloud_creds()
+        kwargs = {'username': UC_USERNAME,
+                  'password': UC_PASSWORD,
+                  'auth_url': UC_AUTH_URL,
+                  'project_id': UC_PROJECT_ID}
+        n_client = nova_client.Client(2, **kwargs)
+        dell_compute = []
+        for compute in n_client.servers.list(detailed=False,
+                                             search_opts={'name': 'compute'}):
+            dell_compute.append(n_client.servers.ips(
+                compute)['ctlplane'][0]['addr'])
+            logger.info("Rebooting server with id: ".format(compute.id))
+            n_client.servers.reboot(compute.id)
+        # Wait for 30s for the nodes to be powered cycle then do the checks
+        time.sleep(30)
+        ssh_success_count = 0
+        for ip in dell_compute:
+            retries = 32
+            while retries > 0:
+                exit_code, _, std_err = Ssh.execute_command(ip,
+                                                            "pwd",
+                                                            user="heat-admin",
+                                                            )
+                retries -= 1
+                if exit_code != 0:
+                    logger.info("Server with IP: {}"
+                                " is not responsive".format(ip))
+                else:
+                    logger.info("Server with IP: {}"
+                                " is responsive".format(ip))
+                    ssh_success_count += 1
+                    break
+                # Waiting 10s before the next attempt
+                time.sleep(10)
+        if ssh_success_count == len(dell_compute):
+            logger.info("All compute nodes are now responsive. Continuing...")
+        else:
+            logger.error("Failed to reboot the nodes or at least "
+                         "one node failed to get back up")
+            raise Exception("At least one compute node failed to reboot")
 
     @classmethod
     def calculate_hostos_cpus(self, number_of_host_os_cpu):
@@ -177,16 +125,17 @@ class ConfigOvercloud(object):
                     if socket.ht_enabled:
                         cpu_count += socket.cores * 2
                     else:
-			            raise Exception("Hyperthreading is not enabled in " + \
-                            str(node_uuid) + ". So exiting the code execution.")
+                        raise Exception("Hyperthreading is not enabled in "
+                                        + str(node_uuid))
                         sys.exit(0)
                 cpu_count_list.append(cpu_count)
 
             min_cpu_count = min(cpu_count_list)
-            if min_cpu_count not in [40, 48, 64, 72, 128]:
-			    raise Exception("CPU count should be one of these" \
-                    " values : [40,48,64,72,128]. But number of cpu is " + str(
-                        min_cpu_count))
+            if min_cpu_count not in [40, 48, 56, 64, 72, 128]:
+                raise Exception("CPU count should be one of these"
+                                " values : [40,48,56,64,72,128]"
+                                " But number of cpu is " + str(
+                                    min_cpu_count))
                 sys.exit(0)
             number_of_host_os_cpu = int(number_of_host_os_cpu)
             logger.info("host_os_cpus {}".format(
@@ -200,7 +149,8 @@ class ConfigOvercloud(object):
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            raise Exception("Failed to calculate Numa Vcpu list {}".format(message))
+            raise Exception("Failed to calculate "
+                            "Numa Vcpu list {}".format(message))
 
     @classmethod
     def calculate_hugepage_count(self, hugepage_size):
@@ -229,7 +179,8 @@ class ConfigOvercloud(object):
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            raise Exception("Failed to calculate hugepage count {}".format(message))
+            raise Exception("Failed to calculate"
+                            " hugepage count {}".format(message))
 
     def edit_dell_environment_file(
             self,
@@ -315,7 +266,6 @@ class ConfigOvercloud(object):
     def get_dell_compute_nodes_hostnames(self, nova):
         try:
             logger.info("Getting dellnfv compute node hostnames")
-
             # Create host object
             host_obj = hosts.HostManager(nova)
 
@@ -348,72 +298,54 @@ class ConfigOvercloud(object):
             file_path)
 
         status = os.system(cmd)
-        print "cmd: {}".format(cmd)
+        logger.info("cmd: {}".format(cmd))
         if status != 0:
             raise Exception(
                 "Failed to execute the command {}"
                 " with error code {}".format(
                     cmd, status))
 
-    def create_aggregates(self, aggr_name):
+    def create_aggregate(self):
+        UC_AUTH_URL, UC_PROJECT_ID, UC_USERNAME, UC_PASSWORD = \
+            CredentialHelper.get_overcloud_creds()
+        # Create nova client object
+        nova = nvclient.Client(
+            2,
+            UC_USERNAME,
+            UC_PASSWORD,
+            UC_PROJECT_ID,
+            UC_AUTH_URL)
+        hostname_list = self.get_dell_compute_nodes_hostnames(nova)
+        self.edit_aggregate_environment_file(
+            hostname_list)
         env_opts = \
             " -e ~/pilot/templates/create_aggregate_environment.yaml"
 
         cmd = self.overcloudrc + "openstack stack create " \
-            " {}" \
+            " Dell_Aggregate" \
             " --template" \
             " ~/pilot/templates/overcloud/puppet/" \
             "services/dellnfv/createaggregate.yaml" \
             " {}" \
-            "".format(aggr_name,
-                      env_opts)
+            "".format(env_opts)
         aggregate_create_status = os.system(cmd)
         if aggregate_create_status == 0:
-            logger.info("Aggregate {} created".format(aggr_name))
+            logger.info("Dell_Aggregate created")
         else:
             raise Exception(
                 "Aggregate {} could not be created..."
-                " Exiting post deployment tasks".format(aggr_name))
-            sys.exit(0)
-
-    def set_aggregate_metadata(self):
-        try:
-            # Get the overcloud details
-			aggregate_name = "Dell_Aggr"
-            ConfigOvercloud.get_overcloud_details(self.overcloud_name)
-
-            # Create nova client object
-            nova = nvclient.Client(
-                2,
-                UC_USERNAME,
-                UC_PASSWORD,
-                UC_PROJECT_ID,
-                UC_AUTH_URL)
-            hostname_list = self.get_dell_compute_nodes_hostnames(nova)
-            self.edit_aggregate_environment_file(
-                hostname_list)
-            self.create_aggregates(aggregate_name)
-        except Exception as error:
-            message = "Exception {}: {}".format(
-                type(error).__name__, str(error))
-            logger.error("{}".format(message))
-            raise Exception(
-                "Unable to set aggregate metadata."
-                " Exiting post deployment task...")
+                " Exiting post deployment tasks")
             sys.exit(0)
 
     def post_deployment_tasks(self, enable_hugepages, enable_numa, hpg_size):
         try:
             # Reboot all the Dell NFV compute nodes
-            self.reboot_dell_nfv_nodes()
-
-            # Wait for 5 mins to let dll nfv nodes boot up
-            time.sleep(300)
+            self.reboot_compute_nodes()
 
             logger.info("Initiating post deployment tasks")
 
             # create aggregate
-            self.set_aggregate_metadata()
+            self.create_aggregate()
 
         except Exception as error:
             message = "Exception {}: {}".format(

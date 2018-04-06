@@ -51,12 +51,10 @@ sibling_info = {
         8: {'vcpu_pin_set': '4-35,40-71', 'host_os_cpu': '0-3,36-39'},
         2: {'vcpu_pin_set': '1-35,37-71', 'host_os_cpu': '0,36'},
         4: {'vcpu_pin_set': '2-35,38-71', 'host_os_cpu': '0-1,36-37'},
-        6: {'vcpu_pin_set': '3-35,39-71', 'host_os_cpu': '0-2,36-38'}
-    },
+        6: {'vcpu_pin_set': '3-35,39-71', 'host_os_cpu': '0-2,36-38'}},
     56: {
         8: {'vcpu_pin_set': '4-27,32-55', 'host_os_cpu': '0-3,28-31'},
         2: {'vcpu_pin_set': '1-27,29-55', 'host_os_cpu': '0,28'},
         4: {'vcpu_pin_set': '2-27,30-55', 'host_os_cpu': '0-1,28-29'},
-        6: {'vcpu_pin_set': '3-27,31-55', 'host_os_cpu': '0-2,28-30'}
-    }
+        6: {'vcpu_pin_set': '3-27,31-55', 'host_os_cpu': '0-2,28-30'}}
 }

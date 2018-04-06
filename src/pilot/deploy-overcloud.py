@@ -368,11 +368,6 @@ def main():
             args.hostos_cpu_count,
             args.num_dell_computes)
 
-        # If either of the dell nfv feature is enabled the compute count will
-        # be 0
-        if args.enable_hugepages or args.enable_numa:
-            args.num_dell_computes = 0
-
         # Launch the deployment
 
         overcloud_name_opt = ""
