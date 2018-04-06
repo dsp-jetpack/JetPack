@@ -35,7 +35,7 @@ def get_nodes():
     node_names = {
         stack_name + '-controller': 'cntl',
         stack_name + '-novacompute': 'nova',
-        stack_name + '-compute': 'nova',
+        stack_name + '-dell-compute': 'nova',
         stack_name + '-cephstorage': 'stor'
     }
 

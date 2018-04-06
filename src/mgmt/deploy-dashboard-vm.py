@@ -143,15 +143,17 @@ chvt 8
 
   echo "GATEWAY=${Gateway}" >> /etc/sysconfig/network
 
-  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth0
-  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth1
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' \
+/etc/sysconfig/network-scripts/ifcfg-eth0
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' \
+/etc/sysconfig/network-scripts/ifcfg-eth1
 
   echo "$( ip addr show dev eth0 | awk '/inet / { print $2 }' | \
 sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
 
   echo "----------------------"
   ip addr
-  echo "subscription-manager register --username ${SMUser} --password *********"
+  echo "subscription-manager register --username ${SMUser} --password ********"
   echo "----------------------"
 
   # Register the system using Subscription Manager
@@ -159,7 +161,8 @@ sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
     ProxyInfo="--proxy ${SMProxy}"
 
     [[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
-    [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
+    [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword \
+${SMProxyPassword}"
 
     Proxy_Creds=""
     [[ ${SMProxyUser} && ${SMProxyPassword} ]] && \\

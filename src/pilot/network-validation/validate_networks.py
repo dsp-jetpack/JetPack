@@ -115,7 +115,8 @@ class NetworkValidation(object):
 
             self.nodes.append(node)
 
-        # Sort just these by name so the SAH/Director/Dashboard nodes come first
+        # Sort just these by name so the SAH/Director/Dashboard nodes come
+        # first
         self.nodes.sort(key=lambda n: n.name)
 
         os_auth_url, os_tenant_name, os_username, os_password = \
