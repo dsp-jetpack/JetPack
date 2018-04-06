@@ -27,8 +27,6 @@ from checkpoints import Checkpoints
 from auto_common import Ipmi, Ssh, Scp
 
 logger = logging.getLogger("osp_deployer")
-valid_hugepage_size_values = ("2MB", "1GB")
-valid_hostos_cpu_values = ("2", "4", "6", "8")
 
 
 def setup_logging():
@@ -119,17 +117,7 @@ def deploy():
                 logger.info("Skipping Storage Console VM install")
 
         logger.debug("loading settings files " + args.settings)
-        settings = Settings(args.settings)
-        try:
-            dell_nfv_validations(
-                settings.hpg_enable,
-                settings.numa_enable,
-                settings.hpg_size,
-                settings.hostos_cpu_count)
-        except ValueError as validation_err:
-            logger.error(validation_err)
-            os._exit(0)
-
+        settings = Settings(args.settings) 
         logger.info("Settings .ini: " + settings.settings_file)
         logger.info("Settings .properties " + settings.network_conf)
         settings.get_version_info()
@@ -283,33 +271,6 @@ def deploy():
         ret_code = 1
     logger.info("log : /auto_results/ ")
     sys.exit(ret_code)
-
-
-def validate_hugepage_params(hugepage_size):
-    if hugepage_size not in valid_hugepage_size_values:
-        raise ValueError(
-            "Invalid huge page size {}. Valid values are {}".format(
-                hugepage_size, valid_hugepage_size_values))
-
-
-def validate_numa_params(hostos_cpus):
-    if hostos_cpus not in valid_hostos_cpu_values:
-        raise ValueError(
-            "Invalid hostos_cpus value {} valid values are {}.".format(
-                hostos_cpus, valid_hostos_cpu_values))
-
-
-def dell_nfv_validations(hpg_enable, enable_numa, hugepage_size, hostos_cpus):
-    # Dell Nfv feature related Input validations
-    if hpg_enable:
-        validate_hugepage_params(hugepage_size)
-    else:
-        raise ValueError("hpg_size is invalid.")
-    if enable_numa:
-        validate_numa_params(hostos_cpus)
-    else:
-        raise ValueError("numa_hostos_cpu_count is invalid.")
-
 
 if __name__ == "__main__":
     setup_logging()
