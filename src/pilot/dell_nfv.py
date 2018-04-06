@@ -337,7 +337,7 @@ class ConfigOvercloud(object):
                 " Exiting post deployment tasks")
             sys.exit(0)
 
-    def post_deployment_tasks(self, enable_hugepages, enable_numa, hpg_size):
+    def post_deployment_tasks(self):
         try:
             # Reboot all the Dell NFV compute nodes
             self.reboot_compute_nodes()

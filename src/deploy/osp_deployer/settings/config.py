@@ -246,7 +246,6 @@ class Settings():
             self.hpg_size = dellnfv_settings['hpg_size']
         else:
             self.hpg_enable = False
-        self.hpg_size = dellnfv_settings['hpg_size']
         if dellnfv_settings['numa_enable'].lower() == 'true':
             self.numa_enable = True
             self.hostos_cpu_count = \

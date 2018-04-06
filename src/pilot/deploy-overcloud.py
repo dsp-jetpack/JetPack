@@ -478,10 +478,7 @@ def main():
         if status == 0:
             horizon_url = finalize_overcloud()
             logger.info("\nDeployment Completed")
-            config.post_deployment_tasks(
-                args.enable_hugepages,
-                args.enable_numa,
-                args.hugepages_size)
+            config.post_deployment_tasks()
         else:
             horizon_url = None
 

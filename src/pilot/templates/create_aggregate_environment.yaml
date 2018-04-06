@@ -14,5 +14,5 @@
 
 parameters:
   aggregate_name: Dell_Aggr
-  aggregate_metadata: {'pinned': 'False','hugepages': 'False'}
+  aggregate_metadata: {}
   hosts:
