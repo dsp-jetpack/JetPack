@@ -43,7 +43,7 @@ class Node:
     and transfer files on a remote system. In addition, it provides a simple
     framework for storing and updating the node's machine ID, which is
     required for the code that configures the Overcloud nodes to work with
-    the Ceph Storage Dashboard Console.
+    the Ceph Storage Dashboard.
     """
 
     etc_hosts = "/etc/hosts"
@@ -134,11 +134,11 @@ def parse_arguments(dashboard_user):
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument("dashboard_addr",
-                        help="The IP address of the Ceph Storage Dashboard"
-                        " Console on the external network", metavar="ADDR")
+                        help="The IP address of the Ceph Storage Dashboard "
+                        "on the external network", metavar="ADDR")
     parser.add_argument("dashboard_pass",
-                        help="The {} password of the Ceph Storage Dashboard"
-                        " Console".format(dashboard_user), metavar="PASSWORD")
+                        help="The {} password of the Ceph Storage "
+                        "Dashboard".format(dashboard_user), metavar="PASSWORD")
 
     LoggingHelper.add_argument(parser)
 
@@ -186,7 +186,7 @@ def get_ceph_nodes(username):
 def prep_host_files(dashboard_node, ceph_nodes):
     """ Prepares the /etc/hosts files on all systems
 
-    The Ceph Storage Dashboard Console prefers using domain names
+    The Ceph Storage Dashboard prefers using domain names
     over IP addresses, and assumes the names will resolve. The function
     ensures the necessary names are added to the /etc/hosts file on all
     relevant systems.
@@ -197,13 +197,13 @@ def prep_host_files(dashboard_node, ceph_nodes):
 
 
 def prep_dashboard_hosts(dashboard_node, ceph_nodes):
-    """ Prepares the hosts file on the Ceph Storage Dashboard Console
+    """ Prepares the hosts file on the Ceph Storage Dashboard
 
-    Adds entries for every Ceph node so the Ceph Storage Dashboard Console
+    Adds entries for every Ceph node so the Ceph Storage Dashboard
     can access the nodes using their FQDN.
     """
 
-    LOG.info("Preparing hosts file on Ceph Storage Dashboard Console.")
+    LOG.info("Preparing hosts file on Ceph Storage Dashboard.")
 
     tmp_hosts = os.path.join("/tmp", "hosts-{}".format(dashboard_node.fqdn))
     dashboard_node.get(tmp_hosts, Node.etc_hosts)
@@ -234,7 +234,7 @@ def prep_dashboard_hosts(dashboard_node, ceph_nodes):
                     .format(node.storage_ip, node.fqdn, node_name))
         f.write(end_banner)
 
-    # Upload the new file to the Ceph Storage Dashboard Console
+    # Upload the new file to the Ceph Storage Dashboard
     dashboard_node.put(tmp_hosts, tmp_hosts)
     dashboard_node.run("sudo cp {} {}.bak"
                        .format(Node.etc_hosts, Node.etc_hosts))
@@ -247,16 +247,16 @@ def prep_ceph_hosts(dashboard_node, ceph_nodes):
     """ Prepares the hosts file on the Ceph nodes
 
     Adds an entry to every Ceph node's host file for the
-    Ceph Storage Dashboard Console's FQDN and the Ceph
-    Storage Dashboard Console's IP address on the storage network.
+    Ceph Storage Dashboard's FQDN and the Ceph
+    Storage Dashboard's IP address on the storage network.
     """
 
     LOG.info("Preparing hosts file on Ceph nodes.")
     LOG.debug("Adding '{}\t{}'".format(
         dashboard_node.storage_ip, dashboard_node.fqdn))
 
-    beg_banner = "# Entries added for Ceph Storage Dashboard Console - Start\n"
-    end_banner = "# Entries added for Ceph Storage Dashboard Console - End\n"
+    beg_banner = "# Entries added for Ceph Storage Dashboard - Start\n"
+    end_banner = "# Entries added for Ceph Storage Dashboard - End\n"
 
     for node in ceph_nodes:
         # Fetch a copy of the node's hosts file
@@ -267,7 +267,7 @@ def prep_ceph_hosts(dashboard_node, ceph_nodes):
         with open(tmp_hosts, "r") as f:
             host_entries = f.readlines()
 
-        # Delete any prior Ceph Storage Dashboard Console entries
+        # Delete any prior Ceph Storage Dashboard entries
         try:
             beg = host_entries.index(beg_banner)
             end = host_entries.index(end_banner)
@@ -275,7 +275,7 @@ def prep_ceph_hosts(dashboard_node, ceph_nodes):
         except:
             pass
 
-        # Create a new hosts file with the Ceph Storage Dashboard Console
+        # Create a new hosts file with the Ceph Storage Dashboard
         with open(tmp_hosts, "w") as f:
             f.writelines(host_entries)
             f.write("{}{}\t{}\n{}".format(
@@ -291,9 +291,9 @@ def prep_ceph_hosts(dashboard_node, ceph_nodes):
 
 
 def prep_root_user(dashboard_node, ceph_nodes):
-    """ Prepares root user on the Ceph Storage Dashboard Console
+    """ Prepares root user on the Ceph Storage Dashboard
     Modifies the Ceph Storage Nodes so that Ceph Storage Dashboard
-    Console can access so that root can install dashboard.
+    can access so that root can install dashboard.
     """
 
     home = expanduser("~")
@@ -309,7 +309,7 @@ def prep_root_user(dashboard_node, ceph_nodes):
     if "true" in stdout:
         return
 
-    LOG.info("Preparing root access on the Ceph Storage Dashboard Console.")
+    LOG.info("Preparing root access on the Ceph Storage Dashboard.")
 
     ssh_files = ('.ssh/authorized_keys',
                  '.ssh/id_rsa',
@@ -362,12 +362,12 @@ def prep_root_user(dashboard_node, ceph_nodes):
 
 def prep_ansible_hosts(dashboard_node, ceph_nodes):
     """ Prepares the /etc/ansible/hosts file on the
-    Ceph Storage Dashboard Console. Adds entries for the
+    Ceph Storage Dashboard. Adds entries for the
     Ceph nodes to the roles sections of the ansible hosts file.
     """
 
     LOG.info("Preparing ansible host file on Ceph Storage " +
-             "Dashboard Console.")
+             "Dashboard.")
 
     tmp_hosts = os.path.join("/tmp", "ansiblehosts-{}"
                              .format(dashboard_node.fqdn))
@@ -428,7 +428,7 @@ def prep_ansible_hosts(dashboard_node, ceph_nodes):
         f.write("{}\n".format(dashboard_node.fqdn))
         f.write(end_banner)
 
-    # Upload the new file to the Ceph Storage Dashboard Console
+    # Upload the new file to the Ceph Storage Dashboard
     dashboard_node.put(tmp_hosts, tmp_hosts)
     dashboard_node.run("sudo cp {} {}.bak"
                        .format(Node.ansible_hosts, Node.ansible_hosts))
@@ -555,18 +555,18 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes):
     dashboard_node.run("cd {}; ansible-playbook {} -u root --skip-tags \
                        'gen_conf_file'".format(ceph_ansible_dir, toc_yml))
 
-    LOG.info("Installing the Ceph Storage Dashboard Console.")
+    LOG.info("Installing the Ceph Storage Dashboard.")
     dashboard_node.run("cd {}; sudo ansible-playbook -s -v playbook.yml"
                        .format(cephmetrics_ansible_dir))
 
-    LOG.info("Ceph Storage Dashboard Console configuration is complete")
-    LOG.info("You may access the Ceph Storage Dashboard Console at:")
+    LOG.info("Ceph Storage Dashboard configuration is complete")
+    LOG.info("You may access the Ceph Storage Dashboard at:")
     LOG.info("      http://<DashboardIP>:3000,")
     LOG.info("with user 'admin' and password 'admin'.")
 
 
 def main():
-    """ Configures the Ceph Storage Dashboard Console and Ceph nodes
+    """ Configures the Ceph Storage Dashboard and Ceph nodes
     """
 
     dashboard_user = "root"
@@ -578,7 +578,7 @@ def main():
                           args.dashboard_pass)
     dashboard_node.initialize()
 
-    LOG.info("Configuring Ceph Storage Dashboard Console on {} ({})".format(
+    LOG.info("Configuring Ceph Storage Dashboard on {} ({})".format(
         dashboard_node.address, dashboard_node.fqdn))
 
     ceph_nodes = get_ceph_nodes(username="heat-admin")
