@@ -38,7 +38,7 @@ from credential_helper import CredentialHelper
 from identify_nodes import main as identify_nodes
 from update_ssh_config import main as update_ssh_config
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
 home_dir = os.path.expanduser('~')
@@ -663,8 +663,12 @@ def main():
                             action='store_true',
                             help="Indicates if the deploy-overcloud script "
                                  "should be run in debug mode")
-        args = parser.parse_args()
+
         LoggingHelper.add_argument(parser)
+
+        args = parser.parse_args()
+
+        LoggingHelper.configure_logging(args.logging_level)
 
         p = re.compile('\d+:\d+')
         if not p.match(args.vlan_range):
@@ -714,10 +718,9 @@ def main():
         # Edit the dellnfv_environment.yaml
         # If disabled, default values will be set and
         # they won't be used for configuration
-        if args.enable_hugepages or args.enable_numa:
-            edit_dell_environment_file(args.enable_hugepages, args.enable_numa,
-                                       args.hugepages_size, vcpu_pin_set,
-                                       args.num_computes)
+        edit_dell_environment_file(args.enable_hugepages, args.enable_numa,
+                                   args.hugepages_size, vcpu_pin_set,
+                                   args.num_computes)
 
         # Launch the deployment
 
