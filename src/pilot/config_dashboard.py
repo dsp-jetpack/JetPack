@@ -565,6 +565,45 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes):
     LOG.info("with user 'admin' and password 'admin'.")
 
 
+def patch_cephmetrics_ansible(dashboard_node):
+    """ Patch /usr/share/cephmetrics-ansible...install_packages.yml
+    file to allow for skipping package installation.  We previously
+    install these packages in the overcloud image customizationi and
+    because we don't subscribe the nodes, this will fail unless we skip
+    this installation process.
+    """
+    
+    cephmetrics_ansible_dir = "/usr/share/cephmetrics-ansible"
+    install_pkg_file = "/usr/share/cephmetrics-ansible/roles/" + \
+                       "ceph-collectd/tasks/install_packages.yml"
+
+    status, stdout, stderr = dashboard_node.execute("[ -f {}.orig ] \
+                                                    && echo true \
+                                                    || echo false "
+                                                    .format(install_pkg_file))
+    if "true" in stdout:
+        return
+
+    LOG.info("Patching /usr/share/cephmetrics-ansible on {}".format(
+             dashboard_node.fqdn))
+    dashboard_node.run("yum -y install patch")
+    dashboard_node.run("""
+cat << EOF|patch -b -d /usr/share/cephmetrics-ansible/roles/ceph-collectd/tasks
+--- install_packages.yml
++++ install_packages.yml.mod
+@@ -25,6 +25,8 @@
+     - ansible_pkg_mgr == "yum"
+     - not devel_mode
+   notify: Restart collectd
++  tags:
++    - cephmetrics-collectors
+
+ - name: Install dependencies for collector plugins
+   package:
+EOF
+""")
+
+
 def main():
     """ Configures the Ceph Storage Dashboard and Ceph nodes
     """
@@ -588,6 +627,7 @@ def main():
     prep_ansible_hosts(dashboard_node, ceph_nodes)
     prep_ceph_conf(dashboard_node, ceph_nodes)
 
+    patch_cephmetrics_ansible(dashboard_node)
     prep_collectd(dashboard_node, ceph_nodes)
     prep_cluster_for_collection(dashboard_node, ceph_nodes)
 
