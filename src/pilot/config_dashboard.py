@@ -568,12 +568,11 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes):
 def patch_cephmetrics_ansible(dashboard_node):
     """ Patch /usr/share/cephmetrics-ansible...install_packages.yml
     file to allow for skipping package installation.  We previously
-    install these packages in the overcloud image customizationi and
+    install these packages in the overcloud image customization and
     because we don't subscribe the nodes, this will fail unless we skip
     this installation process.
     """
     
-    cephmetrics_ansible_dir = "/usr/share/cephmetrics-ansible"
     install_pkg_file = "/usr/share/cephmetrics-ansible/roles/" + \
                        "ceph-collectd/tasks/install_packages.yml"
 
