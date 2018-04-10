@@ -277,12 +277,12 @@ def main():
         parser.add_argument("--hugepages_size",
                             dest="hugepages_size",
                             required=False,
-			    default="2MB",
+                            default="2MB",
                             help="HugePages size")
         parser.add_argument("--hostos_cpu_count",
                             dest="hostos_cpu_count",
                             required=False,
-			    default="4",
+                            default="4",
                             help="HostOs Cpus to be configured")
         parser.add_argument('--enable_dellsc',
                             action='store_true',
