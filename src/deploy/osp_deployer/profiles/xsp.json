@@ -4,11 +4,6 @@
    "associated_settings": [
       {
          "Dell NFV Settings": {
-            "ovs_dpdk_enable": {
-               "valid_values": [
-                  "false"
-               ]
-            },
             "hpg_enable": {
                "valid_values": [
                   "false"
@@ -17,6 +12,21 @@
             "numa_enable": {
                "valid_values": [
                   "false"
+               ]
+            },
+            "ovs_dpdk_enable": {
+               "valid_values": [
+                  "false"
+               ]
+            },
+            "ovs_dpdk_role_list": {
+               "valid_values": [
+                  "Compute"
+               ]
+            },
+            "ovs_dpdk_policy": {
+               "valid_values": [
+                  "Balanced"
                ]
             }
          }

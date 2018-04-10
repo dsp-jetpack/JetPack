@@ -17,17 +17,17 @@
                   "false",
                   "Tenant-networks-only",
                   "Tenant-and-External-networks"
-              ]
+               ]
             },
             "ovs_dpdk_role_list": {
                "valid_values": [
                   "Compute"
-              ]
+               ]
             },
             "ovs_dpdk_policy": {
                "valid_values": [
                   "Balanced"
-              ]
+               ]
             }
          }
       },
