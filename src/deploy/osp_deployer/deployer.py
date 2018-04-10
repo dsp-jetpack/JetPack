@@ -117,7 +117,7 @@ def deploy():
                 logger.info("Skipping Storage Console VM install")
 
         logger.debug("loading settings files " + args.settings)
-        settings = Settings(args.settings) 
+        settings = Settings(args.settings)
         logger.info("Settings .ini: " + settings.settings_file)
         logger.info("Settings .properties " + settings.network_conf)
         settings.get_version_info()
@@ -271,6 +271,7 @@ def deploy():
         ret_code = 1
     logger.info("log : /auto_results/ ")
     sys.exit(ret_code)
+
 
 if __name__ == "__main__":
     setup_logging()
