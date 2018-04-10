@@ -82,8 +82,8 @@
                   "false"
                ]
             },
-            "use_ipmi_driver":"",
-            "use_in_band_introspection":""
+            "use_ipmi_driver": "",
+            "use_in_band_introspection": ""
 
          }
 
