@@ -1,0 +1,983 @@
+! Version 9.11(2.4)
+!
+boot system stack-unit 1 default system: A:
+!
+!
+logging coredump stack-unit  1 
+logging coredump stack-unit  2 
+logging coredump stack-unit  3 
+logging coredump stack-unit  4 
+logging coredump stack-unit  5 
+logging coredump stack-unit  6 
+!
+hostname **Changeme**-Z9100-2
+! 
+protocol lldp 
+ advertise dot1-tlv port-protocol-vlan-id 
+ advertise dot3-tlv max-frame-size 
+ advertise management-tlv system-description system-name 
+ advertise med 
+!
+redundancy auto-synchronize full
+!
+enable password 7 ***CHANGEME***
+!
+username admin password 7 ***CHANGEME*** privilege 15
+!
+lacp ungroup member-independent port-channel 1
+lacp ungroup member-independent port-channel 2
+lacp ungroup member-independent port-channel 3
+lacp ungroup member-independent port-channel 4
+lacp ungroup member-independent port-channel 5
+lacp ungroup member-independent port-channel 6
+lacp ungroup member-independent port-channel 7
+lacp ungroup member-independent port-channel 17
+lacp ungroup member-independent port-channel 18
+lacp ungroup member-independent port-channel 19
+! 
+protocol spanning-tree rstp 
+ no disable 
+ bridge-priority 16384 
+! 
+vlt domain 200 
+ peer-link port-channel 200 
+ system-mac mac-address aa:bb:cc:dd:a1:a1 
+ unit-id 0 
+ peer-routing 
+! 
+stack-unit 1 provision Z9100-ON
+! 
+stack-unit 1 port 1 portmode quad speed 25G
+! 
+stack-unit 1 port 2 portmode quad speed 25G
+! 
+stack-unit 1 port 5 portmode quad speed 25G
+!
+stack-unit 1 port 13 portmode quad speed 25G
+! 
+stack-unit 1 port 14 portmode quad speed 25G
+! 
+stack-unit 1 port 17 portmode quad speed 25G
+! 
+interface twentyFiveGigE 1/1/1
+ description SAH
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 1 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/1/2
+ description Controller 1
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 2 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/1/3
+ description Controller 2
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 3 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/1/4
+ description Controller 3
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 4 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/2/1
+ description Compute 1
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 5 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/2/2
+ description Compute 2
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 6 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/2/3
+ description Compute 3
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 7 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/2/4
+ no ip address
+ shutdown
+!
+interface hundredGigE 1/3
+ no ip address
+ shutdown
+!
+interface hundredGigE 1/4
+ no ip address
+ shutdown
+!
+! 
+interface twentyFiveGigE 1/5/1
+ description Storage 1
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 17 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/5/2
+ description Storage 2
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 18 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/5/3
+ description Storage 3
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 19 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/5/4
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/6
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/7
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/8
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/9
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/10
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/11
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/12
+ no ip address
+ shutdown
+! 
+interface twentyFiveGigE 1/13/1
+ description SAH
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 49 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/13/2
+ description Controller 1
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 50 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/13/3
+ description Controller 2
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 51 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/13/4
+ description Controller 3
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 52 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/14/1
+  description Compute 1
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 53 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/14/2
+ description Compute 2
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 54 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/14/3
+ descripiton Compute 2
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 55 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/14/4
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/15
+ no ip address
+ shutdown
+!
+interface hundredGigE 1/16
+ no ip address
+ shutdown
+! 
+interface twentyFiveGigE 1/17/1
+  description Storage 1
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 65 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/17/2
+ description Storage 2
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 66 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/17/3
+ descripiton Storage 3
+ no ip address
+ mtu 9216
+!  
+ port-channel-protocol LACP 
+  port-channel 67 mode active 
+ no shutdown
+! 
+interface twentyFiveGigE 1/17/4
+ no ip address
+ shutdown
+!
+interface hundredGigE 1/18
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/19
+ no ip address
+ shutdown
+!
+interface hundredGigE 1/20
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/21
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/22
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/23
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/24
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/25
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/26
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/27
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/28
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/29
+ no ip address
+ shutdown
+!
+interface hundredGigE 1/30
+ no ip address
+ shutdown
+! 
+interface hundredGigE 1/31
+ no ip address
+ no shutdown
+! 
+interface hundredGigE 1/32
+ no ip address
+ no shutdown
+! 
+interface TenGigabitEthernet 1/33
+ no ip address
+ shutdown
+interface TenGigabitEthernet 1/34
+ no ip address
+!  
+ port-channel-protocol LACP 
+  port-channel 129 mode active 
+ no shutdown
+! 
+interface ManagementEthernet 1/1
+ ip address 1.3.4.182/24
+ no shutdown
+! 
+interface Port-channel 1
+ description SAH_bond0
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 1
+ no shutdown
+! 
+interface Port-channel 2
+ description cntl0_bnd0
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 2
+ no shutdown
+! 
+interface Port-channel 3
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 3
+ no shutdown
+! 
+interface Port-channel 4
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 4
+ no shutdown
+! 
+interface Port-channel 5
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 5
+ no shutdown
+! 
+interface Port-channel 6
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 6
+ no shutdown
+! 
+interface Port-channel 7
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 7
+ no shutdown
+! 
+interface Port-channel 17
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 17
+ no shutdown
+! 
+interface Port-channel 18
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 18
+ no shutdown
+! 
+interface Port-channel 19
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 19
+ no shutdown
+! 
+interface Port-channel 49
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 49
+ no shutdown
+! 
+interface Port-channel 50
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 50
+ no shutdown
+! 
+interface Port-channel 51
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 51
+ no shutdown
+! 
+interface Port-channel 52
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 52
+ no shutdown
+! 
+interface Port-channel 53
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 53
+ no shutdown
+! 
+interface Port-channel 54
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 54
+ no shutdown
+! 
+interface Port-channel 55
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 55
+ no shutdown
+! 
+interface Port-channel 65
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 65
+ no shutdown
+! 
+interface Port-channel 66
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 66
+ no shutdown
+! 
+interface Port-channel 67
+ no ip address
+ mtu 9216
+ portmode hybrid
+ switchport
+ spanning-tree rstp edge-port 
+ vlt-peer-lag port-channel 67
+ no shutdown
+! 
+interface Port-channel 200
+ description VLT_Port_Channel
+ no ip address
+ channel-member hundredGigE 1/31,1/32
+ no shutdown
+! 
+interface Port-channel 129
+ description Uplink_S3048
+ no ip address
+ mtu 9216
+ switchport
+ vlt-peer-lag port-channel 129
+ no shutdown
+! 
+interface Vlan 1
+!untagged Port-channel 1,49-55,200
+! 
+interface Vlan 110
+ ip address 192.168.110.2/24
+ tagged Port-channel 1,49,129
+ no shutdown
+! 
+interface Vlan 120
+ ip address 192.168.120.2/24
+ tagged Port-channel 1,129
+ untagged Port-channel 2-7,17-19,65-67
+ no shutdown
+! 
+interface Vlan 130
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 140
+ no ip address
+ tagged Port-channel 1-7
+ shutdown
+! 
+interface Vlan 170
+ no ip address
+ tagged Port-channel 1-4,17-19,49-55
+ shutdown
+! 
+interface Vlan 180
+ no ip address
+ tagged Port-channel 65-67
+ shutdown
+! 
+interface Vlan 201
+ description Tenant_VLAN_201
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 202
+ description Tenant_VLAN_202
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 203
+ description Tenant_VLAN_203
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 204
+ description Tenant_VLAN_204
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 205
+ description Tenant_VLAN_205
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 206
+ description Tenant_VLAN_206
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 207
+ description Tenant_VLAN_207
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 208
+ description Tenant_VLAN_208
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 209
+ description Tenant_VLAN_209
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 210
+ description Tenant_VLAN_210
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 211
+ description Tenant_VLAN_211
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 212
+ description Tenant_VLAN_212
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 213
+ description Tenant_VLAN_213
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 214
+ description Tenant_VLAN_214
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 215
+ description Tenant_VLAN_215
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 216
+ description Tenant_VLAN_216
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 217
+ description Tenant_VLAN_217
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 218
+ description Tenant_VLAN_218
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 219
+ description Tenant_VLAN_219
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 220
+ description Tenant_VLAN_220
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 221
+ description Tenant_VLAN_221
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 222
+ description Tenant_VLAN_222
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 223
+ description Tenant_VLAN_223
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 224
+ description Tenant_VLAN_224
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 225
+ description Tenant_VLAN_225
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 226
+ description Tenant_VLAN_226
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 227
+ description Tenant_VLAN_227
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 228
+ description Tenant_VLAN_228
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 229
+ description Tenant_VLAN_229
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 230
+ description Tenant_VLAN_230
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 231
+ description Tenant_VLAN_231
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 232
+ description Tenant_VLAN_232
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 233
+ description Tenant_VLAN_233
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 234
+ description Tenant_VLAN_234
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 235
+ description Tenant_VLAN_235
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 236
+ description Tenant_VLAN_236
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 237
+ description Tenant_VLAN_237
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 238
+ description Tenant_VLAN_238
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 239
+ description Tenant_VLAN_239
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 240
+ description Tenant_VLAN_240
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 241
+ description Tenant_VLAN_241
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 242
+ description Tenant_VLAN_242
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 243
+ description Tenant_VLAN_243
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 244
+ description Tenant_VLAN_244
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 245
+ description Tenant_VLAN_245
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 246
+ description Tenant_VLAN_246
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 247
+ description Tenant_VLAN_247
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 248
+ description Tenant_VLAN_248
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 249
+ description Tenant_VLAN_249
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 250
+ description Tenant_VLAN_250
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 251
+ description Tenant_VLAN_251
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 252
+ description Tenant_VLAN_252
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 253
+ description Tenant_VLAN_253
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 254
+ description Tenant_VLAN_254
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 255
+ description Tenant_VLAN_255
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 256
+ description Tenant_VLAN_256
+ no ip address
+ tagged Port-channel 2-7
+ shutdown
+! 
+interface Vlan 1221
+ description "Public API' 
+ ip address 1.3.3.60/26
+ tagged port-channel **CORE Number **
+ tagged Port-channel 1,49-55,65-66,129
+ no shutdown
+! 
+interface Vlan 1222
+ desicritpion "Tenant Public Space - Floating"
+ ip address 1.3.3.69/26
+ tagged port-channel **CORE Number **
+ tagged Port-channel 49-52,129
+ no shutdown
+! 
+interface Vlan 1331
+ no ip address
+ shutdown
+!
+management route 0.0.0.0/0 1.3.5.1 
+!
+ip route 0.0.0.0/0 1.3.3.1 
+!
+ip ssh server enable
+!
+line console 0
+line vty 0
+line vty 1
+line vty 2
+line vty 3
+line vty 4
+line vty 5
+line vty 6
+line vty 7
+line vty 8
+line vty 9
+! 
+reload-type
+ boot-type normal-reload
+ config-scr-download enable
+! 
+end
