@@ -16,6 +16,7 @@
 
 import logging
 import os
+import re
 import inspect
 import json
 import subprocess
@@ -218,7 +219,7 @@ class Settings():
             self.overcloud_static_ips = False
 
         self.profile = deploy_settings['profile'].lower()
-	logger.info("Profile has been set to {}".format(self.profile))
+        logger.info("Profile has been set to {}".format(self.profile))
 
         if deploy_settings['enable_rbd_backend'].lower() == 'true':
             self.enable_rbd_backend = True
@@ -251,34 +252,6 @@ class Settings():
             self.numa_enable = True
         else:
             self.numa_enable = False
-
-        dellnfv_settings = self.get_settings_section(
-            "Dell NFV Settings")
-        self.ovs_dpdk_enable = dellnfv_settings[
-            'ovs_dpdk_enable']
-        self.ovs_dpdk_role_list = dellnfv_settings[
-            'ovs_dpdk_role_list']
-        self.ovs_dpdk_policy = dellnfv_settings[
-            'ovs_dpdk_policy']
-        self.enable_ovs_dpdk = False
-        if self.ovs_dpdk_enable.lower() == 'false':
-            pass
-        elif self.ovs_dpdk_enable == 'Tenant-networks-only':
-            self.enable_ovs_dpdk = True
-            self.ovs_dpdk_mode = 1
-        elif self.ovs_dpdk_enable == 'Tenant-and-External-networks':
-            self.enable_ovs_dpdk = True
-            self.ovs_dpdk_mode = 2
-        else:
-            raise AssertionError('Only supported values for '
-                                 'ovs_dpdk_enable are false, '
-                                 'Tenant-networks-only and '
-                                 'Tenant-and-External-networks')
-        if self.enable_ovs_dpdk:
-            logger.info("OVS_DPDK is enabled with mode " +
-                        str(self.ovs_dpdk_mode) + ".")
-        else:
-            logger.info("OVS_DPDK is disabled.")
 
         backend_settings = self.get_settings_section(
             "Storage back-end Settings")
@@ -434,9 +407,6 @@ class Settings():
             '/pilot/templates/dell-environment.yaml'
         self.neutron_ovs_dpdk_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/neutron-ovs-dpdk.yaml'
-        if self.enable_ovs_dpdk:
-            mode = str(self.ovs_dpdk_mode)
-            compute_file_name = 'compute-ovs-dpdk-mode' + mode + '.yaml'
         self.static_ips_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/static-ip-environment.yaml'
         self.static_vip_yaml = self.foreman_configuration_scripts + \
@@ -457,6 +427,35 @@ class Settings():
                 '/pilot/templates/nic-configs/' + self.nic_env_file
         if 'sah_bond_opts' in nics_settings:
             self.sah_bond_opts = nics_settings['sah_bond_opts']
+
+        # This particular section has been moved right after the nics_settings
+        # section in order to catch the mode used by the nic-environment file
+        dellnfv_settings = self.get_settings_section(
+            "Dell NFV Settings")
+        self.ovs_dpdk_enable = dellnfv_settings[
+            'ovs_dpdk_enable']
+        self.ovs_dpdk_role_list = dellnfv_settings[
+            'ovs_dpdk_role_list']
+        self.ovs_dpdk_policy = dellnfv_settings[
+            'ovs_dpdk_policy']
+        self.enable_ovs_dpdk = False
+        if self.ovs_dpdk_enable.lower() == 'false':
+            pass
+        elif self.ovs_dpdk_enable.lower() == 'true':
+            self.enable_ovs_dpdk = True
+            for each in re.split(r'[_/]', self.nic_env_file):
+                if each.find('mode') != -1:
+                    self.ovs_dpdk_mode = each[-1:]
+        else:
+            raise AssertionError('Only supported values for '
+                                 'ovs_dpdk_enable are true or false. ')
+        if self.enable_ovs_dpdk:
+            mode = str(self.ovs_dpdk_mode)
+            compute_file_name = 'compute-ovs-dpdk-mode' + mode + '.yaml'
+            logger.info("OVS_DPDK is enabled with mode " +
+                        str(self.ovs_dpdk_mode) + ".")
+        else:
+            logger.info("OVS_DPDK is disabled.")
 
         self.controller_nodes = []
         self.compute_nodes = []
