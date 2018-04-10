@@ -12,13 +12,7 @@
                ]
             },
             "numa_enable": "",
-            "ovs_dpdk_enable": {
-               "valid_values": [
-                  "false",
-                  "Tenant-networks-only",
-                  "Tenant-and-External-networks"
-               ]
-            },
+            "ovs_dpdk_enable": "",
             "ovs_dpdk_role_list": {
                "valid_values": [
                   "Compute"
@@ -38,8 +32,10 @@
                "valid_values": [
                   "4_port/nic_environment.yaml",
                   "5_port/nic_environment.yaml",
-                  "dpdk_4_port/nic_environment.yaml",
-                  "dpdk_5_port/nic_environment.yaml"
+                  "dpdk_mode1_4_port/nic_environment.yaml",
+                  "dpdk_mode2_4_port/nic_environment.yaml",
+                  "dpdk_mode1_5_port/nic_environment.yaml"
+                  "dpdk_mode2_5_port/nic_environment.yaml"
                ]
             },
             "ControllerBondInterfaceOptions": "",
