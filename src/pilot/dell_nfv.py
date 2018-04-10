@@ -29,6 +29,11 @@ from novaclient.v2 import hosts
 from novaclient.v2 import servers
 from credential_helper import CredentialHelper
 from datetime import datetime
+import heatclient
+from heatclient import client as heat_client
+from heatclient import exc
+from keystoneauth1.identity import v2
+from keystoneauth1 import session
 import novaclient.client as nova_client
 from novaclient import client as nvclient
 from ironic_helper import IronicHelper
@@ -306,36 +311,56 @@ class ConfigOvercloud(object):
                     cmd, status))
 
     def create_aggregate(self):
-        UC_AUTH_URL, UC_PROJECT_ID, UC_USERNAME, UC_PASSWORD = \
-            CredentialHelper.get_overcloud_creds()
-        # Create nova client object
-        nova = nvclient.Client(
-            2,
-            UC_USERNAME,
-            UC_PASSWORD,
-            UC_PROJECT_ID,
-            UC_AUTH_URL)
-        hostname_list = self.get_dell_compute_nodes_hostnames(nova)
-        self.edit_aggregate_environment_file(
-            hostname_list)
-        env_opts = \
-            " -e ~/pilot/templates/create_aggregate_environment.yaml"
-
-        cmd = self.overcloudrc + "openstack stack create " \
-            " Dell_Aggregate" \
-            " --template" \
-            " ~/pilot/templates/overcloud/puppet/" \
-            "services/dellnfv/createaggregate.yaml" \
-            " {}" \
-            "".format(env_opts)
-        aggregate_create_status = os.system(cmd)
-        if aggregate_create_status == 0:
-            logger.info("Dell_Aggregate created")
-        else:
-            raise Exception(
-                "Aggregate {} could not be created..."
-                " Exiting post deployment tasks")
-            sys.exit(0)
+        try:
+            logger.info("Creating Aggregate..")
+            stack_name = "Dell_Aggregate"
+            OC_AUTH_URL, OC_PROJECT_ID, OC_USERNAME, OC_PASSWORD = \
+                CredentialHelper.get_overcloud_creds()
+            keystone_auth = v2.Password(username=OC_USERNAME,
+                                        password=OC_PASSWORD,
+                                        tenant_name=OC_PROJECT_ID,
+                                        auth_url=OC_AUTH_URL)
+            keystone_session = session.Session(auth=keystone_auth)
+            kwargs = {'auth_url': OC_AUTH_URL,
+                      'session': keystone_session,
+                      'auth': keystone_auth,
+                      'service_type': 'orchestration'}
+            ht_client = heat_client.Client('1', **kwargs)
+            try:
+                file_path = home_dir \
+                    + '/pilot/templates/overcloud/puppet/'\
+                    "services/dellnfv/createaggregate.yaml"
+                template = open(file_path)
+            except Exception as error:
+                message = "Exception {}: {}".format(
+                    type(error).__name__, str(error))
+                logger.error("{}".format(message))
+                raise Exception("The createaggregate.yaml file does not exist")
+            try:
+                file_path = home_dir \
+                    + '/pilot/templates/create_aggregate_environment.yaml'
+                environment = open(file_path)
+            except Exception as error:
+                message = "Exception {}: {}".format(
+                    type(error).__name__, str(error))
+                logger.error("{}".format(message))
+                raise Exception("The create_aggregate_environment.yaml"
+                                "file does not exist")
+            try:
+                stack = ht_client.stacks.create(stack_name=stack_name,
+                                                template=template.read(),
+                                                environment=environment.read())
+            except heatclient.exc.HTTPConflict as e:
+                error_state = e.error
+                raise Exception("Stack already exists : ",
+                                error_state, stack_name)
+            template.close()
+            environment.close()
+        except Exception as error:
+            message = "Exception {}: {}".format(
+                type(error).__name__, str(error))
+            raise Exception("Aggregate could not be"
+                            " created due to {}".format(message))
 
     def post_deployment_tasks(self):
         try:
