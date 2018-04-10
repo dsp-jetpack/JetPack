@@ -57,8 +57,6 @@ class ConfigOvercloud(object):
 
     def __init__(self, overcloud_name):
         self.overcloud_name = overcloud_name
-        self.overcloudrc = "source " + home_dir + "/"\
-            + self.overcloud_name + "rc;"
 
     def reboot_compute_nodes(self):
         logger.info("Rebooting dell compute nodes")
