@@ -251,6 +251,14 @@ sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyo
 echo "## Done."
 
+# This hacks in a patch to work around an issue where the iDRAC can return
+# invalid non-ASCII characters during an enumeration.
+echo
+echo "## Patching Ironic iDRAC driver wsman.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
+
 # This hacks in a patch to work around a known issue where a RAID-10 virtual
 # disk cannot be created from more than 16 backing physical disks.  This also
 # patches in support for NVMe drives.  Note that this code must be here because
