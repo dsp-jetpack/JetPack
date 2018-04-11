@@ -30,6 +30,7 @@ from novaclient.v2 import aggregates
 from novaclient.v2 import hosts
 from novaclient.v2 import servers
 from ironic_helper import IronicHelper
+from logging_helper import LoggingHelper
 from credential_helper import CredentialHelper
 from dell_nfv import ConfigOvercloud
 # Dell utilities
@@ -310,8 +311,9 @@ def main():
                             action='store_true',
                             help="Indicates if the deploy-overcloud script "
                                  "should be run in debug mode")
+        LoggingHelper.add_argument(parser)
         args = parser.parse_args()
-
+        LoggingHelper.configure_logging(args.logging_level)
         p = re.compile('\d+:\d+')
         if not p.match(args.vlan_range):
             raise ValueError("Error: The VLAN range must be a number followed "

@@ -12,7 +12,7 @@
                ]
             },
             "numa_enable": "",
-	    "numa_hostos_cpu_count": {
+            "numa_hostos_cpu_count": {
 	        "valid_values": [
 			"2",
 			"4",

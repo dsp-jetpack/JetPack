@@ -5,7 +5,22 @@
       {
          "Dell NFV Settings": {
             "hpg_enable": "",
-            "numa_enable": ""
+            "hpg_size": {
+               "valid_values": [
+                  "2MB",
+                  "1GB"
+               ]
+            },
+            "numa_enable": "",
+            "numa_hostos_cpu_count": {
+	        "valid_values": [
+			"2",
+			"4",
+			"6",
+			"8"
+		]
+	    }
+
          }
       },
       {

@@ -29,11 +29,6 @@ from novaclient.v2 import hosts
 from novaclient.v2 import servers
 from credential_helper import CredentialHelper
 from datetime import datetime
-import heatclient
-from heatclient import client as heat_client
-from heatclient import exc
-from keystoneauth1.identity import v2
-from keystoneauth1 import session
 import novaclient.client as nova_client
 from novaclient import client as nvclient
 from ironic_helper import IronicHelper
@@ -53,10 +48,12 @@ class ConfigOvercloud(object):
     ironic = IronicHelper()
     ironic_client = ironic.get_ironic_client()
     nodes = ironic_client.node.list()
-    get_drac_credentail = CredentialHelper()
+    get_drac_credential = CredentialHelper()
 
     def __init__(self, overcloud_name):
         self.overcloud_name = overcloud_name
+        self.overcloudrc = "source " + home_dir + "/"\
+            + self.overcloud_name + "rc;"
 
     def reboot_compute_nodes(self):
         logger.info("Rebooting dell compute nodes")
@@ -118,7 +115,7 @@ class ConfigOvercloud(object):
                     # filter for getting compute node
                     continue
                 drac_ip, drac_user, drac_password = \
-                    ConfigOvercloud.get_drac_credentail.get_drac_creds(
+                    ConfigOvercloud.get_drac_credential.get_drac_creds(
                         ConfigOvercloud.ironic_client, node_uuid)
                 stor = client.DRACClient(drac_ip, drac_user, drac_password)
                 # cpu socket information for every compute node
@@ -130,7 +127,6 @@ class ConfigOvercloud(object):
                     else:
                         raise Exception("Hyperthreading is not enabled in "
                                         + str(node_uuid))
-                        sys.exit(0)
                 cpu_count_list.append(cpu_count)
 
             min_cpu_count = min(cpu_count_list)
@@ -139,7 +135,6 @@ class ConfigOvercloud(object):
                                 " values : [40,48,56,64,72,128]"
                                 " But number of cpu is " + str(
                                     min_cpu_count))
-                sys.exit(0)
             number_of_host_os_cpu = int(number_of_host_os_cpu)
             logger.info("host_os_cpus {}".format(
                 cpu_siblings.sibling_info[
@@ -170,6 +165,11 @@ class ConfigOvercloud(object):
                     node_details.properties['capabilities'].split(',')[
                         0].split(':')[1]
                 if 'compute' in node_properties_capabilities:
+                    # RAM size should be more than 128G
+                    if memory_count < 128000:
+                        raise Exception(
+                            "RAM size is less than 128GB"
+                            "make sure to have all prerequisites")
                     # Subtracting
                     # 16384MB = (Host Memory 12GB + Kernel Memory 4GB)
                     memory_count = (memory_count - 16384)
@@ -177,6 +177,7 @@ class ConfigOvercloud(object):
                         pages.append((memory_count / 2))
                     if hugepage_size == "1GB":
                         pages.append((memory_count / 1024))
+            logger.info("hugepage_size {}".format(hugepage_size))
             logger.info("hugepage_count {}".format(min(pages)))
             return min(pages)
         except Exception as error:
@@ -251,17 +252,17 @@ class ConfigOvercloud(object):
 
             for cmd in cmds:
                 status = os.system(cmd)
+                if status != 0:
+                    raise Exception(
+                        "Failed to execute the command {}"
+                        " with error code {}".format(
+                            cmd, status))
                 logger.debug("cmd: {}".format(cmd))
-            if status != 0:
-                raise Exception(
-                    "Failed to execute the command {}"
-                    " with error code {}".format(
-                        cmd, status))
 
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            logger.error("{}".format(message))
+            logger.error(message)
             raise Exception(
                 "Failed to modify the dell_environment.yaml"
                 " at location {}".format(file_path))
@@ -283,7 +284,7 @@ class ConfigOvercloud(object):
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            logger.error("{}".format(message))
+            logger.error(message)
             raise Exception("Failed to get the Dell Compute nodes.")
 
     def edit_aggregate_environment_file(
@@ -309,56 +310,35 @@ class ConfigOvercloud(object):
                     cmd, status))
 
     def create_aggregate(self):
-        try:
-            logger.info("Creating Aggregate..")
-            stack_name = "Dell_Aggregate"
-            OC_AUTH_URL, OC_PROJECT_ID, OC_USERNAME, OC_PASSWORD = \
-                CredentialHelper.get_overcloud_creds()
-            keystone_auth = v2.Password(username=OC_USERNAME,
-                                        password=OC_PASSWORD,
-                                        tenant_name=OC_PROJECT_ID,
-                                        auth_url=OC_AUTH_URL)
-            keystone_session = session.Session(auth=keystone_auth)
-            kwargs = {'auth_url': OC_AUTH_URL,
-                      'session': keystone_session,
-                      'auth': keystone_auth,
-                      'service_type': 'orchestration'}
-            ht_client = heat_client.Client('1', **kwargs)
-            try:
-                file_path = home_dir \
-                    + '/pilot/templates/overcloud/puppet/'\
-                    "services/dellnfv/createaggregate.yaml"
-                template = open(file_path)
-            except Exception as error:
-                message = "Exception {}: {}".format(
-                    type(error).__name__, str(error))
-                logger.error("{}".format(message))
-                raise Exception("The createaggregate.yaml file does not exist")
-            try:
-                file_path = home_dir \
-                    + '/pilot/templates/create_aggregate_environment.yaml'
-                environment = open(file_path)
-            except Exception as error:
-                message = "Exception {}: {}".format(
-                    type(error).__name__, str(error))
-                logger.error("{}".format(message))
-                raise Exception("The create_aggregate_environment.yaml"
-                                "file does not exist")
-            try:
-                stack = ht_client.stacks.create(stack_name=stack_name,
-                                                template=template.read(),
-                                                environment=environment.read())
-            except heatclient.exc.HTTPConflict as e:
-                error_state = e.error
-                raise Exception("Stack already exists : ",
-                                error_state, stack_name)
-            template.close()
-            environment.close()
-        except Exception as error:
-            message = "Exception {}: {}".format(
-                type(error).__name__, str(error))
-            raise Exception("Aggregate could not be"
-                            " created due to {}".format(message))
+        UC_AUTH_URL, UC_PROJECT_ID, UC_USERNAME, UC_PASSWORD = \
+            CredentialHelper.get_overcloud_creds()
+        # Create nova client object
+        nova = nvclient.Client(
+            2,
+            UC_USERNAME,
+            UC_PASSWORD,
+            UC_PROJECT_ID,
+            UC_AUTH_URL)
+        hostname_list = self.get_dell_compute_nodes_hostnames(nova)
+        self.edit_aggregate_environment_file(
+            hostname_list)
+        env_opts = \
+            " -e ~/pilot/templates/create_aggregate_environment.yaml"
+
+        cmd = self.overcloudrc + "openstack stack create " \
+            " Dell_Aggregate" \
+            " --template" \
+            " ~/pilot/templates/overcloud/puppet/" \
+            "services/dellnfv/createaggregate.yaml" \
+            " {}" \
+            "".format(env_opts)
+        aggregate_create_status = os.system(cmd)
+        if aggregate_create_status == 0:
+            logger.info("Dell_Aggregate created")
+        else:
+            raise Exception(
+                "Aggregate {} could not be created..."
+                " Exiting post deployment tasks")
 
     def post_deployment_tasks(self):
         try:
@@ -373,4 +353,4 @@ class ConfigOvercloud(object):
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
-            raise Exception("{}".format(message))
+            raise Exception(message)
