@@ -190,7 +190,7 @@
 0:mesa-libGL-17.0.1-6.20170307.el7.*
 0:container-storage-setup-0.8.0-3.git1d27ecf.el7.*
 0:puppet-pacemaker-0.6.0-3.el7ost.*
-0:python-firewall-0.4.4.4-6.el7.*
+0:python-firewall-0.4.4.4-14.el7.*
 2:texlive-kpathsea-bin-svn27347.0-38.20130427_r30134.el7.*
 0:numactl-libs-2.0.9-6.el7_2.*
 0:puppet-java-1.6.0-3.2.2b0bd48git.el7ost.*
@@ -415,7 +415,7 @@
 0:python-lz4-0.7.0-5.el7ost.*
 0:info-5.1-4.el7.*
 0:python-pbr-1.10.0-1.el7ost.*
-0:subscription-manager-plugin-container-1.19.23-1.el7_4.*
+0:subscription-manager-plugin-container-1.20.11-1.el7_5.*
 0:usbredir-0.7.1-2.el7.*
 0:python-markdown-2.4.1-1.1.el7.*
 0:perl-Pod-Usage-1.63-3.el7.*
@@ -962,7 +962,7 @@
 0:rhosp-director-images-ipa-10.0-20180222.1.el7ost.*
 0:python-oslo-rootwrap-tests-5.1.2-1.el7ost.*
 0:expat-2.1.0-10.el7_3.*
-0:firewalld-filesystem-0.4.4.4-6.el7.*
+0:firewalld-filesystem-0.4.4.4-14.el7.*
 0:python-sqlalchemy-1.0.11-1.el7ost.*
 0:hwdata-0.252-8.6.el7.*
 0:dnsmasq-2.76-2.el7_4.2.*
@@ -1003,7 +1003,7 @@
 0:puppet-manila-9.5.0-3.el7ost.*
 0:pyserial-2.6-6.el7.*
 0:libXdamage-1.1.4-4.1.el7.*
-0:subscription-manager-1.19.23-1.el7_4.*
+0:subscription-manager-1.20.11-1.el7_5.*
 0:yum-3.4.3-154.el7.*
 0:perl-Storable-2.45-3.el7.*
 0:libassuan-2.1.0-3.el7.*
