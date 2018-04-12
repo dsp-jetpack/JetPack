@@ -448,10 +448,10 @@ class Checkpoints():
     def retreive_switches_config(self):
         if self.settings.switches == 0:
             return
-        logger.info("Retreiving switch(es) configuration")
+        logger.info("Retrieving switch(es) configuration")
         for each in self.settings.switches:
             logger.info(
-                "Retreiving configuration for switch " + each.switch_name)
+                "Retrieving configuration for switch " + each.switch_name)
             logger.info(
                 self.execute_as_shell(each.ip, each.user, each.password,
                                       'show version'))
