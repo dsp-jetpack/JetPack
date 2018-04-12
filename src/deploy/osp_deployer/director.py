@@ -728,35 +728,7 @@ class Director(InfraHost):
         self.setup_nic_configuration()
 
         if self.settings.enable_ovs_dpdk is True:
-            nic_config_dirname = os.path.dirname(self.settings.nic_env_file)
-            mode = str(self.settings.ovs_dpdk_mode)
-            compute_file_name = "compute-ovs-dpdk-mode" + mode + ".yaml"
-            compute_yaml = self.nic_configs_dir + "/" + nic_config_dirname + "/" + compute_file_name
-            logger.debug("setting ovs dpdk environment")
-            cmd = 'sed -i ' \
-                  '"s|Compute::Net::SoftwareConfig:.*|' + \
-                  'Compute::Net::SoftwareConfig: ' + \
-                  compute_yaml + \
-                  '|" ' + \
-                  self.nic_configs_dir + \
-                  '/' + \
-                  self.settings.nic_env_file
-            self.run_tty(cmd)
-
-            cmd = "python " + self.pilot_dir + "/ovs_dpdk_setup.py" \
-                  + " --env_file " + neutron_ovs_dpdk_yaml \
-                  + " --nic_config_file " + compute_yaml \
-                  + " --mode " + str(self.settings.ovs_dpdk_mode)
-            stdout, stderr, exit_status = self.run(cmd)
-            if exit_status:
-                raise AssertionError("An error occurred while running "
-                                     "ovs_dpdk_setup exit_status: {}, "
-                                     "error: {}, "
-                                     "stdout: {}".format(exit_status,
-                                                         stderr,
-                                                         stdout))
-            else:
-                logger.debug("OVS-DPDK environment setup successful.")
+            self.setup_dpdk_nic_configuration()
 
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
@@ -880,6 +852,57 @@ class Director(InfraHost):
                         ':\s*).*/\\1' + setting_value + '/\' ' + remote_file)
 
         # Execute the commands
+        for cmd in cmds:
+            self.run(cmd)
+
+    def setup_dpdk_nic_configuration(self):
+
+        logger.debug("setting ovs dpdk environment")
+        # Get the user supplied NIC settings from the .ini
+        ini_nics_settings = self.settings.get_curated_nics_settings()
+
+        cmds = []
+        dpdk_conf = {}
+        env_file = os.path.join(self.templates_dir, "neutron-ovs-dpdk.yaml")
+
+        # Get and sort the Dpdk interfaces that the user configured
+        for setting_name, setting_value in ini_nics_settings.iteritems():
+            if setting_name.find('Dpdk') != -1:
+                dpdk_conf.update({setting_name: setting_value})
+        dpdk_interfaces = [x[1] for x in sorted(dpdk_conf.items())]
+
+        # The following is joining only the first two dpdk interfaces
+        # for mode 2 or all the interfaces (4) for mode 1
+        if self.settings.ovs_dpdk_mode == 2:
+            interfaces = "'" + ",".join(dpdk_interfaces[0:2]) + "'"
+        else:
+            interfaces = "'" + ",".join(dpdk_interfaces) + "'"
+
+        # Build up the sed command to perform variable substitution
+        # in the neutron-ovs-dpdk.yaml (dpdk environment)
+        cmds.append('sed -i "s|DpdkInterfaces:.*|DpdkInterfaces: ' +
+                    interfaces + '|" ' + env_file)
+
+        nic_config_dirname = os.path.dirname(self.settings.nic_env_file)
+
+        # Get the dpdk mode configured in the .ini
+        mode = str(self.settings.ovs_dpdk_mode)
+
+        compute_file_name = "compute-ovs-dpdk-mode" + mode + ".yaml"
+        compute_yaml = self.nic_configs_dir + "/" + nic_config_dirname + "/" + compute_file_name
+
+        # Buil up the sed command to perform variable substitution
+        # and catch the appropriate nic_environment file name
+        cmds.append('sed -i '
+                    '"s|Compute::Net::SoftwareConfig:.*|' +
+                    'Compute::Net::SoftwareConfig: ' +
+                    compute_yaml +
+                    '|" ' +
+                    self.nic_configs_dir +
+                    '/' +
+                    self.settings.nic_env_file)
+
+        # Execute the command related to dpdk configuration
         for cmd in cmds:
             self.run(cmd)
 
