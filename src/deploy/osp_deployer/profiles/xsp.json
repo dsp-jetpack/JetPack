@@ -9,7 +9,7 @@
          }
       },
       {
-         "MTU_Settings": {
+         "MTU Settings": {
             "mtu_selection": {
                "valid_values": [
                   "global",
@@ -51,12 +51,7 @@
                ]
             },
          "enable_fencing":"",
-         "enable_instance_ha": {
-               "valid_values": [
-                  "true",
-                  "false"
-               ]
-            }
+         "enable_instance_ha":""
          }
       },
       {

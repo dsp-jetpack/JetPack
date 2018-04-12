@@ -23,6 +23,8 @@ import time
 
 from command_helper import Scp, Ssh
 from credential_helper import CredentialHelper
+from os.path import expanduser
+
 from logging_helper import LoggingHelper
 from netaddr import IPNetwork
 from network_helper import NetworkHelper
@@ -31,7 +33,7 @@ logging.basicConfig()
 LOG = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
 
-class RhsconException(BaseException):
+class DashboardException(BaseException):
     pass
 
 
@@ -41,10 +43,13 @@ class Node:
     and transfer files on a remote system. In addition, it provides a simple
     framework for storing and updating the node's machine ID, which is
     required for the code that configures the Overcloud nodes to work with
-    the Storage Console.
+    the Ceph Storage Dashboard.
     """
 
     etc_hosts = "/etc/hosts"
+    ansible_hosts = "/etc/ansible/hosts"
+    ceph_conf = "/etc/ceph/ceph.conf"
+    root_home = expanduser("~root")
 
     storage_network = NetworkHelper.get_storage_network()
 
@@ -73,13 +78,7 @@ class Node:
             msg = "Node at {} does not have an IP address on the storage" \
                   " network".format(self.address)
             LOG.error(msg)
-            raise RhsconException(msg)
-
-    def update_machine_id(self):
-        LOG.warn("Generating a new /etc/machine-id on {}".format(self.fqdn))
-        self.run("sudo rm -f /etc/machine-id")
-        self.run("sudo systemd-machine-id-setup")
-        self._read_machine_id()
+            raise DashboardException(msg)
 
     def execute(self, command):
         status, stdout, stderr = Ssh.execute_command(self.address,
@@ -103,8 +102,8 @@ class Node:
     def run(self, command, check_status=True):
         status, stdout, stderr = self.execute(command)
         if int(status) != 0 and check_status:
-            raise RhsconException("Command execution failed on {} ({})".format(
-                self.fqdn, self.address))
+            raise DashboardException("Command execution failed on {} ({})"
+                                     .format(self.fqdn, self.address))
         return stdout
 
     def put(self, localfile, remotefile):
@@ -131,17 +130,15 @@ def parse_arguments(dashboard_user):
     """
 
     parser = argparse.ArgumentParser(
-        description="Configures the Storage Console and overcloud Ceph nodes.",
+        description="Configures the Ceph Storage Dashboard and Ceph nodes.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument("dashboard_addr",
-                        help="The IP address of the Storage Console on the"
-                        " external network",
-                        metavar="ADDR")
+                        help="The IP address of the Ceph Storage Dashboard "
+                        "on the external network", metavar="ADDR")
     parser.add_argument("dashboard_pass",
-                        help="The {} password of the Storage Console".format(
-                            dashboard_user),
-                        metavar="PASSWORD")
+                        help="The {} password of the Ceph Storage "
+                        "Dashboard".format(dashboard_user), metavar="PASSWORD")
 
     LoggingHelper.add_argument(parser)
 
@@ -178,10 +175,6 @@ def get_ceph_nodes(username):
         if ceph_procs:
             LOG.info("{} ({}) is a Ceph node".format(node.fqdn,
                                                      node.storage_ip))
-
-            # Note whether it's a Ceph monitor
-            node.is_monitor = ("ceph-mon" in ceph_procs)
-
             ceph_nodes.append(node)
         else:
             LOG.debug("{} ({}) is not a Ceph node".format(node.fqdn,
@@ -190,68 +183,27 @@ def get_ceph_nodes(username):
     return sorted(ceph_nodes, key=lambda node: node.fqdn)
 
 
-def get_calamari_node(ceph_nodes):
-    """ Chooses the Calamari server from the list of Ceph nodes
-
-    The Storage Console installation guide states the Calamari server needs
-    to run on one, and only one, Monitor node. This function chooses
-    controller-0 from the list of overcloud Ceph nodes.
-    """
-
-    calamari_node = [n for n in ceph_nodes if "controller-0" in n.fqdn][0]
-
-    if not calamari_node:
-        LOG.error("Unable to locate controller-0 (for Calamari server)"
-                  " in Ceph nodes")
-        raise RhsconException("Error identifying Calamari server")
-
-    LOG.info("Calamari server node is {}".format(calamari_node.fqdn))
-    return calamari_node
-
-
-def prep_machine_ids(nodes):
-    """ Ensures the /etc/machine-id is unique on all Ceph nodes
-
-    See https://bugzilla.redhat.com/show_bug.cgi?id=1270860 for what this
-    is all about. Apparently the Storage Console uses the machine IDs in
-    its database of Ceph nodes, but they may not be unique because the
-    overcloud nodes were deployed from a common overcloud image (so they
-    all end up with the same machine ID).
-
-    This function will need to exist even after RH fixes the BZ. This is
-    because the overcloud may have been deployed prior to the BZ fix.
-    """
-
-    LOG.info("Ensuring /etc/machine-id is unique on all Ceph nodes")
-    for node in nodes:
-        # If there are other nodes with the same machine ID then generate
-        # a new ID for this node.
-        if len([n for n in nodes if n.machine_id == node.machine_id]) > 1:
-            node.update_machine_id()
-
-
-def prep_host_files(dashboard_node, ceph_nodes, calamari_node):
+def prep_host_files(dashboard_node, ceph_nodes):
     """ Prepares the /etc/hosts files on all systems
 
-    The Storage Console prefers using domain names over IP addresses, and
-    assumes the names will resolve. The function ensures the necessary
-    names are added to the /etc/hosts file on all relevant systems.
+    The Ceph Storage Dashboard prefers using domain names
+    over IP addresses, and assumes the names will resolve. The function
+    ensures the necessary names are added to the /etc/hosts file on all
+    relevant systems.
     """
 
     prep_dashboard_hosts(dashboard_node, ceph_nodes)
     prep_ceph_hosts(dashboard_node, ceph_nodes)
-    prep_calamari_hosts(calamari_node, ceph_nodes)
 
 
 def prep_dashboard_hosts(dashboard_node, ceph_nodes):
-    """ Prepares the /etc/hosts file on the Storage Console
+    """ Prepares the hosts file on the Ceph Storage Dashboard
 
-    Adds entries for every Ceph node so the Storage Console can access
-    the nodes using their FQDN.
+    Adds entries for every Ceph node so the Ceph Storage Dashboard
+    can access the nodes using their FQDN.
     """
 
-    LOG.info("Preparing /etc/hosts file on Storage Console ({})".format(
-        dashboard_node.fqdn))
+    LOG.info("Preparing hosts file on Ceph Storage Dashboard.")
 
     tmp_hosts = os.path.join("/tmp", "hosts-{}".format(dashboard_node.fqdn))
     dashboard_node.get(tmp_hosts, Node.etc_hosts)
@@ -275,49 +227,36 @@ def prep_dashboard_hosts(dashboard_node, ceph_nodes):
         f.writelines(host_entries)
         f.write(beg_banner)
         for node in ceph_nodes:
-            LOG.debug("Adding '{}\t{}'".format(node.storage_ip, node.fqdn))
-            f.write("{}\t{}\n".format(node.storage_ip, node.fqdn))
+            LOG.debug("Adding '{}\t{}'"
+                      .format(node.storage_ip, node.fqdn))
+            node_name, domain_name = node.fqdn.split('.', 1)
+            f.write("{}\t{}\t{}\n"
+                    .format(node.storage_ip, node.fqdn, node_name))
         f.write(end_banner)
 
-    # Upload the new file to the Storage Console
+    # Upload the new file to the Ceph Storage Dashboard
     dashboard_node.put(tmp_hosts, tmp_hosts)
-    dashboard_node.run("sudo cp {} {}.bak".format(Node.etc_hosts,
-                                                  Node.etc_hosts))
+    dashboard_node.run("sudo cp {} {}.bak"
+                       .format(Node.etc_hosts, Node.etc_hosts))
     dashboard_node.run("sudo mv {} {}".format(tmp_hosts, Node.etc_hosts))
     dashboard_node.run("sudo restorecon {}".format(Node.etc_hosts))
     os.unlink(tmp_hosts)
 
 
-def configure_access(ceph_nodes):
-    """For Ceph 2.0 Monitor nodes use port 6789 for communication
-    within the Ceph cluster. The monitor where the calamari-lite is
-    running uses port 8002 for access to the Calamari REST-based API.
-    """
-    for node in ceph_nodes:
-        node.run("sudo iptables -I INPUT -p tcp " +
-                 "-s 0.0.0.0/0 --dport 4505 -j ACCEPT")
-        node.run("sudo iptables -I INPUT -p tcp " +
-                 "-s 0.0.0.0/0 --dport 4506 -j ACCEPT")
-        node.run("sudo iptables -I INPUT -p tcp " +
-                 "-s 0.0.0.0/0 --dport 6789 -j ACCEPT")
-        node.run("sudo iptables -I INPUT -p tcp " +
-                 "-s 0.0.0.0/0 --dport 8002 -j ACCEPT")
-        node.run("sudo service iptables save")
-
-
 def prep_ceph_hosts(dashboard_node, ceph_nodes):
-    """ Prepares the /etc/hosts file on the Ceph nodes
+    """ Prepares the hosts file on the Ceph nodes
 
-    Adds an entry to every Ceph node's host file for the Storage Console's
-    FQDN and the Storage Console's IP address on the storage network.
+    Adds an entry to every Ceph node's host file for the
+    Ceph Storage Dashboard's FQDN and the Ceph
+    Storage Dashboard's IP address on the storage network.
     """
 
-    LOG.info("Preparing /etc/hosts file on Ceph nodes")
+    LOG.info("Preparing hosts file on Ceph nodes.")
     LOG.debug("Adding '{}\t{}'".format(
         dashboard_node.storage_ip, dashboard_node.fqdn))
 
-    beg_banner = "# Entries added for Storage Console - Start\n"
-    end_banner = "# Entries added for Storage Console - End\n"
+    beg_banner = "# Entries added for Ceph Storage Dashboard - Start\n"
+    end_banner = "# Entries added for Ceph Storage Dashboard - End\n"
 
     for node in ceph_nodes:
         # Fetch a copy of the node's hosts file
@@ -328,7 +267,7 @@ def prep_ceph_hosts(dashboard_node, ceph_nodes):
         with open(tmp_hosts, "r") as f:
             host_entries = f.readlines()
 
-        # Delete any prior Storage Console entries
+        # Delete any prior Ceph Storage Dashboard entries
         try:
             beg = host_entries.index(beg_banner)
             end = host_entries.index(end_banner)
@@ -336,7 +275,7 @@ def prep_ceph_hosts(dashboard_node, ceph_nodes):
         except:
             pass
 
-        # Create a new hosts file with the Storage Console entry at the end
+        # Create a new hosts file with the Ceph Storage Dashboard
         with open(tmp_hosts, "w") as f:
             f.writelines(host_entries)
             f.write("{}{}\t{}\n{}".format(
@@ -350,254 +289,347 @@ def prep_ceph_hosts(dashboard_node, ceph_nodes):
         node.run("sudo restorecon {}".format(Node.etc_hosts))
         os.unlink(tmp_hosts)
 
-    # configure access now
-    configure_access(ceph_nodes)
 
-
-def prep_calamari_hosts(calamari_node, ceph_nodes):
-    """Prepares the /etc/hosts file on the Calamari server
-
-    NOTE: See https://bugzilla.redhat.com/show_bug.cgi?id=1414918
-          This function implements a workaround to the BZ.
-
-    The Storage Console likes to identify nodes by their FQDN, which is
-    typically what you see when running "hostname --fqdn" on each
-    node. However, when the Storage Console imports an external Ceph cluster,
-    it uses the Calamari server (running on a Ceph monitor node, such as
-    controller-0) to acquire the FQDNs of every MON and OSD node in the
-    cluster.
-
-    The Calamari server uses the contents of its own /etc/hosts file to map
-    the IP address of each node to the FQDN that it reports to the Storage
-    Console, and the hosts file is created by the OSP Director. Unfortunately,
-    the Director adds an extra ".storage" subdomain to all Controllers'
-    storage network address. This causes the Calamari server to report an
-    FQDN for all monitors that don't match their actual FQDN, and that ends
-    up confusing the Storage Console.
-
-    The workaround involves patching the Calamari server's /etc/hosts file.
-    Each entry for Ceph node that's a Ceph Monitor (that would be the
-    controllers), the patch ensures the first host name matches the host's
-    real FQDN, and not the name that includes the extra ".storage" subdomain.
-
-    Only the controller entries need to be patched. For the OSD nodes, the
-    FQDN for their storage network address happens to match the actual FQDN
-    (no patching necessary).
+def prep_root_user(dashboard_node, ceph_nodes):
+    """ Prepares root user on the Ceph Storage Dashboard
+    Modifies the Ceph Storage Nodes so that Ceph Storage Dashboard
+    can access so that root can install dashboard.
     """
 
-    LOG.info("Preparing /etc/hosts file on Calamari server ({})".format(
-        calamari_node.fqdn))
+    home = expanduser("~")
+    root_key = Node.root_home + "/.ssh/authorized_keys"
+    tmp_key = "/tmp/authorized_keys"
+    repl_str = ".*sleep 10\" "
+    bak_date = dashboard_node.run('date +"%Y%m%d%H%M"')
 
-    tmp_hosts = os.path.join("/tmp", "hosts-{}".format(calamari_node.fqdn))
-    calamari_node.get(tmp_hosts, Node.etc_hosts)
+    status, stdout, stderr = dashboard_node.execute("[ -f {} ] \
+                                                    && echo true \
+                                                    || echo false "
+                                                    .format(root_key))
+    if "true" in stdout:
+        return
+
+    LOG.info("Preparing root access on the Ceph Storage Dashboard.")
+
+    ssh_files = ('.ssh/authorized_keys',
+                 '.ssh/id_rsa',
+                 '.ssh/id_rsa.pub')
+
+    for file in ssh_files:
+        tmp_ssh_file = os.path.join("/tmp", "tmp_ssh_file-{}"
+                                    .format(dashboard_node.fqdn))
+        node_ssh_dir = Node.root_home + "/.ssh"
+        node_file = os.path.join(Node.root_home, file)
+        local_file = os.path.join(os.sep, home, file)
+
+        dashboard_node.put(local_file, tmp_ssh_file)
+        dashboard_node.run("sudo /bin/bash -c 'if [ ! -d {} ]; \
+                           then mkdir {}; fi'"
+                           .format(node_ssh_dir, node_ssh_dir))
+        dashboard_node.run("sudo chown root.root {}".format(node_ssh_dir))
+        dashboard_node.run("sudo chmod 0700 {}".format(node_ssh_dir))
+        dashboard_node.run("sudo mv {} {}".format(tmp_ssh_file, node_file))
+        dashboard_node.run("sudo chown root.root {}".format(node_file))
+        dashboard_node.run("sudo chmod 0600 {}".format(node_file))
+        dashboard_node.run("sudo restorecon {}".format(node_file))
+    dashboard_node.run("sudo cat ~root/.ssh/id_rsa.pub \
+                       >> ~root/.ssh/authorized_keys")
+
+    for node in ceph_nodes:
+        node_name, domain_name = node.fqdn.split('.', 1)
+        dashboard_node.run("sudo ssh-keyscan -t ecdsa-sha2-nistp256 {} \
+                           >> ~root/.ssh/known_hosts".format(node.fqdn))
+        dashboard_node.run("sudo ssh-keyscan -t ecdsa-sha2-nistp256 {} \
+                           >> ~root/.ssh/known_hosts".format(node_name))
+    dashboard_node.run("sudo ssh-keyscan -t ecdsa-sha2-nistp256 {} \
+                       >> ~root/.ssh/known_hosts"
+                       .format(dashboard_node.fqdn))
+    dashboard_node_name, domain_name = node.fqdn.split('.', 1)
+    dashboard_node.run("sudo ssh-keyscan -t ecdsa-sha2-nistp256 {} \
+                       >> ~root/.ssh/known_hosts"
+                       .format(dashboard_node_name))
+
+    for node in ceph_nodes:
+        tmp_keys = os.path.join("/tmp", "key-{}".format(node.fqdn))
+        node.run("sudo cp {} {}-{}.bak".format(root_key, root_key, bak_date))
+        node.run("sudo cp {} {}".format(root_key, tmp_key))
+        node.run("sudo chmod 0644 {}".format(tmp_key))
+        node.run("sudo sed -i 's/{}//' {}".format(repl_str, tmp_key))
+        node.get(tmp_keys, tmp_key)
+        node.run("sudo mv {} {}".format(tmp_key, root_key))
+        node.run("sudo chmod 0400 {}".format(root_key))
+
+
+def prep_ansible_hosts(dashboard_node, ceph_nodes):
+    """ Prepares the /etc/ansible/hosts file on the
+    Ceph Storage Dashboard. Adds entries for the
+    Ceph nodes to the roles sections of the ansible hosts file.
+    """
+
+    LOG.info("Preparing ansible host file on Ceph Storage " +
+             "Dashboard.")
+
+    tmp_hosts = os.path.join("/tmp", "ansiblehosts-{}"
+                             .format(dashboard_node.fqdn))
+    dashboard_node.get(tmp_hosts, Node.ansible_hosts)
 
     host_entries = []
     with open(tmp_hosts, "r") as f:
         host_entries = f.readlines()
 
-    # We only need to worry about patching the Ceph Monitor entries
-    for node in [n for n in ceph_nodes if n.is_monitor]:
-        # Scan all lines in host_entries by index so that, if necessary, we
-        # can replace an entry using its index.
-        for index in range(len(host_entries)):
-            entry = host_entries[index]
-            tokens = entry.split()
-            if len(tokens) < 2:
-                continue
-            if tokens[0] == node.storage_ip and tokens[1] != node.fqdn:
-                new_entry = entry.replace(node.storage_ip, "{} {}".format(
-                    node.storage_ip, node.fqdn))
-                LOG.info("Patching host entry:\n"
-                         "  was : {}"
-                         "  now : {}".format(entry, new_entry.strip("\n")))
-                host_entries[index] = new_entry
-                break
+    # Delete any prior Ceph node entries
+    beg_banner = "# Entries added for Ceph nodes - Start\n"
+    end_banner = "# Entries added for Ceph nodes - End\n"
+    try:
+        beg = host_entries.index(beg_banner)
+        end = host_entries.index(end_banner)
+        del(host_entries[beg:end+1])
+    except:
+        pass
 
+    # Update the ansible hosts file with the Ceph nodes at the end
     with open(tmp_hosts, "w") as f:
         f.writelines(host_entries)
+        f.write("\n")
+        f.write(beg_banner)
+        mon_nodes = []
+        rgw_nodes = []
+        osd_nodes = []
+        for node in ceph_nodes:
+            if "controller" in node.fqdn:
+                mon_nodes.append(node)
+                rgw_nodes.append(node)
+            if "storage" in node.fqdn:
+                osd_nodes.append(node)
 
-    # Upload the file to the Calamari node, but this time do not create
-    # another backup file.
-    calamari_node.put(tmp_hosts, tmp_hosts)
-    calamari_node.run("sudo mv {} {}".format(tmp_hosts, Node.etc_hosts))
-    calamari_node.run("sudo restorecon {}".format(Node.etc_hosts))
+        LOG.info("Adding Monitors Stanza to Ansible hosts file")
+        f.write("[mons]\n")
+        for node in mon_nodes:
+            node_name, domain_name = node.fqdn.split('.', 1)
+            f.write("{}\n".format(node_name))
+
+        LOG.info("Adding RadosGW Stanza to Ansible hosts file")
+        f.write("\n")
+        f.write("[rgws]\n")
+        for node in rgw_nodes:
+            node_name, domain_name = node.fqdn.split('.', 1)
+            f.write("{}\n".format(node_name))
+
+        LOG.info("Adding OSD Stanza to Ansible hosts file")
+        f.write("\n")
+        f.write("[osds]\n")
+        for node in osd_nodes:
+            node_name, domain_name = node.fqdn.split('.', 1)
+            f.write("{}\n".format(node_name))
+
+        LOG.info("Adding Graphana Stanza to Ansible hosts file")
+        f.write("\n")
+        f.write("[ceph-grafana]\n")
+        f.write("{}\n".format(dashboard_node.fqdn))
+        f.write(end_banner)
+
+    # Upload the new file to the Ceph Storage Dashboard
+    dashboard_node.put(tmp_hosts, tmp_hosts)
+    dashboard_node.run("sudo cp {} {}.bak"
+                       .format(Node.ansible_hosts, Node.ansible_hosts))
+    dashboard_node.run("sudo mv {} {}"
+                       .format(tmp_hosts, Node.ansible_hosts))
+    dashboard_node.run("sudo restorecon {}".format(Node.ansible_hosts))
     os.unlink(tmp_hosts)
 
 
-def start_dashboard_skyring(dashboard_node):
-    """ Starts the Skyring service on the Storage Console
-
-    Skyring is the name of the service that implements the Storage Console's
-    UI, and it needs to be set up. The "skyring-setup" command prompts the
-    user for a small amount of input, which is scripted below.
+def prep_ceph_conf(dashboard_node, ceph_nodes):
+    """ Prepares the /etc/ceph/ceph.conf file on the Ceph Storage Nodes
+    Adds the string "mon_health_preluminous_compat=true" to the
+    mon section of the storage node "ceph.conf" file.
     """
+    LOG.info("Preparing /etc/ceph/ceph.conf file on Ceph nodes.")
 
-    LOG.info("Starting 'skyring' on Storage Console ({})".format(
-        dashboard_node.fqdn))
-
-    # NOTE: "skyring-setup is a short Python script, and one of the first
-    # things it does is initialize the Django database that is used to store
-    # metrics collected from the Ceph nodes. Unfortunately, early tests
-    # revealed that command wants to prompt for user input, and will basically
-    # swallow *ALL* input we try to pipe into the "skyring-setup" script.
-    #
-    # Fortunately, this can be avoided by running the same Django command with
-    # an additional "--noinput" argument. So, first we run the Django command
-    # with --noinput," and this makes Django happy enough so that it doesn't
-    # prompt for input when the command is run again by "skyring-setup." The
-    # nature of the Django command is such that it's OK to run it twice.
-    #
-    # Find the exact command that will run Django's "syncdb". Then run the
-    # command with an additional "--noinput" argument.
-    syncdb_cmd = dashboard_node.run("grep syncdb $(which skyring-setup)")
-    dashboard_node.run("{} --noinput".format(syncdb_cmd))
-
-    # Now run the "skyring-setup" and specify answers for the two questions
-    # it will ask:
-    #    1) The public FQDN or IP of the Storage Console
-    #    2) Whether we want to create a self-signed SSL certificate
-    dashboard_node.run("skyring-setup <<EOF\n"
-                       "{}\n"
-                       "y\n"
-                       "EOF".format(dashboard_node.address))
-
-    # Restart the service so it picks up the new configuration
-    dashboard_node.run("systemctl restart skyring")
-
-    # Pause for a bit to give the service time to come up. That way it's
-    # ready before we try to install the console agent on the Ceph nodes.
-    time.sleep(5)
-
-
-def install_console_agent(dashboard_node, ceph_nodes):
-    """ Installs the Storage Console agent on all Ceph nodes
-
-    The console agent installation is pretty clever. Each node tickles a
-    RESTful API on the Storage Console and pipes the output to bash. The
-    script is quite small, and basically it just creates a special
-    "ceph-installer" user, and sets things up so the Storage Console has
-    SSH access and sudo privilege (basically the same as the "heat-admin"
-    account used by the Director). The last line of the bash script causes
-    the node to tickle another Storage Console RESTful API, which triggers
-    the Storage Console to finish the storage console installation.
-
-    To monitor the installation process, you can tickle yet another RESTful
-    API, and the output reveals the Storage Console is running an Ansible
-    playbook. This function manages the overall installation by parsing
-    the Ansible output.
-    """
-
-    LOG.info("Installing Storage Console agent on Ceph nodes")
-
-    # This hot mess is the curl command to execute the RESTful API for
-    # checking the console agent installation process, followed by a sed
-    # script that converts "\n" (two characters) into a single '\n' newline.
-    # Note that each '\' has to be escaped for Python.
-    check_task_cmd = "curl -sS http://{}:8181/api/tasks/ |" \
-        " sed -e 's/\\\\n/\\n/g'".format(dashboard_node.storage_ip)
+    beg_banner = "# Preluminous_compat entry added - Start\n"
+    end_banner = "# Preluminous_compat entry added - End\n"
 
     for node in ceph_nodes:
-        LOG.debug("Installing the agent on {} ({})".format(
-            node.fqdn, node.storage_ip))
+        if "controller" in node.fqdn:
+            # Fetch a copy of the node's ceph_conf file
+            tmp_hosts = os.path.join("/tmp", "ceph_conf-{}"
+                                     .format(node.fqdn))
+            node.get(tmp_hosts, Node.ceph_conf)
 
-        # Tickle the RESTful API to trigger the console agent installation
-        node.run("curl -sS http://{}:8181/setup/agent/ | sudo bash".format(
-            dashboard_node.storage_ip))
+            host_entries = []
+            with open(tmp_hosts, "r") as f:
+                host_entries = f.readlines()
 
-        # Poll a while until the installation task completes
-        result = ""
-        for i in range(1, 30):
-            time.sleep(5)
+            # Delete any prior ceph conf file entries
+            try:
+                beg = host_entries.index(beg_banner)
+                end = host_entries.index(end_banner)
+                del(host_entries[beg:end+1])
+            except:
+                pass
 
-            # Here we run the command that dumps the output of the Ansible
-            # playbook that drives the console agent installation.
-            # Unfortunately you get the output for *all* runs of the playbook
-            # (one per Ceph node), so we filter on this particular node's
-            # IP address. Ansible always finishes with summary lines that
-            # begin with the IP address of the remote systems, so we look
-            # for the IP address at the beginning of the line.
+            # Create ceph_conf with the preluminous entry
+            with open(tmp_hosts, "w") as f:
+                f.writelines(host_entries)
+                f.write("{}{}\n{}".format(
+                    beg_banner,
+                    "mon_health_preluminous_compat=true",
+                    end_banner))
 
-            result = node.run("{} | grep ^{} | tail -1".format(
-                check_task_cmd, node.storage_ip), check_status=False)
-            if result:
-                break
-
-            LOG.debug("Waiting for the installation to complete ({})...".
-                      format(i))
-
-        # The final summary provided by Ansible will indicate the number
-        # of commands that failed, and we need to be sure none of them did.
-        if "failed=0" not in result:
-            LOG.error("An error or timeout occured when installing the Storage"
-                      " Console agent on {} ({})".format(
-                          node.fqdn, node.storage_ip))
-            LOG.error("Run this command for hints on what may have happened:")
-            LOG.error("  ssh {}@{} {}".format(
-                      node.username, node.address, check_task_cmd))
-            raise RhsconException(
-                "Error or timeout installing the Storage Console agent")
-
-    # End of install_console_agent
+            # Upload the new file to the node
+            node.put(tmp_hosts, tmp_hosts)
+            node.run("sudo cp {} {}.bak"
+                     .format(Node.ceph_conf, Node.ceph_conf))
+            node.run("sudo mv {} {}".format(tmp_hosts, Node.ceph_conf))
+            node.run("sudo restorecon {}".format(Node.ceph_conf))
+            os.unlink(tmp_hosts)
 
 
-def start_calamari_server(dashboard_node, calamari_node):
-    """Starts the Calamari server
+def prep_collectd(dashboard_node, ceph_nodes):
+    LOG.info("Preparing the Ceph Storage Cluster collectd services.")
+    collectd_dir = "/etc/collectd.d"
 
-    Runs the command that initialzes and starts the Calamari server (one
-    of the Ceph Monitor nodes)
+    for node in ceph_nodes:
+        collectd_restart = False
+        collectd_files = ('network.conf', 'disk.conf')
+        for file in collectd_files:
+            conf_file = os.path.join(os.sep, collectd_dir, file)
+            status, stdout, stderr = node.execute("[ -f {} ] \
+                                                  && echo true \
+                                                  || echo false"
+                                                  .format(conf_file))
+            LOG.debug("STDOUT for node ({}) file ({}) = {}"
+                      .format(node.fqdn, conf_file, stdout))
+            if "true" in stdout:
+                node.run("sudo mv {} {}.bak".format(conf_file, conf_file))
+                collectd_restart = True
 
-    Under the old Calamari UI (prior to the Storage Console), the Calamari
-    server ran on the Ceph admin VM, and was configured with the username
-    and password used to log into the UI.
+        if collectd_restart:
+            LOG.info("Restarting collectd service on node ({})"
+                     .format(node.fqdn))
+            node.run("sudo systemctl restart collectd")
 
-    With the Storage Console, the Calamari server runs on one of the Ceph
-    Monitor nodes, and it communicates with the Storage Console UI running
-    on a VM. In fact, the Storage Console is the one that logs into the
-    Calarmari server.
 
-    NOTE:
-
-    The Storage Console installation instructions mention it uses hard-coded
-    credentials when logging into the Calamari server !!!  It's important the
-    Calamari server be initialed to use the same credentials or else the
-    Storage Console won't be able to connect to it. The hard-coded credentials
-    are... (wait for it!) admin/admin.
+def prep_cluster_for_collection(dashboard_node, ceph_nodes):
+    """ Take over an existing Ceph Storage Cluster
     """
 
-    LOG.info("Starting Calamari sever on {}".format(calamari_node.fqdn))
+    fsid_repl_str = '#fsid: "{{ cluster_uuid.stdout }}"'
+    gen_repl_str = '#generate_fsid: true'
+    sym_link = "/etc/ansible/group_vars"
+    ceph_ansible_dir = "/usr/share/ceph-ansible"
+    toc_yml = "take-over-existing-cluster.yml"
+    cephmetrics_ansible_dir = "/usr/share/cephmetrics-ansible"
 
-    # NOTE: This is where the Calamari server credentials are hard-coded
-    calamari_node.run("sudo calamari-ctl initialize --admin-username admin"
-                      " --admin-password admin --admin-email admin@{}".format(
-                          dashboard_node.fqdn))
+    # Get ceph fsid information from a storage node
+    for node in ceph_nodes:
+        if "controller" in node.fqdn:
+            ceph_fsid = node.run("sudo ceph fsid", check_status=False)
+
+    status, stdout, stderr = dashboard_node.execute("[ -L {} ] \
+                                                    && echo true \
+                                                    || echo false"
+                                                    .format(sym_link))
+
+    if "true" in stdout:
+        return
+
+    LOG.info("Preparing the Ceph Storage Cluster for data collection.")
+    dashboard_node.run("sudo ln -s /usr/share/ceph-ansible/group_vars {}"
+                       .format(sym_link))
+    dashboard_node.run("cd {}; sudo cp all.yml.sample all.yml"
+                       .format(sym_link))
+    dashboard_node.run("cd {}; sudo echo 'ceph_stable_release: jewel' \
+                       >> all.yml" .format(sym_link))
+    dashboard_node.run("sudo sed -i 's/{}/fsid: {}/' \
+                       /etc/ansible/group_vars/all.yml"
+                       .format(fsid_repl_str, ceph_fsid))
+    dashboard_node.run("sudo sed -i 's/{}/generate_fsid: false/' \
+                       /etc/ansible/group_vars/all.yml"
+                       .format(gen_repl_str))
+    dashboard_node.run("cd {}; sudo cp infrastructure-playbooks/{} ."
+                       .format(ceph_ansible_dir, toc_yml))
+    dashboard_node.run("cd {}; sudo echo '      tags:' >> {}"
+                       .format(ceph_ansible_dir, toc_yml))
+    dashboard_node.run("cd {}; sudo echo '        gen_conf_file' >> {}"
+                       .format(ceph_ansible_dir, toc_yml))
+    dashboard_node.run("cd {}; ansible-playbook {} -u root --skip-tags \
+                       'gen_conf_file'".format(ceph_ansible_dir, toc_yml))
+
+    LOG.info("Installing the Ceph Storage Dashboard.")
+    dashboard_node.run("cd {}; sudo ansible-playbook -s -v playbook.yml"
+                       .format(cephmetrics_ansible_dir))
+
+    LOG.info("Ceph Storage Dashboard configuration is complete")
+    LOG.info("You may access the Ceph Storage Dashboard at:")
+    LOG.info("      http://<DashboardIP>:3000,")
+    LOG.info("with user 'admin' and password 'admin'.")
+
+
+def patch_cephmetrics_ansible(dashboard_node):
+    """ Patch /usr/share/cephmetrics-ansible...install_packages.yml
+    file to allow for skipping package installation.  We previously
+    install these packages in the overcloud image customization and
+    because we don't subscribe the nodes, this will fail unless we skip
+    this installation process.
+    """
+    
+    install_pkg_file = "/usr/share/cephmetrics-ansible/roles/" + \
+                       "ceph-collectd/tasks/install_packages.yml"
+
+    status, stdout, stderr = dashboard_node.execute("[ -f {}.orig ] \
+                                                    && echo true \
+                                                    || echo false "
+                                                    .format(install_pkg_file))
+    if "true" in stdout:
+        return
+
+    LOG.info("Patching /usr/share/cephmetrics-ansible on {}".format(
+             dashboard_node.fqdn))
+    dashboard_node.run("yum -y install patch")
+    dashboard_node.run("""
+cat << EOF|patch -b -d /usr/share/cephmetrics-ansible/roles/ceph-collectd/tasks
+--- install_packages.yml
++++ install_packages.yml.mod
+@@ -25,6 +25,8 @@
+     - ansible_pkg_mgr == "yum"
+     - not devel_mode
+   notify: Restart collectd
++  tags:
++    - cephmetrics-collectors
+
+ - name: Install dependencies for collector plugins
+   package:
+EOF
+""")
 
 
 def main():
-    """ Configures the Storage Console and Ceph nodes
+    """ Configures the Ceph Storage Dashboard and Ceph nodes
     """
 
     dashboard_user = "root"
     args = parse_arguments(dashboard_user)
     LOG.setLevel(args.logging_level)
 
-    dashboard_node = Node(args.dashboard_addr, dashboard_user,
+    dashboard_node = Node(args.dashboard_addr,
+                          dashboard_user,
                           args.dashboard_pass)
     dashboard_node.initialize()
 
-    LOG.info("Configuring Storage Console on {} ({})".format(
+    LOG.info("Configuring Ceph Storage Dashboard on {} ({})".format(
         dashboard_node.address, dashboard_node.fqdn))
 
     ceph_nodes = get_ceph_nodes(username="heat-admin")
-    calamari_node = get_calamari_node(ceph_nodes)
 
-    prep_machine_ids(ceph_nodes)
-    prep_host_files(dashboard_node, ceph_nodes, calamari_node)
+    prep_host_files(dashboard_node, ceph_nodes)
+    prep_root_user(dashboard_node, ceph_nodes)
+    prep_ansible_hosts(dashboard_node, ceph_nodes)
+    prep_ceph_conf(dashboard_node, ceph_nodes)
 
-    # start_dashboard_skyring(dashboard_node)
-    # install_console_agent(dashboard_node, ceph_nodes)
-    # start_calamari_server(dashboard_node, calamari_node)
+    patch_cephmetrics_ansible(dashboard_node)
+    prep_collectd(dashboard_node, ceph_nodes)
+    prep_cluster_for_collection(dashboard_node, ceph_nodes)
 
-    LOG.info("Storage Console configuration is complete")
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -431,7 +431,7 @@ def main():
         "--hvm",
         "--os-type linux",
         "--os-variant rhel7",
-        "--disk {},bus=virtio,size=16".format(dashboard_image),
+        "--disk {},bus=virtio,size=100".format(dashboard_image),
         "--network bridge=br-pub-api",
         "--network bridge=br-stor",
         "--initrd-inject {}".format(ks_tmp_filename),

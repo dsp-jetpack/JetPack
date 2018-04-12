@@ -38,6 +38,18 @@
          }
       },
       {
+         "Deployment Settings":{
+            "overcloud_static_ips" :{
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            },
+         "enable_fencing":"",
+         "enable_instance_ha":""
+         }
+      },
+      {
          "Network Settings": {
             "public_api_gateway": {
                "validate": [
