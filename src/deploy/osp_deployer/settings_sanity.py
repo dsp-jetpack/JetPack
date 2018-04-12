@@ -151,7 +151,7 @@ class DeployerSanity():
         for each in shouldbbevalidmtu:
             assert self.is_valid_mtu(getattr(self.settings, each)),\
                 "Setting for " + each + " is not a valid mtu " +\
-                getattr(self.settings, each) + "Maximum mtu size allowed = "
+                getattr(self.settings, each) + "Maximum mtu size allowed = "\
                 "9216 and minimum allowed =594"
 
     def check_ipmi_to_node(self, idrac_ip, ipmi_user, ipmi_password):
@@ -510,13 +510,8 @@ class DeployerSanity():
         # IHA requires fencing
         # verify fencing flag enabled when IHA enabled
         logger.debug("verifying fencing enabled when iha enabled")
-<<<<<<< HEAD
-        if (self.settings.enable_instance_ha is True
-                and self.settings.enable_fencing is False):
-=======
         if (self.settings.enable_instance_ha is True and
                 self.settings.enable_fencing is False):
->>>>>>> upstream/master
             raise AssertionError("Fencing NOT enabled, this is required" +
                                  " for IHA. Please verify this setting.")
 

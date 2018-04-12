@@ -9,7 +9,7 @@
          }
       },
       {
-         "MTU_Settings": {
+         "MTU Settings": {
             "mtu_selection": {
                "valid_values": [
                   "global",
