@@ -57,7 +57,6 @@ repos=(
 )
 
 packages=(
-    calamari-server
     cephmetrics-collectors
 )
 
