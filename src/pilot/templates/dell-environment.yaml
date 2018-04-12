@@ -34,6 +34,21 @@ parameter_defaults:
  
   # Number of Dell Compute nodes 
   DellComputeCount: 0
+  # Apply tuned-adm profile on Compute Nodes
+  ComputeTunedAdmProfile: virtual-host
+
+  # Configures MySQL max_connections config setting
+  MysqlMaxConnections: 15360
+
+  # Configures MariaDB Buffer Pool Size
+  # Setting 'dynamic' will apply 75% of total memory to innodb_buffer_pool_size
+  BufferPoolSize: dynamic
+
+  # Configures MariaDB Buffer Pool Instances
+  BufferPoolInstances: 16
+
+  # Configures HAProxy Max Connections
+  HAProxyMaxConnections: 10000
 
   # To customize the domain name of the overcloud nodes, change "localdomain"
   # in the following line to the desired domain name.

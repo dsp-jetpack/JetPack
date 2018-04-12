@@ -285,6 +285,21 @@ def main():
                             required=False,
                             default="4",
                             help="HostOs Cpus to be configured")
+        parser.add_argument("--mariadb_max_connections",
+                            dest="mariadb_max_connections",
+                            required=False,
+                            default="15360"
+                            help="Maximum number of connections for MariaDB")
+        parser.add_argument("--innodb_buffer_pool_size",
+                            dest="innodb_buffer_pool_size",
+                            required=False,
+                            default="dynamic"
+                            help="InnoDB buffer pool size")
+        parser.add_argument("--innodb_buffer_pool_instances",
+                            dest="innodb_buffer_pool_instances",
+                            required=False,
+                            default="16"
+                            help="InnoDB buffer pool instances.")
         parser.add_argument('--enable_dellsc',
                             action='store_true',
                             default=False,
@@ -370,6 +385,9 @@ def main():
             args.enable_numa,
             args.hugepages_size,
             args.hostos_cpu_count,
+            args.mariadb_max_connections,
+            args.innodb_buffer_pool_size,
+            args.innodb_buffer_pool_instances,
             args.num_dell_computes)
 
         # Launch the deployment

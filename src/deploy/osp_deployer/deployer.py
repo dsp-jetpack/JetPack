@@ -118,6 +118,10 @@ def deploy():
 
         logger.debug("loading settings files " + args.settings)
         settings = Settings(args.settings)
+        validate_performance_optimization_params(
+            settings.mariadb_max_connections,
+            settings.innodb_buffer_pool_size,
+            settings.innodb_buffer_pool_instances)
         logger.info("Settings .ini: " + settings.settings_file)
         logger.info("Settings .properties " + settings.network_conf)
         settings.get_version_info()
@@ -271,6 +275,46 @@ def deploy():
         ret_code = 1
     logger.info("log : /auto_results/ ")
     sys.exit(ret_code)
+
+def validate_performance_optimization_params(
+        mariadb_max_connections,
+        innodb_buffer_pool_size,
+        innodb_buffer_pool_instances):
+    try:
+        mariadb_max_connections_int = int(mariadb_max_connections)
+    except Exception as error:
+        raise Exception("Please enter only integers for "
+                       "mariadb_max_connections in .ini file.")
+
+    if mariadb_max_connections_int < 1 or mariadb_max_connections_int > 100000:
+        logger.error("The value should be a number in range 1 to 100000")
+        raise Exception("Invalid param mariadb max connections")
+
+    if innodb_buffer_pool_size != 'dynamic':
+        pattern = '^\d+G$'
+        valid = re.match(pattern, innodb_buffer_pool_size)
+        if not valid:
+            logger.error(
+                "The given value of innodb_buffer_pool_size"
+                " in .ini file is invalid")
+            raise Exception("Invalid param innodb_buffer_pool_size")
+        innodb_buffer_pool_size = int(innodb_buffer_pool_size.replace("G",""))
+        if innodb_buffer_pool_size < 20 or \
+           innodb_buffer_pool_size > 100:
+            logger.error(
+                "innodb_buffer_pool_instances not in range 20-100G")
+            raise Exception("Invalid param innodb_buffer_pool_size")
+    try:
+        innodb_buffer_pool_instances_int = int(innodb_buffer_pool_instances)
+    except Exception as error:
+        raise Exception(
+            "Please enter only integers for"
+            " innodb_buffer_pool_instances in .ini file.")
+    if innodb_buffer_pool_instances_int < 1 or \
+       innodb_buffer_pool_instances_int > 48:
+        logger.error(
+            "innodb_buffer_pool_instances not in range 1-48")
+        raise Exception("Invalid param innodb_buffer_pool_instances")
 
 
 if __name__ == "__main__":

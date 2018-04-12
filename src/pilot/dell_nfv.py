@@ -192,6 +192,9 @@ class ConfigOvercloud(object):
             enable_numa,
             hugepage_size,
             hostos_cpu_count,
+            mariadb_max_connections,
+            innodb_buffer_pool_size,
+            innodb_buffer_pool_instances,
             dell_compute_count=0):
         try:
             logger.info("Editing dell environment file")
@@ -249,7 +252,22 @@ class ConfigOvercloud(object):
                     vcpu_pin_set +
                     "\"|' " +
                     file_path)
-
+            # Performance and Optimization
+            cmds.append(
+                'sed -i "s|MysqlMaxConnections.*|MysqlMaxConnections: ' +
+                mariadb_max_connections +
+                '|" ' +
+                file_path)
+            cmds.append(
+                'sed -i "s|BufferPoolSize.*|BufferPoolSize: ' +
+                innodb_buffer_pool_size +
+                '|" ' +
+                file_path)
+            cmds.append(
+                'sed -i "s|BufferPoolInstances.*|BufferPoolInstances: ' +
+                innodb_buffer_pool_instances +
+                '|" ' +
+                file_path)
             for cmd in cmds:
                 status = os.system(cmd)
                 if status != 0:
