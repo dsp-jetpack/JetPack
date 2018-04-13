@@ -13,14 +13,36 @@
             },
             "numa_enable": "",
             "numa_hostos_cpu_count": {
-	        "valid_values": [
-			"2",
-			"4",
-			"6",
-			"8"
-		]
-	    }
-
+                 "valid_values": [
+                   "2",
+                   "4",
+                   "6",
+                   "8"
+                ]
+             }
+         },
+         "Performance and Optimization": {
+            "innodb_buffer_pool_instances": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1-48"
+               ]
+            },
+            "innodb_buffer_pool_size": {
+               "validate": [
+                  "valid_buffer_pool_size"
+               ]
+            },
+            "mariadb_max_connections": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1-100000"
+               ]
+            }
          }
       },
       {
@@ -57,7 +79,7 @@
             },
          "enable_fencing":"",
          "enable_instance_ha":""
-            }
+         }
       },
       {
          "Advanced Settings":{
