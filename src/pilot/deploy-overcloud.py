@@ -278,7 +278,7 @@ def main():
         parser.add_argument("--hugepages_size",
                             dest="hugepages_size",
                             required=False,
-                            default="2MB",
+                            default="1GB",
                             help="HugePages size")
         parser.add_argument("--hostos_cpu_count",
                             dest="hostos_cpu_count",
