@@ -108,6 +108,18 @@ apply_patch(){
   fi
 }
 
+run_command(){
+  cmd="$1"
+
+  echo "Executing: $cmd"
+
+  $cmd
+  if [ $? -ne 0 ]; then
+    echo "$cmd execution failed"
+    exit 1
+  fi
+}
+
 cd
 
 if [ ! -z $proxy ];
@@ -132,10 +144,10 @@ echo "## Done."
 
 echo
 echo "## Installing Director"
-sudo yum -y install python-tripleoclient
-openstack undercloud install
+run_command "sudo yum -y install python-tripleoclient"
+run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
-sudo yum -y install python-*-tests
+run_command "sudo yum -y install python-*-tests"
 echo "## Done."
 
 echo
