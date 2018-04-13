@@ -299,8 +299,7 @@ def validate_performance_optimization_params(
                 " in .ini file is invalid")
             raise Exception("Invalid param innodb_buffer_pool_size")
         innodb_buffer_pool_size = int(innodb_buffer_pool_size.replace("G",""))
-        if innodb_buffer_pool_size < 20 or \
-           innodb_buffer_pool_size > 100:
+        if innodb_buffer_pool_size < 1:
             logger.error(
                 "innodb_buffer_pool_instances not in range 20-100G")
             raise Exception("Invalid param innodb_buffer_pool_size")

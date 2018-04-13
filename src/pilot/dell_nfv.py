@@ -100,6 +100,28 @@ class ConfigOvercloud(object):
             raise Exception("At least one compute node failed to reboot")
 
     @classmethod
+    def get_minimum_memory_size(self, node_type):
+        try:
+            memory_size = []
+            for node in ConfigOvercloud.nodes:
+                node_uuid = node.uuid
+                # Get the details of a node
+                node_details = ConfigOvercloud.ironic_client.node.get(
+                    node_uuid)
+                # Get the memory count or size
+                memory_count = node_details.properties['memory_mb']
+                # Get the type details of the node
+                node_properties_capabilities = node_details.properties[
+                    'capabilities'].split(',')[0].split(':')[1]
+                if node_type in node_properties_capabilities:
+                    memory_size.append(memory_count)
+            return min(memory_size)
+        except Exception as error:
+            message = "Exception {}: {}".format(
+                type(error).__name__, str(error))
+            raise Exception("Failed to get memory size {}".format(message))
+
+    @classmethod
     def calculate_hostos_cpus(self, number_of_host_os_cpu):
         try:
             cpu_count_list = []
@@ -153,33 +175,21 @@ class ConfigOvercloud(object):
     @classmethod
     def calculate_hugepage_count(self, hugepage_size):
         try:
-
-            pages = []
-
-            for node in ConfigOvercloud.nodes:
-                node_uuid = node.uuid  # uuid of a node
-                node_details = ConfigOvercloud.ironic_client.node.get(
-                    node_uuid)  # details of a node
-                memory_count = node_details.properties['memory_mb']
-                node_properties_capabilities = \
-                    node_details.properties['capabilities'].split(',')[
-                        0].split(':')[1]
-                if 'compute' in node_properties_capabilities:
-                    # RAM size should be more than 128G
-                    if memory_count < 128000:
-                        raise Exception(
-                            "RAM size is less than 128GB"
-                            "make sure to have all prerequisites")
-                    # Subtracting
-                    # 16384MB = (Host Memory 12GB + Kernel Memory 4GB)
-                    memory_count = (memory_count - 16384)
-                    if hugepage_size == "2MB":
-                        pages.append((memory_count / 2))
-                    if hugepage_size == "1GB":
-                        pages.append((memory_count / 1024))
+            memory_count = ConfigOvercloud.get_minimum_memory_size("compute")
+            # RAM size should be more than 128G
+            if memory_count < 128000:
+                raise Exception("RAM size is less than 128GB"
+                                "make sure to have all prerequisites")
+            # Subtracting
+            # 16384MB = (Host Memory 12GB + Kernel Memory 4GB)
+            memory_count = (memory_count - 16384)
+            if hugepage_size == "2MB":
+                hugepage_count = (memory_count / 2)
+            if hugepage_size == "1GB":
+                hugepage_count = (memory_count / 1024)
             logger.info("hugepage_size {}".format(hugepage_size))
-            logger.info("hugepage_count {}".format(min(pages)))
-            return min(pages)
+            logger.info("hugepage_count {}".format(hugepage_count))
+            return hugepage_count
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
@@ -252,7 +262,15 @@ class ConfigOvercloud(object):
                     vcpu_pin_set +
                     "\"|' " +
                     file_path)
+
             # Performance and Optimization
+            if innodb_buffer_pool_size != "dynamic":
+                BufferPoolSize = int(innodb_buffer_pool_size.replace(
+                    "G", ""))*1024
+                memory_mb = ConfigOvercloud.get_minimum_memory_size("control")
+                if memory_mb < BufferPoolSize:
+                    raise Exception("innodb_buffer_pool_size is greater than"
+                                    " available memory size")
             cmds.append(
                 'sed -i "s|MysqlMaxConnections.*|MysqlMaxConnections: ' +
                 mariadb_max_connections +
@@ -268,6 +286,7 @@ class ConfigOvercloud(object):
                 innodb_buffer_pool_instances +
                 '|" ' +
                 file_path)
+
             for cmd in cmds:
                 status = os.system(cmd)
                 if status != 0:
