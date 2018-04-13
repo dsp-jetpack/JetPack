@@ -875,6 +875,7 @@ class Director(InfraHost):
 
         if self.settings.numa_enable is True:
             cmd += " --enable_numa "
+            cmd += " --hostos_cpu_count " + self.settings.hostos_cpu_count
 
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \
@@ -891,7 +892,13 @@ class Director(InfraHost):
         # of the nodes is the order in which they are defined in the
         # .properties file
         cmd += " --node_placement"
-
+        # Performance and Optimization parameters
+        cmd += " --mariadb_max_connections " \
+            + self.settings.mariadb_max_connections
+        cmd += " --innodb_buffer_pool_size " \
+            + self.settings.innodb_buffer_pool_size
+        cmd += " --innodb_buffer_pool_instances " + \
+            self.settings.innodb_buffer_pool_instances
         if self.settings.deploy_overcloud_debug:
             cmd += " --debug"
 

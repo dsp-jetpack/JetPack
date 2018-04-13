@@ -243,14 +243,24 @@ class Settings():
             "Dell NFV Settings")
         if dellnfv_settings['hpg_enable'].lower() == 'true':
             self.hpg_enable = True
+            self.hpg_size = dellnfv_settings['hpg_size']
         else:
             self.hpg_enable = False
-        self.hpg_size = dellnfv_settings['hpg_size']
         if dellnfv_settings['numa_enable'].lower() == 'true':
             self.numa_enable = True
+            self.hostos_cpu_count = \
+                    dellnfv_settings['numa_hostos_cpu_count']
         else:
             self.numa_enable = False
-
+        # Performance and Optimization
+        performance_and_optimization = self.get_settings_section(
+            "Performance and Optimization")
+        self.mariadb_max_connections = \
+            performance_and_optimization['mariadb_max_connections']
+        self.innodb_buffer_pool_size = \
+            performance_and_optimization['innodb_buffer_pool_size']
+        self.innodb_buffer_pool_instances = performance_and_optimization[
+            'innodb_buffer_pool_instances']
         backend_settings = self.get_settings_section(
             "Storage back-end Settings")
         if backend_settings['enable_dellsc_backend'].lower() == 'true':
