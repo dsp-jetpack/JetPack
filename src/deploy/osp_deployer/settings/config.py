@@ -245,11 +245,13 @@ class Settings():
             "Dell NFV Settings")
         if dellnfv_settings['hpg_enable'].lower() == 'true':
             self.hpg_enable = True
+            self.hpg_size = dellnfv_settings['hpg_size']
         else:
             self.hpg_enable = False
-        self.hpg_size = dellnfv_settings['hpg_size']
         if dellnfv_settings['numa_enable'].lower() == 'true':
             self.numa_enable = True
+            self.hostos_cpu_count = \
+                    dellnfv_settings['numa_hostos_cpu_count']
         else:
             self.numa_enable = False
 
@@ -446,7 +448,6 @@ class Settings():
             raise AssertionError('Only supported values for '
                                  'ovs_dpdk_enable are true or false. ')
         if self.enable_ovs_dpdk:
-            compute_file_name = 'compute-ovs-dpdk-mode' + self.ovs_dpdk_mode + '.yaml'
             logger.info("OVS_DPDK is enabled with mode " +
                         self.ovs_dpdk_mode + ".")
         else:
@@ -554,3 +555,4 @@ class Settings():
             logger.debug("unconventional setup...can t" +
                          " pick source version info")
             self.source_version = "????"
+>>>>>>> master
