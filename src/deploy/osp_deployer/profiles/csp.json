@@ -12,17 +12,7 @@
                ]
             },
             "numa_enable": "",
-            "ovs_dpdk_enable": "",
-            "ovs_dpdk_role_list": {
-               "valid_values": [
-                  "Compute"
-               ]
-            },
-            "ovs_dpdk_policy": {
-               "valid_values": [
-                  "Balanced"
-               ]
-            }
+            "ovs_dpdk_enable": ""
          }
       },
       {

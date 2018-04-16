@@ -434,10 +434,6 @@ class Settings():
             "Dell NFV Settings")
         self.ovs_dpdk_enable = dellnfv_settings[
             'ovs_dpdk_enable']
-        self.ovs_dpdk_role_list = dellnfv_settings[
-            'ovs_dpdk_role_list']
-        self.ovs_dpdk_policy = dellnfv_settings[
-            'ovs_dpdk_policy']
         self.enable_ovs_dpdk = False
         if self.ovs_dpdk_enable.lower() == 'false':
             pass
