@@ -15,6 +15,16 @@
          }
       },
       {
+         "Vips Settings": {
+            "use_static_vips" :{
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            }
+         }
+      },
+      {
          "Nodes Nics and Bonding Settings": {
             "sah_bond_opts": "",
             "nic_env_file": {
@@ -38,6 +48,21 @@
             },
          "enable_fencing":"",
          "enable_instance_ha":""
+         }
+      },
+      {
+         "Advanced Settings":{
+            "rhsm_repos":"",
+            "use_internal_repo":"",
+            "deploy_overcloud_debug": {
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            },
+         "use_ipmi_driver":"",
+         "use_in_band_introspection":"",
+         "enable_version_locking":""
          }
       },
       {
