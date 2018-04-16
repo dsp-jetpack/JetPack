@@ -33,6 +33,7 @@ parameter_defaults:
   # NovaVcpuPinSet: ['8-47']
  
   # Number of Dell Compute nodes 
+
   DellComputeCount: 0
   # Apply tuned-adm profile on Compute Nodes
   ComputeTunedAdmProfile: virtual-host

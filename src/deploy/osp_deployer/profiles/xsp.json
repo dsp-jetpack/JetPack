@@ -47,7 +47,7 @@
       },
       {
          "Vips Settings": {
-            "use_static_vips" :{
+            "use_static_vips": {
                "valid_values": [
                   "true",
                   "false"
@@ -70,8 +70,8 @@
          }
       },
       {
-         "Deployment Settings":{
-            "overcloud_static_ips" :{
+         "Deployment Settings": {
+            "overcloud_static_ips": {
                "valid_values": [
                   "true",
                   "false"
@@ -82,17 +82,17 @@
          }
       },
       {
-         "Advanced Settings":{
-            "rhsm_repos":"",
-            "use_internal_repo":"",
+         "Advanced Settings": {
+            "rhsm_repos": "",
+            "use_internal_repo": "",
             "deploy_overcloud_debug": {
                "valid_values": [
                   "true",
                   "false"
                ]
             },
-         "use_ipmi_driver":"",
-         "use_in_band_introspection":""
+            "use_ipmi_driver": "",
+            "use_in_band_introspection": ""
 
          }
 

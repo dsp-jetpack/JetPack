@@ -262,7 +262,6 @@ class ConfigOvercloud(object):
                     vcpu_pin_set +
                     "\"|' " +
                     file_path)
-
             # Performance and Optimization
             if innodb_buffer_pool_size != "dynamic":
                 BufferPoolSize = int(innodb_buffer_pool_size.replace(
@@ -286,7 +285,6 @@ class ConfigOvercloud(object):
                 innodb_buffer_pool_instances +
                 '|" ' +
                 file_path)
-
             for cmd in cmds:
                 status = os.system(cmd)
                 if status != 0:
