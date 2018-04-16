@@ -37,6 +37,7 @@ FLOATING_IP_NETWORK_START_IP=$(get_value floating_ip_network_start_ip)
 FLOATING_IP_NETWORK_END=$(get_value floating_ip_network_end_ip)
 FLOATING_IP_NETWORK_GATEWAY=$(get_value floating_ip_network_gateway)
 FLOATING_IP_NETWORK_VLAN=$(get_value floating_ip_network_vlan)
+OVS_DPDK_ENABLED=$(get_value ovs_dpdk_enabled)
 SANITY_TENANT_NETWORK=$(get_value sanity_tenant_network)
 SANITY_USER_PASSWORD=$(get_value sanity_user_password)
 SANITY_USER_EMAIL=$(get_value sanity_user_email)
@@ -345,7 +346,10 @@ setup_nova (){
   else
     info "#----- Flavor '$FLAVOR_NAME' exists. Skipping"
   fi
-
+  if [ "$OVS_DPDK_ENABLED" != "False" ]; then
+    info "### OVS DPDK: Adding metadata properties to flavor"
+    execute_command "openstack flavor set --property hw:cpu_policy=dedicated --property hw:cpu_thread_policy=require --property hw:mem_page_size=large --property hw:numa_nodes=1 --property hw:numa_mempolicy=preferred  $FLAVOR_NAME"
+  fi
   set_tenant_scope
   if [ ! -f ~/$SANITY_KEY_NAME ]; then
     info "creating keypair $SANITY_KEY_NAME"
