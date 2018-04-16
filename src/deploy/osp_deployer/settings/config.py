@@ -450,10 +450,9 @@ class Settings():
             raise AssertionError('Only supported values for '
                                  'ovs_dpdk_enable are true or false. ')
         if self.enable_ovs_dpdk:
-            mode = str(self.ovs_dpdk_mode)
-            compute_file_name = 'compute-ovs-dpdk-mode' + mode + '.yaml'
+            compute_file_name = 'compute-ovs-dpdk-mode' + self.ovs_dpdk_mode + '.yaml'
             logger.info("OVS_DPDK is enabled with mode " +
-                        str(self.ovs_dpdk_mode) + ".")
+                        self.ovs_dpdk_mode + ".")
         else:
             logger.info("OVS_DPDK is disabled.")
 
