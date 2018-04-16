@@ -288,17 +288,17 @@ def main():
         parser.add_argument("--mariadb_max_connections",
                             dest="mariadb_max_connections",
                             required=False,
-                            default="15360"
+                            default="15360",
                             help="Maximum number of connections for MariaDB")
         parser.add_argument("--innodb_buffer_pool_size",
                             dest="innodb_buffer_pool_size",
                             required=False,
-                            default="dynamic"
+                            default="dynamic",
                             help="InnoDB buffer pool size")
         parser.add_argument("--innodb_buffer_pool_instances",
                             dest="innodb_buffer_pool_instances",
                             required=False,
-                            default="16"
+                            default="16",
                             help="InnoDB buffer pool instances.")
         parser.add_argument('--enable_dellsc',
                             action='store_true',
