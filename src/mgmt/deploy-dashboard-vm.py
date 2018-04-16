@@ -26,10 +26,10 @@ def parse_arguments():
     """
 
     parser = argparse.ArgumentParser(
-        description="Deploys the Storage Console VM.",
+        description="Deploys the Dashboard VM.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("cfg_filename",
-                        help="Storage Console configuration file",
+                        help="Dashboard configuration file",
                         metavar="CFG-FILE")
     parser.add_argument("rhel_iso",
                         help="RHEL ISO file",
@@ -39,7 +39,7 @@ def parse_arguments():
 
 
 def create_kickstart(ks_filename, cfg_filename):
-    """ Creates the kickstart file for the Storage Console VM
+    """ Creates the kickstart file for the Dashboard VM
 
     The kickstart file consists of 3 parts, two of which are fixed text. The
     middle section (part 2) is dynamically generated using the contents of the
@@ -241,7 +241,7 @@ EOIP
   done
 
   # Add heat user for remote/manual installation steps of integrating
-  # Storage Console to RDO based OSP
+  # Dashboard to RDO based OSP
   /usr/sbin/groupadd -g 1000 heat-admin
   /usr/sbin/useradd -d /home/heat-admin -s /bin/bash -u 1000 -g 1000 heat-admin
 
