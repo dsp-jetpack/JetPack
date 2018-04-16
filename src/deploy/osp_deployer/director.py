@@ -883,24 +883,6 @@ class Director(InfraHost):
         cmds.append('sed -i "s|DpdkInterfaces:.*|DpdkInterfaces: ' +
                     interfaces + '|" ' + env_file)
 
-        nic_config_dirname = os.path.dirname(self.settings.nic_env_file)
-
-        # Get the dpdk mode configured in the .ini
-        mode = str(self.settings.ovs_dpdk_mode)
-
-        compute_file_name = "compute-ovs-dpdk-mode" + mode + ".yaml"
-        compute_yaml = self.nic_configs_dir + "/" + nic_config_dirname + "/" + compute_file_name
-
-        # Buil up the sed command to perform variable substitution
-        # and catch the appropriate nic_environment file name
-        cmds.append('sed -i '
-                    '"s|Compute::Net::SoftwareConfig:.*|' +
-                    'Compute::Net::SoftwareConfig: ' +
-                    compute_yaml +
-                    '|" ' +
-                    self.nic_configs_dir +
-                    '/' +
-                    self.settings.nic_env_file)
 
         # Execute the command related to dpdk configuration
         for cmd in cmds:
