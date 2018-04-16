@@ -990,7 +990,7 @@ class Director(InfraHost):
                          node_id)
 
     def summarize_deployment(self):
-        logger.info("**** Retreiving nodes information ")
+        logger.info("**** Retrieving nodes information ")
         deployment_log = '/auto_results/deployment_summary.log'
         ip_info = []
         fi = open(deployment_log, "wb")
@@ -1164,7 +1164,7 @@ class Director(InfraHost):
                 pass
             ip_info.append("====================================")
         except:
-            logger.debug(" Failed to retreive the nodes ip information ")
+            logger.debug(" Failed to retrieve the nodes ip information ")
         finally:
             for each in ip_info:
                 logger.debug(each)
