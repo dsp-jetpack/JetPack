@@ -50,7 +50,12 @@
             "sah_bond_opts": "",
             "nic_env_file": {
                "valid_values": [
-                  "5_port/nic_environment.yaml"
+                  "4_port/nic_environment.yaml",
+                  "5_port/nic_environment.yaml",
+                  "dpdk_mode1_4_port/nic_environment.yaml",
+                  "dpdk_mode2_4_port/nic_environment.yaml",
+                  "dpdk_mode1_5_port/nic_environment.yaml",
+                  "dpdk_mode2_5_port/nic_environment.yaml"
                ]
             },
             "ControllerBondInterfaceOptions": "",

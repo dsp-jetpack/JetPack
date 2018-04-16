@@ -51,7 +51,7 @@ def get_settings():
                         help='Only reinstall the overcloud',
                         action='store_true', required=False)
     parser.add_argument('-skip_dashboard_vm', '--skip_dashboard_vm',
-                        help='Do not reinstall the Storage Console VM',
+                        help='Do not reinstall the Dashboard VM',
                         action='store_true',
                         required=False)
     parser.add_argument('-validate_settings_only', '--validate_settings_only',
@@ -94,7 +94,7 @@ def deploy():
                             help='Only reinstall the overcloud',
                             action='store_true', required=False)
         parser.add_argument('-skip_dashboard_vm', '--skip_dashboard_vm',
-                            help='Do not reinstall the Storage Console VM',
+                            help='Do not reinstall the Dashboard VM',
                             action='store_true',
                             required=False)
         parser.add_argument('-validate_only', '--validate_only',
@@ -114,7 +114,7 @@ def deploy():
             if args.overcloud_only is True:
                 logger.info("Only redeploying the overcloud")
             if args.skip_dashboard_vm is True:
-                logger.info("Skipping Storage Console VM install")
+                logger.info("Skipping Dashboard VM install")
 
         logger.debug("loading settings files " + args.settings)
         settings = Settings(args.settings)
@@ -183,7 +183,7 @@ def deploy():
             director_vm.delete_overcloud()
 
         if args.skip_dashboard_vm is False:
-            logger.debug("Delete the Storage Console VM")
+            logger.debug("Delete the Dashboard VM")
             dashboard_ip = settings.dashboard_node.public_api_ip
             logger.debug(
                 Ssh.execute_command(dashboard_ip,
@@ -197,13 +197,13 @@ def deploy():
 
             sah_node.delete_dashboard_vm()
 
-            logger.info("=== creating Storage Console VM")
+            logger.info("=== creating Dashboard VM")
             sah_node.create_dashboard_vm()
 
             tester.dashboard_vm_health_check()
 
         else:
-            logger.info("Skipped the Storage Console VM install")
+            logger.info("Skipped the Dashboard VM install")
 
         logger.info("=== Preparing the overcloud ===")
 
@@ -231,6 +231,16 @@ def deploy():
                                     settings.director_install_account_pwd,
                                     cmd)[0]
         logger.debug("=== Overcloud stack state : " + overcloud_status)
+        if settings.hpg_enable:
+            logger.info(
+                " HugePages has been successfully configured with size: " +
+                settings.hpg_size)
+        if settings.numa_enable:
+            logger.info(
+                " NUMA has been successfully configured"
+                " with hostos_cpus count: " +
+                settings.hostos_cpu_count)
+
         logger.info("====================================")
         logger.info(" OverCloud deployment status: " + overcloud_status)
         logger.info(" log : /auto_results/ ")
