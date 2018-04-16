@@ -4,14 +4,22 @@
    "associated_settings": [
       {
          "Dell NFV Settings": {
-            "hpg_enable": "",
+            "hpg_enable": {
+               "valid_values": [
+                  "false"
+               ]
+            },
             "hpg_size": {
                "valid_values": [
                   "2MB",
                   "1GB"
                ]
             },
-            "numa_enable": "",
+            "numa_enable": {
+               "valid_values": [
+                  "false"
+               ]
+            },
             "numa_hostos_cpu_count": {
 	        "valid_values": [
 			"2",
@@ -19,13 +27,17 @@
 			"6",
 			"8"
 		]
-	    }
-
+	    },
+            "ovs_dpdk_enable": {
+               "valid_values": [
+                  "false"
+               ]
+            }
          }
       },
       {
          "Vips Settings": {
-            "use_static_vips" :{
+            "use_static_vips": {
                "valid_values": [
                   "true",
                   "false"
@@ -48,8 +60,8 @@
          }
       },
       {
-         "Deployment Settings":{
-            "overcloud_static_ips" :{
+         "Deployment Settings": {
+            "overcloud_static_ips": {
                "valid_values": [
                   "true",
                   "false"
@@ -60,17 +72,17 @@
          }
       },
       {
-         "Advanced Settings":{
-            "rhsm_repos":"",
-            "use_internal_repo":"",
+         "Advanced Settings": {
+            "rhsm_repos": "",
+            "use_internal_repo": "",
             "deploy_overcloud_debug": {
                "valid_values": [
                   "true",
                   "false"
                ]
             },
-         "use_ipmi_driver":"",
-         "use_in_band_introspection":""
+            "use_ipmi_driver": "",
+            "use_in_band_introspection": ""
 
          }
 

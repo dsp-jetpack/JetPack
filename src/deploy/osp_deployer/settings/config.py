@@ -16,6 +16,7 @@
 
 import logging
 import os
+import re
 import inspect
 import json
 import subprocess
@@ -218,6 +219,7 @@ class Settings():
             self.overcloud_static_ips = False
 
         self.profile = deploy_settings['profile'].lower()
+        logger.info("Profile has been set to {}".format(self.profile))
 
         if deploy_settings['enable_rbd_backend'].lower() == 'true':
             self.enable_rbd_backend = True
@@ -405,6 +407,8 @@ class Settings():
             '/pilot/templates/dell-cinder-backends.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
+        self.neutron_ovs_dpdk_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/neutron-ovs-dpdk.yaml'
         self.static_ips_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/static-ip-environment.yaml'
         self.static_vip_yaml = self.foreman_configuration_scripts + \
@@ -425,6 +429,29 @@ class Settings():
                 '/pilot/templates/nic-configs/' + self.nic_env_file
         if 'sah_bond_opts' in nics_settings:
             self.sah_bond_opts = nics_settings['sah_bond_opts']
+
+        # This particular section has been moved right after the nics_settings
+        # section in order to catch the mode used by the nic-environment file
+        dellnfv_settings = self.get_settings_section(
+            "Dell NFV Settings")
+        self.ovs_dpdk_enable = dellnfv_settings[
+            'ovs_dpdk_enable']
+        self.enable_ovs_dpdk = False
+        if self.ovs_dpdk_enable.lower() == 'false':
+            pass
+        elif self.ovs_dpdk_enable.lower() == 'true':
+            self.enable_ovs_dpdk = True
+            for each in re.split(r'[_/]', self.nic_env_file):
+                if each.find('mode') != -1:
+                    self.ovs_dpdk_mode = each[-1:]
+        else:
+            raise AssertionError('Only supported values for '
+                                 'ovs_dpdk_enable are true or false. ')
+        if self.enable_ovs_dpdk:
+            logger.info("OVS_DPDK is enabled with mode " +
+                        self.ovs_dpdk_mode + ".")
+        else:
+            logger.info("OVS_DPDK is disabled.")
 
         self.controller_nodes = []
         self.compute_nodes = []
@@ -528,3 +555,4 @@ class Settings():
             logger.debug("unconventional setup...can t" +
                          " pick source version info")
             self.source_version = "????"
+>>>>>>> master

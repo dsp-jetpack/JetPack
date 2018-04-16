@@ -19,8 +19,8 @@
 			"6",
 			"8"
 		]
-	    }
-
+	    },
+            "ovs_dpdk_enable": ""
          }
       },
       {
@@ -29,7 +29,11 @@
             "nic_env_file": {
                "valid_values": [
                   "4_port/nic_environment.yaml",
-                  "5_port/nic_environment.yaml"
+                  "5_port/nic_environment.yaml",
+                  "dpdk_mode1_4_port/nic_environment.yaml",
+                  "dpdk_mode2_4_port/nic_environment.yaml",
+                  "dpdk_mode1_5_port/nic_environment.yaml",
+                  "dpdk_mode2_5_port/nic_environment.yaml"
                ]
             },
             "ControllerBondInterfaceOptions": "",
