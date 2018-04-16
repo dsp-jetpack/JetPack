@@ -11,7 +11,26 @@
                   "1GB"
                ]
             },
-            "numa_enable": ""
+            "numa_enable": "",
+            "numa_hostos_cpu_count": {
+	        "valid_values": [
+			"2",
+			"4",
+			"6",
+			"8"
+		]
+	    },
+            "ovs_dpdk_enable": ""
+         }
+      },
+      {
+         "Vips Settings": {
+            "use_static_vips" :{
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            }
          }
       },
       {
@@ -19,7 +38,12 @@
             "sah_bond_opts": "",
             "nic_env_file": {
                "valid_values": [
-                  "5_port/nic_environment.yaml"
+                  "4_port/nic_environment.yaml",
+                  "5_port/nic_environment.yaml",
+                  "dpdk_mode1_4_port/nic_environment.yaml",
+                  "dpdk_mode2_4_port/nic_environment.yaml",
+                  "dpdk_mode1_5_port/nic_environment.yaml",
+                  "dpdk_mode2_5_port/nic_environment.yaml"
                ]
             },
             "ControllerBondInterfaceOptions": "",
@@ -37,6 +61,21 @@
             },
          "enable_fencing":"",
          "enable_instance_ha":""
+         }
+      },
+      {
+         "Advanced Settings":{
+            "rhsm_repos":"",
+            "use_internal_repo":"",
+            "deploy_overcloud_debug": {
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            },
+         "use_ipmi_driver":"",
+         "use_in_band_introspection":"",
+         "enable_version_locking":""
          }
       },
       {
