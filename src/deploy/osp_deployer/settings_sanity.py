@@ -419,8 +419,8 @@ class DeployerSanity():
                              shouldhaveattributes,
                              shouldbbevalidips)
 
-        # Verify Storage Console VM node network definition
-        logger.debug("verifying Storage Console VM network settings")
+        # Verify Dashboard VM node network definition
+        logger.debug("verifying Dashboard VM network settings")
         shouldhaveattributes = ['hostname',
                                 'root_password',
                                 'storage_ip',

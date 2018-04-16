@@ -1266,7 +1266,7 @@ class Director(InfraHost):
             self.run_tty(cmd)
 
     def configure_dashboard(self):
-        logger.info("Configure Storage Console")
+        logger.info("Configure Dashboard")
         ip = self.settings.dashboard_node.public_api_ip
 
         self.run_tty(self.source_stackrc + 'cd ' +
