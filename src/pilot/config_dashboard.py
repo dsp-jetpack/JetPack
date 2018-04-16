@@ -556,8 +556,17 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes):
                        'gen_conf_file'".format(ceph_ansible_dir, toc_yml))
 
     LOG.info("Installing the Ceph Storage Dashboard.")
-    dashboard_node.run("cd {}; sudo ansible-playbook -s -v playbook.yml"
+    dashboard_node.run("cd {}; sudo ansible-playbook -s -v --skip-tags \
+                       cephmetrics-collectors playbook.yml"
                        .format(cephmetrics_ansible_dir))
+
+    for node in ceph_nodes:
+        if "controller" in node.fqdn:
+            node.run("sudo chmod 644 /etc/ceph/ceph.client.openstack.keyring")
+
+    for node in ceph_nodes:
+        if "controller-0" in node.fqdn:
+            node.run("sudo pcs resource restart openstack-cinder-volume")
 
     LOG.info("Ceph Storage Dashboard configuration is complete")
     LOG.info("You may access the Ceph Storage Dashboard at:")
