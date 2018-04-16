@@ -9,11 +9,25 @@
                   "false"
                ]
             },
+            "hpg_size": {
+               "valid_values": [
+                  "2MB",
+                  "1GB"
+               ]
+            },
             "numa_enable": {
                "valid_values": [
                   "false"
                ]
             },
+            "numa_hostos_cpu_count": {
+	        "valid_values": [
+			"2",
+			"4",
+			"6",
+			"8"
+		]
+	    },
             "ovs_dpdk_enable": {
                "valid_values": [
                   "false"

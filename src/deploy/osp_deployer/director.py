@@ -917,6 +917,7 @@ class Director(InfraHost):
 
         if self.settings.numa_enable is True:
             cmd += " --enable_numa "
+            cmd += " --hostos_cpu_count " + self.settings.hostos_cpu_count
 
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \

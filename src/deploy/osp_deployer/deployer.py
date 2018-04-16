@@ -231,6 +231,16 @@ def deploy():
                                     settings.director_install_account_pwd,
                                     cmd)[0]
         logger.debug("=== Overcloud stack state : " + overcloud_status)
+        if settings.hpg_enable:
+            logger.info(
+                " HugePages has been successfully configured with size: " +
+                settings.hpg_size)
+        if settings.numa_enable:
+            logger.info(
+                " NUMA has been successfully configured"
+                " with hostos_cpus count: " +
+                settings.hostos_cpu_count)
+
         logger.info("====================================")
         logger.info(" OverCloud deployment status: " + overcloud_status)
         logger.info(" log : /auto_results/ ")
