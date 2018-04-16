@@ -512,6 +512,9 @@ class Director(InfraHost):
             'sed -i "s|floating_ip_network_vlan=.*|floating_ip_network_vlan=' +
             self.settings.floating_ip_network_vlan +
             '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|ovs_dpdk_enabled=.*|ovs_dpdk_enabled=' +
+            str(self.settings.enable_ovs_dpdk) +
+            '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_tenant_network=.*|sanity_tenant_network=' +
             self.settings.sanity_tenant_network +
             '|" pilot/deployment-validation/sanity.ini',
@@ -712,14 +715,20 @@ class Director(InfraHost):
 
         static_ips_yaml = self.templates_dir + "/static-ip-environment.yaml"
         static_vip_yaml = self.templates_dir + "/static-vip-environment.yaml"
+        neutron_ovs_dpdk_yaml = self.templates_dir + "/neutron-ovs-dpdk.yaml"
 
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy
         # with a different config
         self.upload_file(self.settings.static_ips_yaml, static_ips_yaml)
         self.upload_file(self.settings.static_vip_yaml, static_vip_yaml)
+        self.upload_file(self.settings.neutron_ovs_dpdk_yaml,
+                         neutron_ovs_dpdk_yaml)
 
         self.setup_nic_configuration()
+
+        if self.settings.enable_ovs_dpdk is True:
+            self.setup_dpdk_nic_configuration()
 
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
@@ -846,6 +855,39 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run(cmd)
 
+    def setup_dpdk_nic_configuration(self):
+
+        logger.debug("setting ovs dpdk environment")
+        # Get the user supplied NIC settings from the .ini
+        ini_nics_settings = self.settings.get_curated_nics_settings()
+
+        cmds = []
+        dpdk_conf = {}
+        env_file = os.path.join(self.templates_dir, "neutron-ovs-dpdk.yaml")
+
+        # Get and sort the Dpdk interfaces that the user configured
+        for setting_name, setting_value in ini_nics_settings.iteritems():
+            if setting_name.find('Dpdk') != -1:
+                dpdk_conf.update({setting_name: setting_value})
+        dpdk_interfaces = [x[1] for x in sorted(dpdk_conf.items())]
+
+        # The following is joining only the first two dpdk interfaces
+        # for mode 2 or all the interfaces (4) for mode 1
+        if self.settings.ovs_dpdk_mode == 2:
+            interfaces = "'" + ",".join(dpdk_interfaces[0:2]) + "'"
+        else:
+            interfaces = "'" + ",".join(dpdk_interfaces) + "'"
+
+        # Build up the sed command to perform variable substitution
+        # in the neutron-ovs-dpdk.yaml (dpdk environment)
+        cmds.append('sed -i "s|DpdkInterfaces:.*|DpdkInterfaces: ' +
+                    interfaces + '|" ' + env_file)
+
+
+        # Execute the command related to dpdk configuration
+        for cmd in cmds:
+            self.run(cmd)
+
     def deploy_overcloud(self):
 
         logger.debug("Configuring network settings for overcloud")
@@ -875,6 +917,7 @@ class Director(InfraHost):
 
         if self.settings.numa_enable is True:
             cmd += " --enable_numa "
+            cmd += " --hostos_cpu_count " + self.settings.hostos_cpu_count
 
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \
@@ -887,7 +930,9 @@ class Director(InfraHost):
             cmd += " --static_ips"
         if self.settings.use_static_vips is True:
             cmd += " --static_vips"
-        # Node placement is required in an automated install.  The index order
+        if self.settings.enable_ovs_dpdk is True:
+            cmd += " --ovs_dpdk"
+        # Node placement is required in an automated install. The index order
         # of the nodes is the order in which they are defined in the
         # .properties file
         cmd += " --node_placement"
