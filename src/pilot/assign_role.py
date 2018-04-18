@@ -642,11 +642,18 @@ def physical_disk_id_to_key(disk_id):
     components = disk_id.split(':')
 
     disk_subcomponents = components[0].split('.')
-    enclosure_subcomponents = components[1].split('.')
-    controller_subcomponents = components[2].split('.')
+    if len(components) > 3:
+        enclosure_subcomponents = components[1].split('.')
+        controller_subcomponents = components[2].split('.')
+    else:
+        enclosure_subcomponents = 'Enclosure.None.0-0'.split('.')
+        controller_subcomponents = components[1].split('.')
 
     disk_connection_type = disk_subcomponents[1]
-    disk_number = int(disk_subcomponents[2])
+    try:
+        disk_number = int(disk_subcomponents[2])
+    except:
+        disk_number = int(disk_subcomponents[2].split('-')[0])
 
     enclosure_type = enclosure_subcomponents[1]
     enclosure_numbers = enclosure_subcomponents[2].split('-')
