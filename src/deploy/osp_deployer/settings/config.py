@@ -562,6 +562,4 @@ class Settings():
         except:
             logger.debug("unconventional setup...can t" +
                          " pick source version info")
-
             self.source_version = "????"
-
