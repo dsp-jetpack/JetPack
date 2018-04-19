@@ -20,7 +20,12 @@
 			"8"
 		]
 	    },
-            "ovs_dpdk_enable": ""
+            "ovs_dpdk_enable": {
+                "valid_values": [
+                   "true",
+                   "false"
+                ]
+            }
          }
       },
       {
