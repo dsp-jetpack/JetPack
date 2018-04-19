@@ -4,22 +4,35 @@
    "associated_settings": [
       {
          "Dell NFV Settings": {
-            "hpg_enable": "",
+            "hpg_enable": {
+               "valid_values": [
+                  "false"
+               ]
+            },
             "hpg_size": {
                "valid_values": [
                   "2MB",
                   "1GB"
                ]
             },
-            "numa_enable": "",
+            "numa_enable": {
+               "valid_values": [
+                  "false"
+               ]
+            },
             "numa_hostos_cpu_count": {
-                 "valid_values": [
-                   "2",
-                   "4",
-                   "6",
-                   "8"
-                ]
-             }
+               "valid_values": [
+                  "2",
+                  "4",
+                  "6",
+                  "8"
+		]
+	    },
+            "ovs_dpdk_enable": {
+               "valid_values": [
+                  "false"
+               ]
+            }
          },
          "Performance and Optimization": {
             "innodb_buffer_pool_instances": {
