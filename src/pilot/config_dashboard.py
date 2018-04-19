@@ -554,6 +554,7 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes):
                        .format(ceph_ansible_dir, toc_yml))
     dashboard_node.run("cd {}; ansible-playbook {} -u root --skip-tags \
                        'gen_conf_file'".format(ceph_ansible_dir, toc_yml))
+    dashboard_node.run("setsebool -P httpd_can_network_connect 1")
 
     LOG.info("Installing the Ceph Storage Dashboard.")
     dashboard_node.run("cd {}; sudo ansible-playbook -s -v --skip-tags \
