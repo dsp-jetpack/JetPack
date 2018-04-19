@@ -19,9 +19,15 @@
                    "6",
                    "8"
                 ]
-             }
-         },
-         "Performance and Optimization": {
+             },
+            "ovs_dpdk_enable": {
+                "valid_values": [
+                   "true",
+                   "false"
+                ]
+            }
+	 },
+	    "Performance and Optimization": {
             "innodb_buffer_pool_instances": {
                "validate": [
                   "should_be_valid_int"
@@ -42,7 +48,7 @@
                "in_range": [
                   "1-100000"
                ]
-            }
+	    }
          }
       },
       {
