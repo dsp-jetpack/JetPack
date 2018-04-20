@@ -372,6 +372,7 @@ def main():
         config.edit_dell_environment_file(
             args.enable_hugepages,
             args.enable_numa,
+            args.ovs_dpdk,
             args.hugepages_size,
             args.hostos_cpu_count,
             args.num_dell_computes)

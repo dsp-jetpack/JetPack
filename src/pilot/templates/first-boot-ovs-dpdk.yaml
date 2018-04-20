@@ -30,19 +30,19 @@ parameters:
     description: The vhost-user socket directory for OVS.
     default: ""
     type: string
-  HostCpusNumber:
-    description: >
-      Number of logical cores to be used by ovs-dpdk processess 
-      (dpdk-lcore-mask). Comma separated list of number of cores to be used for 
-      host os on each NUMA Node. 
-    type: string
-    default: "4,4"
-    constraints:
-      - allowed_pattern: "[0-9,]+"
   DpdkInterfaces:
     description: Interfaces that are used by OVS-DPDK
     type: string
-  VmWeight:  
+
+  VcpuPinSet:
+    description: list of Vcpu Pin Set
+    type: string
+
+  HostOsCpus:
+    description: list of Host OS CPUs
+    type: string
+
+  VmWeight:
     description: >
       Used along with PmdWeight, to divide the cores into two groups. For every 
       'N' number of cores assigned for VM, 'M' cores are assigned to PMD list. 
@@ -145,14 +145,9 @@ resources:
         str_replace:
           template: |
             #!/bin/python
-
             import subprocess
             import socket
-            import yaml
-            import math
-            import sys
             import ConfigParser
-            import os.path
 
             if 'compute' in socket.gethostname():
                 pass
@@ -192,6 +187,8 @@ resources:
                 HOSTCPUS_NUMA = '$HOSTCPUS'.split(',')
                 VM_WEIGHT = $VMWEIGHT # sibling pairs 
                 PMD_WEIGHT = $PMDWEIGHT # sibling pairs
+                HOST_CPUS_LIST = "$HOSTCPUSLIST"
+                VCPU_PIN_SET = "$VCPUPINSET"
                 Config = ConfigParser.ConfigParser()
 
                 dpdk_interfaces = DPDK_INTERFACES.replace(" ","")
@@ -205,44 +202,22 @@ resources:
                     out = subprocess.Popen(aff_cmd,shell=True,
                           stdout=subprocess.PIPE).stdout.read().rstrip()
                     dpdk_interfaces_dict[i] = int(out)
-                    
-                out = subprocess.Popen(
-                        "/usr/bin/lscpu | /usr/bin/grep NUMA",
-                        shell=True, stdout=subprocess.PIPE).stdout.readlines()
 
-                numa_nodes_cpu = []
-                numa_nodes = int(str(out[0]).split(':')[1]) 
-                for i in range(numa_nodes):  
-                    cpu_string = str(out[i+1].split(':')[1]).replace(" ","")
-                    cpu_list = hyphen_range(cpu_string)
-                    numa_nodes_cpu.append(cpu_list)       
-                        
-                sibling_sets_list = []
-
-                for i in range(len(numa_nodes_cpu)):
-                    sibling_sets = []
-                    while len(numa_nodes_cpu[i]) != 0:
-                        cpu_thread_cmd = '/sys/devices/system/cpu/cpu' \
-                                         + numa_nodes_cpu[i][0] \
-                                         + '/topology/thread_siblings_list'
-                        inf = open(cpu_thread_cmd,'r').read().rstrip()
-                        sibling_set = (inf.split(',')[0],inf.split(',')[1])
-                        numa_nodes_cpu[i].remove(sibling_set[0])
-                        numa_nodes_cpu[i].remove(sibling_set[1])
-                        sibling_sets.append(sibling_set)
-                    sibling_sets_list.append(sibling_sets)
-                    
-                ovs_lcore_cpus = []
-                vm_cpus = []
+                ovs_lcore_cpus = map(lambda a, b: (a, b),
+                                     *map(hyphen_range, HOST_CPUS_LIST.strip().split(',')))
+                vm_cpus = map(lambda a, b: (a, b),
+                              *map(hyphen_range, VCPU_PIN_SET.strip().split(',')))
                 pmd_cpus = []
+                numa_node_zero_siblings = []
+                numa_node_one_siblings = []
 
-                #HOST RULES: 
-                for n in range(min(numa_nodes,len(HOSTCPUS_NUMA))):
-                    host_pairs = int(math.ceil(int(HOSTCPUS_NUMA[0])/2.0))
-                    for i in range(host_pairs):
-                        ovs_lcore_cpus.append(sibling_sets_list[n][0])
-                        del sibling_sets_list[n][0]
+                for sibling in vm_cpus:
+                    if int(sibling[0]) % 2 == 0:
+                        numa_node_zero_siblings.append(sibling)
+                    else:
+                        numa_node_one_siblings.append(sibling)
 
+                sibling_sets_list = [numa_node_zero_siblings, numa_node_one_siblings]
                 #PMD RULES:
                 extra_cpu_allocated = [0] * len(sibling_sets_list)
                 for pf in dpdk_interfaces:
@@ -258,37 +233,25 @@ resources:
                 weight_of_one_vcpu = ( 0.5 * VM_WEIGHT ) / PMD_WEIGHT
 
                 for i in range(len(sibling_sets_list)):
-                    node = sibling_sets_list[i]
-                    cpus = len(node)
+                    cpus = len(sibling_sets_list[i])
                     cpus -= (extra_cpu_allocated[i] * weight_of_one_vcpu)
                     pmd = cpus * pmd_percentage
                     pmd_int = int(pmd)
-                    if pmd - pmd_int  > 0.25:
-                        pmd_int +=  1
-                    
-                    while (pmd_int != 0 ):
-                        pmd_cpus.append(sibling_sets_list[i][0])
-                        del sibling_sets_list[i][0]
-                        pmd_int -= 1
-                        
-                for l in sibling_sets_list:
-                    vm_cpus += l
-                 
-                ovs_lcore_list = []
-                for l in ovs_lcore_cpus:
-                    ovs_lcore_list += list(l)
-                ovs_lcore_list = ",".join(ovs_lcore_list)    
+                    if pmd - pmd_int > 0.25:
+                        pmd_int += 1
+                    pmd_cpus += sibling_sets_list[i][:pmd_int]
+                    del sibling_sets_list[i][:pmd_int]
 
-                pmd_list = []
-                for l in pmd_cpus:
-                    pmd_list += list(l)
+
+                ovs_lcore_list = reduce(lambda x,y:x+y, map(list, ovs_lcore_cpus))
+                ovs_lcore_list = ",".join(ovs_lcore_list)
+
+                pmd_list = reduce(lambda x,y:x+y, map(list, pmd_cpus))
                 pmd_list = ",".join(pmd_list)
 
-                vm_list = []
-                for l in vm_cpus:
-                    vm_list += list(l)
-                vm_list = ",".join(vm_list)    
-                    
+                vm_list = reduce(lambda x,y:x+y, map(list, vm_cpus))
+                vm_list = ",".join(vm_list)
+
                 mem_cmd = "dmidecode -t memory | grep Size | grep -v Module"
                 out = subprocess.Popen(mem_cmd,shell=True,
                           stdout=subprocess.PIPE).stdout.readlines()
@@ -299,8 +262,8 @@ resources:
                 # 12 Hugespages of 1GB each are reserved for Host Hypervisor usage
                 memory = memory - 12 
 
-                grub = "default_hugepagesz=1GB hugepagesz=1G hugepages=" \
-                        + str(memory) + " iommu=pt intel_iommu=on"
+                grub = ("default_hugepagesz=1GB hugepagesz=1G hugepages=" +
+                        str(memory) + " iommu=pt intel_iommu=on")
                 print 'MEM: ' + str(memory)
                 print 'HOST: ' + ovs_lcore_list
                 print 'PMD: ' + pmd_list
@@ -315,11 +278,12 @@ resources:
                     Config.write(f)
 
           params:
-            $HOSTCPUS: {get_param: HostCpusNumber}
             $DPDKINT: {get_param: DpdkInterfaces}
             $VMWEIGHT: {get_param: VmWeight}
             $PMDWEIGHT: {get_param: PmdWeight}
-            
+            $VCPUPINSET: {get_param: VcpuPinSet}
+            $HOSTCPUSLIST: {get_param: HostOsCpus}
+
   set_ovs_config:
     type: OS::Heat::SoftwareConfig
     properties:

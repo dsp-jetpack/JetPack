@@ -59,12 +59,11 @@ class Settings():
                         if yourConf.has_option(stanza, setting):
                             pass
                         else:
-                            error_msg = error_msg + "Missing \"" +\
-                                setting + "\" setting in your ini file [" +\
-                                stanza + "] section \n"
+                            error_msg = (error_msg + "Missing \"" + setting +
+                                         "\" setting in your ini file [" + stanza + "] section \n")
             else:
-                error_msg = error_msg + "Missing [" + stanza + "] " +\
-                    "section in your ini file \n"
+                error_msg = (error_msg + "Missing [" + stanza + "] " +
+                             "section in your ini file \n")
 
         for stanza in yourConf.sections():
             if conf.has_section(stanza):
@@ -75,14 +74,11 @@ class Settings():
                         if conf.has_option(stanza, setting):
                             pass
                         else:
-                            warning_msg = warning_msg + "\"" + setting + \
-                                "\" setting in your ini file [" + \
-                                stanza + "] section is deprecated and " +\
-                                "should be removed\n"
+                            warning_msg = (warning_msg + "\"" + setting + "\" setting in your ini file [" +
+                                           stanza + "] section is deprecated and should be removed\n")
             else:
-                warning_msg = warning_msg + "Section [" + stanza + \
-                    "] in your ini file is deprecated" +\
-                    " and should be removed\n"
+                warning_msg = (warning_msg + "Section [" + stanza + "] in your ini file is deprecated" +
+                               " and should be removed\n")
 
         if len(error_msg) > 0:
             raise AssertionError("\n" + error_msg)
@@ -388,36 +384,36 @@ class Settings():
         self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
 
         self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
-        self.director_deploy_sh = self.foreman_configuration_scripts +\
-            '/mgmt/deploy-director-vm.sh'
-        self.dashboard_deploy_py = self.foreman_configuration_scripts +\
-            '/mgmt/deploy-dashboard-vm.py'
+        self.director_deploy_sh = (self.foreman_configuration_scripts +
+                                   '/mgmt/deploy-director-vm.sh')
+        self.dashboard_deploy_py = (self.foreman_configuration_scripts +
+                                 '/mgmt/deploy-dashboard-vm.py')
 
-        self.undercloud_conf = self.foreman_configuration_scripts +\
-            '/pilot/undercloud.conf'
-        self.install_director_sh = self.foreman_configuration_scripts +\
-            '/pilot/install-director.sh'
-        self.deploy_overcloud_sh = self.foreman_configuration_scripts + \
-            '/pilot/deploy-overcloud.py'
-        self.assign_role_py = self.foreman_configuration_scripts +\
-            '/pilot/assign_role.py'
-        self.network_env_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/network-environment.yaml'
-        self.dell_storage_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/dell-cinder-backends.yaml'
-        self.dell_env_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/dell-environment.yaml'
-        self.neutron_ovs_dpdk_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/neutron-ovs-dpdk.yaml'
-        self.static_ips_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/static-ip-environment.yaml'
-        self.static_vip_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/static-vip-environment.yaml'
-        self.sanity_ini = self.foreman_configuration_scripts + \
-            '/pilot/deployment-validation/sanity.ini'
-        self.ipxe_rpm = self.foreman_configuration_scripts + \
-            '/pilot/ipxe/ipxe-bootimgs-20151005-1.git6847232.el7.' \
-            'test.noarch.rpm'
+        self.undercloud_conf = (self.foreman_configuration_scripts +
+                                '/pilot/undercloud.conf')
+        self.install_director_sh = (self.foreman_configuration_scripts +
+                                    '/pilot/install-director.sh')
+        self.deploy_overcloud_sh = (self.foreman_configuration_scripts +
+                                    '/pilot/deploy-overcloud.py')
+        self.assign_role_py = (self.foreman_configuration_scripts +
+                               '/pilot/assign_role.py')
+        self.network_env_yaml = (self.foreman_configuration_scripts +
+                                 '/pilot/templates/network-environment.yaml')
+        self.dell_storage_yaml = (self.foreman_configuration_scripts +
+                                  '/pilot/templates/dell-cinder-backends.yaml')
+        self.dell_env_yaml = (self.foreman_configuration_scripts +
+                              '/pilot/templates/dell-environment.yaml')
+        self.neutron_ovs_dpdk_yaml = (self.foreman_configuration_scripts +
+                                      '/pilot/templates/neutron-ovs-dpdk.yaml')
+        self.static_ips_yaml = (self.foreman_configuration_scripts +
+                                '/pilot/templates/static-ip-environment.yaml')
+        self.static_vip_yaml = (self.foreman_configuration_scripts +
+                                '/pilot/templates/static-vip-environment.yaml')
+        self.sanity_ini = (self.foreman_configuration_scripts +
+                           '/pilot/deployment-validation/sanity.ini')
+        self.ipxe_rpm = (self.foreman_configuration_scripts +
+                         '/pilot/ipxe/ipxe-bootimgs-20151005-1.git6847232.el7.'
+                         'test.noarch.rpm')
 
         # The NIC configurations settings are validated after the Settings
         # class has been instanciated.  Guard against the case where the two
@@ -425,8 +421,8 @@ class Settings():
         nics_settings = self.get_nics_settings()
         if 'nic_env_file' in nics_settings:
             self.nic_env_file = nics_settings['nic_env_file']
-            self.nic_env_file_path = self.foreman_configuration_scripts + \
-                '/pilot/templates/nic-configs/' + self.nic_env_file
+            self.nic_env_file_path = (self.foreman_configuration_scripts +
+                                      '/pilot/templates/nic-configs/' + self.nic_env_file)
         if 'sah_bond_opts' in nics_settings:
             self.sah_bond_opts = nics_settings['sah_bond_opts']
 
@@ -545,8 +541,8 @@ class Settings():
             if os.path.isfile(repo_release_txt):
                 re_ = open(repo_release_txt, 'r').read()
             else:
-                cmd = "cd " + self.cloud_repo_dir + ";" + \
-                      "git log | grep -m 1 'commit'"
+                cmd = ("cd " + self.cloud_repo_dir + ";" +
+                       "git log | grep -m 1 'commit'")
                 re_ = subprocess.check_output(cmd,
                                               stderr=subprocess.STDOUT,
                                               shell=True).rstrip()

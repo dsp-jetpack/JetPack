@@ -39,6 +39,8 @@ parameter_defaults:
   NeutronVhostuserSocketDir: "/var/run/openvswitch"
   DpdkInterfaces: 'p2p1,p3p1'
   OvsDpdkBondInterfaceOptions: 'bond_mode=balance-tcp lacp=active'
+  VcpuPinSet: "3-27,31-55"
+  HostOsCpus: "0-3, 20-23"
   ########################
   # Additional settings
   ########################

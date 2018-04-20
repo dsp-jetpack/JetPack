@@ -13,12 +13,53 @@
 # limitations under the License.
 
 resource_registry:
-    OS::TripleO::NodeUserData: ./first-boot.yaml
+    OS::TripleO::Services::ComputeNeutronOvsAgent: ./overcloud/puppet/services/neutron-ovs-dpdk-agent.yaml
+    OS::TripleO::NodeUserData: ./first-boot-ovs-dpdk.yaml
+    OS::TripleO::NodeExtraConfigPost: post-install.yaml
     OS::TripleO::Services::HugePages: overcloud/puppet/services/dellnfv/hugepages.yaml
     OS::TripleO::Services::NUMA: overcloud/puppet/services/dellnfv/numa.yaml
 
 
 parameter_defaults:
+  ########################
+  # OVS DPDK configuration
+  ########################
+  ## NeutronDpdkCoreList and NeutronDpdkMemoryChannels are REQUIRED settings.
+  ## Attempting to deploy DPDK without appropriate values will cause deployment
+  ## to fail or lead to unstable deployments.
+  # List of cores to be used for DPDK Poll Mode Driver
+  NeutronDpdkCoreList: "'0,2'"
+  # Number of memory channels to be used for DPDK
+  NeutronDpdkMemoryChannels: "4"
+  # NeutronDpdkSocketMemory
+  NeutronDpdkSocketMemory: "2048,2048"
+  # NeutronDpdkDriverType
+  NeutronDpdkDriverType: "vfio-pci"
+  # Datapath type for ovs bridges
+  NeutronDatapathType: "netdev"
+  # The vhost-user socket directory for OVS
+  NeutronVhostuserSocketDir: "/var/run/openvswitch"
+  DpdkInterfaces: 'p2p1,p3p1'
+  OvsDpdkBondInterfaceOptions: 'bond_mode=balance-tcp lacp=active'
+  VcpuPinSet: "3-27,31-55"
+  HostOsCpus: "0-3, 20-23"
+  ########################
+  # Additional settings
+  ########################
+  # Reserved RAM for host processes
+  NovaReservedHostMemory: 4096
+  # An array of filters used by Nova to filter a node.These filters will be
+  # applied in the order they are listed,so place your most restrictive filters
+  # first to make the filtering process more efficient.
+  NovaSchedulerDefaultFilters: "RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,PciPassthroughFilter,NUMATopologyFilter"
+  HostCpusNumber: "4,4"
+  # Configure the classname of the firewall driver to use for implementing
+  # security groups.
+  NeutronOVSFirewallDriver: openvswitch
+
+
+
+
   # Flavor used as the regular compute
   OvercloudDellComputeFlavor: baremetal
 

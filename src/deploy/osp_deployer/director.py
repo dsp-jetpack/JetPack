@@ -66,11 +66,8 @@ class Director(InfraHost):
                 "director vm & reinstall rdo manager")
             count = 1
             for repo in self.settings.internal_repos_urls:
-                cmd = 'curl ' + \
-                      repo + \
-                      " > /etc/yum.repos.d/internal_" + \
-                      str(count) + \
-                      ".repo"
+                cmd = ('curl ' + repo + " > /etc/yum.repos.d/internal_" +
+                       str(count) + ".repo")
                 self.run_as_root(cmd)
                 self.run_as_root("sed -i '/enabled=1/a priority=1' "
                                  "/etc/yum.repos.d/internal_" +
@@ -130,11 +127,11 @@ class Director(InfraHost):
 
     def install_director(self):
         logger.debug("Installing the undercloud")
-        cmd = '~/pilot/install-director.sh --dns ' + \
-              self.settings.name_server + " --sm_user " + \
-              self.settings.subscription_manager_user + " --sm_pwd " + \
-              self.settings.subscription_manager_password + " --sm_pool " + \
-              self.settings.subscription_manager_vm_ceph
+        cmd = ('~/pilot/install-director.sh --dns ' +
+               self.settings.name_server + " --sm_user " +
+               self.settings.subscription_manager_user + " --sm_pwd " +
+               self.settings.subscription_manager_password + " --sm_pool " +
+               self.settings.subscription_manager_vm_ceph)
         if len(self.settings.overcloud_nodes_pwd) > 0:
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
         stdout, stderr, exit_status = self.run(cmd)
@@ -171,8 +168,8 @@ class Director(InfraHost):
             remote_file = self.home_dir + "/instackenv.json"
             self.upload_file(setts.custom_instack_json,
                              remote_file)
-            cmd = "sudo chown " + setts.director_install_account_user + ":" + \
-                setts.director_install_account_user + " " + remote_file
+            cmd = ("sudo chown " + setts.director_install_account_user + ":" +
+                   setts.director_install_account_user + " " + remote_file)
             self.run_tty(cmd)
         else:
 
@@ -184,13 +181,12 @@ class Director(InfraHost):
             time.sleep(30)
 
             setts = self.settings
-            cmd = "cd ~/pilot/discover_nodes;./discover_nodes.py  -u " + \
-                  setts.ipmi_user + \
-                  " -p '" + setts.ipmi_password + "'"
+            cmd = ("cd ~/pilot/discover_nodes;./discover_nodes.py  -u " +
+                   setts.ipmi_user + " -p '" + setts.ipmi_password + "'")
 
             # Discover the nodes using DHCP for the iDRAC
-            cmd += ' ' + setts.management_allocation_pool_start + "-" + \
-                setts.management_allocation_pool_end
+            cmd += (' ' + setts.management_allocation_pool_start + "-" +
+                    setts.management_allocation_pool_end)
 
             # Discover the nodes using static IPs for the iDRAC
             for node in (self.settings.controller_nodes +
@@ -204,8 +200,7 @@ class Director(InfraHost):
             self.run_tty(cmd)
 
             cmd = "ls -la ~/instackenv.json | awk '{print $5;}'"
-            size = \
-                self.run_tty(cmd)[0]
+            size = self.run_tty(cmd)[0]
             if int(size) <= 50:
                 logger.fatal("did not manage to pick up the nodes..")
                 raise AssertionError(
@@ -556,14 +551,12 @@ class Director(InfraHost):
 
         enabled_backends += "]"
 
-        cmd = 'sed -i ' + \
-            '"s|cinder_user_enabled_backends:.*|' + \
-            'cinder_user_enabled_backends: ' + \
-            enabled_backends + '|" ' + dell_storage_yaml
+        cmd = ('sed -i ' + '"s|cinder_user_enabled_backends:.*|' +
+               'cinder_user_enabled_backends: ' + enabled_backends + '|" '
+               + dell_storage_yaml)
         self.run_tty(cmd)
-        cmd = 'sed -i "s|<enable_rbd_backend>|' + \
-            str(self.settings.enable_rbd_backend) + \
-            '|" ' + dell_storage_yaml
+        cmd = ('sed -i "s|<enable_rbd_backend>|' + str(self.settings.enable_rbd_backend) +
+               '|" ' + dell_storage_yaml)
         self.run_tty(cmd)
 
     def setup_dellsc(self, dell_storage_yaml):
@@ -701,9 +694,9 @@ class Director(InfraHost):
             self.run_tty(cmd)
 
     def configure_dhcp_server(self):
-        cmd = 'cd ' + self.pilot_dir + ';./config_idrac_dhcp.py ' + \
-            self.settings.sah_node.provisioning_ip + \
-            ' -p ' + self.settings.sah_node.root_password
+        cmd = ('cd ' + self.pilot_dir + ';./config_idrac_dhcp.py ' +
+               self.settings.sah_node.provisioning_ip + ' -p ' +
+               self.settings.sah_node.root_password)
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
             raise AssertionError(
@@ -738,34 +731,34 @@ class Director(InfraHost):
             control_storage_ips = ''
             control_tenant_tunnel_ips = ''
             for node in self.settings.controller_nodes:
-                control_external_ips += "    - " +\
-                                        node.public_api_ip + "\\n"
-                control_private_ips += "    - " +\
-                                       node.private_api_ip + "\\n"
-                control_storage_ips += "    - " +\
-                                       node.storage_ip + "\\n"
-                control_tenant_tunnel_ips += "    - " +\
-                                             node.tenant_tunnel_ip + "\\n"
+                control_external_ips += ("    - " +
+                                        node.public_api_ip + "\\n")
+                control_private_ips += ("    - " +
+                                       node.private_api_ip + "\\n")
+                control_storage_ips += ("    - " +
+                                       node.storage_ip + "\\n")
+                control_tenant_tunnel_ips += ("    - " +
+                                             node.tenant_tunnel_ip + "\\n")
 
             compute_tenant_tunnel_ips = ''
             compute_private_ips = ''
             compute_storage_ips = ''
 
             for node in self.settings.compute_nodes:
-                compute_tenant_tunnel_ips += "    - " +\
-                                             node.tenant_tunnel_ip + "\\n"
-                compute_private_ips += "    - " +\
-                                       node.private_api_ip + "\\n"
-                compute_storage_ips += "    - " +\
-                                       node.storage_ip + "\\n"
+                compute_tenant_tunnel_ips += ("    - " +
+                                             node.tenant_tunnel_ip + "\\n")
+                compute_private_ips += ("    - " +
+                                       node.private_api_ip + "\\n")
+                compute_storage_ips += ("    - " +
+                                       node.storage_ip + "\\n")
 
             storage_storgage_ip = ''
             storage_cluster_ip = ''
             for node in self.settings.ceph_nodes:
-                storage_storgage_ip += "    - " \
-                                       + node.storage_ip + "\\n"
-                storage_cluster_ip += "    - " \
-                                      + node.storage_cluster_ip + "\\n"
+                storage_storgage_ip += ("    - " +
+                                        node.storage_ip + "\\n")
+                storage_cluster_ip += ("    - " +
+                                       node.storage_cluster_ip + "\\n")
 
             cmds = ['sed -i "/192.168/d" ' + static_ips_yaml,
                     'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
@@ -893,23 +886,14 @@ class Director(InfraHost):
         logger.debug("Configuring network settings for overcloud")
         cmd = "rm -f " + self.home_dir + '/.ssh/known_hosts'
         self.run_tty(cmd)
-        cmd = self.source_stackrc + "cd" \
-                                    " ~/pilot;./deploy-overcloud.py" \
-                                    " --dell-computes " + \
-                                    str(len(self.settings.compute_nodes)) + \
-                                    " --controllers " + \
-                                    str(len(self.settings.controller_nodes
-                                            )) + \
-                                    " --storage " + \
-                                    str(len(self.settings.ceph_nodes)) + \
-                                    " --vlan " + \
-                                    self.settings.tenant_vlan_range + \
-                                    " --nic_env_file " + \
-                                    self.settings.nic_env_file + \
-                                    " --overcloud_name " + \
-                                    self.settings.overcloud_name + \
-                                    " --ntp " + \
-                                    self.settings.sah_node.provisioning_ip
+        cmd = (self.source_stackrc + "cd ~/pilot;./deploy-overcloud.py" +
+               " --dell-computes " + str(len(self.settings.compute_nodes)) +
+               " --controllers " + str(len(self.settings.controller_nodes)) +
+               " --storage " + str(len(self.settings.ceph_nodes)) +
+               " --vlan " + self.settings.tenant_vlan_range +
+               " --nic_env_file " + self.settings.nic_env_file +
+               " --overcloud_name " + self.settings.overcloud_name +
+               " --ntp " + self.settings.sah_node.provisioning_ip)
 
         if self.settings.hpg_enable is True:
             cmd += " --enable_hugepages "
@@ -1227,19 +1211,18 @@ class Director(InfraHost):
     def run_tempest(self):
         logger.debug("running tempest")
         setts = self.settings
-        cmd = 'source ~/' + self.settings.overcloud_name + 'rc;cd ' + \
-            '~/tempest;' + \
-            'tempest cleanup --init-saved-state'
+        cmd = ('source ~/' + self.settings.overcloud_name +
+               'rc;cd ~/tempest;' +
+               'tempest cleanup --init-saved-state')
 
         self.run_tty(cmd)
 
         if setts.tempest_smoke_only is True:
-            cmd = "source ~/" + self.settings.overcloud_name + "rc;cd " \
-                  "~/tempest;tools/run-tests.sh  '.*smoke' --concurrency=4"
+            cmd = ("source ~/" + self.settings.overcloud_name +
+                   "rc;cd ~/tempest;tools/run-tests.sh  '.*smoke' --concurrency=4")
         else:
-            cmd = "source ~/" + \
-                  self.settings.overcloud_name + \
-                  "rc;cd ~/tempest;tools/run-tests.sh --concurrency=4"
+            cmd = ("source ~/" + self.settings.overcloud_name +
+                   "rc;cd ~/tempest;tools/run-tests.sh --concurrency=4")
         self.run_tty(cmd)
         ip = setts.director_node.public_api_ip
 
@@ -1283,13 +1266,10 @@ class Director(InfraHost):
                 passwd = new_ipmi_password
             else:
                 passwd = self.settings.ipmi_password
-            cmd = 'cd ' + \
-                  self.pilot_dir + \
-                  ';./agent_fencing.sh ' + \
-                  self.settings.ipmi_user + \
-                  ' ' + \
-                  passwd + \
-                  ' enable'
+            cmd = ('cd ' + self.pilot_dir +
+                   ';./agent_fencing.sh ' +
+                   self.settings.ipmi_user +
+                   ' ' + passwd + ' enable')
             self.run_tty(cmd)
 
     def enable_instance_ha(self):
@@ -1298,9 +1278,8 @@ class Director(InfraHost):
             if self.settings.enable_fencing is False:
                 logger.error("Fencing NOT enabled, this is \
                              required for instance_ha")
-            cmd = 'cd ' + \
-                  self.pilot_dir + \
-                  ';./install-instanceHA.py '
+            cmd = ('cd ' + self.pilot_dir +
+                   ';./install-instanceHA.py ')
             self.run_tty(cmd)
 
     def _create_assign_role_command(self, node, role, index):
