@@ -142,8 +142,10 @@ class ConfigOvercloud(object):
             logger.info("vcpus {}".format(
                 cpu_siblings.sibling_info[
                     min_cpu_count][number_of_host_os_cpu]["vcpu_pin_set"]))
-            return cpu_siblings.sibling_info[
-                min_cpu_count][number_of_host_os_cpu]["vcpu_pin_set"]
+            siblings_info = cpu_siblings.sibling_info[
+                min_cpu_count][number_of_host_os_cpu]
+            return (siblings_info["vcpu_pin_set"],
+                    siblings_info["host_os_cpu"])
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
@@ -190,6 +192,7 @@ class ConfigOvercloud(object):
             self,
             enable_hugepage,
             enable_numa,
+            ovs_dpdk,
             hugepage_size,
             hostos_cpu_count,
             dell_compute_count=0):
@@ -232,7 +235,7 @@ class ConfigOvercloud(object):
                     '|" ' +
                     file_path)
             if enable_numa:
-                vcpu_pin_set = ConfigOvercloud.calculate_hostos_cpus(
+                vcpu_pin_set, _ = ConfigOvercloud.calculate_hostos_cpus(
                     hostos_cpu_count)
                 cmds.append(
                     "sed -i 's|dellnfv::numa::vcpu_pin_set:.*"
@@ -249,6 +252,18 @@ class ConfigOvercloud(object):
                     vcpu_pin_set +
                     "\"|' " +
                     file_path)
+
+
+            if ovs_dpdk:
+                vcpu_pin_sets, host_os_cpus = ConfigOvercloud.calculate_hostos_cpus(
+                    hostos_cpu_count)
+                env_file = file_path
+                cmds += [
+                    'sed -i "s|HostOsCpus:.*|HostOsCpus: "' +
+                    host_os_cpus + '"|" ' + env_file,
+                    'sed -i "s|VcpuPinSet:.*|VcpuPinSet: "' +
+                    vcpu_pin_sets + '"|" ' + env_file,
+                ]
 
             for cmd in cmds:
                 status = os.system(cmd)
