@@ -36,7 +36,7 @@ parameters:
 
   BufferPoolInstances:
     description: >
-      Configures MariaDB BufferPoolSize
+      Configures MariaDB BufferPoolInstances
     type: number
 
 resources:
