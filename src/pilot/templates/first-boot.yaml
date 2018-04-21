@@ -23,11 +23,6 @@ parameters:
     type: string
     default: "virtual-host"
 
-  HAProxyMaxConnections:
-    description: >
-      Configures HAProxy Max Connections
-    type: number
-
   BufferPoolSize:
     description: >
       Configures MariaDB BufferPoolSize
@@ -38,6 +33,7 @@ parameters:
     description: >
       Configures MariaDB BufferPoolInstances
     type: number
+    default: 16
 
 resources:
   userdata:
@@ -73,26 +69,11 @@ resources:
 
             if [[ $(hostname) == *controller* ]] ; then
 
-              # HAProxy Optimization
-              sed -i 's/\$haproxy_default_maxconn        =.*/\$haproxy_default_maxconn        = _HAProxyMaxconn_,/' /etc/puppet/modules/tripleo/manifests/haproxy.pp
-
-              # Openstack Service - Nova Optimization
-              sed -i 's/osapi_max_limit                      \=.*/osapi_max_limit                      = 10000,/' /etc/puppet/modules/nova/manifests/api.pp
-              sed -i 's/rpc_response_timeout                   \=.*/rpc_response_timeout                   = 180,/' /etc/puppet/modules/nova/manifests/init.pp
-              sed -i 's/revocation_cache_time          =>.*/revocation_cache_time          => 300,/' /etc/puppet/modules/nova/manifests/keystone/authtoken.pp
-
-              # Openstack Service - Neutron Optimization
-              sed -i 's/rpc_response_timeout                 \=.*/rpc_response_timeout                 = 180,/' /etc/puppet/modules/neutron/manifests/init.pp
-              sed -i 's/revocation_cache_time          =>.*/revocation_cache_time          => 300,/' /etc/puppet/modules/neutron/manifests/keystone/authtoken.pp
-
               # Openstack Service - Cinder
-              sed -i 's/revocation_cache_time          =>.*/revocation_cache_time          => 300,/' /etc/puppet/modules/cinder/manifests/keystone/authtoken.pp
               sed -i "s/transport_url    \=.*/&\n    rpc_response_timeout    => 180,/" /etc/puppet/modules/cinder/manifests/init.pp
-
               # Openstack Service - Glance
-              sed -i 's/revocation_cache_time          =>.*/revocation_cache_time          => 300,/' /etc/puppet/modules/glance/manifests/api/authtoken.pp
               sed -i 's/rpc_response_timeout \=.*/rpc_response_timeout = 180,/' /etc/puppet/modules/oslo/manifests/messaging/default.pp
-
+              
               # MariaDB Optimization 
               
               bsize=_BufferPoolSize_
@@ -107,13 +88,11 @@ resources:
               sed -i "s/max_connections'         \=.*/&\n        'innodb_flush_method'         => O_DIRECT,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
               sed -i "s/max_connections'         \=.*/&\n        'innodb_file_per_table'         => 1,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
               sed -i "s/max_connections'         \=.*/&\n        'innodb_buffer_pool_instances'         => _BufferPoolInstances_,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              sed -i 's/innodb_flush_log_at_trx_commit \=.*/innodb_flush_log_at_trx_commit = 0,/' /etc/puppet/modules/tripleo/manifests/profile/pacemaker/database/mysql.pp
 
             fi >> /tmp/performance_optimization.log 2>&1
 
           params:
             _TunedProfile_: {get_param: ComputeTunedAdmProfile}
-            _HAProxyMaxconn_: {get_param: HAProxyMaxConnections}
             _BufferPoolSize_: {get_param: BufferPoolSize}
             _BufferPoolInstances_: {get_param: BufferPoolInstances}
 
