@@ -34,7 +34,7 @@ parameter_defaults:
  
   # Number of Dell Compute nodes 
 
-  DellComputeCount: 0
+  DellComputeCount: 3
   # Apply tuned-adm profile on Compute Nodes
   ComputeTunedAdmProfile: virtual-host
 
