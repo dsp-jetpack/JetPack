@@ -384,11 +384,12 @@ def main():
         config = ConfigOvercloud(args.overcloud_name)
         # Remove this when Numa siblings added
         # Edit the dellnfv_environment.yaml
-        config.edit_dell_environment_file(
+        config.edit_environment_files(
             args.enable_hugepages,
             args.enable_numa,
             args.hugepages_size,
             args.hostos_cpu_count,
+            args.ovs_dpdk,
             args.mariadb_max_connections,
             args.innodb_buffer_pool_size,
             args.innodb_buffer_pool_instances,

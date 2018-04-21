@@ -33,8 +33,8 @@ parameter_defaults:
   # NovaVcpuPinSet: ['8-47']
  
   # Number of Dell Compute nodes 
-
   DellComputeCount: 3
+
   # Apply tuned-adm profile on Compute Nodes
   ComputeTunedAdmProfile: virtual-host
 
@@ -47,9 +47,6 @@ parameter_defaults:
 
   # Configures MariaDB Buffer Pool Instances
   BufferPoolInstances: 16
-
-  # Configures HAProxy Max Connections
-  HAProxyMaxConnections: 10000
 
   # To customize the domain name of the overcloud nodes, change "localdomain"
   # in the following line to the desired domain name.
@@ -142,3 +139,13 @@ parameter_defaults:
   NovaComputeExtraConfig:
     nova::migration::libvirt::live_migration_completion_timeout: 800
     nova::migration::libvirt::live_migration_progress_timeout: 150
+  ControllerExtraConfig:
+    nova::api::osapi_max_limit: 10000
+    nova::rpc_response_timeout: 180
+    nova::keystone::authtoken::revocation_cache_time: 300
+    neutron::rpc_response_timeout: 180
+    neutron::keystone::authtoken::revocation_cache_time: 300
+    cinder::keystone::authtoken::revocation_cache_time: 300
+    glance::api::authtoken::revocation_cache_time: 300
+    tripleo::profile::pacemaker::database::mysql::innodb_flush_log_at_trx_commit: 0
+    tripleo::haproxy::haproxy_default_maxconn: 10000
