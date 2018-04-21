@@ -569,3 +569,8 @@ class DeployerSanity():
             raise AssertionError("Neither Hugepages nor NUMA is enabled," +
                                  " this is required for OVS-DPDK. Please" +
                                  " verify this setting.")
+        if (self.settings.enable_ovs_dpdk is True and
+                self.settings.hpg_size == "2MB"):
+            raise AssertionError("Hugepages size should be 1GB, this is" +
+                                 " required for OVS-DPDK. Please verify" +
+                                 " this setting.")
