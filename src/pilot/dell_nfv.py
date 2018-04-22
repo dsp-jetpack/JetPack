@@ -214,6 +214,9 @@ class ConfigOvercloud(object):
             if not os.path.isfile(file_path):
                 raise Exception(
                     "The dell-environment.yaml file does not exist")
+            if not os.path.isfile(dpdk_file):
+                raise Exception(
+                    "The neutron-ovs-dpdk.yaml file does not exist")
             cmds = ['sed -i "s|  # NovaSchedulerDefaultFilters|  ' +
                     'NovaSchedulerDefaultFilters|" ' + file_path]
             cmds.append(
