@@ -52,3 +52,10 @@ parameter_defaults:
   # Configure the classname of the firewall driver to use for implementing
   # security groups.
   NeutronOVSFirewallDriver: openvswitch
+
+  # Configures MariaDB Buffer Pool Size
+  # Setting 'dynamic' will apply 75% of total memory to innodb_buffer_pool_size
+  BufferPoolSize: dynamic
+
+  # Configures MariaDB Buffer Pool Instances
+  BufferPoolInstances: 16
