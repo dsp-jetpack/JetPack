@@ -141,17 +141,17 @@ resources:
             if 'compute' in socket.gethostname():
                 pass
             else:
-                exit() 
-                
+                exit()
+
             def hyphen_range(s):
                 s = "".join(s.split())#removes white space
                 r = set()
                 for x in s.split(','):
                     t = x.split('-')
-                    if len(t) not in [1,2]: 
+                    if len(t) not in [1,2]:
                         raise SyntaxError("Incorrect Format.")
                     if len(t) == 1:
-                        r.add(int(t[0])) 
+                        r.add(int(t[0]))
                     else:
                         r.update(set(range(int(t[0]),int(t[1])+1)))
                 l = list(r)
@@ -159,10 +159,10 @@ resources:
                 for i in range(len(l)):
                     l[i] = str(l[i])
                 return l
- 
+
             if __name__ == '__main__':
                 DPDK_INTERFACES = "$DPDKINT"
-                VM_WEIGHT = $VMWEIGHT # sibling pairs 
+                VM_WEIGHT = $VMWEIGHT # sibling pairs
                 PMD_WEIGHT = $PMDWEIGHT # sibling pairs
                 HOST_CPUS_LIST = "$HOSTCPUSLIST"
                 VCPU_PIN_SET = "$VCPUPINSET"
@@ -173,9 +173,9 @@ resources:
                 dpdk_interfaces = dpdk_interfaces.replace('"',"").split(',')
                 if len(dpdk_interfaces) <= 0:
                     exit(1)
-                dpdk_interfaces_dict = {}    
+                dpdk_interfaces_dict = {}
                 for i in dpdk_interfaces:
-                    aff_cmd = 'cat /sys/class/net/' + i + '/device/numa_node' 
+                    aff_cmd = 'cat /sys/class/net/' + i + '/device/numa_node'
                     out = subprocess.Popen(aff_cmd,shell=True,
                           stdout=subprocess.PIPE).stdout.read().rstrip()
                     dpdk_interfaces_dict[i] = int(out)
@@ -223,8 +223,8 @@ resources:
                 ovs_lcore_list = ",".join(ovs_lcore_list)
 
                 pmd_list = reduce(lambda x,y:x+y, map(list, pmd_cpus))
-                vm_list = reduce(lambda x,y:x+y, map(list, vm_cpus))
-                vm_list = [item for item in vm_list if item not in pmd_list]
+                vm_list = reduce(lambda x,y:x+y, sibling_sets_list)
+                vm_list = reduce(lambda x,y:x+y, map(list, vm_list))
                 vm_list = ",".join(vm_list)
                 pmd_list = ",".join(pmd_list)
                 with open("/root/parameters.ini", 'w') as f:
