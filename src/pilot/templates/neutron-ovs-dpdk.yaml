@@ -53,24 +53,9 @@ parameter_defaults:
   # security groups.
   NeutronOVSFirewallDriver: openvswitch
 
-  # Configures MySQL max_connections
-
-  MysqlMaxConnections: 15360
-
   # Configures MariaDB Buffer Pool Size
   # Setting 'dynamic' will apply 75% of total memory to innodb_buffer_pool_size
   BufferPoolSize: dynamic
 
   # Configures MariaDB Buffer Pool Instances
   BufferPoolInstances: 16
-
-  ControllerExtraConfig:
-    nova::api::osapi_max_limit: 10000
-    nova::rpc_response_timeout: 180
-    nova::keystone::authtoken::revocation_cache_time: 300
-    neutron::rpc_response_timeout: 180
-    neutron::keystone::authtoken::revocation_cache_time: 300
-    cinder::keystone::authtoken::revocation_cache_time: 300
-    glance::api::authtoken::revocation_cache_time: 300
-    tripleo::profile::pacemaker::database::mysql::innodb_flush_log_at_trx_commit: 0
-    tripleo::haproxy::haproxy_default_maxconn: 10000
