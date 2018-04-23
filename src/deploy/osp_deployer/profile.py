@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from settings.config import Settings
+import re
 import os
 import json
 import inspect
@@ -70,7 +71,26 @@ class Profile():
                                             stanza), set)) is False:
                                         Err = Err + "\nSetting for " + set + \
                                             " Should be a valid ip adress\n"
+                                if 'should_be_valid_int' in test:
+                                    if self.is_int(user_config.get(str(
+                                            stanza), set)) is False:
+                                        Err = Err + "\nSetting for " + set + \
+                                            " Should be a valid integer\n"
+                                if 'valid_buffer_pool_size' in test:
+                                    if self.valid_buffer_pool_size(
+                                            user_config.get(str(
+                                            stanza), set)) is False:
+                                        Err = Err + "\nSetting for " + set + \
+                                            " Should be a valid value\n"
+
                             validated = True
+                        if vals['in_range']:
+                            for test in vals['in_range']:
+                                if self.is_in_range(user_config.get(str(
+                                        stanza), set), test) is False:
+                                    Err = Err + "\nSetting for " + set + \
+                                        " Should be in valid" \
+                                        " range "+test+"\n"
                     except:
                         pass
                     if len(allowed_settings) > 0:
@@ -120,3 +140,31 @@ class Profile():
         except ValueError:
             valid = False
         return valid
+
+    def is_int(self, value):
+        valid = True
+        try:
+            int(value)
+        except ValueError:
+            valid = False
+        return valid
+
+    def is_in_range(self, value, input):
+        valid = True
+        list = input.split('-')
+        min = int(list[0])
+        max = int(list[1])
+        if int(value) not in range(min, max):
+            valid = False
+        return valid
+
+    def valid_buffer_pool_size(self, value):
+        if value != "dynamic":
+            pattern = '^\d+G$'
+            valid = re.match(pattern, value)
+            if not valid:
+                return False
+            val = int(value.replace('G', ''))
+            if val < 0:
+                return False
+        return True
