@@ -275,15 +275,15 @@ class ConfigOvercloud(object):
                 if memory_mb < BufferPoolSize:
                     raise Exception("innodb_buffer_pool_size is greater than"
                                     " available memory size")
-            if ovs_dpdk:
-                f_path = dpdk_file
-            else:
-                f_path = file_path
             cmds.append(
                 'sed -i "s|MysqlMaxConnections.*|MysqlMaxConnections: ' +
                 mariadb_max_connections +
                 '|" ' +
-                f_path)
+                file_path)
+            if ovs_dpdk:
+                f_path = dpdk_file
+            else:
+                f_path = file_path
             cmds.append(
                 'sed -i "s|BufferPoolSize.*|BufferPoolSize: ' +
                 innodb_buffer_pool_size +
