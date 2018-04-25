@@ -1,5 +1,3 @@
-
-
 # Added locks on Wed Apr 25 13:09:13 2018
 0:python-libs-2.7.5-68.el7.*
 0:libverto-libevent-0.2.5-4.el7.*
@@ -432,7 +430,7 @@
 10:qemu-kvm-rhev-2.10.0-21.el7.*
 1:net-snmp-libs-5.7.2-32.el7.*
 1:mariadb-libs-5.5.56-2.el7.*
-0:patch-2.7.1-8.el7.*
+0:patch-2.7.1-10.el7_5.*
 0:python-mako-0.8.1-2.el7.*
 0:python-testtools-1.8.0-2.el7ost.*
 0:libpath_utils-0.2.1-29.el7.*

@@ -154,7 +154,7 @@
 0:python-requests-2.6.0-1.el7_1.*
 32:bind-license-9.9.4-61.el7.*
 1:mariadb-libs-5.5.56-2.el7.*
-0:patch-2.7.1-8.el7.*
+0:patch-2.7.1-10.el7_5.*
 1:findutils-4.5.11-5.el7.*
 0:rpm-build-libs-4.11.3-32.el7.*
 0:cephmetrics-1.0-8.el7cp.*
