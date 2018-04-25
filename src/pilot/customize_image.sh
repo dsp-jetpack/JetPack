@@ -35,9 +35,23 @@ then
   export https_proxy=$proxy
 fi
 
+
+run_command(){
+  
+  cmd=$*
+  echo "Executing: $cmd"
+
+  eval $cmd
+  if [ $? -ne 0 ]; then
+    echo "$cmd execution failed"
+    exit 1
+  fi
+}
+
+
 echo "## install libguestfs-tools"
 cd ~/pilot/images
-sudo yum install libguestfs-tools -y
+run_command  "sudo yum install libguestfs-tools -y"
 
 export LIBGUESTFS_BACKEND=direct
 
@@ -69,29 +83,29 @@ director_short=`hostname -s`
 director_long=`hostname`
 cd ~/pilot/images
 
-virt-customize -a overcloud-full.qcow2 --run-command "echo '${director_ip} ${director_short} ${director_long}' >> /etc/hosts"
+run_command "virt-customize -a overcloud-full.qcow2 --run-command \"echo '${director_ip} ${director_short} ${director_long}' >> /etc/hosts\""
 
 #Temporary fix for Ceph-OSD not starting (BZ#1472409)
-virt-customize -a overcloud-full.qcow2 --run-command 'sed -i "s/timeout 120/timeout 10000/" /usr/lib/systemd/system/ceph-disk\@.service'
+run_command "virt-customize -a overcloud-full.qcow2 --run-command 'sed -i \"s/timeout 120/timeout 10000/\" /usr/lib/systemd/system/ceph-disk\@.service'"
 
-virt-customize \
+run_command "virt-customize \
     --memsize 2000 \
     --add overcloud-full.qcow2 \
     --sm-credentials "${subscription_manager_user}:password:${subscription_manager_pass}" \
     --sm-register \
-    --sm-attach "pool:${subscription_manager_poolid}" \
-    --run-command "subscription-manager repos --disable='*' ${repos[*]/#/--enable=}" \
-    --install $(join "," ${packages[*]}) \
+    --sm-attach \"pool:${subscription_manager_poolid}\" \
+    --run-command \"subscription-manager repos --disable='*' ${repos[*]/#/--enable=}\" \
+    --install $(join \",\" ${packages[*]}) \
     --sm-remove \
     --sm-unregister \
-    --selinux-relabel 2>&1 | tee -a ~/pilot/customize_image.log
+    --selinux-relabel"
 
-virt-customize \
+run_command "virt-customize \
     --add overcloud-full.qcow2 \
-    --run-command "cd /usr/share/openstack-puppet/modules;puppet module generate dell-dellnfv --skip-interview" \
-    --run-command "mv /usr/share/openstack-puppet/modules/dell-dellnfv /usr/share/openstack-puppet/modules/dellnfv" \
+    --run-command \"cd /usr/share/openstack-puppet/modules;puppet module generate dell-dellnfv --skip-interview\" \
+    --run-command \"mv /usr/share/openstack-puppet/modules/dell-dellnfv /usr/share/openstack-puppet/modules/dellnfv\" \
     --link /usr/share/openstack-puppet/modules/dellnfv:/etc/puppet/modules/dellnfv \
     --copy-in ~/pilot/templates/dellnfv/numa.pp:/usr/share/openstack-puppet/modules/dellnfv/manifests/ \
-    --copy-in ~/pilot/templates/dellnfv/hugepages.pp:/usr/share/openstack-puppet/modules/dellnfv/manifests/ 2>&1 | tee -a ~/pilot/customize_image.log
-echo "## Done updating the overcloud image"
+    --copy-in ~/pilot/templates/dellnfv/hugepages.pp:/usr/share/openstack-puppet/modules/dellnfv/manifests/"
 
+echo "## Done updating the overcloud image"
