@@ -97,7 +97,7 @@ create_flavor()
 }
 
 apply_patch(){
-  cmd="$1"
+  cmd=$*
 
   echo "Executing: $cmd"
 
@@ -113,7 +113,7 @@ run_command(){
 
   echo "Executing: $cmd"
 
-  $cmd
+  eval $cmd
   if [ $? -ne 0 ]; then
     echo "$cmd execution failed"
     exit 1
@@ -200,16 +200,12 @@ echo "## Done."
 
 echo 
 echo "## Customizing the overcloud image & uploading images"
-~/pilot/customize_image.sh $subscription_manager_user $subscription_manager_pass $subcription_manager_poolid $proxy
+run_command "~/pilot/customize_image.sh ${subscription_manager_user} ${subscription_manager_pass} ${subcription_manager_poolid} ${proxy}"
+
 echo
 if [ -n "${overcloud_nodes_pwd}" ]; then
     echo "# Setting overcloud nodes password"
-    virt-customize -a overcloud-full.qcow2 --root-password password:$overcloud_nodes_pwd
-    if [ $? -ne 0 ]; then
-        echo "Customization of overcloud image FAILED!"
-        echo "Overcloud image will not be uploaded, aborting installation"
-        exit -1
-    fi
+    run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd}"
 fi
 
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
