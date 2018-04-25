@@ -66,6 +66,7 @@ resources:
       - config: {get_resource: set_ovs_config}
       - config: {get_resource: set_dpdk_params}
       - config: {get_resource: install_tuned}
+      - config: {get_resource: compute_kernel_args}
       - config: {get_resource: set_os_limits}
       - config: {get_resource: performance_optimization}
 
@@ -173,6 +174,17 @@ resources:
                     l[i] = str(l[i])
                 return l
 
+            def memory_to_gb(memory): # memory format is 1024 MB or 32 GB
+                memory = memory.rstrip().replace(' +',' ')
+                MEM_LIST = ['KB','MB','GB','TB','PB']
+                BASE_SIZE_INDEX = 2
+                value, unit = memory.split()
+                given_size_index = MEM_LIST.index(unit)
+                index_diff = given_size_index - BASE_SIZE_INDEX
+                factor = 1024. ** index_diff
+                value = int(value)
+                return int(round(value * factor,0))
+
             if __name__ == '__main__':
                 DPDK_INTERFACES = "$DPDKINT"
                 VM_WEIGHT = $VMWEIGHT # sibling pairs
@@ -235,6 +247,19 @@ resources:
                 ovs_lcore_list = reduce(lambda x,y:x+y, map(list, ovs_lcore_cpus))
                 ovs_lcore_list = ",".join(ovs_lcore_list)
 
+                mem_cmd = "dmidecode -t memory | grep Size | grep -v Module"
+                out = subprocess.Popen(mem_cmd,shell=True,
+                          stdout=subprocess.PIPE).stdout.readlines()
+                memory = 0
+                for line in out:
+                    memory += memory_to_gb(line.rstrip().split(': ')[1])
+
+                # 14 Hugespages of 1GB each are reserved for Host Hypervisor usage
+                memory = memory - 14
+
+                grub = "default_hugepagesz=1GB hugepagesz=1G hugepages=" \
+                        + str(memory) + " iommu=pt intel_iommu=on"
+
                 pmd_list = reduce(lambda x,y:x+y, map(list, pmd_cpus))
                 vm_list = reduce(lambda x,y:x+y, sibling_sets_list)
                 vm_list = reduce(lambda x,y:x+y, map(list, vm_list))
@@ -244,6 +269,8 @@ resources:
                     Config.set('DEFAULT', 'HostCPUs', ovs_lcore_list)
                     Config.set('DEFAULT', 'PMDCPUs', pmd_list)
                     Config.set('DEFAULT', 'NovaCPUs', vm_list)
+                    Config.set('DEFAULT', 'IsolCPUs', pmd_list+','+vm_list)
+                    Config.set('DEFAULT', 'grub', grub)
                     Config.write(f)
 
           params:
@@ -361,7 +388,23 @@ resources:
               fi
               tuned-adm profile cpu-partitioning
             fi
+          params:
+            $VCPUPINSET: {get_param: VcpuPinSet}
 
+  compute_kernel_args:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      config:
+        str_replace:
+          template: |
+            #!/bin/bash
+            set -x
+            if [[ $HOSTNAME =~ "compute" ]] ; then
+              KERNEL_ARGS=$(crudini --get /root/parameters.ini DEFAULT grub)
+              sed 's/^\(GRUB_CMDLINE_LINUX=".*\)"/\1 '"$KERNEL_ARGS"' isolcpus='"$VCPUPINSET"'"/g' -i /etc/default/grub ;
+              grub2-mkconfig -o /etc/grub2.cfg
+              reboot
+            fi
           params:
             $VCPUPINSET: {get_param: VcpuPinSet}
 

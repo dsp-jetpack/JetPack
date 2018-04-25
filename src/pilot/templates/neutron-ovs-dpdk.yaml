@@ -39,8 +39,8 @@ parameter_defaults:
   NeutronVhostuserSocketDir: "/var/run/openvswitch"
   DpdkInterfaces: 'p2p1,p3p1'
   OvsDpdkBondInterfaceOptions: 'bond_mode=balance-tcp lacp=active'
-  VcpuPinSet: 4-23,28-47
-  HostOsCpus: 0-3,24-27
+  VcpuPinSet: 2-23,26-47
+  HostOsCpus: 0-1,24-25
   ########################
   # Additional settings
   ########################
@@ -49,7 +49,7 @@ parameter_defaults:
   # An array of filters used by Nova to filter a node.These filters will be 
   # applied in the order they are listed,so place your most restrictive filters
   # first to make the filtering process more efficient.
-  NovaSchedulerDefaultFilters: "RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,PciPassthroughFilter,NUMATopologyFilter"
+  NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','RamFilter','DiskFilter', 'ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter', 'CoreFilter', 'NUMATopologyFilter', 'AggregateInstanceExtraSpecsFilter', 'PciPassthroughFilter']
   # Configure the classname of the firewall driver to use for implementing
   # security groups.
   NeutronOVSFirewallDriver: openvswitch
