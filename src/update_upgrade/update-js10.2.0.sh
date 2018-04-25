@@ -180,6 +180,9 @@ update_heat_templates() {
 
     # copy upgraded templates into template dir
     cp -r /usr/share/openstack-tripleo-heat-templates ~/pilot/templates/overcloud
+    
+    info "Copy nfv templates"
+    cp -r ~/pilot/templates/dellnfv ~/pilot/templates/overcloud/puppet/services/dellnfv
 
     # If we are using old style osd definitions in ceph.yaml instead of putting them
     # in dell-environment, copy them to correct spot.
@@ -207,13 +210,6 @@ update_overcloud() {
     # still need to apply workaround.
     ssh heat-admin@${C} 'sudo pcs resource update rabbitmq op add stop timeout=300s'
 
-    # workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1455224
-    for N in $OVERCLOUD
-    do
-      ssh heat-admin@${N} "sudo yum update -y nss* nspr; sudo rm -rf /var/lib/heat-config/heat-config-script/OVS_UPGRADE"
-    done
-    echo Done updating nss* and nspr on all overcloud nodes
-
     # Parse out -e arguments from existing logged deployment command
     envs=()
     while read -r line || [[ -n "$line" ]]; do
@@ -230,8 +226,10 @@ update_overcloud() {
 
     # Addition in 10.2.0: "openstack overcloud deploy" now requires --stack attribute or it will default to "overcloud"
     # Replace all "~" with value of $HOME when building command otherwise ~ will not be evaluated correctly.
+    
     info "Update overcloud plan next, additional -e args that will be applied: ${envs[@]//\~/$HOME}"
-    openstack overcloud deploy --debug --update-plan-only --stack $STACK_NAME --templates ~/pilot/templates/overcloud -e ~/pilot/templates/overcloud/overcloud-resource-registry-puppet.yaml ${envs[@]//\~/$HOME}
+
+    openstack overcloud deploy --update-plan-only  --debug  --log-file ~/update/overcloud_deploy_update_plan_only.log  -t 120  --stack $STACK_NAME --templates ~/pilot/templates/overcloud -r ~/pilot/templates/roles_data.yaml ${envs[@]//\~/$HOME}
 
     info "Now do the full overcloud update..."
     yes ""|openstack overcloud update stack --debug $STACK_NAME -i  
