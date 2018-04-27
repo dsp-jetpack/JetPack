@@ -39,7 +39,8 @@ logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 home_dir = os.path.expanduser('~')
 UC_USERNAME = UC_PASSWORD = UC_PROJECT_ID = UC_AUTH_URL = ''
-
+HOST_OS_CPUS = ''
+VCPUS = ''
 
 class ConfigOvercloud(object):
     """
@@ -124,6 +125,8 @@ class ConfigOvercloud(object):
     @classmethod
     def calculate_hostos_cpus(self, number_of_host_os_cpu):
         try:
+            global HOST_OS_CPUS
+            global VCPUS
             cpu_count_list = []
             for node in ConfigOvercloud.nodes:
                 # for every compute node get the corresponding drac credentials
@@ -164,8 +167,10 @@ class ConfigOvercloud(object):
             logger.info("vcpus {}".format(
                 cpu_siblings.sibling_info[
                     min_cpu_count][number_of_host_os_cpu]["vcpu_pin_set"]))
-            return cpu_siblings.sibling_info[
-                min_cpu_count][number_of_host_os_cpu]["vcpu_pin_set"]
+            siblings_info = cpu_siblings.sibling_info[
+                min_cpu_count][number_of_host_os_cpu]
+            HOST_OS_CPUS = siblings_info["host_os_cpu"]
+            VCPUS = siblings_info["vcpu_pin_set"]
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
@@ -211,14 +216,17 @@ class ConfigOvercloud(object):
             logger.info("Editing dell environment file")
             file_path = home_dir + '/pilot/templates/dell-environment.yaml'
             dpdk_file = home_dir + '/pilot/templates/neutron-ovs-dpdk.yaml'
+            cmds = []
             if not os.path.isfile(file_path):
                 raise Exception(
                     "The dell-environment.yaml file does not exist")
             if not os.path.isfile(dpdk_file):
                 raise Exception(
                     "The neutron-ovs-dpdk.yaml file does not exist")
-            cmds = ['sed -i "s|  # NovaSchedulerDefaultFilters|  ' +
-                    'NovaSchedulerDefaultFilters|" ' + file_path]
+
+            if not ovs_dpdk:
+                cmds.append('sed -i "s|  # NovaSchedulerDefaultFilters|  ' +
+                            'NovaSchedulerDefaultFilters|" ' + file_path)
             cmds.append(
                 'sed -i "s|dellnfv::hugepages::enable:.*'
                 '|dellnfv::hugepages::enable: ' +
@@ -250,23 +258,31 @@ class ConfigOvercloud(object):
                     '|" ' +
                     file_path)
             if enable_numa:
-                vcpu_pin_set = ConfigOvercloud.calculate_hostos_cpus(
-                    hostos_cpu_count)
+                ConfigOvercloud.calculate_hostos_cpus(hostos_cpu_count)
                 cmds.append(
                     "sed -i 's|dellnfv::numa::vcpu_pin_set:.*"
                     "|dellnfv::numa::vcpu_pin_set: \"" +
-                    vcpu_pin_set +
+                    VCPUS +
                     "\"|' " +
                     file_path)
-                cmds.append(
-                    'sed -i "s|  # NovaVcpuPinSet|  ' +
-                    'NovaVcpuPinSet|" ' +
-                    file_path)
-                cmds.append(
-                    "sed -i 's|NovaVcpuPinSet:.*|NovaVcpuPinSet: \"" +
-                    vcpu_pin_set +
-                    "\"|' " +
-                    file_path)
+                if not ovs_dpdk:
+                    cmds.append(
+                        'sed -i "s|  # NovaVcpuPinSet|  ' +
+                        'NovaVcpuPinSet|" ' +
+                        file_path)
+                    cmds.append(
+                        "sed -i 's|NovaVcpuPinSet:.*|NovaVcpuPinSet: \"" +
+                        VCPUS +
+                        "\"|' " +
+                        file_path)
+            if ovs_dpdk:
+                cmds += [
+                    'sed -i "s|HostOsCpus:.*|HostOsCpus: "' +
+                    HOST_OS_CPUS + '"|" ' + dpdk_file,
+                    'sed -i "s|VcpuPinSet:.*|VcpuPinSet: "' +
+                    VCPUS + '"|" ' + dpdk_file,
+                ]
+
             # Performance and Optimization
             if innodb_buffer_pool_size != "dynamic":
                 BufferPoolSize = int(innodb_buffer_pool_size.replace(
@@ -294,6 +310,7 @@ class ConfigOvercloud(object):
                 innodb_buffer_pool_instances +
                 '|" ' +
                 f_path)
+
             for cmd in cmds:
                 status = os.system(cmd)
                 if status != 0:
