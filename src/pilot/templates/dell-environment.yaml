@@ -29,8 +29,8 @@ parameter_defaults:
   # This line is uncommented and updated when using CSP Profile
   # NovaVcpuPinSet: ['8-47']
 
-  HugepagesEnable: true
-  NumaEnable: true
+  HugepagesEnable: false
+  NumaEnable: false
   HugePages: "default_hugepagesz=2MB hugepagesz=2M hugepages=57344 iommu=pt intel_iommu=on"
   NumaCpus: 4-23,28-47
 
