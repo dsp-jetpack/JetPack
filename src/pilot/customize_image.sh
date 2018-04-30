@@ -101,11 +101,6 @@ run_command "virt-customize \
     --selinux-relabel"
 
 run_command "virt-customize \
-    --add overcloud-full.qcow2 \
-    --run-command \"cd /usr/share/openstack-puppet/modules;puppet module generate dell-dellnfv --skip-interview\" \
-    --run-command \"mv /usr/share/openstack-puppet/modules/dell-dellnfv /usr/share/openstack-puppet/modules/dellnfv\" \
-    --link /usr/share/openstack-puppet/modules/dellnfv:/etc/puppet/modules/dellnfv \
-    --copy-in ~/pilot/templates/dellnfv/numa.pp:/usr/share/openstack-puppet/modules/dellnfv/manifests/ \
-    --copy-in ~/pilot/templates/dellnfv/hugepages.pp:/usr/share/openstack-puppet/modules/dellnfv/manifests/"
+    --add overcloud-full.qcow2"
 
 echo "## Done updating the overcloud image"

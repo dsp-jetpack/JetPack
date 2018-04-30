@@ -14,9 +14,6 @@
 
 resource_registry:
     OS::TripleO::NodeUserData: ./first-boot.yaml
-    OS::TripleO::Services::HugePages: overcloud/puppet/services/dellnfv/hugepages.yaml
-    OS::TripleO::Services::NUMA: overcloud/puppet/services/dellnfv/numa.yaml
-
 
 parameter_defaults:
   # Flavor used as the regular compute
@@ -31,7 +28,12 @@ parameter_defaults:
   # Disabled by default for XSP Profile
   # This line is uncommented and updated when using CSP Profile
   # NovaVcpuPinSet: ['8-47']
- 
+
+  HugepagesEnable: false
+  NumaEnable: false
+  HugePages: "default_hugepagesz=2MB hugepagesz=2M hugepages=57344 iommu=pt intel_iommu=on"
+  NumaCpus: 4-23,28-47
+
   # Number of Dell Compute nodes 
   DellComputeCount: 3
 
@@ -76,13 +78,6 @@ parameter_defaults:
 
   # Additional hiera data for all nodes
   ExtraConfig:
-    # NFV Profile settings start here
-    dellnfv::hugepages::enable: False
-    dellnfv::hugepages::hugepagesize: 2M
-    dellnfv::hugepages::hugepagecount: 49152
-    dellnfv::numa::enable: False
-    dellnfv::numa::vcpu_pin_set: \"8-47\"
-
     ceph::profile::params::osd_journal_size: 10000
     ceph::profile::params::osd_pool_default_min_size: 2
     # CHANGEME:
