@@ -25,6 +25,7 @@ parameter_defaults:
   ## NeutronDpdkCoreList and NeutronDpdkMemoryChannels are REQUIRED settings.
   ## Attempting to deploy DPDK without appropriate values will cause deployment 
   ## to fail or lead to unstable deployments.
+  HugePages: "default_hugepagesz=1GB hugepagesz=1G hugepages=112 iommu=pt intel_iommu=on"
   # List of cores to be used for DPDK Poll Mode Driver
   NeutronDpdkCoreList: "'0,2'"
   # Number of memory channels to be used for DPDK
@@ -39,6 +40,8 @@ parameter_defaults:
   NeutronVhostuserSocketDir: "/var/run/openvswitch"
   DpdkInterfaces: 'p2p1,p3p1'
   OvsDpdkBondInterfaceOptions: 'bond_mode=balance-tcp lacp=active'
+  VcpuPinSet: 2-23,26-47
+  HostOsCpus: 0-1,24-25
   ########################
   # Additional settings
   ########################
@@ -47,8 +50,7 @@ parameter_defaults:
   # An array of filters used by Nova to filter a node.These filters will be 
   # applied in the order they are listed,so place your most restrictive filters
   # first to make the filtering process more efficient.
-  NovaSchedulerDefaultFilters: "RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,PciPassthroughFilter,NUMATopologyFilter"
-  HostCpusNumber: "4,4"
+  NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','RamFilter','DiskFilter', 'ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter', 'CoreFilter', 'NUMATopologyFilter', 'AggregateInstanceExtraSpecsFilter','PciPassthroughFilter']
   # Configure the classname of the firewall driver to use for implementing
   # security groups.
   NeutronOVSFirewallDriver: openvswitch

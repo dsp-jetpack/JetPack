@@ -16,6 +16,32 @@ heat_template_version: 2014-10-16
 
 parameters:
 
+  HugePages:
+    description: >
+      Space seprated list of Kernel args to be update to grub.
+      Example: "default_hugepagesz=1GB hugepagesz=1G hugepages=96"
+    type: string
+    default: ""
+    
+  NumaCpus:
+    description: >
+      Space seprated list of Kernel args to be update to grub.
+      Example: "8-47"
+    type: string
+    default: ""
+
+  HugepagesEnable:
+    description: >
+      Enable Hugepages (true or false)
+    type: string
+    default: "false"
+    
+  NumaEnable:
+    description: >
+      Enable Numa (true or false)
+    type: string
+    default: "false"
+
   ComputeTunedAdmProfile:
     description: >
       Apply tuned profile on compute nodes.
@@ -43,6 +69,37 @@ resources:
       - config: {get_resource: set_os_limits}
       - config: {get_resource: performance_optimization}
       - config: {get_resource: wipe_disk}
+      - config: {get_resource: kernel_args}
+
+  kernel_args:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      config:
+        str_replace:
+          template: |
+            #!/bin/bash
+            if [[ $(hostname) == *compute* ]] ; then
+              hpgflag=_HugepagesEnable_
+              if [[ "$hpgflag" == "True" ]] ; then
+                sudo grubby --update-kernel=ALL --args="_HugePages_"
+                echo "HugePages are applied"
+              fi
+              numaflag=_NumaEnable_
+              if [[ "$numaflag" == "True" ]] ; then
+                sudo grubby --update-kernel=ALL --args="isolcpus=_NumaCpus_"
+                echo "Numa is applied"
+              fi
+              if [[ "$hpgflag" == "True" || "$numaflag" == "True" ]] ; then
+                echo "Rebooting ..."
+                reboot
+              fi
+            fi >> /tmp/grubby.log 2>&1
+
+          params:
+            _HugepagesEnable_: {get_param: HugepagesEnable}
+            _NumaEnable_: {get_param: NumaEnable}
+            _HugePages_: {get_param: HugePages}
+            _NumaCpus_: {get_param: NumaCpus}
 
   set_os_limits:
     type: OS::Heat::CloudConfig

@@ -164,8 +164,6 @@
     - OS::TripleO::Services::SensuClient
     - OS::TripleO::Services::FluentdClient
     - OS::TripleO::Services::VipHosts
-    - OS::TripleO::Services::HugePages
-    - OS::TripleO::Services::NUMA
 
 - name: BlockStorage
   ServicesDefault:

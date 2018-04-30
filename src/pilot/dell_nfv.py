@@ -39,6 +39,8 @@ logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 home_dir = os.path.expanduser('~')
 UC_USERNAME = UC_PASSWORD = UC_PROJECT_ID = UC_AUTH_URL = ''
+HOST_OS_CPUS = ''
+VCPUS = ''
 
 
 class ConfigOvercloud(object):
@@ -54,50 +56,6 @@ class ConfigOvercloud(object):
         self.overcloud_name = overcloud_name
         self.overcloudrc = "source " + home_dir + "/"\
             + self.overcloud_name + "rc;"
-
-    def reboot_compute_nodes(self):
-        logger.info("Rebooting dell compute nodes")
-        UC_AUTH_URL, UC_PROJECT_ID, UC_USERNAME, UC_PASSWORD = \
-            CredentialHelper.get_undercloud_creds()
-        kwargs = {'username': UC_USERNAME,
-                  'password': UC_PASSWORD,
-                  'auth_url': UC_AUTH_URL,
-                  'project_id': UC_PROJECT_ID}
-        n_client = nova_client.Client(2, **kwargs)
-        dell_compute = []
-        for compute in n_client.servers.list(detailed=False,
-                                             search_opts={'name': 'compute'}):
-            dell_compute.append(n_client.servers.ips(
-                compute)['ctlplane'][0]['addr'])
-            logger.info("Rebooting server with id: ".format(compute.id))
-            n_client.servers.reboot(compute.id)
-        # Wait for 30s for the nodes to be powered cycle then do the checks
-        time.sleep(30)
-        ssh_success_count = 0
-        for ip in dell_compute:
-            retries = 32
-            while retries > 0:
-                exit_code, _, std_err = Ssh.execute_command(ip,
-                                                            "pwd",
-                                                            user="heat-admin",
-                                                            )
-                retries -= 1
-                if exit_code != 0:
-                    logger.info("Server with IP: {}"
-                                " is not responsive".format(ip))
-                else:
-                    logger.info("Server with IP: {}"
-                                " is responsive".format(ip))
-                    ssh_success_count += 1
-                    break
-                # Waiting 10s before the next attempt
-                time.sleep(10)
-        if ssh_success_count == len(dell_compute):
-            logger.info("All compute nodes are now responsive. Continuing...")
-        else:
-            logger.error("Failed to reboot the nodes or at least "
-                         "one node failed to get back up")
-            raise Exception("At least one compute node failed to reboot")
 
     @classmethod
     def get_minimum_memory_size(self, node_type):
@@ -124,6 +82,8 @@ class ConfigOvercloud(object):
     @classmethod
     def calculate_hostos_cpus(self, number_of_host_os_cpu):
         try:
+            global HOST_OS_CPUS
+            global VCPUS
             cpu_count_list = []
             for node in ConfigOvercloud.nodes:
                 # for every compute node get the corresponding drac credentials
@@ -164,8 +124,10 @@ class ConfigOvercloud(object):
             logger.info("vcpus {}".format(
                 cpu_siblings.sibling_info[
                     min_cpu_count][number_of_host_os_cpu]["vcpu_pin_set"]))
-            return cpu_siblings.sibling_info[
-                min_cpu_count][number_of_host_os_cpu]["vcpu_pin_set"]
+            siblings_info = cpu_siblings.sibling_info[
+                min_cpu_count][number_of_host_os_cpu]
+            HOST_OS_CPUS = siblings_info["host_os_cpu"]
+            VCPUS = siblings_info["vcpu_pin_set"]
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
@@ -211,26 +173,16 @@ class ConfigOvercloud(object):
             logger.info("Editing dell environment file")
             file_path = home_dir + '/pilot/templates/dell-environment.yaml'
             dpdk_file = home_dir + '/pilot/templates/neutron-ovs-dpdk.yaml'
+            cmds = []
             if not os.path.isfile(file_path):
                 raise Exception(
                     "The dell-environment.yaml file does not exist")
             if not os.path.isfile(dpdk_file):
                 raise Exception(
                     "The neutron-ovs-dpdk.yaml file does not exist")
-            cmds = ['sed -i "s|  # NovaSchedulerDefaultFilters|  ' +
-                    'NovaSchedulerDefaultFilters|" ' + file_path]
-            cmds.append(
-                'sed -i "s|dellnfv::hugepages::enable:.*'
-                '|dellnfv::hugepages::enable: ' +
-                str(enable_hugepage) +
-                '|" ' +
-                file_path)
-            cmds.append(
-                'sed -i "s|dellnfv::numa::enable:.*|dellnfv::numa::enable: ' +
-                str(enable_numa) +
-                '|" ' +
-                file_path)
-
+            if not ovs_dpdk:
+                cmds.append('sed -i "s|  # NovaSchedulerDefaultFilters|  ' +
+                            'NovaSchedulerDefaultFilters|" ' + file_path)
             cmds.append(
                 'sed -i "s|DellComputeCount:.*|DellComputeCount: ' +
                 str(dell_compute_count) +
@@ -238,35 +190,49 @@ class ConfigOvercloud(object):
                 file_path)
 
             if enable_hugepage:
-                hugepage_number = ConfigOvercloud.calculate_hugepage_count(
+                hpg_num = ConfigOvercloud.calculate_hugepage_count(
                     hugepage_size)
-                cmds.append('sed -i "s|dellnfv::hugepages::hugepagesize:.*'
-                            '|dellnfv::hugepages::hugepagesize: ' +
-                            hugepage_size[0:-1] + '|" ' + file_path)
-                cmds.append(
-                    'sed -i "s|dellnfv::hugepages::hugepagecount:.*'
-                    '|dellnfv::hugepages::hugepagecount: ' +
-                    str(hugepage_number) +
-                    '|" ' +
-                    file_path)
+                hugecmd = 'default_hugepagesz=' + \
+                    hugepage_size + ' hugepagesz=' + \
+                    hugepage_size[0:-1]+' hugepages=' + \
+                    str(hpg_num)+' iommu=pt intel_iommu=on'
+                if not ovs_dpdk:
+                    cmds.append('sed -i "s|HugepagesEnable.*|' +
+                                'HugepagesEnable: true|" ' +
+                                file_path)
+                    cmds.append("sed -i 's|HugePages:.*|HugePages: \"" +
+                                hugecmd + "\"|' " + file_path)
+
             if enable_numa:
-                vcpu_pin_set = ConfigOvercloud.calculate_hostos_cpus(
-                    hostos_cpu_count)
+                ConfigOvercloud.calculate_hostos_cpus(hostos_cpu_count)
+                if not ovs_dpdk:
+                    cmds.append('sed -i "s|NumaEnable:.*|NumaEnable: true|" ' +
+                                file_path)
+                    cmds.append(
+                        "sed -i 's|NumaCpus:.*|NumaCpus: " +
+                        VCPUS +
+                        "|' " +
+                        file_path)
+                    cmds.append(
+                        'sed -i "s|  # NovaVcpuPinSet|  ' +
+                        'NovaVcpuPinSet|" ' +
+                        file_path)
+                    cmds.append(
+                        "sed -i 's|NovaVcpuPinSet:.*|NovaVcpuPinSet: \"" +
+                        VCPUS +
+                        "\"|' " +
+                        file_path)
+            if ovs_dpdk:
                 cmds.append(
-                    "sed -i 's|dellnfv::numa::vcpu_pin_set:.*"
-                    "|dellnfv::numa::vcpu_pin_set: \"" +
-                    vcpu_pin_set +
-                    "\"|' " +
-                    file_path)
-                cmds.append(
-                    'sed -i "s|  # NovaVcpuPinSet|  ' +
-                    'NovaVcpuPinSet|" ' +
-                    file_path)
-                cmds.append(
-                    "sed -i 's|NovaVcpuPinSet:.*|NovaVcpuPinSet: \"" +
-                    vcpu_pin_set +
-                    "\"|' " +
-                    file_path)
+                    "sed -i 's|HugePages:.*|HugePages: \"" +
+                    hugecmd+"\"|' " + dpdk_file)
+                cmds += [
+                    'sed -i "s|HostOsCpus:.*|HostOsCpus: "' +
+                    HOST_OS_CPUS + '"|" ' + dpdk_file,
+                    'sed -i "s|VcpuPinSet:.*|VcpuPinSet: "' +
+                    VCPUS + '"|" ' + dpdk_file,
+                ]
+
             # Performance and Optimization
             if innodb_buffer_pool_size != "dynamic":
                 BufferPoolSize = int(innodb_buffer_pool_size.replace(
@@ -294,6 +260,7 @@ class ConfigOvercloud(object):
                 innodb_buffer_pool_instances +
                 '|" ' +
                 f_path)
+
             for cmd in cmds:
                 status = os.system(cmd)
                 if status != 0:
@@ -372,8 +339,7 @@ class ConfigOvercloud(object):
         cmd = self.overcloudrc + "openstack stack create " \
             " Dell_Aggregate" \
             " --template" \
-            " ~/pilot/templates/overcloud/puppet/" \
-            "services/dellnfv/createaggregate.yaml" \
+            " ~/pilot/templates/createaggregate.yaml" \
             " {}" \
             "".format(env_opts)
         aggregate_create_status = os.system(cmd)
@@ -386,14 +352,9 @@ class ConfigOvercloud(object):
 
     def post_deployment_tasks(self):
         try:
-            # Reboot all the Dell NFV compute nodes
-            self.reboot_compute_nodes()
-
             logger.info("Initiating post deployment tasks")
-
             # create aggregate
             self.create_aggregate()
-
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
