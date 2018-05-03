@@ -17,6 +17,7 @@
 
 import cpu_siblings
 import os
+import re
 import sys
 import time
 import subprocess
@@ -41,7 +42,7 @@ home_dir = os.path.expanduser('~')
 UC_USERNAME = UC_PASSWORD = UC_PROJECT_ID = UC_AUTH_URL = ''
 HOST_OS_CPUS = ''
 VCPUS = ''
-
+TOTAL_CPUS = ''
 
 class ConfigOvercloud(object):
     """
@@ -82,8 +83,7 @@ class ConfigOvercloud(object):
     @classmethod
     def calculate_hostos_cpus(self, number_of_host_os_cpu):
         try:
-            global HOST_OS_CPUS
-            global VCPUS
+            global HOST_OS_CPUS,VCPUS,TOTAL_CPUS
             cpu_count_list = []
             for node in ConfigOvercloud.nodes:
                 # for every compute node get the corresponding drac credentials
@@ -113,9 +113,10 @@ class ConfigOvercloud(object):
 
             min_cpu_count = min(cpu_count_list)
             if min_cpu_count not in [40, 48, 56, 64, 72, 128]:
-                raise Exception("CPU count should be one of these"
-                                " values : [40,48,56,64,72,128]"
-                                " But number of cpu is " + str(
+                raise Exception("The number of vCPUs, as specified in the"
+                                " reference architecture, must be one of"
+                                " [40, 48, 56, 64, 72, 128]"
+                                " but number of vCPUs are " + str(
                                     min_cpu_count))
             number_of_host_os_cpu = int(number_of_host_os_cpu)
             logger.info("host_os_cpus {}".format(
@@ -128,6 +129,7 @@ class ConfigOvercloud(object):
                 min_cpu_count][number_of_host_os_cpu]
             HOST_OS_CPUS = siblings_info["host_os_cpu"]
             VCPUS = siblings_info["vcpu_pin_set"]
+            TOTAL_CPUS = min_cpu_count
         except Exception as error:
             message = "Exception {}: {}".format(
                 type(error).__name__, str(error))
@@ -165,6 +167,7 @@ class ConfigOvercloud(object):
             hugepage_size,
             hostos_cpu_count,
             ovs_dpdk,
+            nic_env_file,
             mariadb_max_connections,
             innodb_buffer_pool_size,
             innodb_buffer_pool_instances,
@@ -223,6 +226,25 @@ class ConfigOvercloud(object):
                         "\"|' " +
                         file_path)
             if ovs_dpdk:
+                for each in re.split(r'[_/]', nic_env_file):
+                    if each.find('mode') != -1:
+                        ovs_dpdk_mode = each[-1:]
+                siblings_info = cpu_siblings.sibling_info[
+                    TOTAL_CPUS][int(hostos_cpu_count)]
+                if ovs_dpdk_mode == '1':
+                    pmd_cores = siblings_info["mode1_pmd_cores"]
+                    pmd_rem_cores = siblings_info["mode1_rem_cores"]
+                else:
+                    pmd_cores = siblings_info["mode2_pmd_cores"]
+                    pmd_rem_cores = siblings_info["mode2_rem_cores"]
+                cmds.append(
+                    'sed -i "s|NeutronDpdkCoreList:.*|NeutronDpdkCoreList: \\"'+
+                    pmd_cores.join(["'","'"]) +
+                    '\\" |" ' +
+                    dpdk_file)
+                cmds.append(
+                    'sed -i "s|PmdRemCores:.*|PmdRemCores: "' +
+                    pmd_rem_cores + '"|" ' + dpdk_file)
                 cmds.append(
                     "sed -i 's|HugePages:.*|HugePages: \"" +
                     hugecmd+"\"|' " + dpdk_file)
