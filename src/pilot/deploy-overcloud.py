@@ -390,6 +390,7 @@ def main():
             args.hugepages_size,
             args.hostos_cpu_count,
             args.ovs_dpdk,
+            args.nic_env_file,
             args.mariadb_max_connections,
             args.innodb_buffer_pool_size,
             args.innodb_buffer_pool_instances,
