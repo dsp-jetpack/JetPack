@@ -19,9 +19,9 @@
 # {'number_of_host_os_cpu' : {
 # 'mode2_rem_cores': 'Remaining cores after removing mode2_pmd_cores',
 # 'mode1_rem_cores': 'Remaining cores after removing mode1_pmd_cores',
+# 'vcpu_pin_set' : 'Range of corresponding CPUs available for nova',
 # 'mode1_pmd_cores': 'Range of corresponding CPUs for pmd in Mode 1',
 # 'mode2_pmd_cores': 'Range of corresponding CPUs for pmd in Mode 2',
-# 'vcpu_pin_set' : 'Range of corresponding CPUs available for nova',
 # 'host_os_cpu' : 'Range of corresponding CPUSs available for Host OS'
 # } } }
 # If 'total number of cpu cores' = 48 & 'number_of_host_os_cpu' = 4
