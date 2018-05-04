@@ -318,7 +318,7 @@ rm -f /store/data/images/director.img
     --vcpus 8 \
     --hvm \
     --os-type linux \
-    --os-variant rhel6 \
+    --os-variant rhel7 \
     --disk /store/data/images/director.img,bus=virtio,size=80 \
     --disk /store/data/images/floppy-director.img,device=floppy \
     --network bridge=br-pub-api \
@@ -339,7 +339,7 @@ virt-install --name director \
   --vcpus 8 \
   --hvm \
   --os-type linux \
-  --os-variant rhel6 \
+  --os-variant rhel7 \
   --disk /store/data/images/director.img,bus=virtio,size=80 \
   --network bridge=br-pub-api \
   --network bridge=br-prov \
