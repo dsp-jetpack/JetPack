@@ -4,14 +4,24 @@
    "associated_settings": [
       {
          "Dell NFV Settings": {
-            "hpg_enable": "",
+            "hpg_enable": {
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            },
             "hpg_size": {
                "valid_values": [
                   "2MB",
                   "1GB"
                ]
             },
-            "numa_enable": "",
+            "numa_enable": {
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            },
             "numa_hostos_cpu_count": {
                  "valid_values": [
                    "2",
