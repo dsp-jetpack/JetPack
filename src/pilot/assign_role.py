@@ -267,15 +267,24 @@ def define_target_raid_config(role, drac_client):
         'logical_disks': logical_disks} if logical_disks is not None else None
 
 
-def is_raid_controller(fqdd):
-    return fqdd.startswith('RAID.')
+def is_raid_controller(fqdd, drac_client):
+    if fqdd.startswith('RAID.'):
+        return True
+    elif fqdd.startswith('BOSS'):
+        return True
+    else:
+	disk_controllers = drac_client.list_raid_controllers()
+        boss_raid_controller = [
+            c.id for c in disk_controllers if c.model.startswith('BOSS')]
+        if fqdd == boss_raid_controller[0]:
+            return True
 
 
 def get_raid_controller_id(drac_client):
     disk_controllers = drac_client.list_raid_controllers()
 
     raid_controller_ids = [
-        c.id for c in disk_controllers if is_raid_controller(c.id)]
+        c.id for c in disk_controllers if is_raid_controller(c.id, drac_client)]
 
     number_raid_controllers = len(raid_controller_ids)
 
@@ -372,6 +381,19 @@ def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
         (d.id for d in physical_disks if d.controller == raid_controller_fqdd),
         key=physical_disk_id_to_key)
 
+def is_boss_controller(raid_disks, raid_ctrl_name, drac):
+    #controllers = drac.list_raid_controllers()
+    if is_raid_controller(raid_ctrl_name, drac):
+        #if cnt.model.startswith('BOSS') and cnt.id == raid_disks[0].controller:
+        disks = [disk.id for disk in raid_disks]
+        os_logical_disk = define_logical_disk(
+	    size_gb=raid_disks[0].size_mb/1024,
+	    raid_level='1',
+	    controller_name=raid_disks[0].controller,
+	    physical_disk_names=disks,
+	    is_root_volume=True)
+        return os_logical_disk
+
 
 def define_storage_logical_disks(drac_client, raid_controller_name):
     all_physical_disks = drac_client.list_physical_disks()
@@ -399,8 +421,14 @@ def define_storage_logical_disks(drac_client, raid_controller_name):
         return None
 
     # Define a logical disk to host the operating system.
-    os_logical_disk = define_storage_operating_system_logical_disk(
-        raid_cntlr_physical_disks, raid_controller_name)
+    raid_ctrl_name = raid_controller_name
+    raid_disks = raid_cntlr_physical_disks
+    boss_dsk_info = is_boss_controller(raid_disks, raid_ctrl_name, drac_client)
+    if boss_dsk_info:
+        os_logical_disk = boss_dsk_info
+    else:
+        os_logical_disk = define_storage_operating_system_logical_disk(
+            raid_cntlr_physical_disks, raid_controller_name)
 
     if os_logical_disk is None:
         return None
@@ -658,7 +686,7 @@ def physical_disk_id_to_key(disk_id):
         controller_subcomponents = components[2].split('.')
     else:
         enclosure_subcomponents = 'Enclosure.None.0-0'.split('.')
-        controller_subcomponents = components[1].split('.')
+        controller_subcomponents = components[1].split('.') 
 
     disk_connection_type = disk_subcomponents[1]
     try:
@@ -725,7 +753,7 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
     during one (1) manual cleaning.'''
 
     LOG.info("Deleting the existing RAID configuration")
-    clean_steps = [{'interface': 'raid', 'step': 'delete_configuration'}]
+    clean_steps = [{'interface': 'raid', 'step': 'delete_configuration',}]
     ironic_client.node.set_provision_state(
         node_uuid,
         'clean',
@@ -777,6 +805,9 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
 
     if target_raid_config is None:
         return False
+    #target_raid_config['logical_disks'][0].update({'root_device_hint': {'SpanWidth': 1, 'SpanLength': 1}})
+    #size_gb
+    #target_raid_config['logical_disks'][0].update({'size_gb': 0})
 
     # Set the target RAID configuration on the ironic node.
     ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
@@ -1370,11 +1401,12 @@ def change_physical_disk_state(drac_client, mode,
 
         for physical_disk in physical_disks:
             # Weed out disks that are not attached to a RAID controller
-            if is_raid_controller(physical_disk.controller):
+            if is_raid_controller(physical_disk.controller, drac_client):
                 physical_disk_ids = controllers_to_physical_disk_ids[
                     physical_disk.controller]
 
                 physical_disk_ids.append(physical_disk.id)
+    
 
     # Weed out disks that are already in the mode we want
     failed_disks = []
