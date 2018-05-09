@@ -281,10 +281,10 @@ def is_raid_controller(fqdd, drac_client):
 
 
 def get_raid_controller_id(drac_client):
-    disk_controllers = drac_client.list_raid_controllers()
+    disk_ctrls = drac_client.list_raid_controllers()
 
     raid_controller_ids = [
-        c.id for c in disk_controllers if is_raid_controller(c.id, drac_client)]
+        c.id for c in disk_ctrls if is_raid_controller(c.id, drac_client)]
 
     number_raid_controllers = len(raid_controller_ids)
 
@@ -381,17 +381,16 @@ def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
         (d.id for d in physical_disks if d.controller == raid_controller_fqdd),
         key=physical_disk_id_to_key)
 
+
 def is_boss_controller(raid_disks, raid_ctrl_name, drac):
-    #controllers = drac.list_raid_controllers()
     if is_raid_controller(raid_ctrl_name, drac):
-        #if cnt.model.startswith('BOSS') and cnt.id == raid_disks[0].controller:
         disks = [disk.id for disk in raid_disks]
         os_logical_disk = define_logical_disk(
-	    size_gb=raid_disks[0].size_mb/1024,
-	    raid_level='1',
-	    controller_name=raid_disks[0].controller,
-	    physical_disk_names=disks,
-	    is_root_volume=True)
+            size_gb=raid_disks[0].size_mb/1024,
+            raid_level='1',
+            controller_name=raid_disks[0].controller,
+            physical_disk_names=disks,
+            is_root_volume=True)
         return os_logical_disk
 
 
@@ -686,7 +685,7 @@ def physical_disk_id_to_key(disk_id):
         controller_subcomponents = components[2].split('.')
     else:
         enclosure_subcomponents = 'Enclosure.None.0-0'.split('.')
-        controller_subcomponents = components[1].split('.') 
+        controller_subcomponents = components[1].split('.')
 
     disk_connection_type = disk_subcomponents[1]
     try:
@@ -753,7 +752,7 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
     during one (1) manual cleaning.'''
 
     LOG.info("Deleting the existing RAID configuration")
-    clean_steps = [{'interface': 'raid', 'step': 'delete_configuration',}]
+    clean_steps = [{'interface': 'raid', 'step': 'delete_configuration'}]
     ironic_client.node.set_provision_state(
         node_uuid,
         'clean',
@@ -805,9 +804,6 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
 
     if target_raid_config is None:
         return False
-    #target_raid_config['logical_disks'][0].update({'root_device_hint': {'SpanWidth': 1, 'SpanLength': 1}})
-    #size_gb
-    #target_raid_config['logical_disks'][0].update({'size_gb': 0})
 
     # Set the target RAID configuration on the ironic node.
     ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
