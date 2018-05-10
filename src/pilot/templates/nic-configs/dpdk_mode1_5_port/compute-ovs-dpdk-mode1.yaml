@@ -1,3 +1,17 @@
+# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 heat_template_version: 2015-04-30
 
 description: >
@@ -156,14 +170,10 @@ resources:
               members:
                 -
                   type: interface
-                  # CHANGEME: Change the interface name on the following
-                  # line to an interface to include in bond0
                   name: {get_param: ComputeBond0Interface1}
                   primary: true
                 -
                   type: interface
-                  # CHANGEME: Change the interface name on the following
-                  # line to an interface to include in bond0
                   name: {get_param: ComputeBond0Interface2}
             -
               type: vlan
@@ -196,9 +206,6 @@ resources:
                       members:
                         -
                           type: interface
-                          # CHANGEME: Change the interface name on the following
-                          # line to an interface to include in ovs_dpdk_bond10
-                          # (OVS-DPDK bond)
                           name: {get_param: ComputeOvsDpdkInterface1}
                     
                     -
@@ -207,9 +214,6 @@ resources:
                       members:
                         -
                           type: interface
-                          # CHANGEME: Change the interface name on the following
-                          # line to an interface to include in ovs_dpdk_bond10
-                          # (OVS-DPDK bond)
                           name: {get_param: ComputeOvsDpdkInterface2}
                     -
                       type: ovs_dpdk_port
@@ -217,9 +221,6 @@ resources:
                       members:
                         -
                           type: interface
-                          # CHANGEME: Change the interface name on the following
-                          # line to an interface to include in ovs_dpdk_bond10
-                          # (OVS-DPDK bond)
                           name: {get_param: ComputeOvsDpdkInterface3}
                     
                     -
@@ -228,9 +229,6 @@ resources:
                       members:
                         -
                           type: interface
-                          # CHANGEME: Change the interface name on the following
-                          # line to an interface to include in ovs_dpdk_bond10
-                          # (OVS-DPDK bond)
                           name: {get_param: ComputeOvsDpdkInterface4}
             -
               type: linux_bond
@@ -239,14 +237,10 @@ resources:
               members:
                 -
                   type: interface
-                  # CHANGEME: Change the interface name on the following
-                  # line to an interface to include in bond1
                   name: {get_param: ComputeBond1Interface1}
                   primary: true
                 -
                   type: interface
-                  # CHANGEME: Change the interface name on the following
-                  # line to an interface to include in bond1
                   name: {get_param: ComputeBond1Interface2}
             -
               type: vlan
