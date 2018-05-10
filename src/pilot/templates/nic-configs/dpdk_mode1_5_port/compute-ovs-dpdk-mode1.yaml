@@ -164,35 +164,37 @@ resources:
                   default: true
                   next_hop: {get_param: ControlPlaneDefaultRoute}
             -
-              type: ovs_bridge
-              name: br-tenant
+              type: linux_bond
+              name: bond0
+              bonding_options: {get_param: ComputeBondInterfaceOptions}
               members:
                 -
-                  type: linux_bond
-                  name: bond0
-                  bonding_options: {get_param: ComputeBondInterfaceOptions}
-                  members:
-                    -
-                      type: interface
-                      name: {get_param: ComputeBond0Interface1}
-                      primary: true
-                    -
-                      type: interface
-                      name: {get_param: ComputeBond0Interface2}
+                  type: interface
+                  name: {get_param: ComputeBond0Interface1}
+                  primary: true
                 -
-                  type: vlan
-                  device: bond0
-                  vlan_id: {get_param: TenantNetworkVlanID}
-                  addresses:
-                    -
-                      ip_netmask: {get_param: TenantIpSubnet}
+                  type: interface
+                  name: {get_param: ComputeBond0Interface2}
+            -
+              type: vlan
+              device: bond0
+              vlan_id: {get_param: TenantNetworkVlanID}
+              addresses:
                 -
-                  type: vlan
-                  device: bond0
-                  vlan_id: {get_param: InternalApiNetworkVlanID}
-                  addresses:
-                    -
-                      ip_netmask: {get_param: InternalApiIpSubnet}
+                  ip_netmask: {get_param: TenantIpSubnet}
+            -
+              type: vlan
+              device: bond0
+              vlan_id: {get_param: InternalApiNetworkVlanID}
+              addresses:
+                -
+                  ip_netmask: {get_param: InternalApiIpSubnet}
+                        
+            -
+              type: ovs_user_bridge
+              name: br-tenant
+              use_dhcp: false
+              members:
                 -
                   type: ovs_dpdk_bond
                   name: ovs_dpdk_bond10
@@ -205,7 +207,8 @@ resources:
                         -
                           type: interface
                           name: {get_param: ComputeOvsDpdkInterface1}
-                    -    
+                    
+                    -
                       type: ovs_dpdk_port
                       name: dpdk1
                       members:
@@ -219,6 +222,7 @@ resources:
                         -
                           type: interface
                           name: {get_param: ComputeOvsDpdkInterface3}
+                    
                     -
                       type: ovs_dpdk_port
                       name: dpdk3
@@ -227,29 +231,27 @@ resources:
                           type: interface
                           name: {get_param: ComputeOvsDpdkInterface4}
             -
-              type: ovs_bridge
-              name: br-bond1
+              type: linux_bond
+              name: bond1
+              bonding_options: {get_param: ComputeBondInterfaceOptions}
               members:
                 -
-                  type: linux_bond
-                  name: bond1
-                  bonding_options: {get_param: ComputeBondInterfaceOptions}
-                  members:
-                    -
-                      type: interface
-                      name: {get_param: ComputeBond1Interface1}
-                      primary: true
-                    -
-                      type: interface
-                      name: {get_param: ComputeBond1Interface2}
+                  type: interface
+                  name: {get_param: ComputeBond1Interface1}
+                  primary: true
                 -
-                  type: vlan
-                  device: bond1
-                  vlan_id: {get_param: StorageNetworkVlanID}
-                  addresses:
-                    -
-                      ip_netmask: {get_param: StorageIpSubnet}
+                  type: interface
+                  name: {get_param: ComputeBond1Interface2}
+            -
+              type: vlan
+              device: bond1
+              vlan_id: {get_param: StorageNetworkVlanID}
+              addresses:
+                -
+                  ip_netmask: {get_param: StorageIpSubnet}
+
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.
     value: {get_resource: OsNetConfigImpl}
+
