@@ -25,6 +25,13 @@ resource_registry:
   OS::TripleO::Compute::Ports::StorageMgmtPort: ./overcloud/network/ports/noop.yaml
   OS::TripleO::Compute::Ports::TenantPort: ./overcloud/network/ports/tenant_from_pool.yaml
 
+
+  OS::TripleO::DellCompute::Ports::ExternalPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::DellCompute::Ports::InternalApiPort: ./overcloud/network/ports/internal_api_from_pool.yaml
+  OS::TripleO::DellCompute::Ports::StoragePort: ./overcloud/network/ports/storage_from_pool.yaml
+  OS::TripleO::DellCompute::Ports::StorageMgmtPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::DellCompute::Ports::TenantPort: ./overcloud/network/ports/tenant_from_pool.yaml
+
   OS::TripleO::CephStorage::Ports::ExternalPort: ./overcloud/network/ports/noop.yaml
   OS::TripleO::CephStorage::Ports::InternalApiPort: ./overcloud/network/ports/noop.yaml
   OS::TripleO::CephStorage::Ports::StoragePort: ./overcloud/network/ports/storage_from_pool.yaml
@@ -66,6 +73,26 @@ parameter_defaults:
     - 192.168.190.23
 
   NovaComputeIPs:
+    # CHANGEME: Change the following IPs to the static IPs for the computes on
+    # the Tenant network
+    tenant:
+    - 192.168.130.31
+    - 192.168.130.32
+    - 192.168.130.33
+    # CHANGEME: Change the following IPs to the static IPs for the computes on
+    # the Private API network
+    internal_api:
+    - 192.168.140.31
+    - 192.168.140.32
+    - 192.168.140.33
+    # CHANGEME: Change the following IPs to the static IPs for the computes on
+    # the Storage network
+    storage:
+    - 192.168.170.31
+    - 192.168.170.32
+    - 192.168.170.33
+    
+  DellComputeIPs:
     # CHANGEME: Change the following IPs to the static IPs for the computes on
     # the Tenant network
     tenant:
