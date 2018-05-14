@@ -768,25 +768,25 @@ class Director(InfraHost):
                                       + node.storage_cluster_ip + "\\n"
 
             cmds = ['sed -i "/192.168/d" ' + static_ips_yaml,
-                    'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
+                    'sed -i "/ControllerIPs/,/DellComputeIPs/ \
                     s/tenant:/tenant: \\n' +
                     control_tenant_tunnel_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
+                    'sed -i "/ControllerIPs/,/DellComputeIPs/ \
                     s/external:/external: \\n' +
                     control_external_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
+                    'sed -i "/ControllerIPs/,/DellComputeIPs/ \
                     s/internal_api:/internal_api: \\n' +
                     control_private_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
+                    'sed -i "/ControllerIPs/,/DellComputeIPs/ \
                     s/storage:/storage: \\n' +
                     control_storage_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/NovaComputeIPs/,/CephStorageIPs/ \
+                    'sed -i "/DellComputeIPs/,/CephStorageIPs/ \
                     s/tenant:/tenant: \\n' +
                     compute_tenant_tunnel_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/NovaComputeIPs/,/CephStorageIPs/ \
+                    'sed -i "/DellComputeIPs/,/CephStorageIPs/ \
                     s/internal_api:/internal_api: \\n' +
                     compute_private_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/NovaComputeIPs/,/CephStorageIPs/ \
+                    'sed -i "/DellComputeIPs/,/CephStorageIPs/ \
                     s/storage:/storage: \\n' +
                     compute_storage_ips + "/\" " + static_ips_yaml,
                     'sed -i "/CephStorageIPs/,/$p/ s/storage:/storage: \\n' +
