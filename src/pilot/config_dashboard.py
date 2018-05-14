@@ -616,10 +616,8 @@ EOF
 
 def patch_rgw_collectors(dashboard_node, ceph_nodes):
     """ Patch /usr/lib64/collectd/cephmetrics/collectors/rgw.py
-    file to allow for skipping package installation.  We previously
-    install these packages in the overcloud image customization and
-    because we don't subscribe the nodes, this will fail unless we skip
-    this installation process.
+    file to allow collectd to monitor rgw process. This patch 
+    correctly identifies our naming of client.radosgw.gateway.
     """
 
     LOG.info("Preparing rgw.py file on Ceph Storage Dashboard.")
