@@ -153,8 +153,8 @@ class Profile():
         valid = True
         val_list = input.split('-')
         min_val = int(val_list[0])
-        max_val = int(val_list[1])
-        if int(value) not in range(min_val, max_val+1):
+        max_val = int(val_list[1]) + 1
+        if int(value) not in range(min_val, max_val):
             valid = False
         return valid
 
