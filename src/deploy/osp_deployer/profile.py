@@ -151,10 +151,10 @@ class Profile():
 
     def is_in_range(self, value, input):
         valid = True
-        list = input.split('-')
-        min = int(list[0])
-        max = int(list[1])
-        if int(value) not in range(min, max):
+        val_list = input.split('-')
+        min_val = int(val_list[0])
+        max_val = int(val_list[1])
+        if int(value) not in range(min_val, max_val+1):
             valid = False
         return valid
 
