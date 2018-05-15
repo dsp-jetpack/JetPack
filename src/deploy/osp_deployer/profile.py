@@ -153,7 +153,7 @@ class Profile():
         valid = True
         list = input.split('-')
         min = int(list[0])
-        max = int(list[1])
+        max = int(list[1]) + 1
         if int(value) not in range(min, max):
             valid = False
         return valid
