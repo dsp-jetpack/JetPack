@@ -622,14 +622,12 @@ def patch_rgw_collectors(dashboard_node, ceph_nodes):
 
     LOG.info("Preparing rgw.py file on Ceph Storage Dashboard.")
 
-    rgw_py = "/usr/lib64/collectd/cephmetrics/collectors/rgw.py"
-
     # Get the new file to the Ceph Storage Dashboard
-
     for node in ceph_nodes:
         if "controller" in node.fqdn:
             tmp_rgw_py = os.path.join("/tmp", "rgw.py")
             node.get(tmp_rgw_py, Node.rgw_py)
+            break
 
     if not os.path.exists("/usr/bin/patch"):
         os.system("sudo yum -y install patch")
@@ -637,7 +635,7 @@ def patch_rgw_collectors(dashboard_node, ceph_nodes):
     grep_str = "\"key_name = 'client.radosgw.gateway'\""
     rc = os.system("grep {} {} > /dev/null".format(grep_str, tmp_rgw_py))
 
-    if not rc == 0:
+    if rc != 0:
         os.system("""
 cat << EOF|patch -b -d /tmp 
 --- rgw.py
