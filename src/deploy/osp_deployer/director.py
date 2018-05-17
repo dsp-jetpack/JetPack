@@ -738,60 +738,63 @@ class Director(InfraHost):
             control_storage_ips = ''
             control_tenant_tunnel_ips = ''
             for node in self.settings.controller_nodes:
-                control_external_ips += "    - " +\
-                                        node.public_api_ip + "\\n"
-                control_private_ips += "    - " +\
-                                       node.private_api_ip + "\\n"
-                control_storage_ips += "    - " +\
-                                       node.storage_ip + "\\n"
-                control_tenant_tunnel_ips += "    - " +\
-                                             node.tenant_tunnel_ip + "\\n"
+                control_external_ips += "    - " + node.public_api_ip
+                control_private_ips += "    - " + node.private_api_ip
+                control_storage_ips += "    - " + node.storage_ip
+                control_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip
+                if node != self.settings.controller_nodes[-1]:
+                    control_external_ips += "\\n"
+                    control_private_ips += "\\n"
+                    control_storage_ips += "\\n"
+                    control_tenant_tunnel_ips += "\\n"
 
             compute_tenant_tunnel_ips = ''
             compute_private_ips = ''
             compute_storage_ips = ''
 
             for node in self.settings.compute_nodes:
-                compute_tenant_tunnel_ips += "    - " +\
-                                             node.tenant_tunnel_ip + "\\n"
-                compute_private_ips += "    - " +\
-                                       node.private_api_ip + "\\n"
-                compute_storage_ips += "    - " +\
-                                       node.storage_ip + "\\n"
+                compute_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip
+                compute_private_ips += "    - " + node.private_api_ip
+                compute_storage_ips += "    - " + node.storage_ip
+                if node != self.settings.compute_nodes[-1]:
+                    compute_tenant_tunnel_ips += "\\n"
+                    compute_private_ips += "\\n"
+                    compute_storage_ips += "\\n"
 
             storage_storgage_ip = ''
             storage_cluster_ip = ''
             for node in self.settings.ceph_nodes:
-                storage_storgage_ip += "    - " \
-                                       + node.storage_ip + "\\n"
-                storage_cluster_ip += "    - " \
-                                      + node.storage_cluster_ip + "\\n"
+                storage_storgage_ip += "    - " + node.storage_ip
+                storage_cluster_ip += "    - " + node.storage_cluster_ip
+                if node != self.settings.ceph_nodes[-1]:
+                    storage_storgage_ip += "\\n"
+                    storage_cluster_ip += "\\n"
 
             cmds = ['sed -i "/192.168/d" ' + static_ips_yaml,
-                    'sed -i "/ControllerIPs/,/DellComputeIPs/ \
+                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
                     s/tenant:/tenant: \\n' +
                     control_tenant_tunnel_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/ControllerIPs/,/DellComputeIPs/ \
+                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
                     s/external:/external: \\n' +
                     control_external_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/ControllerIPs/,/DellComputeIPs/ \
+                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
                     s/internal_api:/internal_api: \\n' +
                     control_private_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/ControllerIPs/,/DellComputeIPs/ \
+                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
                     s/storage:/storage: \\n' +
                     control_storage_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/DellComputeIPs/,/CephStorageIPs/ \
+                    'sed -i "/DellComputeIPs:/,/CephStorageIPs:/ \
                     s/tenant:/tenant: \\n' +
                     compute_tenant_tunnel_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/DellComputeIPs/,/CephStorageIPs/ \
+                    'sed -i "/DellComputeIPs:/,/CephStorageIPs:/ \
                     s/internal_api:/internal_api: \\n' +
                     compute_private_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/DellComputeIPs/,/CephStorageIPs/ \
+                    'sed -i "/DellComputeIPs:/,/CephStorageIPs:/ \
                     s/storage:/storage: \\n' +
                     compute_storage_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/CephStorageIPs/,/$p/ s/storage:/storage: \\n' +
+                    'sed -i "/CephStorageIPs:/,/$p/ s/storage:/storage: \\n' +
                     storage_storgage_ip + "/\" " + static_ips_yaml,
-                    'sed -i "/CephStorageIPs/,/$p/ \
+                    'sed -i "/CephStorageIPs:/,/$p/ \
                     s/storage_mgmt:/storage_mgmt: \\n' +
                     storage_cluster_ip + "/\" " + static_ips_yaml
                     ]
@@ -882,7 +885,6 @@ class Director(InfraHost):
         # in the neutron-ovs-dpdk.yaml (dpdk environment)
         cmds.append('sed -i "s|DpdkInterfaces:.*|DpdkInterfaces: ' +
                     interfaces + '|" ' + env_file)
-
 
         # Execute the command related to dpdk configuration
         for cmd in cmds:
