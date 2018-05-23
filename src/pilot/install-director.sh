@@ -145,9 +145,10 @@ echo "## Done."
 echo
 echo "## Installing Director"
 run_command "sudo yum -y install python-tripleoclient"
+run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
-run_command "sudo yum -y install python-*-tests"
+#run_command "sudo yum -y install python-*-tests"
 echo "## Done."
 
 echo
@@ -161,14 +162,14 @@ echo
 images_tar_path='.'
 if [ ! -d $HOME/pilot/images ];
 then
-  sudo yum install rhosp-director-images-ipa -y
+  sudo yum install rhosp-director-images rhosp-director-images-ipa -y
 
   # It's not uncommon to get connection reset errors when installing this 1.2G
   # RPM.  Keep retrying to complete the download
   echo "Downloading and installing rhosp-director-image"
   while :
   do
-    yum_out=$(sudo yum install rhosp-director-images -y 2>&1)
+    yum_out=$(sudo yum install rhosp-director-images rhosp-director-images-ipa -y 2>&1)
     yum_rc=$?
     echo $yum_out
     if [ $yum_rc -eq 1 ]
@@ -192,19 +193,20 @@ then
 fi
 cd $HOME/pilot/images
 
-for i in /usr/share/rhosp-director-images/overcloud-full-latest-10.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-10.0.tar;
+for i in /usr/share/rhosp-director-images/overcloud-full-latest-13.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-13.0.tar;
 do
   tar -xvf $i;
 done
 echo "## Done."
 
-echo 
-echo "## Customizing the overcloud image & uploading images"
-run_command "~/pilot/customize_image.sh ${subscription_manager_user} ${subscription_manager_pass} ${subcription_manager_poolid} ${proxy}"
+#echo 
+#echo "## Customizing the overcloud image & uploading images"
+#run_command "~/pilot/customize_image.sh ${subscription_manager_user} ${subscription_manager_pass} ${subcription_manager_poolid} ${proxy}"
 
 echo
 if [ -n "${overcloud_nodes_pwd}" ]; then
     echo "# Setting overcloud nodes password"
+    run_command "sudo yum install libguestfs-tools -y"
     run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd}"
 fi
 
@@ -240,23 +242,6 @@ echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
-# This hacks in a patch to work around a known issue where RAID configuration
-# fails because the iDRAC is busy running an export to XML job and is not
-# ready. Note that this patch must be here because we use this code prior to
-# deploying the director.
-echo
-echo "## Patching Ironic iDRAC driver is_ready check..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
-echo "## Done."
-
-echo
-echo "## Patching Ironic iDRAC driver uris.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/uris.py ${HOME}/pilot/uris.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyo
-echo "## Done."
 
 # This hacks in a patch to work around an issue where the iDRAC can return
 # invalid non-ASCII characters during an enumeration.
