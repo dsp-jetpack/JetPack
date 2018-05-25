@@ -82,7 +82,7 @@ resources:
               hpgflag=_HugepagesEnable_
               if [[ "$hpgflag" == "True" ]] ; then
                 sed 's/^\(GRUB_CMDLINE_LINUX=".*\)"/\1 '"$KERNEL_ARGS"'"/g' -i /etc/default/grub
-                echo "HugePage is applied"
+                echo "HugePages are applied"
               fi
               numaflag=_NumaEnable_
               if [[ "$numaflag" == "True" ]] ; then
