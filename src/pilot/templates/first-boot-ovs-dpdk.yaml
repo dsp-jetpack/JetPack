@@ -385,6 +385,7 @@ resources:
               sed 's/^\(GRUB_CMDLINE_LINUX=".*\)"/\1 '"$KERNEL_ARGS"' isolcpus='"$TUNED_CORES"'"/g' -i /etc/default/grub ;
               echo "NUMA and HugePage are Applied"
               grub2-mkconfig -o /boot/grub2/grub.cfg
+              reboot
             fi >> /tmp/grubby.log 2>&1
 
           params:
