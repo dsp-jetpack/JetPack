@@ -91,6 +91,7 @@ resources:
               fi
               if [[ "$hpgflag" == "True" || "$numaflag" == "True" ]] ; then
                 grub2-mkconfig -o /boot/grub2/grub.cfg
+                reboot
               fi
             fi >> /tmp/grubby.log 2>&1
 
