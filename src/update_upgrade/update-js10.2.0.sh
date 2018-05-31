@@ -103,7 +103,7 @@ update_director_packages() {
     sudo yum -y update python-tripleoclient
     sudo yum -y update puppet-tripleo
 
-    info "Patch current_config_hosts.rb before undercloud upgrade, see BZ:(INSERT BZ NUMBER)"
+    info "Patch current_config_hosts.rb before undercloud upgrade, see BZ: https://bugzilla.redhat.com/show_bug.cgi?id=1579184"
     sudo patch /usr/share/openstack-puppet/modules/tripleo/lib/facter/current_config_hosts.rb ~/update/9490d69.diff
     info "current_config_hosts.rb patched!"
 
