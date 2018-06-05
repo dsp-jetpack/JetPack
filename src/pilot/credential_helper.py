@@ -18,7 +18,7 @@ import os
 import sys
 from constants import Constants
 from subprocess import check_output
-from os_cloud_config.utils import clients
+from keystoneclient.v3 import client
 from heatclient.v1.client import Client as HeatClient
 
 
@@ -108,6 +108,9 @@ class CredentialHelper:
         if "drac_host" in driver_info:
             drac_ip = driver_info["drac_host"]
             drac_user = driver_info["drac_username"]
+        elif "drac_address" in driver_info:
+            drac_ip = driver_info["drac_address"]
+            drac_user = driver_info["drac_username"]
         else:
             drac_ip = driver_info["ipmi_address"]
             drac_user = driver_info["ipmi_username"]
@@ -173,10 +176,11 @@ class CredentialHelper:
             CredentialHelper.get_undercloud_creds()
 
         try:
-            keystone_client = clients.get_keystone_client(os_username,
-                                                          os_password,
-                                                          os_tenant_name,
-                                                          os_auth_url)
+            keystone_client = client.get_keystone_client(os_username,
+                                                         os_password,
+                                                         os_tenant_name,
+                                                         os_auth_url
+                                                         )
 
             heat_url = keystone_client.service_catalog.url_for(
                 service_type='orchestration',

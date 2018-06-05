@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import sys
+import subprocess
 from arg_helper import ArgHelper
 from command_helper import Exec
 from ironic_helper import IronicHelper
@@ -46,8 +47,17 @@ def main():
     LoggingHelper.configure_logging(args.logging_level)
 
     # Load the nodes into ironic
+    import_json = os.path.expanduser('~/nodes.json')
+    content = json.load(open(args.node_definition))
+    for node in content['nodes']:
+        for k in node.keys():
+            if not k.startswith('pm_'):
+                node.pop(k)
+                print "remomving "  + str(k)
+    with open(import_json, 'w') as out:
+        json.dump(content, out)
     logger.info("Importing {} into ironic".format(args.node_definition))
-    cmd = ["openstack", "baremetal", "import", "--json", args.node_definition]
+    cmd = ["openstack","overcloud","node","import", import_json]
     exit_code, stdin, stderr = Exec.execute_command(cmd)
     if exit_code != 0:
         logger.error("Failed to import nodes into ironic: {}, {}".format(
@@ -97,6 +107,22 @@ def main():
 
         ironic_client.node.update(ironic_node.uuid, patch)
 
+
+#    cmd = '''\
+#set -eux
+#for uuid in $(openstack baremetal node list -f value -c UUID); do
+#    node_ip=$(openstack baremetal node show ${uuid} -f json|jq -r .driver_info.drac_address)
+#    read service_tag provisioning_mac model <<< $(cat ~/instackenv.json| jq -r ".[][] | select(.pm_addr | contains (\"${node_ip}\"))| .service_tag,.provisioning_mac,.model")
+#    openstack baremetal node set $uuid --property service_tag=${service_tag} --property provisioning_mac=${provisioning_mac} --property model=${provisioning_mac}
+#done
+#'''
+    
+#    print(cmd)
+#    
+#    logger.info("Updating the nodes properties")
+#    proc = subprocess.Popen([cmd], stdout=subprocess.PIPE, shell=True)
+#    logger.info( proc.communicate()[0].strip())
+#    print("Completed importing nodes")
 
 if __name__ == "__main__":
     main()

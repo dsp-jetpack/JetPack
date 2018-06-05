@@ -957,7 +957,7 @@ class Director(InfraHost):
                      "openstack stack delete --yes --wait " +
                      self.settings.overcloud_name)
         # Unregister the nodes from Ironic
-        re = self.run_tty(self.source_stackrc + "ironic node-list | grep None")
+        re = self.run_tty(self.source_stackrc + "openstack baremetal node list | grep None")
         ls_nodes = re[0].split("\n")
         ls_nodes.pop()
         for node in ls_nodes:

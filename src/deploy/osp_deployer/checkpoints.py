@@ -336,7 +336,7 @@ class Checkpoints():
 
     def verify_nodes_registered_in_ironic(self):
         logger.debug("Verify the expected amount of nodes imported in ironic")
-        cmd = "source ~/stackrc;ironic node-list | grep None"
+        cmd = "source ~/stackrc;openstack baremetal node list | grep None"
         setts = self.settings
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
@@ -355,7 +355,7 @@ class Checkpoints():
 
     def verify_introspection_sucessfull(self):
         logger.debug("Verify the introspection did not encounter any errors")
-        cmd = "source ~/stackrc;ironic node-list | grep None"
+        cmd = "source ~/stackrc;openstack baremetal node list | grep None"
         setts = self.settings
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
