@@ -1,5 +1,5 @@
---- /usr/lib/python2.7/site-packages/dracclient/resources/raid.py.orig	2018-04-25 12:18:57.583356583 -0500
-+++ /usr/lib/python2.7/site-packages/dracclient/resources/raid.py	2018-04-25 11:48:22.515910316 -0500
+--- raid.py.orig	2018-04-25 12:18:57.583356583 -0500
++++ raid.py	2018-06-06 13:10:09.557456391 -0500
 @@ -66,14 +66,17 @@
      '3': 'fibre',
      '4': 'usb',
@@ -125,19 +125,16 @@
  
      def convert_physical_disks(self, physical_disks, raid_enable):
          """Converts a list of physical disks into or out of RAID mode.
-@@ -383,6 +415,11 @@
+@@ -377,7 +409,7 @@
+             error_msgs.append("'physical_disks' is not supplied")
+ 
+         # size validation
+-        if not size_mb:
++        if size_mb is None:
+             error_msgs.append("'size_mb' is not supplied")
+         else:
              utils.validate_integer_value(size_mb, 'size_mb', error_msgs)
- 
-         virtual_disk_prop_names.append('Size')
-+
-+        # Boss controller validation
-+        if raid_controller.startswith('AHCI.Slot'):
-+            size_mb = 0
-+
-         virtual_disk_prop_values.append(str(size_mb))
- 
-         # RAID level validation
-@@ -396,13 +433,19 @@
+@@ -396,13 +428,19 @@
              virtual_disk_prop_names.append('VirtualDiskName')
              virtual_disk_prop_values.append(disk_name)
  
