@@ -43,7 +43,7 @@
                   "should_be_valid_int"
                ],
                "in_range": [
-                  "1-48"
+                  "8-48"
                ]
             },
             "innodb_buffer_pool_size": {
@@ -56,7 +56,7 @@
                   "should_be_valid_int"
                ],
                "in_range": [
-                  "1-100000"
+                  "1000-100000"
                ]
 	    }
          }
@@ -78,8 +78,6 @@
                "valid_values": [
                   "4_port/nic_environment.yaml",
                   "5_port/nic_environment.yaml",
-                  "dpdk_mode1_4_port/nic_environment.yaml",
-                  "dpdk_mode2_4_port/nic_environment.yaml",
                   "dpdk_mode1_5_port/nic_environment.yaml",
                   "dpdk_mode2_5_port/nic_environment.yaml"
                ]

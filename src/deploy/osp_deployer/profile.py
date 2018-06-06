@@ -102,7 +102,7 @@ class Profile():
                                 "::" + set + \
                                 " is not valid for the profile " + \
                                 self.profile_name + \
-                                ".It should be set to one of the " + \
+                                ". It should be set to one of the " + \
                                 "following options : " + \
                                 json.dumps(allowed_settings)
                     elif validated is True:
@@ -114,7 +114,7 @@ class Profile():
                                 "::" + set + \
                                 " is not valid for the profile " + \
                                 self.profile_name + \
-                                ".It should be set to " + \
+                                ". It should be set to " + \
                                 profile_config.get(str(stanza), set)
 
         if len(Err) > 0:
@@ -153,7 +153,7 @@ class Profile():
         valid = True
         list = input.split('-')
         min = int(list[0])
-        max = int(list[1])
+        max = int(list[1]) + 1
         if int(value) not in range(min, max):
             valid = False
         return valid
