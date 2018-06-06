@@ -410,7 +410,7 @@ def define_storage_logical_disks(drac_client, raid_controller_name):
         return None
 
     os_logical_disk = define_storage_operating_system_logical_disk(
-            raid_cntlr_physical_disks, raid_controller_name)
+            raid_cntlr_physical_disks, drac_client, raid_controller_name)
 
     if os_logical_disk is None:
         return None
@@ -445,7 +445,7 @@ def define_storage_logical_disks(drac_client, raid_controller_name):
     return logical_disks
 
 
-def define_storage_operating_system_logical_disk(physical_disks,
+def define_storage_operating_system_logical_disk(physical_disks, drac_client,
                                                  raid_controller_name):
     (os_logical_disk_size_gb,
      os_physical_disk_names) = find_physical_disks_for_storage_os(
@@ -460,6 +460,8 @@ def define_storage_operating_system_logical_disk(physical_disks,
         "disks, and marking it the root volume:\n  {}".format(
             os_logical_disk_size_gb,
             '\n  '.join(os_physical_disk_names)))
+    if is_boss_controller(raid_controller_name, drac_client):
+        os_logical_disk_size_gb=0
     os_logical_disk = define_logical_disk(
         os_logical_disk_size_gb,
         '1',
