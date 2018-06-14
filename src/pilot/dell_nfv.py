@@ -171,6 +171,13 @@ class ConfigOvercloud(object):
             mariadb_max_connections,
             innodb_buffer_pool_size,
             innodb_buffer_pool_instances,
+            controller_count,
+            ceph_storage_count,
+            controller_flavor,
+            ceph_storage_flavor,
+            swift_storage_flavor,
+            block_storage_flavor,
+            vlan_range,
             dell_compute_count=0):
         try:
             logger.info("Editing dell environment file")
@@ -186,12 +193,40 @@ class ConfigOvercloud(object):
             if not ovs_dpdk:
                 cmds.append('sed -i "s|  # NovaSchedulerDefaultFilters|  ' +
                             'NovaSchedulerDefaultFilters|" ' + file_path)
-            cmds.append(
+            cmds.extend((
                 'sed -i "s|DellComputeCount:.*|DellComputeCount: ' +
                 str(dell_compute_count) +
                 '|" ' +
-                file_path)
-
+                file_path,
+                'sed -i "s|ControllerCount:.*|ControllerCount: ' +
+                str(controller_count) +
+                '|" ' +
+                file_path,
+                'sed -i "s|CephStorageCount:.*|CephStorageCount: ' +
+                str(ceph_storage_count) +
+                '|" ' +
+                file_path,
+                'sed -i "s|OvercloudControllerFlavor:.*|OvercloudControllerFlavor: ' +
+                str(controller_flavor) +
+                '|" ' +
+                file_path,
+                'sed -i "s|OvercloudCephStorageFlavor:.*|OvercloudCephStorageFlavor: ' +
+                str(ceph_storage_flavor) +
+                '|" ' +
+                file_path,
+                'sed -i "s|OvercloudSwiftStorageFlavor:.*|OvercloudSwiftStorageFlavor: ' +
+                str(swift_storage_flavor) +
+                '|" ' +
+                file_path,
+                'sed -i "s|OvercloudBlockStorageFlavor:.*|OvercloudBlockStorageFlavor: ' +
+                str(block_storage_flavor) +
+                '|" ' +
+                file_path,
+                'sed -i "s|NeutronNetworkVLANRanges:.*|NeutronNetworkVLANRanges: ' +
+                'physint:' + str(vlan_range) + ',physext'
+                '|" ' +
+                file_path))
+            
             if enable_hugepage:
                 hpg_num = ConfigOvercloud.calculate_hugepage_count(
                     hugepage_size)

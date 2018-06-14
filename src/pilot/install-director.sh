@@ -139,6 +139,8 @@ echo
 echo "## Configuring paths..."
 ESCAPED_HOME=${HOME//\//\\/}
 sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
+# Clean the nodes disks befor redeploying
+#sed -i "s/clean_nodes = false/clean_nodes = true/" $HOME/pilot/undercloud.conf
 cp $HOME/pilot/undercloud.conf $HOME
 echo "## Done."
 
