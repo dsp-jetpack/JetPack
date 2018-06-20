@@ -33,21 +33,21 @@ parameter_defaults:
   # CHANGEME: Change the interface names in the following lines for the
   # compute nodes provisioning interface and to include in the compute
   # nodes bonds
-  ComputeProvisioningInterface: em1
-  ComputeBond0Interface1: p4p1
-  ComputeBond0Interface2: p6p1
-  ComputeBond1Interface1: p4p2
-  ComputeBond1Interface2: p6p2
+  ComputeProvisioningInterface: em3
+  ComputeBond0Interface1: em1
+  ComputeBond0Interface2: p3p1
+  ComputeBond1Interface1: em2
+  ComputeBond1Interface2: p3p2
   # The bonding mode to use for compute nodes
   ComputeBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
 
   # CHANGEME: Change the interface names in the following lines for the
   # storage nodes provisioning interface and to include in the storage
   # nodes bonds
-  StorageProvisioningInterface: em1
-  StorageBond0Interface1: p4p1
-  StorageBond0Interface2: p6p1
-  StorageBond1Interface1: p4p2
-  StorageBond1Interface2: p6p2
+  StorageProvisioningInterface: em3
+  StorageBond0Interface1: em1
+  StorageBond0Interface2: p2p1
+  StorageBond1Interface1: em2
+  StorageBond1Interface2: p2p2
   # The bonding mode to use for storage nodes
   StorageBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1

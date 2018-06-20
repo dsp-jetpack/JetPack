@@ -881,14 +881,18 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
     controllers = drac_client.list_raid_controllers()
 
     found_hba = False
+    found_boss = False
     for controller in controllers:
         if "hba330" in controller.model.lower():
             found_hba = True
-            break
+        if "boss" in controller.model.lower():
+            found_boss = True
 
-    if not found_hba:
-        LOG.info("No HBA330 found.  Not generating OSD config for "
-                 "{ip}".format(ip=ip_mac_service_tag))
+    if not (found_hba and found_boss):
+        LOG.info("Both BOSS and HBA330 must be present for automatic OSD "
+                 "configuration. Not generating OSD config for {ip} because "
+                 "one, or the other, or both are not present.".format(
+                     ip=ip_mac_service_tag))
         return
 
     LOG.info("Generating OSD config for {ip}".format(ip=ip_mac_service_tag))

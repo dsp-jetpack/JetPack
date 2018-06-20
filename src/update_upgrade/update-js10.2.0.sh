@@ -40,7 +40,6 @@ SUBSCRIPTION_JSON="$HOME/pilot/subscription.json"
 CONTROLLERS=$(openstack server list  -c Name -c Networks -f value | grep 'control' | awk -F "=" '{ print $2 }')
 COMPUTES=$(openstack server list  -c Name -c Networks -f value | grep 'compute' | awk -F "=" '{ print $2 }')
 OVERCLOUD=$(openstack server list  -c Name -c Networks -f value | awk -F "=" '{ print $2 }')
-
 DEPLOY_CMD_PATH=$HOME/pilot/overcloud_deploy_cmd.log
 
 # Logging levels
@@ -76,8 +75,7 @@ fi
 
 mkdir -p ~/update/update-js10.2-lockfiles
 
-
-# Updating JS 10.1 to latest OSP 10 packages
+# Updating JS 10.2 to latest OSP 10 packages
 # Script based on Red Hat documentation see:
 # https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/10/html-single/upgrading_red_hat_openstack_platform/#sect-Updating_the_Environment
 
@@ -103,11 +101,16 @@ update_director_packages() {
 
     # update director packages and restart some services
     sudo yum -y update python-tripleoclient
+    sudo yum -y update puppet-tripleo
+
+    info "Patch current_config_hosts.rb before undercloud upgrade, see BZ: https://bugzilla.redhat.com/show_bug.cgi?id=1579184"
+    sudo patch /usr/share/openstack-puppet/modules/tripleo/lib/facter/current_config_hosts.rb ~/update/9490d69.diff
+    info "current_config_hosts.rb patched!"
 
     info "Begin undercloud upgrade"
     openstack undercloud upgrade
     info "Upgrade undercloud complete."
-
+    
     sleep 5
     touch ~/update/update-js10.2-lockfiles/director-updated.lock
 
@@ -189,14 +192,35 @@ update_heat_templates() {
     if [ -e ~/pilot/templates/overrides/puppet/hieradata/ceph.yaml ]; then
       cp ~/pilot/templates/overrides/puppet/hieradata/ceph.yaml ~/pilot/templates/overcloud/puppet/hieradata
     fi
+    
+    # Fix roles_data.yaml for Manila issue which causes unlocked bits install and update to fail due to regression on OSP 10 z9.
+    if ! grep -q '# - OS::TripleO::Services::ManilaBackendGeneric' ~/pilot/templates/roles_data.yaml; then
+      info "OS::TripleO::Services::ManilaBackendGeneric not commented out, comment it out."
+      sed -i "s/- OS::TripleO::Services::ManilaBackendGeneric/# - OS::TripleO::Services::ManilaBackendGeneric/" ~/pilot/templates/roles_data.yaml
+    fi
 
     touch ~/update/update-js10.2-lockfiles/heat_templates_updated.lock
+}
+
+# known regression recently introduced into puppet-tripleo package- current_config_hosts.rb, see: https://bugzilla.redhat.com/show_bug.cgi?id=1579184
+patch_current_config_hosts() {
+    info "Patching currrent_config_hosts.rb on all nodes due to known defect see BZ: 1579184."
+    for N in $OVERCLOUD
+    do
+        ssh heat-admin@${N} "sudo yum update -y puppet-tripleo"
+        scp ~/update/9490d69.diff heat-admin@$N:~/
+	ssh heat-admin@${N} "sudo patch /usr/share/openstack-puppet/modules/tripleo/lib/facter/current_config_hosts.rb ~/9490d69.diff"
+    done
+    info "current_config_hosts.rb patched on all overcloud nodes."
 }
 
 # https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/10/html-single/upgrading_red_hat_openstack_platform/#sect-Updating_the_Overcloud
 update_overcloud() {
     [ -e ~/update/update-js10.2-lockfiles/overcloud-updated.lock ] && return
     info "Updating overcloud"
+
+    patch_current_config_hosts
+
     cd ~
     source ~/stackrc
     C=($CONTROLLERS)
@@ -245,7 +269,7 @@ update_overcloud() {
     touch ~/update/update-js10.2-lockfiles/overcloud-updated.lock
 }
 
-# main 
+# main
 update_subscription_json
 update_director_packages
 update_overcloud_images
