@@ -44,6 +44,7 @@ HOST_OS_CPUS = ''
 VCPUS = ''
 TOTAL_CPUS = ''
 
+
 class ConfigOvercloud(object):
     """
     Description: Class responsible for overcloud configurations.
@@ -83,7 +84,7 @@ class ConfigOvercloud(object):
     @classmethod
     def calculate_hostos_cpus(self, number_of_host_os_cpu):
         try:
-            global HOST_OS_CPUS,VCPUS,TOTAL_CPUS
+            global HOST_OS_CPUS, VCPUS, TOTAL_CPUS
             cpu_count_list = []
             for node in ConfigOvercloud.nodes:
                 # for every compute node get the corresponding drac credentials

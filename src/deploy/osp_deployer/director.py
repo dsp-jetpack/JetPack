@@ -115,10 +115,10 @@ class Director(InfraHost):
             'sed -i "s|dhcp_end = .*|dhcp_end = ' +
             self.settings.provisioning_net_dhcp_end +
             '|" pilot/undercloud.conf',
-            'sed -i "s|network_cidr = .*|network_cidr = ' +
+            'sed -i "s|cidr = .*|cidr = ' +
             self.settings.provisioning_network +
             '|" pilot/undercloud.conf',
-            'sed -i "s|network_gateway = .*|network_gateway = ' +
+            'sed -i "s|gateway = .*|gateway = ' +
             self.settings.director_node.provisioning_ip +
             '|" pilot/undercloud.conf',
             'sed -i "s|inspection_iprange = .*|inspection_iprange = ' +

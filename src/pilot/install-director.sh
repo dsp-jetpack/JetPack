@@ -293,7 +293,7 @@ openstack overcloud container image prepare --output-env-file ~/overcloud_images
  -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
  -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
  --set ceph_namespace=registry.access.redhat.com/rhceph \
- --set ceph_image=rhceph-2-rhel7 \
+ --set ceph_image=rhceph-3-rhel7 \
  --tag-from-label {version}-{release}  
 
 sudo yum install -y os-cloud-config
