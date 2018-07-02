@@ -373,8 +373,7 @@ class Settings():
         else:
             logger.info("using default repo settings")
             self.rhsm_repos = [
-                'rhel-7-server-openstack-10-rpms',
-                'rhel-7-server-openstack-10-devtools-rpms']
+                'rhel-7-server-openstack-13-rpms']
         if dev_settings['verify_rhsm_status'].lower() \
                 == 'true':
             self.verify_rhsm_status = True

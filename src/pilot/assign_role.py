@@ -928,40 +928,28 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
         node_data_lookup = json.loads(node_data_lookup_str)
 
     if system_id in node_data_lookup:
-        current_osd_config = node_data_lookup[system_id][
-            "ceph::profile::params::osds"]
-        if new_osd_config == current_osd_config:
-            LOG.info("The generated OSD configuration for "
-                     "{ip_mac_service_tag} ({system_id}) is the same as the "
-                     "one in {osd_config_file}.  Skipping OSD "
-                     "configuration.".format(
-                         ip_mac_service_tag=ip_mac_service_tag,
-                         system_id=system_id,
-                         osd_config_file=osd_config_file))
-            return
-        else:
-            generated_config = json.dumps(new_osd_config, sort_keys=True,
-                                          indent=2, separators=(',', ': '))
-            current_config = json.dumps(current_osd_config, sort_keys=True,
-                                        indent=2, separators=(',', ': '))
-            raise RuntimeError("The generated OSD configuration for "
-                               "{ip_mac_service_tag} ({system_id}) is "
-                               "different from the one in {osd_config_file}.\n"
-                               "Generated:\n{generated_config}\n\n"
-                               "Current:\n{current_config}\n\n"
-                               "If this is unexpected then check for failed "
-                               "drives. If this is expected, then delete the "
-                               "configuration for this node from "
-                               "{osd_config_file} and rerun "
-                               "assign_role.".format(
-                                   ip_mac_service_tag=ip_mac_service_tag,
-                                   system_id=system_id,
-                                   osd_config_file=osd_config_file,
-                                   generated_config=generated_config,
-                                   current_config=current_config))
+        current_osd_config = node_data_lookup[system_id]
+        generated_config = json.dumps(new_osd_config, sort_keys=True,
+                                      indent=2, separators=(',', ': '))
+        current_config = json.dumps(current_osd_config, sort_keys=True,
+                                    indent=2, separators=(',', ': '))
+        raise RuntimeError("The generated OSD configuration for "
+                           "{ip_mac_service_tag} ({system_id}) is "
+                           "different from the one in {osd_config_file}.\n"
+                           "Generated:\n{generated_config}\n\n"
+                           "Current:\n{current_config}\n\n"
+                           "If this is unexpected then check for failed "
+                           "drives. If this is expected, then delete the "
+                           "configuration for this node from "
+                           "{osd_config_file} and rerun "
+                           "assign_role.".format(
+                               ip_mac_service_tag=ip_mac_service_tag,
+                               system_id=system_id,
+                               osd_config_file=osd_config_file,
+                               generated_config=generated_config,
+                               current_config=current_config))
 
-    node_data_lookup[system_id] = {
-        "ceph::profile::params::osds": new_osd_config}
+    node_data_lookup[system_id] = new_osd_config
 
     # make a backup copy of the file
     osd_config_file_backup = osd_config_file + ".bak"
@@ -1025,12 +1013,14 @@ def get_drives(drac_client):
 
 
 def generate_osd_config_without_journals(controllers, osd_drives):
-    osd_config = {}
+    osd_config = {
+        'osd_scenario': 'collocated',
+        'devices': []}
     for osd_drive in osd_drives:
         osd_drive_pci_bus_number = get_pci_bus_number(osd_drive, controllers)
         osd_drive_device_name = get_by_path_device_name(
             osd_drive_pci_bus_number, osd_drive)
-        osd_config[osd_drive_device_name] = {}
+        osd_config['devices'].append(osd_drive_device_name)
 
     return osd_config
 
@@ -1041,7 +1031,10 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds):
                     "journals.  This will cause inconsistent performance "
                     "characteristics.")
 
-    osd_config = {}
+    osd_config = {
+        'osd_scenario': 'non-collocated',
+        'devices': [],
+        'dedicated_devices': []}
     osd_index = 0
     remaining_ssds = len(ssds)
     for ssd in ssds:
@@ -1059,8 +1052,8 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds):
             osd_drive_device_name = get_by_path_device_name(
                 osd_drive_pci_bus_number, osd_drive)
 
-            osd_config[osd_drive_device_name] = {"journal": ssd_device_name}
-
+            osd_config['devices'].append(osd_drive_device_name)
+            osd_config['dedicated_devices'].append(ssd_device_name)
         osd_index += num_osds_for_ssd
         remaining_ssds -= 1
 

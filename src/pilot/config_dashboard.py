@@ -616,7 +616,7 @@ EOF
 
 def patch_rgw_collectors(dashboard_node, ceph_nodes):
     """ Patch /usr/lib64/collectd/cephmetrics/collectors/rgw.py
-    file to allow collectd to monitor rgw process. This patch 
+    file to allow collectd to monitor rgw process. This patch
     correctly identifies our naming of client.radosgw.gateway.
     """
 
