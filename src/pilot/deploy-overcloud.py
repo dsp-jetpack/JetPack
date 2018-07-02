@@ -205,16 +205,16 @@ def run_deploy_command(cmd):
 
 
 def finalize_overcloud():
-    from os_cloud_config.utils import clients
+    from keystone.v3 import client
 
     os_auth_url, os_tenant_name, os_username, os_password = \
         CredentialHelper.get_overcloud_creds()
 
     try:
-        keystone_client = clients.get_keystone_client(os_username,
-                                                      os_password,
-                                                      os_tenant_name,
-                                                      os_auth_url)
+        keystone_client = client.get_keystone_client(os_username,
+                                                     os_password,
+                                                     os_tenant_name,
+                                                     os_auth_url)
     except:
         return None
 
@@ -368,13 +368,13 @@ def main():
         # time the overcloud is deployed (instead of once, after the Director
         # is installed) in order to ensure an update to the Director doesn't
         # overwrite the patch.
-        logger.info("Applying patches to director...")
-        cmd = os.path.join(home_dir, 'pilot', 'patch-director.sh')
-        status = os.system(cmd)
-        if status != 0:
-            raise ValueError("\nError: {} failed, unable to continue.  See "
-                             "the comments in that file for additional "
-                             "information".format(cmd))
+        #logger.info("Applying patches to director...")
+        #cmd = os.path.join(home_dir, 'pilot', 'patch-director.sh')
+        #status = os.system(cmd)
+        #if status != 0:
+        #    raise ValueError("\nError: {} failed, unable to continue.  See "
+        #                     "the comments in that file for additional "
+        #                     "information".format(cmd))
         # Pass the parameters required by puppet which will be used
         # to enable/disable dell nfv features
         # Edit the dellnfv_environment.yaml
@@ -394,7 +394,15 @@ def main():
             args.mariadb_max_connections,
             args.innodb_buffer_pool_size,
             args.innodb_buffer_pool_instances,
-            args.num_dell_computes)
+            args.num_controllers,
+            args.num_storage,
+            control_flavor,
+            ceph_storage_flavor,
+            swift_storage_flavor,
+            block_storage_flavor,
+            args.vlan_range,
+            args.num_dell_computes
+            )
 
         # Launch the deployment
 
@@ -440,8 +448,7 @@ def main():
         # storage-environment.yaml and ceph-radosgw.yaml
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "storage-environment.yaml" \
-                    " -e ~/pilot/templates/overcloud/environments/" \
-                    "ceph-radosgw.yaml" \
+                    " -e ~/overcloud_images.yaml" \
                     " -e ~/pilot/templates/dell-environment.yaml" \
                     " -e ~/pilot/templates/overcloud/environments/" \
                     "puppet-pacemaker.yaml"
@@ -455,46 +462,23 @@ def main():
         if args.enable_dellsc:
             env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
 
-        cmd = "cd ; openstack overcloud deploy" \
+        cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
               " --log-file ~/pilot/overcloud_deployment.log" \
               " -t {}" \
               " {}" \
               " --templates ~/pilot/templates/overcloud" \
+              " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml" \
+              " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-rgw.yaml" \
               " {}" \
-              " --control-flavor {}" \
-              " --ceph-storage-flavor {}" \
-              " --swift-storage-flavor {}" \
-              " --block-storage-flavor {}" \
-              " --neutron-public-interface bond1" \
-              " --neutron-network-type vlan" \
-              " --neutron-disable-tunneling" \
               " --libvirt-type kvm" \
-              " --os-auth-url {}" \
-              " --os-project-name {}" \
-              " --os-user-id {}" \
-              " --os-password {}" \
-              " --control-scale {}" \
-              " --ceph-storage-scale {}" \
               " --ntp-server {}" \
-              " --neutron-network-vlan-ranges physint:{},physext" \
-              " --neutron-bridge-mappings physint:br-tenant,physext:br-ex" \
               "".format(debug,
                         args.timeout,
                         overcloud_name_opt,
                         env_opts,
-                        control_flavor,
-                        ceph_storage_flavor,
-                        swift_storage_flavor,
-                        block_storage_flavor,
-                        os_auth_url,
-                        os_tenant_name,
-                        os_username,
-                        os_password,
-                        args.num_controllers,
-                        args.num_storage,
                         args.ntp_server_fqdn,
-                        args.vlan_range)
+                        )
 
         with open(os.path.join(home_dir, 'pilot', 'overcloud_deploy_cmd.log'),
                   'w') as f:

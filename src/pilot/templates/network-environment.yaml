@@ -135,6 +135,7 @@ parameter_defaults:
     MysqlNetwork: internal_api
     CephClusterNetwork: storage_mgmt
     CephPublicNetwork: storage
+    CephRgwNetwork: storage
     ControllerHostnameResolveNetwork: internal_api
     ComputeHostnameResolveNetwork: internal_api
     BlockStorageHostnameResolveNetwork: internal_api

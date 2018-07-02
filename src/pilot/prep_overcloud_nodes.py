@@ -18,7 +18,7 @@ import argparse
 import logging
 import os
 import sys
-from ironic_helper import IronicHelper
+import subprocess
 from logging_helper import LoggingHelper
 from credential_helper import CredentialHelper
 
@@ -47,40 +47,32 @@ def main():
 
     LoggingHelper.configure_logging(args.logging_level)
 
-    ironic_client = IronicHelper.get_ironic_client()
+    cmd = "source ~/stackrc;openstack baremetal node list -f value -c UUID"
+    nodes = subprocess.check_output(cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
 
-    for node in ironic_client.node.list(detail=True):
-        ip, username, password = \
-            CredentialHelper.get_drac_creds_from_node(node)
+    for node in nodes.split("\n"):
 
         # Power off the node
-        cmd = "ipmitool -H {} -I lanplus -U {} -P '{}' chassis " \
-            "power off".format(ip, username, password)
-        logger.info("Powering off {}".format(ip))
+        logger.info("Powering off node " + node)
+        cmd = "openstack baremetal node power off " + node 
         logger.debug("    {}".format(cmd))
         os.system(cmd)
 
         # Set the first boot device to PXE
-        cmd = "ipmitool -H {} -I lanplus -U {} -P '{}' chassis " \
-            "bootdev pxe options=persistent".format(ip, username, password)
-        logger.info("Setting the provisioning NIC to PXE boot on {}".format(
-            ip))
+        logger.info("Setting the provisioning NIC to PXE boot on node " + node)
+
+        cmd = "openstack baremetal node boot device set " + node + " pxe"
+        logger.debug("    {}".format(cmd))
+        os.system(cmd)
+        cmd = "openstack baremetal node set --driver-info force_persistent_boot_device=True " + node
         logger.debug("    {}".format(cmd))
         os.system(cmd)
 
     if not args.skip:
-        os_auth_url, os_tenant_name, os_username, os_password = \
-            CredentialHelper.get_undercloud_creds()
 
-        cmd = "openstack baremetal configure boot " \
-            "--os-auth-url {} " \
-            "--os-project-name {} " \
-            "--os-username {} " \
-            "--os-password {} " \
-            "".format(os_auth_url,
-                      os_tenant_name,
-                      os_username,
-                      os_password)
+        cmd = "openstack overcloud node introspect --all-manageable --provide"
 
         logger.info("Assigning the kernel and ramdisk image to all nodes")
         logger.debug(cmd)
