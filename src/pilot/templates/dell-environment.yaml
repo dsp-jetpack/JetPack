@@ -87,10 +87,8 @@ parameter_defaults:
   # Set to true to enable Nova usage of Ceph for ephemeral storage.
   # If set to false, Nova uses the storage local to the compute.
   NovaEnableRbdBackend: true
-
-  CephAnsibleDisksConfig:
-    devices:
-    - /dev/sda
+  #  devices:
+  #  - /dev/sda2
 
 
   # Configure Ceph Placement Group (PG) values for the indicated pools
