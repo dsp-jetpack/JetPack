@@ -87,8 +87,6 @@ parameter_defaults:
   # Set to true to enable Nova usage of Ceph for ephemeral storage.
   # If set to false, Nova uses the storage local to the compute.
   NovaEnableRbdBackend: true
-
-  #CephAnsibleDisksConfig:
   #  devices:
   #  - /dev/sda2
 
@@ -101,8 +99,8 @@ parameter_defaults:
     journal_size: 10000
     journal_collocation: false
     raw_multi_journal: true
-  CephAnsibleDisksConfig:
-    osd_scenario: collocated
+  CephAnsibleDiskConfig:
+    osd_scenario: non-collocated
     devices:
       - /dev/sdd
       - /dev/sde
@@ -112,6 +110,22 @@ parameter_defaults:
       - /dev/sdi
       - /dev/sdj
       - /dev/sdk
+      - /dev/sdl
+      - /dev/sdm
+      - /dev/sdn
+      - /dev/sdo
+    dedicated_devices:
+      - /dev/sda
+      - /dev/sda
+      - /dev/sda
+      - /dev/sda
+      - /dev/sdb
+      - /dev/sdb
+      - /dev/sdb
+      - /dev/sdb
+      - /dev/sdc
+      - /dev/sdc
+      - /dev/sdc
 
   NovaComputeExtraConfig:
     nova::migration::libvirt::live_migration_completion_timeout: 800
