@@ -16,6 +16,7 @@ import logging
 import json
 import os
 import sys
+import subprocess
 from constants import Constants
 from subprocess import check_output
 from keystoneclient.v3 import client
@@ -172,26 +173,8 @@ class CredentialHelper:
 
     @staticmethod
     def get_overcloud_stack():
-        os_auth_url, os_tenant_name, os_username, os_password = \
-            CredentialHelper.get_undercloud_creds()
+        cmd = "source  " +  CredentialHelper.get_undercloudrc_name() + ";openstack stack list | grep COMPLETE | awk '{print $4}'"
+        return subprocess.check_output(cmd,
+                                       stderr=subprocess.STDOUT,
+                                       shell=True)
 
-        try:
-            keystone_client = client.get_keystone_client(os_username,
-                                                         os_password,
-                                                         os_tenant_name,
-                                                         os_auth_url
-                                                         )
-
-            heat_url = keystone_client.service_catalog.url_for(
-                service_type='orchestration',
-                endpoint_type='publicURL')
-
-            heat_client = HeatClient(endpoint=heat_url,
-                                     token=keystone_client.auth_token)
-
-            # There can be only one overcloud stack, so if there is one it
-            # will be the first in the list.
-            return next(heat_client.stacks.list(), None)
-
-        except:
-            return None
