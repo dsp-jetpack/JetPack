@@ -102,6 +102,8 @@ parameter_defaults:
   CephAnsibleDiskConfig:
     osd_scenario: non-collocated
     devices:
+      - /dev/sdb
+      - /dev/sdc
       - /dev/sdd
       - /dev/sde
       - /dev/sdf
@@ -109,23 +111,16 @@ parameter_defaults:
       - /dev/sdh
       - /dev/sdi
       - /dev/sdj
-      - /dev/sdk
-      - /dev/sdl
-      - /dev/sdm
-      - /dev/sdn
-      - /dev/sdo
     dedicated_devices:
-      - /dev/sda
-      - /dev/sda
-      - /dev/sda
-      - /dev/sda
-      - /dev/sdb
-      - /dev/sdb
-      - /dev/sdb
-      - /dev/sdb
-      - /dev/sdc
-      - /dev/sdc
-      - /dev/sdc
+      - /dev/sdk
+      - /dev/sdk
+      - /dev/sdk
+      - /dev/sdk
+      - /dev/sdk
+      - /dev/sdk
+      - /dev/sdk
+      - /dev/sdk
+      - /dev/sdk
 
   NovaComputeExtraConfig:
     nova::migration::libvirt::live_migration_completion_timeout: 800
