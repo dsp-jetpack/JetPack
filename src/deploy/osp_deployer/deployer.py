@@ -224,7 +224,7 @@ def deploy():
         logger.debug("installing the overcloud ... this might take a while")
         director_vm.deploy_overcloud()
         cmd = "source ~/stackrc; openstack stack list | grep " \
-              + settings.overcloud_name + " | awk '{print $6}'"
+              + settings.overcloud_name + " | awk '{print $8}'"
         overcloud_status = \
             Ssh.execute_command_tty(director_ip,
                                     settings.director_install_account_user,
