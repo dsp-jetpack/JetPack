@@ -195,8 +195,8 @@ def run_deploy_command(cmd):
     status = os.system(cmd)
 
     if status == 0:
-        stack = CredentialHelper.get_overcloud_stack()
-        if not stack or 'FAILED' in stack.stack_status:
+        stack_status = CredentialHelper.get_overcloud_stack_status()
+        if not stack_status or 'FAILED' in stack_status:
             logger.info("\nDeployment failed even "
                         "though command returned success.")
             status = 1
