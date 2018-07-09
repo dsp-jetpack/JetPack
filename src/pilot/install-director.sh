@@ -289,7 +289,7 @@ echo "## Done."
 touch ~/overcloud_images.yaml
 
 openstack overcloud container image prepare --output-env-file ~/overcloud_images.yaml \
- --namespace=registry.access.redhat.com/rhosp13-beta \
+ --namespace=registry.access.redhat.com/rhosp13 \
  -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
  -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
  --set ceph_namespace=registry.access.redhat.com/rhceph \
