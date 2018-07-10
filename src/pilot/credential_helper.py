@@ -176,12 +176,12 @@ class CredentialHelper:
         cmd = "source  " +  CredentialHelper.get_undercloudrc_name() + ";openstack stack list | grep CREATE | awk '{print $4}'"
         return subprocess.check_output(cmd,
                                        stderr=subprocess.STDOUT,
-                                       shell=True)
+                                       shell=True).strip()
 
     @staticmethod
     def get_overcloud_stack_status():
         cmd = "source  " +  CredentialHelper.get_undercloudrc_name() + ";openstack stack list | grep CREATE | awk '{print $8}'"
         return subprocess.check_output(cmd,
                                        stderr=subprocess.STDOUT,
-                                       shell=True)
+                                       shell=True).strip()
 
