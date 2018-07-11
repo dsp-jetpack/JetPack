@@ -45,8 +45,13 @@ class CredentialHelper:
         else:
             project_name = env_keys['OS_TENANT_NAME']
         return \
-            env_keys['OS_AUTH_URL'], project_name, \
-            env_keys['OS_USERNAME'], env_keys['OS_PASSWORD']
+            env_keys['OS_AUTH_URL'], \
+            project_name, \
+            env_keys['OS_USERNAME'], \
+            env_keys['OS_PASSWORD'], \
+            env_keys['OS_USER_DOMAIN_NAME'], \
+            env_keys['OS_PROJECT_DOMAIN_NAME']
+               
 
     @staticmethod
     def get_undercloud_creds():

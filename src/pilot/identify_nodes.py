@@ -15,28 +15,40 @@
 # limitations under the License.
 
 import ironicclient
+from keystoneauth1.identity import v3
+from keystoneauth1 import session
+from keystoneclient.v3 import client
 from novaclient import client as novaclient
 from os import path
 from subprocess import check_output
 from credential_helper import CredentialHelper
 
-
 def main():
-    os_auth_url, os_tenant_name, os_username, os_password = \
+    os_auth_url, os_tenant_name, os_username, os_password, \
+    os_user_domain_name, os_project_domain_name = \
         CredentialHelper.get_undercloud_creds()
+    auth_url = os_auth_url + "v3"
 
     kwargs = {'os_username': os_username,
               'os_password': os_password,
               'os_auth_url': os_auth_url,
-              'os_tenant_name': os_tenant_name}
+              'os_tenant_name': os_tenant_name,
+              'os_user_domain_name': os_user_domain_name,
+              'os_project_domain_name': os_project_domain_name}
     ironic = ironicclient.client.get_client(1, **kwargs)
     nodes = ironic.node.list(detail=True)
 
-    nova = novaclient.Client('2',  # API version
-                             os_username,
-                             os_password,
-                             os_tenant_name,
-                             os_auth_url)
+    auth = v3.Password(
+        auth_url=auth_url,
+        username=os_username,
+        password=os_password,
+        project_name=os_tenant_name,
+        user_domain_name=os_user_domain_name,
+        project_domain_name=os_project_domain_name
+    )
+
+    sess = session.Session(auth=auth)
+    nova = novaclient.Client('2', session=sess)
 
     # Slightly odd syntax for declaring 'banner' reduces the line length
     banner = (
