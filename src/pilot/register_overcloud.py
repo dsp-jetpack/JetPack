@@ -23,6 +23,9 @@ import re
 import json
 import sys
 import subprocess
+from keystoneauth1.identity import v3
+from keystoneauth1 import session
+from keystoneclient.v3 import client
 from credential_helper import CredentialHelper
 from netaddr import IPAddress
 from network_helper import NetworkHelper
@@ -145,18 +148,32 @@ class RegisterOvercloud:
         self.logger.debug("proxy_args: " + self.proxy_args)
 
     def _get_nodes(self):
-        os_auth_url, os_tenant_name, os_username, os_password = \
+        os_auth_url, os_tenant_name, os_username, os_password, \
+        os_user_domain_name, os_project_domain_name = \
             CredentialHelper.get_undercloud_creds()
+        auth_url = os_auth_url + "v3"
 
         provisioning_network = NetworkHelper.get_provisioning_network()
 
         kwargs = {'os_username': os_username,
                   'os_password': os_password,
                   'os_auth_url': os_auth_url,
-                  'os_tenant_name': os_tenant_name}
+                  'os_tenant_name': os_tenant_name, 
+                  'os_user_domain_name': os_user_domain_name,
+                  'os_project_domain_name': os_project_domain_name}
         i_client = ironic_client.get_client(1, **kwargs)
-        n_client = nova_client.Client(2, os_username, os_password,
-                                      os_tenant_name, os_auth_url)
+
+        auth = v3.Password(
+            auth_url=auth_url,
+            username=os_username,
+            password=os_password,
+            project_name=os_tenant_name,
+            user_domain_name=os_user_domain_name,
+            project_domain_name=os_project_domain_name
+        )
+
+        sess = session.Session(auth=auth)
+        n_client = nova_client.Client(2, session=sess)
 
         # Build up a dictionary that maps roles to a list of IPs for that role
         self.node_roles_to_nodes = {}
