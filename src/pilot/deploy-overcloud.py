@@ -124,13 +124,16 @@ def create_flavors():
         {"id": "5", "name": "m1.xlarge", "memory": 16384, "disk": 160,
          "cpus": 8}]
 
-    os_auth_url, os_tenant_name, os_username, os_password = \
-        CredentialHelper.get_overcloud_creds()
+    os_auth_url, os_tenant_name, os_username, os_password, \
+    os_user_domain_name, os_project_domain_name = \
+        CredentialHelper.get_undercloud_creds()
 
     kwargs = {'username': os_username,
               'password': os_password,
               'auth_url': os_auth_url,
-              'project_id': os_tenant_name}
+              'project_id': os_tenant_name,
+              'user_domain_name': os_user_domain_name,
+              'project_domain_name': os_project_domain_name}
     n_client = nova_client.Client(2, **kwargs)
 
     existing_flavor_ids = []
