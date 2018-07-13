@@ -210,16 +210,16 @@ def run_deploy_command(cmd):
 def finalize_overcloud():
     from keystone.v3 import client
 
-    os_auth_url, os_tenant_name, os_username, os_password = \
-        CredentialHelper.get_overcloud_creds()
+    #os_auth_url, os_tenant_name, os_username, os_password = \
+    #    CredentialHelper.get_overcloud_creds()
 
-    try:
-        keystone_client = client.get_keystone_client(os_username,
-                                                     os_password,
-                                                     os_tenant_name,
-                                                     os_auth_url)
-    except:
-        return None
+    #try:
+    #    keystone_client = client.get_keystone_client(os_username,
+    #                                                 os_password,
+    #                                                 os_tenant_name,
+    #                                                 os_auth_url)
+    #except:
+    #    return None
 
     create_flavors()
     create_volume_types()
@@ -340,7 +340,8 @@ def main():
         if not p.match(args.vlan_range):
             raise ValueError("Error: The VLAN range must be a number followed "
                              "by a colon, followed by another number")
-        os_auth_url, os_tenant_name, os_username, os_password = \
+        os_auth_url, os_tenant_name, os_username, os_password, \
+        os_user_domain_name, os_project_domain_name = \
             CredentialHelper.get_undercloud_creds()
 
         # Set up the default flavors
