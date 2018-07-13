@@ -411,7 +411,7 @@ class Sah(InfraHost):
 
         for comd in conf:
             self.run("echo '" + comd + "' >> " + dashboard_conf)
-        logger.debug("=== kick off the Storage Console VM deployment")
+        logger.debug("=== kick off the Dashboard VM deployment")
 
         re = self.run_tty("python " +
                           remote_file +
@@ -423,18 +423,18 @@ class Sah(InfraHost):
                 startVM = False
         if startVM:
             logger.debug(
-                "=== wait for the Storage Console VM install to be complete \
+                "=== wait for the Dashboard VM install to be complete \
                 & power it on")
             while "shut off" \
                   not in self.run("virsh list --all | grep dashboard")[0]:
                 time.sleep(60)
-            logger.debug("=== power on the Storage Console VM ")
+            logger.debug("=== power on the Dashboard VM ")
             self.run("virsh start dashboard")
-        logger.debug("=== waiting for the Storage Console vm to boot up")
+        logger.debug("=== waiting for the Dashboard vm to boot up")
         self.wait_for_vm_to_come_up(self.settings.dashboard_node.public_api_ip,
                                     "root",
                                     self.settings.dashboard_node.root_password)
-        logger.debug("Storage Console VM is up")
+        logger.debug("Dashboard VM is up")
 
     def delete_dashboard_vm(self):
         # Also delete any leftover "ceph" VM so that it cannot interfere

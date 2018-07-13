@@ -221,7 +221,7 @@ EOFPW
          subscription-manager attach --auto ${ProxyInfo}
          )
 
-  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-rpms
+  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-rpms --enable=rhel-7-server-openstack-13-rpms 
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -324,7 +324,7 @@ rm -f /store/data/images/director.img
     --vcpus 8 \
     --hvm \
     --os-type linux \
-    --os-variant rhel6 \
+    --os-variant rhel7 \
     --disk /store/data/images/director.img,bus=virtio,size=80 \
     --disk /store/data/images/floppy-director.img,device=floppy \
     --network bridge=br-pub-api \
@@ -345,7 +345,7 @@ virt-install --name director \
   --vcpus 8 \
   --hvm \
   --os-type linux \
-  --os-variant rhel6 \
+  --os-variant rhel7 \
   --disk /store/data/images/director.img,bus=virtio,size=80 \
   --network bridge=br-pub-api \
   --network bridge=br-prov \

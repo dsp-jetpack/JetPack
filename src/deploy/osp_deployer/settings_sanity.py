@@ -445,8 +445,8 @@ class DeployerSanity():
                              shouldhaveattributes,
                              shouldbbevalidips)
 
-        # Verify Storage Console VM node network definition
-        logger.debug("verifying Storage Console VM network settings")
+        # Verify Dashboard VM node network definition
+        logger.debug("verifying Dashboard VM network settings")
         shouldhaveattributes = ['hostname',
                                 'root_password',
                                 'storage_ip',
@@ -574,3 +574,29 @@ class DeployerSanity():
 
         if error_msg:
             raise AssertionError(error_msg)
+
+    def verify_dpdk_dependencies(self):
+        # DPDK requires CPU Pinning and Hugepages
+        logger.debug("verifying numa and hugepages enabled when dpdk enabled")
+        if (self.settings.enable_ovs_dpdk is True and
+                self.settings.numa_enable is True and
+                self.settings.hpg_enable is False):
+            raise AssertionError("Hugepages are not enabled, this is" +
+                                 " required for OVS-DPDK. Please verify" +
+                                 " this setting.")
+        elif (self.settings.enable_ovs_dpdk is True and
+              self.settings.numa_enable is False and
+              self.settings.hpg_enable is True):
+            raise AssertionError("NUMA is not enabled, this is required" +
+                                 " for OVS-DPDK. Please verify this setting.")
+        elif (self.settings.enable_ovs_dpdk is True and
+              self.settings.numa_enable is False and
+              self.settings.hpg_enable is False):
+            raise AssertionError("Neither Hugepages nor NUMA is enabled," +
+                                 " this is required for OVS-DPDK. Please" +
+                                 " verify this setting.")
+        if (self.settings.enable_ovs_dpdk is True and
+                self.settings.hpg_size == "2MB"):
+            raise AssertionError("Hugepages size should be 1GB, this is" +
+                                 " required for OVS-DPDK. Please verify" +
+                                 " this setting.")

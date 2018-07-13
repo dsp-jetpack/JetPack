@@ -115,10 +115,10 @@ class Director(InfraHost):
             'sed -i "s|dhcp_end = .*|dhcp_end = ' +
             self.settings.provisioning_net_dhcp_end +
             '|" pilot/undercloud.conf',
-            'sed -i "s|network_cidr = .*|network_cidr = ' +
+            'sed -i "s|cidr = .*|cidr = ' +
             self.settings.provisioning_network +
             '|" pilot/undercloud.conf',
-            'sed -i "s|network_gateway = .*|network_gateway = ' +
+            'sed -i "s|gateway = .*|gateway = ' +
             self.settings.director_node.provisioning_ip +
             '|" pilot/undercloud.conf',
             'sed -i "s|inspection_iprange = .*|inspection_iprange = ' +
@@ -512,6 +512,9 @@ class Director(InfraHost):
             'sed -i "s|floating_ip_network_vlan=.*|floating_ip_network_vlan=' +
             self.settings.floating_ip_network_vlan +
             '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|ovs_dpdk_enabled=.*|ovs_dpdk_enabled=' +
+            str(self.settings.enable_ovs_dpdk) +
+            '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_tenant_network=.*|sanity_tenant_network=' +
             self.settings.sanity_tenant_network +
             '|" pilot/deployment-validation/sanity.ini',
@@ -733,14 +736,20 @@ class Director(InfraHost):
 
         static_ips_yaml = self.templates_dir + "/static-ip-environment.yaml"
         static_vip_yaml = self.templates_dir + "/static-vip-environment.yaml"
+        neutron_ovs_dpdk_yaml = self.templates_dir + "/neutron-ovs-dpdk.yaml"
 
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy
         # with a different config
         self.upload_file(self.settings.static_ips_yaml, static_ips_yaml)
         self.upload_file(self.settings.static_vip_yaml, static_vip_yaml)
+        self.upload_file(self.settings.neutron_ovs_dpdk_yaml,
+                         neutron_ovs_dpdk_yaml)
 
         self.setup_nic_configuration()
+
+        if self.settings.enable_ovs_dpdk is True:
+            self.setup_dpdk_nic_configuration()
 
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
@@ -750,60 +759,63 @@ class Director(InfraHost):
             control_storage_ips = ''
             control_tenant_tunnel_ips = ''
             for node in self.settings.controller_nodes:
-                control_external_ips += "    - " +\
-                                        node.public_api_ip + "\\n"
-                control_private_ips += "    - " +\
-                                       node.private_api_ip + "\\n"
-                control_storage_ips += "    - " +\
-                                       node.storage_ip + "\\n"
-                control_tenant_tunnel_ips += "    - " +\
-                                             node.tenant_tunnel_ip + "\\n"
+                control_external_ips += "    - " + node.public_api_ip
+                control_private_ips += "    - " + node.private_api_ip
+                control_storage_ips += "    - " + node.storage_ip
+                control_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip
+                if node != self.settings.controller_nodes[-1]:
+                    control_external_ips += "\\n"
+                    control_private_ips += "\\n"
+                    control_storage_ips += "\\n"
+                    control_tenant_tunnel_ips += "\\n"
 
             compute_tenant_tunnel_ips = ''
             compute_private_ips = ''
             compute_storage_ips = ''
 
             for node in self.settings.compute_nodes:
-                compute_tenant_tunnel_ips += "    - " +\
-                                             node.tenant_tunnel_ip + "\\n"
-                compute_private_ips += "    - " +\
-                                       node.private_api_ip + "\\n"
-                compute_storage_ips += "    - " +\
-                                       node.storage_ip + "\\n"
+                compute_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip
+                compute_private_ips += "    - " + node.private_api_ip
+                compute_storage_ips += "    - " + node.storage_ip
+                if node != self.settings.compute_nodes[-1]:
+                    compute_tenant_tunnel_ips += "\\n"
+                    compute_private_ips += "\\n"
+                    compute_storage_ips += "\\n"
 
             storage_storgage_ip = ''
             storage_cluster_ip = ''
             for node in self.settings.ceph_nodes:
-                storage_storgage_ip += "    - " \
-                                       + node.storage_ip + "\\n"
-                storage_cluster_ip += "    - " \
-                                      + node.storage_cluster_ip + "\\n"
+                storage_storgage_ip += "    - " + node.storage_ip
+                storage_cluster_ip += "    - " + node.storage_cluster_ip
+                if node != self.settings.ceph_nodes[-1]:
+                    storage_storgage_ip += "\\n"
+                    storage_cluster_ip += "\\n"
 
             cmds = ['sed -i "/192.168/d" ' + static_ips_yaml,
-                    'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
+                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
                     s/tenant:/tenant: \\n' +
                     control_tenant_tunnel_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
+                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
                     s/external:/external: \\n' +
                     control_external_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
+                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
                     s/internal_api:/internal_api: \\n' +
                     control_private_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/ControllerIPs/,/NovaComputeIPs/ \
+                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
                     s/storage:/storage: \\n' +
                     control_storage_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/NovaComputeIPs/,/CephStorageIPs/ \
+                    'sed -i "/DellComputeIPs:/,/CephStorageIPs:/ \
                     s/tenant:/tenant: \\n' +
                     compute_tenant_tunnel_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/NovaComputeIPs/,/CephStorageIPs/ \
+                    'sed -i "/DellComputeIPs:/,/CephStorageIPs:/ \
                     s/internal_api:/internal_api: \\n' +
                     compute_private_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/NovaComputeIPs/,/CephStorageIPs/ \
+                    'sed -i "/DellComputeIPs:/,/CephStorageIPs:/ \
                     s/storage:/storage: \\n' +
                     compute_storage_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/CephStorageIPs/,/$p/ s/storage:/storage: \\n' +
+                    'sed -i "/CephStorageIPs:/,/$p/ s/storage:/storage: \\n' +
                     storage_storgage_ip + "/\" " + static_ips_yaml,
-                    'sed -i "/CephStorageIPs/,/$p/ \
+                    'sed -i "/CephStorageIPs:/,/$p/ \
                     s/storage_mgmt:/storage_mgmt: \\n' +
                     storage_cluster_ip + "/\" " + static_ips_yaml
                     ]
@@ -867,6 +879,38 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run(cmd)
 
+    def setup_dpdk_nic_configuration(self):
+
+        logger.debug("setting ovs dpdk environment")
+        # Get the user supplied NIC settings from the .ini
+        ini_nics_settings = self.settings.get_curated_nics_settings()
+
+        cmds = []
+        dpdk_conf = {}
+        env_file = os.path.join(self.templates_dir, "neutron-ovs-dpdk.yaml")
+
+        # Get and sort the Dpdk interfaces that the user configured
+        for setting_name, setting_value in ini_nics_settings.iteritems():
+            if setting_name.find('Dpdk') != -1:
+                dpdk_conf.update({setting_name: setting_value})
+        dpdk_interfaces = [x[1] for x in sorted(dpdk_conf.items())]
+
+        # The following is joining only the first two dpdk interfaces
+        # for mode 2 or all the interfaces (4) for mode 1
+        if self.settings.ovs_dpdk_mode == 2:
+            interfaces = "'" + ",".join(dpdk_interfaces[0:2]) + "'"
+        else:
+            interfaces = "'" + ",".join(dpdk_interfaces) + "'"
+
+        # Build up the sed command to perform variable substitution
+        # in the neutron-ovs-dpdk.yaml (dpdk environment)
+        cmds.append('sed -i "s|DpdkInterfaces:.*|DpdkInterfaces: ' +
+                    interfaces + '|" ' + env_file)
+
+        # Execute the command related to dpdk configuration
+        for cmd in cmds:
+            self.run(cmd)
+
     def deploy_overcloud(self):
 
         logger.debug("Configuring network settings for overcloud")
@@ -896,6 +940,7 @@ class Director(InfraHost):
 
         if self.settings.numa_enable is True:
             cmd += " --enable_numa "
+            cmd += " --hostos_cpu_count " + self.settings.hostos_cpu_count
 
         if self.settings.overcloud_deploy_timeout != "120":
             cmd += " --timeout " \
@@ -908,11 +953,19 @@ class Director(InfraHost):
             cmd += " --static_ips"
         if self.settings.use_static_vips is True:
             cmd += " --static_vips"
-        # Node placement is required in an automated install.  The index order
+        if self.settings.enable_ovs_dpdk is True:
+            cmd += " --ovs_dpdk"
+        # Node placement is required in an automated install. The index order
         # of the nodes is the order in which they are defined in the
         # .properties file
         cmd += " --node_placement"
-
+        # Performance and Optimization parameters
+        cmd += " --mariadb_max_connections " \
+            + self.settings.mariadb_max_connections
+        cmd += " --innodb_buffer_pool_size " \
+            + self.settings.innodb_buffer_pool_size
+        cmd += " --innodb_buffer_pool_instances " + \
+            self.settings.innodb_buffer_pool_instances
         if self.settings.deploy_overcloud_debug:
             cmd += " --debug"
 
@@ -927,7 +980,7 @@ class Director(InfraHost):
                      "openstack stack delete --yes --wait " +
                      self.settings.overcloud_name)
         # Unregister the nodes from Ironic
-        re = self.run_tty(self.source_stackrc + "ironic node-list | grep None")
+        re = self.run_tty(self.source_stackrc + "openstack baremetal node list | grep None")
         ls_nodes = re[0].split("\n")
         ls_nodes.pop()
         for node in ls_nodes:
@@ -949,7 +1002,7 @@ class Director(InfraHost):
                          node_id)
 
     def summarize_deployment(self):
-        logger.info("**** Retreiving nodes information ")
+        logger.info("**** Retrieving nodes information ")
         deployment_log = '/auto_results/deployment_summary.log'
         ip_info = []
         fi = open(deployment_log, "wb")
@@ -1123,7 +1176,7 @@ class Director(InfraHost):
                 pass
             ip_info.append("====================================")
         except:
-            logger.debug(" Failed to retreive the nodes ip information ")
+            logger.debug(" Failed to retrieve the nodes ip information ")
         finally:
             for each in ip_info:
                 logger.debug(each)
@@ -1242,7 +1295,7 @@ class Director(InfraHost):
             self.run_tty(cmd)
 
     def configure_dashboard(self):
-        logger.info("Configure Storage Console")
+        logger.info("Configure Dashboard")
         ip = self.settings.dashboard_node.public_api_ip
 
         self.run_tty(self.source_stackrc + 'cd ' +

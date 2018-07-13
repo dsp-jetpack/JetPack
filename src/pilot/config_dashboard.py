@@ -50,6 +50,7 @@ class Node:
     ansible_hosts = "/etc/ansible/hosts"
     ceph_conf = "/etc/ceph/ceph.conf"
     root_home = expanduser("~root")
+    rgw_py = "/usr/lib64/collectd/cephmetrics/collectors/rgw.py"
 
     storage_network = NetworkHelper.get_storage_network()
 
@@ -309,7 +310,7 @@ def prep_root_user(dashboard_node, ceph_nodes):
     if "true" in stdout:
         return
 
-    LOG.info("Preparing root access on the Ceph Storage Dashboard.")
+    LOG.info("Preparing remote access on the Ceph Storage Dashboard.")
 
     ssh_files = ('.ssh/authorized_keys',
                  '.ssh/id_rsa',
@@ -554,10 +555,20 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes):
                        .format(ceph_ansible_dir, toc_yml))
     dashboard_node.run("cd {}; ansible-playbook {} -u root --skip-tags \
                        'gen_conf_file'".format(ceph_ansible_dir, toc_yml))
+    dashboard_node.run("setsebool -P httpd_can_network_connect 1")
 
     LOG.info("Installing the Ceph Storage Dashboard.")
-    dashboard_node.run("cd {}; sudo ansible-playbook -s -v playbook.yml"
+    dashboard_node.run("cd {}; sudo ansible-playbook -s -v --skip-tags \
+                       cephmetrics-collectors playbook.yml"
                        .format(cephmetrics_ansible_dir))
+
+    for node in ceph_nodes:
+        if "controller" in node.fqdn:
+            node.run("sudo chmod 644 /etc/ceph/ceph.client.openstack.keyring")
+
+    for node in ceph_nodes:
+        if "controller-0" in node.fqdn:
+            node.run("sudo pcs resource restart openstack-cinder-volume")
 
     LOG.info("Ceph Storage Dashboard configuration is complete")
     LOG.info("You may access the Ceph Storage Dashboard at:")
@@ -572,7 +583,7 @@ def patch_cephmetrics_ansible(dashboard_node):
     because we don't subscribe the nodes, this will fail unless we skip
     this installation process.
     """
-    
+
     install_pkg_file = "/usr/share/cephmetrics-ansible/roles/" + \
                        "ceph-collectd/tasks/install_packages.yml"
 
@@ -585,7 +596,7 @@ def patch_cephmetrics_ansible(dashboard_node):
 
     LOG.info("Patching /usr/share/cephmetrics-ansible on {}".format(
              dashboard_node.fqdn))
-    dashboard_node.run("yum -y install patch")
+    dashboard_node.run("sudo yum -y install patch")
     dashboard_node.run("""
 cat << EOF|patch -b -d /usr/share/cephmetrics-ansible/roles/ceph-collectd/tasks
 --- install_packages.yml
@@ -601,6 +612,69 @@ cat << EOF|patch -b -d /usr/share/cephmetrics-ansible/roles/ceph-collectd/tasks
    package:
 EOF
 """)
+
+
+def patch_rgw_collectors(dashboard_node, ceph_nodes):
+    """ Patch /usr/lib64/collectd/cephmetrics/collectors/rgw.py
+    file to allow collectd to monitor rgw process. This patch
+    correctly identifies our naming of client.radosgw.gateway.
+    """
+
+    LOG.info("Preparing rgw.py file on Ceph Storage Dashboard.")
+
+    # Get the new file to the Ceph Storage Dashboard
+    for node in ceph_nodes:
+        if "controller" in node.fqdn:
+            tmp_rgw_py = os.path.join("/tmp", "rgw.py")
+            node.get(tmp_rgw_py, Node.rgw_py)
+            break
+
+    if not os.path.exists("/usr/bin/patch"):
+        os.system("sudo yum -y install patch")
+
+    grep_str = "\"key_name = 'client.radosgw.gateway'\""
+    rc = os.system("grep {} {} > /dev/null".format(grep_str, tmp_rgw_py))
+
+    if rc != 0:
+        os.system("""
+cat << EOF|patch -b -d /tmp 
+--- rgw.py
++++ rgw.py.mod
+@@ -41,9 +41,8 @@
+ 
+     def _get_rgw_data(self):
+ 
+-        rgw_sockets = glob.glob('/var/run/ceph/{}-client.rgw.'
+-                                '{}.*asok'.format(self.cluster_name,
+-                                                  self.host_name))
++        rgw_sockets = glob.glob('/var/run/ceph/ceph-client.*asok')
++
+         if rgw_sockets:
+ 
+             if len(rgw_sockets) > 1:
+@@ -53,7 +52,7 @@
+             response = self._admin_socket(socket_path=rgw_sockets[0])
+ 
+             if response:
+-                key_name = 'client.rgw.{}'.format(self.host_name)
++                key_name = 'client.radosgw.gateway'
+                 return response.get(key_name)
+             else:
+                 # admin_socket call failed
+EOF
+""")
+
+    for node in ceph_nodes:
+        if "controller" in node.fqdn:
+            tmp_rgw_py = os.path.join("/tmp", "rgw.py")
+
+            # Upload the new file to the Ceph Storage Dashboard
+            node.put(tmp_rgw_py, tmp_rgw_py)
+            node.run("sudo cp {} {}.bak".format(Node.rgw_py, Node.rgw_py))
+            node.run("sudo mv {} {}".format(tmp_rgw_py, Node.rgw_py))
+            node.run("sudo chown root.root {}".format(Node.rgw_py))
+            node.run("sudo restorecon {}".format(Node.rgw_py))
+    os.unlink(tmp_rgw_py)
 
 
 def main():
@@ -625,8 +699,8 @@ def main():
     prep_root_user(dashboard_node, ceph_nodes)
     prep_ansible_hosts(dashboard_node, ceph_nodes)
     prep_ceph_conf(dashboard_node, ceph_nodes)
-
     patch_cephmetrics_ansible(dashboard_node)
+    patch_rgw_collectors(dashboard_node, ceph_nodes)
     prep_collectd(dashboard_node, ceph_nodes)
     prep_cluster_for_collection(dashboard_node, ceph_nodes)
 

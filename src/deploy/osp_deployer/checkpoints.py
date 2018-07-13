@@ -44,6 +44,7 @@ class Checkpoints():
         checks.verify_iha_dependency_on_fencing()
         checks.validate_profile()
         checks.check_mtu_of_networks()
+        checks.verify_dpdk_dependencies()
 
     @staticmethod
     def verify_subscription_status(public_api_ip, user, password, retries):
@@ -252,10 +253,10 @@ class Checkpoints():
                 "Director VM cannot ping idrac network (ip) : " + test)
 
     def dashboard_vm_health_check(self):
-        logger.info("Storage Console VM health checks")
+        logger.info("Dashboard VM health checks")
         if self.verify_rhsm_status:
             logger.debug(
-                "*** Verify the Storage Console VM registered properly ***")
+                "*** Verify the Dashboard VM registered properly ***")
             subscription_status = self.verify_subscription_status(
                 self.dashboard_ip,
                 "root",
@@ -263,11 +264,11 @@ class Checkpoints():
                 self.settings.subscription_check_retries)
             if "Current" not in subscription_status:
                 raise AssertionError(
-                    "Storage Console VM did not register properly : " +
+                    "Dashboard VM did not register properly : " +
                     subscription_status)
 
         logger.debug(
-            "*** Verify the Storage Console VM can ping its public gateway")
+            "*** Verify the Dashboard VM can ping its public gateway")
         test = self.ping_host(self.dashboard_ip,
                               "root",
                               self.settings.dashboard_node.root_password,
@@ -276,7 +277,7 @@ class Checkpoints():
             raise AssertionError(
                 "Dashboard VM cannot ping its public gateway : " + test)
         logger.debug(
-            "*** Verify the Storage Console VM " +
+            "*** Verify the Dashboard VM " +
             "can ping the outside world (IP)")
         test = self.ping_host(self.dashboard_ip,
                               "root",
@@ -284,10 +285,10 @@ class Checkpoints():
                               "8.8.8.8")
         if self.ping_success not in test:
             raise AssertionError(
-                "Storage Console VM cannot ping the outside world (IP) : " +
+                "Dashboard VM cannot ping the outside world (IP) : " +
                 test)
 
-        logger.debug("*** Verify the Storage Console VM can ping "
+        logger.debug("*** Verify the Dashboard VM can ping "
                      "the outside world (DNS)")
         test = self.ping_host(self.dashboard_ip,
                               "root",
@@ -295,11 +296,11 @@ class Checkpoints():
                               "google.com")
         if self.ping_success not in test:
             raise AssertionError(
-                "Storage Console VM cannot ping the outside world (DNS) : " +
+                "Dashboard VM cannot ping the outside world (DNS) : " +
                 test)
 
         logger.debug(
-            "*** Verify the Storage Console VM can ping the SAH node "
+            "*** Verify the Dashboard VM can ping the SAH node "
             "through the storage network")
         test = self.ping_host(self.dashboard_ip,
                               "root",
@@ -307,11 +308,11 @@ class Checkpoints():
                               self.settings.sah_node.storage_ip)
         if self.ping_success not in test:
             raise AssertionError(
-                "Storage Console VM cannot ping the SAH node "
+                "Dashboard VM cannot ping the SAH node "
                 "through the storage network : " + test)
 
         logger.debug(
-            "*** Verify the Storage Console VM can ping the SAH "
+            "*** Verify the Dashboard VM can ping the SAH "
             "node through the public network")
         test = self.ping_host(self.dashboard_ip,
                               "root",
@@ -319,11 +320,11 @@ class Checkpoints():
                               self.sah_ip)
         if self.ping_success not in test:
             raise AssertionError(
-                "Storage Console VM cannot ping the SAH node through "
+                "Dashboard VM cannot ping the SAH node through "
                 "the public network : " + test)
 
         logger.debug(
-            "*** Verify the Storage Console VM can ping the Director VM "
+            "*** Verify the Dashboard VM can ping the Director VM "
             "through the public network")
         test = self.ping_host(self.dashboard_ip,
                               "root",
@@ -331,12 +332,12 @@ class Checkpoints():
                               self.director_ip)
         if self.ping_success not in test:
             raise AssertionError(
-                "Storage Console VM cannot ping the Director VM through "
+                "Dashboard VM cannot ping the Director VM through "
                 "the provisioning network : " + test)
 
     def verify_nodes_registered_in_ironic(self):
         logger.debug("Verify the expected amount of nodes imported in ironic")
-        cmd = "source ~/stackrc;ironic node-list | grep None"
+        cmd = "source ~/stackrc;openstack baremetal node list | grep None"
         setts = self.settings
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
@@ -355,7 +356,7 @@ class Checkpoints():
 
     def verify_introspection_sucessfull(self):
         logger.debug("Verify the introspection did not encounter any errors")
-        cmd = "source ~/stackrc;ironic node-list | grep None"
+        cmd = "source ~/stackrc;openstack baremetal node list | grep None"
         setts = self.settings
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
@@ -449,10 +450,10 @@ class Checkpoints():
     def retreive_switches_config(self):
         if self.settings.switches == 0:
             return
-        logger.info("Retreiving switch(es) configuration")
+        logger.info("Retrieving switch(es) configuration")
         for each in self.settings.switches:
             logger.info(
-                "Retreiving configuration for switch " + each.switch_name)
+                "Retrieving configuration for switch " + each.switch_name)
             logger.info(
                 self.execute_as_shell(each.ip, each.user, each.password,
                                       'show version'))
