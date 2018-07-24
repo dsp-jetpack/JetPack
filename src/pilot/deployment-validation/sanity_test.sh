@@ -216,7 +216,7 @@ create_the_networks(){
   subnet_exists=$(openstack subnet list -c Name -f value | grep "$VLAN_NAME")
   if [ "$subnet_exists" != "$VLAN_NAME" ]
   then
-    execute_command "neutron subnet-create $TENANT_NETWORK_NAME $SANITY_TENANT_NETWORK --name $VLAN_NAME"
+    execute_command "openstack subnet create $VLAN_NAME --network $TENANT_NETWORK_NAME --subnet-range $SANITY_TENANT_NETWORK"
   else
     info "#-----VLAN Network subnet '$SANITY_TENANT_NETWORK' exists. Skipping"
   fi
@@ -224,22 +224,22 @@ create_the_networks(){
   router_exists=$(openstack router list -c Name -f value | grep "$TENANT_ROUTER_NAME")
   if [ "$router_exists" != "$TENANT_ROUTER_NAME" ]
   then
-    execute_command "neutron router-create $TENANT_ROUTER_NAME"
+    execute_command "openstack router create $TENANT_ROUTER_NAME"
 
-    subnet_id=$(neutron net-list | grep $TENANT_NETWORK_NAME | head -n 1 | awk '{print $6}')
+    subnet_id=$(openstack network list | grep $TENANT_NETWORK_NAME | head -n 1 | awk '{print $6}')
 
-    execute_command "neutron router-interface-add $TENANT_ROUTER_NAME $subnet_id"
+    execute_command "openstack router add subnet $TENANT_ROUTER_NAME $subnet_id"
   else
     info "#----- $TENANT_ROUTER_NAME exists. Skipping"
   fi
 
-  execute_command "ssh ${SSH_OPTS} heat-admin@$CONTROLLER sudo grep network_vlan_ranges /etc/neutron/plugin.ini"
+  # execute_command "ssh ${SSH_OPTS} heat-admin@$CONTROLLER sudo grep network_vlan_ranges /etc/neutron/plugin.ini"
 
   ext_net_exists=$(openstack network list -c Name -f value | grep "$FLOATING_IP_NETWORK_NAME")
   if [ "$ext_net_exists" != "$FLOATING_IP_NETWORK_NAME" ]
   then
-    execute_command "neutron net-create $FLOATING_IP_NETWORK_NAME --router:external --provider:network_type vlan --provider:physical_network physext --provider:segmentation_id $FLOATING_IP_NETWORK_VLAN"
-    execute_command "neutron subnet-create --name $FLOATING_IP_SUBNET_NAME --allocation-pool start=$FLOATING_IP_NETWORK_START_IP,end=$FLOATING_IP_NETWORK_END --gateway $FLOATING_IP_NETWORK_GATEWAY --disable-dhcp $FLOATING_IP_NETWORK_NAME $FLOATING_IP_NETWORK"
+    execute_command "openstack network create $FLOATING_IP_NETWORK_NAME --external --provider-network-type vlan --provider-physical-network physext --provider-segment $FLOATING_IP_NETWORK_VLAN"
+    execute_command "openstack subnet create $FLOATING_IP_SUBNET_NAME --network $FLOATING_IP_NETWORK_NAME --subnet-range $FLOATING_IP_NETWORK --allocation-pool start=$FLOATING_IP_NETWORK_START_IP,end=$FLOATING_IP_NETWORK_END --gateway $FLOATING_IP_NETWORK_GATEWAY --no-dhcp"
   else
     info "#----- External network '$FLOATING_IP_NETWORK_NAME' exists. Skipping"
   fi
@@ -250,7 +250,7 @@ create_the_networks(){
   execute_command "openstack router list"
 
   # Use external network name
-  execute_command "neutron router-gateway-set $TENANT_ROUTER_NAME $FLOATING_IP_NETWORK_NAME"
+  execute_command "openstack router set --external-gateway $FLOATING_IP_NETWORK_NAME $TENANT_ROUTER_NAME"
   
   # switch to tenant context
   set_tenant_scope
@@ -260,19 +260,19 @@ create_the_networks(){
     info "#----- Security group '$SECURITY_GROUP_NAME' exists. Skipping"
   else
     info "### Creating a Security Group ####"
-    execute_command "neutron security-group-create $SECURITY_GROUP_NAME"
+    execute_command "openstack security group create $SECURITY_GROUP_NAME"
 
     # Allow all inbound and outbound ICMP
-    execute_command "neutron security-group-rule-create --direction ingress --ethertype IPv4 --protocol icmp --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
-    execute_command "neutron security-group-rule-create --direction egress --ethertype IPv4 --protocol icmp --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "openstack security group rule create --ingress --ethertype IPv4 --protocol icmp --remote-ip 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "openstack security group rule create --egress --ethertype IPv4 --protocol icmp --remote-ip 0.0.0.0/0 $SECURITY_GROUP_NAME"
 
     # Allow all inbound and outbound TCP
-    execute_command "neutron security-group-rule-create --direction ingress --ethertype IPv4 --protocol tcp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
-    execute_command "neutron security-group-rule-create --direction egress --ethertype IPv4 --protocol tcp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "openstack security group rule create --ingress --ethertype IPv4 --protocol tcp --dst-port 1:65535 --remote-ip 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "openstack security group rule create --egress --ethertype IPv4 --protocol tcp --dst-port 1:65535 --remote-ip 0.0.0.0/0 $SECURITY_GROUP_NAME"
 
     # Allow all inbound and outbound UDP
-    execute_command "neutron security-group-rule-create --direction ingress --ethertype IPv4 --protocol udp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
-    execute_command "neutron security-group-rule-create --direction egress --ethertype IPv4 --protocol udp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "openstack security group rule create --ingress --ethertype IPv4 --protocol udp --dst-port 1:65535 --remote-ip 0.0.0.0/0 $SECURITY_GROUP_NAME"
+    execute_command "openstack security group rule create --egress --ethertype IPv4 --protocol udp --dst-port 1:65535 --remote-ip 0.0.0.0/0 $SECURITY_GROUP_NAME"
   fi
 }
 
@@ -318,16 +318,17 @@ spin_up_instances(){
   done
 
   info "### Waiting for the instances to be built..."
+  set_tenant_scope
 
   for instance_name in ${instance_names[*]}; do
-    instance_status=$(nova show $instance_name | grep status | awk '{print $4}')
+    instance_status=$(nova list | grep $instance_name | awk '{print $6}')
     while [ "$instance_status" != "ACTIVE" ]; do
       if [ "$instance_status" != "BUILD" ]; then
         fatal "### Instance status is: ${instance_status}!  Aborting sanity test"
       else
         info "### Instance status is: ${instance_status}.  Sleeping..."
         sleep 10
-        instance_status=$(nova show $instance_name | grep status | awk '{print $4}')
+        instance_status=$(nova list | grep $instance_name | awk '{print $6}')
       fi
     done
   done
@@ -396,10 +397,10 @@ ping_from_netns(){
 
 test_neutron_networking (){
   set_admin_scope
-  router_id=$(neutron router-show -F id $TENANT_ROUTER_NAME | grep "id" | awk '{print $4}')
+  router_id=$(openstack router list | grep $TENANT_ROUTER_NAME | awk '{ print $2} ')
 
   set_tenant_scope
-  net_ids=$(neutron net-show -F id -F subnets $TENANT_NETWORK_NAME | grep -E 'id|subnets' | awk '{print $4}')
+  net_ids=$(openstack network list | grep $TENANT_NETWORK_NAME | awk '{ print $2 " " $6 }')
   net_id=$(echo $net_ids | awk '{print $1}')
   subnet_id=$(echo $net_ids | awk '{print $2}')
 
@@ -411,17 +412,17 @@ test_neutron_networking (){
 
       # Allocate a floating IP
       info "Allocating floating IP"
-      floating_ip_id=$(neutron floatingip-create $FLOATING_IP_NETWORK_NAME | grep " id " | awk '{print $4}')
-      floating_ip=$(neutron floatingip-show $floating_ip_id | grep floating_ip_address | awk '{print $4}')
+      floating_ip_id=$(openstack floating ip create $FLOATING_IP_NETWORK_NAME | grep " id " | awk '{print $4}')
+      floating_ip=$(openstack floating ip show $floating_ip_id | grep floating_ip_address | awk '{print $4}')
       floating_ips+=($floating_ip)
 
       # Find the port to associate it with
       set_admin_scope
-      port_id=$(neutron port-list | grep $subnet_id | grep $private_ip | awk '{print $2}')
+      port_id=$(openstack port list | grep $subnet_id | grep $private_ip | awk '{print $2}')
 
       # And finally associate the floating IP with the instance
       set_tenant_scope
-      execute_command "neutron floatingip-associate $floating_ip_id $port_id"
+      execute_command "openstack floating ip set $floating_ip_id --port $port_id"
   done
 
   sleep 3
@@ -453,8 +454,7 @@ setup_cinder(){
     if [ "$vol_exists" != "$volume_name" ]
     then
       info "### Creating volume ${volume_name}"
-      execute_command "cinder type-list"
-      execute_command "cinder create --display-name $volume_name 1 --volume-type=rbd_backend"
+      execute_command "cinder create --display-name $volume_name 1"
       volumes+=($volume_name)
     else
       info "### Volume $volume_name already exists.  Skipping creation"
@@ -504,7 +504,7 @@ radosgw_test(){
 
   execute_command "swift list"
 
-  touch test_file
+  echo "This is a test file for RGW" >  test_file
   execute_command "swift upload $SWIFT_CONTAINER_NAME test_file"
 
   execute_command "swift list $SWIFT_CONTAINER_NAME"
@@ -528,6 +528,7 @@ setup_project(){
   then
     execute_command "openstack project create $PROJECT_NAME"
     execute_command "openstack user create --project $PROJECT_NAME --password $SANITY_USER_PASSWORD --email $SANITY_USER_EMAIL $USER_NAME"
+    execute_command "openstack role add --project $PROJECT_NAME --user $USER_NAME member"
   else
     info "#Project $PROJECT_NAME exists ---- Skipping"
   fi
@@ -572,10 +573,10 @@ then
     for private_ip in $private_ips
     do
       private_ip=${private_ip%,}
-      public_ip_id=$(neutron floatingip-list | grep $private_ip | awk '{print $2}')
+      public_ip_id=$(openstack floating ip list | grep $private_ip | awk '{print $2}')
 
-      [[ $public_ip_id ]] && neutron floatingip-disassociate $public_ip_id
-      [[ $public_ip_id ]] && neutron floatingip-delete $public_ip_id
+      [[ $public_ip_id ]] && openstack floating ip unset $public_ip_id
+      [[ $public_ip_id ]] && openstack floating ip delete $public_ip_id
     done
 
     info   "#### Deleting the instances"
@@ -607,8 +608,6 @@ then
     radosgw_cleanup
 
     set_admin_scope
-    info "#### Disconnecting the router"
-    neutron router-interface-delete $TENANT_ROUTER_NAME $VLAN_NAME
 
     info "#### Deleting the user"
     openstack user show $USER_NAME >/dev/null 2>&1
@@ -630,8 +629,8 @@ then
 
   set_admin_scope
   info   "#### Deleting the security groups"
-  security_group_ids=$(neutron security-group-list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
-  [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 neutron security-group-delete
+  security_group_ids=$(openstack security group list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
+  [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 openstack security group delete
 
   info   "#### Deleting the images"
   image_ids=$(openstack image list | grep $IMAGE_NAME | awk '{print $2}')
@@ -647,20 +646,35 @@ then
   if [ -f ./$IMAGE_FILE_NAME ]; then
      rm -f ./$IMAGE_FILE_NAME
   fi
-  
-  info "### Deleting routers"
-  router_ids=$(neutron router-list | grep $BASE_TENANT_ROUTER_NAME | awk '{print $2}')
+
+  info "### Deleting router and router interfaces"
+  router_ids=$(openstack router list | grep $BASE_VLAN_NAME | awk '{print $2}')
+  subnet_network_ids=$(openstack subnet list | grep $BASE_VLAN_NAME | awk '{print $2}')
   for router_id in $router_ids
   do
-    neutron router-gateway-clear $router_id
-    neutron router-delete $router_id
+    for subnet_network_id in $subnet_network_ids
+    do
+      port_ids=$(openstack port list | grep $subnet_network_id  |awk ' { print $2 }')
+      for port_id in $port_ids
+      do 
+        openstack router remove port $router_id $port_id
+      done 
+    done
+    openstack router unset --all-tag $router_id
+    openstack router delete $router_id
   done
 
+  info "### Deleting network subnets"
+  for subnet_network_id in $subnet_network_ids
+  do
+    openstack subnet delete $subnet_network_id
+  done 
+  
   info "### Deleting networks"
-  network_ids=$(neutron net-list | grep -E "$BASE_TENANT_NETWORK_NAME|$FLOATING_IP_NETWORK_NAME" | awk '{print $2}')
+  network_ids=$(openstack network list | grep -E "$BASE_TENANT_NETWORK_NAME|$FLOATING_IP_NETWORK_NAME" | awk '{print $2}')
   for network_id in $network_ids
   do
-    neutron net-delete $network_id
+    openstack network delete $network_id
   done
 
   info "### Deleting key file"
