@@ -150,7 +150,7 @@ run_command "sudo yum -y install python-tripleoclient"
 run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
-#run_command "sudo yum -y install python-*-tests"
+run_command "sudo yum -y install python-*-tests"
 echo "## Done."
 
 echo

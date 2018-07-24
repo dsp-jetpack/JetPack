@@ -24,7 +24,7 @@ from netaddr import IPNetwork
 class NetworkHelper:
     @staticmethod
     def get_provisioning_network():
-        pattern = re.compile("^network_cidr\s*=\s*(.+)$")
+        pattern = re.compile("^cidr\s*=\s*(.+)$")
         undercloud_conf = open(os.path.join(os.path.expanduser('~'), 'pilot',
                                             'undercloud.conf'), 'r')
 
