@@ -25,6 +25,9 @@ import socket
 import subprocess
 import novaclient.client as nova_client
 import ironicclient
+from keystoneauth1.identity import v3
+from novaclient import client as novaclient
+from keystoneauth1 import session
 from netaddr import IPNetwork
 
 pilot_dir = os.path.join(os.path.expanduser('~'), 'pilot')  # noqa
@@ -32,6 +35,7 @@ sys.path.append(pilot_dir)  # noqa
 
 from credential_helper import CredentialHelper
 from network_helper import NetworkHelper
+from ironic_helper import IronicHelper
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -119,25 +123,34 @@ class NetworkValidation(object):
         # first
         self.nodes.sort(key=lambda n: n.name)
 
-        os_auth_url, os_tenant_name, os_username, os_password = \
+        os_auth_url, os_tenant_name, os_username, os_password, \
+        os_user_domain_name, os_project_domain_name = \
             CredentialHelper.get_undercloud_creds()
+        auth_url = os_auth_url + "v3"
 
-        kwargs = {'os_username': os_username,
-                  'os_password': os_password,
-                  'os_auth_url': os_auth_url,
-                  'os_tenant_name': os_tenant_name}
+        kwargs = {'username': os_username,
+                  'password': os_password,
+                  'auth_url': os_auth_url,
+                  'project_id': os_tenant_name,
+                  'user_domain_name': os_user_domain_name,
+                  'project_domain_name': os_project_domain_name}
+        auth = v3.Password(
+            auth_url=auth_url,
+            username=os_username,
+            password=os_password,
+            project_name=os_tenant_name,
+            user_domain_name=os_user_domain_name,
+            project_domain_name=os_project_domain_name
+        )  
 
-        nova = nova_client.Client('2',  # API version
-                                  os_username,
-                                  os_password,
-                                  os_tenant_name,
-                                  os_auth_url)
+        sess = session.Session(auth=auth)
+        nova = novaclient.Client('2', session=sess)
 
-        ironic = ironicclient.client.get_client(1, **kwargs)
+        ironic = IronicHelper.get_ironic_client()
 
         # Build up a map that maps flavor ids to flavor names
         flavor_map = {}
-        flavors = nova.flavors.list()
+        flavors = nova.flavors.list(detailed=False)
         for flavor in flavors:
             flavor_map[flavor.id] = flavor.name
 
