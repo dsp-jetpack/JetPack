@@ -196,7 +196,7 @@ attach to. - Auto-attaching to any pool." ; \\
     --enable=rhel-7-server-rpms \\
     --enable=rhel-7-server-extras-rpms \\
     --enable=rhel-7-server-rh-common-rpms \\
-    --enable=rhel-7-server-rhceph-2-tools-rpms
+    --enable=rhel-7-server-rhceph-3-tools-rpms
 
   cat <<EOIP > /etc/sysconfig/iptables
 *filter
