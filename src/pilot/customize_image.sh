@@ -67,7 +67,7 @@ fi
 
 repos=(
     rhel-7-server-rpms
-    rhel-7-server-rhceph-2-mon-rpms
+    rhel-7-server-rhceph-3-mon-rpms
 )
 
 packages=(
