@@ -423,9 +423,11 @@ class Director(InfraHost):
         tmp_file = os.fdopen(tmp_fd, 'w')
 
         # Leading whitespace for these variables is critical !!!
-        osds_param = "    ceph::profile::params::osds:"
-        osd_separate_journal = "      '{}':\n        journal: '{}'\n"
-        osd_colocated_journal = "      '{}': {{}}\n"
+        osds_param = "  CephAnsibleDisksConfig:"
+        osd_scenario_param = "    osd_scenario:"
+        osd_scenario = "collocated" # Keep this as default, change if required
+        osd_devices = "    devices:\n"
+        osd_dedicated_devices = "    dedicated_devices:\n"
         domain_param = "  CloudDomain:"
         rbd_backend_param = "  NovaEnableRbdBackend:"
 
@@ -435,13 +437,15 @@ class Director(InfraHost):
                 found_osds_param = True
 
             elif found_osds_param:
-                # Discard lines that begin with "#", "'" or "journal:" because
-                # these lines represent the original ceph.yaml file's OSD
-                # configuration.
+                # Discard lines that begin with "#", "osd_scenario", 
+                # "devices:", "dedicated_devices:" or "-" because these lines
+                # represent the original ceph.yaml file's OSD configuration.
                 tokens = line.split()
                 if len(tokens) > 0 and (tokens[0].startswith("#") or
-                                        tokens[0].startswith("'") or
-                                        tokens[0].startswith("journal:")):
+                                        tokens[0].startswith("osd_scenario") or
+                                        tokens[0].startswith("devices") or
+                                        tokens[0].startswith("dedicated_devices") or
+                                        tokens[0].startswith("-")):
                     continue
 
                 # End of original Ceph OSD configuration: now write the new one
@@ -457,14 +461,29 @@ class Director(InfraHost):
 
                     if len(tokens) == 3:
                         # This OSD specifies a separate journal drive
-                        tmp_file.write(osd_separate_journal.format(tokens[1],
-                                                                   tokens[2]))
+                        # Set the osd-scenario to non-collocated
+                        osd_scenario = "non-collocated"
+                        osd_devices = "{}      - {}\n".format(osd_devices,tokens[1])
+                        osd_dedicated_devices = "{}      - {}\n".format(
+                                                                osd_dedicated_devices,
+                                                                tokens[2])
+
                     elif len(tokens) == 2:
                         # This OSD does not specify a separate journal
-                        tmp_file.write(osd_colocated_journal.format(tokens[1]))
+                        # Add the same device as dedicated device 
+                        # It is useful when there is a mix of collocated 
+                        # and non-collocated devices 
+                        osd_devices = "{}      - {}\n".format(osd_devices,tokens[1])
+                        osd_dedicated_devices = "{}      - {}\n".format(
+                                                                osd_dedicated_devices,
+                                                                tokens[1])
                     else:
                         logger.warning(
                             "Bad entry in osd_disks: {}".format(osd))
+                tmp_file.write("{} {}\n".format(osd_scenario_param,osd_scenario))
+                tmp_file.write(osd_devices)
+                if osd_scenario == "non-collocated":
+                    tmp_file.write(osd_dedicated_devices)
 
                 # This is the line that follows the original Ceph OSD config
                 tmp_file.write(line)
