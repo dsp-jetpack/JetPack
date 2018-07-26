@@ -425,7 +425,7 @@ class Director(InfraHost):
         # Leading whitespace for these variables is critical !!!
         osds_param = "  CephAnsibleDisksConfig:"
         osd_scenario_param = "    osd_scenario:"
-        osd_scenario = "collocated" # Keep this as default, change if required
+        osd_scenario = "collocated"  # Keep this as default, change if required
         osd_devices = "    devices:\n"
         osd_dedicated_devices = "    dedicated_devices:\n"
         domain_param = "  CloudDomain:"
@@ -437,7 +437,7 @@ class Director(InfraHost):
                 found_osds_param = True
 
             elif found_osds_param:
-                # Discard lines that begin with "#", "osd_scenario", 
+                # Discard lines that begin with "#", "osd_scenario",
                 # "devices:", "dedicated_devices:" or "-" because these lines
                 # represent the original ceph.yaml file's OSD configuration.
                 tokens = line.split()
@@ -463,24 +463,27 @@ class Director(InfraHost):
                         # This OSD specifies a separate journal drive
                         # Set the osd-scenario to non-collocated
                         osd_scenario = "non-collocated"
-                        osd_devices = "{}      - {}\n".format(osd_devices,tokens[1])
+                        osd_devices = "{}      - {}\n".format(
+                            osd_devices, tokens[1])
                         osd_dedicated_devices = "{}      - {}\n".format(
-                                                                osd_dedicated_devices,
-                                                                tokens[2])
+                            osd_dedicated_devices,
+                            tokens[2])
 
                     elif len(tokens) == 2:
                         # This OSD does not specify a separate journal
-                        # Add the same device as dedicated device 
-                        # It is useful when there is a mix of collocated 
-                        # and non-collocated devices 
-                        osd_devices = "{}      - {}\n".format(osd_devices,tokens[1])
+                        # Add the same device as dedicated device
+                        # It is useful when there is a mix of collocated
+                        # and non-collocated devices
+                        osd_devices = "{}      - {}\n".format(
+                            osd_devices, tokens[1])
                         osd_dedicated_devices = "{}      - {}\n".format(
-                                                                osd_dedicated_devices,
-                                                                tokens[1])
+                            osd_dedicated_devices,
+                            tokens[1])
                     else:
                         logger.warning(
                             "Bad entry in osd_disks: {}".format(osd))
-                tmp_file.write("{} {}\n".format(osd_scenario_param,osd_scenario))
+                tmp_file.write("{} {}\n".format(
+                    osd_scenario_param, osd_scenario))
                 tmp_file.write(osd_devices)
                 if osd_scenario == "non-collocated":
                     tmp_file.write(osd_dedicated_devices)
@@ -978,7 +981,8 @@ class Director(InfraHost):
                      "openstack stack delete --yes --wait " +
                      self.settings.overcloud_name)
         # Unregister the nodes from Ironic
-        re = self.run_tty(self.source_stackrc + "openstack baremetal node list | grep None")
+        re = self.run_tty(self.source_stackrc +
+                          "openstack baremetal node list | grep None")
         ls_nodes = re[0].split("\n")
         ls_nodes.pop()
         for node in ls_nodes:
@@ -1247,7 +1251,7 @@ class Director(InfraHost):
             'identity.admin_username $OS_USERNAME '
             'identity.admin_password $OS_PASSWORD '
             'identity.admin_tenant_name $OS_PROJECT_NAME',
-            ]
+        ]
         for cmd in cmds:
             self.run_tty(cmd)
 
