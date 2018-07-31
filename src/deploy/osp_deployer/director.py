@@ -430,6 +430,65 @@ class Director(InfraHost):
         osd_dedicated_devices = "    dedicated_devices:\n"
         domain_param = "  CloudDomain:"
         rbd_backend_param = "  NovaEnableRbdBackend:"
+        ceph_pool_default_size_param = "  CephPoolDefaultSize:"
+        ceph_pool_default_size = 3
+        osds_per_node = 0
+        storage_nodes = len(self.settings.ceph_nodes)
+
+        for osd in osd_disks:
+            # Format is ":OSD_DRIVE" or ":OSD_DRIVE:JOURNAL_DRIVE",
+            # so split on the ':'
+            tokens = osd.split(':')
+
+            # Make sure OSD_DRIVE begins with "/dev/"
+            if not tokens[1].startswith("/dev/"):
+                tokens[1] += "/dev/"
+
+            if len(tokens) == 3:
+                # This OSD specifies a separate journal drive
+                # Set the osd-scenario to non-collocated
+                osd_scenario = "non-collocated"
+                osd_devices = "{}      - {}\n".format(
+                    osd_devices, tokens[1])
+                osd_dedicated_devices = "{}      - {}\n".format(
+                    osd_dedicated_devices,
+                    tokens[2])
+                osds_per_node += 1
+            elif len(tokens) == 2:
+                # This OSD does not specify a separate journal
+                # Add the same device as dedicated device
+                # It is useful when there is a mix of collocated
+                # and non-collocated devices
+                osd_devices = "{}      - {}\n".format(
+                    osd_devices, tokens[1])
+                osd_dedicated_devices = "{}      - {}\n".format(
+                    osd_dedicated_devices,
+                    tokens[1])
+                osds_per_node += 1
+            else:
+                logger.warning(
+                    "Bad entry in osd_disks: {}".format(osd))
+
+        # Dynamic calculation for the replication size
+        # This calculation is based on the observation that
+        # 10 Ceph pools are created with 2688 placement groups.
+        # Minimum of 41 OSDs are required for containing 2688 PGs with
+        # a replication size of 3. Each OSD can have 200 PGs.
+        # Simillarly 27 OSDs are reuiqred for a replication size of 2.
+        # And minimum 14 OSDs are required for replication size of 1.
+        if osd_disks:
+            total_osds = osds_per_node * storage_nodes
+            if total_osds >= 41:
+                ceph_pool_default_size = 3
+            elif total_osds >= 27:
+                ceph_pool_default_size = 2
+                logger.warning("Setting the CephDefaultPoolSize to 2.")
+            elif total_osds >= 14:
+                ceph_pool_default_size = 1
+                logger.warning("Setting the CephDefaultPoolSize to 1.")
+            else:
+                raise AssertionError("Number of OSDs on storage nodes is less "
+                                     " than minimum required.")
 
         found_osds_param = False
         for line in src_file:
@@ -450,38 +509,6 @@ class Director(InfraHost):
 
                 # End of original Ceph OSD configuration: now write the new one
                 tmp_file.write("{}\n".format(osds_param))
-                for osd in osd_disks:
-                    # Format is ":OSD_DRIVE" or ":OSD_DRIVE:JOURNAL_DRIVE",
-                    # so split on the ':'
-                    tokens = osd.split(':')
-
-                    # Make sure OSD_DRIVE begins with "/dev/"
-                    if not tokens[1].startswith("/dev/"):
-                        tokens[1] += "/dev/"
-
-                    if len(tokens) == 3:
-                        # This OSD specifies a separate journal drive
-                        # Set the osd-scenario to non-collocated
-                        osd_scenario = "non-collocated"
-                        osd_devices = "{}      - {}\n".format(
-                            osd_devices, tokens[1])
-                        osd_dedicated_devices = "{}      - {}\n".format(
-                            osd_dedicated_devices,
-                            tokens[2])
-
-                    elif len(tokens) == 2:
-                        # This OSD does not specify a separate journal
-                        # Add the same device as dedicated device
-                        # It is useful when there is a mix of collocated
-                        # and non-collocated devices
-                        osd_devices = "{}      - {}\n".format(
-                            osd_devices, tokens[1])
-                        osd_dedicated_devices = "{}      - {}\n".format(
-                            osd_dedicated_devices,
-                            tokens[1])
-                    else:
-                        logger.warning(
-                            "Bad entry in osd_disks: {}".format(osd))
                 tmp_file.write("{} {}\n".format(
                     osd_scenario_param, osd_scenario))
                 tmp_file.write(osd_devices)
@@ -499,6 +526,10 @@ class Director(InfraHost):
             elif line.startswith(rbd_backend_param):
                 value = str(self.settings.enable_rbd_nova_backend).lower()
                 tmp_file.write("{} {}\n".format(rbd_backend_param, value))
+
+            elif line.startswith(ceph_pool_default_size_param):
+                tmp_file.write("{} {}\n".format(ceph_pool_default_size_param,
+                                                ceph_pool_default_size))
 
             else:
                 tmp_file.write(line)
