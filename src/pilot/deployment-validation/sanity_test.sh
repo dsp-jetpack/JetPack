@@ -119,6 +119,7 @@ generate_sanity_rc(){
   else
     sed -i "\$ a export OS_TENANT_NAME=${PROJECT_NAME}" ${SANITYRC}
   fi
+  sed -i "s/export OS_CLOUDNAME=.*/export OS_CLOUDNAME=${PROJECT_NAME}/g" ${SANITYRC}
 }
 
 init(){
