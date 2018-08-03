@@ -284,7 +284,7 @@ class Director(InfraHost):
         setts = self.settings
 
         stdout, stderr, exit_status = self.run(
-            "~/pilot/prep_overcloud_nodes.py")
+            self.source_stackrc + "~/pilot/prep_overcloud_nodes.py")
         if exit_status:
             raise AssertionError("An error occurred while running "
                                  "prep_overcloud_nodes.  exit_status: {}, "
