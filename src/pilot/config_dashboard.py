@@ -679,6 +679,7 @@ cat << EOF|sudo patch -b -d /usr/share/cephmetrics-ansible/roles/ceph-collectd/t
    notify: Restart collectd
 +  tags:
 +    - cephmetrics-collectors
+
  - name: Install dependencies for collector plugins
    package:
 EOF
