@@ -53,7 +53,8 @@ def main():
                                     shell=True)
 
     for node in nodes.split("\n"):
-
+        if len (node) < 1:
+            continue
         # Power off the node
         logger.info("Powering off node " + node)
         cmd = "openstack baremetal node power off " + node 
