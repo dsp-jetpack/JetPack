@@ -201,9 +201,9 @@ do
 done
 echo "## Done."
 
-#echo 
-#echo "## Customizing the overcloud image & uploading images"
-#run_command "~/pilot/customize_image.sh ${subscription_manager_user} ${subscription_manager_pass} ${subcription_manager_poolid} ${proxy}"
+echo 
+echo "## Customizing the overcloud image & uploading images"
+run_command "~/pilot/customize_image.sh ${subscription_manager_user} ${subscription_manager_pass} ${subcription_manager_poolid} ${proxy}"
 
 echo
 if [ -n "${overcloud_nodes_pwd}" ]; then
