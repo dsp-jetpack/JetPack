@@ -284,7 +284,7 @@ class Director(InfraHost):
         setts = self.settings
 
         stdout, stderr, exit_status = self.run(
-            "~/pilot/prep_overcloud_nodes.py")
+            self.source_stackrc + "~/pilot/prep_overcloud_nodes.py")
         if exit_status:
             raise AssertionError("An error occurred while running "
                                  "prep_overcloud_nodes.  exit_status: {}, "
@@ -423,11 +423,72 @@ class Director(InfraHost):
         tmp_file = os.fdopen(tmp_fd, 'w')
 
         # Leading whitespace for these variables is critical !!!
-        osds_param = "    ceph::profile::params::osds:"
-        osd_separate_journal = "      '{}':\n        journal: '{}'\n"
-        osd_colocated_journal = "      '{}': {{}}\n"
+        osds_param = "  CephAnsibleDisksConfig:"
+        osd_scenario_param = "    osd_scenario:"
+        osd_scenario = "collocated"  # Keep this as default, change if required
+        osd_devices = "    devices:\n"
+        osd_dedicated_devices = "    dedicated_devices:\n"
         domain_param = "  CloudDomain:"
         rbd_backend_param = "  NovaEnableRbdBackend:"
+        ceph_pool_default_size_param = "  CephPoolDefaultSize:"
+        ceph_pool_default_size = 3
+        osds_per_node = 0
+        storage_nodes = len(self.settings.ceph_nodes)
+
+        # Dynamic calculation for the replication size
+        # This calculation is based on the observation that
+        # 10 Ceph pools are created with 2688 placement groups.
+        # Minimum of 41 OSDs are required for containing 2688 PGs with
+        # a replication size of 3. Each OSD can have 200 PGs.
+        # Simillarly 27 OSDs are reuiqred for a replication size of 2.
+        # And minimum 14 OSDs are required for replication size of 1.
+        if osd_disks:
+            for osd in osd_disks:
+                # Format is ":OSD_DRIVE" or ":OSD_DRIVE:JOURNAL_DRIVE",
+                # so split on the ':'
+                tokens = osd.split(':')
+
+                # Make sure OSD_DRIVE begins with "/dev/"
+                if not tokens[1].startswith("/dev/"):
+                    tokens[1] += "/dev/"
+
+                if len(tokens) == 3:
+                    # This OSD specifies a separate journal drive
+                    # Set the osd-scenario to non-collocated
+                    osd_scenario = "non-collocated"
+                    osd_devices = "{}      - {}\n".format(
+                        osd_devices, tokens[1])
+                    osd_dedicated_devices = "{}      - {}\n".format(
+                        osd_dedicated_devices,
+                        tokens[2])
+                    osds_per_node += 1
+                elif len(tokens) == 2:
+                    # This OSD does not specify a separate journal
+                    # Add the same device as dedicated device
+                    # It is useful when there is a mix of collocated
+                    # and non-collocated devices
+                    osd_devices = "{}      - {}\n".format(
+                        osd_devices, tokens[1])
+                    osd_dedicated_devices = "{}      - {}\n".format(
+                        osd_dedicated_devices,
+                        tokens[1])
+                    osds_per_node += 1
+                else:
+                    logger.warning(
+                        "Bad entry in osd_disks: {}".format(osd))
+                    
+            total_osds = osds_per_node * storage_nodes
+            if total_osds >= 41:
+                ceph_pool_default_size = 3
+            elif total_osds >= 27:
+                ceph_pool_default_size = 2
+                logger.warning("Setting the CephDefaultPoolSize to 2.")
+            elif total_osds >= 14:
+                ceph_pool_default_size = 1
+                logger.warning("Setting the CephDefaultPoolSize to 1.")
+            else:
+                raise AssertionError("Number of OSDs on storage nodes is less "
+                                     " than minimum required.")
 
         found_osds_param = False
         for line in src_file:
@@ -435,36 +496,24 @@ class Director(InfraHost):
                 found_osds_param = True
 
             elif found_osds_param:
-                # Discard lines that begin with "#", "'" or "journal:" because
-                # these lines represent the original ceph.yaml file's OSD
-                # configuration.
+                # Discard lines that begin with "#", "osd_scenario",
+                # "devices:", "dedicated_devices:" or "-" because these lines
+                # represent the original ceph.yaml file's OSD configuration.
                 tokens = line.split()
                 if len(tokens) > 0 and (tokens[0].startswith("#") or
-                                        tokens[0].startswith("'") or
-                                        tokens[0].startswith("journal:")):
+                                        tokens[0].startswith("osd_scenario") or
+                                        tokens[0].startswith("devices") or
+                                        tokens[0].startswith("dedicated_devices") or
+                                        tokens[0].startswith("-")):
                     continue
 
                 # End of original Ceph OSD configuration: now write the new one
                 tmp_file.write("{}\n".format(osds_param))
-                for osd in osd_disks:
-                    # Format is ":OSD_DRIVE" or ":OSD_DRIVE:JOURNAL_DRIVE",
-                    # so split on the ':'
-                    tokens = osd.split(':')
-
-                    # Make sure OSD_DRIVE begins with "/dev/"
-                    if not tokens[1].startswith("/dev/"):
-                        tokens[1] += "/dev/"
-
-                    if len(tokens) == 3:
-                        # This OSD specifies a separate journal drive
-                        tmp_file.write(osd_separate_journal.format(tokens[1],
-                                                                   tokens[2]))
-                    elif len(tokens) == 2:
-                        # This OSD does not specify a separate journal
-                        tmp_file.write(osd_colocated_journal.format(tokens[1]))
-                    else:
-                        logger.warning(
-                            "Bad entry in osd_disks: {}".format(osd))
+                tmp_file.write("{} {}\n".format(
+                    osd_scenario_param, osd_scenario))
+                tmp_file.write(osd_devices)
+                if osd_scenario == "non-collocated":
+                    tmp_file.write(osd_dedicated_devices)
 
                 # This is the line that follows the original Ceph OSD config
                 tmp_file.write(line)
@@ -477,6 +526,10 @@ class Director(InfraHost):
             elif line.startswith(rbd_backend_param):
                 value = str(self.settings.enable_rbd_nova_backend).lower()
                 tmp_file.write("{} {}\n".format(rbd_backend_param, value))
+
+            elif line.startswith(ceph_pool_default_size_param):
+                tmp_file.write("{} {}\n".format(ceph_pool_default_size_param,
+                                                ceph_pool_default_size))
 
             else:
                 tmp_file.write(line)
@@ -980,7 +1033,8 @@ class Director(InfraHost):
                      "openstack stack delete --yes --wait " +
                      self.settings.overcloud_name)
         # Unregister the nodes from Ironic
-        re = self.run_tty(self.source_stackrc + "openstack baremetal node list | grep None")
+        re = self.run_tty(self.source_stackrc +
+                          "openstack baremetal node list | grep None")
         ls_nodes = re[0].split("\n")
         ls_nodes.pop()
         for node in ls_nodes:
@@ -1249,7 +1303,7 @@ class Director(InfraHost):
             'identity.admin_username $OS_USERNAME '
             'identity.admin_password $OS_PASSWORD '
             'identity.admin_tenant_name $OS_PROJECT_NAME',
-            ]
+        ]
         for cmd in cmds:
             self.run_tty(cmd)
 
