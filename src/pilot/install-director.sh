@@ -62,7 +62,7 @@ subnet_name="ctlplane"
 configure_cleaning_network()
 {
   network_name="$1"
-  network_uuid=$(openstack network lis | grep "${network_name}" | awk '{print $2}')
+  network_uuid=$(openstack network list | grep "${network_name}" | awk '{print $2}')
   sudo sed -i.bak "s/^.*cleaning_network_uuid.*$/cleaning_network_uuid\ =\ $network_uuid/" /etc/ironic/ironic.conf
   sudo systemctl restart openstack-ironic-conductor.service
 }
@@ -228,7 +228,7 @@ echo "## Done."
 
 echo
 echo "## Setting DNS in Neutron ${subnet_name} subnet..."
-subnet_uuid=$(openstack network lis | grep "${subnet_name}" | awk '{print $6}')
+subnet_uuid=$(openstack network list | grep "${subnet_name}" | awk '{print $6}')
 openstack subnet set "${subnet_uuid}" --dns-nameserver "${dns_ip}"
 echo "## Done."
 
