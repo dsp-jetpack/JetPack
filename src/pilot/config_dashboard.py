@@ -562,7 +562,7 @@ def prep_collectd(dashboard_node, ceph_nodes):
 
     for node in ceph_nodes:
         collectd_restart = False
-        collectd_files = ('network.conf', 'disk.conf')
+        collectd_files = ('ipmi.conf', 'ping.conf')
         for file in collectd_files:
             conf_file = os.path.join(os.sep, collectd_dir, file)
             status, stdout, stderr = node.execute("[ -f {} ] \
