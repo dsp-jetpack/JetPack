@@ -629,11 +629,9 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes):
     dashboard_node.run("setsebool -P httpd_can_network_connect 1")
 
     LOG.info("Installing the Ceph Storage Dashboard.")
-    dashboard_node.run("cd {}; sudo ansible-playbook -s -v playbook.yml"
+    dashboard_node.run("cd {}; sudo ansible-playbook -s -v --skip-tags \
+                       cephmetrics-collectors playbook.yml"
                        .format(cephmetrics_ansible_dir))
-    #dashboard_node.run("cd {}; sudo ansible-playbook -s -v --skip-tags \
-    #                   cephmetrics-collectors -u heat-admin playbook.yml"
-    #                   .format(cephmetrics_ansible_dir))
 
     for node in ceph_nodes:
         if "controller" in node.fqdn:
