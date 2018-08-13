@@ -44,12 +44,12 @@ class IronicHelper:
                   'os_auth_token': '',
                   'ironic_url': '',
                   'timeout': 600,
-                  'os_project_domain_name': os.environ['OS_PROJECT_DOMAIN_NAME'],
+                  'os_project_domain_name': os.environ[
+                      'OS_PROJECT_DOMAIN_NAME'],
                   'os_username': os.environ['OS_USERNAME'],
                   'os_password': os.environ['OS_PASSWORD'],
                   'os_auth_url': os.environ['OS_AUTH_URL'],
-                  'os_project_name': os.environ['OS_PROJECT_NAME'],
-                  'os_ironic_api_version': '1.34'}
+                  'os_project_name': os.environ['OS_PROJECT_NAME']}
         return ironicclient.client.get_client(1, **kwargs)
 
     @staticmethod
