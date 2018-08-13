@@ -74,6 +74,10 @@ packages=(
     cephmetrics-collectors
 )
 
+del_packages=(
+    collectd-ipmi,collectd-ping
+)
+
 function join { local IFS="$1"; shift; echo "$*"; }
 
 echo "## Updating the overcloud image"
@@ -96,6 +100,7 @@ run_command "virt-customize \
     --sm-attach \"pool:${subscription_manager_poolid}\" \
     --run-command \"subscription-manager repos --disable='*' ${repos[*]/#/--enable=}\" \
     --install $(join \",\" ${packages[*]}) \
+    --uninstall $(join \",\" ${del_packages[*]}) \
     --sm-remove \
     --sm-unregister \
     --selinux-relabel"
