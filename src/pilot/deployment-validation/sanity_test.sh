@@ -64,7 +64,7 @@ IMAGE_FILE_NAME=$(basename $SANITY_IMAGE_URL)
 SECURITY_GROUP_NAME="$BASE_SECURITY_GROUP_NAME"
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no"
 
-#vlan specific environmental vraiables
+#vlan specific environmental variables
 PARENT_PORT1="tenant_pp1"
 TRUNK_PORT1="tenant_trunk1"
 VLAN_NETWORK_NAME="tenant_vlan_net"
@@ -360,7 +360,13 @@ setup_glance(){
 
   if [ ! -f ./$IMAGE_FILE_NAME ]; then
     sleep 5 #HACK: a timing issue exists on some stamps -- 5 seconds seems sufficient to fix it
-    execute_command "wget $SANITY_IMAGE_URL"
+    info "### Downloading CentOS image file. Please wait..."
+    wget $SANITY_IMAGE_URL
+    if [ $? -ne 0 ]; then
+      echo "command failed"
+      exit 1
+    fi
+    info "### Download complete."
   else
     info "#----- Cirros image exists. Skipping"
   fi
@@ -389,16 +395,16 @@ spin_up_instances(){
   declare -a instance_names
   index=1
   
-    while [ $index -le $((SANITY_NUMBER_INSTANCES + 1)) ]; do
-    instance_name="${BASE_NOVA_INSTANCE_NAME}_$index"
+  while [ $index -le $((SANITY_NUMBER_INSTANCES + 1)) ]; do
+  instance_name="${BASE_NOVA_INSTANCE_NAME}_$index"
     if [ $index != $((${SANITY_NUMBER_INSTANCES} + 1)) ]; then
       execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $instance_name"
     else
       info "### Initiating build of Vlan-Aware-Instance..."
       execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic port-id=${pp1_id} --user-data ${HOME}/interfacescript $instance_name"
     fi
-    instance_names[((index-1))]=$instance_name
-    index=$((index+1))
+  instance_names[((index-1))]=$instance_name
+  index=$((index+1))
   done
 
   info "### Waiting for the instances to be built..."
@@ -693,7 +699,7 @@ then
 
     info "### Starting deletion of $PROJECT_NAME"
     info "### Deleting keypair"
-    keypair_id=$(nova keypair-list | grep $SANITY_KEY_NAME | awk '{print $2}')
+    keypair_ids=$(nova keypair-list | grep $SANITY_KEY_NAME | awk '{print $2}')
     info   "keypair id: $keypair_id"
     [[ $keypair_ids ]] && echo $keypair_ids | xargs -n1 nova keypair-delete
 
@@ -757,9 +763,6 @@ then
   done
 
   set_admin_scope
-  info   "#### Deleting the security groups"
-  security_group_ids=$(openstack security group list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
-  [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 openstack security group delete
 
   info   "#### Deleting the images"
   image_ids=$(openstack image list | grep $IMAGE_NAME | awk '{print $2}')
@@ -799,10 +802,15 @@ then
     openstack port delete $subport
   done
 
+  info   "#### Deleting the security groups"
+  security_group_ids=$(openstack security group list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
+  [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 openstack security group delete
+
+
 
   info "### Deleting router and router interfaces"
   router_ids=$(openstack router list | grep $BASE_VLAN_NAME | awk '{print $2}')
-  subnet_network_ids=$(openstack subnet list | grep -e $BASE_VLAN_NAME -e vlan${VLANID_1}_sub | awk '{print $2}')
+  subnet_network_ids=$(openstack subnet list | grep -E "${BASE_VLAN_NAME}|*vlan[0-9|_]{4}sub*" | awk '{print $2}')
   for router_id in $router_ids
   do
     for subnet_network_id in $subnet_network_ids
@@ -824,7 +832,7 @@ then
   done 
   
   info "### Deleting networks"
-  network_ids=$(openstack network list | grep -E "$BASE_TENANT_NETWORK_NAME|$FLOATING_IP_NETWORK_NAME" | awk '{print $2}')
+  network_ids=$(openstack network list | grep -E "$BASE_TENANT_NETWORK_NAME|$VLAN_NETWORK_NAME|$FLOATING_IP_NETWORK_NAME" | awk '{print $2}')
   for network_id in $network_ids
   do
     openstack network delete $network_id
