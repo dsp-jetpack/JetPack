@@ -18,6 +18,7 @@
 #set -e
 #Variables
 
+
 INI_FILE=sanity.ini
 
 while getopts :s: option
@@ -39,6 +40,7 @@ FLOATING_IP_NETWORK_GATEWAY=$(get_value floating_ip_network_gateway)
 FLOATING_IP_NETWORK_VLAN=$(get_value floating_ip_network_vlan)
 OVS_DPDK_ENABLED=$(get_value ovs_dpdk_enabled)
 SANITY_TENANT_NETWORK=$(get_value sanity_tenant_network)
+SANITY_VLANTEST_NETWORK=$(get_value sanity_vlantest_network)
 SANITY_USER_PASSWORD=$(get_value sanity_user_password)
 SANITY_USER_EMAIL=$(get_value sanity_user_email)
 SANITY_KEY_NAME=$(get_value sanity_key_name)
@@ -61,6 +63,11 @@ BASE_CONTAINER_NAME=$(get_value base_container_name)
 IMAGE_FILE_NAME=$(basename $SANITY_IMAGE_URL)
 SECURITY_GROUP_NAME="$BASE_SECURITY_GROUP_NAME"
 SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no"
+
+#vlan specific environmental variables
+PARENT_PORT1="tenant_pp1"
+TRUNK_PORT1="tenant_trunk1"
+VLAN_NETWORK_NAME="tenant_vlan_net"
 
 shopt -s nullglob
 
@@ -180,6 +187,7 @@ set_unique_names(){
   PROJECT_NAME=${BASE_PROJECT_NAME}${suffix}
   SANITYRC=~/${PROJECT_NAME}rc
   TENANT_NETWORK_NAME="${BASE_TENANT_NETWORK_NAME}${suffix}"
+  VLAN1_NETWORK_NAME="${VLAN_NETWORK_NAME}${suffix}"
   TENANT_ROUTER_NAME="${BASE_TENANT_ROUTER_NAME}${suffix}"
   VLAN_NAME="${BASE_VLAN_NAME}${suffix}"
   USER_NAME="${BASE_USER_NAME}${suffix}"
@@ -205,11 +213,11 @@ get_unique_names(){
 
 create_the_networks(){
   info "### Creating the Networks ####"
-  set_admin_scope
+  set_tenant_scope
   net_exists=$(openstack network list -c Name -f value | grep "$TENANT_NETWORK_NAME")
   if [ "$net_exists" != "$TENANT_NETWORK_NAME" ]
   then
-    execute_command "openstack network create --share $TENANT_NETWORK_NAME"
+    execute_command "openstack network create $TENANT_NETWORK_NAME "
   else
     info "#----- Tenant network '$TENANT_NETWORK_NAME' exists. Skipping"
   fi
@@ -217,25 +225,53 @@ create_the_networks(){
   subnet_exists=$(openstack subnet list -c Name -f value | grep "$VLAN_NAME")
   if [ "$subnet_exists" != "$VLAN_NAME" ]
   then
+    set_tenant_scope
     execute_command "openstack subnet create $VLAN_NAME --network $TENANT_NETWORK_NAME --subnet-range $SANITY_TENANT_NETWORK"
   else
     info "#-----VLAN Network subnet '$SANITY_TENANT_NETWORK' exists. Skipping"
   fi
 
+  vlan1_exists=$(openstack network list -c Name -f value | grep "$VLAN1_NETWORK_NAME")
+  if [ "$vlan1_exists" != "$VLAN1_NETWORK_NAME" ]
+  then
+    set_tenant_scope
+    execute_command "openstack network create $VLAN1_NETWORK_NAME"
+  else
+    info "#-------vlan network '$VLAN1_NETWORK_NAME' already exists. Skipping "
+  fi
+  
+  set_admin_scope
+  VLANID_1=$(openstack network show $VLAN1_NETWORK_NAME -c provider:segmentation_id -f value | awk '{print $1}')
+
+  set_tenant_scope
+  subnet1_exists=$(openstack subnet list -c Name -f value | grep "vlan${VLANID_1}_sub")
+  if [ "$subnet1_exists" != "vlan${VLANID_1}_sub" ]
+  then
+    execute_command "openstack subnet create vlan${VLANID_1}_sub --network $VLAN1_NETWORK_NAME --subnet-range $SANITY_VLANTEST_NETWORK " 
+  else
+    info "#------- Subnet of VLAN $VLAN1ID already exists. Skipping"
+  fi  
+
+  set_tenant_scope
   router_exists=$(openstack router list -c Name -f value | grep "$TENANT_ROUTER_NAME")
   if [ "$router_exists" != "$TENANT_ROUTER_NAME" ]
   then
     execute_command "openstack router create $TENANT_ROUTER_NAME"
 
     subnet_id=$(openstack network list | grep $TENANT_NETWORK_NAME | head -n 1 | awk '{print $6}')
+    subnet_id_vlan=$(openstack network list | grep $VLAN1_NETWORK_NAME | head -n 1 | awk '{print $6}')
 
     execute_command "openstack router add subnet $TENANT_ROUTER_NAME $subnet_id"
+    execute_command "openstack router add subnet $TENANT_ROUTER_NAME $subnet_id_vlan"
+    
+
   else
     info "#----- $TENANT_ROUTER_NAME exists. Skipping"
   fi
 
   # execute_command "ssh ${SSH_OPTS} heat-admin@$CONTROLLER sudo grep network_vlan_ranges /etc/neutron/plugin.ini"
 
+  set_admin_scope
   ext_net_exists=$(openstack network list -c Name -f value | grep "$FLOATING_IP_NETWORK_NAME")
   if [ "$ext_net_exists" != "$FLOATING_IP_NETWORK_NAME" ]
   then
@@ -245,7 +281,7 @@ create_the_networks(){
     info "#----- External network '$FLOATING_IP_NETWORK_NAME' exists. Skipping"
   fi
 
-
+  set_tenant_scope
   execute_command "openstack network list"
 
   execute_command "openstack router list"
@@ -277,6 +313,46 @@ create_the_networks(){
   fi
 }
 
+port_creation() {
+  #Creating ports in the tenant scope
+  set_tenant_scope
+  pp1_exists=$(openstack port list -c Name -f value | grep "$PARENT_PORT1")
+  if [ "$pp1_exists" != "$PARENT_PORT1" ];then
+    info "### Creating parent port and setting its security group----------"
+    execute_command "openstack port create --network $TENANT_NETWORK_NAME $PARENT_PORT1"
+    #Srtting port level security for pinging in the later stage
+    execute_command "openstack port set --security-group $SECURITY_GROUP_NAME $PARENT_PORT1"
+  else
+    info "#-----Parent port 1 already exists. Commencing further----------"
+  fi
+  
+  trunk1_exists=$(openstack trunk list -c Name -f value | grep "$TRUNK_PORT1")
+  if [ "$trunk1_exists" != "$TRUNK_PORT1" ]
+  then
+    execute_command "openstack network trunk create --parent-port $PARENT_PORT1 $TRUNK_PORT1"	
+  else
+    info "#-----Trunk Port 1 already exists. Commencing further----------"
+  fi
+
+  
+  MACADDR_PP1=$(openstack port show -c mac_address -f value $PARENT_PORT1)
+
+  # Creating subports
+  info "### Creating subports and setting its security group----------"
+  subport1_exists=$(openstack port list -c Name -f value | grep "subport1_$VLANID_1")
+  if [ "$subport1_exists" != "subport1_$VLANID_1" ]
+  then
+    set_tenant_scope
+    execute_command "openstack port create --mac-address $MACADDR_PP1 --network $VLAN1_NETWORK_NAME subport1_$VLANID_1"
+    execute_command "openstack port set --security-group $SECURITY_GROUP_NAME subport1_$VLANID_1"
+
+    info "Attaching subport to the TRUNK_PORT1."
+    execute_command "openstack network trunk set --subport port=subport1_$VLANID_1,segmentation-type=vlan,segmentation-id=${VLANID_1} ${TRUNK_PORT1}"
+  else
+    info "#-----Subport subport1_$VLANID_1 exists.Commencing further----------"
+  fi
+}
+
 
 setup_glance(){
   info "### Setting up glance"""
@@ -284,7 +360,13 @@ setup_glance(){
 
   if [ ! -f ./$IMAGE_FILE_NAME ]; then
     sleep 5 #HACK: a timing issue exists on some stamps -- 5 seconds seems sufficient to fix it
-    execute_command "wget $SANITY_IMAGE_URL"
+    info "### Downloading CentOS image file. Please wait..."
+    wget $SANITY_IMAGE_URL
+    if [ $? -ne 0 ]; then
+      echo "command failed"
+      exit 1
+    fi
+    info "### Download complete."
   else
     info "#----- Cirros image exists. Skipping"
   fi
@@ -305,21 +387,29 @@ spin_up_instances(){
   tenant_net_id=$(openstack network list -f value | grep " $TENANT_NETWORK_NAME " | awk '{print $1}')
 
   image_id=$(openstack image list -f value | grep "$IMAGE_NAME" | awk 'NR==1{print $1}')
+  
+  pp1_id=$(openstack port show $PARENT_PORT1 -c id -f value | awk '{print $1}')
 
   info "### Initiating build of instances..."
+  
   declare -a instance_names
   index=1
-  while [ $index -le $SANITY_NUMBER_INSTANCES ]; do
-    instance_name="${BASE_NOVA_INSTANCE_NAME}_$index"
-
-    execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $instance_name"
-
-    instance_names[((index-1))]=$instance_name
-    index=$((index+1))
+  
+  while [ $index -le $((SANITY_NUMBER_INSTANCES + 1)) ]; do
+  instance_name="${BASE_NOVA_INSTANCE_NAME}_$index"
+    if [ $index != $((${SANITY_NUMBER_INSTANCES} + 1)) ]; then
+      execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $instance_name"
+    else
+      info "### Initiating build of Vlan-Aware-Instance..."
+      execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic port-id=${pp1_id} --user-data ${HOME}/interfacescript $instance_name"
+    fi
+  instance_names[((index-1))]=$instance_name
+  index=$((index+1))
   done
 
   info "### Waiting for the instances to be built..."
   set_tenant_scope
+
 
   for instance_name in ${instance_names[*]}; do
     instance_status=$(nova list | grep $instance_name | awk '{print $6}')
@@ -328,7 +418,7 @@ spin_up_instances(){
         fatal "### Instance status is: ${instance_status}!  Aborting sanity test"
       else
         info "### Instance status is: ${instance_status}.  Sleeping..."
-        sleep 10
+        sleep 60
         instance_status=$(nova list | grep $instance_name | awk '{print $6}')
       fi
     done
@@ -337,6 +427,7 @@ spin_up_instances(){
   info "### Instances are successfully built"
   execute_command "nova list"
 }
+
 
 
 setup_nova (){
@@ -397,7 +488,7 @@ ping_from_netns(){
 }
 
 test_neutron_networking (){
-  set_admin_scope
+  set_tenant_scope
   router_id=$(openstack router list | grep $TENANT_ROUTER_NAME | awk '{ print $2} ')
 
   set_tenant_scope
@@ -418,7 +509,7 @@ test_neutron_networking (){
       floating_ips+=($floating_ip)
 
       # Find the port to associate it with
-      set_admin_scope
+      set_tenant_scope
       port_id=$(openstack port list | grep $subnet_id | grep $private_ip | awk '{print $2}')
 
       # And finally associate the floating IP with the instance
@@ -519,6 +610,49 @@ radosgw_cleanup(){
   execute_command "swift list"
 }
 
+script(){
+#Script for the setting up the interfaces of vlan network in vlan aware instance
+info "### Creating interfaces script for interface setup-------------"
+gw_vlan_net=${SANITY_VLANTEST_NETWORK%0\/24}1
+cat << EOF >~/interfacescript
+#!/bin/bash
+sudo touch /etc/sysconfig/network-scripts/ifcfg-eth0.$VLANID_1 
+sudo tee /etc/sysconfig/network-scripts/ifcfg-eth0.$VLANID_1 <<- End >/dev/null
+    DEVICE="eth0.$VLANID_1"
+    BOOTPROTO="dhcp"
+    BOOTPROTOv6="dhcp"
+    ONBOOT="yes"
+    USERCTL="yes"
+    IPV6INIT="yes"
+    DEFROUTE="no"
+    PEERDNS="yes"
+    PERSISTENT_DHCLIENT="1"
+    VLAN=yes
+End
+sudo touch /etc/sysconfig/network-scripts/route-eth0.$VLANID_1
+sudo tee /etc/sysconfig/network-scripts/route-eth0.$VLANID_1 <<- End >/dev/null
+    default via ${gw_vlan_net} dev eth0.${VLANID_1} proto dhcp metric 400
+End
+sudo /etc/sysconfig/network-scripts/ifup ifcfg-eth0.${VLANID_1}
+sudo sleep 3  
+EOF
+}
+
+
+vlan_aware_test(){
+
+  info "### Commencing vlan-instance interface testing"
+  set_tenant_scope
+
+  ip_vlan1=$(openstack port list | grep subport1_$VLANID_1 | awk '{print $8}' | awk -F"'" '{print $2}')
+
+  netid_vlan1=$(neutron net-show -F id $VLAN1_NETWORK_NAME | grep id | awk '{print $4}')
+
+  ping_from_netns ${ip_vlan1} qdhcp-${netid_vlan1}
+
+  info "### Successfully completed the vlan-instance test"
+}
+
 
 setup_project(){
   info "### Setting up new project $PROJECT_NAME"
@@ -565,7 +699,7 @@ then
 
     info "### Starting deletion of $PROJECT_NAME"
     info "### Deleting keypair"
-    keypair_id=$(nova keypair-list | grep $SANITY_KEY_NAME | awk '{print $2}')
+    keypair_ids=$(nova keypair-list | grep $SANITY_KEY_NAME | awk '{print $2}')
     info   "keypair id: $keypair_id"
     [[ $keypair_ids ]] && echo $keypair_ids | xargs -n1 nova keypair-delete
 
@@ -629,9 +763,6 @@ then
   done
 
   set_admin_scope
-  info   "#### Deleting the security groups"
-  security_group_ids=$(openstack security group list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
-  [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 openstack security group delete
 
   info   "#### Deleting the images"
   image_ids=$(openstack image list | grep $IMAGE_NAME | awk '{print $2}')
@@ -648,9 +779,38 @@ then
      rm -f ./$IMAGE_FILE_NAME
   fi
 
+  info "### Deleting the script"
+  if [ -f ~/interfacescript ]; then
+    rm ~/interfacescript
+  fi
+  info "### Deleting trunk and its associated ports"
+  trunk_ports=$(openstack network trunk list | grep $TRUNK_PORT1 | awk '{print $2}')
+  for trunk_port in $trunk_ports
+  do 
+    openstack network trunk remove $trunk_port
+  done
+  
+  parent_ports=$(openstack port list | grep $PARENT_PORT1 | awk '{print $2}')
+  for parent_port in $parent_ports
+  do
+    openstack port delete $parent_port
+  done 
+
+  subports=$(openstack port list | grep subport1_$VLANID_1 | awk '{print $2}')
+  for subport in $subports
+  do
+    openstack port delete $subport
+  done
+
+  info   "#### Deleting the security groups"
+  security_group_ids=$(openstack security group list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
+  [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 openstack security group delete
+
+
+
   info "### Deleting router and router interfaces"
   router_ids=$(openstack router list | grep $BASE_VLAN_NAME | awk '{print $2}')
-  subnet_network_ids=$(openstack subnet list | grep $BASE_VLAN_NAME | awk '{print $2}')
+  subnet_network_ids=$(openstack subnet list | grep -E "${BASE_VLAN_NAME}|*vlan[0-9|_]{4}sub*" | awk '{print $2}')
   for router_id in $router_ids
   do
     for subnet_network_id in $subnet_network_ids
@@ -672,7 +832,7 @@ then
   done 
   
   info "### Deleting networks"
-  network_ids=$(openstack network list | grep -E "$BASE_TENANT_NETWORK_NAME|$FLOATING_IP_NETWORK_NAME" | awk '{print $2}')
+  network_ids=$(openstack network list | grep -E "$BASE_TENANT_NETWORK_NAME|$VLAN_NETWORK_NAME|$FLOATING_IP_NETWORK_NAME" | awk '{print $2}')
   for network_id in $network_ids
   do
     openstack network delete $network_id
@@ -700,9 +860,13 @@ else
 
   create_the_networks
 
+  port_creation   
+
   setup_glance
 
   setup_nova
+
+  script
 
   spin_up_instances
 
@@ -711,6 +875,8 @@ else
   setup_cinder
 
   radosgw_test
+
+  vlan_aware_test
 
   end
 
