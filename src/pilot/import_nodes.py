@@ -53,7 +53,6 @@ def main():
         for k in node.keys():
             if not k.startswith('pm_'):
                 node.pop(k)
-                print "remomving "  + str(k)
     with open(import_json, 'w') as out:
         json.dump(content, out)
     logger.info("Importing {} into ironic".format(args.node_definition))
