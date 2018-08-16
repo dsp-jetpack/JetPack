@@ -254,15 +254,15 @@ sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
 
 # This hacks in a patch to work around a known issue where a RAID-10 virtual
-# disk cannot be created from more than 16 backing physical disks.  This also
-# patches in support for NVMe drives.  Note that this code must be here because
-# we use this code prior to deploying the director.
-#echo
-#echo "## Patching Ironic iDRAC driver RAID library..."
-#apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
-#sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
-#sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
-#echo "## Done."
+# disk cannot be created from more than 16 backing physical disks.
+# Note that this code must be here because we use this code prior to deploying
+# the director.
+echo
+echo "## Patching Ironic iDRAC driver raid.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
+echo "## Done."
 
 # This patches workarounds for two issues into ironic.conf.
 # 1. node_locked_retry_attempts is increased to work around an issue where
