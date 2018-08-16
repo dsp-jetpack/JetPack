@@ -245,6 +245,14 @@ echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
 
+# This hacks in a patch to increase the number of iDRAC is-ready retries to 96,
+# which is required for the latest firmware.
+echo
+echo "## Patching Ironic iDRAC driver constants.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/constants.py ${HOME}/pilot/constants.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyo
+
 # This hacks in a patch to work around an issue where the iDRAC can return
 # invalid non-ASCII characters during an enumeration.
 echo
