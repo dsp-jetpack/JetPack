@@ -18,26 +18,46 @@ import logging
 import os
 import sys
 
-_DRAC_BOOT_MODES = ['Bios', 'Uefi']
+from ironic.common import boot_devices
+
+DRAC_BOOT_MODE_BIOS = 'Bios'
+DRAC_BOOT_MODE_UEFI = 'Uefi'
+
+DRAC_BOOT_MODES = {
+
+}
+
+# TODO(Update Ironic Boot Modes)
+"""For Rocky release, boot modes are defined in boot_modes.py file,
+When we upgrade to next version, we need to import ironic boot modes
+instead of [boot_devices.BIOS and uefi]."""
+DRAC_BOOT_MODES = {
+    DRAC_BOOT_MODE_BIOS: boot_devices.BIOS,
+    DRAC_BOOT_MODE_UEFI: "uefi"
+}
+
+IRONIC_BOOT_MODES = dict((v, k) for (k, v) in DRAC_BOOT_MODES.items())
 
 
 class BootModeHelper(object):
     path = os.path.basename(sys.argv[0])[0]
     LOG = logging.getLogger(os.path.splitext(path)[0])
 
+    @staticmethod
     def is_boot_order_flexibly_programmable(drac_client, bios_settings=None):
         if not bios_settings:
             bios_settings = drac_client.list_bios_settings()
         return 'SetBootOrderFqdd1' in bios_settings
 
-    def determine_boot_mode(drac_client, node):
+    @staticmethod
+    def determine_boot_mode(drac_client, bios_settings=None):
         bios_settings = drac_client.list_bios_settings(by_name=True)
         if is_boot_order_flexibly_programmable(drac_client, bios_settings):
             drac_boot_mode = bios_settings['BootMode'].current_value
-            if drac_boot_mode not in _DRAC_BOOT_MODES:
+            if drac_boot_mode not in [DRAC_BOOT_MODE_BIOS,
+                                      DRAC_BOOT_MODE_UEFI]:
                 message = "DRAC reported unknown boot mode "" \
                 ""{}".format(drac_boot_mode)
-
                 raise BootModeHelper.LOG.error(message)
 
             return drac_boot_mode
