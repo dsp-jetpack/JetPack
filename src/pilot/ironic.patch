@@ -14,7 +14,7 @@
  
  # Number of attempts to grab a node lock. (integer value)
 -#node_locked_retry_attempts = 3
-+node_locked_retry_attempts = 15
++node_locked_retry_attempts = 25
  
  # Seconds to sleep between node lock attempts. (integer value)
  #node_locked_retry_interval = 1
