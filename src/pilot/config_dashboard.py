@@ -561,27 +561,12 @@ def prep_collectd(dashboard_node, ceph_nodes):
     collectd_dir = "/etc/collectd.d"
 
     for node in ceph_nodes:
-        collectd_restart = False
-        collectd_files = ('network.conf', 'disk.conf')
-        for file in collectd_files:
-            conf_file = os.path.join(os.sep, collectd_dir, file)
-            status, stdout, stderr = node.execute("[ -f {} ] \
-                                                  && echo true \
-                                                  || echo false"
-                                                  .format(conf_file))
-            LOG.debug("STDOUT for node ({}) file ({}) = {}"
-                      .format(node.fqdn, conf_file, stdout))
-            if "true" in stdout:
-                node.run("sudo mv {} {}.bak".format(conf_file, conf_file))
-                collectd_restart = True
-
-        if collectd_restart:
-            LOG.info("Restarting collectd service on node ({})"
-                     .format(node.fqdn))
-            node.run("sudo systemctl restart collectd")
+         LOG.info("Restarting collectd service on node ({})"
+                  .format(node.fqdn))
+         node.run("sudo systemctl restart collectd")
 
 
-def prep_cluster_for_collection(dashboard_node, ceph_nodes):
+def prep_cluster_for_collection(dashboard_node, ceph_nodes, dashboard_addr):
     """ Take over an existing Ceph Storage Cluster
     """
 
@@ -629,11 +614,9 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes):
     dashboard_node.run("setsebool -P httpd_can_network_connect 1")
 
     LOG.info("Installing the Ceph Storage Dashboard.")
-    dashboard_node.run("cd {}; sudo ansible-playbook -s -v playbook.yml"
+    dashboard_node.run("cd {}; sudo ansible-playbook -s -v --skip-tags \
+                       cephmetrics-collectors playbook.yml"
                        .format(cephmetrics_ansible_dir))
-    #dashboard_node.run("cd {}; sudo ansible-playbook -s -v --skip-tags \
-    #                   cephmetrics-collectors -u heat-admin playbook.yml"
-    #                   .format(cephmetrics_ansible_dir))
 
     for node in ceph_nodes:
         if "controller" in node.fqdn:
@@ -645,7 +628,7 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes):
 
     LOG.info("Ceph Storage Dashboard configuration is complete")
     LOG.info("You may access the Ceph Storage Dashboard at:")
-    LOG.info("      http://<DashboardIP>:3000,")
+    LOG.info("      http://{}:3000,".format(dashboard_addr))
     LOG.info("with user 'admin' and password 'admin'.")
 
 
@@ -843,7 +826,7 @@ def main():
     patch_selinux_yaml(dashboard_node)
     patch_facts_yaml(dashboard_node)
     prep_collectd(dashboard_node, ceph_nodes)
-    prep_cluster_for_collection(dashboard_node, ceph_nodes)
+    prep_cluster_for_collection(dashboard_node, ceph_nodes, args.dashboard_addr)
 
 
 if __name__ == "__main__":

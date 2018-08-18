@@ -62,7 +62,7 @@ subnet_name="ctlplane"
 configure_cleaning_network()
 {
   network_name="$1"
-  network_uuid=$(neutron net-list | grep "${network_name}" | awk '{print $2}')
+  network_uuid=$(openstack network list | grep "${network_name}" | awk '{print $2}')
   sudo sed -i.bak "s/^.*cleaning_network_uuid.*$/cleaning_network_uuid\ =\ $network_uuid/" /etc/ironic/ironic.conf
   sudo systemctl restart openstack-ironic-conductor.service
 }
@@ -201,9 +201,9 @@ do
 done
 echo "## Done."
 
-#echo 
-#echo "## Customizing the overcloud image & uploading images"
-#run_command "~/pilot/customize_image.sh ${subscription_manager_user} ${subscription_manager_pass} ${subcription_manager_poolid} ${proxy}"
+echo 
+echo "## Customizing the overcloud image & uploading images"
+run_command "~/pilot/customize_image.sh ${subscription_manager_user} ${subscription_manager_pass} ${subcription_manager_poolid} ${proxy}"
 
 echo
 if [ -n "${overcloud_nodes_pwd}" ]; then
@@ -228,8 +228,8 @@ echo "## Done."
 
 echo
 echo "## Setting DNS in Neutron ${subnet_name} subnet..."
-subnet_uuid=$(neutron net-list | grep "${subnet_name}" | awk '{print $6}')
-neutron subnet-update "${subnet_uuid}" --dns-nameserver "${dns_ip}"
+subnet_uuid=$(openstack network list | grep "${subnet_name}" | awk '{print $6}')
+openstack subnet set "${subnet_uuid}" --dns-nameserver "${dns_ip}"
 echo "## Done."
 
 echo
@@ -245,6 +245,14 @@ echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
 
+# This hacks in a patch to increase the number of iDRAC is-ready retries to 96,
+# which is required for the latest firmware.
+echo
+echo "## Patching Ironic iDRAC driver constants.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/constants.py ${HOME}/pilot/constants.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyo
+
 # This hacks in a patch to work around an issue where the iDRAC can return
 # invalid non-ASCII characters during an enumeration.
 echo
@@ -254,15 +262,15 @@ sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
 
 # This hacks in a patch to work around a known issue where a RAID-10 virtual
-# disk cannot be created from more than 16 backing physical disks.  This also
-# patches in support for NVMe drives.  Note that this code must be here because
-# we use this code prior to deploying the director.
-#echo
-#echo "## Patching Ironic iDRAC driver RAID library..."
-#apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
-#sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
-#sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
-#echo "## Done."
+# disk cannot be created from more than 16 backing physical disks.
+# Note that this code must be here because we use this code prior to deploying
+# the director.
+echo
+echo "## Patching Ironic iDRAC driver raid.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
+echo "## Done."
 
 # This patches workarounds for two issues into ironic.conf.
 # 1. node_locked_retry_attempts is increased to work around an issue where
@@ -274,6 +282,18 @@ echo
 echo "## Patching ironic.conf..."
 apply_patch "sudo patch -b -s /etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
 echo "## Done."
+
+# This patches an issue where the  Ironic api service returns http 500 errors
+# https://bugzilla.redhat.com/show_bug.cgi?id=1613995
+echo 
+echo "## Patching 10-ironic_wsgi.conf"
+apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
+echo "## Done"
+
+echo 
+echo "## Restarting httpd"
+sudo systemctl restart httpd
+echo "## Done"
 
 echo
 echo "## Restarting openstack-ironic-conductor.service..."
