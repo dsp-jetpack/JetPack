@@ -585,6 +585,9 @@ class Director(InfraHost):
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_image_url=.*|sanity_image_url=' +
             self.settings.sanity_image_url +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|sanity_vlantest_network=.*|sanity_vlantest_network=' +
+            self.settings.sanity_vlantest_network +
             '|" pilot/deployment-validation/sanity.ini'
         ]
         for cmd in cmds:
@@ -1239,8 +1242,8 @@ class Director(InfraHost):
             cmd = 'rm -f ~/{}'.format(self.settings.sanity_key_name)
             self.run_tty(cmd)
             self.run_tty('wget '
-                         'http://download.cirros-cloud.net/0.3.3/'
-                         'cirros-0.3.3-x86_64-disk.img')
+                         'http://cloud.centos.org/centos/7/images/'
+                         'CentOS-7-x86_64-GenericCloud.qcow2')
             self.run_tty("cd " + self.validation_dir +
                          ';chmod ugo+x sanity_test.sh')
             re = self.run_tty("cd " + self.validation_dir +
