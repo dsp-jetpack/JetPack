@@ -40,5 +40,4 @@ class BootModeHelper(object):
     def get_boot_mode(drac_client, bios_settings=None):
         if not bios_settings:
             bios_settings = drac_client.list_bios_settings(by_name=True)
-        if is_boot_order_flexibly_programmable(drac_client, bios_settings):
-            return bios_settings['BootMode'].current_value
+        return bios_settings['BootMode'].current_value
