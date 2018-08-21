@@ -190,11 +190,10 @@ class Settings():
                 'public_api_network_mtu']
             self.floating_ip_network_mtu = mtu_settings[
                 'floating_ip_network_mtu']
-        # fixed mtu values
         self.default_bond_mtu = '9216'
         self.management_network_mtu = '1500'
         self.provisioning_network_mtu = '1500'
-
+		
         vips_settings = self.get_settings_section(
             "Vips Settings")
         if vips_settings['use_static_vips'].lower() == 'true':
@@ -254,7 +253,7 @@ class Settings():
 
         self.profile = deploy_settings['profile'].lower()
         logger.info("Profile has been set to {}".format(self.profile))
-        
+
         if deploy_settings['enable_rbd_backend'].lower() == 'true':
             self.enable_rbd_backend = True
         else:
@@ -288,7 +287,6 @@ class Settings():
                     dellnfv_settings['numa_hostos_cpu_count']
         else:
             self.numa_enable = False
-        
         # Performance and Optimization
         performance_and_optimization = self.get_settings_section(
             "Performance and Optimization")
@@ -298,7 +296,6 @@ class Settings():
             performance_and_optimization['innodb_buffer_pool_size']
         self.innodb_buffer_pool_instances = performance_and_optimization[
             'innodb_buffer_pool_instances']
-
         backend_settings = self.get_settings_section(
             "Storage back-end Settings")
         if backend_settings['enable_dellsc_backend'].lower() == 'true':
@@ -495,7 +492,7 @@ class Settings():
                         self.ovs_dpdk_mode + ".")
         else:
             logger.info("OVS_DPDK is disabled.")
-            
+
         self.controller_nodes = []
         self.compute_nodes = []
         self.ceph_nodes = []
