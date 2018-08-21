@@ -19,13 +19,13 @@ from ironic.drivers.modules import deploy_utils
 DRAC_BOOT_MODE_BIOS = 'Bios'
 DRAC_BOOT_MODE_UEFI = 'Uefi'
 
-DRAC_TO_IRONIC_BOOT_MODES = {
+DRAC_BOOT_MODE_TO_IRONIC_BOOT_MODE_CAP = {
     DRAC_BOOT_MODE_BIOS: deploy_utils.SUPPORTED_CAPABILITIES['boot_mode'][0],
     DRAC_BOOT_MODE_UEFI: deploy_utils.SUPPORTED_CAPABILITIES['boot_mode'][1]
 }
 
-IRONIC_TO_DRAC_BOOT_MODES = \
-    dict((v, k) for (k, v) in DRAC_TO_IRONIC_BOOT_MODES.items())
+IRONIC_BOOT_MODE_CAP_TO_DRAC_BOOT_MODE = \
+    dict((v, k) for (k, v) in DRAC_BOOT_MODE_TO_IRONIC_BOOT_MODE_CAP.items())
 
 
 class BootModeHelper(object):
