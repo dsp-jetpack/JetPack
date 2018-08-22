@@ -19,6 +19,7 @@ import logging
 import os
 import requests.packages
 import sys
+
 from arg_helper import ArgHelper
 from constants import Constants
 from credential_helper import CredentialHelper
@@ -34,6 +35,9 @@ sys.path.append(discover_nodes_path)
 
 from discover_nodes.dracclient.client import DRACClient  # noqa
 from discover_nodes.dracclient.exceptions import NotFound  # noqa
+
+import boot_mode_helper
+from boot_mode_helper import BootModeHelper
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being made
 requests.packages.urllib3.disable_warnings()
@@ -153,10 +157,10 @@ def configure_nics_boot_settings(
     return reboot_required, job_ids, provisioning_mac
 
 
-def config_legacy_boot_mode(drac_client, ip_service_tag, node):
-    LOG.info("Setting {} to legacy BIOS boot".format(
-        ip_service_tag))
-    settings = {"BootMode": "Bios"}
+def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):
+    LOG.info("Setting {} to {} boot".format(
+        ip_service_tag, boot_mode))
+    settings = {"BootMode": boot_mode}
     response = drac_client.set_bios_settings(settings)
 
     job_id = None
@@ -323,28 +327,30 @@ def config_idrac(instack_lock,
     # there are no pending jobs, but the iDRAC thinks there are
     clear_job_queue(drac_client, ip_service_tag)
 
-    pxe_nic_fqdd = get_pxe_nic_fqdd(
-        pxe_nic,
-        model_properties,
-        drac_client)
-
     reboot_required = False
+    reboot_required_nic = False
+    job_ids = []
 
-    # Configure the NIC port to PXE boot or not
-    reboot_required_nic, job_ids, provisioning_mac = \
-        configure_nics_boot_settings(drac_client,
-                                     ip_service_tag,
-                                     pxe_nic_fqdd,
-                                     node)
+    current_boot_mode = BootModeHelper.get_boot_mode(drac_client)
+    if current_boot_mode == boot_mode_helper.DRAC_BOOT_MODE_UEFI and \
+            BootModeHelper.is_boot_order_flexibly_programmable(drac_client):
+        # Configure the system to UEFI boot mode
+        boot_mode = boot_mode_helper.DRAC_BOOT_MODE_UEFI
+    elif current_boot_mode != boot_mode_helper.DRAC_BOOT_MODE_UEFI and \
+            BootModeHelper.is_boot_order_flexibly_programmable(drac_client):
+        # Configure the system to UEFI boot mode
+        boot_mode = boot_mode_helper.DRAC_BOOT_MODE_UEFI
+    else:
+        # Configure the system to BIOS boot mode
+        boot_mode = boot_mode_helper.DRAC_BOOT_MODE_BIOS
 
     reboot_required = reboot_required or reboot_required_nic
 
-    # Configure the system to legacy boot
-    reboot_required_legacy, legacy_job_id = config_legacy_boot_mode(
-        drac_client, ip_service_tag, node)
-    reboot_required = reboot_required or reboot_required_legacy
-    if legacy_job_id:
-        job_ids.append(legacy_job_id)
+    reboot_required_boot, boot_job_id = config_boot_mode(
+        drac_client, ip_service_tag, node, boot_mode)
+
+    if boot_job_id:
+        job_ids.append(boot_job_id)
 
     # Do initial idrac configuration
     reboot_required_idrac, idrac_job_id = config_idrac_settings(drac_client,
@@ -355,12 +361,97 @@ def config_idrac(instack_lock,
     if idrac_job_id:
         job_ids.append(idrac_job_id)
 
+    if boot_mode == boot_mode_helper.DRAC_BOOT_MODE_UEFI and reboot_required:
+        success = schedule_restart_job(job_ids,
+                                       drac_client,
+                                       drac_ip,
+                                       drac_user,
+                                       password,
+                                       ip_service_tag)
+
+    if boot_mode == boot_mode_helper.DRAC_BOOT_MODE_BIOS:
+        # Configure the system to BIOS/Legacy boot mode
+        pxe_nic_fqdd = get_pxe_nic_fqdd(
+            pxe_nic,
+            model_properties,
+            drac_client)
+
+        # Configure the NIC port to PXE boot or not
+        reboot_required_nic, job_ids, provisioning_mac = \
+            configure_nics_boot_settings(drac_client,
+                                         ip_service_tag,
+                                         pxe_nic_fqdd,
+                                         node)
+
     # If we need to reboot, then add a job for it
     if reboot_required:
-        LOG.info("Rebooting {} to apply configuration".format(ip_service_tag))
+        success = schedule_restart_job(job_ids,
+                                       drac_client,
+                                       drac_ip,
+                                       drac_user,
+                                       password,
+                                       ip_service_tag)
 
-        job_id = drac_client.create_reboot_job()
-        job_ids.append(job_id)
+    # We always want to update the password for the node in the instack file
+    # if the user requested a password change and the iDRAC config job was
+    # successful regardless of if the other jobs succeeded or not.
+    new_password = None
+    if password:
+        job_status = drac_client.get_job(idrac_job_id).status
+
+        if JobHelper.job_succeeded(job_status):
+            new_password = password
+
+    if new_password is not None or \
+        "provisioning_mac" not in node or \
+        ("provisioning_mac" in node and
+         node["provisioning_mac"] != provisioning_mac):
+
+        # Synchronize to prevent thread collisions while saving the instack
+        # file
+        if instack_lock is not None:
+            LOG.debug("Acquiring the lock")
+            instack_lock.acquire()
+        try:
+            if instack_lock is not None:
+                LOG.debug("Clearing and reloading instack")
+                # Force a reload of the instack file
+                CredentialHelper.clear_instack_cache()
+                node = CredentialHelper.get_node_from_instack(ip_service_tag,
+                                                              node_definition)
+            if new_password is not None:
+                node["pm_password"] = new_password
+
+            node["provisioning_mac"] = provisioning_mac
+
+            LOG.debug("Saving instack")
+            CredentialHelper.save_instack(node_definition)
+        finally:
+            if instack_lock is not None:
+                LOG.debug("Releasing the lock")
+                instack_lock.release()
+
+    if success:
+        LOG.info("Completed configuration of the iDRAC on {}".format(
+            ip_service_tag))
+    else:
+        raise RuntimeError("An error occurred while configuring the iDRAC "
+                           "on {}".format(drac_ip))
+
+
+def schedule_restart_job(job_ids,
+                         drac_client,
+                         drac_ip,
+                         drac_user,
+                         password,
+                         ip_service_tag):
+    """Restart the idrac"""
+
+    # If we need to reboot, then add a job for it
+    LOG.info("Rebooting {} to apply configuration".format(ip_service_tag))
+
+    job_id = drac_client.create_reboot_job()
+    job_ids.append(job_id)
 
     success = True
     if job_ids:
@@ -417,51 +508,7 @@ def config_idrac(instack_lock,
         success = config_hard_disk_drive_boot_sequence(
             drac_client, ip_service_tag)
 
-    # We always want to update the password for the node in the instack file
-    # if the user requested a password change and the iDRAC config job was
-    # successful regardless of if the other jobs succeeded or not.
-    new_password = None
-    if password:
-        job_status = drac_client.get_job(idrac_job_id).status
-
-        if JobHelper.job_succeeded(job_status):
-            new_password = password
-
-    if new_password is not None or \
-        "provisioning_mac" not in node or \
-        ("provisioning_mac" in node and
-         node["provisioning_mac"] != provisioning_mac):
-
-        # Synchronize to prevent thread collisions while saving the instack
-        # file
-        if instack_lock is not None:
-            LOG.debug("Acquiring the lock")
-            instack_lock.acquire()
-        try:
-            if instack_lock is not None:
-                LOG.debug("Clearing and reloading instack")
-                # Force a reload of the instack file
-                CredentialHelper.clear_instack_cache()
-                node = CredentialHelper.get_node_from_instack(ip_service_tag,
-                                                              node_definition)
-            if new_password is not None:
-                node["pm_password"] = new_password
-
-            node["provisioning_mac"] = provisioning_mac
-
-            LOG.debug("Saving instack")
-            CredentialHelper.save_instack(node_definition)
-        finally:
-            if instack_lock is not None:
-                LOG.debug("Releasing the lock")
-                instack_lock.release()
-
-    if success:
-        LOG.info("Completed configuration of the iDRAC on {}".format(
-            ip_service_tag))
-    else:
-        raise RuntimeError("An error occurred while configuring the iDRAC "
-                           "on {}".format(drac_ip))
+    return success
 
 
 def main():
