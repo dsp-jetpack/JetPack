@@ -303,6 +303,8 @@ class Settings():
         self.sanity_number_instances = \
             sanity_settings['sanity_number_instances']
         self.sanity_image_url = sanity_settings['sanity_image_url']
+        self.sanity_vlantest_network = \
+	    sanity_settings['sanity_vlantest_network']
         if sanity_settings['run_sanity'].lower() == 'true':
             self.run_sanity = True
         else:
