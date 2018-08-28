@@ -130,7 +130,7 @@ parameter_defaults:
   ManagementNetworkMTU: 1500
   # CHANGEME: Change the following to the MTU value to use on the
   # Default Bonds MTU
-  DefaultBondMTU: 9216
+  DefaultBondMTU: 9000
   
   # CHANGEME: Change the following to mtu size used for the floating network
   ExtraConfig:

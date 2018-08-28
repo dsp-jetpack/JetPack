@@ -190,7 +190,7 @@ class Settings():
                 'public_api_network_mtu']
             self.floating_ip_network_mtu = mtu_settings[
                 'floating_ip_network_mtu']
-        self.default_bond_mtu = '9216'
+        self.default_bond_mtu = '9000'
         self.management_network_mtu = '1500'
         self.provisioning_network_mtu = '1500'
 

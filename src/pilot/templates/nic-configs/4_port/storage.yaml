@@ -121,7 +121,7 @@ parameters:
     description: MTU value for this network.
     type: number
   DefaultBondMTU: # Override this via parameter_defaults
-    default: 9216
+    default: 9000
     description: MTU value for this network.
     type: number
 resources:
