@@ -740,6 +740,27 @@ class Director(InfraHost):
             self.settings.public_api_vlanid + '|" ' + network_yaml,
             'sed -i "s|TenantNetworkVlanID:.*|TenantNetworkVlanID: ' +
             self.settings.tenant_tunnel_vlanid + '|" ' + network_yaml,
+            'sed -i "s|ExternalNetworkMTU:.*|ExternalNetworkMTU: ' +
+            self.settings.public_api_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|InternalApiMTU:.*|InternalApiMTU: ' +
+            self.settings.private_api_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|StorageNetworkMTU:.*|StorageNetworkMTU: ' +
+            self.settings.storage_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|StorageMgmtNetworkMTU:.*|StorageMgmtNetworkMTU: ' +
+            self.settings.storage_cluster_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|TenantNetworkMTU:.*|TenantNetworkMTU: ' +
+            self.settings.tenant_tunnel_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|ProvisioningNetworkMTU:.*|ProvisioningNetworkMTU: ' +
+            self.settings.provisioning_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|ManagementNetworkMTU:.*|ManagementNetworkMTU: ' +
+            self.settings.management_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|DefaultBondMTU:.*|DefaultBondMTU: ' +
+            self.settings.default_bond_mtu + '|" ' + network_yaml,
+            'sed -i "s|NeutronGlobalPhysnetMtu:.*|NeutronGlobalPhysnetMtu: ' +
+            self.settings.tenant_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|neutron::plugins::ml2::physical_network_mtus:.*|neutron'
+            '::plugins::ml2::physical_network_mtus: [\'physext:' +
+            self.settings.floating_ip_network_mtu + '\']|" ' + network_yaml,
         ]
 
         if self.settings.tenant_tunnel_network:

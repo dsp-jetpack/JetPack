@@ -36,8 +36,8 @@
                    "false"
                 ]
             }
-	 },
-	    "Performance and Optimization": {
+     },
+        "Performance and Optimization": {
             "innodb_buffer_pool_instances": {
                "validate": [
                   "should_be_valid_int"
@@ -58,7 +58,7 @@
                "in_range": [
                   "1000-100000"
                ]
-	    }
+        }
          }
       },
       {
@@ -67,6 +67,80 @@
                "valid_values": [
                   "true",
                   "false"
+               ]
+            }
+         }
+      }, 
+      {
+         "MTU Settings": {
+            "mtu_selection": {
+               "valid_values": [
+                  "global",
+                  "per_network"
+               ]
+            },
+             "mtu_size_global_default": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+             "public_api_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "floating_ip_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "private_api_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "tenant_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "storage_cluster_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "storage_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "tenant_tunnel_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
                ]
             }
          }

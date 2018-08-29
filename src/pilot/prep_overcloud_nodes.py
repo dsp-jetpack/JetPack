@@ -52,7 +52,7 @@ def main():
                                     stderr=subprocess.STDOUT,
                                     shell=True)
 
-    for node in nodes.split("\n"):
+    for node in nodes.splitlines():
         if len (node) < 1:
             continue
         # Power off the node
