@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from osp_deployer.settings.config import Settings
+from osp_deployer.checkpoints import Checkpoints
 from infra_host import InfraHost
 from auto_common import Scp, Ssh, FileHelper
 import logging
@@ -39,11 +40,12 @@ class Sah(InfraHost):
         self.root_pwd = self.settings.sah_node.root_password
 
     def update_kickstart_usb(self):
+        tester = Checkpoints()
+        tester.verify_deployer_settings()
         sets = self.settings
         shutil.copyfile(sets.sah_kickstart, sets.cloud_repo_dir +
                         "/../osp-sah.ks")
         sets.sah_kickstart = sets.cloud_repo_dir + "/../osp-sah.ks"
-
         FileHelper.replace_expression(sets.sah_kickstart,
                                       '^HostName=.*',
                                       'HostName="' +
@@ -183,6 +185,67 @@ class Sah(InfraHost):
                                       'prov_netmask="' +
                                       sets.provisioning_netmask +
                                       '"')
+        # mtu_settings
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^extern_bond_mtu=.*',
+                                      'extern_bond_mtu="' +
+                                      sets.default_bond_mtu +
+                                      '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^internal_bond_mtu=.*',
+                                      'internal_bond_mtu="' +
+                                      sets.default_bond_mtu +
+                                      '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^mgmt_bond_mtu=.*',
+                                      'mgmt_bond_mtu="' +
+                                      sets.management_network_mtu +
+                                      '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^br_mgmt_mtu=.*',
+                                      'br_mgmt_mtu="' +
+                                      sets.management_network_mtu +
+                                      '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^prov_bond_mtu=.*',
+                                      'prov_bond_mtu="' +
+                                      sets.provisioning_network_mtu +
+                                      '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^br_prov_mtu=.*',
+                                      'br_prov_mtu="' +
+                                      sets.provisioning_network_mtu +
+                                      '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^stor_bond_mtu=.*',
+                                      'stor_bond_mtu="' +
+                                      sets.storage_network_mtu +
+                                      '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^br_stor_mtu=.*',
+                                      'br_stor_mtu="' +
+                                      sets.storage_network_mtu +
+                                      '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^br_pub_api_mtu=.*',
+                                      'br_pub_api_mtu="' +
+                                      sets.public_api_network_mtu +
+                                      '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^pub_api_bond_mtu=.*',
+                                      'pub_api_bond_mtu="' +
+                                      sets.public_api_network_mtu +
+                                      '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^priv_api_bond_mtu=.*',
+                                      'priv_api_bond_mtu="' +
+                                      sets.private_api_network_mtu +
+                                      '"')
+        FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^br_priv_api_mtu=.*',
+                                      'br_priv_api_mtu="' +
+                                      sets.private_api_network_mtu +
+                                      '"')
         time.sleep(3)
 
     def upload_iso(self):
@@ -191,8 +254,8 @@ class Sah(InfraHost):
 
     def clear_known_hosts(self):
         hosts = [
-             self.settings.director_node.public_api_ip,
-             self.settings.dashboard_node.public_api_ip
+            self.settings.director_node.public_api_ip,
+            self.settings.dashboard_node.public_api_ip
         ]
 
         if self.is_running_from_sah() is True:
@@ -250,19 +313,23 @@ class Sah(InfraHost):
                 "ntpserver " + self.settings.sah_node.provisioning_ip,
                 "user " + self.settings.director_install_account_user,
                 "password " + self.settings.director_install_account_pwd,
-                "# Iface     IP               NETMASK    ",)
+                "# Iface     IP               NETMASK              MTU",)
         conf = conf + ("eth0        " +
                        self.settings.director_node.public_api_ip +
-                       "    " + self.settings.public_api_netmask,)
+                       "    " + self.settings.public_api_netmask +
+                       "     " + self.settings.public_api_network_mtu,)
         conf = conf + ("eth1        " +
                        self.settings.director_node.provisioning_ip +
-                       "    " + self.settings.provisioning_netmask,)
+                       "    " + self.settings.provisioning_netmask +
+                       "     " + self.settings.provisioning_network_mtu,)
         conf = conf + ("eth2        " +
                        self.settings.director_node.management_ip +
-                       "    " + self.settings.management_netmask,)
+                       "    " + self.settings.management_netmask +
+                       "     " + self.settings.management_network_mtu,)
         conf = conf + ("eth3        " +
                        self.settings.director_node.private_api_ip +
-                       "    " + self.settings.private_api_netmask,)
+                       "    " + self.settings.private_api_netmask +
+                       "     " + self.settings.private_api_network_mtu,)
 
         for line in conf:
             self.run("echo '" +
@@ -332,13 +399,15 @@ class Sah(InfraHost):
                 "gateway " + self.settings.public_api_gateway,
                 "nameserver " + self.settings.name_server,
                 "ntpserver " + self.settings.sah_node.provisioning_ip,
-                "# Iface     IP               NETMASK    ",)
+                "# Iface     IP               NETMASK              MTU",)
         conf = conf + ("eth0        " +
                        self.settings.dashboard_node.public_api_ip +
-                       "    " + self.settings.public_api_netmask,)
+                       "    " + self.settings.public_api_netmask +
+                       "     " + self.settings.public_api_network_mtu,)
         conf = conf + ("eth1        " +
                        self.settings.dashboard_node.storage_ip +
-                       "    " + self.settings.storage_netmask,)
+                       "    " + self.settings.storage_netmask +
+                       "     " + self.settings.storage_network_mtu,)
 
         for comd in conf:
             self.run("echo '" + comd + "' >> " + dashboard_conf)
