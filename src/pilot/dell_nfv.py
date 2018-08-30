@@ -26,7 +26,6 @@ import logging
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from novaclient.v2 import aggregates
-from novaclient.v2 import hosts
 from novaclient.v2 import servers
 from credential_helper import CredentialHelper
 from datetime import datetime
@@ -339,16 +338,15 @@ class ConfigOvercloud(object):
     def get_dell_compute_nodes_hostnames(self, nova):
         try:
             logger.info("Getting dellnfv compute node hostnames")
-            # Create host object
-            host_obj = hosts.HostManager(nova)
 
             # Get list of dell nfv nodes
             dell_hosts = []
 
-            for host in host_obj.list():
-                if "dell-compute" in host.host_name:
-                    hostname = str(host.host_name)
+            for host in nova.servers.list():
+                if "dell-compute" in host.name:
+                    hostname = str(host.name)
                     dell_hosts.append(hostname)
+
             return dell_hosts
         except Exception as error:
             message = "Exception {}: {}".format(
