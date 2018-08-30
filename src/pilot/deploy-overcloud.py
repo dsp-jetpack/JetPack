@@ -27,8 +27,6 @@ import novaclient.client as nova_client
 import time
 from command_helper import Ssh
 from novaclient.v2 import aggregates
-from novaclient.v2 import hosts
-from novaclient.v2 import servers
 from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
 from credential_helper import CredentialHelper
@@ -208,7 +206,7 @@ def run_deploy_command(cmd):
 
 
 def finalize_overcloud():
-    from keystone.v3 import client
+    #from keystone.v3 import client
 
     #os_auth_url, os_tenant_name, os_username, os_password = \
     #    CredentialHelper.get_overcloud_creds()
