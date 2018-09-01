@@ -988,7 +988,9 @@ class Director(InfraHost):
                                     " --overcloud_name " + \
                                     self.settings.overcloud_name + \
                                     " --ntp " + \
-                                    self.settings.sah_node.provisioning_ip
+                                    self.settings.sah_node.provisioning_ip + \
+                                    " --mtu " + \
+                                    self.settings.tenant_tunnel_network_mtu
 
         if self.settings.hpg_enable is True:
             cmd += " --enable_hugepages "

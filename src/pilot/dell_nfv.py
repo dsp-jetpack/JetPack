@@ -34,6 +34,7 @@ from novaclient import client as nvclient
 from ironic_helper import IronicHelper
 from dracclient import client
 from command_helper import Ssh
+from nfv_parameters import NfvParameters
 logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -57,7 +58,11 @@ class ConfigOvercloud(object):
         self.overcloud_name = overcloud_name
         self.overcloudrc = "source " + home_dir + "/"\
             + self.overcloud_name + "rc;"
-
+        self.nfv_params = NfvParameters()
+        node_uuid, node_data = self.nfv_params.select_compute_node()
+        self.nfv_params.parse_data(node_data)
+        self.nfv_params.get_all_cpus()
+    '''
     @classmethod
     def get_minimum_memory_size(self, node_type):
         try:
@@ -159,9 +164,19 @@ class ConfigOvercloud(object):
                 type(error).__name__, str(error))
             raise Exception("Failed to calculate"
                             " hugepage count {}".format(message))
+    '''
+    def find_ifaces_by_keyword(self, yaml_file, keyword):
+        nics = []
+        with open(yaml_file, 'r') as f:
+            content = f.readlines()
+            for line in content:
+                if keyword in line:
+                    nics.append(line.split(':')[1].strip())
+        return nics
 
     def edit_environment_files(
             self,
+            mtu,
             enable_hugepage,
             enable_numa,
             hugepage_size,
@@ -228,7 +243,7 @@ class ConfigOvercloud(object):
                 file_path))
             
             if enable_hugepage:
-                hpg_num = ConfigOvercloud.calculate_hugepage_count(
+                hpg_num = self.nfv_params.calculate_hugepage_count(
                     hugepage_size)
                 hugecmd = 'default_hugepagesz=' + \
                     hugepage_size + ' hugepagesz=' + \
@@ -242,13 +257,15 @@ class ConfigOvercloud(object):
                                 hugecmd + "\"|' " + file_path)
 
             if enable_numa:
-                ConfigOvercloud.calculate_hostos_cpus(hostos_cpu_count)
+                self.nfv_params.get_host_cpus(hostos_cpu_count)
+                #ConfigOvercloud.calculate_hostos_cpus(hostos_cpu_count)
                 if not ovs_dpdk:
+                    self.nfv_params.get_nova_cpus()
                     cmds.append('sed -i "s|NumaEnable:.*|NumaEnable: true|" ' +
                                 file_path)
                     cmds.append(
                         "sed -i 's|NumaCpus:.*|NumaCpus: " +
-                        VCPUS +
+                        self.nfv_params.nova_cpus +
                         "|' " +
                         file_path)
                     cmds.append(
@@ -257,10 +274,16 @@ class ConfigOvercloud(object):
                         file_path)
                     cmds.append(
                         "sed -i 's|NovaVcpuPinSet:.*|NovaVcpuPinSet: \"" +
-                        VCPUS +
+                        self.nfv_params.nova_cpus +
                         "\"|' " +
                         file_path)
             if ovs_dpdk:
+                dpdk_nics = self.find_ifaces_by_keyword(nic_env_file, 'Dpdk')
+                self.nfv_params.get_pmd_cpus(mtu, dpdk_nics)
+                self.nfv_params.get_nova_cpus()
+                self.nfv_params.get_isol_cpus()
+                self.nfv_params.get_socket_memory(mtu, dpdk_nics)
+                '''
                 for each in re.split(r'[_/]', nic_env_file):
                     if each.find('mode') != -1:
                         ovs_dpdk_mode = each[-1:]
@@ -272,6 +295,33 @@ class ConfigOvercloud(object):
                 else:
                     pmd_cores = siblings_info["mode2_pmd_cores"]
                     pmd_rem_cores = siblings_info["mode2_rem_cores"]
+                '''
+                cmds.append(
+                    'sed -i "s|OvsDpdkCoreList:.*|OvsDpdkCoreList: \\"'+
+                    self.nfv_params.host_cpus +
+                    '\\" |" ' +
+                    dpdk_file)
+                cmds.append(
+                    'sed -i "s|OvsPmdCoreList:.*|OvsPmdCoreList: \\"'+
+                    self.nfv_params.pmd_cpus +
+                    '\\" |" ' +
+                    dpdk_file)
+                cmds.append(
+                    'sed -i "s|NovaVcpuPinSet:.*|NovaVcpuPinSet: \\"'+
+                    self.nfv_params.nova_cpus +
+                    '\\" |" ' +
+                    dpdk_file)
+                cmds.append(
+                    'sed -i "s|OvsDpdkSocketMemory:.*|OvsDpdkSocketMemory: \\"'+
+                    self.nfv_params.socket_mem +
+                    '\\" |" ' +
+                    dpdk_file)
+                cmds.append(
+                    'sed -i "s|KernelArgs:.*|KernelArgs: \\"'+
+                    hugecmd + ' isolcpus=' + self.nfv_params.isol_cpus +
+                    '\\" |" ' +
+                    dpdk_file)
+                '''
                 cmds.append(
                     'sed -i "s|NeutronDpdkCoreList:.*|NeutronDpdkCoreList: \\"'+
                     pmd_cores.join(["'","'"]) +
@@ -289,12 +339,13 @@ class ConfigOvercloud(object):
                     'sed -i "s|VcpuPinSet:.*|VcpuPinSet: "' +
                     VCPUS + '"|" ' + dpdk_file,
                 ]
+                '''
 
             # Performance and Optimization
             if innodb_buffer_pool_size != "dynamic":
                 BufferPoolSize = int(innodb_buffer_pool_size.replace(
                     "G", ""))*1024
-                memory_mb = ConfigOvercloud.get_minimum_memory_size("control")
+                memory_mb = self.nfv_params.get_minimum_memory_size("control")
                 if memory_mb < BufferPoolSize:
                     raise Exception("innodb_buffer_pool_size is greater than"
                                     " available memory size")

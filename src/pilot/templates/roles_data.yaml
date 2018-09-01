@@ -291,6 +291,7 @@
     - OS::TripleO::Services::ComputeNeutronL3Agent
     - OS::TripleO::Services::ComputeNeutronMetadataAgent
     - OS::TripleO::Services::ComputeNeutronOvsAgent
+    - OS::TripleO::Services::ComputeNeutronOvsDpdk
     - OS::TripleO::Services::Docker
     - OS::TripleO::Services::Fluentd
     - OS::TripleO::Services::Ipsec
