@@ -268,6 +268,8 @@ resources:
                 name: bond1
                 bonding_options:
                   get_param: ComputeBondInterfaceOptions
+                mtu:
+                  get_param: DefaultBondMTU
                 members:
                 - type: interface
                   name:

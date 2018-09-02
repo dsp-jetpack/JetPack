@@ -990,7 +990,7 @@ class Director(InfraHost):
                                     " --ntp " + \
                                     self.settings.sah_node.provisioning_ip + \
                                     " --mtu " + \
-                                    self.settings.tenant_tunnel_network_mtu
+                                    self.settings.default_bond_mtu
 
         if self.settings.hpg_enable is True:
             cmd += " --enable_hugepages "
