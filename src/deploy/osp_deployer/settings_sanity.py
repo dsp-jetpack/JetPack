@@ -523,6 +523,7 @@ class DeployerSanity():
             # Error check for extra or missing NIC settings
             ini_settings_names = set(
                 self.settings.get_curated_nics_settings().keys())
+
             nic_env_settings_names = set(nic_env_nics_settings.keys())
 
             extra_settings = ini_settings_names - nic_env_settings_names

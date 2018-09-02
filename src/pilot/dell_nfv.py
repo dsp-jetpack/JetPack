@@ -167,6 +167,7 @@ class ConfigOvercloud(object):
             hugepage_size,
             hostos_cpu_count,
             ovs_dpdk,
+            sriov,
             nic_env_file,
             mariadb_max_connections,
             innodb_buffer_pool_size,
