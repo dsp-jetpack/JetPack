@@ -368,7 +368,7 @@ setup_glance(){
     fi
     info "### Download complete."
   else
-    info "#----- Cirros image exists. Skipping"
+    info "#----- CentOS image exists. Skipping"
   fi
 
   image_exists=$(openstack image list -c Name -f value | grep -x $IMAGE_NAME)
