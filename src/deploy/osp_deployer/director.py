@@ -567,6 +567,8 @@ class Director(InfraHost):
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|ovs_dpdk_enabled=.*|ovs_dpdk_enabled=' +
             str(self.settings.enable_ovs_dpdk) +
+            'sed -i "s|dvr_enable=.*|dvr_enable=' +
+            str(self.settings.dvr_enable) +
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_tenant_network=.*|sanity_tenant_network=' +
             self.settings.sanity_tenant_network +
@@ -1012,6 +1014,9 @@ class Director(InfraHost):
         if self.settings.enable_ovs_dpdk is True:
             cmd += " --ovs_dpdk"
         # Node placement is required in an automated install. The index order
+        if self.settings.dvr_enable is True:
+            cmd += " --dvr_enable"
+        # Node placement is required in an automated install.  The index order
         # of the nodes is the order in which they are defined in the
         # .properties file
         cmd += " --node_placement"
