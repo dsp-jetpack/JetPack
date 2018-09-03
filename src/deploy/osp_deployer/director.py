@@ -567,6 +567,7 @@ class Director(InfraHost):
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|ovs_dpdk_enabled=.*|ovs_dpdk_enabled=' +
             str(self.settings.enable_ovs_dpdk) +
+            '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|dvr_enable=.*|dvr_enable=' +
             str(self.settings.dvr_enable) +
             '|" pilot/deployment-validation/sanity.ini',

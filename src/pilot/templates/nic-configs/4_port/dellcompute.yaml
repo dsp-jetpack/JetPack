@@ -193,7 +193,7 @@ resources:
                       get_param: InternalApiIpSubnet
               - type: ovs_bridge
                 name: 
-                  get_input: bridge_name
+                  bridge_name
                 mtu:
                   get_param: DefaultBondMTU
                 members:

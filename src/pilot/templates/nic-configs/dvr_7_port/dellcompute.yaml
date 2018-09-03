@@ -72,6 +72,10 @@ parameters:
   EC2MetadataIp: # Override this via parameter_defaults
     description: The IP address of the EC2 metadata server.
     type: string
+  ComputeProvisioningInterface:
+    default: em3
+    description: Provisioning interface name
+    type: string
   ComputeBond0Interface1:
     default: em1
     description: Bond 0 interface 1 name
@@ -95,11 +99,15 @@ parameters:
   ComputeBond2Interface2:
     default: p1p2
     description: Bond 2 interface 2 name
-    type: string
+    type: string  
   ComputeBondInterfaceOptions:
     default: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
     description: The bonding_options string for the bond interface.
     type: string
+  ExternalNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
   InternalApiMTU: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
@@ -128,10 +136,7 @@ parameters:
     default: 9000
     description: MTU value for this network.
     type: number
-  ExternalNetworkMTU: 
-    default: 1500
-    description: MTU value for this network.
-    type: number
+    
 resources:
   OsNetConfigImpl:
     type: OS::Heat::SoftwareConfig
@@ -144,11 +149,12 @@ resources:
           params:
             $network_config:
               network_config:
-              - type: ovs_bridge
-                name: br-tenant
-                use_dhcp: false
+              - type: interface
+                name:
+                  get_param: ComputeProvisioningInterface
                 mtu:
                   get_param: ProvisioningNetworkMTU
+                use_dhcp: false
                 dns_servers:
                   get_param: DnsServers
                 addresses:
@@ -164,6 +170,10 @@ resources:
                 - default: true
                   next_hop:
                     get_param: ControlPlaneDefaultRoute
+              - type: ovs_bridge
+                name: br-tenant
+                mtu:
+                  get_param: DefaultBondMTU
                 members:
                 - type: linux_bond
                   name: bond0
@@ -187,7 +197,7 @@ resources:
                   device: bond0
                   vlan_id:
                     get_param: TenantNetworkVlanID
-                  mtu:
+                  mtu: 
                     get_param: TenantNetworkMTU
                   addresses:
                   - ip_netmask:
@@ -196,6 +206,8 @@ resources:
                   device: bond0
                   vlan_id:
                     get_param: InternalApiNetworkVlanID
+                  mtu:
+                    get_param: InternalApiMTU
                   addresses:
                   - ip_netmask:
                       get_param: InternalApiIpSubnet
@@ -230,10 +242,10 @@ resources:
                     get_param: StorageNetworkMTU
                   addresses:
                   - ip_netmask:
-                      get_param: StorageIpSubnet  
+                      get_param: StorageIpSubnet
               - type: ovs_bridge
-                name: 
-                  get_input: bridge_name
+                name:
+                  bridge_name 
                 mtu:
                   get_param: DefaultBondMTU
                 members:
@@ -255,7 +267,7 @@ resources:
                       get_param: ComputeBond2Interface2
                     mtu:
                       get_param: DefaultBondMTU
-                      
+
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.
