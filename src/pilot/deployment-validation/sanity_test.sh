@@ -384,14 +384,10 @@ setup_glance(){
 }
 
 sriov_port_creation(){
-  index=1
-  while [ $index -le $((SANITY_NUMBER_INSTANCES)) ]; do
-    sriov_port_name="sriov_port_${index}"
-    execute_command "openstack port create --network $TENANT_NETWORK_NAME --vnic-type direct $sriov_port_name"
-    index=$((index+1))
-  done
+  #Creating ports in the tenant scope
+  set_tenant_scope
 
-
+  execute_command "openstack port create --network $TENANT_NETWORK_NAME --vnic-type direct $sriov_port_name"
 }
 
 spin_up_instances(){
@@ -409,11 +405,12 @@ spin_up_instances(){
   while [ $index -le $((SANITY_NUMBER_INSTANCES + 1)) ]; do
   instance_name="${BASE_NOVA_INSTANCE_NAME}_$index"
     if [ $index != $((${SANITY_NUMBER_INSTANCES} + 1)) ]; then
-      if ["$SRIOV_ENABLED" != "False" ]; then
-        info "###SRIOV: Creating SRIOV ports"
-        sriov_port_creation
-        info "###SRIOV: Initiating build of SR-IOV enabled instances..."
-        execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic port-id=sriov_port_${index} $instance_name"
+      if [ "$SRIOV_ENABLED" != False ];then
+        info "### SRIOV: Creating SRIOV ports"
+        sriov_port_name="sriov_port_$index"
+        sriov_port_creation $sriov_port_name
+        info "### SRIOV: Initiating build of SR-IOV enabled instances..."
+        execute_command "openstack server create --security-group $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic port-id=$sriov_port_name $instance_name"
       else
         execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $instance_name"
       fi

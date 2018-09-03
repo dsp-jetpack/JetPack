@@ -990,10 +990,7 @@ class Director(InfraHost):
                 sriov_conf.update({int_name : int_value})
         sriov_interfaces = [x[1] for x in sorted(sriov_conf.items())]
 
-        if self.settings.enable_ovs_dpdk is True:
-            interfaces = "'" + ",".join(sriov_interfaces[0:2]) + "'"
-        else:
-            interfaces = "'" + ",".join(sriov_interfaces) + "'"
+        interfaces = "'" + ",".join(sriov_interfaces) + "'"
 
         # Build up the sed command to perform variable substitution
         # in the neutron-sriov.yaml (sriov environment file)
