@@ -323,6 +323,8 @@
     - OS::TripleO::Services::OVNController
     - OS::TripleO::Services::OVNMetadataAgent
     - OS::TripleO::Services::Ptp
+    - OS::TripleO::Services::NeutronSriovAgent
+    - OS::TripleO::Services::NeutronSriovHostConfig
 ###############################################################################
 # Role: BlockStorage                                                          #
 ###############################################################################
