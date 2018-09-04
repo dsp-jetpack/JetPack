@@ -14,7 +14,7 @@
 
 resource_registry:
   OS::TripleO::Controller::Net::SoftwareConfig: ./controller.yaml
-  OS::TripleO::DellCompute::Net::SoftwareConfig: ./compute-ovs-dpdk-mode1.yaml
+  OS::TripleO::DellCompute::Net::SoftwareConfig: ./dellcompute_dpdk.yaml
   OS::TripleO::CephStorage::Net::SoftwareConfig: ./storage.yaml
 
 

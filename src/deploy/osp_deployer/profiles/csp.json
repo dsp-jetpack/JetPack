@@ -152,8 +152,8 @@
                "valid_values": [
                   "4_port/nic_environment.yaml",
                   "5_port/nic_environment.yaml",
-                  "dpdk_mode1_5_port/nic_environment.yaml",
-                  "dpdk_mode2_5_port/nic_environment.yaml"
+                  "ovs-dpdk_9_port/nic_environment.yaml",
+                  "ovs-dpdk_7_port/nic_environment.yaml"
                ]
             },
             "ControllerBondInterfaceOptions": "",
