@@ -1,3 +1,17 @@
+# Copyright (c) 2018 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from credential_helper import CredentialHelper
 from ironic_helper import IronicHelper
 from keystoneauth1.identity import v3
@@ -17,29 +31,20 @@ import sys
 logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
-DPDK_NICS = ['p3p2', 'p5p1', 'p3p1', 'p5p2']
-HOST_CPUS = 8
-MTU = 1500
+
 
 class NfvParameters(object):
     def __init__(self):
         self.data = {'nics': {}, 'cpus': {}}
-        #self.nodes = []
         self.inspector = None
-        #self.ironic = None
         self.total_cpus = None
         self.host_cpus = None
         self.pmd_cpus = None
         self.nova_cpus = None
         self.isol_cpus = None
         self.socket_mem = None
-        #self.host_cpus_count = host_cpus_count
-        #self.dpdk_nics = dpdk_nics
-        #self.mtu = mtu
-        #self.pmd_weight = pmd_weight
         self.get_inspector_client()
         self.ironic = IronicHelper.get_ironic_client()
-        #self.drac_client = CredentialHelper.get_drac_creds(self.ironic, node)
 
     def get_inspector_client(self):
         os_auth_url, os_tenant_name, os_username, os_password, \
@@ -106,7 +111,8 @@ class NfvParameters(object):
     def get_all_cpus(self):
         try:
             total_cpus = []
-            assert self.data.has_key('cpus'), "Unable to fetch total number of CPUs. Parse CPU data first"
+            assert self.data.has_key('cpus'), "Unable to fetch total number " \
+                                              "of CPUs. Parse CPU data first"
             for node in self.data['cpus'].keys():
                 for cpus in self.data['cpus'][node].values():
                     total_cpus.append(cpus)
@@ -201,12 +207,13 @@ class NfvParameters(object):
         return ranges
 
     def parse_range(self, s):
-        s = "".join(s.split())#removes white space
+        s = "".join(s.split())
         r = set()
         for x in s.split(','):
             t = x.split('-')
             if len(t) not in [1,2]:
-                raise SyntaxError("hash_range is given its arguement as "+s+" which seems not correctly formated.")
+                raise SyntaxError("hash_range is given its arguement as " + \
+                    s + " which seems not correctly formated.")
             r.add(int(t[0])) if len(t)==1 else r.update(set(range(int(t[0]),int(t[1])+1)))
         l = list(r)
         l.sort()
@@ -237,21 +244,10 @@ class NfvParameters(object):
     def get_introspection_data(self, node):
         return self.inspector.get_data(node)
 
-    def generate_parameters(self):
-        #self.get_inspector_client()
-        self.get_nodes_uuids()
-        self.parse_data(self.inspector.get_data(self.nodes[0]))
-        self.get_host_cpus()
-        self.get_pmd_cpus()
-        self.get_nova_cpus()
-        self.get_isol_cpus()
-        self.get_socket_memory()
-
     def get_minimum_memory_size(self, node_type):
         try:
             memory_size = []
             for node_uuid in self.get_nodes_uuids(node_type):
-            #for node in ConfigOvercloud.nodes:
                 # Get the details of a node
                 node_details = self.ironic.node.get(node_uuid)
                 # Get the memory count or size
@@ -289,34 +285,3 @@ class NfvParameters(object):
                 type(error).__name__, str(error))
             raise Exception("Failed to calculate"
                             " hugepage count {}".format(message))
-
-if __name__ == '__main__':
-    #main()
-    nfv_params = NfvParameters()
-    node_uuid, node_data = nfv_params.select_compute_node()
-    #nodes = nfv_params.get_nodes_uuids('compute')
-    #nfv_params.check_ht_status(node_uuid)
-    nfv_params.parse_data(node_data)
-    nfv_params.get_all_cpus()
-    nfv_params.get_host_cpus(HOST_CPUS)
-    nfv_params.get_pmd_cpus(MTU, DPDK_NICS)
-    nfv_params.get_nova_cpus()
-    nfv_params.get_socket_memory(MTU, DPDK_NICS)
-    nfv_params.get_isol_cpus()
-    #nfv_params.get_inspector_client()
-    #nfv_params.get_compute_uuids()
-    #raw_data = nfv_params.inspector.get_data(nfv_params.nodes[0])
-    #nfv_params.parse_data(raw_data)
-    #nfv_params.generate_parameters()
-    #print nfv_params.data
-    #print "Hyperthreading: %s" % nfv_params.check_ht_status(nodes[0])
-    print "TotalCpus: %s" % nfv_params.total_cpus
-    print "OvsDpdkCoreList: %s" % nfv_params.parse_range(nfv_params.host_cpus)
-    print "OvsPmdCoreList: %s" % nfv_params.pmd_cpus
-    print "NovaVcpuPinSet: %s" % nfv_params.nova_cpus
-    print "IsolCpusList: %s" % nfv_params.isol_cpus
-    print "OvsDpdkSocketMemory: %s" % nfv_params.socket_mem
-    print "---------------------"
-    print "Minimum Memory: %s MB" % type(nfv_params.get_minimum_memory_size('compute'))
-    print "HugePages: %s" % nfv_params.calculate_hugepage_count("1GB")
-

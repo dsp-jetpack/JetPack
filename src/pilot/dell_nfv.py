@@ -39,9 +39,6 @@ logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 home_dir = os.path.expanduser('~')
 UC_USERNAME = UC_PASSWORD = UC_PROJECT_ID = UC_AUTH_URL = ''
-HOST_OS_CPUS = ''
-VCPUS = ''
-TOTAL_CPUS = ''
 
 
 class ConfigOvercloud(object):
