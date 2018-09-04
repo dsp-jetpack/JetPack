@@ -498,18 +498,14 @@ class Settings():
             logger.info("OVS_DPDK is disabled.")
 
         # TO enable SRIOV
-        dellnfv_settings = self.get_settings_section("Dell NFV Settings")
         self.sriov_enable = dellnfv_settings['sriov_enable']
         self.enable_sriov = False
         if self.sriov_enable.lower() == 'false':
             pass
-        elif self.sriov_enable.lower() == 'true':
+        else:
             self.enable_sriov = True
             self.sriov_vf_count = dellnfv_settings['sriov_vf_count']
 
-        else:
-            raise AssertionError('Only supported values for '
-                                 'sriov_enabled are true/false.')
         if self.enable_sriov:
             logger.info("SR-IOV is enabled.")
         else:

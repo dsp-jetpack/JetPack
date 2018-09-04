@@ -6,15 +6,9 @@ parameter_defaults:
   NeutronMechanismDrivers: ['sriovnicswitch', 'openvswitch']
   NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','RamFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','PciPassthroughFilter']
   NovaSchedulerAvailableFilters: ["nova.scheduler.filters.all_filters","nova.scheduler.filters.pci_passthrough_filter.PciPassthroughFilter"]
-  HugePages: "default_hugepagesz=1GB hugepagesz=1G hugepages=112 iommu=pt intel_iommu=on"
   NeutronEnableIsolatedMetadata: true
   NeutronEnableForceMetadata: true
   NeutronTunnelTypes: ''
-  NeutronNetworkType: 'vlan'
-  NeutronBridgeMappings:
-    "physint:br-tenant,physext:br-ex"
-  NeutronNetworkVLANRanges:
-    "physint:201:250,physext"
   NeutronSriovNumVFs: 
   NeutronPhysicalDevMappings: 
   NovaPCIPassthrough: 
