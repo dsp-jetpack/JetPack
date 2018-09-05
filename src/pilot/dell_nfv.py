@@ -136,47 +136,36 @@ class ConfigOvercloud(object):
                 'physint:' + str(vlan_range) + ',physext'
                 '|" ' +
                 file_path))
-            
+            kernel_args = ''
+            if sriov:
+                kernel_args = "iommu=pt intel_iommu=on"
             if enable_hugepage:
                 hpg_num = self.nfv_params.calculate_hugepage_count(
                     hugepage_size)
-                hugecmd = 'default_hugepagesz=' + \
-                    hugepage_size + ' hugepagesz=' + \
-                    hugepage_size[0:-1]+' hugepages=' + \
-                    str(hpg_num)+' iommu=pt intel_iommu=on'
-                if not ovs_dpdk:
-                    cmds.append('sed -i "s|HugepagesEnable.*|' +
-                                'HugepagesEnable: true|" ' +
-                                file_path)
-                    cmds.append("sed -i 's|HugePages:.*|HugePages: \"" +
-                                hugecmd + "\"|' " + file_path)
-
+                kernel_args += " default_hugepagesz=%s hugepagesz=%s " \
+                            "hugepages=%s" % (
+                                hugepage_size, hugepage_size[0:-1], str(hpg_num)
+                                )
             if enable_numa:
                 self.nfv_params.get_host_cpus(hostos_cpu_count)
-                if not ovs_dpdk:
-                    self.nfv_params.get_nova_cpus()
-                    cmds.append('sed -i "s|NumaEnable:.*|NumaEnable: true|" ' +
-                                file_path)
-                    cmds.append(
-                        "sed -i 's|NumaCpus:.*|NumaCpus: " +
-                        self.nfv_params.nova_cpus +
-                        "|' " +
-                        file_path)
-                    cmds.append(
-                        'sed -i "s|  # NovaVcpuPinSet|  ' +
-                        'NovaVcpuPinSet|" ' +
-                        file_path)
-                    cmds.append(
-                        "sed -i 's|NovaVcpuPinSet:.*|NovaVcpuPinSet: \"" +
-                        self.nfv_params.nova_cpus +
-                        "\"|' " +
-                        file_path)
-            if ovs_dpdk:
-                dpdk_nics = self.find_ifaces_by_keyword(nic_env_file, 'Dpdk')
-                self.nfv_params.get_pmd_cpus(mtu, dpdk_nics)
+                if ovs_dpdk:
+                    dpdk_nics = self.find_ifaces_by_keyword(nic_env_file, 'Dpdk')
+                    self.nfv_params.get_pmd_cpus(mtu, dpdk_nics)
+                    self.nfv_params.get_socket_memory(mtu, dpdk_nics)
                 self.nfv_params.get_nova_cpus()
                 self.nfv_params.get_isol_cpus()
-                self.nfv_params.get_socket_memory(mtu, dpdk_nics)
+                kernel_args += " isolcpus=%s" % self.nfv_params.nova_cpus
+                cmds.append(
+                    'sed -i "s|# NovaVcpuPinSet:.*|NovaVcpuPinSet: ' +
+                    self.nfv_params.nova_cpus + '|" ' + file_path)
+            cmds.append(
+                'sed -i "s|# DellComputeParameters:|DellComputeParameters:|" ' +
+                file_path)
+            if kernel_args:
+                cmds.append(
+                    'sed -i "s|# KernelArgs:.*|KernelArgs: \\"'+
+                    kernel_args + '\\" |" ' + file_path)
+            if ovs_dpdk:
                 cmds.append(
                     'sed -i "s|OvsDpdkCoreList:.*|OvsDpdkCoreList: \\"'+
                     self.nfv_params.host_cpus +
@@ -188,20 +177,13 @@ class ConfigOvercloud(object):
                     '\\" |" ' +
                     dpdk_file)
                 cmds.append(
-                    'sed -i "s|NovaVcpuPinSet:.*|NovaVcpuPinSet: \\"'+
-                    self.nfv_params.nova_cpus +
-                    '\\" |" ' +
-                    dpdk_file)
-                cmds.append(
                     'sed -i "s|OvsDpdkSocketMemory:.*|OvsDpdkSocketMemory: \\"'+
                     self.nfv_params.socket_mem +
                     '\\" |" ' +
                     dpdk_file)
                 cmds.append(
-                    'sed -i "s|KernelArgs:.*|KernelArgs: \\"'+
-                    hugecmd + ' isolcpus=' + self.nfv_params.isol_cpus +
-                    '\\" |" ' +
-                    dpdk_file)
+                    'sed -i "s|# IsolCpusList:.*|IsolCpusList: ' +
+                    self.nfv_params.isol_cpus + '|" ' + dpdk_file)
 
             # Performance and Optimization
             if innodb_buffer_pool_size != "dynamic":

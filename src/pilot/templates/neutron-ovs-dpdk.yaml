@@ -27,12 +27,10 @@ parameter_defaults:
     VhostuserSocketGroup: "hugetlbfs"
     OvsPmdCoreList: "4-7,28-31"
     OvsDpdkCoreList: "0-3,24-27"
-    NovaVcpuPinSet: "8-23,32-47"
     IsolCpusList: "4-23,28-47"
     OvsDpdkMemoryChannels: "4"
     NovaReservedHostMemory: 4096
     OvsDpdkSocketMemory: "2048,2048"
-    KernelArgs: "default_hugepagesz=1GB hugepagesz=1G hugepages=176 iommu=pt intel_iommu=on isolcpus=4-23,28-47"
     TunedProfileName: "cpu-partitioning"
     NumDpdkInterfaceRxQueues: 1
     OvsEnableDpdk: true

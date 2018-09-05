@@ -809,15 +809,9 @@ class Director(InfraHost):
 
         self.setup_nic_configuration()
 
-<<<<<<< HEAD
-=======
-        if self.settings.enable_ovs_dpdk is True:
-            self.setup_dpdk_nic_configuration()
-
         if self.settings.enable_sriov is True:
             self.setup_sriov_nic_configuration()
 
->>>>>>> 16720d87cc6127281f80f90054054af9565fbba3
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
             # static_ips_yaml

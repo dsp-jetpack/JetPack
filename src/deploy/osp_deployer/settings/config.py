@@ -482,20 +482,13 @@ class Settings():
             'ovs_dpdk_enable']
         self.enable_ovs_dpdk = False
         if self.ovs_dpdk_enable.lower() == 'false':
-            pass
+            logger.info("OVS_DPDK is disabled.")
         elif self.ovs_dpdk_enable.lower() == 'true':
             self.enable_ovs_dpdk = True
-            for each in re.split(r'[_/]', self.nic_env_file):
-                if each.find('mode') != -1:
-                    self.ovs_dpdk_mode = each[-1:]
-        else:
-            raise AssertionError('Only supported values for '
-                                 'ovs_dpdk_enable are true or false. ')
-        if self.enable_ovs_dpdk:
-            logger.info("OVS_DPDK is enabled with mode " +
-                        self.ovs_dpdk_mode + ".")
-        else:
-            logger.info("OVS_DPDK is disabled.")
+            total_ports = 5
+            r = re.search(r'(\w+.\w+).(\d+).port', self.nic_env_file)
+            #logger.info("OVS_DPDK is enabled with %s ports." % (int(r.group(2))-total_ports))
+            logger.info("OVS-DPDK is enabled.")
 
         # TO enable SRIOV
         self.sriov_enable = dellnfv_settings['sriov_enable']

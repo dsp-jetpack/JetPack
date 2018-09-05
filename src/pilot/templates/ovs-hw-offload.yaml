@@ -12,7 +12,7 @@ parameter_defaults:
 
   # Kernel arguments for ComputeSriov node
   DellComputeParameters:
-    KernelArgs: "intel_iommu=on iommu=pt"
+    # KernelArgs: "intel_iommu=on iommu=pt"
     OvsHwOffload: True
     # Number of VFs that needs to be configured for a physical interface
     #NeutronSriovNumVFs: ["ens3f0:4:switchdev"]
