@@ -19,7 +19,10 @@ import logging
 import os
 import requests.packages
 import sys
+
 from arg_helper import ArgHelper
+import boot_mode_helper
+from boot_mode_helper import BootModeHelper
 from constants import Constants
 from credential_helper import CredentialHelper
 from dracclient import exceptions
@@ -153,10 +156,10 @@ def configure_nics_boot_settings(
     return reboot_required, job_ids, provisioning_mac
 
 
-def config_legacy_boot_mode(drac_client, ip_service_tag, node):
-    LOG.info("Setting {} to legacy BIOS boot".format(
-        ip_service_tag))
-    settings = {"BootMode": "Bios"}
+def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):
+    LOG.info("Setting {} to {} boot".format(
+        ip_service_tag, boot_mode.upper()))
+    settings = {"BootMode": boot_mode}
     response = drac_client.set_bios_settings(settings)
 
     job_id = None
@@ -323,28 +326,56 @@ def config_idrac(instack_lock,
     # there are no pending jobs, but the iDRAC thinks there are
     clear_job_queue(drac_client, ip_service_tag)
 
+    if BootModeHelper.is_boot_order_flexibly_programmable(drac_client):
+        target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_UEFI
+    else:
+        target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_BIOS
+
+    job_ids = list()
+    reboot_required = False
+
+    reboot_required_boot_mode, boot_mode_job_id = config_boot_mode(
+        drac_client, ip_service_tag, node, target_boot_mode)
+
+    reboot_required = reboot_required or reboot_required_boot_mode
+    if boot_mode_job_id:
+        job_ids.append(boot_mode_job_id)
+        if target_boot_mode == boot_mode_helper.DRAC_BOOT_MODE_UEFI:
+            if reboot_required:
+                job_id = drac_client.create_reboot_job()
+                job_ids.append(job_id)
+                reboot_required = False
+                LOG.info("Rebooting {} to apply configuration".format(
+                         ip_service_tag))
+            drac_client.schedule_job_execution(job_ids,
+                                               start_time='TIME_NOW')
+
+            LOG.info("Waiting for iDRAC configuration to \
+                     complete on {}".format(ip_service_tag))
+            LOG.info("Do not unplug {}".format(ip_service_tag))
+
+            all_jobs_succeeded = wait_for_jobs_to_complete(
+                job_ids, drac_client, ip_service_tag)
+            if not all_jobs_succeeded:
+                raise RuntimeError("An error occurred while configuring "
+                                   "the iDRAC on {}".format(drac_ip))
+            job_ids = []
+
     pxe_nic_fqdd = get_pxe_nic_fqdd(
         pxe_nic,
         model_properties,
         drac_client)
 
-    reboot_required = False
-
     # Configure the NIC port to PXE boot or not
-    reboot_required_nic, job_ids, provisioning_mac = \
+    reboot_required_nic, nic_job_ids, provisioning_mac = \
         configure_nics_boot_settings(drac_client,
                                      ip_service_tag,
                                      pxe_nic_fqdd,
                                      node)
 
     reboot_required = reboot_required or reboot_required_nic
-
-    # Configure the system to legacy boot
-    reboot_required_legacy, legacy_job_id = config_legacy_boot_mode(
-        drac_client, ip_service_tag, node)
-    reboot_required = reboot_required or reboot_required_legacy
-    if legacy_job_id:
-        job_ids.append(legacy_job_id)
+    if nic_job_ids:
+        job_ids.extend(nic_job_ids)
 
     # Do initial idrac configuration
     reboot_required_idrac, idrac_job_id = config_idrac_settings(drac_client,
