@@ -925,25 +925,35 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
 
     if system_id in node_data_lookup:
         current_osd_config = node_data_lookup[system_id]
-        generated_config = json.dumps(new_osd_config, sort_keys=True,
-                                      indent=2, separators=(',', ': '))
-        current_config = json.dumps(current_osd_config, sort_keys=True,
-                                    indent=2, separators=(',', ': '))
-        raise RuntimeError("The generated OSD configuration for "
-                           "{ip_mac_service_tag} ({system_id}) is "
-                           "different from the one in {osd_config_file}.\n"
-                           "Generated:\n{generated_config}\n\n"
-                           "Current:\n{current_config}\n\n"
-                           "If this is unexpected then check for failed "
-                           "drives. If this is expected, then delete the "
-                           "configuration for this node from "
-                           "{osd_config_file} and rerun "
-                           "assign_role.".format(
-                               ip_mac_service_tag=ip_mac_service_tag,
-                               system_id=system_id,
-                               osd_config_file=osd_config_file,
-                               generated_config=generated_config,
-                               current_config=current_config))
+        if new_osd_config == current_osd_config:
+            LOG.info("The generated OSD configuration for "
+                     "{ip_mac_service_tag} ({system_id}) is the same as the "
+                     "one in {osd_config_file}.  Skipping OSD "
+                     "configuration.".format(
+                         ip_mac_service_tag=ip_mac_service_tag,
+                         system_id=system_id,
+                         osd_config_file=osd_config_file))
+            return
+        else:
+            generated_config = json.dumps(new_osd_config, sort_keys=True,
+                                          indent=2, separators=(',', ': '))
+            current_config = json.dumps(current_osd_config, sort_keys=True,
+                                        indent=2, separators=(',', ': '))
+            raise RuntimeError("The generated OSD configuration for "
+                               "{ip_mac_service_tag} ({system_id}) is "
+                               "different from the one in {osd_config_file}.\n"
+                               "Generated:\n{generated_config}\n\n"
+                               "Current:\n{current_config}\n\n"
+                               "If this is unexpected, then check for failed "
+                               "drives. If this is expected, then delete the "
+                               "configuration for this node from "
+                               "{osd_config_file} and rerun "
+                               "assign_role.".format(
+                                   ip_mac_service_tag=ip_mac_service_tag,
+                                   system_id=system_id,
+                                   osd_config_file=osd_config_file,
+                                   generated_config=generated_config,
+                                   current_config=current_config))
 
     node_data_lookup[system_id] = new_osd_config
 

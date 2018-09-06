@@ -160,6 +160,39 @@ class Settings():
         self.tenant_tunnel_vlanid = network_settings[
             'tenant_tunnel_network_vlanid']
         self.tenant_vlan_range = network_settings['tenant_vlan_range']
+        mtu_settings = self.get_settings_section(
+            "MTU Settings")
+        self.mtu_selection = mtu_settings[
+            'mtu_selection']
+        self.mtu_size_global_default = mtu_settings[
+            'mtu_size_global_default']
+        if self.mtu_selection == 'global':
+            self.tenant_tunnel_network_mtu = self.mtu_size_global_default
+            self.tenant_network_mtu = self.mtu_size_global_default
+            self.storage_cluster_network_mtu = self.mtu_size_global_default
+            self.storage_network_mtu = self.mtu_size_global_default
+            self.private_api_network_mtu = self.mtu_size_global_default
+            self.public_api_network_mtu = self.mtu_size_global_default
+            self.floating_ip_network_mtu = self.mtu_size_global_default
+        elif self.mtu_selection == 'per_network':
+            self.mtu_size_global_default = '1500'
+            self.tenant_tunnel_network_mtu = mtu_settings[
+                'tenant_tunnel_network_mtu']
+            self.tenant_network_mtu = mtu_settings[
+                'tenant_network_mtu']
+            self.storage_cluster_network_mtu = mtu_settings[
+                'storage_cluster_network_mtu']
+            self.storage_network_mtu = mtu_settings[
+                'storage_network_mtu']
+            self.private_api_network_mtu = mtu_settings[
+                'private_api_network_mtu']
+            self.public_api_network_mtu = mtu_settings[
+                'public_api_network_mtu']
+            self.floating_ip_network_mtu = mtu_settings[
+                'floating_ip_network_mtu']
+        self.default_bond_mtu = '9000'
+        self.management_network_mtu = '1500'
+        self.provisioning_network_mtu = '1500'
 
         vips_settings = self.get_settings_section(
             "Vips Settings")
@@ -427,6 +460,8 @@ class Settings():
         self.ipxe_rpm = self.foreman_configuration_scripts + \
             '/pilot/ipxe/ipxe-bootimgs-20151005-1.git6847232.el7.' \
             'test.noarch.rpm'
+        self.neutron_sriov_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/neutron-sriov.yaml'
 
         # The NIC configurations settings are validated after the Settings
         # class has been instanciated.  Guard against the case where the two
@@ -447,20 +482,27 @@ class Settings():
             'ovs_dpdk_enable']
         self.enable_ovs_dpdk = False
         if self.ovs_dpdk_enable.lower() == 'false':
-            pass
+            logger.info("OVS_DPDK is disabled.")
         elif self.ovs_dpdk_enable.lower() == 'true':
             self.enable_ovs_dpdk = True
-            for each in re.split(r'[_/]', self.nic_env_file):
-                if each.find('mode') != -1:
-                    self.ovs_dpdk_mode = each[-1:]
+            total_ports = 5
+            r = re.search(r'(\w+.\w+).(\d+).port', self.nic_env_file)
+            #logger.info("OVS_DPDK is enabled with %s ports." % (int(r.group(2))-total_ports))
+            logger.info("OVS-DPDK is enabled.")
+
+        # TO enable SRIOV
+        self.sriov_enable = dellnfv_settings['sriov_enable']
+        self.enable_sriov = False
+        if self.sriov_enable.lower() == 'false':
+            pass
         else:
-            raise AssertionError('Only supported values for '
-                                 'ovs_dpdk_enable are true or false. ')
-        if self.enable_ovs_dpdk:
-            logger.info("OVS_DPDK is enabled with mode " +
-                        self.ovs_dpdk_mode + ".")
+            self.enable_sriov = True
+            self.sriov_vf_count = dellnfv_settings['sriov_vf_count']
+
+        if self.enable_sriov:
+            logger.info("SR-IOV is enabled.")
         else:
-            logger.info("OVS_DPDK is disabled.")
+            logger.info("SR-IOV is disabled.")
 
         self.controller_nodes = []
         self.compute_nodes = []

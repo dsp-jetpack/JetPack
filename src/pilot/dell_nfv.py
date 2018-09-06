@@ -15,7 +15,6 @@
 # limitations under the License.
 
 
-import cpu_siblings
 import os
 import re
 import sys
@@ -26,7 +25,6 @@ import logging
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from novaclient.v2 import aggregates
-from novaclient.v2 import hosts
 from novaclient.v2 import servers
 from credential_helper import CredentialHelper
 from datetime import datetime
@@ -35,14 +33,12 @@ from novaclient import client as nvclient
 from ironic_helper import IronicHelper
 from dracclient import client
 from command_helper import Ssh
+from nfv_parameters import NfvParameters
 logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 home_dir = os.path.expanduser('~')
 UC_USERNAME = UC_PASSWORD = UC_PROJECT_ID = UC_AUTH_URL = ''
-HOST_OS_CPUS = ''
-VCPUS = ''
-TOTAL_CPUS = ''
 
 
 class ConfigOvercloud(object):
@@ -58,116 +54,29 @@ class ConfigOvercloud(object):
         self.overcloud_name = overcloud_name
         self.overcloudrc = "source " + home_dir + "/"\
             + self.overcloud_name + "rc;"
+        self.nfv_params = NfvParameters()
+        node_uuid, node_data = self.nfv_params.select_compute_node()
+        self.nfv_params.parse_data(node_data)
+        self.nfv_params.get_all_cpus()
 
-    @classmethod
-    def get_minimum_memory_size(self, node_type):
-        try:
-            memory_size = []
-            for node in ConfigOvercloud.nodes:
-                node_uuid = node.uuid
-                # Get the details of a node
-                node_details = ConfigOvercloud.ironic_client.node.get(
-                    node_uuid)
-                # Get the memory count or size
-                memory_count = node_details.properties['memory_mb']
-                # Get the type details of the node
-                node_properties_capabilities = node_details.properties[
-                    'capabilities'].split(',')[0].split(':')[1]
-                if node_type in node_properties_capabilities:
-                    memory_size.append(memory_count)
-            return min(memory_size)
-        except Exception as error:
-            message = "Exception {}: {}".format(
-                type(error).__name__, str(error))
-            raise Exception("Failed to get memory size {}".format(message))
-
-    @classmethod
-    def calculate_hostos_cpus(self, number_of_host_os_cpu):
-        try:
-            global HOST_OS_CPUS, VCPUS, TOTAL_CPUS
-            cpu_count_list = []
-            for node in ConfigOvercloud.nodes:
-                # for every compute node get the corresponding drac credentials
-                # to fetch the cpu details
-                node_uuid = node.uuid
-                node_details = ConfigOvercloud.ironic_client.node.get(
-                    node_uuid)
-                node_type = node_details.properties['capabilities'].split(',')[
-                    0].split(':')[1]
-                if 'compute' not in node_type:
-                    # filter for getting compute node
-                    continue
-                drac_ip, drac_user, drac_password = \
-                    ConfigOvercloud.get_drac_credential.get_drac_creds(
-                        ConfigOvercloud.ironic_client, node_uuid)
-                stor = client.DRACClient(drac_ip, drac_user, drac_password)
-                # cpu socket information for every compute node
-                sockets = stor.list_cpus()
-                cpu_count = 0
-                for socket in sockets:
-                    if socket.ht_enabled:
-                        cpu_count += socket.cores * 2
-                    else:
-                        raise Exception("Hyperthreading is not enabled in "
-                                        + str(node_uuid))
-                cpu_count_list.append(cpu_count)
-
-            min_cpu_count = min(cpu_count_list)
-            if min_cpu_count not in [40, 48, 56, 64, 72, 128]:
-                raise Exception("The number of vCPUs, as specified in the"
-                                " reference architecture, must be one of"
-                                " [40, 48, 56, 64, 72, 128]"
-                                " but number of vCPUs are " + str(
-                                    min_cpu_count))
-            number_of_host_os_cpu = int(number_of_host_os_cpu)
-            logger.info("host_os_cpus {}".format(
-                cpu_siblings.sibling_info[
-                    min_cpu_count][number_of_host_os_cpu]["host_os_cpu"]))
-            logger.info("vcpus {}".format(
-                cpu_siblings.sibling_info[
-                    min_cpu_count][number_of_host_os_cpu]["vcpu_pin_set"]))
-            siblings_info = cpu_siblings.sibling_info[
-                min_cpu_count][number_of_host_os_cpu]
-            HOST_OS_CPUS = siblings_info["host_os_cpu"]
-            VCPUS = siblings_info["vcpu_pin_set"]
-            TOTAL_CPUS = min_cpu_count
-        except Exception as error:
-            message = "Exception {}: {}".format(
-                type(error).__name__, str(error))
-            raise Exception("Failed to calculate "
-                            "Numa Vcpu list {}".format(message))
-
-    @classmethod
-    def calculate_hugepage_count(self, hugepage_size):
-        try:
-            memory_count = ConfigOvercloud.get_minimum_memory_size("compute")
-            # RAM size should be more than 128G
-            if memory_count < 128000:
-                raise Exception("RAM size is less than 128GB"
-                                "make sure to have all prerequisites")
-            # Subtracting
-            # 16384MB = (Host Memory 12GB + Kernel Memory 4GB)
-            memory_count = (memory_count - 16384)
-            if hugepage_size == "2MB":
-                hugepage_count = (memory_count / 2)
-            if hugepage_size == "1GB":
-                hugepage_count = (memory_count / 1024)
-            logger.info("hugepage_size {}".format(hugepage_size))
-            logger.info("hugepage_count {}".format(hugepage_count))
-            return hugepage_count
-        except Exception as error:
-            message = "Exception {}: {}".format(
-                type(error).__name__, str(error))
-            raise Exception("Failed to calculate"
-                            " hugepage count {}".format(message))
+    def find_ifaces_by_keyword(self, yaml_file, keyword):
+        nics = []
+        with open(yaml_file, 'r') as f:
+            content = f.readlines()
+            for line in content:
+                if keyword in line:
+                    nics.append(line.split(':')[1].strip())
+        return nics
 
     def edit_environment_files(
             self,
+            mtu,
             enable_hugepage,
             enable_numa,
             hugepage_size,
             hostos_cpu_count,
             ovs_dpdk,
+            sriov,
             nic_env_file,
             mariadb_max_connections,
             innodb_buffer_pool_size,
@@ -227,75 +136,60 @@ class ConfigOvercloud(object):
                 'physint:' + str(vlan_range) + ',physext'
                 '|" ' +
                 file_path))
-            
+            kernel_args = ''
+            if sriov:
+                kernel_args = "iommu=pt intel_iommu=on"
             if enable_hugepage:
-                hpg_num = ConfigOvercloud.calculate_hugepage_count(
+                hpg_num = self.nfv_params.calculate_hugepage_count(
                     hugepage_size)
-                hugecmd = 'default_hugepagesz=' + \
-                    hugepage_size + ' hugepagesz=' + \
-                    hugepage_size[0:-1]+' hugepages=' + \
-                    str(hpg_num)+' iommu=pt intel_iommu=on'
-                if not ovs_dpdk:
-                    cmds.append('sed -i "s|HugepagesEnable.*|' +
-                                'HugepagesEnable: true|" ' +
-                                file_path)
-                    cmds.append("sed -i 's|HugePages:.*|HugePages: \"" +
-                                hugecmd + "\"|' " + file_path)
-
+                kernel_args += " default_hugepagesz=%s hugepagesz=%s " \
+                            "hugepages=%s" % (
+                                hugepage_size, hugepage_size[0:-1], str(hpg_num)
+                                )
             if enable_numa:
-                ConfigOvercloud.calculate_hostos_cpus(hostos_cpu_count)
-                if not ovs_dpdk:
-                    cmds.append('sed -i "s|NumaEnable:.*|NumaEnable: true|" ' +
-                                file_path)
-                    cmds.append(
-                        "sed -i 's|NumaCpus:.*|NumaCpus: " +
-                        VCPUS +
-                        "|' " +
-                        file_path)
-                    cmds.append(
-                        'sed -i "s|  # NovaVcpuPinSet|  ' +
-                        'NovaVcpuPinSet|" ' +
-                        file_path)
-                    cmds.append(
-                        "sed -i 's|NovaVcpuPinSet:.*|NovaVcpuPinSet: \"" +
-                        VCPUS +
-                        "\"|' " +
-                        file_path)
-            if ovs_dpdk:
-                for each in re.split(r'[_/]', nic_env_file):
-                    if each.find('mode') != -1:
-                        ovs_dpdk_mode = each[-1:]
-                siblings_info = cpu_siblings.sibling_info[
-                    TOTAL_CPUS][int(hostos_cpu_count)]
-                if ovs_dpdk_mode == '1':
-                    pmd_cores = siblings_info["mode1_pmd_cores"]
-                    pmd_rem_cores = siblings_info["mode1_rem_cores"]
-                else:
-                    pmd_cores = siblings_info["mode2_pmd_cores"]
-                    pmd_rem_cores = siblings_info["mode2_rem_cores"]
+                self.nfv_params.get_host_cpus(hostos_cpu_count)
+                if ovs_dpdk:
+                    dpdk_nics = self.find_ifaces_by_keyword(nic_env_file, 'Dpdk')
+                    self.nfv_params.get_pmd_cpus(mtu, dpdk_nics)
+                    self.nfv_params.get_socket_memory(mtu, dpdk_nics)
+                self.nfv_params.get_nova_cpus()
+                self.nfv_params.get_isol_cpus()
+                kernel_args += " isolcpus=%s" % self.nfv_params.nova_cpus
                 cmds.append(
-                    'sed -i "s|NeutronDpdkCoreList:.*|NeutronDpdkCoreList: \\"'+
-                    pmd_cores.join(["'","'"]) +
+                    'sed -i "s|# NovaVcpuPinSet:.*|NovaVcpuPinSet: ' +
+                    self.nfv_params.nova_cpus + '|" ' + file_path)
+            cmds.append(
+                'sed -i "s|# DellComputeParameters:|DellComputeParameters:|" ' +
+                file_path)
+            if kernel_args:
+                cmds.append(
+                    'sed -i "s|# KernelArgs:.*|KernelArgs: \\"'+
+                    kernel_args + '\\" |" ' + file_path)
+            if ovs_dpdk:
+                cmds.append(
+                    'sed -i "s|OvsDpdkCoreList:.*|OvsDpdkCoreList: \\"'+
+                    self.nfv_params.host_cpus +
                     '\\" |" ' +
                     dpdk_file)
                 cmds.append(
-                    'sed -i "s|PmdRemCores:.*|PmdRemCores: "' +
-                    pmd_rem_cores + '"|" ' + dpdk_file)
+                    'sed -i "s|OvsPmdCoreList:.*|OvsPmdCoreList: \\"'+
+                    self.nfv_params.pmd_cpus +
+                    '\\" |" ' +
+                    dpdk_file)
                 cmds.append(
-                    "sed -i 's|HugePages:.*|HugePages: \"" +
-                    hugecmd+"\"|' " + dpdk_file)
-                cmds += [
-                    'sed -i "s|HostOsCpus:.*|HostOsCpus: "' +
-                    HOST_OS_CPUS + '"|" ' + dpdk_file,
-                    'sed -i "s|VcpuPinSet:.*|VcpuPinSet: "' +
-                    VCPUS + '"|" ' + dpdk_file,
-                ]
+                    'sed -i "s|OvsDpdkSocketMemory:.*|OvsDpdkSocketMemory: \\"'+
+                    self.nfv_params.socket_mem +
+                    '\\" |" ' +
+                    dpdk_file)
+                cmds.append(
+                    'sed -i "s|# IsolCpusList:.*|IsolCpusList: ' +
+                    self.nfv_params.isol_cpus + '|" ' + dpdk_file)
 
             # Performance and Optimization
             if innodb_buffer_pool_size != "dynamic":
                 BufferPoolSize = int(innodb_buffer_pool_size.replace(
                     "G", ""))*1024
-                memory_mb = ConfigOvercloud.get_minimum_memory_size("control")
+                memory_mb = self.nfv_params.get_minimum_memory_size("control")
                 if memory_mb < BufferPoolSize:
                     raise Exception("innodb_buffer_pool_size is greater than"
                                     " available memory size")
@@ -339,16 +233,15 @@ class ConfigOvercloud(object):
     def get_dell_compute_nodes_hostnames(self, nova):
         try:
             logger.info("Getting dellnfv compute node hostnames")
-            # Create host object
-            host_obj = hosts.HostManager(nova)
 
             # Get list of dell nfv nodes
             dell_hosts = []
 
-            for host in host_obj.list():
-                if "dell-compute" in host.host_name:
-                    hostname = str(host.host_name)
+            for host in nova.servers.list():
+                if "dell-compute" in host.name:
+                    hostname = str(host.name)
                     dell_hosts.append(hostname)
+
             return dell_hosts
         except Exception as error:
             message = "Exception {}: {}".format(

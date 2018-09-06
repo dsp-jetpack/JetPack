@@ -35,9 +35,25 @@
                    "true",
                    "false"
                 ]
-            }
-	 },
-	    "Performance and Optimization": {
+             },
+            "sriov_enable": {
+                "valid_values": [
+                   "true",
+                   "false"
+                ]
+             },
+            "sriov_vf_count": {
+                "validate": [
+                  "should_be_valid_int"
+                ],
+                "in_range": [
+                   "1-64"
+                ]
+             }
+           }        
+   },
+   {
+      "Performance and Optimization": {
             "innodb_buffer_pool_instances": {
                "validate": [
                   "should_be_valid_int"
@@ -58,7 +74,7 @@
                "in_range": [
                   "1000-100000"
                ]
-	    }
+        }
          }
       },
       {
@@ -70,6 +86,80 @@
                ]
             }
          }
+      }, 
+      {
+         "MTU Settings": {
+            "mtu_selection": {
+               "valid_values": [
+                  "global",
+                  "per_network"
+               ]
+            },
+             "mtu_size_global_default": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+             "public_api_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "floating_ip_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "private_api_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "tenant_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "storage_cluster_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "storage_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "tenant_tunnel_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            }
+         }
       },
       {
          "Nodes Nics and Bonding Settings": {
@@ -78,8 +168,10 @@
                "valid_values": [
                   "4_port/nic_environment.yaml",
                   "5_port/nic_environment.yaml",
-                  "dpdk_mode1_5_port/nic_environment.yaml",
-                  "dpdk_mode2_5_port/nic_environment.yaml"
+                  "ovs-dpdk_9_port/nic_environment.yaml",
+                  "ovs-dpdk_7_port/nic_environment.yaml"
+                  "sriov_9_ports/nic_environment.yaml",
+                  "sriov_7_ports/nic_environment.yaml",
                ]
             },
             "ControllerBondInterfaceOptions": "",

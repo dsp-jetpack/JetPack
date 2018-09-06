@@ -1,7 +1,6 @@
 heat_template_version: queens
 description: >
-  Bond and VLAN configuration for compute nodes. comment14_0: ' The values of the following parameters are overridden by the
-  entries in' comment15_0: ' network-environment.yaml'
+  Bond and VLAN configuration for compute nodes.
 parameters:
   ControlPlaneIp:
     default: ''
@@ -82,7 +81,7 @@ parameters:
     description: Bond 0 interface 1 name
     type: string
   ComputeBond0Interface2:
-    default: p3p1
+    default: p1p1
     description: Bond 0 interface 2 name
     type: string
   ComputeBond1Interface1:
@@ -90,12 +89,33 @@ parameters:
     description: Bond 1 interface 1 name
     type: string
   ComputeBond1Interface2:
-    default: p3p2
+    default: p1p2
     description: Bond 1 interface 2 name
     type: string
   ComputeBondInterfaceOptions:
     default: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
     description: The bonding_options string for the bond interface.
+    type: string
+  ComputeOvsDpdkInterface1:
+    default: p2p1
+    description: Dpdk Interface 1 name
+    type: string
+  ComputeOvsDpdkInterface2:
+    default: p3p1
+    description: Dpdk Interface 2 name
+    type: string
+  ComputeSriovInterface1:
+    default: p2p1
+    description: SRIOV Interface 1 name
+    type: string
+  ComputeSriovInterface2:
+    default: p3p1
+    description: SRIOV Interface 2 name
+    type: string
+  BondInterfaceOvsOptions:
+    default: bond_mode=balance-tcp lacp=active
+    description: The bonding_options string for the bond interface. Set things like 'bond_mode=balance-tcp lacp=active' using
+      this option.
     type: string
   ExternalNetworkMTU: # Override this via parameter_defaults
     default: 1500
@@ -129,7 +149,7 @@ parameters:
     default: 9000
     description: MTU value for this network.
     type: number
-    
+
 resources:
   OsNetConfigImpl:
     type: OS::Heat::SoftwareConfig
@@ -163,79 +183,110 @@ resources:
                 - default: true
                   next_hop:
                     get_param: ControlPlaneDefaultRoute
-              - type: ovs_bridge
+              - type: linux_bond
+                name: bond0
+                bonding_options:
+                  get_param: ComputeBondInterfaceOptions
+                mtu:
+                  get_param: DefaultBondMTU
+                members:
+                - type: interface
+                  name:
+                    get_param: ComputeBond0Interface1
+                  mtu:
+                    get_param: DefaultBondMTU
+                  primary: true
+                - type: interface
+                  name:
+                    get_param: ComputeBond0Interface2
+                  mtu:
+                    get_param: DefaultBondMTU
+              - type: vlan
+                device: bond0
+                vlan_id:
+                  get_param: TenantNetworkVlanID
+                mtu: 
+                  get_param: TenantNetworkMTU
+                addresses:
+                - ip_netmask:
+                    get_param: TenantIpSubnet
+              - type: vlan
+                device: bond0
+                vlan_id:
+                  get_param: InternalApiNetworkVlanID
+                mtu:
+                  get_param: InternalApiMTU
+                addresses:
+                - ip_netmask:
+                    get_param: InternalApiIpSubnet
+              - type: ovs_user_bridge
                 name: br-tenant
                 mtu:
                   get_param: DefaultBondMTU
+                use_dhcp: false
                 members:
-                - type: linux_bond
-                  name: bond0
-                  bonding_options:
-                    get_param: ComputeBondInterfaceOptions
+                - type: ovs_dpdk_bond
+                  name: ovs_dpdk_bond10
                   mtu:
                     get_param: DefaultBondMTU
+                  ovs_options:
+                    get_param: BondInterfaceOvsOptions
                   members:
-                  - type: interface
-                    name:
-                      get_param: ComputeBond0Interface1
-                    mtu:
-                      get_param: DefaultBondMTU
-                    primary: true
-                  - type: interface
-                    name:
-                      get_param: ComputeBond0Interface2
-                    mtu:
-                      get_param: DefaultBondMTU
-                - type: vlan
-                  device: bond0
-                  vlan_id:
-                    get_param: TenantNetworkVlanID
-                  mtu: 
-                    get_param: TenantNetworkMTU
-                  addresses:
-                  - ip_netmask:
-                      get_param: TenantIpSubnet
-                - type: vlan
-                  device: bond0
-                  vlan_id:
-                    get_param: InternalApiNetworkVlanID
-                  mtu:
-                    get_param: InternalApiMTU
-                  addresses:
-                  - ip_netmask:
-                      get_param: InternalApiIpSubnet
-              - type: ovs_bridge
-                name: br-bond1
+                  - type: ovs_dpdk_port
+                    name: dpdk0
+                    members:
+                    - type: interface
+                      name:
+                        get_param: ComputeOvsDpdkInterface1
+                      mtu:
+                        get_param: DefaultBondMTU
+                  - type: ovs_dpdk_port
+                    name: dpdk1
+                    members:
+                    - type: interface
+                      name:
+                        get_param: ComputeOvsDpdkInterface2
+                      mtu:
+                        get_param: DefaultBondMTU
+              - type: linux_bond
+                name: bond1
+                bonding_options:
+                  get_param: ComputeBondInterfaceOptions
                 mtu:
                   get_param: DefaultBondMTU
                 members:
-                - type: linux_bond
-                  name: bond1
-                  bonding_options:
-                    get_param: ComputeBondInterfaceOptions
+                - type: interface
+                  name:
+                    get_param: ComputeBond1Interface1
                   mtu:
                     get_param: DefaultBondMTU
-                  members:
-                  - type: interface
-                    name:
-                      get_param: ComputeBond1Interface1
-                    mtu:
-                      get_param: DefaultBondMTU
-                    primary: true
-                  - type: interface
-                    name:
-                      get_param: ComputeBond1Interface2
-                    mtu:
-                      get_param: DefaultBondMTU
-                - type: vlan
-                  device: bond1
-                  vlan_id:
-                    get_param: StorageNetworkVlanID
+                  primary: true
+                - type: interface
+                  name:
+                    get_param: ComputeBond1Interface2
                   mtu:
-                    get_param: StorageNetworkMTU
-                  addresses:
-                  - ip_netmask:
-                      get_param: StorageIpSubnet
+                    get_param: DefaultBondMTU
+              - type: vlan
+                device: bond1
+                vlan_id:
+                  get_param: StorageNetworkVlanID
+                mtu:
+                  get_param: StorageNetworkMTU
+                addresses:
+                - ip_netmask:
+                    get_param: StorageIpSubnet
+              - type: interface
+                name:
+                  get_param: ComputeSriovInterface1
+                mtu:
+                  get_param: DefaultBondMTU
+                use_dhcp: false
+              - type: interface
+                name:
+                  get_param: ComputeSriovInterface2
+                mtu:
+                  get_param: DefaultBondMTU
+                use_dhcp: false        
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.

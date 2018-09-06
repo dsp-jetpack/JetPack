@@ -97,6 +97,14 @@ parameters:
     default: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
     description: The bonding_options string for the bond interface.
     type: string
+  ComputeSriovInterface1:
+    default: p2p1
+    description: SRIOV Interface 1 name
+    type: string
+  ComputeSriovInterface2:
+    default: p3p1
+    description: SRIOV Interface 2 name
+    type: string
   ExternalNetworkMTU: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
@@ -129,7 +137,6 @@ parameters:
     default: 9000
     description: MTU value for this network.
     type: number
-    
 resources:
   OsNetConfigImpl:
     type: OS::Heat::SoftwareConfig
@@ -236,6 +243,18 @@ resources:
                   addresses:
                   - ip_netmask:
                       get_param: StorageIpSubnet
+              - type: interface
+                name:
+                  get_param: ComputeSriovInterface1
+                mtu:
+                  get_param: DefaultBondMTU
+                use_dhcp: false
+              - type: interface
+                name:
+                  get_param: ComputeSriovInterface2
+                mtu:
+                  get_param: DefaultBondMTU
+                use_dhcp: false                                          
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.
