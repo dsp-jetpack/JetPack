@@ -172,7 +172,13 @@
                ]
             },
          "enable_fencing":"",
-         "enable_instance_ha":""
+         "enable_instance_ha":"",
+         "dvr_enable" :{
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            }
          }
       },
       {

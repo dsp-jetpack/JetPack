@@ -277,6 +277,10 @@ class Settings():
             self.dvr_enable = True
         else:
             self.dvr_enable = False
+        if self.dvr_enable:
+            logger.info("DVR is enabled.")
+        else:
+            logger.info("DVR is disabled.")
         self.overcloud_nodes_pwd = deploy_settings['overcloud_nodes_pwd']
         dellnfv_settings = self.get_settings_section(
             "Dell NFV Settings")
