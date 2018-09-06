@@ -104,14 +104,6 @@ parameters:
     default: p3p1
     description: Dpdk Interface 2 name
     type: string
-  ComputeOvsDpdkInterface3:
-    default: p2p2
-    description: Dpdk Interface 3 name
-    type: string
-  ComputeOvsDpdkInterface4:
-    default: p3p2
-    description: Dpdk Interface 4 name
-    type: string
   BondInterfaceOvsOptions:
     default: bond_mode=balance-tcp lacp=active
     description: The bonding_options string for the bond interface. Set things like 'bond_mode=balance-tcp lacp=active' using
@@ -248,18 +240,6 @@ resources:
                         get_param: ComputeOvsDpdkInterface2
                       mtu:
                         get_param: DefaultBondMTU
-              - type: interface
-                name:
-                  get_param: ComputeOvsDpdkInterface3
-                mtu:
-                  get_param: DefaultBondMTU
-                use_dhcp: false
-              - type: interface
-                name:
-                  get_param: ComputeOvsDpdkInterface4
-                mtu:
-                  get_param: DefaultBondMTU
-                use_dhcp: false
               - type: linux_bond
                 name: bond1
                 bonding_options:

@@ -46,8 +46,6 @@ parameter_defaults:
   # DPDK bonds
   ComputeOvsDpdkInterface1: p2p1
   ComputeOvsDpdkInterface2: p3p1
-  #ComputeOvsDpdkInterface3: p2p2
-  #ComputeOvsDpdkInterface4: p3p2
   # The DPDK bonding mode to use for compute nodes
   BondInterfaceOvsOptions: bond_mode=balance-tcp lacp=active
 

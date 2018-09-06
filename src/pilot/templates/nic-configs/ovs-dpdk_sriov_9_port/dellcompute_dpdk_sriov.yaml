@@ -248,18 +248,6 @@ resources:
                         get_param: ComputeOvsDpdkInterface2
                       mtu:
                         get_param: DefaultBondMTU
-              #- type: interface
-              #  name:
-              #    get_param: ComputeOvsDpdkInterface3
-              #  mtu:
-              #    get_param: DefaultBondMTU
-              #  use_dhcp: false
-              #- type: interface
-              #  name:
-              #    get_param: ComputeOvsDpdkInterface4
-              #  mtu:
-              #    get_param: DefaultBondMTU
-              #  use_dhcp: false
               - type: linux_bond
                 name: bond1
                 bonding_options:
