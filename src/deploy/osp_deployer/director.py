@@ -571,6 +571,9 @@ class Director(InfraHost):
             'sed -i "s|sriov_enabled=.*|sriov_enabled=' +
             str(self.settings.enable_sriov) +
             '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|dvr_enable=.*|dvr_enable=' +
+            str(self.settings.dvr_enable) +
+            '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_tenant_network=.*|sanity_tenant_network=' +
             self.settings.sanity_tenant_network +
             '|" pilot/deployment-validation/sanity.ini',
@@ -1041,6 +1044,9 @@ class Director(InfraHost):
         if self.settings.enable_sriov is True:
             cmd += " --sriov"
         # Node placement is required in an automated install. The index order
+        if self.settings.dvr_enable is True:
+            cmd += " --dvr_enable"
+        # Node placement is required in an automated install.  The index order
         # of the nodes is the order in which they are defined in the
         # .properties file
         cmd += " --node_placement"

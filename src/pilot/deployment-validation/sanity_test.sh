@@ -39,6 +39,7 @@ FLOATING_IP_NETWORK_END=$(get_value floating_ip_network_end_ip)
 FLOATING_IP_NETWORK_GATEWAY=$(get_value floating_ip_network_gateway)
 FLOATING_IP_NETWORK_VLAN=$(get_value floating_ip_network_vlan)
 OVS_DPDK_ENABLED=$(get_value ovs_dpdk_enabled)
+DVR_ENABLED=$(get_value dvr_enable)
 SANITY_TENANT_NETWORK=$(get_value sanity_tenant_network)
 SANITY_VLANTEST_NETWORK=$(get_value sanity_vlantest_network)
 SANITY_USER_PASSWORD=$(get_value sanity_user_password)
@@ -476,7 +477,6 @@ setup_nova (){
   fi
 }
 
-
 ping_from_netns(){
 
   ip=$1
@@ -486,6 +486,31 @@ ping_from_netns(){
   for controller in $CONTROLLERS
   do
       ssh ${SSH_OPTS} heat-admin@$controller "sudo /sbin/ip netns exec ${name_space} ip a" | grep -q $ip
+    if [[ "$?" == 0 ]]
+    then
+      break
+    fi
+  done
+
+  info "### Pinging $ip from netns $name_space on controller $controller"
+  execute_command "ssh ${SSH_OPTS} heat-admin@$controller sudo ip netns exec ${name_space} ping -c 1 -w 5 ${ip}"
+  if [[ "$?" == 0 ]]
+  then
+      info "### Successfully pinged $ip from netns $name_space on controller $controller"
+  else
+      fatal "### Unable to ping $ip from netns $name_space on controller $controller!  Aborting sanity test"
+  fi
+}
+
+ping_from_snat_netns(){
+
+  ip=$1
+  name_space=$2
+
+  # Find the controller that has the IP set to an interface in the netns
+  for controller in $CONTROLLERS
+  do
+      ssh ${SSH_OPTS} heat-admin@$controller "sudo /sbin/ip netns list" | grep -q $name_space
     if [[ "$?" == 0 ]]
     then
       break
@@ -536,9 +561,15 @@ test_neutron_networking (){
 
   for floating_ip in ${floating_ips[@]}
   do
-    # Test pinging the floating IP of the instance from the virtual router
-    # network namespace
-    ping_from_netns $floating_ip "qrouter-${router_id}"
+    if [ "$DVR_ENABLED" == "True" ]; then
+      # Test pinging the floating IP of the instance from the snat
+      # network namespace
+      ping_from_snat_netns $floating_ip "snat-${router_id}"
+    else
+      # Test pinging the floating IP of the instance from the virtual router
+      # network namespace
+      ping_from_netns $floating_ip "qrouter-${router_id}"
+    fi
   done
 }
 

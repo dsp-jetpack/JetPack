@@ -575,3 +575,8 @@ class DeployerSanity():
             raise AssertionError("Hugepages size should be 1GB, this is" +
                                  " required for OVS-DPDK. Please verify" +
                                  " this setting.")
+        logger.debug("verifying DVR is disabled when dpdk enabled")
+        if (self.settings.enable_ovs_dpdk is True and
+                self.settings.dvr_enable == True):
+            raise AssertionError("OVS-DPDk and DVR can not be enabled together." +
+                                 " Please disable one feature and verify the settings.")        
