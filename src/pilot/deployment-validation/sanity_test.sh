@@ -661,7 +661,7 @@ ip_sbp=$(openstack port list | grep subport1_$VLANID_1 | awk '{print $8}' | awk 
 gw_vlan_net=${SANITY_VLANTEST_NETWORK%0\/24}1
 cat << EOF >~/interfacescript
 #!/bin/bash
-intfc=\$(ip route | grep default | sed -e "s/^.*dev.//" -e "s/.proto.*//")
+intfc=\$(ip route | grep default | sed -e "s/^.*dev.//" -e "s/.proto.*//") && intfc=\$(echo \$intfc)
 sudo touch /etc/sysconfig/network-scripts/ifcfg-\${intfc}.${VLANID_1} 
 sudo tee /etc/sysconfig/network-scripts/ifcfg-\${intfc}.$VLANID_1 <<- End >/dev/null
     DEVICE="\${intfc}.$VLANID_1"
