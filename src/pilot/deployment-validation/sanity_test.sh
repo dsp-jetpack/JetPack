@@ -363,7 +363,7 @@ setup_glance(){
   if [ ! -f ./$IMAGE_FILE_NAME ]; then
     sleep 5 #HACK: a timing issue exists on some stamps -- 5 seconds seems sufficient to fix it
     info "### Downloading CentOS image file. Please wait..."
-    wget $SANITY_IMAGE_URL
+    wget --progress=bar:force $SANITY_IMAGE_URL
     if [ $? -ne 0 ]; then
       echo "command failed"
       exit 1
@@ -531,7 +531,6 @@ test_neutron_networking (){
   set_tenant_scope
   router_id=$(openstack router list | grep $TENANT_ROUTER_NAME | awk '{ print $2} ')
 
-  set_tenant_scope
   net_ids=$(openstack network list | grep $TENANT_NETWORK_NAME | awk '{ print $2 " " $6 }')
   net_id=$(echo $net_ids | awk '{print $1}')
   subnet_id=$(echo $net_ids | awk '{print $2}')
@@ -553,7 +552,6 @@ test_neutron_networking (){
       port_id=$(openstack port list | grep $subnet_id | grep $private_ip | awk '{print $2}')
 
       # And finally associate the floating IP with the instance
-      set_tenant_scope
       execute_command "openstack floating ip set $floating_ip_id --port $port_id"
   done
 
@@ -659,27 +657,28 @@ radosgw_cleanup(){
 script(){
 #Script for the setting up the interfaces of vlan network in vlan aware instance
 info "### Creating interfaces script for interface setup-------------"
+ip_sbp=$(openstack port list | grep subport1_$VLANID_1 | awk '{print $8}' | awk -F"'" '{print $2}')
 gw_vlan_net=${SANITY_VLANTEST_NETWORK%0\/24}1
 cat << EOF >~/interfacescript
 #!/bin/bash
-sudo touch /etc/sysconfig/network-scripts/ifcfg-eth0.$VLANID_1 
-sudo tee /etc/sysconfig/network-scripts/ifcfg-eth0.$VLANID_1 <<- End >/dev/null
-    DEVICE="eth0.$VLANID_1"
-    BOOTPROTO="dhcp"
-    BOOTPROTOv6="dhcp"
+intfc=\$(ip route | grep default | sed -e "s/^.*dev.//" -e "s/.proto.*//")
+sudo touch /etc/sysconfig/network-scripts/ifcfg-\${intfc}.${VLANID_1} 
+sudo tee /etc/sysconfig/network-scripts/ifcfg-\${intfc}.$VLANID_1 <<- End >/dev/null
+    DEVICE="\${intfc}.$VLANID_1"
+    BOOTPROTO="static"
     ONBOOT="yes"
+    NETMASK=255.255.255.0
+    IPADDR=${ip_sbp}
     USERCTL="yes"
-    IPV6INIT="yes"
     DEFROUTE="no"
-    PEERDNS="yes"
-    PERSISTENT_DHCLIENT="1"
+    PEERDNS="no"
     VLAN=yes
 End
-sudo touch /etc/sysconfig/network-scripts/route-eth0.$VLANID_1
-sudo tee /etc/sysconfig/network-scripts/route-eth0.$VLANID_1 <<- End >/dev/null
-    default via ${gw_vlan_net} dev eth0.${VLANID_1} proto dhcp metric 400
+sudo touch /etc/sysconfig/network-scripts/route-\${intfc}.$VLANID_1
+sudo tee /etc/sysconfig/network-scripts/route-\${intfc}.$VLANID_1 <<- End >/dev/null
+    default via ${gw_vlan_net} dev \${intfc}.${VLANID_1} proto static metric 200
 End
-sudo /etc/sysconfig/network-scripts/ifup ifcfg-eth0.${VLANID_1}
+sudo /etc/sysconfig/network-scripts/ifup ifcfg-\${intfc}.${VLANID_1}
 sudo sleep 3  
 EOF
 }
@@ -833,7 +832,7 @@ then
   trunk_ports=$(openstack network trunk list | grep $TRUNK_PORT1 | awk '{print $2}')
   for trunk_port in $trunk_ports
   do 
-    openstack network trunk remove $trunk_port
+    openstack network trunk delete $trunk_port
   done
   
   parent_ports=$(openstack port list | grep $PARENT_PORT1 | awk '{print $2}')
@@ -848,6 +847,16 @@ then
     openstack port delete $subport
   done
 
+  #Deleting SRIOV ports
+  if [ "$SRIOV_ENABLED" != False ]; then
+    info "### Deleting SRIOV ports..."
+    sriov_ports=$(openstack port list | grep -E "*sriov_port_*" | awk '{print $2}')
+    for sriov_port in $sriov_ports
+    do
+      openstack port delete $sriov_port
+    done
+  fi
+
   info   "#### Deleting the security groups"
   security_group_ids=$(openstack security group list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
   [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 openstack security group delete
@@ -861,11 +870,7 @@ then
   do
     for subnet_network_id in $subnet_network_ids
     do
-      port_ids=$(openstack port list | grep $subnet_network_id  |awk ' { print $2 }')
-      for port_id in $port_ids
-      do 
-        openstack router remove port $router_id $port_id
-      done 
+      openstack router remove subnet $router_id $subnet_network_id
     done
     openstack router unset --all-tag $router_id
     openstack router delete $router_id
@@ -920,9 +925,9 @@ else
 
   setup_cinder
 
-  radosgw_test
-
   vlan_aware_test
+
+  radosgw_test
 
   end
 
