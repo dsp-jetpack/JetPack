@@ -14,11 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-###############################################################################
-# Run this script run from the director node as the director's admin user.
-# This script assumes the update_ssh_config.py is present.
-###############################################################################
-
 # IMPORTS
 from collections import defaultdict
 import sys
