@@ -410,6 +410,7 @@ spin_up_instances(){
         info "### SRIOV: Creating SRIOV ports"
         sriov_port_name="sriov_port_$index"
         sriov_port_creation $sriov_port_name
+        sleep 10
         info "### SRIOV: Initiating build of SR-IOV enabled instances..."
         execute_command "openstack server create --security-group $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic port-id=$sriov_port_name $instance_name"
       else
@@ -434,7 +435,7 @@ spin_up_instances(){
         fatal "### Instance status is: ${instance_status}!  Aborting sanity test"
       else
         info "### Instance status is: ${instance_status}.  Sleeping..."
-        sleep 60
+        sleep 70
         instance_status=$(nova list | grep $instance_name | awk '{print $6}')
       fi
     done

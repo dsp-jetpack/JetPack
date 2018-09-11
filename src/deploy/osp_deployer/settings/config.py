@@ -174,23 +174,32 @@ class Settings():
             self.private_api_network_mtu = self.mtu_size_global_default
             self.public_api_network_mtu = self.mtu_size_global_default
             self.floating_ip_network_mtu = self.mtu_size_global_default
+            self.default_bond_mtu = self.mtu_size_global_default
         elif self.mtu_selection == 'per_network':
             self.mtu_size_global_default = '1500'
+            max_mtu = []
             self.tenant_tunnel_network_mtu = mtu_settings[
                 'tenant_tunnel_network_mtu']
+            max_mtu.append(self.tenant_tunnel_network_mtu)
             self.tenant_network_mtu = mtu_settings[
                 'tenant_network_mtu']
+            max_mtu.append(self.tenant_network_mtu)
             self.storage_cluster_network_mtu = mtu_settings[
                 'storage_cluster_network_mtu']
+            max_mtu.append(self.storage_cluster_network_mtu)
             self.storage_network_mtu = mtu_settings[
                 'storage_network_mtu']
+            max_mtu.append(self.storage_network_mtu)
             self.private_api_network_mtu = mtu_settings[
                 'private_api_network_mtu']
+            max_mtu.append(self.private_api_network_mtu)
             self.public_api_network_mtu = mtu_settings[
                 'public_api_network_mtu']
+            max_mtu.append(self.private_api_network_mtu)
             self.floating_ip_network_mtu = mtu_settings[
                 'floating_ip_network_mtu']
-        self.default_bond_mtu = '9000'
+            max_mtu.append(self.floating_ip_network_mtu)
+            self.default_bond_mtu = max(max_mtu)
         self.management_network_mtu = '1500'
         self.provisioning_network_mtu = '1500'
 
