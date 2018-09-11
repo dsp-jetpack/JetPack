@@ -14,17 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-###############################################################################
-# Run this script run from the director node as the director's admin user.
-# This script assumes the update_ssh_config.py is present.
-###############################################################################
-
 # IMPORTS
 import csv
 import json
 import sys
 import io
-import os
 
 from collections import defaultdict
 
@@ -65,27 +59,27 @@ def read_input_file(input_file):
         if row["Key"] not in keys:
             key = row["Key"]
             value = row["Value"]
-            if row["Key"].startswith("sah_"):
+            if key.startswith("sah_"):
                 node_setting_key = key.split("sah_")[1]
                 p = parse_key_components()
-                p.setKey(row["Key"])
+                p.setKey(key)
                 role_type = p.getRoleType()
                 node_id = p.getNodeId()
-            elif row["Key"].startswith("director_"):
+            elif key.startswith("director_"):
                 node_setting_key = key.split("director_")[1]
                 p = parse_key_components()
-                p.setKey(row["Key"])
+                p.setKey(key)
                 role_type = p.getRoleType()
                 node_id = p.getNodeId()
-            elif row["Key"].startswith("dashboard_"):
+            elif key.startswith("dashboard_"):
                 node_setting_key = key.split("dashboard_")[1]
                 p = parse_key_components()
-                p.setKey(row["Key"])
+                p.setKey(key)
                 role_type = p.getRoleType()
                 node_id = p.getNodeId()
-            elif row["Key"].startswith("controller_"):
+            elif key.startswith("controller_"):
                 p = parse_key_components()
-                p.setKey(row["Key"])
+                p.setKey(key)
                 role_type = p.getRoleType()
                 node_id = p.getNodeId()
                 if node_id.isdigit():
@@ -93,9 +87,9 @@ def read_input_file(input_file):
                                                  node_id + "_")[1]
                 else:
                     continue
-            elif row["Key"].startswith("compute_"):
+            elif key.startswith("compute_"):
                 p = parse_key_components()
-                p.setKey(row["Key"])
+                p.setKey(key)
                 role_type = p.getRoleType()
                 node_id = p.getNodeId()
                 if node_id.isdigit():
@@ -103,9 +97,9 @@ def read_input_file(input_file):
                                                  node_id + "_")[1]
                 else:
                     continue
-            elif row["Key"].startswith("storage_"):
+            elif key.startswith("storage_"):
                 p = parse_key_components()
-                p.setKey(row["Key"])
+                p.setKey(key)
                 role_type = p.getRoleType()
                 node_id = p.getNodeId()
                 if node_id.isdigit():
@@ -147,12 +141,10 @@ def read_input_file(input_file):
     return settings
 
 
-def generate_tmp_file(in_data, output_file, excluded_keys, use_service_tags):
-    fData = {}
+def generate_output_file(in_data, output_file, excluded_keys, use_service_tags):
     i = 0
-    tmp_file = './tmpfile'
-    tmpFile = open(tmp_file, 'w')
-    tmpFile.write("[\n")
+    outputFile = open(output_file, 'w')
+    sections = []
 
     top_level_keys = in_data.keys()
     key_count = len(top_level_keys)
@@ -161,7 +153,6 @@ def generate_tmp_file(in_data, output_file, excluded_keys, use_service_tags):
         i = i+1
         for nexkey in nexlevel_keys:
             odata = in_data.get(tlkey).get(nexkey)
-            # print "ODATA: {}".format(odata)
 
             if use_service_tags and "idrac_ip" in odata:
                 del odata["idrac_ip"]
@@ -190,26 +181,9 @@ def generate_tmp_file(in_data, output_file, excluded_keys, use_service_tags):
                 for exclude_key in excluded_keys:
                     if exclude_key in odata:
                         del odata[exclude_key]
-            fData[tlkey] = odata
-            output = json.dumps(fData.get(tlkey), indent=4, sort_keys=True)
-            tmpFile.write(output)
-            if i < key_count:
-                tmpFile.write(",\n")
-    tmpFile.write("\n]")
-    tmpFile.close()
-
-
-def generate_pretty_file(output_file):
-    tmp_file = './tmpfile'
-    tmpFile = open(tmp_file, 'r')
-    outputFile = open(output_file, 'w')
-
-    jsonData = tmpFile.read()
-    tmpData = json.loads(jsonData)
-    parsed_out = json.dumps(tmpData, indent=4, sort_keys=True)
-    outputFile.write(parsed_out)
+            sections.append(odata)
+    outputFile.write(json.dumps(sections, indent=4, sort_keys=True))
     outputFile.close()
-    os.remove(tmp_file)
 
 
 def main():
@@ -249,8 +223,7 @@ def main():
                          "install_user_password",
                          "ipmi_user",
                          "ipmi_password"]
-        generate_tmp_file(in_data, output_file, excluded_keys, use_service_tag)
-        generate_pretty_file(output_file)
+        generate_output_file(in_data, output_file, excluded_keys, use_service_tag)
     else:
         print("no input data. not populating output ini file")
         sys.exit(1)
