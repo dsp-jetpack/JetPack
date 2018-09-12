@@ -39,7 +39,7 @@ FLOATING_IP_NETWORK_END=$(get_value floating_ip_network_end_ip)
 FLOATING_IP_NETWORK_GATEWAY=$(get_value floating_ip_network_gateway)
 FLOATING_IP_NETWORK_VLAN=$(get_value floating_ip_network_vlan)
 OVS_DPDK_ENABLED=$(get_value ovs_dpdk_enabled)
-DVR_ENABLED=$(get_value dvr_enable)
+DVR_ENABLED=$(get_value dvr_enabled)
 SANITY_TENANT_NETWORK=$(get_value sanity_tenant_network)
 SANITY_VLANTEST_NETWORK=$(get_value sanity_vlantest_network)
 SANITY_USER_PASSWORD=$(get_value sanity_user_password)
@@ -61,6 +61,8 @@ BASE_PROJECT_NAME=$(get_value base_project_name)
 BASE_USER_NAME=$(get_value base_user_name)
 BASE_CONTAINER_NAME=$(get_value base_container_name)
 SRIOV_ENABLED=$(get_value sriov_enabled)
+HPG_ENABLED=$(get_value hugepages_enabled)
+NUMA_ENABLED=$(get_value numa_enabled)
 
 IMAGE_FILE_NAME=$(basename $SANITY_IMAGE_URL)
 SECURITY_GROUP_NAME="$BASE_SECURITY_GROUP_NAME"
@@ -456,9 +458,17 @@ setup_nova (){
   else
     info "#----- Flavor '$FLAVOR_NAME' exists. Skipping"
   fi
+  if [ "$NUMA_ENABLED" != "False" ]; then
+    info "### NUMA: Adding metadata properties to flavor"
+    execute_command "openstack flavor set --property numa_mempolicy=preferred --property hw:cpu_policy=dedicated --property hw:cpu_thread_policy=require --property hw:numa_nodes=1 $FLAVOR_NAME"
+  fi
+  if [ "$HPG_ENABLED" != "False" ]; then
+    info "### HUGEPAGES: Adding metadata properties to flavor"
+    execute_command "openstack flavor set --property hw:mem_page_size=large $FLAVOR_NAME"
+  fi
   if [ "$OVS_DPDK_ENABLED" != "False" ]; then
     info "### OVS DPDK: Adding metadata properties to flavor"
-    execute_command "openstack flavor set --property hw:cpu_policy=dedicated --property hw:cpu_thread_policy=require --property hw:mem_page_size=large --property hw:numa_nodes=1 --property hw:numa_mempolicy=preferred  $FLAVOR_NAME"
+    execute_command "openstack flavor set --property hw:emulator_threads_policy=isolate $FLAVOR_NAME"
   fi
   set_tenant_scope
   if [ ! -f ~/$SANITY_KEY_NAME ]; then

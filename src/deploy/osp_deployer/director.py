@@ -565,13 +565,19 @@ class Director(InfraHost):
             'sed -i "s|floating_ip_network_vlan=.*|floating_ip_network_vlan=' +
             self.settings.floating_ip_network_vlan +
             '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|numa_enabled=.*|numa_enabled=' +
+            str(self.settings.numa_enable) +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|hugepages_enabled=.*|hugepages_enabled=' +
+            str(self.settings.hpg_enable) +
+            '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|ovs_dpdk_enabled=.*|ovs_dpdk_enabled=' +
             str(self.settings.enable_ovs_dpdk) +
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sriov_enabled=.*|sriov_enabled=' +
             str(self.settings.enable_sriov) +
             '|" pilot/deployment-validation/sanity.ini',
-            'sed -i "s|dvr_enable=.*|dvr_enable=' +
+            'sed -i "s|dvr_enabled=.*|dvr_enabled=' +
             str(self.settings.dvr_enable) +
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_tenant_network=.*|sanity_tenant_network=' +
