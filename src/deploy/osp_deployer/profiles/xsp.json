@@ -32,8 +32,24 @@
                "valid_values": [
                   "false"
                ]
-            }
-         },
+            },
+        "sriov_enable": {
+                "valid_values": [
+                   "true",
+                   "false"
+                ]
+             },
+       "sriov_vf_count": {
+                "validate": [
+                   "should_be_valid_int"
+                ],
+                "in_range": [
+                   "1-64"
+                ]
+             }
+           }         
+    },
+    {
          "Performance and Optimization": {
             "innodb_buffer_pool_instances": {
                "validate": [
@@ -148,7 +164,9 @@
             "nic_env_file": {
                "valid_values": [
                   "4_port/nic_environment.yaml",
-                  "5_port/nic_environment.yaml"
+                  "5_port/nic_environment.yaml",
+                  "sriov_9_ports/nic_environment.yaml",
+                  "sriov_7_ports/nic_environment.yaml"
                ]
             },
             "ControllerBondInterfaceOptions": "",

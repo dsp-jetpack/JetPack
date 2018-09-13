@@ -460,6 +460,8 @@ class Settings():
         self.ipxe_rpm = self.foreman_configuration_scripts + \
             '/pilot/ipxe/ipxe-bootimgs-20151005-1.git6847232.el7.' \
             'test.noarch.rpm'
+        self.neutron_sriov_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/neutron-sriov.yaml'
 
         # The NIC configurations settings are validated after the Settings
         # class has been instanciated.  Guard against the case where the two
@@ -494,6 +496,20 @@ class Settings():
                         self.ovs_dpdk_mode + ".")
         else:
             logger.info("OVS_DPDK is disabled.")
+
+        # TO enable SRIOV
+        self.sriov_enable = dellnfv_settings['sriov_enable']
+        self.enable_sriov = False
+        if self.sriov_enable.lower() == 'false':
+            pass
+        else:
+            self.enable_sriov = True
+            self.sriov_vf_count = dellnfv_settings['sriov_vf_count']
+
+        if self.enable_sriov:
+            logger.info("SR-IOV is enabled.")
+        else:
+            logger.info("SR-IOV is disabled.")
 
         self.controller_nodes = []
         self.compute_nodes = []

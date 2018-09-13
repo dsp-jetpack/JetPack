@@ -321,6 +321,10 @@ def main():
                             action='store_true',
                             default=False,
                             help="Enable OVS+DPDK")
+        parser.add_argument('--sriov',
+                            action='store_true',
+                            default=False,
+                            help="Enable SR-IOV")
         parser.add_argument('--node_placement',
                             action='store_true',
                             default=False,
@@ -392,6 +396,7 @@ def main():
             args.hugepages_size,
             args.hostos_cpu_count,
             args.ovs_dpdk,
+            args.sriov,
             args.nic_env_file,
             args.mariadb_max_connections,
             args.innodb_buffer_pool_size,
@@ -460,6 +465,12 @@ def main():
                                      "enabled in order to use OVS-DPDK")
             else:
                 env_opts += " -e ~/pilot/templates/neutron-ovs-dpdk.yaml"
+
+        if args.sriov:
+            env_opts += " -e ~/pilot/templates/neutron-sriov.yaml"
+            env_opts += " -e ~/pilot/templates/ovs-hw-offload.yaml"
+            env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+                        "host-config-and-reboot.yaml"
 
         if args.enable_dellsc:
             env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
