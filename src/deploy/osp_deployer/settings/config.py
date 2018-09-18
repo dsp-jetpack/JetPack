@@ -502,9 +502,6 @@ class Settings():
             logger.info("OVS_DPDK is disabled.")
         elif self.ovs_dpdk_enable.lower() == 'true':
             self.enable_ovs_dpdk = True
-            total_ports = 5
-            r = re.search(r'(\w+.\w+).(\d+).port', self.nic_env_file)
-            #logger.info("OVS_DPDK is enabled with %s ports." % (int(r.group(2))-total_ports))
             logger.info("OVS-DPDK is enabled.")
 
         # TO enable SRIOV
