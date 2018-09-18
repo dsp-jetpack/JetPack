@@ -444,7 +444,7 @@ def config_idrac(instack_lock,
         if not all_jobs_succeeded:
             success = False
 
-    if success:
+    if success and target_boot_mode == boot_mode_helper.DRAC_BOOT_MODE_BIOS:
         success = config_hard_disk_drive_boot_sequence(
             drac_client, ip_service_tag)
 
