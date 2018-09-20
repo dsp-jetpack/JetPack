@@ -50,12 +50,9 @@ parameter_defaults:
   # List of CPUs reserver for Host OS operation
   # Disabled by default for XSP Profile
   # This line is uncommented and updated when using CSP Profile
-  # NovaVcpuPinSet: ['8-47']
-
-  HugepagesEnable: false
-  NumaEnable: false
-  HugePages: "default_hugepagesz=2MB hugepagesz=2M hugepages=57344 iommu=pt intel_iommu=on"
-  NumaCpus: 4-23,28-47
+  # NovaVcpuPinSet: "8-23,32-47"
+  # DellComputeParameters:
+    # KernelArgs: "default_hugepagesz=1GB hugepagesz=1G hugepages=176 iommu=pt intel_iommu=on"
 
   # Number of Dell Compute nodes 
   DellComputeCount: 3

@@ -77,7 +77,7 @@ parameters:
     description: Bond 0 interface 1 name
     type: string
   ComputeBond0Interface2:
-    default: p1p1
+    default: p3p2
     description: Bond 0 interface 2 name
     type: string
   ComputeBond1Interface1:
@@ -85,8 +85,16 @@ parameters:
     description: Bond 1 interface 1 name
     type: string
   ComputeBond1Interface2:
-    default: p1p2
+    default: p1p1
     description: Bond 1 interface 2 name
+    type: string
+  ComputeBond2Interface1:
+    default: p3p1
+    description: Bond 2 interface 1 name
+    type: string
+  ComputeBond2Interface2:
+    default: p1p2
+    description: Bond 2 interface 2 name
     type: string
   ComputeBondInterfaceOptions:
     default: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
@@ -192,8 +200,7 @@ resources:
                   - ip_netmask:
                       get_param: InternalApiIpSubnet
               - type: ovs_bridge
-                name: 
-                  bridge_name
+                name: br-bond1
                 mtu:
                   get_param: DefaultBondMTU
                 members:
@@ -223,7 +230,32 @@ resources:
                     get_param: StorageNetworkMTU
                   addresses:
                   - ip_netmask:
-                      get_param: StorageIpSubnet
+                      get_param: StorageIpSubnet  
+              - type: ovs_bridge
+                name: 
+                  bridge_name
+                mtu:
+                  get_param: DefaultBondMTU
+                members:
+                - type: linux_bond
+                  name: bond2
+                  bonding_options:
+                    get_param: ComputeBondInterfaceOptions
+                  mtu:
+                    get_param: DefaultBondMTU
+                  members:
+                  - type: interface
+                    name:
+                      get_param: ComputeBond2Interface1
+                    mtu:
+                      get_param: DefaultBondMTU
+                    primary: true
+                  - type: interface
+                    name:
+                      get_param: ComputeBond2Interface2
+                    mtu:
+                      get_param: DefaultBondMTU
+                      
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.
