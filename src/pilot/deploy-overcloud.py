@@ -309,6 +309,10 @@ def main():
                             action='store_true',
                             default=False,
                             help="Disable cinder Ceph and rbd backend")
+        parser.add_argument('--dvr_enable',
+                            action='store_true',
+                            default=False,
+                            help="Enables Distributed Virtual Routing")
         parser.add_argument('--static_ips',
                             action='store_true',
                             default=False,
@@ -321,6 +325,10 @@ def main():
                             action='store_true',
                             default=False,
                             help="Enable OVS+DPDK")
+        parser.add_argument('--sriov',
+                            action='store_true',
+                            default=False,
+                            help="Enable SR-IOV")
         parser.add_argument('--node_placement',
                             action='store_true',
                             default=False,
@@ -331,6 +339,12 @@ def main():
                             action='store_true',
                             help="Indicates if the deploy-overcloud script "
                                  "should be run in debug mode")
+        parser.add_argument("--mtu",
+                            dest="mtu",
+                            type=int,
+                            required=True,
+                            default=1500,
+                            help="Tenant Network MTU")
         LoggingHelper.add_argument(parser)
         args = parser.parse_args()
         LoggingHelper.configure_logging(args.logging_level)
@@ -387,12 +401,14 @@ def main():
         # Remove this when Numa siblings added
         # Edit the dellnfv_environment.yaml
         config.edit_environment_files(
+            args.mtu,
             args.enable_hugepages,
             args.enable_numa,
             args.hugepages_size,
             args.hostos_cpu_count,
             args.ovs_dpdk,
-            args.nic_env_file,
+            args.sriov,
+            nic_env_file,
             args.mariadb_max_connections,
             args.innodb_buffer_pool_size,
             args.innodb_buffer_pool_instances,
@@ -443,6 +459,11 @@ def main():
         if args.static_vips:
             env_opts += " -e ~/pilot/templates/static-vip-environment.yaml"
 
+        # The neutron-ovs-dvr.yaml.yaml must be included after the
+        # network-environment.yaml
+        if args.dvr_enable:
+            env_opts += " -e ~/pilot/templates/neutron-ovs-dvr.yaml"
+
         if args.node_placement:
             env_opts += " -e ~/pilot/templates/node-placement.yaml"
 
@@ -454,12 +475,24 @@ def main():
                     " -e ~/pilot/templates/dell-environment.yaml" \
                     " -e ~/pilot/templates/overcloud/environments/" \
                     "puppet-pacemaker.yaml"
+        host_config = False
+        if args.enable_hugepages or args.enable_numa:
+            env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+                        "host-config-and-reboot.yaml"
+            host_config = True
         if args.ovs_dpdk:
             if not args.enable_hugepages or not args.enable_numa:
                     raise ValueError("Both hugepages and numa must be" +
                                      "enabled in order to use OVS-DPDK")
             else:
                 env_opts += " -e ~/pilot/templates/neutron-ovs-dpdk.yaml"
+
+        if args.sriov:
+            env_opts += " -e ~/pilot/templates/neutron-sriov.yaml"
+            env_opts += " -e ~/pilot/templates/ovs-hw-offload.yaml"
+            if not host_config:
+                env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+                            "host-config-and-reboot.yaml"
 
         if args.enable_dellsc:
             env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
