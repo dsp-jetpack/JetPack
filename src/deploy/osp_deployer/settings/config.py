@@ -301,7 +301,7 @@ class Settings():
         if dellnfv_settings['numa_enable'].lower() == 'true':
             self.numa_enable = True
             self.hostos_cpu_count = \
-                    dellnfv_settings['numa_hostos_cpu_count']
+                dellnfv_settings['numa_hostos_cpu_count']
         else:
             self.numa_enable = False
         # Performance and Optimization
@@ -354,7 +354,7 @@ class Settings():
             sanity_settings['sanity_number_instances']
         self.sanity_image_url = sanity_settings['sanity_image_url']
         self.sanity_vlantest_network = \
-	    sanity_settings['sanity_vlantest_network']
+            sanity_settings['sanity_vlantest_network']
         if sanity_settings['run_sanity'].lower() == 'true':
             self.run_sanity = True
         else:
@@ -616,7 +616,7 @@ class Settings():
                                               stderr=subprocess.STDOUT,
                                               shell=True).rstrip()
             self.source_version = re_
-        except:
+        except:  # noqa: E722
             logger.debug("unconventional setup...can t" +
                          " pick source version info")
             self.source_version = "????"
