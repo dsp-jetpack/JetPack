@@ -110,10 +110,51 @@ def configure_nics_boot_settings(
         drac_client,
         ip_service_tag,
         pxe_nic_id,
-        node):
+        node,
+        target_boot_mode):
     LOG.info("Configuring NIC {} on {} to PXE boot".format(
         pxe_nic_id, ip_service_tag))
 
+    if target_boot_mode == boot_mode_helper.DRAC_BOOT_MODE_UEFI:
+        return configure_uefi_nics_boot_settings(drac_client, pxe_nic_id)
+    else:
+        return configure_bios_nics_boot_settings(drac_client, ip_service_tag,
+                                                 pxe_nic_id)
+
+
+def configure_uefi_nics_boot_settings(drac_client, pxe_nic_id):
+    job_ids = []
+    provisioning_mac = None
+    reboot_required = False
+
+    for nic in drac_client.list_nics(sort=True):
+        # Compare the NIC IDs case insensitively. Assume ASCII strings.
+        if nic.id.lower() == pxe_nic_id.lower():
+            settings = {
+               "PxeDev1EnDis": "Enabled",
+               "PxeDev2EnDis": "Disabled",
+               "PxeDev3EnDis": "Disabled",
+               "PxeDev4EnDis": "Disabled",
+               "PxeDev1Interface": pxe_nic_id,
+               "PxeDev1Protocol": "IPv4",
+               "PxeDev1VlanEnDis": "Disabled"
+               }
+
+            provisioning_mac = nic.mac_address.lower()
+            response = drac_client.set_bios_settings(settings)
+            reboot_required = response['commit_required']
+
+            if response['commit_required']:
+                job_id = drac_client.commit_pending_bios_changes(
+                    reboot=False, start_time=None)
+                job_ids.append(job_id)
+
+            break
+
+    return reboot_required, job_ids, provisioning_mac
+
+
+def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
     job_ids = []
     reboot_required = False
     provisioning_mac = None
@@ -371,7 +412,8 @@ def config_idrac(instack_lock,
         configure_nics_boot_settings(drac_client,
                                      ip_service_tag,
                                      pxe_nic_fqdd,
-                                     node)
+                                     node,
+                                     target_boot_mode)
 
     reboot_required = reboot_required or reboot_required_nic
     if nic_job_ids:
