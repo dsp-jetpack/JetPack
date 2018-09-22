@@ -76,32 +76,32 @@ def run_tempest():
 def deploy():
     ret_code = 0
     # noinspection PyBroadException
+
+    logger.debug("=================================")
+    logger.info("=== Starting up ...")
+    logger.debug("=================================")
+
+    parser = argparse.ArgumentParser(
+        description='JetPack 10.x deployer')
+    parser.add_argument('-s', '--settings',
+                        help='ini settings file, e.g settings/acme.ini',
+                        required=True)
+    parser.add_argument('-undercloud_only', '--undercloud_only',
+                        help='Only reinstall the undercloud',
+                        action='store_true', required=False)
+    parser.add_argument('-overcloud_only', '--overcloud_only',
+                        help='Only reinstall the overcloud',
+                        action='store_true', required=False)
+    parser.add_argument('-skip_dashboard_vm', '--skip_dashboard_vm',
+                        help='Do not reinstall the Dashboard VM',
+                        action='store_true',
+                        required=False)
+    parser.add_argument('-validate_only', '--validate_only',
+                        help='No deployment - just validate config values',
+                        action='store_true',
+                        required=False)
+    args, others = parser.parse_known_args()
     try:
-
-        logger.debug("=================================")
-        logger.info("=== Starting up ...")
-        logger.debug("=================================")
-
-        parser = argparse.ArgumentParser(
-            description='JetPack 10.x deployer')
-        parser.add_argument('-s', '--settings',
-                            help='ini settings file, e.g settings/acme.ini',
-                            required=True)
-        parser.add_argument('-undercloud_only', '--undercloud_only',
-                            help='Only reinstall the undercloud',
-                            action='store_true', required=False)
-        parser.add_argument('-overcloud_only', '--overcloud_only',
-                            help='Only reinstall the overcloud',
-                            action='store_true', required=False)
-        parser.add_argument('-skip_dashboard_vm', '--skip_dashboard_vm',
-                            help='Do not reinstall the Dashboard VM',
-                            action='store_true',
-                            required=False)
-        parser.add_argument('-validate_only', '--validate_only',
-                            help='No deployment - just validate config values',
-                            action='store_true',
-                            required=False)
-        args, others = parser.parse_known_args()
         if len(others) > 0:
             parser.print_help()
             msg = "Invalid argument(s) :"
