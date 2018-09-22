@@ -460,7 +460,7 @@ setup_nova (){
   fi
   if [ "$NUMA_ENABLED" != "False" ]; then
     info "### NUMA: Adding metadata properties to flavor"
-    execute_command "openstack flavor set --property numa_mempolicy=preferred --property hw:cpu_policy=dedicated --property hw:cpu_thread_policy=require --property hw:numa_nodes=1 $FLAVOR_NAME"
+    execute_command "openstack flavor set --property hw:cpu_policy=dedicated --property hw:cpu_thread_policy=require --property hw:numa_nodes=1 $FLAVOR_NAME"
   fi
   if [ "$HPG_ENABLED" != "False" ]; then
     info "### HUGEPAGES: Adding metadata properties to flavor"

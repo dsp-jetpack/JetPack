@@ -55,9 +55,6 @@ class ConfigOvercloud(object):
         self.overcloudrc = "source " + home_dir + "/"\
             + self.overcloud_name + "rc;"
         self.nfv_params = NfvParameters()
-        node_uuid, node_data = self.nfv_params.select_compute_node()
-        self.nfv_params.parse_data(node_data)
-        self.nfv_params.get_all_cpus()
 
     def find_ifaces_by_keyword(self, yaml_file, keyword):
         nics = []
@@ -147,6 +144,9 @@ class ConfigOvercloud(object):
                                 hugepage_size, hugepage_size[0:-1], str(hpg_num)
                                 )
             if enable_numa:
+                node_uuid, node_data = self.nfv_params.select_compute_node()
+                self.nfv_params.parse_data(node_data)
+                self.nfv_params.get_all_cpus()
                 self.nfv_params.get_host_cpus(hostos_cpu_count)
                 if ovs_dpdk:
                     dpdk_nics = self.find_ifaces_by_keyword(nic_env_file, 'Dpdk')
