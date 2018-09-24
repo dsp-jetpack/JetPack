@@ -82,18 +82,15 @@ parameters:
     type: string
   ProvisioningNetworkGateway:
     default: 192.168.120.1
-    description: The IP of the gateway on the provisioning network which will allow access to the management network.
-    type: string
-  ControllerProvisioningInterface:
-    default: em3
-    description: Provisioning interface name
+    description: The IP of the gateway on the provisioning network which will
+                 allow access to the management network.
     type: string
   ControllerBond0Interface1:
     default: em1
     description: Bond 0 interface 1 name
     type: string
   ControllerBond0Interface2:
-    default: p3p1
+    default: p1p1
     description: Bond 0 interface 2 name
     type: string
   ControllerBond1Interface1:
@@ -101,13 +98,46 @@ parameters:
     description: Bond 1 interface 1 name
     type: string
   ControllerBond1Interface2:
-    default: p3p2
+    default: p1p2
     description: Bond 1 interface 2 name
     type: string
   ControllerBondInterfaceOptions:
     default: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
     description: The bonding_options string for the bond interface.
     type: string
+  InternalApiMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  StorageNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  StorageMgmtNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  TenantNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  ProvisioningNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  ManagementNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  DefaultBondMTU: # Override this via parameter_defaults
+    default: 9000
+    description: MTU value for this network.
+    type: number
+  ExternalNetworkMTU: 
+    default: 1500
+    description: MTU value for this network.
+    type: number
+    
 resources:
   OsNetConfigImpl:
     type: OS::Heat::SoftwareConfig
@@ -120,9 +150,10 @@ resources:
           params:
             $network_config:
               network_config:
-              - type: interface
-                name:
-                  get_param: ControllerProvisioningInterface
+              - type: ovs_bridge
+                name: br-tenant
+                mtu: 
+                    get_param: ProvisioningNetworkMTU
                 use_dhcp: false
                 addresses:
                 - ip_netmask:
@@ -149,25 +180,31 @@ resources:
                 #-
                 #  default: true
                 #  next_hop: {get_param: ControlPlaneDefaultRoute}
-              - type: ovs_bridge
-                name: br-tenant
                 members:
                 - type: linux_bond
                   name: bond0
+                  mtu:
+                    get_param: DefaultBondMTU
                   bonding_options:
                     get_param: ControllerBondInterfaceOptions
                   members:
                   - type: interface
                     name:
                       get_param: ControllerBond0Interface1
+                    mtu:
+                      get_param: DefaultBondMTU
                     primary: true
                   - type: interface
                     name:
                       get_param: ControllerBond0Interface2
+                    mtu:
+                      get_param: DefaultBondMTU
                 - type: vlan
                   device: bond0
                   vlan_id:
                     get_param: TenantNetworkVlanID
+                  mtu:
+                    get_param: TenantNetworkMTU
                   addresses:
                   - ip_netmask:
                       get_param: TenantIpSubnet
@@ -175,6 +212,8 @@ resources:
                   device: bond0
                   vlan_id:
                     get_param: InternalApiNetworkVlanID
+                  mtu: 
+                    get_param: InternalApiMTU
                   addresses:
                   - ip_netmask:
                       get_param: InternalApiIpSubnet
@@ -182,6 +221,8 @@ resources:
                   device: bond0
                   vlan_id:
                     get_param: StorageNetworkVlanID
+                  mtu:
+                    get_param: StorageNetworkMTU
                   addresses:
                   - ip_netmask:
                       get_param: StorageIpSubnet
@@ -190,23 +231,33 @@ resources:
                   bridge_name
                 dns_servers:
                   get_param: DnsServers
+                mtu:
+                  get_param: DefaultBondMTU
                 members:
                 - type: linux_bond
                   name: bond1
                   bonding_options:
                     get_param: ControllerBondInterfaceOptions
+                  mtu:
+                    get_param: DefaultBondMTU
                   members:
                   - type: interface
                     name:
                       get_param: ControllerBond1Interface1
+                    mtu:
+                      get_param: DefaultBondMTU
                     primary: true
                   - type: interface
                     name:
                       get_param: ControllerBond1Interface2
+                    mtu: 
+                      get_param: DefaultBondMTU
                 - type: vlan
                   device: bond1
                   vlan_id:
                     get_param: ExternalNetworkVlanID
+                  mtu:
+                    get_param: ExternalNetworkMTU
                   addresses:
                   - ip_netmask:
                       get_param: ExternalIpSubnet
@@ -219,4 +270,3 @@ outputs:
     description: The OsNetConfigImpl resource.
     value:
       get_resource: OsNetConfigImpl
-

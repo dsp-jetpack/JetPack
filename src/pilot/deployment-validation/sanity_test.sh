@@ -39,6 +39,7 @@ FLOATING_IP_NETWORK_END=$(get_value floating_ip_network_end_ip)
 FLOATING_IP_NETWORK_GATEWAY=$(get_value floating_ip_network_gateway)
 FLOATING_IP_NETWORK_VLAN=$(get_value floating_ip_network_vlan)
 OVS_DPDK_ENABLED=$(get_value ovs_dpdk_enabled)
+DVR_ENABLED=$(get_value dvr_enabled)
 SANITY_TENANT_NETWORK=$(get_value sanity_tenant_network)
 SANITY_VLANTEST_NETWORK=$(get_value sanity_vlantest_network)
 SANITY_USER_PASSWORD=$(get_value sanity_user_password)
@@ -59,6 +60,9 @@ BASE_VOLUME_NAME=$(get_value base_volume_name)
 BASE_PROJECT_NAME=$(get_value base_project_name)
 BASE_USER_NAME=$(get_value base_user_name)
 BASE_CONTAINER_NAME=$(get_value base_container_name)
+SRIOV_ENABLED=$(get_value sriov_enabled)
+HPG_ENABLED=$(get_value hugepages_enabled)
+NUMA_ENABLED=$(get_value numa_enabled)
 
 IMAGE_FILE_NAME=$(basename $SANITY_IMAGE_URL)
 SECURITY_GROUP_NAME="$BASE_SECURITY_GROUP_NAME"
@@ -361,14 +365,14 @@ setup_glance(){
   if [ ! -f ./$IMAGE_FILE_NAME ]; then
     sleep 5 #HACK: a timing issue exists on some stamps -- 5 seconds seems sufficient to fix it
     info "### Downloading CentOS image file. Please wait..."
-    wget $SANITY_IMAGE_URL
+    wget --progress=bar:force $SANITY_IMAGE_URL
     if [ $? -ne 0 ]; then
       echo "command failed"
       exit 1
     fi
     info "### Download complete."
   else
-    info "#----- Cirros image exists. Skipping"
+    info "#----- CentOS image exists. Skipping"
   fi
 
   image_exists=$(openstack image list -c Name -f value | grep -x $IMAGE_NAME)
@@ -382,6 +386,12 @@ setup_glance(){
   execute_command "openstack image list"
 }
 
+sriov_port_creation(){
+  #Creating ports in the tenant scope
+  set_tenant_scope
+
+  execute_command "openstack port create --network $TENANT_NETWORK_NAME --vnic-type direct $sriov_port_name"
+}
 
 spin_up_instances(){
   tenant_net_id=$(openstack network list -f value | grep " $TENANT_NETWORK_NAME " | awk '{print $1}')
@@ -398,7 +408,16 @@ spin_up_instances(){
   while [ $index -le $((SANITY_NUMBER_INSTANCES + 1)) ]; do
   instance_name="${BASE_NOVA_INSTANCE_NAME}_$index"
     if [ $index != $((${SANITY_NUMBER_INSTANCES} + 1)) ]; then
-      execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $instance_name"
+      if [ "$SRIOV_ENABLED" != False ];then
+        info "### SRIOV: Creating SRIOV ports"
+        sriov_port_name="sriov_port_$index"
+        sriov_port_creation $sriov_port_name
+        sleep 10
+        info "### SRIOV: Initiating build of SR-IOV enabled instances..."
+        execute_command "openstack server create --security-group $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic port-id=$sriov_port_name $instance_name"
+      else
+        execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $instance_name"
+      fi
     else
       info "### Initiating build of Vlan-Aware-Instance..."
       execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic port-id=${pp1_id} --user-data ${HOME}/interfacescript $instance_name"
@@ -418,7 +437,7 @@ spin_up_instances(){
         fatal "### Instance status is: ${instance_status}!  Aborting sanity test"
       else
         info "### Instance status is: ${instance_status}.  Sleeping..."
-        sleep 60
+        sleep 70
         instance_status=$(nova list | grep $instance_name | awk '{print $6}')
       fi
     done
@@ -439,9 +458,17 @@ setup_nova (){
   else
     info "#----- Flavor '$FLAVOR_NAME' exists. Skipping"
   fi
+  if [ "$NUMA_ENABLED" != "False" ]; then
+    info "### NUMA: Adding metadata properties to flavor"
+    execute_command "openstack flavor set --property hw:cpu_policy=dedicated --property hw:cpu_thread_policy=require --property hw:numa_nodes=1 $FLAVOR_NAME"
+  fi
+  if [ "$HPG_ENABLED" != "False" ]; then
+    info "### HUGEPAGES: Adding metadata properties to flavor"
+    execute_command "openstack flavor set --property hw:mem_page_size=large $FLAVOR_NAME"
+  fi
   if [ "$OVS_DPDK_ENABLED" != "False" ]; then
     info "### OVS DPDK: Adding metadata properties to flavor"
-    execute_command "openstack flavor set --property hw:cpu_policy=dedicated --property hw:cpu_thread_policy=require --property hw:mem_page_size=large --property hw:numa_nodes=1 --property hw:numa_mempolicy=preferred  $FLAVOR_NAME"
+    execute_command "openstack flavor set --property hw:emulator_threads_policy=isolate $FLAVOR_NAME"
   fi
   set_tenant_scope
   if [ ! -f ~/$SANITY_KEY_NAME ]; then
@@ -460,7 +487,6 @@ setup_nova (){
     info "skipping loading $SANITY_KEY_NAME keypair into nova"
   fi
 }
-
 
 ping_from_netns(){
 
@@ -487,11 +513,35 @@ ping_from_netns(){
   fi
 }
 
+ping_from_snat_netns(){
+
+  ip=$1
+  name_space=$2
+
+  # Find the controller that has the IP set to an interface in the netns
+  for controller in $CONTROLLERS
+  do
+      ssh ${SSH_OPTS} heat-admin@$controller "sudo /sbin/ip netns list" | grep -q $name_space
+    if [[ "$?" == 0 ]]
+    then
+      break
+    fi
+  done
+
+  info "### Pinging $ip from netns $name_space on controller $controller"
+  execute_command "ssh ${SSH_OPTS} heat-admin@$controller sudo ip netns exec ${name_space} ping -c 1 -w 5 ${ip}"
+  if [[ "$?" == 0 ]]
+  then
+      info "### Successfully pinged $ip from netns $name_space on controller $controller"
+  else
+      fatal "### Unable to ping $ip from netns $name_space on controller $controller!  Aborting sanity test"
+  fi
+}
+
 test_neutron_networking (){
   set_tenant_scope
   router_id=$(openstack router list | grep $TENANT_ROUTER_NAME | awk '{ print $2} ')
 
-  set_tenant_scope
   net_ids=$(openstack network list | grep $TENANT_NETWORK_NAME | awk '{ print $2 " " $6 }')
   net_id=$(echo $net_ids | awk '{print $1}')
   subnet_id=$(echo $net_ids | awk '{print $2}')
@@ -513,7 +563,6 @@ test_neutron_networking (){
       port_id=$(openstack port list | grep $subnet_id | grep $private_ip | awk '{print $2}')
 
       # And finally associate the floating IP with the instance
-      set_tenant_scope
       execute_command "openstack floating ip set $floating_ip_id --port $port_id"
   done
 
@@ -521,9 +570,15 @@ test_neutron_networking (){
 
   for floating_ip in ${floating_ips[@]}
   do
-    # Test pinging the floating IP of the instance from the virtual router
-    # network namespace
-    ping_from_netns $floating_ip "qrouter-${router_id}"
+    if [ "$DVR_ENABLED" == "True" ]; then
+      # Test pinging the floating IP of the instance from the snat
+      # network namespace
+      ping_from_snat_netns $floating_ip "snat-${router_id}"
+    else
+      # Test pinging the floating IP of the instance from the virtual router
+      # network namespace
+      ping_from_netns $floating_ip "qrouter-${router_id}"
+    fi
   done
 }
 
@@ -613,27 +668,28 @@ radosgw_cleanup(){
 script(){
 #Script for the setting up the interfaces of vlan network in vlan aware instance
 info "### Creating interfaces script for interface setup-------------"
+ip_sbp=$(openstack port list | grep subport1_$VLANID_1 | awk '{print $8}' | awk -F"'" '{print $2}')
 gw_vlan_net=${SANITY_VLANTEST_NETWORK%0\/24}1
 cat << EOF >~/interfacescript
 #!/bin/bash
-sudo touch /etc/sysconfig/network-scripts/ifcfg-eth0.$VLANID_1 
-sudo tee /etc/sysconfig/network-scripts/ifcfg-eth0.$VLANID_1 <<- End >/dev/null
-    DEVICE="eth0.$VLANID_1"
-    BOOTPROTO="dhcp"
-    BOOTPROTOv6="dhcp"
+intfc=\$(ip route | grep default | sed -e "s/^.*dev.//" -e "s/.proto.*//") && intfc=\$(echo \$intfc)
+sudo touch /etc/sysconfig/network-scripts/ifcfg-\${intfc}.${VLANID_1} 
+sudo tee /etc/sysconfig/network-scripts/ifcfg-\${intfc}.$VLANID_1 <<- End >/dev/null
+    DEVICE="\${intfc}.$VLANID_1"
+    BOOTPROTO="static"
     ONBOOT="yes"
+    NETMASK=255.255.255.0
+    IPADDR=${ip_sbp}
     USERCTL="yes"
-    IPV6INIT="yes"
     DEFROUTE="no"
-    PEERDNS="yes"
-    PERSISTENT_DHCLIENT="1"
+    PEERDNS="no"
     VLAN=yes
 End
-sudo touch /etc/sysconfig/network-scripts/route-eth0.$VLANID_1
-sudo tee /etc/sysconfig/network-scripts/route-eth0.$VLANID_1 <<- End >/dev/null
-    default via ${gw_vlan_net} dev eth0.${VLANID_1} proto dhcp metric 400
+sudo touch /etc/sysconfig/network-scripts/route-\${intfc}.$VLANID_1
+sudo tee /etc/sysconfig/network-scripts/route-\${intfc}.$VLANID_1 <<- End >/dev/null
+    default via ${gw_vlan_net} dev \${intfc}.${VLANID_1} proto static metric 200
 End
-sudo /etc/sysconfig/network-scripts/ifup ifcfg-eth0.${VLANID_1}
+sudo /etc/sysconfig/network-scripts/ifup ifcfg-\${intfc}.${VLANID_1}
 sudo sleep 3  
 EOF
 }
@@ -787,7 +843,7 @@ then
   trunk_ports=$(openstack network trunk list | grep $TRUNK_PORT1 | awk '{print $2}')
   for trunk_port in $trunk_ports
   do 
-    openstack network trunk remove $trunk_port
+    openstack network trunk delete $trunk_port
   done
   
   parent_ports=$(openstack port list | grep $PARENT_PORT1 | awk '{print $2}')
@@ -802,6 +858,16 @@ then
     openstack port delete $subport
   done
 
+  #Deleting SRIOV ports
+  if [ "$SRIOV_ENABLED" != False ]; then
+    info "### Deleting SRIOV ports..."
+    sriov_ports=$(openstack port list | grep -E "*sriov_port_*" | awk '{print $2}')
+    for sriov_port in $sriov_ports
+    do
+      openstack port delete $sriov_port
+    done
+  fi
+
   info   "#### Deleting the security groups"
   security_group_ids=$(openstack security group list | grep $BASE_SECURITY_GROUP_NAME | awk '{print $2}')
   [[ $security_group_ids ]] && echo $security_group_ids | xargs -n1 openstack security group delete
@@ -815,11 +881,7 @@ then
   do
     for subnet_network_id in $subnet_network_ids
     do
-      port_ids=$(openstack port list | grep $subnet_network_id  |awk ' { print $2 }')
-      for port_id in $port_ids
-      do 
-        openstack router remove port $router_id $port_id
-      done 
+      openstack router remove subnet $router_id $subnet_network_id
     done
     openstack router unset --all-tag $router_id
     openstack router delete $router_id
@@ -874,9 +936,9 @@ else
 
   setup_cinder
 
-  radosgw_test
-
   vlan_aware_test
+
+  radosgw_test
 
   end
 
