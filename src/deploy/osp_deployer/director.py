@@ -565,8 +565,20 @@ class Director(InfraHost):
             'sed -i "s|floating_ip_network_vlan=.*|floating_ip_network_vlan=' +
             self.settings.floating_ip_network_vlan +
             '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|numa_enabled=.*|numa_enabled=' +
+            str(self.settings.numa_enable) +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|hugepages_enabled=.*|hugepages_enabled=' +
+            str(self.settings.hpg_enable) +
+            '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|ovs_dpdk_enabled=.*|ovs_dpdk_enabled=' +
             str(self.settings.enable_ovs_dpdk) +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|sriov_enabled=.*|sriov_enabled=' +
+            str(self.settings.enable_sriov) +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|dvr_enabled=.*|dvr_enabled=' +
+            str(self.settings.dvr_enable) +
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_tenant_network=.*|sanity_tenant_network=' +
             self.settings.sanity_tenant_network +
@@ -793,6 +805,7 @@ class Director(InfraHost):
         static_ips_yaml = self.templates_dir + "/static-ip-environment.yaml"
         static_vip_yaml = self.templates_dir + "/static-vip-environment.yaml"
         neutron_ovs_dpdk_yaml = self.templates_dir + "/neutron-ovs-dpdk.yaml"
+        neutron_sriov_yaml = self.templates_dir + "/neutron-sriov.yaml"
 
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy
@@ -801,11 +814,12 @@ class Director(InfraHost):
         self.upload_file(self.settings.static_vip_yaml, static_vip_yaml)
         self.upload_file(self.settings.neutron_ovs_dpdk_yaml,
                          neutron_ovs_dpdk_yaml)
+        self.upload_file(self.settings.neutron_sriov_yaml, neutron_sriov_yaml)
 
         self.setup_nic_configuration()
 
-        if self.settings.enable_ovs_dpdk is True:
-            self.setup_dpdk_nic_configuration()
+        if self.settings.enable_sriov is True:
+            self.setup_sriov_nic_configuration()
 
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
@@ -935,33 +949,53 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run(cmd)
 
-    def setup_dpdk_nic_configuration(self):
-
-        logger.debug("setting ovs dpdk environment")
-        # Get the user supplied NIC settings from the .ini
+    def setup_sriov_nic_configuration(self):
+        logger.debug("setting SR-IOV environment")
+        # Get seetings from .ini file
         ini_nics_settings = self.settings.get_curated_nics_settings()
 
         cmds = []
-        dpdk_conf = {}
-        env_file = os.path.join(self.templates_dir, "neutron-ovs-dpdk.yaml")
+        sriov_conf = {}
+        env_file = os.path.join(self.templates_dir, "neutron-sriov.yaml")
 
-        # Get and sort the Dpdk interfaces that the user configured
-        for setting_name, setting_value in ini_nics_settings.iteritems():
-            if setting_name.find('Dpdk') != -1:
-                dpdk_conf.update({setting_name: setting_value})
-        dpdk_interfaces = [x[1] for x in sorted(dpdk_conf.items())]
+        #Get and sort the SR-IOV interfaces that user provided
+        for int_name, int_value in ini_nics_settings.iteritems():
+            if int_name.find('Sriov') != -1:
+                sriov_conf.update({int_name : int_value})
+        sriov_interfaces = [x[1] for x in sorted(sriov_conf.items())]
 
-        # The following is joining only the first two dpdk interfaces
-        # for mode 2 or all the interfaces (4) for mode 1
-        if self.settings.ovs_dpdk_mode == 2:
-            interfaces = "'" + ",".join(dpdk_interfaces[0:2]) + "'"
-        else:
-            interfaces = "'" + ",".join(dpdk_interfaces) + "'"
+        interfaces = "'" + ",".join(sriov_interfaces) + "'"
 
         # Build up the sed command to perform variable substitution
-        # in the neutron-ovs-dpdk.yaml (dpdk environment)
-        cmds.append('sed -i "s|DpdkInterfaces:.*|DpdkInterfaces: ' +
-                    interfaces + '|" ' + env_file)
+        # in the neutron-sriov.yaml (sriov environment file)
+        
+        # Specify number of VFs for sriov mentioned interfaces
+        sriov_vfs_setting = []
+        sriov_map_setting = []
+        sriov_pci_passthrough = []
+        physical_network = "physint"
+        for interface in sriov_interfaces:
+            devname = interface
+            mapping = physical_network +':' + interface
+            sriov_map_setting.append(mapping)
+
+            nova_pci = '{devname: ' + '"' + interface + '",' + \
+                        'physical_network: ' + '"' + physical_network +'"}'
+            sriov_pci_passthrough.append(nova_pci)
+
+            interface = interface +':' + self.settings.sriov_vf_count + ':' + 'switchdev'
+            sriov_vfs_setting.append(interface)
+
+        sriov_vfs_setting = "'" + ",".join(sriov_vfs_setting) + "'"  
+        sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"
+        sriov_pci_passthrough = "[" + ",".join(sriov_pci_passthrough) + "]"
+
+        cmds.append('sed -i "s|NeutronSriovNumVFs:.*|NeutronSriovNumVFs: ' +
+            sriov_vfs_setting + '|" ' + env_file)
+        cmds.append('sed -i "s|NeutronPhysicalDevMappings:.*|NeutronPhysicalDevMappings: ' +
+            sriov_map_setting + '|" ' + env_file)
+        cmds.append('sed -i "s|NovaPCIPassthrough:.*|NovaPCIPassthrough: ' +
+            sriov_pci_passthrough + '|" ' + env_file)
 
         # Execute the command related to dpdk configuration
         for cmd in cmds:
@@ -988,7 +1022,9 @@ class Director(InfraHost):
                                     " --overcloud_name " + \
                                     self.settings.overcloud_name + \
                                     " --ntp " + \
-                                    self.settings.sah_node.provisioning_ip
+                                    self.settings.sah_node.provisioning_ip + \
+                                    " --mtu " + \
+                                    self.settings.default_bond_mtu
 
         if self.settings.hpg_enable is True:
             cmd += " --enable_hugepages "
@@ -1011,7 +1047,12 @@ class Director(InfraHost):
             cmd += " --static_vips"
         if self.settings.enable_ovs_dpdk is True:
             cmd += " --ovs_dpdk"
+        if self.settings.enable_sriov is True:
+            cmd += " --sriov"
         # Node placement is required in an automated install. The index order
+        if self.settings.dvr_enable is True:
+            cmd += " --dvr_enable"
+        # Node placement is required in an automated install.  The index order
         # of the nodes is the order in which they are defined in the
         # .properties file
         cmd += " --node_placement"

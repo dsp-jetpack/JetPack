@@ -1,6 +1,7 @@
 heat_template_version: queens
 description: >
-  Bond and VLAN configuration for compute nodes.
+  Bond and VLAN configuration for compute nodes. comment14_0: ' The values of the following parameters are overridden by the
+  entries in' comment15_0: ' network-environment.yaml'
 parameters:
   ControlPlaneIp:
     default: ''
@@ -72,12 +73,16 @@ parameters:
   EC2MetadataIp: # Override this via parameter_defaults
     description: The IP address of the EC2 metadata server.
     type: string
+  ComputeProvisioningInterface:
+    default: em3
+    description: Provisioning interface name
+    type: string
   ComputeBond0Interface1:
     default: em1
     description: Bond 0 interface 1 name
     type: string
   ComputeBond0Interface2:
-    default: p1p1
+    default: p3p1
     description: Bond 0 interface 2 name
     type: string
   ComputeBond1Interface1:
@@ -85,13 +90,25 @@ parameters:
     description: Bond 1 interface 1 name
     type: string
   ComputeBond1Interface2:
-    default: p1p2
+    default: p3p2
     description: Bond 1 interface 2 name
     type: string
   ComputeBondInterfaceOptions:
     default: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
     description: The bonding_options string for the bond interface.
     type: string
+  ComputeSriovInterface1:
+    default: p2p1
+    description: SRIOV Interface 1 name
+    type: string
+  ComputeSriovInterface2:
+    default: p3p1
+    description: SRIOV Interface 2 name
+    type: string
+  ExternalNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
   InternalApiMTU: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
@@ -120,10 +137,6 @@ parameters:
     default: 9000
     description: MTU value for this network.
     type: number
-  ExternalNetworkMTU: 
-    default: 1500
-    description: MTU value for this network.
-    type: number
 resources:
   OsNetConfigImpl:
     type: OS::Heat::SoftwareConfig
@@ -136,11 +149,12 @@ resources:
           params:
             $network_config:
               network_config:
-              - type: ovs_bridge
-                name: br-tenant
-                use_dhcp: false
+              - type: interface
+                name:
+                  get_param: ComputeProvisioningInterface
                 mtu:
                   get_param: ProvisioningNetworkMTU
+                use_dhcp: false
                 dns_servers:
                   get_param: DnsServers
                 addresses:
@@ -156,6 +170,10 @@ resources:
                 - default: true
                   next_hop:
                     get_param: ControlPlaneDefaultRoute
+              - type: ovs_bridge
+                name: br-tenant
+                mtu:
+                  get_param: DefaultBondMTU
                 members:
                 - type: linux_bond
                   name: bond0
@@ -179,7 +197,7 @@ resources:
                   device: bond0
                   vlan_id:
                     get_param: TenantNetworkVlanID
-                  mtu:
+                  mtu: 
                     get_param: TenantNetworkMTU
                   addresses:
                   - ip_netmask:
@@ -188,12 +206,13 @@ resources:
                   device: bond0
                   vlan_id:
                     get_param: InternalApiNetworkVlanID
+                  mtu:
+                    get_param: InternalApiMTU
                   addresses:
                   - ip_netmask:
                       get_param: InternalApiIpSubnet
               - type: ovs_bridge
-                name: 
-                  bridge_name
+                name: br-bond1
                 mtu:
                   get_param: DefaultBondMTU
                 members:
@@ -224,8 +243,21 @@ resources:
                   addresses:
                   - ip_netmask:
                       get_param: StorageIpSubnet
+              - type: interface
+                name:
+                  get_param: ComputeSriovInterface1
+                mtu:
+                  get_param: DefaultBondMTU
+                use_dhcp: false
+              - type: interface
+                name:
+                  get_param: ComputeSriovInterface2
+                mtu:
+                  get_param: DefaultBondMTU
+                use_dhcp: false                                          
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.
     value:
       get_resource: OsNetConfigImpl
+
