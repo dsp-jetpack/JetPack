@@ -262,7 +262,7 @@ def deploy():
         logger.info("Deployment summary info; useful ip's etc.. " +
                     "/auto_results/deployment_summary.log")
 
-    except:
+    except:  # noqa: E722
         logger.error(traceback.format_exc())
         e = sys.exc_info()[0]
         logger.error(e)

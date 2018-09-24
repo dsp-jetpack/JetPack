@@ -476,7 +476,7 @@ class Director(InfraHost):
                 else:
                     logger.warning(
                         "Bad entry in osd_disks: {}".format(osd))
-                    
+
             total_osds = osds_per_node * storage_nodes
             if total_osds >= 41:
                 ceph_pool_default_size = 3
@@ -503,7 +503,7 @@ class Director(InfraHost):
                 if len(tokens) > 0 and (tokens[0].startswith("#") or
                                         tokens[0].startswith("osd_scenario") or
                                         tokens[0].startswith("devices") or
-                                        tokens[0].startswith("dedicated_devices") or
+                                        tokens[0].startswith("dedicated_devices") or  # noqa: E501
                                         tokens[0].startswith("-")):
                     continue
 
@@ -942,7 +942,7 @@ class Director(InfraHost):
         for setting_name, setting_value in ini_nics_settings.iteritems():
             # The following is executing a sed command of the following format:
             # sed -i -r 's/(^\s*StorageBond0Interface1:\s*).*/\1p1p2/'
-            cmds.append('sed -i -r \'s/(^\s*' + setting_name +
+            cmds.append('sed -i -r \'s/(^\s*' + setting_name +    # noqa: W605
                         ':\s*).*/\\1' + setting_value + '/\' ' + remote_file)
 
         # Execute the commands
@@ -958,17 +958,17 @@ class Director(InfraHost):
         sriov_conf = {}
         env_file = os.path.join(self.templates_dir, "neutron-sriov.yaml")
 
-        #Get and sort the SR-IOV interfaces that user provided
+        # Get and sort the SR-IOV interfaces that user provided
         for int_name, int_value in ini_nics_settings.iteritems():
             if int_name.find('Sriov') != -1:
-                sriov_conf.update({int_name : int_value})
+                sriov_conf.update({int_name: int_value})
         sriov_interfaces = [x[1] for x in sorted(sriov_conf.items())]
 
         interfaces = "'" + ",".join(sriov_interfaces) + "'"
 
         # Build up the sed command to perform variable substitution
         # in the neutron-sriov.yaml (sriov environment file)
-        
+
         # Specify number of VFs for sriov mentioned interfaces
         sriov_vfs_setting = []
         sriov_map_setting = []
@@ -976,26 +976,31 @@ class Director(InfraHost):
         physical_network = "physint"
         for interface in sriov_interfaces:
             devname = interface
-            mapping = physical_network +':' + interface
+            mapping = physical_network + ':' + interface
             sriov_map_setting.append(mapping)
 
-            nova_pci = '{devname: ' + '"' + interface + '",' + \
-                        'physical_network: ' + '"' + physical_network +'"}'
+            nova_pci = '{devname: ' + \
+                       '"' + interface + '",' + \
+                       'physical_network: ' + \
+                       '"' + physical_network + '"}'
             sriov_pci_passthrough.append(nova_pci)
 
-            interface = interface +':' + self.settings.sriov_vf_count + ':' + 'switchdev'
+            interface = interface + ':' + \
+                                    self.settings.sriov_vf_count + \
+                                    ':' + 'switchdev'
             sriov_vfs_setting.append(interface)
 
-        sriov_vfs_setting = "'" + ",".join(sriov_vfs_setting) + "'"  
+        sriov_vfs_setting = "'" + ",".join(sriov_vfs_setting) + "'"
         sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"
         sriov_pci_passthrough = "[" + ",".join(sriov_pci_passthrough) + "]"
 
         cmds.append('sed -i "s|NeutronSriovNumVFs:.*|NeutronSriovNumVFs: ' +
-            sriov_vfs_setting + '|" ' + env_file)
-        cmds.append('sed -i "s|NeutronPhysicalDevMappings:.*|NeutronPhysicalDevMappings: ' +
-            sriov_map_setting + '|" ' + env_file)
+                    sriov_vfs_setting + '|" ' + env_file)
+        cmds.append('sed -i "s|NeutronPhysicalDevMappings:.*|' +
+                    'NeutronPhysicalDevMappings: ' +
+                    sriov_map_setting + '|" ' + env_file)
         cmds.append('sed -i "s|NovaPCIPassthrough:.*|NovaPCIPassthrough: ' +
-            sriov_pci_passthrough + '|" ' + env_file)
+                    sriov_pci_passthrough + '|" ' + env_file)
 
         # Execute the command related to dpdk configuration
         for cmd in cmds:
@@ -1110,13 +1115,13 @@ class Director(InfraHost):
             ip_info.append("### nodes ip information ###")
 
             priv_ = self.settings.private_api_network.rsplit(".", 1)[0]
-            priv_.replace(".", '\.')
+            priv_.replace(".", '\.')  # noqa: W605
             pub_ = self.settings.public_api_network.rsplit(".", 1)[0]
-            pub_.replace(".", '\.')
+            pub_.replace(".", '\.')  # noqa: W605
             stor_ = self.settings.storage_network.rsplit(".", 1)[0]
-            stor_.replace(".", '\.')
+            stor_.replace(".", '\.')  # noqa: W605
             clus_ = self.settings.storage_cluster_network.rsplit(".", 1)[0]
-            clus_.replace(".", '\.')
+            clus_.replace(".", '\.')  # noqa: W605
 
             re = self.run_tty(self.source_stackrc +
                               "nova list | grep controller")
@@ -1270,10 +1275,10 @@ class Director(InfraHost):
                                self.settings.cloud_repo_version)
                 ip_info.append("deploy-auto # " +
                                self.settings.deploy_auto_version)
-            except:
+            except:  # noqa: E722
                 pass
             ip_info.append("====================================")
-        except:
+        except:  # noqa: E722
             logger.debug(" Failed to retrieve the nodes ip information ")
         finally:
             for each in ip_info:

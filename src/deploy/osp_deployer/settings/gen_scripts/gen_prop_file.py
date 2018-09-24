@@ -141,7 +141,8 @@ def read_input_file(input_file):
     return settings
 
 
-def generate_output_file(in_data, output_file, excluded_keys, use_service_tags):
+def generate_output_file(in_data, output_file,
+                         excluded_keys, use_service_tags):
     i = 0
     outputFile = open(output_file, 'w')
     sections = []
@@ -223,7 +224,8 @@ def main():
                          "install_user_password",
                          "ipmi_user",
                          "ipmi_password"]
-        generate_output_file(in_data, output_file, excluded_keys, use_service_tag)
+        generate_output_file(in_data, output_file,
+                             excluded_keys, use_service_tag)
     else:
         print("no input data. not populating output ini file")
         sys.exit(1)
