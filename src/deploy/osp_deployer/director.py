@@ -1421,17 +1421,6 @@ class Director(InfraHost):
                   ' enable'
             self.run_tty(cmd)
 
-    def enable_instance_ha(self):
-        if self.settings.enable_instance_ha is True:
-            logger.info("Enabling instance HA")
-            if self.settings.enable_fencing is False:
-                logger.error("Fencing NOT enabled, this is \
-                             required for instance_ha")
-            cmd = 'cd ' + \
-                  self.pilot_dir + \
-                  ';./install-instanceHA.py '
-            self.run_tty(cmd)
-
     def _create_assign_role_command(self, node, role, index):
         node_identifier = ""
         if hasattr(node, 'service_tag'):
