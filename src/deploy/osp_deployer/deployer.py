@@ -255,7 +255,6 @@ def deploy():
         if args.skip_dashboard_vm is False:
             director_vm.configure_dashboard()
         director_vm.enable_fencing()
-        director_vm.enable_instance_ha()
         director_vm.configure_tempest()
         director_vm.run_sanity_test()
         run_tempest()

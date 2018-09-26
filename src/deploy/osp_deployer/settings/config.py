@@ -278,10 +278,6 @@ class Settings():
         else:
             self.enable_fencing = False
 
-        if deploy_settings['enable_instance_ha'].lower() == 'true':
-            self.enable_instance_ha = True
-        else:
-            self.enable_instance_ha = False
         if deploy_settings['dvr_enable'].lower() == 'true':
             self.dvr_enable = True
         else:
