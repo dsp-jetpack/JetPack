@@ -28,7 +28,7 @@ from update_ssh_config import get_nodes
 common_path = os.path.join(os.path.expanduser('~'), 'common')
 sys.path.append(common_path)
 
-from thread_helper import ThreadWithExHandling
+from thread_helper import ThreadWithExHandling  # noqa: E402
 
 logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])

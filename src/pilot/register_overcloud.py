@@ -57,7 +57,7 @@ class RegisterOvercloud:
         logging.basicConfig()
         self.logger = logging.getLogger(__name__)
 
-        self.pool_id_matcher = re.compile("^Pool ID:\s+(.+)$")
+        self.pool_id_matcher = re.compile("^Pool ID:\s+(.+)$")  # noqa: W605
 
     def _get_credential(self, credential_type, credential_name,
                         credential_value=None, required=True):
@@ -149,7 +149,7 @@ class RegisterOvercloud:
 
     def _get_nodes(self):
         os_auth_url, os_tenant_name, os_username, os_password, \
-        os_user_domain_name, os_project_domain_name = \
+            os_user_domain_name, os_project_domain_name = \
             CredentialHelper.get_undercloud_creds()
         auth_url = os_auth_url + "v3"
 
@@ -158,7 +158,7 @@ class RegisterOvercloud:
         kwargs = {'os_username': os_username,
                   'os_password': os_password,
                   'os_auth_url': os_auth_url,
-                  'os_tenant_name': os_tenant_name, 
+                  'os_tenant_name': os_tenant_name,
                   'os_user_domain_name': os_user_domain_name,
                   'os_project_domain_name': os_project_domain_name}
         i_client = ironic_client.get_client(1, **kwargs)

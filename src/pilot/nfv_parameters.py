@@ -48,8 +48,8 @@ class NfvParameters(object):
 
     def get_inspector_client(self):
         os_auth_url, os_tenant_name, os_username, os_password, \
-        os_user_domain_name, os_project_domain_name = \
-        CredentialHelper.get_undercloud_creds()
+            os_user_domain_name, os_project_domain_name = \
+            CredentialHelper.get_undercloud_creds()
         auth_url = os_auth_url + "v3"
 
         kwargs = {
@@ -86,7 +86,7 @@ class NfvParameters(object):
 
     def get_nodes_uuids(self, nodetype):
         nodes = []
-        #ironic = IronicHelper.get_ironic_client()
+        # ironic = IronicHelper.get_ironic_client()
         for node in self.ironic.node.list(detail=True):
             if nodetype in node.properties['capabilities']:
                 nodes.append(node.uuid)
@@ -101,7 +101,7 @@ class NfvParameters(object):
     def get_numa_cpus(self, node_data):
         numa_cpus = {0: {}, 1: {}}
         for d in node_data['numa_topology']['cpus']:
-            numa_cpus[d['numa_node']][d['thread_siblings'][0]] = d['thread_siblings']
+            numa_cpus[d['numa_node']][d['thread_siblings'][0]] = d['thread_siblings']  # noqa: E501
         return numa_cpus
 
     def parse_data(self, node_data):
@@ -111,8 +111,9 @@ class NfvParameters(object):
     def get_all_cpus(self):
         try:
             total_cpus = []
-            assert self.data.has_key('cpus'), "Unable to fetch total number " \
-                                              "of CPUs. Parse CPU data first"
+            assert self.data.has_key('cpus'),\
+                "Unable to fetch total number " \
+                "of CPUs. Parse CPU data first"
             for node in self.data['cpus'].keys():
                 for cpus in self.data['cpus'][node].values():
                     total_cpus.append(cpus)
@@ -126,9 +127,9 @@ class NfvParameters(object):
         host_cpus = []
         pairs = int(math.ceil(int(host_cpus_count)/2.0))
         for i in range(0, pairs):
-            host_cpus.append(self.data['cpus'][i%2][i][0])
-            host_cpus.append(self.data['cpus'][i%2][i][1])
-            self.data['cpus'][i%2].pop(i, None)
+            host_cpus.append(self.data['cpus'][i % 2][i][0])
+            host_cpus.append(self.data['cpus'][i % 2][i][1])
+            self.data['cpus'][i % 2].pop(i, None)
             i += 1
         host_cpus = self.range_extract(sorted(host_cpus, key=int))
         self.host_cpus = ','.join(map(str, host_cpus))
@@ -138,7 +139,7 @@ class NfvParameters(object):
         nics_numa_distribution = {}
         nodes = self.data['nics'].keys()
         for node in nodes:
-            #if not nics_numa_distribution.has_key(node):
+            # if not nics_numa_distribution.has_key(node):
             nics_numa_distribution[node] = False
             for nic in dpdk_nics:
                 if nic in self.data['nics'][node]:
@@ -177,7 +178,7 @@ class NfvParameters(object):
 
     def get_socket_memory(self, mtu, dpdk_nics):
         nodes = self.data['nics'].keys()
-        numa_mem = {el:1024 for el in nodes}
+        numa_mem = {el: 1024 for el in nodes}
         mtu = self.round_to_nearest(mtu, 1024)
         for n in nodes:
             mem = 536870912
@@ -198,12 +199,12 @@ class NfvParameters(object):
     def range_extract(self, a):
         ranges = []
         for k, iterable in groupby(enumerate(sorted(a)), self.subtract):
-             rng = list(iterable)
-             if len(rng) == 1:
-                 s = str(rng[0][1])
-             else:
-                 s = "%s-%s" % (rng[0][1], rng[-1][1])
-             ranges.append(s)
+            rng = list(iterable)
+            if len(rng) == 1:
+                s = str(rng[0][1])
+            else:
+                s = "%s-%s" % (rng[0][1], rng[-1][1])
+            ranges.append(s)
         return ranges
 
     def parse_range(self, s):
@@ -211,19 +212,20 @@ class NfvParameters(object):
         r = set()
         for x in s.split(','):
             t = x.split('-')
-            if len(t) not in [1,2]:
-                raise SyntaxError("hash_range is given its arguement as " + \
-                    s + " which seems not correctly formated.")
-            r.add(int(t[0])) if len(t)==1 else r.update(set(range(int(t[0]),int(t[1])+1)))
-        l = list(r)
-        l.sort()
-        return ','.join(map(str, l))
+            if len(t) not in [1, 2]:
+                raise SyntaxError("hash_range is given its arguement as " +
+                                  s +
+                                  " which seems not correctly formated.")
+            r.add(int(t[0])) if len(t) == 1 else r.update(set(range(int(t[0]), int(t[1]) + 1)))  # noqa: E501
+        ls = list(r)
+        ls.sort()
+        return ','.join(map(str, ls))
 
     def select_compute_node(self):
         ref_node = {"uuid": None, "cpus": None, "data": None}
         for node in self.get_nodes_uuids("compute"):
             self.check_ht_status(node)
-            data = self.get_introspection_data(node) 
+            data = self.get_introspection_data(node)
             if not ref_node["uuid"]:
                 ref_node["uuid"] = node
                 ref_node["data"] = data

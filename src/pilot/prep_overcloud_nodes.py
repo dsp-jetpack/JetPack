@@ -53,11 +53,11 @@ def main():
                                     shell=True)
 
     for node in nodes.splitlines():
-        if len (node) < 1:
+        if len(node) < 1:
             continue
         # Power off the node
         logger.info("Powering off node " + node)
-        cmd = "openstack baremetal node power off " + node 
+        cmd = "openstack baremetal node power off " + node
         logger.debug("    {}".format(cmd))
         os.system(cmd)
 
@@ -67,7 +67,8 @@ def main():
         cmd = "openstack baremetal node boot device set " + node + " pxe"
         logger.debug("    {}".format(cmd))
         os.system(cmd)
-        cmd = "openstack baremetal node set --driver-info force_persistent_boot_device=True " + node
+        cmd = "openstack baremetal node set --driver-info " + \
+              "force_persistent_boot_device=True " + node
         logger.debug("    {}".format(cmd))
         os.system(cmd)
 

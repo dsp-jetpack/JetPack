@@ -46,7 +46,7 @@ def get_nodes():
     for line in subprocess.check_output(nova_list_cmd, shell=True).split('\n'):
         # Create a match object that chops up the "nova list" output so we
         # can extract the pieces we need.
-        m = re.search('(.+ \| )(\S+)(-)(\d+)( .+ctlplane=)(\S+)( .+)', line)
+        m = re.search('(.+ \| )(\S+)(-)(\d+)( .+ctlplane=)(\S+)( .+)', line)  # noqa: W605
         if not m:
             # No match (probably banner text)
             continue
@@ -76,7 +76,7 @@ def update_known_hosts(host_addrs):
     try:
         with open(known_hosts, 'r') as f:
             hosts = list(f)
-    except:
+    except:  # noqa: E722
         hosts = []
 
     # Remove stale references to all host_addrs
@@ -100,7 +100,7 @@ def update_known_hosts(host_addrs):
         subprocess.call(cmd,
                         stdout=open(known_hosts_new, 'a'),
                         stderr=open('/dev/null', 'w'))
-    except:
+    except:  # noqa: E722
         pass
 
     if os.path.isfile(known_hosts):

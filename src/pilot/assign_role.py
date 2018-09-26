@@ -663,7 +663,7 @@ def physical_disk_id_to_key(disk_id):
     disk_connection_type = disk_subcomponents[1]
     try:
         disk_number = int(disk_subcomponents[2])
-    except:
+    except:  # noqa: E722
         disk_number = int(disk_subcomponents[2].split('-')[0])
 
     enclosure_type = enclosure_subcomponents[1]
@@ -1461,7 +1461,7 @@ def change_physical_disk_state(drac_client, mode,
                     job_id = drac_client.commit_pending_raid_changes(
                         controller, reboot=False, start_time=None)
                     job_ids.append(job_id)
-    except:
+    except:  # noqa: E722
         # If any exception (except Not Supported) occurred during the
         # conversion, then roll back all the changes for this node so we don't
         # leave pending config jobs in the job queue
@@ -1541,7 +1541,7 @@ def main():
         sys.exit(1)
     except SystemExit:
         raise
-    except:  # Catch all exceptions.
+    except:  # noqa: E722
         LOG.exception("Unexpected error")
         sys.exit(1)
     finally:
