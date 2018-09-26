@@ -37,6 +37,7 @@ from socket import getaddrinfo
 logging.basicConfig()
 LOG = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
+
 class DashboardException(BaseException):
     pass
 
@@ -162,7 +163,7 @@ def get_ceph_nodes(username):
     LOG.info("Identifying Ceph nodes (Monitor and OSD nodes)")
 
     os_auth_url, os_tenant_name, os_username, os_password, \
-    os_user_domain_name, os_project_domain_name = \
+        os_user_domain_name, os_project_domain_name = \
         CredentialHelper.get_undercloud_creds()
     auth_url = os_auth_url + "v3"
 
@@ -187,17 +188,17 @@ def get_ceph_nodes(username):
 
         # Identify Ceph nodes by looking for Ceph monitor or OSD processes.
         # If there are none then it's not a Ceph node.
-        ceph_procs = node.run("pgrep -l 'ceph-[mon\|osd]'",
+        ceph_procs = node.run("pgrep -l 'ceph-[mon\|osd]'",  # noqa: W605
                               check_status=False)
         if ceph_procs:
-            # A small cheat below strips domain name from node name 
+            # A small cheat below strips domain name from node name
             # as it is not ever used to coonfigure the dashboard
-            node.fqdn = node.fqdn + ".mydomain" 
-            #if (node.fqdn.find(".")):
+            node.fqdn = node.fqdn + ".mydomain"
+            # if (node.fqdn.find(".")):
             if ('.' in node.fqdn):
                 node.fqdn, domain_name = node.fqdn.split('.', 1)
-            else: 
-                node.fqdn = node.fqdn 
+            else:
+                node.fqdn = node.fqdn
             LOG.info("{} ({}) is a Ceph node".format(node.fqdn,
                                                      node.storage_ip))
             ceph_nodes.append(node)
@@ -244,7 +245,7 @@ def prep_dashboard_hosts(dashboard_node, ceph_nodes):
         beg = host_entries.index(beg_banner)
         end = host_entries.index(end_banner)
         del(host_entries[beg:end+1])
-    except:
+    except:  # noqa: E722
         pass
 
     # Create a new hosts file with the Ceph nodes at the end
@@ -296,7 +297,7 @@ def prep_ceph_hosts(dashboard_node, ceph_nodes):
             beg = host_entries.index(beg_banner)
             end = host_entries.index(end_banner)
             del(host_entries[beg:end+1])
-        except:
+        except:  # noqa: E722
             pass
 
         # Create a new hosts file with the Ceph Storage Dashboard
@@ -377,7 +378,7 @@ def prep_root_user(dashboard_node, ceph_nodes):
         node.run("sudo chmod 0400 {}".format(root_key))
 
 
-def prep_heat_admin_user (dashboard_node, ceph_nodes):
+def prep_heat_admin_user(dashboard_node, ceph_nodes):
     """ Prepares heat_admin user on the Ceph Storage Dashboard
     Modifies the Ceph Storage Nodes so that Ceph Storage Dashboard
     can access so that root can install dashboard.
@@ -413,10 +414,12 @@ def prep_heat_admin_user (dashboard_node, ceph_nodes):
         dashboard_node.run("sudo /bin/bash -c 'if [ ! -d {} ]; \
                            then mkdir {}; fi'"
                            .format(node_ssh_dir, node_ssh_dir))
-        dashboard_node.run("sudo chown heat-admin.heat-admin {}".format(node_ssh_dir))
+        dashboard_node.run("sudo chown heat-admin.heat-admin {}"
+                           .format(node_ssh_dir))
         dashboard_node.run("sudo chmod 0700 {}".format(node_ssh_dir))
         dashboard_node.run("sudo mv {} {}".format(tmp_ssh_file, node_file))
-        dashboard_node.run("sudo chown heat-admin.heat-admin {}".format(node_file))
+        dashboard_node.run("sudo chown heat-admin.heat-admin {}"
+                           .format(node_file))
         dashboard_node.run("sudo chmod 0600 {}".format(node_file))
         dashboard_node.run("sudo restorecon {}".format(node_file))
     dashboard_node.run("sudo cat ~heat-admin/.ssh/id_rsa.pub \
@@ -424,7 +427,8 @@ def prep_heat_admin_user (dashboard_node, ceph_nodes):
 
     for node in ceph_nodes:
         tmp_keys = os.path.join("/tmp", "key-{}".format(node.fqdn))
-        node.run("sudo cp {} {}-{}.bak".format(heat_admin_key, heat_admin_key, bak_date))
+        node.run("sudo cp {} {}-{}.bak"
+                 .format(heat_admin_key, heat_admin_key, bak_date))
         node.run("sudo cp {} {}".format(heat_admin_key, tmp_key))
         node.run("sudo chmod 0644 {}".format(tmp_key))
         node.run("sudo sed -i 's/{}//' {}".format(repl_str, tmp_key))
@@ -459,7 +463,7 @@ def prep_ansible_hosts(dashboard_node, ceph_nodes):
         beg = host_entries.index(beg_banner)
         end = host_entries.index(end_banner)
         del(host_entries[beg:end+1])
-    except:
+    except:  # noqa: E722
         pass
 
     # Update the ansible hosts file with the Ceph nodes at the end
@@ -536,7 +540,7 @@ def prep_ceph_conf(dashboard_node, ceph_nodes):
                 beg = host_entries.index(beg_banner)
                 end = host_entries.index(end_banner)
                 del(host_entries[beg:end+1])
-            except:
+            except:  # noqa: E722
                 pass
 
             # Create ceph_conf with the preluminous entry
@@ -561,9 +565,9 @@ def prep_collectd(dashboard_node, ceph_nodes):
     collectd_dir = "/etc/collectd.d"
 
     for node in ceph_nodes:
-         LOG.info("Restarting collectd service on node ({})"
-                  .format(node.fqdn))
-         node.run("sudo systemctl restart collectd")
+        LOG.info("Restarting collectd service on node ({})"
+                 .format(node.fqdn))
+        node.run("sudo systemctl restart collectd")
 
 
 def prep_cluster_for_collection(dashboard_node, ceph_nodes, dashboard_addr):
@@ -678,7 +682,7 @@ def patch_selinux_yaml(dashboard_node):
     """
 
     selinux_yaml = "/usr/share/cephmetrics-ansible/roles/" + \
-                       "ceph-collectd/tasks/selinux.yml"
+                   "ceph-collectd/tasks/selinux.yml"
 
     status, stdout, stderr = dashboard_node.execute("[ -f {}.orig ] \
                                                     && echo true \
@@ -706,7 +710,7 @@ cat << EOF|sudo patch -b -d /usr/share/cephmetrics-ansible/roles/ceph-collectd/t
 +#  when: "'osds' in group_names"
 +#  register: restorecon
 +#  changed_when: restorecon.stdout|length != 0 or restorecon.stderr|length != 0
- 
+
  - include: selinux_module.yml
    when:
 EOF
@@ -722,7 +726,7 @@ def patch_facts_yaml(dashboard_node):
     """
 
     facts_yaml = "/usr/share/ceph-ansible/roles/" + \
-                       "ceph-defaults/tasks/facts.yml"
+                 "ceph-defaults/tasks/facts.yml"
 
     status, stdout, stderr = dashboard_node.execute("[ -f {}.orig ] \
                                                     && echo true \
@@ -739,7 +743,7 @@ cat << EOF|sudo patch -b -d /usr/share/ceph-ansible/roles/ceph-defaults/tasks
 @@ -154,32 +154,32 @@
      - rbd_client_directory_mode is not defined
        or not rbd_client_directory_mode
- 
+
 -- name: resolve device link(s)
 -  command: readlink -f {{ item }}
 -  changed_when: false
@@ -792,7 +796,7 @@ cat << EOF|sudo patch -b -d /usr/share/ceph-ansible/roles/ceph-defaults/tasks
 +#    - inventory_hostname in groups.get(osd_group_name, [])
 +#    - not osd_auto_discovery|default(False)
 +#    - osd_scenario|default('dummy') != 'lvm'
- 
+
  - name: set_fact ceph_uid for Debian based system
    set_fact:
 EOF
@@ -826,7 +830,9 @@ def main():
     patch_selinux_yaml(dashboard_node)
     patch_facts_yaml(dashboard_node)
     prep_collectd(dashboard_node, ceph_nodes)
-    prep_cluster_for_collection(dashboard_node, ceph_nodes, args.dashboard_addr)
+    prep_cluster_for_collection(dashboard_node,
+                                ceph_nodes,
+                                args.dashboard_addr)
 
 
 if __name__ == "__main__":

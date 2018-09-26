@@ -56,7 +56,7 @@ def main():
     with open(import_json, 'w') as out:
         json.dump(content, out)
     logger.info("Importing {} into ironic".format(args.node_definition))
-    cmd = ["openstack","overcloud","node","import", import_json]
+    cmd = ["openstack", "overcloud", "node", "import", import_json]
     exit_code, stdin, stderr = Exec.execute_command(cmd)
     if exit_code != 0:
         logger.error("Failed to import nodes into ironic: {}, {}".format(
@@ -105,7 +105,6 @@ def main():
                           'path': '/properties/provisioning_mac'})
 
         ironic_client.node.update(ironic_node.uuid, patch)
-
 
 
 if __name__ == "__main__":
