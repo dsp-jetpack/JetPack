@@ -278,14 +278,6 @@ class Settings():
         else:
             self.enable_fencing = False
 
-        if deploy_settings['dvr_enable'].lower() == 'true':
-            self.dvr_enable = True
-        else:
-            self.dvr_enable = False
-        if self.dvr_enable:
-            logger.info("DVR is enabled.")
-        else:
-            logger.info("DVR is disabled.")
         self.overcloud_nodes_pwd = deploy_settings['overcloud_nodes_pwd']
         dellnfv_settings = self.get_settings_section(
             "Dell NFV Settings")
@@ -300,6 +292,12 @@ class Settings():
                 dellnfv_settings['numa_hostos_cpu_count']
         else:
             self.numa_enable = False
+        if dellnfv_settings['dvr_enable'].lower() == 'true':
+            self.dvr_enable = True
+            logger.info("DVR is enabled.")
+        else:
+            self.dvr_enable = False
+            logger.info("DVR is disabled.")
         # Performance and Optimization
         performance_and_optimization = self.get_settings_section(
             "Performance and Optimization")
