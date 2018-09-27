@@ -49,8 +49,14 @@
                 "in_range": [
                    "1-64"
                 ]
-             }
-           }        
+             },
+            "dvr_enable" :{
+              "valid_values": [
+                 "true",
+                 "false"
+              ]
+            }
+         }        
    },
    {
       "Performance and Optimization": {
@@ -189,13 +195,7 @@
                   "false"
                ]
             },
-         "enable_fencing":"",
-         "dvr_enable" :{
-               "valid_values": [
-                  "true",
-                  "false"
-               ]
-            }
+         "enable_fencing":""
          }
       },
       {
