@@ -285,7 +285,7 @@ echo "## Done."
 
 # These patches add support for BOSS cards
 echo 
-echo "### Patching raid_conig_schema"
+echo "### Patching raid_config_schema"
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/raid_config_schema.json ${HOME}/pilot/raid_schema.patch"
 ech "done"
 echo "### Patching raid.py"
