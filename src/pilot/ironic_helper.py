@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import ironicclient
+import os
 from credential_helper import CredentialHelper
 
 from ironicclient.common.apiclient.exceptions import NotFound
@@ -24,14 +25,31 @@ class IronicHelper:
 
     @staticmethod
     def get_ironic_client():
-        os_auth_url, os_tenant_name, os_username, os_password = \
-            CredentialHelper.get_undercloud_creds()
-
-        kwargs = {'os_username': os_username,
-                  'os_password': os_password,
-                  'os_auth_url': os_auth_url,
-                  'os_tenant_name': os_tenant_name,
-                  'os_ironic_api_version': '1.15'}
+        kwargs = {'os_user_domain_name': os.environ['OS_USER_DOMAIN_NAME'],
+                  'os_cacert': None,
+                  'os_tenant_name': '',
+                  'os_user_domain_id': '',
+                  'os_cert': None,
+                  'os_ironic_api_version': '1.34',
+                  'os_project_id': '',
+                  'retry_interval': 2,
+                  'os_tenant_id': '',
+                  'os_service_type': '',
+                  'os_key': None,
+                  'os_project_domain_id': '',
+                  'insecure': False,
+                  'max_retries': 5,
+                  'os_endpoint_type': '',
+                  'os_region_name': '',
+                  'os_auth_token': '',
+                  'ironic_url': '',
+                  'timeout': 600,
+                  'os_project_domain_name': os.environ[
+                      'OS_PROJECT_DOMAIN_NAME'],
+                  'os_username': os.environ['OS_USERNAME'],
+                  'os_password': os.environ['OS_PASSWORD'],
+                  'os_auth_url': os.environ['OS_AUTH_URL'],
+                  'os_project_name': os.environ['OS_PROJECT_NAME']}
         return ironicclient.client.get_client(1, **kwargs)
 
     @staticmethod
