@@ -27,8 +27,6 @@ import novaclient.client as nova_client
 import time
 from command_helper import Ssh
 from novaclient.v2 import aggregates
-from novaclient.v2 import hosts
-from novaclient.v2 import servers
 from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
 from credential_helper import CredentialHelper
@@ -124,13 +122,16 @@ def create_flavors():
         {"id": "5", "name": "m1.xlarge", "memory": 16384, "disk": 160,
          "cpus": 8}]
 
-    os_auth_url, os_tenant_name, os_username, os_password = \
-        CredentialHelper.get_overcloud_creds()
+    os_auth_url, os_tenant_name, os_username, os_password, \
+        os_user_domain_name, os_project_domain_name = \
+        CredentialHelper.get_undercloud_creds()
 
     kwargs = {'username': os_username,
               'password': os_password,
               'auth_url': os_auth_url,
-              'project_id': os_tenant_name}
+              'project_id': os_tenant_name,
+              'user_domain_name': os_user_domain_name,
+              'project_domain_name': os_project_domain_name}
     n_client = nova_client.Client(2, **kwargs)
 
     existing_flavor_ids = []
@@ -159,7 +160,7 @@ def create_volume_types():
         for line in cinder_file:
             line = line.strip()
             try:
-                found = re.search('cinder_user_enabled_backends: \[(.+?)\]',
+                found = re.search('cinder_user_enabled_backends: \[(.+?)\]',  # noqa: W605
                                   line).group(1)
                 backends = found.split(",")
                 for backend in backends:
@@ -195,8 +196,8 @@ def run_deploy_command(cmd):
     status = os.system(cmd)
 
     if status == 0:
-        stack = CredentialHelper.get_overcloud_stack()
-        if not stack or 'FAILED' in stack.stack_status:
+        stack_status = CredentialHelper.get_overcloud_stack_status()
+        if not stack_status or 'FAILED' in stack_status:
             logger.info("\nDeployment failed even "
                         "though command returned success.")
             status = 1
@@ -205,18 +206,18 @@ def run_deploy_command(cmd):
 
 
 def finalize_overcloud():
-    from os_cloud_config.utils import clients
+    # from keystone.v3 import client
 
-    os_auth_url, os_tenant_name, os_username, os_password = \
-        CredentialHelper.get_overcloud_creds()
+    # os_auth_url, os_tenant_name, os_username, os_password = \
+    #     CredentialHelper.get_overcloud_creds()
 
-    try:
-        keystone_client = clients.get_keystone_client(os_username,
-                                                      os_password,
-                                                      os_tenant_name,
-                                                      os_auth_url)
-    except:
-        return None
+    # try:
+    #     keystone_client = client.get_keystone_client(os_username,
+    #                                                 os_password,
+    #                                                 os_tenant_name,
+    #                                                 os_auth_url)
+    # except:
+    #     return None
 
     create_flavors()
     create_volume_types()
@@ -308,6 +309,10 @@ def main():
                             action='store_true',
                             default=False,
                             help="Disable cinder Ceph and rbd backend")
+        parser.add_argument('--dvr_enable',
+                            action='store_true',
+                            default=False,
+                            help="Enables Distributed Virtual Routing")
         parser.add_argument('--static_ips',
                             action='store_true',
                             default=False,
@@ -320,6 +325,10 @@ def main():
                             action='store_true',
                             default=False,
                             help="Enable OVS+DPDK")
+        parser.add_argument('--sriov',
+                            action='store_true',
+                            default=False,
+                            help="Enable SR-IOV")
         parser.add_argument('--node_placement',
                             action='store_true',
                             default=False,
@@ -330,14 +339,21 @@ def main():
                             action='store_true',
                             help="Indicates if the deploy-overcloud script "
                                  "should be run in debug mode")
+        parser.add_argument("--mtu",
+                            dest="mtu",
+                            type=int,
+                            required=True,
+                            default=1500,
+                            help="Tenant Network MTU")
         LoggingHelper.add_argument(parser)
         args = parser.parse_args()
         LoggingHelper.configure_logging(args.logging_level)
-        p = re.compile('\d+:\d+')
+        p = re.compile('\d+:\d+')  # noqa: W605
         if not p.match(args.vlan_range):
             raise ValueError("Error: The VLAN range must be a number followed "
                              "by a colon, followed by another number")
-        os_auth_url, os_tenant_name, os_username, os_password = \
+        os_auth_url, os_tenant_name, os_username, os_password, \
+            os_user_domain_name, os_project_domain_name = \
             CredentialHelper.get_undercloud_creds()
 
         # Set up the default flavors
@@ -368,13 +384,13 @@ def main():
         # time the overcloud is deployed (instead of once, after the Director
         # is installed) in order to ensure an update to the Director doesn't
         # overwrite the patch.
-        logger.info("Applying patches to director...")
-        cmd = os.path.join(home_dir, 'pilot', 'patch-director.sh')
-        status = os.system(cmd)
-        if status != 0:
-            raise ValueError("\nError: {} failed, unable to continue.  See "
-                             "the comments in that file for additional "
-                             "information".format(cmd))
+        # logger.info("Applying patches to director...")
+        # cmd = os.path.join(home_dir, 'pilot', 'patch-director.sh')
+        # status = os.system(cmd)
+        # if status != 0:
+        #    raise ValueError("\nError: {} failed, unable to continue.  See "
+        #                     "the comments in that file for additional "
+        #                     "information".format(cmd))
         # Pass the parameters required by puppet which will be used
         # to enable/disable dell nfv features
         # Edit the dellnfv_environment.yaml
@@ -385,16 +401,26 @@ def main():
         # Remove this when Numa siblings added
         # Edit the dellnfv_environment.yaml
         config.edit_environment_files(
+            args.mtu,
             args.enable_hugepages,
             args.enable_numa,
             args.hugepages_size,
             args.hostos_cpu_count,
             args.ovs_dpdk,
-            args.nic_env_file,
+            args.sriov,
+            nic_env_file,
             args.mariadb_max_connections,
             args.innodb_buffer_pool_size,
             args.innodb_buffer_pool_instances,
-            args.num_dell_computes)
+            args.num_controllers,
+            args.num_storage,
+            control_flavor,
+            ceph_storage_flavor,
+            swift_storage_flavor,
+            block_storage_flavor,
+            args.vlan_range,
+            args.num_dell_computes
+            )
 
         # Launch the deployment
 
@@ -433,6 +459,11 @@ def main():
         if args.static_vips:
             env_opts += " -e ~/pilot/templates/static-vip-environment.yaml"
 
+        # The neutron-ovs-dvr.yaml.yaml must be included after the
+        # network-environment.yaml
+        if args.dvr_enable:
+            env_opts += " -e ~/pilot/templates/neutron-ovs-dvr.yaml"
+
         if args.node_placement:
             env_opts += " -e ~/pilot/templates/node-placement.yaml"
 
@@ -440,11 +471,15 @@ def main():
         # storage-environment.yaml and ceph-radosgw.yaml
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "storage-environment.yaml" \
-                    " -e ~/pilot/templates/overcloud/environments/" \
-                    "ceph-radosgw.yaml" \
+                    " -e ~/overcloud_images.yaml" \
                     " -e ~/pilot/templates/dell-environment.yaml" \
                     " -e ~/pilot/templates/overcloud/environments/" \
                     "puppet-pacemaker.yaml"
+        host_config = False
+        if args.enable_hugepages or args.enable_numa:
+            env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+                        "host-config-and-reboot.yaml"
+            host_config = True
         if args.ovs_dpdk:
             if not args.enable_hugepages or not args.enable_numa:
                     raise ValueError("Both hugepages and numa must be" +
@@ -452,49 +487,35 @@ def main():
             else:
                 env_opts += " -e ~/pilot/templates/neutron-ovs-dpdk.yaml"
 
+        if args.sriov:
+            env_opts += " -e ~/pilot/templates/neutron-sriov.yaml"
+            env_opts += " -e ~/pilot/templates/ovs-hw-offload.yaml"
+            if not host_config:
+                env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+                            "host-config-and-reboot.yaml"
+
         if args.enable_dellsc:
             env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
 
-        cmd = "cd ; openstack overcloud deploy" \
+        cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
               " --log-file ~/pilot/overcloud_deployment.log" \
               " -t {}" \
               " {}" \
               " --templates ~/pilot/templates/overcloud" \
+              " -e /usr/share/openstack-tripleo-heat-templates/" \
+              "environments/ceph-ansible/ceph-ansible.yaml" \
+              " -e /usr/share/openstack-tripleo-heat-templates/" \
+              "environments/ceph-ansible/ceph-rgw.yaml" \
               " {}" \
-              " --control-flavor {}" \
-              " --ceph-storage-flavor {}" \
-              " --swift-storage-flavor {}" \
-              " --block-storage-flavor {}" \
-              " --neutron-public-interface bond1" \
-              " --neutron-network-type vlan" \
-              " --neutron-disable-tunneling" \
               " --libvirt-type kvm" \
-              " --os-auth-url {}" \
-              " --os-project-name {}" \
-              " --os-user-id {}" \
-              " --os-password {}" \
-              " --control-scale {}" \
-              " --ceph-storage-scale {}" \
               " --ntp-server {}" \
-              " --neutron-network-vlan-ranges physint:{},physext" \
-              " --neutron-bridge-mappings physint:br-tenant,physext:br-ex" \
               "".format(debug,
                         args.timeout,
                         overcloud_name_opt,
                         env_opts,
-                        control_flavor,
-                        ceph_storage_flavor,
-                        swift_storage_flavor,
-                        block_storage_flavor,
-                        os_auth_url,
-                        os_tenant_name,
-                        os_username,
-                        os_password,
-                        args.num_controllers,
-                        args.num_storage,
                         args.ntp_server_fqdn,
-                        args.vlan_range)
+                        )
 
         with open(os.path.join(home_dir, 'pilot', 'overcloud_deploy_cmd.log'),
                   'w') as f:

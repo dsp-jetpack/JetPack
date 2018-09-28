@@ -62,7 +62,7 @@ subnet_name="ctlplane"
 configure_cleaning_network()
 {
   network_name="$1"
-  network_uuid=$(neutron net-list | grep "${network_name}" | awk '{print $2}')
+  network_uuid=$(openstack network list | grep "${network_name}" | awk '{print $2}')
   sudo sed -i.bak "s/^.*cleaning_network_uuid.*$/cleaning_network_uuid\ =\ $network_uuid/" /etc/ironic/ironic.conf
   sudo systemctl restart openstack-ironic-conductor.service
 }
@@ -139,12 +139,15 @@ echo
 echo "## Configuring paths..."
 ESCAPED_HOME=${HOME//\//\\/}
 sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
+# Clean the nodes disks befor redeploying
+#sed -i "s/clean_nodes = false/clean_nodes = true/" $HOME/pilot/undercloud.conf
 cp $HOME/pilot/undercloud.conf $HOME
 echo "## Done."
 
 echo
 echo "## Installing Director"
 run_command "sudo yum -y install python-tripleoclient"
+run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
 run_command "sudo yum -y install python-*-tests"
@@ -161,14 +164,14 @@ echo
 images_tar_path='.'
 if [ ! -d $HOME/pilot/images ];
 then
-  sudo yum install rhosp-director-images-ipa -y
+  sudo yum install rhosp-director-images rhosp-director-images-ipa -y
 
   # It's not uncommon to get connection reset errors when installing this 1.2G
   # RPM.  Keep retrying to complete the download
   echo "Downloading and installing rhosp-director-image"
   while :
   do
-    yum_out=$(sudo yum install rhosp-director-images -y 2>&1)
+    yum_out=$(sudo yum install rhosp-director-images rhosp-director-images-ipa -y 2>&1)
     yum_rc=$?
     echo $yum_out
     if [ $yum_rc -eq 1 ]
@@ -192,7 +195,7 @@ then
 fi
 cd $HOME/pilot/images
 
-for i in /usr/share/rhosp-director-images/overcloud-full-latest-10.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-10.0.tar;
+for i in /usr/share/rhosp-director-images/overcloud-full-latest-13.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-13.0.tar;
 do
   tar -xvf $i;
 done
@@ -205,6 +208,7 @@ run_command "~/pilot/customize_image.sh ${subscription_manager_user} ${subscript
 echo
 if [ -n "${overcloud_nodes_pwd}" ]; then
     echo "# Setting overcloud nodes password"
+    run_command "sudo yum install libguestfs-tools -y"
     run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd}"
 fi
 
@@ -224,8 +228,8 @@ echo "## Done."
 
 echo
 echo "## Setting DNS in Neutron ${subnet_name} subnet..."
-subnet_uuid=$(neutron net-list | grep "${subnet_name}" | awk '{print $6}')
-neutron subnet-update "${subnet_uuid}" --dns-nameserver "${dns_ip}"
+subnet_uuid=$(openstack network list | grep "${subnet_name}" | awk '{print $6}')
+openstack subnet set "${subnet_uuid}" --dns-nameserver "${dns_ip}"
 echo "## Done."
 
 echo
@@ -240,23 +244,14 @@ echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
-# This hacks in a patch to work around a known issue where RAID configuration
-# fails because the iDRAC is busy running an export to XML job and is not
-# ready. Note that this patch must be here because we use this code prior to
-# deploying the director.
-echo
-echo "## Patching Ironic iDRAC driver is_ready check..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
-echo "## Done."
 
+# This hacks in a patch to increase the number of iDRAC is-ready retries to 96,
+# which is required for the latest firmware.
 echo
-echo "## Patching Ironic iDRAC driver uris.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/uris.py ${HOME}/pilot/uris.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyo
-echo "## Done."
+echo "## Patching Ironic iDRAC driver constants.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/constants.py ${HOME}/pilot/constants.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyo
 
 # This hacks in a patch to work around an issue where the iDRAC can return
 # invalid non-ASCII characters during an enumeration.
@@ -267,14 +262,14 @@ sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
 
 # This hacks in a patch to work around a known issue where a RAID-10 virtual
-# disk cannot be created from more than 16 backing physical disks.  This also
-# patches in support for NVMe drives.  Note that this code must be here because
-# we use this code prior to deploying the director.
+# disk cannot be created from more than 16 backing physical disks.
+# Note that this code must be here because we use this code prior to deploying
+# the director.
 echo
-echo "## Patching Ironic iDRAC driver RAID library..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
+echo "## Patching Ironic iDRAC driver raid.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
 echo "## Done."
 
 # This patches workarounds for two issues into ironic.conf.
@@ -288,6 +283,29 @@ echo "## Patching ironic.conf..."
 apply_patch "sudo patch -b -s /etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
 echo "## Done."
 
+# These patches add support for BOSS cards
+echo 
+echo "### Patching raid_config_schema"
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/raid_config_schema.json ${HOME}/pilot/raid_schema.patch"
+ech "done"
+echo "### Patching raid.py"
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/drac_raid.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
+echo "done"
+
+# This patches an issue where the  Ironic api service returns http 500 errors
+# https://bugzilla.redhat.com/show_bug.cgi?id=1613995
+echo 
+echo "## Patching 10-ironic_wsgi.conf"
+apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
+echo "## Done"
+
+echo 
+echo "## Restarting httpd"
+sudo systemctl restart httpd
+echo "## Done"
+
 echo
 echo "## Restarting openstack-ironic-conductor.service..."
 sudo systemctl restart openstack-ironic-conductor.service
@@ -298,6 +316,21 @@ echo
 echo "## Configuring neutron network ${network} as a cleaning network"
 configure_cleaning_network $network
 echo "## Done."
+
+touch ~/overcloud_images.yaml
+
+openstack overcloud container image prepare --output-env-file ~/overcloud_images.yaml \
+ --namespace=registry.access.redhat.com/rhosp13 \
+ -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+ -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
+ --set ceph_namespace=registry.access.redhat.com/rhceph \
+ --set ceph_image=rhceph-3-rhel7 \
+ --tag-from-label {version}-{release}  
+
+sudo yum install -y os-cloud-config
+sudo yum install -y ceph-ansible
+
+
 
 echo
 echo "## Configuration complete!"

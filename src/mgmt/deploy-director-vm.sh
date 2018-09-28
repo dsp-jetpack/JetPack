@@ -70,7 +70,7 @@ EOFKS
 { 
 ntp=""
 
-while read iface ip mask bridge
+while read iface ip mask mtu
 do
   flag=""
 
@@ -106,21 +106,23 @@ do
   [[ ${iface} == smproxypassword ]] && echo "echo SMProxyPassword=${ip} >> /tmp/ks_post_include.txt"
 
   [[ ${iface} == eth0 ]] && {
-    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers} >> /tmp/ks_include.txt"
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers} --mtu=${mtu} >> /tmp/ks_include.txt"
+    echo "echo ${iface}_mtu=${mtu} >> /tmp/ks_post_include.txt"
     }
 
   [[ ${iface} == eth1 ]] && {
-    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
+    echo "echo ${iface}_mtu=${mtu} >> /tmp/ks_post_include.txt"
     }
-
   [[ ${iface} == eth2 ]] && {
-    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
+    echo "echo ${iface}_mtu=${mtu} >> /tmp/ks_post_include.txt"
     }
-
+    
   [[ ${iface} == eth3 ]] && {
-    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute >> /tmp/ks_include.txt"
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
+    echo "echo ${iface}_mtu=${mtu} >> /tmp/ks_post_include.txt"
     }
-
 done <<< "$( grep -Ev "^#|^;|^\s*$" ${cfg_file} )"
 } >> /tmp/director.ks
 
@@ -166,6 +168,10 @@ EOFPW
   done
 
   echo "GATEWAY=${Gateway}" >> /etc/sysconfig/network
+  echo "MTU=${eth0_mtu}" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+  echo "MTU=${eth1_mtu}" >> /etc/sysconfig/network-scripts/ifcfg-eth1
+  echo "MTU=${eth2_mtu}" >> /etc/sysconfig/network-scripts/ifcfg-eth2
+  echo "MTU=${eth3_mtu}" >> /etc/sysconfig/network-scripts/ifcfg-eth3
 
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth0
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth1
@@ -215,7 +221,7 @@ EOFPW
          subscription-manager attach --auto ${ProxyInfo}
          )
 
-  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-rpms
+  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-rpms --enable=rhel-7-server-openstack-13-rpms 
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt

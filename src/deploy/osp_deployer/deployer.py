@@ -40,7 +40,7 @@ def setup_logging():
 
 def get_settings():
     parser = argparse.ArgumentParser(
-        description='JetPack 10.x deployer')
+        description='JetPack 13.x deployer')
     parser.add_argument('-s', '--settings',
                         help='ini settings file, e.g settings/acme.ini',
                         required=True)
@@ -76,32 +76,32 @@ def run_tempest():
 def deploy():
     ret_code = 0
     # noinspection PyBroadException
+
+    logger.debug("=================================")
+    logger.info("=== Starting up ...")
+    logger.debug("=================================")
+
+    parser = argparse.ArgumentParser(
+        description='JetPack 13.x deployer')
+    parser.add_argument('-s', '--settings',
+                        help='ini settings file, e.g settings/acme.ini',
+                        required=True)
+    parser.add_argument('-undercloud_only', '--undercloud_only',
+                        help='Only reinstall the undercloud',
+                        action='store_true', required=False)
+    parser.add_argument('-overcloud_only', '--overcloud_only',
+                        help='Only reinstall the overcloud',
+                        action='store_true', required=False)
+    parser.add_argument('-skip_dashboard_vm', '--skip_dashboard_vm',
+                        help='Do not reinstall the Dashboard VM',
+                        action='store_true',
+                        required=False)
+    parser.add_argument('-validate_only', '--validate_only',
+                        help='No deployment - just validate config values',
+                        action='store_true',
+                        required=False)
+    args, others = parser.parse_known_args()
     try:
-
-        logger.debug("=================================")
-        logger.info("=== Starting up ...")
-        logger.debug("=================================")
-
-        parser = argparse.ArgumentParser(
-            description='JetPack 10.x deployer')
-        parser.add_argument('-s', '--settings',
-                            help='ini settings file, e.g settings/acme.ini',
-                            required=True)
-        parser.add_argument('-undercloud_only', '--undercloud_only',
-                            help='Only reinstall the undercloud',
-                            action='store_true', required=False)
-        parser.add_argument('-overcloud_only', '--overcloud_only',
-                            help='Only reinstall the overcloud',
-                            action='store_true', required=False)
-        parser.add_argument('-skip_dashboard_vm', '--skip_dashboard_vm',
-                            help='Do not reinstall the Dashboard VM',
-                            action='store_true',
-                            required=False)
-        parser.add_argument('-validate_only', '--validate_only',
-                            help='No deployment - just validate config values',
-                            action='store_true',
-                            required=False)
-        args, others = parser.parse_known_args()
         if len(others) > 0:
             parser.print_help()
             msg = "Invalid argument(s) :"
@@ -224,7 +224,7 @@ def deploy():
         logger.debug("installing the overcloud ... this might take a while")
         director_vm.deploy_overcloud()
         cmd = "source ~/stackrc; openstack stack list | grep " \
-              + settings.overcloud_name + " | awk '{print $6}'"
+              + settings.overcloud_name + " | awk '{print $8}'"
         overcloud_status = \
             Ssh.execute_command_tty(director_ip,
                                     settings.director_install_account_user,
@@ -255,14 +255,13 @@ def deploy():
         if args.skip_dashboard_vm is False:
             director_vm.configure_dashboard()
         director_vm.enable_fencing()
-        director_vm.enable_instance_ha()
         director_vm.configure_tempest()
         director_vm.run_sanity_test()
         run_tempest()
         logger.info("Deployment summary info; useful ip's etc.. " +
                     "/auto_results/deployment_summary.log")
 
-    except:
+    except:  # noqa: E722
         logger.error(traceback.format_exc())
         e = sys.exc_info()[0]
         logger.error(e)

@@ -41,9 +41,9 @@ class Checkpoints():
         checks.check_network_overlaps()
         checks.check_duplicate_ips()
         checks.verify_overcloud_name()
-        checks.verify_iha_dependency_on_fencing()
         checks.validate_profile()
         checks.verify_dpdk_dependencies()
+        checks.verify_sriov_dependencies()
 
     @staticmethod
     def verify_subscription_status(public_api_ip, user, password, retries):
@@ -336,7 +336,7 @@ class Checkpoints():
 
     def verify_nodes_registered_in_ironic(self):
         logger.debug("Verify the expected amount of nodes imported in ironic")
-        cmd = "source ~/stackrc;ironic node-list | grep None"
+        cmd = "source ~/stackrc;openstack baremetal node list | grep None"
         setts = self.settings
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
@@ -355,7 +355,7 @@ class Checkpoints():
 
     def verify_introspection_sucessfull(self):
         logger.debug("Verify the introspection did not encounter any errors")
-        cmd = "source ~/stackrc;ironic node-list | grep None"
+        cmd = "source ~/stackrc;openstack baremetal node list | grep None"
         setts = self.settings
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,

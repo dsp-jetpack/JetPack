@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import sys
+import subprocess
 from arg_helper import ArgHelper
 from command_helper import Exec
 from ironic_helper import IronicHelper
@@ -46,8 +47,16 @@ def main():
     LoggingHelper.configure_logging(args.logging_level)
 
     # Load the nodes into ironic
+    import_json = os.path.expanduser('~/nodes.json')
+    content = json.load(open(args.node_definition))
+    for node in content['nodes']:
+        for k in node.keys():
+            if not k.startswith('pm_'):
+                node.pop(k)
+    with open(import_json, 'w') as out:
+        json.dump(content, out)
     logger.info("Importing {} into ironic".format(args.node_definition))
-    cmd = ["openstack", "baremetal", "import", "--json", args.node_definition]
+    cmd = ["openstack", "overcloud", "node", "import", import_json]
     exit_code, stdin, stderr = Exec.execute_command(cmd)
     if exit_code != 0:
         logger.error("Failed to import nodes into ironic: {}, {}".format(
