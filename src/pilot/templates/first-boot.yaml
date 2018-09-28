@@ -15,33 +15,6 @@
 heat_template_version: 2014-10-16
 
 parameters:
-
-  HugePages:
-    description: >
-      Space seprated list of Kernel args to be update to grub.
-      Example: "default_hugepagesz=1GB hugepagesz=1G hugepages=96"
-    type: string
-    default: ""
-    
-  NumaCpus:
-    description: >
-      Space seprated list of Kernel args to be update to grub.
-      Example: "8-47"
-    type: string
-    default: ""
-
-  HugepagesEnable:
-    description: >
-      Enable Hugepages (true or false)
-    type: string
-    default: "false"
-    
-  NumaEnable:
-    description: >
-      Enable Numa (true or false)
-    type: string
-    default: "false"
-
   ComputeTunedAdmProfile:
     description: >
       Apply tuned profile on compute nodes.
@@ -69,37 +42,6 @@ resources:
       - config: {get_resource: set_os_limits}
       - config: {get_resource: performance_optimization}
       - config: {get_resource: wipe_disk}
-      - config: {get_resource: kernel_args}
-
-  kernel_args:
-    type: OS::Heat::SoftwareConfig
-    properties:
-      config:
-        str_replace:
-          template: |
-            #!/bin/bash
-            if [[ $(hostname) == *compute* ]] ; then
-              hpgflag=_HugepagesEnable_
-              if [[ "$hpgflag" == "True" ]] ; then
-                sed 's/^\(GRUB_CMDLINE_LINUX=".*\)"/\1 '"$KERNEL_ARGS"'"/g' -i /etc/default/grub
-                echo "HugePages are applied"
-              fi
-              numaflag=_NumaEnable_
-              if [[ "$numaflag" == "True" ]] ; then
-                sed 's/^\(GRUB_CMDLINE_LINUX=".*\)"/\1 isolcpus='"$TUNED_CORES"'"/g' -i /etc/default/grub
-                echo "Numa is applied"
-              fi
-              if [[ "$hpgflag" == "True" || "$numaflag" == "True" ]] ; then
-                grub2-mkconfig -o /boot/grub2/grub.cfg
-                reboot
-              fi
-            fi >> /tmp/grubby.log 2>&1
-
-          params:
-            _HugepagesEnable_: {get_param: HugepagesEnable}
-            _NumaEnable_: {get_param: NumaEnable}
-            $KERNEL_ARGS: {get_param: HugePages}
-            $TUNED_CORES: {get_param: NumaCpus}
 
   set_os_limits:
     type: OS::Heat::CloudConfig
@@ -140,11 +82,11 @@ resources:
               else 
               sed -i "s/innodb_buffer_pool_size    \=.*/innodb_buffer_pool_size    = _BufferPoolSize_,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
               fi
-              sed -i "s/max_connections'         \=.*/&\n        'innodb_log_file_size' => 1500M,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              sed -i "s/max_connections'         \=.*/&\n        'innodb_log_files_in_group'         => 2,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              sed -i "s/max_connections'         \=.*/&\n        'innodb_flush_method'         => O_DIRECT,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              sed -i "s/max_connections'         \=.*/&\n        'innodb_file_per_table'         => 1,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              sed -i "s/max_connections'         \=.*/&\n        'innodb_buffer_pool_instances'         => _BufferPoolInstances_,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
+              #sed -i "s/max_connections'         \=.*/&\n        'innodb_log_file_size' => 1500M,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
+              #sed -i "s/max_connections'         \=.*/&\n        'innodb_log_files_in_group'         => 2,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
+              #sed -i "s/max_connections'         \=.*/&\n        'innodb_flush_method'         => O_DIRECT,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
+              #sed -i "s/max_connections'         \=.*/&\n        'innodb_file_per_table'         => 1,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
+              #sed -i "s/max_connections'         \=.*/&\n        'innodb_buffer_pool_instances'         => _BufferPoolInstances_,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
 
             fi >> /tmp/performance_optimization.log 2>&1
 

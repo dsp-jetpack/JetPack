@@ -115,10 +115,10 @@ class Director(InfraHost):
             'sed -i "s|dhcp_end = .*|dhcp_end = ' +
             self.settings.provisioning_net_dhcp_end +
             '|" pilot/undercloud.conf',
-            'sed -i "s|network_cidr = .*|network_cidr = ' +
+            'sed -i "s|cidr = .*|cidr = ' +
             self.settings.provisioning_network +
             '|" pilot/undercloud.conf',
-            'sed -i "s|network_gateway = .*|network_gateway = ' +
+            'sed -i "s|gateway = .*|gateway = ' +
             self.settings.director_node.provisioning_ip +
             '|" pilot/undercloud.conf',
             'sed -i "s|inspection_iprange = .*|inspection_iprange = ' +
@@ -284,7 +284,7 @@ class Director(InfraHost):
         setts = self.settings
 
         stdout, stderr, exit_status = self.run(
-            "~/pilot/prep_overcloud_nodes.py")
+            self.source_stackrc + "~/pilot/prep_overcloud_nodes.py")
         if exit_status:
             raise AssertionError("An error occurred while running "
                                  "prep_overcloud_nodes.  exit_status: {}, "
@@ -423,11 +423,72 @@ class Director(InfraHost):
         tmp_file = os.fdopen(tmp_fd, 'w')
 
         # Leading whitespace for these variables is critical !!!
-        osds_param = "    ceph::profile::params::osds:"
-        osd_separate_journal = "      '{}':\n        journal: '{}'\n"
-        osd_colocated_journal = "      '{}': {{}}\n"
+        osds_param = "  CephAnsibleDisksConfig:"
+        osd_scenario_param = "    osd_scenario:"
+        osd_scenario = "collocated"  # Keep this as default, change if required
+        osd_devices = "    devices:\n"
+        osd_dedicated_devices = "    dedicated_devices:\n"
         domain_param = "  CloudDomain:"
         rbd_backend_param = "  NovaEnableRbdBackend:"
+        ceph_pool_default_size_param = "  CephPoolDefaultSize:"
+        ceph_pool_default_size = 3
+        osds_per_node = 0
+        storage_nodes = len(self.settings.ceph_nodes)
+
+        # Dynamic calculation for the replication size
+        # This calculation is based on the observation that
+        # 10 Ceph pools are created with 2688 placement groups.
+        # Minimum of 41 OSDs are required for containing 2688 PGs with
+        # a replication size of 3. Each OSD can have 200 PGs.
+        # Simillarly 27 OSDs are reuiqred for a replication size of 2.
+        # And minimum 14 OSDs are required for replication size of 1.
+        if osd_disks:
+            for osd in osd_disks:
+                # Format is ":OSD_DRIVE" or ":OSD_DRIVE:JOURNAL_DRIVE",
+                # so split on the ':'
+                tokens = osd.split(':')
+
+                # Make sure OSD_DRIVE begins with "/dev/"
+                if not tokens[1].startswith("/dev/"):
+                    tokens[1] += "/dev/"
+
+                if len(tokens) == 3:
+                    # This OSD specifies a separate journal drive
+                    # Set the osd-scenario to non-collocated
+                    osd_scenario = "non-collocated"
+                    osd_devices = "{}      - {}\n".format(
+                        osd_devices, tokens[1])
+                    osd_dedicated_devices = "{}      - {}\n".format(
+                        osd_dedicated_devices,
+                        tokens[2])
+                    osds_per_node += 1
+                elif len(tokens) == 2:
+                    # This OSD does not specify a separate journal
+                    # Add the same device as dedicated device
+                    # It is useful when there is a mix of collocated
+                    # and non-collocated devices
+                    osd_devices = "{}      - {}\n".format(
+                        osd_devices, tokens[1])
+                    osd_dedicated_devices = "{}      - {}\n".format(
+                        osd_dedicated_devices,
+                        tokens[1])
+                    osds_per_node += 1
+                else:
+                    logger.warning(
+                        "Bad entry in osd_disks: {}".format(osd))
+
+            total_osds = osds_per_node * storage_nodes
+            if total_osds >= 41:
+                ceph_pool_default_size = 3
+            elif total_osds >= 27:
+                ceph_pool_default_size = 2
+                logger.warning("Setting the CephDefaultPoolSize to 2.")
+            elif total_osds >= 14:
+                ceph_pool_default_size = 1
+                logger.warning("Setting the CephDefaultPoolSize to 1.")
+            else:
+                raise AssertionError("Number of OSDs on storage nodes is less "
+                                     " than minimum required.")
 
         found_osds_param = False
         for line in src_file:
@@ -435,36 +496,24 @@ class Director(InfraHost):
                 found_osds_param = True
 
             elif found_osds_param:
-                # Discard lines that begin with "#", "'" or "journal:" because
-                # these lines represent the original ceph.yaml file's OSD
-                # configuration.
+                # Discard lines that begin with "#", "osd_scenario",
+                # "devices:", "dedicated_devices:" or "-" because these lines
+                # represent the original ceph.yaml file's OSD configuration.
                 tokens = line.split()
                 if len(tokens) > 0 and (tokens[0].startswith("#") or
-                                        tokens[0].startswith("'") or
-                                        tokens[0].startswith("journal:")):
+                                        tokens[0].startswith("osd_scenario") or
+                                        tokens[0].startswith("devices") or
+                                        tokens[0].startswith("dedicated_devices") or  # noqa: E501
+                                        tokens[0].startswith("-")):
                     continue
 
                 # End of original Ceph OSD configuration: now write the new one
                 tmp_file.write("{}\n".format(osds_param))
-                for osd in osd_disks:
-                    # Format is ":OSD_DRIVE" or ":OSD_DRIVE:JOURNAL_DRIVE",
-                    # so split on the ':'
-                    tokens = osd.split(':')
-
-                    # Make sure OSD_DRIVE begins with "/dev/"
-                    if not tokens[1].startswith("/dev/"):
-                        tokens[1] += "/dev/"
-
-                    if len(tokens) == 3:
-                        # This OSD specifies a separate journal drive
-                        tmp_file.write(osd_separate_journal.format(tokens[1],
-                                                                   tokens[2]))
-                    elif len(tokens) == 2:
-                        # This OSD does not specify a separate journal
-                        tmp_file.write(osd_colocated_journal.format(tokens[1]))
-                    else:
-                        logger.warning(
-                            "Bad entry in osd_disks: {}".format(osd))
+                tmp_file.write("{} {}\n".format(
+                    osd_scenario_param, osd_scenario))
+                tmp_file.write(osd_devices)
+                if osd_scenario == "non-collocated":
+                    tmp_file.write(osd_dedicated_devices)
 
                 # This is the line that follows the original Ceph OSD config
                 tmp_file.write(line)
@@ -477,6 +526,10 @@ class Director(InfraHost):
             elif line.startswith(rbd_backend_param):
                 value = str(self.settings.enable_rbd_nova_backend).lower()
                 tmp_file.write("{} {}\n".format(rbd_backend_param, value))
+
+            elif line.startswith(ceph_pool_default_size_param):
+                tmp_file.write("{} {}\n".format(ceph_pool_default_size_param,
+                                                ceph_pool_default_size))
 
             else:
                 tmp_file.write(line)
@@ -512,8 +565,20 @@ class Director(InfraHost):
             'sed -i "s|floating_ip_network_vlan=.*|floating_ip_network_vlan=' +
             self.settings.floating_ip_network_vlan +
             '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|numa_enabled=.*|numa_enabled=' +
+            str(self.settings.numa_enable) +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|hugepages_enabled=.*|hugepages_enabled=' +
+            str(self.settings.hpg_enable) +
+            '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|ovs_dpdk_enabled=.*|ovs_dpdk_enabled=' +
             str(self.settings.enable_ovs_dpdk) +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|sriov_enabled=.*|sriov_enabled=' +
+            str(self.settings.enable_sriov) +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|dvr_enabled=.*|dvr_enabled=' +
+            str(self.settings.dvr_enable) +
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_tenant_network=.*|sanity_tenant_network=' +
             self.settings.sanity_tenant_network +
@@ -532,6 +597,9 @@ class Director(InfraHost):
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_image_url=.*|sanity_image_url=' +
             self.settings.sanity_image_url +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|sanity_vlantest_network=.*|sanity_vlantest_network=' +
+            self.settings.sanity_vlantest_network +
             '|" pilot/deployment-validation/sanity.ini'
         ]
         for cmd in cmds:
@@ -684,6 +752,27 @@ class Director(InfraHost):
             self.settings.public_api_vlanid + '|" ' + network_yaml,
             'sed -i "s|TenantNetworkVlanID:.*|TenantNetworkVlanID: ' +
             self.settings.tenant_tunnel_vlanid + '|" ' + network_yaml,
+            'sed -i "s|ExternalNetworkMTU:.*|ExternalNetworkMTU: ' +
+            self.settings.public_api_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|InternalApiMTU:.*|InternalApiMTU: ' +
+            self.settings.private_api_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|StorageNetworkMTU:.*|StorageNetworkMTU: ' +
+            self.settings.storage_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|StorageMgmtNetworkMTU:.*|StorageMgmtNetworkMTU: ' +
+            self.settings.storage_cluster_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|TenantNetworkMTU:.*|TenantNetworkMTU: ' +
+            self.settings.tenant_tunnel_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|ProvisioningNetworkMTU:.*|ProvisioningNetworkMTU: ' +
+            self.settings.provisioning_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|ManagementNetworkMTU:.*|ManagementNetworkMTU: ' +
+            self.settings.management_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|DefaultBondMTU:.*|DefaultBondMTU: ' +
+            self.settings.default_bond_mtu + '|" ' + network_yaml,
+            'sed -i "s|NeutronGlobalPhysnetMtu:.*|NeutronGlobalPhysnetMtu: ' +
+            self.settings.tenant_network_mtu + '|" ' + network_yaml,
+            'sed -i "s|neutron::plugins::ml2::physical_network_mtus:.*|neutron'
+            '::plugins::ml2::physical_network_mtus: [\'physext:' +
+            self.settings.floating_ip_network_mtu + '\']|" ' + network_yaml,
         ]
 
         if self.settings.tenant_tunnel_network:
@@ -716,6 +805,7 @@ class Director(InfraHost):
         static_ips_yaml = self.templates_dir + "/static-ip-environment.yaml"
         static_vip_yaml = self.templates_dir + "/static-vip-environment.yaml"
         neutron_ovs_dpdk_yaml = self.templates_dir + "/neutron-ovs-dpdk.yaml"
+        neutron_sriov_yaml = self.templates_dir + "/neutron-sriov.yaml"
 
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy
@@ -724,11 +814,12 @@ class Director(InfraHost):
         self.upload_file(self.settings.static_vip_yaml, static_vip_yaml)
         self.upload_file(self.settings.neutron_ovs_dpdk_yaml,
                          neutron_ovs_dpdk_yaml)
+        self.upload_file(self.settings.neutron_sriov_yaml, neutron_sriov_yaml)
 
         self.setup_nic_configuration()
 
-        if self.settings.enable_ovs_dpdk is True:
-            self.setup_dpdk_nic_configuration()
+        if self.settings.enable_sriov is True:
+            self.setup_sriov_nic_configuration()
 
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
@@ -851,40 +942,65 @@ class Director(InfraHost):
         for setting_name, setting_value in ini_nics_settings.iteritems():
             # The following is executing a sed command of the following format:
             # sed -i -r 's/(^\s*StorageBond0Interface1:\s*).*/\1p1p2/'
-            cmds.append('sed -i -r \'s/(^\s*' + setting_name +
+            cmds.append('sed -i -r \'s/(^\s*' + setting_name +    # noqa: W605
                         ':\s*).*/\\1' + setting_value + '/\' ' + remote_file)
 
         # Execute the commands
         for cmd in cmds:
             self.run(cmd)
 
-    def setup_dpdk_nic_configuration(self):
-
-        logger.debug("setting ovs dpdk environment")
-        # Get the user supplied NIC settings from the .ini
+    def setup_sriov_nic_configuration(self):
+        logger.debug("setting SR-IOV environment")
+        # Get seetings from .ini file
         ini_nics_settings = self.settings.get_curated_nics_settings()
 
         cmds = []
-        dpdk_conf = {}
-        env_file = os.path.join(self.templates_dir, "neutron-ovs-dpdk.yaml")
+        sriov_conf = {}
+        env_file = os.path.join(self.templates_dir, "neutron-sriov.yaml")
 
-        # Get and sort the Dpdk interfaces that the user configured
-        for setting_name, setting_value in ini_nics_settings.iteritems():
-            if setting_name.find('Dpdk') != -1:
-                dpdk_conf.update({setting_name: setting_value})
-        dpdk_interfaces = [x[1] for x in sorted(dpdk_conf.items())]
+        # Get and sort the SR-IOV interfaces that user provided
+        for int_name, int_value in ini_nics_settings.iteritems():
+            if int_name.find('Sriov') != -1:
+                sriov_conf.update({int_name: int_value})
+        sriov_interfaces = [x[1] for x in sorted(sriov_conf.items())]
 
-        # The following is joining only the first two dpdk interfaces
-        # for mode 2 or all the interfaces (4) for mode 1
-        if self.settings.ovs_dpdk_mode == 2:
-            interfaces = "'" + ",".join(dpdk_interfaces[0:2]) + "'"
-        else:
-            interfaces = "'" + ",".join(dpdk_interfaces) + "'"
+        interfaces = "'" + ",".join(sriov_interfaces) + "'"
 
         # Build up the sed command to perform variable substitution
-        # in the neutron-ovs-dpdk.yaml (dpdk environment)
-        cmds.append('sed -i "s|DpdkInterfaces:.*|DpdkInterfaces: ' +
-                    interfaces + '|" ' + env_file)
+        # in the neutron-sriov.yaml (sriov environment file)
+
+        # Specify number of VFs for sriov mentioned interfaces
+        sriov_vfs_setting = []
+        sriov_map_setting = []
+        sriov_pci_passthrough = []
+        physical_network = "physint"
+        for interface in sriov_interfaces:
+            devname = interface
+            mapping = physical_network + ':' + interface
+            sriov_map_setting.append(mapping)
+
+            nova_pci = '{devname: ' + \
+                       '"' + interface + '",' + \
+                       'physical_network: ' + \
+                       '"' + physical_network + '"}'
+            sriov_pci_passthrough.append(nova_pci)
+
+            interface = interface + ':' + \
+                                    self.settings.sriov_vf_count + \
+                                    ':' + 'switchdev'
+            sriov_vfs_setting.append(interface)
+
+        sriov_vfs_setting = "'" + ",".join(sriov_vfs_setting) + "'"
+        sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"
+        sriov_pci_passthrough = "[" + ",".join(sriov_pci_passthrough) + "]"
+
+        cmds.append('sed -i "s|NeutronSriovNumVFs:.*|NeutronSriovNumVFs: ' +
+                    sriov_vfs_setting + '|" ' + env_file)
+        cmds.append('sed -i "s|NeutronPhysicalDevMappings:.*|' +
+                    'NeutronPhysicalDevMappings: ' +
+                    sriov_map_setting + '|" ' + env_file)
+        cmds.append('sed -i "s|NovaPCIPassthrough:.*|NovaPCIPassthrough: ' +
+                    sriov_pci_passthrough + '|" ' + env_file)
 
         # Execute the command related to dpdk configuration
         for cmd in cmds:
@@ -911,7 +1027,9 @@ class Director(InfraHost):
                                     " --overcloud_name " + \
                                     self.settings.overcloud_name + \
                                     " --ntp " + \
-                                    self.settings.sah_node.provisioning_ip
+                                    self.settings.sah_node.provisioning_ip + \
+                                    " --mtu " + \
+                                    self.settings.default_bond_mtu
 
         if self.settings.hpg_enable is True:
             cmd += " --enable_hugepages "
@@ -934,7 +1052,12 @@ class Director(InfraHost):
             cmd += " --static_vips"
         if self.settings.enable_ovs_dpdk is True:
             cmd += " --ovs_dpdk"
+        if self.settings.enable_sriov is True:
+            cmd += " --sriov"
         # Node placement is required in an automated install. The index order
+        if self.settings.dvr_enable is True:
+            cmd += " --dvr_enable"
+        # Node placement is required in an automated install.  The index order
         # of the nodes is the order in which they are defined in the
         # .properties file
         cmd += " --node_placement"
@@ -959,7 +1082,8 @@ class Director(InfraHost):
                      "openstack stack delete --yes --wait " +
                      self.settings.overcloud_name)
         # Unregister the nodes from Ironic
-        re = self.run_tty(self.source_stackrc + "ironic node-list | grep None")
+        re = self.run_tty(self.source_stackrc +
+                          "openstack baremetal node list | grep None")
         ls_nodes = re[0].split("\n")
         ls_nodes.pop()
         for node in ls_nodes:
@@ -991,13 +1115,13 @@ class Director(InfraHost):
             ip_info.append("### nodes ip information ###")
 
             priv_ = self.settings.private_api_network.rsplit(".", 1)[0]
-            priv_.replace(".", '\.')
+            priv_.replace(".", '\.')  # noqa: W605
             pub_ = self.settings.public_api_network.rsplit(".", 1)[0]
-            pub_.replace(".", '\.')
+            pub_.replace(".", '\.')  # noqa: W605
             stor_ = self.settings.storage_network.rsplit(".", 1)[0]
-            stor_.replace(".", '\.')
+            stor_.replace(".", '\.')  # noqa: W605
             clus_ = self.settings.storage_cluster_network.rsplit(".", 1)[0]
-            clus_.replace(".", '\.')
+            clus_.replace(".", '\.')  # noqa: W605
 
             re = self.run_tty(self.source_stackrc +
                               "nova list | grep controller")
@@ -1151,10 +1275,10 @@ class Director(InfraHost):
                                self.settings.cloud_repo_version)
                 ip_info.append("deploy-auto # " +
                                self.settings.deploy_auto_version)
-            except:
+            except:  # noqa: E722
                 pass
             ip_info.append("====================================")
-        except:
+        except:  # noqa: E722
             logger.debug(" Failed to retrieve the nodes ip information ")
         finally:
             for each in ip_info:
@@ -1184,9 +1308,6 @@ class Director(InfraHost):
             self.run_tty(cmd)
             cmd = 'rm -f ~/{}'.format(self.settings.sanity_key_name)
             self.run_tty(cmd)
-            self.run_tty('wget '
-                         'http://download.cirros-cloud.net/0.3.3/'
-                         'cirros-0.3.3-x86_64-disk.img')
             self.run_tty("cd " + self.validation_dir +
                          ';chmod ugo+x sanity_test.sh')
             re = self.run_tty("cd " + self.validation_dir +
@@ -1228,7 +1349,7 @@ class Director(InfraHost):
             'identity.admin_username $OS_USERNAME '
             'identity.admin_password $OS_PASSWORD '
             'identity.admin_tenant_name $OS_PROJECT_NAME',
-            ]
+        ]
         for cmd in cmds:
             self.run_tty(cmd)
 
@@ -1298,17 +1419,6 @@ class Director(InfraHost):
                   ' ' + \
                   passwd + \
                   ' enable'
-            self.run_tty(cmd)
-
-    def enable_instance_ha(self):
-        if self.settings.enable_instance_ha is True:
-            logger.info("Enabling instance HA")
-            if self.settings.enable_fencing is False:
-                logger.error("Fencing NOT enabled, this is \
-                             required for instance_ha")
-            cmd = 'cd ' + \
-                  self.pilot_dir + \
-                  ';./install-instanceHA.py '
             self.run_tty(cmd)
 
     def _create_assign_role_command(self, node, role, index):

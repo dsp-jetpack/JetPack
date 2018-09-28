@@ -1,6 +1,6 @@
---- /etc/ironic/ironic.conf	2017-11-13 18:46:02.757143022 +0000
-+++ /root/ironic.conf.new	2017-11-13 18:47:09.636378764 +0000
-@@ -655,7 +655,7 @@
+--- ironic.conf	2018-07-12 14:04:55.353000000 -0500
++++ ironic.conf.new	2018-07-12 14:04:23.947000000 -0500
+@@ -1294,7 +1294,7 @@
  
  # Interval between syncing the node power state to the
  # database, in seconds. (integer value)
@@ -9,12 +9,21 @@
  
  # Interval between checks of provision timeouts, in seconds.
  # (integer value)
-@@ -683,7 +683,7 @@
+@@ -1327,7 +1327,7 @@
  #periodic_max_workers = 8
  
  # Number of attempts to grab a node lock. (integer value)
 -#node_locked_retry_attempts = 3
-+node_locked_retry_attempts = 15
++node_locked_retry_attempts = 25
  
  # Seconds to sleep between node lock attempts. (integer value)
  #node_locked_retry_interval = 1
+@@ -1393,7 +1393,7 @@
+ # doing the cleaning. If the timeout is reached the node will
+ # be put in the "clean failed" provision state. Set to 0 to
+ # disable timeout. (integer value)
+-#clean_callback_timeout = 1800
++clean_callback_timeout = 2700
+ 
+ # Timeout (seconds) to wait for a callback from the rescue
+ # ramdisk. If the timeout is reached the node will be put in

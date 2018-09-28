@@ -55,7 +55,7 @@ class Widget():
             element = UIManager.driver().find_element_by_xpath(self.locator)
             visible = element.is_displayed()
             si_o_no = visible
-        except:
+        except:  # noqa: E722
             si_o_no = False
         return si_o_no
 

@@ -29,7 +29,7 @@ from utils import Utils
 common_path = os.path.join(os.path.expanduser('~'), 'common')
 sys.path.append(common_path)
 
-from thread_helper import ThreadWithExHandling
+from thread_helper import ThreadWithExHandling  # noqa: E402
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being made
 requests.packages.urllib3.disable_warnings()
 
@@ -74,7 +74,7 @@ def main():
     if args.json_config is not None:
         try:
             json_config = json.loads(args.json_config)
-        except:
+        except:  # noqa: E501
             LOG.exception("Failed to parse json_config data")
             sys.exit(1)
 
@@ -136,6 +136,7 @@ def main():
     except Exception as ex:
         LOG.exception(ex.message)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
