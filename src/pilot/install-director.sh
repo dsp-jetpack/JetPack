@@ -283,6 +283,17 @@ echo "## Patching ironic.conf..."
 apply_patch "sudo patch -b -s /etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
 echo "## Done."
 
+# These patches add support for BOSS cards
+echo 
+echo "### Patching raid_config_schema"
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/raid_config_schema.json ${HOME}/pilot/raid_schema.patch"
+ech "done"
+echo "### Patching raid.py"
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/drac_raid.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
+echo "done"
+
 # This patches an issue where the  Ironic api service returns http 500 errors
 # https://bugzilla.redhat.com/show_bug.cgi?id=1613995
 echo 
