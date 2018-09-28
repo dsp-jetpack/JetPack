@@ -61,7 +61,7 @@ class Profile():
                     try:
                         if vals['valid_values']:
                             allowed_settings = vals['valid_values']
-                    except:
+                    except:  # noqa: E722
                         pass
                     try:
                         if vals['validate']:
@@ -91,7 +91,7 @@ class Profile():
                                     Err = Err + "\nSetting for " + set + \
                                         " Should be in valid" \
                                         " range "+test+"\n"
-                    except:
+                    except:  # noqa: E722
                         pass
                     if len(allowed_settings) > 0:
                         if user_config.get(str(stanza), set) in \
@@ -160,7 +160,7 @@ class Profile():
 
     def valid_buffer_pool_size(self, value):
         if value != "dynamic":
-            pattern = '^\d+G$'
+            pattern = '^\d+G$'  # noqa: W605
             valid = re.match(pattern, value)
             if not valid:
                 return False

@@ -21,6 +21,10 @@ import os
 import sys
 import time
 
+from keystoneauth1.identity import v3
+from keystoneauth1 import session
+from keystoneclient.v3 import client
+
 from command_helper import Scp, Ssh
 from credential_helper import CredentialHelper
 from os.path import expanduser
@@ -28,6 +32,7 @@ from os.path import expanduser
 from logging_helper import LoggingHelper
 from netaddr import IPNetwork
 from network_helper import NetworkHelper
+from socket import getaddrinfo
 
 logging.basicConfig()
 LOG = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
@@ -50,6 +55,7 @@ class Node:
     ansible_hosts = "/etc/ansible/hosts"
     ceph_conf = "/etc/ceph/ceph.conf"
     root_home = expanduser("~root")
+    heat_admin_home = expanduser("~heat-admin")
     rgw_py = "/usr/lib64/collectd/cephmetrics/collectors/rgw.py"
 
     storage_network = NetworkHelper.get_storage_network()
@@ -156,11 +162,22 @@ def get_ceph_nodes(username):
 
     LOG.info("Identifying Ceph nodes (Monitor and OSD nodes)")
 
-    os_auth_url, os_tenant_name, os_username, os_password = \
+    os_auth_url, os_tenant_name, os_username, os_password, \
+        os_user_domain_name, os_project_domain_name = \
         CredentialHelper.get_undercloud_creds()
+    auth_url = os_auth_url + "v3"
 
-    nova = nova_client.Client(2, os_username, os_password,
-                              os_tenant_name, os_auth_url)
+    auth = v3.Password(
+        auth_url=auth_url,
+        username=os_username,
+        password=os_password,
+        project_name=os_tenant_name,
+        user_domain_name=os_user_domain_name,
+        project_domain_name=os_project_domain_name
+    )
+
+    sess = session.Session(auth=auth)
+    nova = nova_client.Client(2, session=sess)
 
     ceph_nodes = []
     for server in nova.servers.list():
@@ -171,9 +188,17 @@ def get_ceph_nodes(username):
 
         # Identify Ceph nodes by looking for Ceph monitor or OSD processes.
         # If there are none then it's not a Ceph node.
-        ceph_procs = node.run("pgrep -l 'ceph-[mon\|osd]'",
+        ceph_procs = node.run("pgrep -l 'ceph-[mon\|osd]'",  # noqa: W605
                               check_status=False)
         if ceph_procs:
+            # A small cheat below strips domain name from node name
+            # as it is not ever used to coonfigure the dashboard
+            node.fqdn = node.fqdn + ".mydomain"
+            # if (node.fqdn.find(".")):
+            if ('.' in node.fqdn):
+                node.fqdn, domain_name = node.fqdn.split('.', 1)
+            else:
+                node.fqdn = node.fqdn
             LOG.info("{} ({}) is a Ceph node".format(node.fqdn,
                                                      node.storage_ip))
             ceph_nodes.append(node)
@@ -220,7 +245,7 @@ def prep_dashboard_hosts(dashboard_node, ceph_nodes):
         beg = host_entries.index(beg_banner)
         end = host_entries.index(end_banner)
         del(host_entries[beg:end+1])
-    except:
+    except:  # noqa: E722
         pass
 
     # Create a new hosts file with the Ceph nodes at the end
@@ -230,9 +255,8 @@ def prep_dashboard_hosts(dashboard_node, ceph_nodes):
         for node in ceph_nodes:
             LOG.debug("Adding '{}\t{}'"
                       .format(node.storage_ip, node.fqdn))
-            node_name, domain_name = node.fqdn.split('.', 1)
-            f.write("{}\t{}\t{}\n"
-                    .format(node.storage_ip, node.fqdn, node_name))
+            f.write("{}\t{}\n"
+                    .format(node.storage_ip, node.fqdn))
         f.write(end_banner)
 
     # Upload the new file to the Ceph Storage Dashboard
@@ -273,7 +297,7 @@ def prep_ceph_hosts(dashboard_node, ceph_nodes):
             beg = host_entries.index(beg_banner)
             end = host_entries.index(end_banner)
             del(host_entries[beg:end+1])
-        except:
+        except:  # noqa: E722
             pass
 
         # Create a new hosts file with the Ceph Storage Dashboard
@@ -337,18 +361,11 @@ def prep_root_user(dashboard_node, ceph_nodes):
                        >> ~root/.ssh/authorized_keys")
 
     for node in ceph_nodes:
-        node_name, domain_name = node.fqdn.split('.', 1)
         dashboard_node.run("sudo ssh-keyscan -t ecdsa-sha2-nistp256 {} \
                            >> ~root/.ssh/known_hosts".format(node.fqdn))
-        dashboard_node.run("sudo ssh-keyscan -t ecdsa-sha2-nistp256 {} \
-                           >> ~root/.ssh/known_hosts".format(node_name))
     dashboard_node.run("sudo ssh-keyscan -t ecdsa-sha2-nistp256 {} \
                        >> ~root/.ssh/known_hosts"
                        .format(dashboard_node.fqdn))
-    dashboard_node_name, domain_name = node.fqdn.split('.', 1)
-    dashboard_node.run("sudo ssh-keyscan -t ecdsa-sha2-nistp256 {} \
-                       >> ~root/.ssh/known_hosts"
-                       .format(dashboard_node_name))
 
     for node in ceph_nodes:
         tmp_keys = os.path.join("/tmp", "key-{}".format(node.fqdn))
@@ -359,6 +376,67 @@ def prep_root_user(dashboard_node, ceph_nodes):
         node.get(tmp_keys, tmp_key)
         node.run("sudo mv {} {}".format(tmp_key, root_key))
         node.run("sudo chmod 0400 {}".format(root_key))
+
+
+def prep_heat_admin_user(dashboard_node, ceph_nodes):
+    """ Prepares heat_admin user on the Ceph Storage Dashboard
+    Modifies the Ceph Storage Nodes so that Ceph Storage Dashboard
+    can access so that root can install dashboard.
+    """
+
+    home = expanduser("~")
+    heat_admin_key = Node.heat_admin_home + "/.ssh/authorized_keys"
+    tmp_key = "/tmp/heat_authorized_keys"
+    repl_str = ".*sleep 10\" "
+    bak_date = dashboard_node.run('date +"%Y%m%d%H%M"')
+
+    status, stdout, stderr = dashboard_node.execute("[ -f {} ] \
+                                                    && echo true \
+                                                    || echo false "
+                                                    .format(heat_admin_key))
+    if "true" in stdout:
+        return
+
+    LOG.info("Preparing remote access on the Ceph Storage Dashboard.")
+
+    ssh_files = ('.ssh/authorized_keys',
+                 '.ssh/id_rsa',
+                 '.ssh/id_rsa.pub')
+
+    for file in ssh_files:
+        tmp_ssh_file = os.path.join("/tmp", "tmp_ssh_file-{}"
+                                    .format(dashboard_node.fqdn))
+        node_ssh_dir = Node.heat_admin_home + "/.ssh"
+        node_file = os.path.join(Node.heat_admin_home, file)
+        local_file = os.path.join(os.sep, home, file)
+
+        dashboard_node.put(local_file, tmp_ssh_file)
+        dashboard_node.run("sudo /bin/bash -c 'if [ ! -d {} ]; \
+                           then mkdir {}; fi'"
+                           .format(node_ssh_dir, node_ssh_dir))
+        dashboard_node.run("sudo chown heat-admin.heat-admin {}"
+                           .format(node_ssh_dir))
+        dashboard_node.run("sudo chmod 0700 {}".format(node_ssh_dir))
+        dashboard_node.run("sudo mv {} {}".format(tmp_ssh_file, node_file))
+        dashboard_node.run("sudo chown heat-admin.heat-admin {}"
+                           .format(node_file))
+        dashboard_node.run("sudo chmod 0600 {}".format(node_file))
+        dashboard_node.run("sudo restorecon {}".format(node_file))
+    dashboard_node.run("sudo cat ~heat-admin/.ssh/id_rsa.pub \
+                       >> ~heat-admin/.ssh/authorized_keys")
+
+    for node in ceph_nodes:
+        tmp_keys = os.path.join("/tmp", "key-{}".format(node.fqdn))
+        node.run("sudo cp {} {}-{}.bak"
+                 .format(heat_admin_key, heat_admin_key, bak_date))
+        node.run("sudo cp {} {}".format(heat_admin_key, tmp_key))
+        node.run("sudo chmod 0644 {}".format(tmp_key))
+        node.run("sudo sed -i 's/{}//' {}".format(repl_str, tmp_key))
+        node.get(tmp_keys, tmp_key)
+        node.run("sudo mv {} {}".format(tmp_key, heat_admin_key))
+        node.run("sudo chown heat-admin.heat-admin {}".format(heat_admin_key))
+        node.run("sudo chmod 0400 {}".format(heat_admin_key))
+        node.run("sudo restorecon {}".format(heat_admin_key))
 
 
 def prep_ansible_hosts(dashboard_node, ceph_nodes):
@@ -385,7 +463,7 @@ def prep_ansible_hosts(dashboard_node, ceph_nodes):
         beg = host_entries.index(beg_banner)
         end = host_entries.index(end_banner)
         del(host_entries[beg:end+1])
-    except:
+    except:  # noqa: E722
         pass
 
     # Update the ansible hosts file with the Ceph nodes at the end
@@ -406,22 +484,19 @@ def prep_ansible_hosts(dashboard_node, ceph_nodes):
         LOG.info("Adding Monitors Stanza to Ansible hosts file")
         f.write("[mons]\n")
         for node in mon_nodes:
-            node_name, domain_name = node.fqdn.split('.', 1)
-            f.write("{}\n".format(node_name))
+            f.write("{}\n".format(node.fqdn))
 
         LOG.info("Adding RadosGW Stanza to Ansible hosts file")
         f.write("\n")
         f.write("[rgws]\n")
         for node in rgw_nodes:
-            node_name, domain_name = node.fqdn.split('.', 1)
-            f.write("{}\n".format(node_name))
+            f.write("{}\n".format(node.fqdn))
 
         LOG.info("Adding OSD Stanza to Ansible hosts file")
         f.write("\n")
         f.write("[osds]\n")
         for node in osd_nodes:
-            node_name, domain_name = node.fqdn.split('.', 1)
-            f.write("{}\n".format(node_name))
+            f.write("{}\n".format(node.fqdn))
 
         LOG.info("Adding Graphana Stanza to Ansible hosts file")
         f.write("\n")
@@ -465,7 +540,7 @@ def prep_ceph_conf(dashboard_node, ceph_nodes):
                 beg = host_entries.index(beg_banner)
                 end = host_entries.index(end_banner)
                 del(host_entries[beg:end+1])
-            except:
+            except:  # noqa: E722
                 pass
 
             # Create ceph_conf with the preluminous entry
@@ -490,27 +565,12 @@ def prep_collectd(dashboard_node, ceph_nodes):
     collectd_dir = "/etc/collectd.d"
 
     for node in ceph_nodes:
-        collectd_restart = False
-        collectd_files = ('network.conf', 'disk.conf')
-        for file in collectd_files:
-            conf_file = os.path.join(os.sep, collectd_dir, file)
-            status, stdout, stderr = node.execute("[ -f {} ] \
-                                                  && echo true \
-                                                  || echo false"
-                                                  .format(conf_file))
-            LOG.debug("STDOUT for node ({}) file ({}) = {}"
-                      .format(node.fqdn, conf_file, stdout))
-            if "true" in stdout:
-                node.run("sudo mv {} {}.bak".format(conf_file, conf_file))
-                collectd_restart = True
-
-        if collectd_restart:
-            LOG.info("Restarting collectd service on node ({})"
-                     .format(node.fqdn))
-            node.run("sudo systemctl restart collectd")
+        LOG.info("Restarting collectd service on node ({})"
+                 .format(node.fqdn))
+        node.run("sudo systemctl restart collectd")
 
 
-def prep_cluster_for_collection(dashboard_node, ceph_nodes):
+def prep_cluster_for_collection(dashboard_node, ceph_nodes, dashboard_addr):
     """ Take over an existing Ceph Storage Cluster
     """
 
@@ -539,7 +599,7 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes):
                        .format(sym_link))
     dashboard_node.run("cd {}; sudo cp all.yml.sample all.yml"
                        .format(sym_link))
-    dashboard_node.run("cd {}; sudo echo 'ceph_stable_release: jewel' \
+    dashboard_node.run("cd {}; sudo echo 'ceph_stable_release: luminous' \
                        >> all.yml" .format(sym_link))
     dashboard_node.run("sudo sed -i 's/{}/fsid: {}/' \
                        /etc/ansible/group_vars/all.yml"
@@ -572,11 +632,11 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes):
 
     LOG.info("Ceph Storage Dashboard configuration is complete")
     LOG.info("You may access the Ceph Storage Dashboard at:")
-    LOG.info("      http://<DashboardIP>:3000,")
+    LOG.info("      http://{}:3000,".format(dashboard_addr))
     LOG.info("with user 'admin' and password 'admin'.")
 
 
-def patch_cephmetrics_ansible(dashboard_node):
+def patch_install_packages_yaml(dashboard_node):
     """ Patch /usr/share/cephmetrics-ansible...install_packages.yml
     file to allow for skipping package installation.  We previously
     install these packages in the overcloud image customization and
@@ -584,21 +644,20 @@ def patch_cephmetrics_ansible(dashboard_node):
     this installation process.
     """
 
-    install_pkg_file = "/usr/share/cephmetrics-ansible/roles/" + \
+    install_pkg_yaml = "/usr/share/cephmetrics-ansible/roles/" + \
                        "ceph-collectd/tasks/install_packages.yml"
 
     status, stdout, stderr = dashboard_node.execute("[ -f {}.orig ] \
                                                     && echo true \
                                                     || echo false "
-                                                    .format(install_pkg_file))
+                                                    .format(install_pkg_yaml))
     if "true" in stdout:
         return
 
-    LOG.info("Patching /usr/share/cephmetrics-ansible on {}".format(
-             dashboard_node.fqdn))
+    LOG.info("Patching install_packages.yml on {}".format(dashboard_node.fqdn))
     dashboard_node.run("sudo yum -y install patch")
     dashboard_node.run("""
-cat << EOF|patch -b -d /usr/share/cephmetrics-ansible/roles/ceph-collectd/tasks
+cat << EOF|sudo patch -b -d /usr/share/cephmetrics-ansible/roles/ceph-collectd/tasks
 --- install_packages.yml
 +++ install_packages.yml.mod
 @@ -25,6 +25,8 @@
@@ -614,67 +673,134 @@ EOF
 """)
 
 
-def patch_rgw_collectors(dashboard_node, ceph_nodes):
-    """ Patch /usr/lib64/collectd/cephmetrics/collectors/rgw.py
-    file to allow collectd to monitor rgw process. This patch 
-    correctly identifies our naming of client.radosgw.gateway.
+def patch_selinux_yaml(dashboard_node):
+    """ Patch /usr/share/cephmetrics-ansible...install_packages.yml
+    file to allow for skipping package installation.  We previously
+    install these packages in the overcloud image customization and
+    because we don't subscribe the nodes, this will fail unless we skip
+    this installation process.
     """
 
-    LOG.info("Preparing rgw.py file on Ceph Storage Dashboard.")
+    selinux_yaml = "/usr/share/cephmetrics-ansible/roles/" + \
+                   "ceph-collectd/tasks/selinux.yml"
 
-    # Get the new file to the Ceph Storage Dashboard
-    for node in ceph_nodes:
-        if "controller" in node.fqdn:
-            tmp_rgw_py = os.path.join("/tmp", "rgw.py")
-            node.get(tmp_rgw_py, Node.rgw_py)
-            break
+    status, stdout, stderr = dashboard_node.execute("[ -f {}.orig ] \
+                                                    && echo true \
+                                                    || echo false "
+                                                    .format(selinux_yaml))
+    if "true" in stdout:
+        return
 
-    if not os.path.exists("/usr/bin/patch"):
-        os.system("sudo yum -y install patch")
+    LOG.info("Patching selinux.yml on {}".format(dashboard_node.fqdn))
+    dashboard_node.run("""
+cat << EOF|sudo patch -b -d /usr/share/cephmetrics-ansible/roles/ceph-collectd/tasks
+--- selinux.yml
++++ selinux.mod
+@@ -5,11 +5,11 @@
+     state: yes
+     persistent: yes
+ 
+-- name: Restore SELinux context of OSD journals
+-  shell: "restorecon -R -v /var/lib/ceph/osd/*/journal"
+-  when: "'osds' in group_names"
+-  register: restorecon
+-  changed_when: restorecon.stdout|length != 0 or restorecon.stderr|length != 0
++#- name: Restore SELinux context of OSD journals
++#  shell: "restorecon -R -v /var/lib/ceph/osd/*/journal"
++#  when: "'osds' in group_names"
++#  register: restorecon
++#  changed_when: restorecon.stdout|length != 0 or restorecon.stderr|length != 0
 
-    grep_str = "\"key_name = 'client.radosgw.gateway'\""
-    rc = os.system("grep {} {} > /dev/null".format(grep_str, tmp_rgw_py))
-
-    if rc != 0:
-        os.system("""
-cat << EOF|patch -b -d /tmp 
---- rgw.py
-+++ rgw.py.mod
-@@ -41,9 +41,8 @@
- 
-     def _get_rgw_data(self):
- 
--        rgw_sockets = glob.glob('/var/run/ceph/{}-client.rgw.'
--                                '{}.*asok'.format(self.cluster_name,
--                                                  self.host_name))
-+        rgw_sockets = glob.glob('/var/run/ceph/ceph-client.*asok')
-+
-         if rgw_sockets:
- 
-             if len(rgw_sockets) > 1:
-@@ -53,7 +52,7 @@
-             response = self._admin_socket(socket_path=rgw_sockets[0])
- 
-             if response:
--                key_name = 'client.rgw.{}'.format(self.host_name)
-+                key_name = 'client.radosgw.gateway'
-                 return response.get(key_name)
-             else:
-                 # admin_socket call failed
+ - include: selinux_module.yml
+   when:
 EOF
 """)
 
-    for node in ceph_nodes:
-        if "controller" in node.fqdn:
-            tmp_rgw_py = os.path.join("/tmp", "rgw.py")
 
-            # Upload the new file to the Ceph Storage Dashboard
-            node.put(tmp_rgw_py, tmp_rgw_py)
-            node.run("sudo cp {} {}.bak".format(Node.rgw_py, Node.rgw_py))
-            node.run("sudo mv {} {}".format(tmp_rgw_py, Node.rgw_py))
-            node.run("sudo chown root.root {}".format(Node.rgw_py))
-            node.run("sudo restorecon {}".format(Node.rgw_py))
-    os.unlink(tmp_rgw_py)
+def patch_facts_yaml(dashboard_node):
+    """ Patch /usr/share/cephmetrics-ansible...install_packages.yml
+    file to allow for skipping package installation.  We previously
+    install these packages in the overcloud image customization and
+    because we don't subscribe the nodes, this will fail unless we skip
+    this installation process.
+    """
+
+    facts_yaml = "/usr/share/ceph-ansible/roles/" + \
+                 "ceph-defaults/tasks/facts.yml"
+
+    status, stdout, stderr = dashboard_node.execute("[ -f {}.orig ] \
+                                                    && echo true \
+                                                    || echo false "
+                                                    .format(facts_yaml))
+    if "true" in stdout:
+        return
+
+    LOG.info("Patching facts.yml on {}".format(dashboard_node.fqdn))
+    dashboard_node.run("""
+cat << EOF|sudo patch -b -d /usr/share/ceph-ansible/roles/ceph-defaults/tasks
+--- facts.yml
++++ facts.mod
+@@ -154,32 +154,32 @@
+     - rbd_client_directory_mode is not defined
+       or not rbd_client_directory_mode
+
+-- name: resolve device link(s)
+-  command: readlink -f {{ item }}
+-  changed_when: false
+-  with_items: "{{ devices }}"
+-  register: devices_prepare_canonicalize
+-  when:
+-    - inventory_hostname in groups.get(osd_group_name, [])
+-    - not osd_auto_discovery|default(False)
+-    - osd_scenario|default('dummy') != 'lvm'
+-
+-- name: set_fact build devices from resolved symlinks
+-  set_fact:
+-    devices: "{{ devices | default([]) + [ item.stdout ] }}"
+-  with_items: "{{ devices_prepare_canonicalize.results }}"
+-  when:
+-    - inventory_hostname in groups.get(osd_group_name, [])
+-    - not osd_auto_discovery|default(False)
+-    - osd_scenario|default('dummy') != 'lvm'
+-
+-- name: set_fact build final devices list
+-  set_fact:
+-    devices: "{{ devices | reject('search','/dev/disk') | list | unique }}"
+-  when:
+-    - inventory_hostname in groups.get(osd_group_name, [])
+-    - not osd_auto_discovery|default(False)
+-    - osd_scenario|default('dummy') != 'lvm'
++#- name: resolve device link(s)
++#  command: readlink -f {{ item }}
++#  changed_when: false
++#  with_items: "{{ devices }}"
++#  register: devices_prepare_canonicalize
++#  when:
++#    - inventory_hostname in groups.get(osd_group_name, [])
++#    - not osd_auto_discovery|default(False)
++#    - osd_scenario|default('dummy') != 'lvm'
++#
++#- name: set_fact build devices from resolved symlinks
++#  set_fact:
++#    devices: "{{ devices | default([]) + [ item.stdout ] }}"
++#  with_items: "{{ devices_prepare_canonicalize.results }}"
++#  when:
++#    - inventory_hostname in groups.get(osd_group_name, [])
++#    - not osd_auto_discovery|default(False)
++#    - osd_scenario|default('dummy') != 'lvm'
++#
++#- name: set_fact build final devices list
++#  set_fact:
++#    devices: "{{ devices | reject('search','/dev/disk') | list | unique }}"
++#  when:
++#    - inventory_hostname in groups.get(osd_group_name, [])
++#    - not osd_auto_discovery|default(False)
++#    - osd_scenario|default('dummy') != 'lvm'
+
+ - name: set_fact ceph_uid for Debian based system
+   set_fact:
+EOF
+""")
 
 
 def main():
@@ -697,12 +823,16 @@ def main():
 
     prep_host_files(dashboard_node, ceph_nodes)
     prep_root_user(dashboard_node, ceph_nodes)
+    prep_heat_admin_user(dashboard_node, ceph_nodes)
     prep_ansible_hosts(dashboard_node, ceph_nodes)
     prep_ceph_conf(dashboard_node, ceph_nodes)
-    patch_cephmetrics_ansible(dashboard_node)
-    patch_rgw_collectors(dashboard_node, ceph_nodes)
+    patch_install_packages_yaml(dashboard_node)
+    patch_selinux_yaml(dashboard_node)
+    patch_facts_yaml(dashboard_node)
     prep_collectd(dashboard_node, ceph_nodes)
-    prep_cluster_for_collection(dashboard_node, ceph_nodes)
+    prep_cluster_for_collection(dashboard_node,
+                                ceph_nodes,
+                                args.dashboard_addr)
 
 
 if __name__ == "__main__":

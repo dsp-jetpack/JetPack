@@ -26,14 +26,36 @@
                   "4",
                   "6",
                   "8"
-		]
-	    },
+        ]
+        },
             "ovs_dpdk_enable": {
                "valid_values": [
                   "false"
                ]
+            },
+        "sriov_enable": {
+                "valid_values": [
+                   "true",
+                   "false"
+                ]
+             },
+       "sriov_vf_count": {
+                "validate": [
+                   "should_be_valid_int"
+                ],
+                "in_range": [
+                   "1-64"
+                ]
+             },
+        "dvr_enable" :{
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
             }
-         },
+        }         
+    },
+    {
          "Performance and Optimization": {
             "innodb_buffer_pool_instances": {
                "validate": [
@@ -59,6 +81,80 @@
          }
       },
       {
+         "MTU Settings": {
+            "mtu_selection": {
+               "valid_values": [
+                  "global",
+                  "per_network"
+               ]
+            },
+            "mtu_size_global_default": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "public_api_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "floating_ip_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "private_api_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "tenant_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "storage_cluster_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "storage_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "tenant_tunnel_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            }
+         }
+      },
+      {
          "Vips Settings": {
             "use_static_vips": {
                "valid_values": [
@@ -74,7 +170,11 @@
             "nic_env_file": {
                "valid_values": [
                   "4_port/nic_environment.yaml",
-                  "5_port/nic_environment.yaml"
+                  "5_port/nic_environment.yaml",
+                  "sriov_9_ports/nic_environment.yaml",
+                  "sriov_7_ports/nic_environment.yaml",
+                  "dvr_6_port/nic_environment.yaml",
+                  "dvr_7_port/nic_environment.yaml"
                ]
             },
             "ControllerBondInterfaceOptions": "",
@@ -90,8 +190,7 @@
                   "false"
                ]
             },
-         "enable_fencing":"",
-         "enable_instance_ha":""
+         "enable_fencing":""
          }
       },
       {

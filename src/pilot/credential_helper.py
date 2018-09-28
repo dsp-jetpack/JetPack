@@ -16,9 +16,10 @@ import logging
 import json
 import os
 import sys
+import subprocess
 from constants import Constants
 from subprocess import check_output
-from os_cloud_config.utils import clients
+from keystoneclient.v3 import client
 from heatclient.v1.client import Client as HeatClient
 
 
@@ -44,8 +45,12 @@ class CredentialHelper:
         else:
             project_name = env_keys['OS_TENANT_NAME']
         return \
-            env_keys['OS_AUTH_URL'], project_name, \
-            env_keys['OS_USERNAME'], env_keys['OS_PASSWORD']
+            env_keys['OS_AUTH_URL'], \
+            project_name, \
+            env_keys['OS_USERNAME'], \
+            env_keys['OS_PASSWORD'], \
+            env_keys['OS_USER_DOMAIN_NAME'], \
+            env_keys['OS_PROJECT_DOMAIN_NAME']
 
     @staticmethod
     def get_undercloud_creds():
@@ -108,6 +113,9 @@ class CredentialHelper:
         if "drac_host" in driver_info:
             drac_ip = driver_info["drac_host"]
             drac_user = driver_info["drac_username"]
+        elif "drac_address" in driver_info:
+            drac_ip = driver_info["drac_address"]
+            drac_user = driver_info["drac_username"]
         else:
             drac_ip = driver_info["ipmi_address"]
             drac_user = driver_info["ipmi_username"]
@@ -163,31 +171,22 @@ class CredentialHelper:
     def get_overcloud_name():
         stack = CredentialHelper.get_overcloud_stack()
         if stack:
-            return stack.stack_name
+            return stack
 
         return None
 
     @staticmethod
     def get_overcloud_stack():
-        os_auth_url, os_tenant_name, os_username, os_password = \
-            CredentialHelper.get_undercloud_creds()
+        cmd = "source  " + CredentialHelper.get_undercloudrc_name() + \
+              ";openstack stack list | grep CREATE | awk '{print $4}'"
+        return subprocess.check_output(cmd,
+                                       stderr=subprocess.STDOUT,
+                                       shell=True).strip()
 
-        try:
-            keystone_client = clients.get_keystone_client(os_username,
-                                                          os_password,
-                                                          os_tenant_name,
-                                                          os_auth_url)
-
-            heat_url = keystone_client.service_catalog.url_for(
-                service_type='orchestration',
-                endpoint_type='publicURL')
-
-            heat_client = HeatClient(endpoint=heat_url,
-                                     token=keystone_client.auth_token)
-
-            # There can be only one overcloud stack, so if there is one it
-            # will be the first in the list.
-            return next(heat_client.stacks.list(), None)
-
-        except:
-            return None
+    @staticmethod
+    def get_overcloud_stack_status():
+        cmd = "source  " + CredentialHelper.get_undercloudrc_name() + \
+              ";openstack stack list | grep CREATE | awk '{print $8}'"
+        return subprocess.check_output(cmd,
+                                       stderr=subprocess.STDOUT,
+                                       shell=True).strip()

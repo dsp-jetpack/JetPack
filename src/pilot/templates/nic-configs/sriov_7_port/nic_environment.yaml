@@ -14,7 +14,7 @@
 
 resource_registry:
   OS::TripleO::Controller::Net::SoftwareConfig: ./controller.yaml
-  OS::TripleO::DellCompute::Net::SoftwareConfig: ./compute-ovs-dpdk-mode1.yaml
+  OS::TripleO::DellCompute::Net::SoftwareConfig: ./dellcompute_sriov.yaml
   OS::TripleO::CephStorage::Net::SoftwareConfig: ./storage.yaml
 
 
@@ -42,16 +42,6 @@ parameter_defaults:
   ComputeBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
 
   # CHANGEME: Change the interface names in the following lines for the
-  # compute nodes provisioning interface and to include in the compute
-  # DPDK bonds
-  ComputeOvsDpdkInterface1: p2p1
-  ComputeOvsDpdkInterface2: p3p1
-  ComputeOvsDpdkInterface3: p2p2
-  ComputeOvsDpdkInterface4: p3p2
-  # The DPDK bonding mode to use for compute nodes
-  BondInterfaceOvsOptions: bond_mode=balance-tcp lacp=active
-  
-  # CHANGEME: Change the interface names in the following lines for the
   # storage nodes provisioning interface and to include in the storage
   # nodes bonds
   StorageProvisioningInterface: em3
@@ -61,3 +51,10 @@ parameter_defaults:
   StorageBond1Interface2: p2p2
   # The bonding mode to use for storage nodes
   StorageBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+  
+  # CHANGEME: Change the interface names in the following lines for the
+  # compute nodes provisioning interface and to include in the compute
+  # SRIOV bonds
+  ComputeSriovInterface1: p1p1
+  ComputeSriovInterface2: p4p1
+
