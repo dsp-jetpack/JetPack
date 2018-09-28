@@ -67,11 +67,15 @@ fi
 
 repos=(
     rhel-7-server-rpms
-    rhel-7-server-rhceph-2-mon-rpms
+    rhel-7-server-rhceph-3-tools-rpms
 )
 
 packages=(
     cephmetrics-collectors
+)
+
+del_packages=(
+    collectd-ipmi,collectd-ping
 )
 
 function join { local IFS="$1"; shift; echo "$*"; }
@@ -85,9 +89,6 @@ cd ~/pilot/images
 
 run_command "virt-customize -a overcloud-full.qcow2 --run-command \"echo '${director_ip} ${director_short} ${director_long}' >> /etc/hosts\""
 
-#Temporary fix for Ceph-OSD not starting (BZ#1472409)
-run_command "virt-customize -a overcloud-full.qcow2 --run-command 'sed -i \"s/timeout 120/timeout 10000/\" /usr/lib/systemd/system/ceph-disk\@.service'"
-
 run_command "virt-customize \
     --memsize 2000 \
     --add overcloud-full.qcow2 \
@@ -96,6 +97,7 @@ run_command "virt-customize \
     --sm-attach \"pool:${subscription_manager_poolid}\" \
     --run-command \"subscription-manager repos --disable='*' ${repos[*]/#/--enable=}\" \
     --install $(join \",\" ${packages[*]}) \
+    --uninstall $(join \",\" ${del_packages[*]}) \
     --sm-remove \
     --sm-unregister \
     --selinux-relabel"
