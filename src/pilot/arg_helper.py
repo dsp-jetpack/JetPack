@@ -40,7 +40,8 @@ class ArgHelper:
         parser.add_argument("-n",
                             "--node-definition",
                             default=Constants.INSTACKENV_FILENAME,
-                            help="""node definition template file that defines the
+                            help="""node definition template file
+                                    that defines the
                                     nodes being configured""",
                             metavar="FILENAME")
 
