@@ -221,7 +221,7 @@ EOFPW
          subscription-manager attach --auto ${ProxyInfo}
          )
 
-  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-rpms --enable=rhel-7-server-openstack-13-rpms 
+  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-rpms --enable=rhel-7-server-openstack-13-rpms --enable=rhel-7-server-openstack-13-devtools-rpms --enable=rhel-7-server-rhceph-3-tools-rpms 
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
