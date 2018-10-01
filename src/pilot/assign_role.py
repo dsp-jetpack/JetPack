@@ -275,7 +275,7 @@ def is_boss_controller(fqdd, drac_client):
     disk_controllers = drac_client.list_raid_controllers()
     boss_raid_controller = [
         c.id for c in disk_controllers if c.model.startswith('BOSS')]
-    if fqdd == boss_raid_controller[0]:
+    if boss_raid_controller and fqdd == boss_raid_controller[0]:
         return True
 
 
@@ -287,7 +287,9 @@ def get_raid_controller_id(drac_client):
     boss_controller_ids = [
         c.id for c in disk_ctrls if is_boss_controller(c.id, drac_client)
     ]
-    raid_controller_ids.append(boss_controller_ids[0])
+
+    if boss_controller_ids:
+        raid_controller_ids.append(boss_controller_ids[0])
     number_raid_controllers = len(raid_controller_ids)
 
     if number_raid_controllers == 1:
