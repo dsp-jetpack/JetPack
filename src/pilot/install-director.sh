@@ -287,7 +287,7 @@ echo "## Done."
 echo 
 echo "### Patching raid_config_schema"
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/raid_config_schema.json ${HOME}/pilot/raid_schema.patch"
-ech "done"
+echo "done"
 echo "### Patching raid.py"
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/drac_raid.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
