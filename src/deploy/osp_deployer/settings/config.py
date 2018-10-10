@@ -278,18 +278,6 @@ class Settings():
         else:
             self.enable_fencing = False
 
-        if deploy_settings['enable_instance_ha'].lower() == 'true':
-            self.enable_instance_ha = True
-        else:
-            self.enable_instance_ha = False
-        if deploy_settings['dvr_enable'].lower() == 'true':
-            self.dvr_enable = True
-        else:
-            self.dvr_enable = False
-        if self.dvr_enable:
-            logger.info("DVR is enabled.")
-        else:
-            logger.info("DVR is disabled.")
         self.overcloud_nodes_pwd = deploy_settings['overcloud_nodes_pwd']
         dellnfv_settings = self.get_settings_section(
             "Dell NFV Settings")
@@ -301,9 +289,15 @@ class Settings():
         if dellnfv_settings['numa_enable'].lower() == 'true':
             self.numa_enable = True
             self.hostos_cpu_count = \
-                    dellnfv_settings['numa_hostos_cpu_count']
+                dellnfv_settings['numa_hostos_cpu_count']
         else:
             self.numa_enable = False
+        if dellnfv_settings['dvr_enable'].lower() == 'true':
+            self.dvr_enable = True
+            logger.info("DVR is enabled.")
+        else:
+            self.dvr_enable = False
+            logger.info("DVR is disabled.")
         # Performance and Optimization
         performance_and_optimization = self.get_settings_section(
             "Performance and Optimization")
@@ -354,7 +348,7 @@ class Settings():
             sanity_settings['sanity_number_instances']
         self.sanity_image_url = sanity_settings['sanity_image_url']
         self.sanity_vlantest_network = \
-	    sanity_settings['sanity_vlantest_network']
+            sanity_settings['sanity_vlantest_network']
         if sanity_settings['run_sanity'].lower() == 'true':
             self.run_sanity = True
         else:
@@ -425,7 +419,9 @@ class Settings():
         else:
             logger.info("using default repo settings")
             self.rhsm_repos = [
-                'rhel-7-server-openstack-13-rpms']
+                'rhel-7-server-openstack-13-rpms',
+                'rhel-7-server-openstack-13-devtools-rpms',
+                'rhel-7-server-rhceph-3-tools-rpms']
         if dev_settings['verify_rhsm_status'].lower() \
                 == 'true':
             self.verify_rhsm_status = True
@@ -616,7 +612,7 @@ class Settings():
                                               stderr=subprocess.STDOUT,
                                               shell=True).rstrip()
             self.source_version = re_
-        except:
+        except:  # noqa: E722
             logger.debug("unconventional setup...can t" +
                          " pick source version info")
             self.source_version = "????"

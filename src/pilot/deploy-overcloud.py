@@ -123,7 +123,7 @@ def create_flavors():
          "cpus": 8}]
 
     os_auth_url, os_tenant_name, os_username, os_password, \
-    os_user_domain_name, os_project_domain_name = \
+        os_user_domain_name, os_project_domain_name = \
         CredentialHelper.get_undercloud_creds()
 
     kwargs = {'username': os_username,
@@ -160,7 +160,7 @@ def create_volume_types():
         for line in cinder_file:
             line = line.strip()
             try:
-                found = re.search('cinder_user_enabled_backends: \[(.+?)\]',
+                found = re.search('cinder_user_enabled_backends: \[(.+?)\]',  # noqa: W605
                                   line).group(1)
                 backends = found.split(",")
                 for backend in backends:
@@ -206,18 +206,18 @@ def run_deploy_command(cmd):
 
 
 def finalize_overcloud():
-    #from keystone.v3 import client
+    # from keystone.v3 import client
 
-    #os_auth_url, os_tenant_name, os_username, os_password = \
-    #    CredentialHelper.get_overcloud_creds()
+    # os_auth_url, os_tenant_name, os_username, os_password = \
+    #     CredentialHelper.get_overcloud_creds()
 
-    #try:
-    #    keystone_client = client.get_keystone_client(os_username,
+    # try:
+    #     keystone_client = client.get_keystone_client(os_username,
     #                                                 os_password,
     #                                                 os_tenant_name,
     #                                                 os_auth_url)
-    #except:
-    #    return None
+    # except:
+    #     return None
 
     create_flavors()
     create_volume_types()
@@ -348,12 +348,12 @@ def main():
         LoggingHelper.add_argument(parser)
         args = parser.parse_args()
         LoggingHelper.configure_logging(args.logging_level)
-        p = re.compile('\d+:\d+')
+        p = re.compile('\d+:\d+')  # noqa: W605
         if not p.match(args.vlan_range):
             raise ValueError("Error: The VLAN range must be a number followed "
                              "by a colon, followed by another number")
         os_auth_url, os_tenant_name, os_username, os_password, \
-        os_user_domain_name, os_project_domain_name = \
+            os_user_domain_name, os_project_domain_name = \
             CredentialHelper.get_undercloud_creds()
 
         # Set up the default flavors
@@ -384,10 +384,10 @@ def main():
         # time the overcloud is deployed (instead of once, after the Director
         # is installed) in order to ensure an update to the Director doesn't
         # overwrite the patch.
-        #logger.info("Applying patches to director...")
-        #cmd = os.path.join(home_dir, 'pilot', 'patch-director.sh')
-        #status = os.system(cmd)
-        #if status != 0:
+        # logger.info("Applying patches to director...")
+        # cmd = os.path.join(home_dir, 'pilot', 'patch-director.sh')
+        # status = os.system(cmd)
+        # if status != 0:
         #    raise ValueError("\nError: {} failed, unable to continue.  See "
         #                     "the comments in that file for additional "
         #                     "information".format(cmd))
@@ -503,8 +503,10 @@ def main():
               " -t {}" \
               " {}" \
               " --templates ~/pilot/templates/overcloud" \
-              " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml" \
-              " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-rgw.yaml" \
+              " -e /usr/share/openstack-tripleo-heat-templates/" \
+              "environments/ceph-ansible/ceph-ansible.yaml" \
+              " -e /usr/share/openstack-tripleo-heat-templates/" \
+              "environments/ceph-ansible/ceph-rgw.yaml" \
               " {}" \
               " --libvirt-type kvm" \
               " --ntp-server {}" \

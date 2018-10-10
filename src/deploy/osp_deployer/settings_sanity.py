@@ -137,7 +137,7 @@ class DeployerSanity():
                                 idrac_ip)
             logger.debug(
                 " :: " + ipmi_session.get_power_state())
-        except:
+        except:  # noqa: E722
             raise AssertionError("Could not ipmi to host " +
                                  idrac_ip)
 
@@ -480,15 +480,6 @@ class DeployerSanity():
                                                 shouldhaveattributes,
                                                 shouldbbevalidips)
 
-    def verify_iha_dependency_on_fencing(self):
-        # IHA requires fencing
-        # verify fencing flag enabled when IHA enabled
-        logger.debug("verifying fencing enabled when iha enabled")
-        if (self.settings.enable_instance_ha is True and
-                self.settings.enable_fencing is False):
-            raise AssertionError("Fencing NOT enabled, this is required" +
-                                 " for IHA. Please verify this setting.")
-
     def validate_profile(self):
         self.profile = Profile()
         self.profile.validate_configuration()
@@ -577,14 +568,15 @@ class DeployerSanity():
                                  " this setting.")
         logger.debug("verifying DVR is disabled when OVS-DPDK is enabled")
         if (self.settings.enable_ovs_dpdk is True and
-                self.settings.dvr_enable == True):
-            raise AssertionError("OVS-DPDk and DVR can not be enabled together." +
-                                 " Please disable one feature and verify the settings.")
+                self.settings.dvr_enable is True):
+            raise AssertionError("OVS-DPDk and DVR can not be enabled" +
+                                 " together.Please disable one " +
+                                 "feature and verify the settings.")
 
     def verify_sriov_dependencies(self):
         logger.debug("verifying DVR is disabled when SR-IOV is enabled")
         if (self.settings.enable_sriov is True and
-                self.settings.dvr_enable == True):
-            raise AssertionError("SR-IOV and DVR can not be enabled together." +
-                                 " Please disable one feature and verify the settings.")
-
+                self.settings.dvr_enable is True):
+            raise AssertionError("SR-IOV and DVR can not be " +
+                                 "enabled together.Please disable" +
+                                 "one feature and verify the settings.")

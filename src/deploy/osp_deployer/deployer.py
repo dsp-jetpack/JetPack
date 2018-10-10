@@ -40,7 +40,7 @@ def setup_logging():
 
 def get_settings():
     parser = argparse.ArgumentParser(
-        description='JetPack 10.x deployer')
+        description='JetPack 13.x deployer')
     parser.add_argument('-s', '--settings',
                         help='ini settings file, e.g settings/acme.ini',
                         required=True)
@@ -82,7 +82,7 @@ def deploy():
     logger.debug("=================================")
 
     parser = argparse.ArgumentParser(
-        description='JetPack 10.x deployer')
+        description='JetPack 13.x deployer')
     parser.add_argument('-s', '--settings',
                         help='ini settings file, e.g settings/acme.ini',
                         required=True)
@@ -255,14 +255,13 @@ def deploy():
         if args.skip_dashboard_vm is False:
             director_vm.configure_dashboard()
         director_vm.enable_fencing()
-        director_vm.enable_instance_ha()
         director_vm.configure_tempest()
         director_vm.run_sanity_test()
         run_tempest()
         logger.info("Deployment summary info; useful ip's etc.. " +
                     "/auto_results/deployment_summary.log")
 
-    except:
+    except:  # noqa: E722
         logger.error(traceback.format_exc())
         e = sys.exc_info()[0]
         logger.error(e)

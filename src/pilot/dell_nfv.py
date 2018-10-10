@@ -113,23 +113,28 @@ class ConfigOvercloud(object):
                 str(ceph_storage_count) +
                 '|" ' +
                 file_path,
-                'sed -i "s|OvercloudControllerFlavor:.*|OvercloudControllerFlavor: ' +
+                'sed -i "s|OvercloudControllerFlavor:.*' +
+                '|OvercloudControllerFlavor: ' +
                 str(controller_flavor) +
                 '|" ' +
                 file_path,
-                'sed -i "s|OvercloudCephStorageFlavor:.*|OvercloudCephStorageFlavor: ' +
+                'sed -i "s|OvercloudCephStorageFlavor:.*' +
+                '|OvercloudCephStorageFlavor: ' +
                 str(ceph_storage_flavor) +
                 '|" ' +
                 file_path,
-                'sed -i "s|OvercloudSwiftStorageFlavor:.*|OvercloudSwiftStorageFlavor: ' +
+                'sed -i "s|OvercloudSwiftStorageFlavor:.*' +
+                '|OvercloudSwiftStorageFlavor: ' +
                 str(swift_storage_flavor) +
                 '|" ' +
                 file_path,
-                'sed -i "s|OvercloudBlockStorageFlavor:.*|OvercloudBlockStorageFlavor: ' +
+                'sed -i "s|OvercloudBlockStorageFlavor:.*' +
+                '|OvercloudBlockStorageFlavor: ' +
                 str(block_storage_flavor) +
                 '|" ' +
                 file_path,
-                'sed -i "s|NeutronNetworkVLANRanges:.*|NeutronNetworkVLANRanges: ' +
+                'sed -i "s|NeutronNetworkVLANRanges:.*' +
+                '|NeutronNetworkVLANRanges: ' +
                 'physint:' + str(vlan_range) + ',physext'
                 '|" ' +
                 file_path))
@@ -139,17 +144,18 @@ class ConfigOvercloud(object):
             if enable_hugepage:
                 hpg_num = self.nfv_params.calculate_hugepage_count(
                     hugepage_size)
-                kernel_args += " default_hugepagesz=%s hugepagesz=%s " \
-                            "hugepages=%s" % (
-                                hugepage_size, hugepage_size[0:-1], str(hpg_num)
-                                )
+                kernel_args += " default_hugepagesz=%s hugepagesz=%s" \
+                    " hugepages=%s" \
+                    % (hugepage_size, hugepage_size[0:-1], str(hpg_num))
+
             if enable_numa:
                 node_uuid, node_data = self.nfv_params.select_compute_node()
                 self.nfv_params.parse_data(node_data)
                 self.nfv_params.get_all_cpus()
                 self.nfv_params.get_host_cpus(hostos_cpu_count)
                 if ovs_dpdk:
-                    dpdk_nics = self.find_ifaces_by_keyword(nic_env_file, 'Dpdk')
+                    dpdk_nics = self.find_ifaces_by_keyword(nic_env_file,
+                                                            'Dpdk')
                     self.nfv_params.get_pmd_cpus(mtu, dpdk_nics)
                     self.nfv_params.get_socket_memory(mtu, dpdk_nics)
                 self.nfv_params.get_nova_cpus()
@@ -159,25 +165,27 @@ class ConfigOvercloud(object):
                     'sed -i "s|# NovaVcpuPinSet:.*|NovaVcpuPinSet: ' +
                     self.nfv_params.nova_cpus + '|" ' + file_path)
             cmds.append(
-                'sed -i "s|# DellComputeParameters:|DellComputeParameters:|" ' +
+                'sed -i "s|# DellComputeParameters:' +
+                '|DellComputeParameters:|" ' +
                 file_path)
             if kernel_args:
                 cmds.append(
-                    'sed -i "s|# KernelArgs:.*|KernelArgs: \\"'+
+                    'sed -i "s|# KernelArgs:.*|KernelArgs: \\"' +
                     kernel_args + '\\" |" ' + file_path)
             if ovs_dpdk:
                 cmds.append(
-                    'sed -i "s|OvsDpdkCoreList:.*|OvsDpdkCoreList: \\"'+
+                    'sed -i "s|OvsDpdkCoreList:.*|OvsDpdkCoreList: \\"' +
                     self.nfv_params.host_cpus +
                     '\\" |" ' +
                     dpdk_file)
                 cmds.append(
-                    'sed -i "s|OvsPmdCoreList:.*|OvsPmdCoreList: \\"'+
+                    'sed -i "s|OvsPmdCoreList:.*|OvsPmdCoreList: \\"' +
                     self.nfv_params.pmd_cpus +
                     '\\" |" ' +
                     dpdk_file)
                 cmds.append(
-                    'sed -i "s|OvsDpdkSocketMemory:.*|OvsDpdkSocketMemory: \\"'+
+                    'sed -i "s|OvsDpdkSocketMemory:' +
+                    '.*|OvsDpdkSocketMemory: \\"' +
                     self.nfv_params.socket_mem +
                     '\\" |" ' +
                     dpdk_file)
