@@ -180,6 +180,9 @@
                   "sriov_7_ports/nic_environment.yaml",
                   "dvr_6_port/nic_environment.yaml",
                   "dvr_7_port/nic_environment.yaml"
+               ],
+               "validate": [
+                  "match_nic_env_files"
                ]
             },
             "ControllerBondInterfaceOptions": "",
