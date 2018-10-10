@@ -171,8 +171,8 @@
                "valid_values": [
                   "4_port/nic_environment.yaml",
                   "5_port/nic_environment.yaml",
-                  "sriov_9_ports/nic_environment.yaml",
-                  "sriov_7_ports/nic_environment.yaml",
+                  "sriov_9_port/nic_environment.yaml",
+                  "sriov_7_port/nic_environment.yaml",
                   "dvr_6_port/nic_environment.yaml",
                   "dvr_7_port/nic_environment.yaml"
                ]
