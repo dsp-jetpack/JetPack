@@ -57,7 +57,6 @@ class Profile():
             for stanza, value in items.iteritems():
                 for set, vals in value.iteritems():
                     allowed_settings = []
-                    features = {}
                     validated = False
                     try:
                         if vals['valid_values']:
