@@ -82,10 +82,10 @@ class Profile():
                                             stanza), set)) is False:
                                         Err = Err + "\nSetting for " + set + \
                                             " Should be a valid value\n"
-                                if 'match_nic_env_files' in test:
+                                if 'valid_nic_env_file' in test:
                                     nic_config = user_config.get(str(
                                                             stanza), set)
-                                    if self.match_nic_env_files(nic_config) \
+                                    if self.valid_nic_env_file(nic_config) \
                                             is False:
                                         Err = Err + "\nIncorrect nic_env_" \
                                             "file '" + nic_config + "' selected\n"
@@ -176,7 +176,7 @@ class Profile():
                 return False
         return True
 
-    def match_nic_env_files(self, config_file):
+    def valid_nic_env_file(self, config_file):
         try:
             if self.settings.enable_sriov and self.settings.enable_ovs_dpdk:
                 assert config_file == "ovs-dpdk_sriov_9_port/nic_environment.yaml"

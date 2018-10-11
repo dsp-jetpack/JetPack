@@ -176,13 +176,13 @@
                   "5_port/nic_environment.yaml",
                   "ovs-dpdk_9_port/nic_environment.yaml",
                   "ovs-dpdk_7_port/nic_environment.yaml",
-                  "sriov_9_ports/nic_environment.yaml",
-                  "sriov_7_ports/nic_environment.yaml",
+                  "sriov_9_port/nic_environment.yaml",
+                  "sriov_7_port/nic_environment.yaml",
                   "dvr_6_port/nic_environment.yaml",
                   "dvr_7_port/nic_environment.yaml"
                ],
                "validate": [
-                  "match_nic_env_files"
+                  "valid_nic_env_file"
                ]
             },
             "ControllerBondInterfaceOptions": "",
