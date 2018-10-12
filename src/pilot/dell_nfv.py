@@ -138,7 +138,9 @@ class ConfigOvercloud(object):
                 'physint:' + str(vlan_range) + ',physext'
                 '|" ' +
                 file_path))
-            kernel_args = "iommu=pt intel_iommu=on"
+            kernel_args = ''
+            if sriov or ovs_dpdk:
+                kernel_args = "iommu=pt intel_iommu=on"
             if enable_hugepage:
                 hpg_num = self.nfv_params.calculate_hugepage_count(
                     hugepage_size)
