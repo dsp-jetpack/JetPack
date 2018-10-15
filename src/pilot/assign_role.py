@@ -870,12 +870,17 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
             role_index.role,
             flavor))
 
+    node = ironic_client.node.get(node_uuid, fields=['properties'])
+
     role = "profile:{}".format(flavor)
 
     if role_index.index:
         role = "node:{}-{}".format(flavor, role_index.index)
 
-    value = "{},boot_option:local".format(role)
+    if 'capabilities' in node.properties:
+        value = "{},{}".format(role, node.properties['capabilities'])
+    else:
+        value = "{},boot_option:local".format(role)
 
     patch = [{'op': 'add',
               'value': value,
