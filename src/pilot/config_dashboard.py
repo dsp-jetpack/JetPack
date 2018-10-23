@@ -20,6 +20,9 @@ import novaclient.client as nova_client
 import os
 import sys
 import time
+import re
+import shutil
+import tempfile
 
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
@@ -54,9 +57,9 @@ class Node:
     etc_hosts = "/etc/hosts"
     ansible_hosts = "/etc/ansible/hosts"
     ceph_conf = "/etc/ceph/ceph.conf"
+    prometheus_yml = "/var/lib/cephmetrics/prometheus.yml"
     root_home = expanduser("~root")
     heat_admin_home = expanduser("~heat-admin")
-    rgw_py = "/usr/lib64/collectd/cephmetrics/collectors/rgw.py"
 
     storage_network = NetworkHelper.get_storage_network()
 
@@ -130,6 +133,17 @@ class Node:
                      remotefile,
                      user=self.username,
                      password=self.password)
+
+    def sed_inplace(self, filename, pattern, repl):
+        pattern_compiled = re.compile(pattern)
+
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp_file:
+            with open(filename) as src_file:
+                for line in src_file:
+                    tmp_file.write(pattern_compiled.sub(repl, line))
+
+        shutil.copystat(filename, tmp_file.name)
+        shutil.move(tmp_file.name, filename)
 
 
 def parse_arguments(dashboard_user):
@@ -498,6 +512,12 @@ def prep_ansible_hosts(dashboard_node, ceph_nodes):
         for node in osd_nodes:
             f.write("{}\n".format(node.fqdn))
 
+        LOG.info("Adding MGR Stanza to Ansible hosts file")
+        f.write("\n")
+        f.write("[mgrs]\n")
+        for node in mon_nodes:
+            f.write("{}\n".format(node.fqdn))
+
         LOG.info("Adding Graphana Stanza to Ansible hosts file")
         f.write("\n")
         f.write("[ceph-grafana]\n")
@@ -560,14 +580,33 @@ def prep_ceph_conf(dashboard_node, ceph_nodes):
             os.unlink(tmp_hosts)
 
 
-def prep_collectd(dashboard_node, ceph_nodes):
-    LOG.info("Preparing the Ceph Storage Cluster collectd services.")
-    collectd_dir = "/etc/collectd.d"
+def restart_prometheus(dashboard_node, ceph_nodes):
+    # Prepares the /var/lib/cephmetrics/prometheus.yml file
+    LOG.info("Preparing the Ceph Storage Cluster prometheus service.")
+
+    tmp_yml = os.path.join("/tmp", "prometheus.yml-{}"
+                           .format(dashboard_node.fqdn))
+    dashboard_node.get(tmp_yml, Node.prometheus_yml)
 
     for node in ceph_nodes:
-        LOG.info("Restarting collectd service on node ({})"
-                 .format(node.fqdn))
-        node.run("sudo systemctl restart collectd")
+        if "controller" in node.fqdn or "storage" in node.fqdn:
+            orig_str = "'" + node.fqdn + ":"
+            repl_str = "'" + node.storage_ip + ":"
+            node.sed_inplace(tmp_yml, orig_str, repl_str)
+    dashboard_str = "'" + dashboard_node.fqdn + ":"
+    node.sed_inplace(tmp_yml, dashboard_node.fqdn, "localhost")
+
+    # Upload the new file to the node
+    dashboard_node.put(tmp_yml, tmp_yml)
+    dashboard_node.run("sudo cp {} {}.bak"
+                       .format(Node.prometheus_yml, Node.prometheus_yml))
+    dashboard_node.run("sudo mv {} {}".format(tmp_yml, Node.prometheus_yml))
+    dashboard_node.run("sudo restorecon {}".format(Node.prometheus_yml))
+    os.unlink(tmp_yml)
+
+    LOG.info("Restarting prometheus service on node ({})"
+             .format(dashboard_node.fqdn))
+    dashboard_node.run("sudo systemctl restart prometheus.service")
 
 
 def prep_cluster_for_collection(dashboard_node, ceph_nodes, dashboard_addr):
@@ -636,85 +675,9 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes, dashboard_addr):
     LOG.info("with user 'admin' and password 'admin'.")
 
 
-def patch_install_packages_yaml(dashboard_node):
-    """ Patch /usr/share/cephmetrics-ansible...install_packages.yml
-    file to allow for skipping package installation.  We previously
-    install these packages in the overcloud image customization and
-    because we don't subscribe the nodes, this will fail unless we skip
-    this installation process.
-    """
-
-    install_pkg_yaml = "/usr/share/cephmetrics-ansible/roles/" + \
-                       "ceph-collectd/tasks/install_packages.yml"
-
-    status, stdout, stderr = dashboard_node.execute("[ -f {}.orig ] \
-                                                    && echo true \
-                                                    || echo false "
-                                                    .format(install_pkg_yaml))
-    if "true" in stdout:
-        return
-
-    LOG.info("Patching install_packages.yml on {}".format(dashboard_node.fqdn))
+def install_patch_package(dashboard_node):
+    LOG.info("Installing yum patch package on {}".format(dashboard_node.fqdn))
     dashboard_node.run("sudo yum -y install patch")
-    dashboard_node.run("""
-cat << EOF|sudo patch -b -d /usr/share/cephmetrics-ansible/roles/ceph-collectd/tasks
---- install_packages.yml
-+++ install_packages.yml.mod
-@@ -25,6 +25,8 @@
-     - ansible_pkg_mgr == "yum"
-     - not devel_mode
-   notify: Restart collectd
-+  tags:
-+    - cephmetrics-collectors
-
- - name: Install dependencies for collector plugins
-   package:
-EOF
-""")
-
-
-def patch_selinux_yaml(dashboard_node):
-    """ Patch /usr/share/cephmetrics-ansible...install_packages.yml
-    file to allow for skipping package installation.  We previously
-    install these packages in the overcloud image customization and
-    because we don't subscribe the nodes, this will fail unless we skip
-    this installation process.
-    """
-
-    selinux_yaml = "/usr/share/cephmetrics-ansible/roles/" + \
-                   "ceph-collectd/tasks/selinux.yml"
-
-    status, stdout, stderr = dashboard_node.execute("[ -f {}.orig ] \
-                                                    && echo true \
-                                                    || echo false "
-                                                    .format(selinux_yaml))
-    if "true" in stdout:
-        return
-
-    LOG.info("Patching selinux.yml on {}".format(dashboard_node.fqdn))
-    dashboard_node.run("""
-cat << EOF|sudo patch -b -d /usr/share/cephmetrics-ansible/roles/ceph-collectd/tasks
---- selinux.yml
-+++ selinux.mod
-@@ -5,11 +5,11 @@
-     state: yes
-     persistent: yes
- 
--- name: Restore SELinux context of OSD journals
--  shell: "restorecon -R -v /var/lib/ceph/osd/*/journal"
--  when: "'osds' in group_names"
--  register: restorecon
--  changed_when: restorecon.stdout|length != 0 or restorecon.stderr|length != 0
-+#- name: Restore SELinux context of OSD journals
-+#  shell: "restorecon -R -v /var/lib/ceph/osd/*/journal"
-+#  when: "'osds' in group_names"
-+#  register: restorecon
-+#  changed_when: restorecon.stdout|length != 0 or restorecon.stderr|length != 0
-
- - include: selinux_module.yml
-   when:
-EOF
-""")
 
 
 def patch_facts_yaml(dashboard_node):
@@ -740,10 +703,10 @@ def patch_facts_yaml(dashboard_node):
 cat << EOF|sudo patch -b -d /usr/share/ceph-ansible/roles/ceph-defaults/tasks
 --- facts.yml
 +++ facts.mod
-@@ -154,32 +154,32 @@
+@@ -160,32 +160,32 @@
      - rbd_client_directory_mode is not defined
        or not rbd_client_directory_mode
-
+ 
 -- name: resolve device link(s)
 -  command: readlink -f {{ item }}
 -  changed_when: false
@@ -796,8 +759,8 @@ cat << EOF|sudo patch -b -d /usr/share/ceph-ansible/roles/ceph-defaults/tasks
 +#    - inventory_hostname in groups.get(osd_group_name, [])
 +#    - not osd_auto_discovery|default(False)
 +#    - osd_scenario|default('dummy') != 'lvm'
-
- - name: set_fact ceph_uid for Debian based system
+ 
+ - name: set_fact ceph_uid for debian based system - non container
    set_fact:
 EOF
 """)
@@ -826,14 +789,12 @@ def main():
     prep_heat_admin_user(dashboard_node, ceph_nodes)
     prep_ansible_hosts(dashboard_node, ceph_nodes)
     prep_ceph_conf(dashboard_node, ceph_nodes)
-    patch_install_packages_yaml(dashboard_node)
-    patch_selinux_yaml(dashboard_node)
+    install_patch_package(dashboard_node)
     patch_facts_yaml(dashboard_node)
-    prep_collectd(dashboard_node, ceph_nodes)
     prep_cluster_for_collection(dashboard_node,
                                 ceph_nodes,
                                 args.dashboard_addr)
-
+    restart_prometheus(dashboard_node, ceph_nodes)
 
 if __name__ == "__main__":
     sys.exit(main())
