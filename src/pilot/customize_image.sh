@@ -71,7 +71,7 @@ repos=(
 )
 
 packages=(
-    prometheus-node-exporter
+    cephmetrics-collectors
 )
 
 del_packages=(

@@ -58,6 +58,7 @@ class Node:
     ansible_hosts = "/etc/ansible/hosts"
     ceph_conf = "/etc/ceph/ceph.conf"
     prometheus_yml = "/var/lib/cephmetrics/prometheus.yml"
+    subscription_json = "~/pilot/subscription.json"
     root_home = expanduser("~root")
     heat_admin_home = expanduser("~heat-admin")
 
@@ -134,16 +135,17 @@ class Node:
                      user=self.username,
                      password=self.password)
 
-    def sed_inplace(self, filename, pattern, repl):
-        pattern_compiled = re.compile(pattern)
 
-        with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp_file:
-            with open(filename) as src_file:
-                for line in src_file:
-                    tmp_file.write(pattern_compiled.sub(repl, line))
+def sed_inplace(filename, pattern, repl):
+    pattern_compiled = re.compile(pattern)
 
-        shutil.copystat(filename, tmp_file.name)
-        shutil.move(tmp_file.name, filename)
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp_file:
+        with open(filename) as src_file:
+            for line in src_file:
+                tmp_file.write(pattern_compiled.sub(repl, line))
+
+    shutil.copystat(filename, tmp_file.name)
+    shutil.move(tmp_file.name, filename)
 
 
 def parse_arguments(dashboard_user):
@@ -158,8 +160,20 @@ def parse_arguments(dashboard_user):
                         help="The IP address of the Ceph Storage Dashboard "
                         "on the external network", metavar="ADDR")
     parser.add_argument("dashboard_pass",
-                        help="The {} password of the Ceph Storage "
-                        "Dashboard".format(dashboard_user), metavar="PASSWORD")
+                        help="The password of the Ceph Storage Dashboard "
+                        "node ", metavar="PASSWORD")
+    parser.add_argument("subUser",
+                        help="The username for Red Hat Subscription Access"
+                        " ", metavar="SUBSCRIPTION_USER")
+    parser.add_argument("subPass",
+                        help="The password for Red Hat Subscription Access"
+                        " ", metavar="SUBSCRIPTION_PASSWORD")
+    parser.add_argument("physId",
+                        help="The subscription poolid for Physical Nodes"
+                        " ", metavar="PHYSICAL_POOL_ID")
+    parser.add_argument("cephId",
+                        help="The subscription poolid for Ceph Nodes"
+                        " ", metavar="CEPH_POOL_ID")
 
     LoggingHelper.add_argument(parser)
 
@@ -592,9 +606,9 @@ def restart_prometheus(dashboard_node, ceph_nodes):
         if "controller" in node.fqdn or "storage" in node.fqdn:
             orig_str = "'" + node.fqdn + ":"
             repl_str = "'" + node.storage_ip + ":"
-            node.sed_inplace(tmp_yml, orig_str, repl_str)
+            sed_inplace(tmp_yml, orig_str, repl_str)
     dashboard_str = "'" + dashboard_node.fqdn + ":"
-    node.sed_inplace(tmp_yml, dashboard_node.fqdn, "localhost")
+    sed_inplace(tmp_yml, dashboard_node.fqdn, "localhost")
 
     # Upload the new file to the node
     dashboard_node.put(tmp_yml, tmp_yml)
@@ -706,7 +720,7 @@ cat << EOF|sudo patch -b -d /usr/share/ceph-ansible/roles/ceph-defaults/tasks
 @@ -160,32 +160,32 @@
      - rbd_client_directory_mode is not defined
        or not rbd_client_directory_mode
- 
+
 -- name: resolve device link(s)
 -  command: readlink -f {{ item }}
 -  changed_when: false
@@ -766,6 +780,43 @@ EOF
 """)
 
 
+def prep_subscription_json(subUser, subPass, physId, cephId):
+    # Prepares the subscription.json file
+    LOG.info("Preparing the subscription json file.")
+
+    tmp_file = os.path.join("/tmp", "subscription.json-mod")
+    os.system('cp ' + Node.subscription_json + ' ' + tmp_file)
+    sed_inplace(tmp_file, "CHANGEME_username", subUser)
+    sed_inplace(tmp_file, "CHANGEME_password", subPass)
+    sed_inplace(tmp_file, "CHANGEME_openstack_pool_id", physId)
+    sed_inplace(tmp_file, "CHANGEME_ceph_pool_id", cephId)
+    os.system('cp ' + tmp_file + ' ' + Node.subscription_json)
+    os.unlink(tmp_file)
+
+
+def register_overcloud_nodes():
+    LOG.info("Register the overcolud nodes.")
+    os.system("python register_overcloud.py")
+
+
+def unregister_overcloud_nodes():
+    LOG.info("Unregister the overcolud nodes.")
+    os.system("python unregister_overcloud.py")
+
+
+def add_iptables_ports():
+    LOG.info("Add new ports to iptables ceph nodes")
+    for node in ceph_nodes:
+        node.run("sudo iptables -A INPUT -m state --state NEW \
+                 -m tcp -p tcp --dport 9100 -j ACCEPT")
+        node.run("sudo iptables -A INPUT -m state --state NEW \
+                 -m tcp -p tcp --dport 9283 -j ACCEPT")
+        node.run("sudo iptables-save > /tmp/iptables.new")
+        node.run("sudo systemctl stop iptables")
+        node.run("sudo mv /tmp/iptables.new /etc/sysconfig/iptables")
+        node.run("sudo systemctl start iptables")
+
+
 def main():
     """ Configures the Ceph Storage Dashboard and Ceph nodes
     """
@@ -784,6 +835,9 @@ def main():
 
     ceph_nodes = get_ceph_nodes(username="heat-admin")
 
+    prep_subscription_json(args.subUser, args.subPass,
+                           args.physId, args.cephId)
+    register_overcloud_nodes()
     prep_host_files(dashboard_node, ceph_nodes)
     prep_root_user(dashboard_node, ceph_nodes)
     prep_heat_admin_user(dashboard_node, ceph_nodes)
@@ -794,6 +848,8 @@ def main():
     prep_cluster_for_collection(dashboard_node,
                                 ceph_nodes,
                                 args.dashboard_addr)
+    add_iptables_ports()
+    unregister_overcloud_nodes()
     restart_prometheus(dashboard_node, ceph_nodes)
 
 if __name__ == "__main__":
