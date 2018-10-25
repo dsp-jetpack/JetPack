@@ -272,8 +272,8 @@ sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
 echo
 echo "## Patching Ironic iDRAC driver job.py..."
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/job.py ${HOME}/pilot/job.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/job.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/job.pyo
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
 
 # This hacks in a patch to work around a known issue where a RAID-10 virtual
 # disk cannot be created from more than 16 backing physical disks.  Also
