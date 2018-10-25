@@ -7,9 +7,9 @@
                   "_proxy_credentials below and fill in the following proxy",
                   "information." ],
     "_proxy_credentials": {
-        "proxy_url": "CHANGEME_hostname:CHANGEME_port",
-        "proxy_username": "CHANGEME_username",
-        "proxy_password": "CHANGEME_password"
+        "proxy_url": "CHANGEME_proxy_hostname:CHANGEME_proxy_port",
+        "proxy_username": "CHANGEME_proxy_username",
+        "proxy_password": "CHANGEME_proxy_password"
     },
     "roles": {
         "control": {
