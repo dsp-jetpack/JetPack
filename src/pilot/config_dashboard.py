@@ -20,6 +20,9 @@ import novaclient.client as nova_client
 import os
 import sys
 import time
+import re
+import shutil
+import tempfile
 
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
@@ -54,9 +57,10 @@ class Node:
     etc_hosts = "/etc/hosts"
     ansible_hosts = "/etc/ansible/hosts"
     ceph_conf = "/etc/ceph/ceph.conf"
+    prometheus_yml = "/var/lib/cephmetrics/prometheus.yml"
+    subscription_json = "~/pilot/subscription.json"
     root_home = expanduser("~root")
     heat_admin_home = expanduser("~heat-admin")
-    rgw_py = "/usr/lib64/collectd/cephmetrics/collectors/rgw.py"
 
     storage_network = NetworkHelper.get_storage_network()
 
@@ -132,6 +136,18 @@ class Node:
                      password=self.password)
 
 
+def sed_inplace(filename, pattern, repl):
+    pattern_compiled = re.compile(pattern)
+
+    with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp_file:
+        with open(filename) as src_file:
+            for line in src_file:
+                tmp_file.write(pattern_compiled.sub(repl, line))
+
+    shutil.copystat(filename, tmp_file.name)
+    shutil.move(tmp_file.name, filename)
+
+
 def parse_arguments(dashboard_user):
     """ Parses the input argments
     """
@@ -144,8 +160,20 @@ def parse_arguments(dashboard_user):
                         help="The IP address of the Ceph Storage Dashboard "
                         "on the external network", metavar="ADDR")
     parser.add_argument("dashboard_pass",
-                        help="The {} password of the Ceph Storage "
-                        "Dashboard".format(dashboard_user), metavar="PASSWORD")
+                        help="The password of the Ceph Storage Dashboard "
+                        "node ", metavar="PASSWORD")
+    parser.add_argument("subUser",
+                        help="The username for Red Hat Subscription Access"
+                        " ", metavar="SUBSCRIPTION_USER")
+    parser.add_argument("subPass",
+                        help="The password for Red Hat Subscription Access"
+                        " ", metavar="SUBSCRIPTION_PASSWORD")
+    parser.add_argument("physId",
+                        help="The subscription poolid for Physical Nodes"
+                        " ", metavar="PHYSICAL_POOL_ID")
+    parser.add_argument("cephId",
+                        help="The subscription poolid for Ceph Nodes"
+                        " ", metavar="CEPH_POOL_ID")
 
     LoggingHelper.add_argument(parser)
 
@@ -498,6 +526,12 @@ def prep_ansible_hosts(dashboard_node, ceph_nodes):
         for node in osd_nodes:
             f.write("{}\n".format(node.fqdn))
 
+        LOG.info("Adding MGR Stanza to Ansible hosts file")
+        f.write("\n")
+        f.write("[mgrs]\n")
+        for node in mon_nodes:
+            f.write("{}\n".format(node.fqdn))
+
         LOG.info("Adding Graphana Stanza to Ansible hosts file")
         f.write("\n")
         f.write("[ceph-grafana]\n")
@@ -560,14 +594,33 @@ def prep_ceph_conf(dashboard_node, ceph_nodes):
             os.unlink(tmp_hosts)
 
 
-def prep_collectd(dashboard_node, ceph_nodes):
-    LOG.info("Preparing the Ceph Storage Cluster collectd services.")
-    collectd_dir = "/etc/collectd.d"
+def restart_prometheus(dashboard_node, ceph_nodes):
+    # Prepares the /var/lib/cephmetrics/prometheus.yml file
+    LOG.info("Preparing the Ceph Storage Cluster prometheus service.")
+
+    tmp_yml = os.path.join("/tmp", "prometheus.yml-{}"
+                           .format(dashboard_node.fqdn))
+    dashboard_node.get(tmp_yml, Node.prometheus_yml)
 
     for node in ceph_nodes:
-        LOG.info("Restarting collectd service on node ({})"
-                 .format(node.fqdn))
-        node.run("sudo systemctl restart collectd")
+        if "controller" in node.fqdn or "storage" in node.fqdn:
+            orig_str = "'" + node.fqdn + ":"
+            repl_str = "'" + node.storage_ip + ":"
+            sed_inplace(tmp_yml, orig_str, repl_str)
+    dashboard_str = "'" + dashboard_node.fqdn + ":"
+    sed_inplace(tmp_yml, dashboard_node.fqdn, "localhost")
+
+    # Upload the new file to the node
+    dashboard_node.put(tmp_yml, tmp_yml)
+    dashboard_node.run("sudo cp {} {}.bak"
+                       .format(Node.prometheus_yml, Node.prometheus_yml))
+    dashboard_node.run("sudo mv {} {}".format(tmp_yml, Node.prometheus_yml))
+    dashboard_node.run("sudo restorecon {}".format(Node.prometheus_yml))
+    os.unlink(tmp_yml)
+
+    LOG.info("Restarting prometheus service on node ({})"
+             .format(dashboard_node.fqdn))
+    dashboard_node.run("sudo systemctl restart prometheus.service")
 
 
 def prep_cluster_for_collection(dashboard_node, ceph_nodes, dashboard_addr):
@@ -636,85 +689,9 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes, dashboard_addr):
     LOG.info("with user 'admin' and password 'admin'.")
 
 
-def patch_install_packages_yaml(dashboard_node):
-    """ Patch /usr/share/cephmetrics-ansible...install_packages.yml
-    file to allow for skipping package installation.  We previously
-    install these packages in the overcloud image customization and
-    because we don't subscribe the nodes, this will fail unless we skip
-    this installation process.
-    """
-
-    install_pkg_yaml = "/usr/share/cephmetrics-ansible/roles/" + \
-                       "ceph-collectd/tasks/install_packages.yml"
-
-    status, stdout, stderr = dashboard_node.execute("[ -f {}.orig ] \
-                                                    && echo true \
-                                                    || echo false "
-                                                    .format(install_pkg_yaml))
-    if "true" in stdout:
-        return
-
-    LOG.info("Patching install_packages.yml on {}".format(dashboard_node.fqdn))
+def install_patch_package(dashboard_node):
+    LOG.info("Installing yum patch package on {}".format(dashboard_node.fqdn))
     dashboard_node.run("sudo yum -y install patch")
-    dashboard_node.run("""
-cat << EOF|sudo patch -b -d /usr/share/cephmetrics-ansible/roles/ceph-collectd/tasks
---- install_packages.yml
-+++ install_packages.yml.mod
-@@ -25,6 +25,8 @@
-     - ansible_pkg_mgr == "yum"
-     - not devel_mode
-   notify: Restart collectd
-+  tags:
-+    - cephmetrics-collectors
-
- - name: Install dependencies for collector plugins
-   package:
-EOF
-""")
-
-
-def patch_selinux_yaml(dashboard_node):
-    """ Patch /usr/share/cephmetrics-ansible...install_packages.yml
-    file to allow for skipping package installation.  We previously
-    install these packages in the overcloud image customization and
-    because we don't subscribe the nodes, this will fail unless we skip
-    this installation process.
-    """
-
-    selinux_yaml = "/usr/share/cephmetrics-ansible/roles/" + \
-                   "ceph-collectd/tasks/selinux.yml"
-
-    status, stdout, stderr = dashboard_node.execute("[ -f {}.orig ] \
-                                                    && echo true \
-                                                    || echo false "
-                                                    .format(selinux_yaml))
-    if "true" in stdout:
-        return
-
-    LOG.info("Patching selinux.yml on {}".format(dashboard_node.fqdn))
-    dashboard_node.run("""
-cat << EOF|sudo patch -b -d /usr/share/cephmetrics-ansible/roles/ceph-collectd/tasks
---- selinux.yml
-+++ selinux.mod
-@@ -5,11 +5,11 @@
-     state: yes
-     persistent: yes
- 
--- name: Restore SELinux context of OSD journals
--  shell: "restorecon -R -v /var/lib/ceph/osd/*/journal"
--  when: "'osds' in group_names"
--  register: restorecon
--  changed_when: restorecon.stdout|length != 0 or restorecon.stderr|length != 0
-+#- name: Restore SELinux context of OSD journals
-+#  shell: "restorecon -R -v /var/lib/ceph/osd/*/journal"
-+#  when: "'osds' in group_names"
-+#  register: restorecon
-+#  changed_when: restorecon.stdout|length != 0 or restorecon.stderr|length != 0
-
- - include: selinux_module.yml
-   when:
-EOF
-""")
 
 
 def patch_facts_yaml(dashboard_node):
@@ -740,7 +717,7 @@ def patch_facts_yaml(dashboard_node):
 cat << EOF|sudo patch -b -d /usr/share/ceph-ansible/roles/ceph-defaults/tasks
 --- facts.yml
 +++ facts.mod
-@@ -154,32 +154,32 @@
+@@ -160,32 +160,32 @@
      - rbd_client_directory_mode is not defined
        or not rbd_client_directory_mode
 
@@ -796,11 +773,48 @@ cat << EOF|sudo patch -b -d /usr/share/ceph-ansible/roles/ceph-defaults/tasks
 +#    - inventory_hostname in groups.get(osd_group_name, [])
 +#    - not osd_auto_discovery|default(False)
 +#    - osd_scenario|default('dummy') != 'lvm'
-
- - name: set_fact ceph_uid for Debian based system
+ 
+ - name: set_fact ceph_uid for debian based system - non container
    set_fact:
 EOF
 """)
+
+
+def prep_subscription_json(subUser, subPass, physId, cephId):
+    # Prepares the subscription.json file
+    LOG.info("Preparing the subscription json file.")
+
+    tmp_file = os.path.join("/tmp", "subscription.json-mod")
+    os.system('cp ' + Node.subscription_json + ' ' + tmp_file)
+    sed_inplace(tmp_file, "CHANGEME_username", subUser)
+    sed_inplace(tmp_file, "CHANGEME_password", subPass)
+    sed_inplace(tmp_file, "CHANGEME_openstack_pool_id", physId)
+    sed_inplace(tmp_file, "CHANGEME_ceph_pool_id", cephId)
+    os.system('cp ' + tmp_file + ' ' + Node.subscription_json)
+    os.unlink(tmp_file)
+
+
+def register_overcloud_nodes():
+    LOG.info("Register the overcolud nodes.")
+    os.system("python register_overcloud.py")
+
+
+def unregister_overcloud_nodes():
+    LOG.info("Unregister the overcolud nodes.")
+    os.system("python unregister_overcloud.py")
+
+
+def add_iptables_ports():
+    LOG.info("Add new ports to iptables ceph nodes")
+    for node in ceph_nodes:
+        node.run("sudo iptables -A INPUT -m state --state NEW \
+                 -m tcp -p tcp --dport 9100 -j ACCEPT")
+        node.run("sudo iptables -A INPUT -m state --state NEW \
+                 -m tcp -p tcp --dport 9283 -j ACCEPT")
+        node.run("sudo iptables-save > /tmp/iptables.new")
+        node.run("sudo systemctl stop iptables")
+        node.run("sudo mv /tmp/iptables.new /etc/sysconfig/iptables")
+        node.run("sudo systemctl start iptables")
 
 
 def main():
@@ -821,19 +835,22 @@ def main():
 
     ceph_nodes = get_ceph_nodes(username="heat-admin")
 
+    prep_subscription_json(args.subUser, args.subPass,
+                           args.physId, args.cephId)
+    register_overcloud_nodes()
     prep_host_files(dashboard_node, ceph_nodes)
     prep_root_user(dashboard_node, ceph_nodes)
     prep_heat_admin_user(dashboard_node, ceph_nodes)
     prep_ansible_hosts(dashboard_node, ceph_nodes)
     prep_ceph_conf(dashboard_node, ceph_nodes)
-    patch_install_packages_yaml(dashboard_node)
-    patch_selinux_yaml(dashboard_node)
+    install_patch_package(dashboard_node)
     patch_facts_yaml(dashboard_node)
-    prep_collectd(dashboard_node, ceph_nodes)
     prep_cluster_for_collection(dashboard_node,
                                 ceph_nodes,
                                 args.dashboard_addr)
-
+    add_iptables_ports()
+    unregister_overcloud_nodes()
+    restart_prometheus(dashboard_node, ceph_nodes)
 
 if __name__ == "__main__":
     sys.exit(main())
