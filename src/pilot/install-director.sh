@@ -253,6 +253,13 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/consta
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyo
 
+# This hacks in a patch to allow realtime RAID creation.
+echo
+echo "## Patching Ironic iDRAC driver client.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
+
 # This hacks in a patch to work around an issue where the iDRAC can return
 # invalid non-ASCII characters during an enumeration.
 echo
@@ -261,8 +268,16 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
 
+# This hacks in a patch to enable realtime RAID creation.
+echo
+echo "## Patching Ironic iDRAC driver job.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/job.py ${HOME}/pilot/job.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
+
 # This hacks in a patch to work around a known issue where a RAID-10 virtual
-# disk cannot be created from more than 16 backing physical disks.
+# disk cannot be created from more than 16 backing physical disks.  Also
+# included is the ability to create a virtual disk using realtime mode.
 # Note that this code must be here because we use this code prior to deploying
 # the director.
 echo

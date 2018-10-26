@@ -1,0 +1,11 @@
+111c111
+<                           reboot=False):
+---
+>                           reboot=False, realtime=False):
+146c146,149
+<         if reboot:
+---
+>         if realtime:
+>             properties['RealTime'] = '1'
+> 
+>         if not realtime and reboot:
