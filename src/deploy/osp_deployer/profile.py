@@ -82,13 +82,6 @@ class Profile():
                                             stanza), set)) is False:
                                         Err = Err + "\nSetting for " + set + \
                                             " Should be a valid value\n"
-                                if 'valid_nic_env_file' in test:
-                                    nic_config = user_config.get(str(
-                                                            stanza), set)
-                                    if self.valid_nic_env_file(nic_config) \
-                                            is False:
-                                        Err = Err + "\nIncorrect nic_env_" \
-                                            "file '" + nic_config + "' selected\n"
 
                             validated = True
                         if vals['in_range']:
@@ -175,23 +168,3 @@ class Profile():
             if val < 0:
                 return False
         return True
-
-    def valid_nic_env_file(self, config_file):
-        try:
-            if self.settings.enable_sriov and self.settings.enable_ovs_dpdk:
-                assert config_file == "ovs-dpdk_sriov_9_port/nic_environment.yaml"
-            elif self.settings.enable_sriov:
-                assert config_file == "sriov_7_port/nic_environment.yaml" or \
-                    config_file == "sriov_9_port/nic_environment.yaml"
-            elif self.settings.enable_ovs_dpdk:
-                assert config_file == "ovs-dpdk_7_port/nic_environment.yaml" or \
-                    config_file == "ovs-dpdk_9_port/nic_environment.yaml"
-            elif self.settings.enable_dvr:
-                assert config_file == "5_port/nic_environment.yaml" or \
-                    config_file == "dvr_7_port/nic_environment.yaml"    
-            else:
-                assert config_file == "5_port/nic_environment.yaml" or \
-                    config_file == "4_port/nic_environment.yaml"
-            return True
-        except AssertionError:
-            return False

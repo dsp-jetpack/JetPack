@@ -169,9 +169,6 @@
                "valid_values": [
                   "4_port/nic_environment.yaml",
                   "5_port/nic_environment.yaml"
-               ],
-               "validate": [
-                  "valid_nic_env_file"
                ]
             },
             "ControllerBondInterfaceOptions": "",
