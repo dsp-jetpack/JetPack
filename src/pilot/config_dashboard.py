@@ -795,21 +795,21 @@ def prep_subscription_json(subUser, subPass, physId, cephId):
 
 
 def register_overcloud_nodes():
-    LOG.info("Register the overcolud nodes.")
+    LOG.info("Register the overcloud nodes.")
     os.system("python register_overcloud.py")
 
 
 def unregister_overcloud_nodes():
-    LOG.info("Unregister the overcolud nodes.")
+    LOG.info("Unregister the overcloud nodes.")
     os.system("python unregister_overcloud.py")
 
 
-def add_iptables_ports():
+def add_iptables_ports(ceph_nodes):
     LOG.info("Add new ports to iptables ceph nodes")
     for node in ceph_nodes:
-        node.run("sudo iptables -A INPUT -m state --state NEW \
+        node.run("sudo iptables -I INPUT 1 -m state --state NEW \
                  -m tcp -p tcp --dport 9100 -j ACCEPT")
-        node.run("sudo iptables -A INPUT -m state --state NEW \
+        node.run("sudo iptables -I INPUT 1 -m state --state NEW \
                  -m tcp -p tcp --dport 9283 -j ACCEPT")
         node.run("sudo iptables-save > /tmp/iptables.new")
         node.run("sudo systemctl stop iptables")
@@ -848,7 +848,7 @@ def main():
     prep_cluster_for_collection(dashboard_node,
                                 ceph_nodes,
                                 args.dashboard_addr)
-    add_iptables_ports()
+    add_iptables_ports(ceph_nodes)
     unregister_overcloud_nodes()
     restart_prometheus(dashboard_node, ceph_nodes)
 
