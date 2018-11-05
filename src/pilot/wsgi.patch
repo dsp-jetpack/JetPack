@@ -5,7 +5,7 @@
    SetEnvIf X-Forwarded-Proto https HTTPS=1
    WSGIApplicationGroup %{GLOBAL}
 -  WSGIDaemonProcess ironic display-name=ironic_wsgi group=ironic processes=4 threads=1 user=ironic
-+  WSGIDaemonProcess ironic display-name=ironic_wsgi group=ironic processes=4 threads=15 user=ironic
++  WSGIDaemonProcess ironic display-name=ironic_wsgi group=ironic processes=4 threads=30 user=ironic
    WSGIProcessGroup ironic
    WSGIScriptAlias / "/var/www/cgi-bin/ironic/app"
  </VirtualHost>
