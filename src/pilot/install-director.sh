@@ -280,6 +280,18 @@ echo "## Patching ironic.conf..."
 apply_patch "sudo patch -b -s /etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
 echo "## Done."
 
+# This patches an issue where the  Ironic api service returns http 500 errors
+# https://bugzilla.redhat.com/show_bug.cgi?id=1613995
+echo
+echo "## Patching 10-ironic_wsgi.conf"
+apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
+echo "## Done"
+
+echo
+echo "## Restarting httpd"
+sudo systemctl restart httpd
+echo "## Done"
+
 echo
 echo "## Restarting openstack-ironic-conductor.service..."
 sudo systemctl restart openstack-ironic-conductor.service
