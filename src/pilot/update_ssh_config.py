@@ -28,7 +28,7 @@ def get_nodes():
     by running "nova list"
     """
 
-    stack_name = CredentialHelper.get_overcloud_name()
+    stack_name = CredentialHelper.get_overcloud_name().lower()
 
     # A dictionary that maps nova node names to something shorter and easier
     # to type.
