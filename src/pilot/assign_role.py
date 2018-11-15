@@ -911,7 +911,7 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
         return
 
     LOG.info("Generating OSD config for {ip}".format(ip=ip_mac_service_tag))
-    system_id = drac_client.get_system_id().upper()
+    system_id = drac_client.get_system_id()
 
     spinners, ssds = get_drives(drac_client)
 
