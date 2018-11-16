@@ -124,12 +124,12 @@ def create_flavors():
 
     os_auth_url, os_tenant_name, os_username, os_password, \
         os_user_domain_name, os_project_domain_name = \
-        CredentialHelper.get_undercloud_creds()
+        CredentialHelper.get_overcloud_creds()
 
     kwargs = {'username': os_username,
               'password': os_password,
               'auth_url': os_auth_url,
-              'project_id': os_tenant_name,
+              'project_name': os_tenant_name,
               'user_domain_name': os_user_domain_name,
               'project_domain_name': os_project_domain_name}
     n_client = nova_client.Client(2, **kwargs)
@@ -527,13 +527,12 @@ def main():
         end = time.time()
         logger.info('\nExecution time: {} (hh:mm:ss)'.format(
             time.strftime('%H:%M:%S', time.gmtime(end - start))))
-        print 'Fetching SSH keys...'
+        logger.info('Fetching SSH keys...')
 
         update_ssh_config()
         if status == 0:
             horizon_url = finalize_overcloud()
             logger.info("\nDeployment Completed")
-            config.post_deployment_tasks()
         else:
             horizon_url = None
 
