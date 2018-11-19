@@ -29,6 +29,7 @@ import sys
 import yaml
 
 from dracclient import utils
+from dracclient import client
 from dracclient.constants import POWER_OFF
 from dracclient.exceptions import DRACOperationFailed, \
     DRACUnexpectedReturnValue, WSManInvalidResponse, WSManRequestFailure
@@ -861,9 +862,12 @@ def place_node_in_available_state(ironic_client, node_uuid):
 
 
 def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
-                ironic_client, drac_client):
+                ironic_client, node_definition, node):
     flavor = ROLES[role_index.role]
-
+    drac_ip, drac_user, drac_password = \
+        CredentialHelper.get_drac_creds_from_node(node,
+                                                  node_definition)
+    drac_client = client.DRACClient(drac_ip, drac_user, drac_password)
     LOG.info(
         "Setting role for {} to {}, flavor {}".format(
             ip_mac_service_tag,
@@ -911,7 +915,7 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
         return
 
     LOG.info("Generating OSD config for {ip}".format(ip=ip_mac_service_tag))
-    system_id = drac_client.get_system_id()
+    system_id = drac_client.get_system().id
 
     spinners, ssds = get_drives(drac_client)
 
@@ -1553,7 +1557,8 @@ def main():
             args.role_index,
             args.os_volume_size_gb,
             ironic_client,
-            drac_client)
+            args.node_definition,
+            node)
 
     except (DRACOperationFailed, DRACUnexpectedReturnValue,
             InternalServerError, KeyError, TypeError, ValueError,
