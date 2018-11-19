@@ -1383,7 +1383,11 @@ class Director(InfraHost):
                      self.pilot_dir +
                      ';./config_dashboard.py ' +
                      ip +
-                     ' ' + self.settings.dashboard_node.root_password)
+                     ' ' + self.settings.dashboard_node.root_password +
+                     ' ' + self.settings.subscription_manager_user + 
+                     ' ' + self.settings.subscription_manager_password + 
+                     ' ' + self.settings.subscription_manager_pool_sah + 
+                     ' ' + self.settings.subscription_manager_vm_ceph)
 
     def enable_fencing(self):
         if self.settings.enable_fencing is True:

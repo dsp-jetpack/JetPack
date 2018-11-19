@@ -245,8 +245,7 @@ echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
-
-s hacks in a patch to allow realtime RAID creation.
+# This hacks in a patch to allow realtime RAID creation.
 echo
 echo "## Patching Ironic iDRAC driver client.py..."
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch"
@@ -270,8 +269,7 @@ sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
 echo "## Done."
 
-
- This patches workarounds for two issues into ironic.conf.
+# This patches workarounds for two issues into ironic.conf.
 # 1. node_locked_retry_attempts is increased to work around an issue where
 #    lock contention on the nodes in ironic can occur during RAID cleaning.
 # 2. sync_power_state_interval is increased to work around an issue where
@@ -282,7 +280,14 @@ echo "## Patching ironic.conf..."
 apply_patch "sudo patch -b -s /etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
 echo "## Done."
 
-echo 
+# This patches an issue where the  Ironic api service returns http 500 errors
+# https://bugzilla.redhat.com/show_bug.cgi?id=1613995
+echo
+echo "## Patching 10-ironic_wsgi.conf"
+apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
+echo "## Done"
+
+echo
 echo "## Restarting httpd"
 sudo systemctl restart httpd
 echo "## Done"
@@ -297,6 +302,7 @@ echo
 echo "## Configuring neutron network ${network} as a cleaning network"
 configure_cleaning_network $network
 echo "## Done."
+
 
 touch ~/overcloud_images.yaml
 
