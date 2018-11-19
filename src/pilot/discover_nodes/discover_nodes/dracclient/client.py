@@ -31,7 +31,6 @@ from time import sleep
 from .resources import idrac_card
 from .resources import job
 from .resources import nic
-from .resources import system
 from .resources import uris
 # import discover_nodes.dracclient.resources.nic as nic
 
@@ -485,33 +484,6 @@ class DRACClient(ironic_client.DRACClient):
         :raises: WSManInvalidResponse when receiving invalid response
         """
         return self._nic_mgmt.get_nic_statistics(nic_id)
-
-    def get_system_id(self):
-        """Return the system id.
-
-        :returns: system model id
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        """
-        return system.SystemManagement(self.client).get_system_id()
-
-    def get_system_model_name(self):
-        """Return the system model name.
-
-        :returns: system model name
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        """
-        return system.SystemManagement(self.client).get_system_model_name()
-
-    def get_system_service_tag(self):
-        """Return the system service tag.
-
-        :returns: system service tag
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        """
-        return system.SystemManagement(self.client).get_system_service_tag()
 
     def is_nic_legacy_boot_protocol_none(self, nic_id):
         """Return true if the legacy, non-UEFI, boot protocol of a NIC is NONE,
