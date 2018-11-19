@@ -777,15 +777,6 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
                      "failed")
         return False
 
-    # If the user specified the volume to install the OS on, and they told
-    # us to configure RAID, then we delete any existing RAID volumes, convert
-    # the disks to JBOD mode, and call it good since we don't know what RAID
-    # config to apply.
-    if os_volume_size_gb is not None:
-        # Return the ironic node to the available state.
-        place_node_in_available_state(ironic_client, node_uuid)
-        return True
-
     target_raid_config = define_target_raid_config(
         role, drac_client)
 
@@ -911,7 +902,7 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
         return
 
     LOG.info("Generating OSD config for {ip}".format(ip=ip_mac_service_tag))
-    system_id = drac_client.get_system_id().upper()
+    system_id = drac_client.get_system_id()
 
     spinners, ssds = get_drives(drac_client)
 
