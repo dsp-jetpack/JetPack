@@ -1333,7 +1333,6 @@ class Director(InfraHost):
             'discover-tempest-config --deployer-input ~/tempest-deployer-input.conf ' + 
             "--debug --create --network-id `openstack subnet list  | grep external_sub " +
             "| awk '{print $6;}'` object-storage-feature-enabled.discoverability False",
-            ####''
             'sed -i "s|tempest_roles =.*|tempest_roles = _member_,Member|" ' + 
             '~/mytempest/etc/tempest.conf',
         ]
