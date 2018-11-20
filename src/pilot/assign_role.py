@@ -308,10 +308,10 @@ def define_controller_logical_disks(drac_client, raid_controller_name):
     raid_10_logical_disk = define_single_raid_10_logical_disk(
         drac_client, raid_controller_name)
 
-    if raid_10_logical_disk is None:
-        return None
-
     logical_disks = list()
+    if not raid_10_logical_disk:
+        return logical_disks
+
     logical_disks.append(raid_10_logical_disk)
 
     return logical_disks
@@ -321,10 +321,10 @@ def define_compute_logical_disks(drac_client, raid_controller_name):
     raid_10_logical_disk = define_single_raid_10_logical_disk(
         drac_client, raid_controller_name)
 
-    if raid_10_logical_disk is None:
-        return None
-
     logical_disks = list()
+    if not raid_10_logical_disk:
+        return logical_disks
+
     logical_disks.append(raid_10_logical_disk)
 
     return logical_disks
@@ -639,7 +639,7 @@ def define_jbod_or_raid_0_logical_disk(drac_client,
         documents the RAID configuration on the ironic node. It would
         also eliminate the dependency the RAID create_configuration
         clean step has on the delete_configuration step.'''
-        return None
+        return dict()
     else:
         return define_logical_disk('MAX', '0', raid_controller_name,
                                    [physical_disk_name], is_root_volume)
@@ -780,8 +780,9 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
     target_raid_config = define_target_raid_config(
         role, drac_client)
 
-    if target_raid_config is None:
-        return False
+    if not target_raid_config["logical_disks"]:
+        place_node_in_available_state(ironic_client, node_uuid)
+        return True
 
     # Set the target RAID configuration on the ironic node.
     ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
@@ -1161,6 +1162,23 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                     break
 
             if raid_size_gb == 0:
+                try:
+                    physical_disk_view_doc = drac_client.enumerate(
+                        DCIM_PhysicalDiskView)
+                    physical_disk_docs = utils.find_xml(
+                        physical_disk_view_doc,
+                        'DCIM_PhysicalDiskView',
+                        DCIM_PhysicalDiskView,
+                        True)
+                    disks = [get_size_in_bytes(physical_disk_doc,
+                                               DCIM_PhysicalDiskView)
+                             for physical_disk_doc in physical_disk_docs]
+                    os_volume_size_gb = int(disks[0]) / units.Gi
+                except:
+                    raise RuntimeError(
+                        "There must be either a virtual disk that "
+                        "is not a RAID 0 to install the OS on, or "
+                        "os-volume-size-gb must be specified")
                 raise RuntimeError("There must be either a virtual disk that "
                                    "is not a RAID 0 to install the OS on, or "
                                    "os-volume-size-gb must be specified")
@@ -1389,7 +1407,6 @@ def change_physical_disk_state(drac_client, mode,
                     physical_disk.controller]
 
                 physical_disk_ids.append(physical_disk.id)
-    
 
     # Weed out disks that are already in the mode we want
     failed_disks = []
