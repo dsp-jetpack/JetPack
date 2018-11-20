@@ -1367,9 +1367,9 @@ class Director(InfraHost):
         logger.debug("Finished running tempest")
         logger.debug("Tempest clean up")
         cmds = ['source ~/' + self.settings.overcloud_name + 'rc;cd '
-                '~/tempest;tempest cleanup --dry-run',
+                '~/mytempest;tempest cleanup --dry-run',
                 'source ~/' + self.settings.overcloud_name + 'rc;cd '
-                '~/tempest;tempest cleanup'
+                '~/mytempest;tempest cleanup'
                 ]
         for cmd in cmds:
             self.run_tty(cmd)
