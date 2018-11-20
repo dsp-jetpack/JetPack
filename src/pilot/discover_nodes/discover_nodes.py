@@ -82,6 +82,7 @@ class CustomLoggerAdapter(logging.LoggerAdapter):
     def set_idrac_ip_address(self, ip_address):
         self.extra['idracip'] = ip_address
 
+
 logger = logging.getLogger(__name__)
 LOG = CustomLoggerAdapter(logger, {})
 
@@ -126,6 +127,7 @@ OSPD_NODE_TEMPLATE_VALUE_USER_INTERVENTION_REQUIRED = \
 
 class NotSupported(BaseException):
     pass
+
 
 # Create a factory function for creating tuple-like objects that contain
 # the information needed to generate an OSP Director node template. The
@@ -365,8 +367,8 @@ def scan_one(scan_info):
     # (WS-Management) Specification"
     # (http://www.dmtf.org/sites/default/files/standards/documents/DSP0226_1.2.0.pdf).
     drac_client = client.DRACClient(scan_info.ip_address,
-                                                  scan_info.user_name,
-                                                  scan_info.password)
+                                    scan_info.user_name,
+                                    scan_info.password)
 
     # Initialize the values of the attributes.
     pm_address = scan_info.ip_address
@@ -506,6 +508,7 @@ def is_idrac(drac_client):
         doc,
         DCIM_iDRACCardView,
         'DeviceDescription') == 'iDRAC'
+
 
 if __name__ == '__main__':
     main()
