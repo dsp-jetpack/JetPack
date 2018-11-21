@@ -124,6 +124,9 @@ class Director(InfraHost):
             'sed -i "s|inspection_iprange = .*|inspection_iprange = ' +
             self.settings.discovery_ip_range +
             '|" pilot/undercloud.conf',
+            'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' + 
+            self.settings.sah_node.provisioning_ip +
+            '|" pilot/undercloud.conf'
         ]
         for cmd in cmds:
             self.run(cmd)
