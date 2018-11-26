@@ -303,20 +303,26 @@ echo "## Configuring neutron network ${network} as a cleaning network"
 configure_cleaning_network $network
 echo "## Done."
 
+# If deployment is unlocked, generate the overcloud container list from the latest.
+if [ -e $HOME/overcloud_images.yaml ];
+then
+    echo "using locked containers versions"
+else
+    echo "using latest available containers versions"
+    touch ~/overcloud_images.yaml
 
-touch ~/overcloud_images.yaml
-
-openstack overcloud container image prepare --output-env-file ~/overcloud_images.yaml \
+    openstack overcloud container image prepare --output-env-file ~/overcloud_images.yaml \
  --namespace=registry.access.redhat.com/rhosp13 \
  -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
  -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
  --set ceph_namespace=registry.access.redhat.com/rhceph \
  --set ceph_image=rhceph-3-rhel7 \
- --tag-from-label {version}-{release}  
+ --tag-from-label {version}-{release}
+
+fi
 
 sudo yum install -y os-cloud-config
 sudo yum install -y ceph-ansible
-
 
 
 echo

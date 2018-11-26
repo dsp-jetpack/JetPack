@@ -131,6 +131,11 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run(cmd)
 
+        if self.settings.version_locking_enabled is True:
+            source_file = self.settings.lock_files_dir + "/overcloud_images.yaml"
+            dest_file = self.home_dir + "/overcloud_images.yaml"
+            self.upload_file(source_file, dest_file)
+
     def install_director(self):
         logger.debug("Installing the undercloud")
         cmd = '~/pilot/install-director.sh --dns ' + \
