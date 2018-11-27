@@ -309,10 +309,12 @@ def define_controller_logical_disks(drac_client, raid_controller_name):
         drac_client, raid_controller_name)
 
     logical_disks = list()
-    if not raid_10_logical_disk:
+    if raid_10_logical_disk is None:
         return logical_disks
-
-    logical_disks.append(raid_10_logical_disk)
+    elif isinstance(raid_10_logical_disk, dict) and not raid_10_logical_disk:
+        return logical_disks
+    else:
+        logical_disks.append(raid_10_logical_disk)
 
     return logical_disks
 
@@ -322,10 +324,12 @@ def define_compute_logical_disks(drac_client, raid_controller_name):
         drac_client, raid_controller_name)
 
     logical_disks = list()
-    if not raid_10_logical_disk:
+    if raid_10_logical_disk is None:
+        return None
+    elif isinstance(raid_10_logical_disk, dict) and not raid_10_logical_disk:
         return logical_disks
-
-    logical_disks.append(raid_10_logical_disk)
+    else:
+        logical_disks.append(raid_10_logical_disk)
 
     return logical_disks
 
