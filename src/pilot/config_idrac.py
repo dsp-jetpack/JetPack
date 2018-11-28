@@ -328,7 +328,7 @@ def clear_job_queue(drac_client, ip_service_tag):
 
 def reset_idrac(drac_client, ip_service_tag):
     LOG.info('Resetting the iDRAC on {}'.format(ip_service_tag))
-    drac_client.wait_until_idrac_is_reset(False)
+    drac_client.reset_idrac(wait=True)
 
 
 def config_idrac(instack_lock,
