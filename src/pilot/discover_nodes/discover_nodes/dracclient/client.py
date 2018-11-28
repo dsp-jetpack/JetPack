@@ -118,17 +118,6 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._idrac_cfg.set_idrac_settings(idrac_fqdd, settings)
 
-    def reset_idrac(self, force=False):
-        """Resets the iDRAC
-
-        :param force: does a force reset when True and a graceful reset when
-               False
-        :returns: True on success and False on failure.
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        """
-        return self._idrac_cfg.reset_idrac(force)
-
     def wait_until_idrac_is_reset(self, force=False):
         """Resets the iDRAC and waits for it to become ready
 
