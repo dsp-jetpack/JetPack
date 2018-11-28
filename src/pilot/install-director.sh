@@ -150,7 +150,8 @@ run_command "sudo yum -y install python-tripleoclient"
 run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
-run_command "sudo yum -y install python-*-tests"
+run_command "sudo yum -y install openstack-tempest"
+run_command "sudo yum install -y python-neutron-tests-tempest python-cinder-tests-tempest python-telemetry-tests-tempest python-heat-tests-tempest python-keystone-tests-tempest python-horizon-tests-tempest"
 echo "## Done."
 
 echo
@@ -244,29 +245,12 @@ echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
-
-# This hacks in a patch to increase the number of iDRAC is-ready retries to 96,
-# which is required for the latest firmware.
-echo
-echo "## Patching Ironic iDRAC driver constants.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/constants.py ${HOME}/pilot/constants.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyo
-
 # This hacks in a patch to allow realtime RAID creation.
 echo
 echo "## Patching Ironic iDRAC driver client.py..."
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
-
-# This hacks in a patch to work around an issue where the iDRAC can return
-# invalid non-ASCII characters during an enumeration.
-echo
-echo "## Patching Ironic iDRAC driver wsman.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
 
 # This hacks in a patch to enable realtime RAID creation.
 echo
@@ -275,9 +259,7 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resour
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
 
-# This hacks in a patch to work around a known issue where a RAID-10 virtual
-# disk cannot be created from more than 16 backing physical disks.  Also
-# included is the ability to create a virtual disk using realtime mode.
+# This hacks in a patch to create a virtual disk using realtime mode.
 # Note that this code must be here because we use this code prior to deploying
 # the director.
 echo
@@ -298,25 +280,14 @@ echo "## Patching ironic.conf..."
 apply_patch "sudo patch -b -s /etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
 echo "## Done."
 
-# These patches add support for BOSS cards
-echo 
-echo "### Patching raid_config_schema"
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/raid_config_schema.json ${HOME}/pilot/raid_schema.patch"
-echo "done"
-echo "### Patching raid.py"
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/drac_raid.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
-echo "done"
-
 # This patches an issue where the  Ironic api service returns http 500 errors
 # https://bugzilla.redhat.com/show_bug.cgi?id=1613995
-echo 
+echo
 echo "## Patching 10-ironic_wsgi.conf"
 apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
 echo "## Done"
 
-echo 
+echo
 echo "## Restarting httpd"
 sudo systemctl restart httpd
 echo "## Done"
@@ -332,19 +303,26 @@ echo "## Configuring neutron network ${network} as a cleaning network"
 configure_cleaning_network $network
 echo "## Done."
 
-touch ~/overcloud_images.yaml
+# If deployment is unlocked, generate the overcloud container list from the latest.
+if [ -e $HOME/overcloud_images.yaml ];
+then
+    echo "using locked containers versions"
+else
+    echo "using latest available containers versions"
+    touch ~/overcloud_images.yaml
 
-openstack overcloud container image prepare --output-env-file ~/overcloud_images.yaml \
+    openstack overcloud container image prepare --output-env-file ~/overcloud_images.yaml \
  --namespace=registry.access.redhat.com/rhosp13 \
  -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
  -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
  --set ceph_namespace=registry.access.redhat.com/rhceph \
  --set ceph_image=rhceph-3-rhel7 \
- --tag-from-label {version}-{release}  
+ --tag-from-label {version}-{release}
+
+fi
 
 sudo yum install -y os-cloud-config
 sudo yum install -y ceph-ansible
-
 
 
 echo

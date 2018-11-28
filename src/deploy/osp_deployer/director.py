@@ -124,9 +124,17 @@ class Director(InfraHost):
             'sed -i "s|inspection_iprange = .*|inspection_iprange = ' +
             self.settings.discovery_ip_range +
             '|" pilot/undercloud.conf',
+            'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' + 
+            self.settings.sah_node.provisioning_ip +
+            '|" pilot/undercloud.conf'
         ]
         for cmd in cmds:
             self.run(cmd)
+
+        if self.settings.version_locking_enabled is True:
+            source_file = self.settings.lock_files_dir + "/overcloud_images.yaml"
+            dest_file = self.home_dir + "/overcloud_images.yaml"
+            self.upload_file(source_file, dest_file)
 
     def install_director(self):
         logger.debug("Installing the undercloud")
@@ -1327,28 +1335,14 @@ class Director(InfraHost):
         setts = self.settings
         cmds = [
             'source ~/' + self.settings.overcloud_name + 'rc;'
-            "sudo ip route add `openstack subnet list | " +
-            "grep external_sub | awk '{print $8;}'` dev eth0",
-            'source ~/' + self.settings.overcloud_name + 'rc;'
-            'openstack role create heat_stack_owner;'
-            'openstack role create swiftoperator',
-            "source ~/" + self.settings.overcloud_name + "rc;mkdir -p /home/" +
-            setts.director_install_account_user +
-            "/tempest",
-            'source ~/' + self.settings.overcloud_name + 'rc;cd '
-            '~/tempest;/usr/share/openstack-tempest-*/tools/'
-            'configure-tempest-directory',
-            'source ~/' + self.settings.overcloud_name +
-            'rc;cd ~/tempest;tools/config_tempest.py '
-            '--create --deployer-input '
-            '~/tempest-deployer-input.conf --debug '
-            'service_available.swift False '
-            'object-storage-feature-enabled.discoverability False '
-            ' identity.uri $OS_AUTH_URL '
-            'identity-feature-enabled.api_v3 False '
-            'identity.admin_username $OS_USERNAME '
-            'identity.admin_password $OS_PASSWORD '
-            'identity.admin_tenant_name $OS_PROJECT_NAME',
+            "sudo ip route add " + self.settings.floating_ip_network + " dev eth0",
+            'source ~/' + self.settings.overcloud_name + 'rc;' +
+            'tempest init mytempest;cd mytempest;' +
+            'discover-tempest-config --deployer-input ~/tempest-deployer-input.conf ' + 
+            "--debug --create --network-id `openstack subnet list  | grep external_sub " +
+            "| awk '{print $6;}'` object-storage-feature-enabled.discoverability False",
+            'sed -i "s|tempest_roles =.*|tempest_roles = _member_,Member|" ' + 
+            '~/mytempest/etc/tempest.conf',
         ]
         for cmd in cmds:
             self.run_tty(cmd)
@@ -1357,39 +1351,33 @@ class Director(InfraHost):
         logger.debug("running tempest")
         setts = self.settings
         cmd = 'source ~/' + self.settings.overcloud_name + 'rc;cd ' + \
-            '~/tempest;' + \
+            '~/mytempest;' + \
             'tempest cleanup --init-saved-state'
 
         self.run_tty(cmd)
 
         if setts.tempest_smoke_only is True:
             cmd = "source ~/" + self.settings.overcloud_name + "rc;cd " \
-                  "~/tempest;tools/run-tests.sh  '.*smoke' --concurrency=4"
+                  "~/mytempest; ostestr '.*smoke' --concurrency=4"
         else:
             cmd = "source ~/" + \
                   self.settings.overcloud_name + \
-                  "rc;cd ~/tempest;tools/run-tests.sh --concurrency=4"
+                  "rc;cd ~/mytempest;ostestr --concurrency=4"
         self.run_tty(cmd)
         ip = setts.director_node.public_api_ip
 
         Scp.get_file(ip,
                      setts.director_install_account_user,
                      setts.director_install_account_pwd,
-                     "/auto_results/tempest.xml",
-                     "/home/" + setts.director_install_account_user +
-                     "/tempest/tempest.xml")
-        Scp.get_file(ip,
-                     setts.director_install_account_user,
-                     setts.director_install_account_pwd,
                      "/auto_results/tempest.log",
                      "/home/" + setts.director_install_account_user +
-                     "/tempest/tempest.log")
+                     "/mytempest/tempest.log")
         logger.debug("Finished running tempest")
         logger.debug("Tempest clean up")
         cmds = ['source ~/' + self.settings.overcloud_name + 'rc;cd '
-                '~/tempest;tempest cleanup --dry-run',
+                '~/mytempest;tempest cleanup --dry-run',
                 'source ~/' + self.settings.overcloud_name + 'rc;cd '
-                '~/tempest;tempest cleanup'
+                '~/mytempest;tempest cleanup'
                 ]
         for cmd in cmds:
             self.run_tty(cmd)
