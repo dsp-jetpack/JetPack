@@ -32,7 +32,7 @@ from time import sleep
 from utils import Utils
 
 discover_nodes_path = os.path.join(os.path.expanduser('~'),
-                                   'pilot/discover_nodes')
+                                   'dev_work/JetPack/src/pilot/discover_nodes')
 sys.path.append(discover_nodes_path)
 
 from discover_nodes.dracclient.client import DRACClient  # noqa
