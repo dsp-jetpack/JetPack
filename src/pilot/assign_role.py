@@ -310,7 +310,7 @@ def define_controller_logical_disks(drac_client, raid_controller_name):
 
     logical_disks = list()
     if raid_10_logical_disk is None:
-        return logical_disks
+        return None
     elif isinstance(raid_10_logical_disk, dict) and not raid_10_logical_disk:
         return logical_disks
     else:
@@ -784,7 +784,7 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
     target_raid_config = define_target_raid_config(
         role, drac_client)
 
-    if not target_raid_config["logical_disks"]:
+    if not target_raid_config or target_raid_config is None:
         place_node_in_available_state(ironic_client, node_uuid)
         return True
 
@@ -1165,6 +1165,7 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
 
                     break
 
+            # Note: This code block represents single disk scenario.
             if raid_size_gb == 0:
                 try:
                     physical_disk_view_doc = drac_client.enumerate(
@@ -1177,15 +1178,13 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                     disks = [get_size_in_bytes(physical_disk_doc,
                                                DCIM_PhysicalDiskView)
                              for physical_disk_doc in physical_disk_docs]
-                    os_volume_size_gb = int(disks[0]) / units.Gi
+                    if len(disks) == 1:
+                        os_volume_size_gb = int(disks[0]) / units.Gi
                 except:
                     raise RuntimeError(
                         "There must be either a virtual disk that "
-                        "is not a RAID 0 to install the OS on, or "
+                        "is not a RAID 0 or single JBOD disk, or "
                         "os-volume-size-gb must be specified")
-                raise RuntimeError("There must be either a virtual disk that "
-                                   "is not a RAID 0 to install the OS on, or "
-                                   "os-volume-size-gb must be specified")
 
             # Now check to see if we have any physical disks that don't back
             # the RAID that are the same size as the RAID
