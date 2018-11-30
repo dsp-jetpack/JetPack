@@ -75,43 +75,6 @@ class DRACClient(ironic_client.DRACClient):
         self._nic_cfg = nic.NICConfiguration(self.client)
         self._nic_mgmt = nic.NICManagement(self.client)
 
-    def list_idrac_settings(self):
-        """List the iDRAC configuration settings
-
-        :returns: a dictionary with the iDRAC settings using its name as the
-                  key. The attributes are either iDRACCArdEnumerableAttribute,
-                  iDRACCardStringAttribute or iDRACCardIntegerAttribute
-                  objects.
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        :raises: DRACOperationFailed on error reported back by the DRAC
-                 interface
-        """
-        return self._idrac_cfg.list_idrac_settings()
-
-    def set_idrac_settings(self, settings, idrac_fqdd='iDRAC.Embedded.1'):
-        """Sets the iDRAC configuration settings
-
-        To be more precise, it sets the pending_value parameter for each of the
-        attributes passed in. For the values to be applied, a config job must
-        be created and the node must be rebooted.
-
-        :param settings: a dictionary containing the proposed values, with
-                         each key being the name of attribute and the value
-                         being the proposed value.
-        :param idrac_fqdd: the FQDD of the iDRAC.
-        :returns: a dictionary containing the commit_needed key with a boolean
-                  value indicating whether a config job must be created for the
-                  values to be applied.
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        :raises: DRACOperationFailed on error reported back by the DRAC
-                 interface
-        :raises: DRACUnexpectedReturnValue on return value mismatch
-        :raises: InvalidParameterValue on invalid attribute
-        """
-        return self._idrac_cfg.set_idrac_settings(settings, idrac_fqdd)
-
     def commit_pending_idrac_changes(
             self,
             idrac_fqdd='iDRAC.Embedded.1',
