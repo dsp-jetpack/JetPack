@@ -28,7 +28,6 @@ import sys
 
 from dracclient import exceptions
 from time import sleep
-from .resources import idrac_card
 from .resources import job
 from .resources import nic
 from .resources import system
@@ -77,7 +76,6 @@ class DRACClient(ironic_client.DRACClient):
                                          path,
                                          protocol)
         self._job_mgmt = job.JobManagement(self.client)
-        self._idrac_con = idrac_card.iDRACCardConfiguration(self.client)
         self._nic_cfg = nic.NICConfiguration(self.client)
         self._nic_mgmt = nic.NICManagement(self.client)
 
@@ -93,7 +91,7 @@ class DRACClient(ironic_client.DRACClient):
         :raises: DRACOperationFailed on error reported back by the DRAC
                  interface
         """
-        return self._idrac_con.list_idrac_settings()
+        return self._idrac_cfg.list_idrac_settings()
 
     def set_idrac_settings(self, settings, idrac_fqdd='iDRAC.Embedded.1'):
         """Sets the iDRAC configuration settings
@@ -116,7 +114,7 @@ class DRACClient(ironic_client.DRACClient):
         :raises: DRACUnexpectedReturnValue on return value mismatch
         :raises: InvalidParameterValue on invalid attribute
         """
-        return self._idrac_con.set_idrac_settings(idrac_fqdd, settings)
+        return self._idrac_cfg.set_idrac_settings(settings, idrac_fqdd)
 
     def commit_pending_idrac_changes(
             self,
