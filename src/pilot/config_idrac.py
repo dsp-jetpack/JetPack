@@ -243,11 +243,11 @@ def config_idrac_settings(drac_client, ip_service_tag, password, node):
     response = drac_client.set_idrac_settings(idrac_settings)
 
     job_id = None
-    if response['commit_required']:
+    if response['is_commit_required']:
         job_id = drac_client.commit_pending_idrac_changes(reboot=False,
                                                           start_time=None)
 
-    return response['reboot_required'], job_id
+    return response['is_reboot_required'], job_id
 
 
 def config_hard_disk_drive_boot_sequence(drac_client, ip_service_tag):
@@ -335,7 +335,7 @@ def clear_job_queue(drac_client, ip_service_tag):
 
 def reset_idrac(drac_client, ip_service_tag):
     LOG.info('Resetting the iDRAC on {}'.format(ip_service_tag))
-    drac_client.wait_until_idrac_is_reset(False)
+    drac_client.reset_idrac(wait=True)
 
 
 def config_idrac(instack_lock,
