@@ -23,11 +23,7 @@ import dracclient.client as ironic_client
 import dracclient.resources.uris as ironic_uris
 
 import logging
-import os
-import sys
 
-from dracclient import exceptions
-from time import sleep
 from .resources import job
 from .resources import nic
 from .resources import system
