@@ -784,7 +784,11 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
     target_raid_config = define_target_raid_config(
         role, drac_client)
 
-    if not target_raid_config or target_raid_config is None:
+    if target_raid_config is None:
+        return None
+
+    if "logical_disks" in target_raid_config and not\
+            target_raid_config['logical_disks']:
         place_node_in_available_state(ironic_client, node_uuid)
         return True
 
@@ -1166,10 +1170,30 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                     break
 
             # Note: This code block represents single disk scenario.
+            raid_disk_ids = []
             if raid_size_gb == 0:
-                try:
+                if virtual_disk_docs:
+                    for virtual_disk_doc in virtual_disk_docs:
+                        fqdd = get_fqdd(virtual_disk_doc, DCIM_VirtualDiskView)
+                        raid_type = utils.find_xml(
+                            virtual_disk_doc,
+                            'RAIDTypes',
+                            DCIM_VirtualDiskView).text
+
+                        if raid_type == RAID0:
+                            raid_size = get_size_in_bytes(virtual_disk_doc,
+                                                          DCIM_VirtualDiskView)
+                            raid_size_gb = int(raid_size) / units.Gi
+                            raid_disk_ids.append(raid_size_gb)
+                    if not len(raid_disk_ids) == 1:
+                        raise RuntimeError(
+                            "There must be either a virtual disk that "
+                            "is  a RAID 0, or "
+                            "os-volume-size-gb must be specified")
+                    os_volume_size_gb = raid_disk_ids[0]
+                else:
                     physical_disk_view_doc = drac_client.enumerate(
-                        DCIM_PhysicalDiskView)
+                                                 DCIM_PhysicalDiskView)
                     physical_disk_docs = utils.find_xml(
                         physical_disk_view_doc,
                         'DCIM_PhysicalDiskView',
@@ -1178,14 +1202,13 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                     disks = [get_size_in_bytes(physical_disk_doc,
                                                DCIM_PhysicalDiskView)
                              for physical_disk_doc in physical_disk_docs]
-                    if len(disks) == 1:
-                        os_volume_size_gb = int(disks[0]) / units.Gi
-                except:
-                    raise RuntimeError(
-                        "There must be either a virtual disk that "
-                        "is not a RAID 0 or single JBOD disk, or "
-                        "os-volume-size-gb must be specified")
+                    if not len(disks) == 1:
+                        raise RuntimeError(
+                            "There must be either a virtual disk that "
+                            "is not a RAID 0 or single JBOD disk, or "
+                            "os-volume-size-gb must be specified")
 
+                    os_volume_size_gb = int(disks[0]) / units.Gi
             # Now check to see if we have any physical disks that don't back
             # the RAID that are the same size as the RAID
 
