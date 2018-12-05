@@ -785,10 +785,9 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
         role, drac_client)
 
     if target_raid_config is None:
-        return None
+        return False
 
-    if "logical_disks" in target_raid_config and not\
-            target_raid_config['logical_disks']:
+    if not target_raid_config['logical_disks']:
         place_node_in_available_state(ironic_client, node_uuid)
         return True
 
