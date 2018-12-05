@@ -31,6 +31,7 @@ import yaml
 from dracclient import utils
 from dracclient import client
 from dracclient.constants import POWER_OFF
+from dracclient.resources import raid
 from dracclient.exceptions import DRACOperationFailed, \
     DRACUnexpectedReturnValue, WSManInvalidResponse, WSManRequestFailure
 from oslo_utils import units
@@ -428,7 +429,7 @@ def define_storage_logical_disks(drac_client, raid_controller_name):
     #
     # A successful call returns a list, which may be empty; otherwise,
     # None is returned.
-    jbod_capable = is_jbod_capable(drac_client, raid_controller_name)
+    jbod_capable = raid.is_jbod_capable(drac_client, raid_controller_name)
     jbod_logical_disks = define_jbod_logical_disks(
         drac_client, remaining_physical_disks, raid_controller_name,
         jbod_capable)
@@ -619,7 +620,7 @@ def define_jbod_or_raid_0_logical_disk(drac_client,
                                        is_root_volume=False,
                                        jbod_capable=None):
     if jbod_capable is None:
-        jbod_capable = is_jbod_capable(drac_client, raid_controller_name)
+        jbod_capable = raid.is_jbod_capable(drac_client, raid_controller_name)
 
     if jbod_capable:
         # Presently, when a RAID controller is JBOD capable, there is no
@@ -1306,53 +1307,6 @@ def change_physical_disk_state_wait(
         result = JobHelper.determine_job_outcomes(drac_client, job_ids)
 
     return result
-
-
-def is_jbod_capable(drac_client, raid_controller_fqdd):
-    is_jbod_capable = False
-
-    # Grab all the disks associated with the RAID controller
-    all_physical_disks = drac_client.list_physical_disks()
-    physical_disks = [physical_disk for physical_disk in all_physical_disks
-                      if physical_disk.controller == raid_controller_fqdd]
-
-    # If there is a disk in the Non-RAID state, then the controller is JBOD
-    # capable
-    ready_disk = None
-    for physical_disk in physical_disks:
-        if physical_disk.raid_status == 'non-RAID':
-            is_jbod_capable = True
-            break
-        elif not ready_disk and physical_disk.raid_status == 'ready':
-            ready_disk = physical_disk
-
-    if not is_jbod_capable:
-        if not ready_disk:
-            raise RuntimeError("Unable to find a disk in the Ready state")
-
-        # Try moving a disk in the Ready state to JBOD mode
-        try:
-            drac_client.convert_physical_disks(
-                ready_disk.controller,
-                [ready_disk.id],
-                False)
-
-            is_jbod_capable = True
-
-            # Flip the disk back to the Ready state.  This results in the
-            # pending value being reset to nothing, so it effectively
-            # undoes the last command and makes the check non-destructive
-            drac_client.convert_physical_disks(
-                ready_disk.controller,
-                [ready_disk.id],
-                True)
-        except DRACOperationFailed as ex:
-            if NOT_SUPPORTED_MSG in ex.message:
-                pass
-            else:
-                raise
-
-    return is_jbod_capable
 
 
 # mode is either "RAID" or "JBOD"
