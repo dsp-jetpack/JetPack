@@ -31,7 +31,6 @@ import yaml
 from dracclient import utils
 from dracclient import client
 from dracclient.constants import POWER_OFF
-from dracclient.resources import raid
 from dracclient.exceptions import DRACOperationFailed, \
     DRACUnexpectedReturnValue, WSManInvalidResponse, WSManRequestFailure
 from oslo_utils import units
@@ -429,7 +428,7 @@ def define_storage_logical_disks(drac_client, raid_controller_name):
     #
     # A successful call returns a list, which may be empty; otherwise,
     # None is returned.
-    jbod_capable = raid.is_jbod_capable(drac_client, raid_controller_name)
+    jbod_capable = drac_client.is_jbod_capable(raid_controller_name)
     jbod_logical_disks = define_jbod_logical_disks(
         drac_client, remaining_physical_disks, raid_controller_name,
         jbod_capable)
@@ -620,7 +619,7 @@ def define_jbod_or_raid_0_logical_disk(drac_client,
                                        is_root_volume=False,
                                        jbod_capable=None):
     if jbod_capable is None:
-        jbod_capable = raid.is_jbod_capable(drac_client, raid_controller_name)
+        jbod_capable = drac_client.is_jbod_capable(raid_controller_name)
 
     if jbod_capable:
         # Presently, when a RAID controller is JBOD capable, there is no
