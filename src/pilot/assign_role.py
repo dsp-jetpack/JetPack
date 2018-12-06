@@ -1169,9 +1169,9 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                     break
 
             # Note: This code block represents single disk scenario.
-            raid_disk_ids = []
             if raid_size_gb == 0:
                 if virtual_disk_docs:
+                    raid_disk_ids = []
                     for virtual_disk_doc in virtual_disk_docs:
                         fqdd = get_fqdd(virtual_disk_doc, DCIM_VirtualDiskView)
                         raid_type = utils.find_xml(
@@ -1186,9 +1186,10 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                             raid_disk_ids.append(raid_size_gb)
                     if not len(raid_disk_ids) == 1:
                         raise RuntimeError(
-                            "There must be either a virtual disk that "
-                            "is  a RAID 0, or "
-                            "os-volume-size-gb must be specified")
+                            "There must be a non-RAID0 virtual disk,"
+                            "a single disk RAID0, or a single JBOD disk"
+                            "to install the OS on,"
+                            "or os-volume-size-gb must be specified.")
                     os_volume_size_gb = raid_disk_ids[0]
                 else:
                     physical_disk_view_doc = drac_client.enumerate(
@@ -1202,10 +1203,12 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                                                DCIM_PhysicalDiskView)
                              for physical_disk_doc in physical_disk_docs]
                     if not len(disks) == 1:
+
                         raise RuntimeError(
-                            "There must be either a virtual disk that "
-                            "is not a RAID 0 or single JBOD disk, or "
-                            "os-volume-size-gb must be specified")
+                            "There must be a non-RAID0 virtual disk,"
+                            "a single disk RAID0, or a single JBOD disk"
+                            "to install the OS on,"
+                            "or os-volume-size-gb must be specified.")
 
                     os_volume_size_gb = int(disks[0]) / units.Gi
             # Now check to see if we have any physical disks that don't back
