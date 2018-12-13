@@ -21,6 +21,7 @@ import requests.packages
 import sys
 
 from arg_helper import ArgHelper
+from dracclient import client
 import boot_mode_helper
 from boot_mode_helper import BootModeHelper
 from constants import Constants
@@ -68,10 +69,16 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def get_pxe_nic_fqdd(fqdd, model_properties, drac_client):
+def get_pxe_nic_fqdd(fqdd, model_properties, ip_service_tag, node_definition):
     # Explicitly specifying the network interface controller (NIC) fully
     # qualified device descriptor (FQDD) takes precedence over determining the
     # PXE NIC by the node's system model.
+    node = CredentialHelper.get_node_from_instack(ip_service_tag,
+                                                  node_definition)
+    drac_ip = node["pm_addr"]
+    drac_user = node["pm_user"]
+    drac_password = node["pm_password"]
+    drac_client = client.DRACClient(drac_ip, drac_user, drac_password)
     if fqdd is None:
         pxe_nic_fqdd = get_pxe_nic_fqdd_from_model_properties(
             model_properties,
@@ -96,7 +103,7 @@ def get_pxe_nic_fqdd_from_model_properties(model_properties, drac_client):
     if model_properties is None:
         return None
 
-    model_name = drac_client.get_system_model_name()
+    model_name = drac_client.get_system().model
 
     # If the model does not have an entry in the model properties JSON file,
     # return None, instead of raising a KeyError exception.
@@ -236,11 +243,11 @@ def config_idrac_settings(drac_client, ip_service_tag, password, node):
     response = drac_client.set_idrac_settings(idrac_settings)
 
     job_id = None
-    if response['commit_required']:
+    if response['is_commit_required']:
         job_id = drac_client.commit_pending_idrac_changes(reboot=False,
                                                           start_time=None)
 
-    return response['reboot_required'], job_id
+    return response['is_reboot_required'], job_id
 
 
 def config_hard_disk_drive_boot_sequence(drac_client, ip_service_tag):
@@ -328,7 +335,7 @@ def clear_job_queue(drac_client, ip_service_tag):
 
 def reset_idrac(drac_client, ip_service_tag):
     LOG.info('Resetting the iDRAC on {}'.format(ip_service_tag))
-    drac_client.wait_until_idrac_is_reset(False)
+    drac_client.reset_idrac(wait=True)
 
 
 def config_idrac(instack_lock,
@@ -405,7 +412,8 @@ def config_idrac(instack_lock,
     pxe_nic_fqdd = get_pxe_nic_fqdd(
         pxe_nic,
         model_properties,
-        drac_client)
+        ip_service_tag,
+        node_definition)
 
     # Configure the NIC port to PXE boot or not
     reboot_required_nic, nic_job_ids, provisioning_mac = \
