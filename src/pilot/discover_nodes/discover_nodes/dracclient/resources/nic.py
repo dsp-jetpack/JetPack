@@ -190,16 +190,6 @@ class NICManagement(object):
 
         return nics
 
-    def list_nics(self, sort=False):
-        """Return the list of NICs.
-
-        :param sort: indication of whether to sort the returned list by
-                     network interface controller (NIC) id
-        :returns: list of NIC objects
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        """
-        return self._list_nics_common(sort=sort)
 
     def _get_nic_property(self, drac_nic, property_name, nullable=False):
         return utils.get_wsman_resource_attr(drac_nic,
@@ -648,21 +638,6 @@ class NICConfiguration(object):
         """
         return self.get_nic_link_status(nic_id).current_value == 'Connected'
 
-    def list_nic_settings(self, nic_id):
-        """Return the list of attribute settings of a NIC.
-
-        :param nic_id: id of the network interface controller (NIC)
-        :returns: dictionary containing the NIC settings. The keys are
-                  attribute names. Each value is a
-                  NICEnumerationAttribute, NICIntegerAttribute, or
-                  NICStringAttribute object.
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        :raises: DRACOperationFailed on error reported back by the iDRAC
-                 interface
-        """
-        selection_expression = ('FQDD = "%(fqdd)s"') % {'fqdd': nic_id}
-        return self._list_nic_settings(selection_expression)
 
     def set_nic_legacy_boot_protocol(self, nic_id, value):
         """Set the legacy, non-UEFI, boot protocol of a NIC.
@@ -706,92 +681,6 @@ class NICConfiguration(object):
         settings = {attribute_name: value}
         return self.set_nic_settings(nic_id, settings)
 
-    def set_nic_settings(self, nic_id, settings):
-        """Modify one or more settings of a NIC.
-
-        If successful, the pending values of the attributes are set. For
-        the new values to be applied, a configuration job must be
-        created and the node must be rebooted.
-
-        :param nic_id: id of the network interface controller (NIC)
-        :param settings: dictionary containing the proposed values, with
-                         each key being the name of an attribute and the
-                         value being the proposed value
-        :returns: dictionary containing a 'commit_required' key with a
-                  boolean value indicating whether a configuration job
-                  must be created for the new settings to be applied and
-                  also containing a 'reboot_required' key with a boolean
-                  value indicating whether or not a reboot is required
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        :raises: DRACOperationFailed on error reported back by the iDRAC
-                 interface
-        :raises: InvalidParameterValue on invalid NIC attribute
-        """
-        current_settings = self.list_nic_settings(nic_id)
-        unknown_keys = set(settings) - set(current_settings)
-
-        if unknown_keys:
-            msg = ('Unknown NIC attributes found: %(unknown_keys)r' %
-                   {'unknown_keys': unknown_keys})
-            raise ironic_exceptions.InvalidParameterValue(reason=msg)
-
-        read_only_keys = []
-        unchanged_attribs = []
-        invalid_attribs_msgs = []
-        attrib_names = []
-        candidates = set(settings)
-
-        for attr in candidates:
-            if str(settings[attr]) == str(
-                    current_settings[attr].current_value):
-                unchanged_attribs.append(attr)
-            elif current_settings[attr].read_only:
-                read_only_keys.append(attr)
-            else:
-                validation_msg = current_settings[attr].validate(
-                    settings[attr])
-
-                if validation_msg is None:
-                    attrib_names.append(attr)
-                else:
-                    invalid_attribs_msgs.append(validation_msg)
-
-        if unchanged_attribs:
-            LOG.warning('Ignoring unchanged NIC attributes: %r' %
-                        unchanged_attribs)
-
-        if invalid_attribs_msgs or read_only_keys:
-            if read_only_keys:
-                read_only_msg = ['Cannot set read-only NIC attributes: %r.'
-                                 % read_only_keys]
-            else:
-                read_only_msg = []
-
-            drac_messages = '\n'.join(invalid_attribs_msgs + read_only_msg)
-            raise ironic_exceptions.DRACOperationFailed(
-                drac_messages=drac_messages)
-
-        if not attrib_names:
-            return {'commit_required': False}
-
-        selectors = {'CreationClassName': 'DCIM_NICService',
-                     'Name': 'DCIM:NICService',
-                     'SystemCreationClassName': 'DCIM_ComputerSystem',
-                     'SystemName': 'DCIM:ComputerSystem'}
-        properties = {'Target': nic_id,
-                      'AttributeName': attrib_names,
-                      'AttributeValue': [settings[attr] for attr
-                                         in attrib_names]}
-        doc = self.client.invoke(uris.DCIM_NICService,
-                                 'SetAttributes',
-                                 selectors,
-                                 properties)
-
-        return {'reboot_required': utils.is_reboot_required(
-            doc, uris.DCIM_NICService),
-                'commit_required': utils_additional.is_commit_required(
-            doc, uris.DCIM_NICService)}
 
     def _get_config(self,
                     resource,

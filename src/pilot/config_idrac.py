@@ -147,7 +147,7 @@ def configure_uefi_nics_boot_settings(drac_client, pxe_nic_id):
                "PxeDev1VlanEnDis": "Disabled"
                }
 
-            provisioning_mac = nic.mac_address.lower()
+            provisioning_mac = nic.mac.lower()
             response = drac_client.set_bios_settings(settings)
             reboot_required = response['commit_required']
 
