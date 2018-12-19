@@ -1282,9 +1282,9 @@ def change_physical_disk_state_wait(
 
     job_ids = []
     if physical_disk_status['commit_required_ids']:
-        for controller in physical_disk_status['commit_required_ids']:
+        for controller_id in physical_disk_status['commit_required_ids']:
             job_id = drac_client.commit_pending_raid_changes(
-                controller, reboot=False, start_time=None)
+                controller_id, reboot=False, start_time=None)
             job_ids.append(job_id)
 
     result = True
@@ -1302,7 +1302,7 @@ def change_physical_disk_state_wait(
 
     return result
 
-  
+
 def main():
 
     try:
