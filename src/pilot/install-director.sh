@@ -259,6 +259,13 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resour
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
 
+# This hacks in a patch to enable resetting iDRACs.
+echo
+echo "## Patching Ironic iDRAC driver idrac_card.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/idrac_card.py ${HOME}/pilot/idrac_card.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/idrac_card.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/idrac_card.pyo
+
 # This hacks in a patch to create a virtual disk using realtime mode.
 # Note that this code must be here because we use this code prior to deploying
 # the director.
