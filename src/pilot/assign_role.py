@@ -1277,19 +1277,19 @@ def change_physical_disk_state_wait(
         node_uuid, ironic_client, drac_client, mode,
         controllers_to_physical_disk_ids=None):
 
-    physical_disk_status = drac_client.change_physical_disk_state(
+    change_state_result = drac_client.change_physical_disk_state(
         mode, controllers_to_physical_disk_ids)
 
     job_ids = []
-    if physical_disk_status['commit_required_ids']:
-        for controller_id in physical_disk_status['commit_required_ids']:
+    if change_state_result['commit_required_ids']:
+        for controller_id in change_state_result['commit_required_ids']:
             job_id = drac_client.commit_pending_raid_changes(
                 controller_id, reboot=False, start_time=None)
             job_ids.append(job_id)
 
     result = True
     if job_ids:
-        if physical_disk_status['is_reboot_required']:
+        if change_state_result['is_reboot_required']:
             LOG.debug("Rebooting the node to apply configuration")
             job_id = drac_client.create_reboot_job()
             job_ids.append(job_id)
