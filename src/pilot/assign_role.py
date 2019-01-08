@@ -1245,7 +1245,7 @@ def configure_bios(node, ironic_client, settings, drac_client):
         args=settings,
         http_method='POST')
 
-    if not response.commit_required:
+    if not response.is_commit_required:
         LOG.info("Completed BIOS configuration")
         return True
 
@@ -1389,7 +1389,7 @@ def change_physical_disk_state(drac_client, mode,
                     physical_disk.controller]
 
                 physical_disk_ids.append(physical_disk.id)
-    
+
 
     # Weed out disks that are already in the mode we want
     failed_disks = []
