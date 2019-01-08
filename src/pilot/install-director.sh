@@ -150,7 +150,8 @@ run_command "sudo yum -y install python-tripleoclient"
 run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
-run_command "sudo yum -y install python-*-tests"
+run_command "sudo yum -y install openstack-tempest"
+run_command "sudo yum install -y python-glance-tests python-keystone-tests python-horizon-tests-tempest python-neutron-tests python-cinder-tests python-nova-tests python-swift-tests python-ceilometer-tests python-gnocchi-tests python-aodh-tests"
 echo "## Done."
 
 echo
@@ -244,7 +245,6 @@ echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
-
 # This hacks in a patch to allow realtime RAID creation.
 echo
 echo "## Patching Ironic iDRAC driver client.py..."
@@ -258,6 +258,13 @@ echo "## Patching Ironic iDRAC driver job.py..."
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/job.py ${HOME}/pilot/job.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
+
+# This hacks in a patch to enable resetting iDRACs.
+echo
+echo "## Patching Ironic iDRAC driver idrac_card.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/idrac_card.py ${HOME}/pilot/idrac_card.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/idrac_card.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/idrac_card.pyo
 
 # This hacks in a patch to create a virtual disk using realtime mode.
 # Note that this code must be here because we use this code prior to deploying
@@ -302,6 +309,7 @@ echo
 echo "## Configuring neutron network ${network} as a cleaning network"
 configure_cleaning_network $network
 echo "## Done."
+
 
 touch ~/overcloud_images.yaml
 
