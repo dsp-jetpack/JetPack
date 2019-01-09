@@ -123,6 +123,10 @@ def parse_arguments():
                         '--skip-raid-config',
                         action='store_true',
                         help="skip configuring RAID")
+    parser.add_argument('-b',
+                        '--skip-bios-config',
+                        action='store_true',
+                        help="skip configuring BIOS")
     parser.add_argument('-o',
                         '--os-volume-size-gb',
                         help="the size of the volume to install the OS on "
@@ -1475,15 +1479,17 @@ def main():
                 if not succeeded:
                     sys.exit(1)
 
-            succeeded = configure_bios(
-                node,
-                ironic_client,
-                bios_settings,
-                drac_client)
+            if not args.skip_bios_config:
+                succeeded = configure_bios(
+                    node,
+                    ironic_client,
+                    bios_settings,
+                    drac_client)
 
-            if not succeeded:
-                sys.exit(1)
-
+                if not succeeded:
+                    sys.exit(1)
+            else:
+                LOG.info("Skipping BIOS configuration")
         assign_role(
             args.ip_mac_service_tag,
             node.uuid,
