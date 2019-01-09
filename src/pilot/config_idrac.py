@@ -215,8 +215,6 @@ def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):
         job_id = drac_client.commit_pending_bios_changes(reboot=False,
                                                          start_time=None)
 
-    # Note that "commit_required" is actually "reboot_required" under the
-    # covers
     return response['is_reboot_required'], job_id
 
 
