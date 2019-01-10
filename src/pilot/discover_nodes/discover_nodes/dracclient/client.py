@@ -298,32 +298,6 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_mgmt.list_integrated_nics(sort)
 
-    def list_nic_settings(self, nic_id):
-        """Return the list of attribute settings of a NIC.
-
-        :param nic_id: id of the network interface controller (NIC)
-        :returns: dictionary containing the NIC settings. The keys are
-                  attribute names. Each value is a
-                  NICEnumerationAttribute, NICIntegerAttribute, or
-                  NICStringAttribute object.
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        :raises: DRACOperationFailed on error reported back by the iDRAC
-                 interface
-        """
-        return self._nic_cfg.list_nic_settings(nic_id)
-
-    def list_nics(self, sort=False):
-        """Return the list of NICs.
-
-        :param sort: indication of whether to sort the returned list by
-                     network interface controller (NIC) id
-        :returns: list of NIC objects
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        """
-        return self._nic_mgmt.list_nics(sort)
-
     def set_nic_legacy_boot_protocol(self, nic_id, value):
         """Set the legacy, non-UEFI, boot protocol of a NIC.
 
@@ -402,28 +376,6 @@ class DRACClient(ironic_client.DRACClient):
         :raises: InvalidParameterValue on invalid NIC attribute
         """
         return self._nic_cfg.set_nic_setting(nic_id, attribute_name, value)
-
-    def set_nic_settings(self, nic_id, settings):
-        """Modify one or more settings of a NIC.
-
-        If successful, the pending values of the attributes are set. For
-        the new values to be applied, a configuration job must be
-        created and the node must be rebooted.
-
-        :param nic_id: id of the network interface controller (NIC)
-        :param settings: dictionary containing the proposed values, with
-                         each key being the name of an attribute and the
-                         value being the proposed value
-        :returns: dictionary containing a 'commit_required' key with a
-                  boolean value indicating whether a configuration job
-                  must be created for the new settings to be applied
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        :raises: DRACOperationFailed on error reported back by the iDRAC
-                 interface
-        :raises: InvalidParameterValue on invalid NIC attribute
-        """
-        return self._nic_cfg.set_nic_settings(nic_id, settings)
 
     def commit_pending_raid_changes(self, raid_controller, reboot=False,
                                     start_time='TIME_NOW'):

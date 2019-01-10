@@ -1239,7 +1239,7 @@ def configure_bios(node, ironic_client, settings, drac_client):
         args=settings,
         http_method='POST')
 
-    if not response.commit_required:
+    if not response.is_commit_required:
         LOG.info("Completed BIOS configuration")
         return True
 
