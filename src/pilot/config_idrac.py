@@ -33,7 +33,8 @@ from time import sleep
 from utils import Utils
 
 discover_nodes_path = os.path.join(os.path.expanduser('~'),
-                                   'pilot/discover_nodes')
+#                                   'pilot/discover_nodes')
+                                   '/home/devel/skipbaremetal/JetPack/src/pilot/discover_nodes')
 sys.path.append(discover_nodes_path)
 
 from discover_nodes.dracclient.client import DRACClient  # noqa
@@ -147,7 +148,7 @@ def configure_uefi_nics_boot_settings(drac_client, pxe_nic_id):
                "PxeDev1VlanEnDis": "Disabled"
                }
 
-            provisioning_mac = nic.mac.lower()
+            provisioning_mac = nic.mac_address.lower()
             response = drac_client.set_bios_settings(settings)
             reboot_required = response['is_reboot_required']
 
@@ -176,12 +177,12 @@ def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
 
             # This is the NIC we want to PXE boot, so set it to PXE if it's
             # not set to PXE already
-            if not drac_client.is_nic_legacy_boot_protocol_pxe(nic_id):
-                result = drac_client.set_nic_legacy_boot_protocol_pxe(nic_id)
+            if not is_nic_legacy_boot_protocol_pxe(nic_id):
+                result = set_nic_legacy_boot_protocol_pxe(nic_id)
         else:
             try:
-                if not drac_client.is_nic_legacy_boot_protocol_none(nic_id):
-                    result = drac_client.set_nic_legacy_boot_protocol_none(
+                if not is_nic_legacy_boot_protocol_none(nic_id):
+                    result = set_nic_legacy_boot_protocol_none(
                         nic_id)
             except NotFound:
                 LOG.warn("Unable to check the legacy boot protocol of NIC {} "
@@ -202,6 +203,114 @@ def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
             reboot_required = True
 
     return reboot_required, job_ids, provisioning_mac
+
+
+def get_nic_legacy_boot_protocol(self, nic_id):
+    """Obtain the legacy, non-UEFI, boot protocol of a NIC.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :returns: legacy boot protocol
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    :raises: NotFound when no settings for NIC found
+    """
+    return self.get_nic_setting(nic_id, 'LegacyBootProto')
+
+
+def is_nic_legacy_boot_protocol_none(self, nic_id):
+    """Return true if the legacy, non-UEFI, boot protocol of a NIC is NONE,
+    false otherwise.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :returns: boolean indicating whether or not the legacy,
+              non-UEFI, boot protocol is NONE
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    :raises: NotFound when no settings for NIC found
+    """
+    return self.get_nic_legacy_boot_protocol(
+        nic_id).current_value == 'NONE'
+
+
+def is_nic_legacy_boot_protocol_pxe(self, nic_id):
+    """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE,
+    false otherwise.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :returns: boolean indicating whether or not the legacy,
+              non-UEFI, boot protocol is PXE
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    :raises: NotFound when no settings for NIC found
+    """
+    return self.get_nic_legacy_boot_protocol(nic_id).current_value == 'PXE'
+
+
+def set_nic_legacy_boot_protocol(self, nic_id, value):
+    """Set the legacy, non-UEFI, boot protocol of a NIC.
+
+    If successful, the pending value of the NIC's legacy boot
+    protocol attribute is set. For the new value to be applied, a
+    configuration job must be created and the node must be rebooted.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :param value: legacy boot protocol
+    :returns: dictionary containing a 'commit_required' key with a
+              boolean value indicating whether a configuration job
+              must be created for the new legacy boot protocol
+              setting to be applied
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    """
+    return self.set_nic_setting(nic_id, 'LegacyBootProto', value)
+
+
+def set_nic_legacy_boot_protocol_none(self, nic_id):
+    """Set the legacy, non-UEFI, boot protocol of a NIC to NONE.
+
+    If successful, the pending value of the NIC's legacy boot
+    protocol attribute is set. For the new value to be applied, a
+    configuration job must be created and the node must be rebooted.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :returns: dictionary containing a 'commit_required' key with a
+              boolean value indicating whether a configuration job
+              must be created for the new legacy boot protocol
+              setting to be applied
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    """
+    return self._nic_cfg.set_nic_legacy_boot_protocol(nic_id, 'NONE')
+
+
+def set_nic_legacy_boot_protocol_pxe(self, nic_id):
+    """Set the legacy, non-UEFI, boot protocol of a NIC to PXE.
+
+    If successful, the pending value of the NIC's legacy boot
+    protocol attribute is set. For the new value to be applied, a
+    configuration job must be created and the node must be rebooted.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :returns: dictionary containing a 'commit_required' key with a
+              boolean value indicating whether a configuration job
+              must be created for the new legacy boot protocol
+              setting to be applied
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    """
+    return self._nic_cfg.set_nic_legacy_boot_protocol(nic_id, 'PXE')
 
 
 def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):

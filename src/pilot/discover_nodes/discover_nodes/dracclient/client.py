@@ -24,7 +24,7 @@ import dracclient.resources.uris as ironic_uris
 
 import logging
 
-from .resources import nic
+#from .resources import nic
 from .resources import uris
 # import discover_nodes.dracclient.resources.nic as nic
 
@@ -202,7 +202,7 @@ class DRACClient(ironic_client.DRACClient):
             reboot=reboot,
             start_time=start_time)
 
-    def get_nic_legacy_boot_protocol(self, nic_id):
+    def get_nic_legacy_boot_protocol_old(self, nic_id):
         """Obtain the legacy, non-UEFI, boot protocol of a NIC.
 
         :param nic_id: id of the network interface controller (NIC)
@@ -214,7 +214,7 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_cfg.get_nic_legacy_boot_protocol(nic_id)
 
-    def get_nic_link_status(self, nic_id):
+    def get_nic_link_status_old(self, nic_id):
         """Obtain the link status, up or down, of a NIC.
 
         :param nic_id: id of the network interface controller (NIC)
@@ -226,7 +226,7 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_mgmt.get_nic_link_status(nic_id)
 
-    def get_nic_setting(self, nic_id, attribute_name):
+    def get_nic_setting_old(self, nic_id, attribute_name):
         """Obtain a setting of a NIC.
 
         :param nic_id: id of the network interface controller (NIC)
@@ -239,7 +239,7 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_cfg.get_nic_setting(nic_id, attribute_name)
 
-    def get_nic_statistics(self, nic_id):
+    def get_nic_statistics_old(self, nic_id):
         """Obtain the statistics of a NIC.
 
         :param nic_id: id of the network interface controller (NIC)
@@ -249,7 +249,7 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_mgmt.get_nic_statistics(nic_id)
 
-    def is_nic_legacy_boot_protocol_none(self, nic_id):
+    def is_nic_legacy_boot_protocol_none_old(self, nic_id):
         """Return true if the legacy, non-UEFI, boot protocol of a NIC is NONE,
         false otherwise.
 
@@ -263,7 +263,7 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_cfg.is_nic_legacy_boot_protocol_none(nic_id)
 
-    def is_nic_legacy_boot_protocol_pxe(self, nic_id):
+    def is_nic_legacy_boot_protocol_pxe_old(self, nic_id):
         """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE,
         false otherwise.
 
@@ -277,7 +277,7 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_cfg.is_nic_legacy_boot_protocol_pxe(nic_id)
 
-    def is_nic_link_up(self, nic_id):
+    def is_nic_link_up_old(self, nic_id):
         """Return true if the link status of a NIC is up, false otherwise.
 
         :param nic_id: id of the network interface controller (NIC)
@@ -287,7 +287,7 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_mgmt.is_nic_link_up(nic_id)
 
-    def list_integrated_nics(self, sort=False):
+    def list_integrated_nics_old(self, sort=False):
         """Return the list of integrated NICs.
 
         :param sort: indication of whether to sort the returned list by
@@ -298,7 +298,7 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_mgmt.list_integrated_nics(sort)
 
-    def set_nic_legacy_boot_protocol(self, nic_id, value):
+    def set_nic_legacy_boot_protocol_old(self, nic_id, value):
         """Set the legacy, non-UEFI, boot protocol of a NIC.
 
         If successful, the pending value of the NIC's legacy boot
@@ -318,7 +318,7 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_cfg.set_nic_legacy_boot_protocol(nic_id, value)
 
-    def set_nic_legacy_boot_protocol_none(self, nic_id):
+    def set_nic_legacy_boot_protocol_none_old(self, nic_id):
         """Set the legacy, non-UEFI, boot protocol of a NIC to NONE.
 
         If successful, the pending value of the NIC's legacy boot
@@ -337,7 +337,7 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_cfg.set_nic_legacy_boot_protocol(nic_id, 'NONE')
 
-    def set_nic_legacy_boot_protocol_pxe(self, nic_id):
+    def set_nic_legacy_boot_protocol_pxe_old(self, nic_id):
         """Set the legacy, non-UEFI, boot protocol of a NIC to PXE.
 
         If successful, the pending value of the NIC's legacy boot
@@ -356,7 +356,7 @@ class DRACClient(ironic_client.DRACClient):
         """
         return self._nic_cfg.set_nic_legacy_boot_protocol(nic_id, 'PXE')
 
-    def set_nic_setting(self, nic_id, attribute_name, value):
+    def set_nic_setting_old(self, nic_id, attribute_name, value):
         """Modify a setting of a NIC.
 
         If successful, the pending value of the attribute is set. For
