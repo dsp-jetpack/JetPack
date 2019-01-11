@@ -1478,6 +1478,8 @@ def main():
 
                 if not succeeded:
                     sys.exit(1)
+            else:
+                LOG.info("Skipping RAID configuration")
 
             if not args.skip_bios_config:
                 succeeded = configure_bios(

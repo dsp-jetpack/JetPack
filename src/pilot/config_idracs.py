@@ -105,10 +105,8 @@ def main():
 
                     if "password" in node_config.keys():
                         password = node_config["password"]
-                    if "skip_nic_config" in json_config[
-                        node["pm_addr"]].keys():
-                        skip_nic_config = json_config[node["pm_addr"]
-                        ]["skip_nic_config"]
+                    if "skip_nic_config" in node_config.keys():
+                        skip_nic_config = node_config["skip_nic_config"]
             thread = ThreadWithExHandling(LOG,
                                           target=config_idrac.config_idrac,
                                           args=(instack_lock,
