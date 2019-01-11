@@ -262,25 +262,13 @@ def define_target_raid_config(role, drac_client):
         'logical_disks': logical_disks} if logical_disks is not None else None
 
 
-def is_raid_controller(fqdd):
-    return fqdd.startswith('RAID.')
-
-
-def is_boss_controller(fqdd, drac_client):
-    disk_controllers = drac_client.list_raid_controllers()
-    boss_raid_controller = [
-        c.id for c in disk_controllers if c.model.startswith('BOSS')]
-    if boss_raid_controller and fqdd == boss_raid_controller[0]:
-        return True
-
-
 def get_raid_controller_id(drac_client):
     disk_ctrls = drac_client.list_raid_controllers()
 
     raid_controller_ids = [
-        c.id for c in disk_ctrls if is_raid_controller(c.id)]
+        c.id for c in disk_ctrls if drac_client.is_raid_controller(c.id)]
     boss_controller_ids = [
-        c.id for c in disk_ctrls if is_boss_controller(c.id, drac_client)
+        c.id for c in disk_ctrls if drac_client.is_boss_controller(c.id)
     ]
 
     if boss_controller_ids:
@@ -457,7 +445,7 @@ def define_storage_operating_system_logical_disk(physical_disks, drac_client,
         "disks, and marking it the root volume:\n  {}".format(
             os_logical_disk_size_gb,
             '\n  '.join(os_physical_disk_names)))
-    if is_boss_controller(raid_controller_name, drac_client):
+    if drac_client.is_boss_controller(raid_controller_name):
         os_logical_disk_size_gb = 0
     os_logical_disk = define_logical_disk(
         os_logical_disk_size_gb,
@@ -1288,14 +1276,21 @@ def ensure_node_is_powered_off(drac_client):
 def change_physical_disk_state_wait(
         node_uuid, ironic_client, drac_client, mode,
         controllers_to_physical_disk_ids=None):
-    reboot_required, job_ids = change_physical_disk_state(
-        drac_client, mode, controllers_to_physical_disk_ids)
+
+    change_state_result = drac_client.change_physical_disk_state(
+        mode, controllers_to_physical_disk_ids)
+
+    job_ids = []
+    if change_state_result['commit_required_ids']:
+        for controller_id in change_state_result['commit_required_ids']:
+            job_id = drac_client.commit_pending_raid_changes(
+                controller_id, reboot=False, start_time=None)
+            job_ids.append(job_id)
 
     result = True
     if job_ids:
-        if reboot_required:
+        if change_state_result['is_reboot_required']:
             LOG.debug("Rebooting the node to apply configuration")
-
             job_id = drac_client.create_reboot_job()
             job_ids.append(job_id)
 
@@ -1306,127 +1301,6 @@ def change_physical_disk_state_wait(
         result = JobHelper.determine_job_outcomes(drac_client, job_ids)
 
     return result
-
-
-# mode is either "RAID" or "JBOD"
-# controllers_to_physical_disk_ids is a dictionary with the keys being the
-# FQDD of RAID controllers, and the value being a list of physical disk FQDDs
-def change_physical_disk_state(drac_client, mode,
-                               controllers_to_physical_disk_ids=None):
-    # The node is rebooting from the last RAID config step, and when it reboots
-    # the "export to xml" job runs.  Wait until this completes so we don't blow
-    # up when trying to create a config job below
-    # TODO: Move this check into list_physical_disks along with all other iDRAC
-    #       commands
-    drac_client.wait_until_idrac_is_ready()
-
-    physical_disks = drac_client.list_physical_disks()
-    p_disk_id_to_state = {}
-    for physical_disk in physical_disks:
-        p_disk_id_to_state[physical_disk.id] = physical_disk.raid_status
-
-    if not controllers_to_physical_disk_ids:
-        controllers_to_physical_disk_ids = defaultdict(list)
-
-        for physical_disk in physical_disks:
-            # Weed out disks that are not attached to a RAID controller
-            if is_raid_controller(physical_disk.controller) or \
-                    is_boss_controller(physical_disk.controller, drac_client):
-                physical_disk_ids = controllers_to_physical_disk_ids[
-                    physical_disk.controller]
-
-                physical_disk_ids.append(physical_disk.id)
-
-    # Weed out disks that are already in the mode we want
-    failed_disks = []
-    bad_disks = []
-    for controller in controllers_to_physical_disk_ids.keys():
-        final_physical_disk_ids = []
-        physical_disk_ids = controllers_to_physical_disk_ids[controller]
-        for physical_disk_id in physical_disk_ids:
-            raid_status = p_disk_id_to_state[physical_disk_id]
-            if (mode == "JBOD" and raid_status == "non-RAID") or \
-                    (mode == "RAID" and raid_status == "ready"):
-                # This means the disk is already in the desired state,
-                # so skip it
-                continue
-            elif (mode == "JBOD" and raid_status == "ready") or \
-                    (mode == "RAID" and raid_status == "non-RAID"):
-                # This disk is moving from a state we expect to RAID or JBOD,
-                # so keep it
-                final_physical_disk_ids.append(physical_disk_id)
-            elif raid_status == "failed":
-                failed_disks.append(physical_disk_id)
-            else:
-                # This disk is in one of many states that we don't know what
-                # to do with, so pitch it
-                bad_disks.append("{} ({})".format(physical_disk_id,
-                                                  raid_status))
-
-        controllers_to_physical_disk_ids[controller] = final_physical_disk_ids
-
-    if failed_disks or bad_disks:
-        error_msg = ""
-
-        if failed_disks:
-            error_msg += "The following drives have failed: " \
-                "{failed_disks}.  Manually check the status of all drives " \
-                "and replace as necessary, then run the installation " \
-                "again.".format(failed_disks=" ".join(failed_disks))
-
-        if bad_disks:
-            if failed_disks:
-                error_msg += "\n"
-            error_msg += "Unable to change the state of the following " \
-                "drives because their status is not ready or non-RAID: {}.  " \
-                "Bring up the RAID controller GUI on this node and change " \
-                "the drives' state to ready or non-RAID.".format(
-                    ", ".join(bad_disks))
-
-        raise ValueError(error_msg)
-
-    job_ids = []
-    reboot_required = False
-    try:
-        for controller in controllers_to_physical_disk_ids.keys():
-            physical_disk_ids = controllers_to_physical_disk_ids[controller]
-            if physical_disk_ids:
-                LOG.debug("Converting the following disks to {} on RAID "
-                          "controller {}: {}".format(
-                              mode, controller, str(physical_disk_ids)))
-                try:
-                    _ = drac_client.convert_physical_disks(
-                        controller,
-                        physical_disk_ids,
-                        mode == "RAID")
-                except DRACOperationFailed as ex:
-                    if NOT_SUPPORTED_MSG in ex.message:
-                        LOG.debug("Controller {} does not support "
-                                  "JBOD mode".format(controller))
-                        pass
-                    else:
-                        raise
-                else:
-                    # The iDRAC response can contain YES, NO, or OPTIONAL.
-                    # Testing has shown that when OPTIONAL is returned,
-                    # and a config job is created scheduled for TIME_NOW,
-                    # the config job fails to run unless the node is rebooted.
-                    # As a result, we always must reboot the node since if
-                    # we made it this far then at least 1 disk was converted
-                    # and either YES or OPTIONAL was returned.
-                    reboot_required = True
-
-                    job_id = drac_client.commit_pending_raid_changes(
-                        controller, reboot=False, start_time=None)
-                    job_ids.append(job_id)
-    except:  # noqa: E722
-        # If any exception (except Not Supported) occurred during the
-        # conversion, then roll back all the changes for this node so we don't
-        # leave pending config jobs in the job queue
-        drac_client.delete_jobs(job_ids)
-        raise
-
-    return reboot_required, job_ids
 
 
 def main():
