@@ -22,19 +22,21 @@ import sys
 
 from arg_helper import ArgHelper
 from dracclient import client
+from dracclient import wsman
+from dracclient.resources import uris
 import boot_mode_helper
 from boot_mode_helper import BootModeHelper
 from constants import Constants
 from credential_helper import CredentialHelper
 from dracclient import exceptions
+from dracclient.resources import nic
 from job_helper import JobHelper
 from logging_helper import LoggingHelper
 from time import sleep
 from utils import Utils
 
 discover_nodes_path = os.path.join(os.path.expanduser('~'),
-#                                   'pilot/discover_nodes')
-                                   '/home/devel/skipbaremetal/JetPack/src/pilot/discover_nodes')
+                                   'pilot/discover_nodes')
 sys.path.append(discover_nodes_path)
 
 from discover_nodes.dracclient.client import DRACClient  # noqa
@@ -148,7 +150,7 @@ def configure_uefi_nics_boot_settings(drac_client, pxe_nic_id):
                "PxeDev1VlanEnDis": "Disabled"
                }
 
-            provisioning_mac = nic.mac_address.lower()
+            provisioning_mac = nic.mac.lower()
             response = drac_client.set_bios_settings(settings)
             reboot_required = response['is_reboot_required']
 
@@ -173,17 +175,17 @@ def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
 
         # Compare the NIC IDs case insensitively. Assume ASCII strings.
         if nic_id.lower() == pxe_nic_id.lower():
-            provisioning_mac = nic.mac_address.lower()
+            provisioning_mac = nic.mac.lower()
 
             # This is the NIC we want to PXE boot, so set it to PXE if it's
             # not set to PXE already
             if not is_nic_legacy_boot_protocol_pxe(nic_id):
-                result = set_nic_legacy_boot_protocol_pxe(nic_id)
+                result = set_nic_legacy_boot_protocol_pxe(nic_id, drac_client)
         else:
             try:
                 if not is_nic_legacy_boot_protocol_none(nic_id):
                     result = set_nic_legacy_boot_protocol_none(
-                        nic_id)
+                        nic_id, drac_client)
             except NotFound:
                 LOG.warn("Unable to check the legacy boot protocol of NIC {} "
                          "on {}, and so cannot set it to None".format(
@@ -205,7 +207,7 @@ def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
     return reboot_required, job_ids, provisioning_mac
 
 
-def get_nic_legacy_boot_protocol(self, nic_id):
+def get_nic_legacy_boot_protocol(nic_id):
     """Obtain the legacy, non-UEFI, boot protocol of a NIC.
 
     :param nic_id: id of the network interface controller (NIC)
@@ -216,10 +218,10 @@ def get_nic_legacy_boot_protocol(self, nic_id):
              interface
     :raises: NotFound when no settings for NIC found
     """
-    return self.get_nic_setting(nic_id, 'LegacyBootProto')
+    return get_nic_setting(nic_id, 'LegacyBootProto')
 
 
-def is_nic_legacy_boot_protocol_none(self, nic_id):
+def is_nic_legacy_boot_protocol_none(nic_id):
     """Return true if the legacy, non-UEFI, boot protocol of a NIC is NONE,
     false otherwise.
 
@@ -232,11 +234,10 @@ def is_nic_legacy_boot_protocol_none(self, nic_id):
              interface
     :raises: NotFound when no settings for NIC found
     """
-    return self.get_nic_legacy_boot_protocol(
-        nic_id).current_value == 'NONE'
+    return get_nic_legacy_boot_protocol(nic_id).current_value == 'NONE'
 
 
-def is_nic_legacy_boot_protocol_pxe(self, nic_id):
+def is_nic_legacy_boot_protocol_pxe(nic_id):
     """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE,
     false otherwise.
 
@@ -249,10 +250,10 @@ def is_nic_legacy_boot_protocol_pxe(self, nic_id):
              interface
     :raises: NotFound when no settings for NIC found
     """
-    return self.get_nic_legacy_boot_protocol(nic_id).current_value == 'PXE'
+    return get_nic_legacy_boot_protocol(nic_id).current_value == 'PXE'
 
 
-def set_nic_legacy_boot_protocol(self, nic_id, value):
+def set_nic_legacy_boot_protocol(nic_id, value, drac_client):
     """Set the legacy, non-UEFI, boot protocol of a NIC.
 
     If successful, the pending value of the NIC's legacy boot
@@ -270,10 +271,10 @@ def set_nic_legacy_boot_protocol(self, nic_id, value):
     :raises: DRACOperationFailed on error reported back by the iDRAC
              interface
     """
-    return self.set_nic_setting(nic_id, 'LegacyBootProto', value)
+    return set_nic_setting(nic_id, 'LegacyBootProto', value, drac_client)
 
 
-def set_nic_legacy_boot_protocol_none(self, nic_id):
+def set_nic_legacy_boot_protocol_none(nic_id, drac_client):
     """Set the legacy, non-UEFI, boot protocol of a NIC to NONE.
 
     If successful, the pending value of the NIC's legacy boot
@@ -290,10 +291,10 @@ def set_nic_legacy_boot_protocol_none(self, nic_id):
     :raises: DRACOperationFailed on error reported back by the iDRAC
              interface
     """
-    return self._nic_cfg.set_nic_legacy_boot_protocol(nic_id, 'NONE')
+    return set_nic_legacy_boot_protocol(nic_id, 'NONE', drac_client)
 
 
-def set_nic_legacy_boot_protocol_pxe(self, nic_id):
+def set_nic_legacy_boot_protocol_pxe(nic_id, drac_client):
     """Set the legacy, non-UEFI, boot protocol of a NIC to PXE.
 
     If successful, the pending value of the NIC's legacy boot
@@ -310,7 +311,89 @@ def set_nic_legacy_boot_protocol_pxe(self, nic_id):
     :raises: DRACOperationFailed on error reported back by the iDRAC
              interface
     """
-    return self._nic_cfg.set_nic_legacy_boot_protocol(nic_id, 'PXE')
+    return set_nic_legacy_boot_protocol(nic_id, 'PXE', drac_client)
+
+
+def _list_nic_settings(selection_expression):
+    result = {}
+    configurable_attributes = [
+        (uris.DCIM_NICEnumeration,
+         'DCIM_NICEnumeration',
+         nic.NICEnumerationAttribute),
+        (uris.DCIM_NICString,
+         'DCIM_NICString',
+         nic.NICStringAttribute),
+        (uris.DCIM_NICInteger,
+         'DCIM_NICInteger',
+         nic.NICIntegerAttribute)]
+
+    for (resource, class_name, attr_cls) in configurable_attributes:
+        attribs = _get_nic_config(resource, class_name,
+                                  selection_expression, attr_cls)
+
+        if not set(result).isdisjoint(set(attribs)):
+            raise exceptions.DRACOperationFailed(
+                drac_messages=('Colliding attributes %r' % (
+                    set(result) & set(attribs))))
+
+        result.update(attribs)
+
+    return result
+
+
+def get_nic_setting(nic_id, attribute_name):
+    """Obtain a setting of a NIC.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :param attribute_name: name of the setting
+    :returns: value of the attribute on successful query, None
+              otherwise
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    :raises: NotFound when no settings for NIC found
+    """
+    selection_expression = ('InstanceID = '
+                            '"%(fqdd)s:%(attribute_name)s"') % {
+        'fqdd': nic_id,
+        'attribute_name': attribute_name}
+    settings = _list_nic_settings(selection_expression)
+
+    # Were no settings found?
+    if not settings:
+        raise exceptions.NotFound(
+            what=('settings for NIC %(nic)s') % {
+                'nic': nic_id})
+
+    # Do the settings include the attribute?
+    if attribute_name not in settings:
+        return None
+
+    return settings[attribute_name]
+
+
+def set_nic_setting(nic_id, attribute_name, value, drac_client):
+    """Modify a setting of a NIC.
+
+    If successful, the pending value of the attribute is set. For
+    the new value to be applied, a configuration job must be created
+    and the node must be rebooted.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :param attribute_name: name of the setting
+    :param value: value of the attribute
+    :returns: dictionary containing a 'commit_required' key with a
+              boolean value indicating whether a configuration job
+              must be created for the new setting to be applied
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    :raises: InvalidParameterValue on invalid NIC attribute
+    """
+    settings = {attribute_name: value}
+    return drac_client.set_nic_settings(nic_id, settings)
 
 
 def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):
@@ -355,6 +438,25 @@ def config_idrac_settings(drac_client, ip_service_tag, password, node):
                                                           start_time=None)
 
     return response['is_reboot_required'], job_id
+
+
+def _get_nic_config(self, resource, class_name,
+                    selection_expression, attr_cls):
+    filter_query = (
+        'select * '
+        'from %(class)s '
+        'where %(selection_expression)s') % {
+        'class': class_name, 'selection_expression': selection_expression}
+    doc = self.client.enumerate(resource, filter_query=filter_query)
+
+    result = {}
+    items = doc.find('.//{%s}Items' % wsman.NS_WSMAN)
+
+    for item in items:
+        attribute = attr_cls.parse(item)
+        result[attribute.name] = attribute
+
+    return result
 
 
 def config_hard_disk_drive_boot_sequence(drac_client, ip_service_tag):
