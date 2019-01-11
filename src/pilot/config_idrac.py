@@ -133,7 +133,7 @@ def configure_nics_boot_settings(
                                                  pxe_nic_id)
 
 
-def skipped_configure_nics_boot_settings(drac_client, pxe_nic_id):
+def get_nic_mac_address(drac_client, pxe_nic_id):
     for nic in drac_client.list_nics(sort=True):
         # Compare the NIC IDs case insensitively. Assume ASCII strings.
         if nic.id.lower() == pxe_nic_id.lower():
@@ -385,8 +385,9 @@ def config_idrac(instack_lock,
     # Clear out any pending jobs in the job queue and fix the condition where
     # there are no pending jobs, but the iDRAC thinks there are
     clear_job_queue(drac_client, ip_service_tag)
-
-    if BootModeHelper.is_boot_order_flexibly_programmable(drac_client):
+    if skip_nic_config:
+        target_boot_mode = BootModeHelper.get_boot_mode(drac_client)
+    elif BootModeHelper.is_boot_order_flexibly_programmable(drac_client):
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_UEFI
     else:
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_BIOS
@@ -427,19 +428,11 @@ def config_idrac(instack_lock,
         ip_service_tag,
         node_definition)
 
-    boot_modes_same = BootModeHelper.get_boot_mode(
-        drac_client) == target_boot_mode
-
-    if skip_nic_config and boot_modes_same:
-        provisioning_mac = skipped_configure_nics_boot_settings(
+    if skip_nic_config:
+        provisioning_mac = get_nic_mac_address(
             drac_client, pxe_nic_fqdd)
         LOG.info("Skipping NIC configuration")
-
     else:
-
-        if skip_nic_config and not boot_modes_same:
-            LOG.warning("NIC configurations cannot be skipped because"
-                        "current and target boot modes are different")
         # Configure the NIC port to PXE boot or not
         reboot_required_nic, nic_job_ids, provisioning_mac = \
             configure_nics_boot_settings(drac_client,
@@ -452,23 +445,23 @@ def config_idrac(instack_lock,
         if nic_job_ids:
             job_ids.extend(nic_job_ids)
 
-        # Do initial idrac configuration
-        reboot_required_idrac, idrac_job_id = config_idrac_settings(
-            drac_client,
-            ip_service_tag,
-            password,
-            node)
-        reboot_required = reboot_required or reboot_required_idrac
-        if idrac_job_id:
-            job_ids.append(idrac_job_id)
+    # Do initial idrac configuration
+    reboot_required_idrac, idrac_job_id = config_idrac_settings(
+        drac_client,
+        ip_service_tag,
+        password,
+        node)
+    reboot_required = reboot_required or reboot_required_idrac
+    if idrac_job_id:
+        job_ids.append(idrac_job_id)
 
-        # If we need to reboot, then add a job for it
-        if reboot_required:
-            LOG.info("Rebooting {} to apply configuration".format(
-                ip_service_tag))
+    # If we need to reboot, then add a job for it
+    if reboot_required:
+        LOG.info("Rebooting {} to apply configuration".format(
+            ip_service_tag))
 
-            job_id = drac_client.create_reboot_job()
-            job_ids.append(job_id)
+        job_id = drac_client.create_reboot_job()
+        job_ids.append(job_id)
 
     success = True
     if job_ids:
