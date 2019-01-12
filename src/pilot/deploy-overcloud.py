@@ -313,6 +313,10 @@ def main():
                             action='store_true',
                             default=False,
                             help="Enables Distributed Virtual Routing")
+        parser.add_argument('--barbican_enable',
+                            action='store_true',
+                            default=False,
+                            help="Enables Barbican key manager")
         parser.add_argument('--static_ips',
                             action='store_true',
                             default=False,
@@ -464,6 +468,11 @@ def main():
         if args.dvr_enable:
             env_opts += " -e ~/pilot/templates/neutron-ovs-dvr.yaml"
 
+        # The configure-barbican.yaml must be included after the
+        # network-environment.yaml
+        if args.barbican_enable:
+            env_opts += " -e ~/pilot/templates/configure-barbican.yaml"
+            
         if args.node_placement:
             env_opts += " -e ~/pilot/templates/node-placement.yaml"
 

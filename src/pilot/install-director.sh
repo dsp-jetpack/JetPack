@@ -323,6 +323,7 @@ else
  --namespace=registry.access.redhat.com/rhosp13 \
  -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
  -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
+ -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
  --set ceph_namespace=registry.access.redhat.com/rhceph \
  --set ceph_image=rhceph-3-rhel7 \
  --tag-from-label {version}-{release}

@@ -298,6 +298,12 @@ class Settings():
         else:
             self.dvr_enable = False
             logger.info("DVR is disabled.")
+        if dellnfv_settings['barbican_enable'].lower() == 'true':
+            self.barbican_enable = True
+            logger.info("Barbican is enabled.")
+        else:
+            self.dvr_enable = False
+            logger.info("Barbican is disabled.")
         # Performance and Optimization
         performance_and_optimization = self.get_settings_section(
             "Performance and Optimization")

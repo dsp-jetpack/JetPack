@@ -55,6 +55,12 @@
                  "true",
                  "false"
               ]
+            },
+            "barbican_enable" :{
+              "valid_values": [
+                 "true",
+                 "false"
+              ]
             }
          }        
    },
