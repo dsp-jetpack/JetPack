@@ -76,15 +76,6 @@ parameter_defaults:
   # will allow access to the management network
   ProvisioningNetworkGateway: 192.168.120.1
 
-  # CHANGEME: Set to the router gateway on the provisioning network (or Undercloud IP)
-  ControlPlaneDefaultRoute: 192.168.120.13
-
-  # CHANGEME: Set to the CIDR of the control plane network
-  ControlPlaneSubnetCidr: "24"
-
-  # CHANGEME: Set to the IP address of the Undercloud
-  EC2MetadataIp: 192.168.120.13
-
   # CHANGEME: Set to the DNS servers to use for the overcloud nodes (maximum 2)
   DnsServers: ["8.8.8.8", "8.8.4.4"]
 
