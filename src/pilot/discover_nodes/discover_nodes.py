@@ -83,6 +83,7 @@ class CustomLoggerAdapter(logging.LoggerAdapter):
     def set_idrac_ip_address(self, ip_address):
         self.extra['idracip'] = ip_address
 
+
 logger = logging.getLogger(__name__)
 LOG = CustomLoggerAdapter(logger, {})
 
@@ -127,6 +128,7 @@ OSPD_NODE_TEMPLATE_VALUE_USER_INTERVENTION_REQUIRED = \
 
 class NotSupported(BaseException):
     pass
+
 
 # Create a factory function for creating tuple-like objects that contain
 # the information needed to generate an OSP Director node template. The
@@ -385,8 +387,8 @@ def scan_one(scan_info):
             LOG.info('IP address is not an iDRAC')
             return None
 
-        model = client.get_system_model_name()
-        service_tag = client.get_system_service_tag()
+        model = client.get_system().model
+        service_tag = client.get_system().service_tag
     except dracclient.exceptions.WSManInvalidResponse:
         # Most likely the user credentials are unauthorized.
 
@@ -507,6 +509,7 @@ def is_idrac(client):
         doc,
         DCIM_iDRACCardView,
         'DeviceDescription') == 'iDRAC'
+
 
 if __name__ == '__main__':
     main()
