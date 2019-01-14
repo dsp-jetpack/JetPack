@@ -67,6 +67,8 @@ class DeployerSanity():
             'management_allocation_pool_start',
             'management_allocation_pool_end',
             'name_server',
+            'undercloud_public_host',
+            'undercloud_admin_host'
         ]
 
         for ip in getattr(self.settings, 'discovery_ip_range').split(","):
