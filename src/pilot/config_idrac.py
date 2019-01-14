@@ -96,7 +96,7 @@ def get_pxe_nic_fqdd_from_model_properties(model_properties, drac_client):
     if model_properties is None:
         return None
 
-    model_name = drac_client.get_system_model_name()
+    model_name = drac_client.get_system().model
 
     # If the model does not have an entry in the model properties JSON file,
     # return None, instead of raising a KeyError exception.
@@ -140,11 +140,11 @@ def configure_uefi_nics_boot_settings(drac_client, pxe_nic_id):
                "PxeDev1VlanEnDis": "Disabled"
                }
 
-            provisioning_mac = nic.mac_address.lower()
+            provisioning_mac = nic.mac.lower()
             response = drac_client.set_bios_settings(settings)
-            reboot_required = response['commit_required']
+            reboot_required = response['is_reboot_required']
 
-            if response['commit_required']:
+            if response['is_commit_required']:
                 job_id = drac_client.commit_pending_bios_changes(
                     reboot=False, start_time=None)
                 job_ids.append(job_id)
@@ -184,14 +184,14 @@ def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
         if result is None:
             continue
 
-        if result['commit_required']:
+        if result['is_commit_required']:
             job_id = drac_client.create_nic_config_job(
                 nic_id,
                 reboot=False,
                 start_time=None)
             job_ids.append(job_id)
 
-        if result['reboot_required']:
+        if result['is_reboot_required']:
             reboot_required = True
 
     return reboot_required, job_ids, provisioning_mac
@@ -204,13 +204,11 @@ def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):
     response = drac_client.set_bios_settings(settings)
 
     job_id = None
-    if response['commit_required']:
+    if response['is_commit_required']:
         job_id = drac_client.commit_pending_bios_changes(reboot=False,
                                                          start_time=None)
 
-    # Note that "commit_required" is actually "reboot_required" under the
-    # covers
-    return response['commit_required'], job_id
+    return response['is_reboot_required'], job_id
 
 
 def config_idrac_settings(drac_client, ip_service_tag, password, node):
@@ -236,11 +234,11 @@ def config_idrac_settings(drac_client, ip_service_tag, password, node):
     response = drac_client.set_idrac_settings(idrac_settings)
 
     job_id = None
-    if response['commit_required']:
+    if response['is_commit_required']:
         job_id = drac_client.commit_pending_idrac_changes(reboot=False,
                                                           start_time=None)
 
-    return response['reboot_required'], job_id
+    return response['is_reboot_required'], job_id
 
 
 def config_hard_disk_drive_boot_sequence(drac_client, ip_service_tag):
@@ -328,7 +326,7 @@ def clear_job_queue(drac_client, ip_service_tag):
 
 def reset_idrac(drac_client, ip_service_tag):
     LOG.info('Resetting the iDRAC on {}'.format(ip_service_tag))
-    drac_client.wait_until_idrac_is_reset(False)
+    drac_client.reset_idrac(wait=True)
 
 
 def config_idrac(instack_lock,
