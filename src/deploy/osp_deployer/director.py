@@ -126,7 +126,23 @@ class Director(InfraHost):
             '|" pilot/undercloud.conf',
             'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' + 
             self.settings.sah_node.provisioning_ip +
-            '|" pilot/undercloud.conf'
+            '|" pilot/undercloud.conf',
+            'sed -i "s|deployment_user = .*|deployment_user = ' +
+            self.settings.director_install_account_user +
+            '|" pilot/undercloud.conf',
+            'sed -i "s|container_images_file =.*|container_images_file = ' +
+            self.home_dir +  '/containers-prepare-parameter.yaml' +
+            '|" pilot/undercloud.conf',
+            'sed -i "s|overcloud_domain_name = .*|overcloud_domain_name = ' +
+            self.settings.domain +
+            '|" pilot/undercloud.conf',
+            'sed -i "s|undercloud_admin_host = .*|undercloud_admin_host = ' +
+            self.settings.undercloud_admin_host +
+            '|" pilot/undercloud.conf',
+            'sed -i "s|undercloud_public_host = .*|undercloud_public_host = ' +
+            self.settings.undercloud_public_host +
+            '|" pilot/undercloud.conf',
+            
         ]
         for cmd in cmds:
             self.run(cmd)
@@ -1099,17 +1115,17 @@ class Director(InfraHost):
             node_id = node.split("|")[1]
             if "ERROR" in node_state:
                 self.run_tty(self.source_stackrc +
-                             "ironic node-set-maintenance " +
-                             node_id + " true")
+                             "openstack baremetal node maintenance set " +
+                             node_id)
             if "clean failed" in node_state:
                 self.run_tty(self.source_stackrc +
-                             "ironic node-set-maintenance " +
-                             node_id + " False")
+                             "openstack baremetal node maintenance unset " +
+                             node_id)
                 self.run_tty(self.source_stackrc +
-                             "ironic node-set-provision-state " +
-                             node_id + " manage")
+                             "openstack baremetal node manage " +
+                             node_id)
             self.run_tty(self.source_stackrc +
-                         "ironic node-delete " +
+                         "openstack baremetal node delete " +
                          node_id)
 
     def summarize_deployment(self):

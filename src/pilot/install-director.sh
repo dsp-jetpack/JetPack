@@ -148,6 +148,9 @@ echo
 echo "## Installing Director"
 run_command "sudo yum -y install python-tripleoclient"
 run_command "sudo yum install -y ceph-ansible"
+run_command "openstack tripleo container image prepare default --local-push-destination --output-env-file $HOME/containers-prepare-parameter.yaml"
+#sed -i "s/namespace: registry.access.redhat.com\/rhosp14/namespace: registry.access.redhat.com\/rhosp14-beta/" $HOME/containers-prepare-parameter.yaml
+
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
 run_command "sudo yum -y install openstack-tempest"
@@ -196,7 +199,7 @@ then
 fi
 cd $HOME/pilot/images
 
-for i in /usr/share/rhosp-director-images/overcloud-full-latest-13.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-13.0.tar;
+for i in /usr/share/rhosp-director-images/overcloud-full-latest-14.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-14.0.tar;
 do
   tar -xvf $i;
 done
@@ -259,51 +262,11 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resour
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
 
-# This hacks in a patch to create a virtual disk using realtime mode.
-# Note that this code must be here because we use this code prior to deploying
-# the director.
-echo
-echo "## Patching Ironic iDRAC driver raid.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
-echo "## Done."
-
-# This patches workarounds for two issues into ironic.conf.
-# 1. node_locked_retry_attempts is increased to work around an issue where
-#    lock contention on the nodes in ironic can occur during RAID cleaning.
-# 2. sync_power_state_interval is increased to work around an issue where
-#    servers go into maintenance mode in ironic if polled for power state too
-#    aggressively.
-echo
-echo "## Patching ironic.conf..."
-apply_patch "sudo patch -b -s /etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
-echo "## Done."
-
-# This patches an issue where the  Ironic api service returns http 500 errors
-# https://bugzilla.redhat.com/show_bug.cgi?id=1613995
-echo
-echo "## Patching 10-ironic_wsgi.conf"
-apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
-echo "## Done"
-
-# This patch fixes tempest cleanup
-echo
-echo "### Patching tempest cleanup..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.py ${HOME}/pilot/tempest_cleanup.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyo
-echo "## Done."
 
 echo
 echo "## Restarting httpd"
 sudo systemctl restart httpd
 echo "## Done"
-
-echo
-echo "## Restarting openstack-ironic-conductor.service..."
-sudo systemctl restart openstack-ironic-conductor.service
-echo "## Done."
 
 network="ctlplane"
 echo
@@ -331,6 +294,7 @@ fi
 
 sudo yum install -y os-cloud-config
 sudo yum install -y ceph-ansible
+sudo yum install -y openstack-ironic-api
 
 
 echo
