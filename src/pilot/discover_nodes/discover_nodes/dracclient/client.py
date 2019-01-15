@@ -25,7 +25,6 @@ import dracclient.resources.uris as ironic_uris
 import logging
 
 from .resources import uris
-
 LOG = logging.getLogger(__name__)
 
 
