@@ -300,11 +300,15 @@ def define_controller_logical_disks(drac_client, raid_controller_name):
     raid_10_logical_disk = define_single_raid_10_logical_disk(
         drac_client, raid_controller_name)
 
+    # None indicates an error occurred.
     if raid_10_logical_disk is None:
         return None
 
     logical_disks = list()
-    logical_disks.append(raid_10_logical_disk)
+
+    # Add the disk to the list only if it is not empty.
+    if raid_10_logical_disk:
+        logical_disks.append(raid_10_logical_disk)
 
     return logical_disks
 
@@ -313,11 +317,15 @@ def define_compute_logical_disks(drac_client, raid_controller_name):
     raid_10_logical_disk = define_single_raid_10_logical_disk(
         drac_client, raid_controller_name)
 
+    # None indicates an error occurred.
     if raid_10_logical_disk is None:
         return None
 
     logical_disks = list()
-    logical_disks.append(raid_10_logical_disk)
+
+    # Add the disk to the list only if it is not empty.
+    if raid_10_logical_disk:
+        logical_disks.append(raid_10_logical_disk)
 
     return logical_disks
 
@@ -631,7 +639,7 @@ def define_jbod_or_raid_0_logical_disk(drac_client,
         documents the RAID configuration on the ironic node. It would
         also eliminate the dependency the RAID create_configuration
         clean step has on the delete_configuration step.'''
-        return None
+        return dict()
     else:
         return define_logical_disk('MAX', '0', raid_controller_name,
                                    [physical_disk_name], is_root_volume)
@@ -774,6 +782,10 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
 
     if target_raid_config is None:
         return False
+
+    if not target_raid_config['logical_disks']:
+        place_node_in_available_state(ironic_client, node_uuid)
+        return True
 
     # Set the target RAID configuration on the ironic node.
     ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
@@ -1151,10 +1163,75 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
 
                     break
 
+            # Note: This code block represents single disk scenario.
             if raid_size_gb == 0:
-                raise RuntimeError("There must be either a virtual disk that "
-                                   "is not a RAID 0 to install the OS on, or "
-                                   "os-volume-size-gb must be specified")
+                if virtual_disk_docs:
+                    raid0_disk_sizes = []
+                    for virtual_disk_doc in virtual_disk_docs:
+                        fqdd = get_fqdd(virtual_disk_doc, DCIM_VirtualDiskView)
+                        raid_type = utils.find_xml(
+                            virtual_disk_doc,
+                            'RAIDTypes',
+                            DCIM_VirtualDiskView).text
+
+                        if raid_type == RAID0:
+                            raid_size = get_size_in_bytes(virtual_disk_doc,
+                                                          DCIM_VirtualDiskView)
+                            raid_size_gb = int(raid_size) / units.Gi
+                            raid0_disk_sizes.append(raid_size_gb)
+
+                            # Get the physical disks that back this RAID
+                            raid_physical_disk_docs = utils.find_xml(
+                                virtual_disk_doc,
+                                'PhysicalDiskIDs',
+                                DCIM_VirtualDiskView,
+                                True)
+
+                            for raid_physical_disk_doc in \
+                                    raid_physical_disk_docs:
+                                raid_physical_disk_id = \
+                                    raid_physical_disk_doc.text
+                                raid_physical_disk_ids.append(
+                                    raid_physical_disk_id)
+
+                            LOG.debug(
+                                "Found RAID {} virtual disk {} with a size of"
+                                " {} "
+                                "bytes comprised of physical disks:\n"
+                                " {}".format(
+                                    RAID_TYPE_TO_DESCRIPTION[raid_type],
+                                    fqdd,
+                                    raid_size,
+                                    "\n  ".join(raid_physical_disk_ids)))
+
+                            break
+
+                    if len(raid0_disk_sizes) != 1:
+                        raise RuntimeError(
+                            "There must be a non-RAID0 virtual disk,"
+                            "a single disk RAID0, or a single JBOD disk"
+                            "to install the OS on,"
+                            "or os-volume-size-gb must be specified.")
+                else:
+                    physical_disk_view_doc = drac_client.enumerate(
+                        DCIM_PhysicalDiskView)
+                    physical_disk_docs = utils.find_xml(
+                        physical_disk_view_doc,
+                        'DCIM_PhysicalDiskView',
+                        DCIM_PhysicalDiskView,
+                        True)
+                    physical_disk_sizes = [
+                        get_size_in_bytes(physical_disk_doc,
+                                          DCIM_PhysicalDiskView)
+                        for physical_disk_doc in physical_disk_docs]
+                    if len(physical_disk_sizes) != 1:
+                        raise RuntimeError(
+                            "There must be a non-RAID0 virtual disk,"
+                            "a single disk RAID0, or a single JBOD disk"
+                            "to install the OS on,"
+                            "or os-volume-size-gb must be specified.")
+
+                    os_volume_size_gb = int(physical_disk_sizes[0]) / units.Gi
 
             # Now check to see if we have any physical disks that don't back
             # the RAID that are the same size as the RAID
