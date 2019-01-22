@@ -303,7 +303,7 @@ def define_controller_logical_disks(drac_client, raid_controller_name):
     logical_disks = list()
 
     # Add the disk to the list only if it is not empty.
-    if logical_disks:
+    if raid_10_logical_disk:
         logical_disks.append(raid_10_logical_disk)
 
     return logical_disks
@@ -320,7 +320,7 @@ def define_compute_logical_disks(drac_client, raid_controller_name):
     logical_disks = list()
 
     # Add the disk to the list only if it is not empty.
-    if logical_disks:
+    if raid_10_logical_disk:
         logical_disks.append(raid_10_logical_disk)
 
     return logical_disks
