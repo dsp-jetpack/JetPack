@@ -179,11 +179,11 @@ def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
 
             # This is the NIC we want to PXE boot, so set it to PXE if it's
             # not set to PXE already
-            if not is_nic_legacy_boot_protocol_pxe(nic_id):
+            if not is_nic_legacy_boot_protocol_pxe(nic_id, drac_client):
                 result = set_nic_legacy_boot_protocol_pxe(nic_id, drac_client)
         else:
             try:
-                if not is_nic_legacy_boot_protocol_none(nic_id):
+                if not is_nic_legacy_boot_protocol_none(nic_id, drac_client):
                     result = set_nic_legacy_boot_protocol_none(
                         nic_id, drac_client)
             except NotFound:
@@ -207,25 +207,27 @@ def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
     return reboot_required, job_ids, provisioning_mac
 
 
-def get_nic_legacy_boot_protocol(nic_id):
+def get_nic_legacy_boot_protocol(nic_id, drac_client):
     """Obtain the legacy, non-UEFI, boot protocol of a NIC.
 
     :param nic_id: id of the network interface controller (NIC)
     :returns: legacy boot protocol
+    :param drac_client: drac_client from python-dracclient
     :raises: WSManRequestFailure on request failures
     :raises: WSManInvalidResponse when receiving invalid response
     :raises: DRACOperationFailed on error reported back by the iDRAC
              interface
     :raises: NotFound when no settings for NIC found
     """
-    return get_nic_setting(nic_id, 'LegacyBootProto')
+    return get_nic_setting(nic_id, 'LegacyBootProto', drac_client)
 
 
-def is_nic_legacy_boot_protocol_none(nic_id):
+def is_nic_legacy_boot_protocol_none(nic_id, drac_client):
     """Return true if the legacy, non-UEFI, boot protocol of a NIC is NONE,
     false otherwise.
 
     :param nic_id: id of the network interface controller (NIC)
+    :param drac_client: drac_client from python-dracclient
     :returns: boolean indicating whether or not the legacy,
               non-UEFI, boot protocol is NONE
     :raises: WSManRequestFailure on request failures
@@ -234,14 +236,15 @@ def is_nic_legacy_boot_protocol_none(nic_id):
              interface
     :raises: NotFound when no settings for NIC found
     """
-    return get_nic_legacy_boot_protocol(nic_id).current_value == 'NONE'
+    return get_nic_legacy_boot_protocol(nic_id, drac_client).current_value == 'NONE'
 
 
-def is_nic_legacy_boot_protocol_pxe(nic_id):
+def is_nic_legacy_boot_protocol_pxe(nic_id, drac_client):
     """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE,
     false otherwise.
 
     :param nic_id: id of the network interface controller (NIC)
+    :param drac_client: drac_client from python-dracclient
     :returns: boolean indicating whether or not the legacy,
               non-UEFI, boot protocol is PXE
     :raises: WSManRequestFailure on request failures
@@ -250,7 +253,7 @@ def is_nic_legacy_boot_protocol_pxe(nic_id):
              interface
     :raises: NotFound when no settings for NIC found
     """
-    return get_nic_legacy_boot_protocol(nic_id).current_value == 'PXE'
+    return get_nic_legacy_boot_protocol(nic_id, drac_client).current_value == 'PXE'
 
 
 def set_nic_legacy_boot_protocol(nic_id, value, drac_client):
@@ -317,38 +320,12 @@ def set_nic_legacy_boot_protocol_pxe(nic_id, drac_client):
     return set_nic_legacy_boot_protocol(nic_id, 'PXE', drac_client)
 
 
-def _list_nic_settings(selection_expression):
-    result = {}
-    configurable_attributes = [
-        (uris.DCIM_NICEnumeration,
-         'DCIM_NICEnumeration',
-         nic.NICEnumerationAttribute),
-        (uris.DCIM_NICString,
-         'DCIM_NICString',
-         nic.NICStringAttribute),
-        (uris.DCIM_NICInteger,
-         'DCIM_NICInteger',
-         nic.NICIntegerAttribute)]
-
-    for (resource, class_name, attr_cls) in configurable_attributes:
-        attribs = _get_nic_config(resource, class_name,
-                                  selection_expression, attr_cls)
-
-        if not set(result).isdisjoint(set(attribs)):
-            raise exceptions.DRACOperationFailed(
-                drac_messages=('Colliding attributes %r' % (
-                    set(result) & set(attribs))))
-
-        result.update(attribs)
-
-    return result
-
-
-def get_nic_setting(nic_id, attribute_name):
+def get_nic_setting(nic_id, attribute_name, drac_client):
     """Obtain a setting of a NIC.
 
     :param nic_id: id of the network interface controller (NIC)
     :param attribute_name: name of the setting
+    :param drac_client: drac_client from python-dracclient
     :returns: value of the attribute on successful query, None
               otherwise
     :raises: WSManRequestFailure on request failures
@@ -357,11 +334,7 @@ def get_nic_setting(nic_id, attribute_name):
              interface
     :raises: NotFound when no settings for NIC found
     """
-    selection_expression = ('InstanceID = '
-                            '"%(fqdd)s:%(attribute_name)s"') % {
-        'fqdd': nic_id,
-        'attribute_name': attribute_name}
-    settings = _list_nic_settings(selection_expression)
+    settings = drac_client.list_nic_settings(nic_id)
 
     # Were no settings found?
     if not settings:
@@ -442,25 +415,6 @@ def config_idrac_settings(drac_client, ip_service_tag, password, node):
                                                           start_time=None)
 
     return response['is_reboot_required'], job_id
-
-
-def _get_nic_config(self, resource, class_name,
-                    selection_expression, attr_cls):
-    filter_query = (
-        'select * '
-        'from %(class)s '
-        'where %(selection_expression)s') % {
-        'class': class_name, 'selection_expression': selection_expression}
-    doc = self.client.enumerate(resource, filter_query=filter_query)
-
-    result = {}
-    items = doc.find('.//{%s}Items' % wsman.NS_WSMAN)
-
-    for item in items:
-        attribute = attr_cls.parse(item)
-        result[attribute.name] = attribute
-
-    return result
 
 
 def config_hard_disk_drive_boot_sequence(drac_client, ip_service_tag):
