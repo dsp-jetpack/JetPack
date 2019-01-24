@@ -19,7 +19,6 @@ from __future__ import print_function
 
 import argparse
 from collections import namedtuple
-from dracclient import client
 from exceptions import ValueError
 import json
 import logging
@@ -30,6 +29,8 @@ import dracclient.exceptions
 import dracclient.utils
 import netaddr
 import requests.packages
+
+import discover_nodes.dracclient.client as discover_nodes_dracclient
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being
 # made. See
@@ -366,9 +367,9 @@ def scan_one(scan_info):
     # protocol. See the DMTF's "Web Services for Management
     # (WS-Management) Specification"
     # (http://www.dmtf.org/sites/default/files/standards/documents/DSP0226_1.2.0.pdf).
-    drac_client = client.DRACClient(scan_info.ip_address,
-                                    scan_info.user_name,
-                                    scan_info.password)
+    client = discover_nodes_dracclient.DRACClient(scan_info.ip_address,
+                                                  scan_info.user_name,
+                                                  scan_info.password)
 
     # Initialize the values of the attributes.
     pm_address = scan_info.ip_address
@@ -382,12 +383,12 @@ def scan_one(scan_info):
         # Determine if the IP address is a WS-Man endpoint and an iDRAC.
         # If it is not, return None so that no entry is created for it
         # in the node definition template.
-        if not is_idrac(drac_client):
+        if not is_idrac(client):
             LOG.info('IP address is not an iDRAC')
             return None
 
-        model = drac_client.get_system().model
-        service_tag = drac_client.get_system().service_tag
+        model = client.get_system().model
+        service_tag = client.get_system().service_tag
     except dracclient.exceptions.WSManInvalidResponse:
         # Most likely the user credentials are unauthorized.
 
@@ -442,7 +443,7 @@ def scan_one(scan_info):
 #       (http://www.dmtf.org/sites/default/files/standards/documents/DSP0226_1.2.0.pdf),
 #       section 11, "Metadata and Discovery", for the specification of
 #       Identify.
-def is_idrac(drac_client):
+def is_idrac(client):
     # This determines whether or not an IPv4 address is a WS-Man
     # endpoint and iDRAC.
     #
@@ -472,7 +473,7 @@ def is_idrac(drac_client):
     requests_logger.disabled = True
 
     try:
-        doc = drac_client.client.enumerate(DCIM_iDRACCardView)
+        doc = client.client.enumerate(DCIM_iDRACCardView)
     except dracclient.exceptions.WSManInvalidResponse as e:
         # Most likely the user credentials are unauthorized.
 

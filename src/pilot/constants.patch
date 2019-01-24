@@ -1,0 +1,19 @@
+--- constants.py.orig	2019-01-23 14:21:10.077000000 +0000
++++ constants.py	2019-01-23 13:45:52.275000000 +0000
+@@ -75,3 +75,16 @@
+                 cls.reboot_forced_shutdown]
+ 
+ 
++class RaidStatus(object):
++    """Enumeration of different volume types."""
++
++    jbod = 'JBOD'
++    """Just a Bunch of Disks"""
++
++    raid = 'RAID'
++    """Redundant Array of Independent Disks"""
++
++    @classmethod
++    def all(cls):
++        return [cls.jbod,
++                cls.raid]
