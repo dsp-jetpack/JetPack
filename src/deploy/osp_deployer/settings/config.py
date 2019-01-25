@@ -298,6 +298,12 @@ class Settings():
         else:
             self.dvr_enable = False
             logger.info("DVR is disabled.")
+        if dellnfv_settings['octavia_enable'].lower() == 'true':
+            self.octavia_enable = True
+            logger.info("Octavia is enabled.")
+        else:
+            self.octavia_enable = False
+            logger.info("Octavia is disabled.")       
         # Performance and Optimization
         performance_and_optimization = self.get_settings_section(
             "Performance and Optimization")

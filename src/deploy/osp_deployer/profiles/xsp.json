@@ -46,6 +46,11 @@
                    "1-64"
                 ]
              },
+       "octavia_enable": {
+               "valid_values": [
+                  "false"
+               ]
+             },
         "dvr_enable" :{
                "valid_values": [
                   "false"

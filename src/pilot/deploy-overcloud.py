@@ -309,6 +309,10 @@ def main():
                             action='store_true',
                             default=False,
                             help="Disable cinder Ceph and rbd backend")
+        parser.add_argument('--octavia_enable',
+                            action='store_true',
+                            default=False,
+                            help="Enables Octavia Load Balancer")
         parser.add_argument('--dvr_enable',
                             action='store_true',
                             default=False,
@@ -463,6 +467,11 @@ def main():
         # network-environment.yaml
         if args.dvr_enable:
             env_opts += " -e ~/pilot/templates/neutron-ovs-dvr.yaml"
+
+        # The octavia.yaml must be included after the
+        # network-environment.yaml
+        if args.octavia_enable:
+            env_opts += " -e ~/pilot/templates/octavia.yaml"
 
         if args.node_placement:
             env_opts += " -e ~/pilot/templates/node-placement.yaml"

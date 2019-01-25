@@ -1062,9 +1062,10 @@ class Director(InfraHost):
             cmd += " --ovs_dpdk"
         if self.settings.enable_sriov is True:
             cmd += " --sriov"
-        # Node placement is required in an automated install. The index order
         if self.settings.dvr_enable is True:
             cmd += " --dvr_enable"
+        if self.settings.octavia_enable is True:
+            cmd += " --octavia_enable"
         # Node placement is required in an automated install.  The index order
         # of the nodes is the order in which they are defined in the
         # .properties file
