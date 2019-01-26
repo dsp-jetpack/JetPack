@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2017-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -422,7 +422,7 @@ def main():
         # care about the contents, but rely on an exception if the directory
         # doesn't exist. If no exception then we're good.
         os.listdir(images_path)
-   
+
     if os.path.exists(dashboard_image):
         os.remove(dashboard_image)
 
