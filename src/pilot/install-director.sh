@@ -266,6 +266,20 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resour
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/idrac_card.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/idrac_card.pyo
 
+# This hacks in a patch to validate and retrieve raid and boss controller and physical disk status.
+echo
+echo "## Patching Ironic iDRAC driver raid.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
+
+# This hacks in a patch to retrieve error message.
+echo
+echo "## Patching Ironic iDRAC driver constants.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/constants.py ${HOME}/pilot/constants.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/constants.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/constants.pyo
+
 # This hacks in a patch to create a virtual disk using realtime mode.
 # Note that this code must be here because we use this code prior to deploying
 # the director.
