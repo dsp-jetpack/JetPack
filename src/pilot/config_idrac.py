@@ -23,13 +23,13 @@ import sys
 from arg_helper import ArgHelper
 from dracclient import client
 from dracclient import wsman
+from dracclient import exceptions
 from dracclient.resources import uris
 from dracclient.resources import nic
 import boot_mode_helper
 from boot_mode_helper import BootModeHelper
 from constants import Constants
 from credential_helper import CredentialHelper
-from dracclient import exceptions
 from job_helper import JobHelper
 from logging_helper import LoggingHelper
 from time import sleep
@@ -40,7 +40,6 @@ discover_nodes_path = os.path.join(os.path.expanduser('~'),
 sys.path.append(discover_nodes_path)
 
 from discover_nodes.dracclient.client import DRACClient  # noqa
-from discover_nodes.dracclient.exceptions import NotFound  # noqa
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being made
 requests.packages.urllib3.disable_warnings()
@@ -186,7 +185,7 @@ def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
                 if not is_nic_legacy_boot_protocol_none(nic_id, drac_client):
                     result = set_nic_legacy_boot_protocol_none(
                         nic_id, drac_client)
-            except NotFound:
+            except exceptions.InvalidParameterValue:
                 LOG.warn("Unable to check the legacy boot protocol of NIC {} "
                          "on {}, and so cannot set it to None".format(
                              nic_id, ip_service_tag))
@@ -217,7 +216,7 @@ def get_nic_legacy_boot_protocol(nic_id, drac_client):
     :raises: WSManInvalidResponse when receiving invalid response
     :raises: DRACOperationFailed on error reported back by the iDRAC
              interface
-    :raises: NotFound when no settings for NIC found
+    :raises: InvalidParameterValue on invalid NIC attribute
     """
     return get_nic_setting(nic_id, 'LegacyBootProto', drac_client)
 
@@ -234,7 +233,7 @@ def is_nic_legacy_boot_protocol_none(nic_id, drac_client):
     :raises: WSManInvalidResponse when receiving invalid response
     :raises: DRACOperationFailed on error reported back by the iDRAC
              interface
-    :raises: NotFound when no settings for NIC found
+    :raises: InvalidParameterValue on invalid NIC attribute
     """
     return get_nic_legacy_boot_protocol(nic_id, drac_client).current_value == 'NONE'
 
@@ -251,7 +250,7 @@ def is_nic_legacy_boot_protocol_pxe(nic_id, drac_client):
     :raises: WSManInvalidResponse when receiving invalid response
     :raises: DRACOperationFailed on error reported back by the iDRAC
              interface
-    :raises: NotFound when no settings for NIC found
+    :raises: InvalidParameterValue on invalid NIC attribute
     """
     return get_nic_legacy_boot_protocol(nic_id, drac_client).current_value == 'PXE'
 
@@ -332,16 +331,13 @@ def get_nic_setting(nic_id, attribute_name, drac_client):
     :raises: WSManInvalidResponse when receiving invalid response
     :raises: DRACOperationFailed on error reported back by the iDRAC
              interface
-    :raises: NotFound when no settings for NIC found
+    :raises: InvalidParameterValue on invalid NIC attribute
     """
     settings = drac_client.list_nic_settings(nic_id)
-
     # Were no settings found?
     if not settings:
-        raise exceptions.NotFound(
-            what=('settings for NIC %(nic)s') % {
-                'nic': nic_id})
-
+        msg = 'Settings could not be found because nic id is invalid'
+        raise exceptions.InvalidParameterValue(reason=msg)
     # Do the settings include the attribute?
     if attribute_name not in settings:
         return None
