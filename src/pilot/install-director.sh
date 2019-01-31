@@ -151,7 +151,7 @@ run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
 run_command "sudo yum -y install openstack-tempest"
-run_command "sudo yum install -y python-glance-tests python-keystone-tests python-horizon-tests-tempest python-neutron-tests python-cinder-tests python-nova-tests python-swift-tests python-ceilometer-tests python-gnocchi-tests python-aodh-tests"
+run_command "sudo yum install -y python-neutron-tests-tempest python-cinder-tests-tempest python-telemetry-tests-tempest python-keystone-tests-tempest python-horizon-tests-tempest"
 echo "## Done."
 
 echo
@@ -308,6 +308,14 @@ echo "## Patching 10-ironic_wsgi.conf"
 apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
 echo "## Done"
 
+# This patch fixes tempest cleanup
+echo
+echo "### Patching tempest cleanup..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.py ${HOME}/pilot/tempest_cleanup.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyo
+echo "## Done."
+
 echo
 echo "## Restarting httpd"
 sudo systemctl restart httpd
@@ -324,20 +332,26 @@ echo "## Configuring neutron network ${network} as a cleaning network"
 configure_cleaning_network $network
 echo "## Done."
 
+# If deployment is unlocked, generate the overcloud container list from the latest.
+if [ -e $HOME/overcloud_images.yaml ];
+then
+    echo "using locked containers versions"
+else
+    echo "using latest available containers versions"
+    touch ~/overcloud_images.yaml
 
-touch ~/overcloud_images.yaml
-
-openstack overcloud container image prepare --output-env-file ~/overcloud_images.yaml \
+    openstack overcloud container image prepare --output-env-file ~/overcloud_images.yaml \
  --namespace=registry.access.redhat.com/rhosp13 \
  -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
  -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
  --set ceph_namespace=registry.access.redhat.com/rhceph \
  --set ceph_image=rhceph-3-rhel7 \
- --tag-from-label {version}-{release}  
+ --tag-from-label {version}-{release}
+
+fi
 
 sudo yum install -y os-cloud-config
 sudo yum install -y ceph-ansible
-
 
 
 echo
