@@ -267,7 +267,7 @@ class NfvParameters(object):
 
     def calculate_hugepage_count(self, hugepage_size):
         try:
-            memory_count = self.get_minimum_memory_size("compute")
+            memory_count = int(self.get_minimum_memory_size("compute"))
             # RAM size should be more than 128G
             if memory_count < 128000:
                 raise Exception("RAM size is less than 128GB"
