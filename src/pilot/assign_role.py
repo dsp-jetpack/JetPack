@@ -27,6 +27,9 @@ import math
 import os
 import sys
 import yaml
+import errno
+import fcntl
+import time
 
 from dracclient import utils
 from dracclient.constants import POWER_OFF
@@ -923,8 +926,19 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
 
     # load the osd environment file
     osd_config_file = os.path.join(Constants.TEMPLATES, "ceph-osd-config.yaml")
-    with open(osd_config_file, 'r') as stream:
-        current_osd_configs = yaml.load(stream)
+    stream = open(osd_config_file, 'r')
+    while True:
+        try:
+            fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except IOError as e:
+            if e.errno != errno.EAGAIN:
+                raise
+            else:
+                time.sleep(1)
+    current_osd_configs = yaml.load(stream)
+    fcntl.flock(stream, fcntl.LOCK_UN)
+    stream.close()
 
     node_data_lookup_str = \
         current_osd_configs["parameter_defaults"]["NodeDataLookup"]
@@ -980,18 +994,39 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
 
     # Using the simple yaml.dump results in a completely unreadable file, so we
     # do it the hard way to create something more user friendly
-    with open(osd_config_file + ".orig", 'r') as instream:
-        with open(osd_config_file, 'w') as outstream:
-            for line in instream:
-                if '{}' not in line:
-                    outstream.write(line)
+    instream = open(osd_config_file + ".orig", 'r')
+    while True:
+        try:
+            fcntl.flock(instream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except IOError as e:
+            if e.errno != errno.EAGAIN:
+                raise
+            else:
+                time.sleep(1)
+    outstream = open(osd_config_file, 'w')
+    while True:
+        try:
+            fcntl.flock(outstream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except IOError as e:
+            if e.errno != errno.EAGAIN:
+                 raise
+            else:
+                time.sleep(1)
+    for line in instream:
+        if '{}' not in line:
+            outstream.write(line)
 
-            osd_config_str = json.dumps(node_data_lookup, sort_keys=True,
+    osd_config_str = json.dumps(node_data_lookup, sort_keys=True,
                                         indent=2, separators=(',', ': '))
-            for line in osd_config_str.split('\n'):
-                line = "    " + line + "\n"
-                outstream.write(line)
-
+    for line in osd_config_str.split('\n'):
+        line = "    " + line + "\n"
+        outstream.write(line)
+    fcntl.flock(instream, fcntl.LOCK_UN)
+    fcntl.flock(outstream, fcntl.LOCK_UN)
+    instream.close()
+    outstream.close()
 
 def get_drives(drac_client):
     spinners = []
