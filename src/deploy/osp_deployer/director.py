@@ -124,9 +124,17 @@ class Director(InfraHost):
             'sed -i "s|inspection_iprange = .*|inspection_iprange = ' +
             self.settings.discovery_ip_range +
             '|" pilot/undercloud.conf',
+            'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' + 
+            self.settings.sah_node.provisioning_ip +
+            '|" pilot/undercloud.conf'
         ]
         for cmd in cmds:
             self.run(cmd)
+
+        if self.settings.version_locking_enabled is True:
+            source_file = self.settings.lock_files_dir + "/overcloud_images.yaml"
+            dest_file = self.home_dir + "/overcloud_images.yaml"
+            self.upload_file(source_file, dest_file)
 
     def install_director(self):
         logger.debug("Installing the undercloud")
