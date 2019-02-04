@@ -1367,8 +1367,6 @@ def change_physical_disk_state_wait(
         mode, controllers_to_physical_disk_ids)
 
     realtime_controllers = []
-    reboot_true = constants.RebootRequired.true
-    reboot_false = constants.RebootRequired.optional
     job_ids = []
     if change_state_result['commit_required_ids']:
         for controller_id in change_state_result['commit_required_ids']:
