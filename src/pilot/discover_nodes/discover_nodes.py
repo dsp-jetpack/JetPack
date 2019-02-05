@@ -473,7 +473,7 @@ def is_idrac(client):
     requests_logger.disabled = True
 
     try:
-        doc = client.client.enumerate(DCIM_iDRACCardView)
+        is_ready = client.client.is_idrac_ready()
     except dracclient.exceptions.WSManInvalidResponse as e:
         # Most likely the user credentials are unauthorized.
 
@@ -501,15 +501,8 @@ def is_idrac(client):
         # Ensure the libraries' loggers are re-enabled.
         requests_logger.disabled = False
         dracclient_wsman_logger.disabled = False
-
-    if doc is None:
-        return False
-
-    return dracclient.utils.get_wsman_resource_attr(
-        doc,
-        DCIM_iDRACCardView,
-        'DeviceDescription') == 'iDRAC'
-
+    
+    return is_ready
 
 if __name__ == '__main__':
     main()
