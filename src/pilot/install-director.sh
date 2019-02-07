@@ -269,12 +269,12 @@ sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
 # This hacks in a patch to create a virtual disk using realtime mode.
 # Note that this code must be here because we use this code prior to deploying
 # the director.
-echo
-echo "## Patching Ironic iDRAC driver raid.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
-echo "## Done."
+#echo
+#echo "## Patching Ironic iDRAC driver raid.py..."
+#apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
+#sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
+#sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
+#echo "## Done."
 
 # This patches workarounds for two issues into ironic.conf.
 # 1. node_locked_retry_attempts is increased to work around an issue where
