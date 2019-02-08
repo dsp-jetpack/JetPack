@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2017-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -137,9 +137,7 @@ def configure_uefi_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
                "PxeDev1EnDis": "Enabled",
                "PxeDev2EnDis": "Disabled",
                "PxeDev3EnDis": "Disabled",
-               "PxeDev4EnDis": "Disabled",
-               "PxeDev1Protocol": "IPv4",
-               "PxeDev1VlanEnDis": "Disabled"
+               "PxeDev4EnDis": "Disabled"
                }
 
             response = drac_client.set_bios_settings(settings)
@@ -158,10 +156,12 @@ def configure_uefi_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
                 if not all_jobs_succeeded:
                     raise RuntimeError("An error occurred while configuring "
                                        "initial UEFI PXE NIC settings on "
-                                       "{}".format(drac_ip))
+                                       "{}".format(ip_service_tag))
 
             settings = {
-               "PxeDev1Interface": pxe_nic_id
+               "PxeDev1Interface": pxe_nic_id,
+               "PxeDev1Protocol": "IPv4",
+               "PxeDev1VlanEnDis": "Disabled"
                }
 
             LOG.info("Setting UEFI PXE NIC configuration \
@@ -242,7 +242,7 @@ def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):
             [job_id], drac_client, ip_service_tag)
         if not all_jobs_succeeded:
             raise RuntimeError("An error occurred while configuring "
-                               "the boot mode on {}".format(drac_ip))
+                               "the boot mode on {}".format(ip_service_tag))
 
 
 def config_idrac_settings(drac_client, ip_service_tag, password, node):
