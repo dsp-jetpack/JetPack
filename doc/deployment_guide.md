@@ -75,12 +75,31 @@ DISCLAIMER: The OpenStack® Word Mark and OpenStack Logo are either registered t
 
 [Chapter 5 : Deploying the Undercloud and the OpenStack Cluster](#Chapter-5-:-Deploying-the-Undercloud-and-the-OpenStack-Cluster)
 
+# Appendix's:
+
 [Appendix A : Files References](#Appendix-A-:-Files-References)
 
 [Appendix B : Updating RPMs on Version Locked Nodes](#Appendix-B-:-Updating-RPMs-on-Version-Locked-Nodes)
 
 [Appendix C : OpenStack Operations Functional Test](#Appendix-C-:-OpenStack-Operations-Functional-Test)
 
+[Appendix D : Hugepages](#Appendix-D-:-Hugepages)
+
+[Appendix E : NUMA](#Appendix-E-:-NUMA)
+
+[Appendix F : OVS-DPDK](#Appendix-F-:-OVS-DPDK)
+
+[Appendix G : Neutron managed SR-IOV in JS 13.0](#Appendix-G-:-Neutron-managed-SR-IOV-in-JS-13.0)
+
+[Appendix H : Neutron DVR support in JS 13.0](#Appendix-H-:-Neutron-DVR-support-in-JS-13.0)
+
+[Appendix I : Performance Optimization](#Appendix-I-:-Performance-Optimization)
+
+[Appendix J : Sample Files](#Appendix-J-:-Sample-Files)
+
+[Appendix K : Solution Validation Overview](#Appendix-K-:-Solution-Validation-Overview)
+
+[Appendix M : References](#Appendix-M-:-References)
 
 
 
@@ -356,7 +375,7 @@ The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configu
     c. The Dell EMC Ready Architecture for Red Hat OpenStack Platform v13optimizes the performance of the deployed overcloud. See [Appendix G](#Appendix-G) for instructions on how to further tune the performance Optimization parameters.
 
 5. With CSP profile, hugepages is enabled. With XSP profile, hugepages are disabled on the deployed compute nodes for XSP profile. 
-    > To enable hugepages, see [Appendix D](#Appendix-D). 
+    > To enablhugepages, see [Appendix D](#Appendix-D). 
 
 6.	Edit the stamp-specific .properties file:
     
@@ -1217,6 +1236,4815 @@ As an alternative to manually testing your deployment script, we provide sanity_
     ```
 
 > Note: There are deployment options [Sanity Test Settings], in the sample files which may be configured initially to run the sanity tests automatically after the overcloud deployment is successful. The relevant sanity logs will be generated in the director VM at the directory of pilot/deployment-validation/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div style="page-break-after: always;"></div>
+
+# Appendix D : Hugepages
+
+This appendix details the guidelines for configuration of hugepages during the deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13. The number of Hugepages is now calculated at runtime and no longer needs to be specified by the user.
+
+> ***Topics:***
+> * Hugepages Overview
+> * Prerequisites
+> * Enabling and Deploying Hugepages
+> * Logging
+> * Example of sample_csp_profile.ini
+
+#### Hugepages Overview
+
+The Dell EMC Ready Architecture for Red Hat OpenStack Platform v13 provides the ability to enable hugepage support on all Nova compute nodes in the solution.
+
+The Linux kernel partitions memory into basic units called pages. The default number of pages is 49152 in the x86 architecture. Hugepages allow the Linux kernel to utilize the multiple page size capabilities of modern hardware architecture.
+
+Earlier, in previous release, fixed values were used for the number of hugepages. The number of hugepages was set to 49152 and 96 when the hugepage size was set to 2MB and 1GB respectively.
+
+In Dell EMC Ready Architecture for Red Hat OpenStack Platform Software Deployment Guide - Version 13, the number of hugepages is computed during runtime. The OpenStack Ironic API is used to fetch the **total memory size** of a compute node, and the following formula is applied to calculate the number of hugepages:
+
+
+> Hugepage Number = ( Total Memory Size - ( Memory Reserved for Host OS + Memory Reserved for Kernel)) / Size of a Hugepage
+
+The number of hugepages is calculated for each compute node based on that nodes memory size. The smallest number of hugepages supported by all compute nodes is then used to configure all the compute nodes with this number of hugepages. This means that all compute nodes will be configured with the number of hugepages that are supported by the compute node with the least amount of memory.
+
+#### Prerequisites
+
+The following requirements must be met before enabling hugepages:
+
+1. Memory size must be greater than or equal to 128GB on every compute node.
+    > Note: It is assumed that:
+    a.	The memory reserved for the host OS = 12GB
+    b.	The memory reserved for the kernel = 4GB
+
+2. Refer to the automated or manual deployment sections before setting these values.
+
+
+#### Enabling and Deploying Hugepages
+This section provides the instructions to configure and deploy hugepage support.
+
+#### Enabling Hugepages
+
+HugePages configuration parameters
+
+3. hpg_enable: (true/false) (Set "true" for enabling hugepages and "false" for disabling it.)
+4. hpg_size: 1GB/2MB (The hugepage size to be configured on every compute node. The default is: 1GB)
+
+Follow the procedure below to enable Hugepages on Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13:
+
+5.	Open an SSH session to the SAH node.
+6.	Log in as the root user.
+7.	Refer to section Automation configuration files in this document.
+8.	Set hpg_enable=true
+9.	Set hpg_size to the size of the hugepages to use
+
+> Note: Valid values are 1GB and 2MB
+
+> **Note:** Refer to the [Dell NFV Settings] section of Example of sample_csp_profile.ini for details
+
+
+#### Deploying with Hugepages
+
+After enabling hugepages in the hardware stamp's .ini file, perform the following steps to deploy hugepages in Dell EMC Ready Architecture for Red Hat OpenStack Platform.
+
+
+10.	Open an SSH session to the SAH node.
+11.	Run the following commands to deploy the Overcloud with hugepages enabled:
+    a.	cd /root/JetPack/src/deploy/osp_deployer
+    b.	python deployer.py -s <path_to_settings_ini_file>
+    > Note: During deployment, JetPack takes the following actions:
+12.	Fetches the memory size of every compute node.
+13.	Selects the minimum memory size among all compute nodes.
+14.	Calculates the number of hugepages using the following formula:
+    > Hugepage Number = ( Total_Mem - ( Host_Mem + Kernel_Mem )) / hugepage_size
+ 
+
+ 
+#### Logging
+
+Status messages are logged to /auto_results/deployer.log<time_stamp> on the SAH node and ~/pilot/overcloud_deploy_out.log on the director node.
+
+15.	When the deployment has successfully completed, the following message will be displayed in the log files:
+
+    ```bash
+    HugePages has been successfully configured with size: 1GB
+    ```
+
+
+16.	If the deployment fails due to either a validation failure or other error, refere to the table below.
+
+    Below is the table of log messages and actions to be taken upon encountering such errors. If other errors occur, please email openstack@dell.com
+
+    | ErrorError Message Description | Further Action |
+    |----------|----------|
+    | RAM Failed to size calculate in hugepage less count RAM than size is less 128GB than 128GB on	make sure one	to have all or prerequisites more compute nodes. | RAM size must be 128GB or more on all compute nodes. |
+
+
+
+#### Example of sample_csp_profile.ini
+
+```yaml
+[Dell NFV Settings]
+#Provide NFV features here.
+
+#Enter value of enable_hpg as true/false for HugePages hpg_enable=true
+
+#User should give this parameter in same format.
+#Supported values for hpg_size(Size of hugepages) is 2MB and 1GB.
+hpg_size=1GB
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div style="page-break-after: always;"></div>
+# Appendix E : NUMA
+
+This appendix details the guidelines for configuration of NUMA during the deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
+
+The last release offered basic and minimal NUMA enablement via Jetpack. The functionality was limited to the fixed and preset number of Host OS CPUs for NUMA enablement.
+
+This release version, 13, offers hardware supported dynamic values of parameters required for NUMA enablement. Values are retrieved from the Ironic API during RHOSP deployment.
+
+
+> **Topics:**
+> * NUMA Overview
+> * Prerequisites
+> * Enabling and Deploying NUMA
+> * Logging
+> * Example of
+> * sample_csp_profile.ini
+
+
+#### NUMA Overview
+
+The Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13 provides the ability to enable NUMA optimization and CPU pinning support on all Nova compute nodes in the solution.
+
+Non-uniform memory access or NUMA allows multiple CPUs to share local memory, which improves performance due to improved memory access times.
+
+This appendix provides the instructions to configure this feature at the time of deployment.
+
+Warning: Do not reboot any nodes when optional feature scripts are active. If any node is rebooted, the deployment will fail.
+
+#### Prerequisites
+
+The following hardware requirements must be met for NUMA compatibility:
+
+* Hyperthreading should be enabled and the degree of hyperthreading should be 2.
+* The number of CPU cores per socket must be 10, 12, 14, 16, or 32.
+* The total number of CPU sockets must be 2.
+
+
+#### Enabling and Deploying NUMA
+
+This section provides the instructions to configure NUMA.
+
+#### Enabling NUMA
+
+##### NUMA configuration parameters
+
+* numa_enable: True/False (True for enabling NUMA and False for disabling it.)
+* numa_hostos_cpu_count: 2|4|6|8 (The number of CPU cores to reserve for the host OS.)
+
+**Follow the procedure provided below to enable NUMA optimization and CPU pinning on Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13:
+**
+1.	Open an SSH session to the SAH node.
+2.	Log in as the root user.
+3.	Refer to section Automation configuration files in this document.
+4.	Set numa_enable=true.
+5.	Set numa_hostos_cpu_count to the number of CPU cores to reserve for the host OS.
+
+    > Note: Valid values are 2, 4, 6, and 8.
+ 
+Refer to the [Dell NFV Settings] section of Example of sample_csp_profile.ini for details.
+
+#### Deploying with NUMA
+
+After enabling NUMA in the hardware stamp's .ini file, perform the following steps to deploy NUMA in Dell EMC Ready Architecture for Red Hat OpenStack Platform.
+
+1.	Open an SSH session to the SAH node.
+2.	Run the following commands to deploy the Overcloud with NUMA enabled:
+    a.	cd /root/JetPack/src/deploy/osp_deployer
+    b.	python deployer.py -s <path_to_settings_ini_file>
+
+> Note: During deployment, JetPack takes the following actions:
+
+3.	Fetches the number of CPU cores of every compute node.
+4.	Takes the minimum number of CPU cores among all compute nodes.
+5.	Calculates the sibling pairs based on the CPU cores.
+6.	Reserves numa_hostos_cpu_count CPU cores for the host OS.
+
+
+##### Logging
+
+Status messages are logged to /auto_results/deployer.log<time_stamp> on the SAH node and ~/pilot/overcloud_deploy_out.log on the director node.
+
+1.	When the deployment has successfully completed, the following messages will be displayed on the SAH node console and in the log files:
+
+NUMA has been successfully configured with hostos_cpu_count:
+<2/4/6/8>.OverCloud deployment status: CREATE_COMPLETE
+
+2.	If the deployment fails due to either a validation failure or other error. refer to the table below: 
+
+
+
+
+Below is the table of log messages and actions to be taken upon encountering such errors. If other errors occur, please email openstack@dell.com.
+
+
+
+| Error Description | Error Message | Action |
+|----------|----------|----|
+| Failed to calculate vcpu list of Numa.  | "Failed to calculate Numa Vcpu list"  |  Check drac client is up. Redeploy or contact support if the problem persists.  |
+| Hyper-threading not enabled.          | "Hyperthrea-ding is not enabled in node_id"  |  Enable hyper-threading in BIOS setting of all the compute nodes. Redeploy if problem persists.   |
+| Invalid CPU count value. | "The number of vCPUs, as specified in the reference architecture, must be one of [40, 48, 56, 64, 72, 128] but number of vCPUs are 32" |  Verify in .ini file the values in Dell NFV Settings section are correct. |
+
+
+### Example of sample_csp_profile.ini
+
+```yaml
+[Dell NFV Settings]
+#Provide NFV features here.
+
+#Enter value of enable_numa as true/false for NUMA
+
+numa_enable=true
+
+#Enter number of cores you want to reserve for Host OS #Supported values are 2 or 4 or 6 or 8 numa_hostos_cpu_count=4
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div style="page-break-after: always;"></div>
+
+# Appendix F : OVS-DPDK
+
+This appendix details the guidelines for configuration of OVS-DPDK at the time of deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform v13.
+
+> Note: OVS-DPDK has only been validated with [Intel] XXV710
+
+> **Topics**:
+> * OvS
+> * DPDK
+> * OVS-DPDK
+> * OVS-DPDK in Dell EMC Ready Architecture for Red Hat OpenStack Platorm v13
+> * Before You Begin
+> * Prerequisites
+> * Start Deployment
+> * Success
+> * Failure
+> * Post Deployment Steps
+
+
+#### OvS
+
+Open vSwitch (OvS) is a multilayer software/virtual switch used to interconnect virtual machines in the same host and between different hosts. Open vSwitch makes use of kernel for packet forwarding through a data path known as “fastpath” which consists of a simple flow table with action rules for the received packets. Exception packets, i.e., packets with no corresponding forwarding rule in the flow table are sent to the user space (slowpath) first. Switching between two memory spaces creates much overhead, thus making the user space “slowpath”. User space takes a decision and updates the flow table in the kernel space accordingly so they can make use of fastpath in future.
+
+![Figure 2 OvS Architecture](media/943bbeaf066c3acddca7d92e304680de.png)
+
+As can be seen in the Figure 2, OVS kernel module acts as a cache for the user space. And just like a cache, its performance decreases as the number of rules increase in the user space.
+
+#### DPDK
+
+The Data Plane Development Kit (DPDK) is a set of data plane libraries and network interface controller drivers for fast packet processing from Intel. DPDK runs inside user space, and gives applications direct access to raw traffic from NIC, completely bypassing kernel and kernel IP Stack. It further utilizes poll mode drivers (PMDs) and Hugepages to increase network performance.
+
+
+#### OVS-DPDK
+
+With the help of DPDK, all the OVS processes are moved to user space. Since all the paths are in single space, it removes the bottleneck created by continuous switching between two spaces.
+
+
+#### OVS-DPDK in Dell EMC Ready Architecture for Red Hat OpenStack Platform v13
+
+OVS-DPDK is enabled as a part of the automated RHOSP deployment in Dell EMC Ready Architecture for Red Hat OpenStack Platform Version 13.0. There is no post deployment enablement support in this release. If enabled, OVS-DPDK must be so on all compute nodes.
+
+> Note: OVS-DPDK deployment is enabled only on Dell Compute role.
+ 
+
+OVS-DPDK requires an extra network bond; the already existing bonds (bond0 and bond1) carry storage network, OpenStack tunnelled tenant network and internal API network. The OVS-DPDK bond will carry OpenStack VLAN tenant networks.
+
+#### Before You Begin
+
+In this guide, it is assumed that the user has complete knowledge about the Dell EMC Ready Architecture for Red Hat OpenStack Platform Version 13. This includes:
+1.	Knowledge about different nodes in Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13, like SAH, Director, Controller, Compute and Ceph-storage as explained in  Dell_EMC_Red_Hat_Ready_Architecture_Guide_v13.0.pdf
+2.	Hardware configurations including switch configurations as explained in Dell_EMC_Red_Hat_Ready_Architecture_Guide_v13.0.pdf and Dell_EMC_Red_Hat_Ready_Architecture_Cumulus_Switch_Configurations_v13.0.pdf
+3.	Automation scripts, settings, and properties files required for deployment are open sourced and available in git hub https://github.com/dsp-jetpack/JetPack
+
+#### Prerequisites
+
+Before starting the deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform Version 13 with OVS-DPDK, following prerequisites must be met:
+
+1.	Hyperthreading should be enabled and degree of hyperthreading should be 2 on compute nodes
+2.	Total number of CPU sockets should be 2 per compute nodes.
+3.	NUMA and Hugepages settings should be enabled in the .ini file.
+4.	Extra NICs:
+    Two extra Intel XXV710 NICs in the compute nodes are attached. For Dell EMC PowerEdge R640, OVS-DPDK NICs are plugged in PCI Slot 1 and 2 and for Dell EMC PowerEdge R740xd, OVS-DPDK NICs are plugged in PCI Slot 4 & 5.
+
+##### System Requirements
+
+Given below are the additional hardware requirements that must be supported to enable OVS-DPDK in Dell EMC NFV Ready Architecture for Red Hat OpenStack Platform v13.0:
+
+| Device Name | Quantity    |
+|----------------------------------|------------------------------------------|
+| Intel XXV710 adapters  | 3 or 6                          |
+| QSFP  connectors       | 4  (Depends upon the implementation of S5248) |
+| SFP  Connector       | 6 or 12                              |
+
+
+
+
+##### Switch Configurations:
+
+To setup the switch configurations, connect the OVS-DPDK NICs to leaf switches. The connections need to be such that high availability (HA) is ensured. This means that one NIC of a compute node is connected to switch 1, and other to switch 2 respectively. The bond is created over two NICs to ensure fail-over in case of failure of a NIC or a leaf switch.
+
+Switch configurations depend on the numbr of ports used for OVS-DPDK. The tenant networks are carried over bond0 in the default Dell EMC NFV Ready Architecture for Red Hat OpenStack Platform v13.0 configuration. However, with OVS-DPDK enabled, these networks are carried over a new OVS-DPDK bond.
+
+**OVS-DPDK with Two Ports:**
+
+For this scenario, switch configuration will have three major changes:
+a.	Creation of new bonds for the new ports that will be used for OVS-DPDK bond with LACP enabled on two ports.
+b.	Removal of Removal of tenant VLANs from NOVA1-bond0, NOVA2-bond0 and NOVA3-bond0 bonds.
+c.	Tagging of newly created bonds in tenant network VLANs.
+
+![Figure 3: OVS-DPDK with two ports reference wiring diagram](media/88677057ea84a8e286c164657821eb14.jpg)
+
+> NOTE: In the reference diagram above, PCI Slot 1 and PCI Slot 2 are utilized on all the Compute nodes. PCI slots on the Compute nodes are connected to swp38, swp40, and swp42 interfaces on Leaf-1 and Leaf-2 switches according to the reference diagram.
+
+
+Switch configurations for OVS-DPDK on both switches according to the four ports OVS-DPDK will be:
+
+```bash
+$ net add interface swp38,swp40,swp42
+$ net add bond NOVA1-bond10 bond slaves swp38 clag id 59
+$ net add bond NOVA2-bond10 bond slaves swp40 clag id 61
+$ net add bond NOVA3-bond10 bond slaves swp42 clag id 63
+$ net add bond NOVA1-bond10 bridge vids 201-220
+$ net add bond NOVA2-bond10 bridge vids 201-220
+$ net add bond NOVA3-bond10 bridge vids 201-220
+
+
+Also, the port channel will have the following configuration on both switches:
+
+auto NOVA1-bond10
+iface NOVA1-bond10
+   bond-slaves swp38
+   bridge-vids 201-220
+   clag-id 59
+   mtu 9000
+ 
+ 
+auto NOVA2-bond10
+iface NOVA2-bond10
+   bond-slaves swp40
+   bridge-vids 201-220
+   clag-id 61
+   mtu 9000
+ 
+ 
+auto NOVA3-bond10
+iface NOVA3-bond10
+   bond-slaves swp42
+   bridge-vids 201-220
+   clag-id 63
+   mtu 9000
+```
+
+
+
+**OVS-DPDK with Four Ports:**
+
+
+For this scenario, switch configuration will have three major changes:
+
+a.	Creation of new bonds for the new ports that will be used for OVS-DPDK bond with LACP enabled on four ports.
+
+b.	Removal of tenant VLANs from NOVA1-bond0, NOVA2-bond0 and NOVA3-bond0 bonds.
+c.	Tagging of newly created bonds in tenant network VLANs.
+
+    > Note: Tenant VLANs in JS 13.0:
+    > Mention the VLAN range for tenant network from 201-220 in the INI file under SAH node.i.e. Default Tenant VLANs range: 201-220
+
+![Figure 4: OVS-DPDK with four ports reference wiring diagram](media/356efb0038cfa4229f3989a8ad873c02.jpg)
+
+> Note: In the four ports OVS-DPDK reference diagram, PCI Slot 1 and PCI Slot 2 are utilized on all the Compute nodes. PCI slots on the Compute nodes are connected to swp38, swp39, swp40, swp41, swp42, and swp43 interfaces on Leaf-1 and Leaf-2 switches according to the reference diagram.
+
+**Switch configurations for OVS-DPDK on both switches according to the four ports OVS-DPDK will be:**
+
+
+```bash
+$ net add interface swp38-43
+$ net add bond NOVA1-bond10 bond slaves swp38-39 clag id 59
+$ net add bond NOVA2-bond10 bond slaves swp40-41 clag id 61
+$ net add bond NOVA3-bond10 bond slaves swp42-43 clag id 63
+$ net add bond NOVA1-bond10 bridge vids 201-220
+$ net add bond NOVA2-bond10 bridge vids 201-220
+$ net add bond NOVA3-bond10 bridge vids 201-220
+
+
+Also the new OVS-DPDK will have the following configuration on both switches:
+
+auto NOVA1-bond10
+ iface NOVA1-bond10
+    bond-slaves swp38 swp39
+    bridge-vids 201-220
+    clag-id 59
+    mtu 9000
+ 
+ 
+auto NOVA2-bond10
+ iface NOVA2-bond10
+    bond-slaves swp40 swp41
+    bridge-vids 201-220
+    clag-id 61
+    mtu 9000
+ 
+ 
+auto NOVA3-bond10
+ iface NOVA3-bond10
+    bond-slaves swp42 swp43
+    bridge-vids 201-220
+    clag-id 63
+    mtu 9000
+```
+
+
+7. Settings file parameters
+    To enable OVS-DPDK in the Dell EMC Ready Architecture for Red Hat OpenStack Platform Version 13, following changes should be made in the settings file.
+
+    1.	Open an SSH terminal as "root" user, to the SAH Node. 
+        ```bash
+        $ssh root@<sah_node_ip>
+        ```
+    
+    2.	Open the settings file, and find "ovs_dpdk_enable". Assuming the name of settings file is "sample_csp_profile.ini" and it is present in the "/root" directory:
+    	#vi /root/sample_csp_profile.ini
+
+        All the parameters that are related to enabling OVS-DPDK are described in the table below.
+
+        ![](media/table-ovs-dpdk-options.png)
+
+
+**Example 1 OVS-DPDK with two ports:**
+
+Settings for enabling OVS-DPDK with 2 ports are following:
+
+```yaml
+numa_enable=true
+
+numa_hostos_cpu_count=4
+
+hpg_enable=true
+
+hpg_size=1GB
+
+ovs_dpdk_enable=true
+
+nic_env_file= ovs-dpdk_7_port/nic_environment.yaml
+
+#Note: the following interfaces need to be changed as per the server model
+#R640 should use 'p2p1', 'p3p1', 'p2p2', 'p3p2'
+#R740/R740xd should use 'p4p1', 'p5p1', 'p4p2', 'p5p2'
+#The following lines should be commented out if ovs_dpdk_enable is set to false
+ComputeOvsDpdkInterface1=p2p1
+ComputeOvsDpdkInterface2=p3p1
+ComputeOvsDpdkInterface3=p2p2
+ComputeOvsDpdkInterface4=p3p2
+BondInterfaceOvsOptions=bond_mode=balance-tcp lacp=active
+```
+
+
+**Example 2 OVS-DPDK with four ports:**
+Settings for enabling OVS-DPDK with 4 ports are following:
+
+```yaml
+numa_enable=true
+
+numa_hostos_cpu_count=4
+
+hpg_enable=true
+
+hpg_size=1GB
+
+ovs_dpdk_enable=true
+
+nic_env_file= ovs-dpdk_9_port/nic_enviornment.yaml
+
+#Note: The following interfaces need to be changed as per the server model
+#R640 should use 'p2p1', 'p3p1', 'p2p2', 'p3p2'
+#R740/R740xd should use 'p4p1', 'p5p1', 'p4p2', 'p5p2'
+#The following lines should be commented out if ovs_dpdk_enable is set to false
+ComputeOvsDpdkInterface1=p2p1
+ComputeOvsDpdkInterface2=p3p1
+ComputeOvsDpdkInterface3=p2p2
+ComputeOvsDpdkInterface4=p3p2
+BondInterfaceOvsOptions=bond_mode=balance-tcp lacp=active
+```
+
+
+#### Start Deployment
+
+Change the directory to /root/JetPack/src/deploy/osp_deployer.
+
+```bash
+# cd /root/JetPack/src/deploy/osp_deployer
+```
+
+
+Start the “deployer.py” script execution and pass the settings file using “-s” parameter.
+
+```bash
+# python deployer.py –s /root/sample_csp_profile.ini
+```
+
+
+Monitor the output of the script. For detailed logs open a new SSH terminal and tail the logs file in “/ auto_results/” directory. The log files are timestamped.
+```bash
+# tail -f /auto_results/<latest log file>
+```
+
+
+Upon the successful completion of OVS-DPDK deployment, overcloud deployment status should be CREATE_COMPLETE. The VALIDATION SUCCESS status should be displayed in case the sanity test value is set to true
+Success
+Output for successful deployment looks like this:
+
+![Figure 5: Dell EMC Ready Architecture for Red Hat OpenStack Platform with OVS-DPDK successful deployment](media/shell-output.png)
+
+Figure 5: Dell EMC Ready Architecture for Red Hat OpenStack Platform with OVS-DPDK successful deployment
+
+At the start of deployment a log message shows whether OVS-DPDK is enabled or not. For a successful deployment, overcloud deployment status should be CREATE_COMPLETE. And if sanity test was set to true in the .ini file, it should display VALIDATION SUCCESS message.
+
+Troubleshooting
+
+There are two types of deployment failures that can occur:
+
+1.	At the start of deployment, failures related to settings and properties file input validation may occur.
+2.	At the time of overcloud deployment preparations, in this part OVS-DPDK related parameters are configured.
+
+During the deployment, failure can be due to multiple reasons: a subset of these failures is related to “FAILED_OVERCLOUD”. The OVS-DPDK related failure are part of this subset. The most likely reasons for these failures are following:
+
+a.	Switch configurations.
+b.	Hardware configuration like placing the extra NICs in the right PCI Slots.
+
+Screenshots and solutions of common failure are given below.
+
+Start of Deployment
+
+Following errors can occur at the start of deployment i.e. input validation period
+
+Unsupported value of ovs_dpdk_enable:
+
+![Figure 6: Unsupported value for ovs_dpdk_enable in the settings file](media/1646e65f0d972f42eda08b59ebb68a59.png)
+
+Change the value in the settings to a supported one and deploy again.
+
+
+Unsupported value of nic_env_file:
+
+![Figure 7: Unsupported value for nic_env_file in the settings file](media/2019-02-11_14-15-16.png)
+
+Change the value in the settings to a supported one and deploy again.
+
+Comments not removed for OVS-DPDK interfaces:
+ 
+![Figure 8: Comments not removed for OVS-DPDK interfaces](media/8c6dd4b536a3f46019e592745482d2b3.png)
+
+Un-comment the required parameters and deploy again.
+
+**During Overcloud Deployment**
+
+In this case deployment fails with overcloud deployment status as "CREATE_FAILED". These errors can be due to a number of reasons. Following commands can be used to debug the issue. All of these commands are to be run on the director node.
+
+Use the following command to get the stack name.
+
+```bash
+$ openstack stack list
+```
+
+List all the resources of the stack and using grep, filter out the resources which are created successfully and list only FAILED or IN PROGRESS resources.
+
+```bash
+$ openstack stack resource list <stack-name> | grep -v COMPLETE
+```
+
+
+This will provide a general idea of which resource creation failed.
+
+The following command can be used to list all the software deployments, which are either in "IN PROGRESS" or "FAILED" state.
+
+```bash
+$ openstack software deployment list | grep -v COMPLETE
+```
+
+
+To further filter out which server has failed or in progress, software deployment server option can be given.
+
+First list all the servers and obtain the UUID of the servers.
+
+```bash
+$ openstack server list
+```
+
+
+Use the UUID to filter the output of software deployment list command.
+
+```bash
+$ openstack software deployment list server <server-uuid> | grep -v
+COMPLETE
+```
+
+
+Failed software deployment reports also contain the reason for failure. Use the software deployment uuid to display all the information.
+
+```bash
+$ openstack software deployment show <uuid>
+```
+
+Post Deployment Steps
+
+Flavors created on the OVS-DPDK enabled compute nodes need to have the following metadata tags:
+
+1.	hw:cpu_policy=dedicated
+2.	hw:cpu_thread_policy=require
+3.	hw:mem_page_size=large
+4.	hw:numa_nodes=1
+5.	hw:numa_mempolicy=preferred
+
+To create a custom flavor for OVS-DPDK instance, follow the steps below.
+1.	Source the overcloud resource configuration file.
+
+```bash
+$ source <overcloudrc>
+```
+
+2.	Create the custom flavor.
+
+```bash
+$ openstack flavor create <flavor-name> --disk 40 --ram 4096 --vcpu 4
+```
+
+> Note: Disk size, RAM and number of vCPUs can vary.
+
+
+3.	Add the metadata tags to the newly created flavor.
+
+
+```bash
+$ openstack flavor set <flavor-name> \
+--property hw:cpu_policy=dedicated \
+--property hw:cpu_thread_policy=require \
+--property hw:mem_page_size=large \
+--property hw:numa_nodes=1 \
+--property hw:numa_mempolicy=preferred
+```
+
+> Note: To add metadata tags to an existing flavor, only step 3 is required.
+
+Sample Configurations
+
+```yaml
+dell-environment.yaml - Sample DPDK Parameters
+# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+ 
+resource_registry:
+    OS::TripleO::NodeUserData: ./first-boot.yaml
+ 
+parameter_defaults:
+ 
+  # Defines the interface to bridge onto br-ex for network nodes
+  NeutronPublicInterface: bond1
+  # The tenant network type for Neutron
+  NeutronNetworkType: vlan
+  ## >neutron-disable-tunneling no mapping.
+ 
+  # The neutron ML2 and OpenvSwith VLAN Mapping ranges to support.
+  NeutronNetworkVLANRanges: physint:201:220,physext
+ 
+  # The logical to physical bridge mappings to use.
+  # Defaults to mapping the external bridge on hosts (br-ex) to a physical name (datacentre).
+  # You would use this for the default floating network
+  NeutronBridgeMappings: physint:br-tenant,physext:br-ex
+ 
+  # Flavor used as the regular compute
+  OvercloudDellComputeFlavor: baremetal
+  # Flavor to use for the Controller nodes
+  OvercloudControllerFlavor: baremetal
+  # Flavor to use for the ceph Storage nodes
+  OvercloudCephStorageFlavor: baremetal
+  # Flavor to use for the Swift storage nodes
+  OvercloudSwiftStorageFlavor: baremetal
+  # Flavor to use for the Cinder nodes
+  OvercloudBlockStorageFlavor: baremetal
+ 
+  # List of Default Filters to pass to the nova Scheduler
+  # Default filters are used if profile is set to XSP
+  # This line is uncommented when using with CSP profile
+
+                                                                                                                                                               OVS-DPDK | 52
+
+
+  NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','RamFilter','DiskFilter', 'ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter', 'CoreFilter', 'NUMATopologyFilter', 'AggregateInstanceExtraSpecsFilter']
+ 
+  # List of CPUs reserver for Host OS operation
+  # Disabled by default for XSP Profile
+  # This line is uncommented and updated when using CSP Profile
+  NovaVcpuPinSet: 4-23,28-47
+  DellComputeParameters:
+    KernelArgs: "iommu=pt intel_iommu=on default_hugepagesz=1GB hugepagesz=1G hugepages=176 isolcpus=4-23,28-47"
+ 
+  # Number of Dell Compute nodes
+  DellComputeCount: 3
+ 
+  # Apply tuned-adm profile on Compute Nodes
+  ComputeTunedAdmProfile: virtual-host
+ 
+  # Number of Controller nodes
+  ControllerCount: 3
+ 
+  # Number of Ceph Storage nodes
+  CephStorageCount: 3
+ 
+ 
+  # Configures MySQL max_connections config setting
+  MysqlMaxConnections: 15360
+ 
+  # Configures MariaDB Buffer Pool Size
+  # Setting 'dynamic' will apply 75% of total memory to innodb_buffer_pool_size
+  BufferPoolSize: dynamic
+ 
+  # Configures MariaDB Buffer Pool Instances
+  BufferPoolInstances: 16
+ 
+  # To customize the domain name of the overcloud nodes, change "localdomain"
+  # in the following line to the desired domain name.
+  CloudDomain: r151.nfv.lab
+ 
+  # Set to true to enable Nova usage of Ceph for ephemeral storage.
+  # If set to false, Nova uses the storage local to the compute.
+  NovaEnableRbdBackend: true
+  #  devices:
+  #  - /dev/sda2
+ 
+ 
+  # Configure Ceph Placement Group (PG) values for the indicated pools
+  CephPools: [{"name": "volumes", "pg_num": 1024, "pgp_num": 1024}, {"name": "vms", "pg_num": 256, "pgp_num": 256},
+{"name": "images", "pg_num": 128, "pgp_num": 128}, {"name": ".rgw.buckets", "pg_num": 512, "pgp_num": 512}]
+ 
+  # Default pool size is 3, change to 2 if depolyment fails on 13G.
+  CephPoolDefaultSize: 3
+  CephConfigOverrides:
+    journal_size: 10000
+    journal_collocation: false
+    raw_multi_journal: true
+  CephAnsibleDisksConfig:
+    osd_scenario: non-collocated
+    devices:
+      - /dev/sdb
+      - /dev/sdc
+      - /dev/sdd
+      - /dev/sde
+      - /dev/sdf
+53 | OVS-DPDK
+
+      - /dev/sdg
+      - /dev/sdh
+      - /dev/sdi
+      - /dev/sdj
+    dedicated_devices:
+      - /dev/sdk
+      - /dev/sdk
+      - /dev/sdk
+      - /dev/sdk
+      - /dev/sdk
+      - /dev/sdk
+      - /dev/sdk
+      - /dev/sdk
+      - /dev/sdk
+ 
+  NovaComputeExtraConfig:
+    nova::migration::libvirt::live_migration_completion_timeout: 800
+    nova::migration::libvirt::live_migration_progress_timeout: 150
+  ControllerExtraConfig:
+    nova::api::osapi_max_limit: 10000
+    nova::rpc_response_timeout: 180
+    nova::keystone::authtoken::revocation_cache_time: 300
+    neutron::rpc_response_timeout: 180
+    neutron::keystone::authtoken::revocation_cache_time: 300
+    cinder::keystone::authtoken::revocation_cache_time: 300
+    glance::api::authtoken::revocation_cache_time: 300
+    tripleo::profile::pacemaker::database::mysql::innodb_flush_log_at_trx_commit: 0
+    tripleo::haproxy::haproxy_default_maxconn: 10000
+
+
+neutron-ovs-dpdk.yaml
+# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+ 
+## A Heat environment that can be used to deploy DPDK with OVS
+resource_registry:
+  OS::TripleO::Services::ComputeNeutronOvsDpdk: ./overcloud/docker/services/neutron-ovs-dpdk-agent.yaml
+  OS::TripleO::Services::ComputeNeutronOvsAgent: OS::Heat::None
+ 
+parameter_defaults:
+  NeutronDatapathType: "netdev"
+  NeutronVhostuserSocketDir: "/var/lib/vhost_sockets"
+  NovaSchedulerDefaultFilters: "RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,NUMATopologyFilter"
+  OvsDpdkDriverType: "vfio-pci"
+  NeutronOVSFirewallDriver: openvswitch
+  DellComputeParameters:
+    VhostuserSocketGroup: "hugetlbfs"
+    OvsPmdCoreList: "4-7,28-31"
+OVS-DPDK | 54
+
+    OvsDpdkCoreList: "0-3,24-27"
+    IsolCpusList: "4-23,28-47"
+    OvsDpdkMemoryChannels: "4"
+    NovaReservedHostMemory: 4096
+    OvsDpdkSocketMemory: "2048,2048"
+    TunedProfileName: "cpu-partitioning"
+    NumDpdkInterfaceRxQueues: 1
+    OvsEnableDpdk: true
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div style="page-break-after: always;"></div>
+
+# Appendix G : Neutron managed SR-IOV in JS 13.0
+
+This appendix details the guidelines for configuration of Neutron managed SR-IOV at the time of deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform v13.
+
+> Topics:
+> * SR-IOV
+> * Open vSwitch Hardware Offload
+> * Neutron-Managed SR-IOV
+> * SR-IOV initial investigation
+> * SR-IOV in JS 13.0
+> * Deployment
+> * Post Deployment Steps
+> * Sample Configurations
+> * Functionality Testing
+> 
+
+
+
+
+**SR-IOV**
+
+Single root I/O virtualization (SR-IOV) is an extension to the PCI Express (PCIe) specification. SRIOV enables a single PCIe device to appear as multiple, separate devices. Traditionally in a virtualized environment, a packet has to pass through an extra layer of hypervisor, resulting in multiple CPU interrupts per packet. These extra interrupts can result in a bottleneck in high traffic environments. SR-IOV enabled devices have the ability to dedicate isolated access to its resources among various PCIe hardware functions. These functions are later assigned to the virtual machines which allow direct memory access (DMA) to the network data. This enables efficient sharing of PCIe devices, optimization of performance and reduction in hardware costs.
+The main components of the SR-IOV architecture are: 
+
+**Physical Function (PF)**
+
+Physical Function is a full-featured PCIe function of a network adapter that is SR-IOV capable. Physical Functions are discovered, managed, and configured as normal PCIe devices. PCIe devices have a set of registers known as configuration space. Physical Function behaves like a L2 switch and performs traffic forwarding between physical port and Virtual Functions.
+
+**Virtual Function (VF)**
+
+Virtual Functions (VFs) are simple "lightweight" PCIe functions that lack the configuration resources and only have the ability to move data in and out. Each Virtual Function is associated with a PCIe Physical Function. Each VF represents a virtualized instance of the network adaptor and have a separate PCI Configuration space. These VFs are assigned to virtual machines later.
+
+**I/O MMU**
+
+Input/Output Memory Management Unit (IOMMU) connects a Direct-Memory-Access–capable (DMAcapable) I/O bus to the main memory. The IOMMU maps device addresses or I/O addresses to physical addresses. IOMMU helps in accessing physical devices directly from virtual machines.
+
+**Hypervisor**
+
+A hypervisor is a software that allows running multiple virtual machines to share a single underlying hardware platform. In case of SR-IOV, either the hypervisor or the guest OS must be aware that they are not using full PCIe devices. Hypervisor maps VF’s configuration space to the configuration space presented to the guest using IOMMU.
+
+**Virtual Machine**
+
+A VF can only be assigned to one virtual machine at a time. VF appears as a single network interface card inside of a virtual machine.
+
+**Open vSwitch Hardware Offload**
+
+In a virtualized environment, the hypervisor is used to perform the software emulation to abstract the physical resources. This abstraction results in the additional overhead on the CPU, network, and I/O since virtualized resources need to be mapped to physical resources. In order to reduce the CPU load on the host, CPU intensive tasks can be offloaded to the capable attached I/O devices. The process of offloading tasks is known as Hardware Offloading.
+Open vSwitch is a production quality, multilayer virtual switch designed to enable massive network automation through programmatic extension, while still supporting standard management interfaces and protocols. Open vSwitch (OVS) allows Virtual Machines (VM) to communicate with each other and with the outside world. The OVS software-based solution is CPU intensive, affecting system performance and preventing full utilization of available bandwidth. This bottleneck can be tackled by making use of the OVS hardware offload feature where the fast-datapath is moved to the underlying offloading capable NIC. 
+This feature enables us to make use of SR-IOV in an OpenStack environment under the supervision of OVS for network acceleration. Red Hat OpenStack Platform 13 supports SR-IOV acceleration for tenant networks using the OVS hardware offload feature without modifying the Overcloud network configuration templates.
+
+
+**Neutron-Managed SR-IOV**
+
+In SR-IOV, the network packets are passed directly to the VM coming from the NIC, bypassing the in-between hypervisor. The SR-IOV based devices present an opportunity to improve the network performance for NFV use case in a Cloud-based environment. However, SR-IOV based environment poses deep limitations on the ability of a hypervisor to manage the network when flow-based approaches like OVS are utilized. This feature is not suitable for an OpenStack based environment as the Neutron must have control over the overlay networks.
+
+With the introduction of OVS-Offloading feature based on the TC subsystem framework, it is possible for Neutron to program the SR-IOV e-switch and manage the flows. In the Neutron managed SR-IOV, OVS datapath flows are hardware offloaded to the SR-IOV e-switch, and control traffic is handed over to userspace OVS.
+
+Dell EMC NFV Ready Bundle for Red Hat v13.0 supports the deployment with Neutron managed SR-IOV with 1-64 number of VFs.
+
+	
+#### SR-IOV initial investigation
+
+**Changes Required**
+
+Neutron managed SR-IOV for RHOSP requires the following changes:
+1.	Addition of neutron-sriov.yaml and ovs-hw-offload.yaml environment files.
+2.	Switch configurations for SR-IOV supported NICs on Compute nodes.
+
+**Deployment steps**
+
+Following are the necessary deployment steps for Neutron managed SR-IOV with OVS Hardware Offload:
+
+1.	Add the following additional services required for SR-IOV to the DellCompute role:
+
+**Additional DellCompute role services**
+
+- OS::TripleO::Services::NeutronSriovAgent
+- OS::TripleO::Services::NeutronSriovHostConfig
+
+2.	Configure the SR-IOV parameters for Compute nodes in ~/pilot/templates/neutron-sriov.yaml. Change the fields <network_name>, <interface_name> and <number_of_vfs> according to the required environment:
+
+**Changes required in neutron-sriov.yaml**
+
+```yaml
+parameter_defaults:
+       NeutronTunnelTypes: ''
+       NeutronSriovNumVFs:
+            - <interface_name>:<number_of_vfs>:switchdev
+       NeutronPhysicalDevMappings:
+            - <network_name>:<interface_name>
+       NovaPCIPassthrough:
+            - devname: <interface_name>
+              physical_network: <network_name>
+```
+
+
+**NeutronSriovNumVFs**
+
+This parameter contains the number of VFs to be created on a physical interface as a comma separated key/value pair.
+
+```bash
+NeutronSriovNumVFs: "p1p1:5,p4p1:5"
+```
+      
+**NeutronPhysicalDevMappings**
+
+This parameter contains the list of physical network to the physical device mapping.
+
+```bash
+NeutronPhysicalDevMappings: "physint:p1p1, physint:p4p1"
+```
+     
+     
+**NovaPCIPassthrough**
+
+This parameter contains the whitelisted PCI devices available for guest environment.
+
+```bash
+NovaPCIPassthrough:
+  - devname: "p1p1"
+    physical_network:"physint"
+  - devname: "p4p1"
+    physical_network:"physint"
+```
+
+3.	Add the following environment files to the OpenStack Overcloud deployment command to enable the SR-IOV with OVS hardware offload:
+
+```bash
+Sample SR-IOV parameters
+# Enables OVS Hardware Offload
+-e ~/pilot/templates/ovs-hw-offload.yaml
+# Applies the KernelArgs and TunedProfile with a reboot
+-e ~/pilot/templates/overcloud/environments/host-config-and-reboot.yaml
+# meta-data parameters for Nova scheduler 
+-e ~/pilot/templates/neutron-sriov.yaml
+```
+
+> NOTE: Sample neutron-sriov.yaml
+
+The sample neutron-sriov.yaml file is given in the Sample Configurations section.
+
+4.	Execute the Overcloud deployment command.
+
+**SR-IOV workbook execution**
+
+```bash
+cd ;source ~/stackrc; openstack overcloud deploy --log-file ~/pilot/overcloud_deployment.log -t 120 --stack r151 \
+--templates ~/pilot/templates/overcloud -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+-e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-rgw.yaml -r ~/pilot/templates/roles_data.yaml \
+-e ~/pilot/templates/overcloud/environments/network-isolation.yaml \
+-e ~/pilot/templates/network-environment.yaml \
+-e /home/osp_admin/pilot/templates/nic-configs/sriov_7_port/nic_environment.yaml \
+-e ~/pilot/templates/ceph-osd-config.yaml \
+-e ~/pilot/templates/static-ip-environment.yaml \
+-e ~/pilot/templates/static-vip-environment.yaml \
+-e ~/pilot/templates/node-placement.yaml \
+-e ~/pilot/templates/overcloud/environments/storage-environment.yaml \
+-e ~/overcloud_images.yaml \
+-e ~/pilot/templates/dell-environment.yaml \
+-e ~/pilot/templates/overcloud/environments/puppet-pacemaker.yaml \
+-e ~/pilot/templates/ovs-hw-offload.yaml \
+-e ~/pilot/templates/overcloud/environments/host-config-and-reboot.yaml \
+-e ~/pilot/templates/neutron-sriov.yaml \
+--libvirt-type kvm --ntp-server 192.168.120.8
+
+```
+
+
+### SR-IOV in JS 13.0
+
+Neutron managed SR-IOV is enabled as a part of the automated RHOSP deployment solution in JS 13.0. In this guide, it is assumed that the user has complete knowledge about the Dell EMC NFV Ready Architecture for Red Hat OpenStack Platform v13.0. This includes knowledge about different nodes in Dell EMC NFV Ready Bundle for Red Hat v13.0 such as SAH, Director, Controller, Compute, and Ceph-storage.
+
+#### Prerequisites
+
+**System Requirements**
+
+**Following are the hardware requirements for enabling Neutron-managed SR-IOV:**
+
+| Device Name | Total |
+|----------|----------|
+| Intel® Ethernet Network Adapter XXV710 | 3 or 6 |
+| SFP Connector | 6 or 12 |
+| QSFP connector |Depends upon the implementation of S5248) |
+
+
+**Additional SR-IOV NIC details**
+
+| NIC |	Total NICs |	NICs per Compute Node  |	Ports per NIC  |	Bandwidth per Port |
+|---|---|---|---|---|
+| Intel® Ethernet Network Adapter XXV710 |	3 or 6	 | 1 or 2	| 2	| 25 G |
+
+
+**Switch Configurations**
+
+To setup the switch configurations, connect the SR-IOV NICs to leaf switches such that high-availability (HA) is ensured. This implies one port of a NIC on a Compute node is attached to Leaf-1 switch while the other to Leaf-2 switch.
+
+Switch configurations depend upon the number of ports used for SR-IOV. In Neutron managed SR-IOV, the tenant networks for normal instances are carried over the default bond0 while for SR-IOV enabled instances, tenant networks are carried over the SR-IOV enabled NICs.
+
+**SR-IOV with Four Ports**
+
+For this scenario, the following changes are required in the switch configurations:
+
+* Wiring of SR-IOV NICs in Compute nodes to the Leaf switches according to the reference diagram for four ports.
+* Reference wiring diagram for SR-IOV with four ports is depicted below:
+ 
+![Figure: SRIOV with four ports wiring diagram](media/200f6167390b87559423bd74be82cf9a.png)
+
+
+> NOTE: PCI slots in reference diagram
+In the four ports SR-IOV reference diagram, PCI slot 1 and 2 are used just for reference. User can utilize different PCI slots according to the network environment.
+
+
+* Addition of additional four ports to the tenant VLANs on both the leaf switches.
+* Switch configuration for SR-IOV on both the switches according to the reference diagram will be:
+
+```bash
+$ net add interface swp38-43
+$ net add bridge bridge ports swp38-43
+$ net add interface swp38 bridge vids 201-220
+$ net add interface swp39 bridge vids 201-220
+$ net add interface swp40 bridge vids 201-220
+$ net add interface swp41 bridge vids 201-220
+$ net add interface swp42 bridge vids 201-220
+$ net add interface swp43 bridge vids 201-220
+```
+
+**Following additional configuration will be added to both the switches:**
+```bash
+auto swp38
+iface swp38
+    bridge-vids 201-220
+
+auto swp39
+iface swp39
+    bridge-vids 201-220
+
+auto swp40
+iface swp40
+    bridge-vids 201-220
+
+auto swp41
+iface swp41
+    bridge-vids 201-220
+
+auto swp42
+iface swp42
+    bridge-vids 201-220
+
+auto swp43
+iface swp43
+    bridge-vids 201-220
+
+auto bridge
+iface bridge
+    bridge-ports CNTL1-bond0 CNTL1-bond1 CNTL2-bond0 CNTL2-bond1 CNTL3-bond0 CNTL3-bond1 MLAG NOVA1-bond0 NOVA1-bond1 NOVA2-bond0 NOVA2-bond1 NOVA3-bond0 NOVA3-bond1 S4048-LAG SAH-bond0 SAH-bond1 STOR1-bond0 STOR1-bond1 STOR2-bond0 STOR2-bond1 STOR3-bond0 STOR3-bond1 swp38 swp39 swp40 swp41 swp42 swp43
+    bridge-vids 110 120 130 140 170 180 201-220 1543-1544
+    bridge-vlan-aware yes
+```
+
+
+
+
+**SR-IOV with Two Ports**
+
+For this scenario, the following changes are required in the switch configurations:
+
+* Wiring of SR-IOV NICs in Compute nodes to the Leaf switches according to the reference diagram for four ports.
+* Reference wiring diagram for SR-IOV with two ports is depicted below:
+
+ 
+![Figure: SRIOV with two ports wiring diagram](media/69656ef66a6a005c925717dd93230b48.png)
+
+> NOTE: PCI slots in reference diagram
+> In the two ports SR-IOV reference diagram, PCI slot 1 and 2 are used just for reference. User can utilize different PCI slots according to the network environment.
+
+
+* Addition of additional two ports to the tenant VLANs on both the leaf switches.
+* Switch configuration for SR-IOV on both the switches according to the reference diagram will be:
+
+
+```bash
+$ net add interface swp38,swp40,swp42
+$ net add bridge bridge ports swp38,swp40,swp42
+$ net add interface swp38 bridge vids 201-220
+$ net add interface swp40 bridge vids 201-220
+$ net add interface swp42 bridge vids 201-220
+```
+
+**Following additional configuration will be added to both the switches:**
+
+```bash
+auto swp38
+iface swp38
+    bridge-vids 201-220
+
+auto swp40
+iface swp40
+    bridge-vids 201-220
+
+auto swp42
+iface swp42
+    bridge-vids 201-220
+
+auto bridge
+iface bridge
+    bridge-ports CNTL1-bond0 CNTL1-bond1 CNTL2-bond0 CNTL2-bond1 CNTL3-bond0 CNTL3-bond1 MLAG NOVA1-bond0 NOVA1-bond1 NOVA2-bond0 NOVA2-bond1 NOVA3-bond0 NOVA3-bond1 S4048-LAG SAH-bond0 SAH-bond1 STOR1-bond0 STOR1-bond1 STOR2-bond0 STOR2-bond1 STOR3-bond0 STOR3-bond1 swp38 swp40 swp42
+    bridge-vids 110 120 130 140 170 180 201-220 1543-1544
+    bridge-vlan-aware yes
+```
+
+
+> NOTE: Provider Network:
+> Existing provider network physint is mapped on the SR-IOV interfaces, thus, both normal and SR-IOV enabled instances can be started together
+
+
+### Deployment
+To enable SR-IOV in JetStream 13.0, perform the following steps:
+
+* Open an SSH session as user root in SAH node.
+
+    ```bash
+    $ ssh root@<sah_node_ip>
+    ```
+
+* Open the settings INI file located in /root directory for SR-IOV configuration.
+
+    ```bash
+    $ vi /root/<sample CSP profile INI file>
+    ```
+
+* Change the SR-IOV parameters provided in the following table in settings INI file: 
+    
+    | Parameter	|  Value | 	Description |
+    | ----- | ----- | ----- |
+    | sriov_enable  |	true or false|	SR-IOV is enabled when set to true |
+    | sriov_vf_count |	1-64 |	This parameter reflects the number of virtual functions created per physical function. <br>Example: sriov_vf_count=4 |
+    | nic_env_file	| To enable SR-IOV with 7 nic ports, choose sriov_7_port/nic_environment.yaml. While for 9 ports, choose sriov_9_port/nic_enviornment.yaml.	| Set NIC environment file according to the SR-IOV ports requirement. <br>Example: nic_env_file=sriov_7_port/nic_environment.yaml |
+    | ComputeSriovInterface1=p1p1 ComputeSriovInterface2=p4p1 ComputeSriovInterface3=p2p1 ComputeSriovInterface4=p4p2 |	Uncomment these lines when sriov_enable set to true. | Uncomment these interfaces according to the NIC environment file selected i.e. sriov_7_port or sriov_9_port |
+
+* Change the directory to /root/JetPack/src/deploy/osp_deployer.
+    ```bash
+    # cd /root/JetPack/src/deploy/osp_deployer
+    ```
+
+* Execute the deployer.py script and pass the settings file using -s flag.
+    ```bash
+    python deployer.py –s /root/sample_csp_profile.ini
+    ```
+
+1.	For detailed logs and to monitor the output of the script, open a new SSH terminal and tail the latest logs file in /auto_results/ directory.
+Upon the successful completion of SR-IOV deployment, overcloud deployment status should be CREATE_COMPLETE. The VALIDATION SUCCESS status should be displayed in case the sanity test value is set to true. SSH into the Compute nodes and verify the created VFs: 
+
+![](media/f6d8bf824c3c9f4309446c8ce90323fd.png
+
+**Post-deployment steps**
+
+After the completion of Neutron managed SR-IOV deployment with JetStream 13.0, perform the following steps to create a SR-IOV enabled instance:
+
+1.	Source the overcloud RC file.
+    ```bash
+    $ source <overcloudrc>
+    ```
+
+2.	Create an aggregate group and add a host to it for SR-IOV.
+    ```bash
+    $ openstack aggregate create --zone=sriov sriov
+    $ openstack aggregate add host sriov <compute node hostname>.localdomain
+    ```
+
+3.	Create a SR-IOV compliant flavor.
+    ```bash
+    $ openstack flavor create sriov --ram 4096 --disk 150 --vcpus 4
+    ```
+
+**NOTE: NUMA and Hugepages**
+
+If NUMA and Hugepages are enabled, set the required NUMA and Hugepages metadata on the SR-IOV enabled flavor.
+4.	Create a SR-IOV enabled network by specifying the provider network VLAN and provider physical network as mentioned in the neutron-sriov.yaml.
+    ```bash
+    $ openstack network create --provider-network-type=vlan --provider-physical-network=physint sriov_net
+    $ openstack subnet create --project admin --subnet-range 10.0.10.0/24 --dhcp --network sriov_net sriov-sub
+    ```
+
+5.	Create a Neutron port associated with SR-IOV VF.
+    ```bash
+    $ openstack port create --network net1 --vnic-type direct sriov_port
+    ```
+
+6.	Deploy an instance.
+    ```bash
+    $ openstack server create --flavor compute --availability-zone sriov --image <image name> --nic port-id=sriov_port sriov_vm
+    ```
+    
+    **Sample Configurations**
+
+    ```yaml
+    neutron-sriov.yaml
+    Sample SR-IOV parameters
+    parameter_defaults:
+      NeutronMechanismDrivers: ['sriovnicswitch', 'openvswitch']
+      NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','RamFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','PciPassthroughFilter']
+      NovaSchedulerAvailableFilters: ["nova.scheduler.filters.all_filters","nova.scheduler.filters.pci_passthrough_filter.PciPassthroughFilter"]
+      NeutronEnableIsolatedMetadata: true
+      NeutronEnableForceMetadata: true
+      NeutronTunnelTypes: ''
+      NeutronSriovNumVFs: 'p1p2:5:switchdev,p4p2:5:switchdev'
+      NeutronPhysicalDevMappings: 'physint:p1p2,physint:p4p2'
+      NovaPCIPassthrough: [{devname: p1p2,physical_network: physint},{devname: p4p2,physical_network: physint}]
+    ```
+
+    **Functionality Testing**
+    
+    **Using first approach of SR-IOV deployment, four scenarios are tested:**
+    
+    a.	Communication of SR-IOV instance on same compute nodes
+        ![](media/33cd5be8469a73afa49bf5774759a420.png)
+    
+    b.	Communication of SR-IOV instances on different compute nodes
+        ![](media/7d27988983f1e6d39857d2a5d07e6818.png)
+        
+    c.	Communication between instance with SR-IOV port and instance with normal port on same compute node:
+        ![](media/ec2f238eb08cddf693563ef479edc059.png)
+        
+    d.	Communication between instance with SR-IOV port and instance with normal port on different compute nodes:
+        ![](media/871357315a5327e2598ea064126dfb69.png)
+        
+    e.	Communication of SR-IOV instance with floating ip:
+        ![](media/6e9d9186c59d7249b1a716c8322fb3e4.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div style="page-break-after: always;"></div>
+
+# Appendix H : Neutron DVR support in JS 13.0
+
+This appendix details the guidelines for configuration of Neutron DVR support in JS 13.0 at the time of deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform v13.
+
+> Topics:
+> * Introduction
+> * Prerequisites
+> * Switch Configuration 
+> * Settings file parameters
+> * JS13 Deployment of Undercloud and Overcloud
+> * Deployment verification
+
+### Introduction
+
+Distributed Virtual Routing (DVR) offers an alternative routing design, which is now fully supported with Red Hat OpenStack Platform. It intends to isolate the failure domain of the Controller node and optimize network traffic by deploying the L3 agent and schedule routers on every Compute node. By eliminating a centralized layer 3 agent, the routing that was performed on a single node is now handled by the compute nodes themselves.  
+
+### Prerequisite
+
+Follow these steps to configure bonds interfaces of every compute node on both switches:
+
+**Switch with OS9**
+
+Switch with OS9, configurations can be done using following commands:
+
+* Switch configurations for 5 port nics, port-channel of compute Bond1 interfaces should be in floating vlan:
+    ```yaml
+    # int vlan <floating-vlan> 
+    #tagged port-channel <name of channel which have interfaces of bond1>
+    # int vlan <publicApi-vlan> 
+    #tagged port-channel <name of channel which have interfaces of bond1>
+    ```
+
+* When using 7 port nic environment file, additional bond interfaces should be in external and floating vlan. Below are the configurations to add interfaces to vlans:
+    ```yaml
+    # int port-channel <name of channel which have interfaces of bond2 >
+    # switchport
+    # exit
+    # int TwentyGigabitEthernet <interface of bond2>
+    # port-channel porotocol lacp
+    # port-channel <channel which have interfaces of bond2> mode active
+    # exit
+    # int vlan <floating-vlan>
+    #tagged port-channel <channel which have interfaces of bond2>
+    # int vlan <publicApi-vlan>
+    #tagged port-channel <channel which have interfaces of bond2>
+    Repeat the above configurations for bond’s other interface on switch 2.
+    Add port channel on vlt-peer-lag on both switches
+    # int port-channel <channel which have interfaces of bond2>
+    # vlt-peer-lag port-channel <channel which have interfaces of bond2>
+
+    ```
+
+
+**Switch with Cumulus OS**
+
+Switch with Cumulus OS, configurations can be done using following commands:
+
+* **Switch configurations for 5 port nics, port-channel of compute Bond1 interfaces should be in floating vlan:**
+    ```bash
+    $ net add bond <compute node bond1> bridge vids <floating ip vlan>
+    $ net commit
+    # This settings need to done for every compute node bond1.
+    ```
+
+* **When using 7 port nic environment file, additional bond interfaces should be in external and floating vlan. Below are the configurations to add interfaces to vlans:**
+    ```bash
+    #net add bond <compute node bond2> slave <compute node bond2 port number e-g swp38>
+    #net add bond <compute node bond2> clag id <compute node bond2 clag id e-g 50>
+    #net add bond <compute node bond2> bridge vids <floating network vlan>
+    #net add bond <compute node bond2> mtu 9216
+    #net commit
+    Repeat the above configurations for bond’s other interface on switch 2 and also for every compute node.
+    ```
+
+
+### Settings file parameter verification
+
+* To deploy the dvr with JS13, set the dvr_enable variable value to True in the ini file under the [Deployment Settings] section
+      dvr_enable = True
+* For NIC configurations, change the value of nic_env_file parameter under the [Nodes Nics and Bonding Settings] section. DVR can be enabled in two different environments:
+    1.	dvr_5_port
+    2.	dvr_7_port
+*	To enable DVR for 5_port, set the nic_env_file parameter to:
+    ```bash
+    nic_env_file = dvr_5_port/nic_environment.yaml
+    ```
+*	To enable DVR for 7_port, set the nic_env_file parameter to:
+    ```bash
+    nic_env_file = dvr_7_port/nic_environment.yaml
+    ```
+*	Uncomment the bellow 2 interfaces for enabling DVR for 7_port.
+    ```bash
+    #ComputeBond2Interface1=p3p1
+    #ComputeBond2Interface2=p2p1
+    ```
+
+
+
+### JS 13 Deployment of Undercloud and Overcloud
+
+Assuming that sah node is deployed and JetPack folder is at root location. Edit your hardware stamp’s .ini and .properties files to match your hardware stamp documentation. Run the deployment by executing the deployer.py command:
+
+```bash
+# cd /root/JetPack/src/deploy/osp_deployer
+# python deployer.py -s <path_to_settings_ini_file>
+```
+
+### Deployment Verification
+
+Different scenarios are tested to check the functionality of DVR:
+
+Verify that DVR is deployed on all the controller nodes
+
+1. ssh to controller node and change to root user by command "sudo -i"
+2. get docker container id of neutron l3 agent container by cocmmand "docker ps"
+3.connect to the container by command"docker exec -it <neutron l3 agent container id> bash"
+4. run the command: "cat /etc/neutron/l3_agent.ini | grep dvr"
+5. agent_mode value must be dvr_snat
+6.  repeat the all steps for other controller nodes.
+
+**Verify that L3 agent must be distributed on all the compute nodes.**
+
+1.	ssh to Director node as osp_admin user
+2.	Source overcloudrc file
+3.	Run the command "neutron agent-list --agent-type="L3 agent""
+4.	In host column, you will see the nodes that host L3 agent.
+
+**Verify that traffic between two compute nodes bypass the Controller node.**
+
+1.	Create two instance on different compute nodes and networks
+2.	ssh to both instances on the different tabs
+3.	Ping first instance from second instance.
+4.	ssh to controller node
+5.	run the command "sudo ip netns exec  <qrouter-namepace> /bin/bash"
+"ip a"
+"tcpdump -i <qr-interface>"
+6.	Ping traffic for instance will not transver the through that interface. 
+
+**Verify the snat traffic transverse through the controller node.**
+
+1.	Create an instance
+2.	ssh to instance
+3.	Ping 8.8.8.8 from instance.
+4.	ssh to controller node
+5.	run the command "sudo ip netns exec  <snat-namepace> /bin/bash"
+"ip a"
+"tcpdump -i <sg-interface>"
+6.	Ping traffic will transver the through that interface
+
+**Verify that traffic with floating IPs for external traffic must bypass the Controller node.**
+
+1.	Create an instance and associate Floating IP to it. 
+2.	ssh to instance
+3.	Ping 8.8.8.8 from instance.
+4.	ssh to controller node
+5.	run the command "sudo ip netns exec  <qr-namepace> /bin/bash"
+"ip a"
+"tcpdump -i <qg-interface>"
+6.	ping traffic will not transver the through that interface. 
+
+**ssh the instance through the fip namespaces created on the compute node.**
+
+1.	ssh to compute node
+2.	run the command “sudo ip netns exec <fip-namespace> ssh –i /home/heat-admin/key user@<ip-addr>”
+3.	ssh should be successful
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div style="page-break-after: always;"></div>
+
+# Appendix I : Performance Optimization 
+
+This appendix details the guidelines for application of Performance Optimization at the time of deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
+
+> Topics:
+> * Overview
+> * Deploying Performance Optimization
+> * Logging
+> * List of Parameters to be Optimized by Default
+
+
+### Overview
+
+
+Performance optimization is the improvement of system response. Typically, in cloud infrastructure, the motivation for such activity is called a performance problem, which can be either real or anticipated. Most systems will respond to increased load (computation, networking etc.) with some degree of decreasing performance. A system's ability to accept higher load is called scalability, and modifying a system to handle a higher load is synonymous to performance tuning.
+
+
+### Deploying Performance Optimization
+
+The Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13 provides the ability to apply Performance Optimization on all the nodes during deployment. This section provides the instructions to configure Deployment.
+
+### Applying Performance Optimization Parameters
+
+List of Performance Optimization user modifiable Parameters -
+
+* mariadb_max_connections: (1000 - 100000) The maximum permitted number of simultaneous client connections.
+
+    ```bash
+    default : 15360
+    ```
+
+
+* innodb_buffer_pool_size: InnoDB buffer pool size in GBs. (Max. value of this parameter depends on the hardware architecture)
+
+    ```bash
+    default : dynamic (This assigns 75% ram size of controller node.)
+    ```
+
+
+* innodb_buffer_pool_instances: (8 - 48) The number of regions that the InnoDB buffer pool is divided into.
+
+    ```bash
+    default : 16
+    ```
+
+
+Follow the procedure provided below to apply Performance Optimization parameters with Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13:
+
+1.	Open an SSH session to the SAH node.
+
+2.	Log in as the root user.
+
+3.	Change the working directory to /root/JetPack/src/deploy/osp_deployer/settings/
+
+    ```bash
+    #cd /root/JetPack/src/deploy/osp_deployer/settings/
+    ```
+
+4.	Edit the sample_csp_profile.ini or sample_xsp_profile.ini file. Change the settings under section [Performance and Optimization]. Please refer sample_csp_profile.ini and sample_xsp_profile.ini for details.
+
+     Note:
+
+**Only two types of values are supported for innodb_buffer_pool_size those are:**
+
+* For dynamically calculating and assigning 75% of total memory of respective controller node: innodb_buffer_pool_size = dynamic
+* For user value: innodb_buffer_pool_size = 64G (Please follow the same format, an integer value followed by G).
+
+**Deploy Performance Optimization Parameters**
+
+After applying performance optimization parameters in sample_csp_profile.ini or
+sample_xsp_profile.ini file, perform the following steps to deploy performance and optimization parameters inDell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
+ 
+1.	Open an SSH session to the SAH node.
+2.	Ensure all hardware in the OpenStack Cluster is powered off.
+3.	Run the following command to deploy performance optimization:
+    ```bash
+    #cd /root/JetPack/src/deploy/osp_deployer
+    #python deployer.py -s < path-of-settings-file >
+    ```
+4.	Upon successful execution, success log will be generated. Please refer section Logging for details.
+
+There are more parameters which are by default optimized by Dell EMC Ready Architecture for Red Hat OpenStack Platform version 10.2. These parameters can be seen in List of parameters to be optimized by default .
+
+
+
+### Logging
+
+Below is the table of log messages and actions to be taken upon encountering such errors. Apart from these errors if any other error is received, please email openstack@dell.com.
+
+| S No | Error Description | Custom Error Message | Action | Log Action | Further Action |
+|----------|----------|----------|----------|----------|----------|
+| 1 | Invalid buffer pool size.  | "innodb_buffer_pool_size is greater than available memory size"  | Login to the director VM as the initial deployed user. | Director_node | Check .ini file and verify the given value of innodb_buffer _pool_size try a lower value. Once corrected redeploy. |
+
+### List of Parameters to be Optimized by Default
+
+#### System Level Optimization
+
+1.	Linux OS Limits: (all nodes)
+    a.	soft nofile 64000
+    b.	hard nofile 64000
+    c.	soft nproc 10240
+    d.	hard nproc unlimited
+
+2.	Tuned Profiles
+    a.	tuned-adm profile virtual-host ( for all computes )
+    b.	tuned-adm throughput-performance ( for all controllers and storage nodes )
+    c.	OVS-DPDK requires the tuned profile set to be cpu-partitioning
+
+
+### Openstack Core Services
+
+1.	Nova (/etc/nova/nova.conf )
+    ```yaml
+    [DEFAULT] / rpc_response_timeout = 180
+    [DEFAULT] / osapi_max_limit = 10000
+    [keystone_authtoken] / revocation_cache_time = 300
+    ```
+
+
+2.	Neutron (/etc/neutron/neutron.conf)
+    ```yaml
+    [DEFAULT] / rpc_response_timeout = 180
+    [keystone_authtoken] / revocation_cache_time = 300
+    ```
+
+    
+3.	Cinder (/etc/cinder/cinder.conf)
+    ```yaml
+    [DEFAULT] / rpc_response_timeout = 180
+    [keystone_authtoken] / revocation_cache_time = 300
+    ```
+    
+4.	Glance (/etc/glance/glance-api.conf)
+    ```yaml
+    [DEFAULT] / rpc_response_timeout = 180
+    [keystone_authtoken] / revocation_cache_time = 300
+    ```
+
+
+### Openstack Components
+
+1.	MariaDB (/etc/my.cnf.d/galera.cnf):
+    ```yaml
+    [mysqld] / innodb_log_file_size=1500M
+    [mysqld] / innodb_log_files_in_group=2
+    [mysqld] / innodb_flush_method = O_DIRECT
+    [mysqld] / innodb_file_per_table = 1
+    [mysqld] / innodb_flush_log_at_trx_commit = 0
+    ```
+2.	HAproxy (/etc/haproxy/haproxy.cfg)
+    ```yaml
+    defaults / maxconn 10000
+    ```
+
+
+Example of sample_csp_profile.ini and sample_xsp_profile.ini
+
+
+```yaml
+[Performance and Optimization]
+
+#mariadb_max_connections takes value from 1000 to 100000, it is mandatory. 
+mariadb_max_connections = 15360
+
+#MariaDB innodb_buffer_pool_size should be given value in GB, Example : 64G.
+#Default is 'dynamic' which assigns 75% ram size of controller node.
+#Note that innodb_buffer_pool_size should be less than available ram size. innodb_buffer_pool_size = dynamic
+
+#innodb_buffer_pool_instances takes value from 8 to 48 
+innodb_buffer_pool_instances = 16
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div style="page-break-after: always;"></div>
+
+# Appendix J : Sample Files 
+
+This appendix details the sample properties file and describes the differences between the xSP and CSP sample profile files of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
+
+> Topics:
+> * Sample Properties File
+> * Sample CSP .ini File
+> * Sample xSP .ini File
+> * Sample xSP/CSP Profile File Differences
+
+### Sample Properties File
+
+```yaml
+[
+{
+"is_sah": "true",
+"hostname": "sah",
+"idrac_ip": "192.168.110.20",
+"root_password": "xxxxxxxxxx",
+
+"anaconda_ip":"192.168.190.134",
+"anaconda_iface":"em4",
+
+"public_bond": "bond1",
+"public_slaves": "em2 p1p2",
+"public_api_ip":"192.168.190.12",
+
+"private_bond": "bond0",
+"private_slaves": "em1 p1p1",
+"provisioning_ip":"192.168.120.12",
+"storage_ip":"192.168.170.12",
+"private_api_ip":"192.168.140.12",
+"management_ip":"192.168.110.12"
+},
+{
+"is_director": "true",
+"hostname": "director",
+"root_password": "xxxxxxxxxx",
+
+"provisioning_ip": "192.168.120.13",
+
+"management_ip":"192.168.110.13",
+"public_api_ip":"192.168.190.13",
+
+"private_api_ip":"192.168.140.13"
+},
+{
+"is_dashboard": "true",
+"hostname": "dashboard",
+"root_password": "xxxxxxxxx",
+
+"public_api_ip": "192.168.190.14",
+"storage_ip": "192.168.170.14"
+},
+{
+"is_controller": "true",
+"idrac_ip": "192.168.110.21",
+
+"public_api_ip": "192.168.190.21",
+"private_api_ip": "192.168.140.21",
+"storage_ip": "192.168.170.21",
+"tenant_tunnel_ip": "192.168.130.21"
+},
+{
+"is_controller": "true",
+"service_tag": "ABCXYZ",
+
+"public_api_ip": "192.168.190.22",
+"private_api_ip": "192.168.140.22",
+"storage_ip": "192.168.170.22",
+"tenant_tunnel_ip": "192.168.130.22"
+},
+{
+
+"is_controller": "true",
+"idrac_ip": "192.168.110.23",
+
+"public_api_ip": "192.168.190.23",
+"private_api_ip": "192.168.140.23",
+"storage_ip": "192.168.170.23",
+"tenant_tunnel_ip": "192.168.130.23"
+},
+{
+"is_compute": "true",
+"idrac_ip": "192.168.110.31",
+
+"private_api_ip": "192.168.140.31",
+"storage_ip": "192.168.170.31",
+"tenant_tunnel_ip": "192.168.130.31"
+
+},
+{
+"is_compute": "true",
+"service_tag": "DEFUVW",
+
+"private_api_ip": "192.168.140.32",
+"storage_ip": "192.168.170.32",
+"tenant_tunnel_ip": "192.168.130.32"
+
+},
+{
+"is_compute": "true",
+"idrac_ip": "192.168.110.33",
+
+"private_api_ip": "192.168.140.33",
+"storage_ip": "192.168.170.33",
+"tenant_tunnel_ip": "192.168.130.33"
+
+},
+{
+"is_ceph_storage": "true",
+"idrac_ip": "192.168.110.76",
+
+"storage_ip": "192.168.170.76",
+"storage_cluster_ip": "192.168.180.76"
+},
+{
+"is_ceph_storage": "true",
+"service_tag": "GHIRST",
+
+"storage_ip": "192.168.170.77",
+"storage_cluster_ip": "192.168.180.77"
+},
+{
+"is_ceph_storage": "true",
+"idrac_ip": "192.168.110.78",
+
+"storage_ip": "192.168.170.78",
+"storage_cluster_ip": "192.168.180.78"
+}
+]
+```
+
+
+
+
+
+### Sample CSP.ini File
+
+```yaml
+
+# Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+###########################################################################
+#                                                                         #
+# Copy and rename this file for your own stamp.                           #
+# Review ALL settings below, pay particular attention to paths/ip's etc.. #
+#                                                                         #
+###########################################################################
+
+
+[Network Settings]
+
+# Nova public network details
+public_api_network=192.168.190.0/24
+public_api_vlanid=190
+public_api_gateway=192.168.190.1
+public_api_netmask=255.255.255.0
+public_api_allocation_pool_start=192.168.190.121
+public_api_allocation_pool_end=192.168.190.250
+name_server=8.8.8.8
+
+# Private API network details
+private_api_network=192.168.140.0/24
+private_api_vlanid=140
+private_api_netmask=255.255.255.0
+private_api_allocation_pool_start=192.168.140.121
+private_api_allocation_pool_end=192.168.140.250
+
+
+# Storage network details
+storage_network=192.168.170.0/24
+storage_vlanid=170
+storage_netmask=255.255.255.0
+storage_allocation_pool_start=192.168.170.125
+storage_allocation_pool_end=192.168.170.250
+
+# Provisioning network details
+provisioning_network=192.168.120.0/24
+provisioning_vlanid=120
+provisioning_netmask=255.255.255.0
+provisioning_gateway=192.168.120.1
+provisioning_net_dhcp_start=192.168.120.121
+provisioning_net_dhcp_end=192.168.120.250
+discovery_ip_range=192.168.120.21,192.168.120.120
+
+# Storage cluster network details
+storage_cluster_network=192.168.180.0/24
+storage_cluster_vlanid=180
+storage_cluster_allocation_pool_start=192.168.180.121
+storage_cluster_allocation_pool_end=192.168.180.250
+
+# Management network details
+# Make sure the SAH node idrac ip defined in the .properties
+# is NOT within the allocation pool below.
+management_network=192.168.110.0/24
+management_vlanid=110
+management_netmask=255.255.255.0
+management_gateway=192.168.110.1
+management_allocation_pool_start=192.168.110.100
+management_allocation_pool_end=192.168.110.199
+
+# Tenant network details
+# Not used unless you wish to configure Generic Routing Encapsulation (GRE) networks.
+tenant_tunnel_network=192.168.130.0/24
+tenant_tunnel_network_allocation_pool_start=192.168.130.121
+tenant_tunnel_network_allocation_pool_end=192.168.130.250
+tenant_tunnel_network_vlanid=130
+# Nova Private network details
+
+
+tenant_vlan_range=201:250
+
+
+[MTU Settings]
+
+# The mtu_selection setting defines whether to use the "global" or "per_network" option. 
+# If the mtu_selection is defined as "global", the mtu value for all networks will be set to the value provided in mtu_size_global_default. The supported value must be within the range of 1500-9000.
+# If "per_network" mtu_selection is defined, the user should provide an mtu value for each network in the range of 1500-9000.
+# For "public_api_network_mtu" and "floating_ip_network_mtu" networks, mtu sizes greater than 1500 is only supported if jumbo frames are enabled on upstream routers.
+mtu_selection=global 
+mtu_size_global_default=1500
+public_api_network_mtu=1500
+floating_ip_network_mtu=1500
+private_api_network_mtu=1500
+tenant_network_mtu=1500
+storage_cluster_network_mtu=1500
+storage_network_mtu=1500
+tenant_tunnel_network_mtu=1500
+
+[Vips Settings]
+
+# Use static VIPs ip addresses for the overcloud
+use_static_vips=true
+
+# The following VIP settings apply if the above use_static_vips is enabled.
+
+# VIP for the redis service on the Private API api network
+# Note that this IP must lie outside the private_api_allocation_pool_start/end
+# range
+redis_vip=192.168.140.251
+
+# VIP for the provisioning network
+# Note that this IP must lie outside the provisioning_net_dhcp_start/end range
+provisioning_vip=192.168.120.251
+
+
+
+# VIP for the Private API network
+# Note that this IP must lie outside the private_api_allocation_pool_start/end
+# range
+private_api_vip=192.168.140.252
+
+# VIP for the Public API network
+# Note that this IP must lie outside the public_api_allocation_pool_start/end
+# range
+public_api_vip=192.168.190.251
+
+# VIP for the Storage network
+# Note that this IP must lie outside the storage_allocation_pool_start/end
+# range
+storage_vip=192.168.170.251
+
+# VIP for the Storage cluster network
+# The Storage Clustering network is not connected to the controller nodes,
+# so the VIP for this network must be mapped to the provisioning network
+# Note that this IP must lie outside the provisioning_net_dhcp_start/end range
+storage_cluster_vip=192.168.120.252
+
+
+[Subscription Manager Settings]
+
+# Subscription Manager account info for registering Red Hat subscriptions
+subscription_manager_user=xxxxxxx
+subscription_manager_password=xxxxxxxxxxxxxx
+
+# The following pool IDs provide different collections of repositories.
+# Each is labeled with possible subscription names.
+
+# Red Hat Enterprise Linux (Physical Node)
+subscription_manager_pool_sah=xxxxxxxxxxxxxxxxxxxxxxxxxxxx44f5
+
+# Red Hat Enterprise Linux OpenStack Platform (Virtual Node)
+subscription_manager_pool_vm_rhel=xxxxxxxxxxxxxxxxxxxxxxxxxxxx454a
+
+# Red Hat Ceph Storage (Physical Node)
+subscription_manager_vm_ceph=xxxxxxxxxxxxxxxxxxxxxxxxxxxx7826
+
+
+subscription_check_retries=20
+
+[Nodes Nics and Bonding Settings]
+
+sah_bond_opts=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+
+# NIC environment file
+#       1. To enable standard XSP profile or standard CSP profile (NUMA and HugePages):
+#          For 5 ports, choose 5_port/nic_environment.yaml. 
+#          For 4 ports, choose 4_port/nic_environment.yaml.
+#       2. To enable OVS-DPDK with 7 nic ports, choose ovs-dpdk_7_port/nic_environment.yaml.
+#          For 9 ports, choose ovs-dpdk_9_port/nic_enviornment.yaml.
+#       3. To enable SR-IOV with 7 nic ports, choose sriov_7_port/nic_environment.yaml.
+#          For 9 ports, choose sriov_9_port/nic_enviornment.yaml.
+#       4. To enable OVS-DPDK (2-ports) and SR-IOV (2-ports), choose ovs-dpdk_sriov_9_port/nic_environment.yaml.
+#       5. To enable DVR, for Storage and Floating networks that share a single bond, choose 5_port/nic_environment.yaml.
+#          If a separate bond is required for Floating network on compute nodes, choose dvr_7_port/nic_environment.yaml.
+nic_env_file=5_port/nic_environment.yaml
+
+# Interfaces and bonding options per node type.
+# When using any 4 port NIC configuration, comment out or delete the
+# ControllerProvisioningInterface line below.
+ControllerProvisioningInterface=em3
+ControllerBond0Interface1=em1
+ControllerBond0Interface2=p1p1
+ControllerBond1Interface1=em2
+ControllerBond1Interface2=p1p2
+ControllerBondInterfaceOptions=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+
+# When using any 4 port NIC configuration, comment out or delete the
+# ComputeProvisioningInterface line below.
+ComputeProvisioningInterface=em3
+ComputeBond0Interface1=em1
+
+
+ComputeBond0Interface2=p1p1
+ComputeBond1Interface1=em2
+ComputeBond1Interface2=p1p2
+ComputeBondInterfaceOptions=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+
+# When using any 4 port NIC configuration, comment out or delete the
+# StorageProvisioningInterface line below.
+StorageProvisioningInterface=em3
+StorageBond0Interface1=em1
+StorageBond0Interface2=p2p1
+StorageBond1Interface1=em2
+StorageBond1Interface2=p2p2
+StorageBondInterfaceOptions=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+
+# To enable standalone OVS-DPDK, two or four interfaces should be used.
+# For two interfaces, uncomment 'ComputeOvsDpdkInterface1', 'ComputeOvsDpdkInterface2' and 'BondInterfaceOvsOption'.
+# For four interfaces, uncomment all four interfaces and 'BondInterfaceOvsOption'.
+# The following lines should be commented out  if ovs_dpdk_enable is set to false
+#ComputeOvsDpdkInterface1=p2p1
+#ComputeOvsDpdkInterface2=p3p1
+#ComputeOvsDpdkInterface3=p2p2
+#ComputeOvsDpdkInterface4=p3p2
+#BondInterfaceOvsOptions=bond_mode=balance-tcp lacp=active
+
+# To enable standalone SR-IOV, two or four interfaces should be used.
+# For two interfaces, uncomment 'ComputeSriovInterface1' and 'ComputeSriovInterface2'.
+# For four interfaces, uncomment all four interfaces.
+# Following lines should be commented out if sriov_enable is set to false
+#ComputeSriovInterface1=p1p1
+#ComputeSriovInterface2=p4p1
+#ComputeSriovInterface3=p1p2
+#ComputeSriovInterface4=p4p2
+
+# To enable SR-IOV and OVS-DPDK, four interfaces should be used.
+# Following lines should be uncommented if both sriov_enable and ovs-dpdk_enable are set to true.
+
+
+#ComputeSriovInterface1=p1p1
+#ComputeSriovInterface2=p4p1
+#ComputeOvsDpdkInterface1=p2p1
+
+
+#ComputeOvsDpdkInterface2=p3p1
+#BondInterfaceOvsOptions=bond_mode=balance-tcp lacp=active
+
+# To enable DVR with a separate bond for Floating network on compute nodes, two interfaces should be used.  
+# To use the two interfaces, uncomment 'ComputeBond2Interface1' and 'ComputeBond2Interface2'.
+# Following lines should be commented out if dvr_enable is set to false. 
+#ComputeBond2Interface1: p3p1
+#ComputeBond2Interface2: p1p2
+
+[Dell NFV Settings]
+
+#Enter value of enable_hpg as true/false for HugePages
+hpg_enable=true
+#User should give this parameter in same format.
+#Supported values for hpg_size(Size of hugepages) is 2MB and 1 GB.
+#The number of hugepages will be calculated dynamically.
+hpg_size=1GB
+
+#Enter value of enable_numa as true/false for NUMA
+numa_enable=true
+
+# OVS-DPDK Settings
+# Set the following option to true/false
+ovs_dpdk_enable=false
+
+# Enter number of cores you want to reserve for Host OS
+# Supported values are 2,4,6,8
+numa_hostos_cpu_count=4
+
+# SRIOV Settings
+# Set the following option to true/false for SRIOV
+sriov_enable=false
+
+# Enter the number of VFs you want to create per port
+# Supported values are between 1-64
+
+
+sriov_vf_count=64
+
+# Set to true to enable DVR
+
+
+dvr_enable=false
+
+
+[Performance and Optimization]
+
+# mariadb_max_connections takes value from 1000 to 100000, it is mandatory.
+mariadb_max_connections = 15360
+
+# MariaDB innodb_buffer_pool_size should be given value in GB, Example : 64G.
+# Default is 'dynamic' which assigns 75% ram size of controller node.
+# Note that innodb_buffer_pool_size should be less than available ram size.
+innodb_buffer_pool_size = dynamic
+
+# innodb_buffer_pool_instances takes value from 8 to 48
+innodb_buffer_pool_instances = 16
+
+[IPMI credentials Settings]
+
+# DRAC credentials with IPMI privilege for the SAH node
+sah_ipmi_user=root
+sah_ipmi_password=xxxxxxx
+
+# DRAC credentials with IPMI privilege for the overcloud nodes
+ipmi_user=root
+ipmi_password=xxxxxxx
+# A password to change to on overcloud nodes if desired
+new_ipmi_password=
+
+
+[Deployment Settings]
+
+#Valid values are csp, xsp and custom.
+profile=csp
+
+# This pathname must be the full path to the properties file which
+# describes the cluster. You should copy *this* sample settings file
+
+# (sample.ini) and the sample properties file (sample.properties) to
+# another directory, and customize them for your cluster. Then use the
+# path to your customized properties file here.
+cluster_nodes_configuration_file=/root/acme.properties
+
+
+# User for the undercloud/overcloud installation
+director_install_user=osp_admin
+director_install_user_password=xxxxxxx
+
+# Name of the Overcloud.
+# The nodes hostnames will be prepended with the given name and a dash
+overcloud_name=overcloud
+
+# Domain name for the cluster (i.e., mycluster.lab)
+domain=domain.net
+
+# Optional : root passord for the overcloud nodes, no password is set if left empty
+overcloud_nodes_pwd=
+
+# , separated list of ntp servers
+ntp_servers=0.centos.pool.ntp.org,1.centos.pool.ntp.org,2.centos.pool.ntp.org,3.centos.pool.ntp.org
+time_zone=America/Chicago
+
+# Use static ip adresses for the overcloud nodes if set to true (ips need to be defined in the .properties)
+# Use dhcp if set to false (ips not required in the .properties)
+overcloud_static_ips=true
+
+# Set to true to enable cinder backend of Ceph for storage.
+enable_rbd_backend=true
+
+# Set to true to enable Nova usage of Ceph for ephemeral storage.
+# If set to false, Nova uses the storage local to the compute.
+enable_rbd_nova_backend=true
+
+# Set to false to disable fencing
+enable_fencing=true
+
+[Storage back-end Settings]
+
+
+# Compellent parameters. See the Software Deployment Guide for description of the parameters.
+enable_dellsc_backend=false
+
+dellsc_backend_name=CHANGEME
+dellsc_api_port=3033
+dellsc_iscsi_ip_address=CHANGEME
+dellsc_iscsi_port=3260
+dellsc_san_ip=CHANGEME
+dellsc_san_login=CHANGEME
+dellsc_san_password=CHANGEME
+dellsc_ssn=CHANGEME
+dellsc_server_folder=cmpl_iscsi_servers
+dellsc_volume_folder=cmpl_iscsi_volumes
+
+
+[Sanity Test Settings]
+
+# If you want the sanity script to run on deployment completion (Appendix C, etc.), you may do so.
+run_sanity=false
+
+floating_ip_network=192.168.191.0/24
+floating_ip_network_start_ip=192.168.191.20
+floating_ip_network_end_ip=192.168.191.59
+floating_ip_network_gateway=192.168.191.1
+floating_ip_network_vlan=191
+sanity_tenant_network=192.168.201.0/24
+sanity_user_password=s@n1ty
+sanity_user_email=someone@somewhere.com
+sanity_key_name=sanity
+
+# The number of instances to spin up in nova.
+# Note that this will be limited by the instance quota in OpenStack, which is
+# 10 by default.
+# Note: One additional instance will be created for vlan-aware testing. Maximum
+# number of instances can be 9 unless the quota is increased.
+sanity_number_instances=1
+sanity_image_url=http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
+
+
+# vlan-aware specific parameters
+# address of vlan-network where subport is attached
+sanity_vlantest_network=192.168.216.0/24
+ [Tempest Settings]
+
+# If you want to run Tempest post-deployment, you may do so. The sanity script must also run to create networks for Tempest.
+run_tempest=false
+tempest_smoke_only=true
+
+
+[Advanced Settings]
+
+#The following settings should typically only be used by developers
+
+# Only developers should set to false.
+enable_version_locking=true
+
+# The list of RHSM repositories to enable to access the product.  Repos should
+# be comma separated.
+# Note that this parameter is defaulted as shown below when commented out or
+# not specified.  It should not be necessary to change it from the default in
+# most cases.
+rhsm_repos=rhel-7-server-openstack-13-rpms,rhel-7-server-openstack-13-devtools-rpms,rhel-7-server-rhceph-3-tools-rpms
+
+# Option below is to use a custom instack.json and skip discover_nodes
+use_custom_instack_json=false
+custom_instack_json=n/a
+
+# Indicates if the deploy-overcloud.py script should be run in debug mode
+deploy_overcloud_debug=false
+
+use_internal_repo=false
+# Semi-colon ( ; ) separated list of internal repos to use, if needed.
+internal_repos_locations=CHANGEME_INTERNAL_REPO_URL
+
+cloud_repo_dir=/root/JetPack
+rhel_iso=/root/rhel76.iso
+
+
+
+# Overcloud deployment timeout value - default is 120mns, but can be tweaked here if required.
+overcloud_deploy_timeout=120
+
+
+# Default driver is DRAC.
+use_ipmi_driver=false
+
+# Default introspection method is out-of-band.
+# Note that out-of-band introspection is only supported by the DRAC driver.  If
+# use_ipmi_driver is set to "true" above then in-band introspection will be
+# used regardless of the value below.
+use_in_band_introspection=false
+
+# RDO cloud images
+# Available to download @ https://access.redhat.com/downloads/content/191/ver=8/rhel---7/8/x86_64/product-software
+discovery_ram_disk_image=/pathto/discovery-ramdisk-7.1.0-39.tar
+overcloud_image=/pathto/overcloud-full-7.1.0-39.tar
+# if option below is enabled, images will be pulled fom the cdn (and the above x2 settings ignored)
+pull_images_from_cdn=true
+
+# Occasionally there can be problems with Subscription Manager
+# and a node may be properly registered yet "subscription manager status"
+# will return "Unknown"  which will cause checks to fail.
+# Setting this to false will skip SM checks to get around this issue.
+verify_rhsm_status=true
+
+
+```
+
+
+
+### Sample xSP.ini File
+
+```yaml
+# Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+###########################################################################
+#                                                                         #
+# Copy and rename this file for your own stamp.                           #
+# Review ALL settings below, pay particular attention to paths/ip's etc.. #
+#                                                                         #
+###########################################################################
+
+
+
+
+[Network Settings]
+
+# Nova public network details
+public_api_network=192.168.190.0/24
+public_api_vlanid=190
+public_api_gateway=192.168.190.1
+public_api_netmask=255.255.255.0
+public_api_allocation_pool_start=192.168.190.121
+public_api_allocation_pool_end=192.168.190.250
+name_server=8.8.8.8
+
+# Private API network details
+private_api_network=192.168.140.0/24
+private_api_vlanid=140
+private_api_netmask=255.255.255.0
+private_api_allocation_pool_start=192.168.140.121
+private_api_allocation_pool_end=192.168.140.250
+
+# Storage network details
+storage_network=192.168.170.0/24
+storage_vlanid=170
+storage_netmask=255.255.255.0
+storage_allocation_pool_start=192.168.170.125
+storage_allocation_pool_end=192.168.170.250
+
+# Provisioning network details
+provisioning_network=192.168.120.0/24
+provisioning_vlanid=120
+provisioning_netmask=255.255.255.0
+provisioning_gateway=192.168.120.1
+provisioning_net_dhcp_start=192.168.120.121
+provisioning_net_dhcp_end=192.168.120.250
+discovery_ip_range=192.168.120.21,192.168.120.120
+
+# Storage cluster network details
+storage_cluster_network=192.168.180.0/24
+storage_cluster_vlanid=180
+storage_cluster_allocation_pool_start=192.168.180.121
+storage_cluster_allocation_pool_end=192.168.180.250
+
+# Management network details
+# Make sure the SAH node idrac ip defined in the .properties
+# is NOT within the allocation pool below.
+management_network=192.168.110.0/24
+management_vlanid=110
+management_netmask=255.255.255.0
+management_gateway=192.168.110.1
+management_allocation_pool_start=192.168.110.100
+management_allocation_pool_end=192.168.110.199
+
+# Tenant network details
+# Not used unless you wish to configure Generic Routing Encapsulation (GRE) networks.
+tenant_tunnel_network=192.168.130.0/24
+tenant_tunnel_network_allocation_pool_start=192.168.130.121
+tenant_tunnel_network_allocation_pool_end=192.168.130.250
+tenant_tunnel_network_vlanid=130
+
+# Nova Private network details
+tenant_vlan_range=201:250
+
+
+
+
+[MTU Settings]
+
+# The mtu_selection setting defines whether to use the "global" or "per_network" option. 
+# If the mtu_selection is defined as "global", the mtu value for all networks will be set to the value provided in mtu_size_global_default. The supported value must be within the range of 1500-9000.
+# If "per_network" mtu_selection is defined, the user should provide an mtu value for each network in the range of 1500-9000.
+# For "public_api_network_mtu" and "floating_ip_network_mtu" networks, mtu sizes greater than 1500 is only supported if jumbo frames are enabled on upstream routers.
+mtu_selection=global 
+mtu_size_global_default=1500
+public_api_network_mtu=1500
+floating_ip_network_mtu=1500
+private_api_network_mtu=1500
+tenant_network_mtu=1500
+storage_cluster_network_mtu=1500
+storage_network_mtu=1500
+tenant_tunnel_network_mtu=1500
+
+[Vips Settings]
+
+# Use static VIPs ip addresses for the overcloud
+use_static_vips=true
+
+# The following VIP settings apply if the above use_static_vips is enabled.
+
+# VIP for the redis service on the Private API api network
+# Note that this IP must lie outside the private_api_allocation_pool_start/end
+# range
+redis_vip=192.168.140.251
+
+# VIP for the provisioning network
+# Note that this IP must lie outside the provisioning_net_dhcp_start/end range
+provisioning_vip=192.168.120.251
+
+# VIP for the Private API network
+# Note that this IP must lie outside the private_api_allocation_pool_start/end
+# range
+private_api_vip=192.168.140.252
+
+# VIP for the Public API network
+# Note that this IP must lie outside the public_api_allocation_pool_start/end
+# range
+public_api_vip=192.168.190.251
+
+# VIP for the Storage network
+# Note that this IP must lie outside the storage_allocation_pool_start/end
+# range
+storage_vip=192.168.170.251
+
+# VIP for the Storage cluster network
+# The Storage Clustering network is not connected to the controller nodes,
+# so the VIP for this network must be mapped to the provisioning network
+# Note that this IP must lie outside the provisioning_net_dhcp_start/end range
+storage_cluster_vip=192.168.120.252
+
+
+[Subscription Manager Settings]
+
+# Subscription Manager account info for registering Red Hat subscriptions
+subscription_manager_user=xxxxxxx
+subscription_manager_password=xxxxxxxxxxxxxx
+
+# The following pool IDs provide different collections of repositories.
+# Each is labeled with possible subscription names.
+
+
+
+# Red Hat Enterprise Linux (Physical Node)
+subscription_manager_pool_sah=xxxxxxxxxxxxxxxxxxxxxxxxxxxx44f5
+
+# Red Hat Enterprise Linux OpenStack Platform (Virtual Node)
+subscription_manager_pool_vm_rhel=xxxxxxxxxxxxxxxxxxxxxxxxxxxx454a
+
+# Red Hat Ceph Storage (Physical Node)
+subscription_manager_vm_ceph=xxxxxxxxxxxxxxxxxxxxxxxxxxxx7826
+
+subscription_check_retries=20
+
+
+[Nodes Nics and Bonding Settings]
+
+sah_bond_opts=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+
+# NIC environment file
+#       1. To enable standard XSP profile or standard CSP profile (NUMA and HugePages):
+#          For 5 ports, choose 5_port/nic_environment.yaml. 
+#          For 4 ports, choose 4_port/nic_environment.yaml.
+#       2. To enable OVS-DPDK with 7 nic ports, choose ovs-dpdk_7_port/nic_environment.yaml.
+#          For 9 ports, choose ovs-dpdk_9_port/nic_enviornment.yaml.
+#       3. To enable SR-IOV with 7 nic ports, choose sriov_7_port/nic_environment.yaml.
+#          For 9 ports, choose sriov_9_port/nic_enviornment.yaml.
+#       4. To enable OVS-DPDK (2-ports) and SR-IOV (2-ports), choose ovs-dpdk_sriov_9_port/nic_environment.yaml.
+#       5. To enable DVR, for Storage and Floating networks that share a single bond, choose 5_port/nic_environment.yaml.
+#          If a separate bond is required for Floating network on compute nodes, choose dvr_7_port/nic_environment.yaml.
+nic_env_file=5_port/nic_environment.yaml
+
+# Interfaces and bonding options per node type.
+# When using any 4 port NIC configuration, comment out or delete the
+# ControllerProvisioningInterface line below.
+ControllerProvisioningInterface=em3
+ControllerBond0Interface1=em1
+ControllerBond0Interface2=p1p1
+ControllerBond1Interface1=em2
+ControllerBond1Interface2=p1p2
+ControllerBondInterfaceOptions=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+
+# When using any 4 port NIC configuration, comment out or delete the
+# ComputeProvisioningInterface line below.
+ComputeProvisioningInterface=em3
+ComputeBond0Interface1=em1
+ComputeBond0Interface2=p1p1
+ComputeBond1Interface1=em2
+ComputeBond1Interface2=p1p2
+ComputeBondInterfaceOptions=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+
+# When using any 4 port NIC configuration, comment out or delete the
+# StorageProvisioningInterface line below.
+StorageProvisioningInterface=em3
+StorageBond0Interface1=em1
+StorageBond0Interface2=p2p1
+StorageBond1Interface1=em2
+StorageBond1Interface2=p2p2
+StorageBondInterfaceOptions=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+
+# To enable standalone OVS-DPDK, two or four interfaces should be used.
+# For two interfaces, uncomment 'ComputeOvsDpdkInterface1', 'ComputeOvsDpdkInterface2' and 'BondInterfaceOvsOption'.
+# For four interfaces, uncomment all four interfaces and 'BondInterfaceOvsOption'.
+# The following lines should be commented out  if ovs_dpdk_enable is set to false
+
+
+#ComputeOvsDpdkInterface1=p2p1
+#ComputeOvsDpdkInterface2=p3p1
+#ComputeOvsDpdkInterface3=p2p2
+#ComputeOvsDpdkInterface4=p3p2
+#BondInterfaceOvsOptions=bond_mode=balance-tcp lacp=active
+
+# To enable standalone SR-IOV, two or four interfaces should be used.
+# For two interfaces, uncomment 'ComputeSriovInterface1' and 'ComputeSriovInterface2'.
+# For four interfaces, uncomment all four interfaces.
+# Following lines should be commented out if sriov_enable is set to false
+#ComputeSriovInterface1=p1p1
+#ComputeSriovInterface2=p4p1
+#ComputeSriovInterface3=p1p2
+#ComputeSriovInterface4=p4p2
+
+# To enable SR-IOV and OVS-DPDK, four interfaces should be used.
+# Following lines should be uncommented if both sriov_enable and ovs-dpdk_enable are set to true.
+#ComputeSriovInterface1=p1p1
+#ComputeSriovInterface2=p4p1
+#ComputeOvsDpdkInterface1=p2p1
+#ComputeOvsDpdkInterface2=p3p1
+#BondInterfaceOvsOptions=bond_mode=balance-tcp lacp=active
+
+# To enable DVR with a separate bond for Floating network on compute nodes, two interfaces should be used.
+# To use the two interfaces, uncomment 'ComputeBond2Interface1' and 'ComputeBond2Interface2'.
+# Following lines should be commented out if dvr_enable is set to false.
+#ComputeBond2Interface1: p3p1
+#ComputeBond2Interface2: p1p2
+
+[Dell NFV Settings]
+
+#Enter value of enable_hpg as true/false for HugePages
+hpg_enable=false
+#User should give this parameter in same format.
+#Supported values for hpg_size(Size of hugepages) is 2MB and 1 GB.
+#The number of hugepages will be calculated dynamically.
+hpg_size=1GB
+
+#Enter value of enable_numa as true/false for NUMA
+numa_enable=false
+
+# OVS-DPDK Settings
+# Set the following option to true/false
+ovs_dpdk_enable=false
+
+#Enter number of cores you want to reserve for Host OS
+#Supported values are 2,4,6,8
+numa_hostos_cpu_count=4
+
+# SRIOV Settings
+# Set the following option to true/false for SRIOV
+sriov_enable=false
+
+#Enter the number of VFs you want to create per port
+#Supported values are between 1-64
+sriov_vf_count=64
+
+# Set to true to enable DVR
+dvr_enable=false
+
+
+[Performance and Optimization]
+
+# mariadb_max_connections takes value from 1000 to 100000, it is mandatory.
+mariadb_max_connections = 15360
+
+# MariaDB innodb_buffer_pool_size should be given value in GB, Example : 64G.
+# Default is 'dynamic' which assigns 75% ram size of controller node.
+# Note that innodb_buffer_pool_size should be less than available ram size.
+
+
+innodb_buffer_pool_size = dynamic
+
+# innodb_buffer_pool_instances takes value from 8 to 48
+innodb_buffer_pool_instances = 16
+
+[IPMI credentials Settings]
+
+# DRAC credentials with IPMI privilege for the SAH node
+sah_ipmi_user=root
+sah_ipmi_password=xxxxxxx
+
+# DRAC credentials with IPMI privilege for the overcloud nodes
+ipmi_user=root
+ipmi_password=xxxxxxx
+# A password to change to on overcloud nodes if desired
+new_ipmi_password=
+
+
+[Deployment Settings]
+
+# valid values are csp, xsp and custom.
+profile=xsp
+
+# This pathname must be the full path to the properties file which
+# describes the cluster. You should copy *this* sample settings file
+# (sample.ini) and the sample properties file (sample.properties) to
+# another directory, and customize them for your cluster. Then use the
+# path to your customized properties file here.
+cluster_nodes_configuration_file=/root/acme.properties
+
+# User for the undercloud/overcloud installation
+director_install_user=osp_admin
+director_install_user_password=xxxxxxx
+
+# Name of the Overcloud.
+# The nodes hostnames will be prepended with the given name and a dash
+overcloud_name=overcloud
+
+# Domain name for the cluster (i.e., mycluster.lab)
+domain=domain.net
+
+# Optional : root passord for the overcloud nodes, no password is set if left empty
+overcloud_nodes_pwd=
+
+# , separated list of ntp servers
+ntp_servers=0.centos.pool.ntp.org,1.centos.pool.ntp.org,2.centos.pool.ntp.org,3.centos.pool.ntp.org
+time_zone=America/Chicago
+
+# Use static ip adresses for the overcloud nodes if set to true (ips need to be defined in the .properties)
+# Use dhcp if set to false (ips not required in the .properties)
+overcloud_static_ips=true
+
+# Set to true to enable cinder backend of Ceph for storage.
+enable_rbd_backend=true
+
+# Set to true to enable Nova usage of Ceph for ephemeral storage.
+# If set to false, Nova uses the storage local to the compute.
+enable_rbd_nova_backend=true
+
+# Set to false to disable fencing
+enable_fencing=true
+
+
+[Storage back-end Settings]
+
+# Compellent parameters. See the Software Deployment Guide for description of the parameters.
+enable_dellsc_backend=false
+dellsc_backend_name=CHANGEME
+dellsc_api_port=3033
+
+
+dellsc_iscsi_ip_address=CHANGEME
+dellsc_iscsi_port=3260
+dellsc_san_ip=CHANGEME
+dellsc_san_login=CHANGEME
+dellsc_san_password=CHANGEME
+dellsc_ssn=CHANGEME
+dellsc_server_folder=cmpl_iscsi_servers
+dellsc_volume_folder=cmpl_iscsi_volumes
+
+
+[Sanity Test Settings]
+
+# If you want the sanity script to run on deployment completion (Appendix C, etc.), you may do so.
+run_sanity=false
+
+floating_ip_network=192.168.191.0/24
+floating_ip_network_start_ip=192.168.191.20
+floating_ip_network_end_ip=192.168.191.59
+floating_ip_network_gateway=192.168.191.1
+floating_ip_network_vlan=191
+sanity_tenant_network=192.168.201.0/24
+sanity_user_password=s@n1ty
+sanity_user_email=someone@somewhere.com
+sanity_key_name=sanity
+
+# The number of instances to spin up in nova.
+# Note that this will be limited by the instance quota in OpenStack, which is
+# 10 by default.
+# Note: One additional instance will be created for vlan-aware testing. Maximum
+# number of instances can be 9 unless the quota is increased.
+sanity_number_instances=1
+sanity_image_url=http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
+
+# vlan-aware specific parameters
+# address of vlan-network where subport is attached
+sanity_vlantest_network=192.168.216.0/24
+
+
+
+[Tempest Settings]
+
+# If you want to run Tempest post-deployment, you may do so. The sanity script must also run to create networks for Tempest.
+run_tempest=false
+tempest_smoke_only=true
+
+
+[Advanced Settings]
+
+#The following settings should typically only be used by developers
+
+# Only developers should set to false.
+enable_version_locking=true
+
+# The list of RHSM repositories to enable to access the product.  Repos should
+# be comma separated.
+# Note that this parameter is defaulted as shown below when commented out or
+# not specified.  It should not be necessary to change it from the default in
+# most cases.
+rhsm_repos=rhel-7-server-openstack-13-rpms,rhel-7-server-openstack-13-devtools-rpms,rhel-7-server-rhceph-3-tools-rpms
+
+# Option below is to use a custom instack.json and skip discover_nodes
+use_custom_instack_json=false
+custom_instack_json=n/a
+
+# Indicates if the deploy-overcloud.py script should be run in debug mode
+deploy_overcloud_debug=false
+
+
+
+use_internal_repo=false
+# Semi-colon ( ; ) separated list of internal repos to use, if needed.
+internal_repos_locations=CHANGEME_INTERNAL_REPO_URL
+
+cloud_repo_dir=/root/JetPack
+rhel_iso=/root/rhel76.iso
+
+# Overcloud deployment timeout value - default is 120mns, but can be tweaked here if required.
+overcloud_deploy_timeout=120
+
+# Default driver is DRAC.
+use_ipmi_driver=false
+
+# Default introspection method is out-of-band.
+# Note that out-of-band introspection is only supported by the DRAC driver.  If
+# use_ipmi_driver is set to "true" above then in-band introspection will be
+# used regardless of the value below.
+use_in_band_introspection=false
+
+# RDO cloud images
+# Available to download @ https://access.redhat.com/downloads/content/191/ver=8/rhel---7/8/x86_64/product-software
+discovery_ram_disk_image=/pathto/discovery-ramdisk-7.1.0-39.tar
+overcloud_image=/pathto/overcloud-full-7.1.0-39.tar
+# if option below is enabled, images will be pulled fom the cdn (and the above x2 settings ignored)
+pull_images_from_cdn=true
+
+# Occasionally there can be problems with Subscription Manager
+# and a node may be properly registered yet "subscription manager status"
+# will return "Unknown"  which will cause checks to fail.
+# Setting this to false will skip SM checks to get around this issue.
+verify_rhsm_status=true
+```
+
+
+### Sample xSP/CSP Profile File Differences
+
+The sample xSP and CSP profile files are very similar. The primary differences between them are that the CSP profile has various NFV features enabled, while the xSP profile has these features disabled.
+
+The following features are enabled in the CSP profile and disabled in the xSP profile:
+* Huge pages (hpg_enable)
+* NUMA (numa_enable)
+
+See the JetPack open source repository for the entire content of each file, or if doing an automated install, see the ~/JetPack/src/deploy/osp_deployer/settings directory on the SAH node.
+ 
+
+Acme.properties Example for 14G stamp (Power Edge R640 servers)
+
+Each server for Ceph Nodes had total of 8 disks [slot 0 to 7]
+
+Ceph-Storage nodes: disks in last 2 slots are RAID-1 and used for OS installation (root disk) which are HDD disks Remaining 6 all are SSD disks are for 5 OSDs  + 1 journal. 
+The name should follow as below in acme.properties for this scenario:
+ 
+![](media/f1d1371b0eeec6aba4332cd940d9119f.png)
+
+
+Also in the assign_role.py, small tweak was done by changing ssd as media_type_filter instead of hdd. This is required since we are using all SSDs disk for Ceph OSDs.
+
+<a href="https://github.com/dsp-jetpack/JetPack/blob/master/src/pilot/assign_role.py#L517"
+target="_blank">https://github.com/dsp-jetpack/JetPack/blob/master/src/pilot/assign_role.py#L517</a>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div style="page-break-after: always;"></div>
+# Appendix K : Solution Validation Overview 
+
+Validation of the complete solution is based on the hardware in the Ready Architecture, as defined in the Dell EMC Ready Architecture for Red Hat OpenStack Platform - Architecture Guide - Version 13, the JetPack software, and utilizes several tools to ensure the functionality of the solution. In addition, the Solution, once validated, is listed by the OpenStack Foundation (https://www.openstack.org/marketplace/distros/distribution/emc/dell-emc-ready-bundle-for-red-hat-openstack) as a Certified  
+
+
+> Topics:
+> * Solution Validation Hardware
+> * Solution Validation Tools and Certifications
+> * Tempest Results
+> * Test Results from Deployment Validation Sanity
+
+### Solution Validation Hardware
+
+**Hardware components used in the solution include:**
+
+	Node 1: Dell EMC PowerEdge R640 Solution Admin Host with the Red Hat OpenStack Platform Director and the Red Hat Ceph Storage Dashboard Installed
+	Nodes 2 - 4: Dell EMC PowerEdge R640 OpenStack Controllers
+	Nodes 5 - 7 Dell EMC PowerEdge R640 Nova Compute Nodes
+	Nodes 8 - 10: Dell EMC PowerEdge R740xd Storage Nodes
+
+	Dell Networking S3048-ON Switch
+	Dell Networking S4048-ON Switch
+
+
+### Solution Validation Tools and Certifications
+
+#### The tools used to validate the deployed solution include:
+
+	OpenStack Tempest Test Suite
+	Deployment Scripted RHOSP Sanity Test
+	Solution RefStack submission https://refstack.openstack.org/#/results/d1df0e3d-fcec-4968-86b2-ff1244326bad for OpenStack Powered Compute
+
+#### The certification listing of the Solution is listed on the OpenStack Marketplace at:
+
+	https://www.openstack.org/marketplace/distros/distribution/emc/dell-emc-ready-bundle-for-red-hat-openstack
+
+### Tempest Results
+
+Results of a full Tempest run:
+
+```bash
+Ran: 2089 tests in 3559.522 sec.
+	Passed: 1776
+	Skipped: 296
+	Expected Fail: 0
+	Unexpected Success: 0
+	Failed: 17
+```
+
+
+### Test Results from Deployment Validation Sanity
+
+#### Results of a complete run of the Deployment Scripted RHOSP Sanity Test:
+
+```bash
+2017-10-13 14:20:13: INFO: ###Appendix-C Openstack Operations Functional Test ###
+2017-10-13 14:20:13: INFO: ### Random init stuff
+2017-10-13 14:20:13: INFO: ### Collecting SSH keys... ###
+
+2017-10-13 14:20:13: INFO: Executing: /home/osp_admin/pilot/ update_ssh_config.py
+2017-10-13 14:20:17: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2017-10-13 14:20:17: INFO: ### sourcing ~/MHTR18BLKrc
+2017-10-13 14:20:17: INFO: ### PCS Status
+ 
+
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+
+Cluster name: tripleo_cluster
+Stack: corosync
+
+Current DC: mhtr18blk-controller-1 (version 1.1.16-12.el7_4.2-94ff4df) - partition with quorum
+Last updated: Fri Oct 13 18:20:17 2017
+
+Last change: Fri Oct 13 16:06:52 2017 by root via cibadmin on mhtr18blk-controller-2
+
+3 nodes configured
+22 resources configured
+
+Online: [ mhtr18blk-controller-0 mhtr18blk-controller-1 mhtr18blk-controller-2 ]
+
+Full list of resources:
+
+ip-192.168.140.211 (ocf::heartbeat:IPaddr2): Started mhtr18blk-controller-0
+Clone Set: haproxy-clone [haproxy]
+
+Started: [ mhtr18blk-controller-0 mhtr18blk-controller-1 mhtr18blk-controller-2 ]
+Master/Slave Set: galera-master [galera]
+
+Masters: [ mhtr18blk-controller-0 mhtr18blk-controller-1 mhtr18blk-controller-2 ]
+ip-192.168.120.211 (ocf::heartbeat:IPaddr2): Started mhtr18blk-controller-1
+ip-192.168.120.210 (ocf::heartbeat:IPaddr2): Started mhtr18blk-controller-2
+ip-192.168.140.210 (ocf::heartbeat:IPaddr2): Started mhtr18blk-controller-0
+Clone Set: rabbitmq-clone [rabbitmq]
+
+Started: [ mhtr18blk-controller-0 mhtr18blk-controller-1 mhtr18blk-controller-2 ]
+ip-192.168.170.210 (ocf::heartbeat:IPaddr2): Started mhtr18blk-controller-1
+Master/Slave Set: redis-master [redis]
+Masters: [ mhtr18blk-controller-1 ]
+Slaves: [ mhtr18blk-controller-0 mhtr18blk-controller-2 ]
+ip-100.84.122.62 (ocf::heartbeat:IPaddr2): Started mhtr18blk-controller-2
+openstack-cinder-volume (systemd:openstack-cinder-volume): Started
+mhtr18blk-controller-0
+mhtr18blk-controller-0-ipmi (stonith:fence_ipmilan): Started
+mhtr18blk-controller-1-ipmi (stonith:fence_ipmilan): Started
+
+mhtr18blk-controller-2-ipmi (stonith:fence_ipmilan): Started Daemon Status:
+corosync: active/enabled
+pacemaker: active/enabled
+pcsd: active/enabled
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+2017-10-13 14:20:18: INFO: ###Ensure db and rabbit services are in the active state
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+rabbitmq	78093	0.0	0.0	44728	732	?	S	15:34	0:00	/usr/
+lib64/erlang/erts-7.3.1.3/bin/epmd	-daemon				
+root	97942	0.0	0.0	11636	1352	?	Ss	15:38	0:00 sh -
+c /usr/sbin/rabbitmq-server	> /var/log/rabbitmq/startup_log 2> /var/log/
+rabbitmq/startup_err								
+root	97950	0.0	0.0	11636	1436	?	S	15:38	0:00	/bin/sh /
+usr/sbin/rabbitmq-server							
+root	97972	0.0	0.0	86120	2312	?	S	15:38	0:00	su
+rabbitmq -s /bin/sh -c /usr/lib/rabbitmq/bin/rabbitmq-server		
+ 
+
+
+
+rabbitmq	97974	0.0	0.0	9516  1452 ?	Ss	15:38	0:00 /bin/sh -
+e /usr/lib/rabbitmq/bin/rabbitmq-server			
+rabbitmq	98240	12.1	0.2	22607776 587808 ?	Sl	15:38	19:40 /usr/
+lib64/erlang/erts-7.3.1.3/bin/beam.smp -W w -A 768 -K true -P 1048576
+-K true -B i --	-root	/usr/lib64/erlang -progname erl -- -home /
+var/lib/rabbitmq	-- -pa /usr/lib/rabbitmq/lib/rabbitmq_server-3.6.3/
+ebin -noshell -noinput	-s rabbit boot -sname rabbit@mhtr18blk-
+
+controller-2 -boot start_sasl -config /etc/rabbitmq/rabbitmq -kernel
+inet_default_connect_options [{nodelay,true},{raw,6,18,<<5000:64/native>>}]
+-kernel inet_default_listen_options [{raw,6,18,<<5000:64/native>>}] -
+kernel inet_default_connect_options [{nodelay,true}] -rabbit tcp_listeners
+[{"192.168.140.11",5672}] -sasl errlog_type error -sasl sasl_error_logger
+false -rabbit error_logger {file,"/var/log/rabbitmq/rabbit@mhtr18blk-
+controller-2.log"} -rabbit sasl_error_logger {file,"/var/log/rabbitmq/
+rabbit@mhtr18blk-controller-2-sasl.log"} -rabbit enabled_plugins_file
+"/etc/rabbitmq/enabled_plugins" -rabbit plugins_dir "/usr/lib/rabbitmq/
+lib/rabbitmq_server-3.6.3/plugins" -rabbit plugins_expand_dir "/var/lib/
+rabbitmq/mnesia/rabbit@mhtr18blk-controller-2-plugins-expand" -os_mon
+start_cpu_sup false -os_mon start_disksup false -os_mon start_memsup false
+-mnesia dir "/var/lib/rabbitmq/mnesia/rabbit@mhtr18blk-controller-2"
+rabbitmq	99235	0.0	0.0	11544	448	?	Ss	15:38	0:00
+inet_gethost 4								
+rabbitmq	99237	0.0	0.0	13668	656	?	S	15:38	0:00
+inet_gethost 4								
+root	918767	0.0	0.0	115516	1860	?	S	18:20	0:00 /bin/sh /
+usr/lib/ocf/resource.d/heartbeat/rabbitmq-cluster monitor	
+root	918798	0.0	0.0	11636	1436	?	S	18:20	0:00 /bin/sh /
+usr/sbin/rabbitmqctl cluster_status					
+root	918809	0.0	0.0	86120	2308	?	S	18:20	0:00 su
+rabbitmq	-s /bin/sh -c /usr/lib/rabbitmq/bin/rabbitmqctl	'cluster_status'
+rabbitmq	918810	31.0	0.0	4085264	70388 ?	Ssl	18:20	0:00 /usr/
+lib64/erlang/erts-7.3.1.3/bin/beam.smp -B -- -root /usr/lib64/erlang -
+progname erl -- -home /var/lib/rabbitmq	-- -pa /usr/lib/rabbitmq/lib/
+rabbitmq_server-3.6.3/ebin	-noshell -noinput -hidden -boot start_clean -sasl
+
+errlog_type error -mnesia dir "/var/lib/rabbitmq/mnesia/rabbit@mhtr18blk-controller-2" -s rabbit_control_main -nodename rabbit@mhtr18blk-controller-2
+-extra cluster_status									
+rabbitmq  918967	0.0	0.0	4143452	60016 ?	Ssl	18:20	0:00 /usr/
+lib64/erlang/erts-7.3.1.3/bin/beam.smp --	-root /usr/lib64/erlang -progname
+erl -- -home /var/lib/rabbitmq -- -sname	epmd-starter-815754527 -proto_dist
+"inet_tcp" -noshell -eval	halt().							
+heat-ad+  919052	0.0	0.0	113128	1512	?		Ss	18:20	0:00	bash -c
+sudo ps aux | grep rabbit								
+heat-ad+  919060	0.0	0.0	112664	940	?		S	18:20	0:00	grep
+rabbit										
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known
+hosts.			
+root	93950	1  0 15:37 ?	00:00:00 /bin/sh /usr/bin/
+
+mysqld_safe --defaults-file=/etc/my.cnf --pid-file=/var/run/mysql/mysqld.pid --socket=/var/lib/mysql/mysql.sock --datadir=/var/lib/mysql --log-error=/ var/log/mysqld.log --user=mysql --open-files-limit=16384 --wsrep-cluster-address=gcomm://
+mysql	94902	93950	0 15:37 ?	00:00:42 /usr/libexec/mysqld
+--defaults-file=/etc/my.cnf --basedir=/usr --datadir=/var/lib/mysql
+--plugin-dir=/usr/lib64/mysql/plugin --user=mysql --wsrep-provider=/
+
+usr/lib64/galera/libgalera_smm.so --wsrep-cluster-address=gcomm:// -- log-error=/var/log/mysqld.log --open-files-limit=16384 --pid-file=/var/ run/mysql/mysqld.pid --socket=/var/lib/mysql/mysql.sock --port=3306 -- wsrep_start_position=00000000-0000-0000-0000-000000000000:-1
+heat-ad+	919087	919071	0	18:20	?	00:00:00	bash	-c ps -ef | grep
+mysqld								
+heat-ad+	919095	919087	0	18:20	?	00:00:00	grep	mysqld
+ 
+
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+
+heat-ad+	919212	919168	0	18:20	?	00:00:00	bash	-c ps -ef | grep
+mariadb								
+heat-ad+	919270	919212	0	18:20	?	00:00:00	grep	mariadb
+2017-10-13 14:20:18: INFO: ### CREATION MODE
+2017-10-13 14:20:18: INFO: ### Getting unique names
+2017-10-13 14:20:18: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2017-10-13 14:20:18: INFO: ### sourcing ~/MHTR18BLKrc
+2017-10-13 14:20:19: INFO: Generating sanityrc file.
+2017-10-13 14:20:19: INFO: ### Setting up new project sanity1
+2017-10-13 14:20:19: INFO: setting admin scope with: ~/MHTR18BLKrc.
+
+2017-10-13 14:20:19: INFO: ### sourcing ~/MHTR18BLKrc No tenant with a name or ID of 'sanity1' exists.
+2017-10-13 14:20:20: INFO: Executing: openstack project create sanity1
++-------------	+	----------------------------------	+
+| Field	|	Value	|
++-------------	+	----------------------------------	+
+| description |	None	|
+| enabled	|	True	|
+| id	|	26c77e1e763b4fecbc1833b9284e4986 |
+| name	|	sanity1	|
++-------------	+	----------------------------------	+
+
+2017-10-13 14:20:21: INFO: Executing: openstack user create --project sanity1 --password <<PASSWORD>> --email someone@somewhere.com sanity1
++------------	+	----------------------------------	+
+| Field	|	Value	|
++------------	+	----------------------------------	+
+| email	|	someone@somewhere.com	|
+| enabled	|	True	|
+| id	|	4442207de58448938694bdbd7b764cf4 |
+| name	|	sanity1	|
+| project_id |	26c77e1e763b4fecbc1833b9284e4986 |
+| username	|	sanity1	|
++------------	+	----------------------------------	+
+2017-10-13 14:20:21: INFO: ### Creating the Networks ####
+2017-10-13 14:20:21: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2017-10-13 14:20:21: INFO: ### sourcing ~/MHTR18BLKrc
+2017-10-13 14:20:22: INFO: Executing: openstack network create --share
+tenant_net1		
++---------------------------	+--------------------------------------	+
+| Field	| Value	|
++---------------------------	+--------------------------------------	+
+| admin_state_up	| UP	|
+| availability_zone_hints	|	|
+| availability_zones	|	|
+| created_at	| 2017-10-13T18:20:23Z	|
+| description	|	|
+| headers	|	|
+| id	| e8e22aaf-0ee9-4c82-a295-f02788e97e8f |
+| ipv4_address_scope	| None	|
+| ipv6_address_scope	| None	|
+| mtu	| 1496	|
+| name	| tenant_net1	|
+| port_security_enabled	| True	|
+| project_id	| 4790c5b2d4c64f6e9d6c367bc0b8b069	|
+| project_id	| 4790c5b2d4c64f6e9d6c367bc0b8b069	|
+| provider:network_type	| vlan	|
+| provider:physical_network	| physint	|
+| provider:segmentation_id	| 237	|
+| qos_policy_id	| None	|
+| revision_number	| 3	|
+| router:external	| Internal	|
+| shared				| True	|
+| status				| ACTIVE	|
+| subnets				|	|
+| tags				| []	|
+| updated_at				| 2017-10-13T18:20:23Z	|
++---------------------------			+--------------------------------------	+
+2017-10-13 14:20:24: INFO: Executing: neutron subnet-create tenant_net1
+192.168.201.0/24 --name tenant_2011	
+Created a new subnet:				
++-------------------	+	------------------------------------------------------		+
+| Field	|	Value		|
++-------------------	+	------------------------------------------------------		+
+| allocation_pools	|	{"start": "192.168.201.2", "end": "192.168.201.254"} |
+| cidr	|	192.168.201.0/24	|
+| created_at	|	2017-10-13T18:20:25Z	|
+| description	|				|
+| dns_nameservers	|				|
+| enable_dhcp	|	True			|
+| gateway_ip	|	192.168.201.1	|
+| host_routes	|				|
+| id	|	c8057c7b-777f-4f5d-bfe8-7d227da6c960	|
+| ip_version	|	4			|
+| ipv6_address_mode	|				|
+| ipv6_ra_mode	|				|
+| name	|	tenant_2011	|
+| network_id	|	e8e22aaf-0ee9-4c82-a295-f02788e97e8f	|
+| project_id	|	4790c5b2d4c64f6e9d6c367bc0b8b069	|
+| revision_number	|	2			|
+| service_types	|				|
+| subnetpool_id	|				|
+| tenant_id	|	4790c5b2d4c64f6e9d6c367bc0b8b069	|
+| updated_at	|	2017-10-13T18:20:25Z	|
++-------------------	+	------------------------------------------------------		+
+2017-10-13 14:20:26: INFO: Executing: neutron router-create	
+tenant_201_router1					
+Created a new router:				
++-------------------------		+	--------------------------------------	+
+| Field			|	Value	|
++-------------------------		+	--------------------------------------	+
+| admin_state_up			|	True	|
+| availability_zone_hints |		|
+| availability_zones		|		|
+| created_at			|	2017-10-13T18:20:26Z	|
+| description			|		|
+| distributed			|	False	|
+| external_gateway_info	|		|
+| flavor_id			|		|
+| ha			|	True	|
+| id			|	5adcd390-b199-43cf-a32d-a708bcb1fb50 |
+| name			|	tenant_201_router1	|
+| project_id			|	4790c5b2d4c64f6e9d6c367bc0b8b069	|
+| revision_number			|	3	|
+| routes			|		|
+| status			|	ACTIVE	|
+| tenant_id			|	4790c5b2d4c64f6e9d6c367bc0b8b069	|
+| updated_at			|	2017-10-13T18:20:26Z	|
++-------------------------		+	--------------------------------------	+
+2017-10-13 14:20:29: INFO: Executing: neutron router-interface-add
+tenant_201_router1	c8057c7b-777f-4f5d-bfe8-7d227da6c960	
+Added interface 7e458d5e-7c68-4607-8f32-64470d6d0359 to router	
+tenant_201_router1.				
+
+2017-10-13 14:20:30: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.138 sudo grep network_vlan_ranges /etc/neutron/plugin.ini
+ 
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+
+#network_vlan_ranges =
+
+network_vlan_ranges =physint:201:250,physext 2017-10-13 14:20:32: INFO: Executing: neutron net-create public -- router:external --provider:network_type vlan --provider:physical_network
+physext --provider:segmentation_id 1223	
+Created a new network:			
++---------------------------	+	--------------------------------------	+
+| Field	|	Value	|
++---------------------------	+	--------------------------------------	+
+| admin_state_up	|	True	|
+| availability_zone_hints	|		|
+| availability_zones	|		|
+| created_at	|	2017-10-13T18:20:32Z	|
+| description	|		|
+| id	|	46cc68f3-0ee2-4ae1-8ee0-60ef6d89c0e6 |
+| ipv4_address_scope	|		|
+| ipv6_address_scope	|		|
+| is_default	|	False	|
+| mtu	|	1496	|
+| name	|	public	|
+| port_security_enabled	|	True	|
+| project_id	|	4790c5b2d4c64f6e9d6c367bc0b8b069	|
+| provider:network_type	|	vlan	|
+| provider:physical_network |	physext	|
+| provider:segmentation_id	|	1223	|
+| qos_policy_id	|		|
+| revision_number	|	4	|
+| router:external	|	True	|
+| shared	|	False	|
+| status	|	ACTIVE	|
+| subnets	|		|
+| tags	|		|
+| tenant_id	|	4790c5b2d4c64f6e9d6c367bc0b8b069	|
+| updated_at	|	2017-10-13T18:20:32Z	|
++---------------------------	+	--------------------------------------	+
+2017-10-13 14:20:32: INFO: Executing: neutron subnet-create --name	
+external_sub --allocation-pool start=100.84.122.71,end=100.84.122.104 --	
+gateway 100.84.122.65	--disable-dhcp public 100.84.122.64/26	
+Created a new subnet:		
++-------------------	+	-----------------------------------------------------	+
+| Field	|	Value	|
++-------------------	+	-----------------------------------------------------	+
+| allocation_pools	|	{"start": "100.84.122.71", "end": "100.84.122.104"} |
+| cidr	|	100.84.122.64/26	|
+| created_at	|	2017-10-13T18:20:33Z	|
+| description	|		|
+| dns_nameservers	|		|
+| enable_dhcp	|	False	|
+| gateway_ip	|	100.84.122.65	|
+| host_routes	|		|
+| id	|	957798ec-ec62-435f-a7a7-7bd749cb5d6f	|
+| ip_version	|	4	|
+| ipv6_address_mode |		|
+| ipv6_ra_mode	|		|
+| name	|	external_sub	|
+| network_id	|	46cc68f3-0ee2-4ae1-8ee0-60ef6d89c0e6	|
+| project_id	|	4790c5b2d4c64f6e9d6c367bc0b8b069	|
+| revision_number	|	2	|
+| service_types	|		|
+| subnetpool_id	|		|
+| tenant_id	|	4790c5b2d4c64f6e9d6c367bc0b8b069	|
+| updated_at	| 2017-10-13T18:20:33Z	|
+
++-------------------+-----------------------------------------------------+
+2017-10-13 14:20:33: INFO: Executing: openstack network list
++--------------------------------------
++----------------------------------------------------
++--------------------------------------+
+| ID	| Name
+| Subnets	|
++--------------------------------------
++----------------------------------------------------
++--------------------------------------+
+| 46cc68f3-0ee2-4ae1-8ee0-60ef6d89c0e6 | public
+
+| 957798ec-ec62-435f-a7a7-7bd749cb5d6f | | 76ad3e74-7171-4a4f-9d80-4d452d469f14 | HA network tenant
+	4790c5b2d4c64f6e9d6c367bc0b8b069 | c235034a-4403-4624-87c0-82ee742527ef |
+| e8e22aaf-0ee9-4c82-a295-f02788e97e8f |	tenant_net1	
+		| c8057c7b-777f-4f5d-bfe8-7d227da6c960 |	
++	--------------------------------------				
++	----------------------------------------------------				
++	--------------------------------------		+		
+2017-10-13 14:20:34: INFO: Executing: openstack router list	
++	--------------------------------------		+	--------------------	+--------
++	-------+-------------	+------	+----------------------------------	+
+| ID			|	Name	| Status | State
+	| Distributed | HA	| Project	|	
++	--------------------------------------		+	--------------------	+--------
++	-------+-------------	+------	+----------------------------------	+
+| 5adcd390-b199-43cf-a32d-a708bcb1fb50 |	tenant_201_router1 | ACTIVE | UP
+	| False	| True | 4790c5b2d4c64f6e9d6c367bc0b8b069 |	
++	--------------------------------------		+	--------------------	+--------
++	-------+-------------	+------	+----------------------------------	+
+
+2017-10-13 14:20:35: INFO: Executing: neutron router-gateway-set tenant_201_router1 public
+Set gateway for router tenant_201_router1
+2017-10-13 14:20:37: INFO: Setting tenant scope.
+2017-10-13 14:20:39: INFO: ### Creating a Security Group ####
+
+2017-10-13 14:20:39: INFO: Executing: neutron security-group-create sanity_security_group
+Created a new security_group:
++----------------------
++--------------------------------------------------------------------------------------
++
+| Field	| Value
+
+
+
+
+
+|
++----------------------
++--------------------------------------------------------------------------------------
++
+| created_at	| 2017-10-13T18:20:39Z
+
+
+
+
+
+|
+| description	|
+
+|
+| id	| 429d26ae-d018-41c8-9331-debd33bebbff
+
+
+
+
+
+|
+| name	| sanity_security_group
+
+
+
+
+
+|
+| project_id	| 26c77e1e763b4fecbc1833b9284e4986
+
+
+
+
+
+|
+| revision_number	| 1
+
+
+
+
+
+|
+| security_group_rules | {"remote_group_id": null, "direction":
+"egress", "protocol": null, "description": null, "ethertype": "IPv4",
+"remote_ip_prefix": null, "port_range_max": null, "updated_at":
+"2017-10-13T18:20:39Z", "security_group_id": "429d26ae-d018-41c8-9331-
+debd33bebbff", "port_range_min": null, "revision_number": 1,
+"tenant_id": "26c77e1e763b4fecbc1833b9284e4986", "created_at":
+"2017-10-13T18:20:39Z", "project_id": "26c77e1e763b4fecbc1833b9284e4986",
+"id": "1aa1def6-9405-4b60-bf71-65cc4499859f"} |
+|	| {"remote_group_id": null, "direction":
+"egress", "protocol": null, "description": null, "ethertype": "IPv6",
+"remote_ip_prefix": null, "port_range_max": null, "updated_at":
+"2017-10-13T18:20:39Z", "security_group_id": "429d26ae-d018-41c8-9331-
+
+debd33bebbff", "port_range_min": null, "revision_number": 1, "tenant_id": "26c77e1e763b4fecbc1833b9284e4986", "created_at": "2017-10-13T18:20:39Z", "project_id": "26c77e1e763b4fecbc1833b9284e4986", "id": "fc6fe44a-c8de-4cd3-9cf2-aa13ae770259"} |
+| tenant_id	| 26c77e1e763b4fecbc1833b9284e4986
+
+
+
+
+
+|
+| updated_at	| 2017-10-13T18:20:39Z
+
+
+
+
+
+|
++----------------------
++--------------------------------------------------------------------------------------
++
+ 
+
+
+
+
+
+2017-10-13 14:20:39: INFO: Executing: neutron security-group-rule-create --direction ingress --ethertype IPv4 --protocol icmp --remote-ip-prefix
+
+0.0.0.0/0 sanity_security_group	
+Created a new security_group_rule:	
++-------------------	+--------------------------------------	+
+| Field	| Value	|
++-------------------	+--------------------------------------	+
+| created_at	| 2017-10-13T18:20:40Z	|
+| description	|	|
+| direction	| ingress	|
+| ethertype	| IPv4	|
+| id	| 282502a2-c60a-4e7d-b05d-2c079a5aeb0d |
+| port_range_max	|	|
+| port_range_min	|	|
+| project_id	| 26c77e1e763b4fecbc1833b9284e4986	|
+| protocol	| icmp	|
+| remote_group_id	|	|
+| remote_ip_prefix	| 0.0.0.0/0	|
+| revision_number	| 1	|
+| security_group_id	| 429d26ae-d018-41c8-9331-debd33bebbff |
+| tenant_id	| 26c77e1e763b4fecbc1833b9284e4986	|
+| updated_at	| 2017-10-13T18:20:40Z	|
++-------------------	+--------------------------------------	+
+2017-10-13 14:20:40: INFO: Executing: neutron security-group-rule-create
+--direction egress	--ethertype IPv4 --protocol icmp --remote-ip-prefix
+0.0.0.0/0 sanity_security_group	
+Created a new security_group_rule:	
++-------------------	+--------------------------------------	+
+| Field	| Value	|
++-------------------	+--------------------------------------	+
+| created_at	| 2017-10-13T18:20:41Z	|
+| description	|	|
+| direction	| egress	|
+| ethertype	| IPv4	|
+| id	| 2638d18f-9dd4-414b-988e-34de3f77a76e |
+| port_range_max	|	|
+| port_range_min	|	|
+| project_id	| 26c77e1e763b4fecbc1833b9284e4986	|
+| protocol	| icmp	|
+| remote_group_id	|	|
+| remote_ip_prefix	| 0.0.0.0/0	|
+| revision_number	| 1	|
+| security_group_id	| 429d26ae-d018-41c8-9331-debd33bebbff |
+| tenant_id	| 26c77e1e763b4fecbc1833b9284e4986	|
+| updated_at	| 2017-10-13T18:20:41Z	|
++-------------------	+--------------------------------------	+
+
+2017-10-13 14:20:41: INFO: Executing: neutron security-group-rule-create -- direction ingress --ethertype IPv4 --protocol tcp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 sanity_security_group
+Created a new security_group_rule:	
++-------------------	+--------------------------------------	+
+| Field	| Value	|
++-------------------	+--------------------------------------	+
+| created_at	| 2017-10-13T18:20:41Z	|
+| description	|	|
+| direction	| ingress	|
+| ethertype	| IPv4	|
+| id	| aaa2e0b0-f8ad-4f4f-ae25-a60cbb187af7 |
+| port_range_max	| 65535	|
+| port_range_min	| 1	|
+| project_id	| 26c77e1e763b4fecbc1833b9284e4986	|
+| protocol	| tcp	|
+| remote_group_id	|	|
+| remote_ip_prefix	| 0.0.0.0/0	|
+ 
+
+
+| revision_number	|	1	|
+| security_group_id |	429d26ae-d018-41c8-9331-debd33bebbff |
+| tenant_id	|	26c77e1e763b4fecbc1833b9284e4986	|
+| updated_at	|	2017-10-13T18:20:41Z	|
++-------------------	+	--------------------------------------	+
+
+2017-10-13 14:20:41: INFO: Executing: neutron security-group-rule-create -- direction egress --ethertype IPv4 --protocol tcp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 sanity_security_group Created a new security_group_rule:
++-------------------	+	--------------------------------------	+
+| Field	|	Value	|
++-------------------	+	--------------------------------------	+
+| created_at	|	2017-10-13T18:20:42Z	|
+| description	|		|
+| direction	|	egress	|
+| ethertype	|	IPv4	|
+| id	|	c8627ddc-8100-4f11-8c30-40ace0d787b0 |
+| port_range_max	|	65535	|
+| port_range_min	|	1	|
+| project_id	|	26c77e1e763b4fecbc1833b9284e4986	|
+| protocol	|	tcp	|
+| remote_group_id	|		|
+| remote_ip_prefix	|	0.0.0.0/0	|
+| revision_number	|	1	|
+| security_group_id |	429d26ae-d018-41c8-9331-debd33bebbff |
+| tenant_id	|	26c77e1e763b4fecbc1833b9284e4986	|
+| updated_at	|	2017-10-13T18:20:42Z	|
++-------------------	+	--------------------------------------	+
+
+2017-10-13 14:20:42: INFO: Executing: neutron security-group-rule-create -- direction ingress --ethertype IPv4 --protocol udp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 sanity_security_group
+Created a new security_group_rule:	
++-------------------	+	--------------------------------------	+
+| Field	|	Value	|
++-------------------	+	--------------------------------------	+
+| created_at	|	2017-10-13T18:20:43Z	|
+| description	|		|
+| direction	|	ingress	|
+| ethertype	|	IPv4	|
+| id	|	96b5be98-091d-48cc-a7db-9386fc753306 |
+| port_range_max	|	65535	|
+| port_range_min	|	1	|
+| project_id	|	26c77e1e763b4fecbc1833b9284e4986	|
+| protocol	|	udp	|
+| remote_group_id	|		|
+| remote_ip_prefix	|	0.0.0.0/0	|
+| revision_number	|	1	|
+| security_group_id |	429d26ae-d018-41c8-9331-debd33bebbff |
+| tenant_id	|	26c77e1e763b4fecbc1833b9284e4986	|
+| updated_at	|	2017-10-13T18:20:43Z	|
++-------------------	+	--------------------------------------	+
+
+2017-10-13 14:20:43: INFO: Executing: neutron security-group-rule-create -- direction egress --ethertype IPv4 --protocol udp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 sanity_security_group
+Created a new security_group_rule:	
++-------------------	+--------------------------------------	+
+| Field	| Value	|
++-------------------	+--------------------------------------	+
+| created_at	| 2017-10-13T18:20:43Z	|
+| description	|	|
+| direction	| egress	|
+| ethertype	| IPv4	|
+| id	| f096278f-928c-4c0c-b90b-0af8775f110a |
+| port_range_max	| 65535	|
+| port_range_min	|	1		|		
+| project_id	|	26c77e1e763b4fecbc1833b9284e4986	|		
+| protocol	|	udp		|		
+| remote_group_id	|			|		
+| remote_ip_prefix	|	0.0.0.0/0		|		
+| revision_number	|	1		|		
+| security_group_id |	429d26ae-d018-41c8-9331-debd33bebbff |		
+| tenant_id	|	26c77e1e763b4fecbc1833b9284e4986	|		
+| updated_at	|	2017-10-13T18:20:43Z	|		
++-------------------	+	--------------------------------------	+		
+2017-10-13 14:20:43: INFO: ### Setting up glance			
+2017-10-13 14:20:43: INFO: setting admin scope with: ~/MHTR18BLKrc.	
+2017-10-13 14:20:43: INFO: ### sourcing ~/MHTR18BLKrc			
+2017-10-13 14:20:48: INFO: Executing: wget http://download.cirros-	
+cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img			
+--2017-10-13 14:20:48	--  http://download.cirros-cloud.net/0.3.3/		
+cirros-0.3.3-x86_64-disk.img				
+Resolving download.cirros-cloud.net (download.cirros-cloud.net)...	
+64.90.42.85, 2607:f298:6:a036::bd6:a72a				
+Connecting to download.cirros-cloud.net (download.cirros-cloud.net)|	
+64.90.42.85|:80...	connected.				
+HTTP request sent, awaiting response...	200 OK			
+Length: 13200896 (13M) [text/plain]				
+Saving to: â€˜cirros-0.3.3-x86_64-disk.imgâ€™			
+0K ..........	.......... .......... .......... ..........	0%	255K 50s
+50K ..........	.......... .......... .......... ..........	0%	518K 37s
+...						
+...						
+12850K ..........	.......... .......... .......... .	100%	
+6.36M=5.3s						
+
+
+2017-10-13 14:20:54 (2.37 MB/s) - â€˜cirros-0.3.3-x86_64-disk.imgâ€™ saved [13200896/13200896]
+
+2017-10-13 14:20:55: INFO: Executing: openstack image create --disk-format qcow2 --container-format bare --file cirros-0.3.3-x86_64-disk.img cirros --
+public	
++------------------	
++--------------------------------------------------------------------------------------
++	
+| Field	| Value
+	|
++------------------	
++--------------------------------------------------------------------------------------
++	
+| checksum	| 133eae9fb1c98f45894a4e60d8736619
+	|
+| container_format | bare
+	|
+| created_at	| 2017-10-13T18:20:56Z
+	|
+| disk_format	| qcow2
+
+
+|
+ 
+
+| file	| /v2/images/90dc3459-e253-49a5-b5fe-e403ce231110/file
+
+
+|
+| id	| 90dc3459-e253-49a5-b5fe-e403ce231110
+
+
+|
+| min_disk	| 0
+
+
+|
+| min_ram	| 0
+
+
+|
+| name	| cirros
+
+
+|
+| owner	| 4790c5b2d4c64f6e9d6c367bc0b8b069
+
+
+|
+| properties	| direct_url='rbd://de4de876-b026-11e7-9a09-525400a5b196/
+
+images/90dc3459-e253-49a5-b5fe-e403ce231110/snap', locations='[{u'url': u'rbd://de4de876-b026-11e7-9a09-525400a5b196/images/90dc3459-e253-49a5-b5fe-e403ce231110/snap', u'metadata': {}}]' |
+| protected	| False
+
+
+|
+| schema	| /v2/schemas/image
+
+
+|
+| size	| 13200896
+
+
+|
+| status	| active
+
+
+|
+| tags	|
+
+
+|
+| updated_at	| 2017-10-13T18:20:57Z
+
+
+|
+| virtual_size	| None
+
+
+|
+| visibility	| public
+
+
+|
++------------------
++--------------------------------------------------------------------------------------
++
+2017-10-13 14:20:58: INFO: Executing: openstack image list
+ 
+
++--------------------------------------	+--------	+--------	+
+| ID	|	Name	| Status |
++--------------------------------------	+--------	+--------	+
+| 90dc3459-e253-49a5-b5fe-e403ce231110 |	cirros	| active |
++--------------------------------------	+--------	+--------	+
+2017-10-13 14:20:59: INFO: ### Setup Nova			
+
+2017-10-13 14:21:00: INFO: Executing: openstack flavor create --ram 2048 --
+vcpus 1 --disk 20 sanity_flavor		
++	----------------------------			+--------------------------------------	+
+| Field				|	Value	|
++	----------------------------			+--------------------------------------	+
+| OS-FLV-DISABLED:disabled	|	False	|
+| OS-FLV-EXT-DATA:ephemeral	|	0	|
+| disk				|	20	|
+| id				|	3e2ad0a4-f094-457d-81ec-1f83a9a7f44d |
+| name				|	sanity_flavor	|
+| os-flavor-access:is_public	|	True	|
+| properties			|		|
+| ram				|	2048	|
+| rxtx_factor			|	1.0	|
+| swap				|		|
+| vcpus				|	1	|
++	----------------------------			+--------------------------------------	+
+2017-10-13 14:21:01: INFO: Setting tenant scope.	
+2017-10-13 14:21:01: INFO: creating keypair sanity	
+Generating public/private rsa key pair.	
+Your identification	has been	saved in /home/osp_admin/sanity.	
+Your public key has	been saved	in /home/osp_admin/sanity.pub.	
+The key fingerprint	is:			
+SHA256:kfQhn/uqx7XJ/nJgxVGCxhg2rNnLtctr6DSUZgAAfBA	
+	osp_admin@director.mhtr18blk.dfr	
+The key's randomart	image is:			
++	---[RSA 2048]----	+				
+| .E+...	o.=+ ....|				
+|	. .	o *o++ .. |				
+|	.	+++. . . |				
+|		oo.o. o	|				
+|		S.*o o	|				
+|		+o.=	|				
+|		.o*.=	|				
+|		.+oO .	|				
+|		.+ooo=.	|				
++	----[SHA256]-----	+				
+2017-10-13 14:21:01: INFO: loading sanity keypair into nova	
+2017-10-13 14:21:05: INFO: ###	Initiating build of instances...	
+2017-10-13 14:21:05: INFO: Executing: nova boot --security-groups	
+	sanity_security_group --flavor sanity_flavor --key-name sanity --image
+	90dc3459-e253-49a5-b5fe-e403ce231110 --nic net-id=e8e22aaf-0ee9-4c82-a295-
+f02788e97e8f cirros_test_1
++--------------------------------------
++------------------------------------------------------+
+| Property	| Value
+|
++--------------------------------------
++------------------------------------------------------+
+| OS-DCF:diskConfig	| MANUAL
+|
+| OS-EXT-AZ:availability_zone	|
+|
+| OS-EXT-STS:power_state	| 0
+|
+| OS-EXT-STS:task_state	| scheduling
+|
+ 
+
+| OS-EXT-STS:vm_state		|	building
+|			
+| OS-SRV-USG:launched_at	|	-
+|			
+| OS-SRV-USG:terminated_at	|	-
+|			
+| accessIPv4		|	
+|			
+| accessIPv6		|	
+|			
+| adminPass		|	RC7ECQKnjrsJ
+|			
+| config_drive		|	
+|			
+| created		|	2017-10-13T18:21:08Z
+|			
+| description		|	-
+|			
+| flavor		|	sanity_flavor (3e2ad0a4-
+f094-457d-81ec-1f83a9a7f44d) |		
+| hostId		|	
+|			
+| id		|	625b1245-445e-43d0-
+b4ae-74a925cd95d0		|	
+| image		|	cirros (90dc3459-e253-49a5-b5fe-
+e403ce231110)	|		
+| key_name		|	sanity
+|			
+| locked		|	False
+|			
+| metadata		|	{}
+|			
+| name		|	cirros_test_1
+|			
+| os-extended-volumes:volumes_attached |	[]
+|			
+| progress		|	0
+|			
+| security_groups		|	sanity_security_group
+|			
+| status		|	BUILD
+|			
+| tags		|	[]
+|			
+| tenant_id		|	26c77e1e763b4fecbc1833b9284e4986
+|			
+| updated		|	2017-10-13T18:21:08Z
+|			
+| user_id		|	4442207de58448938694bdbd7b764cf4
+|			
++--------------------------------------		
++------------------------------------------------------		+
+2017-10-13 14:21:09: INFO: Executing: nova boot --security-groups
+
+sanity_security_group --flavor sanity_flavor --key-name sanity --image 90dc3459-e253-49a5-b5fe-e403ce231110 --nic net-id=e8e22aaf-0ee9-4c82-a295-
+f02788e97e8f cirros_test_2
++--------------------------------------
++------------------------------------------------------+
+| Property	| Value
+|
++--------------------------------------
++------------------------------------------------------+
+| OS-DCF:diskConfig	| MANUAL
+|
+| OS-EXT-AZ:availability_zone	|	
+|			
+| OS-EXT-STS:power_state	|	0
+|			
+| OS-EXT-STS:task_state	|	scheduling
+|			
+| OS-EXT-STS:vm_state		|	building
+|			
+| OS-SRV-USG:launched_at	|	-
+|			
+| OS-SRV-USG:terminated_at	|	-
+|			
+| accessIPv4		|	
+|			
+| accessIPv6		|	
+|			
+| adminPass		|	WKuE3wedfV49
+|			
+| config_drive		|	
+|			
+| created		|	2017-10-13T18:21:12Z
+|			
+| description		|	-
+|			
+| flavor		|	sanity_flavor (3e2ad0a4-
+f094-457d-81ec-1f83a9a7f44d) |		
+| hostId		|	
+|			
+| id		|	c18f6d9e-8a51-49e5-
+bca7-95f44774798e		|	
+| image		|	cirros (90dc3459-e253-49a5-b5fe-
+e403ce231110)	|		
+| key_name		|	sanity
+|			
+| locked		|	False
+|			
+| metadata		|	{}
+|			
+| name		|	cirros_test_2
+|			
+| os-extended-volumes:volumes_attached |	[]
+|			
+| progress		|	0
+|			
+| security_groups		|	sanity_security_group
+|			
+| status		|	BUILD
+|			
+| tags		|	[]
+|			
+| tenant_id		|	26c77e1e763b4fecbc1833b9284e4986
+|			
+| updated		|	2017-10-13T18:21:12Z
+|			
+| user_id		|	4442207de58448938694bdbd7b764cf4
+|			
++--------------------------------------		
++------------------------------------------------------		+
+
+2017-10-13 14:21:12: INFO: Executing: nova boot --security-groups
+sanity_security_group --flavor sanity_flavor --key-name sanity --image
+90dc3459-e253-49a5-b5fe-e403ce231110 --nic net-id=e8e22aaf-0ee9-4c82-a295-
+f02788e97e8f cirros_test_3
++--------------------------------------
++------------------------------------------------------+
+ 
+
+| Property		|	Value
+|			
++--------------------------------------		
++------------------------------------------------------		+
+| OS-DCF:diskConfig		|	MANUAL
+|			
+| OS-EXT-AZ:availability_zone	|	
+|			
+| OS-EXT-STS:power_state	|	0
+|			
+| OS-EXT-STS:task_state	|	scheduling
+|			
+| OS-EXT-STS:vm_state		|	building
+|			
+| OS-SRV-USG:launched_at	|	-
+|			
+| OS-SRV-USG:terminated_at	|	-
+|			
+| accessIPv4		|	
+|			
+| accessIPv6		|	
+|			
+| adminPass		|	8K3gdcEgALZn
+|			
+| config_drive		|	
+|			
+| created		|	2017-10-13T18:21:16Z
+|			
+| description		|	-
+|			
+| flavor		|	sanity_flavor (3e2ad0a4-
+f094-457d-81ec-1f83a9a7f44d) |		
+| hostId		|	
+|			
+| id		|	
+836c1fbb-3ca3-4e13-966f-856622d1c9b5		|
+| image		|	cirros (90dc3459-e253-49a5-b5fe-
+e403ce231110)	|		
+| key_name		|	sanity
+|			
+| locked		|	False
+|			
+| metadata		|	{}
+|			
+| name		|	cirros_test_3
+|			
+| os-extended-volumes:volumes_attached |	[]
+|			
+| progress		|	0
+|			
+| security_groups		|	sanity_security_group
+|			
+| status		|	BUILD
+|			
+| tags		|	[]
+|			
+| tenant_id		|	26c77e1e763b4fecbc1833b9284e4986
+|			
+| updated		|	2017-10-13T18:21:16Z
+|			
+| user_id		|	4442207de58448938694bdbd7b764cf4
+|			
++--------------------------------------		
++------------------------------------------------------		+
+
+ 
+
+
+2017-10-13 14:21:17: INFO: Executing: nova boot --security-groups sanity_security_group --flavor sanity_flavor --key-name sanity --image 90dc3459-e253-49a5-b5fe-e403ce231110 --nic net-id=e8e22aaf-0ee9-4c82-a295-
+
+f02788e97e8f cirros_test_4		
++--------------------------------------		
++------------------------------------------------------		+
+| Property		|	Value
+|			
++--------------------------------------		
++------------------------------------------------------+
+| OS-DCF:diskConfig		|	MANUAL
+|			
+| OS-EXT-AZ:availability_zone	|	
+|			
+| OS-EXT-STS:power_state	|	0
+|			
+| OS-EXT-STS:task_state	|	scheduling
+|			
+| OS-EXT-STS:vm_state		|	building
+|			
+| OS-SRV-USG:launched_at	|	-
+|			
+| OS-SRV-USG:terminated_at	|	-
+|			
+| accessIPv4		|	
+|			
+| accessIPv6		|	
+|			
+| adminPass		|	8zeMCa7jWjA2
+|			
+| config_drive		|	
+|			
+| created		|	2017-10-13T18:21:20Z
+|			
+| description		|	-
+|			
+| flavor		|	sanity_flavor (3e2ad0a4-
+f094-457d-81ec-1f83a9a7f44d) |		
+| hostId		|	
+|			
+| id		|	ff93e1a4-
+ea01-4c7b-8952-0cebfb3f9ff4		|
+| image		|	cirros (90dc3459-e253-49a5-b5fe-
+e403ce231110)	|		
+| key_name		|	sanity
+|			
+| locked		|	False
+|			
+| metadata		|	{}
+|			
+| name		|	cirros_test_4
+|			
+| os-extended-volumes:volumes_attached |	[]
+|			
+| progress		|	0
+|			
+| security_groups		|	sanity_security_group
+|			
+| status		|	BUILD
+|			
+| tags		|	[]
+|			
+| tenant_id		|	26c77e1e763b4fecbc1833b9284e4986
+|			
+ 
+| updated	| 2017-10-13T18:21:20Z
+
+|
+| user_id	| 4442207de58448938694bdbd7b764cf4
+|
++--------------------------------------
++------------------------------------------------------+
+
+2017-10-13 14:21:20: INFO: Executing: nova boot --security-groups sanity_security_group --flavor sanity_flavor --key-name sanity --image 90dc3459-e253-49a5-b5fe-e403ce231110 --nic net-id=e8e22aaf-0ee9-4c82-a295-
+f02788e97e8f cirros_test_5		
++--------------------------------------		
++------------------------------------------------------		+
+| Property		|	Value
+|			
++--------------------------------------		
++------------------------------------------------------		+
+| OS-DCF:diskConfig		|	MANUAL
+|			
+| OS-EXT-AZ:availability_zone	|	
+|			
+| OS-EXT-STS:power_state	|	0
+|			
+| OS-EXT-STS:task_state	|	scheduling
+|			
+| OS-EXT-STS:vm_state		|	building
+|			
+| OS-SRV-USG:launched_at	|	-
+|			
+| OS-SRV-USG:terminated_at	|	-
+|			
+| accessIPv4		|	
+|			
+| accessIPv6		|	
+|			
+| adminPass		|	UffoJW46qE4d
+|			
+| config_drive		|	
+|			
+| created		|	2017-10-13T18:21:23Z
+|			
+| description		|	-
+|			
+| flavor		|	sanity_flavor (3e2ad0a4-
+f094-457d-81ec-1f83a9a7f44d) |	
+| hostId		|	
+|			
+| id		|	fde7800f-ebdd-44b1-af41-
+e164ddff8715		|	
+| image		|	cirros (90dc3459-e253-49a5-b5fe-
+e403ce231110)	|		
+| key_name		|	sanity
+|			
+| locked		|	False
+|			
+| metadata		|	{}
+|			
+| name		|	cirros_test_5
+|			
+| os-extended-volumes:volumes_attached |	[]
+|			
+| progress		|	0
+|			
+| security_groups		|	sanity_security_group
+|			
+
+
+
+
+| status			|	BUILD	
+	|				
+| tags			|	[]	
+	|				
+| tenant_id			|	26c77e1e763b4fecbc1833b9284e4986
+	|				
+| updated			|	2017-10-13T18:21:23Z
+	|				
+| user_id			|	4442207de58448938694bdbd7b764cf4
+	|				
++--------------------------------------				
++------------------------------------------------------				+
+2017-10-13 14:21:24: INFO: ### Waiting for the instances to be built...
+2017-10-13 14:21:32: INFO: ### Instances	are successfully built
+2017-10-13 14:21:32: INFO: Executing: nova list	
++--------------------------------------		+	---------------	+--------
++------------	+-------------	+	----------------------------	+
+| ID			|	Name	| Status | Task State
+| Power State | Networks			|	
++--------------------------------------		+	---------------	+--------
++------------	+-------------	+	----------------------------	+
+
+| 625b1245-445e-43d0-b4ae-74a925cd95d0 | cirros_test_1 | ACTIVE | -
+| Running	| tenant_net1=192.168.201.8	|
+| c18f6d9e-8a51-49e5-bca7-95f44774798e | cirros_test_2 | ACTIVE | -
+| Running	| tenant_net1=192.168.201.5	|
+| 836c1fbb-3ca3-4e13-966f-856622d1c9b5 | cirros_test_3 | ACTIVE | -
+| Running	| tenant_net1=192.168.201.10 |
+| ff93e1a4-ea01-4c7b-8952-0cebfb3f9ff4 | cirros_test_4 | ACTIVE | -
+| Running	| tenant_net1=192.168.201.14 |
+| fde7800f-ebdd-44b1-af41-e164ddff8715 | cirros_test_5 | ACTIVE | -
+| Running	| tenant_net1=192.168.201.7	|
+
++--------------------------------------+---------------+-------- +------------+-------------+----------------------------+ 2017-10-13 14:21:33: INFO: setting admin scope with: ~/MHTR18BLKrc. 2017-10-13 14:21:33: INFO: ### sourcing ~/MHTR18BLKrc 2017-10-13 14:21:34: INFO: Setting tenant scope.
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+Warning: Permanently added '192.168.120.128' (ECDSA) to the list of known hosts.
+
+Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
+
+2017-10-13 14:21:37: INFO: ### Pinging 192.168.201.7 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
+
+2017-10-13 14:21:37: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.7
+
+Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
+
+PING 192.168.201.7 (192.168.201.7) 56(84) bytes of data.
+64 bytes from 192.168.201.7: icmp_seq=1 ttl=64 time=0.227 ms
+
+--- 192.168.201.7 ping statistics ---
+
+1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.227/0.227/0.227/0.000 ms
+
+2017-10-13 14:21:37: INFO: ### Successfully pinged 192.168.201.7 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133 2017-10-13 14:21:37: INFO: Allocating floating IP
+2017-10-13 14:21:39: INFO: setting admin scope with: ~/MHTR18BLKrc.
+ 
+
+2017-10-13 14:21:39: INFO: ### sourcing ~/MHTR18BLKrc
+
+2017-10-13 14:21:39: INFO: Setting tenant scope.
+
+2017-10-13 14:21:39: INFO: Executing: neutron floatingip-associate db9c0bb6-0ebc-4676-90ac-8870981cf741 ce160385-8e28-4d3a-b894-d37055ddabd1 Associated floating IP db9c0bb6-0ebc-4676-90ac-8870981cf741
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+Warning: Permanently added '192.168.120.128' (ECDSA) to the list of known hosts.
+
+Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
+
+2017-10-13 14:21:41: INFO: ### Pinging 192.168.201.14 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
+
+2017-10-13 14:21:41: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.14
+
+Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
+
+PING 192.168.201.14 (192.168.201.14) 56(84) bytes of data.
+
+64 bytes from 192.168.201.14: icmp_seq=1 ttl=64 time=0.599 ms --- 192.168.201.14 ping statistics ---
+
+1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.599/0.599/0.599/0.000 ms
+
+2017-10-13 14:21:41: INFO: ### Successfully pinged 192.168.201.14 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133 2017-10-13 14:21:41: INFO: Allocating floating IP
+2017-10-13 14:21:43: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2017-10-13 14:21:43: INFO: ### sourcing ~/MHTR18BLKrc
+2017-10-13 14:21:43: INFO: Setting tenant scope.
+
+2017-10-13 14:21:43: INFO: Executing: neutron floatingip-associate 013f86a5-20f7-4bf3-b28b-62011f72bab4 28ec9e01-2210-402f-9013-f92b752ddf9c Associated floating IP 013f86a5-20f7-4bf3-b28b-62011f72bab4
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+Warning: Permanently added '192.168.120.128' (ECDSA) to the list of known hosts.
+
+Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
+
+2017-10-13 14:21:46: INFO: ### Pinging 192.168.201.10 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
+
+2017-10-13 14:21:46: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.10
+
+Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
+
+PING 192.168.201.10 (192.168.201.10) 56(84) bytes of data. 64 bytes from 192.168.201.10: icmp_seq=1 ttl=64 time=1.11 ms
+
+--- 192.168.201.10 ping statistics ---
+
+1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 1.119/1.119/1.119/0.000 ms
+
+2017-10-13 14:21:46: INFO: ### Successfully pinged 192.168.201.10 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
+ 
+
+2017-10-13 14:21:46: INFO: Allocating floating IP
+
+2017-10-13 14:21:48: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2017-10-13 14:21:48: INFO: ### sourcing ~/MHTR18BLKrc
+2017-10-13 14:21:48: INFO: Setting tenant scope.
+
+2017-10-13 14:21:48: INFO: Executing: neutron floatingip-associate 9e679f7d-591e-45f3-9565-51b240ad9f23 ca3ac3de-46f6-4468-9717-78c6ac6f2415 Associated floating IP 9e679f7d-591e-45f3-9565-51b240ad9f23
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+Warning: Permanently added '192.168.120.128' (ECDSA) to the list of known hosts.
+
+Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
+
+2017-10-13 14:21:50: INFO: ### Pinging 192.168.201.5 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
+
+2017-10-13 14:21:50: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.5
+
+Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
+
+PING 192.168.201.5 (192.168.201.5) 56(84) bytes of data.
+64 bytes from 192.168.201.5: icmp_seq=1 ttl=64 time=0.446 ms
+
+--- 192.168.201.5 ping statistics ---
+
+1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.446/0.446/0.446/0.000 ms
+
+2017-10-13 14:21:50: INFO: ### Successfully pinged 192.168.201.5 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133 2017-10-13 14:21:50: INFO: Allocating floating IP
+2017-10-13 14:21:52: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2017-10-13 14:21:52: INFO: ### sourcing ~/MHTR18BLKrc
+2017-10-13 14:21:53: INFO: Setting tenant scope.
+
+2017-10-13 14:21:53: INFO: Executing: neutron floatingip-associate 6723b319-3926-4050-a712-34bbf9d2ffc1 b333704f-4bf5-48c5-bebf-e94d3e713db3 Associated floating IP 6723b319-3926-4050-a712-34bbf9d2ffc1
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+Warning: Permanently added '192.168.120.128' (ECDSA) to the list of known hosts.
+
+Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
+
+2017-10-13 14:21:54: INFO: ### Pinging 192.168.201.8 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
+
+2017-10-13 14:21:54: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.8
+
+Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
+
+PING 192.168.201.8 (192.168.201.8) 56(84) bytes of data.
+64 bytes from 192.168.201.8: icmp_seq=1 ttl=64 time=0.606 ms
+
+--- 192.168.201.8 ping statistics ---
+
+1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.606/0.606/0.606/0.000 ms
+ 
+
+2017-10-13 14:21:55: INFO: ### Successfully pinged 192.168.201.8 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133 2017-10-13 14:21:55: INFO: Allocating floating IP
+
+2017-10-13 14:21:57: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2017-10-13 14:21:57: INFO: ### sourcing ~/MHTR18BLKrc
+2017-10-13 14:21:57: INFO: Setting tenant scope.
+
+2017-10-13 14:21:57: INFO: Executing: neutron floatingip-associate bdd66e64-299c-4d8c-bd68-4ce467526aeb 40987052-eddf-4595-9bba-a1df9602948f Associated floating IP bdd66e64-299c-4d8c-bd68-4ce467526aeb
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+2017-10-13 14:22:02: INFO: ### Pinging 100.84.122.72 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2017-10-13 14:22:02: INFO: Executing: ssh -o StrictHostKeyChecking=no
+
+-o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.138 sudo ip netns exec qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 ping -c 1 -w 5 100.84.122.72
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+PING 100.84.122.72 (100.84.122.72) 56(84) bytes of data.
+64 bytes from 100.84.122.72: icmp_seq=1 ttl=64 time=0.615 ms
+
+--- 100.84.122.72 ping statistics ---
+
+1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.615/0.615/0.615/0.000 ms
+
+2017-10-13 14:22:02: INFO: ### Successfully pinged 100.84.122.72 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+2017-10-13 14:22:02: INFO: ### Pinging 100.84.122.82 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2017-10-13 14:22:02: INFO: Executing: ssh -o StrictHostKeyChecking=no
+
+-o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.138 sudo ip netns exec qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 ping -c 1 -w 5 100.84.122.82
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+PING 100.84.122.82 (100.84.122.82) 56(84) bytes of data.
+64 bytes from 100.84.122.82: icmp_seq=1 ttl=64 time=0.704 ms
+
+--- 100.84.122.82 ping statistics ---
+
+1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.704/0.704/0.704/0.000 ms
+
+2017-10-13 14:22:03: INFO: ### Successfully pinged 100.84.122.82 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+2017-10-13 14:22:03: INFO: ### Pinging 100.84.122.73 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2017-10-13 14:22:03: INFO: Executing: ssh -o StrictHostKeyChecking=no
+
+-o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.138 sudo ip netns exec qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 ping -c 1 -w 5 100.84.122.73
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+PING 100.84.122.73 (100.84.122.73) 56(84) bytes of data.
+64 bytes from 100.84.122.73: icmp_seq=1 ttl=64 time=0.869 ms
+ 
+
+--- 100.84.122.73 ping statistics ---
+
+1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.869/0.869/0.869/0.000 ms
+
+2017-10-13 14:22:03: INFO: ### Successfully pinged 100.84.122.73 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+2017-10-13 14:22:03: INFO: ### Pinging 100.84.122.75 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2017-10-13 14:22:03: INFO: Executing: ssh -o StrictHostKeyChecking=no
+
+-o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.138 sudo ip netns exec qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 ping -c 1 -w 5 100.84.122.75
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+PING 100.84.122.75 (100.84.122.75) 56(84) bytes of data.
+64 bytes from 100.84.122.75: icmp_seq=1 ttl=64 time=0.615 ms
+
+--- 100.84.122.75 ping statistics ---
+
+1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.615/0.615/0.615/0.000 ms
+
+2017-10-13 14:22:04: INFO: ### Successfully pinged 100.84.122.75 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+2017-10-13 14:22:04: INFO: ### Pinging 100.84.122.71 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2017-10-13 14:22:04: INFO: Executing: ssh -o StrictHostKeyChecking=no
+
+-o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.138 sudo ip netns exec qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 ping -c 1 -w 5 100.84.122.71
+
+Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+
+PING 100.84.122.71 (100.84.122.71) 56(84) bytes of data.
+64 bytes from 100.84.122.71: icmp_seq=1 ttl=64 time=0.635 ms
+
+--- 100.84.122.71 ping statistics ---				
+1	packets transmitted, 1 received, 0% packet loss, time 0ms	
+rtt min/avg/max/mdev	= 0.635/0.635/0.635/0.000 ms			
+2017-10-13	14:22:04: INFO: ### Successfully pinged 100.84.122.71 from netns
+	qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138
+2017-10-13	14:22:04: INFO: ### Cinder test			
+2017-10-13	14:22:04: INFO: Setting tenant scope.			
+2017-10-13	14:22:04: INFO: Executing: cinder list			
++	----+--------	+------	+------	+-------------	+----------	+	-------------	+
+| ID | Status | Name | Size | Volume Type | Bootable |	Attached to |
++	----+--------	+------	+------	+-------------	+----------	+	-------------	+
++	----+--------	+------	+------	+-------------	+----------	+	-------------	+
+2017-10-13	14:22:06: INFO: ### Kicking off volume creation...	
+2017-10-13	14:22:09: INFO: ### Creating volume volume_test_5	
+2017-10-13	14:22:09: INFO: Executing: cinder type-list		
++	--------------------------------------			+-------------	+	-------------	
++	-----------	+						
+| ID				| Name	|	Description |
+	Is_Public	|						
++	--------------------------------------			+-------------	+	-------------	
++	-----------	+						
+| c57d99f2-00de-42c8-a5cd-41011182704c | rbd_backend |	-	| True
+	|							
+
+
+
++--------------------------------------			+-------------	+-------------	
++-----------	+				
+2017-10-13 14:22:09: INFO: Executing: cinder create --display-name	
+volume_test_5 1 --volume-type=rbd_backend		
++------------------------------	+	--------------------------------------	+
+| Property		|	Value		|
++------------------------------	+	--------------------------------------	+
+| attachments	|	[]		|
+| availability_zone	|	nova		|
+| bootable		|	false		|
+| consistencygroup_id	|	None		|
+| created_at		|	2017-10-13T18:22:10.000000	|
+| description	|	None		|
+| encrypted		|	False		|
+| id		|	c48d7ace-808d-4d4e-8643-5b2d2fabff36 |
+| metadata		|	{}		|
+| multiattach	|	False		|
+| name		|	volume_test_5		|
+| os-vol-tenant-attr:tenant_id |	26c77e1e763b4fecbc1833b9284e4986	|
+| replication_status	|	disabled		|
+| size		|	1		|
+| snapshot_id	|	None		|
+| source_volid	|	None		|
+| status		|	creating		|
+| updated_at		|	2017-10-13T18:22:10.000000	|
+| user_id		|	4442207de58448938694bdbd7b764cf4	|
+| volume_type	|	rbd_backend		|
++------------------------------	+	--------------------------------------	+
+2017-10-13 14:22:11: INFO: ### Creating volume volume_test_4	
+2017-10-13 14:22:11: INFO: Executing: cinder type-list	
++--------------------------------------		+-------------	+-------------	
++-----------	+				
+| ID			| Name	| Description |
+Is_Public |					
++--------------------------------------		+-------------	+-------------	
++-----------	+				
+| c57d99f2-00de-42c8-a5cd-41011182704c | rbd_backend | -	| True
+|					
++--------------------------------------		+-------------	+-------------	
++-----------	+				
+2017-10-13 14:22:11: INFO: Executing: cinder create --display-name	
+volume_test_4 1 --volume-type=rbd_backend		
++------------------------------	+	--------------------------------------	+
+| Property		|	Value		|
++------------------------------	+	--------------------------------------	+
+| attachments	|	[]		|
+| availability_zone	|	nova		|
+| bootable		|	false		|
+| consistencygroup_id	|	None		|
+| created_at		|	2017-10-13T18:22:12.000000	|
+| description	|	None		|
+| encrypted		|	False		|
+| id		|	79bbed71-6941-4610-9031-39ed2946d2fc |
+| metadata		|	{}		|
+| multiattach	|	False		|
+| name		|	volume_test_4		|
+| os-vol-tenant-attr:tenant_id |	26c77e1e763b4fecbc1833b9284e4986	|
+| replication_status	|	disabled		|
+| size		|	1		|
+| snapshot_id	|	None		|
+| source_volid	|	None		|
+| status		|	available		|
+| updated_at		|	2017-10-13T18:22:12.000000	|
+| user_id		|	4442207de58448938694bdbd7b764cf4	|
+| volume_type	|	rbd_backend		|
++------------------------------	+	--------------------------------------	+
+
+2017-10-13 14:22:14: INFO: ### Creating volume volume_test_3	
+2017-10-13 14:22:14: INFO: Executing: cinder type-list	
+
++--------------------------------------		+-------------	+-------------	
++-----------	+				
+| ID			| Name	| Description |
+Is_Public |					
++--------------------------------------		+-------------	+-------------	
++-----------	+				
+| c57d99f2-00de-42c8-a5cd-41011182704c | rbd_backend | -	| True
+|					
++--------------------------------------		+-------------	+-------------	
++-----------	+	
+
+2017-10-13 14:22:14: INFO: Executing: cinder create --display-name	
+volume_test_3 1 --volume-type=rbd_backend
+
++------------------------------	+	--------------------------------------	+
+| Property		|	Value		|
++------------------------------	+	--------------------------------------	+
+| attachments	|	[]		|
+| availability_zone	|	nova		|
+| bootable		|	false		|
+| consistencygroup_id	|	None		|
+| created_at		|	2017-10-13T18:22:15.000000	|
+| description	|	None		|
+| encrypted		|	False		|
+| id		|	79d0ce2b-ef49-4640-8d45-96f88ecd1a32 |
+| metadata		|	{}		|
+| multiattach	|	False		|
+| name		|	volume_test_3		|
+| os-vol-tenant-attr:tenant_id |	26c77e1e763b4fecbc1833b9284e4986	|
+| replication_status	|	disabled		|
+| size		|	1		|
+| snapshot_id	|	None		|
+| source_volid	|	None		|
+| status		|	creating		|
+| updated_at		|	2017-10-13T18:22:15.000000	|
+| user_id		|	4442207de58448938694bdbd7b764cf4	|
+| volume_type	|	rbd_backend		|
++------------------------------	+	--------------------------------------	+
+
+2017-10-13 14:22:16: INFO: ### Creating volume volume_test_2	
+2017-10-13 14:22:16: INFO: Executing: cinder type-list	
+
++--------------------------------------+-------------+-------------+-----------+				
+| ID			| Name	| Description |Is_Public |					
++--------------------------------------+-------------+-------------	+-----------	+				
+| c57d99f2-00de-42c8-a5cd-41011182704c | rbd_backend | -	| True|				
++--------------------------------------		+-------------	+-------------	
++-----------	+				
+
+2017-10-13 14:22:17: INFO: Executing: cinder create --display-name	
+volume_test_2 1 --volume-type=rbd_backend
+
+
++------------------------------	+	--------------------------------------	+
+| Property		|	Value		|
++------------------------------	+	--------------------------------------	+
+| attachments	|	[]		|
+| availability_zone	|	nova		|
+| bootable		|	false		|
+| consistencygroup_id	|	None		|
+| created_at		|	2017-10-13T18:22:18.000000	|
+| description	|	None		|
+| encrypted		|	False		|
+| id		|	4c17b29d-d866-4d5f-a40c-7e8031ec07c4 |
+| metadata		|	{}		|
+| multiattach	|	False		|
+| name		|	volume_test_2		|
+| os-vol-tenant-attr:tenant_id |	26c77e1e763b4fecbc1833b9284e4986	|
+| replication_status	|	disabled		|
+| size		|	1		|
+| snapshot_id	|	None		|
+| source_volid	|	None		|
+| status		|	creating		|
+| updated_at		|	None		|
+| user_id		|	4442207de58448938694bdbd7b764cf4	|
+| volume_type	|	rbd_backend		|
++------------------------------	+	--------------------------------------	+
+2017-10-13 14:22:19: INFO: ### Creating volume volume_test_1	
+2017-10-13 14:22:19: INFO: Executing: cinder type-list	
++--------------------------------------		+-------------	+-------------	
++-----------	+				
+| ID			| Name	| Description |
+Is_Public |					
++--------------------------------------		+-------------	+-------------	
++-----------	+				
+| c57d99f2-00de-42c8-a5cd-41011182704c | rbd_backend | -	| True
+|					
++--------------------------------------		+-------------	+-------------	
++-----------	+				
+2017-10-13 14:22:19: INFO: Executing: cinder create --display-name	
+volume_test_1 1 --volume-type=rbd_backend		
++------------------------------	+	--------------------------------------	+
+| Property		|	Value		|
++------------------------------	+	--------------------------------------	+
+| attachments	|	[]		|
+| availability_zone	|	nova		|
+| bootable		|	false		|
+| consistencygroup_id	|	None		|
+| created_at		|	2017-10-13T18:22:21.000000	|
+| description	|	None		|
+| encrypted		|	False		|
+| id		|	866f999b-2099-4932-a27a-c3f762dc9c41 |
+| metadata		|	{}		|
+| multiattach	|	False		|
+| name		|	volume_test_1		|
+| os-vol-tenant-attr:tenant_id |	26c77e1e763b4fecbc1833b9284e4986	|
+| replication_status	|	disabled		|
+| size		|	1		|
+| snapshot_id	|	None		|
+| source_volid	|	None		|
+| status		|	creating		|
+| updated_at		|	2017-10-13T18:22:21.000000	|
+| user_id		|	4442207de58448938694bdbd7b764cf4	|
+| volume_type	|	rbd_backend		|
++------------------------------	+	--------------------------------------	+
+
+2017-10-13 14:22:21: INFO: Executing: cinder list
+
++	--------------------------------------	+	-----------	+---------------	+	------	
++	-------------+----------	+	-------------+					
+| ID		|	Status	| Name	|	Size |
+	Volume Type | Bootable | Attached to |					
++	--------------------------------------	+	-----------	+---------------	+	------	
++	-------------+----------	+	-------------+					
+| 4c17b29d-d866-4d5f-a40c-7e8031ec07c4 |	available	| volume_test_2 |	1	|
+	rbd_backend | false	|	|					
+| 79bbed71-6941-4610-9031-39ed2946d2fc |	available	| volume_test_4 |	1	|
+	rbd_backend | false	|	|					
+| 79d0ce2b-ef49-4640-8d45-96f88ecd1a32 | available | volume_test_3 | 1	|
+rbd_backend	| false	|	|			
+| 866f999b-2099-4932-a27a-c3f762dc9c41 | available | volume_test_1 | 1	|
+rbd_backend	| false	|	|			
+| c48d7ace-808d-4d4e-8643-5b2d2fabff36 | available | volume_test_5 | 1	|
+rbd_backend	| false	|	|			
++--------------------------------------			+-----------	+---------------	+------	
++-------------	+----------	+	-------------+			
+2017-10-13	14:22:22: INFO: ### Waiting for volumes status to change to	
+available...						
+2017-10-13	14:22:22: INFO: ### Attaching volumes to instances...		
+2017-10-13	14:22:25: INFO: Executing: nova volume-attach fde7800f-ebdd-44b1-
+af41-e164ddff8715 c48d7ace-808d-4d4e-8643-5b2d2fabff36 /dev/vdb		
++----------	+	--------------------------------------	+			
+| Property	|	Value		|			
++----------	+	--------------------------------------	+			
+| device	|	/dev/vdb		|			
+| id	|	c48d7ace-808d-4d4e-8643-5b2d2fabff36 |			
+| serverId	|	fde7800f-ebdd-44b1-af41-e164ddff8715 |			
+| volumeId	|	c48d7ace-808d-4d4e-8643-5b2d2fabff36 |			
++----------	+	--------------------------------------	+			
+2017-10-13	14:22:27: INFO: Volume volume_test_5 attached to cirros_test_5.	
+ssh in and verify					
+2017-10-13	14:22:27: INFO: Executing: nova volume-attach ff93e1a4-		
+ea01-4c7b-8952-0cebfb3f9ff4 79bbed71-6941-4610-9031-39ed2946d2fc /dev/vdb	
++----------	+	--------------------------------------	+			
+| Property	|	Value		|			
++----------	+	--------------------------------------	+			
+| device	|	/dev/vdb		|			
+| id	|	79bbed71-6941-4610-9031-39ed2946d2fc |			
+| serverId	|	ff93e1a4-ea01-4c7b-8952-0cebfb3f9ff4 |			
+| volumeId	|	79bbed71-6941-4610-9031-39ed2946d2fc |			
++----------	+	--------------------------------------	+			
+2017-10-13	14:22:30: INFO: Volume volume_test_4 attached to cirros_test_4.	
+ssh in and verify					
+2017-10-13	14:22:31: INFO: Executing: nova volume-attach		
+
+836c1fbb-3ca3-4e13-966f-856622d1c9b5 79d0ce2b-ef49-4640-8d45-96f88ecd1a32 /
+dev/vdb			
++----------	+	--------------------------------------	+
+| Property |	Value	|
++----------	+	--------------------------------------	+
+| device	|	/dev/vdb	|
+| id	|	79d0ce2b-ef49-4640-8d45-96f88ecd1a32 |
+| serverId |	836c1fbb-3ca3-4e13-966f-856622d1c9b5 |
+| volumeId |	79d0ce2b-ef49-4640-8d45-96f88ecd1a32 |
++----------	+	--------------------------------------	+
+
+2017-10-13 14:22:32: INFO: Volume volume_test_3 attached to cirros_test_3. ssh in and verify
+
+2017-10-13 14:22:33: INFO: Executing: nova volume-attach c18f6d9e-8a51-49e5-bca7-95f44774798e 4c17b29d-d866-4d5f-a40c-7e8031ec07c4 /dev/vdb
++----------	+	--------------------------------------	+
+| Property |	Value	|
++----------	+	--------------------------------------	+
+| device	|	/dev/vdb	|
+| id	|	4c17b29d-d866-4d5f-a40c-7e8031ec07c4 |
+| serverId |	c18f6d9e-8a51-49e5-bca7-95f44774798e |
+| volumeId |	4c17b29d-d866-4d5f-a40c-7e8031ec07c4 |
++----------	+	--------------------------------------	+
+
+2017-10-13 14:22:35: INFO: Volume volume_test_2 attached to cirros_test_2.
+ssh in and verify
+2017-10-13 14:22:35: INFO: Executing: nova volume-attach 625b1245-445e-43d0-
+b4ae-74a925cd95d0 866f999b-2099-4932-a27a-c3f762dc9c41 /dev/vdb
+
++----------+--------------------------------------+
+| Property | Value	|
++----------	+--------------------------------------	+
+| device	| /dev/vdb	|
+| id	| 866f999b-2099-4932-a27a-c3f762dc9c41 |
+| serverId	| 625b1245-445e-43d0-b4ae-74a925cd95d0 |
+| volumeId	| 866f999b-2099-4932-a27a-c3f762dc9c41 |
++----------	+--------------------------------------	+
+2017-10-13	14:22:39: INFO: Volume volume_test_1 attached to cirros_test_1.
+ssh in and verify	
+2017-10-13	14:22:39: INFO: ### RadosGW test	
+2017-10-13	14:22:39: INFO: Setting tenant scope.	
+2017-10-13	14:22:39: INFO: Executing: swift post sanity_container_1
+2017-10-13	14:22:39: INFO: Executing: swift list	
+sanity_container_1	
+2017-10-13	14:22:39: INFO: Executing: swift upload sanity_container_1
+test_file		
+test_file		
+2017-10-13	14:22:40: INFO: Executing: swift list sanity_container_1
+test_file		
+2017-10-13	14:22:41: INFO: #####VALIDATION SUCCESS#####
+2017-10-13	14:22:41: INFO: ##### Done #####
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div style="page-break-after: always;"></div>
+
+# Appendix L : Post Deployment Features
+
+This appendix provides information about the post deployment Features for the Dell EMC Ready Architecture for Red Hat OpenStack Platform.
+
+> Topics:
+> * Ease of Use
+> * SR-IOV
+
+
+### Ease of Use
+
+Ease of Use is used for the post-deployment customization of Dell EMC Ready Architecture for Red Hat OpenStack Platform for various use cases of NFV. Multiple projects, networks and Security Groups can be created and deleted with great ease by running the Ease of Use playbooks. The Cloud administrator has the flexibility to provide VNF related information in an Excel spreadsheet, which will then be used by the Ansible playbooks to deploy the virtual network functions. The following resources can be created/deleted automatically using this feature:
+
+	Projects
+	Users
+	Networks
+	Subnets
+	Routers
+	Security Groups
+
+The feature contains creation and deletion playbooks which take input from the Excel spreadsheet. As the name suggests, the creation playbook is used to create the OpenStack resources. Multiple resources can be created using a single command. Similarly, the deletion playbook is to be used for deleting the created projects. The user can delete one project at a time by providing its name in the deletion command. Deleting a project also deletes all associated virtual resources.
+
+Using this Excel spreadsheet, the Ease of Use feature can create up to 500 projects. Each project can have up to one router; 3 networks along with one subnet for each; one user and up to 9 security groups.
+
+> Note: See the document Dell EMC Ready Hat Ready Architecture Guide v13.0 for further information
+
+
+### SR-IOV
+
+SR-IOV feature is enabled in Dell EMC Ready Architecture for Red Hat OpenStack Platform v13 to enable external network access to the instances through the lowest latency path.
+
+Single root I/O virtualization (SR-IOV) is an extension to the PCI Express (PCIe) specification. SR-IOV enables a single PCIe device to appear as multiple, separate devices. Traditionally in a virtualized environment, a packet has to go through an extra layer of hypervisor, resulting in multiple CPU interrupts per packet. These extra interrupts can result in a bottleneck in high traffic environments. SR-IOV enabled devices have the ability to dedicate isolated access to its resources among various PCIe hardware functions.
+
+SR-IOV enablement script is sub divided into two parts, Cnode Pass and Instance Pass scripts. Each script makes use of a different Settings INI file. The Settings file requires the user to input the parameters required for executing the individual scripts.
+
+Cnode pass is the first of the two scripts that should be run. Cnode pass enables SR-IOV on a single compute node in Dell EMC Ready Architecture for Red Hat OpenStack Platform. It has two modes: ephemeral and persistent. The ephemeral mode of Cnode pass is the non-persistent setup of SR-IOV. It creates the supported number of Virtual Functions for the desired Physical Functions on a compute node. All the created VFs will be removed after the compute node is rebooted. The persistent mode of Cnode pass creates the SR-IOV environment that is persistent across multiple reboots of a compute node.
+
+Instance pass is the final step in enabling the SR-IOV feature. This script attaches two VFs to the desired instance and creates a supported bond over the attached VFs. Connectivity to the external network is enabled using this bond for the desired instance overriding the OpenStack tenant network default route.
+
+Enhance the SR-IOV feature by enabling the NIC Alignment where the vCPUs instance and physical NIC align with the same CPU socket.
+
+
+
+> Note: See the document Dell EMC Ready Architecture for Red Hat OpenStack Platform SR-IOV User Guide 13 for further information on the SR-IOV feature.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div style="page-break-after: always;"></div>
+
+# Appendix M : References
+
+Additional information found at http://www.dell.com/en-us/work/learn/ openstack-cloud or by e-mailing openstack@dell.com.
+If you need additional services or implementation help, please contact your Dell EMC sales representative
+
+### To learn more
+
+For more information on the Dell EMC Ready Architecture for Red Hat OpenStack Platform v13.0 visit https://www.dellemc.com/en-us/solutions/cloud/openstack/ready-bundle-for-openstack.htm.
+
+This document and all other related architecture and technical guides can be found in the Dell EMC TechCenter community at http://en.community.dell.com/techcenter/cloud/w/wiki/12047.dell-emc-red-hat-openstack-cloud-solutions
+
+Copyright © 2014-2018 Dell Inc. or its subsidiaries. All rights reserved. Trademarks and trade names may be used in this document to refer to either the entities claiming the marks and names or their products. Specifications are correct at date of publication but are subject to availability or change without notice
+
+at any time. Dell EMC and its affiliates cannot be responsible for errors or omissions in typography or photography. Dell EMC’s Terms and Conditions of Sales and Service apply and are available on request. Dell EMC service offerings do not affect consumer’s statutory rights.
+
+Dell EMC, the DELL EMC logo, the DELL EMC badge, and PowerEdge are trademarks of Dell Inc.
  
 
 
@@ -1225,4 +6053,28 @@ As an alternative to manually testing your deployment script, we provide sanity_
 
 
 
-------------------- Pending Huge Pages Appendix D -------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
