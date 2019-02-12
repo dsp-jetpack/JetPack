@@ -77,7 +77,7 @@ DISCLAIMER: The OpenStack® Word Mark and OpenStack Logo are either registered t
 
 # Appendix's:
 
-[Appendix A Files References](#Appendix-A-:-Files-References)
+[Appendix A Files References](#Appendix-A-Files-References)
 
 [Appendix B Updating RPMs on Version Locked Nodes](#Appendix-B-Updating-RPMs-on-Version-Locked-Nodes)
 
