@@ -171,7 +171,7 @@ The following prerequisites must be satisfied before proceeding with a Dell EMC 
 ## Dependencies
 For customers performing a self-installation, these files are available upon request from Dell EMC. Please contact your account representative, or email <a href="malito: openstack@dell.com" target="_blank">openstack@dell.com</a> for instructions.
 
-> NOTE: The files are also open sourced and can be obtained from <a href="https://github.com/dsp-jetpack/JetPack." target="_blank">https://github.com/dsp-jetpack/JetPack.</a> The Dell EMC Ready Architecture for Red Hat OpenStack Platform v13 deployment dependencies include
+> NOTE: The files are also open sourced and can be obtained from <a href="https://github.com/dsp-jetpack/JetPack/tree/JS-13.0" target="_blank">https://github.com/dsp-jetpack/JetPack/tree/JS-13.0</a> The Dell EMC Ready Architecture for Red Hat OpenStack Platform v13 deployment dependencies include
 
 
 > NOTE: The automated install also requires that you have the ISO file “Red Hat Enterprise Linux 7.6 Binary DVD”. It can be downloaded from the Red Hat Customer Portal here: https://access.redhat.com/downloads/content/69/ver=/rhel---7/7.2/x86_64/product-software
@@ -700,7 +700,7 @@ Now that the SAH node is installed you can deploy and validate the rest of the D
 
 <u>**Dell EMC Ready Architecture for Red Hat OpenStack Platform v13 includes:**</u>
 
-* https://github.com/dsp-jetpack/JetPack - Contains all automation deployment solution scripts
+* https://github.com/dsp-jetpack/JetPack/tree/JS-13.0 - Contains all automation deployment solution scripts
 * Dell_EMC_Red_Hat_Ready_Architecture_Cumulus_Switch_Configurations_v13.0.pdf
 * Dell_EMC_Red_Hat_Ready_Architecture_Guide_v13.0.pdf
 * Dell_EMC_Red_Hat_Ready_Architecture_Release_Notes_v13.0.pdf
@@ -4209,7 +4209,7 @@ target="_blank">https://github.com/dsp-jetpack/JetPack/blob/master/src/pilot/ass
 <div style="page-break-after: always;"></div>
 # Appendix K Solution Validation Overview 
 
-Validation of the complete solution is based on the hardware in the Ready Architecture, as defined in the Dell EMC Ready Architecture for Red Hat OpenStack Platform - Architecture Guide - Version 13, the JetPack software, and utilizes several tools to ensure the functionality of the solution. In addition, the Solution, once validated, is listed by the OpenStack Foundation (https://www.openstack.org/marketplace/distros/distribution/emc/dell-emc-ready-bundle-for-red-hat-openstack) as a Certified  
+Validation of the complete solution is based on the hardware in the Ready Architecture, as defined in the Dell EMC Ready Architecture for Red Hat OpenStack Platform - Architecture Guide - Version 13, the JetPack software, and utilizes several tools to ensure the functionality of the solution. In addition, the Solution, once validated, is listed by the OpenStack Foundation (https://www.openstack.org/marketplace/distros/distribution/emc/dell-emc-ready-arch-for-red-hat-openstack) as a Certified  
 
 
 > Topics:
@@ -4237,7 +4237,7 @@ Validation of the complete solution is based on the hardware in the Ready Archit
 
 	OpenStack Tempest Test Suite
 	Deployment Scripted RHOSP Sanity Test
-	Solution RefStack submission https://refstack.openstack.org/#/results/d1df0e3d-fcec-4968-86b2-ff1244326bad for OpenStack Powered Compute
+	Solution RefStack submission https://refstack.openstack.org/#/results/87e12c62-d3d1-4eea-a0fa-5de89a4815d9 for OpenStack Powered Compute
 
 #### The certification listing of the Solution is listed on the OpenStack Marketplace at:
 
