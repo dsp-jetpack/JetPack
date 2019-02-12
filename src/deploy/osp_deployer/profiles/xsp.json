@@ -184,6 +184,14 @@
                   "false"
                ]
             },
+            "glance_backend": {
+               "valid_values": [
+                  "file",
+                  "rbd",
+                  "cinder",
+                  "swift"
+               ]
+            },
          "enable_fencing":""
          }
       },
