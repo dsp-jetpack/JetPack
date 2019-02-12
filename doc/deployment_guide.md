@@ -1,31 +1,14 @@
-﻿
+
 <img src="media/dc99730255437cdd115b74c45cc6c19d.jpg" alt="drawing" width="200px"/>
 
 # Dell EMC Red Hat Ready Architecture Deployment Guide Notes
-### Version 13.0
-##### Dell EMC Service Provider Solutions
+
+**Version 13.0**
+
+**Dell EMC Service Provider Solutions**
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<br><br><br><br><br><br><br><br><br>
 <div style="page-break-after: always;"></div>
 
 # Trademarks
@@ -35,7 +18,7 @@ Microsoft® and Windows® are registered trademarks of Microsoft Corporation in 
 
 Red Hat®, Red Hat Enterprise Linux®, and Ceph are trademarks or registered trademarks of Red Hat, Inc., registered in the U.S. and other countries. Linux® is the registered trademark of Linus Torvalds in the U.S. and other countries. Oracle® and Java® are registered trademarks of Oracle Corporation and/or its affiliates.
 
-DISCLAIMER: The OpenStack® Word Mark and OpenStack Logo are either registered trademarks/ service marks or trademarks/service marks of the OpenStack Foundation, in the United States and other countries, and are used with the OpenStack Foundation's permission. We are not affiliated with, endorsed or sponsored by the OpenStack Foundation or the OpenStack community.
+> DISCLAIMER: The OpenStack® Word Mark and OpenStack Logo are either registered trademarks/ service marks or trademarks/service marks of the OpenStack Foundation, in the United States and other countries, and are used with the OpenStack Foundation's permission. We are not affiliated with, endorsed or sponsored by the OpenStack Foundation or the OpenStack community.
 
 
 
@@ -102,27 +85,6 @@ DISCLAIMER: The OpenStack® Word Mark and OpenStack Logo are either registered t
 [Appendix M References](#Appendix-M-References)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <div style="page-break-after: always;"></div>
 
 # Chapter 1 Overview
@@ -175,29 +137,6 @@ For customers performing a self-installation, these files are available upon req
 
 
 > NOTE: The automated install also requires that you have the ISO file “Red Hat Enterprise Linux 7.6 Binary DVD”. It can be downloaded from the Red Hat Customer Portal here: https://access.redhat.com/downloads/content/69/ver=/rhel---7/7.2/x86_64/product-software
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 <div style="page-break-after: always;"></div>
@@ -269,6 +208,7 @@ System Type:	Physical
 | Storage Node                      | Red Hat Ceph Storage            | Physical                          |
 
 
+
 <div style="page-break-after: always;"></div>
 
 # Chapter 3 Automation Configuration Files
@@ -288,35 +228,6 @@ The following procedure installs the required configuration files and scripts us
 5.	Download or copy the ISO of the Red Hat Enterprise Linux Server 7.6 installation DVD to /root/ rhel76.iso.
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <div style="page-break-after: always;"></div>
 
 # Chapter 4 Preparing and Deploying the Solution Admin Host
@@ -328,7 +239,7 @@ The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configu
 > ***CAUTION:*** This operation will destroy all data on the SAH, with no option for recovery.
 
 > ***Note:*** This release uses the feature of profiles to determine the use case for a deployment. There are 2 different pre-defined profiles, CSP or xSP that can be used for a deployment. The CSP profile is designed for Telecommunications Providers, Cable TV Operators, Satellite TV, Internet Service Providers, etc. whereas the xSP profile is designed for Business & IT Services Providers such as Hosting Service Providers, Cloud Service Providers, Software-as-a-Service/Platform-as-a-Service Providers, Application Hosting Service Providers and Private Managed Cloud Service Providers.
-> 
+
 
 1.	Log into your RHEL 7.6 system as the root user.
 2.	Change the working directory to 
@@ -406,7 +317,7 @@ The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configu
 
     > ***Note:*** The anaconda_ip is used for the initial installation of the SAH node, and requires an address that can access the Internet to obtain Red Hat software. When possible, the anaconda_iface must be a dedicated interface using 1GbE that is only used for this purpose, and is not used in any other part of the configuration. For 10GbE or 25GbE Intel NICs, "em4" (the fourth nic on the motherboard) should be used. For Intel XXV710 DP 25GbE DA/SFP NICs, "em2.<public_api_network_vlan_id>" (usually "em2.190") should be used.
 
-a.	Configure the Overcloud nodes' iDRACs to use either DHCP or statically-assigned IP addresses. A mix of these two choices is supported.
+**a.	Configure the Overcloud nodes' iDRACs to use either DHCP or statically-assigned IP addresses. A mix of these two choices is supported.**
 
 1.	Determine the service tag of the Overcloud nodes whose iDRAC is configured to use DHCP.
 
@@ -442,15 +353,15 @@ a.	Configure the Overcloud nodes' iDRACs to use either DHCP or statically-assign
             $ ironic node-show <node_guid>
             ```
             
-b. When using Mellanox 25GbE NICs, add the following to each Overcloud node in the .properties file: yaml 
-```yaml
-"pxe_nic": "NIC.Integrated.1-1-1",
-```
+**b. When using Mellanox 25GbE NICs, add the following to each Overcloud node in the .properties file: yaml**
+	```yaml
+	"pxe_nic": "NIC.Integrated.1-1-1",
+	```
 
 
 8. Update your python path:
     ```bash
-    $ export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/\ site-packages:~/JetPack/src/deploy
+    $ export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:~/JetPack/src/deploy
     ```
 
 9.	You can install the SAH node using either of the following methods:
@@ -503,45 +414,16 @@ b. When using Mellanox 25GbE NICs, add the following to each Overcloud node in t
     a. At the installation menu, select the Install option. Do not press the [Enter] key. b. Press the Tab key.
     
     c. Move the cursor to the end of the line that begins with vmlinuz. d. Append the following to the end of the line:
-
-        ```bash
-        ks=hd:sdb:/osp-sah.ks
-        ```
+    
+	```bash
+	ks=hd:sdb:/osp-sah.ks
+	```
         
     > Note: The device sdb can change, depending upon the quantity of disks being presented to the installation environment. These instructions assume that a single disk is presented. If otherwise, adjust accordingly.
  
 5.	Press the [Enter] key to start the installation.
     > Note: It may take a few minutes before progress is seen on the screen. Press the [ESC] key at the memory check to speed up the process.
  
-<br><br><br>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 <div style="page-break-after: always;"></div>
@@ -666,34 +548,6 @@ Now that the SAH node is installed you can deploy and validate the rest of the D
     ```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <div style="page-break-after: always;"></div>
 
 # Appendix A Files References
@@ -709,33 +563,6 @@ Now that the SAH node is installed you can deploy and validate the rest of the D
 * Dell_EMC_Red_Hat_Ready_Architecture_Guide_v13.0.pdf
 * Dell_EMC_Red_Hat_Ready_Architecture_Release_Notes_v13.0.pdf
 * Dell_EMC_Red_Hat_Ready_Architecture_Deployment_Guide_Notes¬_v13.0 (github doc folder)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -785,47 +612,20 @@ To update the RPMs:
 
 	a. Execute the following command for an RPM, substituting RPMNameWithoutVersion with the name of the RPM without the version number:
 
-    	```bash
-        $ yum update RPMNameWithoutVersion
-        ```
+	```bash
+    $ yum update RPMNameWithoutVersion
+    ```
 
 	b. Repeat for each subsequent RPM
 
 5.	Add each of the selected RPMs back into the version lock list:
     Execute the following command, again substituting RPMNameWithoutVersion with the name of the RPM without the version number:
-
-    ```bash
-    $ yum versionlock add RPMNameWithoutVersion
-    ```
+		
+	```bash
+	$ yum versionlock add RPMNameWithoutVersion
+	```
 
 > Note: The deployment option “enable_version_locking=true” in the [Advanced Settings] of .ini file for both csp and xsp profiles enforces version lock on the packages. Typically developers should set to false.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -968,12 +768,12 @@ This example uses the Cirros image to test high-level functional operations of O
     --container-format <format> --file <file_path> <IMAGE_NAME> --public
     ```
 
-For example:
-
-    ```bash
-    $ openstack image create --disk-format qcow2 \
-        --container-format bare --file cirros-0.3.3-x86_64-disk.img cirros --public
-    ```
+	For example:
+	
+	```bash
+	$ openstack image create --disk-format qcow2 \
+	    --container-format bare --file cirros-0.3.3-x86_64-disk.img cirros --public
+	```
 
 5.	List available images to verify that your image uploaded Successfully: 
 
@@ -991,52 +791,50 @@ For example:
 7.	Launch an instance using the boot image that uploaded: 
     a. Get the ID of the flavor you will use:
     
-        ```bash
-        $ openstack flavor list
-        ```
+    ```bash
+    $ openstack flavor list
+    ```
 
     b.	Get the image ID:
     
-        ```bash
-        $ openstack image list
-        ```
+    ```bash
+    $ openstack image list
+    ```
     
     c.	Get the tenant network ID:
 
-        ```bash
-        $ openstack network list
-        ```
+    ```bash
+    $ openstack network list
+    ```
 
     d.	Generate a key pair. The command below generates a new key pair; if you try using an existing key pair in the command, it fails.
+    > Note: MY_KEY.pem is an output file created by the nova keypair-add command, and will be used later.
     
-        >  	Note: MY_KEY.pem is an output file created by the nova keypair-add command, and will be used later.
-    
-        ```bash
-        $ openstack keypair create --public-key <path to public key>  MY_KEY > MY_KEY.pem
-        ```
+    ```bash
+    $ openstack keypair create --public-key <path to public key>  MY_KEY > MY_KEY.pem
+    ```
     
     e.	Create an instance using the nova boot command. 
+    >  	Note: Change the IDs to your IDs from Steps 7a-c, and the nameofinstance and the key_name from Step 7c:
+        
+        
+    ```bash
+    $ openstack server create --flavor <flavor_id> --key-name <key_name> \
+    --image <imageid>	--nic net-id=<tenantNetID> <nameofinstance>
+    ```
+        
+    For example:
     
-        >  	Note: Change the IDs to your IDs from Steps 7a-c, and the nameofinstance and the key_name from Step 7c:
-        
-        
-        ```bash
-        $ openstack server create --flavor <flavor_id> --key-name <key_name> \
-        --image <imageid>	--nic net-id=<tenantNetID> <nameofinstance>
-        ```
-        
-        For example:
-        
-        ```bash
-        $ openstack server create --flavor 2 --key_name key_name \ --image 0bde34f6-fba6-4174-a3ea-ff2a7918de2e \
-        --nic net-id=52411536-ec43-402f-9736-4cabdc8c875d	cirros-test
-        ```
+    ```bash
+    $ openstack server create --flavor 2 --key_name key_name \ --image 0bde34f6-fba6-4174-a3ea-ff2a7918de2e \
+    --nic net-id=52411536-ec43-402f-9736-4cabdc8c875d	cirros-test
+    ```
     
     f.	List the instance you created:
     
-        ```bash
-        $ openstack server list
-        ```
+    ```bash
+    $ openstack server list
+    ```
 
 8.	If you have multiple backends, create a Cinder volume type for each backend. Get the <volume_backend_name> from the /etc/cinder/cinder.conf file on the Controller node.
 
@@ -1072,142 +870,144 @@ For example:
 
     a.	List the Cinder volumes:
         
-        ```bash
-        $ openstack volume list
-        ```
+    ```bash
+    $ openstack volume list
+    ```
         
-        b.	Attach the volume to the instance, specifying the server ID and the volume ID.
-        
-        > Note: Replace the server_id with the ID returned from the nova list command, and replace the volume_id with the ID returned from the cinder list command, from the previous steps.
+     b.	Attach the volume to the instance, specifying the server ID and the volume ID.
+     
+     > Note: Replace the server_id with the ID returned from the nova list command, and replace the volume_id with the ID returned from the cinder list command, from the previous steps.
  
-        ```bash
-        $ openstack server add volume <server_id> <volume_id> <device>
-        ```
-        
-        For example:
-        
-        ```bash
-        $ openstack server add volume 84c6e57d-a6b1-44b6-81eb-fcb36afd31b5 \ 573e024d-5235-49ce-8332-be1576d323f8 /dev/vdb
-        ```
+    ```bash
+    $ openstack server add volume <server_id> <volume_id> <device>
+    ```
+    
+    For example:
+    
+    ```bash
+    $ openstack server add volume 84c6e57d-a6b1-44b6-81eb-fcb36afd31b5 \ 573e024d-5235-49ce-8332-be1576d323f8 /dev/vdb
+    ```
 
 10. Access the instance.
 
     a.	Find the active Controller by executing the following commands from the Director Node:
 
-        ```bash
-        $ cd ~/
-        $ source stackrc
-        $ openstack server list (make note of the controllers ips)
-        $ ssh heat-admin@<controller ip>
-        $ sudo -i
-        # pcs cluster status
-        ```
-        
-        The displayed output will be similar to the following:
+    ```bash
+    $ cd ~/
+    $ source stackrc
+    $ openstack server list (make note of the controllers ips)
+    $ ssh heat-admin@<controller ip>
+    $ sudo -i
+    # pcs cluster status
+    ```
+    
+    The displayed output will be similar to the following:
 
-        ```bash
-        Cluster name: tripleo_cluster
-        Last updated: Wed Apr 6 20:48:10 2016
-        Last change: Mon Apr 4 18:49:20 2016 by root via cibadmin on overcloud-
-        controller-1
-        Stack: corosync
-        
-        Current DC: overcloud-controller-1 (version 1.1.13-10.el7_2.2-44eb2dd) - partition with quorum        3	nodes and 112 resources configured
-        ```
+    ```bash
+    Cluster name: tripleo_cluster
+    Last updated: Wed Apr 6 20:48:10 2016
+    Last change: Mon Apr 4 18:49:20 2016 by root via cibadmin on overcloud-
+    controller-1
+    Stack: corosync
+    
+    Current DC: overcloud-controller-1 (version 1.1.13-10.el7_2.2-44eb2dd) - partition with quorum        3	nodes and 112 resources configured
+    ```
 
 
     b.	Initiate an SSH session to the active Controller, as heat-admin.
     
     c.	Find the instances by executing the following command:
     
-        ```bash
-        $ sudo -i
-        # ip netns
-        ```
-
+    ```bash
+    $ sudo -i
+    # ip netns
+    ```
     
-        The displayed output will be similar to the following:
-        
-        ```bash
-        qrouter-21eba0b0-b849-4083-ac40-44b794744e9f
-        qdhcp-f4a2c88f-1bc9-4785-b070-cc82d7c334f4
-        ```
+    > The displayed output will be similar to the following:
+    
+    ```bash
+    qrouter-21eba0b0-b849-4083-ac40-44b794744e9f
+    qdhcp-f4a2c88f-1bc9-4785-b070-cc82d7c334f4
+    ```
 
 
     d.	Access an instance namespace by executing the following command:
     
-        ```bash
-        $ ip netns exec <namespace> bash
-        ```
+    ```bash
+    $ ip netns exec <namespace> bash
+    ```
 
-        For example:
-        
-        ```bash
-        $ ip netns exec qdhcp-f4a2c88f-1bc9-4785-b070-cc82d7c334f4 bash
-        ```
+    For example:
+    
+    ```bash
+    $ ip netns exec qdhcp-f4a2c88f-1bc9-4785-b070-cc82d7c334f4 bash
+    ```
 
     
     e. Verify that the namespace is the desired tenant network, by executing the following command:
     
-        ```bash
-        ip a
-        ```
+    ```bash
+    ip a
+    ```
 
-    
-        The displayed output will be similar to the following:
-    
-        ```bash
-        1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN
-        link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-        inet 127.0.0.1/8 scope host lo
-        valid_lft forever preferred_lft forever
-        inet6 ::1/128 scope host
-        valid_lft forever preferred_lft forever
-        19: tap05a22fb4-4f: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc
-        noqueue state UNKNOWN
-        link/ether fa:16:3e:99:b9:88 brd ff:ff:ff:ff:ff:ff
-        inet 192.168.201.2/24 brd 192.168.201.255 scope global tap05a22fb4-4f ->
-        Tenant network
-        valid_lft forever preferred_lft forever
-        inet6 fe80::f816:3eff:fe99:b988/64 scope link
-        valid_lft forever preferred_lft forever
-        ```
+
+    The displayed output will be similar to the following:
+
+    ```bash
+    1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+    valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+    valid_lft forever preferred_lft forever
+    19: tap05a22fb4-4f: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc
+    noqueue state UNKNOWN
+    link/ether fa:16:3e:99:b9:88 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.201.2/24 brd 192.168.201.255 scope global tap05a22fb4-4f ->
+    Tenant network
+    valid_lft forever preferred_lft forever
+    inet6 fe80::f816:3eff:fe99:b988/64 scope link
+    valid_lft forever preferred_lft forever
+    ```
   
     
     f.	Ping the IP address of the instance.
     
     g.	SSH into the instance, as cirros, using the keypair generated above:
     
-        ```bash
-        $ ssh -i MY_KEY.pem cirros@<ip>
-        ```
+    ```bash
+    $ ssh -i MY_KEY.pem cirros@<ip>
+    ```
 
 
 
 11. Format the drive and access it.
 
     a. List storage devices:
-        ```bash
-        $ sudo -i
-        $ fdisk –l
-        ```
+    
+    ```bash
+    $ sudo -i
+    $ fdisk –l
+    ```
 
 
     b. Format the drive:
-        ```bash
-        $ mkfs.ext3 /dev/vdb
-        ```
+
+    ```bash
+    $ mkfs.ext3 /dev/vdb
+    ```
 
 
 c. Mount the device, access it, and then unmount it:
-        ```bash
-        $ mkdir ~/mydrive
-        $ mount /dev/vdb ~/mydrive
-        $ cd ~/mydrive
-        $ touch helloworld.txt
-        $ ls
-        $ umount ~/mydrive
-        ```
+
+```bash
+$ mkdir ~/mydrive
+$ mount /dev/vdb ~/mydrive
+$ cd ~/mydrive
+$ touch helloworld.txt
+$ ls
+$ umount ~/mydrive
+```
 
 
 ### Scripted RHOSP Sanity Test
@@ -1240,32 +1040,6 @@ As an alternative to manually testing your deployment script, we provide sanity_
     ```
 
 > Note: There are deployment options [Sanity Test Settings], in the sample files which may be configured initially to run the sanity tests automatically after the overcloud deployment is successful. The relevant sanity logs will be generated in the director VM at the directory of pilot/deployment-validation/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1385,36 +1159,8 @@ hpg_size=1GB
 ```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <div style="page-break-after: always;"></div>
+
 # Appendix E NUMA
 
 This appendix details the guidelines for configuration of NUMA during the deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
@@ -1529,33 +1275,6 @@ numa_enable=true
 
 #Enter number of cores you want to reserve for Host OS #Supported values are 2 or 4 or 6 or 8 numa_hostos_cpu_count=4
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -1762,11 +1481,14 @@ auto NOVA3-bond10
         ```
     
     2.	Open the settings file, and find "ovs_dpdk_enable". Assuming the name of settings file is "sample_csp_profile.ini" and it is present in the "/root" directory:
-    	#vi /root/sample_csp_profile.ini
+    3. 
+    ``` bash
+    $vi /root/sample_csp_profile.ini
+	```
+	
+	All the parameters that are related to enabling OVS-DPDK are described in the table below.
 
-        All the parameters that are related to enabling OVS-DPDK are described in the table below.
-
-        ![](media/table-ovs-dpdk-options.png)
+    ![](media/table-ovs-dpdk-options.png)
 
 
 **Example 1 OVS-DPDK with two ports:**
@@ -1843,6 +1565,7 @@ Start the “deployer.py” script execution and pass the settings file using �
 
 
 Monitor the output of the script. For detailed logs open a new SSH terminal and tail the logs file in “/ auto_results/” directory. The log files are timestamped.
+
 ```bash
 # tail -f /auto_results/<latest log file>
 ```
@@ -1854,13 +1577,12 @@ Output for successful deployment looks like this:
 
 ![Figure 5: Dell EMC Ready Architecture for Red Hat OpenStack Platform with OVS-DPDK successful deployment](media/shell-output.png)
 
-Figure 5: Dell EMC Ready Architecture for Red Hat OpenStack Platform with OVS-DPDK successful deployment
 
 At the start of deployment a log message shows whether OVS-DPDK is enabled or not. For a successful deployment, overcloud deployment status should be CREATE_COMPLETE. And if sanity test was set to true in the .ini file, it should display VALIDATION SUCCESS message.
 
-Troubleshooting
+### Troubleshooting
 
-There are two types of deployment failures that can occur:
+**There are two types of deployment failures that can occur:**
 
 1.	At the start of deployment, failures related to settings and properties file input validation may occur.
 2.	At the time of overcloud deployment preparations, in this part OVS-DPDK related parameters are configured.
@@ -1868,28 +1590,26 @@ There are two types of deployment failures that can occur:
 During the deployment, failure can be due to multiple reasons: a subset of these failures is related to “FAILED_OVERCLOUD”. The OVS-DPDK related failure are part of this subset. The most likely reasons for these failures are following:
 
 a.	Switch configurations.
+
 b.	Hardware configuration like placing the extra NICs in the right PCI Slots.
 
-Screenshots and solutions of common failure are given below.
 
-Start of Deployment
+**Following errors can occur at the start of deployment i.e. input validation period**
 
-Following errors can occur at the start of deployment i.e. input validation period
-
-Unsupported value of ovs_dpdk_enable:
+**Unsupported value of ovs_dpdk_enable:**
 
 ![Figure 6: Unsupported value for ovs_dpdk_enable in the settings file](media/1646e65f0d972f42eda08b59ebb68a59.png)
 
 Change the value in the settings to a supported one and deploy again.
 
 
-Unsupported value of nic_env_file:
+**Unsupported value of nic_env_file:**
 
 ![Figure 7: Unsupported value for nic_env_file in the settings file](media/2019-02-11_14-15-16.png)
 
 Change the value in the settings to a supported one and deploy again.
 
-Comments not removed for OVS-DPDK interfaces:
+**Comments not removed for OVS-DPDK interfaces:**
  
 ![Figure 8: Comments not removed for OVS-DPDK interfaces](media/8c6dd4b536a3f46019e592745482d2b3.png)
 
@@ -1944,7 +1664,7 @@ Failed software deployment reports also contain the reason for failure. Use the 
 $ openstack software deployment show <uuid>
 ```
 
-Post Deployment Steps
+### Post Deployment Steps
 
 Flavors created on the OVS-DPDK enabled compute nodes need to have the following metadata tags:
 
@@ -1984,10 +1704,11 @@ $ openstack flavor set <flavor-name> \
 
 > Note: To add metadata tags to an existing flavor, only step 3 is required.
 
-Sample Configurations
+**Sample Configurations**
+
+dell-environment.yaml - Sample DPDK Parameters
 
 ```yaml
-dell-environment.yaml - Sample DPDK Parameters
 # Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -2035,9 +1756,6 @@ parameter_defaults:
   # List of Default Filters to pass to the nova Scheduler
   # Default filters are used if profile is set to XSP
   # This line is uncommented when using with CSP profile
-
-                                                                                                                                                               OVS-DPDK | 52
-
 
   NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','RamFilter','DiskFilter', 'ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter', 'CoreFilter', 'NUMATopologyFilter', 'AggregateInstanceExtraSpecsFilter']
  
@@ -2100,12 +1818,11 @@ parameter_defaults:
       - /dev/sdd
       - /dev/sde
       - /dev/sdf
-53 | OVS-DPDK
-
       - /dev/sdg
       - /dev/sdh
       - /dev/sdi
       - /dev/sdj
+     
     dedicated_devices:
       - /dev/sdk
       - /dev/sdk
@@ -2161,8 +1878,6 @@ parameter_defaults:
   DellComputeParameters:
     VhostuserSocketGroup: "hugetlbfs"
     OvsPmdCoreList: "4-7,28-31"
-OVS-DPDK | 54
-
     OvsDpdkCoreList: "0-3,24-27"
     IsolCpusList: "4-23,28-47"
     OvsDpdkMemoryChannels: "4"
@@ -2271,6 +1986,7 @@ Dell EMC NFV Ready Bundle for Red Hat v13.0 supports the deployment with Neutron
 **Changes Required**
 
 Neutron managed SR-IOV for RHOSP requires the following changes:
+
 1.	Addition of neutron-sriov.yaml and ovs-hw-offload.yaml environment files.
 2.	Switch configurations for SR-IOV supported NICs on Compute nodes.
 
@@ -2433,6 +2149,7 @@ $ net add interface swp43 bridge vids 201-220
 ```
 
 **Following additional configuration will be added to both the switches:**
+
 ```bash
 auto swp38
 iface swp38
@@ -2546,30 +2263,34 @@ To enable SR-IOV in JetStream 13.0, perform the following steps:
     | ComputeSriovInterface1=p1p1 ComputeSriovInterface2=p4p1 ComputeSriovInterface3=p2p1 ComputeSriovInterface4=p4p2 |	Uncomment these lines when sriov_enable set to true. | Uncomment these interfaces according to the NIC environment file selected i.e. sriov_7_port or sriov_9_port |
 
 * Change the directory to /root/JetPack/src/deploy/osp_deployer.
-    ```bash
-    # cd /root/JetPack/src/deploy/osp_deployer
-    ```
+
+	```bash
+	# cd /root/JetPack/src/deploy/osp_deployer
+	```
 
 * Execute the deployer.py script and pass the settings file using -s flag.
-    ```bash
-    python deployer.py –s /root/sample_csp_profile.ini
-    ```
+
+	```bash
+	python deployer.py –s /root/sample_csp_profile.ini
+	```
 
 1.	For detailed logs and to monitor the output of the script, open a new SSH terminal and tail the latest logs file in /auto_results/ directory.
 Upon the successful completion of SR-IOV deployment, overcloud deployment status should be CREATE_COMPLETE. The VALIDATION SUCCESS status should be displayed in case the sanity test value is set to true. SSH into the Compute nodes and verify the created VFs: 
 
-![](media/f6d8bf824c3c9f4309446c8ce90323fd.png
+![](media/f6d8bf824c3c9f4309446c8ce90323fd.png)
 
 **Post-deployment steps**
 
 After the completion of Neutron managed SR-IOV deployment with JetStream 13.0, perform the following steps to create a SR-IOV enabled instance:
 
 1.	Source the overcloud RC file.
+
     ```bash
     $ source <overcloudrc>
     ```
 
 2.	Create an aggregate group and add a host to it for SR-IOV.
+
     ```bash
     $ openstack aggregate create --zone=sriov sriov
     $ openstack aggregate add host sriov <compute node hostname>.localdomain
@@ -2636,38 +2357,6 @@ If NUMA and Hugepages are enabled, set the required NUMA and Hugepages metadata 
         ![](media/6e9d9186c59d7249b1a716c8322fb3e4.png)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <div style="page-break-after: always;"></div>
 
 # Appendix H Neutron DVR support in JS 13.0
@@ -2695,6 +2384,7 @@ Follow these steps to configure bonds interfaces of every compute node on both s
 Switch with OS9, configurations can be done using following commands:
 
 * Switch configurations for 5 port nics, port-channel of compute Bond1 interfaces should be in floating vlan:
+
     ```yaml
     # int vlan <floating-vlan> 
     #tagged port-channel <name of channel which have interfaces of bond1>
@@ -2703,6 +2393,7 @@ Switch with OS9, configurations can be done using following commands:
     ```
 
 * When using 7 port nic environment file, additional bond interfaces should be in external and floating vlan. Below are the configurations to add interfaces to vlans:
+
     ```yaml
     # int port-channel <name of channel which have interfaces of bond2 >
     # switchport
@@ -2725,9 +2416,10 @@ Switch with OS9, configurations can be done using following commands:
 
 **Switch with Cumulus OS**
 
-Switch with Cumulus OS, configurations can be done using following commands:
+**Switch with Cumulus OS, configurations can be done using following commands:**
 
 * **Switch configurations for 5 port nics, port-channel of compute Bond1 interfaces should be in floating vlan:**
+
     ```bash
     $ net add bond <compute node bond1> bridge vids <floating ip vlan>
     $ net commit
@@ -2735,6 +2427,7 @@ Switch with Cumulus OS, configurations can be done using following commands:
     ```
 
 * **When using 7 port nic environment file, additional bond interfaces should be in external and floating vlan. Below are the configurations to add interfaces to vlans:**
+
     ```bash
     #net add bond <compute node bond2> slave <compute node bond2 port number e-g swp38>
     #net add bond <compute node bond2> clag id <compute node bond2 clag id e-g 50>
@@ -2748,19 +2441,28 @@ Switch with Cumulus OS, configurations can be done using following commands:
 ### Settings file parameter verification
 
 * To deploy the dvr with JS13, set the dvr_enable variable value to True in the ini file under the [Deployment Settings] section
-      dvr_enable = True
+
+	``` bash 
+	dvr_enable = True
+	```
 * For NIC configurations, change the value of nic_env_file parameter under the [Nodes Nics and Bonding Settings] section. DVR can be enabled in two different environments:
+
     1.	dvr_5_port
     2.	dvr_7_port
+    
 *	To enable DVR for 5_port, set the nic_env_file parameter to:
+
     ```bash
     nic_env_file = dvr_5_port/nic_environment.yaml
     ```
 *	To enable DVR for 7_port, set the nic_env_file parameter to:
+    
     ```bash
     nic_env_file = dvr_7_port/nic_environment.yaml
     ```
+    
 *	Uncomment the bellow 2 interfaces for enabling DVR for 7_port.
+    
     ```bash
     #ComputeBond2Interface1=p3p1
     #ComputeBond2Interface2=p2p1
@@ -2835,36 +2537,6 @@ Verify that DVR is deployed on all the controller nodes
 1.	ssh to compute node
 2.	run the command “sudo ip netns exec <fip-namespace> ssh –i /home/heat-admin/key user@<ip-addr>”
 3.	ssh should be successful
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -3044,41 +2716,9 @@ innodb_buffer_pool_instances = 16
 ```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <div style="page-break-after: always;"></div>
 
-# Appendix J Sample Files 
+# Appendix J Sample Files
 
 This appendix details the sample properties file and describes the differences between the xSP and CSP sample profile files of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
 
@@ -3681,7 +3321,6 @@ pull_images_from_cdn=true
 # Setting this to false will skip SM checks to get around this issue.
 verify_rhsm_status=true
 
-
 ```
 
 
@@ -3710,8 +3349,6 @@ verify_rhsm_status=true
 # Review ALL settings below, pay particular attention to paths/ip's etc.. #
 #                                                                         #
 ###########################################################################
-
-
 
 
 [Network Settings]
@@ -3773,8 +3410,6 @@ tenant_tunnel_network_vlanid=130
 
 # Nova Private network details
 tenant_vlan_range=201:250
-
-
 
 
 [MTU Settings]
@@ -4147,6 +3782,7 @@ pull_images_from_cdn=true
 # will return "Unknown"  which will cause checks to fail.
 # Setting this to false will skip SM checks to get around this issue.
 verify_rhsm_status=true
+
 ```
 
 
@@ -4211,6 +3847,7 @@ target="_blank">https://github.com/dsp-jetpack/JetPack/blob/master/src/pilot/ass
 
 
 <div style="page-break-after: always;"></div>
+
 # Appendix K Solution Validation Overview 
 
 Validation of the complete solution is based on the hardware in the Ready Architecture, as defined in the Dell EMC Ready Architecture for Red Hat OpenStack Platform - Architecture Guide - Version 13, the JetPack software, and utilizes several tools to ensure the functionality of the solution. In addition, the Solution, once validated, is listed by the OpenStack Foundation (https://www.openstack.org/marketplace/distros/distribution/emc/dell-emc-ready-arch-for-red-hat-openstack) as a Certified  
@@ -5924,30 +5561,6 @@ test_file
 2017-10-13	14:22:41: INFO: #####VALIDATION SUCCESS#####
 2017-10-13	14:22:41: INFO: ##### Done #####
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
