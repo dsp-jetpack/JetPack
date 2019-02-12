@@ -133,7 +133,7 @@ def get_nic_mac_address(drac_client, pxe_nic_id):
     for nic in drac_client.list_nics(sort=True):
         # Compare the NIC IDs case insensitively. Assume ASCII strings.
         if nic.id.lower() == pxe_nic_id.lower():
-            return nic.mac_address.lower()
+            return nic.mac.lower()
 
 
 def configure_uefi_nics_boot_settings(drac_client, pxe_nic_id):
