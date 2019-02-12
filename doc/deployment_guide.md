@@ -406,44 +406,48 @@ The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configu
 
     > ***Note:*** The anaconda_ip is used for the initial installation of the SAH node, and requires an address that can access the Internet to obtain Red Hat software. When possible, the anaconda_iface must be a dedicated interface using 1GbE that is only used for this purpose, and is not used in any other part of the configuration. For 10GbE or 25GbE Intel NICs, "em4" (the fourth nic on the motherboard) should be used. For Intel XXV710 DP 25GbE DA/SFP NICs, "em2.<public_api_network_vlan_id>" (usually "em2.190") should be used.
 
-    a.	Configure the Overcloud nodes' iDRACs to use either DHCP or statically-assigned IP addresses. A mix of these two choices is supported.
+a.	Configure the Overcloud nodes' iDRACs to use either DHCP or statically-assigned IP addresses. A mix of these two choices is supported.
+
+1.	Determine the service tag of the Overcloud nodes whose iDRAC is configured to use DHCP.
+
+2.	Determine the IP addresses of the Overcloud nodes whose iDRAC is configured to use static IP addresses.
+
+3.	When creating the automation .properties file:
+    * Add the following line to each node using DHCP, substituting the service tag for the node:
     
-        a.	Determine the service tag of the Overcloud nodes whose iDRAC is configured to use DHCP.
-        
-        b.	Determine the IP addresses of the Overcloud nodes whose iDRAC is configured to use static IP addresses.
-        
-        c.	When creating the automation .properties file:
-            * Add the following line to each node using DHCP, substituting the service tag for the node:
-                ```yaml
-                "service_tag": "<serviceTagHere>",
-                ```
-            * Add the following line to each node using static IP addressing, substituting IP address:
-                ```yaml
-                "idrac_ip": "<idracIpHere>",
-                ```
-                Only service_tag or idrac_ip should be specified for each Overcloud node, not both.
-                
-                The iDRACs using DHCP will be assigned an IP address from the management allocation pool specified in the .ini file. The parameters that specify the pool range are:
-        
-                * management_allocation_pool_start
-                
-                * management_allocation_pool_end
-        
-                During deployment, the iDRACs using DHCP will be automatically assigned an IP address and discovered. The IP addresses assigned to the nodes can be seen after the undercloud is deployed:
-        
-                * In /var/lib/dhcpd/dhcpd.leases on the SAH Node
-                * In ~/instackenv.json on the Director Node
-                * By executing the following commands on the Director Node:
-                
-                    ```bash
-                    $ ironic node-list
-                    $ ironic node-show <node_guid>
-                    ```
-                    
-    b. When using Mellanox 25GbE NICs, add the following to each Overcloud node in the .properties file:
         ```yaml
-        "pxe_nic": "NIC.Integrated.1-1-1",
+        "service_tag": "<serviceTagHere>",
         ```
+    * Add the following line to each node using static IP addressing, substituting IP address:
+    
+        ```yaml
+        "idrac_ip": "<idracIpHere>",
+        ```
+        Only service_tag or idrac_ip should be specified for each Overcloud node, not both.
+        
+        The iDRACs using DHCP will be assigned an IP address from the management allocation pool specified in the .ini file. The parameters that specify the pool range are:
+
+        * management_allocation_pool_start
+        
+        * management_allocation_pool_end
+
+        During deployment, the iDRACs using DHCP will be automatically assigned an IP address and discovered. The IP addresses assigned to the nodes can be seen after the undercloud is deployed:
+
+        * In /var/lib/dhcpd/dhcpd.leases on the SAH Node
+        * In ~/instackenv.json on the Director Node
+        * By executing the following commands on the Director Node:
+        
+            ```bash
+            $ ironic node-list
+            $ ironic node-show <node_guid>
+            ```
+            
+b. When using Mellanox 25GbE NICs, add the following to each Overcloud node in the .properties file: yaml 
+```yaml
+"pxe_nic": "NIC.Integrated.1-1-1",
+```
+
+
 8. Update your python path:
     ```bash
     $ export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/\ site-packages:~/JetPack/src/deploy
