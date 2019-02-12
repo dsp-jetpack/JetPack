@@ -65,41 +65,41 @@ DISCLAIMER: The OpenStack® Word Mark and OpenStack Logo are either registered t
 
 # Contents:
 
-[Chapter 1  Overview](#Chapter-1-:-Overview)
+[Chapter 1 Overview](#Chapter-1-Overview)
 
-[Chapter 2  Red Hat Subscriptions](#Chapter-2-:-Red-Hat-Subscriptions)
+[Chapter 2 Red Hat Subscriptions](#Chapter-2-Red-Hat-Subscriptions)
 
-[Chapter 3  Automation Configuration Files](#Chapter-3-:-Automation-Configuration-Files)
+[Chapter 3 Automation Configuration Files](#Chapter-3-Automation-Configuration-Files)
 
-[Chapter 4  Preparing and Deploying the Solution Admin Host](#Chapter-4-Preparing-and-Deploying-the-Solution-Admin-Host)
+[Chapter 4 Preparing and Deploying the Solution Admin Host](#Chapter-4-Preparing-and-Deploying-the-Solution-Admin-Host)
 
-[Chapter 5  Deploying the Undercloud and the OpenStack Cluster](#Chapter-5-:-Deploying-the-Undercloud-and-the-OpenStack-Cluster)
+[Chapter 5 Deploying the Undercloud and the OpenStack Cluster](#Chapter-5-Deploying-the-Undercloud-and-the-OpenStack-Cluster)
 
 # Appendix's:
 
 [Appendix A Files References](#Appendix-A-:-Files-References)
 
-[Appendix B Updating RPMs on Version Locked Nodes](#Appendix-B-:-Updating-RPMs-on-Version-Locked-Nodes)
+[Appendix B Updating RPMs on Version Locked Nodes](#Appendix-B-Updating-RPMs-on-Version-Locked-Nodes)
 
-[Appendix C OpenStack Operations Functional Test](#Appendix-C-:-OpenStack-Operations-Functional-Test)
+[Appendix C OpenStack Operations Functional Test](#Appendix-C-OpenStack-Operations-Functional-Test)
 
-[Appendix D Hugepages](#Appendix-D-:-Hugepages)
+[Appendix D Hugepages](#Appendix-D-Hugepages)
 
-[Appendix E NUMA](#Appendix-E-:-NUMA)
+[Appendix E NUMA](#Appendix-E-NUMA)
 
-[Appendix F OVS-DPDK](#Appendix-F-:-OVS-DPDK)
+[Appendix F OVS-DPDK](#Appendix-F-OVS-DPDK)
 
-[Appendix G Neutron managed SR-IOV in JS 13.0](#Appendix-G-:-Neutron-managed-SR-IOV-in-JS-13.0)
+[Appendix G Neutron managed SR-IOV in JS 13.0](#Appendix-G-Neutron-managed-SR-IOV-in-JS-13.0)
 
-[Appendix H Neutron DVR support in JS 13.0](#Appendix-H-:-Neutron-DVR-support-in-JS-13.0)
+[Appendix H Neutron DVR support in JS 13.0](#Appendix-H-Neutron-DVR-support-in-JS-13.0)
 
-[Appendix I Performance Optimization](#Appendix-I-:-Performance-Optimization)
+[Appendix I Performance Optimization](#Appendix-I-Performance-Optimization)
 
-[Appendix J Sample Files](#Appendix-J-:-Sample-Files)
+[Appendix J Sample Files](#Appendix-J-Sample-Files)
 
-[Appendix K Solution Validation Overview](#Appendix-K-:-Solution-Validation-Overview)
+[Appendix K Solution Validation Overview](#Appendix-K-Solution-Validation-Overview)
 
-[Appendix M References](#Appendix-M-:-References)
+[Appendix M References](#Appendix-M-References)
 
 
 
@@ -125,7 +125,7 @@ DISCLAIMER: The OpenStack® Word Mark and OpenStack Logo are either registered t
 
 <div style="page-break-after: always;"></div>
 
-# Chapter 1 : Overview
+# Chapter 1 Overview
 This guide provides information necessary to deploy the Dell EMC Ready Architecture for Red Hat OpenStack platform v13.0 using an automation framework developed by Dell EMC and validated by Red Hat.
 
 **Servers**
@@ -202,7 +202,7 @@ For customers performing a self-installation, these files are available upon req
 
 <div style="page-break-after: always;"></div>
 
-# Chapter 2 : Red Hat Subscriptions
+# Chapter 2 Red Hat Subscriptions
 Once all prerequisites have been met, you must determine the Appropriate Red Hat subscription entitlements for each cluster node.
 
 ## Red Hat Subscription Manager Pool IDs
@@ -271,7 +271,7 @@ System Type:	Physical
 
 <div style="page-break-after: always;"></div>
 
-# Chapter 3 : Automation Configuration Files
+# Chapter 3 Automation Configuration Files
 This chapter details obtaining the required configuration files.
 
 ### Downloading and Extracting Automation Files
@@ -319,7 +319,7 @@ The following procedure installs the required configuration files and scripts us
 
 <div style="page-break-after: always;"></div>
 
-# Chapter 4: Preparing and Deploying the Solution Admin Host
+# Chapter 4 Preparing and Deploying the Solution Admin Host
 This topic describes preparing for, and performing, the Solution Admin Host (SAH) deployment.
 
 The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configuration Toolkit (OS-HCTK) **to be run only on the SAH**.
@@ -542,7 +542,7 @@ The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configu
 
 <div style="page-break-after: always;"></div>
 
-# Chapter 5: Deploying the Undercloud and the OpenStack Cluster
+# Chapter 5 Deploying the Undercloud and the OpenStack Cluster
 > ***Topics:*** Deploying and Validating the Cluster
 
 Now that the SAH node is installed you can deploy and validate the rest of the Dell EMC Ready Architecture for Red Hat OpenStack Platform v13
@@ -692,7 +692,7 @@ Now that the SAH node is installed you can deploy and validate the rest of the D
 
 <div style="page-break-after: always;"></div>
 
-# Appendix A : Files References
+# Appendix A Files References
 > ***Topics:*** Solution Files This appendix lists documents and script archives that are required to install and deploy the Dell EMC Ready Architecture for Red Hat OpenStack Plaftform v13. Please contact your Dell EMC representative for copies if required.
  
 
@@ -737,7 +737,7 @@ Now that the SAH node is installed you can deploy and validate the rest of the D
 
 <div style="page-break-after: always;"></div>
 
-# Appendix B : Updating RPMs on Version Locked Nodes
+# Appendix B Updating RPMs on Version Locked Nodes
 At a high level, updating RPMs on a version locked node (Red Hat OpenStack Platform Director Node or Red Hat Ceph Storage Dashboard VM):
 1. Identifies the RPMs that need to be updated.
 2. Updated RPMs removed from the version lock list for that node.
@@ -827,7 +827,7 @@ To update the RPMs:
 
 <div style="page-break-after: always;"></div>
 
-# Appendix C : OpenStack Operations Functional Test
+# Appendix C OpenStack Operations Functional Test
 
 > **Topics:** Creating Neutron Networks in the Overcloud, Manual RHOSP Test, Scripted RHOSP Sanity Test
 
@@ -1268,7 +1268,7 @@ As an alternative to manually testing your deployment script, we provide sanity_
 
 <div style="page-break-after: always;"></div>
 
-# Appendix D : Hugepages
+# Appendix D Hugepages
 
 This appendix details the guidelines for configuration of hugepages during the deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13. The number of Hugepages is now calculated at runtime and no longer needs to be specified by the user.
 
@@ -1411,7 +1411,7 @@ hpg_size=1GB
 
 
 <div style="page-break-after: always;"></div>
-# Appendix E : NUMA
+# Appendix E NUMA
 
 This appendix details the guidelines for configuration of NUMA during the deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
 
@@ -1558,7 +1558,7 @@ numa_enable=true
 
 <div style="page-break-after: always;"></div>
 
-# Appendix F : OVS-DPDK
+# Appendix F OVS-DPDK
 
 This appendix details the guidelines for configuration of OVS-DPDK at the time of deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform v13.
 
@@ -2202,7 +2202,7 @@ OVS-DPDK | 54
 
 <div style="page-break-after: always;"></div>
 
-# Appendix G : Neutron managed SR-IOV in JS 13.0
+# Appendix G Neutron managed SR-IOV in JS 13.0
 
 This appendix details the guidelines for configuration of Neutron managed SR-IOV at the time of deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform v13.
 
@@ -2666,7 +2666,7 @@ If NUMA and Hugepages are enabled, set the required NUMA and Hugepages metadata 
 
 <div style="page-break-after: always;"></div>
 
-# Appendix H : Neutron DVR support in JS 13.0
+# Appendix H Neutron DVR support in JS 13.0
 
 This appendix details the guidelines for configuration of Neutron DVR support in JS 13.0 at the time of deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform v13.
 
@@ -2867,7 +2867,7 @@ Verify that DVR is deployed on all the controller nodes
 
 <div style="page-break-after: always;"></div>
 
-# Appendix I : Performance Optimization 
+# Appendix I Performance Optimization 
 
 This appendix details the guidelines for application of Performance Optimization at the time of deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
 
@@ -3074,7 +3074,7 @@ innodb_buffer_pool_instances = 16
 
 <div style="page-break-after: always;"></div>
 
-# Appendix J : Sample Files 
+# Appendix J Sample Files 
 
 This appendix details the sample properties file and describes the differences between the xSP and CSP sample profile files of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
 
@@ -4207,7 +4207,7 @@ target="_blank">https://github.com/dsp-jetpack/JetPack/blob/master/src/pilot/ass
 
 
 <div style="page-break-after: always;"></div>
-# Appendix K : Solution Validation Overview 
+# Appendix K Solution Validation Overview 
 
 Validation of the complete solution is based on the hardware in the Ready Architecture, as defined in the Dell EMC Ready Architecture for Red Hat OpenStack Platform - Architecture Guide - Version 13, the JetPack software, and utilizes several tools to ensure the functionality of the solution. In addition, the Solution, once validated, is listed by the OpenStack Foundation (https://www.openstack.org/marketplace/distros/distribution/emc/dell-emc-ready-bundle-for-red-hat-openstack) as a Certified  
 
@@ -5951,7 +5951,7 @@ test_file
 
 <div style="page-break-after: always;"></div>
 
-# Appendix L : Post Deployment Features
+# Appendix L Post Deployment Features
 
 This appendix provides information about the post deployment Features for the Dell EMC Ready Architecture for Red Hat OpenStack Platform.
 
@@ -6029,7 +6029,7 @@ Enhance the SR-IOV feature by enabling the NIC Alignment where the vCPUs instanc
 
 <div style="page-break-after: always;"></div>
 
-# Appendix M : References
+# Appendix M References
 
 Additional information found at http://www.dell.com/en-us/work/learn/ openstack-cloud or by e-mailing openstack@dell.com.
 If you need additional services or implementation help, please contact your Dell EMC sales representative
