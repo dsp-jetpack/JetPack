@@ -29,7 +29,7 @@
 <div style="page-break-after: always;"></div>
 
 # Trademarks
-Copyright © 2014-2018 Dell Inc. or its subsidiaries. All rights reserved.
+Copyright © 2014-2019 Dell Inc. or its subsidiaries. All rights reserved.
 
 Microsoft® and Windows® are registered trademarks of Microsoft Corporation in the United States and/or other countries.
 
