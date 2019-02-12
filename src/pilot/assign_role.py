@@ -438,6 +438,8 @@ def define_storage_logical_disks(drac_client, raid_controller_name):
         drac_client, remaining_physical_disks, raid_controller_name,
         jbod_capable)
 
+    jbod_logical_disks = filter(None, jbod_logical_disks)
+
     if jbod_logical_disks is None:
         return None
 
