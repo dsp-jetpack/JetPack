@@ -65,41 +65,41 @@ DISCLAIMER: The OpenStack® Word Mark and OpenStack Logo are either registered t
 
 # Contents:
 
-[Chapter 1 : Overview](#Chapter-1-:-Overview)
+[Chapter 1  Overview](#Chapter-1-:-Overview)
 
-[Chapter 2 : Red Hat Subscriptions](#Chapter-2-:-Red-Hat-Subscriptions)
+[Chapter 2  Red Hat Subscriptions](#Chapter-2-:-Red-Hat-Subscriptions)
 
-[Chapter 3 : Automation Configuration Files](#Chapter-3-:-Automation-Configuration-Files)
+[Chapter 3  Automation Configuration Files](#Chapter-3-:-Automation-Configuration-Files)
 
-[Chapter 4   Preparing and Deploying the Solution Admin Host](#Chapter-4-Preparing-and-Deploying-the-Solution-Admin-Host)
+[Chapter 4  Preparing and Deploying the Solution Admin Host](#Chapter-4-Preparing-and-Deploying-the-Solution-Admin-Host)
 
-[Chapter 5 : Deploying the Undercloud and the OpenStack Cluster](#Chapter-5-:-Deploying-the-Undercloud-and-the-OpenStack-Cluster)
+[Chapter 5  Deploying the Undercloud and the OpenStack Cluster](#Chapter-5-:-Deploying-the-Undercloud-and-the-OpenStack-Cluster)
 
 # Appendix's:
 
-[Appendix A : Files References](#Appendix-A-:-Files-References)
+[Appendix A Files References](#Appendix-A-:-Files-References)
 
-[Appendix B : Updating RPMs on Version Locked Nodes](#Appendix-B-:-Updating-RPMs-on-Version-Locked-Nodes)
+[Appendix B Updating RPMs on Version Locked Nodes](#Appendix-B-:-Updating-RPMs-on-Version-Locked-Nodes)
 
-[Appendix C : OpenStack Operations Functional Test](#Appendix-C-:-OpenStack-Operations-Functional-Test)
+[Appendix C OpenStack Operations Functional Test](#Appendix-C-:-OpenStack-Operations-Functional-Test)
 
-[Appendix D : Hugepages](#Appendix-D-:-Hugepages)
+[Appendix D Hugepages](#Appendix-D-:-Hugepages)
 
-[Appendix E : NUMA](#Appendix-E-:-NUMA)
+[Appendix E NUMA](#Appendix-E-:-NUMA)
 
-[Appendix F : OVS-DPDK](#Appendix-F-:-OVS-DPDK)
+[Appendix F OVS-DPDK](#Appendix-F-:-OVS-DPDK)
 
-[Appendix G : Neutron managed SR-IOV in JS 13.0](#Appendix-G-:-Neutron-managed-SR-IOV-in-JS-13.0)
+[Appendix G Neutron managed SR-IOV in JS 13.0](#Appendix-G-:-Neutron-managed-SR-IOV-in-JS-13.0)
 
-[Appendix H : Neutron DVR support in JS 13.0](#Appendix-H-:-Neutron-DVR-support-in-JS-13.0)
+[Appendix H Neutron DVR support in JS 13.0](#Appendix-H-:-Neutron-DVR-support-in-JS-13.0)
 
-[Appendix I : Performance Optimization](#Appendix-I-:-Performance-Optimization)
+[Appendix I Performance Optimization](#Appendix-I-:-Performance-Optimization)
 
-[Appendix J : Sample Files](#Appendix-J-:-Sample-Files)
+[Appendix J Sample Files](#Appendix-J-:-Sample-Files)
 
-[Appendix K : Solution Validation Overview](#Appendix-K-:-Solution-Validation-Overview)
+[Appendix K Solution Validation Overview](#Appendix-K-:-Solution-Validation-Overview)
 
-[Appendix M : References](#Appendix-M-:-References)
+[Appendix M References](#Appendix-M-:-References)
 
 
 
