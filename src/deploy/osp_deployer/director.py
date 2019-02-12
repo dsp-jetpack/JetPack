@@ -625,10 +625,25 @@ class Director(InfraHost):
                      " " + dell_storage_yaml + ".bak")
 
         self.setup_dellsc(dell_storage_yaml)
+
+        #Unity is in a separate yaml file
+        dell_unity_cinder_yaml = self.templates_dir + "/dellemc-unity-cinder-backend.yaml"
+        self.upload_file(self.settings.dell_unity_cinder_yaml,
+                         dell_unity_cinder_yaml)
+        # Backup before modifying
+        self.run_tty("cp " + dell_unity_cinder_yaml +
+                     " " + dell_unity_cinder_yaml + ".bak")
+
+        self.setup_unity_cinder(dell_unity_cinder_yaml)
+        
+        #Enable multiple backends now
         enabled_backends = "["
 
         if self.settings.enable_dellsc_backend is True:
             enabled_backends += "'dellsc'"
+
+        if self.settings.enable_unity_backend is True:
+            enabled_backends += ",'tripleo_dellemc_unity'"
 
         enabled_backends += "]"
 
@@ -669,6 +684,31 @@ class Director(InfraHost):
             self.settings.dellsc_server_folder + '|" ' + dell_storage_yaml,
             'sed -i "s|dellsc_volume_folder|' +
             self.settings.dellsc_volume_folder + '|" ' + dell_storage_yaml,
+        ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
+    def setup_unity_cinder(self, dell_unity_cinder_yaml):
+
+        if self.settings.enable_unity_backend is False:
+            logger.debug("not setting up unity cinder backend")
+            return
+
+        logger.debug("configuring dell emc unity backend")
+
+        cmds = [
+            'sed -i "s|<unity_san_ip>|' +
+            self.settings.unity_san_ip + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_san_login>|' +
+            self.settings.unity_san_login + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_san_password>|' +
+            self.settings.unity_san_password + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_storage_protocol>|' +
+            self.settings.unity_storage_protocol + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_io_ports>|' +
+            self.settings.unity_io_ports + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_storage_pool_names>|' +
+            self.settings.unity_storage_pool_names + '|" ' + dell_unity_cinder_yaml,
         ]
         for cmd in cmds:
             self.run_tty(cmd)
@@ -1052,6 +1092,8 @@ class Director(InfraHost):
                    + self.settings.overcloud_deploy_timeout
         if self.settings.enable_dellsc_backend is True:
             cmd += " --enable_dellsc"
+        if self.settings.enable_unity_backend is True:
+            cmd += " --enable_unity" 
         if self.settings.enable_rbd_backend is False:
             cmd += " --disable_rbd"
         if self.settings.overcloud_static_ips is True:
