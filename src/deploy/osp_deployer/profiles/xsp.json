@@ -51,6 +51,12 @@
                   "false"
                ]
              },
+       "octavia_generate_certs": {
+         "valid_values": [
+            "true",
+            "false"
+         ]
+        },
         "dvr_enable" :{
                "valid_values": [
                   "false"
