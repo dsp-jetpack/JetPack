@@ -273,6 +273,9 @@ class Settings():
         else:
             self.enable_rbd_nova_backend = False
 
+        #glance backend, possible values file, cinder, swift or rbd
+        self.glance_backend = deploy_settings['glance_backend'].lower()
+
         if deploy_settings['enable_fencing'].lower() == 'true':
             self.enable_fencing = True
         else:
