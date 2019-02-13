@@ -438,6 +438,7 @@ class Director(InfraHost):
         osd_dedicated_devices = "    dedicated_devices:\n"
         domain_param = "  CloudDomain:"
         rbd_backend_param = "  NovaEnableRbdBackend:"
+        glance_backend_param = "  GlanceBackend:"
         ceph_pool_default_size_param = "  CephPoolDefaultSize:"
         ceph_pool_default_size = 3
         osds_per_node = 0
@@ -534,6 +535,10 @@ class Director(InfraHost):
             elif line.startswith(rbd_backend_param):
                 value = str(self.settings.enable_rbd_nova_backend).lower()
                 tmp_file.write("{} {}\n".format(rbd_backend_param, value))
+
+            elif line.startswith(glance_backend_param):
+                value = str(self.settings.glance_backend).lower()
+                tmp_file.write("{} {}\n".format(glance_backend_param, value))
 
             elif line.startswith(ceph_pool_default_size_param):
                 tmp_file.write("{} {}\n".format(ceph_pool_default_size_param,

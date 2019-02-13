@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2017-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -116,13 +116,14 @@ def configure_nics_boot_settings(
         pxe_nic_id, ip_service_tag))
 
     if target_boot_mode == boot_mode_helper.DRAC_BOOT_MODE_UEFI:
-        return configure_uefi_nics_boot_settings(drac_client, pxe_nic_id)
+        return configure_uefi_nics_boot_settings(drac_client, ip_service_tag,
+                                                 pxe_nic_id)
     else:
         return configure_bios_nics_boot_settings(drac_client, ip_service_tag,
                                                  pxe_nic_id)
 
 
-def configure_uefi_nics_boot_settings(drac_client, pxe_nic_id):
+def configure_uefi_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
     job_ids = []
     provisioning_mac = None
     reboot_required = False
@@ -130,25 +131,50 @@ def configure_uefi_nics_boot_settings(drac_client, pxe_nic_id):
     for nic in drac_client.list_nics(sort=True):
         # Compare the NIC IDs case insensitively. Assume ASCII strings.
         if nic.id.lower() == pxe_nic_id.lower():
+            provisioning_mac = nic.mac_address.lower()
+
             settings = {
                "PxeDev1EnDis": "Enabled",
                "PxeDev2EnDis": "Disabled",
                "PxeDev3EnDis": "Disabled",
-               "PxeDev4EnDis": "Disabled",
+               "PxeDev4EnDis": "Disabled"
+               }
+
+            response = drac_client.set_bios_settings(settings)
+            reboot_required = response['commit_required']
+
+            if reboot_required:
+                job_id = drac_client.commit_pending_bios_changes(
+                    reboot=True)
+
+                LOG.info("Waiting for initial UEFI PXE NIC configuration to \
+                         complete on {}".format(ip_service_tag))
+                LOG.info("Do not unplug {}".format(ip_service_tag))
+
+                all_jobs_succeeded = wait_for_jobs_to_complete(
+                    [job_id], drac_client, ip_service_tag)
+                if not all_jobs_succeeded:
+                    raise RuntimeError("An error occurred while configuring "
+                                       "initial UEFI PXE NIC settings on "
+                                       "{}".format(ip_service_tag))
+
+            settings = {
                "PxeDev1Interface": pxe_nic_id,
                "PxeDev1Protocol": "IPv4",
                "PxeDev1VlanEnDis": "Disabled"
                }
 
-            provisioning_mac = nic.mac_address.lower()
+            LOG.info("Setting UEFI PXE NIC configuration \
+                     on {}".format(ip_service_tag))
             response = drac_client.set_bios_settings(settings)
             reboot_required = response['commit_required']
 
-            if response['commit_required']:
+            if reboot_required:
+                LOG.info("Committing UEFI PXE NIC configuration \
+                         on {}".format(ip_service_tag))
                 job_id = drac_client.commit_pending_bios_changes(
                     reboot=False, start_time=None)
                 job_ids.append(job_id)
-
             break
 
     return reboot_required, job_ids, provisioning_mac
@@ -203,14 +229,20 @@ def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):
     settings = {"BootMode": boot_mode}
     response = drac_client.set_bios_settings(settings)
 
-    job_id = None
     if response['commit_required']:
-        job_id = drac_client.commit_pending_bios_changes(reboot=False,
-                                                         start_time=None)
+        LOG.info("Rebooting {} to apply configuration".format(
+                 ip_service_tag))
+        job_id = drac_client.commit_pending_bios_changes(reboot=True)
 
-    # Note that "commit_required" is actually "reboot_required" under the
-    # covers
-    return response['commit_required'], job_id
+        LOG.info("Waiting for iDRAC configuration to \
+                 complete on {}".format(ip_service_tag))
+        LOG.info("Do not unplug {}".format(ip_service_tag))
+
+        all_jobs_succeeded = wait_for_jobs_to_complete(
+            [job_id], drac_client, ip_service_tag)
+        if not all_jobs_succeeded:
+            raise RuntimeError("An error occurred while configuring "
+                               "the boot mode on {}".format(ip_service_tag))
 
 
 def config_idrac_settings(drac_client, ip_service_tag, password, node):
@@ -372,35 +404,10 @@ def config_idrac(instack_lock,
     else:
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_BIOS
 
+    config_boot_mode(drac_client, ip_service_tag, node, target_boot_mode)
+
     job_ids = list()
     reboot_required = False
-
-    reboot_required_boot_mode, boot_mode_job_id = config_boot_mode(
-        drac_client, ip_service_tag, node, target_boot_mode)
-
-    reboot_required = reboot_required or reboot_required_boot_mode
-    if boot_mode_job_id:
-        job_ids.append(boot_mode_job_id)
-        if target_boot_mode == boot_mode_helper.DRAC_BOOT_MODE_UEFI:
-            if reboot_required:
-                job_id = drac_client.create_reboot_job()
-                job_ids.append(job_id)
-                reboot_required = False
-                LOG.info("Rebooting {} to apply configuration".format(
-                         ip_service_tag))
-            drac_client.schedule_job_execution(job_ids,
-                                               start_time='TIME_NOW')
-
-            LOG.info("Waiting for iDRAC configuration to \
-                     complete on {}".format(ip_service_tag))
-            LOG.info("Do not unplug {}".format(ip_service_tag))
-
-            all_jobs_succeeded = wait_for_jobs_to_complete(
-                job_ids, drac_client, ip_service_tag)
-            if not all_jobs_succeeded:
-                raise RuntimeError("An error occurred while configuring "
-                                   "the iDRAC on {}".format(drac_ip))
-            job_ids = []
 
     pxe_nic_fqdd = get_pxe_nic_fqdd(
         pxe_nic,
