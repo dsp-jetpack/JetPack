@@ -1520,13 +1520,24 @@ class Director(InfraHost):
             pass
 
     def configure_tempest(self):
-        logger.debug("configuring tempest")
+        logger.debug("Configuring tempest")
         setts = self.settings
+        external_sub_cmd = ("source ~/" + setts.overcloud_name + "rc;" +
+                            "openstack subnet list  | grep external_sub " +
+                            "| awk '{print $6;}'")
+        external_sub_guid = self.run_tty(external_sub_cmd)[0].rstrip()
+
+        if not external_sub_guid:
+            logger.error("Could not find public network, please run the " +
+                        "sanity test to create the appropriate networks " +
+                        "and re-run this script with " +
+                        "--tempest_config_only flag.")
+            pass
+
         cmds = [
-            'source ~/' + self.settings.overcloud_name + 'rc;'
-            "sudo ip route add " + self.settings.floating_ip_network +
-            " dev eth0",
-            'source ~/' + self.settings.overcloud_name + 'rc;' +
+            'source ~/' + setts.overcloud_name + 'rc;'
+            "sudo ip route add " + setts.floating_ip_network + " dev eth0",
+            'source ~/' + setts.overcloud_name + 'rc;' +
             'tempest init mytempest;cd mytempest;' +
             'discover-tempest-config --deployer-input ' +
             '~/tempest-deployer-input.conf --debug --create --network-id ' +

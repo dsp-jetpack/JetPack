@@ -58,6 +58,9 @@ def get_settings():
                         help='Only validate ini and properties files ' +
                         '(no deployment)',
                         action='store_true', required=False)
+    parser.add_argument('-tempest_config_only', '--tempest_config_only',
+                        help='Only (re-)generate the tempest.conf file.',
+                        action='store_true', required=False)
     args, ignore = parser.parse_known_args()
     settings = Settings(args.settings)
     return settings
@@ -100,6 +103,9 @@ def deploy():
                         help='No deployment - just validate config values',
                         action='store_true',
                         required=False)
+    parser.add_argument('-tempest_config_only', '--tempest_config_only',
+                        help='Only (re-)generate the tempest.conf file.',
+                        action='store_true', required=False)
     args, others = parser.parse_known_args()
     try:
         if len(others) > 0:
@@ -136,6 +142,13 @@ def deploy():
         sah_node = Sah()
 
         tester.sah_health_check()
+
+        if args.tempest_config_only:
+            logger.info("Only (re-)generating tempest.conf")
+            director_vm = Director()
+            director_vm.configure_tempest()
+            os._exit(0)
+
         logger.info("Uploading configs/iso/scripts..")
         sah_node.clear_known_hosts()
         sah_node.handle_lock_files()
