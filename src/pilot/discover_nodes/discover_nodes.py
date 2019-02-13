@@ -460,11 +460,8 @@ def is_idrac(client):
     # WS-Man service implementation that is an iDRAC. WS-Man's Enumerate
     # operation is used to obtain it.
     #
-    # This returns true if the Enumerate operation succeeds, the
-    # response contains an DCIM_iDRACCardView instance, the instance has
-    # a 'DeviceDescription' property, and the value of that property is
-    # 'iDRAC'; otherwise, false is returned.
-
+    # since the GetRemoteAPIStatus call is vendor specific, if the
+    # server responds then that is sufficient to determine that it's an iDRAC.
     # Squelch a couple of chatty libraries.
     dracclient_wsman_logger = logging.getLogger('dracclient.wsman')
     dracclient_wsman_logger.disabled = True
@@ -473,7 +470,7 @@ def is_idrac(client):
     requests_logger.disabled = True
 
     try:
-        is_ready = client.client.is_idrac_ready()
+        return client.client.is_idrac_ready()
     except dracclient.exceptions.WSManInvalidResponse as e:
         # Most likely the user credentials are unauthorized.
 
@@ -501,8 +498,7 @@ def is_idrac(client):
         # Ensure the libraries' loggers are re-enabled.
         requests_logger.disabled = False
         dracclient_wsman_logger.disabled = False
-    
-    return is_ready
+
 
 if __name__ == '__main__':
     main()
