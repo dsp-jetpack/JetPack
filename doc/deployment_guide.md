@@ -2608,131 +2608,134 @@ This appendix details the sample properties file and describes the differences b
 
 > Topics:
 > * Sample Properties File
-> * Sample CSP .ini File
-> * Sample xSP .ini File
+> * Sample CSP.ini File
+> * Sample xSP.ini File
 > * Sample xSP/CSP Profile File Differences
 
 ### Sample Properties File
 
+sample.properties
+
 ```yaml
+
 [
-{
-"is_sah": "true",
-"hostname": "sah",
-"idrac_ip": "192.168.110.20",
-"root_password": "xxxxxxxxxx",
+    {
+        "is_sah": "true",
+        "hostname": "sah",
+        "idrac_ip": "192.168.110.20",
+        "root_password": "xxxxxxxxxx",
 
-"anaconda_ip":"192.168.190.134",
-"anaconda_iface":"em4",
+        "anaconda_ip":"192.168.190.134",
+        "anaconda_iface":"em4",
 
-"public_bond": "bond1",
-"public_slaves": "em2 p1p2",
-"public_api_ip":"192.168.190.12",
+        "public_bond": "bond1",
+        "public_slaves": "em2 p1p2",
+        "public_api_ip":"192.168.190.12",
 
-"private_bond": "bond0",
-"private_slaves": "em1 p1p1",
-"provisioning_ip":"192.168.120.12",
-"storage_ip":"192.168.170.12",
-"private_api_ip":"192.168.140.12",
-"management_ip":"192.168.110.12"
-},
-{
-"is_director": "true",
-"hostname": "director",
-"root_password": "xxxxxxxxxx",
+        "private_bond": "bond0",
+        "private_slaves": "em1 p1p1",
+        "provisioning_ip":"192.168.120.12",
+        "storage_ip":"192.168.170.12",
+        "private_api_ip":"192.168.140.12",
+        "management_ip":"192.168.110.12"
+    },
+    {
+        "is_director": "true",
+        "hostname": "director",
+        "root_password": "xxxxxxxxxx",
 
-"provisioning_ip": "192.168.120.13",
+        "provisioning_ip": "192.168.120.13",
 
-"management_ip":"192.168.110.13",
-"public_api_ip":"192.168.190.13",
+        "management_ip":"192.168.110.13",
+        "public_api_ip":"192.168.190.13",
 
-"private_api_ip":"192.168.140.13"
-},
-{
-"is_dashboard": "true",
-"hostname": "dashboard",
-"root_password": "xxxxxxxxx",
+        "private_api_ip":"192.168.140.13"
+    },
+    {
+        "is_dashboard": "true",
+        "hostname": "dashboard",
+        "root_password": "xxxxxxxxx",
 
-"public_api_ip": "192.168.190.14",
-"storage_ip": "192.168.170.14"
-},
-{
-"is_controller": "true",
-"idrac_ip": "192.168.110.21",
+        "public_api_ip": "192.168.190.14",
+        "storage_ip": "192.168.170.14"
+    },
+    {
+        "is_controller": "true",
+        "idrac_ip": "192.168.110.21",
 
-"public_api_ip": "192.168.190.21",
-"private_api_ip": "192.168.140.21",
-"storage_ip": "192.168.170.21",
-"tenant_tunnel_ip": "192.168.130.21"
-},
-{
-"is_controller": "true",
-"service_tag": "ABCXYZ",
+        "public_api_ip": "192.168.190.21",
+        "private_api_ip": "192.168.140.21",
+        "storage_ip": "192.168.170.21",
+        "tenant_tunnel_ip": "192.168.130.21"
+    },
+    {
+        "is_controller": "true",
+        "service_tag": "ABCXYZ",
 
-"public_api_ip": "192.168.190.22",
-"private_api_ip": "192.168.140.22",
-"storage_ip": "192.168.170.22",
-"tenant_tunnel_ip": "192.168.130.22"
-},
-{
+        "public_api_ip": "192.168.190.22",
+        "private_api_ip": "192.168.140.22",
+        "storage_ip": "192.168.170.22",
+        "tenant_tunnel_ip": "192.168.130.22"
+    },
+    {
+        "is_controller": "true",
+        "idrac_ip": "192.168.110.23",
 
-"is_controller": "true",
-"idrac_ip": "192.168.110.23",
+        "public_api_ip": "192.168.190.23",
+        "private_api_ip": "192.168.140.23",
+        "storage_ip": "192.168.170.23",
+        "tenant_tunnel_ip": "192.168.130.23"
+    },
+    {
+        "is_compute": "true",
+        "idrac_ip": "192.168.110.31",
 
-"public_api_ip": "192.168.190.23",
-"private_api_ip": "192.168.140.23",
-"storage_ip": "192.168.170.23",
-"tenant_tunnel_ip": "192.168.130.23"
-},
-{
-"is_compute": "true",
-"idrac_ip": "192.168.110.31",
+        "private_api_ip": "192.168.140.31",
+        "storage_ip": "192.168.170.31",
+        "tenant_tunnel_ip": "192.168.130.31"
 
-"private_api_ip": "192.168.140.31",
-"storage_ip": "192.168.170.31",
-"tenant_tunnel_ip": "192.168.130.31"
+    },
+    {
+        "is_compute": "true",
+        "service_tag": "DEFUVW",
 
-},
-{
-"is_compute": "true",
-"service_tag": "DEFUVW",
+        "private_api_ip": "192.168.140.32",
+        "storage_ip": "192.168.170.32",
+        "tenant_tunnel_ip": "192.168.130.32"
 
-"private_api_ip": "192.168.140.32",
-"storage_ip": "192.168.170.32",
-"tenant_tunnel_ip": "192.168.130.32"
+    },
+    {
+        "is_compute": "true",
+        "idrac_ip": "192.168.110.33",
 
-},
-{
-"is_compute": "true",
-"idrac_ip": "192.168.110.33",
+        "private_api_ip": "192.168.140.33",
+        "storage_ip": "192.168.170.33",
+        "tenant_tunnel_ip": "192.168.130.33"
 
-"private_api_ip": "192.168.140.33",
-"storage_ip": "192.168.170.33",
-"tenant_tunnel_ip": "192.168.130.33"
+    },
+    {
+        "is_ceph_storage": "true",
+        "idrac_ip": "192.168.110.76",
 
-},
-{
-"is_ceph_storage": "true",
-"idrac_ip": "192.168.110.76",
+        "storage_ip": "192.168.170.76",
+        "storage_cluster_ip": "192.168.180.76"
+    },
+    {
+        "is_ceph_storage": "true",
+        "service_tag": "GHIRST",
 
-"storage_ip": "192.168.170.76",
-"storage_cluster_ip": "192.168.180.76"
-},
-{
-"is_ceph_storage": "true",
-"service_tag": "GHIRST",
+        "storage_ip": "192.168.170.77",
+        "storage_cluster_ip": "192.168.180.77"
+    },
+    {
+        "is_ceph_storage": "true",
+        "idrac_ip": "192.168.110.78",
 
-"storage_ip": "192.168.170.77",
-"storage_cluster_ip": "192.168.180.77"
-},
-{
-"is_ceph_storage": "true",
-"idrac_ip": "192.168.110.78",
-
-"storage_ip": "192.168.170.78",
-"storage_cluster_ip": "192.168.180.78"
-}
+        "storage_ip": "192.168.170.78",
+        "storage_cluster_ip": "192.168.180.78"
+    }
 ]
+
 ```
 
 
@@ -2743,7 +2746,6 @@ This appendix details the sample properties file and describes the differences b
 
 
 ```yaml
-
 # Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -2784,7 +2786,6 @@ private_api_netmask=255.255.255.0
 private_api_allocation_pool_start=192.168.140.121
 private_api_allocation_pool_end=192.168.140.250
 
-
 # Storage network details
 storage_network=192.168.170.0/24
 storage_vlanid=170
@@ -2823,9 +2824,8 @@ tenant_tunnel_network=192.168.130.0/24
 tenant_tunnel_network_allocation_pool_start=192.168.130.121
 tenant_tunnel_network_allocation_pool_end=192.168.130.250
 tenant_tunnel_network_vlanid=130
+
 # Nova Private network details
-
-
 tenant_vlan_range=201:250
 
 
@@ -2860,8 +2860,6 @@ redis_vip=192.168.140.251
 # VIP for the provisioning network
 # Note that this IP must lie outside the provisioning_net_dhcp_start/end range
 provisioning_vip=192.168.120.251
-
-
 
 # VIP for the Private API network
 # Note that this IP must lie outside the private_api_allocation_pool_start/end
@@ -2903,8 +2901,8 @@ subscription_manager_pool_vm_rhel=xxxxxxxxxxxxxxxxxxxxxxxxxxxx454a
 # Red Hat Ceph Storage (Physical Node)
 subscription_manager_vm_ceph=xxxxxxxxxxxxxxxxxxxxxxxxxxxx7826
 
-
 subscription_check_retries=20
+
 
 [Nodes Nics and Bonding Settings]
 
@@ -2937,8 +2935,6 @@ ControllerBondInterfaceOptions=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4
 # ComputeProvisioningInterface line below.
 ComputeProvisioningInterface=em3
 ComputeBond0Interface1=em1
-
-
 ComputeBond0Interface2=p1p1
 ComputeBond1Interface1=em2
 ComputeBond1Interface2=p1p2
@@ -2974,13 +2970,9 @@ StorageBondInterfaceOptions=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 la
 
 # To enable SR-IOV and OVS-DPDK, four interfaces should be used.
 # Following lines should be uncommented if both sriov_enable and ovs-dpdk_enable are set to true.
-
-
 #ComputeSriovInterface1=p1p1
 #ComputeSriovInterface2=p4p1
 #ComputeOvsDpdkInterface1=p2p1
-
-
 #ComputeOvsDpdkInterface2=p3p1
 #BondInterfaceOvsOptions=bond_mode=balance-tcp lacp=active
 
@@ -2993,9 +2985,7 @@ StorageBondInterfaceOptions=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 la
 [Dell NFV Settings]
 
 #Enter value of enable_hpg as true/false for HugePages
-
 hpg_enable=true
-
 #User should give this parameter in same format.
 #Supported values for hpg_size(Size of hugepages) is 2MB and 1 GB.
 #The number of hugepages will be calculated dynamically.
@@ -3018,13 +3008,9 @@ sriov_enable=false
 
 # Enter the number of VFs you want to create per port
 # Supported values are between 1-64
-
-
 sriov_vf_count=64
 
 # Set to true to enable DVR
-
-
 dvr_enable=false
 
 
@@ -3061,12 +3047,10 @@ profile=csp
 
 # This pathname must be the full path to the properties file which
 # describes the cluster. You should copy *this* sample settings file
-
 # (sample.ini) and the sample properties file (sample.properties) to
 # another directory, and customize them for your cluster. Then use the
 # path to your customized properties file here.
 cluster_nodes_configuration_file=/root/acme.properties
-
 
 # User for the undercloud/overcloud installation
 director_install_user=osp_admin
@@ -3097,15 +3081,16 @@ enable_rbd_backend=true
 # If set to false, Nova uses the storage local to the compute.
 enable_rbd_nova_backend=true
 
+# Set the glance backend. Vaules are file, rbd ,swift or cinder
+glance_backend=rbd
+
 # Set to false to disable fencing
 enable_fencing=true
 
 [Storage back-end Settings]
 
-
 # Compellent parameters. See the Software Deployment Guide for description of the parameters.
 enable_dellsc_backend=false
-
 dellsc_backend_name=CHANGEME
 dellsc_api_port=3033
 dellsc_iscsi_ip_address=CHANGEME
@@ -3141,11 +3126,11 @@ sanity_key_name=sanity
 sanity_number_instances=1
 sanity_image_url=http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
 
-
 # vlan-aware specific parameters
 # address of vlan-network where subport is attached
 sanity_vlantest_network=192.168.216.0/24
- [Tempest Settings]
+
+[Tempest Settings]
 
 # If you want to run Tempest post-deployment, you may do so. The sanity script must also run to create networks for Tempest.
 run_tempest=false
@@ -3180,20 +3165,17 @@ internal_repos_locations=CHANGEME_INTERNAL_REPO_URL
 cloud_repo_dir=/root/JetPack
 rhel_iso=/root/rhel76.iso
 
-
-
 # Overcloud deployment timeout value - default is 120mns, but can be tweaked here if required.
 overcloud_deploy_timeout=120
-
 
 # Default driver is DRAC.
 use_ipmi_driver=false
 
-# Default introspection method is out-of-band.
+# Default introspection method is in-band.
 # Note that out-of-band introspection is only supported by the DRAC driver.  If
 # use_ipmi_driver is set to "true" above then in-band introspection will be
 # used regardless of the value below.
-use_in_band_introspection=false
+use_in_band_introspection=true
 
 # RDO cloud images
 # Available to download @ https://access.redhat.com/downloads/content/191/ver=8/rhel---7/8/x86_64/product-software
@@ -3242,7 +3224,6 @@ Also in the assign_role.py, small tweak was done by changing ssd as media_type_f
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 ###########################################################################
 #                                                                         #
 # Copy and rename this file for your own stamp.                           #
@@ -3375,8 +3356,6 @@ subscription_manager_password=xxxxxxxxxxxxxx
 # The following pool IDs provide different collections of repositories.
 # Each is labeled with possible subscription names.
 
-
-
 # Red Hat Enterprise Linux (Physical Node)
 subscription_manager_pool_sah=xxxxxxxxxxxxxxxxxxxxxxxxxxxx44f5
 
@@ -3438,8 +3417,6 @@ StorageBondInterfaceOptions=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 la
 # For two interfaces, uncomment 'ComputeOvsDpdkInterface1', 'ComputeOvsDpdkInterface2' and 'BondInterfaceOvsOption'.
 # For four interfaces, uncomment all four interfaces and 'BondInterfaceOvsOption'.
 # The following lines should be commented out  if ovs_dpdk_enable is set to false
-
-
 #ComputeOvsDpdkInterface1=p2p1
 #ComputeOvsDpdkInterface2=p3p1
 #ComputeOvsDpdkInterface3=p2p2
@@ -3509,8 +3486,6 @@ mariadb_max_connections = 15360
 # MariaDB innodb_buffer_pool_size should be given value in GB, Example : 64G.
 # Default is 'dynamic' which assigns 75% ram size of controller node.
 # Note that innodb_buffer_pool_size should be less than available ram size.
-
-
 innodb_buffer_pool_size = dynamic
 
 # innodb_buffer_pool_instances takes value from 8 to 48
@@ -3570,6 +3545,9 @@ enable_rbd_backend=true
 # If set to false, Nova uses the storage local to the compute.
 enable_rbd_nova_backend=true
 
+# Set the glance backend. Vaules are file, rbd, swift or cinder
+glance_backend=rbd
+
 # Set to false to disable fencing
 enable_fencing=true
 
@@ -3580,8 +3558,6 @@ enable_fencing=true
 enable_dellsc_backend=false
 dellsc_backend_name=CHANGEME
 dellsc_api_port=3033
-
-
 dellsc_iscsi_ip_address=CHANGEME
 dellsc_iscsi_port=3260
 dellsc_san_ip=CHANGEME
@@ -3648,8 +3624,6 @@ custom_instack_json=n/a
 
 # Indicates if the deploy-overcloud.py script should be run in debug mode
 deploy_overcloud_debug=false
-
-
 
 use_internal_repo=false
 # Semi-colon ( ; ) separated list of internal repos to use, if needed.
@@ -3756,17 +3730,19 @@ Ran: 2089 tests in 3559.522 sec.
 
 ### Test Results from Deployment Validation Sanity
 
+> Note: the log output below is for guidance only.
+
 #### Results of a complete run of the Deployment Scripted RHOSP Sanity Test:
 
 ```bash
-2017-10-13 14:20:13: INFO: ###Appendix-C Openstack Operations Functional Test ###
-2017-10-13 14:20:13: INFO: ### Random init stuff
-2017-10-13 14:20:13: INFO: ### Collecting SSH keys... ###
+2018-10-13 14:20:13: INFO: ###Appendix-C Openstack Operations Functional Test ###
+2018-10-13 14:20:13: INFO: ### Random init stuff
+2018-10-13 14:20:13: INFO: ### Collecting SSH keys... ###
 
-2017-10-13 14:20:13: INFO: Executing: /home/osp_admin/pilot/ update_ssh_config.py
-2017-10-13 14:20:17: INFO: setting admin scope with: ~/MHTR18BLKrc.
-2017-10-13 14:20:17: INFO: ### sourcing ~/MHTR18BLKrc
-2017-10-13 14:20:17: INFO: ### PCS Status
+2018-10-13 14:20:13: INFO: Executing: /home/osp_admin/pilot/ update_ssh_config.py
+2018-10-13 14:20:17: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2018-10-13 14:20:17: INFO: ### sourcing ~/MHTR18BLKrc
+2018-10-13 14:20:17: INFO: ### PCS Status
  
 
 
@@ -3818,7 +3794,7 @@ pcsd: active/enabled
 
 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
 
-2017-10-13 14:20:18: INFO: ###Ensure db and rabbit services are in the active state
+2018-10-13 14:20:18: INFO: ###Ensure db and rabbit services are in the active state
 
 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
 
@@ -3903,16 +3879,16 @@ Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
 heat-ad+	919212	919168	0	18:20	?	00:00:00	bash	-c ps -ef | grep
 mariadb								
 heat-ad+	919270	919212	0	18:20	?	00:00:00	grep	mariadb
-2017-10-13 14:20:18: INFO: ### CREATION MODE
-2017-10-13 14:20:18: INFO: ### Getting unique names
-2017-10-13 14:20:18: INFO: setting admin scope with: ~/MHTR18BLKrc.
-2017-10-13 14:20:18: INFO: ### sourcing ~/MHTR18BLKrc
-2017-10-13 14:20:19: INFO: Generating sanityrc file.
-2017-10-13 14:20:19: INFO: ### Setting up new project sanity1
-2017-10-13 14:20:19: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2018-10-13 14:20:18: INFO: ### CREATION MODE
+2018-10-13 14:20:18: INFO: ### Getting unique names
+2018-10-13 14:20:18: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2018-10-13 14:20:18: INFO: ### sourcing ~/MHTR18BLKrc
+2018-10-13 14:20:19: INFO: Generating sanityrc file.
+2018-10-13 14:20:19: INFO: ### Setting up new project sanity1
+2018-10-13 14:20:19: INFO: setting admin scope with: ~/MHTR18BLKrc.
 
-2017-10-13 14:20:19: INFO: ### sourcing ~/MHTR18BLKrc No tenant with a name or ID of 'sanity1' exists.
-2017-10-13 14:20:20: INFO: Executing: openstack project create sanity1
+2018-10-13 14:20:19: INFO: ### sourcing ~/MHTR18BLKrc No tenant with a name or ID of 'sanity1' exists.
+2018-10-13 14:20:20: INFO: Executing: openstack project create sanity1
 +-------------	+	----------------------------------	+
 | Field	|	Value	|
 +-------------	+	----------------------------------	+
@@ -3922,7 +3898,7 @@ heat-ad+	919270	919212	0	18:20	?	00:00:00	grep	mariadb
 | name	|	sanity1	|
 +-------------	+	----------------------------------	+
 
-2017-10-13 14:20:21: INFO: Executing: openstack user create --project sanity1 --password <<PASSWORD>> --email someone@somewhere.com sanity1
+2018-10-13 14:20:21: INFO: Executing: openstack user create --project sanity1 --password <<PASSWORD>> --email someone@somewhere.com sanity1
 +------------	+	----------------------------------	+
 | Field	|	Value	|
 +------------	+	----------------------------------	+
@@ -3933,10 +3909,10 @@ heat-ad+	919270	919212	0	18:20	?	00:00:00	grep	mariadb
 | project_id |	26c77e1e763b4fecbc1833b9284e4986 |
 | username	|	sanity1	|
 +------------	+	----------------------------------	+
-2017-10-13 14:20:21: INFO: ### Creating the Networks ####
-2017-10-13 14:20:21: INFO: setting admin scope with: ~/MHTR18BLKrc.
-2017-10-13 14:20:21: INFO: ### sourcing ~/MHTR18BLKrc
-2017-10-13 14:20:22: INFO: Executing: openstack network create --share
+2018-10-13 14:20:21: INFO: ### Creating the Networks ####
+2018-10-13 14:20:21: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2018-10-13 14:20:21: INFO: ### sourcing ~/MHTR18BLKrc
+2018-10-13 14:20:22: INFO: Executing: openstack network create --share
 tenant_net1		
 +---------------------------	+--------------------------------------	+
 | Field	| Value	|
@@ -3944,7 +3920,7 @@ tenant_net1
 | admin_state_up	| UP	|
 | availability_zone_hints	|	|
 | availability_zones	|	|
-| created_at	| 2017-10-13T18:20:23Z	|
+| created_at	| 2018-10-13T18:20:23Z	|
 | description	|	|
 | headers	|	|
 | id	| e8e22aaf-0ee9-4c82-a295-f02788e97e8f |
@@ -3965,9 +3941,9 @@ tenant_net1
 | status				| ACTIVE	|
 | subnets				|	|
 | tags				| []	|
-| updated_at				| 2017-10-13T18:20:23Z	|
+| updated_at				| 2018-10-13T18:20:23Z	|
 +---------------------------			+--------------------------------------	+
-2017-10-13 14:20:24: INFO: Executing: neutron subnet-create tenant_net1
+2018-10-13 14:20:24: INFO: Executing: neutron subnet-create tenant_net1
 192.168.201.0/24 --name tenant_2011	
 Created a new subnet:				
 +-------------------	+	------------------------------------------------------		+
@@ -3975,7 +3951,7 @@ Created a new subnet:
 +-------------------	+	------------------------------------------------------		+
 | allocation_pools	|	{"start": "192.168.201.2", "end": "192.168.201.254"} |
 | cidr	|	192.168.201.0/24	|
-| created_at	|	2017-10-13T18:20:25Z	|
+| created_at	|	2018-10-13T18:20:25Z	|
 | description	|				|
 | dns_nameservers	|				|
 | enable_dhcp	|	True			|
@@ -3992,9 +3968,9 @@ Created a new subnet:
 | service_types	|				|
 | subnetpool_id	|				|
 | tenant_id	|	4790c5b2d4c64f6e9d6c367bc0b8b069	|
-| updated_at	|	2017-10-13T18:20:25Z	|
+| updated_at	|	2018-10-13T18:20:25Z	|
 +-------------------	+	------------------------------------------------------		+
-2017-10-13 14:20:26: INFO: Executing: neutron router-create	
+2018-10-13 14:20:26: INFO: Executing: neutron router-create	
 tenant_201_router1					
 Created a new router:				
 +-------------------------		+	--------------------------------------	+
@@ -4003,7 +3979,7 @@ Created a new router:
 | admin_state_up			|	True	|
 | availability_zone_hints |		|
 | availability_zones		|		|
-| created_at			|	2017-10-13T18:20:26Z	|
+| created_at			|	2018-10-13T18:20:26Z	|
 | description			|		|
 | distributed			|	False	|
 | external_gateway_info	|		|
@@ -4016,14 +3992,14 @@ Created a new router:
 | routes			|		|
 | status			|	ACTIVE	|
 | tenant_id			|	4790c5b2d4c64f6e9d6c367bc0b8b069	|
-| updated_at			|	2017-10-13T18:20:26Z	|
+| updated_at			|	2018-10-13T18:20:26Z	|
 +-------------------------		+	--------------------------------------	+
-2017-10-13 14:20:29: INFO: Executing: neutron router-interface-add
+2018-10-13 14:20:29: INFO: Executing: neutron router-interface-add
 tenant_201_router1	c8057c7b-777f-4f5d-bfe8-7d227da6c960	
 Added interface 7e458d5e-7c68-4607-8f32-64470d6d0359 to router	
 tenant_201_router1.				
 
-2017-10-13 14:20:30: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.138 sudo grep network_vlan_ranges /etc/neutron/plugin.ini
+2018-10-13 14:20:30: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.138 sudo grep network_vlan_ranges /etc/neutron/plugin.ini
  
 
 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
@@ -4031,7 +4007,7 @@ Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
 
 #network_vlan_ranges =
 
-network_vlan_ranges =physint:201:250,physext 2017-10-13 14:20:32: INFO: Executing: neutron net-create public -- router:external --provider:network_type vlan --provider:physical_network
+network_vlan_ranges =physint:201:250,physext 2018-10-13 14:20:32: INFO: Executing: neutron net-create public -- router:external --provider:network_type vlan --provider:physical_network
 physext --provider:segmentation_id 1223	
 Created a new network:			
 +---------------------------	+	--------------------------------------	+
@@ -4040,7 +4016,7 @@ Created a new network:
 | admin_state_up	|	True	|
 | availability_zone_hints	|		|
 | availability_zones	|		|
-| created_at	|	2017-10-13T18:20:32Z	|
+| created_at	|	2018-10-13T18:20:32Z	|
 | description	|		|
 | id	|	46cc68f3-0ee2-4ae1-8ee0-60ef6d89c0e6 |
 | ipv4_address_scope	|		|
@@ -4061,9 +4037,9 @@ Created a new network:
 | subnets	|		|
 | tags	|		|
 | tenant_id	|	4790c5b2d4c64f6e9d6c367bc0b8b069	|
-| updated_at	|	2017-10-13T18:20:32Z	|
+| updated_at	|	2018-10-13T18:20:32Z	|
 +---------------------------	+	--------------------------------------	+
-2017-10-13 14:20:32: INFO: Executing: neutron subnet-create --name	
+2018-10-13 14:20:32: INFO: Executing: neutron subnet-create --name	
 external_sub --allocation-pool start=100.84.122.71,end=100.84.122.104 --	
 gateway 100.84.122.65	--disable-dhcp public 100.84.122.64/26	
 Created a new subnet:		
@@ -4072,7 +4048,7 @@ Created a new subnet:
 +-------------------	+	-----------------------------------------------------	+
 | allocation_pools	|	{"start": "100.84.122.71", "end": "100.84.122.104"} |
 | cidr	|	100.84.122.64/26	|
-| created_at	|	2017-10-13T18:20:33Z	|
+| created_at	|	2018-10-13T18:20:33Z	|
 | description	|		|
 | dns_nameservers	|		|
 | enable_dhcp	|	False	|
@@ -4089,10 +4065,10 @@ Created a new subnet:
 | service_types	|		|
 | subnetpool_id	|		|
 | tenant_id	|	4790c5b2d4c64f6e9d6c367bc0b8b069	|
-| updated_at	| 2017-10-13T18:20:33Z	|
+| updated_at	| 2018-10-13T18:20:33Z	|
 
 +-------------------+-----------------------------------------------------+
-2017-10-13 14:20:33: INFO: Executing: openstack network list
+2018-10-13 14:20:33: INFO: Executing: openstack network list
 +--------------------------------------
 +----------------------------------------------------
 +--------------------------------------+
@@ -4110,7 +4086,7 @@ Created a new subnet:
 +	--------------------------------------				
 +	----------------------------------------------------				
 +	--------------------------------------		+		
-2017-10-13 14:20:34: INFO: Executing: openstack router list	
+2018-10-13 14:20:34: INFO: Executing: openstack router list	
 +	--------------------------------------		+	--------------------	+--------
 +	-------+-------------	+------	+----------------------------------	+
 | ID			|	Name	| Status | State
@@ -4122,12 +4098,12 @@ Created a new subnet:
 +	--------------------------------------		+	--------------------	+--------
 +	-------+-------------	+------	+----------------------------------	+
 
-2017-10-13 14:20:35: INFO: Executing: neutron router-gateway-set tenant_201_router1 public
+2018-10-13 14:20:35: INFO: Executing: neutron router-gateway-set tenant_201_router1 public
 Set gateway for router tenant_201_router1
-2017-10-13 14:20:37: INFO: Setting tenant scope.
-2017-10-13 14:20:39: INFO: ### Creating a Security Group ####
+2018-10-13 14:20:37: INFO: Setting tenant scope.
+2018-10-13 14:20:39: INFO: ### Creating a Security Group ####
 
-2017-10-13 14:20:39: INFO: Executing: neutron security-group-create sanity_security_group
+2018-10-13 14:20:39: INFO: Executing: neutron security-group-create sanity_security_group
 Created a new security_group:
 +----------------------
 +--------------------------------------------------------------------------------------
@@ -4142,7 +4118,7 @@ Created a new security_group:
 +----------------------
 +--------------------------------------------------------------------------------------
 +
-| created_at	| 2017-10-13T18:20:39Z
+| created_at	| 2018-10-13T18:20:39Z
 
 
 
@@ -4183,17 +4159,17 @@ Created a new security_group:
 | security_group_rules | {"remote_group_id": null, "direction":
 "egress", "protocol": null, "description": null, "ethertype": "IPv4",
 "remote_ip_prefix": null, "port_range_max": null, "updated_at":
-"2017-10-13T18:20:39Z", "security_group_id": "429d26ae-d018-41c8-9331-
+"2018-10-13T18:20:39Z", "security_group_id": "429d26ae-d018-41c8-9331-
 debd33bebbff", "port_range_min": null, "revision_number": 1,
 "tenant_id": "26c77e1e763b4fecbc1833b9284e4986", "created_at":
-"2017-10-13T18:20:39Z", "project_id": "26c77e1e763b4fecbc1833b9284e4986",
+"2018-10-13T18:20:39Z", "project_id": "26c77e1e763b4fecbc1833b9284e4986",
 "id": "1aa1def6-9405-4b60-bf71-65cc4499859f"} |
 |	| {"remote_group_id": null, "direction":
 "egress", "protocol": null, "description": null, "ethertype": "IPv6",
 "remote_ip_prefix": null, "port_range_max": null, "updated_at":
-"2017-10-13T18:20:39Z", "security_group_id": "429d26ae-d018-41c8-9331-
+"2018-10-13T18:20:39Z", "security_group_id": "429d26ae-d018-41c8-9331-
 
-debd33bebbff", "port_range_min": null, "revision_number": 1, "tenant_id": "26c77e1e763b4fecbc1833b9284e4986", "created_at": "2017-10-13T18:20:39Z", "project_id": "26c77e1e763b4fecbc1833b9284e4986", "id": "fc6fe44a-c8de-4cd3-9cf2-aa13ae770259"} |
+debd33bebbff", "port_range_min": null, "revision_number": 1, "tenant_id": "26c77e1e763b4fecbc1833b9284e4986", "created_at": "2018-10-13T18:20:39Z", "project_id": "26c77e1e763b4fecbc1833b9284e4986", "id": "fc6fe44a-c8de-4cd3-9cf2-aa13ae770259"} |
 | tenant_id	| 26c77e1e763b4fecbc1833b9284e4986
 
 
@@ -4201,7 +4177,7 @@ debd33bebbff", "port_range_min": null, "revision_number": 1, "tenant_id": "26c77
 
 
 |
-| updated_at	| 2017-10-13T18:20:39Z
+| updated_at	| 2018-10-13T18:20:39Z
 
 
 
@@ -4217,14 +4193,14 @@ debd33bebbff", "port_range_min": null, "revision_number": 1, "tenant_id": "26c77
 
 
 
-2017-10-13 14:20:39: INFO: Executing: neutron security-group-rule-create --direction ingress --ethertype IPv4 --protocol icmp --remote-ip-prefix
+2018-10-13 14:20:39: INFO: Executing: neutron security-group-rule-create --direction ingress --ethertype IPv4 --protocol icmp --remote-ip-prefix
 
 0.0.0.0/0 sanity_security_group	
 Created a new security_group_rule:	
 +-------------------	+--------------------------------------	+
 | Field	| Value	|
 +-------------------	+--------------------------------------	+
-| created_at	| 2017-10-13T18:20:40Z	|
+| created_at	| 2018-10-13T18:20:40Z	|
 | description	|	|
 | direction	| ingress	|
 | ethertype	| IPv4	|
@@ -4238,16 +4214,16 @@ Created a new security_group_rule:
 | revision_number	| 1	|
 | security_group_id	| 429d26ae-d018-41c8-9331-debd33bebbff |
 | tenant_id	| 26c77e1e763b4fecbc1833b9284e4986	|
-| updated_at	| 2017-10-13T18:20:40Z	|
+| updated_at	| 2018-10-13T18:20:40Z	|
 +-------------------	+--------------------------------------	+
-2017-10-13 14:20:40: INFO: Executing: neutron security-group-rule-create
+2018-10-13 14:20:40: INFO: Executing: neutron security-group-rule-create
 --direction egress	--ethertype IPv4 --protocol icmp --remote-ip-prefix
 0.0.0.0/0 sanity_security_group	
 Created a new security_group_rule:	
 +-------------------	+--------------------------------------	+
 | Field	| Value	|
 +-------------------	+--------------------------------------	+
-| created_at	| 2017-10-13T18:20:41Z	|
+| created_at	| 2018-10-13T18:20:41Z	|
 | description	|	|
 | direction	| egress	|
 | ethertype	| IPv4	|
@@ -4261,15 +4237,15 @@ Created a new security_group_rule:
 | revision_number	| 1	|
 | security_group_id	| 429d26ae-d018-41c8-9331-debd33bebbff |
 | tenant_id	| 26c77e1e763b4fecbc1833b9284e4986	|
-| updated_at	| 2017-10-13T18:20:41Z	|
+| updated_at	| 2018-10-13T18:20:41Z	|
 +-------------------	+--------------------------------------	+
 
-2017-10-13 14:20:41: INFO: Executing: neutron security-group-rule-create -- direction ingress --ethertype IPv4 --protocol tcp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 sanity_security_group
+2018-10-13 14:20:41: INFO: Executing: neutron security-group-rule-create -- direction ingress --ethertype IPv4 --protocol tcp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 sanity_security_group
 Created a new security_group_rule:	
 +-------------------	+--------------------------------------	+
 | Field	| Value	|
 +-------------------	+--------------------------------------	+
-| created_at	| 2017-10-13T18:20:41Z	|
+| created_at	| 2018-10-13T18:20:41Z	|
 | description	|	|
 | direction	| ingress	|
 | ethertype	| IPv4	|
@@ -4286,14 +4262,14 @@ Created a new security_group_rule:
 | revision_number	|	1	|
 | security_group_id |	429d26ae-d018-41c8-9331-debd33bebbff |
 | tenant_id	|	26c77e1e763b4fecbc1833b9284e4986	|
-| updated_at	|	2017-10-13T18:20:41Z	|
+| updated_at	|	2018-10-13T18:20:41Z	|
 +-------------------	+	--------------------------------------	+
 
-2017-10-13 14:20:41: INFO: Executing: neutron security-group-rule-create -- direction egress --ethertype IPv4 --protocol tcp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 sanity_security_group Created a new security_group_rule:
+2018-10-13 14:20:41: INFO: Executing: neutron security-group-rule-create -- direction egress --ethertype IPv4 --protocol tcp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 sanity_security_group Created a new security_group_rule:
 +-------------------	+	--------------------------------------	+
 | Field	|	Value	|
 +-------------------	+	--------------------------------------	+
-| created_at	|	2017-10-13T18:20:42Z	|
+| created_at	|	2018-10-13T18:20:42Z	|
 | description	|		|
 | direction	|	egress	|
 | ethertype	|	IPv4	|
@@ -4307,15 +4283,15 @@ Created a new security_group_rule:
 | revision_number	|	1	|
 | security_group_id |	429d26ae-d018-41c8-9331-debd33bebbff |
 | tenant_id	|	26c77e1e763b4fecbc1833b9284e4986	|
-| updated_at	|	2017-10-13T18:20:42Z	|
+| updated_at	|	2018-10-13T18:20:42Z	|
 +-------------------	+	--------------------------------------	+
 
-2017-10-13 14:20:42: INFO: Executing: neutron security-group-rule-create -- direction ingress --ethertype IPv4 --protocol udp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 sanity_security_group
+2018-10-13 14:20:42: INFO: Executing: neutron security-group-rule-create -- direction ingress --ethertype IPv4 --protocol udp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 sanity_security_group
 Created a new security_group_rule:	
 +-------------------	+	--------------------------------------	+
 | Field	|	Value	|
 +-------------------	+	--------------------------------------	+
-| created_at	|	2017-10-13T18:20:43Z	|
+| created_at	|	2018-10-13T18:20:43Z	|
 | description	|		|
 | direction	|	ingress	|
 | ethertype	|	IPv4	|
@@ -4329,15 +4305,15 @@ Created a new security_group_rule:
 | revision_number	|	1	|
 | security_group_id |	429d26ae-d018-41c8-9331-debd33bebbff |
 | tenant_id	|	26c77e1e763b4fecbc1833b9284e4986	|
-| updated_at	|	2017-10-13T18:20:43Z	|
+| updated_at	|	2018-10-13T18:20:43Z	|
 +-------------------	+	--------------------------------------	+
 
-2017-10-13 14:20:43: INFO: Executing: neutron security-group-rule-create -- direction egress --ethertype IPv4 --protocol udp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 sanity_security_group
+2018-10-13 14:20:43: INFO: Executing: neutron security-group-rule-create -- direction egress --ethertype IPv4 --protocol udp --port-range-min 1 --port-range-max 65535 --remote-ip-prefix 0.0.0.0/0 sanity_security_group
 Created a new security_group_rule:	
 +-------------------	+--------------------------------------	+
 | Field	| Value	|
 +-------------------	+--------------------------------------	+
-| created_at	| 2017-10-13T18:20:43Z	|
+| created_at	| 2018-10-13T18:20:43Z	|
 | description	|	|
 | direction	| egress	|
 | ethertype	| IPv4	|
@@ -4351,14 +4327,14 @@ Created a new security_group_rule:
 | revision_number	|	1		|		
 | security_group_id |	429d26ae-d018-41c8-9331-debd33bebbff |		
 | tenant_id	|	26c77e1e763b4fecbc1833b9284e4986	|		
-| updated_at	|	2017-10-13T18:20:43Z	|		
+| updated_at	|	2018-10-13T18:20:43Z	|		
 +-------------------	+	--------------------------------------	+		
-2017-10-13 14:20:43: INFO: ### Setting up glance			
-2017-10-13 14:20:43: INFO: setting admin scope with: ~/MHTR18BLKrc.	
-2017-10-13 14:20:43: INFO: ### sourcing ~/MHTR18BLKrc			
-2017-10-13 14:20:48: INFO: Executing: wget http://download.cirros-	
+2018-10-13 14:20:43: INFO: ### Setting up glance			
+2018-10-13 14:20:43: INFO: setting admin scope with: ~/MHTR18BLKrc.	
+2018-10-13 14:20:43: INFO: ### sourcing ~/MHTR18BLKrc			
+2018-10-13 14:20:48: INFO: Executing: wget http://download.cirros-	
 cloud.net/0.3.3/cirros-0.3.3-x86_64-disk.img			
---2017-10-13 14:20:48	--  http://download.cirros-cloud.net/0.3.3/		
+--2018-10-13 14:20:48	--  http://download.cirros-cloud.net/0.3.3/		
 cirros-0.3.3-x86_64-disk.img				
 Resolving download.cirros-cloud.net (download.cirros-cloud.net)...	
 64.90.42.85, 2607:f298:6:a036::bd6:a72a				
@@ -4375,9 +4351,9 @@ Saving to: â€˜cirros-0.3.3-x86_64-disk.imgâ€™
 6.36M=5.3s						
 
 
-2017-10-13 14:20:54 (2.37 MB/s) - â€˜cirros-0.3.3-x86_64-disk.imgâ€™ saved [13200896/13200896]
+2018-10-13 14:20:54 (2.37 MB/s) - â€˜cirros-0.3.3-x86_64-disk.imgâ€™ saved [13200896/13200896]
 
-2017-10-13 14:20:55: INFO: Executing: openstack image create --disk-format qcow2 --container-format bare --file cirros-0.3.3-x86_64-disk.img cirros --
+2018-10-13 14:20:55: INFO: Executing: openstack image create --disk-format qcow2 --container-format bare --file cirros-0.3.3-x86_64-disk.img cirros --
 public	
 +------------------	
 +--------------------------------------------------------------------------------------
@@ -4391,7 +4367,7 @@ public
 	|
 | container_format | bare
 	|
-| created_at	| 2017-10-13T18:20:56Z
+| created_at	| 2018-10-13T18:20:56Z
 	|
 | disk_format	| qcow2
 
@@ -4446,7 +4422,7 @@ images/90dc3459-e253-49a5-b5fe-e403ce231110/snap', locations='[{u'url': u'rbd://
 
 
 |
-| updated_at	| 2017-10-13T18:20:57Z
+| updated_at	| 2018-10-13T18:20:57Z
 
 
 |
@@ -4461,7 +4437,7 @@ images/90dc3459-e253-49a5-b5fe-e403ce231110/snap', locations='[{u'url': u'rbd://
 +------------------
 +--------------------------------------------------------------------------------------
 +
-2017-10-13 14:20:58: INFO: Executing: openstack image list
+2018-10-13 14:20:58: INFO: Executing: openstack image list
  
 
 +--------------------------------------	+--------	+--------	+
@@ -4469,9 +4445,9 @@ images/90dc3459-e253-49a5-b5fe-e403ce231110/snap', locations='[{u'url': u'rbd://
 +--------------------------------------	+--------	+--------	+
 | 90dc3459-e253-49a5-b5fe-e403ce231110 |	cirros	| active |
 +--------------------------------------	+--------	+--------	+
-2017-10-13 14:20:59: INFO: ### Setup Nova			
+2018-10-13 14:20:59: INFO: ### Setup Nova			
 
-2017-10-13 14:21:00: INFO: Executing: openstack flavor create --ram 2048 --
+2018-10-13 14:21:00: INFO: Executing: openstack flavor create --ram 2048 --
 vcpus 1 --disk 20 sanity_flavor		
 +	----------------------------			+--------------------------------------	+
 | Field				|	Value	|
@@ -4488,8 +4464,8 @@ vcpus 1 --disk 20 sanity_flavor
 | swap				|		|
 | vcpus				|	1	|
 +	----------------------------			+--------------------------------------	+
-2017-10-13 14:21:01: INFO: Setting tenant scope.	
-2017-10-13 14:21:01: INFO: creating keypair sanity	
+2018-10-13 14:21:01: INFO: Setting tenant scope.	
+2018-10-13 14:21:01: INFO: creating keypair sanity	
 Generating public/private rsa key pair.	
 Your identification	has been	saved in /home/osp_admin/sanity.	
 Your public key has	been saved	in /home/osp_admin/sanity.pub.	
@@ -4508,9 +4484,9 @@ The key's randomart	image is:
 |		.+oO .	|				
 |		.+ooo=.	|				
 +	----[SHA256]-----	+				
-2017-10-13 14:21:01: INFO: loading sanity keypair into nova	
-2017-10-13 14:21:05: INFO: ###	Initiating build of instances...	
-2017-10-13 14:21:05: INFO: Executing: nova boot --security-groups	
+2018-10-13 14:21:01: INFO: loading sanity keypair into nova	
+2018-10-13 14:21:05: INFO: ###	Initiating build of instances...	
+2018-10-13 14:21:05: INFO: Executing: nova boot --security-groups	
 	sanity_security_group --flavor sanity_flavor --key-name sanity --image
 	90dc3459-e253-49a5-b5fe-e403ce231110 --nic net-id=e8e22aaf-0ee9-4c82-a295-
 f02788e97e8f cirros_test_1
@@ -4544,7 +4520,7 @@ f02788e97e8f cirros_test_1
 |			
 | config_drive		|	
 |			
-| created		|	2017-10-13T18:21:08Z
+| created		|	2018-10-13T18:21:08Z
 |			
 | description		|	-
 |			
@@ -4576,13 +4552,13 @@ e403ce231110)	|
 |			
 | tenant_id		|	26c77e1e763b4fecbc1833b9284e4986
 |			
-| updated		|	2017-10-13T18:21:08Z
+| updated		|	2018-10-13T18:21:08Z
 |			
 | user_id		|	4442207de58448938694bdbd7b764cf4
 |			
 +--------------------------------------		
 +------------------------------------------------------		+
-2017-10-13 14:21:09: INFO: Executing: nova boot --security-groups
+2018-10-13 14:21:09: INFO: Executing: nova boot --security-groups
 
 sanity_security_group --flavor sanity_flavor --key-name sanity --image 90dc3459-e253-49a5-b5fe-e403ce231110 --nic net-id=e8e22aaf-0ee9-4c82-a295-
 f02788e97e8f cirros_test_2
@@ -4614,7 +4590,7 @@ f02788e97e8f cirros_test_2
 |			
 | config_drive		|	
 |			
-| created		|	2017-10-13T18:21:12Z
+| created		|	2018-10-13T18:21:12Z
 |			
 | description		|	-
 |			
@@ -4646,14 +4622,14 @@ e403ce231110)	|
 |			
 | tenant_id		|	26c77e1e763b4fecbc1833b9284e4986
 |			
-| updated		|	2017-10-13T18:21:12Z
+| updated		|	2018-10-13T18:21:12Z
 |			
 | user_id		|	4442207de58448938694bdbd7b764cf4
 |			
 +--------------------------------------		
 +------------------------------------------------------		+
 
-2017-10-13 14:21:12: INFO: Executing: nova boot --security-groups
+2018-10-13 14:21:12: INFO: Executing: nova boot --security-groups
 sanity_security_group --flavor sanity_flavor --key-name sanity --image
 90dc3459-e253-49a5-b5fe-e403ce231110 --nic net-id=e8e22aaf-0ee9-4c82-a295-
 f02788e97e8f cirros_test_3
@@ -4687,7 +4663,7 @@ f02788e97e8f cirros_test_3
 |			
 | config_drive		|	
 |			
-| created		|	2017-10-13T18:21:16Z
+| created		|	2018-10-13T18:21:16Z
 |			
 | description		|	-
 |			
@@ -4719,7 +4695,7 @@ e403ce231110)	|
 |			
 | tenant_id		|	26c77e1e763b4fecbc1833b9284e4986
 |			
-| updated		|	2017-10-13T18:21:16Z
+| updated		|	2018-10-13T18:21:16Z
 |			
 | user_id		|	4442207de58448938694bdbd7b764cf4
 |			
@@ -4729,7 +4705,7 @@ e403ce231110)	|
  
 
 
-2017-10-13 14:21:17: INFO: Executing: nova boot --security-groups sanity_security_group --flavor sanity_flavor --key-name sanity --image 90dc3459-e253-49a5-b5fe-e403ce231110 --nic net-id=e8e22aaf-0ee9-4c82-a295-
+2018-10-13 14:21:17: INFO: Executing: nova boot --security-groups sanity_security_group --flavor sanity_flavor --key-name sanity --image 90dc3459-e253-49a5-b5fe-e403ce231110 --nic net-id=e8e22aaf-0ee9-4c82-a295-
 
 f02788e97e8f cirros_test_4		
 +--------------------------------------		
@@ -4760,7 +4736,7 @@ f02788e97e8f cirros_test_4
 |			
 | config_drive		|	
 |			
-| created		|	2017-10-13T18:21:20Z
+| created		|	2018-10-13T18:21:20Z
 |			
 | description		|	-
 |			
@@ -4793,7 +4769,7 @@ e403ce231110)	|
 | tenant_id		|	26c77e1e763b4fecbc1833b9284e4986
 |			
  
-| updated	| 2017-10-13T18:21:20Z
+| updated	| 2018-10-13T18:21:20Z
 
 |
 | user_id	| 4442207de58448938694bdbd7b764cf4
@@ -4801,7 +4777,7 @@ e403ce231110)	|
 +--------------------------------------
 +------------------------------------------------------+
 
-2017-10-13 14:21:20: INFO: Executing: nova boot --security-groups sanity_security_group --flavor sanity_flavor --key-name sanity --image 90dc3459-e253-49a5-b5fe-e403ce231110 --nic net-id=e8e22aaf-0ee9-4c82-a295-
+2018-10-13 14:21:20: INFO: Executing: nova boot --security-groups sanity_security_group --flavor sanity_flavor --key-name sanity --image 90dc3459-e253-49a5-b5fe-e403ce231110 --nic net-id=e8e22aaf-0ee9-4c82-a295-
 f02788e97e8f cirros_test_5		
 +--------------------------------------		
 +------------------------------------------------------		+
@@ -4831,7 +4807,7 @@ f02788e97e8f cirros_test_5
 |			
 | config_drive		|	
 |			
-| created		|	2017-10-13T18:21:23Z
+| created		|	2018-10-13T18:21:23Z
 |			
 | description		|	-
 |			
@@ -4867,15 +4843,15 @@ e403ce231110)	|
 	|				
 | tenant_id			|	26c77e1e763b4fecbc1833b9284e4986
 	|				
-| updated			|	2017-10-13T18:21:23Z
+| updated			|	2018-10-13T18:21:23Z
 	|				
 | user_id			|	4442207de58448938694bdbd7b764cf4
 	|				
 +--------------------------------------				
 +------------------------------------------------------				+
-2017-10-13 14:21:24: INFO: ### Waiting for the instances to be built...
-2017-10-13 14:21:32: INFO: ### Instances	are successfully built
-2017-10-13 14:21:32: INFO: Executing: nova list	
+2018-10-13 14:21:24: INFO: ### Waiting for the instances to be built...
+2018-10-13 14:21:32: INFO: ### Instances	are successfully built
+2018-10-13 14:21:32: INFO: Executing: nova list	
 +--------------------------------------		+	---------------	+--------
 +------------	+-------------	+	----------------------------	+
 | ID			|	Name	| Status | Task State
@@ -4894,7 +4870,7 @@ e403ce231110)	|
 | fde7800f-ebdd-44b1-af41-e164ddff8715 | cirros_test_5 | ACTIVE | -
 | Running	| tenant_net1=192.168.201.7	|
 
-+--------------------------------------+---------------+-------- +------------+-------------+----------------------------+ 2017-10-13 14:21:33: INFO: setting admin scope with: ~/MHTR18BLKrc. 2017-10-13 14:21:33: INFO: ### sourcing ~/MHTR18BLKrc 2017-10-13 14:21:34: INFO: Setting tenant scope.
++--------------------------------------+---------------+-------- +------------+-------------+----------------------------+ 2018-10-13 14:21:33: INFO: setting admin scope with: ~/MHTR18BLKrc. 2018-10-13 14:21:33: INFO: ### sourcing ~/MHTR18BLKrc 2018-10-13 14:21:34: INFO: Setting tenant scope.
 
 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
 
@@ -4902,9 +4878,9 @@ Warning: Permanently added '192.168.120.128' (ECDSA) to the list of known hosts.
 
 Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
 
-2017-10-13 14:21:37: INFO: ### Pinging 192.168.201.7 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
+2018-10-13 14:21:37: INFO: ### Pinging 192.168.201.7 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
 
-2017-10-13 14:21:37: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.7
+2018-10-13 14:21:37: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.7
 
 Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
 
@@ -4915,15 +4891,15 @@ PING 192.168.201.7 (192.168.201.7) 56(84) bytes of data.
 
 1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.227/0.227/0.227/0.000 ms
 
-2017-10-13 14:21:37: INFO: ### Successfully pinged 192.168.201.7 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133 2017-10-13 14:21:37: INFO: Allocating floating IP
-2017-10-13 14:21:39: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2018-10-13 14:21:37: INFO: ### Successfully pinged 192.168.201.7 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133 2018-10-13 14:21:37: INFO: Allocating floating IP
+2018-10-13 14:21:39: INFO: setting admin scope with: ~/MHTR18BLKrc.
  
 
-2017-10-13 14:21:39: INFO: ### sourcing ~/MHTR18BLKrc
+2018-10-13 14:21:39: INFO: ### sourcing ~/MHTR18BLKrc
 
-2017-10-13 14:21:39: INFO: Setting tenant scope.
+2018-10-13 14:21:39: INFO: Setting tenant scope.
 
-2017-10-13 14:21:39: INFO: Executing: neutron floatingip-associate db9c0bb6-0ebc-4676-90ac-8870981cf741 ce160385-8e28-4d3a-b894-d37055ddabd1 Associated floating IP db9c0bb6-0ebc-4676-90ac-8870981cf741
+2018-10-13 14:21:39: INFO: Executing: neutron floatingip-associate db9c0bb6-0ebc-4676-90ac-8870981cf741 ce160385-8e28-4d3a-b894-d37055ddabd1 Associated floating IP db9c0bb6-0ebc-4676-90ac-8870981cf741
 
 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
 
@@ -4931,9 +4907,9 @@ Warning: Permanently added '192.168.120.128' (ECDSA) to the list of known hosts.
 
 Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
 
-2017-10-13 14:21:41: INFO: ### Pinging 192.168.201.14 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
+2018-10-13 14:21:41: INFO: ### Pinging 192.168.201.14 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
 
-2017-10-13 14:21:41: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.14
+2018-10-13 14:21:41: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.14
 
 Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
 
@@ -4943,12 +4919,12 @@ PING 192.168.201.14 (192.168.201.14) 56(84) bytes of data.
 
 1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.599/0.599/0.599/0.000 ms
 
-2017-10-13 14:21:41: INFO: ### Successfully pinged 192.168.201.14 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133 2017-10-13 14:21:41: INFO: Allocating floating IP
-2017-10-13 14:21:43: INFO: setting admin scope with: ~/MHTR18BLKrc.
-2017-10-13 14:21:43: INFO: ### sourcing ~/MHTR18BLKrc
-2017-10-13 14:21:43: INFO: Setting tenant scope.
+2018-10-13 14:21:41: INFO: ### Successfully pinged 192.168.201.14 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133 2018-10-13 14:21:41: INFO: Allocating floating IP
+2018-10-13 14:21:43: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2018-10-13 14:21:43: INFO: ### sourcing ~/MHTR18BLKrc
+2018-10-13 14:21:43: INFO: Setting tenant scope.
 
-2017-10-13 14:21:43: INFO: Executing: neutron floatingip-associate 013f86a5-20f7-4bf3-b28b-62011f72bab4 28ec9e01-2210-402f-9013-f92b752ddf9c Associated floating IP 013f86a5-20f7-4bf3-b28b-62011f72bab4
+2018-10-13 14:21:43: INFO: Executing: neutron floatingip-associate 013f86a5-20f7-4bf3-b28b-62011f72bab4 28ec9e01-2210-402f-9013-f92b752ddf9c Associated floating IP 013f86a5-20f7-4bf3-b28b-62011f72bab4
 
 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
 
@@ -4956,9 +4932,9 @@ Warning: Permanently added '192.168.120.128' (ECDSA) to the list of known hosts.
 
 Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
 
-2017-10-13 14:21:46: INFO: ### Pinging 192.168.201.10 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
+2018-10-13 14:21:46: INFO: ### Pinging 192.168.201.10 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
 
-2017-10-13 14:21:46: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.10
+2018-10-13 14:21:46: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.10
 
 Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
 
@@ -4968,16 +4944,16 @@ PING 192.168.201.10 (192.168.201.10) 56(84) bytes of data. 64 bytes from 192.168
 
 1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 1.119/1.119/1.119/0.000 ms
 
-2017-10-13 14:21:46: INFO: ### Successfully pinged 192.168.201.10 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
+2018-10-13 14:21:46: INFO: ### Successfully pinged 192.168.201.10 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
  
 
-2017-10-13 14:21:46: INFO: Allocating floating IP
+2018-10-13 14:21:46: INFO: Allocating floating IP
 
-2017-10-13 14:21:48: INFO: setting admin scope with: ~/MHTR18BLKrc.
-2017-10-13 14:21:48: INFO: ### sourcing ~/MHTR18BLKrc
-2017-10-13 14:21:48: INFO: Setting tenant scope.
+2018-10-13 14:21:48: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2018-10-13 14:21:48: INFO: ### sourcing ~/MHTR18BLKrc
+2018-10-13 14:21:48: INFO: Setting tenant scope.
 
-2017-10-13 14:21:48: INFO: Executing: neutron floatingip-associate 9e679f7d-591e-45f3-9565-51b240ad9f23 ca3ac3de-46f6-4468-9717-78c6ac6f2415 Associated floating IP 9e679f7d-591e-45f3-9565-51b240ad9f23
+2018-10-13 14:21:48: INFO: Executing: neutron floatingip-associate 9e679f7d-591e-45f3-9565-51b240ad9f23 ca3ac3de-46f6-4468-9717-78c6ac6f2415 Associated floating IP 9e679f7d-591e-45f3-9565-51b240ad9f23
 
 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
 
@@ -4985,9 +4961,9 @@ Warning: Permanently added '192.168.120.128' (ECDSA) to the list of known hosts.
 
 Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
 
-2017-10-13 14:21:50: INFO: ### Pinging 192.168.201.5 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
+2018-10-13 14:21:50: INFO: ### Pinging 192.168.201.5 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
 
-2017-10-13 14:21:50: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.5
+2018-10-13 14:21:50: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.5
 
 Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
 
@@ -4998,12 +4974,12 @@ PING 192.168.201.5 (192.168.201.5) 56(84) bytes of data.
 
 1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.446/0.446/0.446/0.000 ms
 
-2017-10-13 14:21:50: INFO: ### Successfully pinged 192.168.201.5 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133 2017-10-13 14:21:50: INFO: Allocating floating IP
-2017-10-13 14:21:52: INFO: setting admin scope with: ~/MHTR18BLKrc.
-2017-10-13 14:21:52: INFO: ### sourcing ~/MHTR18BLKrc
-2017-10-13 14:21:53: INFO: Setting tenant scope.
+2018-10-13 14:21:50: INFO: ### Successfully pinged 192.168.201.5 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133 2018-10-13 14:21:50: INFO: Allocating floating IP
+2018-10-13 14:21:52: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2018-10-13 14:21:52: INFO: ### sourcing ~/MHTR18BLKrc
+2018-10-13 14:21:53: INFO: Setting tenant scope.
 
-2017-10-13 14:21:53: INFO: Executing: neutron floatingip-associate 6723b319-3926-4050-a712-34bbf9d2ffc1 b333704f-4bf5-48c5-bebf-e94d3e713db3 Associated floating IP 6723b319-3926-4050-a712-34bbf9d2ffc1
+2018-10-13 14:21:53: INFO: Executing: neutron floatingip-associate 6723b319-3926-4050-a712-34bbf9d2ffc1 b333704f-4bf5-48c5-bebf-e94d3e713db3 Associated floating IP 6723b319-3926-4050-a712-34bbf9d2ffc1
 
 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
 
@@ -5011,9 +4987,9 @@ Warning: Permanently added '192.168.120.128' (ECDSA) to the list of known hosts.
 
 Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
 
-2017-10-13 14:21:54: INFO: ### Pinging 192.168.201.8 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
+2018-10-13 14:21:54: INFO: ### Pinging 192.168.201.8 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133
 
-2017-10-13 14:21:54: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.8
+2018-10-13 14:21:54: INFO: Executing: ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.133 sudo ip netns exec qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f ping -c 1 -w 5 192.168.201.8
 
 Warning: Permanently added '192.168.120.133' (ECDSA) to the list of known hosts.
 
@@ -5025,17 +5001,17 @@ PING 192.168.201.8 (192.168.201.8) 56(84) bytes of data.
 1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.606/0.606/0.606/0.000 ms
  
 
-2017-10-13 14:21:55: INFO: ### Successfully pinged 192.168.201.8 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133 2017-10-13 14:21:55: INFO: Allocating floating IP
+2018-10-13 14:21:55: INFO: ### Successfully pinged 192.168.201.8 from netns qdhcp-e8e22aaf-0ee9-4c82-a295-f02788e97e8f on controller 192.168.120.133 2018-10-13 14:21:55: INFO: Allocating floating IP
 
-2017-10-13 14:21:57: INFO: setting admin scope with: ~/MHTR18BLKrc.
-2017-10-13 14:21:57: INFO: ### sourcing ~/MHTR18BLKrc
-2017-10-13 14:21:57: INFO: Setting tenant scope.
+2018-10-13 14:21:57: INFO: setting admin scope with: ~/MHTR18BLKrc.
+2018-10-13 14:21:57: INFO: ### sourcing ~/MHTR18BLKrc
+2018-10-13 14:21:57: INFO: Setting tenant scope.
 
-2017-10-13 14:21:57: INFO: Executing: neutron floatingip-associate bdd66e64-299c-4d8c-bd68-4ce467526aeb 40987052-eddf-4595-9bba-a1df9602948f Associated floating IP bdd66e64-299c-4d8c-bd68-4ce467526aeb
+2018-10-13 14:21:57: INFO: Executing: neutron floatingip-associate bdd66e64-299c-4d8c-bd68-4ce467526aeb 40987052-eddf-4595-9bba-a1df9602948f Associated floating IP bdd66e64-299c-4d8c-bd68-4ce467526aeb
 
 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
 
-2017-10-13 14:22:02: INFO: ### Pinging 100.84.122.72 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2017-10-13 14:22:02: INFO: Executing: ssh -o StrictHostKeyChecking=no
+2018-10-13 14:22:02: INFO: ### Pinging 100.84.122.72 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2018-10-13 14:22:02: INFO: Executing: ssh -o StrictHostKeyChecking=no
 
 -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.138 sudo ip netns exec qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 ping -c 1 -w 5 100.84.122.72
 
@@ -5048,9 +5024,9 @@ PING 100.84.122.72 (100.84.122.72) 56(84) bytes of data.
 
 1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.615/0.615/0.615/0.000 ms
 
-2017-10-13 14:22:02: INFO: ### Successfully pinged 100.84.122.72 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+2018-10-13 14:22:02: INFO: ### Successfully pinged 100.84.122.72 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
 
-2017-10-13 14:22:02: INFO: ### Pinging 100.84.122.82 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2017-10-13 14:22:02: INFO: Executing: ssh -o StrictHostKeyChecking=no
+2018-10-13 14:22:02: INFO: ### Pinging 100.84.122.82 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2018-10-13 14:22:02: INFO: Executing: ssh -o StrictHostKeyChecking=no
 
 -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.138 sudo ip netns exec qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 ping -c 1 -w 5 100.84.122.82
 
@@ -5063,9 +5039,9 @@ PING 100.84.122.82 (100.84.122.82) 56(84) bytes of data.
 
 1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.704/0.704/0.704/0.000 ms
 
-2017-10-13 14:22:03: INFO: ### Successfully pinged 100.84.122.82 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+2018-10-13 14:22:03: INFO: ### Successfully pinged 100.84.122.82 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
 
-2017-10-13 14:22:03: INFO: ### Pinging 100.84.122.73 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2017-10-13 14:22:03: INFO: Executing: ssh -o StrictHostKeyChecking=no
+2018-10-13 14:22:03: INFO: ### Pinging 100.84.122.73 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2018-10-13 14:22:03: INFO: Executing: ssh -o StrictHostKeyChecking=no
 
 -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.138 sudo ip netns exec qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 ping -c 1 -w 5 100.84.122.73
 
@@ -5079,9 +5055,9 @@ PING 100.84.122.73 (100.84.122.73) 56(84) bytes of data.
 
 1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.869/0.869/0.869/0.000 ms
 
-2017-10-13 14:22:03: INFO: ### Successfully pinged 100.84.122.73 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+2018-10-13 14:22:03: INFO: ### Successfully pinged 100.84.122.73 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
 
-2017-10-13 14:22:03: INFO: ### Pinging 100.84.122.75 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2017-10-13 14:22:03: INFO: Executing: ssh -o StrictHostKeyChecking=no
+2018-10-13 14:22:03: INFO: ### Pinging 100.84.122.75 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2018-10-13 14:22:03: INFO: Executing: ssh -o StrictHostKeyChecking=no
 
 -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.138 sudo ip netns exec qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 ping -c 1 -w 5 100.84.122.75
 
@@ -5094,9 +5070,9 @@ PING 100.84.122.75 (100.84.122.75) 56(84) bytes of data.
 
 1 packets transmitted, 1 received, 0% packet loss, time 0ms rtt min/avg/max/mdev = 0.615/0.615/0.615/0.000 ms
 
-2017-10-13 14:22:04: INFO: ### Successfully pinged 100.84.122.75 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
+2018-10-13 14:22:04: INFO: ### Successfully pinged 100.84.122.75 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 Warning: Permanently added '192.168.120.138' (ECDSA) to the list of known hosts.
 
-2017-10-13 14:22:04: INFO: ### Pinging 100.84.122.71 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2017-10-13 14:22:04: INFO: Executing: ssh -o StrictHostKeyChecking=no
+2018-10-13 14:22:04: INFO: ### Pinging 100.84.122.71 from netns qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138 2018-10-13 14:22:04: INFO: Executing: ssh -o StrictHostKeyChecking=no
 
 -o UserKnownHostsFile=/dev/null -o KbdInteractiveDevices=no heat-admin@192.168.120.138 sudo ip netns exec qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 ping -c 1 -w 5 100.84.122.71
 
@@ -5108,18 +5084,18 @@ PING 100.84.122.71 (100.84.122.71) 56(84) bytes of data.
 --- 100.84.122.71 ping statistics ---				
 1	packets transmitted, 1 received, 0% packet loss, time 0ms	
 rtt min/avg/max/mdev	= 0.635/0.635/0.635/0.000 ms			
-2017-10-13	14:22:04: INFO: ### Successfully pinged 100.84.122.71 from netns
+2018-10-13	14:22:04: INFO: ### Successfully pinged 100.84.122.71 from netns
 	qrouter-5adcd390-b199-43cf-a32d-a708bcb1fb50 on controller 192.168.120.138
-2017-10-13	14:22:04: INFO: ### Cinder test			
-2017-10-13	14:22:04: INFO: Setting tenant scope.			
-2017-10-13	14:22:04: INFO: Executing: cinder list			
+2018-10-13	14:22:04: INFO: ### Cinder test			
+2018-10-13	14:22:04: INFO: Setting tenant scope.			
+2018-10-13	14:22:04: INFO: Executing: cinder list			
 +	----+--------	+------	+------	+-------------	+----------	+	-------------	+
 | ID | Status | Name | Size | Volume Type | Bootable |	Attached to |
 +	----+--------	+------	+------	+-------------	+----------	+	-------------	+
 +	----+--------	+------	+------	+-------------	+----------	+	-------------	+
-2017-10-13	14:22:06: INFO: ### Kicking off volume creation...	
-2017-10-13	14:22:09: INFO: ### Creating volume volume_test_5	
-2017-10-13	14:22:09: INFO: Executing: cinder type-list		
+2018-10-13	14:22:06: INFO: ### Kicking off volume creation...	
+2018-10-13	14:22:09: INFO: ### Creating volume volume_test_5	
+2018-10-13	14:22:09: INFO: Executing: cinder type-list		
 +	--------------------------------------			+-------------	+	-------------	
 +	-----------	+						
 | ID				| Name	|	Description |
@@ -5133,7 +5109,7 @@ rtt min/avg/max/mdev	= 0.635/0.635/0.635/0.000 ms
 
 +--------------------------------------			+-------------	+-------------	
 +-----------	+				
-2017-10-13 14:22:09: INFO: Executing: cinder create --display-name	
+2018-10-13 14:22:09: INFO: Executing: cinder create --display-name	
 volume_test_5 1 --volume-type=rbd_backend		
 +------------------------------	+	--------------------------------------	+
 | Property		|	Value		|
@@ -5142,7 +5118,7 @@ volume_test_5 1 --volume-type=rbd_backend
 | availability_zone	|	nova		|
 | bootable		|	false		|
 | consistencygroup_id	|	None		|
-| created_at		|	2017-10-13T18:22:10.000000	|
+| created_at		|	2018-10-13T18:22:10.000000	|
 | description	|	None		|
 | encrypted		|	False		|
 | id		|	c48d7ace-808d-4d4e-8643-5b2d2fabff36 |
@@ -5155,12 +5131,12 @@ volume_test_5 1 --volume-type=rbd_backend
 | snapshot_id	|	None		|
 | source_volid	|	None		|
 | status		|	creating		|
-| updated_at		|	2017-10-13T18:22:10.000000	|
+| updated_at		|	2018-10-13T18:22:10.000000	|
 | user_id		|	4442207de58448938694bdbd7b764cf4	|
 | volume_type	|	rbd_backend		|
 +------------------------------	+	--------------------------------------	+
-2017-10-13 14:22:11: INFO: ### Creating volume volume_test_4	
-2017-10-13 14:22:11: INFO: Executing: cinder type-list	
+2018-10-13 14:22:11: INFO: ### Creating volume volume_test_4	
+2018-10-13 14:22:11: INFO: Executing: cinder type-list	
 +--------------------------------------		+-------------	+-------------	
 +-----------	+				
 | ID			| Name	| Description |
@@ -5171,7 +5147,7 @@ Is_Public |
 |					
 +--------------------------------------		+-------------	+-------------	
 +-----------	+				
-2017-10-13 14:22:11: INFO: Executing: cinder create --display-name	
+2018-10-13 14:22:11: INFO: Executing: cinder create --display-name	
 volume_test_4 1 --volume-type=rbd_backend		
 +------------------------------	+	--------------------------------------	+
 | Property		|	Value		|
@@ -5180,7 +5156,7 @@ volume_test_4 1 --volume-type=rbd_backend
 | availability_zone	|	nova		|
 | bootable		|	false		|
 | consistencygroup_id	|	None		|
-| created_at		|	2017-10-13T18:22:12.000000	|
+| created_at		|	2018-10-13T18:22:12.000000	|
 | description	|	None		|
 | encrypted		|	False		|
 | id		|	79bbed71-6941-4610-9031-39ed2946d2fc |
@@ -5193,13 +5169,13 @@ volume_test_4 1 --volume-type=rbd_backend
 | snapshot_id	|	None		|
 | source_volid	|	None		|
 | status		|	available		|
-| updated_at		|	2017-10-13T18:22:12.000000	|
+| updated_at		|	2018-10-13T18:22:12.000000	|
 | user_id		|	4442207de58448938694bdbd7b764cf4	|
 | volume_type	|	rbd_backend		|
 +------------------------------	+	--------------------------------------	+
 
-2017-10-13 14:22:14: INFO: ### Creating volume volume_test_3	
-2017-10-13 14:22:14: INFO: Executing: cinder type-list	
+2018-10-13 14:22:14: INFO: ### Creating volume volume_test_3	
+2018-10-13 14:22:14: INFO: Executing: cinder type-list	
 
 +--------------------------------------		+-------------	+-------------	
 +-----------	+				
@@ -5212,7 +5188,7 @@ Is_Public |
 +--------------------------------------		+-------------	+-------------	
 +-----------	+	
 
-2017-10-13 14:22:14: INFO: Executing: cinder create --display-name	
+2018-10-13 14:22:14: INFO: Executing: cinder create --display-name	
 volume_test_3 1 --volume-type=rbd_backend
 
 +------------------------------	+	--------------------------------------	+
@@ -5222,7 +5198,7 @@ volume_test_3 1 --volume-type=rbd_backend
 | availability_zone	|	nova		|
 | bootable		|	false		|
 | consistencygroup_id	|	None		|
-| created_at		|	2017-10-13T18:22:15.000000	|
+| created_at		|	2018-10-13T18:22:15.000000	|
 | description	|	None		|
 | encrypted		|	False		|
 | id		|	79d0ce2b-ef49-4640-8d45-96f88ecd1a32 |
@@ -5235,13 +5211,13 @@ volume_test_3 1 --volume-type=rbd_backend
 | snapshot_id	|	None		|
 | source_volid	|	None		|
 | status		|	creating		|
-| updated_at		|	2017-10-13T18:22:15.000000	|
+| updated_at		|	2018-10-13T18:22:15.000000	|
 | user_id		|	4442207de58448938694bdbd7b764cf4	|
 | volume_type	|	rbd_backend		|
 +------------------------------	+	--------------------------------------	+
 
-2017-10-13 14:22:16: INFO: ### Creating volume volume_test_2	
-2017-10-13 14:22:16: INFO: Executing: cinder type-list	
+2018-10-13 14:22:16: INFO: ### Creating volume volume_test_2	
+2018-10-13 14:22:16: INFO: Executing: cinder type-list	
 
 +--------------------------------------+-------------+-------------+-----------+				
 | ID			| Name	| Description |Is_Public |					
@@ -5250,7 +5226,7 @@ volume_test_3 1 --volume-type=rbd_backend
 +--------------------------------------		+-------------	+-------------	
 +-----------	+				
 
-2017-10-13 14:22:17: INFO: Executing: cinder create --display-name	
+2018-10-13 14:22:17: INFO: Executing: cinder create --display-name	
 volume_test_2 1 --volume-type=rbd_backend
 
 
@@ -5261,7 +5237,7 @@ volume_test_2 1 --volume-type=rbd_backend
 | availability_zone	|	nova		|
 | bootable		|	false		|
 | consistencygroup_id	|	None		|
-| created_at		|	2017-10-13T18:22:18.000000	|
+| created_at		|	2018-10-13T18:22:18.000000	|
 | description	|	None		|
 | encrypted		|	False		|
 | id		|	4c17b29d-d866-4d5f-a40c-7e8031ec07c4 |
@@ -5278,8 +5254,8 @@ volume_test_2 1 --volume-type=rbd_backend
 | user_id		|	4442207de58448938694bdbd7b764cf4	|
 | volume_type	|	rbd_backend		|
 +------------------------------	+	--------------------------------------	+
-2017-10-13 14:22:19: INFO: ### Creating volume volume_test_1	
-2017-10-13 14:22:19: INFO: Executing: cinder type-list	
+2018-10-13 14:22:19: INFO: ### Creating volume volume_test_1	
+2018-10-13 14:22:19: INFO: Executing: cinder type-list	
 +--------------------------------------		+-------------	+-------------	
 +-----------	+				
 | ID			| Name	| Description |
@@ -5290,7 +5266,7 @@ Is_Public |
 |					
 +--------------------------------------		+-------------	+-------------	
 +-----------	+				
-2017-10-13 14:22:19: INFO: Executing: cinder create --display-name	
+2018-10-13 14:22:19: INFO: Executing: cinder create --display-name	
 volume_test_1 1 --volume-type=rbd_backend		
 +------------------------------	+	--------------------------------------	+
 | Property		|	Value		|
@@ -5299,7 +5275,7 @@ volume_test_1 1 --volume-type=rbd_backend
 | availability_zone	|	nova		|
 | bootable		|	false		|
 | consistencygroup_id	|	None		|
-| created_at		|	2017-10-13T18:22:21.000000	|
+| created_at		|	2018-10-13T18:22:21.000000	|
 | description	|	None		|
 | encrypted		|	False		|
 | id		|	866f999b-2099-4932-a27a-c3f762dc9c41 |
@@ -5312,12 +5288,12 @@ volume_test_1 1 --volume-type=rbd_backend
 | snapshot_id	|	None		|
 | source_volid	|	None		|
 | status		|	creating		|
-| updated_at		|	2017-10-13T18:22:21.000000	|
+| updated_at		|	2018-10-13T18:22:21.000000	|
 | user_id		|	4442207de58448938694bdbd7b764cf4	|
 | volume_type	|	rbd_backend		|
 +------------------------------	+	--------------------------------------	+
 
-2017-10-13 14:22:21: INFO: Executing: cinder list
+2018-10-13 14:22:21: INFO: Executing: cinder list
 
 +	--------------------------------------	+	-----------	+---------------	+	------	
 +	-------------+----------	+	-------------+					
@@ -5337,10 +5313,10 @@ rbd_backend	| false	|	|
 rbd_backend	| false	|	|			
 +--------------------------------------			+-----------	+---------------	+------	
 +-------------	+----------	+	-------------+			
-2017-10-13	14:22:22: INFO: ### Waiting for volumes status to change to	
+2018-10-13	14:22:22: INFO: ### Waiting for volumes status to change to	
 available...						
-2017-10-13	14:22:22: INFO: ### Attaching volumes to instances...		
-2017-10-13	14:22:25: INFO: Executing: nova volume-attach fde7800f-ebdd-44b1-
+2018-10-13	14:22:22: INFO: ### Attaching volumes to instances...		
+2018-10-13	14:22:25: INFO: Executing: nova volume-attach fde7800f-ebdd-44b1-
 af41-e164ddff8715 c48d7ace-808d-4d4e-8643-5b2d2fabff36 /dev/vdb		
 +----------	+	--------------------------------------	+			
 | Property	|	Value		|			
@@ -5350,9 +5326,9 @@ af41-e164ddff8715 c48d7ace-808d-4d4e-8643-5b2d2fabff36 /dev/vdb
 | serverId	|	fde7800f-ebdd-44b1-af41-e164ddff8715 |			
 | volumeId	|	c48d7ace-808d-4d4e-8643-5b2d2fabff36 |			
 +----------	+	--------------------------------------	+			
-2017-10-13	14:22:27: INFO: Volume volume_test_5 attached to cirros_test_5.	
+2018-10-13	14:22:27: INFO: Volume volume_test_5 attached to cirros_test_5.	
 ssh in and verify					
-2017-10-13	14:22:27: INFO: Executing: nova volume-attach ff93e1a4-		
+2018-10-13	14:22:27: INFO: Executing: nova volume-attach ff93e1a4-		
 ea01-4c7b-8952-0cebfb3f9ff4 79bbed71-6941-4610-9031-39ed2946d2fc /dev/vdb	
 +----------	+	--------------------------------------	+			
 | Property	|	Value		|			
@@ -5362,9 +5338,9 @@ ea01-4c7b-8952-0cebfb3f9ff4 79bbed71-6941-4610-9031-39ed2946d2fc /dev/vdb
 | serverId	|	ff93e1a4-ea01-4c7b-8952-0cebfb3f9ff4 |			
 | volumeId	|	79bbed71-6941-4610-9031-39ed2946d2fc |			
 +----------	+	--------------------------------------	+			
-2017-10-13	14:22:30: INFO: Volume volume_test_4 attached to cirros_test_4.	
+2018-10-13	14:22:30: INFO: Volume volume_test_4 attached to cirros_test_4.	
 ssh in and verify					
-2017-10-13	14:22:31: INFO: Executing: nova volume-attach		
+2018-10-13	14:22:31: INFO: Executing: nova volume-attach		
 
 836c1fbb-3ca3-4e13-966f-856622d1c9b5 79d0ce2b-ef49-4640-8d45-96f88ecd1a32 /
 dev/vdb			
@@ -5377,9 +5353,9 @@ dev/vdb
 | volumeId |	79d0ce2b-ef49-4640-8d45-96f88ecd1a32 |
 +----------	+	--------------------------------------	+
 
-2017-10-13 14:22:32: INFO: Volume volume_test_3 attached to cirros_test_3. ssh in and verify
+2018-10-13 14:22:32: INFO: Volume volume_test_3 attached to cirros_test_3. ssh in and verify
 
-2017-10-13 14:22:33: INFO: Executing: nova volume-attach c18f6d9e-8a51-49e5-bca7-95f44774798e 4c17b29d-d866-4d5f-a40c-7e8031ec07c4 /dev/vdb
+2018-10-13 14:22:33: INFO: Executing: nova volume-attach c18f6d9e-8a51-49e5-bca7-95f44774798e 4c17b29d-d866-4d5f-a40c-7e8031ec07c4 /dev/vdb
 +----------	+	--------------------------------------	+
 | Property |	Value	|
 +----------	+	--------------------------------------	+
@@ -5389,9 +5365,9 @@ dev/vdb
 | volumeId |	4c17b29d-d866-4d5f-a40c-7e8031ec07c4 |
 +----------	+	--------------------------------------	+
 
-2017-10-13 14:22:35: INFO: Volume volume_test_2 attached to cirros_test_2.
+2018-10-13 14:22:35: INFO: Volume volume_test_2 attached to cirros_test_2.
 ssh in and verify
-2017-10-13 14:22:35: INFO: Executing: nova volume-attach 625b1245-445e-43d0-
+2018-10-13 14:22:35: INFO: Executing: nova volume-attach 625b1245-445e-43d0-
 b4ae-74a925cd95d0 866f999b-2099-4932-a27a-c3f762dc9c41 /dev/vdb
 
 +----------+--------------------------------------+
@@ -5402,20 +5378,20 @@ b4ae-74a925cd95d0 866f999b-2099-4932-a27a-c3f762dc9c41 /dev/vdb
 | serverId	| 625b1245-445e-43d0-b4ae-74a925cd95d0 |
 | volumeId	| 866f999b-2099-4932-a27a-c3f762dc9c41 |
 +----------	+--------------------------------------	+
-2017-10-13	14:22:39: INFO: Volume volume_test_1 attached to cirros_test_1.
+2018-10-13	14:22:39: INFO: Volume volume_test_1 attached to cirros_test_1.
 ssh in and verify	
-2017-10-13	14:22:39: INFO: ### RadosGW test	
-2017-10-13	14:22:39: INFO: Setting tenant scope.	
-2017-10-13	14:22:39: INFO: Executing: swift post sanity_container_1
-2017-10-13	14:22:39: INFO: Executing: swift list	
+2018-10-13	14:22:39: INFO: ### RadosGW test	
+2018-10-13	14:22:39: INFO: Setting tenant scope.	
+2018-10-13	14:22:39: INFO: Executing: swift post sanity_container_1
+2018-10-13	14:22:39: INFO: Executing: swift list	
 sanity_container_1	
-2017-10-13	14:22:39: INFO: Executing: swift upload sanity_container_1
+2018-10-13	14:22:39: INFO: Executing: swift upload sanity_container_1
 test_file		
 test_file		
-2017-10-13	14:22:40: INFO: Executing: swift list sanity_container_1
+2018-10-13	14:22:40: INFO: Executing: swift list sanity_container_1
 test_file		
-2017-10-13	14:22:41: INFO: #####VALIDATION SUCCESS#####
-2017-10-13	14:22:41: INFO: ##### Done #####
+2018-10-13	14:22:41: INFO: #####VALIDATION SUCCESS#####
+2018-10-13	14:22:41: INFO: ##### Done #####
 ```
 
 
