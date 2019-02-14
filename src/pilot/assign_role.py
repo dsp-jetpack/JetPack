@@ -612,7 +612,7 @@ def define_jbod_logical_disks(
             drac_client, raid_controller_name, physical_disk_name,
             is_root_volume=False, jbod_capable=jbod_capable)
 
-        if jbod_logical_disk is not None:
+        if jbod_logical_disk:
             logical_disks.append(jbod_logical_disk)
 
     return logical_disks
