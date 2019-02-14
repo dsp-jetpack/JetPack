@@ -34,6 +34,7 @@ Red Hat®, Red Hat Enterprise Linux®, and Ceph are trademarks or registered tra
 
 [Chapter 5 Deploying the Undercloud and the OpenStack Cluster](#Chapter-5-Deploying-the-Undercloud-and-the-OpenStack-Cluster)
 
+
 # Appendix's:
 
 [Appendix A Files References](#Appendix-A-Files-References)
@@ -64,13 +65,12 @@ Red Hat®, Red Hat Enterprise Linux®, and Ceph are trademarks or registered tra
 <div style="page-break-after: always;"></div>
 
 # Chapter 1 Overview
-This guide provides information necessary to deploy the Dell EMC Ready Architecture for Red Hat OpenStack platform v13.0 using an automation framework developed by Dell EMC & Validated by Redhat (JetPack v13.0)
+This guide provides information necessary to deploy the Dell EMC Ready Architecture for Red Hat OpenStack platform v13.0 using an automation framework developed by Dell EMC.
 
 ### General Hardware Options
 
-To reduce time spent on specifying hardware for an initial system, the Architecture Guide offers a full
-solution using validated Dell EMC PowerEdge server hardware designed to allow a wide range of
-configuration options, including optimized configurations for:
+To reduce time spent on specifying hardware for an initial system, the Architecture Guide offers a full solution using validated Dell EMC PowerEdge server hardware designed to allow a wide range of
+configuration options, including optimized configurations for: 
 
 * Compute nodes
 * Infrastructure nodes
