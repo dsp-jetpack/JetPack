@@ -276,6 +276,17 @@ sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
 echo "## Done."
 
+# This hacks in a patch to filter out all non-printable characters during WSMAN
+# enumeration.
+# Note that this code must be here because we use this code prior to deploying
+# the director.
+echo
+echo "## Patching Ironic iDRAC driver wsman.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
+echo "## Done."
+
 # This patches workarounds for two issues into ironic.conf.
 # 1. node_locked_retry_attempts is increased to work around an issue where
 #    lock contention on the nodes in ironic can occur during RAID cleaning.
