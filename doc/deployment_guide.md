@@ -20,30 +20,6 @@ Red Hat®, Red Hat Enterprise Linux®, and Ceph are trademarks or registered tra
 
 > DISCLAIMER: The OpenStack® Word Mark and OpenStack Logo are either registered trademarks/ service marks or trademarks/service marks of the OpenStack Foundation, in the United States and other countries, and are used with the OpenStack Foundation's permission. We are not affiliated with, endorsed or sponsored by the OpenStack Foundation or the OpenStack community.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <div style="page-break-after: always;"></div>
 
 # Contents:
@@ -88,21 +64,87 @@ Red Hat®, Red Hat Enterprise Linux®, and Ceph are trademarks or registered tra
 <div style="page-break-after: always;"></div>
 
 # Chapter 1 Overview
-This guide provides information necessary to deploy the Dell EMC Ready Architecture for Red Hat OpenStack platform v13.0 using an automation framework developed by Dell EMC and validated by Red Hat.
+This guide provides information necessary to deploy the Dell EMC Ready Architecture for Red Hat OpenStack platform v13.0 using an automation framework developed by Dell EMC & Validated by Redhat (JetPack v13.0)
 
-**Servers**
+### General Hardware Options
 
-This document describes the procedure for solution validation using Dell EMC PowerEdge R640 with the Dell EMC PowerEdge H740 disk controller and S4048T switches for networking and other possible hardware configurations.
+To reduce time spent on specifying hardware for an initial system, the Architecture Guide offers a full
+solution using validated Dell EMC PowerEdge server hardware designed to allow a wide range of
+configuration options, including optimized configurations for:
 
-The base validated Solution supports the Dell EMC PowerEdge R640 and Dell EMC PowerEdge R740xd Server lines
+* Compute nodes
+* Infrastructure nodes
+* Storage nodes
 
-> Note: Please contact your Dell EMC sales representative for Detailed parts lists.
+Dell EMC recommends starting with OpenStack software using components from this Architecture Guide -
+Version 13 because the hardware and operations processes comprise a flexible foundation upon which to
+expand as your cloud deployment grows, so your investment is protected.
 
-**Networking**
+As noted throughout this Architecture Guide - Version 13, Dell EMC constantly adds capabilities to expand
+this offering, and other hardware may be available. [please check the Architecture Guide for more details]("https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_ready_architecture_for_red_hat_openstack_platform_architecture_guide.pdf")
 
-The Dell EMC Ready Architecture for Red Hat OpenStack Platform uses the S5248-ON as the Top of Rack switches and the S3048-ON switch (S4048-ON optional) as the management switch. 
+### Servers Options
+
+**Dell EMC PowerEdge R640 server**
+
+The Dell EMC PowerEdge R640 is the ideal dual-socket, 1U platform for dense scale-out cloud computing. The scalable busines architecture of the Dell EMC PowerEdge R640 is designed to maximize application performance and provide the flexibility to optimize configurations based on the application and use case. With the Dell EMC PowerEdge R640 you can create an NVMe cache pool and use either 2.5” or 3.5” drives for data storage. Combined with up to 24 DIMM’s, 12 of which can be NVDIMM’s, you have the resources to create the optimum configuration to maximize application performance in only a 1U chassis. This can simplify and speed up deployments of Dell EMC Bundle for Red Hat OpenStack Platform.
+
+**Dell EMC PowerEdge R740/Dell EMC PowerEdge R740xd servers**
+
+The Dell EMC PowerEdge R740/Dell EMC PowerEdge R740xd delivers a perfect balance between storage scalability and performance. The 2U two-socket platform is ideal for software defined storage. The R/740/R740xd versatility is highlighted with the ability to mix any drive type to create the optimum configuration of SSD and HDD for either performance, capacity or both.
+
+> Note: The Dell EMC PowerEdge R740/Dell EMC PowerEdge R740xd usage for Network functions virtualization (NFV) architecture installation. Dell EMC PowerEdge R740 for Compute Node functionality is sufficient.
+
+> Note: The Dell EMC PowerEdge R740/Dell EMC PowerEdge R740xd is the platform of choice for software defined storage and is the foundation for Red Hat Ceph Storage
 
 
+### Networking and network services
+
+Network configuration is based upon using the Neutron-based options supported by the RHOSP code base, and does not rely upon third-party drivers. This reference configuration is based upon the Neutron networking services using the ML2 drivers for Open vSwitch with the VLAN option.
+
+#### Networking includes:
+
+* Core and layered networking capabilities
+* Network Function Virtualization (NFV)
+* 25GbE networking
+* NIC bonding
+* Redundant trunking top-of-rack (ToR) switches into core routers
+
+This enables the Dell EMC Ready Architecture for Red Hat OpenStack Platform to operate in a full production environment. Detailed designs are available through Dell EMC consulting services. [rhosp.ra.ps@emc.com](malito:rhosp.ra.ps@emc.com)
+
+The Dell EMC Ready Architecture for Red Hat OpenStack Platform uses the S5248-ON as the Top of Rack switches and the S3048-ON switch (S4048-ON optional) as the management switch.
+
+**Infrastructure layouts**
+
+The network consists of the following major network infrastructure layouts:
+
+* Core Network Infrastructure - The connectivity of aggregation switches to the core for external connectivity.
+* Data Network Infrastructure - The server NICs, top-of-rack (ToR) switches, and the aggregation switches.
+* Management Network Infrastructure - The BMC management network, consisting of iDRAC ports and the out-of-band management ports of the switches, is aggregated into a 1-rack unit (RU) S3048-ON switch in one of the three racks in the cluster. This 1-RU switch in turn can connect to one of the aggregation or core switches to create a separate network with a separate VLAN.
+
+
+> Note: Please contact your Dell EMC sales representative for Detailed parts lists. or contact Dell EMC Professional Services team for OpenStack using the email [rhosp.ra.ps@emc.com](malito:rhosp.ra.ps@emc.com)
+
+### Version 13 features
+
+**the following features are added in the JetPack Automation and the Ready Architecture for RedHat OpenStack:**
+
+* Support for the lastest release of Red Hat OpenStack Platform 13 including the latest udpates.
+* Support for latest release of RHEL 7.6 including the latest updates.
+* Support for Red Hat Ceph Storage version 3.1
+* Added support for jumbo frames.
+* Added support for UEFI on all Overcloud nodes.
+* Added support for Cumulus Network OS..
+* Added support for Dell EMC Networking S5248-ON switch.
+* Added support for 25GbE networking with Intel XXV710 network interface cards.
+* Added support for Red Hat Ceph Storage to use NVMe storage for OSD/Journal.
+* Enhancement of Huge Pages with JetPack CSP profile.
+* Enhancement of NUMA/CPU Pinning with JetPack CSP profile.
+* Support of OVS-DPDK with JetPack CSP profile.
+* Enhancement of SR-IOV with JetPack CSP profile.
+* Added support for Distributed Virtual Router, (DVR).
+* Added support for auto-generation of .ini and .properties files for use in automated deployments.*
+* Added support for VLAN aware VM.
 
 ## Before You Begin
 
@@ -113,10 +155,10 @@ The high-level steps required to install the Dell EMC Ready Architecture for Red
 1.  Ensuring that your environment meets the [Prerequisites](#Prerequisites)
 2.  Ensuring that the [Dependencies](#Dependencies) on are met.
 3.  *Determining Pool IDs*.
-4.  [Downloading and Extracting Automation Files](#page12).
-5.  [Preparing the Solution Admin Host Deployment](#page14).
-6.  [Deploying the SAH Node](#page16).
-7.  [Deploying the Undercloud and the OpenStack Cluster](#page18).
+4.  [Downloading and Extracting Automation Files]("https://github.com/dsp-jetpack/JetPack/").
+5.  [Preparing the Solution Admin Host Deployment](#Preparing-the-Solution-Admin-Host-Deployment).
+6.  [Deploying the SAH Node](#Deploying-the-SAH-Node).
+7.  [Deploying the Undercloud and the OpenStack Cluster](#Deploying-the-Undercloud-and-the-OpenStack-Cluster).
 
 ## Prerequisites
 The following prerequisites must be satisfied before proceeding with a Dell EMC Ready Architecture for Red Hat OpenStack platform v13.0 deployment:
@@ -315,9 +357,9 @@ The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configu
     | 191                   | External Tenant Network (Used for floating IP addresses) |
     | 201-250               | Internal Tenant Network                                  |
 
-    > ***Note:*** The anaconda_ip is used for the initial installation of the SAH node, and requires an address that can access the Internet to obtain Red Hat software. When possible, the anaconda_iface must be a dedicated interface using 1GbE that is only used for this purpose, and is not used in any other part of the configuration. For 10GbE or 25GbE Intel NICs, "em4" (the fourth nic on the motherboard) should be used. For Intel XXV710 DP 25GbE DA/SFP NICs, "em2.<public_api_network_vlan_id>" (usually "em2.190") should be used.
+    > ***Note:*** The anaconda__ip is used for the initial installation of the SAH node, and requires an address that can access the Internet to obtain Red Hat software. When possible, the anaconda_iface must be a dedicated interface using 1GbE that is only used for this purpose, and is not used in any other part of the configuration. For 10GbE or 25GbE Intel NICs, "em4" (the fourth nic on the motherboard) should be used. For Intel XXV710 DP 25GbE DA/SFP NICs, "em2.<public_api_network_vlan_id>" (usually "em2.190") should be used.
 
-**a.	Configure the Overcloud nodes' iDRACs to use either DHCP or statically-assigned IP addresses. A mix of these two choices is supported.**
+**Configure the Overcloud nodes' iDRACs to use either DHCP or statically-assigned IP addresses. A mix of these two choices is supported.**
 
 1.	Determine the service tag of the Overcloud nodes whose iDRAC is configured to use DHCP.
 
@@ -352,14 +394,10 @@ The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configu
             $ ironic node-list
             $ ironic node-show <node_guid>
             ```
-            
-**b. When using Mellanox 25GbE NICs, add the following to each Overcloud node in the .properties file: yaml**
-	```yaml
-	"pxe_nic": "NIC.Integrated.1-1-1",
-	```
 
 
 8. Update your python path:
+
     ```bash
     $ export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:~/JetPack/src/deploy
     ```
@@ -1151,7 +1189,9 @@ Status messages are logged to /auto_results/deployer.log<time_stamp> on the SAH 
 [Dell NFV Settings]
 #Provide NFV features here.
 
-#Enter value of enable_hpg as true/false for HugePages hpg_enable=true
+#Enter value of enable_hpg as true/false for HugePages 
+
+hpg_enable=true
 
 #User should give this parameter in same format.
 #Supported values for hpg_size(Size of hugepages) is 2MB and 1GB.
@@ -1273,7 +1313,9 @@ Below is the table of log messages and actions to be taken upon encountering suc
 
 numa_enable=true
 
-#Enter number of cores you want to reserve for Host OS #Supported values are 2 or 4 or 6 or 8 numa_hostos_cpu_count=4
+#Enter number of cores you want to reserve for Host OS #Supported values are 2 or 4 or 6 or 8 
+
+numa_hostos_cpu_count=4
 ```
 
 
@@ -1926,168 +1968,12 @@ parameter_defaults:
 This appendix details the guidelines for configuration of Neutron managed SR-IOV at the time of deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform v13.
 
 > Topics:
-> * SR-IOV
-> * Open vSwitch Hardware Offload
-> * Neutron-Managed SR-IOV
-> * SR-IOV initial investigation
 > * SR-IOV in JS 13.0
 > * Deployment
 > * Post Deployment Steps
 > * Sample Configurations
 > * Functionality Testing
-> 
 
-
-
-
-**SR-IOV**
-
-Single root I/O virtualization (SR-IOV) is an extension to the PCI Express (PCIe) specification. SRIOV enables a single PCIe device to appear as multiple, separate devices. Traditionally in a virtualized environment, a packet has to pass through an extra layer of hypervisor, resulting in multiple CPU interrupts per packet. These extra interrupts can result in a bottleneck in high traffic environments. SR-IOV enabled devices have the ability to dedicate isolated access to its resources among various PCIe hardware functions. These functions are later assigned to the virtual machines which allow direct memory access (DMA) to the network data. This enables efficient sharing of PCIe devices, optimization of performance and reduction in hardware costs.
-The main components of the SR-IOV architecture are: 
-
-**Physical Function (PF)**
-
-Physical Function is a full-featured PCIe function of a network adapter that is SR-IOV capable. Physical Functions are discovered, managed, and configured as normal PCIe devices. PCIe devices have a set of registers known as configuration space. Physical Function behaves like a L2 switch and performs traffic forwarding between physical port and Virtual Functions.
-
-**Virtual Function (VF)**
-
-Virtual Functions (VFs) are simple "lightweight" PCIe functions that lack the configuration resources and only have the ability to move data in and out. Each Virtual Function is associated with a PCIe Physical Function. Each VF represents a virtualized instance of the network adaptor and have a separate PCI Configuration space. These VFs are assigned to virtual machines later.
-
-**I/O MMU**
-
-Input/Output Memory Management Unit (IOMMU) connects a Direct-Memory-Access–capable (DMAcapable) I/O bus to the main memory. The IOMMU maps device addresses or I/O addresses to physical addresses. IOMMU helps in accessing physical devices directly from virtual machines.
-
-**Hypervisor**
-
-A hypervisor is a software that allows running multiple virtual machines to share a single underlying hardware platform. In case of SR-IOV, either the hypervisor or the guest OS must be aware that they are not using full PCIe devices. Hypervisor maps VF’s configuration space to the configuration space presented to the guest using IOMMU.
-
-**Virtual Machine**
-
-A VF can only be assigned to one virtual machine at a time. VF appears as a single network interface card inside of a virtual machine.
-
-**Open vSwitch Hardware Offload**
-
-In a virtualized environment, the hypervisor is used to perform the software emulation to abstract the physical resources. This abstraction results in the additional overhead on the CPU, network, and I/O since virtualized resources need to be mapped to physical resources. In order to reduce the CPU load on the host, CPU intensive tasks can be offloaded to the capable attached I/O devices. The process of offloading tasks is known as Hardware Offloading.
-Open vSwitch is a production quality, multilayer virtual switch designed to enable massive network automation through programmatic extension, while still supporting standard management interfaces and protocols. Open vSwitch (OVS) allows Virtual Machines (VM) to communicate with each other and with the outside world. The OVS software-based solution is CPU intensive, affecting system performance and preventing full utilization of available bandwidth. This bottleneck can be tackled by making use of the OVS hardware offload feature where the fast-datapath is moved to the underlying offloading capable NIC. 
-This feature enables us to make use of SR-IOV in an OpenStack environment under the supervision of OVS for network acceleration. Red Hat OpenStack Platform 13 supports SR-IOV acceleration for tenant networks using the OVS hardware offload feature without modifying the Overcloud network configuration templates.
-
-
-**Neutron-Managed SR-IOV**
-
-In SR-IOV, the network packets are passed directly to the VM coming from the NIC, bypassing the in-between hypervisor. The SR-IOV based devices present an opportunity to improve the network performance for NFV use case in a Cloud-based environment. However, SR-IOV based environment poses deep limitations on the ability of a hypervisor to manage the network when flow-based approaches like OVS are utilized. This feature is not suitable for an OpenStack based environment as the Neutron must have control over the overlay networks.
-
-With the introduction of OVS-Offloading feature based on the TC subsystem framework, it is possible for Neutron to program the SR-IOV e-switch and manage the flows. In the Neutron managed SR-IOV, OVS datapath flows are hardware offloaded to the SR-IOV e-switch, and control traffic is handed over to userspace OVS.
-
-Dell EMC NFV Ready Bundle for Red Hat v13.0 supports the deployment with Neutron managed SR-IOV with 1-64 number of VFs.
-
-	
-#### SR-IOV initial investigation
-
-**Changes Required**
-
-Neutron managed SR-IOV for RHOSP requires the following changes:
-
-1.	Addition of neutron-sriov.yaml and ovs-hw-offload.yaml environment files.
-2.	Switch configurations for SR-IOV supported NICs on Compute nodes.
-
-**Deployment steps**
-
-Following are the necessary deployment steps for Neutron managed SR-IOV with OVS Hardware Offload:
-
-1.	Add the following additional services required for SR-IOV to the DellCompute role:
-
-**Additional DellCompute role services**
-
-- OS::TripleO::Services::NeutronSriovAgent
-- OS::TripleO::Services::NeutronSriovHostConfig
-
-2.	Configure the SR-IOV parameters for Compute nodes in ~/pilot/templates/neutron-sriov.yaml. Change the fields <network_name>, <interface_name> and <number_of_vfs> according to the required environment:
-
-**Changes required in neutron-sriov.yaml**
-
-```yaml
-parameter_defaults:
-       NeutronTunnelTypes: ''
-       NeutronSriovNumVFs:
-            - <interface_name>:<number_of_vfs>:switchdev
-       NeutronPhysicalDevMappings:
-            - <network_name>:<interface_name>
-       NovaPCIPassthrough:
-            - devname: <interface_name>
-              physical_network: <network_name>
-```
-
-
-**NeutronSriovNumVFs**
-
-This parameter contains the number of VFs to be created on a physical interface as a comma separated key/value pair.
-
-```bash
-NeutronSriovNumVFs: "p1p1:5,p4p1:5"
-```
-      
-**NeutronPhysicalDevMappings**
-
-This parameter contains the list of physical network to the physical device mapping.
-
-```bash
-NeutronPhysicalDevMappings: "physint:p1p1, physint:p4p1"
-```
-     
-     
-**NovaPCIPassthrough**
-
-This parameter contains the whitelisted PCI devices available for guest environment.
-
-```bash
-NovaPCIPassthrough:
-  - devname: "p1p1"
-    physical_network:"physint"
-  - devname: "p4p1"
-    physical_network:"physint"
-```
-
-3.	Add the following environment files to the OpenStack Overcloud deployment command to enable the SR-IOV with OVS hardware offload:
-
-```bash
-Sample SR-IOV parameters
-# Enables OVS Hardware Offload
--e ~/pilot/templates/ovs-hw-offload.yaml
-# Applies the KernelArgs and TunedProfile with a reboot
--e ~/pilot/templates/overcloud/environments/host-config-and-reboot.yaml
-# meta-data parameters for Nova scheduler 
--e ~/pilot/templates/neutron-sriov.yaml
-```
-
-> NOTE: Sample neutron-sriov.yaml
-
-The sample neutron-sriov.yaml file is given in the Sample Configurations section.
-
-4.	Execute the Overcloud deployment command.
-
-**SR-IOV workbook execution**
-
-```bash
-cd ;source ~/stackrc; openstack overcloud deploy --log-file ~/pilot/overcloud_deployment.log -t 120 --stack r151 \
---templates ~/pilot/templates/overcloud -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
--e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-rgw.yaml -r ~/pilot/templates/roles_data.yaml \
--e ~/pilot/templates/overcloud/environments/network-isolation.yaml \
--e ~/pilot/templates/network-environment.yaml \
--e /home/osp_admin/pilot/templates/nic-configs/sriov_7_port/nic_environment.yaml \
--e ~/pilot/templates/ceph-osd-config.yaml \
--e ~/pilot/templates/static-ip-environment.yaml \
--e ~/pilot/templates/static-vip-environment.yaml \
--e ~/pilot/templates/node-placement.yaml \
--e ~/pilot/templates/overcloud/environments/storage-environment.yaml \
--e ~/overcloud_images.yaml \
--e ~/pilot/templates/dell-environment.yaml \
--e ~/pilot/templates/overcloud/environments/puppet-pacemaker.yaml \
--e ~/pilot/templates/ovs-hw-offload.yaml \
--e ~/pilot/templates/overcloud/environments/host-config-and-reboot.yaml \
--e ~/pilot/templates/neutron-sriov.yaml \
---libvirt-type kvm --ntp-server 192.168.120.8
-
-```
 
 
 ### SR-IOV in JS 13.0
@@ -2181,8 +2067,6 @@ iface bridge
     bridge-vids 110 120 130 140 170 180 201-220 1543-1544
     bridge-vlan-aware yes
 ```
-
-
 
 
 **SR-IOV with Two Ports**
@@ -2857,6 +2741,7 @@ This appendix details the sample properties file and describes the differences b
 
 ### Sample CSP.ini File
 
+
 ```yaml
 
 # Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
@@ -3108,7 +2993,9 @@ StorageBondInterfaceOptions=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 la
 [Dell NFV Settings]
 
 #Enter value of enable_hpg as true/false for HugePages
+
 hpg_enable=true
+
 #User should give this parameter in same format.
 #Supported values for hpg_size(Size of hugepages) is 2MB and 1 GB.
 #The number of hugepages will be calculated dynamically.
@@ -3323,6 +3210,19 @@ verify_rhsm_status=true
 
 ```
 
+Acme.properties Example for 14G stamp (Power Edge R640 servers)
+
+Each server for Ceph Nodes had total of 8 disks [slot 0 to 7]
+
+Ceph-Storage nodes: disks in last 2 slots are RAID-1 and used for OS installation (root disk) which are HDD disks Remaining 6 all are SSD disks are for 5 OSDs  + 1 journal. 
+The name should follow as below in acme.properties for this scenario:
+ 
+![](media/f1d1371b0eeec6aba4332cd940d9119f.png)
+
+
+Also in the assign_role.py, small tweak was done by changing ssd as media_type_filter instead of hdd. This is required since we are using all SSDs disk for Ceph OSDs.
+
+<a href="https://github.com/dsp-jetpack/JetPack/blob/master/src/pilot/assign_role.py#L517" target="_blank">https://github.com/dsp-jetpack/JetPack/blob/master/src/pilot/assign_role.py#L517</a>
 
 
 ### Sample xSP.ini File
@@ -3790,59 +3690,15 @@ verify_rhsm_status=true
 
 The sample xSP and CSP profile files are very similar. The primary differences between them are that the CSP profile has various NFV features enabled, while the xSP profile has these features disabled.
 
-The following features are enabled in the CSP profile and disabled in the xSP profile:
+The following features are enabled by default in the CSP profile and disabled in the xSP profile:
+
 * Huge pages (hpg_enable)
 * NUMA (numa_enable)
+* OVS-DPDK
+* DVR
+* MTU (Can be enabled on both CSP and xSP Profiles)
 
 See the JetPack open source repository for the entire content of each file, or if doing an automated install, see the ~/JetPack/src/deploy/osp_deployer/settings directory on the SAH node.
- 
-
-Acme.properties Example for 14G stamp (Power Edge R640 servers)
-
-Each server for Ceph Nodes had total of 8 disks [slot 0 to 7]
-
-Ceph-Storage nodes: disks in last 2 slots are RAID-1 and used for OS installation (root disk) which are HDD disks Remaining 6 all are SSD disks are for 5 OSDs  + 1 journal. 
-The name should follow as below in acme.properties for this scenario:
- 
-![](media/f1d1371b0eeec6aba4332cd940d9119f.png)
-
-
-Also in the assign_role.py, small tweak was done by changing ssd as media_type_filter instead of hdd. This is required since we are using all SSDs disk for Ceph OSDs.
-
-<a href="https://github.com/dsp-jetpack/JetPack/blob/master/src/pilot/assign_role.py#L517"
-target="_blank">https://github.com/dsp-jetpack/JetPack/blob/master/src/pilot/assign_role.py#L517</a>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -3850,8 +3706,7 @@ target="_blank">https://github.com/dsp-jetpack/JetPack/blob/master/src/pilot/ass
 
 # Appendix K Solution Validation Overview 
 
-Validation of the complete solution is based on the hardware in the Ready Architecture, as defined in the Dell EMC Ready Architecture for Red Hat OpenStack Platform - Architecture Guide - Version 13, the JetPack software, and utilizes several tools to ensure the functionality of the solution. In addition, the Solution, once validated, is listed by the OpenStack Foundation (https://www.openstack.org/marketplace/distros/distribution/emc/dell-emc-ready-arch-for-red-hat-openstack) as a Certified  
-
+Validation of the complete solution is based on the hardware in the Ready Architecture, as defined in the Dell EMC Ready Architecture for Red Hat OpenStack Platform - Architecture Guide - Version 13, the JetPack software, and utilizes several tools to ensure the functionality of the solution. In addition, the Solution, once validated, is listed by the OpenStack Foundation (https://www.openstack.org/marketplace/distros/distribution/emc/dell-emc-ready-arch-for-red-hat-openstack) as a Certified . 
 
 > Topics:
 > * Solution Validation Hardware
@@ -3870,6 +3725,7 @@ Validation of the complete solution is based on the hardware in the Ready Archit
 
 	Dell Networking S3048-ON Switch
 	Dell Networking S4048-ON Switch
+	Dell Networking S5248F Switch
 
 
 ### Solution Validation Tools and Certifications
@@ -5561,85 +5417,6 @@ test_file
 2017-10-13	14:22:41: INFO: #####VALIDATION SUCCESS#####
 2017-10-13	14:22:41: INFO: ##### Done #####
 ```
-
-
-
-
-
-<div style="page-break-after: always;"></div>
-
-# Appendix L Post Deployment Features
-
-This appendix provides information about the post deployment Features for the Dell EMC Ready Architecture for Red Hat OpenStack Platform.
-
-> Topics:
-> * Ease of Use
-> * SR-IOV
-
-
-### Ease of Use
-
-Ease of Use is used for the post-deployment customization of Dell EMC Ready Architecture for Red Hat OpenStack Platform for various use cases of NFV. Multiple projects, networks and Security Groups can be created and deleted with great ease by running the Ease of Use playbooks. The Cloud administrator has the flexibility to provide VNF related information in an Excel spreadsheet, which will then be used by the Ansible playbooks to deploy the virtual network functions. The following resources can be created/deleted automatically using this feature:
-
-	Projects
-	Users
-	Networks
-	Subnets
-	Routers
-	Security Groups
-
-The feature contains creation and deletion playbooks which take input from the Excel spreadsheet. As the name suggests, the creation playbook is used to create the OpenStack resources. Multiple resources can be created using a single command. Similarly, the deletion playbook is to be used for deleting the created projects. The user can delete one project at a time by providing its name in the deletion command. Deleting a project also deletes all associated virtual resources.
-
-Using this Excel spreadsheet, the Ease of Use feature can create up to 500 projects. Each project can have up to one router; 3 networks along with one subnet for each; one user and up to 9 security groups.
-
-> Note: See the document Dell EMC Ready Hat Ready Architecture Guide v13.0 for further information
-
-
-### SR-IOV
-
-SR-IOV feature is enabled in Dell EMC Ready Architecture for Red Hat OpenStack Platform v13 to enable external network access to the instances through the lowest latency path.
-
-Single root I/O virtualization (SR-IOV) is an extension to the PCI Express (PCIe) specification. SR-IOV enables a single PCIe device to appear as multiple, separate devices. Traditionally in a virtualized environment, a packet has to go through an extra layer of hypervisor, resulting in multiple CPU interrupts per packet. These extra interrupts can result in a bottleneck in high traffic environments. SR-IOV enabled devices have the ability to dedicate isolated access to its resources among various PCIe hardware functions.
-
-SR-IOV enablement script is sub divided into two parts, Cnode Pass and Instance Pass scripts. Each script makes use of a different Settings INI file. The Settings file requires the user to input the parameters required for executing the individual scripts.
-
-Cnode pass is the first of the two scripts that should be run. Cnode pass enables SR-IOV on a single compute node in Dell EMC Ready Architecture for Red Hat OpenStack Platform. It has two modes: ephemeral and persistent. The ephemeral mode of Cnode pass is the non-persistent setup of SR-IOV. It creates the supported number of Virtual Functions for the desired Physical Functions on a compute node. All the created VFs will be removed after the compute node is rebooted. The persistent mode of Cnode pass creates the SR-IOV environment that is persistent across multiple reboots of a compute node.
-
-Instance pass is the final step in enabling the SR-IOV feature. This script attaches two VFs to the desired instance and creates a supported bond over the attached VFs. Connectivity to the external network is enabled using this bond for the desired instance overriding the OpenStack tenant network default route.
-
-Enhance the SR-IOV feature by enabling the NIC Alignment where the vCPUs instance and physical NIC align with the same CPU socket.
-
-
-
-> Note: See the document Dell EMC Ready Architecture for Red Hat OpenStack Platform SR-IOV User Guide 13 for further information on the SR-IOV feature.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
