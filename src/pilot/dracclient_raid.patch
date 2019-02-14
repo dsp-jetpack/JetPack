@@ -1,31 +1,55 @@
---- raid.py.orig	2019-01-23 15:57:50.655000000 +0000
-+++ raid_backup.py	2019-01-23 14:44:59.068000000 +0000
-@@ -588,14 +588,26 @@
-         """
-         return raid_controller_fqdd.startswith('RAID.')
+--- raid.py.orig	2019-02-12 00:55:47.000000000 -0500
++++ raid_new.py	2019-02-13 10:27:14.000000000 -0500
+@@ -34,6 +34,11 @@
  
--    def is_boss_controller(self, raid_controller_fqdd):
-+    def is_boss_controller(self, raid_controller_fqdd, raid_controllers=None):
-         """Find out if a RAID controller a BOSS card or not
+ REVERSE_RAID_LEVELS = dict((v, k) for (k, v) in RAID_LEVELS.items())
  
-         :param raid_controller_fqdd: The object's fqdd we are testing to see
-                                      if it is a BOSS card or not.
-+        :param raid_controllers: A list of RAIDController to scan for presence
-+                                 of BOSS card, if None the drac will be queried
-+                                 for the list of controllers which will then be
-+                                 scanned.
-         :returns: boolean, True if the device is a BOSS card, False if not.
-+        :raises: WSManRequestFailure on request failures
-+        :raises: WSManInvalidResponse when receiving invalid response
-+        :raises: DRACOperationFailed on error reported back by the DRAC
-+                 interface
-         """
--        return raid_controller_fqdd.startswith('AHCI.')
-+        if raid_controllers is None:
-+            raid_controllers = self.list_raid_controllers()
-+        boss_raid_controllers = [
-+            c.id for c in raid_controllers if c.model.startswith('BOSS')]
-+        return raid_controller_fqdd in boss_raid_controllers
++RAID_CONTROLLER_IS_REALTIME = {
++    '1': True,
++    '0': False
++}
++
+ DISK_RAID_STATUS = {
+     '0': 'unknown',
+     '1': 'ready',
+@@ -110,7 +115,8 @@
  
-     def _check_disks_status(self, mode, physical_disks,
-                             controllers_to_physical_disk_ids):
+ RAIDController = collections.namedtuple(
+     'RAIDController', ['id', 'description', 'manufacturer', 'model',
+-                       'primary_status', 'firmware_version', 'bus'])
++                       'primary_status', 'firmware_version', 'bus',
++                       'supports_realtime'])
+ 
+ VirtualDiskTuple = collections.namedtuple(
+     'VirtualDisk',
+@@ -191,7 +197,10 @@
+                                                'PrimaryStatus')],
+             firmware_version=self._get_raid_controller_attr(
+                 drac_controller, 'ControllerFirmwareVersion'),
+-            bus=self._get_raid_controller_attr(drac_controller, 'Bus'))
++            bus=self._get_raid_controller_attr(drac_controller, 'Bus'),
++            supports_realtime=RAID_CONTROLLER_IS_REALTIME[
++                self._get_raid_controller_attr(
++                    drac_controller, 'RealtimeCapability')])
+ 
+     def _get_raid_controller_attr(self, drac_controller, attr_name):
+         return utils.get_wsman_resource_attr(
+@@ -775,3 +784,18 @@
+ 
+         return {'is_reboot_required': is_reboot_required,
+                 'commit_required_ids': controllers}
++
++    def is_realtime_supported(self, raid_controller_fqdd):
++        """Find if controller supports realtime or not
++
++        :param raid_controller_fqdd: ID of RAID controller
++        :returns: True or False
++        """
++        drac_raid_controllers = self.list_raid_controllers()
++        realtime_controller = [cnt.id for cnt in drac_raid_controllers
++                               if cnt.supports_realtime]
++
++        if raid_controller_fqdd in realtime_controller:
++            return True
++
++        return False
