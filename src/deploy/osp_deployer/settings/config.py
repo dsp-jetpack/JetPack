@@ -332,6 +332,21 @@ class Settings():
         else:
             self.enable_dellsc_backend = False
 
+        #unity 
+        if backend_settings['enable_unity_backend'].lower() == 'true':
+            self.enable_unity_backend = True
+            self.unity_san_ip = backend_settings['unity_san_ip']
+            self.unity_san_login = backend_settings[
+                'unity_san_login']
+            self.unity_san_password = backend_settings[
+                'unity_san_password']
+            self.unity_io_ports = backend_settings[
+                'unity_io_ports']
+            self.unity_storage_pool_names = backend_settings[
+                'unity_storage_pool_names']
+        else:
+            self.enable_unity_backend = False
+
         sanity_settings = self.get_settings_section(
             "Sanity Test Settings")
         self.floating_ip_network = sanity_settings['floating_ip_network']
@@ -463,6 +478,8 @@ class Settings():
             '/pilot/templates/network-environment.yaml'
         self.dell_storage_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-cinder-backends.yaml'
+        self.dell_unity_cinder_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/dellemc-unity-cinder-backend.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
         self.neutron_ovs_dpdk_yaml = self.foreman_configuration_scripts + \
