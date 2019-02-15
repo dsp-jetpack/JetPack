@@ -154,7 +154,7 @@ def create_volume_types():
     if not args.disable_rbd:
         types.append(["rbd_backend", "tripleo_ceph"])
 
-    if args.enable_dellsc || args.enable_unity :
+    if args.enable_dellsc or args.enable_unity :
         cinder_file = open(home_dir +
                            '/pilot/templates/dell-cinder-backends.yaml', 'r')
         for line in cinder_file:
@@ -501,7 +501,7 @@ def main():
         if args.enable_dellsc:
             env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
         
-       if args.enable_unity:
+        if args.enable_unity:
             env_opts += " -e ~/pilot/templates/dellemc-unity-cinder-backends.yaml" 
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
