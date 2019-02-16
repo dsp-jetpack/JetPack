@@ -1,5 +1,14 @@
---- client.py.orig	2018-11-26 21:48:01.000000000 +0000
-+++ client_new.py	2019-02-01 11:34:14.145952815 +0000
+--- client.py.orig	2018-11-26 15:48:01.000000000 -0600
++++ client_new.py	2019-02-16 06:34:08.458930636 -0600
+@@ -272,7 +272,7 @@
+         state_reached = self._wait_for_host_state(
+             self.client.host,
+             alive=False,
+-            ping_count=3,
++            ping_count=2,
+             retries=24)
+ 
+         if not state_reached:
 @@ -468,7 +468,8 @@
                            cim_system_creation_class_name='DCIM_ComputerSystem',
                            cim_system_name='DCIM:ComputerSystem',
@@ -15,7 +24,7 @@
                             the job will not execute until
                             schedule_job_execution is called
 +        :param realtime: Indicates if reatime mode should be used.
-+               Valid values are True and False. Default value is False.
++               Valid values are True and False.
          :returns: id of the created job
          :raises: WSManRequestFailure on request failures
          :raises: WSManInvalidResponse when receiving invalid response
@@ -71,4 +80,3 @@
 +
      def list_cpus(self):
          """Returns the list of CPUs
-
