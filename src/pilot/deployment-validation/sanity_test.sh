@@ -702,7 +702,7 @@ vlan_aware_test(){
 
   ip_vlan1=$(openstack port list | grep subport1_$VLANID_1 | awk '{print $8}' | awk -F"'" '{print $2}')
 
-  netid_vlan1=$(neutron net-show -F id $VLAN1_NETWORK_NAME | grep id | awk '{print $4}')
+  netid_vlan1=$(openstack network show $VLAN1_NETWORK_NAME | grep " id" | awk '{print $4}')
 
   ping_from_netns ${ip_vlan1} qdhcp-${netid_vlan1}
 
