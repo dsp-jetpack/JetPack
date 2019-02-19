@@ -476,9 +476,8 @@ def main():
         # network-environment.yaml
         if args.octavia_enable:
             env_opts += " -e ~/pilot/templates/octavia.yaml"          
-
-        if args.octavia_user_certs_keys is True:
-            env_opts += " -e ~/pilot/templates/cert_keys.yaml"
+            if args.octavia_user_certs_keys is True:
+                env_opts += " -e ~/pilot/templates/cert_keys.yaml"
 
         if args.node_placement:
             env_opts += " -e ~/pilot/templates/node-placement.yaml"

@@ -688,13 +688,13 @@ class Director(InfraHost):
                            self.templates_dir + "/cert_keys.yaml")
           self.run_tty('sed -i "s|OctaviaGenerateCerts:.*|' + 
             'OctaviaGenerateCerts: ' +
-            'False' + '|" ' + 
+            'false' + '|" ' + 
             str(octavia_yaml))
         
         if self.settings.octavia_user_certs_keys is False:
           self.run_tty('sed -i "s|OctaviaGenerateCerts:.*|' + 
             'OctaviaGenerateCerts: ' +
-            'True' + '|" ' + 
+            'true' + '|" ' + 
             str(octavia_yaml))
                              
         cmds = [
