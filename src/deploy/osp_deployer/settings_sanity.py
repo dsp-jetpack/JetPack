@@ -104,6 +104,11 @@ class DeployerSanity():
                 self.settings.overcloud_image), \
                 self.settings.overcloud_image + \
                 " file doesn't seem to exist"
+        if self.settings.octavia_user_certs_keys is True:
+            assert os.path.isfile(
+                self.settings.certificate_keys_path),\
+                self.settings.certificate_keys_path +\
+                " file doesn't seem to exist"
         assert os.path.isfile(
             self.settings.install_director_sh), \
             self.settings.install_director_sh +\
