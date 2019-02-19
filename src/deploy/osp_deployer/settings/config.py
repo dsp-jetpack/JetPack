@@ -301,6 +301,18 @@ class Settings():
         else:
             self.dvr_enable = False
             logger.info("DVR is disabled.")
+        if dellnfv_settings['octavia_enable'].lower() == 'true':
+            self.octavia_enable = True
+            logger.info("Octavia is enabled.")
+        else:
+            self.octavia_enable = False
+            logger.info("Octavia is disabled.")       
+        if dellnfv_settings['octavia_generate_certs'].lower() == 'true':
+            self.octavia_user_certs_keys = False
+        else:
+            self.octavia_user_certs_keys = True
+            self.certificate_keys_path = dellnfv_settings['certificate_keys_path']
+       
         # Performance and Optimization
         performance_and_optimization = self.get_settings_section(
             "Performance and Optimization")

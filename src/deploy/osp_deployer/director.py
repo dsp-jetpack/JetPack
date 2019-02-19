@@ -723,10 +723,25 @@ class Director(InfraHost):
         logger.debug("Configuring network-environment.yaml for overcloud")
 
         network_yaml = self.templates_dir + "/network-environment.yaml"
-
+        octavia_yaml = self.templates_dir + "/octavia.yaml"
+        
         self.upload_file(self.settings.network_env_yaml,
                          network_yaml)
-
+                         
+        if self.settings.octavia_user_certs_keys is True:
+          self.upload_file(self.settings.certificate_keys_path,
+                           self.templates_dir + "/cert_keys.yaml")
+          self.run_tty('sed -i "s|OctaviaGenerateCerts:.*|' + 
+            'OctaviaGenerateCerts: ' +
+            'false' + '|" ' + 
+            str(octavia_yaml))
+        
+        if self.settings.octavia_user_certs_keys is False:
+          self.run_tty('sed -i "s|OctaviaGenerateCerts:.*|' + 
+            'OctaviaGenerateCerts: ' +
+            'true' + '|" ' + 
+            str(octavia_yaml))
+                             
         cmds = [
             'sed -i "s|ControlPlaneDefaultRoute:.*|' +
             'ControlPlaneDefaultRoute: ' +
@@ -1109,9 +1124,12 @@ class Director(InfraHost):
             cmd += " --ovs_dpdk"
         if self.settings.enable_sriov is True:
             cmd += " --sriov"
-        # Node placement is required in an automated install. The index order
         if self.settings.dvr_enable is True:
             cmd += " --dvr_enable"
+        if self.settings.octavia_enable is True:
+            cmd += " --octavia_enable"
+        if self.settings.octavia_user_certs_keys is True:
+            cmd += " --octavia_user_certs_keys"
         # Node placement is required in an automated install.  The index order
         # of the nodes is the order in which they are defined in the
         # .properties file
