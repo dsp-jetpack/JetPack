@@ -604,6 +604,18 @@ class Settings():
                 except AttributeError:
                     node.skip_raid_config = False
                     pass
+                try:
+                    if node.skip_bios_config == "true":
+                        node.skip_bios_config = True
+                except AttributeError:
+                    node.skip_bios_config = False
+                    pass
+                try:
+                    if node.skip_nic_config == "true":
+                        node.skip_nic_config = True
+                except AttributeError:
+                    node.skip_nic_config = False
+                    pass
 
         Settings.settings = self
 
