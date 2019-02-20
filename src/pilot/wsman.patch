@@ -1,0 +1,33 @@
+27a28,29
+> MAX_ELEMENTS = 384
+> 
+138,139c140,142
+<     def enumerate(self, resource_uri, optimization=True, max_elems=100,
+<                   auto_pull=True, filter_query=None, filter_dialect='cql'):
+---
+>     def enumerate(self, resource_uri, optimization=True,
+>                   max_elems=MAX_ELEMENTS, auto_pull=True, filter_query=None,
+>                   filter_dialect='cql'):
+166,167c169,173
+<                         'non-ASCII characters: ' + repr(resp.content))
+<             resp_xml = ElementTree.fromstring(re.sub(six.b('[^\x00-\x7f]'),
+---
+>                         'unprintable characters: ' + repr(resp.content))
+> 
+>             # Filter out everything except for printable ASCII characters and
+>             # tab
+>             resp_xml = ElementTree.fromstring(re.sub(six.b('[^\x20-\x7e\t]'),
+200c206
+<     def pull(self, resource_uri, context, max_elems=100):
+---
+>     def pull(self, resource_uri, context, max_elems=MAX_ELEMENTS):
+291c297,298
+<                  max_elems=100, filter_query=None, filter_dialect=None):
+---
+>                  max_elems=MAX_ELEMENTS, filter_query=None,
+>                  filter_dialect=None):
+351c358,359
+<     def __init__(self, endpoint, resource_uri, context, max_elems=100):
+---
+>     def __init__(self, endpoint, resource_uri, context,
+>                  max_elems=MAX_ELEMENTS):
