@@ -379,27 +379,22 @@ class Director(InfraHost):
         non_sah_nodes = (self.settings.controller_nodes +
                          self.settings.compute_nodes +
                          self.settings.ceph_nodes)
-        # Allow for the number of nodes + a couple of sessions
-        maxSessions = len(non_sah_nodes) + 2
-        cmds = [
-            "sed -i 's/.*MaxStartups.*/MaxStartups " +
-            str(maxSessions) + "/' /etc/ssh/sshd_config",
-            "sed -i 's/.*MaxSession.*/MaxSessions " +
-            str(maxSessions) + "/' /etc/ssh/sshd_config",
-            "/sbin/service sshd restart",
-            "grep max -i /etc/ssh/sshd_config"
-        ]
-        for cmd in cmds:
-            self.run_as_root(cmd)
-
+        # Allow for the number of nodes + a few extra sessions
+        maxSessions = len(non_sah_nodes) + 10
+        
+        setts = ['MaxStartups','MaxSessions']
+        for each in setts:
+            re = self.run("sudo grep " + each + " /etc/ssh/sshd_config")[0].rstrip()
+            if re !=  each + " " + str(maxSessions):
+                self.run_as_root('sed -i -e "\$a' + each + ' ' + str(maxSessions) +'" /etc/ssh/sshd_config')
+        self.run_as_root("systemctl restart sshd")
+        
     def revert_sshd_conf(self):
         # Revert sshd_config to its default
         cmds = [
-            "sed -i 's/.*MaxStartups.*/#MaxStartups 10:30:100/'" +
-            " /etc/ssh/sshd_config",
-            "sed -i 's/.*MaxSession.*/#MaxSession 10/' /etc/ssh/sshd_config",
-            "/sbin/service sshd restart",
-            "grep max -i /etc/ssh/sshd_config"
+            "sed -i '/MaxStartups/d' /etc/ssh/sshd_config",
+            "sed -i '/MaxSessions/d' /etc/ssh/sshd_config",
+            "systemctl restart sshd"
         ]
         for cmd in cmds:
             self.run_as_root(cmd)
