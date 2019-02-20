@@ -352,6 +352,8 @@ class Settings():
                 'unity_san_login']
             self.unity_san_password = backend_settings[
                 'unity_san_password']
+            self.unity_storage_protocol = backend_settings[
+                'unity_storage_protocol']
             self.unity_io_ports = backend_settings[
                 'unity_io_ports']
             self.unity_storage_pool_names = backend_settings[
