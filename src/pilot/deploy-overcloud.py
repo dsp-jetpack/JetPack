@@ -156,7 +156,7 @@ def create_volume_types():
 
     if args.enable_dellsc or args.enable_unity :
         cinder_file = open(home_dir +
-                           '/pilot/templates/dell-cinder-backends.yaml', 'r')
+                           '/pilot/templates/dell-cinder-backend.yaml', 'r')
         for line in cinder_file:
             line = line.strip()
             try:
