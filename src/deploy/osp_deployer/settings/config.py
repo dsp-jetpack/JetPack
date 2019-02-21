@@ -273,7 +273,7 @@ class Settings():
         else:
             self.enable_rbd_nova_backend = False
 
-        #glance backend, possible values file, cinder, swift or rbd
+        # glance backend, possible values file, cinder, swift or rbd
         self.glance_backend = deploy_settings['glance_backend'].lower()
 
         if deploy_settings['enable_fencing'].lower() == 'true':
@@ -306,13 +306,13 @@ class Settings():
             logger.info("Octavia is enabled.")
         else:
             self.octavia_enable = False
-            logger.info("Octavia is disabled.")       
+            logger.info("Octavia is disabled.")
         if dellnfv_settings['octavia_generate_certs'].lower() == 'true':
             self.octavia_user_certs_keys = False
         else:
             self.octavia_user_certs_keys = True
             self.certificate_keys_path = dellnfv_settings['certificate_keys_path']
-       
+
         # Performance and Optimization
         performance_and_optimization = self.get_settings_section(
             "Performance and Optimization")
@@ -344,7 +344,7 @@ class Settings():
         else:
             self.enable_dellsc_backend = False
 
-        #unity 
+        # unity
         if backend_settings['enable_unity_backend'].lower() == 'true':
             self.enable_unity_backend = True
             self.unity_san_ip = backend_settings['unity_san_ip']
