@@ -595,6 +595,7 @@ echo "POST: upgrade setuptools"
 pip install --upgrade setuptools
 pip install paramiko
 pip install selenium
+pip install cryptography==2.4.2
 echo "POST: Done installing extra packages"
 
 echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/root/JetPack/src/deploy/' >> /root/.bashrc
