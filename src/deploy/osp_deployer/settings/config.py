@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,6 +27,8 @@ logger = logging.getLogger("osp_deployer")
 
 
 class Settings():
+    CEPH_OSD_CONFIG_FILE = 'pilot/templates/ceph-osd-config.yaml'
+
     settings = ''
 
     def __init__(self, settings_file):
@@ -352,8 +354,6 @@ class Settings():
                 'unity_san_login']
             self.unity_san_password = backend_settings[
                 'unity_san_password']
-            self.unity_storage_protocol = backend_settings[
-                'unity_storage_protocol']
             self.unity_io_ports = backend_settings[
                 'unity_io_ports']
             self.unity_storage_pool_names = backend_settings[
@@ -494,6 +494,8 @@ class Settings():
             '/pilot/templates/dell-cinder-backends.yaml'
         self.dell_unity_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellemc-unity-cinder-backend.yaml'
+        self.ceph_osd_config_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/ceph-osd-config.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
         self.neutron_ovs_dpdk_yaml = self.foreman_configuration_scripts + \

@@ -27,10 +27,17 @@ import subprocess
 import sys
 import tempfile
 import time
+import yaml
 
 logger = logging.getLogger("osp_deployer")
 
 exitFlag = 0
+
+# Ceph pools present in a default install
+HEAVY_POOLS = ['volumes', 'images', 'vms']
+OTHER_POOLS = ['rbd', '.rgw.root', 'default.rgw.control',
+               'default.rgw.data.root', 'default.rgw.gc', 'default.rgw.log',
+               'metrics', 'backups', '.rgw.buckets', 'default.rgw.users.uid']
 
 
 class Director(InfraHost):
@@ -408,6 +415,76 @@ class Director(InfraHost):
         self.setup_environment()
         self.setup_sanity_ini()
 
+    def clamp_min_pgs(self, num_pgs):
+        pg_options = [8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4,
+                      2, 1]
+        pg_max = pg_options[0]
+
+        option_index = 0
+        finding_pg_value = True
+        while finding_pg_value:
+            if num_pgs >= pg_options[option_index]:
+                num_pgs = pg_options[option_index]
+                finding_pg_value = False
+            else:
+                option_index += 1
+
+        return num_pgs
+
+    def calc_pgs(self, num_osds, num_heavy_pools, num_other_pools):
+        replication_factor = 3
+        max_pgs = num_osds * 200 / replication_factor
+        total_pgs = max_pgs * 0.8
+        total_heavy_pgs = total_pgs / 2
+        heavy_pgs = total_heavy_pgs / num_heavy_pools
+        heavy_pgs = self.clamp_min_pgs(heavy_pgs)
+
+        heavy_pools_pgs = num_heavy_pools * heavy_pgs
+        remaining_pgs = total_pgs - heavy_pools_pgs
+        other_pgs = remaining_pgs / num_other_pools
+        other_pgs = self.clamp_min_pgs(other_pgs)
+
+        return heavy_pgs, other_pgs
+
+    def calc_num_osds(self, default_osds_per_node):
+        # Pull down the auto-generated OSD config file from the director
+        local_file = self.settings.ceph_osd_config_yaml + '.director'
+        remote_file = os.path.join('/home',
+            self.settings.director_install_account_user,
+            Settings.CEPH_OSD_CONFIG_FILE)
+        self.download_file(local_file, remote_file)
+
+        # Calculate the number of OSDs across the entire cluster
+        total_osds = 0
+
+        with open(local_file, 'r') as stream:
+            osd_configs_yaml = yaml.load(stream)
+
+        node_data_lookup_str = osd_configs_yaml["parameter_defaults"][
+            "NodeDataLookup"]
+        uuid_to_osd_configs = json.loads(node_data_lookup_str)
+        for uuid in uuid_to_osd_configs:
+            osd_config = uuid_to_osd_configs[uuid]
+            num_osds = len(osd_config["devices"])
+            total_osds = total_osds + num_osds
+
+        num_storage_nodes = len(self.settings.ceph_nodes)
+        num_unaccounted = num_storage_nodes - len(uuid_to_osd_configs)
+        if num_unaccounted < 0:
+            raise AssertionError("There are extraneous servers listed in {}. "
+                                 "Unable to calculate the number of OSDs in "
+                                 "the cluster.  Remove the bad entries from "
+                                 "the file or discard the current generated "
+                                 "OSD configration by copying {}.orig to "
+                                 "{}.".format(
+                                     self.settings.ceph_osd_config_yaml,
+                                     self.settings.ceph_osd_config_yaml,
+                                     self.settings.ceph_osd_config_yaml))
+
+        total_osds = total_osds + (num_unaccounted * default_osds_per_node)
+
+        return total_osds
+
     def setup_environment(self):
         logger.debug("Configuring Ceph storage settings for overcloud")
 
@@ -431,21 +508,12 @@ class Director(InfraHost):
         osd_scenario = "collocated"  # Keep this as default, change if required
         osd_devices = "    devices:\n"
         osd_dedicated_devices = "    dedicated_devices:\n"
+        ceph_pools = "  CephPools:"
         domain_param = "  CloudDomain:"
         rbd_backend_param = "  NovaEnableRbdBackend:"
         glance_backend_param = "  GlanceBackend:"
-        ceph_pool_default_size_param = "  CephPoolDefaultSize:"
-        ceph_pool_default_size = 3
         osds_per_node = 0
-        storage_nodes = len(self.settings.ceph_nodes)
 
-        # Dynamic calculation for the replication size
-        # This calculation is based on the observation that
-        # 10 Ceph pools are created with 2688 placement groups.
-        # Minimum of 41 OSDs are required for containing 2688 PGs with
-        # a replication size of 3. Each OSD can have 200 PGs.
-        # Simillarly 27 OSDs are reuiqred for a replication size of 2.
-        # And minimum 14 OSDs are required for replication size of 1.
         if osd_disks:
             for osd in osd_disks:
                 # Format is ":OSD_DRIVE" or ":OSD_DRIVE:JOURNAL_DRIVE",
@@ -481,18 +549,10 @@ class Director(InfraHost):
                     logger.warning(
                         "Bad entry in osd_disks: {}".format(osd))
 
-            total_osds = osds_per_node * storage_nodes
-            if total_osds >= 41:
-                ceph_pool_default_size = 3
-            elif total_osds >= 27:
-                ceph_pool_default_size = 2
-                logger.warning("Setting the CephDefaultPoolSize to 2.")
-            elif total_osds >= 14:
-                ceph_pool_default_size = 1
-                logger.warning("Setting the CephDefaultPoolSize to 1.")
-            else:
-                raise AssertionError("Number of OSDs on storage nodes is less "
-                                     " than minimum required.")
+        total_osds = self.calc_num_osds(osds_per_node)
+        heavy_pgs, other_pgs = self.calc_pgs(total_osds,
+                                             len(HEAVY_POOLS),
+                                             len(OTHER_POOLS))
 
         found_osds_param = False
         for line in src_file:
@@ -535,10 +595,18 @@ class Director(InfraHost):
                 value = str(self.settings.glance_backend).lower()
                 tmp_file.write("{} {}\n".format(glance_backend_param, value))
 
-            elif line.startswith(ceph_pool_default_size_param):
-                tmp_file.write("{} {}\n".format(ceph_pool_default_size_param,
-                                                ceph_pool_default_size))
+            elif line.startswith(ceph_pools):
+                pool_str = line[len(ceph_pools):]
+                pools = json.loads(pool_str)
+                for pool in pools:
+                    if pool["name"] in HEAVY_POOLS:
+                        pool["pg_num"] = heavy_pgs
+                        pool["pgp_num"] = heavy_pgs
+                    else:
+                        pool["pg_num"] = other_pgs
+                        pool["pgp_num"] = other_pgs
 
+                tmp_file.write("{} {}\n".format(ceph_pools, json.dumps(pools)))
             else:
                 tmp_file.write(line)
 
