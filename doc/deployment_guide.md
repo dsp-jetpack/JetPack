@@ -69,8 +69,7 @@ This guide provides information necessary to deploy the Dell EMC Ready Architect
 
 ### General Hardware Options
 
-To reduce time spent on specifying hardware for an initial system, the Architecture Guide offers a full solution using validated Dell EMC PowerEdge server hardware designed to allow a wide range of
-configuration options, including optimized configurations for: 
+To reduce time spent on specifying hardware for an initial system, the Architecture Guide offers a full solution using validated Dell EMC PowerEdge server hardware designed to allow a wide range of configuration options, including optimized configurations for: 
 
 * Compute nodes
 * Infrastructure nodes
@@ -81,7 +80,7 @@ Version 13 because the hardware and operations processes comprise a flexible fou
 expand as your cloud deployment grows, so your investment is protected.
 
 As noted throughout this Architecture Guide - Version 13, Dell EMC constantly adds capabilities to expand
-this offering, and other hardware may be available. [please check the Architecture Guide for more details]("https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_ready_architecture_for_red_hat_openstack_platform_architecture_guide.pdf")
+this offering, and other hardware may be available. [Please check the Architecture Guide for more details]("https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_ready_architecture_for_red_hat_openstack_platform_architecture_guide.pdf")
 
 ### Servers Options
 
@@ -123,13 +122,13 @@ The network consists of the following major network infrastructure layouts:
 * Management Network Infrastructure - The BMC management network, consisting of iDRAC ports and the out-of-band management ports of the switches, is aggregated into a 1-rack unit (RU) S3048-ON switch in one of the three racks in the cluster. This 1-RU switch in turn can connect to one of the aggregation or core switches to create a separate network with a separate VLAN.
 
 
-> Note: Please contact your Dell EMC sales representative for Detailed parts lists. or contact Dell EMC Professional Services team for OpenStack using the email [rhosp.ra.ps@emc.com](malito:rhosp.ra.ps@emc.com)
+> Note: Please contact your Dell EMC sales representative for a detailed parts list. or contact Dell EMC Professional Services team for OpenStack using the email [rhosp.ra.ps@emc.com](malito:rhosp.ra.ps@emc.com)
 
 ### Version 13 features
 
-**the following features are added in the JetPack Automation and the Ready Architecture for RedHat OpenStack:**
+**The following features are added in the JetPack Automation and the Ready Architecture for RedHat OpenStack:**
 
-* Support for the lastest release of Red Hat OpenStack Platform 13 including the latest udpates.
+* Support for the lastest release of Red Hat OpenStack Platform 13 including the latest updates.
 * Support for latest release of RHEL 7.6 including the latest updates.
 * Support for Red Hat Ceph Storage version 3.1
 * Added support for jumbo frames.
@@ -148,12 +147,12 @@ The network consists of the following major network infrastructure layouts:
 
 ## Before You Begin
 
-> Note: This guide assumes that you have racked the servers and networking hardware, and completed power and network cabling, as per the *Dell EMC Ready Architecture_for_Red_Hat OpenStack Platform Reference Guide – Version 13.*
+> Note: This guide assumes that you have racked the servers and networking hardware, and completed power and network cabling, as per the *Dell EMC Ready Architecture_for_Red_Hat OpenStack Platform Architecture Guide – Version 13.*
 
 The high-level steps required to install the Dell EMC Ready Architecture for Red Hat OpenStack Platform v13 using the automated installation procedures include:
 
 1.  Ensuring that your environment meets the [Prerequisites](#Prerequisites)
-2.  Ensuring that the [Dependencies](#Dependencies) on are met.
+2.  Ensuring that the [Dependencies](#Dependencies) are met.
 3.  *Determining Pool IDs*.
 4.  [Downloading and Extracting Automation Files]("https://github.com/dsp-jetpack/JetPack/").
 5.  [Preparing the Solution Admin Host Deployment](#Preparing-the-Solution-Admin-Host-Deployment).
@@ -163,20 +162,19 @@ The high-level steps required to install the Dell EMC Ready Architecture for Red
 ## Prerequisites
 The following prerequisites must be satisfied before proceeding with a Dell EMC Ready Architecture for Red Hat OpenStack platform v13.0 deployment:
 
-> Note: All nodes in the same roles must be of the same server models, with identical HDD, RAM, and NIC configurations. So, all Controller nodes must be identical to each other; all Compute nodes must be identical to each other; and so on. See the Dell EMC Ready Architecture for Red Hat OpenStack Platform - Version 13 for configuration options for each node role.
+> Note: All nodes in the same roles must be of the same server models, with identical HDD, RAM, and NIC configurations. So, all Controller nodes must be identical to each other; all Compute nodes must be identical to each other.
 
 * Hardware racked and wired per the [Dell EMC Ready Architecture for Red Hat OpenStack Platform Architecture Guide Version 13](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_ready_architecture_for_red_hat_openstack_platform_architecture_guide.pdf).
 * Hardware configured as per the [Dell EMC Ready Architecture for Red Hat OpenStack Platform Architecture Guide Version 13](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_ready_architecture_for_red_hat_openstack_platform_architecture_guide.pdf).
 * Hardware is powered off after the hardware is configured per the [Dell EMC Ready Architecture for Red Hat OpenStack Platform Architecture Guide Version 13](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_ready_architecture_for_red_hat_openstack_platform_architecture_guide.pdf).
 * Internet access, including but not limited to, Red Hat’s subscription manager service and repositories
 * Valid Red Hat subscriptions
-* Workstation used to extract the JetPack-automation-13.0.tgz file and begin building the collateral for the SAH node.Workstation must be a RHEL7.6 host.
+* Workstation used to extract the JetPack-automation-13.0.tgz file and begin building the collateral for the SAH node. Workstation must be a RHEL7.6 host.
 
 ## Dependencies
 For customers performing a self-installation, these files are available upon request from Dell EMC. Please contact your account representative, or email <a href="malito: openstack@dell.com" target="_blank">openstack@dell.com</a> for instructions.
 
-> NOTE: The files are also open sourced and can be obtained from <a href="https://github.com/dsp-jetpack/JetPack/tree/JS-13.0" target="_blank">https://github.com/dsp-jetpack/JetPack/tree/JS-13.0</a> The Dell EMC Ready Architecture for Red Hat OpenStack Platform v13 deployment dependencies include
-
+> NOTE: The files are also open sourced and can be obtained from <a href="https://github.com/dsp-jetpack/JetPack/tree/JS-13.0" target="_blank">https://github.com/dsp-jetpack/JetPack/tree/JS-13.0</a>
 
 > NOTE: The automated install also requires that you have the ISO file “Red Hat Enterprise Linux 7.6 Binary DVD”. It can be downloaded from the Red Hat Customer Portal here: https://access.redhat.com/downloads/content/69/ver=/rhel---7/7.2/x86_64/product-software
 
@@ -275,8 +273,6 @@ The following procedure installs the required configuration files and scripts us
 # Chapter 4 Preparing and Deploying the Solution Admin Host
 This topic describes preparing for, and performing, the Solution Admin Host (SAH) deployment.
 
-The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configuration Toolkit (OS-HCTK) **to be run only on the SAH**.
-
 ## Preparing the Solution Admin Host Deployment
 > ***CAUTION:*** This operation will destroy all data on the SAH, with no option for recovery.
 
@@ -321,14 +317,14 @@ The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configu
     
     a. Change the pre-populated values in your stamp-specific .ini file to match your specific environment. In addition, the IP addresses and the Subscription Manager Pool IDs must be changed to match your deployment. Each section will have a brief description of the attributes.
     
-    b. The nic_env_file parameter must be set to the NIC configuration to use. The default value of 5_port/nic_environment.yaml is appropriate for 10GbE or 25GbE  Intel NICs with DPDK disabled.The deployment can be done with only 4NICs too, where in you need to use the value of 4_port/nic_environment.yaml
+    b. The nic_env_file parameter must be set to the NIC configuration to use. The default value of 5_port/nic_environment.yaml is appropriate for 10GbE or 25GbE  Intel NICs with DPDK disabled.The deployment can be done with only 4 NICs too, where in you need to use the value of 4_port/nic_environment.yaml
         
-    > Note: The overcloud deployment is validated with R630 servers is the normal compute nodes [standard deployment] without any NFV features. Also validated with R740 servers. Although the additional information for the settings within the CSP profile can be found in the [Appendix D-F](#Appendix-D). 
+    > Note: The overcloud deployment is validated with R640 servers as the normal compute nodes [standard deployment] without any NFV features. Also validated with R740 servers. 
     
-    c. The Dell EMC Ready Architecture for Red Hat OpenStack Platform v13optimizes the performance of the deployed overcloud. See [Appendix G](#Appendix-G) for instructions on how to further tune the performance Optimization parameters.
+    c. The Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13 optimizes the performance of the deployed overcloud. See [Appendix G](#Appendix-G) for instructions on how to further tune the performance Optimization parameters.
 
-5. With CSP profile, hugepages is enabled. With XSP profile, hugepages are disabled on the deployed compute nodes for XSP profile. 
-    > To enablhugepages, see [Appendix D](#Appendix-D). 
+5. With CSP profile, hugepages is enabled. With XSP profile, hugepages are disabled on the deployed compute nodes. 
+    > To enable hugepages, see [Appendix D](#Appendix-D). 
 
 6.	Edit the stamp-specific .properties file:
     
@@ -340,10 +336,10 @@ The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configu
 
     **The storage OSDs/journals configuration is not specified if the storage nodes are 14G servers with HBA330 controllers, but must be specified for all other storage node configurations.**
 
-    > Note: Additional nodes can be added to your stamp-specific .properties file if your environment contains more than that supported by the base architecture, as described in the Dell EMC Ready Architecture for Red Hat OpenStack Platform Reference Guide Version 13.
+    > Note: Additional nodes can be added to your stamp-specific .properties file if your environment contains more than that supported by the base architecture, as described in the Dell EMC Ready Architecture for Red Hat OpenStack Platform Architecture Guide Version 13.
 
 
-    The examples in this file are based on the Dell EMC Ready Architecture for Red Hat OpenStack Platform Reference Guide Version 13, and the installation scripts rely on the VLAN IDs as specified in this file. For example, the Private API VLAN ID is 140. So, all addresses on the Private API network must have 140 as the third octet (e.g., 192.168.140.114). Table 2: VLAN IDs on page 15 below lists the VLAN IDs.
+    The examples in this file are based on the Dell EMC Ready Architecture for Red Hat OpenStack Platform Architecture Guide Version 13, and the installation scripts rely on the VLAN IDs as specified in this file. For example, the Private API VLAN ID is 140. So, all addresses on the Private API network must have 140 as the third octet (e.g., 192.168.140.114). The table below lists the VLAN IDs.
     
     | **VLAN ID**           | **Name**                                                 |
     |-----------------------|----------------------------------------------------------|
@@ -357,7 +353,7 @@ The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configu
     | 191                   | External Tenant Network (Used for floating IP addresses) |
     | 201-250               | Internal Tenant Network                                  |
 
-    > ***Note:*** The anaconda__ip is used for the initial installation of the SAH node, and requires an address that can access the Internet to obtain Red Hat software. When possible, the anaconda_iface must be a dedicated interface using 1GbE that is only used for this purpose, and is not used in any other part of the configuration. For 10GbE or 25GbE Intel NICs, "em4" (the fourth nic on the motherboard) should be used. For Intel XXV710 DP 25GbE DA/SFP NICs, "em2.<public_api_network_vlan_id>" (usually "em2.190") should be used.
+    > ***Note:*** The anaconda__ip is used for the initial installation of the SAH node, and requires an address that can access the Internet to obtain Red Hat software. When possible, the anaconda_iface must be a dedicated interface using 1GbE that is only used for this purpose, and is not used in any other part of the configuration. For 10GbE or 25GbE Intel NICs, "em4" (the fourth nic on the motherboard) should be used.
 
 **Configure the Overcloud nodes' iDRACs to use either DHCP or statically-assigned IP addresses. A mix of these two choices is supported.**
 
@@ -391,8 +387,8 @@ The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configu
         * By executing the following commands on the Director Node:
         
             ```bash
-            $ ironic node-list
-            $ ironic node-show <node_guid>
+            $  openstack baremetal node list
+            $  openstack baremetal node show <node_guid>
             ```
 
 
@@ -449,7 +445,9 @@ The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configu
 
 4.	Boot the SAH node.
 
-    a. At the installation menu, select the Install option. Do not press the [Enter] key. b. Press the Tab key.
+    a. At the installation menu, select the Install option. Do not press the [Enter] key. 
+    
+    b. Press the Tab key.
     
     c. Move the cursor to the end of the line that begins with vmlinuz. d. Append the following to the end of the line:
     
@@ -460,7 +458,7 @@ The Dell EMC PowerEdge R-Series servers require the Open Source Hardware Configu
     > Note: The device sdb can change, depending upon the quantity of disks being presented to the installation environment. These instructions assume that a single disk is presented. If otherwise, adjust accordingly.
  
 5.	Press the [Enter] key to start the installation.
-    > Note: It may take a few minutes before progress is seen on the screen. Press the [ESC] key at the memory check to speed up the process.
+    > Note: It may take a few minutes before progress is seen on the screen. Press the [ESC] key at the disk check to speed up the process.
  
 
 
@@ -514,7 +512,7 @@ Now that the SAH node is installed you can deploy and validate the rest of the D
     Optional arguments include:
     * -undercloud_only = Reinstall only the Undercloud
     * -overcloud_only = Reinstall only the Overcloud
-    * -skip_dashboard_vm = Do not reinstall the Red Hat Ceph Storage Dashobard VM
+    * -skip_dashboard_vm = Do not reinstall the Red Hat Ceph Storage Dashboard VM
 
 7.	For installation details, execute a tail command on the /auto_results/deployer.log.xxx file on the SAH node. For example:
 
@@ -523,8 +521,11 @@ Now that the SAH node is installed you can deploy and validate the rest of the D
     ```
 
 8.	If issues are discovered during the installation process:
+
     a. Identify the issue in the deployer.log 
+
     b. Address the issue.
+
     c. Rerun the python deployer.py command above.
 
 9.	If the installation is successful, the deployment_summary.log file will display some useful information for accessing the Dell EMC Ready Architecture for Red Hat OpenStack platform v13.
@@ -597,10 +598,10 @@ Now that the SAH node is installed you can deploy and validate the rest of the D
 <u>**Dell EMC Ready Architecture for Red Hat OpenStack Platform v13 includes:**</u>
 
 * https://github.com/dsp-jetpack/JetPack/tree/JS-13.0 - Contains all automation deployment solution scripts
-* Dell_EMC_Red_Hat_Ready_Architecture_Cumulus_Switch_Configurations_v13.0.pdf
-* Dell_EMC_Red_Hat_Ready_Architecture_Guide_v13.0.pdf
-* Dell_EMC_Red_Hat_Ready_Architecture_Release_Notes_v13.0.pdf
-* Dell_EMC_Red_Hat_Ready_Architecture_Deployment_Guide_Notes¬_v13.0 (github doc folder)
+* [Dell_EMC_Red_Hat_Ready_Architecture_Cumulus_Switch_Configurations_v13.0.pdf](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_ready_architecture_for_red_hat_openstack_platform_cumulus_switch_configuration.pdf)
+* [Dell_EMC_Red_Hat_Ready_Architecture_Guide_v13.0.pdf](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_ready_architecture_for_red_hat_openstack_platform_architecture_guide.pdf)
+* [Dell_EMC_Red_Hat_Ready_Architecture_Release_Notes_v13.0.pdf](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_ready_architecture_for_red_hat_openstack_platform_release_notes.pdf)
+
 
 
 
@@ -1372,8 +1373,11 @@ OVS-DPDK requires an extra network bond; the already existing bonds (bond0 and b
 #### Before You Begin
 
 In this guide, it is assumed that the user has complete knowledge about the Dell EMC Ready Architecture for Red Hat OpenStack Platform Version 13. This includes:
+
 1.	Knowledge about different nodes in Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13, like SAH, Director, Controller, Compute and Ceph-storage as explained in  Dell_EMC_Red_Hat_Ready_Architecture_Guide_v13.0.pdf
+
 2.	Hardware configurations including switch configurations as explained in Dell_EMC_Red_Hat_Ready_Architecture_Guide_v13.0.pdf and Dell_EMC_Red_Hat_Ready_Architecture_Cumulus_Switch_Configurations_v13.0.pdf
+
 3.	Automation scripts, settings, and properties files required for deployment are open sourced and available in git hub https://github.com/dsp-jetpack/JetPack
 
 #### Prerequisites
