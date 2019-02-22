@@ -519,8 +519,7 @@ def main():
 
         if args.enable_unity:
             env_opts += " -e ~/pilot/templates/dellemc-unity-cinder-" \
-                        "backends.yaml"
-            env_opts += " -e ~/pilot/templates/dellemc-unity-cinder-backend.yaml" 
+                        "backend.yaml"
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
