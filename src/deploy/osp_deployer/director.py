@@ -35,9 +35,8 @@ exitFlag = 0
 
 # Ceph pools present in a default install
 HEAVY_POOLS = ['volumes', 'images', 'vms']
-OTHER_POOLS = ['rbd', '.rgw.root', 'default.rgw.control',
-               'default.rgw.data.root', 'default.rgw.gc', 'default.rgw.log',
-               'metrics', 'backups', '.rgw.buckets', 'default.rgw.users.uid']
+OTHER_POOLS = ['.rgw.root', 'default.rgw.control', 'default.rgw.meta',
+               'default.rgw.log', 'metrics', 'backups', '.rgw.buckets' ]
 
 
 class Director(InfraHost):
