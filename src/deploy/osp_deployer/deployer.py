@@ -127,9 +127,7 @@ def deploy():
         if args.validate_only is True:
             logger.info("Settings validated")
             os._exit(0)
-
-        if settings.retreive_switches_config is True:
-            tester.retreive_switches_config()
+        tester.retreive_switches_config()
 
         non_sah_nodes = (settings.controller_nodes +
                          settings.compute_nodes +

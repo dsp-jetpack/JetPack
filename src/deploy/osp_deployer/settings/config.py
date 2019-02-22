@@ -461,15 +461,6 @@ class Settings():
             self.verify_rhsm_status = False
 
         self.cygwin_installdir = 'n/a'
-        try:
-            self.bastion_host_ip = dev_settings['bastion_host_ip']
-            self.bastion_host_user = dev_settings[
-                'bastion_host_user']
-            self.bastion_host_password = dev_settings[
-                'bastion_host_password']
-            self.retreive_switches_config = True
-        except KeyError:
-            self.retreive_switches_config = False
 
         self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
         self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
