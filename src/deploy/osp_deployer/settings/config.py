@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -354,6 +354,8 @@ class Settings():
                 'unity_san_login']
             self.unity_san_password = backend_settings[
                 'unity_san_password']
+            self.unity_storage_protocol = backend_settings[
+                'unity_storage_protocol']
             self.unity_io_ports = backend_settings[
                 'unity_io_ports']
             self.unity_storage_pool_names = backend_settings[
