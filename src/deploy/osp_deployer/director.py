@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -248,7 +248,6 @@ class Director(InfraHost):
         nodes = list(self.settings.controller_nodes)
         nodes.extend(self.settings.compute_nodes)
         nodes.extend(self.settings.ceph_nodes)
-
         cmd = "~/pilot/config_idracs.py "
 
         json_config = defaultdict(dict)
@@ -264,7 +263,8 @@ class Director(InfraHost):
             new_ipmi_password = self.settings.new_ipmi_password
             if new_ipmi_password:
                 json_config[node_id]["password"] = new_ipmi_password
-
+            if node.skip_nic_config:
+                json_config[node_id]["skip_nic_config"] = node.skip_nic_config
         if json_config.items():
             cmd += "-j '{}'".format(json.dumps(json_config))
 
@@ -379,27 +379,22 @@ class Director(InfraHost):
         non_sah_nodes = (self.settings.controller_nodes +
                          self.settings.compute_nodes +
                          self.settings.ceph_nodes)
-        # Allow for the number of nodes + a couple of sessions
-        maxSessions = len(non_sah_nodes) + 2
-        cmds = [
-            "sed -i 's/.*MaxStartups.*/MaxStartups " +
-            str(maxSessions) + "/' /etc/ssh/sshd_config",
-            "sed -i 's/.*MaxSession.*/MaxSessions " +
-            str(maxSessions) + "/' /etc/ssh/sshd_config",
-            "/sbin/service sshd restart",
-            "grep max -i /etc/ssh/sshd_config"
-        ]
-        for cmd in cmds:
-            self.run_as_root(cmd)
-
+        # Allow for the number of nodes + a few extra sessions
+        maxSessions = len(non_sah_nodes) + 10
+        
+        setts = ['MaxStartups','MaxSessions']
+        for each in setts:
+            re = self.run("sudo grep " + each + " /etc/ssh/sshd_config")[0].rstrip()
+            if re !=  each + " " + str(maxSessions):
+                self.run_as_root('sed -i -e "\$a' + each + ' ' + str(maxSessions) +'" /etc/ssh/sshd_config')
+        self.run_as_root("systemctl restart sshd")
+        
     def revert_sshd_conf(self):
         # Revert sshd_config to its default
         cmds = [
-            "sed -i 's/.*MaxStartups.*/#MaxStartups 10:30:100/'" +
-            " /etc/ssh/sshd_config",
-            "sed -i 's/.*MaxSession.*/#MaxSession 10/' /etc/ssh/sshd_config",
-            "/sbin/service sshd restart",
-            "grep max -i /etc/ssh/sshd_config"
+            "sed -i '/MaxStartups/d' /etc/ssh/sshd_config",
+            "sed -i '/MaxSessions/d' /etc/ssh/sshd_config",
+            "systemctl restart sshd"
         ]
         for cmd in cmds:
             self.run_as_root(cmd)
@@ -630,10 +625,25 @@ class Director(InfraHost):
                      " " + dell_storage_yaml + ".bak")
 
         self.setup_dellsc(dell_storage_yaml)
+
+        #Unity is in a separate yaml file
+        dell_unity_cinder_yaml = self.templates_dir + "/dellemc-unity-cinder-backend.yaml"
+        self.upload_file(self.settings.dell_unity_cinder_yaml,
+                         dell_unity_cinder_yaml)
+        # Backup before modifying
+        self.run_tty("cp " + dell_unity_cinder_yaml +
+                     " " + dell_unity_cinder_yaml + ".bak")
+
+        self.setup_unity_cinder(dell_unity_cinder_yaml)
+        
+        #Enable multiple backends now
         enabled_backends = "["
 
         if self.settings.enable_dellsc_backend is True:
             enabled_backends += "'dellsc'"
+
+        if self.settings.enable_unity_backend is True:
+            enabled_backends += ",'tripleo_dellemc_unity'"
 
         enabled_backends += "]"
 
@@ -678,15 +688,55 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
 
+    def setup_unity_cinder(self, dell_unity_cinder_yaml):
+
+        if self.settings.enable_unity_backend is False:
+            logger.debug("not setting up unity cinder backend")
+            return
+
+        logger.debug("configuring dell emc unity backend")
+
+        cmds = [
+            'sed -i "s|<unity_san_ip>|' +
+            self.settings.unity_san_ip + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_san_login>|' +
+            self.settings.unity_san_login + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_san_password>|' +
+            self.settings.unity_san_password + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_storage_protocol>|' +
+            self.settings.unity_storage_protocol + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_io_ports>|' +
+            self.settings.unity_io_ports + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_storage_pool_names>|' +
+            self.settings.unity_storage_pool_names + '|" ' + dell_unity_cinder_yaml,
+        ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
     def setup_net_envt(self):
 
         logger.debug("Configuring network-environment.yaml for overcloud")
 
         network_yaml = self.templates_dir + "/network-environment.yaml"
-
+        octavia_yaml = self.templates_dir + "/octavia.yaml"
+        
         self.upload_file(self.settings.network_env_yaml,
                          network_yaml)
-
+                         
+        if self.settings.octavia_user_certs_keys is True:
+          self.upload_file(self.settings.certificate_keys_path,
+                           self.templates_dir + "/cert_keys.yaml")
+          self.run_tty('sed -i "s|OctaviaGenerateCerts:.*|' + 
+            'OctaviaGenerateCerts: ' +
+            'false' + '|" ' + 
+            str(octavia_yaml))
+        
+        if self.settings.octavia_user_certs_keys is False:
+          self.run_tty('sed -i "s|OctaviaGenerateCerts:.*|' + 
+            'OctaviaGenerateCerts: ' +
+            'true' + '|" ' + 
+            str(octavia_yaml))
+                             
         cmds = [
             'sed -i "s|ControlPlaneDefaultRoute:.*|' +
             'ControlPlaneDefaultRoute: ' +
@@ -1057,6 +1107,8 @@ class Director(InfraHost):
                    + self.settings.overcloud_deploy_timeout
         if self.settings.enable_dellsc_backend is True:
             cmd += " --enable_dellsc"
+        if self.settings.enable_unity_backend is True:
+            cmd += " --enable_unity" 
         if self.settings.enable_rbd_backend is False:
             cmd += " --disable_rbd"
         if self.settings.overcloud_static_ips is True:
@@ -1067,9 +1119,12 @@ class Director(InfraHost):
             cmd += " --ovs_dpdk"
         if self.settings.enable_sriov is True:
             cmd += " --sriov"
-        # Node placement is required in an automated install. The index order
         if self.settings.dvr_enable is True:
             cmd += " --dvr_enable"
+        if self.settings.octavia_enable is True:
+            cmd += " --octavia_enable"
+        if self.settings.octavia_user_certs_keys is True:
+            cmd += " --octavia_user_certs_keys"
         # Node placement is required in an automated install.  The index order
         # of the nodes is the order in which they are defined in the
         # .properties file
@@ -1343,10 +1398,10 @@ class Director(InfraHost):
             "sudo ip route add " + self.settings.floating_ip_network + " dev eth0",
             'source ~/' + self.settings.overcloud_name + 'rc;' +
             'tempest init mytempest;cd mytempest;' +
-            'discover-tempest-config --deployer-input ~/tempest-deployer-input.conf ' + 
+            'discover-tempest-config --deployer-input ~/tempest-deployer-input.conf ' +
             "--debug --create --network-id `openstack subnet list  | grep external_sub " +
             "| awk '{print $6;}'` object-storage-feature-enabled.discoverability False",
-            'sed -i "s|tempest_roles =.*|tempest_roles = _member_,Member|" ' + 
+            'sed -i "s|tempest_roles =.*|tempest_roles = _member_,Member|" ' +
             '~/mytempest/etc/tempest.conf',
         ]
         for cmd in cmds:
@@ -1396,9 +1451,9 @@ class Director(InfraHost):
                      ';./config_dashboard.py ' +
                      ip +
                      ' ' + self.settings.dashboard_node.root_password +
-                     ' ' + self.settings.subscription_manager_user + 
-                     ' ' + self.settings.subscription_manager_password + 
-                     ' ' + self.settings.subscription_manager_pool_sah + 
+                     ' ' + self.settings.subscription_manager_user +
+                     ' ' + self.settings.subscription_manager_password +
+                     ' ' + self.settings.subscription_manager_pool_sah +
                      ' ' + self.settings.subscription_manager_vm_ceph)
 
     def enable_fencing(self):
@@ -1429,13 +1484,18 @@ class Director(InfraHost):
         if node.skip_raid_config:
             skip_raid_config = "-s"
 
+        skip_bios_config = ""
+        if node.skip_bios_config:
+            skip_bios_config = "-b"
+
         os_volume_size_gb = ""
         if hasattr(node, 'os_volume_size_gb'):
             os_volume_size_gb = "-o {}".format(node.os_volume_size_gb)
 
-        return './assign_role.py {} {} {} {}-{}'.format(
+        return './assign_role.py {} {} {} {} {}-{}'.format(
             os_volume_size_gb,
             skip_raid_config,
+            skip_bios_config,
             node_identifier,
             role,
             str(index))

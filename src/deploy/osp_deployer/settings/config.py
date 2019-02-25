@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -301,6 +301,18 @@ class Settings():
         else:
             self.dvr_enable = False
             logger.info("DVR is disabled.")
+        if dellnfv_settings['octavia_enable'].lower() == 'true':
+            self.octavia_enable = True
+            logger.info("Octavia is enabled.")
+        else:
+            self.octavia_enable = False
+            logger.info("Octavia is disabled.")       
+        if dellnfv_settings['octavia_generate_certs'].lower() == 'true':
+            self.octavia_user_certs_keys = False
+        else:
+            self.octavia_user_certs_keys = True
+            self.certificate_keys_path = dellnfv_settings['certificate_keys_path']
+       
         # Performance and Optimization
         performance_and_optimization = self.get_settings_section(
             "Performance and Optimization")
@@ -331,6 +343,23 @@ class Settings():
                 'dellsc_volume_folder']
         else:
             self.enable_dellsc_backend = False
+
+        #unity 
+        if backend_settings['enable_unity_backend'].lower() == 'true':
+            self.enable_unity_backend = True
+            self.unity_san_ip = backend_settings['unity_san_ip']
+            self.unity_san_login = backend_settings[
+                'unity_san_login']
+            self.unity_san_password = backend_settings[
+                'unity_san_password']
+            self.unity_storage_protocol = backend_settings[
+                'unity_storage_protocol']
+            self.unity_io_ports = backend_settings[
+                'unity_io_ports']
+            self.unity_storage_pool_names = backend_settings[
+                'unity_storage_pool_names']
+        else:
+            self.enable_unity_backend = False
 
         sanity_settings = self.get_settings_section(
             "Sanity Test Settings")
@@ -463,6 +492,8 @@ class Settings():
             '/pilot/templates/network-environment.yaml'
         self.dell_storage_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-cinder-backends.yaml'
+        self.dell_unity_cinder_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/dellemc-unity-cinder-backend.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
         self.neutron_ovs_dpdk_yaml = self.foreman_configuration_scripts + \
@@ -574,6 +605,18 @@ class Settings():
                         node.skip_raid_config = True
                 except AttributeError:
                     node.skip_raid_config = False
+                    pass
+                try:
+                    if node.skip_bios_config == "true":
+                        node.skip_bios_config = True
+                except AttributeError:
+                    node.skip_bios_config = False
+                    pass
+                try:
+                    if node.skip_nic_config == "true":
+                        node.skip_nic_config = True
+                except AttributeError:
+                    node.skip_nic_config = False
                     pass
 
         Settings.settings = self
