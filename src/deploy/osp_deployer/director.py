@@ -409,6 +409,7 @@ class Director(InfraHost):
 
         self.setup_networking()
         self.setup_dell_storage()
+        self.setup_manila() 
         self.setup_environment()
         self.setup_sanity_ini()
 
@@ -631,7 +632,8 @@ class Director(InfraHost):
         self.setup_dellsc(dell_storage_yaml)
 
         # Unity is in a separate yaml file
-        dell_unity_cinder_yaml = self.templates_dir + "/dellemc-unity-cinder-backend.yaml"
+        dell_unity_cinder_yaml = self.templates_dir + \
+            "/dellemc-unity-cinder-backend.yaml"
         self.upload_file(self.settings.dell_unity_cinder_yaml,
                          dell_unity_cinder_yaml)
         # Backup before modifying
@@ -660,6 +662,19 @@ class Director(InfraHost):
             str(self.settings.enable_rbd_backend) + \
             '|" ' + dell_storage_yaml
         self.run_tty(cmd)
+
+    def setup_manila(self):
+        # Re - Upload the yaml files in case we're trying to
+        # leave the undercloud intact but want to redeploy with
+        # a different config
+        unity_manila_yaml = self.templates_dir + "/unity-manila-config.yaml"
+        self.upload_file(self.settings.unity_manila_yaml,
+                         unity_manila_yaml)
+        # Backup before modifying
+        self.run_tty("cp " + unity_manila_yaml +
+                     " " + unity_manila_yaml + ".bak")
+
+        self.setup_unity_manila(unity_manila_yaml)
 
     def setup_dellsc(self, dell_storage_yaml):
 
@@ -715,6 +730,46 @@ class Director(InfraHost):
             'sed -i "s|<unity_storage_pool_names>|' +
             self.settings.unity_storage_pool_names + '|" ' +
             dell_unity_cinder_yaml,
+        ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
+    def setup_unity_manila(self, unity_manila_yaml):
+
+        if self.settings.enable_unity_manila_backend is False:
+            logger.debug("not setting up unity manila backend")
+            return
+
+        logger.debug("configuring dell emc unity manila backend")
+
+        cmds = [
+            'sed -i "s|<manila_unity_driver_handles_share_servers>|' +
+            self.settings.manila_unity_driver_handles_share_servers +
+            '|" ' + unity_manila_yaml,
+            'sed -i "s|<manila_unity_nas_login>|' +
+            self.settings.manila_unity_nas_login + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_nas_password>|' +
+            self.settings.manila_unity_nas_password + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_nas_server>|' +
+            self.settings.manila_unity_nas_server + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_server_meta_pool>|' +
+            self.settings.manila_unity_server_meta_pool + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_share_data_pools>|' +
+            self.settings.manila_unity_share_data_pools + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_ethernet_ports>|' +
+            self.settings.manila_unity_ethernet_ports + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_ssl_cert_verify>|' +
+            self.settings.manila_unity_ssl_cert_verify + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_ssl_cert_path>|' +
+            self.settings.manila_unity_ssl_cert_path + '|" ' +
+            unity_manila_yaml,
         ]
         for cmd in cmds:
             self.run_tty(cmd)
@@ -1115,6 +1170,8 @@ class Director(InfraHost):
             cmd += " --enable_dellsc"
         if self.settings.enable_unity_backend is True:
             cmd += " --enable_unity"
+        if self.settings.enable_unity_manila_backend is True:
+            cmd += " --enable_unity_manila"
         if self.settings.enable_rbd_backend is False:
             cmd += " --disable_rbd"
         if self.settings.overcloud_static_ips is True:
