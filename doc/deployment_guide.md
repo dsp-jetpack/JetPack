@@ -151,8 +151,13 @@ The network consists of the following major network infrastructure layouts:
 
 The high-level steps required to install the Dell EMC Ready Architecture for Red Hat OpenStack Platform v13 using the automated installation procedures include:
 
+<<<<<<< HEAD
 1.  Ensure that your environment meets the [Prerequisites](#Prerequisites)
 2.  Ensure that the [Dependencies](#Dependencies) are met.
+=======
+1.  Ensuring that your environment meets the [Prerequisites](#Prerequisites)
+2.  Ensuring that the [Dependencies](#Dependencies) are met.
+>>>>>>> b3352609a5c2321b637c16f9c30c41afee4e9217
 3.  *Determining Pool IDs*.
 4.  [Downloading and Extracting Automation Files]("https://github.com/dsp-jetpack/JetPack/").
 5.  [Preparing the Solution Admin Host Deployment](#Preparing-the-Solution-Admin-Host-Deployment).
@@ -169,7 +174,11 @@ The following prerequisites must be satisfied before proceeding with a Dell EMC 
 * Hardware is powered off after the hardware is configured per the [Dell EMC Ready Architecture for Red Hat OpenStack Platform Architecture Guide Version 13](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_ready_architecture_for_red_hat_openstack_platform_architecture_guide.pdf).
 * Internet access, including but not limited to, Red Hat’s subscription manager service and repositories
 * Valid Red Hat subscriptions
+<<<<<<< HEAD
 * Workstation used to extract the JetPack-automation-13.0.tgz file and begin building the collateral for the SAH node.  Workstation must be a RHEL7.6 host.
+=======
+* Workstation used to extract the JetPack-automation-13.0.tgz file and begin building the collateral for the SAH node. Workstation must be a RHEL7.6 host.
+>>>>>>> b3352609a5c2321b637c16f9c30c41afee4e9217
 
 ## Dependencies
 For customers performing a self-installation, these files are available upon request from Dell EMC. Please contact your account representative, or email <a href="malito: openstack@dell.com" target="_blank">openstack@dell.com</a> for instructions.
