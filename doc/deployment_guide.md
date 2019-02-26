@@ -509,8 +509,9 @@ Now that the SAH node is installed you can deploy and validate the rest of the D
     $ cd /root/JetPack/src/deploy/osp_deployer
     $ python deployer.py -s <path_to_settings_ini_file> [-undercloud_only] [-overcloud_only] [-skip_dashboard_vm]
     ```
-
+    
     Optional arguments include:
+    
     * -undercloud_only = Reinstall only the Undercloud
     * -overcloud_only = Reinstall only the Overcloud
     * -skip_dashboard_vm = Do not reinstall the Red Hat Ceph Storage Dashboard VM

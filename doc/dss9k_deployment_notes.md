@@ -353,6 +353,7 @@ public_api_vip=100.82.35.60
 # range
 storage_vip=192.168.170.121
 
+
 # VIP for the Storage cluster network
 # The Storage Clustering network is not connected to the controller nodes,
 # so the VIP for this network must be mapped to the provisioning network
