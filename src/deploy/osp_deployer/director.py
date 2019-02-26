@@ -130,7 +130,7 @@ class Director(InfraHost):
             'sed -i "s|inspection_iprange = .*|inspection_iprange = ' +
             self.settings.discovery_ip_range +
             '|" pilot/undercloud.conf',
-            'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' + 
+            'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' +
             self.settings.sah_node.provisioning_ip +
             '|" pilot/undercloud.conf'
         ]
@@ -138,8 +138,9 @@ class Director(InfraHost):
             self.run(cmd)
 
         if self.settings.version_locking_enabled is True:
-            source_file = self.settings.lock_files_dir + "/overcloud_images.yaml"
-            dest_file = self.home_dir + "/overcloud_images.yaml"
+            yaml = "/overcloud_images.yaml"
+            source_file = self.settings.lock_files_dir + yaml
+            dest_file = self.home_dir + yaml
             self.upload_file(source_file, dest_file)
 
     def install_director(self):
@@ -387,14 +388,17 @@ class Director(InfraHost):
                          self.settings.ceph_nodes)
         # Allow for the number of nodes + a few extra sessions
         maxSessions = len(non_sah_nodes) + 10
-        
-        setts = ['MaxStartups','MaxSessions']
+
+        setts = ['MaxStartups', 'MaxSessions']
         for each in setts:
-            re = self.run("sudo grep " + each + " /etc/ssh/sshd_config")[0].rstrip()
-            if re !=  each + " " + str(maxSessions):
-                self.run_as_root('sed -i -e "\$a' + each + ' ' + str(maxSessions) +'" /etc/ssh/sshd_config')
+            re = self.run("sudo grep " + each +
+                          " /etc/ssh/sshd_config")[0].rstrip()
+            if re != each + " " + str(maxSessions):
+                self.run_as_root('sed -i -e "\$a' + each + ' ' +
+                                 str(maxSessions) +
+                                 '" /etc/ssh/sshd_config')
         self.run_as_root("systemctl restart sshd")
-        
+
     def revert_sshd_conf(self):
         # Revert sshd_config to its default
         cmds = [
@@ -411,6 +415,7 @@ class Director(InfraHost):
 
         self.setup_networking()
         self.setup_dell_storage()
+        self.setup_manila() 
         self.setup_environment()
         self.setup_sanity_ini()
 
@@ -692,8 +697,9 @@ class Director(InfraHost):
 
         self.setup_dellsc(dell_storage_yaml)
 
-        #Unity is in a separate yaml file
-        dell_unity_cinder_yaml = self.templates_dir + "/dellemc-unity-cinder-backend.yaml"
+        # Unity is in a separate yaml file
+        dell_unity_cinder_yaml = self.templates_dir + \
+            "/dellemc-unity-cinder-backend.yaml"
         self.upload_file(self.settings.dell_unity_cinder_yaml,
                          dell_unity_cinder_yaml)
         # Backup before modifying
@@ -701,8 +707,8 @@ class Director(InfraHost):
                      " " + dell_unity_cinder_yaml + ".bak")
 
         self.setup_unity_cinder(dell_unity_cinder_yaml)
-        
-        #Enable multiple backends now
+
+        # Enable multiple backends now
         enabled_backends = "["
 
         if self.settings.enable_dellsc_backend is True:
@@ -722,6 +728,19 @@ class Director(InfraHost):
             str(self.settings.enable_rbd_backend) + \
             '|" ' + dell_storage_yaml
         self.run_tty(cmd)
+
+    def setup_manila(self):
+        # Re - Upload the yaml files in case we're trying to
+        # leave the undercloud intact but want to redeploy with
+        # a different config
+        unity_manila_yaml = self.templates_dir + "/unity-manila-config.yaml"
+        self.upload_file(self.settings.unity_manila_yaml,
+                         unity_manila_yaml)
+        # Backup before modifying
+        self.run_tty("cp " + unity_manila_yaml +
+                     " " + unity_manila_yaml + ".bak")
+
+        self.setup_unity_manila(unity_manila_yaml)
 
     def setup_dellsc(self, dell_storage_yaml):
 
@@ -770,11 +789,53 @@ class Director(InfraHost):
             'sed -i "s|<unity_san_password>|' +
             self.settings.unity_san_password + '|" ' + dell_unity_cinder_yaml,
             'sed -i "s|<unity_storage_protocol>|' +
-            self.settings.unity_storage_protocol + '|" ' + dell_unity_cinder_yaml,
+            self.settings.unity_storage_protocol + '|" ' +
+            dell_unity_cinder_yaml,
             'sed -i "s|<unity_io_ports>|' +
             self.settings.unity_io_ports + '|" ' + dell_unity_cinder_yaml,
             'sed -i "s|<unity_storage_pool_names>|' +
-            self.settings.unity_storage_pool_names + '|" ' + dell_unity_cinder_yaml,
+            self.settings.unity_storage_pool_names + '|" ' +
+            dell_unity_cinder_yaml,
+        ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
+    def setup_unity_manila(self, unity_manila_yaml):
+
+        if self.settings.enable_unity_manila_backend is False:
+            logger.debug("not setting up unity manila backend")
+            return
+
+        logger.debug("configuring dell emc unity manila backend")
+
+        cmds = [
+            'sed -i "s|<manila_unity_driver_handles_share_servers>|' +
+            self.settings.manila_unity_driver_handles_share_servers +
+            '|" ' + unity_manila_yaml,
+            'sed -i "s|<manila_unity_nas_login>|' +
+            self.settings.manila_unity_nas_login + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_nas_password>|' +
+            self.settings.manila_unity_nas_password + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_nas_server>|' +
+            self.settings.manila_unity_nas_server + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_server_meta_pool>|' +
+            self.settings.manila_unity_server_meta_pool + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_share_data_pools>|' +
+            self.settings.manila_unity_share_data_pools + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_ethernet_ports>|' +
+            self.settings.manila_unity_ethernet_ports + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_ssl_cert_verify>|' +
+            self.settings.manila_unity_ssl_cert_verify + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_ssl_cert_path>|' +
+            self.settings.manila_unity_ssl_cert_path + '|" ' +
+            unity_manila_yaml,
         ]
         for cmd in cmds:
             self.run_tty(cmd)
@@ -785,24 +846,24 @@ class Director(InfraHost):
 
         network_yaml = self.templates_dir + "/network-environment.yaml"
         octavia_yaml = self.templates_dir + "/octavia.yaml"
-        
+
         self.upload_file(self.settings.network_env_yaml,
                          network_yaml)
-                         
+
         if self.settings.octavia_user_certs_keys is True:
-          self.upload_file(self.settings.certificate_keys_path,
-                           self.templates_dir + "/cert_keys.yaml")
-          self.run_tty('sed -i "s|OctaviaGenerateCerts:.*|' + 
-            'OctaviaGenerateCerts: ' +
-            'false' + '|" ' + 
-            str(octavia_yaml))
-        
+            self.upload_file(self.settings.certificate_keys_path,
+                             self.templates_dir + "/cert_keys.yaml")
+            self.run_tty('sed -i "s|OctaviaGenerateCerts:.*|' +
+                         'OctaviaGenerateCerts: ' +
+                         'false' + '|" ' +
+                         str(octavia_yaml))
+
         if self.settings.octavia_user_certs_keys is False:
-          self.run_tty('sed -i "s|OctaviaGenerateCerts:.*|' + 
-            'OctaviaGenerateCerts: ' +
-            'true' + '|" ' + 
-            str(octavia_yaml))
-                             
+            self.run_tty('sed -i "s|OctaviaGenerateCerts:.*|' +
+                         'OctaviaGenerateCerts: ' +
+                         'true' + '|" ' +
+                         str(octavia_yaml))
+
         cmds = [
             'sed -i "s|ControlPlaneDefaultRoute:.*|' +
             'ControlPlaneDefaultRoute: ' +
@@ -1174,7 +1235,9 @@ class Director(InfraHost):
         if self.settings.enable_dellsc_backend is True:
             cmd += " --enable_dellsc"
         if self.settings.enable_unity_backend is True:
-            cmd += " --enable_unity" 
+            cmd += " --enable_unity"
+        if self.settings.enable_unity_manila_backend is True:
+            cmd += " --enable_unity_manila"
         if self.settings.enable_rbd_backend is False:
             cmd += " --disable_rbd"
         if self.settings.overcloud_static_ips is True:
@@ -1461,12 +1524,15 @@ class Director(InfraHost):
         setts = self.settings
         cmds = [
             'source ~/' + self.settings.overcloud_name + 'rc;'
-            "sudo ip route add " + self.settings.floating_ip_network + " dev eth0",
+            "sudo ip route add " + self.settings.floating_ip_network +
+            " dev eth0",
             'source ~/' + self.settings.overcloud_name + 'rc;' +
             'tempest init mytempest;cd mytempest;' +
-            'discover-tempest-config --deployer-input ~/tempest-deployer-input.conf ' +
-            "--debug --create --network-id `openstack subnet list  | grep external_sub " +
-            "| awk '{print $6;}'` object-storage-feature-enabled.discoverability False",
+            'discover-tempest-config --deployer-input ' +
+            '~/tempest-deployer-input.conf --debug --create --network-id ' +
+            "`openstack subnet list  | grep external_sub | awk " +
+            "'{print $6;}'` " +
+            "object-storage-feature-enabled.discoverability False",
             'sed -i "s|tempest_roles =.*|tempest_roles = _member_,Member|" ' +
             '~/mytempest/etc/tempest.conf',
         ]
