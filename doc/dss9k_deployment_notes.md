@@ -238,7 +238,7 @@ the following configuration files where used to deploy jetpack 10.2 on DSS9000 s
 
 #### dss9k_v10_acme.ini
 
-``` bash
+``` dosini
 # Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -631,7 +631,7 @@ verify_rhsm_status=true
 
 #### dss9k_v10_acme.properties
 
-``` bash
+``` json
 [
     {
         "is_sah": "true",
@@ -932,7 +932,7 @@ nic_env_file=4_port/nic_environment.yaml
 
 Please find the full configuration file used below: 
 
-``` bash
+``` dosini
 # Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
