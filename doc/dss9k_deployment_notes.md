@@ -1,6 +1,6 @@
 <img src="media/dc99730255437cdd115b74c45cc6c19d.jpg" alt="drawing" width="200px"/>
 
-#JetPack 13 Deployment on Dell DSS 9000
+# JetPack 13 Deployment on Dell DSS 9000
 
 ## Table of Contents 
 
