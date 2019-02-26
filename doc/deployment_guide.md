@@ -292,7 +292,7 @@ This topic describes preparing for, and performing, the Solution Admin Host (SAH
     > Note: Pick the right sample configuration files for your deployment. There are 3
     > sample configuration files available, sample_csp_profile.ini, sample_xsp_profile.ini and
     > sample_properties. Make sure you review Appendix D-F for additional information for the sample_csp_profile.ini file.
-    > .
+    
 
 3.	Copy the sample settings files to the ~/ directory and rename them for your deployment
     
@@ -309,7 +309,7 @@ This topic describes preparing for, and performing, the Solution Admin Host (SAH
     $ cp ~/JetPack/src/deploy/osp_deployer/settings/sample_xsp_profile.ini ~/acme.ini
     ```
 
-4.	Edit your hardware stamp’s .ini and .properties files to match your hardware stamp documentation (i.e., a Solution Workbook). Use a text editor of your choice; our example uses vi:
+4.	Edit your hardware stamp’s .ini and .properties files to match your hardware stamp configuration. Use a text editor of your choice; our example uses vi:
     
     ```bash
     $ vi ~/acme.ini
