@@ -417,7 +417,6 @@ class Director(InfraHost):
     def clamp_min_pgs(self, num_pgs):
         pg_options = [8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4,
                       2, 1]
-        pg_max = pg_options[0]
 
         option_index = 0
         finding_pg_value = True

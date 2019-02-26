@@ -497,7 +497,7 @@ class Settings():
         self.dell_unity_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellemc-unity-cinder-backend.yaml'
         self.ceph_osd_config_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/ceph-osd-config.yaml'
+            '/' + CEPH_OSD_CONFIG_FILE
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
         self.neutron_ovs_dpdk_yaml = self.foreman_configuration_scripts + \
