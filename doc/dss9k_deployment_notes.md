@@ -363,20 +363,20 @@ storage_cluster_vip=192.168.120.122
 [Subscription Manager Settings]
 
 # Subscription Manager account info for registering Red Hat subscriptions
-subscription_manager_user=dellcloudsol
-subscription_manager_password=b3s0Mon3Great
+subscription_manager_user=xxxxx
+subscription_manager_password=xxxx
 
 # The following pool IDs provide different collections of repositories.
 # Each is labeled with possible subscription names.
 
 # Red Hat Enterprise Linux (Physical Node)
-subscription_manager_pool_sah=8a85f98c6183a108016188e199ed32a2
+subscription_manager_pool_sah=xxxxxx
 
 # Red Hat Enterprise Linux OpenStack Platform (Virtual Node)
-subscription_manager_pool_vm_rhel=8a85f98c6183a108016188e19b3f32a5
+subscription_manager_pool_vm_rhel=xxxxx
 
 # Red Hat Ceph Storage (Physical Node)
-subscription_manager_vm_ceph=8a85f98c6183a108016188e1b6a432a8
+subscription_manager_vm_ceph=xxxxx
 
 subscription_check_retries=20
 
@@ -1073,20 +1073,20 @@ storage_cluster_vip=192.168.120.122
 [Subscription Manager Settings]
 
 # Subscription Manager account info for registering Red Hat subscriptions
-subscription_manager_user=dellcloudsol
-subscription_manager_password=b3s0Mon3Great
+subscription_manager_user=xxxx
+subscription_manager_password=xxxx
 
 # The following pool IDs provide different collections of repositories.
 # Each is labeled with possible subscription names.
 
 # Red Hat Enterprise Linux (Physical Node)
-subscription_manager_pool_sah=8a85f98c6183a108016188e199ed32a2
+subscription_manager_pool_sah=xxxx
 
 # Red Hat Enterprise Linux OpenStack Platform (Virtual Node)
-subscription_manager_pool_vm_rhel=8a85f98c6183a108016188e19b3f32a5
+subscription_manager_pool_vm_rhel=xxx
 
 # Red Hat Ceph Storage (Physical Node)
-subscription_manager_vm_ceph=8a85f98c6183a108016188e1b6a432a8
+subscription_manager_vm_ceph=xxxx
 
 subscription_check_retries=20
 
