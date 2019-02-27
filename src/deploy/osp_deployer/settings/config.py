@@ -27,6 +27,8 @@ logger = logging.getLogger("osp_deployer")
 
 
 class Settings():
+    CEPH_OSD_CONFIG_FILE = 'pilot/templates/ceph-osd-config.yaml'
+
     settings = ''
 
     def __init__(self, settings_file):
@@ -514,6 +516,8 @@ class Settings():
             '/pilot/templates/unity-manila-config.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
+        self.ceph_osd_config_yaml = self.foreman_configuration_scripts + \
+            '/' + CEPH_OSD_CONFIG_FILE
         self.neutron_ovs_dpdk_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/neutron-ovs-dpdk.yaml'
         self.static_ips_yaml = self.foreman_configuration_scripts + \
