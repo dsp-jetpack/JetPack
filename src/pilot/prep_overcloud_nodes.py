@@ -58,11 +58,8 @@ def main():
         # Set the first boot device to PXE
         logger.info("Setting the provisioning NIC to PXE boot on node " + node)
 
-        cmd = "openstack baremetal node boot device set " + node + " pxe"
-        logger.debug("    {}".format(cmd))
-        os.system(cmd)
-        cmd = "openstack baremetal node set --driver-info " + \
-              "force_persistent_boot_device=True " + node
+        cmd = "openstack baremetal node boot device set --persistent " + \
+            node + " pxe"
         logger.debug("    {}".format(cmd))
         os.system(cmd)
 
