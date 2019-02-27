@@ -1536,7 +1536,8 @@ class Director(InfraHost):
 
         cmds = [
             'source ~/' + setts.overcloud_name + 'rc;'
-            "sudo ip route add " + setts.floating_ip_network + " dev eth0",
+            "sudo ip route add " + setts.floating_ip_network +
+            " dev eth0",
             'source ~/' + setts.overcloud_name + 'rc;' +
             'tempest init mytempest;cd mytempest;' +
             'discover-tempest-config --deployer-input ' +
