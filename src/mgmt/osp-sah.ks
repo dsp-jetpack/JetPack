@@ -575,7 +575,7 @@ subscription-manager register --username ${SMUser} --password ${SMPassword} ${Pr
          subscription-manager attach --auto ${ProxyInfo}
          )
 
-subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms
+subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-optional-rpms
 
 systemctl disable NetworkManager
 systemctl disable firewalld
