@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -127,9 +127,7 @@ def deploy():
         if args.validate_only is True:
             logger.info("Settings validated")
             os._exit(0)
-
-        if settings.retreive_switches_config is True:
-            tester.retreive_switches_config()
+        tester.retreive_switches_config()
 
         non_sah_nodes = (settings.controller_nodes +
                          settings.compute_nodes +
