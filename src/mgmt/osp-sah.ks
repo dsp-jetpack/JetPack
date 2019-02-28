@@ -1,4 +1,4 @@
-# (c) 2014-2018 Dell
+# (c) 2014-2019 Dell
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -595,6 +595,7 @@ echo "POST: upgrade setuptools"
 pip install --upgrade setuptools
 pip install paramiko
 pip install selenium
+pip install cryptography==2.4.2
 echo "POST: Done installing extra packages"
 
 echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/root/JetPack/src/deploy/' >> /root/.bashrc
