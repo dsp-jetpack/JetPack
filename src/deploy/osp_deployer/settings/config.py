@@ -517,7 +517,7 @@ class Settings():
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
         self.ceph_osd_config_yaml = self.foreman_configuration_scripts + \
-            '/' + CEPH_OSD_CONFIG_FILE
+            '/' + Settings.CEPH_OSD_CONFIG_FILE
         self.neutron_ovs_dpdk_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/neutron-ovs-dpdk.yaml'
         self.static_ips_yaml = self.foreman_configuration_scripts + \
