@@ -62,6 +62,10 @@ def main():
             node + " pxe"
         logger.debug("    {}".format(cmd))
         os.system(cmd)
+        cmd = "openstack baremetal node set --driver-info " + \
+              "force_persistent_boot_device=True " + node
+        logger.debug("    {}".format(cmd))
+        os.system(cmd)
 
 
 if __name__ == "__main__":
