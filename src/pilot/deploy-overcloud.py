@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -154,7 +154,7 @@ def create_volume_types():
     if not args.disable_rbd:
         types.append(["rbd_backend", "tripleo_ceph"])
 
-    if args.enable_dellsc or args.enable_unity :
+    if args.enable_dellsc or args.enable_unity:
         cinder_file = open(home_dir +
                            '/pilot/templates/dell-cinder-backends.yaml', 'r')
         for line in cinder_file:
@@ -309,6 +309,10 @@ def main():
                             action='store_true',
                             default=False,
                             help="Enable Dell EMC Unity backend")
+        parser.add_argument('--enable_unity_manila',
+                            action='store_true',
+                            default=False,
+                            help="Enable Dell EMC Unity Manila backend")
         parser.add_argument('--disable_rbd',
                             action='store_true',
                             default=False,
@@ -320,7 +324,8 @@ def main():
         parser.add_argument('--octavia_user_certs_keys',
                             action='store_true',
                             default=False,
-                            help="Enables Octavia Load Balancer with user provided certs and keys")
+                            help="Enables Octavia Load Balancer with "
+                                 "user provided certs and keys")
         parser.add_argument('--dvr_enable',
                             action='store_true',
                             default=False,
@@ -479,7 +484,7 @@ def main():
         # The octavia.yaml must be included after the
         # network-environment.yaml
         if args.octavia_enable:
-            env_opts += " -e ~/pilot/templates/octavia.yaml"          
+            env_opts += " -e ~/pilot/templates/octavia.yaml"
             if args.octavia_user_certs_keys is True:
                 env_opts += " -e ~/pilot/templates/cert_keys.yaml"
 
@@ -515,9 +520,12 @@ def main():
 
         if args.enable_dellsc:
             env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
-        
+
         if args.enable_unity:
-            env_opts += " -e ~/pilot/templates/dellemc-unity-cinder-backends.yaml" 
+            env_opts += " -e ~/pilot/templates/dellemc-unity-cinder-" \
+                        "backend.yaml"
+        if args.enable_unity_manila:
+            env_opts += " -e ~/pilot/templates/unity-manila-config.yaml"
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
