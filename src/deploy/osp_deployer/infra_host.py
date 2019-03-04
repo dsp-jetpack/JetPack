@@ -71,3 +71,10 @@ class InfraHost():
                      self.root_pwd,
                      local_file,
                      remote_file)
+
+    def download_file(self, local_file, remote_file):
+        Scp.get_file(self.ip,
+                     self.user,
+                     self.pwd,
+                     local_file,
+                     remote_file)
