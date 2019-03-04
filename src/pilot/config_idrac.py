@@ -147,30 +147,7 @@ def configure_uefi_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
         if nic.id.lower() == pxe_nic_id.lower():
             provisioning_mac = nic.mac.lower()
 
-            settings = {
-               "PxeDev1EnDis": "Enabled",
-               "PxeDev2EnDis": "Disabled",
-               "PxeDev3EnDis": "Disabled",
-               "PxeDev4EnDis": "Disabled"
-               }
-
-            response = drac_client.set_bios_settings(settings)
-            reboot_required = response['commit_required']
-
-            if reboot_required:
-                job_id = drac_client.commit_pending_bios_changes(
-                    reboot=True)
-
-                LOG.info("Waiting for initial UEFI PXE NIC configuration to \
-                         complete on {}".format(ip_service_tag))
-                LOG.info("Do not unplug {}".format(ip_service_tag))
-
-                all_jobs_succeeded = wait_for_jobs_to_complete(
-                    [job_id], drac_client, ip_service_tag)
-                if not all_jobs_succeeded:
-                    raise RuntimeError("An error occurred while configuring "
-                                       "initial UEFI PXE NIC settings on "
-                                       "{}".format(ip_service_tag))
+            configure_uefi_pxe_dev_en_dis(drac_client, ip_service_tag, nic)
 
             settings = {
                "PxeDev1Interface": pxe_nic_id,
@@ -182,9 +159,10 @@ def configure_uefi_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
                      on {}".format(ip_service_tag))
 
             response = drac_client.set_bios_settings(settings)
+            commit_required = response['is_commit_required']
             reboot_required = response['is_reboot_required']
 
-            if response['is_commit_required']:
+            if commit_required:
                 LOG.info("Committing UEFI PXE NIC configuration \
                          on {}".format(ip_service_tag))
                 job_id = drac_client.commit_pending_bios_changes(
@@ -193,6 +171,34 @@ def configure_uefi_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
             break
 
     return reboot_required, job_ids, provisioning_mac
+
+
+def configure_uefi_pxe_dev_en_dis(drac_client, ip_service_tag, nic):
+    settings = {
+       "PxeDev1EnDis": "Enabled",
+       "PxeDev2EnDis": "Disabled",
+       "PxeDev3EnDis": "Disabled",
+       "PxeDev4EnDis": "Disabled"
+       }
+
+    response = drac_client.set_bios_settings(settings)
+    commit_required = response['is_commit_required']
+    reboot_required = response['is_reboot_required']
+
+    if commit_required:
+        job_id = drac_client.commit_pending_bios_changes(
+            reboot=reboot_required)
+
+        LOG.info("Waiting for initial UEFI PXE NIC configuration to \
+                 complete on {}".format(ip_service_tag))
+        LOG.info("Do not unplug {}".format(ip_service_tag))
+
+        all_jobs_succeeded = wait_for_jobs_to_complete(
+            [job_id], drac_client, ip_service_tag)
+        if not all_jobs_succeeded:
+            raise RuntimeError("An error occurred while configuring "
+                               "initial UEFI PXE NIC settings on "
+                               "{}".format(ip_service_tag))
 
 
 def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
@@ -407,12 +413,20 @@ def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):
     settings = {"BootMode": boot_mode}
     response = drac_client.set_bios_settings(settings)
 
-    job_id = None
     if response['is_commit_required']:
-        job_id = drac_client.commit_pending_bios_changes(reboot=False,
-                                                         start_time=None)
+        LOG.info("Rebooting {} to apply configuration".format(
+                 ip_service_tag))
+        job_id = drac_client.commit_pending_bios_changes(reboot=True)
 
-    return response['is_reboot_required'], job_id
+        LOG.info("Waiting for iDRAC configuration to \
+                 complete on {}".format(ip_service_tag))
+        LOG.info("Do not unplug {}".format(ip_service_tag))
+
+        job_succeeded = wait_for_jobs_to_complete(
+            [job_id], drac_client, ip_service_tag)
+        if not job_succeeded:
+            raise RuntimeError("An error occurred while configuring "
+                               "the boot mode on {}".format(ip_service_tag))
 
 
 def config_idrac_settings(drac_client, ip_service_tag, password, node):
