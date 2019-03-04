@@ -141,7 +141,7 @@ class NetworkValidation(object):
             project_name=os_tenant_name,
             user_domain_name=os_user_domain_name,
             project_domain_name=os_project_domain_name
-        )  
+        )
 
         sess = session.Session(auth=auth)
         nova = novaclient.Client('2', session=sess)

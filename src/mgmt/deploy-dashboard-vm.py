@@ -422,7 +422,7 @@ def main():
         # care about the contents, but rely on an exception if the directory
         # doesn't exist. If no exception then we're good.
         os.listdir(images_path)
-   
+
     if os.path.exists(dashboard_image):
         os.remove(dashboard_image)
 
