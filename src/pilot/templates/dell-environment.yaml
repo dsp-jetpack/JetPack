@@ -125,6 +125,7 @@ parameter_defaults:
       - /dev/sdk
       - /dev/sdk
       - /dev/sdk
+    osd_objectstore: bluestore
 
   NovaComputeExtraConfig:
     nova::migration::libvirt::live_migration_completion_timeout: 800
