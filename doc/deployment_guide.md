@@ -1122,9 +1122,11 @@ The number of hugepages is calculated for each compute node based on that nodes 
 The following requirements must be met before enabling hugepages:
 
 1. Memory size must be greater than or equal to 128GB on every compute node.
-    > Note: It is assumed that:
-    a.	The memory reserved for the host OS = 12GB
-    b.	The memory reserved for the kernel = 4GB
+
+   It is assumed that:
+   
+   - The memory reserved for the host OS = 12GB
+   - The memory reserved for the kernel = 4GB
 
 2. Refer to the automated or manual deployment sections before setting these values.
 
@@ -1137,20 +1139,20 @@ This section provides the instructions to configure and deploy hugepage support.
 
 HugePages configuration parameters
 
-3. hpg_enable: (true/false) (Set "true" for enabling hugepages and "false" for disabling it.)
-4. hpg_size: 1GB/2MB (The hugepage size to be configured on every compute node. The default is: 1GB)
+```
+hpg_enable: (true/false) (Set "true" for enabling hugepages and "false" for disabling it.)
+hpg_size: 1GB/2MB (The hugepage size to be configured on every compute node. The default is: 1GB)
+```
 
-Follow the procedure below to enable Hugepages on Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13:
+**Follow the procedure below to enable Hugepages on Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.0:**
 
-5.	Open an SSH session to the SAH node.
-6.	Log in as the root user.
-7.	Refer to section Automation configuration files in this document.
-8.	Set hpg_enable=true
-9.	Set hpg_size to the size of the hugepages to use
-
-> Note: Valid values are 1GB and 2MB
-
-> **Note:** Refer to the [Dell NFV Settings] section of Example of sample_csp_profile.ini for details
+1.	Open an SSH session to the SAH node.
+2.	Log in as the root user.
+3.	Refer to section Automation configuration files in this document.
+4.	Set hpg_enable=true
+5.	Set hpg_size to the size of the hugepages to use
+	
+	> Note: Valid values are 1GB and 2MB
 
 
 #### Deploying with hugepages
@@ -1158,14 +1160,19 @@ Follow the procedure below to enable Hugepages on Dell EMC Ready Architecture fo
 After enabling hugepages in the hardware stamp's .ini file, perform the following steps to deploy hugepages in Dell EMC Ready Architecture for Red Hat OpenStack Platform.
 
 
-10.	Open an SSH session to the SAH node.
-11.	Run the following commands to deploy the overcloud with hugepages enabled:
+1.	Open an SSH session to the SAH node.
+2.	Run the following commands to deploy the overcloud with hugepages enabled:
+
     a.	cd /root/JetPack/src/deploy/osp_deployer
+    
     b.	python deployer.py -s <path_to_settings_ini_file>
-    > Note: During deployment, JetPack takes the following actions:
-12.	Fetches the memory size of every compute node.
-13.	Selects the minimum memory size among all compute nodes.
-14.	Calculates the number of hugepages using the following formula:
+
+**Note that during deployment, JetPack takes the following actions:**
+
+1.	Fetches the memory size of every compute node.
+2.	Selects the minimum memory size among all compute nodes.
+3.	Calculates the number of hugepages using the following formula:
+
     > Hugepage Number = ( Total_Mem - ( Host_Mem + Kernel_Mem )) / hugepage_size
  
 
@@ -1185,10 +1192,9 @@ Status messages are logged to /auto_results/deployer.log<time_stamp> on the SAH 
 
     Below is the table of log messages and actions to be taken upon encountering such errors. If other errors occur, please email openstack@dell.com
 
-    | ErrorError Message Description | Further Action |
-    |----------|----------|
-    | RAM Failed to size calculate in hugepage less count RAM than size is less 128GB than 128GB on	make sure one	to have all or prerequisites more compute nodes. | RAM size must be 128GB or more on all compute nodes. |
-
+   | Error Message Description                                                                                                                               | Further Action                                       |
+|--------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------|
+| RAM Failed to size calculate in hugepage less count RAM than size is less 128GB than 128GB on	make sure one	to have all or prerequisites more compute nodes. | RAM size must be 128GB or more on all compute nodes. |
 
 
 #### Example of sample_csp_profile.ini
@@ -1218,14 +1224,6 @@ The last release offered basic and minimal NUMA enablement via Jetpack. The func
 This release version, 13, offers hardware supported dynamic values of parameters required for NUMA enablement. Values are retrieved from the Ironic API during RHOSP deployment.
 
 
-> **Topics:**
-> * NUMA overview
-> * Prerequisites
-> * Enabling and deploying NUMA
-> * Logging
-> * Example of sample_csp_profile.ini
-
-
 #### NUMA overview
 
 The Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.0 provides the ability to enable NUMA optimization and CPU pinning support on all Nova compute nodes in the solution.
@@ -1253,8 +1251,10 @@ This section provides the instructions to configure NUMA.
 
 ##### NUMA configuration parameters
 
-* numa_enable: True/False (True for enabling NUMA and False for disabling it.)
-* numa_hostos_cpu_count: 2|4|6|8 (The number of CPU cores to reserve for the host OS.)
+```
+numa_enable: True/False (True for enabling NUMA and False for disabling it.)
+numa_hostos_cpu_count: 2|4|6|8 (The number of CPU cores to reserve for the host OS.)
+```
 
 **Follow the procedure provided below to enable NUMA optimization and CPU pinning on Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.0:**
 
@@ -1262,7 +1262,7 @@ This section provides the instructions to configure NUMA.
 2.	Log in as the root user.
 3.	Refer to section Automation configuration files in this document.
 4.	Set numa_enable=true.
-5.	Set numa_hostos_cpu_count to the number of CPU cores to reserve for the host OS.
+5.	Set ```numa_hostos_cpu_count``` to the number of CPU cores to reserve for the host OS.
 
     > Note: Valid values are 2, 4, 6, and 8.
  
@@ -1279,12 +1279,13 @@ After enabling NUMA in the hardware stamp's .ini file, perform the following ste
 
     b. python deployer.py -s <path_to_settings_ini_file>
 
-    	> Note: During deployment, JetPack takes the following actions:
 
-3.	Fetches the number of CPU cores of every compute node.
-4.	Takes the minimum number of CPU cores among all compute nodes.
-5.	Calculates the sibling pairs based on the CPU cores.
-6.	Reserves numa_hostos_cpu_count CPU cores for the host OS.
+Note: During deployment, JetPack takes the following actions:
+
+1.	Fetches the number of CPU cores of every compute node.
+2.	Takes the minimum number of CPU cores among all compute nodes.
+3.	Calculates the sibling pairs based on the CPU cores.
+4.	Reserves numa_hostos_cpu_count CPU cores for the host OS.
 
 
 ##### Logging
@@ -1336,19 +1337,6 @@ numa_hostos_cpu_count=4
 # Appendix F OVS-DPDK
 
 This appendix details the guidelines for configuration of OVS-DPDK at the time of deployment of Dell EMC Ready Architecture for RedHat OpenStack Platform v13.0.
-
-> **Topics**
-> * OvS
-> * DPDK
-> * OVS-DPDK
-> * OVS-DPDK in Dell EMC Ready Architecture for Red Hat OpenStack Platorm v13
-> * Before You Begin
-> * Prerequisites
-> * Start Deployment
-> * Success
-> * Failure
-> * Post Deployment Steps
-> >
 
 
 #### OvS
