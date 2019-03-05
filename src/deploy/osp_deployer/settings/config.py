@@ -27,6 +27,8 @@ logger = logging.getLogger("osp_deployer")
 
 
 class Settings():
+    CEPH_OSD_CONFIG_FILE = 'pilot/templates/ceph-osd-config.yaml'
+
     settings = ''
 
     def __init__(self, settings_file):
@@ -311,7 +313,8 @@ class Settings():
             self.octavia_user_certs_keys = False
         else:
             self.octavia_user_certs_keys = True
-            self.certificate_keys_path = dellnfv_settings['certificate_keys_path']
+            self.certificate_keys_path = \
+                dellnfv_settings['certificate_keys_path']
 
         # Performance and Optimization
         performance_and_optimization = self.get_settings_section(
@@ -360,6 +363,30 @@ class Settings():
                 'unity_storage_pool_names']
         else:
             self.enable_unity_backend = False
+
+        # Unity Manila
+        if backend_settings['enable_unity_manila_backend'].lower() == 'true':
+            self.enable_unity_manila_backend = True
+            self.manila_unity_driver_handles_share_servers = \
+                backend_settings['manila_unity_driver_handles_share_servers']
+            self.manila_unity_nas_login = \
+                backend_settings['manila_unity_nas_login']
+            self.manila_unity_nas_password = \
+                backend_settings['manila_unity_nas_password']
+            self.manila_unity_nas_server = \
+                backend_settings['manila_unity_nas_server']
+            self.manila_unity_server_meta_pool = \
+                backend_settings['manila_unity_server_meta_pool']
+            self.manila_unity_share_data_pools = \
+                backend_settings['manila_unity_share_data_pools']
+            self.manila_unity_ethernet_ports = \
+                backend_settings['manila_unity_ethernet_ports']
+            self.manila_unity_ssl_cert_verify = \
+                backend_settings['manila_unity_ssl_cert_verify']
+            self.manila_unity_ssl_cert_path = \
+                backend_settings['manila_unity_ssl_cert_path']
+        else:
+            self.enable_unity_manila_backend = False
 
         sanity_settings = self.get_settings_section(
             "Sanity Test Settings")
@@ -485,8 +512,12 @@ class Settings():
             '/pilot/templates/dell-cinder-backends.yaml'
         self.dell_unity_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellemc-unity-cinder-backend.yaml'
+        self.unity_manila_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/unity-manila-config.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
+        self.ceph_osd_config_yaml = self.foreman_configuration_scripts + \
+            '/' + Settings.CEPH_OSD_CONFIG_FILE
         self.neutron_ovs_dpdk_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/neutron-ovs-dpdk.yaml'
         self.static_ips_yaml = self.foreman_configuration_scripts + \

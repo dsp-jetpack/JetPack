@@ -309,6 +309,10 @@ def main():
                             action='store_true',
                             default=False,
                             help="Enable Dell EMC Unity backend")
+        parser.add_argument('--enable_unity_manila',
+                            action='store_true',
+                            default=False,
+                            help="Enable Dell EMC Unity Manila backend")
         parser.add_argument('--disable_rbd',
                             action='store_true',
                             default=False,
@@ -520,6 +524,8 @@ def main():
         if args.enable_unity:
             env_opts += " -e ~/pilot/templates/dellemc-unity-cinder-" \
                         "backend.yaml"
+        if args.enable_unity_manila:
+            env_opts += " -e ~/pilot/templates/unity-manila-config.yaml"
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
