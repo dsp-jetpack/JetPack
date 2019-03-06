@@ -51,13 +51,14 @@ Red Hat®, Red Hat Enterprise Linux®, and Ceph are trademarks or registered tra
 
 - [Appendix H Neutron DVR support in JS 13.0](#appendix-h-neutron-dvr-support-in-js-130)
 
-- [Appendix I Performance Optimization](#appendix-i-performance-optimization)
+- [Appendix I Performance optimization](#appendix-i-performance-optimization)
 
-- [Appendix J Sample Files](#appendix-j-sample-files)
+- [Appendix J Sample files](#appendix-j-sample-files)
 
-- [Appendix K Solution Validation Overview](#appendix-k-solution-validation-overview)
+- [Appendix K Solution validation overview](#appendix-k-solution-validation-overview)
 
 - [Appendix M References](#appendix-m-references)
+
 
 
 
@@ -2259,7 +2260,7 @@ This appendix details the guidelines for configuration of Neutron DVR support in
 
 ### Introduction
 
-Distributed Virtual Routing (DVR) offers an alternative routing design, which is now fully supported with Red Hat OpenStack Platform. It intends to isolate the failure domain of the Controller node and optimize network traffic by deploying the L3 agent and schedule routers on every Compute node. By eliminating a centralized layer 3 agent, the routing that was performed on a single node is now handled by the compute nodes themselves.  
+Distributed Virtual Routing (DVR) offers an alternative routing design, which is now fully supported with Red Hat OpenStack Platform. It intends to isolate the failure domain of the controller node and optimize network traffic by deploying the L3 agent and schedule routers on every compute node. By eliminating a centralized layer 3 agent, the routing that was performed on a single node is now handled by the compute nodes themselves.  
 
 ### Prerequisite
 
@@ -2269,7 +2270,7 @@ Follow these steps to configure bonds interfaces of every compute node on both s
 
 Switch with OS9, configurations can be done using following commands:
 
-* Switch configurations for 5 port nics, port-channel of compute Bond1 interfaces should be in floating vlan:
+* Switch configurations for five port nics, port-channel of compute Bond1 interfaces should be in floating vlan:
 
     ```yaml
     # int vlan <floating-vlan> 
@@ -2278,7 +2279,7 @@ Switch with OS9, configurations can be done using following commands:
     #tagged port-channel <name of channel which have interfaces of bond1>
     ```
 
-* When using 7 port nic environment file, additional bond interfaces should be in external and floating vlan. Below are the configurations to add interfaces to vlans:
+* When using seven port nic environment file, additional bond interfaces should be in external and floating vlan. Below are the configurations to add interfaces to vlans:
 
     ```yaml
     # int port-channel <name of channel which have interfaces of bond2 >
@@ -2304,7 +2305,7 @@ Switch with OS9, configurations can be done using following commands:
 
 **Switch with Cumulus OS, configurations can be done using following commands:**
 
-* **Switch configurations for 5 port nics, port-channel of compute Bond1 interfaces should be in floating vlan:**
+* **Switch configurations for five port nics, port-channel of compute Bond1 interfaces should be in floating vlan:**
 
     ```bash
     $ net add bond <compute node bond1> bridge vids <floating ip vlan>
@@ -2312,7 +2313,7 @@ Switch with OS9, configurations can be done using following commands:
     # This settings need to done for every compute node bond1.
     ```
 
-* **When using 7 port nic environment file, additional bond interfaces should be in external and floating vlan. Below are the configurations to add interfaces to vlans:**
+* **When using seven port nic environment file, additional bond interfaces should be in external and floating vlan. Below are the configurations to add interfaces to vlans:**
 
     ```bash
     #net add bond <compute node bond2> slave <compute node bond2 port number e-g swp38>
@@ -2326,15 +2327,15 @@ Switch with OS9, configurations can be done using following commands:
 
 ### Settings file parameter verification
 
-* To deploy the dvr with JS13, set the dvr_enable variable value to True in the ini file under the [Deployment Settings] section
+* To deploy the dvr with JS13, set the dvr_enable variable value to True in the .ini file under the [Deployment Settings] section
 
 	``` bash 
 	dvr_enable = True
 	```
 * For NIC configurations, change the value of nic_env_file parameter under the [Nodes Nics and Bonding Settings] section. DVR can be enabled in two different environments:
 
-    1.	dvr_5_port
-    2.	dvr_7_port
+    1.	```dvr_5_port```
+    2.	```dvr_7_port```
     
 *	To enable DVR for 5_port, set the nic_env_file parameter to:
 
@@ -2356,31 +2357,31 @@ Switch with OS9, configurations can be done using following commands:
 
 
 
-### JS 13.0 Deployment of Undercloud and Overcloud
+### JS 13.0 deployment of undercloud and overcloud
 
-Assuming that sah node is deployed and JetPack folder is at root location. Edit your hardware stamp’s .ini and .properties files to match your hardware stamp documentation. Run the deployment by executing the deployer.py command:
+Assuming that SAH node is deployed and JetPack folder is at root location. Edit your hardware stamp’s .ini and .properties files to match your hardware stamp documentation. Run the deployment by executing the deployer.py command:
 
 ```bash
 # cd /root/JetPack/src/deploy/osp_deployer
 # python deployer.py -s <path_to_settings_ini_file>
 ```
 
-### Deployment Verification
+### Deployment verification
 
 Different scenarios are tested to check the functionality of DVR:
 
 Verify that DVR is deployed on all the controller nodes
 
-1. ssh to controller node and change to root user by command "sudo -i"
-2. get docker container id of neutron l3 agent container by cocmmand "docker ps"
-3.connect to the container by command"docker exec -it <neutron l3 agent container id> bash"
-4. run the command: "cat /etc/neutron/l3_agent.ini | grep dvr"
-5. agent_mode value must be dvr_snat
-6.  repeat the all steps for other controller nodes.
+1. SSH to controller node and change to root user by command "sudo -i"
+2. Get docker container id of neutron l3 agent container by cocmmand "docker ps"
+3. Connect to the container by command"docker exec -it <neutron l3 agent container id> bash"
+4. Run the command: "cat /etc/neutron/l3_agent.ini | grep dvr"
+5. Agent_mode value must be dvr_snat
+6. Repeat the all steps for other controller nodes.
 
 **Verify that L3 agent must be distributed on all the compute nodes.**
 
-1.	ssh to Director node as osp_admin user
+1.	SSH to Director node as osp_admin user
 2.	Source overcloudrc file
 3.	Run the command "neutron agent-list --agent-type="L3 agent""
 4.	In host column, you will see the nodes that host L3 agent.
@@ -2388,24 +2389,34 @@ Verify that DVR is deployed on all the controller nodes
 **Verify that traffic between two compute nodes bypass the Controller node.**
 
 1.	Create two instance on different compute nodes and networks
-2.	ssh to both instances on the different tabs
+2.	SSH to both instances on the different tabs
 3.	Ping first instance from second instance.
-4.	ssh to controller node
-5.	run the command "sudo ip netns exec  <qrouter-namepace> /bin/bash"
-"ip a"
-"tcpdump -i <qr-interface>"
-6.	Ping traffic for instance will not transver the through that interface. 
+4.	SSH to controller node
+5.	RUN the commands 
+
+	```
+	sudo ip netns exec  <qrouter-namepace> /bin/bash 
+	ip a
+	tcpdump -i <qr-interface>
+	```
+	
+6.	Ping traffic for instance will not transfer the through that interface. 
 
 **Verify the snat traffic transverse through the controller node.**
 
 1.	Create an instance
-2.	ssh to instance
+2.	SSH to instance
 3.	Ping 8.8.8.8 from instance.
-4.	ssh to controller node
-5.	run the command "sudo ip netns exec  <snat-namepace> /bin/bash"
-"ip a"
-"tcpdump -i <sg-interface>"
-6.	Ping traffic will transver the through that interface
+4.	SSH to controller node
+5.	Run the commands 
+
+	```
+	sudo ip netns exec  <snat-namepace> /bin/bash
+	ip a
+	tcpdump -i <sg-interface>
+	```
+
+6.	Ping traffic will transfer the through that interface
 
 **Verify that traffic with floating IPs for external traffic must bypass the Controller node.**
 
@@ -2413,69 +2424,72 @@ Verify that DVR is deployed on all the controller nodes
 2.	ssh to instance
 3.	Ping 8.8.8.8 from instance.
 4.	ssh to controller node
-5.	run the command "sudo ip netns exec  <qr-namepace> /bin/bash"
-"ip a"
-"tcpdump -i <qg-interface>"
-6.	ping traffic will not transver the through that interface. 
+5.	run the commands 
+
+	```
+	sudo ip netns exec  <qr-namepace> /bin/bash
+	ip a
+	tcpdump -i <qg-interface>
+	
+	```
+
+6.	ping traffic will not transfer the through that interface. 
 
 **ssh the instance through the fip namespaces created on the compute node.**
 
-1.	ssh to compute node
-2.	run the command “sudo ip netns exec <fip-namespace> ssh –i /home/heat-admin/key user@<ip-addr>”
-3.	ssh should be successful
+1.	SSH to compute node
+2.	Run the command 
+	
+	```
+	sudo ip netns exec <fip-namespace> 
+	ssh –i /home/heat-admin/key user@<ip-addr>
+	```
+3.	SSH should be successful
 
 
 
 
 <div style="page-break-after: always;"></div>
 
-# Appendix I Performance Optimization 
+# Appendix I Performance optimization 
 
-This appendix details the guidelines for application of Performance Optimization at the time of deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
-
-> Topics:
-> * Overview
-> * Deploying Performance Optimization
-> * Logging
-> * List of Parameters to be Optimized by Default
-
+This appendix details the guidelines for application of performance optimization at the time of deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
 
 ### Overview
-
 
 Performance optimization is the improvement of system response. Typically, in cloud infrastructure, the motivation for such activity is called a performance problem, which can be either real or anticipated. Most systems will respond to increased load (computation, networking etc.) with some degree of decreasing performance. A system's ability to accept higher load is called scalability, and modifying a system to handle a higher load is synonymous to performance tuning.
 
 
-### Deploying Performance Optimization
+### Deploying performance optimization
 
-The Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.0 provides the ability to apply Performance Optimization on all the nodes during deployment. This section provides the instructions to configure Deployment.
+The Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.0 provides the ability to apply Performance Optimization on all the nodes during deployment. This section provides the instructions to configure deployment.
 
-### Applying Performance Optimization Parameters
+### Applying performance optimization parameters
 
-List of Performance Optimization user modifiable Parameters -
+List of performance optimization user modifiable Parameters 
 
-* mariadb_max_connections: (1000 - 100000) The maximum permitted number of simultaneous client connections.
+* ```mariadb_max_connections```: (1000 - 100000) The maximum permitted number of simultaneous client connections.
 
     ```bash
     default : 15360
     ```
 
 
-* innodb_buffer_pool_size: InnoDB buffer pool size in GBs. (Max. value of this parameter depends on the hardware architecture)
+* ```innodb_buffer_pool_size``` : InnoDB buffer pool size in GBs. (Max. value of this parameter depends on the hardware architecture)
 
     ```bash
     default : dynamic (This assigns 75% ram size of controller node.)
     ```
 
 
-* innodb_buffer_pool_instances: (8 - 48) The number of regions that the InnoDB buffer pool is divided into.
+* ```innodb_buffer_pool_instances``` : (8 - 48) The number of regions that the InnoDB buffer pool is divided into.
 
     ```bash
     default : 16
     ```
 
 
-Follow the procedure provided below to apply Performance Optimization parameters with Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13:
+Follow the procedure provided below to apply performance optimization parameters with Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13:
 
 1.	Open an SSH session to the SAH node.
 
@@ -2491,12 +2505,12 @@ Follow the procedure provided below to apply Performance Optimization parameters
 
      Note:
 
-**Only two types of values are supported for innodb_buffer_pool_size those are:**
+**Only two types of values are supported for ```innodb_buffer_pool_size``` those are:**
 
 * For dynamically calculating and assigning 75% of total memory of respective controller node: innodb_buffer_pool_size = dynamic
 * For user value: innodb_buffer_pool_size = 64G (Please follow the same format, an integer value followed by G).
 
-**Deploy Performance Optimization Parameters**
+**Deploy performance optimization parameters**
 
 After applying performance optimization parameters in sample_csp_profile.ini or
 sample_xsp_profile.ini file, perform the following steps to deploy performance and optimization parameters inDell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
@@ -2504,6 +2518,7 @@ sample_xsp_profile.ini file, perform the following steps to deploy performance a
 1.	Open an SSH session to the SAH node.
 2.	Ensure all hardware in the OpenStack Cluster is powered off.
 3.	Run the following command to deploy performance optimization:
+
     ```bash
     #cd /root/JetPack/src/deploy/osp_deployer
     #python deployer.py -s < path-of-settings-file >
@@ -2518,29 +2533,38 @@ There are more parameters which are by default optimized by Dell EMC Ready Archi
 
 Below is the table of log messages and actions to be taken upon encountering such errors. Apart from these errors if any other error is received, please email openstack@dell.com.
 
-| S No | Error Description | Custom Error Message | Action | Log Action | Further Action |
-|----------|----------|----------|----------|----------|----------|
-| 1 | Invalid buffer pool size.  | "innodb_buffer_pool_size is greater than available memory size"  | Login to the director VM as the initial deployed user. | Director_node | Check .ini file and verify the given value of innodb_buffer _pool_size try a lower value. Once corrected redeploy. |
+| S No | Error description         | Custom error message                                            | Action                                                 | Log action    | Further action                                                                                                     |
+|------|---------------------------|-----------------------------------------------------------------|--------------------------------------------------------|---------------|--------------------------------------------------------------------------------------------------------------------|
+| 1    | Invalid buffer pool size. | "innodb_buffer_pool_size is greater than available memory size" | Login to the director VM as the initial deployed user. | Director_node | Check .ini file and verify the given value of innodb_buffer _pool_size try a lower value. Once corrected redeploy. |
 
-### List of Parameters to be Optimized by Default
 
-#### System Level Optimization
+### List of Parameters to be optimized by default
+
+#### System level optimization
 
 1.	Linux OS Limits: (all nodes)
-    a.	soft nofile 64000
+
+    a. soft nofile 64000
+    
     b.	hard nofile 64000
+    
     c.	soft nproc 10240
+    
     d.	hard nproc unlimited
 
 2.	Tuned Profiles
+
     a.	tuned-adm profile virtual-host ( for all computes )
+    
     b.	tuned-adm throughput-performance ( for all controllers and storage nodes )
+    
     c.	OVS-DPDK requires the tuned profile set to be cpu-partitioning
 
 
-### Openstack Core Services
+### Openstack core services
 
 1.	Nova (/etc/nova/nova.conf )
+    
     ```yaml
     [DEFAULT] / rpc_response_timeout = 180
     [DEFAULT] / osapi_max_limit = 10000
@@ -2549,6 +2573,7 @@ Below is the table of log messages and actions to be taken upon encountering suc
 
 
 2.	Neutron (/etc/neutron/neutron.conf)
+    
     ```yaml
     [DEFAULT] / rpc_response_timeout = 180
     [keystone_authtoken] / revocation_cache_time = 300
@@ -2556,21 +2581,24 @@ Below is the table of log messages and actions to be taken upon encountering suc
 
     
 3.	Cinder (/etc/cinder/cinder.conf)
+    
     ```yaml
     [DEFAULT] / rpc_response_timeout = 180
     [keystone_authtoken] / revocation_cache_time = 300
     ```
     
 4.	Glance (/etc/glance/glance-api.conf)
+    
     ```yaml
     [DEFAULT] / rpc_response_timeout = 180
     [keystone_authtoken] / revocation_cache_time = 300
     ```
 
 
-### Openstack Components
+### Openstack components
 
 1.	MariaDB (/etc/my.cnf.d/galera.cnf):
+    
     ```yaml
     [mysqld] / innodb_log_file_size=1500M
     [mysqld] / innodb_log_files_in_group=2
@@ -2579,13 +2607,13 @@ Below is the table of log messages and actions to be taken upon encountering suc
     [mysqld] / innodb_flush_log_at_trx_commit = 0
     ```
 2.	HAproxy (/etc/haproxy/haproxy.cfg)
+    
     ```yaml
     defaults / maxconn 10000
     ```
 
 
 Example of sample_csp_profile.ini and sample_xsp_profile.ini
-
 
 ```yaml
 [Performance and Optimization]
@@ -2604,17 +2632,12 @@ innodb_buffer_pool_instances = 16
 
 <div style="page-break-after: always;"></div>
 
-# Appendix J Sample Files
+# Appendix J Sample files
 
-This appendix details the sample properties file and describes the differences between the xSP and CSP sample profile files of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
+This appendix details the sample properties file and describes the differences between the xSP and CSP sample profile files found in Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
 
-> Topics:
-> * Sample Properties File
-> * Sample CSP.ini File
-> * Sample xSP.ini File
-> * Sample xSP/CSP Profile File Differences
 
-### Sample Properties File
+### Sample properties file
 
 sample.properties
 
@@ -2744,7 +2767,7 @@ sample.properties
 
 
 
-### Sample CSP.ini File
+### Sample CSP.ini file
 
 
 ```yaml
@@ -3194,22 +3217,23 @@ verify_rhsm_status=true
 
 ```
 
-Acme.properties Example for 14G stamp (Power Edge R640 servers)
+Acme.properties example for 14G stamp (Power Edge R640 servers)
 
-Each server for Ceph Nodes had total of 8 disks [slot 0 to 7]
+Each server for ceph nodes had total of 8 disks [slot 0 to 7]
 
-Ceph-Storage nodes: disks in last 2 slots are RAID-1 and used for OS installation (root disk) which are HDD disks Remaining 6 all are SSD disks are for 5 OSDs  + 1 journal. 
+Ceph storage nodes: disks in last two slots are RAID-1 and used for OS installation (root disk) which are HDD disks Remaining six all are SSD disks are for five OSDs  + one journal. 
+
 The name should follow as below in acme.properties for this scenario:
  
 ![](media/f1d1371b0eeec6aba4332cd940d9119f.png)
 
 
-Also in the assign_role.py, small tweak was done by changing ssd as media_type_filter instead of hdd. This is required since we are using all SSDs disk for Ceph OSDs.
+Also in the assign_role.py, small tweak was done by changing SSD as media_type_filter instead of HDD. This is required since we are using all SSDs disk for Ceph OSDs.
 
 <a href="https://github.com/dsp-jetpack/JetPack/blob/master/src/pilot/assign_role.py#L517" target="_blank">https://github.com/dsp-jetpack/JetPack/blob/master/src/pilot/assign_role.py#L517</a>
 
 
-### Sample xSP.ini File
+### Sample xSP.ini file
 
 ```yaml
 # Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
@@ -3662,7 +3686,7 @@ verify_rhsm_status=true
 ```
 
 
-### Sample xSP/CSP Profile File Differences
+### Sample xSP/CSP profile file differences
 
 The sample xSP and CSP profile files are very similar. The primary differences between them are that the CSP profile has various NFV features enabled, while the xSP profile has these features disabled.
 
@@ -3680,31 +3704,25 @@ See the JetPack open source repository for the entire content of each file, or i
 
 <div style="page-break-after: always;"></div>
 
-# Appendix K Solution Validation Overview 
+# Appendix K Solution validation overview 
 
-Validation of the complete solution is based on the hardware in the Ready Architecture, as defined in the Dell EMC Ready Architecture for Red Hat OpenStack Platform - Architecture Guide - Version 13, the JetPack software, and utilizes several tools to ensure the functionality of the solution. In addition, the Solution, once validated, is listed by the OpenStack Foundation (https://www.openstack.org/marketplace/distros/distribution/emc/dell-emc-ready-arch-for-red-hat-openstack) as a Certified . 
+Validation of the complete solution is based on the hardware in the Ready Architecture, as defined in the Dell EMC Ready Architecture for Red Hat OpenStack Platform - Architecture Guide - Version 13, the JetPack software, and utilizes several tools to ensure the functionality of the solution. In addition, the Solution, once validated, is listed by the OpenStack Foundation (https://www.openstack.org/marketplace/distros/distribution/emc/dell-emc-ready-arch-for-red-hat-openstack) as a certified . 
 
-> Topics:
-> * Solution Validation Hardware
-> * Solution Validation Tools and Certifications
-> * Tempest Results
-> * Test Results from Deployment Validation Sanity
 
-### Solution Validation Hardware
+### Solution validation hardware
 
 **Hardware components used in the solution include:**
 
-	Node 1: Dell EMC PowerEdge R640 Solution Admin Host with the Red Hat OpenStack Platform Director and the Red Hat Ceph Storage Dashboard Installed
-	Nodes 2 - 4: Dell EMC PowerEdge R640 OpenStack Controllers
-	Nodes 5 - 7 Dell EMC PowerEdge R640 Nova Compute Nodes
-	Nodes 8 - 10: Dell EMC PowerEdge R740xd Storage Nodes
+* Node 1: Dell EMC PowerEdge R640 Solution Admin Host with the Red Hat OpenStack Platform Director and the Red Hat Ceph Storage Dashboard Installed
+* Nodes 2 - 4: Dell EMC PowerEdge R640 OpenStack Controllers
+* Nodes 5 - 7 Dell EMC PowerEdge R640 Nova Compute Nodes
+* Nodes 8 - 10: Dell EMC PowerEdge R740xd Storage Nodes
+* Dell Networking S3048-ON Switch
+* Dell Networking S4048-ON Switch
+* Dell Networking S5248F Switch
 
-	Dell Networking S3048-ON Switch
-	Dell Networking S4048-ON Switch
-	Dell Networking S5248F Switch
 
-
-### Solution Validation Tools and Certifications
+### Solution validation tools and certifications
 
 #### The tools used to validate the deployed solution include:
 
@@ -3712,7 +3730,7 @@ Validation of the complete solution is based on the hardware in the Ready Archit
 	Deployment Scripted RHOSP Sanity Test
 	Solution RefStack submission https://refstack.openstack.org/#/results/87e12c62-d3d1-4eea-a0fa-5de89a4815d9 for OpenStack Powered Compute
 
-#### The certification listing of the Solution is listed on the OpenStack Marketplace at:
+#### The certification listing of the solution is listed on the OpenStack marketplace at:
 
 	https://www.openstack.org/marketplace/distros/distribution/emc/dell-emc-ready-bundle-for-red-hat-openstack
 
@@ -3730,11 +3748,11 @@ Ran: 2089 tests in 3559.522 sec.
 ```
 
 
-### Test Results from Deployment Validation Sanity
+### Test results from deployment validation sanity
 
-> Note: the log output below is for guidance only.
+	> Note: the log output below is for guidance only.
 
-#### Results of a complete run of the Deployment Scripted RHOSP Sanity Test:
+#### Results of a complete run of the deployment scripted RHOSP sanity test:
 
 ```bash
 2018-10-13 14:20:13: INFO: ###Appendix-C Openstack Operations Functional Test ###
