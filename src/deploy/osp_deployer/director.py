@@ -1531,11 +1531,11 @@ class Director(InfraHost):
         external_sub_guid = self.run_tty(external_sub_cmd)[0].rstrip()
 
         if not external_sub_guid:
-            logger.error("Could not find public network, please run the " +
-                         "sanity test to create the appropriate networks " +
-                         "and re-run this script with " +
-                         "--tempest_config_only flag.")
-            pass
+            err = ("Could not find public network, please run the "
+                   + "sanity test to create the appropriate networks "
+                   + "and re-run this script with the "
+                   + "--tempest_config_only flag.")
+            raise AssertionError(err)
 
         self._backup_tempest_conf()
 
@@ -1557,12 +1557,11 @@ class Director(InfraHost):
             self.run_tty(cmd)
 
     def run_tempest(self):
-        logger.debug("Running tempest")
+        logger.info("Running tempest")
 
         if not self._is_tempest_conf():
             self.configure_tempest()
 
-        os._exit(0)
         setts = self.settings
         cmd = 'source ~/' + self.settings.overcloud_name + 'rc;cd ' + \
             '~/' + TEMPEST_DIR + ';' + \
@@ -1605,7 +1604,7 @@ class Director(InfraHost):
 
     def _backup_tempest_conf(self):
         logger.info("Backing up tempest.conf")
-        if self.is_tempest_conf():
+        if self._is_tempest_conf():
             timestamp = int(round(time.time() * 1000))
             new_conf = (TEMPEST_DIR + "/etc/" + TEMPEST_CONF + "."
                         + str(timestamp))
