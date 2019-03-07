@@ -36,7 +36,7 @@ exitFlag = 0
 # Ceph pools present in a default install
 HEAVY_POOLS = ['volumes', 'images', 'vms']
 OTHER_POOLS = ['.rgw.root', 'default.rgw.control', 'default.rgw.meta',
-               'default.rgw.log', 'metrics', 'backups', '.rgw.buckets' ]
+               'default.rgw.log', 'metrics', 'backups', '.rgw.buckets']
 
 
 class Director(InfraHost):
@@ -46,6 +46,7 @@ class Director(InfraHost):
         self.settings = Settings.settings
         self.user = self.settings.director_install_account_user
         self.ip = self.settings.director_node.public_api_ip
+        self.provisioning_ip = self.settings.director_node.provisioning_ip
         self.pwd = self.settings.director_install_account_pwd
         self.root_pwd = self.settings.director_node.root_password
 
@@ -415,7 +416,7 @@ class Director(InfraHost):
 
         self.setup_networking()
         self.setup_dell_storage()
-        self.setup_manila() 
+        self.setup_manila()
         self.setup_environment()
         self.setup_sanity_ini()
 
@@ -453,8 +454,8 @@ class Director(InfraHost):
         # Pull down the auto-generated OSD config file from the director
         local_file = self.settings.ceph_osd_config_yaml + '.director'
         remote_file = os.path.join('/home',
-            self.settings.director_install_account_user,
-            Settings.CEPH_OSD_CONFIG_FILE)
+           self.settings.director_install_account_user,
+           Settings.CEPH_OSD_CONFIG_FILE)
         self.download_file(local_file, remote_file)
 
         # Calculate the number of OSDs across the entire cluster
@@ -782,6 +783,25 @@ class Director(InfraHost):
         logger.debug("configuring dell emc unity backend")
 
         cmds = [
+            'docker login -u ' + self.settings.subscription_manager_user +
+            ' -p ' + self.settings.subscription_manager_pass +
+            ' registry.connect.redhat.com',
+            'docker pull registry.connect.redhat.com' +
+            '/dellemc/openstack-cinder-volume-dellemc',
+            'docker tag registry.connect.redhat.com' +
+            '/dellemc/openstack-cinder-volume-dellemc ' +
+            self.ip + ':8787/dellemc/openstack-cinder-volume-dellemc',
+            'docker push ' + self.ip +
+            ':8787/dellemc/openstack-cinder-volume-dellemc',
+            'sed -i "s|DockerCinderVolumeImage.*|' +
+            'DockerCinderVolumeImage: ' + self.ip +
+            ':8787\/dellemc\/openstack-cinder-volume-dellemc' +
+            '|" ' + overcloud_images_file,
+            'echo "  DockerInsecureRegistryAddress:" >> ' +
+            overcloud_images_file,
+            'echo "  - ' + self.provisioning_ip + ':8787 " >> ' +
+            overcloud_images_file,
+            'docker logout registry.connect.redhat.com',
             'sed -i "s|<unity_san_ip>|' +
             self.settings.unity_san_ip + '|" ' + dell_unity_cinder_yaml,
             'sed -i "s|<unity_san_login>|' +
@@ -809,6 +829,25 @@ class Director(InfraHost):
         logger.debug("configuring dell emc unity manila backend")
 
         cmds = [
+            'docker login -u ' + self.settings.subscription_manager_user +
+            ' -p ' + self.settings.subscription_manager_pass +
+            ' registry.connect.redhat.com',
+            'docker pull registry.connect.redhat.com' +
+            '/dellemc/openstack-manila-share-dellemc',
+            'docker tag registry.connect.redhat.com' +
+            '/dellemc/openstack-manila-share-dellemc ' +
+            self.ip + ':8787/dellemc/openstack-manila-share-dellemc',
+            'docker push ' + self.ip +
+            ':8787/dellemc/openstack-manila-share-dellemc',
+            'sed -i "s|DockerManilaShareImage.*|' +
+            'DockerManilaShareImage: ' + self.ip +
+            ':8787\/dellemc\/openstack-manila-share-dellemc' +
+            '|" ' + overcloud_images_file,
+            'echo "  DockerInsecureRegistryAddress:" >> ' +
+            overcloud_images_file,
+            'echo "  - ' + self.provisioning_ip + ':8787 " >> ' +
+            overcloud_images_file,
+            'docker logout registry.connect.redhat.com',
             'sed -i "s|<manila_unity_driver_handles_share_servers>|' +
             self.settings.manila_unity_driver_handles_share_servers +
             '|" ' + unity_manila_yaml,
