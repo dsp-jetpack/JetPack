@@ -782,9 +782,11 @@ class Director(InfraHost):
 
         logger.debug("configuring dell emc unity backend")
 
+        overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
+
         cmds = [
             'docker login -u ' + self.settings.subscription_manager_user +
-            ' -p ' + self.settings.subscription_manager_pass +
+            ' -p ' + self.settings.subscription_manager_password +
             ' registry.connect.redhat.com',
             'docker pull registry.connect.redhat.com' +
             '/dellemc/openstack-cinder-volume-dellemc',
@@ -828,9 +830,11 @@ class Director(InfraHost):
 
         logger.debug("configuring dell emc unity manila backend")
 
+        overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
+
         cmds = [
             'docker login -u ' + self.settings.subscription_manager_user +
-            ' -p ' + self.settings.subscription_manager_pass +
+            ' -p ' + self.settings.subscription_manager_password +
             ' registry.connect.redhat.com',
             'docker pull registry.connect.redhat.com' +
             '/dellemc/openstack-manila-share-dellemc',
