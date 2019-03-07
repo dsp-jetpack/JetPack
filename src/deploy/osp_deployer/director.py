@@ -784,7 +784,7 @@ class Director(InfraHost):
 
         cmds = [
             'docker login -u ' + self.settings.subscription_manager_user +
-            ' -p ' + self.settings.subscription_manager_pass +
+            ' -p ' + self.settings.subscription_manager_password +
             ' registry.connect.redhat.com',
             'docker pull registry.connect.redhat.com' +
             '/dellemc/openstack-cinder-volume-dellemc',
@@ -830,7 +830,7 @@ class Director(InfraHost):
 
         cmds = [
             'docker login -u ' + self.settings.subscription_manager_user +
-            ' -p ' + self.settings.subscription_manager_pass +
+            ' -p ' + self.settings.subscription_manager_password +
             ' registry.connect.redhat.com',
             'docker pull registry.connect.redhat.com' +
             '/dellemc/openstack-manila-share-dellemc',
