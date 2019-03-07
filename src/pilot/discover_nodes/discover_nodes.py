@@ -457,7 +457,7 @@ def is_idrac(client):
     requests_logger.disabled = True
 
     try:
-        is_ready = client.client.is_idrac_ready()
+        client.client.is_idrac_ready()
     except dracclient.exceptions.WSManInvalidResponse as e:
         # Most likely the user credentials are unauthorized.
 
@@ -485,8 +485,7 @@ def is_idrac(client):
         # Ensure the libraries' loggers are re-enabled.
         requests_logger.disabled = False
         dracclient_wsman_logger.disabled = False
-    if is_ready in (True, False):
-        return True
+    return True
 
 
 if __name__ == '__main__':
