@@ -424,6 +424,9 @@ class Director(InfraHost):
         self.setup_sanity_ini()
 
     def clamp_min_pgs(self, num_pgs):
+        if num_pgs < 1:
+            return 0
+
         pg_options = [8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4,
                       2, 1]
 
@@ -439,6 +442,8 @@ class Director(InfraHost):
         return num_pgs
 
     def calc_pgs(self, num_osds, num_heavy_pools, num_other_pools):
+        if num_osds == 0:
+            return 0, 0
         replication_factor = 3
         max_pgs = num_osds * 200 / replication_factor
         total_pgs = max_pgs * 0.8
@@ -556,7 +561,15 @@ class Director(InfraHost):
                     logger.warning(
                         "Bad entry in osd_disks: {}".format(osd))
 
+        if osds_per_node < 1:
+            logger.info("no OSDs available. exiting")
+            sys.exit(1)
+
         total_osds = self.calc_num_osds(osds_per_node)
+        if total_osds == 0:
+            logger.info("no OSDs available. exiting")
+            sys.exit(1)
+
         heavy_pgs, other_pgs = self.calc_pgs(total_osds,
                                              len(HEAVY_POOLS),
                                              len(OTHER_POOLS))
