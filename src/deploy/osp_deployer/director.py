@@ -792,11 +792,12 @@ class Director(InfraHost):
             '/dellemc/openstack-cinder-volume-dellemc',
             'docker tag registry.connect.redhat.com' +
             '/dellemc/openstack-cinder-volume-dellemc ' +
-            self.ip + ':8787/dellemc/openstack-cinder-volume-dellemc',
-            'docker push ' + self.ip +
+            self.provisioning_ip +
+            ':8787/dellemc/openstack-cinder-volume-dellemc',
+            'docker push ' + self.provisioning_ip +
             ':8787/dellemc/openstack-cinder-volume-dellemc',
             'sed -i "s|DockerCinderVolumeImage.*|' +
-            'DockerCinderVolumeImage: ' + self.ip +
+            'DockerCinderVolumeImage: ' + self.provisioning_ip +
             ':8787\/dellemc\/openstack-cinder-volume-dellemc' +
             '|" ' + overcloud_images_file,
             'echo "  DockerInsecureRegistryAddress:" >> ' +
@@ -830,7 +831,8 @@ class Director(InfraHost):
 
         logger.debug("configuring dell emc unity manila backend")
 
-        overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
+        overcloud_images_file = self.home_dir +
+        "/overcloud_images.yaml"
 
         cmds = [
             'docker login -u ' + self.settings.subscription_manager_user +
@@ -840,13 +842,13 @@ class Director(InfraHost):
             '/dellemc/openstack-manila-share-dellemc',
             'docker tag registry.connect.redhat.com' +
             '/dellemc/openstack-manila-share-dellemc ' +
-            self.ip + ':8787/dellemc/openstack-manila-share-dellemc',
-            'docker push ' + self.ip +
+            self.provisioning_ip +
             ':8787/dellemc/openstack-manila-share-dellemc',
-            'sed -i "s|DockerManilaShareImage.*|' +
-            'DockerManilaShareImage: ' + self.ip +
-            ':8787\/dellemc\/openstack-manila-share-dellemc' +
-            '|" ' + overcloud_images_file,
+            'docker push ' + self.provisioning_ip +
+            ':8787/dellemc/openstack-manila-share-dellemc',
+            'sed -i "50i \  DockerManilaShareImage: ' + self.provisioning_ip +
+            ':8787\/dellemc\/openstack-manila-share-dellemc " ' +
+            overcloud_images_file,
             'echo "  DockerInsecureRegistryAddress:" >> ' +
             overcloud_images_file,
             'echo "  - ' + self.provisioning_ip + ':8787 " >> ' +
