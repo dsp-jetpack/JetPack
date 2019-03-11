@@ -831,8 +831,7 @@ class Director(InfraHost):
 
         logger.debug("configuring dell emc unity manila backend")
 
-        overcloud_images_file = self.home_dir +
-        "/overcloud_images.yaml"
+        overcloud_images_file = self.home_dir + "/overcloud_images.yaml" 
 
         cmds = [
             'docker login -u ' + self.settings.subscription_manager_user +
