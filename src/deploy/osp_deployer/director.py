@@ -780,10 +780,10 @@ class Director(InfraHost):
     def setup_unity_cinder(self, dell_unity_cinder_yaml):
 
         if self.settings.enable_unity_backend is False:
-            logger.debug("not setting up unity cinder backend")
+            logger.debug("Not setting up unity cinder backend.")
             return
 
-        logger.debug("configuring dell emc unity backend")
+        logger.debug("Configuring dell emc unity backend.")
 
         overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
 
@@ -828,10 +828,10 @@ class Director(InfraHost):
     def setup_unity_manila(self, unity_manila_yaml):
 
         if self.settings.enable_unity_manila_backend is False:
-            logger.debug("not setting up unity manila backend")
+            logger.debug("Not setting up unity manila backend.")
             return
 
-        logger.debug("configuring dell emc unity manila backend")
+        logger.debug("Configuring dell emc unity manila backend.")
 
         overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
 
