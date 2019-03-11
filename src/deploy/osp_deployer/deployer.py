@@ -147,7 +147,7 @@ def deploy():
             director_vm.run_tempest()
             os._exit(0)
 
-        logger.info("Uploading configs/iso/scripts..")
+        logger.info("Uploading configs/iso/scripts.")
         sah_node.clear_known_hosts()
         sah_node.handle_lock_files()
         sah_node.upload_iso()
@@ -226,9 +226,7 @@ def deploy():
         director_vm.node_introspection()
         director_vm.update_sshd_conf()
         director_vm.assign_node_roles()
-        # Should we be calling function below?
-        # director_vm.revert_sshd_conf()?
-        director_vm.revert_sshd_conf
+        director_vm.revert_sshd_conf()
 
         director_vm.setup_templates()
         logger.info("=== Installing the overcloud ")
