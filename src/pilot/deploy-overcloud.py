@@ -154,19 +154,11 @@ def create_volume_types():
     if not args.disable_rbd:
         types.append(["rbd_backend", "tripleo_ceph"])
 
-    if args.enable_dellsc or args.enable_unity:
-        cinder_file = open(home_dir +
-                           '/pilot/templates/dell-cinder-backends.yaml', 'r')
-        for line in cinder_file:
-            line = line.strip()
-            try:
-                found = re.search('cinder_user_enabled_backends: \[(.+?)\]',  # noqa: W605
-                                  line).group(1)
-                backends = found.split(",")
-                for backend in backends:
-                    types.append([backend + "_backend", backend])
-            except AttributeError:
-                found = ''
+    if args.enable_dellsc:
+        types.append(["dellsc_backend", "dellsc"])
+
+    if args.enable_unity:
+        types.append(["unity_backend", "tripleo_dellemc_unity"])
 
     overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 
