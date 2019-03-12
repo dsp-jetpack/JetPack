@@ -56,11 +56,10 @@ def get_settings():
                         action='store_true',
                         required=False)
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-validate_settings_only', '--validate_settings_only',
-                        help='Only validate ini and properties files ' +
-                        '(no deployment)',
-                        action='store_true', required=False)
-
+    group.add_argument('-validate_only', '--validate_only',
+                       help='No deployment - just validate config values',
+                       action='store_true',
+                       required=False)
     group.add_argument('-tempest_config_only', '--tempest_config_only',
                        help='Only (re-)generate the tempest.conf file.',
                        action='store_true', required=False)
