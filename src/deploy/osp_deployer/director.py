@@ -561,13 +561,11 @@ class Director(InfraHost):
                     logger.warning(
                         "Bad entry in osd_disks: {}".format(osd))
 
-        if osds_per_node < 1:
-            logger.info("no OSDs available. exiting")
-            sys.exit(1)
-
         total_osds = self.calc_num_osds(osds_per_node)
         if total_osds == 0:
-            logger.info("no OSDs available. exiting")
+            logger.info("Either the OSD configuration is not specified in "
+                        "the .properties file or the storage nodes have "
+                        "no available storage to dedicate to OSDs. Exiting")
             sys.exit(1)
 
         heavy_pgs, other_pgs = self.calc_pgs(total_osds,
