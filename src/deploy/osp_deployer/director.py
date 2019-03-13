@@ -1579,11 +1579,7 @@ class Director(InfraHost):
         """
         logger.info("Configuring tempest")
         setts = self.settings
-        external_sub_cmd = ("source ~/" + setts.overcloud_name + "rc;" +
-                            "openstack subnet list  | grep external_sub " +
-                            "| awk '{print $6;}'")
-        external_sub_guid = self.run_tty(external_sub_cmd)[0].rstrip()
-
+        external_sub_guid = self.get_sanity_subnet()
         if not external_sub_guid:
             err = ("Could not find public network, please run the "
                    + "sanity test to create the appropriate networks "
@@ -1600,10 +1596,9 @@ class Director(InfraHost):
             'source ~/' + setts.overcloud_name + 'rc;' +
             'tempest init ' + TEMPEST_DIR + ';cd ' + TEMPEST_DIR + ';' +
             'discover-tempest-config --deployer-input ' +
-            '~/tempest-deployer-input.conf --debug --create --network-id ' +
-            "`openstack subnet list  | grep external_sub | awk " +
-            "'{print $6;}'` " +
-            "object-storage-feature-enabled.discoverability False",
+            '~/tempest-deployer-input.conf --debug --create ' +
+            '--network-id ' + external_sub_guid +
+            " object-storage-feature-enabled.discoverability False",
             'sed -i "s|tempest_roles =.*|tempest_roles = _member_,Member|" ' +
             TEMPEST_CONF_PATH,
         ]
@@ -1655,6 +1650,15 @@ class Director(InfraHost):
         resp = self.run_tty(cmd)[0].rstrip()
         is_conf = not bool(int(resp))
         return is_conf
+
+    def get_sanity_subnet(self):
+        logger.debug("Retrieving sanity test subnet.")
+        setts = self.settings
+        external_sub_cmd = ("source ~/" + setts.overcloud_name + "rc;" +
+                            "openstack subnet list  | grep external_sub " +
+                            "| awk '{print $6;}'")
+        external_sub_guid = self.run_tty(external_sub_cmd)[0].rstrip()
+        return external_sub_guid
 
     def _backup_tempest_conf(self):
         logger.info("Backing up tempest.conf")
