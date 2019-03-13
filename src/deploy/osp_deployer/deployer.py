@@ -264,8 +264,13 @@ def deploy():
             director_vm.configure_dashboard()
         director_vm.enable_fencing()
         director_vm.run_sanity_test()
-        director_vm.configure_tempest()
+
+        external_sub_guid = director_vm.get_sanity_subnet()
+        if external_sub_guid:
+            director_vm.configure_tempest()
+
         run_tempest()
+
         logger.info("Deployment summary info; useful ip's etc.. " +
                     "/auto_results/deployment_summary.log")
 
