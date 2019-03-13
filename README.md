@@ -7,7 +7,7 @@ JetPack code and documentation is distributed under the Apache 2 license. Contr
 JetPack is an innovative automation package that is used to configure the infrastructure hardware and OpenStack software in a fully automated fashion. The toolkit includes scripts from Dell EMC that work with Red Hat OpenStack Platform Director to automate the deployment process, not only to save time but to ensure the process is reliable and repeatable each time.
 
 Please reference the current Dell EMC NFV Ready Bundle for Red Hat Software Deployment Guide v10.2 for installation and configuration at:
-https://www.dell.com/support/article/us/en/19/sln310368/dell-emc-nfv-ready-bundle-for-red-hat
+https://github.com/dsp-jetpack/JetPack/blob/master/doc/Dell_EMC_Red_Hat_Ready_Architecture_Deployment_Guide_Notes_v13.0.docx
 
 ## Legal
 
