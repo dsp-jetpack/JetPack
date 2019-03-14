@@ -37,7 +37,10 @@ exitFlag = 0
 HEAVY_POOLS = ['volumes', 'images', 'vms']
 OTHER_POOLS = ['.rgw.root', 'default.rgw.control', 'default.rgw.meta',
                'default.rgw.log', 'metrics', 'backups', '.rgw.buckets']
-
+# tempest constants
+TEMPEST_DIR = "~/mytempest"
+TEMPEST_CONF = "tempest.conf"
+TEMPEST_CONF_PATH = TEMPEST_DIR + "/etc/" + TEMPEST_CONF
 
 class Director(InfraHost):
 
@@ -777,10 +780,10 @@ class Director(InfraHost):
     def setup_unity_cinder(self, dell_unity_cinder_yaml):
 
         if self.settings.enable_unity_backend is False:
-            logger.debug("not setting up unity cinder backend")
+            logger.debug("Not setting up unity cinder backend.")
             return
 
-        logger.debug("configuring dell emc unity backend")
+        logger.debug("Configuring dell emc unity backend.")
 
         overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
 
@@ -826,10 +829,10 @@ class Director(InfraHost):
     def setup_unity_manila(self, unity_manila_yaml):
 
         if self.settings.enable_unity_manila_backend is False:
-            logger.debug("not setting up unity manila backend")
+            logger.debug("Not setting up unity manila backend.")
             return
 
-        logger.debug("configuring dell emc unity manila backend")
+        logger.debug("Configuring dell emc unity manila backend.")
 
         overcloud_images_file = self.home_dir + "/overcloud_images.yaml" 
 
@@ -1564,41 +1567,64 @@ class Director(InfraHost):
             pass
 
     def configure_tempest(self):
-        logger.debug("configuring tempest")
+        """Attemtps to create tempest.conf
+
+        If there is an existing tempest.conf it is backed up, the we try
+        to create a new one.  If the correct networks are not there it means
+        sanity test most likely wasn't run, in that case we raise exception
+        informing the user to run sanity test and try again.
+
+        :raises: AssertionException Could not find right subnet to discover
+        networks and configure tempest.
+        """
+        logger.info("Configuring tempest")
         setts = self.settings
+        external_sub_guid = self.get_sanity_subnet()
+        if not external_sub_guid:
+            err = ("Could not find public network, please run the "
+                   + "sanity test to create the appropriate networks "
+                   + "and re-run this script with the "
+                   + "--tempest_config_only flag.")
+            raise AssertionError(err)
+
+        self._backup_tempest_conf()
+
         cmds = [
-            'source ~/' + self.settings.overcloud_name + 'rc;'
-            "sudo ip route add " + self.settings.floating_ip_network +
+            'source ~/' + setts.overcloud_name + 'rc;'
+            "sudo ip route add " + setts.floating_ip_network +
             " dev eth0",
-            'source ~/' + self.settings.overcloud_name + 'rc;' +
-            'tempest init mytempest;cd mytempest;' +
+            'source ~/' + setts.overcloud_name + 'rc;' +
+            'tempest init ' + TEMPEST_DIR + ';cd ' + TEMPEST_DIR + ';' +
             'discover-tempest-config --deployer-input ' +
-            '~/tempest-deployer-input.conf --debug --create --network-id ' +
-            "`openstack subnet list  | grep external_sub | awk " +
-            "'{print $6;}'` " +
-            "object-storage-feature-enabled.discoverability False",
+            '~/tempest-deployer-input.conf --debug --create ' +
+            '--network-id ' + external_sub_guid +
+            " object-storage-feature-enabled.discoverability False",
             'sed -i "s|tempest_roles =.*|tempest_roles = _member_,Member|" ' +
-            '~/mytempest/etc/tempest.conf',
+            TEMPEST_CONF_PATH,
         ]
         for cmd in cmds:
             self.run_tty(cmd)
 
     def run_tempest(self):
-        logger.debug("running tempest")
+        logger.info("Running tempest")
+
+        if not self.is_tempest_conf():
+            self.configure_tempest()
+
         setts = self.settings
         cmd = 'source ~/' + self.settings.overcloud_name + 'rc;cd ' + \
-            '~/mytempest;' + \
+            '~/' + TEMPEST_DIR + ';' + \
             'tempest cleanup --init-saved-state'
 
         self.run_tty(cmd)
 
         if setts.tempest_smoke_only is True:
             cmd = "source ~/" + self.settings.overcloud_name + "rc;cd " \
-                  "~/mytempest; ostestr '.*smoke' --concurrency=4"
+                  "~/" + TEMPEST_DIR + " ostestr '.*smoke' --concurrency=4"
         else:
             cmd = "source ~/" + \
                   self.settings.overcloud_name + \
-                  "rc;cd ~/mytempest;ostestr --concurrency=4"
+                  "rc;cd ~/" + TEMPEST_DIR + ";ostestr --concurrency=4"
         self.run_tty(cmd)
         ip = setts.director_node.public_api_ip
 
@@ -1607,15 +1633,42 @@ class Director(InfraHost):
                      setts.director_install_account_pwd,
                      "/auto_results/tempest.log",
                      "/home/" + setts.director_install_account_user +
-                     "/mytempest/tempest.log")
+                     "~/" + TEMPEST_DIR + "/tempest.log")
         logger.debug("Finished running tempest")
         logger.debug("Tempest clean up")
         cmds = ['source ~/' + self.settings.overcloud_name + 'rc;cd '
-                '~/mytempest;tempest cleanup --dry-run',
+                '~/' + TEMPEST_DIR + ';tempest cleanup --dry-run',
                 'source ~/' + self.settings.overcloud_name + 'rc;cd '
-                '~/mytempest;tempest cleanup'
+                '~/' + TEMPEST_DIR + ';tempest cleanup'
                 ]
         for cmd in cmds:
+            self.run_tty(cmd)
+
+    def is_tempest_conf(self):
+        logger.info("Checking to see if tempest.conf exists.")
+        cmd = "test -f " + TEMPEST_CONF_PATH + "; echo $?;"
+        resp = self.run_tty(cmd)[0].rstrip()
+        is_conf = not bool(int(resp))
+        return is_conf
+
+    def get_sanity_subnet(self):
+        logger.debug("Retrieving sanity test subnet.")
+        setts = self.settings
+        external_sub_cmd = ("source ~/" + setts.overcloud_name + "rc;" +
+                            "openstack subnet list  | grep external_sub " +
+                            "| awk '{print $6;}'")
+        external_sub_guid = self.run_tty(external_sub_cmd)[0].rstrip()
+        return external_sub_guid
+
+    def _backup_tempest_conf(self):
+        logger.info("Backing up tempest.conf")
+        if self.is_tempest_conf():
+            timestamp = int(round(time.time() * 1000))
+            new_conf = (TEMPEST_DIR + "/etc/" + TEMPEST_CONF + "."
+                        + str(timestamp))
+            logger.debug("Backing up tempest.conf, new file is: %s "
+                         % new_conf)
+            cmd = ("mv " + TEMPEST_CONF_PATH + " " + new_conf + " 2>/dev/null")
             self.run_tty(cmd)
 
     def configure_dashboard(self):
