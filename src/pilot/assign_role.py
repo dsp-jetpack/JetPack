@@ -1381,7 +1381,7 @@ def change_physical_disk_state_wait(
 
     result = True
     if job_ids:
-        if all_realtime_controllers:
+        if not all_realtime_controllers:
             LOG.debug("Rebooting the node to apply configuration")
             job_id = drac_client.create_reboot_job()
             job_ids.append(job_id)
