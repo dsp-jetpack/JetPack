@@ -13,7 +13,7 @@
 # limitations under the License.
 
 resource_registry:
-  OS::TripleO::CephStorageExtraConfigPre: ./overcloud/puppet/extraconfig/pre_deploy/per_node.yaml
+  OS::TripleO::CephStorageExtraConfigPre: /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/per_node.yaml
 
 parameter_defaults:
   NodeDataLookup: >
