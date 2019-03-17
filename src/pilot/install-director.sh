@@ -295,6 +295,12 @@ echo "## Patching 10-ironic_wsgi.conf"
 apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
 echo "## Done"
 
+# This patch fixes an issue in tripleo-heat-templates
+echo
+echo "### Patching tripleo-heat-templates"
+sudo sed -i 's/$(get_python)/python/' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/per_node.yaml
+echo "## Done."
+
 # This patch fixes tempest cleanup
 echo
 echo "### Patching tempest cleanup..."
