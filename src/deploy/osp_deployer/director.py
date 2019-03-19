@@ -700,6 +700,10 @@ class Director(InfraHost):
             self.run(cmd)
 
     def setup_dell_storage(self):
+
+        # Clean the local docker registry
+        self.run_tty("sudo docker rmi $(sudo docker images -a -q)")
+
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy with
         # a different config
