@@ -188,7 +188,7 @@ def create_share_types():
     logger.info("Creating manila share types...")
     types = []
 
-    if args.enable_manila_unity:
+    if args.enable_unity_manila:
         types.append(["unity_share", "tripleo_manila_unity"])
 
     overcloudrc_name = CredentialHelper.get_overcloudrc_name()
