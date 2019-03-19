@@ -273,6 +273,13 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resour
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
 
+# This hacks in a patch to remove this hack as OOB introspection is fixed. 
+echo
+echo "## Patching Ironic iDRAC driver inspect.py.."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.py ${HOME}/pilot/inspect.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.pyo
+
 # This hacks in a patch to retrieve error message.
 echo
 echo "## Patching Ironic iDRAC driver constants.py..."
