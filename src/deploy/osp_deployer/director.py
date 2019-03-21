@@ -1599,6 +1599,7 @@ class Director(InfraHost):
             '~/tempest-deployer-input.conf --debug --create ' +
             '--network-id ' + external_sub_guid +
             " object-storage-feature-enabled.discoverability False",
+            " object-storage-feature-enabled.discoverable_apis container_quotas",
             'sed -i "s|tempest_roles =.*|tempest_roles = _member_,Member|" ' +
             TEMPEST_CONF_PATH,
         ]
