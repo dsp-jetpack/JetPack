@@ -691,7 +691,7 @@ setup_manila(){
         fatal "### Share status is: ${share_status}!  Aborting sanity test"
       else
         info "### Share status is: ${share_status}.  Sleeping..."
-        sleep 10
+        sleep 30
         share_status=$(manila list | grep "$share_name" | awk '{print $10}')
       fi
     done
