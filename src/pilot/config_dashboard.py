@@ -580,9 +580,11 @@ def prep_ceph_conf(dashboard_node, ceph_nodes):
             # Create ceph_conf with the preluminous entry
             with open(tmp_hosts, "w") as f:
                 f.writelines(host_entries)
-                f.write("{}{}\n{}".format(
+                f.write("{}{}\n{}\n{}\n{}".format(
                     beg_banner,
                     "mon_health_preluminous_compat=true",
+                    "rgw_swift_enforce_content_length=true",
+                    "rgw_swift_versioning_enabled=true",
                     end_banner))
 
             # Upload the new file to the node
