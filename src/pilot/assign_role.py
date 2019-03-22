@@ -911,21 +911,10 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
     system_id = drac_client.get_system().uuid
 
     spinners, ssds = get_drives(drac_client)
+    disks = spinners + ssds
 
     new_osd_config = None
-    if len(ssds) > 0 and len(spinners) == 0:
-        # If we have an all flash config, then let Ceph colocate the journals
-        new_osd_config = generate_osd_config_without_journals(controllers,
-                                                              ssds)
-    elif len(ssds) > 0 and len(spinners) > 0:
-        # If we have a mix of flash and spinners, then use the ssds as journals
-        new_osd_config = generate_osd_config_with_journals(controllers,
-                                                           spinners,
-                                                           ssds)
-    else:
-        # We have all spinners, so let Ceph colocate the journals
-        new_osd_config = generate_osd_config_without_journals(controllers,
-                                                              spinners)
+    new_osd_config = generate_osd_config_list(controllers, disks)
 
     # load the osd environment file
     osd_config_file = os.path.join(Constants.TEMPLATES, "ceph-osd-config.yaml")
@@ -1054,50 +1043,17 @@ def get_drives(drac_client):
     return spinners, ssds
 
 
-def generate_osd_config_without_journals(controllers, osd_drives):
+def generate_osd_config_list(controllers, drives):
+    # Let ceph-volume allocated WAL devices automatically if applicable.
     osd_config = {
-        'osd_scenario': 'collocated',
+        'osd_scenario': 'lvm',
+        'osd_objectstore': 'bluestore',
         'devices': []}
-    for osd_drive in osd_drives:
+    for osd_drive in drives:
         osd_drive_pci_bus_number = get_pci_bus_number(osd_drive, controllers)
         osd_drive_device_name = get_by_path_device_name(
             osd_drive_pci_bus_number, osd_drive)
         osd_config['devices'].append(osd_drive_device_name)
-
-    return osd_config
-
-
-def generate_osd_config_with_journals(controllers, osd_drives, ssds):
-    if len(osd_drives) % len(ssds) != 0:
-        LOG.warning("There is not an even mapping of OSD drives to SSD "
-                    "journals.  This will cause inconsistent performance "
-                    "characteristics.")
-
-    osd_config = {
-        'osd_scenario': 'non-collocated',
-        'devices': [],
-        'dedicated_devices': []}
-    osd_index = 0
-    remaining_ssds = len(ssds)
-    for ssd in ssds:
-        ssd_pci_bus_number = get_pci_bus_number(ssd, controllers)
-        ssd_device_name = get_by_path_device_name(ssd_pci_bus_number, ssd)
-
-        num_osds_for_ssd = int(math.ceil((len(osd_drives)-osd_index) /
-                                         (remaining_ssds * 1.0)))
-
-        osds_for_ssd = osd_drives[osd_index:
-                                  osd_index + num_osds_for_ssd]
-        for osd_drive in osds_for_ssd:
-            osd_drive_pci_bus_number = get_pci_bus_number(osd_drive,
-                                                          controllers)
-            osd_drive_device_name = get_by_path_device_name(
-                osd_drive_pci_bus_number, osd_drive)
-
-            osd_config['devices'].append(osd_drive_device_name)
-            osd_config['dedicated_devices'].append(ssd_device_name)
-        osd_index += num_osds_for_ssd
-        remaining_ssds -= 1
 
     return osd_config
 
