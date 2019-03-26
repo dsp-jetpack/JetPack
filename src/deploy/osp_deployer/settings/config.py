@@ -405,6 +405,8 @@ class Settings():
         self.sanity_key_name = sanity_settings['sanity_key_name']
         self.sanity_number_instances = \
             sanity_settings['sanity_number_instances']
+        self.vlan_aware_sanity = \
+            sanity_settings['vlan_aware_sanity']
         self.sanity_image_url = sanity_settings['sanity_image_url']
         self.sanity_vlantest_network = \
             sanity_settings['sanity_vlantest_network']
