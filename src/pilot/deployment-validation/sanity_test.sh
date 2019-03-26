@@ -58,6 +58,7 @@ BASE_TENANT_ROUTER_NAME=$(get_value base_tenant_router_name)
 BASE_VLAN_NAME=$(get_value base_vlan_name)
 BASE_NOVA_INSTANCE_NAME=$(get_value base_nova_instance_name)
 BASE_VOLUME_NAME=$(get_value base_volume_name)
+BASE_SHARE_NAME=$(get_value base_share_name)
 BASE_PROJECT_NAME=$(get_value base_project_name)
 BASE_USER_NAME=$(get_value base_user_name)
 BASE_CONTAINER_NAME=$(get_value base_container_name)
@@ -676,6 +677,78 @@ setup_cinder(){
   done
 }
 
+setup_manila(){
+  info "### Manila test"""
+  
+  set_admin_scope
+  manila_exists=$(manila service-list | grep manila-share |  head -n 1  | awk '{print $4}')
+  if [ "$manila_exists" != 'manila-share' ]; then
+    info "### Manila is not deployed. Skipping..."
+    return 1
+  fi
+
+  info "### Create manila share network (unity requires)..."
+  execute_command "manila share-network-list"  
+  manila_share_network_exists=$(manila share-network-list | grep unity_share_net | awk '{print $4}')
+  if [ "$manila_share_network_exists" != "unity_share_net" ]; then
+    net_id=$(openstack network list | grep " $TENANT_NETWORK_NAME " | head -n 1 | awk '{print $2}')
+    subnet_id=$(openstack network list | grep $TENANT_NETWORK_NAME | head -n 1 | awk '{print $6}')
+    
+    execute_command "manila share-network-create --neutron-net-id  $net_id --neutron-subnet-id $subnet_id --name unity_share_net" 
+  fi   
+  execute_command "manila share-network-list"
+  
+	  
+  execute_command "manila list"
+
+  info "### Kicking off share creation..."
+
+  shares=()
+  share_name=$BASE_SHARE_NAME
+  share_exists=$(manila list | grep "$share_name" | awk '{print $2}')
+  if [ "$share_exists" != "$share_name" ]; then
+    info "### Creating share ${share_name}"
+    execute_command "manila create --name $share_name --share_type unity_share --share_network unity_share_net nfs 10"
+    shares+=($share_name)
+  else
+    info "### Share $share_name already exists.  Skipping creation"
+  fi
+
+  execute_command "manila list"    
+
+  info "### Waiting for shares status to change to available..."
+  for share_name in ${shares[@]}
+  do
+    share_status=$(manila list | grep "$share_name" | awk '{print $10}')
+    while [ "$share_status" != "available" ]; do
+      if [ "$share_status" != "creating" ]; then
+        fatal "### Share status is: ${share_status}!  Aborting sanity test"
+      else
+        info "### Share status is: ${share_status}.  Sleeping..."
+        sleep 30
+        share_status=$(manila list | grep "$share_name" | awk '{print $10}')
+      fi
+    done
+    info "### Share $share_name is ready, status is $share_status"
+  done
+}
+
+manila_cleanup()
+{
+    info "#### Deleting the shares"
+
+    ids=$(manila list | grep $BASE_SHARE_NAME | awk '{print $2}')
+    info "share ids: $ids"
+    [[ $ids ]] && echo $ids | xargs -n1 manila delete
+     
+    sleep 5
+
+    ids=$(manila share-network-list | grep unity_share_net | awk '{print $2}')
+    info "share network ids: $ids"
+    [[ $ids ]] && echo $ids | xargs -n1 manila share-network-delete
+
+}
+
 
 radosgw_test(){
   info "### RadosGW test"
@@ -854,6 +927,8 @@ then
 
   set_admin_scope
 
+  manila_cleanup
+
   info   "#### Deleting the images"
   image_ids=$(openstack image list | grep $IMAGE_NAME | awk '{print $2}')
   [[ $image_ids ]] && echo $image_ids | xargs -n1 openstack image delete
@@ -979,11 +1054,17 @@ else
 
   setup_cinder
 
+<<<<<<< HEAD
   if [ "$VLAN_AWARE_SANITY" != False ];then
     vlan_aware_test
   else
     info "VLAN AWARE CHECK = False"
   fi
+=======
+  setup_manila
+
+  vlan_aware_test
+>>>>>>> upstream/master
 
   radosgw_test
 
