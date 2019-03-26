@@ -867,9 +867,8 @@ class Director(InfraHost):
             'docker pull ' + remote_url,
             'docker tag ' + remote_url + ' ' + local_url,
             'docker push ' + local_url,
-            'sed -i "s|DockerManilaShareImage.*|' +
-            'DockerManilaShareImage: ' + local_url +
-            '|" ' + overcloud_images_file,
+            'sed -i "50i \  DockerManilaShareImage: ' + local_url +	
+            '" ' + overcloud_images_file,
             'echo "  DockerInsecureRegistryAddress:" >> ' +
             overcloud_images_file,
             'echo "  - ' + local_registry + ' " >> ' +
