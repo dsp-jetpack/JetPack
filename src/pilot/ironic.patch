@@ -23,7 +23,7 @@
  # be put in the "clean failed" provision state. Set to 0 to
  # disable timeout. (integer value)
 -#clean_callback_timeout = 1800
-+clean_callback_timeout = 2700
++clean_callback_timeout = 5400
  
  # Timeout (seconds) to wait for a callback from the rescue
  # ramdisk. If the timeout is reached the node will be put in

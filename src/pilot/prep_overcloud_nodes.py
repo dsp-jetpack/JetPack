@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,7 +58,8 @@ def main():
         # Set the first boot device to PXE
         logger.info("Setting the provisioning NIC to PXE boot on node " + node)
 
-        cmd = "openstack baremetal node boot device set " + node + " pxe"
+        cmd = "openstack baremetal node boot device set --persistent " + \
+            node + " pxe"
         logger.debug("    {}".format(cmd))
         os.system(cmd)
         cmd = "openstack baremetal node set --driver-info " + \
