@@ -151,7 +151,7 @@ run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
 run_command "sudo yum -y install openstack-tempest"
-run_command "sudo yum install -y python-glance-tests python-keystone-tests python-horizon-tests-tempest python-neutron-tests python-cinder-tests python-nova-tests python-swift-tests python-ceilometer-tests python-gnocchi-tests python-aodh-tests"
+run_command "sudo yum install -y python-neutron-tests-tempest python-cinder-tests-tempest python-telemetry-tests-tempest python-keystone-tests-tempest python-horizon-tests-tempest"
 echo "## Done."
 
 echo
@@ -259,13 +259,6 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resour
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
 
-# This hacks in a patch to enable resetting iDRACs.
-echo
-echo "## Patching Ironic iDRAC driver idrac_card.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/idrac_card.py ${HOME}/pilot/idrac_card.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/idrac_card.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/idrac_card.pyo
-
 # This hacks in a patch to validate and retrieve raid and boss controller and physical disk status.
 echo
 echo "## Patching Ironic iDRAC driver raid.py..."
@@ -280,13 +273,6 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/mo
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.pyo
 
-# This hacks in a patch to retrieve error message.
-echo
-echo "## Patching Ironic iDRAC driver constants.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/constants.py ${HOME}/pilot/constants.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/constants.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/constants.pyo
-
 # This hacks in a patch to create a virtual disk using realtime mode.
 # Note that this code must be here because we use this code prior to deploying
 # the director.
@@ -295,6 +281,17 @@ echo "## Patching Ironic iDRAC driver raid.py..."
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
+echo "## Done."
+
+# This hacks in a patch to filter out all non-printable characters during WSMAN
+# enumeration.
+# Note that this code must be here because we use this code prior to deploying
+# the director.
+echo
+echo "## Patching Ironic iDRAC driver wsman.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
 echo "## Done."
 
 # This patches workarounds for two issues into ironic.conf.
@@ -315,6 +312,14 @@ echo "## Patching 10-ironic_wsgi.conf"
 apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
 echo "## Done"
 
+# This patch fixes tempest cleanup
+echo
+echo "### Patching tempest cleanup..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.py ${HOME}/pilot/tempest_cleanup.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyo
+echo "## Done."
+
 echo
 echo "## Restarting httpd"
 sudo systemctl restart httpd
@@ -331,20 +336,26 @@ echo "## Configuring neutron network ${network} as a cleaning network"
 configure_cleaning_network $network
 echo "## Done."
 
+# If deployment is unlocked, generate the overcloud container list from the latest.
+if [ -e $HOME/overcloud_images.yaml ];
+then
+    echo "using locked containers versions"
+else
+    echo "using latest available containers versions"
+    touch ~/overcloud_images.yaml
 
-touch ~/overcloud_images.yaml
-
-openstack overcloud container image prepare --output-env-file ~/overcloud_images.yaml \
+    openstack overcloud container image prepare --output-env-file ~/overcloud_images.yaml \
  --namespace=registry.access.redhat.com/rhosp13 \
  -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
  -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
  --set ceph_namespace=registry.access.redhat.com/rhceph \
  --set ceph_image=rhceph-3-rhel7 \
- --tag-from-label {version}-{release}  
+ --tag-from-label {version}-{release}
+
+fi
 
 sudo yum install -y os-cloud-config
 sudo yum install -y ceph-ansible
-
 
 
 echo

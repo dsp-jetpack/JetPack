@@ -124,9 +124,17 @@ class Director(InfraHost):
             'sed -i "s|inspection_iprange = .*|inspection_iprange = ' +
             self.settings.discovery_ip_range +
             '|" pilot/undercloud.conf',
+            'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' + 
+            self.settings.sah_node.provisioning_ip +
+            '|" pilot/undercloud.conf'
         ]
         for cmd in cmds:
             self.run(cmd)
+
+        if self.settings.version_locking_enabled is True:
+            source_file = self.settings.lock_files_dir + "/overcloud_images.yaml"
+            dest_file = self.home_dir + "/overcloud_images.yaml"
+            self.upload_file(source_file, dest_file)
 
     def install_director(self):
         logger.debug("Installing the undercloud")
@@ -240,7 +248,6 @@ class Director(InfraHost):
         nodes = list(self.settings.controller_nodes)
         nodes.extend(self.settings.compute_nodes)
         nodes.extend(self.settings.ceph_nodes)
-
         cmd = "~/pilot/config_idracs.py "
 
         json_config = defaultdict(dict)
@@ -256,7 +263,8 @@ class Director(InfraHost):
             new_ipmi_password = self.settings.new_ipmi_password
             if new_ipmi_password:
                 json_config[node_id]["password"] = new_ipmi_password
-
+            if node.skip_nic_config:
+                json_config[node_id]["skip_nic_config"] = node.skip_nic_config
         if json_config.items():
             cmd += "-j '{}'".format(json.dumps(json_config))
 
@@ -1330,10 +1338,10 @@ class Director(InfraHost):
             "sudo ip route add " + self.settings.floating_ip_network + " dev eth0",
             'source ~/' + self.settings.overcloud_name + 'rc;' +
             'tempest init mytempest;cd mytempest;' +
-            'discover-tempest-config --deployer-input ~/tempest-deployer-input.conf ' + 
+            'discover-tempest-config --deployer-input ~/tempest-deployer-input.conf ' +
             "--debug --create --network-id `openstack subnet list  | grep external_sub " +
             "| awk '{print $6;}'` object-storage-feature-enabled.discoverability False",
-            'sed -i "s|tempest_roles =.*|tempest_roles = _member_,Member|" ' + 
+            'sed -i "s|tempest_roles =.*|tempest_roles = _member_,Member|" ' +
             '~/mytempest/etc/tempest.conf',
         ]
         for cmd in cmds:
@@ -1383,9 +1391,9 @@ class Director(InfraHost):
                      ';./config_dashboard.py ' +
                      ip +
                      ' ' + self.settings.dashboard_node.root_password +
-                     ' ' + self.settings.subscription_manager_user + 
-                     ' ' + self.settings.subscription_manager_password + 
-                     ' ' + self.settings.subscription_manager_pool_sah + 
+                     ' ' + self.settings.subscription_manager_user +
+                     ' ' + self.settings.subscription_manager_password +
+                     ' ' + self.settings.subscription_manager_pool_sah +
                      ' ' + self.settings.subscription_manager_vm_ceph)
 
     def enable_fencing(self):
@@ -1416,13 +1424,18 @@ class Director(InfraHost):
         if node.skip_raid_config:
             skip_raid_config = "-s"
 
+        skip_bios_config = ""
+        if node.skip_bios_config:
+            skip_bios_config = "-b"
+
         os_volume_size_gb = ""
         if hasattr(node, 'os_volume_size_gb'):
             os_volume_size_gb = "-o {}".format(node.os_volume_size_gb)
 
-        return './assign_role.py {} {} {} {}-{}'.format(
+        return './assign_role.py {} {} {} {} {}-{}'.format(
             os_volume_size_gb,
             skip_raid_config,
+            skip_bios_config,
             node_identifier,
             role,
             str(index))

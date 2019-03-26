@@ -28,6 +28,8 @@ from logging_helper import LoggingHelper
 logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
+DOWNSTREAM_ATTRS = ["model", "provisioning_mac", "service_tag"]
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -51,7 +53,7 @@ def main():
     content = json.load(open(args.node_definition))
     for node in content['nodes']:
         for k in node.keys():
-            if not k.startswith('pm_'):
+            if k in DOWNSTREAM_ATTRS:
                 node.pop(k)
     with open(import_json, 'w') as out:
         json.dump(content, out)
