@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -84,13 +84,16 @@ parameter_defaults:
   # Set to true to enable Nova usage of Ceph for ephemeral storage.
   # If set to false, Nova uses the storage local to the compute.
   NovaEnableRbdBackend: true
+
+  # Backend to use for glance, options are file, cinder, rbd
+  GlanceBackend: rbd
+
   #  devices:
   #  - /dev/sda2
 
 
   # Configure Ceph Placement Group (PG) values for the indicated pools
-  CephPools: [{"name": "volumes", "pg_num": 1024, "pgp_num": 1024}, {"name": "vms", "pg_num": 256, "pgp_num": 256},
-{"name": "images", "pg_num": 128, "pgp_num": 128}, {"name": ".rgw.buckets", "pg_num": 512, "pgp_num": 512}]
+  CephPools: [{"name": "volumes", "pg_num": 128, "pgp_num": 128}, {"name": "vms", "pg_num": 128, "pgp_num": 128}, {"name": "images", "pg_num": 128, "pgp_num": 128}, {"name": ".rgw.buckets", "pg_num": 64, "pgp_num": 64}]
 
   CephAnsiblePlaybookVerbosity: 1
   
