@@ -401,7 +401,7 @@ sriov_port_creation(){
   #Creating ports in the tenant scope
   set_tenant_scope
 
-  execute_command "openstack port create --network $TENANT_NETWORK_NAME --vnic-type direct $sriov_port_name"
+  execute_command "openstack port create --network $TENANT_NETWORK_NAME --vnic-type direct $sriov_port_name --binding-profile capabilities=switchdev"
 }
 
 spin_up_instances(){
@@ -826,7 +826,7 @@ setup_project(){
   then
     execute_command "openstack project create $PROJECT_NAME"
     execute_command "openstack user create --project $PROJECT_NAME --password $SANITY_USER_PASSWORD --email $SANITY_USER_EMAIL $USER_NAME"
-    execute_command "openstack role add --project $PROJECT_NAME --user $USER_NAME member"
+    execute_command "openstack role add --project $PROJECT_NAME --user $USER_NAME admin"
   else
     info "#Project $PROJECT_NAME exists ---- Skipping"
   fi
@@ -1054,17 +1054,14 @@ else
 
   setup_cinder
 
-<<<<<<< HEAD
   if [ "$VLAN_AWARE_SANITY" != False ];then
     vlan_aware_test
   else
     info "VLAN AWARE CHECK = False"
   fi
-=======
   setup_manila
 
   vlan_aware_test
->>>>>>> upstream/master
 
   radosgw_test
 
