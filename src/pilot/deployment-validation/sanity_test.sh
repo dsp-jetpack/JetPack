@@ -46,6 +46,7 @@ SANITY_USER_PASSWORD=$(get_value sanity_user_password)
 SANITY_USER_EMAIL=$(get_value sanity_user_email)
 SANITY_KEY_NAME=$(get_value sanity_key_name)
 SANITY_NUMBER_INSTANCES=$(get_value sanity_number_instances)
+VLAN_AWARE_SANITY=$(get_value vlan_aware_sanity)
 SANITY_IMAGE_URL=$(get_value image_url)
 FLOATING_IP_NETWORK_NAME=$(get_value floating_ip_network_name)
 FLOATING_IP_SUBNET_NAME=$(get_value floating_ip_subnet_name)
@@ -235,27 +236,30 @@ create_the_networks(){
   else
     info "#-----VLAN Network subnet '$SANITY_TENANT_NETWORK' exists. Skipping"
   fi
+  if [ "$VLAN_AWARE_SANITY" != False ];then
+    vlan1_exists=$(openstack network list -c Name -f value | grep "$VLAN1_NETWORK_NAME")
+    if [ "$vlan1_exists" != "$VLAN1_NETWORK_NAME" ]
+    then
+        set_tenant_scope
+        execute_command "openstack network create $VLAN1_NETWORK_NAME"
+    else
+        info "#-------vlan network '$VLAN1_NETWORK_NAME' already exists. Skipping "
+    fi
 
-  vlan1_exists=$(openstack network list -c Name -f value | grep "$VLAN1_NETWORK_NAME")
-  if [ "$vlan1_exists" != "$VLAN1_NETWORK_NAME" ]
-  then
+    set_admin_scope
+    VLANID_1=$(openstack network show $VLAN1_NETWORK_NAME -c provider:segmentation_id -f value | awk '{print $1}')
+
     set_tenant_scope
-    execute_command "openstack network create $VLAN1_NETWORK_NAME"
+    subnet1_exists=$(openstack subnet list -c Name -f value | grep "vlan${VLANID_1}_sub")
+    if [ "$subnet1_exists" != "vlan${VLANID_1}_sub" ]
+    then
+        execute_command "openstack subnet create vlan${VLANID_1}_sub --network $VLAN1_NETWORK_NAME --subnet-range $SANITY_VLANTEST_NETWORK "
+    else
+        info "#------- Subnet of VLAN $VLAN1ID already exists. Skipping"
+    fi
   else
-    info "#-------vlan network '$VLAN1_NETWORK_NAME' already exists. Skipping "
+    info "VLAN AWARE CHECK = False"
   fi
-  
-  set_admin_scope
-  VLANID_1=$(openstack network show $VLAN1_NETWORK_NAME -c provider:segmentation_id -f value | awk '{print $1}')
-
-  set_tenant_scope
-  subnet1_exists=$(openstack subnet list -c Name -f value | grep "vlan${VLANID_1}_sub")
-  if [ "$subnet1_exists" != "vlan${VLANID_1}_sub" ]
-  then
-    execute_command "openstack subnet create vlan${VLANID_1}_sub --network $VLAN1_NETWORK_NAME --subnet-range $SANITY_VLANTEST_NETWORK " 
-  else
-    info "#------- Subnet of VLAN $VLAN1ID already exists. Skipping"
-  fi  
 
   set_tenant_scope
   router_exists=$(openstack router list -c Name -f value | grep "$TENANT_ROUTER_NAME")
@@ -264,10 +268,13 @@ create_the_networks(){
     execute_command "openstack router create $TENANT_ROUTER_NAME"
 
     subnet_id=$(openstack network list | grep $TENANT_NETWORK_NAME | head -n 1 | awk '{print $6}')
-    subnet_id_vlan=$(openstack network list | grep $VLAN1_NETWORK_NAME | head -n 1 | awk '{print $6}')
-
     execute_command "openstack router add subnet $TENANT_ROUTER_NAME $subnet_id"
-    execute_command "openstack router add subnet $TENANT_ROUTER_NAME $subnet_id_vlan"
+    if [ "$VLAN_AWARE_SANITY" != False ];then
+      subnet_id_vlan=$(openstack network list | grep $VLAN1_NETWORK_NAME | head -n 1 | awk '{print $6}')
+      execute_command "openstack router add subnet $TENANT_ROUTER_NAME $subnet_id_vlan"
+    else
+      info "VLAN AWARE CHECK = False"
+    fi
     
 
   else
@@ -330,31 +337,34 @@ port_creation() {
   else
     info "#-----Parent port 1 already exists. Commencing further----------"
   fi
-  
-  trunk1_exists=$(openstack trunk list -c Name -f value | grep "$TRUNK_PORT1")
-  if [ "$trunk1_exists" != "$TRUNK_PORT1" ]
-  then
-    execute_command "openstack network trunk create --parent-port $PARENT_PORT1 $TRUNK_PORT1"	
-  else
-    info "#-----Trunk Port 1 already exists. Commencing further----------"
-  fi
+if [ "$VLAN_AWARE_SANITY" != False ];then
+    trunk1_exists=$(openstack trunk list -c Name -f value | grep "$TRUNK_PORT1")
+    if [ "$trunk1_exists" != "$TRUNK_PORT1" ]
+    then
+      execute_command "openstack network trunk create --parent-port $PARENT_PORT1 $TRUNK_PORT1"
+    else
+      info "#-----Trunk Port 1 already exists. Commencing further----------"
+    fi
 
-  
-  MACADDR_PP1=$(openstack port show -c mac_address -f value $PARENT_PORT1)
+
+    MACADDR_PP1=$(openstack port show -c mac_address -f value $PARENT_PORT1)
 
   # Creating subports
-  info "### Creating subports and setting its security group----------"
-  subport1_exists=$(openstack port list -c Name -f value | grep "subport1_$VLANID_1")
-  if [ "$subport1_exists" != "subport1_$VLANID_1" ]
-  then
-    set_tenant_scope
-    execute_command "openstack port create --mac-address $MACADDR_PP1 --network $VLAN1_NETWORK_NAME subport1_$VLANID_1"
-    execute_command "openstack port set --security-group $SECURITY_GROUP_NAME subport1_$VLANID_1"
+    info "### Creating subports and setting its security group----------"
+    subport1_exists=$(openstack port list -c Name -f value | grep "subport1_$VLANID_1")
+    if [ "$subport1_exists" != "subport1_$VLANID_1" ]
+    then
+      set_tenant_scope
+      execute_command "openstack port create --mac-address $MACADDR_PP1 --network $VLAN1_NETWORK_NAME subport1_$VLANID_1"
+      execute_command "openstack port set --security-group $SECURITY_GROUP_NAME subport1_$VLANID_1"
 
-    info "Attaching subport to the TRUNK_PORT1."
-    execute_command "openstack network trunk set --subport port=subport1_$VLANID_1,segmentation-type=vlan,segmentation-id=${VLANID_1} ${TRUNK_PORT1}"
+      info "Attaching subport to the TRUNK_PORT1."
+      execute_command "openstack network trunk set --subport port=subport1_$VLANID_1,segmentation-type=vlan,segmentation-id=${VLANID_1} ${TRUNK_PORT1}"
+    else
+      info "#-----Subport subport1_$VLANID_1 exists.Commencing further----------"
+    fi
   else
-    info "#-----Subport subport1_$VLANID_1 exists.Commencing further----------"
+    info "VLAN AWARE CHECK = False"
   fi
 }
 
@@ -404,24 +414,47 @@ spin_up_instances(){
   info "### Initiating build of instances..."
   
   declare -a instance_names
+info "VLAN AWARE CHECK == ${VLAN_AWARE_SANITY}"
+  if [ "$VLAN_AWARE_SANITY" != False ];then
+    info "SANITY_NUMBER_INSTANCES = ${SANITY_NUMBER_INSTANCES}"
+    SANITY_NUMBER_INSTANCES=$((SANITY_NUMBER_INSTANCES+1))
+    info "SANITY_NUMBER_INSTANCES WITH Vlan Instance = ${SANITY_NUMBER_INSTANCES}"
+  else
+    info "SANITY_NUMBER_INSTANCES = ${SANITY_NUMBER_INSTANCES}"
+  fi
   index=1
-  
-  while [ $index -le $((SANITY_NUMBER_INSTANCES + 1)) ]; do
+
+  while [ $index -le $((${SANITY_NUMBER_INSTANCES})) ]; do
   instance_name="${BASE_NOVA_INSTANCE_NAME}_$index"
-    if [ $index != $((${SANITY_NUMBER_INSTANCES} + 1)) ]; then
+    if [ $index -le $((${SANITY_NUMBER_INSTANCES})) ] && [ "$VLAN_AWARE_SANITY" == False ]; then
       if [ "$SRIOV_ENABLED" != False ];then
         info "### SRIOV: Creating SRIOV ports"
         sriov_port_name="sriov_port_$index"
         sriov_port_creation $sriov_port_name
-        sleep 10
+        sleep 50
         info "### SRIOV: Initiating build of SR-IOV enabled instances..."
         execute_command "openstack server create --security-group $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic port-id=$sriov_port_name $instance_name"
       else
         execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $instance_name"
       fi
+    elif [ $index -le $((${SANITY_NUMBER_INSTANCES})) ] && [ "$VLAN_AWARE_SANITY" != False ]; then
+      if [ $index -lt $((${SANITY_NUMBER_INSTANCES})) ]; then
+        if [ "$SRIOV_ENABLED" != False ];then
+          info "### SRIOV: Creating SRIOV ports"
+          sriov_port_name="sriov_port_$index"
+          sriov_port_creation $sriov_port_name
+          sleep 50
+          info "### SRIOV: Initiating build of SR-IOV enabled instances..."
+          execute_command "openstack server create --security-group $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic port-id=$sriov_port_name $instance_name"
+        else
+          execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $instance_name"
+        fi
+      else
+        info "### Initiating build of Vlan-Aware-Instance..."
+        execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic port-id=${pp1_id} --user-data ${HOME}/interfacescript $instance_name"
+      fi
     else
-      info "### Initiating build of Vlan-Aware-Instance..."
-      execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic port-id=${pp1_id} --user-data ${HOME}/interfacescript $instance_name"
+        info "VLAN AWARE CHECK == ${VLAN_AWARE_SANITY}"
     fi
   instance_names[((index-1))]=$instance_name
   index=$((index+1))
@@ -503,8 +536,9 @@ ping_from_netns(){
       break
     fi
   done
-  sleep 20
+
   info "### Pinging $ip from netns $name_space on controller $controller"
+  sleep 20
   execute_command "ssh ${SSH_OPTS} heat-admin@$controller sudo ip netns exec ${name_space} ping -c 1 -w 5 ${ip}"
   if [[ "$?" == 0 ]]
   then
@@ -970,9 +1004,14 @@ then
   
   info "### Deleting networks"
   network_ids=$(openstack network list | grep -E "$BASE_TENANT_NETWORK_NAME|$VLAN_NETWORK_NAME|$FLOATING_IP_NETWORK_NAME" | awk '{print $2}')
+  public_id=$(openstack network list | grep $FLOATING_IP_NETWORK_NAME | head -n 1 | awk '{print $2}')
   for network_id in $network_ids
   do
-    openstack network delete $network_id
+    if [ "$network_id" != "$public_id" ];then
+      openstack network delete $network_id
+    else
+      info "Public Network Can not be deleted"
+    fi
   done
 
   info "### Deleting key file"
@@ -1003,7 +1042,11 @@ else
 
   setup_nova
 
-  script
+  if [ "$VLAN_AWARE_SANITY" != False ];then
+    script
+  else
+    info "VLAN AWARE CHECK = False"
+  fi
 
   spin_up_instances
 
@@ -1011,9 +1054,17 @@ else
 
   setup_cinder
 
+<<<<<<< HEAD
+  if [ "$VLAN_AWARE_SANITY" != False ];then
+    vlan_aware_test
+  else
+    info "VLAN AWARE CHECK = False"
+  fi
+=======
   setup_manila
 
   vlan_aware_test
+>>>>>>> upstream/master
 
   radosgw_test
 
