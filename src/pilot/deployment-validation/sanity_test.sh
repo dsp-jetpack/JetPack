@@ -371,7 +371,7 @@ if [ "$VLAN_AWARE_SANITY" != False ];then
 
 setup_glance(){
   info "### Setting up glance"""
-  set_admin_scope
+  set_tenant_scope
 
   if [ ! -f ./$IMAGE_FILE_NAME ]; then
     sleep 5 #HACK: a timing issue exists on some stamps -- 5 seconds seems sufficient to fix it
@@ -389,12 +389,14 @@ setup_glance(){
   image_exists=$(openstack image list -c Name -f value | grep -x $IMAGE_NAME)
   if [ "$image_exists" != "$IMAGE_NAME" ]
   then
-    execute_command "openstack image create --disk-format qcow2 --container-format bare --file $IMAGE_FILE_NAME $IMAGE_NAME --public"
+    execute_command "openstack image create --disk-format qcow2 --container-format bare --file $IMAGE_FILE_NAME $IMAGE_NAME"
   else
     info "#----- Image '$IMAGE_NAME' exists. Skipping"
   fi
 
   execute_command "openstack image list"
+  #reset
+  set_admin_scope
 }
 
 sriov_port_creation(){
