@@ -1056,17 +1056,14 @@ else
 
   setup_cinder
 
-<<<<<<< HEAD
   if [ "$VLAN_AWARE_SANITY" != False ];then
     vlan_aware_test
   else
     info "VLAN AWARE CHECK = False"
   fi
-=======
   setup_manila
 
   vlan_aware_test
->>>>>>> upstream/master
 
   radosgw_test
 
