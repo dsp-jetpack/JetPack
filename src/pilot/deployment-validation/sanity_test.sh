@@ -1044,26 +1044,19 @@ else
 
   setup_nova
 
-  if [ "$VLAN_AWARE_SANITY" != False ];then
-    script
-  else
-    info "VLAN AWARE CHECK = False"
-  fi
-
   spin_up_instances
 
   test_neutron_networking
 
   setup_cinder
 
+  setup_manila
+
   if [ "$VLAN_AWARE_SANITY" != False ];then
     vlan_aware_test
   else
     info "VLAN AWARE CHECK = False"
   fi
-  setup_manila
-
-  vlan_aware_test
 
   radosgw_test
 
