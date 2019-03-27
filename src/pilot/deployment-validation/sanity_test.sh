@@ -774,7 +774,7 @@ radosgw_cleanup(){
   execute_command "swift list"
 }
 
-script(){
+create_vlan_aware_interface_script(){
 #Script for the setting up the interfaces of vlan network in vlan aware instance
 info "### Creating interfaces script for interface setup-------------"
 ip_sbp=$(openstack port list | grep subport1_$VLANID_1 | awk '{print $8}' | awk -F"'" '{print $2}')
@@ -1043,6 +1043,12 @@ else
   setup_glance
 
   setup_nova
+  
+  if [ "$VLAN_AWARE_SANITY" != False ];then
+    create_vlan_aware_interface_script
+  else
+    info "VLAN aware check is false."
+  fi
 
   spin_up_instances
 
@@ -1054,8 +1060,6 @@ else
 
   if [ "$VLAN_AWARE_SANITY" != False ];then
     vlan_aware_test
-  else
-    info "VLAN AWARE CHECK = False"
   fi
 
   radosgw_test
