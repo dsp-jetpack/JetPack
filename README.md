@@ -1,13 +1,8 @@
-# JetPack
+# Hyper Converged Infrastructure Ready Architecture on Red Hat Openstack
 
-JetPack code and documentation is distributed under the Apache 2 license. Contributions back to the source are encouraged. 
 
 ## Description
 
-JetPack is an innovative automation package that is used to configure the infrastructure hardware and OpenStack software in a fully automated fashion. The toolkit includes scripts from Dell EMC that work with Red Hat OpenStack Platform Director to automate the deployment process, not only to save time but to ensure the process is reliable and repeatable each time.
-
-Please reference the current Deployment Guide for Dell EMC NFV Ready Architecture for Red Hat Software v13.0 for installation and configuration at:
-https://github.com/dsp-jetpack/JetPack/blob/master/doc/deployment_guide.md
 
 ## Legal
 
