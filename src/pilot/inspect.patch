@@ -1,14 +1,6 @@
---- inspect.py	2019-03-18 04:26:06.117996201 -0400
-+++ inspect_latest.py	2019-03-18 04:36:58.007653944 -0400
-@@ -119,10 +119,17 @@
-                       {'node_uuid': node.uuid, 'error': exc})
-             raise exception.HardwareInspectionFailure(error=exc)
- 
-+        pxe_dev_nics = self._get_pxe_dev_nics(client, nics, node)
-+        if pxe_dev_nics is None:
-+            LOG.warning('No PXE enabled NIC was found for node '
-+                        '%(node_uuid)s.', {'node_uuid': node.uuid})
-+        
+--- inspect.py	2019-03-27 09:53:02.035769407 +0000
++++ inspect_modified.py	2019-03-27 09:51:32.965097867 +0000
+@@ -122,8 +122,10 @@
          for nic in nics:
              try:
                  port = objects.Port(task.context, address=nic.mac,
@@ -16,10 +8,11 @@
 +                                    node_id=node.id,
 +                                    pxe_enabled=(nic.id in pxe_dev_nics))
                  port.create()
-                 
++
                  LOG.info('Port created with MAC address %(mac)s '
                           'for node %(node_uuid)s during inspection',
-@@ -161,3 +168,48 @@
+                          {'mac': nic.mac, 'node_uuid': node.uuid})
+@@ -161,3 +163,47 @@
              return cpu.cores * 2
          else:
              return cpu.cores
@@ -42,7 +35,7 @@
 +            bios_settings = client.list_bios_settings()
 +        except drac_exceptions.BaseClientException as exc:
 +            LOG.error('DRAC driver failed to list bios settings '
-+                          'for %(node_uuid)s. Reason: %(error)s.',
++                      'for %(node_uuid)s. Reason: %(error)s.',
 +                      {'node_uuid': node.uuid, 'error': exc})
 +            raise exception.HardwareInspectionFailure(error=exc)
 +
@@ -58,7 +51,7 @@
 +                    nic_cap = client.list_nic_settings(nic_id=nic.id)
 +                except drac_exceptions.BaseClientException as exc:
 +                    LOG.error('DRAC driver failed to list nic settings '
-+                                  'for %(node_uuid)s. Reason: %(error)s.',
++                              'for %(node_uuid)s. Reason: %(error)s.',
 +                              {'node_uuid': node.uuid, 'error': exc})
 +                    raise exception.HardwareInspectionFailure(error=exc)
 +
@@ -67,4 +60,3 @@
 +                    pxe_dev_nics.append(nic.id)
 +
 +        return pxe_dev_nics
-+
