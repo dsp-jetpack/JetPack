@@ -1,0 +1,115 @@
+# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+resource_registry:
+  OS::TripleO::NodeUserData: /home/osp_admin/templates/wipe-disks.yaml
+
+parameter_defaults:
+
+  # Defines the interface to bridge onto br-ex for network nodes
+  NeutronPublicInterface: bond1
+  # The tenant network type for Neutron
+  NeutronNetworkType: vlan
+  ## >neutron-disable-tunneling no mapping.
+
+  # The neutron ML2 and OpenvSwith VLAN Mapping ranges to support.
+  NeutronNetworkVLANRanges: physint:201:250,physext
+
+  # The logical to physical bridge mappings to use. 
+  # Defaults to mapping the external bridge on hosts (br-ex) to a physical name (datacentre). 
+  # You would use this for the default floating network
+  NeutronBridgeMappings: physint:br-tenant,physext:br-ex
+
+  # Flavor used as the HCI compute
+  OvercloudComputeHCIFlavor: baremetal
+  # Flavor to use for the Controller nodes
+  OvercloudControllerFlavor: baremetal
+  # Flavor to use for the ceph Storage nodes
+  OvercloudCephStorageFlavor: baremetal
+  # Flavor to use for the Swift storage nodes
+  OvercloudSwiftStorageFlavor: baremetal
+  # Flavor to use for the Cinder nodes
+  OvercloudBlockStorageFlavor: baremetal
+
+  # List of Default Filters to pass to the nova Scheduler
+  # Default filters are used if profile is set to XSP
+  # This line is uncommented when using with CSP profile
+  # NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','RamFilter','DiskFilter', 'ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter', 'CoreFilter', 'NUMATopologyFilter', 'AggregateInstanceExtraSpecsFilter']
+
+  # Number of HCI Compute nodes
+  ComputeHCICount: 3
+
+  # Number of Controller nodes
+  ControllerCount: 3
+
+  # To customize the domain name of the overcloud nodes, change "localdomain"
+  # in the following line to the desired domain name.
+  CloudDomain: oss.labs
+
+  # Set to true to enable Nova usage of Ceph for ephemeral storage.
+  # If set to false, Nova uses the storage local to the compute.
+  NovaEnableRbdBackend: true
+  #  devices:
+  #  - /dev/sda2
+
+
+  # Configure Ceph Placement Group (PG) values for the indicated pools
+  CephPools: [{"name": "volumes", "pg_num": 4096, "pgp_num": 4096}, {"name": "vms", "pg_num": 1024, "pgp_num": 1024},{"name": "images", "pg_num": 512, "pgp_num": 512}]
+  CephAnsiblePlaybookVerbosity: 1
+
+  # Default pool size is 3, change to 2 if deployment fails on 13G. 
+  CephPoolDefaultSize: 2
+  CephConfigOverrides:
+    journal_size: 10240
+    journal_collocation: true
+    mon_max_pg_per_osd: 300
+  CephAnsibleDisksConfig:
+    osd_scenario: lvm
+    devices:
+      - /dev/nvme0n1
+      - /dev/nvme1n1
+      - /dev/nvme2n1
+      - /dev/nvme3n1
+      - /dev/nvme4n1
+      - /dev/nvme5n1
+      - /dev/nvme6n1
+      - /dev/nvme7n1
+  CephAnsibleExtraConfig:
+    osd_objectstore: bluestore
+    osds_per_device: 2
+    osd_recovery_op_priority: 3
+    osd_recovery_max_active: 3
+    osd_max_backfills: 1
+    ceph_osd_docker_memory_limit: 10g
+    ceph_osd_docker_cpu_limit: 4
+
+  ComputeHCIExtraConfig:
+    cpu_allocation_ratio: 6.7
+
+  ComputeHCIParameters:
+    NovaReservedHostMemory: 115000
+
+  NovaComputeExtraConfig:
+    nova::migration::libvirt::live_migration_completion_timeout: 800
+    nova::migration::libvirt::live_migration_progress_timeout: 150
+  ControllerExtraConfig:
+    nova::api::osapi_max_limit: 10000
+    nova::rpc_response_timeout: 180
+    nova::keystone::authtoken::revocation_cache_time: 300
+    neutron::rpc_response_timeout: 180
+    neutron::keystone::authtoken::revocation_cache_time: 300
+    cinder::keystone::authtoken::revocation_cache_time: 300
+    glance::api::authtoken::revocation_cache_time: 300
+    tripleo::profile::pacemaker::database::mysql::innodb_flush_log_at_trx_commit: 0
+    tripleo::haproxy::haproxy_default_maxconn: 10000
