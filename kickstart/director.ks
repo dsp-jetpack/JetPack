@@ -45,17 +45,17 @@ yum-plugin-versionlock
 %end
 
 %pre --log /tmp/director-pre.log
-echo rootpw Dell0SS! >> /tmp/ks_include.txt
+echo rootpw xxxxxxxx >> /tmp/ks_include.txt
 echo timezone America/Chicago --utc >> /tmp/ks_include.txt
-echo SMUser=NFVSolution >> /tmp/ks_post_include.txt
-echo SMPassword=\'1234Dell\' >> /tmp/ks_post_include.txt
-echo SMPool=8a85f98b635f3e6d0164454c8b17467d >> /tmp/ks_post_include.txt
+echo SMUser=xxxxxxxxxxx >> /tmp/ks_post_include.txt
+echo SMPassword=XXXXXXXX >> /tmp/ks_post_include.txt
+echo SMPool=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx >> /tmp/ks_post_include.txt
 echo HostName=director.OSS.LABS >> /tmp/ks_post_include.txt
 echo Gateway=100.67.139.1 >> /tmp/ks_post_include.txt
 echo NameServers=8.8.8.8 >> /tmp/ks_post_include.txt
 echo NTPServers=192.168.120.8 >> /tmp/ks_post_include.txt
 echo User=osp_admin >> /tmp/ks_post_include.txt
-echo Password=Dell0SS! >> /tmp/ks_post_include.txt
+echo Password=xxxxxxxx >> /tmp/ks_post_include.txt
 echo network --activate --onboot=true --noipv6 --device=eth0 --bootproto=static --ip=100.67.139.9 --netmask=255.255.255.192 --hostname=director.OSS.LABS --gateway=100.67.139.1 --nameserver=8.8.8.8 --mtu=1500 >> /tmp/ks_include.txt
 echo eth0_mtu=1500 >> /tmp/ks_post_include.txt
 echo network --activate --onboot=true --noipv6 --device=eth1 --bootproto=static --ip=192.168.120.9 --netmask=255.255.255.0 --gateway=100.67.139.1 --nodefroute --mtu=1500 >> /tmp/ks_include.txt

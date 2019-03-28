@@ -88,14 +88,14 @@ system-config-firewall-base
 HostName="sah.R139b.nfv.lab"
 
 # Root password of server
-SystemPassword="Dell0SS!"
+SystemPassword="xxxxxxxx"
 
 # Subscription Manager credentials and pool to connect to.
 # If the pool is not specified, the kickstart will try to subscribe to
 # the first subcription specified as "Red Hat Enterprise Linux Server"
-SubscriptionManagerUser="NFVSolution"
-SubscriptionManagerPassword="1234Dell"
-SubscriptionManagerPool="8a85f98b635f3e6d0164454c88d44678"
+SubscriptionManagerUser="xxxxxxxxxxx"
+SubscriptionManagerPassword="xxxxxxxx"
+SubscriptionManagerPool="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 SubscriptionManagerProxy=""
 SubscriptionManagerProxyPort=""
 SubscriptionManagerProxyUser=""
