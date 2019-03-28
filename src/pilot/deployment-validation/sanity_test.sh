@@ -371,7 +371,7 @@ if [ "$VLAN_AWARE_SANITY" != False ];then
 
 setup_glance(){
   info "### Setting up glance"""
-  set_admin_scope
+  set_tenant_scope
 
   if [ ! -f ./$IMAGE_FILE_NAME ]; then
     sleep 5 #HACK: a timing issue exists on some stamps -- 5 seconds seems sufficient to fix it
@@ -389,12 +389,14 @@ setup_glance(){
   image_exists=$(openstack image list -c Name -f value | grep -x $IMAGE_NAME)
   if [ "$image_exists" != "$IMAGE_NAME" ]
   then
-    execute_command "openstack image create --disk-format qcow2 --container-format bare --file $IMAGE_FILE_NAME $IMAGE_NAME --public"
+    execute_command "openstack image create --disk-format qcow2 --container-format bare --file $IMAGE_FILE_NAME $IMAGE_NAME"
   else
     info "#----- Image '$IMAGE_NAME' exists. Skipping"
   fi
 
   execute_command "openstack image list"
+  #reset
+  set_admin_scope
 }
 
 sriov_port_creation(){
@@ -772,7 +774,7 @@ radosgw_cleanup(){
   execute_command "swift list"
 }
 
-script(){
+create_vlan_aware_interface_script(){
 #Script for the setting up the interfaces of vlan network in vlan aware instance
 info "### Creating interfaces script for interface setup-------------"
 ip_sbp=$(openstack port list | grep subport1_$VLANID_1 | awk '{print $8}' | awk -F"'" '{print $2}')
@@ -1041,11 +1043,11 @@ else
   setup_glance
 
   setup_nova
-
+  
   if [ "$VLAN_AWARE_SANITY" != False ];then
-    script
+    create_vlan_aware_interface_script
   else
-    info "VLAN AWARE CHECK = False"
+    info "VLAN aware check is false."
   fi
 
   spin_up_instances
@@ -1054,14 +1056,11 @@ else
 
   setup_cinder
 
-  if [ "$VLAN_AWARE_SANITY" != False ];then
-    vlan_aware_test
-  else
-    info "VLAN AWARE CHECK = False"
-  fi
   setup_manila
 
-  vlan_aware_test
+  if [ "$VLAN_AWARE_SANITY" != False ];then
+    vlan_aware_test
+  fi
 
   radosgw_test
 

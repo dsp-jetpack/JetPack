@@ -468,11 +468,11 @@ innodb_buffer_pool_instances = 16
 
 # DRAC credentials with IPMI privilege for the SAH node
 sah_ipmi_user=root
-sah_ipmi_password=Dell0SS!
+sah_ipmi_password=xxxx
 
 # DRAC credentials with IPMI privilege for the overcloud nodes
 ipmi_user=root
-ipmi_password=Dell0SS!
+ipmi_password=xxxx
 # A password to change to on overcloud nodes if desired
 new_ipmi_password=
 
@@ -490,7 +490,7 @@ cluster_nodes_configuration_file=/root/dss9k_js10.2.csp.properties
 
 # User for the undercloud/overcloud installation
 director_install_user=osp_admin
-director_install_user_password=Dell0SS!
+director_install_user_password=xxxx
 
 # Name of the Overcloud.
 # The nodes hostnames will be prepended with the given name and a dash
@@ -500,7 +500,7 @@ overcloud_name=dss9k-rh
 domain=oss.labs
 
 # Optional : root passord for the overcloud nodes, no password is set if left empty
-overcloud_nodes_pwd=Dell0SS!
+overcloud_nodes_pwd=xxxx
 
 # , separated list of ntp servers
 ntp_servers=0.centos.pool.ntp.org,1.centos.pool.ntp.org,2.centos.pool.ntp.org,3.centos.pool.ntp.org
@@ -539,7 +539,7 @@ dellsc_iscsi_ip_address=192.168.170.241
 dellsc_iscsi_port=3260
 dellsc_san_ip=100.82.32.49
 dellsc_san_login=svc.cmpl
-dellsc_san_password=Dell0SS!
+dellsc_san_password=xxxx
 dellsc_ssn=43411
 dellsc_server_folder=cmpl_iscsi_servers
 dellsc_volume_folder=cmpl_iscsi_volumes
@@ -556,7 +556,7 @@ floating_ip_network_end_ip=100.82.35.120
 floating_ip_network_gateway=100.82.35.65
 floating_ip_network_vlan=352
 sanity_tenant_network=192.168.201.0/24
-sanity_user_password=Dell0SS!
+sanity_user_password=xxxx
 sanity_user_email=someone@somewhere.com
 sanity_key_name=sanity
 
@@ -638,7 +638,7 @@ verify_rhsm_status=true
         "is_sah": "true",
         "hostname": "dss9k-sah",
         "idrac_ip": "192.168.110.9",
-        "root_password": "Dell0SS!",
+        "root_password": "xxxx",
 
         "anaconda_ip":"100.82.35.6",
         "anaconda_iface":"p3p2.351",
@@ -657,7 +657,7 @@ verify_rhsm_status=true
     {
         "is_director": "true",
         "hostname": "dss9k-director",
-        "root_password": "Dell0SS!",
+        "root_password": "xxxx",
         "provisioning_ip": "192.168.120.10",
         "management_ip":"192.168.110.110",
         "public_api_ip":"100.82.35.10",
@@ -666,7 +666,7 @@ verify_rhsm_status=true
     {
         "is_dashboard": "true",
         "hostname": "dss9k-dashboard",
-        "root_password": "Dell0SS!",
+        "root_password": "xxxx",
 
         "public_api_ip": "100.82.35.11",
         "storage_ip": "192.168.170.11"
@@ -1207,11 +1207,11 @@ innodb_buffer_pool_instances = 16
 
 # DRAC credentials with IPMI privilege for the SAH node
 sah_ipmi_user=root
-sah_ipmi_password=Dell0SS!
+sah_ipmi_password=xxxx
 
 # DRAC credentials with IPMI privilege for the overcloud nodes
 ipmi_user=root
-ipmi_password=Dell0SS!
+ipmi_password=xxxx
 # A password to change to on overcloud nodes if desired
 new_ipmi_password=
 
@@ -1230,7 +1230,7 @@ cluster_nodes_configuration_file=/root/acme.properties
 
 # User for the undercloud/overcloud installation
 director_install_user=osp_admin
-director_install_user_password=Dell0SS!
+director_install_user_password=xxxx
 
 # Name of the Overcloud.
 # The nodes hostnames will be prepended with the given name and a dash
@@ -1240,7 +1240,7 @@ overcloud_name=dss-overcloud
 domain=oss.labs
 
 # Optional : root passord for the overcloud nodes, no password is set if left empty
-overcloud_nodes_pwd=Dell0SS!
+overcloud_nodes_pwd=xxxx
 
 # , separated list of ntp servers
 ntp_servers=0.centos.pool.ntp.org,1.centos.pool.ntp.org,2.centos.pool.ntp.org,3.centos.pool.ntp.org
@@ -1271,7 +1271,7 @@ dellsc_iscsi_ip_address=192.168.170.241
 dellsc_iscsi_port=3260
 dellsc_san_ip=100.82.32.49
 dellsc_san_login=svc.cmp1
-dellsc_san_password=Dell0SS!
+dellsc_san_password=xxxx
 dellsc_ssn=43411
 dellsc_server_folder=cmpl_iscsi_servers
 dellsc_volume_folder=cmpl_iscsi_volumes
@@ -1288,7 +1288,7 @@ floating_ip_network_end_ip=100.82.35.120
 floating_ip_network_gateway=100.82.35.65
 floating_ip_network_vlan=352
 sanity_tenant_network=192.168.201.0/24
-sanity_user_password=Dell0SS!
+sanity_user_password=xxxx
 sanity_user_email=someone@somewhere.com
 sanity_key_name=sanity
 
@@ -1377,7 +1377,7 @@ verify_rhsm_status=true
         "is_sah": "true",
         "hostname": "dss9k-sah",
         "idrac_ip": "192.168.110.9",
-        "root_password": "Dell0SS!",
+        "root_password": "xxxx",
 
         "anaconda_ip":"100.82.35.6",
         "anaconda_iface":"p3p2.351",
@@ -1396,7 +1396,7 @@ verify_rhsm_status=true
     {
         "is_director": "true",
         "hostname": "dss9k-director",
-        "root_password": "Dell0SS!",
+        "root_password": "xxxx",
 
         "provisioning_ip": "192.168.120.10",
 
@@ -1408,7 +1408,7 @@ verify_rhsm_status=true
     {
         "is_dashboard": "true",
         "hostname": "dss9k-dashboard",
-        "root_password": "Dell0SS!",
+        "root_password": "xxxx",
 
         "public_api_ip": "100.82.35.11",
         "storage_ip": "192.168.170.11"

@@ -804,27 +804,28 @@ class Director(InfraHost):
 
         overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
 
+        cinder_container = "/dellemc/openstack-cinder-volume-dellemc:" + \
+            self.settings.cinder_unity_container_version
+        remote_registry = "registry.connect.redhat.com"
+        remote_url = remote_registry + cinder_container
+        local_registry = self.provisioning_ip + ":8787"
+        local_url = local_registry + cinder_container
+
         cmds = [
             'docker login -u ' + self.settings.subscription_manager_user +
             ' -p ' + self.settings.subscription_manager_password +
-            ' registry.connect.redhat.com',
-            'docker pull registry.connect.redhat.com' +
-            '/dellemc/openstack-cinder-volume-dellemc',
-            'docker tag registry.connect.redhat.com' +
-            '/dellemc/openstack-cinder-volume-dellemc ' +
-            self.provisioning_ip +
-            ':8787/dellemc/openstack-cinder-volume-dellemc',
-            'docker push ' + self.provisioning_ip +
-            ':8787/dellemc/openstack-cinder-volume-dellemc',
+            ' ' + remote_registry,
+            'docker pull ' + remote_url,
+            'docker tag ' + remote_url + ' ' + local_url,
+            'docker push ' + local_url,
             'sed -i "s|DockerCinderVolumeImage.*|' +
-            'DockerCinderVolumeImage: ' + self.provisioning_ip +
-            ':8787\/dellemc\/openstack-cinder-volume-dellemc' +
+            'DockerCinderVolumeImage: ' + local_url +
             '|" ' + overcloud_images_file,
             'echo "  DockerInsecureRegistryAddress:" >> ' +
             overcloud_images_file,
-            'echo "  - ' + self.provisioning_ip + ':8787 " >> ' +
+            'echo "  - ' + local_registry + ' " >> ' +
             overcloud_images_file,
-            'docker logout registry.connect.redhat.com',
+            'docker logout ' + remote_registry,
             'sed -i "s|<unity_san_ip>|' +
             self.settings.unity_san_ip + '|" ' + dell_unity_cinder_yaml,
             'sed -i "s|<unity_san_login>|' +
@@ -851,28 +852,28 @@ class Director(InfraHost):
 
         logger.debug("Configuring dell emc unity manila backend.")
 
-        overcloud_images_file = self.home_dir + "/overcloud_images.yaml" 
+        overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
+        manila_container = "/dellemc/openstack-manila-share-dellemc:" + \
+             self.settings.manila_unity_container_version
+        remote_registry = "registry.connect.redhat.com"
+        remote_url = remote_registry + manila_container
+        local_registry = self.provisioning_ip + ":8787"
+        local_url = local_registry + manila_container
 
         cmds = [
             'docker login -u ' + self.settings.subscription_manager_user +
             ' -p ' + self.settings.subscription_manager_password +
-            ' registry.connect.redhat.com',
-            'docker pull registry.connect.redhat.com' +
-            '/dellemc/openstack-manila-share-dellemc',
-            'docker tag registry.connect.redhat.com' +
-            '/dellemc/openstack-manila-share-dellemc ' +
-            self.provisioning_ip +
-            ':8787/dellemc/openstack-manila-share-dellemc',
-            'docker push ' + self.provisioning_ip +
-            ':8787/dellemc/openstack-manila-share-dellemc',
-            'sed -i "50i \  DockerManilaShareImage: ' + self.provisioning_ip +
-            ':8787\/dellemc\/openstack-manila-share-dellemc " ' +
-            overcloud_images_file,
+            ' ' + remote_registry,
+            'docker pull ' + remote_url,
+            'docker tag ' + remote_url + ' ' + local_url,
+            'docker push ' + local_url,
+            'sed -i "50i \  DockerManilaShareImage: ' + local_url +	
+            '" ' + overcloud_images_file,
             'echo "  DockerInsecureRegistryAddress:" >> ' +
             overcloud_images_file,
-            'echo "  - ' + self.provisioning_ip + ':8787 " >> ' +
+            'echo "  - ' + local_registry + ' " >> ' +
             overcloud_images_file,
-            'docker logout registry.connect.redhat.com',
+            'docker logout ' + remote_registry,
             'sed -i "s|<manila_unity_driver_handles_share_servers>|' +
             self.settings.manila_unity_driver_handles_share_servers +
             '|" ' + unity_manila_yaml,
