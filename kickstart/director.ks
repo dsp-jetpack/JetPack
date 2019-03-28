@@ -24,7 +24,7 @@ lang en_US.UTF-8
 auth --enableshadow --passalgo=sha512
 
 %include /tmp/ks_include.txt
-rootpw Dell0SS!
+rootpw xxxxxx
 timezone America/Chicago
 
 
