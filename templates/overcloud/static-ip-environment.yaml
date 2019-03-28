@@ -1,0 +1,71 @@
+# Copyright (c) 2018 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+resource_registry:
+  OS::TripleO::Controller::Ports::ExternalPort: ./network/ports/external_from_pool.yaml
+  OS::TripleO::Controller::Ports::InternalApiPort: ./network/ports/internal_api_from_pool.yaml
+  OS::TripleO::Controller::Ports::StoragePort: ./network/ports/storage_from_pool.yaml
+  OS::TripleO::Controller::Ports::StorageMgmtPort: ./network/ports/noop.yaml
+  OS::TripleO::Controller::Ports::TenantPort: ./network/ports/tenant_from_pool.yaml
+
+  OS::TripleO::ComputeHCI::Ports::ExternalPort: ./network/ports/noop.yaml
+  OS::TripleO::ComputeHCI::Ports::InternalApiPort: ./network/ports/internal_api_from_pool.yaml
+  OS::TripleO::ComputeHCI::Ports::StoragePort: ./network/ports/storage_from_pool.yaml
+  OS::TripleO::ComputeHCI::Ports::StorageMgmtPort: ./network/ports/storage_mgmt_from_pool.yaml
+  OS::TripleO::ComputeHCI::Ports::TenantPort: ./network/ports/tenant_from_pool.yaml
+
+parameter_defaults:
+  # Specify the IPs for the overcloud nodes on the indicated networks below.
+  # The IPs are listed in the order: node0, node1, node2 for each network.
+  #
+  # Note that the IPs chosen must lie outside the allocation pools defined in
+  # network-environment.yaml, and must not collide with the IPs assigned to
+  # other nodes or networking equipment on the network, such as the SAH,
+  # OSP Director node, Ceph Storage Admin node, etc.
+  ControllerIPs:
+    tenant:
+    - 192.168.130.12
+    - 192.168.130.13
+    - 192.168.130.14
+    internal_api:
+    - 192.168.140.12
+    - 192.168.140.13
+    - 192.168.140.14
+    storage:
+    - 192.168.170.12
+    - 192.168.170.13
+    - 192.168.170.14
+    external:
+    - 100.67.139.186
+    - 100.67.139.187
+    - 100.67.139.188
+
+  ComputeHCIIPs:
+    tenant:
+    - 192.168.130.15
+    - 192.168.130.16
+    - 192.168.130.17
+    internal_api:
+    - 192.168.140.15
+    - 192.168.140.16
+    - 192.168.140.17
+    storage:
+    - 192.168.170.15
+    - 192.168.170.16
+    - 192.168.170.17
+    storage_mgmt:
+    - 192.168.180.15
+    - 192.168.180.16
+    - 192.168.180.17
+
