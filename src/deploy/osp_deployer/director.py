@@ -524,6 +524,7 @@ class Director(InfraHost):
         domain_param = "  CloudDomain:"
         rbd_backend_param = "  NovaEnableRbdBackend:"
         glance_backend_param = "  GlanceBackend:"
+        rbd_cinder_backend_param = "  CinderEnableRbdBackend:" 
         osds_per_node = 0
 
         if osd_disks:
@@ -612,6 +613,10 @@ class Director(InfraHost):
             elif line.startswith(glance_backend_param):
                 value = str(self.settings.glance_backend).lower()
                 tmp_file.write("{} {}\n".format(glance_backend_param, value))
+
+            elif line.startswith(rbd_cinder_backend_param):
+                value = str(self.settings.enable_rbd_backend).lower()
+                tmp_file.write("{} {}\n".format(rbd_cinder_backend_param, value))
 
             elif line.startswith(ceph_pools):
                 pool_str = line[len(ceph_pools):]
