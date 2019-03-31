@@ -1,6 +1,14 @@
---- inspect.py	2019-03-27 09:53:02.035769407 +0000
-+++ inspect_modified.py	2019-03-27 09:51:32.965097867 +0000
-@@ -122,8 +122,10 @@
+--- inspect.py	2018-12-20 16:21:00.000000000 +0000
++++ inspect_modified.py	2019-03-31 07:27:01.564211446 +0000
+@@ -119,11 +119,18 @@
+                       {'node_uuid': node.uuid, 'error': exc})
+             raise exception.HardwareInspectionFailure(error=exc)
+ 
++        pxe_dev_nics = self._get_pxe_dev_nics(client, nics, node)
++        if pxe_dev_nics is None:
++            LOG.warning('No PXE enabled NIC was found for node '
++                        '%(node_uuid)s.', {'node_uuid': node.uuid})
++
          for nic in nics:
              try:
                  port = objects.Port(task.context, address=nic.mac,
@@ -12,7 +20,7 @@
                  LOG.info('Port created with MAC address %(mac)s '
                           'for node %(node_uuid)s during inspection',
                           {'mac': nic.mac, 'node_uuid': node.uuid})
-@@ -161,3 +163,47 @@
+@@ -161,3 +168,47 @@
              return cpu.cores * 2
          else:
              return cpu.cores
