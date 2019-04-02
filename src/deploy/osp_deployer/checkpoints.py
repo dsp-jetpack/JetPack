@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -453,17 +453,17 @@ class Checkpoints():
         for each in self.settings.switches:
             logger.info(
                 "Retrieving configuration for switch " + each.switch_name)
-            logger.info(
+            logger.debug(
                 self.execute_as_shell(each.ip, each.user, each.password,
                                       'show version'))
-            logger.info(
+            logger.debug(
                 self.execute_as_shell(each.ip,
                                       each.user,
                                       each.password,
                                       'copy running-config scp://' +
-                                      self.settings.bastion_host_user + ':' +
-                                      self.settings.bastion_host_password +
-                                      '@' + self.settings.bastion_host_ip +
+                                      "root" + ':' +
+                                      self.settings.sah_node.root_password +
+                                      '@' + self.settings.sah_node.public_api_ip +
                                       '//auto_results/switch-config-' +
                                       each.switch_name))
 

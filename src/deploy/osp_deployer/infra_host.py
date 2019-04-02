@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -69,5 +69,12 @@ class InfraHost():
         Scp.put_file(self.ip,
                      "root",
                      self.root_pwd,
+                     local_file,
+                     remote_file)
+
+    def download_file(self, local_file, remote_file):
+        Scp.get_file(self.ip,
+                     self.user,
+                     self.pwd,
                      local_file,
                      remote_file)
