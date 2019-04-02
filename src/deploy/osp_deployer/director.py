@@ -692,7 +692,8 @@ class Director(InfraHost):
             self.settings.sanity_key_name +
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_number_instances=.*|sanity_number_instances=' +
-            self.settings.sanity_number_instances +
+            str(self.settings.sanity_number_instances) +
+            '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|vlan_aware_sanity=.*|vlan_aware_sanity=' +
             self.settings.vlan_aware_sanity +
             '|" pilot/deployment-validation/sanity.ini',
