@@ -1,0 +1,59 @@
+{
+  "nodes": [
+    {
+      "name": "control-0",
+      "capabilities": "node:control-0,boot_option:local,boot_mode:uefi",
+      "root_device": {"size":"2791"},
+      "pm_addr": "192.168.110.12",
+      "pm_password": "xxxxxxxx",
+      "pm_type": "pxe_drac",
+      "pm_user": "root"
+    },
+    {
+      "name": "control-1",
+      "capabilities": "node:control-1,boot_option:local,boot_mode:uefi",
+      "root_device": {"size":"2791"},
+      "pm_addr": "192.168.110.13",
+      "pm_password": "xxxxxxxx",
+      "pm_type": "pxe_drac",
+      "pm_user": "root"
+    },
+    {
+      "name": "control-2",
+      "capabilities": "node:control-2,boot_option:local,boot_mode:uefi",
+      "root_device": {"size":"2791"},
+      "pm_addr": "192.168.110.14",
+      "pm_password": "xxxxxxxx",
+      "pm_type": "pxe_drac",
+      "pm_user": "root"
+    },
+    {
+      "name": "computeHCI-0",
+      "capabilities": "node:computeHCI-0,boot_option:local,boot_mode:uefi",
+      "root_device": {"size":"223"},
+      "pm_addr": "192.168.110.15",
+      "pm_password": "xxxxxxxx",
+      "pm_type": "pxe_drac",
+      "pm_user": "root"
+    },
+    {
+      "name": "computeHCI-1",
+      "capabilities": "node:computeHCI-1,boot_option:local,boot_mode:uefi",
+      "root_device": {"size":"223"},
+      "pm_addr": "192.168.110.16",
+      "pm_password": "xxxxxxxx",
+      "pm_type": "pxe_drac",
+      "pm_user": "root"
+    },
+    {
+      "name": "computeHCI-2",
+      "capabilities": "node:computeHCI-2,boot_option:local,boot_mode:uefi",
+      "root_device": {"size":"223"},
+      "pm_addr": "192.168.110.17",
+      "pm_password": "xxxxxxxx",
+      "pm_type": "pxe_drac",
+      "pm_user": "root"
+    }
+  ]
+}
+
