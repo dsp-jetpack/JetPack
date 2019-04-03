@@ -1390,15 +1390,21 @@ def change_physical_disk_state_wait(
         mode, controllers_to_physical_disk_ids)
 
     job_ids = []
+    all_realtime_controllers = True
     if change_state_result['commit_required_ids']:
+        disk_controllers = {c.id: c for c in
+                            drac_client.list_raid_controllers()}
         for controller_id in change_state_result['commit_required_ids']:
+            all_realtime_controllers = all_realtime_controllers and \
+                disk_controllers[controller_id].supports_realtime
             job_id = drac_client.commit_pending_raid_changes(
-                controller_id, reboot=False, start_time=None)
+                controller_id, reboot=False, start_time=None,
+                realtime=disk_controllers[controller_id].supports_realtime)
             job_ids.append(job_id)
 
     result = True
     if job_ids:
-        if change_state_result['is_reboot_required']:
+        if not all_realtime_controllers:
             LOG.debug("Rebooting the node to apply configuration")
             job_id = drac_client.create_reboot_job()
             job_ids.append(job_id)

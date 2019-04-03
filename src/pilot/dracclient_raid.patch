@@ -1,6 +1,40 @@
---- raid.py.orig	2019-01-23 15:57:50.655000000 +0000
-+++ raid_backup.py	2019-01-23 14:44:59.068000000 +0000
-@@ -588,14 +588,26 @@
+--- raid.py.orig	2019-02-22 12:01:15.504155374 +0000
++++ raid.py	2019-02-20 07:14:38.810186916 +0000
+@@ -34,6 +34,11 @@
+ 
+ REVERSE_RAID_LEVELS = dict((v, k) for (k, v) in RAID_LEVELS.items())
+ 
++RAID_CONTROLLER_IS_REALTIME = {
++    '1': True,
++    '0': False
++}
++
+ DISK_RAID_STATUS = {
+     '0': 'unknown',
+     '1': 'ready',
+@@ -110,7 +115,8 @@
+ 
+ RAIDController = collections.namedtuple(
+     'RAIDController', ['id', 'description', 'manufacturer', 'model',
+-                       'primary_status', 'firmware_version', 'bus'])
++                       'primary_status', 'firmware_version', 'bus',
++                       'supports_realtime'])
+ 
+ VirtualDiskTuple = collections.namedtuple(
+     'VirtualDisk',
+@@ -191,7 +197,10 @@
+                                                'PrimaryStatus')],
+             firmware_version=self._get_raid_controller_attr(
+                 drac_controller, 'ControllerFirmwareVersion'),
+-            bus=self._get_raid_controller_attr(drac_controller, 'Bus'))
++            bus=self._get_raid_controller_attr(drac_controller, 'Bus'),
++            supports_realtime=RAID_CONTROLLER_IS_REALTIME[
++                self._get_raid_controller_attr(
++                    drac_controller, 'RealtimeCapability')])
+ 
+     def _get_raid_controller_attr(self, drac_controller, attr_name):
+         return utils.get_wsman_resource_attr(
+@@ -582,14 +591,26 @@
          """
          return raid_controller_fqdd.startswith('RAID.')
  
@@ -29,3 +63,22 @@
  
      def _check_disks_status(self, mode, physical_disks,
                              controllers_to_physical_disk_ids):
+@@ -763,3 +784,18 @@
+ 
+         return {'is_reboot_required': is_reboot_required,
+                 'commit_required_ids': controllers}
++
++    def is_realtime_supported(self, raid_controller_fqdd):
++        """Find if controller supports realtime or not
++
++        :param raid_controller_fqdd: ID of RAID controller
++        :returns: True or False
++        """
++        drac_raid_controllers = self.list_raid_controllers()
++        realtime_controller = [cnt.id for cnt in drac_raid_controllers
++                               if cnt.supports_realtime]
++
++        if raid_controller_fqdd in realtime_controller:
++            return True
++
++        return False
