@@ -29,7 +29,7 @@ do
     esac
 done
 
-get_value() {       
+get_value() {
     echo $(grep "$1=" $INI_FILE  | awk -F= '{print $2}')
 }
 
@@ -434,6 +434,7 @@ info "VLAN AWARE CHECK == ${VLAN_AWARE_SANITY}"
   while [ $index -le $((${SANITY_NUMBER_INSTANCES})) ]; do
   instance_name="${BASE_NOVA_INSTANCE_NAME}_$index"
     if [ $index -le $((${SANITY_NUMBER_INSTANCES})) ] && [ "$VLAN_AWARE_SANITY" == false ]; then
+      info "SRIOV_ENABLED == ${SRIOV_ENABLED}"
       if [ "$SRIOV_ENABLED" != false ];then
         info "### SRIOV: Creating SRIOV ports"
         sriov_port_name="sriov_port_$index"
