@@ -33,20 +33,25 @@ get_value() {
     echo $(grep "$1=" $INI_FILE  | awk -F= '{print $2}')
 }
 
+get_value_lower() { 
+    echo $(grep "$1=" $INI_FILE  | awk -F= '{print $2}'| tr '[:upper:]' '[:lower:]' )
+}
+
+
 FLOATING_IP_NETWORK=$(get_value floating_ip_network)
 FLOATING_IP_NETWORK_START_IP=$(get_value floating_ip_network_start_ip)
 FLOATING_IP_NETWORK_END=$(get_value floating_ip_network_end_ip)
 FLOATING_IP_NETWORK_GATEWAY=$(get_value floating_ip_network_gateway)
 FLOATING_IP_NETWORK_VLAN=$(get_value floating_ip_network_vlan)
-OVS_DPDK_ENABLED=$(get_value ovs_dpdk_enabled)
-DVR_ENABLED=$(get_value dvr_enabled)
+OVS_DPDK_ENABLED=$(get_value_lower ovs_dpdk_enabled)
+DVR_ENABLED=$(get_value_lower dvr_enabled)
 SANITY_TENANT_NETWORK=$(get_value sanity_tenant_network)
 SANITY_VLANTEST_NETWORK=$(get_value sanity_vlantest_network)
 SANITY_USER_PASSWORD=$(get_value sanity_user_password)
 SANITY_USER_EMAIL=$(get_value sanity_user_email)
 SANITY_KEY_NAME=$(get_value sanity_key_name)
 SANITY_NUMBER_INSTANCES=$(get_value sanity_number_instances)
-VLAN_AWARE_SANITY=$(get_value vlan_aware_sanity)
+VLAN_AWARE_SANITY=$(get_value_lower vlan_aware_sanity)
 SANITY_IMAGE_URL=$(get_value image_url)
 FLOATING_IP_NETWORK_NAME=$(get_value floating_ip_network_name)
 FLOATING_IP_SUBNET_NAME=$(get_value floating_ip_subnet_name)
@@ -62,9 +67,9 @@ BASE_SHARE_NAME=$(get_value base_share_name)
 BASE_PROJECT_NAME=$(get_value base_project_name)
 BASE_USER_NAME=$(get_value base_user_name)
 BASE_CONTAINER_NAME=$(get_value base_container_name)
-SRIOV_ENABLED=$(get_value sriov_enabled)
-HPG_ENABLED=$(get_value hugepages_enabled)
-NUMA_ENABLED=$(get_value numa_enabled)
+SRIOV_ENABLED=$(get_value_lower sriov_enabled)
+HPG_ENABLED=$(get_value_lower hugepages_enabled)
+NUMA_ENABLED=$(get_value_lower numa_enabled)
 
 IMAGE_FILE_NAME=$(basename $SANITY_IMAGE_URL)
 SECURITY_GROUP_NAME="$BASE_SECURITY_GROUP_NAME"
@@ -236,7 +241,7 @@ create_the_networks(){
   else
     info "#-----VLAN Network subnet '$SANITY_TENANT_NETWORK' exists. Skipping"
   fi
-  if [ "$VLAN_AWARE_SANITY" != False ];then
+  if [ "$VLAN_AWARE_SANITY" != false ];then
     vlan1_exists=$(openstack network list -c Name -f value | grep "$VLAN1_NETWORK_NAME")
     if [ "$vlan1_exists" != "$VLAN1_NETWORK_NAME" ]
     then
@@ -258,7 +263,7 @@ create_the_networks(){
         info "#------- Subnet of VLAN $VLAN1ID already exists. Skipping"
     fi
   else
-    info "VLAN AWARE CHECK = False"
+    info "VLAN AWARE CHECK = false"
   fi
 
   set_tenant_scope
@@ -269,11 +274,11 @@ create_the_networks(){
 
     subnet_id=$(openstack network list | grep $TENANT_NETWORK_NAME | head -n 1 | awk '{print $6}')
     execute_command "openstack router add subnet $TENANT_ROUTER_NAME $subnet_id"
-    if [ "$VLAN_AWARE_SANITY" != False ];then
+    if [ "$VLAN_AWARE_SANITY" != false ];then
       subnet_id_vlan=$(openstack network list | grep $VLAN1_NETWORK_NAME | head -n 1 | awk '{print $6}')
       execute_command "openstack router add subnet $TENANT_ROUTER_NAME $subnet_id_vlan"
     else
-      info "VLAN AWARE CHECK = False"
+      info "VLAN AWARE CHECK = false"
     fi
     
 
@@ -337,7 +342,7 @@ port_creation() {
   else
     info "#-----Parent port 1 already exists. Commencing further----------"
   fi
-if [ "$VLAN_AWARE_SANITY" != False ];then
+if [ "$VLAN_AWARE_SANITY" != false ];then
     trunk1_exists=$(openstack trunk list -c Name -f value | grep "$TRUNK_PORT1")
     if [ "$trunk1_exists" != "$TRUNK_PORT1" ]
     then
@@ -364,7 +369,7 @@ if [ "$VLAN_AWARE_SANITY" != False ];then
       info "#-----Subport subport1_$VLANID_1 exists.Commencing further----------"
     fi
   else
-    info "VLAN AWARE CHECK = False"
+    info "VLAN AWARE CHECK = false"
   fi
 }
 
@@ -417,7 +422,7 @@ spin_up_instances(){
   
   declare -a instance_names
 info "VLAN AWARE CHECK == ${VLAN_AWARE_SANITY}"
-  if [ "$VLAN_AWARE_SANITY" != False ];then
+  if [ "$VLAN_AWARE_SANITY" != false ];then
     info "SANITY_NUMBER_INSTANCES = ${SANITY_NUMBER_INSTANCES}"
     SANITY_NUMBER_INSTANCES=$((SANITY_NUMBER_INSTANCES+1))
     info "SANITY_NUMBER_INSTANCES WITH Vlan Instance = ${SANITY_NUMBER_INSTANCES}"
@@ -428,8 +433,9 @@ info "VLAN AWARE CHECK == ${VLAN_AWARE_SANITY}"
 
   while [ $index -le $((${SANITY_NUMBER_INSTANCES})) ]; do
   instance_name="${BASE_NOVA_INSTANCE_NAME}_$index"
-    if [ $index -le $((${SANITY_NUMBER_INSTANCES})) ] && [ "$VLAN_AWARE_SANITY" == False ]; then
-      if [ "$SRIOV_ENABLED" != False ];then
+    if [ $index -le $((${SANITY_NUMBER_INSTANCES})) ] && [ "$VLAN_AWARE_SANITY" == false ]; then
+      info "SRIOV_ENABLED == ${SRIOV_ENABLED}"
+      if [ "$SRIOV_ENABLED" != false ];then
         info "### SRIOV: Creating SRIOV ports"
         sriov_port_name="sriov_port_$index"
         sriov_port_creation $sriov_port_name
@@ -439,9 +445,9 @@ info "VLAN AWARE CHECK == ${VLAN_AWARE_SANITY}"
       else
         execute_command "nova boot --security-groups $SECURITY_GROUP_NAME --flavor $FLAVOR_NAME --key-name $SANITY_KEY_NAME --image $image_id --nic net-id=$tenant_net_id $instance_name"
       fi
-    elif [ $index -le $((${SANITY_NUMBER_INSTANCES})) ] && [ "$VLAN_AWARE_SANITY" != False ]; then
+    elif [ $index -le $((${SANITY_NUMBER_INSTANCES})) ] && [ "$VLAN_AWARE_SANITY" != false ]; then
       if [ $index -lt $((${SANITY_NUMBER_INSTANCES})) ]; then
-        if [ "$SRIOV_ENABLED" != False ];then
+        if [ "$SRIOV_ENABLED" != false ];then
           info "### SRIOV: Creating SRIOV ports"
           sriov_port_name="sriov_port_$index"
           sriov_port_creation $sriov_port_name
@@ -494,15 +500,15 @@ setup_nova (){
   else
     info "#----- Flavor '$FLAVOR_NAME' exists. Skipping"
   fi
-  if [ "$NUMA_ENABLED" != "False" ]; then
+  if [ "$NUMA_ENABLED" != "false" ]; then
     info "### NUMA: Adding metadata properties to flavor"
     execute_command "openstack flavor set --property hw:cpu_policy=dedicated --property hw:cpu_thread_policy=require --property hw:numa_nodes=1 $FLAVOR_NAME"
   fi
-  if [ "$HPG_ENABLED" != "False" ]; then
+  if [ "$HPG_ENABLED" != "false" ]; then
     info "### HUGEPAGES: Adding metadata properties to flavor"
     execute_command "openstack flavor set --property hw:mem_page_size=large $FLAVOR_NAME"
   fi
-  if [ "$OVS_DPDK_ENABLED" != "False" ]; then
+  if [ "$OVS_DPDK_ENABLED" != "false" ]; then
     info "### OVS DPDK: Adding metadata properties to flavor"
     execute_command "openstack flavor set --property hw:emulator_threads_policy=isolate $FLAVOR_NAME"
   fi
@@ -970,7 +976,7 @@ then
   done
 
   #Deleting SRIOV ports
-  if [ "$SRIOV_ENABLED" != False ]; then
+  if [ "$SRIOV_ENABLED" != false ]; then
     info "### Deleting SRIOV ports..."
     sriov_ports=$(openstack port list | grep -E "*sriov_port_*" | awk '{print $2}')
     for sriov_port in $sriov_ports
@@ -1044,7 +1050,7 @@ else
 
   setup_nova
   
-  if [ "$VLAN_AWARE_SANITY" != False ];then
+  if [ "$VLAN_AWARE_SANITY" != false ];then
     create_vlan_aware_interface_script
   else
     info "VLAN aware check is false."
@@ -1058,7 +1064,7 @@ else
 
   setup_manila
 
-  if [ "$VLAN_AWARE_SANITY" != False ];then
+  if [ "$VLAN_AWARE_SANITY" != false ];then
     vlan_aware_test
   fi
 
