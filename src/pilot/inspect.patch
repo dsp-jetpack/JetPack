@@ -43,6 +43,10 @@
                  LOG.info('Port created with MAC address %(mac)s '
                           'for node %(node_uuid)s during inspection',
                           {'mac': nic.mac, 'node_uuid': node.uuid})
+@@ -161,3 +177,47 @@
+             return cpu.cores * 2
+         else:
+             return cpu.cores
 +
 +    def _get_pxe_dev_nics(self, client, nics, node):
 +        """Get a list of pxe device interfaces.
