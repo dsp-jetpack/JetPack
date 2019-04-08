@@ -473,15 +473,17 @@ info "VLAN AWARE CHECK == ${VLAN_AWARE_SANITY}"
 
 
   for instance_name in ${instance_names[*]}; do
-    instance_status=$(nova list | grep $instance_name | awk '{print $6}')
-    info "### Instance status is: ${instance_name} : ${instance_status}..."
+    instance_status=$(nova list | grep -w $instance_name | awk '{print $6}')
+    info "### Instance status is: ${instance_name} : ${instance_status}"
     while [ "$instance_status" != "ACTIVE" ]; do
       if [ "$instance_status" == "ERROR" ]; then
         fatal "### Instance status is: ${instance_name} : ${instance_status}!  Aborting sanity test"
+      elif [ "$instance_status" == "ACTIVE" ]; then
+        break
       else
         info "### Instance status is: ${instance_name} : ${instance_status}.  Sleeping..."
-        sleep 70
-        instance_status=$(nova list | grep $instance_name | awk '{print $6}')
+        sleep 30 
+        instance_status=$(nova list | grep -w $instance_name | awk '{print $6}')
       fi
     done
   done
