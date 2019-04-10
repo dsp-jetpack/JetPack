@@ -73,55 +73,12 @@ ease of management.
 This Architecture Guide describes prescriptive guidance and recommendations for complete configuration, 
 sizing, bill-of-material, and deployment details.
 
-### Executive summary
+## Executive summary
 
-### Key benefits
+## Key benefits
 
-### Key differentiators
+## Key differentiators
 
-#### Networking includes:
-
-* Core and layered networking capabilities
-* Network Function Virtualization (NFV)
-* 25GbE networking
-* NIC bonding
-* Redundant trunking top-of-rack (ToR) switches into core routers
-
-This enables the Dell EMC Ready Architecture for Red Hat OpenStack Platform to operate in a full production environment. Detailed designs are available through Dell EMC consulting services. [rhosp.ra.ps@emc.com](malito:rhosp.ra.ps@emc.com)
-
-The Dell EMC Ready Architecture for Red Hat OpenStack Platform uses the S5248-ON as the Top of Rack switches and the S3048-ON switch (S4048-ON optional) as the management switch.
-
-**Infrastructure layouts**
-
-The network consists of the following major network infrastructure layouts:
-
-* Core Network Infrastructure - The connectivity of aggregation switches to the core for external connectivity.
-* Data Network Infrastructure - The server NICs, top-of-rack (ToR) switches, and the aggregation switches.
-* Management Network Infrastructure - The BMC management network, consisting of iDRAC ports and the out-of-band management ports of the switches, is aggregated into a 1-rack unit (RU) S3048-ON switch in one of the three racks in the cluster. This 1-RU switch in turn can connect to one of the aggregation or core switches to create a separate network with a separate VLAN.
-
-
-> Note: Please contact your Dell EMC sales representative for a detailed parts list or contact Dell EMC Professional Services team for OpenStack using the email [rhosp.ra.ps@emc.com](malito:rhosp.ra.ps@emc.com)
-
-### Version 13.0 features
-
-**The following features are added in the JetPack Automation and the Ready Architecture for RedHat OpenStack:**
-
-* Support for the lastest release of Red Hat OpenStack Platform 13.0 including the latest updates.
-* Support for latest release of RHEL 7.6 including the latest updates.
-* Support for Red Hat Ceph Storage version 3.1
-* Added support for jumbo frames.
-* Added support for UEFI on all Overcloud nodes.
-* Added support for Cumulus Network OS.
-* Added support for Dell EMC Networking S5248-ON switch.
-* Added support for 25GbE networking with Intel XXV710 network interface cards.
-* Added support for Red Hat Ceph Storage to use NVMe storage for OSD/Journal.
-* Enhancement of Huge Pages with JetPack CSP profile.
-* Enhancement of NUMA/CPU Pinning with JetPack CSP profile.
-* Support of OVS-DPDK with JetPack CSP profile.
-* Enhancement of SR-IOV with JetPack CSP profile.
-* Added support for Distributed Virtual Router, (DVR).
-* Added support for auto-generation of .ini and .properties files for use in automated deployments.
-* Added support for VLAN aware VM.
 
 ## Before
 
