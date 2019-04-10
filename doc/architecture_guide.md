@@ -3,7 +3,7 @@
 
 # Dell EMC Red Hat Ready Architecture for Hyper Converged Infrastructure on Red Hat Openstack Platform
 
-**Version 1
+**Version 1**
 
 **Dell EMC Service Provider Solutions**
 
