@@ -45,38 +45,21 @@ Foundation or the OpenStack community
 
 - [Chapter 1 Overview](#chapter-1-overview)
 
-- [Chapter 2 Red Hat Subscriptions](#chapter-2-red-hat-subscriptions)
+- [Chapter 2 Architecture Overview](#chapter-2-architecture-overview)
 
-- [Chapter 3 Automation Configuration Files](#chapter-3-automation-configuration-files)
+- [Chapter 3 Red Hat Ceph storage for HCI](#chapter-3-red-hat-ceph-storage-for-hci)
 
-- [Chapter 4 Preparing and Deploying the Solution Admin Host](#chapter-4-preparing-and-deploying-the-solution-admin-host)
+- [Chapter 4 Deployment considerations](#chapter-4-deployment-considerations)
 
-- [Chapter 5 Deploying the Undercloud and the OpenStack Cluster](#chapter-5-deploying-the-undercloud-and-the-openstack-cluster)
+- [Chapter 5 Deployment](#chapter-5-deployment)
 
-- [Appendix A Files references](#appendix-a-files-references)
+- [Chapter 6 Validation and testing]](#chapter-6-validation-and-testing)
 
-- [Appendix B Updating RPMs on version locked nodes](#appendix-b-updating-rpms-on-version-locked-nodes)
+- [Appendix A Bill of materials](#appendix-a-bill-of-materials)
 
-- [Appendix C OpenStack operations functional test](#appendix-c-openstack-operations-functional-test)
+- [Appendix B Environment files](#appendix-b-environment-files)
 
-- [Appendix D Hugepages](#appendix-d-hugepages)
-
-- [Appendix E NUMA](#appendix-e-numa)
-
-- [Appendix F OVS-DPDK](#appendix-f-ovs-dpdk)
-
-- [Appendix G Neutron managed SR-IOV](#appendix-g-neutron-managed-sr-iov)
-
-- [Appendix H Neutron DVR support in JS 13.0](#appendix-h-neutron-dvr-support-in-js-130)
-
-- [Appendix I Performance optimization](#appendix-i-performance-optimization)
-
-- [Appendix J Sample files](#appendix-j-sample-files)
-
-- [Appendix K Solution validation overview](#appendix-k-solution-validation-overview)
-
-- [Appendix M References](#appendix-m-references)
-
+- [Appendix C References](#appendix-c-references)
 
 
 
