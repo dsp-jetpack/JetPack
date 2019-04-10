@@ -53,7 +53,7 @@ Foundation or the OpenStack community
 
 - [Chapter 5 Deployment](#chapter-5-deployment)
 
-- [Chapter 6 Validation and testing]](#chapter-6-validation-and-testing)
+- [Chapter 6 Validation and testing](#chapter-6-validation-and-testing)
 
 - [Appendix A Bill of materials](#appendix-a-bill-of-materials)
 
@@ -66,39 +66,18 @@ Foundation or the OpenStack community
 <div style="page-break-after: always;"></div>
 
 # Chapter 1 Overview
-This guide provides information necessary to deploy the Dell EMC Ready Architecture for Red Hat OpenStack platform v13.0 using an automation framework developed by Dell EMC.
+Dell EMC and Red Hat have worked closely together to build an enterprise scale hyper converged 
+infrastructure Architecture Guide ideally suited for customers who are looking for performance and 
+ease of management.
 
-### General Hardware Options
+This Architecture Guide describes prescriptive guidance and recommendations for complete configuration, 
+sizing, bill-of-material, and deployment details.
 
-To reduce time spent on specifying hardware for an initial system, the Architecture Guide offers a full solution using validated Dell EMC PowerEdge server hardware designed to allow a wide range of configuration options, including optimized configurations for: 
+### Executive summary
 
-* Compute nodes
-* Infrastructure nodes
-* Storage nodes
+### Key benefits
 
-Dell EMC recommends starting with OpenStack software using components from this Architecture Guide -
-Version 13.0 because the hardware and operations processes comprise a flexible foundation upon which to
-expand as your cloud deployment grows, so your investment is protected.
-
-As noted throughout this Architecture Guide - Version 13, Dell EMC constantly adds capabilities to expand
-this offering, and other hardware may be available. [Please check the Architecture Guide for more details]("https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_ready_architecture_for_red_hat_openstack_platform_architecture_guide.pdf")
-
-### Servers Options
-
-**Dell EMC PowerEdge R640 server**
-
-The Dell EMC PowerEdge R640 is the ideal dual-socket, 1U platform for dense scale-out cloud computing. The scalable busines architecture of the Dell EMC PowerEdge R640 is designed to maximize application performance and provide the flexibility to optimize configurations based on the application and use case. With the Dell EMC PowerEdge R640 you can create an NVMe cache pool and use either 2.5” or 3.5” drives for data storage. Combined with up to 24 DIMM’s, 12 of which can be NVDIMM’s, you have the resources to create the optimum configuration to maximize application performance in only a 1U chassis. This can simplify and speed up deployments of Dell EMC Bundle for Red Hat OpenStack Platform.
-
-**Dell EMC PowerEdge R740/Dell EMC PowerEdge R740xd servers**
-
-The Dell EMC PowerEdge R740/Dell EMC PowerEdge R740xd delivers a perfect balance between storage scalability and performance. The 2U two-socket platform is ideal for software defined storage. The R/740/R740xd versatility is highlighted with the ability to mix any drive type to create the optimum configuration of SSD and HDD for either performance, capacity or both.
-
-> Note: The Dell EMC PowerEdge R740/Dell EMC PowerEdge R740xd is the platform of choice for software defined storage and is the foundation for Red Hat Ceph Storage
-
-
-### Networking and network services
-
-Network configuration is based upon using the Neutron-based options supported by the RHOSP code base, and does not rely upon third-party drivers. This reference configuration is based upon the Neutron networking services using the ML2 drivers for Open vSwitch with the VLAN option.
+### Key differentiators
 
 #### Networking includes:
 
