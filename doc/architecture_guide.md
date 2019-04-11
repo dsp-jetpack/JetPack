@@ -77,23 +77,28 @@ sizing, bill-of-material, and deployment details.
 This Architecture Guide describes an approach for deployment of Red Hat OpenStack Platform and Red Hat Ceph
 Storage so that a single node hardware commissions and consumes OpenStack Nova Compute services and the Ceph
 Storage services.
+
 This Architecture Guide describes configurations of Hyper Converged Infrastructure using RHOSP13 and Red Hat Ceph
 Storage.
+
 Communication Service Providers inherently have distributed operation environments, whether multiple large scale
 Core Datacenters, 100's and 1000's of central offices and Edge locations, or even customer premise equipment, all
 need to be able to offer the same infrastructure services in remote and branch offices as they run in their Datacenter.
 However, remote and branch offices can have unique challenges such as less space and power/cooling, fewer (or no)
 technical staff on-site. Organizations in this situation require powerful services, integrated on a single server that can
 easily scale out.
+
 Dell EMC Hyper Converged Infrastructure for Red Hat OpenStack Platform is designed to address these challenges
 by integrating compute and storage together on a single aggregated cluster, making it a well-suited solution for lowfootprint
 remote or central office installation and edge computing. Dell EMC Hyper Converged Infrastructure for Red
 Hat OpenStack Platform is designed to enable organizations to deploy and manage distributed infrastructure centrally,
 enabling remote locations to benefit from high-performing systems without requiring extensive or highly specialized
 on-site technical staff.
+
 This Architecture Guide gives to the user enough details on hardware and software building blocks used to design this
 reference Architecture Guide (including but not limited to Red Hat OpenStack Platform configuration, network
 switches configuration and for all software and hardware components).
+
 This all-NVMe configuration is optimized for block performance.
 
 ## Key benefits
