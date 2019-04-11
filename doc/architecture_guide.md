@@ -74,11 +74,67 @@ This Architecture Guide describes prescriptive guidance and recommendations for 
 sizing, bill-of-material, and deployment details.
 
 ## Executive summary
+This Architecture Guide describes an approach for deployment of Red Hat OpenStack Platform and Red Hat Ceph
+Storage so that a single node hardware commissions and consumes OpenStack Nova Compute services and the Ceph
+Storage services.
+This Architecture Guide describes configurations of Hyper Converged Infrastructure using RHOSP13 and Red Hat Ceph
+Storage.
+Communication Service Providers inherently have distributed operation environments, whether multiple large scale
+Core Datacenters, 100's and 1000's of central offices and Edge locations, or even customer premise equipment, all
+need to be able to offer the same infrastructure services in remote and branch offices as they run in their Datacenter.
+However, remote and branch offices can have unique challenges such as less space and power/cooling, fewer (or no)
+technical staff on-site. Organizations in this situation require powerful services, integrated on a single server that can
+easily scale out.
+Dell EMC Hyper Converged Infrastructure for Red Hat OpenStack Platform is designed to address these challenges
+by integrating compute and storage together on a single aggregated cluster, making it a well-suited solution for lowfootprint
+remote or central office installation and edge computing. Dell EMC Hyper Converged Infrastructure for Red
+Hat OpenStack Platform is designed to enable organizations to deploy and manage distributed infrastructure centrally,
+enabling remote locations to benefit from high-performing systems without requiring extensive or highly specialized
+on-site technical staff.
+This Architecture Guide gives to the user enough details on hardware and software building blocks used to design this
+reference Architecture Guide (including but not limited to Red Hat OpenStack Platform configuration, network
+switches configuration and for all software and hardware components).
+This all-NVMe configuration is optimized for block performance.
 
 ## Key benefits
+The Dell EMC Hyper Converged Infrastructure for Red Hat OpenStack Platform offers several benefits to help
+Service Providers to reduce CAPEX/OPEX and simplify planning and procurement:
+* Infrastructure Consolidation: smaller hardware footprint eases power and cooling and deployment, thus reducing
+CAPEX.
+* Operational Efficiency: single supported rack is easier to train, manage and configure, thus reducing OPEX.
+* Hyper Converged Infrastructure simplifies planning and procurement
+* Fully engineered, validated, tested and documented by Dell EMC. Your investment and deployment risks are
+leveraged.
+* Based on Poweredge R-Series servers and specially its 14th generation which is the hardware recommended
+for this Architecture Guide, which includes Intel Xeon processors, Intel NVMe disks and Intel 25GbE network
+interface cards.
 
 ## Key differentiators
+[TODO] - Add diagram
 
+The Dell EMC Hyper Converged Infrastructure for Red Hat Openstack Platform has some major enhancements from
+the regular Dell EMC Ready Architecture for Red Hat Openstack Platform.
+
+* Implementation model: compute and storage are deployed in a Hyper Converged Infrastructure approach; As a
+result, both services and their associated OpenStack services are deployed and managed as a single entity.
+* Server model: 14th generation of Dell servers are used in this Architecture Guide providing the most cutting
+edge range of PowerEdge server solutions providing optimized technology for all kind of workloads and offers
+sophisticated built -in protection at every step.
+* Hardware resources: Optimized for Hyper Converged Infrastructure, Ready Architecture combines scalability,
+robustness, and efficiency by leveraging Intel components:
+* Intel Platinum 8160 Skylake processors: used for compute and storage needs, this 64-bit 24-core x86 multisocket
+high performance server microprocessor providing 48 cores per node which maximizes the concurrent
+execution of multi-threaded applications.
+* Intel 25GbE adaptors: used for all network communication, the flexible and scalable Intel XXV710 network
+adapter offers broad interoperability, critical performance optimizations, and increased agility. A couple of
+ports have also been reserved for future usage of NFV oriented optimizations such as SR-IOV or OVS-DPDK.
+* Intel P4600 NVMe drives: acting as a key for Red Hat Ceph storage backend, this NAND SSD drive is
+optimized for the data caching needs of cloud storage and more particularly software-defined solutions. It
+helps modernizing the data center by combining performance, capacity, manageability and scalability.
+* RAM Optimized: because memory is a key concern when it comes to Virtualization and even more with an
+Hyper Converged Infrastructure each compute/storage server comes along with 384GB of RAM, delivering
+optimal performance and available resource for both compute and storage services.
+This Architecture Guide will cover in details the key differentiators in the next sections.
 
 ## Before
 
