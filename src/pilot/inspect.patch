@@ -1,6 +1,29 @@
---- inspect.py	2018-12-20 16:21:00.000000000 +0000
-+++ inspect_modified.py	2019-03-31 07:27:01.564211446 +0000
-@@ -119,11 +119,18 @@
+--- inspect.py	2019-03-31 07:49:22.188804818 +0000
++++ inspect_new.py	2019-03-31 07:34:39.786354074 +0000
+@@ -24,6 +24,7 @@
+ from ironic.common.i18n import _
+ from ironic.common import states
+ from ironic.drivers import base
++from ironic.common import utils
+ from ironic.drivers.modules.drac import common as drac_common
+ from ironic import objects
+ 
+@@ -84,6 +85,14 @@
+                     [self._calculate_cpus(cpu) for cpu in cpus])
+                 properties['cpu_arch'] = 'x86_64' if cpus[0].arch64 else 'x86'
+ 
++            bios_settings = client.list_bios_settings()
++            current_capabilities = node.properties.get('capabilities', '')
++            new_capabilities = {
++                'boot_mode': bios_settings["BootMode"].current_value.lower()}
++            capabilties = utils.get_updated_capabilities(current_capabilities,
++                                                         new_capabilities)
++            properties['capabilities'] = capabilties
++
+             virtual_disks = client.list_virtual_disks()
+             root_disk = self._guess_root_disk(virtual_disks)
+             if root_disk:
+@@ -119,11 +128,18 @@
                        {'node_uuid': node.uuid, 'error': exc})
              raise exception.HardwareInspectionFailure(error=exc)
  
@@ -20,7 +43,7 @@
                  LOG.info('Port created with MAC address %(mac)s '
                           'for node %(node_uuid)s during inspection',
                           {'mac': nic.mac, 'node_uuid': node.uuid})
-@@ -161,3 +168,47 @@
+@@ -161,3 +177,47 @@
              return cpu.cores * 2
          else:
              return cpu.cores
