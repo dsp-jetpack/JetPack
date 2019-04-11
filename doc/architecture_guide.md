@@ -141,6 +141,25 @@ Hyper Converged Infrastructure each compute/storage server comes along with 384G
 optimal performance and available resource for both compute and storage services.
 This Architecture Guide will cover in details the key differentiators in the next sections.
 
+# Chapter 2 Architecture Overview
+Undercloud and Overcloud deployment elements are part of Dell EMC Ready Architecture for Hyper Converged Infrastructure 
+on Red Hat OpenStack Platform. This ready architecture uses RHOSP (Red Hat OpenStack Platform) 13. 
+The Red Hat OpenStack Platform implementation of Hyper-Converged Infrastructure (HCI) uses Red Hat Ceph 3.2 Storage as 
+the storage provider.
+
+This overview of the deployment process for Dell EMC Ready Architecture for Hyper-Converged Infrastructure on Red Hat 
+OpenStack Platform on Dell EMC's 14G server hardware and network outlines the following:
+* Software requirements
+* Hardware requirements
+* Dell EMC Networking Switch requirements
+
+## Overview
+This chapter describes the complete architecture for Red Hat OpenStack Platform 13 over Hyper-Converged
+Infrastructure, Figure 2: Architecture for RHOSP13 over HCI on page 15 shows components used in Undercloud
+and Overcloud in detail and description of SAH node with logical networks, and this section also provides description
+of hardware and software components.
+Figure 2: Architecture for RHOSP13 over HCI on page 15 illustrates ready architecture for RHOSP13
+deployment over HCI
 ## Before
 
 > Note: This guide assumes that you have racked the servers and networking hardware, and completed power and network cabling, as per the *Dell EMC Ready Architecture_for_Red_Hat OpenStack Platform Architecture Guide – Version 13.*
