@@ -120,23 +120,23 @@ interface cards.
 The Dell EMC Hyper Converged Infrastructure for Red Hat Openstack Platform has some major enhancements from
 the regular Dell EMC Ready Architecture for Red Hat Openstack Platform.
 
-* Implementation model: compute and storage are deployed in a Hyper Converged Infrastructure approach; As a
+* **Implementation model:** compute and storage are deployed in a Hyper Converged Infrastructure approach; As a
 result, both services and their associated OpenStack services are deployed and managed as a single entity.
-* Server model: 14th generation of Dell servers are used in this Architecture Guide providing the most cutting
+* **Server model:** 14th generation of Dell servers are used in this Architecture Guide providing the most cutting
 edge range of PowerEdge server solutions providing optimized technology for all kind of workloads and offers
 sophisticated built -in protection at every step.
-* Hardware resources: Optimized for Hyper Converged Infrastructure, Ready Architecture combines scalability,
+* **Hardware resources:** Optimized for Hyper Converged Infrastructure, Ready Architecture combines scalability,
 robustness, and efficiency by leveraging Intel components:
-* Intel Platinum 8160 Skylake processors: used for compute and storage needs, this 64-bit 24-core x86 multisocket
+* **Intel Platinum 8160 Skylake processors:** used for compute and storage needs, this 64-bit 24-core x86 multisocket
 high performance server microprocessor providing 48 cores per node which maximizes the concurrent
 execution of multi-threaded applications.
-* Intel 25GbE adaptors: used for all network communication, the flexible and scalable Intel XXV710 network
+* **Intel 25GbE adaptors:** used for all network communication, the flexible and scalable Intel XXV710 network
 adapter offers broad interoperability, critical performance optimizations, and increased agility. A couple of
 ports have also been reserved for future usage of NFV oriented optimizations such as SR-IOV or OVS-DPDK.
-* Intel P4600 NVMe drives: acting as a key for Red Hat Ceph storage backend, this NAND SSD drive is
+* **Intel P4600 NVMe drives:** acting as a key for Red Hat Ceph storage backend, this NAND SSD drive is
 optimized for the data caching needs of cloud storage and more particularly software-defined solutions. It
 helps modernizing the data center by combining performance, capacity, manageability and scalability.
-* RAM Optimized: because memory is a key concern when it comes to Virtualization and even more with an
+* **RAM Optimized:** because memory is a key concern when it comes to Virtualization and even more with an
 Hyper Converged Infrastructure each compute/storage server comes along with 384GB of RAM, delivering
 optimal performance and available resource for both compute and storage services.
 This Architecture Guide will cover in details the key differentiators in the next sections.
