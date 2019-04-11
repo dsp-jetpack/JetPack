@@ -160,6 +160,8 @@ and Overcloud in detail and description of SAH node with logical networks, and t
 of hardware and software components.
 Figure 2: Architecture for RHOSP13 over HCI on page 15 illustrates ready architecture for RHOSP13
 deployment over HCI
+
+
 ## Before
 
 > Note: This guide assumes that you have racked the servers and networking hardware, and completed power and network cabling, as per the *Dell EMC Ready Architecture_for_Red_Hat OpenStack Platform Architecture Guide – Version 13.*
