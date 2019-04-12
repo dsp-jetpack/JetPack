@@ -155,11 +155,35 @@ OpenStack Platform on Dell EMC's 14G server hardware and network outlines the fo
 
 ## Overview
 This chapter describes the complete architecture for Red Hat OpenStack Platform 13 over Hyper-Converged
-Infrastructure, Figure 2: Architecture for RHOSP13 over HCI on page 15 shows components used in Undercloud
-and Overcloud in detail and description of SAH node with logical networks, and this section also provides description
-of hardware and software components.
-Figure 2: Architecture for RHOSP13 over HCI on page 15 illustrates ready architecture for RHOSP13
-deployment over HCI
+Infrastructure, the figure below shows components used in Undercloud and Overcloud in detail, and this 
+section also provides description of hardware and software components.
+
+<img src="media/HCI_architecture.png" alt="drawing" width="400px"/>
+
+> NOTE: A minimal configuration of 7 nodes including a Solution Admin Host, 3 controllers and 3 converged nodes
+is recommended for optimal performance and high-availibility
+
+### Solution Admin Host (SAH)
+The Solution Admin Host is the central administration server, and the server has internal bridged networks
+for the Virtual Machines, and is responsible for performing management operations across the domain.
+Figure below shows brief layout of SAH node. It is also a physical server that supports VMs for the 
+Undercloud that are needed for the OpenStack Overcloud to be deployed and operated. The Solution Admin 
+Node communicates with the Node Managers to perform management operations across the domain. It is 
+physically connected to the following networks. For more details of
+networks, please refer Table 5: Logical Networks on page 21
+
+<img src="media/SAH_Internal_Layout.png" alt="drawing" width="400px"/>
+
+**Undercloud**: The Undercloud is the OSP director (TripleO) node. It is a single-VM OpenStack installation
+that includes components for provisioning and managing the Overcloud.
+
+**HCI Overcloud**: The Overcloud is the end user RHOSP environment created using Undercloud. HCI
+Overcloud has only two types of roles:
+* Controller: Node that provides administration, networking, and high availability for the OpenStack
+Overcloud environments
+* ComputeHCI: It is a real hyper converged role designed to have compute and storage services like
+“Nova Compute” and “Ceph Storage” to run in tandem. This role has a direct application for edge
+computing for Telcos'.
 
 
 ## Before
