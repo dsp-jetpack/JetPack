@@ -187,8 +187,9 @@ computing for Telcos'.
 
 | **Deployment layer**                     | **Deployment element**                 | **Description**                                           |
 |------------------------------------------|----------------------------------------|-----------------------------------------------------------|
-| Undercloud                               | RHEL 7.6                               | Dell EMC PowerEdge servers need an operating system <br> which handles high density networks. Red Hat Enterprise <br>  Linux Operating System is the best optimized operating <br> system for these servers.    			                               |
-| Director node                     | Red Hat OpenStack               | Virtual                           |
+| Undercloud                               | RHEL 7.6                               | Dell EMC PowerEdge servers need an operating system which handles high density networks. Red Hat Enterprise Linux Operating System is the best optimized operating system for these servers.    			                                               |
+| Undercloud                               | KVM                                    | Kernel-based Virtual Machine (KVM) is an open source virtualization technology built into Linux®. Specifically, KVM lets you turn Linux into a hypervisor that allows a host machine to run multiple, isolated virtual environments called guests or virtual machines (VMs). This virtualization layer runs on the Solution Admin Host and hosts the director VM as well as the dashboard VM. These two VMS shares the Solution Admin Host resources to run their applications
+                                                                                                                                                |
 | Red Hat Ceph Storage Dashboard VM | Red Hat Ceph Storage Dashboard  | physical (no virtual available at this time |
 | Controller node                   | Red Hat OpenStack               | Physical                          |
 | Compute node                      | Red Hat OpenStack               | Physical                          |
