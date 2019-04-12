@@ -185,6 +185,17 @@ Overcloud environments
 “Nova Compute” and “Ceph Storage” to run in tandem. This role has a direct application for edge
 computing for Telcos'.
 
+| **Deployment layer**                     | **Deployment element**                 | **Description**                                           |
+|------------------------------------------|----------------------------------------|-----------------------------------------------------------|
+| Undercloud                               | RHEL 7.6                               | Dell EMC PowerEdge servers need an operating system       |
+|                                          |                                        | which handles high density networks. Red Hat Enterprise   |
+|                                          |                                        | Linux Operating System is the best optimized operating    |
+|                                          |                                        | system for these servers.                                 |
+| Director node                     | Red Hat OpenStack               | Virtual                           |
+| Red Hat Ceph Storage Dashboard VM | Red Hat Ceph Storage Dashboard  | physical (no virtual available at this time |
+| Controller node                   | Red Hat OpenStack               | Physical                          |
+| Compute node                      | Red Hat OpenStack               | Physical                          |
+| Storage node                      | Red Hat Ceph Storage            | Physical                          |
 
 ## Before
 
