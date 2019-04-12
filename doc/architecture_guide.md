@@ -1,5 +1,5 @@
 
-<img src="media/dc99730255437cdd115b74c45cc6c19d.jpg" alt="drawing" width="200px"/>
+<img src="media/DellEMC_Logo_Prm_Blue_Gry_rgb.png" alt="drawing" width="200px"/>
 
 # Dell EMC Red Hat Ready Architecture for Hyper Converged Infrastructure on Red Hat Openstack Platform
 
