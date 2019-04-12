@@ -185,6 +185,7 @@ Overcloud environments
 “Nova Compute” and “Ceph Storage” to run in tandem. This role has a direct application for edge
 computing for Telcos'.
 
+**RHOSP Deployment Elements**
 | **Deployment layer**                     | **Deployment element**                 | **Description**                                           |
 |------------------------------------------|----------------------------------------|-----------------------------------------------------------|
 | Undercloud                               | RHEL 7.6                               | Dell EMC PowerEdge servers need an operating system which handles high density networks. Red Hat Enterprise Linux Operating System is the best optimized operating system for these servers.    			                                               |
