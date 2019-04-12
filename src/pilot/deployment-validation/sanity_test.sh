@@ -699,11 +699,14 @@ setup_manila(){
   fi
 
   info "### Create manila share network (unity requires)..."
+
+  set_tenant_scope #Create shares in tenant aka sanity scope
+
   execute_command "manila share-network-list"  
   manila_share_network_exists=$(manila share-network-list | grep unity_share_net | awk '{print $4}')
   if [ "$manila_share_network_exists" != "unity_share_net" ]; then
-    net_id=$(openstack network list | grep " $TENANT_NETWORK_NAME " | head -n 1 | awk '{print $2}')
-    subnet_id=$(openstack network list | grep $TENANT_NETWORK_NAME | head -n 1 | awk '{print $6}')
+    net_id=$(openstack network list | grep " $FLOATING_IP_NETWORK_NAME " | head -n 1 | awk '{print $2}')
+    subnet_id=$(openstack network list | grep $FLOATING_IP_NETWORK_NAME | head -n 1 | awk '{print $6}')
     
     execute_command "manila share-network-create --neutron-net-id  $net_id --neutron-subnet-id $subnet_id --name unity_share_net" 
   fi   
@@ -741,11 +744,37 @@ setup_manila(){
       fi
     done
     info "### Share $share_name is ready, status is $share_status"
+ 
+  
+  info "### Mounting the share to instances..."
+  share_path=$(manila share-export-location-list "$share_name" | grep ":/" | awk '{print $4}')
+  info "Share path of $share_name is $share_path ..."
+  openstack server list -c ID -c Name -c Networks -f value | while read line
+  do
+    echo "Line = $line"
+    server_id=$(echo $line | awk '{print $1}')
+    server_name=$(echo $line | awk '{print $2}')
+    server_ip=$(echo $line | awk '{print $4}')
+    server_index=$(echo $server_name | awk -F_ '{print $3}')
+
+    #allow access to the VM using ip
+    info "Share $share_name allows access to $server_name.  ssh in and mount to verify"
+    execute_command "manila access-allow $share_name ip $server_ip"
+    sleep 30
+    ssh ${SSH_OPTS} -i ~/$SANITY_KEY_NAME centos@${server_ip} "sudo mkdir ~/mnt"
+    ssh ${SSH_OPTS} -i ~/$SANITY_KEY_NAME centos@${server_ip} "sudo mount -t nfs ${share_path} ~/mnt"
+    ssh ${SSH_OPTS} -i ~/$SANITY_KEY_NAME centos@${server_ip} "sudo touch ~/mnt/${server_ip}"
+ 
+  done
+   
+    set_admin_scope #reset
   done
 }
 
 manila_cleanup()
 {
+    set_tenant_scope
+
     info "#### Deleting the shares"
 
     ids=$(manila list | grep $BASE_SHARE_NAME | awk '{print $2}')
@@ -914,6 +943,8 @@ then
       num_volumes=$(cinder list | grep $BASE_VOLUME_NAME | wc -l)
     done
 
+    manila_cleanup
+
     radosgw_cleanup
 
     set_admin_scope
@@ -938,7 +969,6 @@ then
 
   set_admin_scope
 
-  manila_cleanup
 
   info   "#### Deleting the images"
   image_ids=$(openstack image list | grep $IMAGE_NAME | awk '{print $2}')
