@@ -115,7 +115,7 @@ for this Architecture Guide, which includes Intel Xeon processors, Intel NVMe di
 interface cards.
 
 ## Key differentiators
-<img src="media/key_diffs.png" alt="drawing" width="200px"/>
+<img src="media/key_diffs.png" alt="drawing" width="600px"/>
 
 The Dell EMC Hyper Converged Infrastructure for Red Hat Openstack Platform has some major enhancements from
 the regular Dell EMC Ready Architecture for Red Hat Openstack Platform.
