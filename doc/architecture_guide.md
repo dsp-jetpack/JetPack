@@ -187,10 +187,7 @@ computing for Telcos'.
 
 | **Deployment layer**                     | **Deployment element**                 | **Description**                                           |
 |------------------------------------------|----------------------------------------|-----------------------------------------------------------|
-| Undercloud                               | RHEL 7.6                               | Dell EMC PowerEdge servers need an operating system <br> 
-										      which handles high density networks. Red Hat Enterprise <br>  
-										      Linux Operating System is the best optimized operating <br>
-										      system for these servers.                                 |
+| Undercloud                               | RHEL 7.6                               | Dell EMC PowerEdge servers need an operating system <br> which handles high density networks. Red Hat Enterprise <br>  Linux Operating System is the best optimized operating <br> system for these servers.    			                               |
 | Director node                     | Red Hat OpenStack               | Virtual                           |
 | Red Hat Ceph Storage Dashboard VM | Red Hat Ceph Storage Dashboard  | physical (no virtual available at this time |
 | Controller node                   | Red Hat OpenStack               | Physical                          |
