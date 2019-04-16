@@ -689,97 +689,6 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes, dashboard_addr):
     LOG.info("with user 'admin' and password 'admin'.")
 
 
-def install_patch_package(dashboard_node):
-    LOG.info("Installing yum patch package on {}".format(dashboard_node.fqdn))
-    dashboard_node.run("sudo yum -y install patch")
-
-
-def patch_facts_yaml(dashboard_node):
-    """ Patch /usr/share/cephmetrics-ansible...install_packages.yml
-    file to allow for skipping package installation.  We previously
-    install these packages in the overcloud image customization and
-    because we don't subscribe the nodes, this will fail unless we skip
-    this installation process.
-    """
-
-    facts_yaml = "/usr/share/ceph-ansible/roles/" + \
-                 "ceph-defaults/tasks/facts.yml"
-
-    status, stdout, stderr = dashboard_node.execute("[ -f {}.orig ] \
-                                                    && echo true \
-                                                    || echo false "
-                                                    .format(facts_yaml))
-    if "true" in stdout:
-        return
-
-    LOG.info("Patching facts.yml on {}".format(dashboard_node.fqdn))
-    dashboard_node.run("""
-cat << EOF|sudo patch -b -d /usr/share/ceph-ansible/roles/ceph-defaults/tasks
---- facts.yml
-+++ facts.mod
-@@ -160,32 +160,32 @@
-     - rbd_client_directory_mode is not defined
-       or not rbd_client_directory_mode
-
--- name: resolve device link(s)
--  command: readlink -f {{ item }}
--  changed_when: false
--  with_items: "{{ devices }}"
--  register: devices_prepare_canonicalize
--  when:
--    - inventory_hostname in groups.get(osd_group_name, [])
--    - not osd_auto_discovery|default(False)
--    - osd_scenario|default('dummy') != 'lvm'
--
--- name: set_fact build devices from resolved symlinks
--  set_fact:
--    devices: "{{ devices | default([]) + [ item.stdout ] }}"
--  with_items: "{{ devices_prepare_canonicalize.results }}"
--  when:
--    - inventory_hostname in groups.get(osd_group_name, [])
--    - not osd_auto_discovery|default(False)
--    - osd_scenario|default('dummy') != 'lvm'
--
--- name: set_fact build final devices list
--  set_fact:
--    devices: "{{ devices | reject('search','/dev/disk') | list | unique }}"
--  when:
--    - inventory_hostname in groups.get(osd_group_name, [])
--    - not osd_auto_discovery|default(False)
--    - osd_scenario|default('dummy') != 'lvm'
-+#- name: resolve device link(s)
-+#  command: readlink -f {{ item }}
-+#  changed_when: false
-+#  with_items: "{{ devices }}"
-+#  register: devices_prepare_canonicalize
-+#  when:
-+#    - inventory_hostname in groups.get(osd_group_name, [])
-+#    - not osd_auto_discovery|default(False)
-+#    - osd_scenario|default('dummy') != 'lvm'
-+#
-+#- name: set_fact build devices from resolved symlinks
-+#  set_fact:
-+#    devices: "{{ devices | default([]) + [ item.stdout ] }}"
-+#  with_items: "{{ devices_prepare_canonicalize.results }}"
-+#  when:
-+#    - inventory_hostname in groups.get(osd_group_name, [])
-+#    - not osd_auto_discovery|default(False)
-+#    - osd_scenario|default('dummy') != 'lvm'
-+#
-+#- name: set_fact build final devices list
-+#  set_fact:
-+#    devices: "{{ devices | reject('search','/dev/disk') | list | unique }}"
-+#  when:
-+#    - inventory_hostname in groups.get(osd_group_name, [])
-+#    - not osd_auto_discovery|default(False)
-+#    - osd_scenario|default('dummy') != 'lvm'
- 
- - name: set_fact ceph_uid for debian based system - non container
-   set_fact:
-EOF
-""")
-
-
 def prep_subscription_json(subUser, subPass, physId, cephId):
     # Prepares the subscription.json file
     LOG.info("Preparing the subscription json file.")
@@ -843,8 +752,6 @@ def main():
     prep_heat_admin_user(dashboard_node, ceph_nodes)
     prep_ansible_hosts(dashboard_node, ceph_nodes)
     prep_ceph_conf(dashboard_node, ceph_nodes)
-    install_patch_package(dashboard_node)
-    patch_facts_yaml(dashboard_node)
     prep_cluster_for_collection(dashboard_node,
                                 ceph_nodes,
                                 args.dashboard_addr)
