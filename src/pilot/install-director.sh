@@ -223,6 +223,12 @@ subnet_uuid=$(openstack network list | grep "${subnet_name}" | awk '{print $6}')
 openstack subnet set "${subnet_uuid}" --dns-nameserver "${dns_ip}"
 echo "## Done."
 
+# This patch fixes an issue in tripleo-heat-templates
+echo
+echo "### Patching tripleo-heat-templates"
+sudo sed -i 's/$(get_python)/python/' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/per_node.yaml
+echo "## Done."
+
 echo
 echo "## Copying heat templates..."
 cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overcloud

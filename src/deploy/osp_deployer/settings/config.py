@@ -28,6 +28,7 @@ logger = logging.getLogger("osp_deployer")
 
 class Settings():
     CEPH_OSD_CONFIG_FILE = 'pilot/templates/ceph-osd-config.yaml'
+    TEMPEST_DEFAULT_WORKSPACE_NAME = 'mytempest'
 
     settings = ''
 
@@ -350,6 +351,8 @@ class Settings():
         # unity
         if backend_settings['enable_unity_backend'].lower() == 'true':
             self.enable_unity_backend = True
+            self.cinder_unity_container_version = backend_settings[
+                'cinder_unity_container_version']
             self.unity_san_ip = backend_settings['unity_san_ip']
             self.unity_san_login = backend_settings[
                 'unity_san_login']
@@ -367,6 +370,8 @@ class Settings():
         # Unity Manila
         if backend_settings['enable_unity_manila_backend'].lower() == 'true':
             self.enable_unity_manila_backend = True
+            self.manila_unity_container_version = backend_settings[
+                'manila_unity_container_version']
             self.manila_unity_driver_handles_share_servers = \
                 backend_settings['manila_unity_driver_handles_share_servers']
             self.manila_unity_nas_login = \
@@ -405,6 +410,8 @@ class Settings():
         self.sanity_key_name = sanity_settings['sanity_key_name']
         self.sanity_number_instances = \
             sanity_settings['sanity_number_instances']
+        self.vlan_aware_sanity = \
+            sanity_settings['vlan_aware_sanity']
         self.sanity_image_url = sanity_settings['sanity_image_url']
         self.sanity_vlantest_network = \
             sanity_settings['sanity_vlantest_network']
@@ -415,16 +422,15 @@ class Settings():
 
         tempest_settings = self.get_settings_section(
             "Tempest Settings")
-        if tempest_settings['run_tempest'].lower() == 'true':
-            self.run_tempest = True
-            if tempest_settings['tempest_smoke_only'].lower() \
-                    == 'true':
-                self.tempest_smoke_only = True
-            else:
-                self.tempest_smoke_only = False
-        else:
-            self.run_tempest = False
-            self.tempest_smoke_only = False
+
+        self.run_tempest = bool(tempest_settings['run_tempest']
+                                .lower() == 'true')
+        self.tempest_smoke_only = bool(tempest_settings['tempest_smoke_only']
+                                       .lower() == 'true')
+
+        self.tempest_workspace = Settings.TEMPEST_DEFAULT_WORKSPACE_NAME
+        if 'tempest_workspace' in tempest_settings:
+            self.tempest_workspace = tempest_settings['tempest_workspace']
 
         dev_settings = self.get_settings_section(
             "Advanced Settings")

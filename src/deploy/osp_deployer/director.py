@@ -37,10 +37,10 @@ exitFlag = 0
 HEAVY_POOLS = ['volumes', 'images', 'vms']
 OTHER_POOLS = ['.rgw.root', 'default.rgw.control', 'default.rgw.meta',
                'default.rgw.log', 'metrics', 'backups', '.rgw.buckets']
-# tempest constants
-TEMPEST_DIR = "~/mytempest"
+
+# tempest configuraton file
 TEMPEST_CONF = "tempest.conf"
-TEMPEST_CONF_PATH = TEMPEST_DIR + "/etc/" + TEMPEST_CONF
+
 
 class Director(InfraHost):
 
@@ -63,6 +63,11 @@ class Director(InfraHost):
         self.validation_dir = os.path.join(self.pilot_dir,
                                            "deployment-validation")
         self.source_stackrc = 'source ' + self.home_dir + "/stackrc;"
+
+        self.tempest_directory = os.path.join(self.home_dir,
+                                              self.settings.tempest_workspace)
+        self.tempest_conf = os.path.join(self.tempest_directory,
+                                         "etc", TEMPEST_CONF)
 
         cmd = "mkdir -p " + self.pilot_dir
         self.run(cmd)
@@ -424,6 +429,9 @@ class Director(InfraHost):
         self.setup_sanity_ini()
 
     def clamp_min_pgs(self, num_pgs):
+        if num_pgs < 1:
+            return 0
+
         pg_options = [8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4,
                       2, 1]
 
@@ -439,6 +447,8 @@ class Director(InfraHost):
         return num_pgs
 
     def calc_pgs(self, num_osds, num_heavy_pools, num_other_pools):
+        if num_osds == 0:
+            return 0, 0
         replication_factor = 3
         max_pgs = num_osds * 200 / replication_factor
         total_pgs = max_pgs * 0.8
@@ -519,6 +529,7 @@ class Director(InfraHost):
         domain_param = "  CloudDomain:"
         rbd_backend_param = "  NovaEnableRbdBackend:"
         glance_backend_param = "  GlanceBackend:"
+        rbd_cinder_backend_param = "  CinderEnableRbdBackend:"
         osds_per_node = 0
 
         if osd_disks:
@@ -557,6 +568,12 @@ class Director(InfraHost):
                         "Bad entry in osd_disks: {}".format(osd))
 
         total_osds = self.calc_num_osds(osds_per_node)
+        if total_osds == 0:
+            logger.info("Either the OSD configuration is not specified in "
+                        "the .properties file or the storage nodes have "
+                        "no available storage to dedicate to OSDs. Exiting")
+            sys.exit(1)
+
         heavy_pgs, other_pgs = self.calc_pgs(total_osds,
                                              len(HEAVY_POOLS),
                                              len(OTHER_POOLS))
@@ -601,6 +618,10 @@ class Director(InfraHost):
             elif line.startswith(glance_backend_param):
                 value = str(self.settings.glance_backend).lower()
                 tmp_file.write("{} {}\n".format(glance_backend_param, value))
+
+            elif line.startswith(rbd_cinder_backend_param):
+                value = str(self.settings.enable_rbd_backend).lower()
+                tmp_file.write("{} {}\n".format(rbd_cinder_backend_param, value))
 
             elif line.startswith(ceph_pools):
                 pool_str = line[len(ceph_pools):]
@@ -676,7 +697,10 @@ class Director(InfraHost):
             self.settings.sanity_key_name +
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_number_instances=.*|sanity_number_instances=' +
-            self.settings.sanity_number_instances +
+            str(self.settings.sanity_number_instances) +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|vlan_aware_sanity=.*|vlan_aware_sanity=' +
+            self.settings.vlan_aware_sanity +
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_image_url=.*|sanity_image_url=' +
             self.settings.sanity_image_url +
@@ -689,6 +713,11 @@ class Director(InfraHost):
             self.run(cmd)
 
     def setup_dell_storage(self):
+
+        # Clean the local docker registry
+        if len(self.run_tty("sudo docker images -a -q")[0]) > 1:
+            self.run_tty("sudo docker rmi $(sudo docker images -a -q) --force")
+
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy with
         # a different config
@@ -787,27 +816,28 @@ class Director(InfraHost):
 
         overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
 
+        cinder_container = "/dellemc/openstack-cinder-volume-dellemc:" + \
+            self.settings.cinder_unity_container_version
+        remote_registry = "registry.connect.redhat.com"
+        remote_url = remote_registry + cinder_container
+        local_registry = self.provisioning_ip + ":8787"
+        local_url = local_registry + cinder_container
+
         cmds = [
             'docker login -u ' + self.settings.subscription_manager_user +
             ' -p ' + self.settings.subscription_manager_password +
-            ' registry.connect.redhat.com',
-            'docker pull registry.connect.redhat.com' +
-            '/dellemc/openstack-cinder-volume-dellemc',
-            'docker tag registry.connect.redhat.com' +
-            '/dellemc/openstack-cinder-volume-dellemc ' +
-            self.provisioning_ip +
-            ':8787/dellemc/openstack-cinder-volume-dellemc',
-            'docker push ' + self.provisioning_ip +
-            ':8787/dellemc/openstack-cinder-volume-dellemc',
+            ' ' + remote_registry,
+            'docker pull ' + remote_url,
+            'docker tag ' + remote_url + ' ' + local_url,
+            'docker push ' + local_url,
             'sed -i "s|DockerCinderVolumeImage.*|' +
-            'DockerCinderVolumeImage: ' + self.provisioning_ip +
-            ':8787\/dellemc\/openstack-cinder-volume-dellemc' +
+            'DockerCinderVolumeImage: ' + local_url +
             '|" ' + overcloud_images_file,
             'echo "  DockerInsecureRegistryAddress:" >> ' +
             overcloud_images_file,
-            'echo "  - ' + self.provisioning_ip + ':8787 " >> ' +
+            'echo "  - ' + local_registry + ' " >> ' +
             overcloud_images_file,
-            'docker logout registry.connect.redhat.com',
+            'docker logout ' + remote_registry,
             'sed -i "s|<unity_san_ip>|' +
             self.settings.unity_san_ip + '|" ' + dell_unity_cinder_yaml,
             'sed -i "s|<unity_san_login>|' +
@@ -834,28 +864,28 @@ class Director(InfraHost):
 
         logger.debug("Configuring dell emc unity manila backend.")
 
-        overcloud_images_file = self.home_dir + "/overcloud_images.yaml" 
+        overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
+        manila_container = "/dellemc/openstack-manila-share-dellemc:" + \
+             self.settings.manila_unity_container_version
+        remote_registry = "registry.connect.redhat.com"
+        remote_url = remote_registry + manila_container
+        local_registry = self.provisioning_ip + ":8787"
+        local_url = local_registry + manila_container
 
         cmds = [
             'docker login -u ' + self.settings.subscription_manager_user +
             ' -p ' + self.settings.subscription_manager_password +
-            ' registry.connect.redhat.com',
-            'docker pull registry.connect.redhat.com' +
-            '/dellemc/openstack-manila-share-dellemc',
-            'docker tag registry.connect.redhat.com' +
-            '/dellemc/openstack-manila-share-dellemc ' +
-            self.provisioning_ip +
-            ':8787/dellemc/openstack-manila-share-dellemc',
-            'docker push ' + self.provisioning_ip +
-            ':8787/dellemc/openstack-manila-share-dellemc',
-            'sed -i "50i \  DockerManilaShareImage: ' + self.provisioning_ip +
-            ':8787\/dellemc\/openstack-manila-share-dellemc " ' +
-            overcloud_images_file,
+            ' ' + remote_registry,
+            'docker pull ' + remote_url,
+            'docker tag ' + remote_url + ' ' + local_url,
+            'docker push ' + local_url,
+            'sed -i "50i \  DockerManilaShareImage: ' + local_url +
+            '" ' + overcloud_images_file,
             'echo "  DockerInsecureRegistryAddress:" >> ' +
             overcloud_images_file,
-            'echo "  - ' + self.provisioning_ip + ':8787 " >> ' +
+            'echo "  - ' + local_registry + ' " >> ' +
             overcloud_images_file,
-            'docker logout registry.connect.redhat.com',
+            'docker logout ' + remote_registry,
             'sed -i "s|<manila_unity_driver_handles_share_servers>|' +
             self.settings.manila_unity_driver_handles_share_servers +
             '|" ' + unity_manila_yaml,
@@ -1589,21 +1619,26 @@ class Director(InfraHost):
 
         self._backup_tempest_conf()
 
-        cmds = [
-            'source ~/' + setts.overcloud_name + 'rc;'
-            "sudo ip route add " + setts.floating_ip_network +
-            " dev eth0",
-            'source ~/' + setts.overcloud_name + 'rc;' +
-            'tempest init ' + TEMPEST_DIR + ';cd ' + TEMPEST_DIR + ';' +
-            'discover-tempest-config --deployer-input ' +
-            '~/tempest-deployer-input.conf --debug --create ' +
-            '--network-id ' + external_sub_guid +
-            " object-storage-feature-enabled.discoverability False",
-            " object-storage-feature-enabled.discoverable_apis container_quotas",
-            'sed -i "s|tempest_roles =.*|tempest_roles = _member_,Member|" ' +
-            TEMPEST_CONF_PATH,
-        ]
+        cmd_route = ("source ~/" + setts.overcloud_name + "rc;"
+                     "sudo ip route add " + setts.floating_ip_network
+                     + " dev eth0")
+        cmd_config = ("source ~/" + setts.overcloud_name + "rc;"
+                      "if [ ! -d " + self.tempest_directory
+                      + " -o -z '$(ls -A " + self.tempest_directory
+                      + " 2>/dev/null)' ]; then tempest init "
+                      + self.tempest_directory + ";fi;cd "
+                      + self.tempest_directory
+                      + ";discover-tempest-config --deployer-input "
+                      "~/tempest-deployer-input.conf --debug --create "
+                      "--network-id " + external_sub_guid
+                      + " object-storage-feature-enabled.discoverability "
+                      "False object-storage-feature-enabled.discoverable_apis"
+                      " container_quotas")
+        cmd_roles = ("sed -i 's|tempest_roles =.*|tempest_roles "
+                     "= _member_,Member|' " + self.tempest_conf)
+        cmds = [cmd_route, cmd_config, cmd_roles]
         for cmd in cmds:
+            logger.info("Configuring tempest, cmd: %s" % cmd)
             self.run_tty(cmd)
 
     def run_tempest(self):
@@ -1613,41 +1648,41 @@ class Director(InfraHost):
             self.configure_tempest()
 
         setts = self.settings
-        cmd = 'source ~/' + self.settings.overcloud_name + 'rc;cd ' + \
-            '~/' + TEMPEST_DIR + ';' + \
-            'tempest cleanup --init-saved-state'
+        cmd = ("source ~/" + setts.overcloud_name + "rc;cd "
+               + self.tempest_directory
+               + ";tempest cleanup --init-saved-state")
 
         self.run_tty(cmd)
 
         if setts.tempest_smoke_only is True:
-            cmd = "source ~/" + self.settings.overcloud_name + "rc;cd " \
-                  "~/" + TEMPEST_DIR + " ostestr '.*smoke' --concurrency=4"
+            logger.info("Running tempest - smoke tests only.")
+            cmd = ("source ~/" + setts.overcloud_name + "rc;cd "
+                   + self.tempest_directory
+                   + ";ostestr '.*smoke' --concurrency=4")
         else:
-            cmd = "source ~/" + \
-                  self.settings.overcloud_name + \
-                  "rc;cd ~/" + TEMPEST_DIR + ";ostestr --concurrency=4"
-        self.run_tty(cmd)
-        ip = setts.director_node.public_api_ip
+            logger.info("Running tempest - full tempest run.")
+            cmd = ("source ~/" + setts.overcloud_name
+                   + "rc;cd " + self.tempest_directory
+                   + ";ostestr --concurrency=4")
 
-        Scp.get_file(ip,
-                     setts.director_install_account_user,
-                     setts.director_install_account_pwd,
+        self.run_tty(cmd)
+        tempest_log_file = (self.tempest_directory + "/tempest.log")
+
+        Scp.get_file(self.ip, self.user, self.pwd,
                      "/auto_results/tempest.log",
-                     "/home/" + setts.director_install_account_user +
-                     "~/" + TEMPEST_DIR + "/tempest.log")
-        logger.debug("Finished running tempest")
-        logger.debug("Tempest clean up")
-        cmds = ['source ~/' + self.settings.overcloud_name + 'rc;cd '
-                '~/' + TEMPEST_DIR + ';tempest cleanup --dry-run',
-                'source ~/' + self.settings.overcloud_name + 'rc;cd '
-                '~/' + TEMPEST_DIR + ';tempest cleanup'
-                ]
+                     tempest_log_file)
+        logger.debug("Finished running tempest, cleanup next.")
+        cmds = ['source ~/' + self.settings.overcloud_name + 'rc;cd ' +
+                self.tempest_directory + ';tempest cleanup --dry-run',
+                'source ~/' + self.settings.overcloud_name + 'rc;cd ' +
+                self.tempest_directory + ';tempest cleanup']
+
         for cmd in cmds:
             self.run_tty(cmd)
 
     def is_tempest_conf(self):
         logger.info("Checking to see if tempest.conf exists.")
-        cmd = "test -f " + TEMPEST_CONF_PATH + "; echo $?;"
+        cmd = "test -f " + self.tempest_conf + "; echo $?;"
         resp = self.run_tty(cmd)[0].rstrip()
         is_conf = not bool(int(resp))
         return is_conf
@@ -1665,11 +1700,10 @@ class Director(InfraHost):
         logger.info("Backing up tempest.conf")
         if self.is_tempest_conf():
             timestamp = int(round(time.time() * 1000))
-            new_conf = (TEMPEST_DIR + "/etc/" + TEMPEST_CONF + "."
-                        + str(timestamp))
+            new_conf = (self.tempest_conf + "." + str(timestamp))
             logger.debug("Backing up tempest.conf, new file is: %s "
                          % new_conf)
-            cmd = ("mv " + TEMPEST_CONF_PATH + " " + new_conf + " 2>/dev/null")
+            cmd = ("mv " + self.tempest_conf + " " + new_conf + " 2>/dev/null")
             self.run_tty(cmd)
 
     def configure_dashboard(self):
