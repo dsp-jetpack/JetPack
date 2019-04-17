@@ -86,14 +86,9 @@ def run_tempest():
     if settings.run_tempest is True or args.run_tempest_only:
         logger.info("=== Running tempest ==")
         director_vm = Director()
-        is_tempest_conf = director_vm.is_tempest_conf()
-        logger.debug("Does tempest.conf exist? %s"
-                     % str(is_tempest_conf))
-        if not is_tempest_conf:
-            director_vm.configure_tempest()
         director_vm.run_tempest()
     else:
-        logger.debug("not running tempest")
+        logger.debug("Not running tempest")
 
 
 def deploy():
