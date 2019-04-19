@@ -44,6 +44,7 @@ system-config-firewall-base
 yum-plugin-versionlock
 %end
 
+####################### CHANGEME
 %pre --log /tmp/director-pre.log
 echo rootpw xxxxxxxx >> /tmp/ks_include.txt
 echo timezone America/Chicago --utc >> /tmp/ks_include.txt
@@ -65,6 +66,7 @@ echo eth2_mtu=1500 >> /tmp/ks_post_include.txt
 echo network --activate --onboot=true --noipv6 --device=eth3 --bootproto=static --ip=192.168.140.9 --netmask=255.255.255.0 --gateway=100.67.139.1 --nodefroute --mtu=1500 >> /tmp/ks_include.txt
 echo eth3_mtu=1500 >> /tmp/ks_post_include.txt
 %end
+####################### END OF CHANGEME
 
 %post --nochroot --logfile /root/director-post.log
 # Copy the files created during the %pre section to /root of the installed system for later use.
