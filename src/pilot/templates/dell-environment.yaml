@@ -105,6 +105,8 @@ parameter_defaults:
     journal_size: 10000
     journal_collocation: false
     raw_multi_journal: true
+    rgw_swift_enforce_content_length: true
+    rgw_swift_versioning_enabled: true
   CephAnsibleDisksConfig:
     osd_scenario: non-collocated
     devices:
