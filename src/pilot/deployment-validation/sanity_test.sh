@@ -408,7 +408,7 @@ sriov_port_creation(){
   #Creating ports in the tenant scope
   set_tenant_scope
 
-  execute_command "openstack port create --network $TENANT_NETWORK_NAME --vnic-type direct $sriov_port_name --binding-profile capabilities=switchdev"
+  execute_command "openstack port create --network $TENANT_NETWORK_NAME --vnic-type direct $sriov_port_name"
 }
 
 spin_up_instances(){
@@ -549,7 +549,7 @@ ping_from_netns(){
   done
 
   info "### Pinging $ip from netns $name_space on controller $controller"
-  sleep 20
+  sleep 50
   execute_command "ssh ${SSH_OPTS} heat-admin@$controller sudo ip netns exec ${name_space} ping -c 1 -w 5 ${ip}"
   if [[ "$?" == 0 ]]
   then
@@ -573,7 +573,7 @@ ping_from_snat_netns(){
       break
     fi
   done
-  sleep 20
+  sleep 50
   info "### Pinging $ip from netns $name_space on controller $controller"
   execute_command "ssh ${SSH_OPTS} heat-admin@$controller sudo ip netns exec ${name_space} ping -c 1 -w 5 ${ip}"
   if [[ "$?" == 0 ]]
@@ -866,7 +866,7 @@ setup_project(){
   then
     execute_command "openstack project create $PROJECT_NAME"
     execute_command "openstack user create --project $PROJECT_NAME --password $SANITY_USER_PASSWORD --email $SANITY_USER_EMAIL $USER_NAME"
-    execute_command "openstack role add --project $PROJECT_NAME --user $USER_NAME admin"
+    execute_command "openstack role add --project $PROJECT_NAME --user $USER_NAME member"
   else
     info "#Project $PROJECT_NAME exists ---- Skipping"
   fi
