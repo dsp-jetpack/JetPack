@@ -548,6 +548,8 @@ class Settings():
                 '/pilot/templates/nic-configs/' + self.nic_env_file
         if 'sah_bond_opts' in nics_settings:
             self.sah_bond_opts = nics_settings['sah_bond_opts']
+        if 'HostNicDriver' in nics_settings:
+            self.HostNicDriver = nics_settings['HostNicDriver']
 
         # This particular section has been moved right after the nics_settings
         # section in order to catch the mode used by the nic-environment file
