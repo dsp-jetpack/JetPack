@@ -549,7 +549,7 @@ ping_from_netns(){
   done
 
   info "### Pinging $ip from netns $name_space on controller $controller"
-  sleep 20
+  sleep 50
   execute_command "ssh ${SSH_OPTS} heat-admin@$controller sudo ip netns exec ${name_space} ping -c 1 -w 5 ${ip}"
   if [[ "$?" == 0 ]]
   then
@@ -573,7 +573,7 @@ ping_from_snat_netns(){
       break
     fi
   done
-  sleep 20
+  sleep 50
   info "### Pinging $ip from netns $name_space on controller $controller"
   execute_command "ssh ${SSH_OPTS} heat-admin@$controller sudo ip netns exec ${name_space} ping -c 1 -w 5 ${ip}"
   if [[ "$?" == 0 ]]

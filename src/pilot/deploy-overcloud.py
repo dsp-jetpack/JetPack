@@ -537,7 +537,6 @@ def main():
 
         if args.sriov:
             env_opts += " -e ~/pilot/templates/neutron-sriov.yaml"
-            env_opts += " -e ~/pilot/templates/ovs-hw-offload.yaml"
             if not host_config:
                 env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                             "host-config-and-reboot.yaml"

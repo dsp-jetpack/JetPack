@@ -1074,6 +1074,8 @@ class Director(InfraHost):
         neutron_ovs_dpdk_yaml = self.templates_dir + "/neutron-ovs-dpdk.yaml"
         neutron_sriov_yaml = self.templates_dir + "/neutron-sriov.yaml"
 
+        self.set_ovs_dpdk_driver(self.settings.neutron_ovs_dpdk_yaml)
+
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy
         # with a different config
@@ -1253,8 +1255,7 @@ class Director(InfraHost):
             sriov_pci_passthrough.append(nova_pci)
 
             interface = interface + ':' + \
-                                    self.settings.sriov_vf_count + \
-                                    ':' + 'switchdev'
+                                    self.settings.sriov_vf_count
             sriov_vfs_setting.append(interface)
 
         sriov_vfs_setting = "'" + ",".join(sriov_vfs_setting) + "'"
@@ -1763,3 +1764,24 @@ class Director(InfraHost):
             node_identifier,
             role,
             str(index))
+
+    def set_ovs_dpdk_driver(self, neutron_ovs_dpdk_yaml):
+        cmds = []
+        HostNicDriver = self.settings.HostNicDriver
+        if HostNicDriver == 'mlx5_core':
+            nic_driver = 'mlx5_core'
+        else:
+            nic_driver = 'vfio-pci'
+        cmds.append(
+                    'sed -i "s|OvsDpdkDriverType:.*|OvsDpdkDriverType: \\"' +
+                    nic_driver +
+                    '\\" |" ' +
+                    neutron_ovs_dpdk_yaml)
+        for cmd in cmds:
+            status = os.system(cmd)
+            if status != 0:
+                raise Exception(
+                    "Failed to execute the command {}"
+                    " with error code {}".format(
+                        cmd, status))
+            logger.debug("cmd: {}".format(cmd))
