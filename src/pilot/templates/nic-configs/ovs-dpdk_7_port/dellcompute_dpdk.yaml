@@ -231,7 +231,7 @@ resources:
                   - type: ovs_dpdk_port
                     name: dpdk0
                     driver:
-                        get_param:HostNicDriver
+                        get_param: HostNicDriver
                     members:
                     - type: interface
                       name:
@@ -241,7 +241,7 @@ resources:
                   - type: ovs_dpdk_port
                     name: dpdk1
                     driver:
-                        get_param:HostNicDriver
+                        get_param: HostNicDriver
                     members:
                     - type: interface
                       name:
