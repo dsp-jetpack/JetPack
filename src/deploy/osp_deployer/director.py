@@ -1074,7 +1074,8 @@ class Director(InfraHost):
         neutron_ovs_dpdk_yaml = self.templates_dir + "/neutron-ovs-dpdk.yaml"
         neutron_sriov_yaml = self.templates_dir + "/neutron-sriov.yaml"
 
-        self.set_ovs_dpdk_driver(self.settings.neutron_ovs_dpdk_yaml)
+        if self.settings.enable_ovs_dpdk is True:
+            self.set_ovs_dpdk_driver(self.settings.neutron_ovs_dpdk_yaml)
 
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy
