@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,6 +27,9 @@ import math
 import os
 import sys
 import yaml
+import errno
+import fcntl
+import time
 
 from dracclient import utils
 from dracclient.constants import POWER_OFF
@@ -612,7 +615,7 @@ def define_jbod_logical_disks(
             drac_client, raid_controller_name, physical_disk_name,
             is_root_volume=False, jbod_capable=jbod_capable)
 
-        if jbod_logical_disk is not None:
+        if jbod_logical_disk:
             logical_disks.append(jbod_logical_disk)
 
     return logical_disks
@@ -905,7 +908,7 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
         return
 
     LOG.info("Generating OSD config for {ip}".format(ip=ip_mac_service_tag))
-    system_id = drac_client.get_system().id
+    system_id = drac_client.get_system().uuid
 
     spinners, ssds = get_drives(drac_client)
 
@@ -926,74 +929,94 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
 
     # load the osd environment file
     osd_config_file = os.path.join(Constants.TEMPLATES, "ceph-osd-config.yaml")
-    with open(osd_config_file, 'r') as stream:
-        current_osd_configs = yaml.load(stream)
-
-    node_data_lookup_str = \
+    stream = open(osd_config_file, 'r+')
+    while True:
+        try:
+            fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except IOError as e:
+            if e.errno != errno.EAGAIN:
+                raise
+            else:
+                time.sleep(1)
+    try:
+        try:
+            current_osd_configs = yaml.load(stream)
+        except:
+            raise
+        node_data_lookup_str = \
         current_osd_configs["parameter_defaults"]["NodeDataLookup"]
-    if not node_data_lookup_str:
-        node_data_lookup = {}
-    else:
-        node_data_lookup = json.loads(node_data_lookup_str)
-
-    if system_id in node_data_lookup:
-        current_osd_config = node_data_lookup[system_id]
-        if new_osd_config == current_osd_config:
-            LOG.info("The generated OSD configuration for "
-                     "{ip_mac_service_tag} ({system_id}) is the same as the "
-                     "one in {osd_config_file}.  Skipping OSD "
-                     "configuration.".format(
-                         ip_mac_service_tag=ip_mac_service_tag,
-                         system_id=system_id,
-                         osd_config_file=osd_config_file))
-            return
+        if not node_data_lookup_str:
+            node_data_lookup = {}
         else:
-            generated_config = json.dumps(new_osd_config, sort_keys=True,
-                                          indent=2, separators=(',', ': '))
-            current_config = json.dumps(current_osd_config, sort_keys=True,
-                                        indent=2, separators=(',', ': '))
-            raise RuntimeError("The generated OSD configuration for "
-                               "{ip_mac_service_tag} ({system_id}) is "
-                               "different from the one in {osd_config_file}.\n"
-                               "Generated:\n{generated_config}\n\n"
-                               "Current:\n{current_config}\n\n"
-                               "If this is unexpected, then check for failed "
-                               "drives. If this is expected, then delete the "
-                               "configuration for this node from "
-                               "{osd_config_file} and rerun "
-                               "assign_role.".format(
-                                   ip_mac_service_tag=ip_mac_service_tag,
-                                   system_id=system_id,
-                                   osd_config_file=osd_config_file,
-                                   generated_config=generated_config,
-                                   current_config=current_config))
+            node_data_lookup = json.loads(node_data_lookup_str)
+        LOG.info("Checking for existing config ")
+        if system_id in node_data_lookup:
+            current_osd_config = node_data_lookup[system_id]
+            if new_osd_config == current_osd_config:
+                LOG.info("The generated OSD configuration for "
+                         "{ip_mac_service_tag} ({system_id}) is the same as the "
+                         "one in {osd_config_file}.  Skipping OSD "
+                         "configuration.".format(
+                             ip_mac_service_tag=ip_mac_service_tag,
+                             system_id=system_id,
+                             osd_config_file=osd_config_file))
+                return
+            else:
+                generated_config = json.dumps(new_osd_config, sort_keys=True,
+                                              indent=2, separators=(',', ': '))
+                current_config = json.dumps(current_osd_config, sort_keys=True,
+                                            indent=2, separators=(',', ': '))
+                raise RuntimeError("The generated OSD configuration for "
+                                   "{ip_mac_service_tag} ({system_id}) is "
+                                   "different from the one in {osd_config_file}.\n"
+                                   "Generated:\n{generated_config}\n\n"
+                                   "Current:\n{current_config}\n\n"
+                                   "If this is unexpected, then check for failed"
+                                   " drives. If this is expected, then delete the"
+                                   " configuration for this node from "
+                                   "{osd_config_file} and rerun "
+                                   "assign_role.".format(
+                                       ip_mac_service_tag=ip_mac_service_tag,
+                                       system_id=system_id,
+                                       osd_config_file=osd_config_file,
+                                       generated_config=generated_config,
+                                       current_config=current_config))
 
-    node_data_lookup[system_id] = new_osd_config
+        node_data_lookup[system_id] = new_osd_config
 
-    # make a backup copy of the file
-    osd_config_file_backup = osd_config_file + ".bak"
-    LOG.info("Backing up original OSD config file to "
-             "{osd_config_file_backup}".format(
-                 osd_config_file_backup=osd_config_file_backup))
-    copyfile(osd_config_file, osd_config_file_backup)
+        # make a backup copy of the file
+        osd_config_file_backup = osd_config_file + ".bak"
+        LOG.info("Backing up original OSD config file to "
+                 "{osd_config_file_backup}".format(
+                     osd_config_file_backup=osd_config_file_backup))
+        copyfile(osd_config_file, osd_config_file_backup)
 
-    # save the new config
-    LOG.info("Saving new OSD config to {osd_config_file}".format(
-        osd_config_file=osd_config_file))
+        # save the new config
+        LOG.info("Saving new OSD config to {osd_config_file}".format(
+            osd_config_file=osd_config_file))
 
-    # Using the simple yaml.dump results in a completely unreadable file, so we
-    # do it the hard way to create something more user friendly
-    with open(osd_config_file + ".orig", 'r') as instream:
-        with open(osd_config_file, 'w') as outstream:
+        # Using the simple yaml.dump results in a completely
+        # unreadable file, so we do it the hard way to create
+        # something more user friendly
+        stream.seek(0)
+        with open(osd_config_file + ".orig", 'r') as instream:
             for line in instream:
                 if '{}' not in line:
-                    outstream.write(line)
+                    stream.write(line)
 
-            osd_config_str = json.dumps(node_data_lookup, sort_keys=True,
-                                        indent=2, separators=(',', ': '))
+            osd_config_str = json.dumps(node_data_lookup,
+                                        sort_keys=True,
+                                        indent=2,
+                                        separators=(',', ': '))
             for line in osd_config_str.split('\n'):
                 line = "    " + line + "\n"
-                outstream.write(line)
+                stream.write(line)
+        stream.truncate()
+        instream.close()
+    finally:
+        fcntl.flock(stream, fcntl.LOCK_UN)
+        stream.close()
 
 
 def get_drives(drac_client):
@@ -1367,15 +1390,21 @@ def change_physical_disk_state_wait(
         mode, controllers_to_physical_disk_ids)
 
     job_ids = []
+    all_realtime_controllers = True
     if change_state_result['commit_required_ids']:
+        disk_controllers = {c.id: c for c in
+                            drac_client.list_raid_controllers()}
         for controller_id in change_state_result['commit_required_ids']:
+            all_realtime_controllers = all_realtime_controllers and \
+                disk_controllers[controller_id].supports_realtime
             job_id = drac_client.commit_pending_raid_changes(
-                controller_id, reboot=False, start_time=None)
+                controller_id, reboot=False, start_time=None,
+                realtime=disk_controllers[controller_id].supports_realtime)
             job_ids.append(job_id)
 
     result = True
     if job_ids:
-        if change_state_result['is_reboot_required']:
+        if not all_realtime_controllers:
             LOG.debug("Rebooting the node to apply configuration")
             job_id = drac_client.create_reboot_job()
             job_ids.append(job_id)

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -155,18 +155,10 @@ def create_volume_types():
         types.append(["rbd_backend", "tripleo_ceph"])
 
     if args.enable_dellsc:
-        cinder_file = open(home_dir +
-                           '/pilot/templates/dell-cinder-backends.yaml', 'r')
-        for line in cinder_file:
-            line = line.strip()
-            try:
-                found = re.search('cinder_user_enabled_backends: \[(.+?)\]',  # noqa: W605
-                                  line).group(1)
-                backends = found.split(",")
-                for backend in backends:
-                    types.append([backend + "_backend", backend])
-            except AttributeError:
-                found = ''
+        types.append(["dellsc_backend", "dellsc"])
+
+    if args.enable_unity:
+        types.append(["unity_backend", "tripleo_dellemc_unity"])
 
     overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 
@@ -190,6 +182,37 @@ def create_volume_types():
 
     os.system("source {} && "
               "cinder extra-specs-list".format(overcloudrc_name))
+
+
+def create_share_types():
+    logger.info("Creating manila share types...")
+    types = []
+
+    if args.enable_unity_manila:
+        types.append(["unity_share", "tripleo_manila_unity"])
+
+    overcloudrc_name = CredentialHelper.get_overcloudrc_name()
+
+    for type in types:
+        type_name = type[0]
+        cmd = "source {} && manila type-list | grep ' {} ' | " \
+              "awk '{{print $4}}'".format(overcloudrc_name, type_name)
+        proc = subprocess.Popen([cmd], stdout=subprocess.PIPE, shell=True)
+        return_output = proc.communicate()[0].strip()
+
+        if type_name == return_output:
+            logger.warning("Manila type exists, skipping {}".format(type[0]))
+            continue
+        else:
+            logger.info("Creating manila share type {}".format(type[0]))
+            cmd = "source {} && " \
+                  "manila type-create --is_public True {} true && " \
+                  "manila type-key {} set share_backend_name={}" \
+                  "".format(overcloudrc_name, type[0], type[0], type[1])
+            os.system(cmd)
+
+    os.system("source {} && "
+              "manila extra-specs-list".format(overcloudrc_name))
 
 
 def run_deploy_command(cmd):
@@ -221,6 +244,7 @@ def finalize_overcloud():
 
     create_flavors()
     create_volume_types()
+    create_share_types()
 
     # horizon_service = keystone_client.services.find(**{'name': 'horizon'})
     # horizon_endpoint = keystone_client.endpoints.find(
@@ -305,10 +329,27 @@ def main():
                             action='store_true',
                             default=False,
                             help="Enable cinder Dell Storage Center backend")
+        parser.add_argument('--enable_unity',
+                            action='store_true',
+                            default=False,
+                            help="Enable Dell EMC Unity backend")
+        parser.add_argument('--enable_unity_manila',
+                            action='store_true',
+                            default=False,
+                            help="Enable Dell EMC Unity Manila backend")
         parser.add_argument('--disable_rbd',
                             action='store_true',
                             default=False,
                             help="Disable cinder Ceph and rbd backend")
+        parser.add_argument('--octavia_enable',
+                            action='store_true',
+                            default=False,
+                            help="Enables Octavia Load Balancer")
+        parser.add_argument('--octavia_user_certs_keys',
+                            action='store_true',
+                            default=False,
+                            help="Enables Octavia Load Balancer with "
+                                 "user provided certs and keys")
         parser.add_argument('--dvr_enable',
                             action='store_true',
                             default=False,
@@ -464,6 +505,13 @@ def main():
         if args.dvr_enable:
             env_opts += " -e ~/pilot/templates/neutron-ovs-dvr.yaml"
 
+        # The octavia.yaml must be included after the
+        # network-environment.yaml
+        if args.octavia_enable:
+            env_opts += " -e ~/pilot/templates/octavia.yaml"
+            if args.octavia_user_certs_keys is True:
+                env_opts += " -e ~/pilot/templates/cert_keys.yaml"
+
         if args.node_placement:
             env_opts += " -e ~/pilot/templates/node-placement.yaml"
 
@@ -496,6 +544,12 @@ def main():
 
         if args.enable_dellsc:
             env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
+
+        if args.enable_unity:
+            env_opts += " -e ~/pilot/templates/dellemc-unity-cinder-" \
+                        "backend.yaml"
+        if args.enable_unity_manila:
+            env_opts += " -e ~/pilot/templates/unity-manila-config.yaml"
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \

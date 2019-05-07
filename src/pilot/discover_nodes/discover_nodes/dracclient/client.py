@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -182,32 +182,5 @@ class DRACClient(ironic_client.DRACClient):
             cim_creation_class_name='DCIM_NICService',
             cim_name='DCIM:NICService',
             target=nic_id,
-            reboot=reboot,
-            start_time=start_time)
-
-    def commit_pending_raid_changes(self, raid_controller, reboot=False,
-                                    start_time='TIME_NOW'):
-        """Applies all pending changes on a RAID controller
-
-         ...by creating a config job.
-
-        :param raid_controller: id of the RAID controller
-        :param reboot: indicates whether a RebootJob should also be
-                       created or not
-        :param start_time: start time for job execution in format
-               yyyymmddhhmmss; the string 'TIME_NOW' means
-               immediately and None means unspecified
-        :returns: id of the created job
-        :raises: WSManRequestFailure on request failures
-        :raises: WSManInvalidResponse when receiving invalid response
-        :raises: DRACOperationFailed on error reported back by the DRAC
-                 interface
-        :raises: DRACUnexpectedReturnValue on return value mismatch
-        """
-        return self._job_mgmt.create_config_job(
-            resource_uri=ironic_uris.DCIM_RAIDService,
-            cim_creation_class_name='DCIM_RAIDService',
-            cim_name='DCIM:RAIDService',
-            target=raid_controller,
             reboot=reboot,
             start_time=start_time)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -103,6 +103,11 @@ class DeployerSanity():
             assert os.path.isfile(
                 self.settings.overcloud_image), \
                 self.settings.overcloud_image + \
+                " file doesn't seem to exist"
+        if self.settings.octavia_user_certs_keys is True:
+            assert os.path.isfile(
+                self.settings.certificate_keys_path),\
+                self.settings.certificate_keys_path +\
                 " file doesn't seem to exist"
         assert os.path.isfile(
             self.settings.install_director_sh), \
