@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,11 +27,20 @@ import subprocess
 import sys
 import tempfile
 import time
+import yaml
 
 logger = logging.getLogger("osp_deployer")
 
 exitFlag = 0
 
+# Ceph pools present in a default install
+HEAVY_POOLS = ['volumes', 'images', 'vms']
+OTHER_POOLS = ['.rgw.root', 'default.rgw.control', 'default.rgw.meta',
+               'default.rgw.log', 'metrics', 'backups', '.rgw.buckets']
+# tempest constants
+TEMPEST_DIR = "~/mytempest"
+TEMPEST_CONF = "tempest.conf"
+TEMPEST_CONF_PATH = TEMPEST_DIR + "/etc/" + TEMPEST_CONF
 
 class Director(InfraHost):
 
@@ -40,6 +49,7 @@ class Director(InfraHost):
         self.settings = Settings.settings
         self.user = self.settings.director_install_account_user
         self.ip = self.settings.director_node.public_api_ip
+        self.provisioning_ip = self.settings.director_node.provisioning_ip
         self.pwd = self.settings.director_install_account_pwd
         self.root_pwd = self.settings.director_node.root_password
 
@@ -124,7 +134,7 @@ class Director(InfraHost):
             'sed -i "s|inspection_iprange = .*|inspection_iprange = ' +
             self.settings.discovery_ip_range +
             '|" pilot/undercloud.conf',
-            'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' + 
+            'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' +
             self.settings.sah_node.provisioning_ip +
             '|" pilot/undercloud.conf'
         ]
@@ -132,8 +142,9 @@ class Director(InfraHost):
             self.run(cmd)
 
         if self.settings.version_locking_enabled is True:
-            source_file = self.settings.lock_files_dir + "/overcloud_images.yaml"
-            dest_file = self.home_dir + "/overcloud_images.yaml"
+            yaml = "/overcloud_images.yaml"
+            source_file = self.settings.lock_files_dir + yaml
+            dest_file = self.home_dir + yaml
             self.upload_file(source_file, dest_file)
 
     def install_director(self):
@@ -379,27 +390,25 @@ class Director(InfraHost):
         non_sah_nodes = (self.settings.controller_nodes +
                          self.settings.compute_nodes +
                          self.settings.ceph_nodes)
-        # Allow for the number of nodes + a couple of sessions
-        maxSessions = len(non_sah_nodes) + 2
-        cmds = [
-            "sed -i 's/.*MaxStartups.*/MaxStartups " +
-            str(maxSessions) + "/' /etc/ssh/sshd_config",
-            "sed -i 's/.*MaxSession.*/MaxSessions " +
-            str(maxSessions) + "/' /etc/ssh/sshd_config",
-            "/sbin/service sshd restart",
-            "grep max -i /etc/ssh/sshd_config"
-        ]
-        for cmd in cmds:
-            self.run_as_root(cmd)
+        # Allow for the number of nodes + a few extra sessions
+        maxSessions = len(non_sah_nodes) + 10
+
+        setts = ['MaxStartups', 'MaxSessions']
+        for each in setts:
+            re = self.run("sudo grep " + each +
+                          " /etc/ssh/sshd_config")[0].rstrip()
+            if re != each + " " + str(maxSessions):
+                self.run_as_root('sed -i -e "\$a' + each + ' ' +
+                                 str(maxSessions) +
+                                 '" /etc/ssh/sshd_config')
+        self.run_as_root("systemctl restart sshd")
 
     def revert_sshd_conf(self):
         # Revert sshd_config to its default
         cmds = [
-            "sed -i 's/.*MaxStartups.*/#MaxStartups 10:30:100/'" +
-            " /etc/ssh/sshd_config",
-            "sed -i 's/.*MaxSession.*/#MaxSession 10/' /etc/ssh/sshd_config",
-            "/sbin/service sshd restart",
-            "grep max -i /etc/ssh/sshd_config"
+            "sed -i '/MaxStartups/d' /etc/ssh/sshd_config",
+            "sed -i '/MaxSessions/d' /etc/ssh/sshd_config",
+            "systemctl restart sshd"
         ]
         for cmd in cmds:
             self.run_as_root(cmd)
@@ -410,8 +419,83 @@ class Director(InfraHost):
 
         self.setup_networking()
         self.setup_dell_storage()
+        self.setup_manila()
         self.setup_environment()
         self.setup_sanity_ini()
+
+    def clamp_min_pgs(self, num_pgs):
+        if num_pgs < 1:
+            return 0
+
+        pg_options = [8192, 4096, 2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4,
+                      2, 1]
+
+        option_index = 0
+        finding_pg_value = True
+        while finding_pg_value:
+            if num_pgs >= pg_options[option_index]:
+                num_pgs = pg_options[option_index]
+                finding_pg_value = False
+            else:
+                option_index += 1
+
+        return num_pgs
+
+    def calc_pgs(self, num_osds, num_heavy_pools, num_other_pools):
+        if num_osds == 0:
+            return 0, 0
+        replication_factor = 3
+        max_pgs = num_osds * 200 / replication_factor
+        total_pgs = max_pgs * 0.8
+        total_heavy_pgs = total_pgs / 2
+        heavy_pgs = total_heavy_pgs / num_heavy_pools
+        heavy_pgs = self.clamp_min_pgs(heavy_pgs)
+
+        heavy_pools_pgs = num_heavy_pools * heavy_pgs
+        remaining_pgs = total_pgs - heavy_pools_pgs
+        other_pgs = remaining_pgs / num_other_pools
+        other_pgs = self.clamp_min_pgs(other_pgs)
+
+        return heavy_pgs, other_pgs
+
+    def calc_num_osds(self, default_osds_per_node):
+        # Pull down the auto-generated OSD config file from the director
+        local_file = self.settings.ceph_osd_config_yaml + '.director'
+        remote_file = os.path.join('/home',
+           self.settings.director_install_account_user,
+           Settings.CEPH_OSD_CONFIG_FILE)
+        self.download_file(local_file, remote_file)
+
+        # Calculate the number of OSDs across the entire cluster
+        total_osds = 0
+
+        with open(local_file, 'r') as stream:
+            osd_configs_yaml = yaml.load(stream)
+
+        node_data_lookup_str = osd_configs_yaml["parameter_defaults"][
+            "NodeDataLookup"]
+        uuid_to_osd_configs = json.loads(node_data_lookup_str)
+        for uuid in uuid_to_osd_configs:
+            osd_config = uuid_to_osd_configs[uuid]
+            num_osds = len(osd_config["devices"])
+            total_osds = total_osds + num_osds
+
+        num_storage_nodes = len(self.settings.ceph_nodes)
+        num_unaccounted = num_storage_nodes - len(uuid_to_osd_configs)
+        if num_unaccounted < 0:
+            raise AssertionError("There are extraneous servers listed in {}. "
+                                 "Unable to calculate the number of OSDs in "
+                                 "the cluster.  Remove the bad entries from "
+                                 "the file or discard the current generated "
+                                 "OSD configration by copying {}.orig to "
+                                 "{}.".format(
+                                     self.settings.ceph_osd_config_yaml,
+                                     self.settings.ceph_osd_config_yaml,
+                                     self.settings.ceph_osd_config_yaml))
+
+        total_osds = total_osds + (num_unaccounted * default_osds_per_node)
+
+        return total_osds
 
     def setup_environment(self):
         logger.debug("Configuring Ceph storage settings for overcloud")
@@ -436,20 +520,12 @@ class Director(InfraHost):
         osd_scenario = "collocated"  # Keep this as default, change if required
         osd_devices = "    devices:\n"
         osd_dedicated_devices = "    dedicated_devices:\n"
+        ceph_pools = "  CephPools:"
         domain_param = "  CloudDomain:"
         rbd_backend_param = "  NovaEnableRbdBackend:"
-        ceph_pool_default_size_param = "  CephPoolDefaultSize:"
-        ceph_pool_default_size = 3
+        glance_backend_param = "  GlanceBackend:"
         osds_per_node = 0
-        storage_nodes = len(self.settings.ceph_nodes)
 
-        # Dynamic calculation for the replication size
-        # This calculation is based on the observation that
-        # 10 Ceph pools are created with 2688 placement groups.
-        # Minimum of 41 OSDs are required for containing 2688 PGs with
-        # a replication size of 3. Each OSD can have 200 PGs.
-        # Simillarly 27 OSDs are reuiqred for a replication size of 2.
-        # And minimum 14 OSDs are required for replication size of 1.
         if osd_disks:
             for osd in osd_disks:
                 # Format is ":OSD_DRIVE" or ":OSD_DRIVE:JOURNAL_DRIVE",
@@ -485,18 +561,16 @@ class Director(InfraHost):
                     logger.warning(
                         "Bad entry in osd_disks: {}".format(osd))
 
-            total_osds = osds_per_node * storage_nodes
-            if total_osds >= 41:
-                ceph_pool_default_size = 3
-            elif total_osds >= 27:
-                ceph_pool_default_size = 2
-                logger.warning("Setting the CephDefaultPoolSize to 2.")
-            elif total_osds >= 14:
-                ceph_pool_default_size = 1
-                logger.warning("Setting the CephDefaultPoolSize to 1.")
-            else:
-                raise AssertionError("Number of OSDs on storage nodes is less "
-                                     " than minimum required.")
+        total_osds = self.calc_num_osds(osds_per_node)
+        if total_osds == 0:
+            logger.info("Either the OSD configuration is not specified in "
+                        "the .properties file or the storage nodes have "
+                        "no available storage to dedicate to OSDs. Exiting")
+            sys.exit(1)
+
+        heavy_pgs, other_pgs = self.calc_pgs(total_osds,
+                                             len(HEAVY_POOLS),
+                                             len(OTHER_POOLS))
 
         found_osds_param = False
         for line in src_file:
@@ -535,10 +609,22 @@ class Director(InfraHost):
                 value = str(self.settings.enable_rbd_nova_backend).lower()
                 tmp_file.write("{} {}\n".format(rbd_backend_param, value))
 
-            elif line.startswith(ceph_pool_default_size_param):
-                tmp_file.write("{} {}\n".format(ceph_pool_default_size_param,
-                                                ceph_pool_default_size))
+            elif line.startswith(glance_backend_param):
+                value = str(self.settings.glance_backend).lower()
+                tmp_file.write("{} {}\n".format(glance_backend_param, value))
 
+            elif line.startswith(ceph_pools):
+                pool_str = line[len(ceph_pools):]
+                pools = json.loads(pool_str)
+                for pool in pools:
+                    if pool["name"] in HEAVY_POOLS:
+                        pool["pg_num"] = heavy_pgs
+                        pool["pgp_num"] = heavy_pgs
+                    else:
+                        pool["pg_num"] = other_pgs
+                        pool["pgp_num"] = other_pgs
+
+                tmp_file.write("{} {}\n".format(ceph_pools, json.dumps(pools)))
             else:
                 tmp_file.write(line)
 
@@ -602,6 +688,8 @@ class Director(InfraHost):
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_number_instances=.*|sanity_number_instances=' +
             self.settings.sanity_number_instances +
+            'sed -i "s|vlan_aware_sanity=.*|vlan_aware_sanity=' +
+            self.settings.vlan_aware_sanity +
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_image_url=.*|sanity_image_url=' +
             self.settings.sanity_image_url +
@@ -614,6 +702,10 @@ class Director(InfraHost):
             self.run(cmd)
 
     def setup_dell_storage(self):
+
+        # Clean the local docker registry
+        self.run_tty("sudo docker rmi $(sudo docker images -a -q) --force")
+
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy with
         # a different config
@@ -625,10 +717,26 @@ class Director(InfraHost):
                      " " + dell_storage_yaml + ".bak")
 
         self.setup_dellsc(dell_storage_yaml)
+
+        # Unity is in a separate yaml file
+        dell_unity_cinder_yaml = self.templates_dir + \
+            "/dellemc-unity-cinder-backend.yaml"
+        self.upload_file(self.settings.dell_unity_cinder_yaml,
+                         dell_unity_cinder_yaml)
+        # Backup before modifying
+        self.run_tty("cp " + dell_unity_cinder_yaml +
+                     " " + dell_unity_cinder_yaml + ".bak")
+
+        self.setup_unity_cinder(dell_unity_cinder_yaml)
+
+        # Enable multiple backends now
         enabled_backends = "["
 
         if self.settings.enable_dellsc_backend is True:
             enabled_backends += "'dellsc'"
+
+        if self.settings.enable_unity_backend is True:
+            enabled_backends += ",'tripleo_dellemc_unity'"
 
         enabled_backends += "]"
 
@@ -641,6 +749,19 @@ class Director(InfraHost):
             str(self.settings.enable_rbd_backend) + \
             '|" ' + dell_storage_yaml
         self.run_tty(cmd)
+
+    def setup_manila(self):
+        # Re - Upload the yaml files in case we're trying to
+        # leave the undercloud intact but want to redeploy with
+        # a different config
+        unity_manila_yaml = self.templates_dir + "/unity-manila-config.yaml"
+        self.upload_file(self.settings.unity_manila_yaml,
+                         unity_manila_yaml)
+        # Backup before modifying
+        self.run_tty("cp " + unity_manila_yaml +
+                     " " + unity_manila_yaml + ".bak")
+
+        self.setup_unity_manila(unity_manila_yaml)
 
     def setup_dellsc(self, dell_storage_yaml):
 
@@ -673,14 +794,140 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
 
+    def setup_unity_cinder(self, dell_unity_cinder_yaml):
+
+        if self.settings.enable_unity_backend is False:
+            logger.debug("Not setting up unity cinder backend.")
+            return
+
+        logger.debug("Configuring dell emc unity backend.")
+
+        overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
+
+        cinder_container = "/dellemc/openstack-cinder-volume-dellemc:" + \
+            self.settings.cinder_unity_container_version
+        remote_registry = "registry.connect.redhat.com"
+        remote_url = remote_registry + cinder_container
+        local_registry = self.provisioning_ip + ":8787"
+        local_url = local_registry + cinder_container
+
+        cmds = [
+            'docker login -u ' + self.settings.subscription_manager_user +
+            ' -p ' + self.settings.subscription_manager_password +
+            ' ' + remote_registry,
+            'docker pull ' + remote_url,
+            'docker tag ' + remote_url + ' ' + local_url,
+            'docker push ' + local_url,
+            'sed -i "s|DockerCinderVolumeImage.*|' +
+            'DockerCinderVolumeImage: ' + local_url +
+            '|" ' + overcloud_images_file,
+            'echo "  DockerInsecureRegistryAddress:" >> ' +
+            overcloud_images_file,
+            'echo "  - ' + local_registry + ' " >> ' +
+            overcloud_images_file,
+            'docker logout ' + remote_registry,
+            'sed -i "s|<unity_san_ip>|' +
+            self.settings.unity_san_ip + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_san_login>|' +
+            self.settings.unity_san_login + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_san_password>|' +
+            self.settings.unity_san_password + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_storage_protocol>|' +
+            self.settings.unity_storage_protocol + '|" ' +
+            dell_unity_cinder_yaml,
+            'sed -i "s|<unity_io_ports>|' +
+            self.settings.unity_io_ports + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_storage_pool_names>|' +
+            self.settings.unity_storage_pool_names + '|" ' +
+            dell_unity_cinder_yaml,
+        ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
+    def setup_unity_manila(self, unity_manila_yaml):
+
+        if self.settings.enable_unity_manila_backend is False:
+            logger.debug("Not setting up unity manila backend.")
+            return
+
+        logger.debug("Configuring dell emc unity manila backend.")
+
+        overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
+        manila_container = "/dellemc/openstack-manila-share-dellemc:" + \
+             self.settings.manila_unity_container_version
+        remote_registry = "registry.connect.redhat.com"
+        remote_url = remote_registry + manila_container
+        local_registry = self.provisioning_ip + ":8787"
+        local_url = local_registry + manila_container
+
+        cmds = [
+            'docker login -u ' + self.settings.subscription_manager_user +
+            ' -p ' + self.settings.subscription_manager_password +
+            ' ' + remote_registry,
+            'docker pull ' + remote_url,
+            'docker tag ' + remote_url + ' ' + local_url,
+            'docker push ' + local_url,
+            'sed -i "50i \  DockerManilaShareImage: ' + local_url +	
+            '" ' + overcloud_images_file,
+            'echo "  DockerInsecureRegistryAddress:" >> ' +
+            overcloud_images_file,
+            'echo "  - ' + local_registry + ' " >> ' +
+            overcloud_images_file,
+            'docker logout ' + remote_registry,
+            'sed -i "s|<manila_unity_driver_handles_share_servers>|' +
+            self.settings.manila_unity_driver_handles_share_servers +
+            '|" ' + unity_manila_yaml,
+            'sed -i "s|<manila_unity_nas_login>|' +
+            self.settings.manila_unity_nas_login + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_nas_password>|' +
+            self.settings.manila_unity_nas_password + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_nas_server>|' +
+            self.settings.manila_unity_nas_server + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_server_meta_pool>|' +
+            self.settings.manila_unity_server_meta_pool + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_share_data_pools>|' +
+            self.settings.manila_unity_share_data_pools + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_ethernet_ports>|' +
+            self.settings.manila_unity_ethernet_ports + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_ssl_cert_verify>|' +
+            self.settings.manila_unity_ssl_cert_verify + '|" ' +
+            unity_manila_yaml,
+            'sed -i "s|<manila_unity_ssl_cert_path>|' +
+            self.settings.manila_unity_ssl_cert_path + '|" ' +
+            unity_manila_yaml,
+        ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
     def setup_net_envt(self):
 
         logger.debug("Configuring network-environment.yaml for overcloud")
 
         network_yaml = self.templates_dir + "/network-environment.yaml"
+        octavia_yaml = self.templates_dir + "/octavia.yaml"
 
         self.upload_file(self.settings.network_env_yaml,
                          network_yaml)
+
+        if self.settings.octavia_user_certs_keys is True:
+            self.upload_file(self.settings.certificate_keys_path,
+                             self.templates_dir + "/cert_keys.yaml")
+            self.run_tty('sed -i "s|OctaviaGenerateCerts:.*|' +
+                         'OctaviaGenerateCerts: ' +
+                         'false' + '|" ' +
+                         str(octavia_yaml))
+
+        if self.settings.octavia_user_certs_keys is False:
+            self.run_tty('sed -i "s|OctaviaGenerateCerts:.*|' +
+                         'OctaviaGenerateCerts: ' +
+                         'true' + '|" ' +
+                         str(octavia_yaml))
 
         cmds = [
             'sed -i "s|ControlPlaneDefaultRoute:.*|' +
@@ -1052,6 +1299,10 @@ class Director(InfraHost):
                    + self.settings.overcloud_deploy_timeout
         if self.settings.enable_dellsc_backend is True:
             cmd += " --enable_dellsc"
+        if self.settings.enable_unity_backend is True:
+            cmd += " --enable_unity"
+        if self.settings.enable_unity_manila_backend is True:
+            cmd += " --enable_unity_manila"
         if self.settings.enable_rbd_backend is False:
             cmd += " --disable_rbd"
         if self.settings.overcloud_static_ips is True:
@@ -1062,9 +1313,12 @@ class Director(InfraHost):
             cmd += " --ovs_dpdk"
         if self.settings.enable_sriov is True:
             cmd += " --sriov"
-        # Node placement is required in an automated install. The index order
         if self.settings.dvr_enable is True:
             cmd += " --dvr_enable"
+        if self.settings.octavia_enable is True:
+            cmd += " --octavia_enable"
+        if self.settings.octavia_user_certs_keys is True:
+            cmd += " --octavia_user_certs_keys"
         # Node placement is required in an automated install.  The index order
         # of the nodes is the order in which they are defined in the
         # .properties file
@@ -1331,38 +1585,64 @@ class Director(InfraHost):
             pass
 
     def configure_tempest(self):
-        logger.debug("configuring tempest")
+        """Attemtps to create tempest.conf
+
+        If there is an existing tempest.conf it is backed up, the we try
+        to create a new one.  If the correct networks are not there it means
+        sanity test most likely wasn't run, in that case we raise exception
+        informing the user to run sanity test and try again.
+
+        :raises: AssertionException Could not find right subnet to discover
+        networks and configure tempest.
+        """
+        logger.info("Configuring tempest")
         setts = self.settings
+        external_sub_guid = self.get_sanity_subnet()
+        if not external_sub_guid:
+            err = ("Could not find public network, please run the "
+                   + "sanity test to create the appropriate networks "
+                   + "and re-run this script with the "
+                   + "--tempest_config_only flag.")
+            raise AssertionError(err)
+
+        self._backup_tempest_conf()
+
         cmds = [
-            'source ~/' + self.settings.overcloud_name + 'rc;'
-            "sudo ip route add " + self.settings.floating_ip_network + " dev eth0",
-            'source ~/' + self.settings.overcloud_name + 'rc;' +
-            'tempest init mytempest;cd mytempest;' +
-            'discover-tempest-config --deployer-input ~/tempest-deployer-input.conf ' +
-            "--debug --create --network-id `openstack subnet list  | grep external_sub " +
-            "| awk '{print $6;}'` object-storage-feature-enabled.discoverability False",
+            'source ~/' + setts.overcloud_name + 'rc;'
+            "sudo ip route add " + setts.floating_ip_network +
+            " dev eth0",
+            'source ~/' + setts.overcloud_name + 'rc;' +
+            'tempest init ' + TEMPEST_DIR + ';cd ' + TEMPEST_DIR + ';' +
+            'discover-tempest-config --deployer-input ' +
+            '~/tempest-deployer-input.conf --debug --create ' +
+            '--network-id ' + external_sub_guid +
+            " object-storage-feature-enabled.discoverability False",
             'sed -i "s|tempest_roles =.*|tempest_roles = _member_,Member|" ' +
-            '~/mytempest/etc/tempest.conf',
+            TEMPEST_CONF_PATH,
         ]
         for cmd in cmds:
             self.run_tty(cmd)
 
     def run_tempest(self):
-        logger.debug("running tempest")
+        logger.info("Running tempest")
+
+        if not self.is_tempest_conf():
+            self.configure_tempest()
+
         setts = self.settings
         cmd = 'source ~/' + self.settings.overcloud_name + 'rc;cd ' + \
-            '~/mytempest;' + \
+            '~/' + TEMPEST_DIR + ';' + \
             'tempest cleanup --init-saved-state'
 
         self.run_tty(cmd)
 
         if setts.tempest_smoke_only is True:
             cmd = "source ~/" + self.settings.overcloud_name + "rc;cd " \
-                  "~/mytempest; ostestr '.*smoke' --concurrency=4"
+                  "~/" + TEMPEST_DIR + " ostestr '.*smoke' --concurrency=4"
         else:
             cmd = "source ~/" + \
                   self.settings.overcloud_name + \
-                  "rc;cd ~/mytempest;ostestr --concurrency=4"
+                  "rc;cd ~/" + TEMPEST_DIR + ";ostestr --concurrency=4"
         self.run_tty(cmd)
         ip = setts.director_node.public_api_ip
 
@@ -1371,15 +1651,42 @@ class Director(InfraHost):
                      setts.director_install_account_pwd,
                      "/auto_results/tempest.log",
                      "/home/" + setts.director_install_account_user +
-                     "/mytempest/tempest.log")
+                     "~/" + TEMPEST_DIR + "/tempest.log")
         logger.debug("Finished running tempest")
         logger.debug("Tempest clean up")
         cmds = ['source ~/' + self.settings.overcloud_name + 'rc;cd '
-                '~/mytempest;tempest cleanup --dry-run',
+                '~/' + TEMPEST_DIR + ';tempest cleanup --dry-run',
                 'source ~/' + self.settings.overcloud_name + 'rc;cd '
-                '~/mytempest;tempest cleanup'
+                '~/' + TEMPEST_DIR + ';tempest cleanup'
                 ]
         for cmd in cmds:
+            self.run_tty(cmd)
+
+    def is_tempest_conf(self):
+        logger.info("Checking to see if tempest.conf exists.")
+        cmd = "test -f " + TEMPEST_CONF_PATH + "; echo $?;"
+        resp = self.run_tty(cmd)[0].rstrip()
+        is_conf = not bool(int(resp))
+        return is_conf
+
+    def get_sanity_subnet(self):
+        logger.debug("Retrieving sanity test subnet.")
+        setts = self.settings
+        external_sub_cmd = ("source ~/" + setts.overcloud_name + "rc;" +
+                            "openstack subnet list  | grep external_sub " +
+                            "| awk '{print $6;}'")
+        external_sub_guid = self.run_tty(external_sub_cmd)[0].rstrip()
+        return external_sub_guid
+
+    def _backup_tempest_conf(self):
+        logger.info("Backing up tempest.conf")
+        if self.is_tempest_conf():
+            timestamp = int(round(time.time() * 1000))
+            new_conf = (TEMPEST_DIR + "/etc/" + TEMPEST_CONF + "."
+                        + str(timestamp))
+            logger.debug("Backing up tempest.conf, new file is: %s "
+                         % new_conf)
+            cmd = ("mv " + TEMPEST_CONF_PATH + " " + new_conf + " 2>/dev/null")
             self.run_tty(cmd)
 
     def configure_dashboard(self):
