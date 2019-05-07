@@ -301,14 +301,6 @@ echo "## Patching 10-ironic_wsgi.conf"
 apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
 echo "## Done"
 
-# This patch fixes tempest cleanup
-echo
-echo "### Patching tempest cleanup..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.py ${HOME}/pilot/tempest_cleanup.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyo
-echo "## Done."
-
 echo
 echo "## Restarting httpd"
 sudo systemctl restart httpd
