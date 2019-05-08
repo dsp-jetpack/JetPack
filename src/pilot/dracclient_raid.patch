@@ -1,5 +1,5 @@
---- raid.py.orig	2019-02-22 12:01:15.504155374 +0000
-+++ raid.py	2019-02-20 07:14:38.810186916 +0000
+--- /usr/lib/python2.7/site-packages/dracclient/resources/raid.py	2019-04-23 19:30:47.284579280 +0000
++++ raid.py	2019-04-23 19:30:37.187395939 +0000
 @@ -34,6 +34,11 @@
  
  REVERSE_RAID_LEVELS = dict((v, k) for (k, v) in RAID_LEVELS.items())
@@ -34,9 +34,26 @@
  
      def _get_raid_controller_attr(self, drac_controller, attr_name):
          return utils.get_wsman_resource_attr(
-@@ -582,14 +591,26 @@
+@@ -572,24 +581,41 @@
+ 
+         return is_jbod_capable
+ 
+-    def is_raid_controller(self, raid_controller_fqdd):
++    def is_raid_controller(self, raid_controller_fqdd, raid_controllers=None):
+         """Find out if object's fqdd is for a raid controller or not
+ 
+         :param raid_controller_fqdd: The object's fqdd we are testing to see
+                                      if it is a raid controller or not.
++        :param raid_controllers: A list of RAIDControllers used to check for
++                                 the presence of BOSS cards.  If None, the
++                                 iDRAC will be queried for the list of
++                                 controllers.
+         :returns: boolean, True if the device is a RAID controller,
+                   False if not.
          """
-         return raid_controller_fqdd.startswith('RAID.')
+-        return raid_controller_fqdd.startswith('RAID.')
++        return raid_controller_fqdd.startswith('RAID.') or \
++            self.is_boss_controller(raid_controller_fqdd, raid_controllers)
  
 -    def is_boss_controller(self, raid_controller_fqdd):
 +    def is_boss_controller(self, raid_controller_fqdd, raid_controllers=None):
@@ -63,7 +80,21 @@
  
      def _check_disks_status(self, mode, physical_disks,
                              controllers_to_physical_disk_ids):
-@@ -763,3 +784,18 @@
+@@ -713,10 +739,11 @@
+         if not controllers_to_physical_disk_ids:
+             controllers_to_physical_disk_ids = collections.defaultdict(list)
+ 
++            all_controllers = self.list_raid_controllers()
+             for physical_d in physical_disks:
+                 # Weed out disks that are not attached to a RAID controller
+-                if (self.is_raid_controller(physical_d.controller)
+-                        or self.is_boss_controller(physical_d.controller)):
++                if self.is_raid_controller(physical_d.controller,
++                                           all_controllers):
+                     physical_disk_ids = controllers_to_physical_disk_ids[
+                         physical_d.controller]
+ 
+@@ -763,3 +790,18 @@
  
          return {'is_reboot_required': is_reboot_required,
                  'commit_required_ids': controllers}
