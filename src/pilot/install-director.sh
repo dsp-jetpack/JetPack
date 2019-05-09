@@ -262,7 +262,8 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resour
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
 
-# This hacks in a patch to out-of-band inspection that sets pxe_enabled on ports.
+# This hacks in a patch to out-of-band inspection to set boot_mode on the node
+# being inspected.
 echo
 echo "## Patching Ironic iDRAC driver inspect.py.."
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.py ${HOME}/pilot/inspect.patch"
@@ -307,14 +308,6 @@ echo
 echo "## Patching 10-ironic_wsgi.conf"
 apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
 echo "## Done"
-
-# This patch fixes tempest cleanup
-echo
-echo "### Patching tempest cleanup..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.py ${HOME}/pilot/tempest_cleanup.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyo
-echo "## Done."
 
 echo
 echo "## Restarting httpd"
