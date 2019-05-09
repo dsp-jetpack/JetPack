@@ -280,12 +280,7 @@ def get_raid_controller_id(drac_client):
 
     raid_controller_ids = [
         c.id for c in disk_ctrls if drac_client.is_raid_controller(c.id)]
-    boss_controller_ids = [
-        c.id for c in disk_ctrls if drac_client.is_boss_controller(c.id)
-    ]
 
-    if boss_controller_ids:
-        raid_controller_ids.append(boss_controller_ids[0])
     number_raid_controllers = len(raid_controller_ids)
 
     if number_raid_controllers == 1:

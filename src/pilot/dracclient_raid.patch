@@ -1,5 +1,5 @@
---- /usr/lib/python2.7/site-packages/dracclient/resources/raid.py	2019-05-08 21:29:28.840099010 +0000
-+++ raid.py	2019-05-08 21:28:47.855350267 +0000
+--- /usr/lib/python2.7/site-packages/dracclient/resources/raid.py	2019-05-09 15:37:11.450522239 +0000
++++ raid.py	2019-05-09 15:37:04.219391200 +0000
 @@ -12,6 +12,7 @@
  #    under the License.
  
@@ -42,9 +42,26 @@
  
      def _get_raid_controller_attr(self, drac_controller, attr_name):
          return utils.get_wsman_resource_attr(
-@@ -582,14 +592,26 @@
+@@ -572,24 +582,41 @@
+ 
+         return is_jbod_capable
+ 
+-    def is_raid_controller(self, raid_controller_fqdd):
++    def is_raid_controller(self, raid_controller_fqdd, raid_controllers=None):
+         """Find out if object's fqdd is for a raid controller or not
+ 
+         :param raid_controller_fqdd: The object's fqdd we are testing to see
+                                      if it is a raid controller or not.
++        :param raid_controllers: A list of RAIDControllers used to check for
++                                 the presence of BOSS cards.  If None, the
++                                 iDRAC will be queried for the list of
++                                 controllers.
+         :returns: boolean, True if the device is a RAID controller,
+                   False if not.
          """
-         return raid_controller_fqdd.startswith('RAID.')
+-        return raid_controller_fqdd.startswith('RAID.')
++        return raid_controller_fqdd.startswith('RAID.') or \
++            self.is_boss_controller(raid_controller_fqdd, raid_controllers)
  
 -    def is_boss_controller(self, raid_controller_fqdd):
 +    def is_boss_controller(self, raid_controller_fqdd, raid_controllers=None):
@@ -71,7 +88,7 @@
  
      def _check_disks_status(self, mode, physical_disks,
                              controllers_to_physical_disk_ids):
-@@ -607,15 +629,17 @@
+@@ -607,15 +634,17 @@
          :param mode: constants.RaidStatus enumeration used to
                       determine what raid status to check for.
          :param physical_disks: all physical disks
@@ -94,7 +111,7 @@
          p_disk_id_to_status = {}
          for physical_disk in physical_disks:
              p_disk_id_to_status[physical_disk.id] = physical_disk.raid_status
-@@ -674,34 +698,37 @@
+@@ -674,34 +703,37 @@
  
              raise ValueError(error_msg)
  
@@ -153,7 +170,21 @@
          :raises: DRACOperationFailed on error reported back by the DRAC and the
                   exception message does not contain NOT_SUPPORTED_MSG constant.
          :raises: Exception on unknown error.
-@@ -727,13 +754,14 @@
+@@ -713,10 +745,11 @@
+         if not controllers_to_physical_disk_ids:
+             controllers_to_physical_disk_ids = collections.defaultdict(list)
+ 
++            all_controllers = self.list_raid_controllers()
+             for physical_d in physical_disks:
+                 # Weed out disks that are not attached to a RAID controller
+-                if (self.is_raid_controller(physical_d.controller)
+-                        or self.is_boss_controller(physical_d.controller)):
++                if self.is_raid_controller(physical_d.controller,
++                                           all_controllers):
+                     physical_disk_ids = controllers_to_physical_disk_ids[
+                         physical_d.controller]
+ 
+@@ -727,13 +760,14 @@
          Raise exception if there are any failed drives or
          drives not in status 'ready' or 'non-RAID'
          '''
@@ -171,7 +202,7 @@
              if physical_disk_ids:
                  LOG.debug("Converting the following disks to {} on RAID "
                            "controller {}: {}".format(
-@@ -746,20 +774,52 @@
+@@ -746,20 +780,52 @@
                      if constants.NOT_SUPPORTED_MSG in str(ex):
                          LOG.debug("Controller {} does not support "
                                    "JBOD mode".format(controller))
