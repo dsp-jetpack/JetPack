@@ -1394,11 +1394,15 @@ def change_physical_disk_state_wait(
         if controller_result['is_reboot_required'] == RebootRequired.true:
             is_reboot_required = True
 
-        realtime = controller_result['is_reboot_required'] == \
-            RebootRequired.optional
-        job_id = drac_client.commit_pending_raid_changes(
-            controller_id, reboot=False, start_time=None, realtime=realtime)
-        job_ids.append(job_id)
+        if controller_result['is_commit_required']:
+            realtime = controller_result['is_reboot_required'] == \
+                RebootRequired.optional
+            job_id = drac_client.commit_pending_raid_changes(
+                controller_id,
+                reboot=False,
+                start_time=None,
+                realtime=realtime)
+            job_ids.append(job_id)
 
     result = True
     if job_ids:
