@@ -95,7 +95,7 @@ parameter_defaults:
   CinderEnableRbdBackend: true
 
   # Configure Ceph Placement Group (PG) values for the indicated pools
-  CephPools: [{"name": "volumes", "pg_num": 128, "pgp_num": 128}, {"name": "vms", "pg_num": 128, "pgp_num": 128}, {"name": "images", "pg_num": 128, "pgp_num": 128}, {"name": ".rgw.buckets", "pg_num": 64, "pgp_num": 64}]
+  CephPools: [{"name": "volumes", "pg_num": 128, "pgp_num": 128}, {"name": "vms", "pg_num": 128, "pgp_num": 128}, {"name": "images", "pg_num": 128, "pgp_num": 128}, {"name": ".rgw.buckets", "pg_num": 64, "pgp_num": 64}, {"name": "backups", "pg_num": 64, "pgp_num": 64}, {"name": "metrics", "pg_num": 64, "pgp_num": 64}, {"name": ".rgw.root", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.control", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.meta", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.log", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.buckets.index", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.buckets.data", "pg_num": 64, "pgp_num": 64}]
 
   CephAnsiblePlaybookVerbosity: 1
   
