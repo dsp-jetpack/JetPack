@@ -34,9 +34,17 @@ logger = logging.getLogger("osp_deployer")
 exitFlag = 0
 
 # Ceph pools present in a default install
-HEAVY_POOLS = ['volumes', 'images', 'vms']
-OTHER_POOLS = ['.rgw.root', 'default.rgw.control', 'default.rgw.meta',
-               'default.rgw.log', 'metrics', 'backups', '.rgw.buckets']
+HEAVY_POOLS = ['images',
+               'vms',
+               'volumes']
+OTHER_POOLS = ['.rgw.buckets',
+               '.rgw.root',
+               'backups',
+               'default.rgw.buckets.data',
+               'default.rgw.buckets.index',
+               'default.rgw.control',
+               'default.rgw.log',
+               'default.rgw.meta',
 
 # tempest configuraton file
 TEMPEST_CONF = "tempest.conf"
