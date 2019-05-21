@@ -700,18 +700,10 @@ def config_idrac(instack_lock,
         if JobHelper.job_succeeded(job_status):
             new_password = password
 
-    BOOT_MODE_CAP_NAME = "boot_mode"
-    ironic_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_TO_IRONIC_BOOT_MODE_CAP[
-        target_boot_mode]
-    target_boot_mode_cap = "{name}:{value}".format(name=BOOT_MODE_CAP_NAME,
-                                                   value=ironic_boot_mode)
-
     if new_password is not None or \
         "provisioning_mac" not in node or \
         ("provisioning_mac" in node and
-         node["provisioning_mac"] != provisioning_mac) or \
-        "capabilities" not in node or \
-            target_boot_mode_cap not in node["capabilities"]:
+         node["provisioning_mac"] != provisioning_mac):
 
         # Synchronize to prevent thread collisions while saving the instack
         # file
@@ -729,19 +721,6 @@ def config_idrac(instack_lock,
                 node["pm_password"] = new_password
 
             node["provisioning_mac"] = provisioning_mac
-
-            if "capabilities" not in node:
-                node["capabilities"] = target_boot_mode_cap
-            elif target_boot_mode_cap not in node["capabilities"]:
-                node_caps = node["capabilities"].split(",")
-                for index, cap in enumerate(node_caps):
-                    items = cap.split(':')
-                    if items[0] == BOOT_MODE_CAP_NAME and items[1] != \
-                            ironic_boot_mode:
-                        node_caps[index] = target_boot_mode_cap
-                        break
-
-                node["capabilities"] = ",".join(node_caps)
 
             LOG.debug("Saving instack")
             CredentialHelper.save_instack(node_definition)
