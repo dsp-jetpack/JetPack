@@ -44,7 +44,7 @@ OTHER_POOLS = ['.rgw.buckets',
                'default.rgw.buckets.index',
                'default.rgw.control',
                'default.rgw.log',
-               'default.rgw.meta',
+               'default.rgw.meta']
 
 # tempest configuraton file
 TEMPEST_CONF = "tempest.conf"
