@@ -34,9 +34,18 @@ logger = logging.getLogger("osp_deployer")
 exitFlag = 0
 
 # Ceph pools present in a default install
-HEAVY_POOLS = ['volumes', 'images', 'vms']
-OTHER_POOLS = ['.rgw.root', 'default.rgw.control', 'default.rgw.meta',
-               'default.rgw.log', 'metrics', 'backups', '.rgw.buckets']
+HEAVY_POOLS = ['images',
+               'vms',
+               'volumes']
+OTHER_POOLS = ['.rgw.buckets',
+               '.rgw.root',
+               'backups',
+               'default.rgw.buckets.data',
+               'default.rgw.buckets.index',
+               'default.rgw.control',
+               'default.rgw.log',
+               'default.rgw.meta',
+               'metrics']
 
 # tempest configuraton file
 TEMPEST_CONF = "tempest.conf"
@@ -1074,7 +1083,8 @@ class Director(InfraHost):
         neutron_ovs_dpdk_yaml = self.templates_dir + "/neutron-ovs-dpdk.yaml"
         neutron_sriov_yaml = self.templates_dir + "/neutron-sriov.yaml"
 
-        self.set_ovs_dpdk_driver(self.settings.neutron_ovs_dpdk_yaml)
+        if self.settings.enable_ovs_dpdk is True:
+            self.set_ovs_dpdk_driver(self.settings.neutron_ovs_dpdk_yaml)
 
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy

@@ -447,24 +447,8 @@ def is_idrac(client):
     # This determines whether or not an IPv4 address is a WS-Man
     # endpoint and iDRAC.
     #
-    # The Dell Common Information Model's (DCIM) DCIM_iDRACCardView
-    # class is leveraged. That class is documented in the "iDRAC Card
-    # Profile"
-    # (http://en.community.dell.com/techcenter/extras/m/white_papers/20441091/download),
-    # which is part of the DCIM Extensions Library Profile Collection.
-    # The collection is available at
-    # http://en.community.dell.com/techcenter/systems-management/w/wiki/1906.dcim-library-profile.
-    #
-    # An instance of that class represents an iDRAC's information. This
-    # assumes that at most only one (1) instance can be obtained from a
-    # WS-Man service implementation that is an iDRAC. WS-Man's Enumerate
-    # operation is used to obtain it.
-    #
-    # This returns true if the Enumerate operation succeeds, the
-    # response contains an DCIM_iDRACCardView instance, the instance has
-    # a 'DeviceDescription' property, and the value of that property is
-    # 'iDRAC'; otherwise, false is returned.
-
+    # Since the GetRemoteAPIStatus call is vendor specific, if the
+    # server responds then that is sufficient to determine that it's an iDRAC.
     # Squelch a couple of chatty libraries.
     dracclient_wsman_logger = logging.getLogger('dracclient.wsman')
     dracclient_wsman_logger.disabled = True
@@ -473,7 +457,7 @@ def is_idrac(client):
     requests_logger.disabled = True
 
     try:
-        doc = client.client.enumerate(DCIM_iDRACCardView)
+        client.client.is_idrac_ready()
     except dracclient.exceptions.WSManInvalidResponse as e:
         # Most likely the user credentials are unauthorized.
 
@@ -501,14 +485,7 @@ def is_idrac(client):
         # Ensure the libraries' loggers are re-enabled.
         requests_logger.disabled = False
         dracclient_wsman_logger.disabled = False
-
-    if doc is None:
-        return False
-
-    return dracclient.utils.get_wsman_resource_attr(
-        doc,
-        DCIM_iDRACCardView,
-        'DeviceDescription') == 'iDRAC'
+    return True
 
 
 if __name__ == '__main__':
