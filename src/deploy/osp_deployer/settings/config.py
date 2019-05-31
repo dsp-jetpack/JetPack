@@ -561,6 +561,9 @@ class Settings():
         elif self.ovs_dpdk_enable.lower() == 'true':
             self.enable_ovs_dpdk = True
             logger.info("OVS-DPDK is enabled.")
+            if 'HostNicDriver' in nics_settings:
+                self.HostNicDriver = nics_settings['HostNicDriver']
+
 
         # TO enable SRIOV
         self.sriov_enable = dellnfv_settings['sriov_enable']
