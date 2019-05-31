@@ -1,157 +1,470 @@
-# This file describes the network interfaces available on your system
-# and how to activate them. For more information, see interfaces(5).
+R154-S4048T# show running-configuration
+! Version 10.4.3E
+! Last configuration change at Apr  20 02:33:08 2019
+!
+ip vrf default
+!
+interface breakout 1/1/54 map 10g-4x
+hostname R154-S4048T
+system-user linuxadmin password $6$5DdOHYg5$JCE1vMSmkQOrbh31U74PIPv7lyOgRmba1IxhkYibppMXs1KM4Y.gbTPcxyMP/PHUkMc5rdk/ZLv9Sfv3ALtB61
+iscsi enable
+iscsi target port 860
+iscsi target port 3260
+username admin password $6$q9QBeYjZ$jfxzVqGhkxX3smxJSH9DDz7/3OJc6m5wjF8nnLD7/VKx8SloIhp4NoGZs0I/UNwh8WVuxwfd9q4pWIgNs5BKH. role sysadmin priv-lvl 15
+aaa authentication login default local
+aaa authentication login console local
+!
+class-map type application class-iscsi
+!
+policy-map type application policy-iscsi
+!
+interface vlan1
+ no shutdown
+!
+interface vlan110
+ no shutdown
+ ip address 192.168.110.1/24
+!
+interface vlan120
+ no shutdown
+ ip address 192.168.120.1/24
+!
+interface vlan130
+ no shutdown
+!
+interface vlan140
+ no shutdown
+!
+interface vlan170
+ no shutdown
+!
+interface vlan180
+ no shutdown
+!
+interface vlan201
+ no shutdown
+!
+interface vlan202
+ no shutdown
+!
+interface vlan203
+ no shutdown
+!
+interface vlan204
+ no shutdown
+!
+interface vlan205
+ no shutdown
+!
+interface vlan206
+ no shutdown
+!
+interface vlan207
+ no shutdown
+!
+interface vlan208
+ no shutdown
+!
+interface vlan209
+ no shutdown
+!
+interface vlan210
+ no shutdown
+!
+interface vlan211
+ no shutdown
+!
+interface vlan212
+ no shutdown
+!
+interface vlan213
+ no shutdown
+!
+interface vlan214
+ no shutdown
+!
+interface vlan215
+ no shutdown
+!
+interface vlan216
+ no shutdown
+!
+interface vlan217
+ no shutdown
+!
+interface vlan218
+ no shutdown
+!
+interface vlan219
+ no shutdown
+!
+interface vlan220
+ no shutdown
+!
+interface vlan1541
+ no shutdown
+!
+interface vlan1542
+ no shutdown
+!
+interface vlan1543
+ no shutdown
+!
+interface vlan1544
+ no shutdown
+!
+interface port-channel50
+ no shutdown
+ switchport mode trunk
+ switchport access vlan 1
+ switchport trunk allowed vlan 110,120,130,140,170,180,201-220,1541-1544
+ mtu 9216
+!
+interface mgmt1/1/1
+ no shutdown
+ no ip address dhcp
+ ip address 100.67.26.50/23
+ ipv6 address autoconfig
+!
+interface ethernet1/1/1
+ no shutdown
+ switchport access vlan 110
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/2
+ no shutdown
+ switchport access vlan 110
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/3
+ no shutdown
+ switchport access vlan 110
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/4
+ no shutdown
+ switchport access vlan 110
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/5
+ no shutdown
+ switchport access vlan 110
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/6
+ no shutdown
+ switchport access vlan 110
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/7
+ no shutdown
+ switchport access vlan 110
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/8
+ no shutdown
+ switchport access vlan 110
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/9
+ no shutdown
+ switchport access vlan 110
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/10
+ no shutdown
+ switchport access vlan 110
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/11
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/12
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/13
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/14
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/15
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/16
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/17
+ no shutdown
+ switchport access vlan 120
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/18
+ no shutdown
+ switchport access vlan 120
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/19
+ no shutdown
+ switchport access vlan 120
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/20
+ no shutdown
+ switchport access vlan 120
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/21
+ no shutdown
+ switchport access vlan 120
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/22
+ no shutdown
+ switchport access vlan 120
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/23
+ no shutdown
+ switchport access vlan 120
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/24
+ no shutdown
+ switchport access vlan 120
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/25
+ no shutdown
+ switchport access vlan 120
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/26
+ no shutdown
+ switchport access vlan 120
+ mtu 9216
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/27
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/28
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/29
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/30
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/31
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/32
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/33
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/34
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/35
+ no shutdown
+ switchport access vlan 170
+ mtu 9216
+ flowcontrol receive on
+!
+interface ethernet1/1/36
+ no shutdown
+ switchport access vlan 170
+ mtu 9216
+ flowcontrol receive on
+!
+interface ethernet1/1/37
+ no shutdown
+ switchport access vlan 170
+ mtu 9216
+ flowcontrol receive on
+!
+interface ethernet1/1/38
+ no shutdown
+ switchport access vlan 1543
+ flowcontrol receive on
+ spanning-tree port type edge
+!
+interface ethernet1/1/39
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/40
+ no shutdown
+ switchport access vlan 1543
+ flowcontrol receive on
+!
+interface ethernet1/1/41
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/42
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/43
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/44
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/45
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/46
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/47
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/48
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/49
+ no shutdown
+ channel-group 50 mode active
+ no switchport
+ mtu 9216
+ flowcontrol receive on
+!
+interface ethernet1/1/50
+ no shutdown
+ channel-group 50 mode active
+ no switchport
+ mtu 9216
+ flowcontrol receive on
+!
+interface ethernet1/1/51
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/52
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/53
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/54:1
+ no shutdown
+ switchport mode trunk
+ switchport access vlan 1
+ switchport trunk allowed vlan 1541-1544
+ mtu 9216
+ flowcontrol receive on
+!
+interface ethernet1/1/54:2
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/54:3
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive on
+!
+interface ethernet1/1/54:4
+ no shutdown
+ switchport mode trunk
+ switchport access vlan 1
+ switchport trunk allowed vlan 110,120,130,140,170,180,201-220,1541-1544
+ mtu 9216
+ flowcontrol receive on
+!
+support-assist
+snmp-server contact "Contact Support"
 
-source /etc/network/interfaces.d/*.intf
-
-# The loopback network interface
-auto lo
-iface lo inet loopback
-
-# The primary network interface
-auto eth0
-iface eth0
-    address x.x.x.x/24
-    gateway x.x.x.x
-
-iface eth1 inet dhcp
-
-auto swp1
-iface swp1
-    bridge-access 110
-
-auto swp2
-iface swp2
-    bridge-access 110
-
-auto swp3
-iface swp3
-    bridge-access 110
-
-auto swp4
-iface swp4
-    bridge-access 110
-
-auto swp5
-iface swp5
-    bridge-access 110
-
-auto swp6
-iface swp6
-    bridge-access 110
-
-auto swp7
-iface swp7
-    bridge-access 110
-
-auto swp8
-iface swp8
-    bridge-access 110
-
-auto swp9
-iface swp9
-    bridge-access 110
-
-auto swp10
-iface swp10
-    bridge-access 110
-
-auto swp17
-iface swp17
-    bridge-access 120
-
-auto swp18
-iface swp18
-    bridge-access 120
-
-auto swp19
-iface swp19
-    bridge-access 120
-
-auto swp20
-iface swp20
-    bridge-access 120
-
-auto swp21
-iface swp21
-    bridge-access 120
-
-auto swp22
-iface swp22
-    bridge-access 120
-
-auto swp23
-iface swp23
-    bridge-access 120
-
-auto swp24
-iface swp24
-    bridge-access 120
-
-auto swp25
-iface swp25
-    bridge-access 120
-
-auto swp26
-iface swp26
-    bridge-access 120
-
-auto swp29
-iface swp29
-
-auto swp30
-iface swp30
-    bridge-access 1543
-
-auto swp49
-iface swp49
-    link-speed 40000
-
-auto swp50
-iface swp50
-    link-speed 40000
-
-auto swp51
-iface swp51
-
-auto swp54s0
-iface swp54s0
-    bridge-vids 1541-1544
-
-auto swp54s1
-iface swp54s1
-
-auto swp54s2
-iface swp54s2
-
-auto swp54s3
-iface swp54s3
-    bridge-vids 1541-1544 110 120
-
-auto OOB
-iface OOB
-    vrf-table auto
-
-auto S4048-LAG
-iface S4048-LAG
-    bond-lacp-bypass-allow yes
-    bond-slaves swp49 swp50
-    bridge-vids 110 120 1541 1542 1543 1544 170
-    mtu 9216
-
-auto bridge
-iface bridge
-    bridge-ports S4048-LAG swp1 swp2 swp3 swp4 swp5 swp6 swp7 swp8 swp9 swp10 swp17 swp18 swp19 swp20 swp21 swp22 swp23 swp24 swp25 swp26 swp30 swp54s0 swp54s3
-    bridge-vids 110 120 170 1541-1544
-    bridge-vlan-aware yes
-
-auto vlan110
-iface vlan110
-    address 192.168.110.1/24
-    vlan-id 110
-    vlan-raw-device bridge
-
-auto vlan120
-iface vlan120
-    address 192.168.120.1/24
-    vlan-id 120
-    vlan-raw-device bridge
