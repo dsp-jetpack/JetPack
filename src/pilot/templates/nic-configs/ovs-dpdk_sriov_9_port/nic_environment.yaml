@@ -1,4 +1,4 @@
-# Copyright (c) 2018 Dell Inc. or its subsidiaries.
+# Copyright (c)2018-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,6 +48,7 @@ parameter_defaults:
   ComputeOvsDpdkInterface2: p3p1
   # The DPDK bonding mode to use for compute nodes
   BondInterfaceOvsOptions: bond_mode=balance-tcp lacp=active
+  HostNicDriver: mlx5_core
 
   ComputeSriovInterface1: p1p1
   ComputeSriovInterface2: p4p1

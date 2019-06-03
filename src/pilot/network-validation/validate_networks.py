@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2014-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2014-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -141,7 +141,7 @@ class NetworkValidation(object):
             project_name=os_tenant_name,
             user_domain_name=os_user_domain_name,
             project_domain_name=os_project_domain_name
-        )  
+        )
 
         sess = session.Session(auth=auth)
         nova = novaclient.Client('2', session=sess)

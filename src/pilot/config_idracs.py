@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2017-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -91,6 +91,7 @@ def main():
         for node in instackenv["nodes"]:
             pxe_nic = None
             password = None
+            skip_nic_config = False
             if json_config is not None:
                 node_config = None
                 if node["pm_addr"] in json_config.keys():
@@ -104,7 +105,8 @@ def main():
 
                     if "password" in node_config.keys():
                         password = node_config["password"]
-
+                    if "skip_nic_config" in node_config.keys():
+                        skip_nic_config = node_config["skip_nic_config"]
             thread = ThreadWithExHandling(LOG,
                                           target=config_idrac.config_idrac,
                                           args=(instack_lock,
@@ -112,7 +114,8 @@ def main():
                                                 args.node_definition,
                                                 model_properties,
                                                 pxe_nic,
-                                                password))
+                                                password,
+                                                skip_nic_config))
             threads.append(thread)
             thread.start()
 

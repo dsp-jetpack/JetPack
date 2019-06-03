@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -83,6 +83,7 @@ class CustomLoggerAdapter(logging.LoggerAdapter):
     def set_idrac_ip_address(self, ip_address):
         self.extra['idracip'] = ip_address
 
+
 logger = logging.getLogger(__name__)
 LOG = CustomLoggerAdapter(logger, {})
 
@@ -127,6 +128,7 @@ OSPD_NODE_TEMPLATE_VALUE_USER_INTERVENTION_REQUIRED = \
 
 class NotSupported(BaseException):
     pass
+
 
 # Create a factory function for creating tuple-like objects that contain
 # the information needed to generate an OSP Director node template. The
@@ -385,8 +387,8 @@ def scan_one(scan_info):
             LOG.info('IP address is not an iDRAC')
             return None
 
-        model = client.get_system_model_name()
-        service_tag = client.get_system_service_tag()
+        model = client.get_system().model
+        service_tag = client.get_system().service_tag
     except dracclient.exceptions.WSManInvalidResponse:
         # Most likely the user credentials are unauthorized.
 
@@ -445,24 +447,8 @@ def is_idrac(client):
     # This determines whether or not an IPv4 address is a WS-Man
     # endpoint and iDRAC.
     #
-    # The Dell Common Information Model's (DCIM) DCIM_iDRACCardView
-    # class is leveraged. That class is documented in the "iDRAC Card
-    # Profile"
-    # (http://en.community.dell.com/techcenter/extras/m/white_papers/20441091/download),
-    # which is part of the DCIM Extensions Library Profile Collection.
-    # The collection is available at
-    # http://en.community.dell.com/techcenter/systems-management/w/wiki/1906.dcim-library-profile.
-    #
-    # An instance of that class represents an iDRAC's information. This
-    # assumes that at most only one (1) instance can be obtained from a
-    # WS-Man service implementation that is an iDRAC. WS-Man's Enumerate
-    # operation is used to obtain it.
-    #
-    # This returns true if the Enumerate operation succeeds, the
-    # response contains an DCIM_iDRACCardView instance, the instance has
-    # a 'DeviceDescription' property, and the value of that property is
-    # 'iDRAC'; otherwise, false is returned.
-
+    # Since the GetRemoteAPIStatus call is vendor specific, if the
+    # server responds then that is sufficient to determine that it's an iDRAC.
     # Squelch a couple of chatty libraries.
     dracclient_wsman_logger = logging.getLogger('dracclient.wsman')
     dracclient_wsman_logger.disabled = True
@@ -471,7 +457,7 @@ def is_idrac(client):
     requests_logger.disabled = True
 
     try:
-        doc = client.client.enumerate(DCIM_iDRACCardView)
+        client.client.is_idrac_ready()
     except dracclient.exceptions.WSManInvalidResponse as e:
         # Most likely the user credentials are unauthorized.
 
@@ -499,14 +485,8 @@ def is_idrac(client):
         # Ensure the libraries' loggers are re-enabled.
         requests_logger.disabled = False
         dracclient_wsman_logger.disabled = False
+    return True
 
-    if doc is None:
-        return False
-
-    return dracclient.utils.get_wsman_resource_attr(
-        doc,
-        DCIM_iDRACCardView,
-        'DeviceDescription') == 'iDRAC'
 
 if __name__ == '__main__':
     main()

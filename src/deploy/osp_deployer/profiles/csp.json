@@ -50,6 +50,18 @@
                    "1-64"
                 ]
              },
+            "octavia_enable": {
+              "valid_values": [
+                 "true",
+                 "false"
+              ]
+             },
+            "octavia_generate_certs": {
+              "valid_values": [
+                 "true",
+                 "false"
+              ]
+             },
             "dvr_enable" :{
               "valid_values": [
                  "true",
@@ -200,6 +212,14 @@
                "valid_values": [
                   "true",
                   "false"
+               ]
+            },
+            "glance_backend": {
+               "valid_values": [
+                  "file",
+                  "rbd",
+                  "cinder",
+                  "swift"
                ]
             },
          "enable_fencing":""

@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-# Copyright (c) 2017-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,11 +21,15 @@ import requests.packages
 import sys
 
 from arg_helper import ArgHelper
+from dracclient import client
+from dracclient import wsman
+from dracclient import exceptions
+from dracclient.resources import uris
+from dracclient.resources import nic
 import boot_mode_helper
 from boot_mode_helper import BootModeHelper
 from constants import Constants
 from credential_helper import CredentialHelper
-from dracclient import exceptions
 from job_helper import JobHelper
 from logging_helper import LoggingHelper
 from time import sleep
@@ -36,7 +40,6 @@ discover_nodes_path = os.path.join(os.path.expanduser('~'),
 sys.path.append(discover_nodes_path)
 
 from discover_nodes.dracclient.client import DRACClient  # noqa
-from discover_nodes.dracclient.exceptions import NotFound  # noqa
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being made
 requests.packages.urllib3.disable_warnings()
@@ -59,6 +62,10 @@ def parse_arguments():
     parser.add_argument("-c",
                         "--change-password",
                         help="The new password for the root user")
+    parser.add_argument("-i",
+                        "--skip-nic-config",
+                        action='store_true',
+                        help="Use to skip NIC configuration")
 
     ArgHelper.add_instack_arg(parser)
     ArgHelper.add_model_properties_arg(parser)
@@ -96,7 +103,7 @@ def get_pxe_nic_fqdd_from_model_properties(model_properties, drac_client):
     if model_properties is None:
         return None
 
-    model_name = drac_client.get_system_model_name()
+    model_name = drac_client.get_system().model
 
     # If the model does not have an entry in the model properties JSON file,
     # return None, instead of raising a KeyError exception.
@@ -116,13 +123,21 @@ def configure_nics_boot_settings(
         pxe_nic_id, ip_service_tag))
 
     if target_boot_mode == boot_mode_helper.DRAC_BOOT_MODE_UEFI:
-        return configure_uefi_nics_boot_settings(drac_client, pxe_nic_id)
+        return configure_uefi_nics_boot_settings(drac_client, ip_service_tag,
+                                                 pxe_nic_id)
     else:
         return configure_bios_nics_boot_settings(drac_client, ip_service_tag,
                                                  pxe_nic_id)
 
 
-def configure_uefi_nics_boot_settings(drac_client, pxe_nic_id):
+def get_nic_mac_address(drac_client, pxe_nic_id):
+    for nic in drac_client.list_nics(sort=True):
+        # Compare the NIC IDs case insensitively. Assume ASCII strings.
+        if nic.id.lower() == pxe_nic_id.lower():
+            return nic.mac.lower()
+
+
+def configure_uefi_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
     job_ids = []
     provisioning_mac = None
     reboot_required = False
@@ -130,28 +145,60 @@ def configure_uefi_nics_boot_settings(drac_client, pxe_nic_id):
     for nic in drac_client.list_nics(sort=True):
         # Compare the NIC IDs case insensitively. Assume ASCII strings.
         if nic.id.lower() == pxe_nic_id.lower():
+            provisioning_mac = nic.mac.lower()
+
+            configure_uefi_pxe_dev_en_dis(drac_client, ip_service_tag, nic)
+
             settings = {
-               "PxeDev1EnDis": "Enabled",
-               "PxeDev2EnDis": "Disabled",
-               "PxeDev3EnDis": "Disabled",
-               "PxeDev4EnDis": "Disabled",
                "PxeDev1Interface": pxe_nic_id,
                "PxeDev1Protocol": "IPv4",
                "PxeDev1VlanEnDis": "Disabled"
                }
 
-            provisioning_mac = nic.mac_address.lower()
-            response = drac_client.set_bios_settings(settings)
-            reboot_required = response['commit_required']
+            LOG.info("Setting UEFI PXE NIC configuration \
+                     on {}".format(ip_service_tag))
 
-            if response['commit_required']:
+            response = drac_client.set_bios_settings(settings)
+            commit_required = response['is_commit_required']
+            reboot_required = response['is_reboot_required']
+
+            if commit_required:
+                LOG.info("Committing UEFI PXE NIC configuration \
+                         on {}".format(ip_service_tag))
                 job_id = drac_client.commit_pending_bios_changes(
                     reboot=False, start_time=None)
                 job_ids.append(job_id)
-
             break
 
     return reboot_required, job_ids, provisioning_mac
+
+
+def configure_uefi_pxe_dev_en_dis(drac_client, ip_service_tag, nic):
+    settings = {
+       "PxeDev1EnDis": "Enabled",
+       "PxeDev2EnDis": "Disabled",
+       "PxeDev3EnDis": "Disabled",
+       "PxeDev4EnDis": "Disabled"
+       }
+
+    response = drac_client.set_bios_settings(settings)
+    commit_required = response['is_commit_required']
+    reboot_required = response['is_reboot_required']
+
+    if commit_required:
+        job_id = drac_client.commit_pending_bios_changes(
+            reboot=reboot_required)
+
+        LOG.info("Waiting for initial UEFI PXE NIC configuration to \
+                 complete on {}".format(ip_service_tag))
+        LOG.info("Do not unplug {}".format(ip_service_tag))
+
+        all_jobs_succeeded = wait_for_jobs_to_complete(
+            [job_id], drac_client, ip_service_tag)
+        if not all_jobs_succeeded:
+            raise RuntimeError("An error occurred while configuring "
+                               "initial UEFI PXE NIC settings on "
+                               "{}".format(ip_service_tag))
 
 
 def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
@@ -165,18 +212,18 @@ def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
 
         # Compare the NIC IDs case insensitively. Assume ASCII strings.
         if nic_id.lower() == pxe_nic_id.lower():
-            provisioning_mac = nic.mac_address.lower()
+            provisioning_mac = nic.mac.lower()
 
             # This is the NIC we want to PXE boot, so set it to PXE if it's
             # not set to PXE already
-            if not drac_client.is_nic_legacy_boot_protocol_pxe(nic_id):
-                result = drac_client.set_nic_legacy_boot_protocol_pxe(nic_id)
+            if not is_nic_legacy_boot_protocol_pxe(nic_id, drac_client):
+                result = set_nic_legacy_boot_protocol_pxe(nic_id, drac_client)
         else:
             try:
-                if not drac_client.is_nic_legacy_boot_protocol_none(nic_id):
-                    result = drac_client.set_nic_legacy_boot_protocol_none(
-                        nic_id)
-            except NotFound:
+                if not is_nic_legacy_boot_protocol_none(nic_id, drac_client):
+                    result = set_nic_legacy_boot_protocol_none(
+                        nic_id, drac_client)
+            except exceptions.InvalidParameterValue:
                 LOG.warn("Unable to check the legacy boot protocol of NIC {} "
                          "on {}, and so cannot set it to None".format(
                              nic_id, ip_service_tag))
@@ -184,17 +231,180 @@ def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
         if result is None:
             continue
 
-        if result['commit_required']:
+        if result['is_commit_required']:
             job_id = drac_client.create_nic_config_job(
                 nic_id,
                 reboot=False,
                 start_time=None)
             job_ids.append(job_id)
 
-        if result['reboot_required']:
+        if result['is_reboot_required']:
             reboot_required = True
 
     return reboot_required, job_ids, provisioning_mac
+
+
+def get_nic_legacy_boot_protocol(nic_id, drac_client):
+    """Obtain the legacy, non-UEFI, boot protocol of a NIC.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :returns: legacy boot protocol
+    :param drac_client: drac_client from python-dracclient
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    :raises: InvalidParameterValue on invalid NIC attribute
+    """
+    return get_nic_setting(nic_id, 'LegacyBootProto', drac_client)
+
+
+def is_nic_legacy_boot_protocol_none(nic_id, drac_client):
+    """Return true if the legacy, non-UEFI, boot protocol of a NIC is NONE,
+    false otherwise.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :param drac_client: drac_client from python-dracclient
+    :returns: boolean indicating whether or not the legacy,
+              non-UEFI, boot protocol is NONE
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    :raises: InvalidParameterValue on invalid NIC attribute
+    """
+    return get_nic_legacy_boot_protocol(nic_id, drac_client).current_value == 'NONE'
+
+
+def is_nic_legacy_boot_protocol_pxe(nic_id, drac_client):
+    """Return true if the legacy, non-UEFI, boot protocol of a NIC is PXE,
+    false otherwise.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :param drac_client: drac_client from python-dracclient
+    :returns: boolean indicating whether or not the legacy,
+              non-UEFI, boot protocol is PXE
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    :raises: InvalidParameterValue on invalid NIC attribute
+    """
+    return get_nic_legacy_boot_protocol(nic_id, drac_client).current_value == 'PXE'
+
+
+def set_nic_legacy_boot_protocol(nic_id, value, drac_client):
+    """Set the legacy, non-UEFI, boot protocol of a NIC.
+
+    If successful, the pending value of the NIC's legacy boot
+    protocol attribute is set. For the new value to be applied, a
+    configuration job must be created and the node must be rebooted.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :param value: legacy boot protocol
+    :param drac_client: drac_client from python-dracclient
+    :returns: dictionary containing a 'commit_required' key with a
+              boolean value indicating whether a configuration job
+              must be created for the new legacy boot protocol
+              setting to be applied
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    """
+    return set_nic_setting(nic_id, 'LegacyBootProto', value, drac_client)
+
+
+def set_nic_legacy_boot_protocol_none(nic_id, drac_client):
+    """Set the legacy, non-UEFI, boot protocol of a NIC to NONE.
+
+    If successful, the pending value of the NIC's legacy boot
+    protocol attribute is set. For the new value to be applied, a
+    configuration job must be created and the node must be rebooted.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :param drac_client: drac_client from python-dracclient
+    :returns: dictionary containing a 'commit_required' key with a
+              boolean value indicating whether a configuration job
+              must be created for the new legacy boot protocol
+              setting to be applied
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    """
+    return set_nic_legacy_boot_protocol(nic_id, 'NONE', drac_client)
+
+
+def set_nic_legacy_boot_protocol_pxe(nic_id, drac_client):
+    """Set the legacy, non-UEFI, boot protocol of a NIC to PXE.
+
+    If successful, the pending value of the NIC's legacy boot
+    protocol attribute is set. For the new value to be applied, a
+    configuration job must be created and the node must be rebooted.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :param drac_client: drac_client from python-dracclient
+    :returns: dictionary containing a 'commit_required' key with a
+              boolean value indicating whether a configuration job
+              must be created for the new legacy boot protocol
+              setting to be applied
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    """
+    return set_nic_legacy_boot_protocol(nic_id, 'PXE', drac_client)
+
+
+def get_nic_setting(nic_id, attribute_name, drac_client):
+    """Obtain a setting of a NIC.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :param attribute_name: name of the setting
+    :param drac_client: drac_client from python-dracclient
+    :returns: value of the attribute on successful query, None
+              otherwise
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    :raises: InvalidParameterValue on invalid NIC attribute
+    """
+    settings = drac_client.list_nic_settings(nic_id)
+    # Were no settings found?
+    if not settings:
+        msg = 'Settings could not be found because nic id is invalid'
+        raise exceptions.InvalidParameterValue(reason=msg)
+    # Do the settings include the attribute?
+    if attribute_name not in settings:
+        return None
+
+    return settings[attribute_name]
+
+
+def set_nic_setting(nic_id, attribute_name, value, drac_client):
+    """Modify a setting of a NIC.
+
+    If successful, the pending value of the attribute is set. For
+    the new value to be applied, a configuration job must be created
+    and the node must be rebooted.
+
+    :param nic_id: id of the network interface controller (NIC)
+    :param attribute_name: name of the setting
+    :param value: value of the attribute
+    :param drac_client: drac_client from python-dracclient
+    :returns: dictionary containing a 'commit_required' key with a
+              boolean value indicating whether a configuration job
+              must be created for the new setting to be applied
+    :raises: WSManRequestFailure on request failures
+    :raises: WSManInvalidResponse when receiving invalid response
+    :raises: DRACOperationFailed on error reported back by the iDRAC
+             interface
+    :raises: InvalidParameterValue on invalid NIC attribute
+    """
+    settings = {attribute_name: value}
+    return drac_client.set_nic_settings(nic_id, settings)
 
 
 def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):
@@ -203,14 +413,20 @@ def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):
     settings = {"BootMode": boot_mode}
     response = drac_client.set_bios_settings(settings)
 
-    job_id = None
-    if response['commit_required']:
-        job_id = drac_client.commit_pending_bios_changes(reboot=False,
-                                                         start_time=None)
+    if response['is_commit_required']:
+        LOG.info("Rebooting {} to apply configuration".format(
+                 ip_service_tag))
+        job_id = drac_client.commit_pending_bios_changes(reboot=True)
 
-    # Note that "commit_required" is actually "reboot_required" under the
-    # covers
-    return response['commit_required'], job_id
+        LOG.info("Waiting for iDRAC configuration to \
+                 complete on {}".format(ip_service_tag))
+        LOG.info("Do not unplug {}".format(ip_service_tag))
+
+        job_succeeded = wait_for_jobs_to_complete(
+            [job_id], drac_client, ip_service_tag)
+        if not job_succeeded:
+            raise RuntimeError("An error occurred while configuring "
+                               "the boot mode on {}".format(ip_service_tag))
 
 
 def config_idrac_settings(drac_client, ip_service_tag, password, node):
@@ -226,7 +442,7 @@ def config_idrac_settings(drac_client, ip_service_tag, password, node):
         "Users.2#Enable": "Enabled",
         "Users.2#IpmiLanPrivilege": "Administrator",
         "Users.2#Privilege": 0x1ff
-        }
+    }
 
     if password:
         LOG.warn("Updating the password on {}".format(ip_service_tag))
@@ -236,11 +452,11 @@ def config_idrac_settings(drac_client, ip_service_tag, password, node):
     response = drac_client.set_idrac_settings(idrac_settings)
 
     job_id = None
-    if response['commit_required']:
+    if response['is_commit_required']:
         job_id = drac_client.commit_pending_idrac_changes(reboot=False,
                                                           start_time=None)
 
-    return response['reboot_required'], job_id
+    return response['is_reboot_required'], job_id
 
 
 def config_hard_disk_drive_boot_sequence(drac_client, ip_service_tag):
@@ -328,7 +544,7 @@ def clear_job_queue(drac_client, ip_service_tag):
 
 def reset_idrac(drac_client, ip_service_tag):
     LOG.info('Resetting the iDRAC on {}'.format(ip_service_tag))
-    drac_client.wait_until_idrac_is_reset(False)
+    drac_client.reset_idrac(wait=True)
 
 
 def config_idrac(instack_lock,
@@ -336,7 +552,8 @@ def config_idrac(instack_lock,
                  node_definition=Constants.INSTACKENV_FILENAME,
                  model_properties=Constants.MODEL_PROPERTIES_FILENAME,
                  pxe_nic=None,
-                 password=None):
+                 password=None,
+                 skip_nic_config=False):
     node = CredentialHelper.get_node_from_instack(ip_service_tag,
                                                   node_definition)
     if not node:
@@ -366,71 +583,54 @@ def config_idrac(instack_lock,
     # Clear out any pending jobs in the job queue and fix the condition where
     # there are no pending jobs, but the iDRAC thinks there are
     clear_job_queue(drac_client, ip_service_tag)
-
-    if BootModeHelper.is_boot_order_flexibly_programmable(drac_client):
+    if skip_nic_config:
+        target_boot_mode = BootModeHelper.get_boot_mode(drac_client)
+    elif BootModeHelper.is_boot_order_flexibly_programmable(drac_client):
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_UEFI
     else:
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_BIOS
 
+    config_boot_mode(drac_client, ip_service_tag, node, target_boot_mode)
+
     job_ids = list()
     reboot_required = False
-
-    reboot_required_boot_mode, boot_mode_job_id = config_boot_mode(
-        drac_client, ip_service_tag, node, target_boot_mode)
-
-    reboot_required = reboot_required or reboot_required_boot_mode
-    if boot_mode_job_id:
-        job_ids.append(boot_mode_job_id)
-        if target_boot_mode == boot_mode_helper.DRAC_BOOT_MODE_UEFI:
-            if reboot_required:
-                job_id = drac_client.create_reboot_job()
-                job_ids.append(job_id)
-                reboot_required = False
-                LOG.info("Rebooting {} to apply configuration".format(
-                         ip_service_tag))
-            drac_client.schedule_job_execution(job_ids,
-                                               start_time='TIME_NOW')
-
-            LOG.info("Waiting for iDRAC configuration to \
-                     complete on {}".format(ip_service_tag))
-            LOG.info("Do not unplug {}".format(ip_service_tag))
-
-            all_jobs_succeeded = wait_for_jobs_to_complete(
-                job_ids, drac_client, ip_service_tag)
-            if not all_jobs_succeeded:
-                raise RuntimeError("An error occurred while configuring "
-                                   "the iDRAC on {}".format(drac_ip))
-            job_ids = []
 
     pxe_nic_fqdd = get_pxe_nic_fqdd(
         pxe_nic,
         model_properties,
         drac_client)
 
-    # Configure the NIC port to PXE boot or not
-    reboot_required_nic, nic_job_ids, provisioning_mac = \
-        configure_nics_boot_settings(drac_client,
-                                     ip_service_tag,
-                                     pxe_nic_fqdd,
-                                     node,
-                                     target_boot_mode)
+    if skip_nic_config:
+        provisioning_mac = get_nic_mac_address(
+            drac_client, pxe_nic_fqdd)
+        LOG.info("Skipping NIC configuration")
+    else:
+        # Configure the NIC port to PXE boot or not
+        reboot_required_nic, nic_job_ids, provisioning_mac = \
+            configure_nics_boot_settings(drac_client,
+                                         ip_service_tag,
+                                         pxe_nic_fqdd,
+                                         node,
+                                         target_boot_mode)
 
-    reboot_required = reboot_required or reboot_required_nic
-    if nic_job_ids:
-        job_ids.extend(nic_job_ids)
+        reboot_required = reboot_required or reboot_required_nic
+        if nic_job_ids:
+            job_ids.extend(nic_job_ids)
 
     # Do initial idrac configuration
-    reboot_required_idrac, idrac_job_id = config_idrac_settings(drac_client,
-                                                                ip_service_tag,
-                                                                password,
-                                                                node)
+    reboot_required_idrac, idrac_job_id = config_idrac_settings(
+        drac_client,
+        ip_service_tag,
+        password,
+        node)
     reboot_required = reboot_required or reboot_required_idrac
     if idrac_job_id:
         job_ids.append(idrac_job_id)
 
     # If we need to reboot, then add a job for it
     if reboot_required:
-        LOG.info("Rebooting {} to apply configuration".format(ip_service_tag))
+        LOG.info("Rebooting {} to apply configuration".format(
+            ip_service_tag))
 
         job_id = drac_client.create_reboot_job()
         job_ids.append(job_id)
@@ -500,18 +700,10 @@ def config_idrac(instack_lock,
         if JobHelper.job_succeeded(job_status):
             new_password = password
 
-    BOOT_MODE_CAP_NAME = "boot_mode"
-    ironic_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_TO_IRONIC_BOOT_MODE_CAP[
-        target_boot_mode]
-    target_boot_mode_cap = "{name}:{value}".format(name=BOOT_MODE_CAP_NAME,
-                                                   value=ironic_boot_mode)
-
     if new_password is not None or \
         "provisioning_mac" not in node or \
         ("provisioning_mac" in node and
-         node["provisioning_mac"] != provisioning_mac) or \
-        "capabilities" not in node or \
-            target_boot_mode_cap not in node["capabilities"]:
+         node["provisioning_mac"] != provisioning_mac):
 
         # Synchronize to prevent thread collisions while saving the instack
         # file
@@ -529,19 +721,6 @@ def config_idrac(instack_lock,
                 node["pm_password"] = new_password
 
             node["provisioning_mac"] = provisioning_mac
-
-            if "capabilities" not in node:
-                node["capabilities"] = target_boot_mode_cap
-            elif target_boot_mode_cap not in node["capabilities"]:
-                node_caps = node["capabilities"].split(",")
-                for index, cap in enumerate(node_caps):
-                    items = cap.split(':')
-                    if items[0] == BOOT_MODE_CAP_NAME and items[1] != \
-                            ironic_boot_mode:
-                        node_caps[index] = target_boot_mode_cap
-                        break
-
-                node["capabilities"] = ",".join(node_caps)
 
             LOG.debug("Saving instack")
             CredentialHelper.save_instack(node_definition)
@@ -571,7 +750,8 @@ def main():
                      args.node_definition,
                      model_properties,
                      args.pxe_nic,
-                     args.change_password)
+                     args.change_password,
+                     args.skip_nic_config)
     except ValueError as ex:
         LOG.error("An error occurred while configuring iDRAC {}: {}".format(
             args.ip_service_tag, ex.message))

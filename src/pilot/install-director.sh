@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,16 +56,6 @@ fi
 
 flavors="control compute ceph-storage"
 subnet_name="ctlplane"
-
-# Configure a cleaning network so that the Bare Metal service, ironic, can use
-# node cleaning.
-configure_cleaning_network()
-{
-  network_name="$1"
-  network_uuid=$(openstack network list | grep "${network_name}" | awk '{print $2}')
-  sudo sed -i.bak "s/^.*cleaning_network_uuid.*$/cleaning_network_uuid\ =\ $network_uuid/" /etc/ironic/ironic.conf
-  sudo systemctl restart openstack-ironic-conductor.service
-}
 
 # Create the requested flavor if it does not exist.
 # Set the properties of the flavor regardless.
@@ -151,7 +141,7 @@ run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
 run_command "sudo yum -y install openstack-tempest"
-run_command "sudo yum install -y python-neutron-tests-tempest python-cinder-tests-tempest python-telemetry-tests-tempest python-keystone-tests-tempest python-horizon-tests-tempest"
+run_command "sudo yum install -y python-neutron-tests-tempest python-cinder-tests-tempest python-telemetry-tests-tempest python-keystone-tests-tempest python-horizon-tests-tempest python2-octavia-tests-tempest python2-manila-tests-tempest"
 echo "## Done."
 
 echo
@@ -165,7 +155,7 @@ echo
 images_tar_path='.'
 if [ ! -d $HOME/pilot/images ];
 then
-  sudo yum install rhosp-director-images rhosp-director-images-ipa -y
+  sudo yum install rhosp-director-images rhosp-director-images-ipa octavia-amphora-image -y
 
   # It's not uncommon to get connection reset errors when installing this 1.2G
   # RPM.  Keep retrying to complete the download
@@ -233,6 +223,12 @@ subnet_uuid=$(openstack network list | grep "${subnet_name}" | awk '{print $6}')
 openstack subnet set "${subnet_uuid}" --dns-nameserver "${dns_ip}"
 echo "## Done."
 
+# This patch fixes an issue in tripleo-heat-templates
+echo
+echo "### Patching tripleo-heat-templates"
+sudo sed -i 's/$(get_python)/python/' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/per_node.yaml
+echo "## Done."
+
 echo
 echo "## Copying heat templates..."
 cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overcloud
@@ -259,6 +255,21 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resour
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
 
+# This hacks in a patch to validate and retrieve raid and boss controller and physical disk status.
+echo
+echo "## Patching Ironic iDRAC driver raid.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
+
+# This hacks in a patch to out-of-band inspection to set boot_mode on the node
+# being inspected.
+echo
+echo "## Patching Ironic iDRAC driver inspect.py.."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.py ${HOME}/pilot/inspect.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.pyo
+
 # This hacks in a patch to create a virtual disk using realtime mode.
 # Note that this code must be here because we use this code prior to deploying
 # the director.
@@ -267,6 +278,17 @@ echo "## Patching Ironic iDRAC driver raid.py..."
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
+echo "## Done."
+
+# This hacks in a patch to filter out all non-printable characters during WSMAN
+# enumeration.
+# Note that this code must be here because we use this code prior to deploying
+# the director.
+echo
+echo "## Patching Ironic iDRAC driver wsman.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
 echo "## Done."
 
 # This patches workarounds for two issues into ironic.conf.
@@ -287,14 +309,6 @@ echo "## Patching 10-ironic_wsgi.conf"
 apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
 echo "## Done"
 
-# This patch fixes tempest cleanup
-echo
-echo "### Patching tempest cleanup..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.py ${HOME}/pilot/tempest_cleanup.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyo
-echo "## Done."
-
 echo
 echo "## Restarting httpd"
 sudo systemctl restart httpd
@@ -303,12 +317,6 @@ echo "## Done"
 echo
 echo "## Restarting openstack-ironic-conductor.service..."
 sudo systemctl restart openstack-ironic-conductor.service
-echo "## Done."
-
-network="ctlplane"
-echo
-echo "## Configuring neutron network ${network} as a cleaning network"
-configure_cleaning_network $network
 echo "## Done."
 
 # If deployment is unlocked, generate the overcloud container list from the latest.
@@ -324,6 +332,7 @@ else
  -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
  -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
  -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
+ -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
  --set ceph_namespace=registry.access.redhat.com/rhceph \
  --set ceph_image=rhceph-3-rhel7 \
  --tag-from-label {version}-{release}

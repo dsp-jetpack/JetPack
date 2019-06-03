@@ -1,4 +1,4 @@
-# Copyright (c) 2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2018-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -267,7 +267,7 @@ class NfvParameters(object):
 
     def calculate_hugepage_count(self, hugepage_size):
         try:
-            memory_count = self.get_minimum_memory_size("compute")
+            memory_count = int(self.get_minimum_memory_size("compute"))
             # RAM size should be more than 128G
             if memory_count < 128000:
                 raise Exception("RAM size is less than 128GB"
