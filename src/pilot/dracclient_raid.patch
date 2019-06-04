@@ -1,5 +1,5 @@
---- /usr/lib/python2.7/site-packages/dracclient/resources/raid.py	2019-05-09 15:37:11.450522239 +0000
-+++ raid.py	2019-05-09 15:37:04.219391200 +0000
+--- raid.py.orig	2019-06-04 06:05:21.552747110 -0400
++++ raid_.py	2019-06-04 06:13:31.532261809 -0400
 @@ -12,6 +12,7 @@
  #    under the License.
  
@@ -20,7 +20,16 @@
  DISK_RAID_STATUS = {
      '0': 'unknown',
      '1': 'ready',
-@@ -110,7 +116,8 @@
+@@ -78,6 +84,8 @@
+      'firmware_version', 'status', 'raid_status', 'sas_address',
+      'device_protocol'])
+ 
++NO_FOREIGN_DRIVE = "STOR018"
++
+ 
+ class PhysicalDisk(PhysicalDiskTuple):
+ 
+@@ -110,7 +118,8 @@
  
  RAIDController = collections.namedtuple(
      'RAIDController', ['id', 'description', 'manufacturer', 'model',
@@ -30,7 +39,7 @@
  
  VirtualDiskTuple = collections.namedtuple(
      'VirtualDisk',
-@@ -191,7 +198,10 @@
+@@ -191,7 +200,10 @@
                                                 'PrimaryStatus')],
              firmware_version=self._get_raid_controller_attr(
                  drac_controller, 'ControllerFirmwareVersion'),
@@ -42,7 +51,108 @@
  
      def _get_raid_controller_attr(self, drac_controller, attr_name):
          return utils.get_wsman_resource_attr(
-@@ -572,24 +582,41 @@
+@@ -518,6 +530,100 @@
+                                        include_commit_required=True,
+                                        is_commit_required_value=True)
+ 
++    def reset_raid_config(self, raid_controller):
++        """Delete all virtual disk and unassign all hotspares
++
++        The job to reset the RAID controller config will be in pending state.
++        For the changes to be applied, a config job must be created.
++
++        :param raid_controller: id of the RAID controller
++        :returns: a dictionary containing:
++                 - The is_commit_required key with the value always set to
++                   True indicating that a config job must be created to
++                   reset configuration.
++                 - The is_reboot_required key with a RebootRequired enumerated
++                   value indicating whether the server must be rebooted to
++                   reset configuration.
++        :raises: WSManRequestFailure on request failures
++        :raises: WSManInvalidResponse when receiving invalid response
++        :raises: DRACOperationFailed on error reported back by the DRAC
++                 interface
++        :raises: DRACUnexpectedReturnValue on return value mismatch
++        """
++
++        selectors = {'SystemCreationClassName': 'DCIM_ComputerSystem',
++                     'CreationClassName': 'DCIM_RAIDService',
++                     'SystemName': 'DCIM:ComputerSystem',
++                     'Name': 'DCIM:RAIDService'}
++        properties = {'Target': raid_controller}
++
++        doc = self.client.invoke(uris.DCIM_RAIDService, 'ResetConfig',
++                                 selectors, properties,
++                                 expected_return_value=utils.RET_SUCCESS)
++
++        return utils.build_return_dict(doc, uris.DCIM_RAIDService,
++                                       is_commit_required_value=True)
++
++    def clear_foreign_config(self, raid_controller):
++        """Free up foreign drives
++
++        The job to clear foreign config will be in pending state.
++        For the changes to be applied, a config job must be created.
++
++        :param raid_controller: id of the RAID controller
++        :returns: a dictionary containing:
++                 - The is_commit_required key with the value always set to
++                   True indicating that a config job must be created to
++                   clear foreign configuration.
++                 - The is_reboot_required key with a RebootRequired enumerated
++                   value indicating whether the server must be rebooted to
++                   clear foreign configuration.
++        :raises: WSManRequestFailure on request failures
++        :raises: WSManInvalidResponse when receiving invalid response
++        :raises: DRACOperationFailed on error reported back by the DRAC
++                 interface
++        :raises: DRACUnexpectedReturnValue on return value mismatch
++        """
++
++        selectors = {'SystemCreationClassName': 'DCIM_ComputerSystem',
++                     'CreationClassName': 'DCIM_RAIDService',
++                     'SystemName': 'DCIM:ComputerSystem',
++                     'Name': 'DCIM:RAIDService'}
++        properties = {'Target': raid_controller}
++
++        doc = self.client.invoke(uris.DCIM_RAIDService, 'ClearForeignConfig',
++                                 selectors, properties,
++                                 check_return_value=False)
++        
++        is_commit_required_value = True
++        is_reboot_required_value = None
++        ret_value = utils.find_xml(doc,
++                                   'ReturnValue',
++                                   uris.DCIM_RAIDService).text
++
++        if ret_value == utils.RET_ERROR:
++            message_id = utils.find_xml(doc,
++                                        'MessageID',
++                                        uris.DCIM_RAIDService).text
++
++            # A MessageID 'STOR018' indicates no foreign drive was
++            # detected. Return a value which informs the caller nothing
++            # further needs to be done.
++            if message_id == NO_FOREIGN_DRIVE:
++                is_commit_required_value = False
++                is_reboot_required_value = constants.RebootRequired.false
++            else:
++                message = utils.find_xml(doc,
++                                         'Message',
++                                         uris.DCIM_RAIDService).text
++                raise exceptions.DRACOperationFailed(
++                        drac_messages=message)
++
++        return utils.build_return_dict(
++                doc, uris.DCIM_RAIDService,
++                is_commit_required_value=is_commit_required_value,
++                is_reboot_required_value=is_reboot_required_value)
++
+     def is_jbod_capable(self, raid_controller_fqdd):
+         """Find out if raid controller supports jbod
+ 
+@@ -572,24 +678,41 @@
  
          return is_jbod_capable
  
@@ -88,7 +198,7 @@
  
      def _check_disks_status(self, mode, physical_disks,
                              controllers_to_physical_disk_ids):
-@@ -607,15 +634,17 @@
+@@ -607,15 +730,17 @@
          :param mode: constants.RaidStatus enumeration used to
                       determine what raid status to check for.
          :param physical_disks: all physical disks
@@ -111,7 +221,7 @@
          p_disk_id_to_status = {}
          for physical_disk in physical_disks:
              p_disk_id_to_status[physical_disk.id] = physical_disk.raid_status
-@@ -674,34 +703,37 @@
+@@ -674,34 +799,37 @@
  
              raise ValueError(error_msg)
  
@@ -120,8 +230,7 @@
      def change_physical_disk_state(self, mode,
                                     controllers_to_physical_disk_ids=None):
 -        """Convert disks RAID status and return a list of controller IDs
-+        """Convert disks RAID status
- 
+-
 -        Builds a list of controller ids that have had disks converted to the
 -        specified RAID status by:
 -        - Examining all the disks in the system and filtering out any that are
@@ -132,13 +241,14 @@
 -          statuses and raise an exception where appropriate.
 -        - Return a list of controller IDs for controllers whom have had any of
 -          their disks converted, and whether a reboot is required.
++        """Convert disks RAID status
+ 
+-        The caller typically should then create a config job for the list of
+-        controllers returned to finalize the RAID configuration.
 +        This method intelligently converts the requested physical disks from
 +        RAID to JBOD or vice versa.  It does this by only converting the
 +        disks that are not already in the correct state.
  
--        The caller typically should then create a config job for the list of
--        controllers returned to finalize the RAID configuration.
--
 -        :param mode: constants.RaidStatus enumeration used to determine what
 -                     raid status to check for.
 +        :param mode: constants.RaidStatus enumeration that indicates the mode
@@ -170,7 +280,7 @@
          :raises: DRACOperationFailed on error reported back by the DRAC and the
                   exception message does not contain NOT_SUPPORTED_MSG constant.
          :raises: Exception on unknown error.
-@@ -713,10 +745,11 @@
+@@ -713,10 +841,11 @@
          if not controllers_to_physical_disk_ids:
              controllers_to_physical_disk_ids = collections.defaultdict(list)
  
@@ -184,7 +294,7 @@
                      physical_disk_ids = controllers_to_physical_disk_ids[
                          physical_d.controller]
  
-@@ -727,13 +760,14 @@
+@@ -727,13 +856,14 @@
          Raise exception if there are any failed drives or
          drives not in status 'ready' or 'non-RAID'
          '''
@@ -202,7 +312,7 @@
              if physical_disk_ids:
                  LOG.debug("Converting the following disks to {} on RAID "
                            "controller {}: {}".format(
-@@ -746,20 +780,52 @@
+@@ -746,20 +876,52 @@
                      if constants.NOT_SUPPORTED_MSG in str(ex):
                          LOG.debug("Controller {} does not support "
                                    "JBOD mode".format(controller))
