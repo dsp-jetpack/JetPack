@@ -323,7 +323,6 @@ class Settings():
             self.certificate_keys_path = \
                 dellnfv_settings['certificate_keys_path']
 
->>>>>>> upstream/master
         # Performance and Optimization
         performance_and_optimization = self.get_settings_section(
             "Performance and Optimization")
