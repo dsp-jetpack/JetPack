@@ -71,7 +71,7 @@ repos=(
 )
 
 packages=(
-    cephmetrics-collectors
+    cephmetrics-ansible
 )
 
 del_packages=(
