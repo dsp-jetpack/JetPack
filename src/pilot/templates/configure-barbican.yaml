@@ -3,8 +3,9 @@
 
 resource_registry:
   OS::TripleO::Services::BarbicanApi: ./overcloud/docker/services/barbican-api.yaml
-  OS::TripleO::Services::BarbicanBackendSimpleCrypto: .overcloud/puppet/services/barbican-backend-simple-crypto.yaml
+  OS::TripleO::Services::BarbicanBackendSimpleCrypto: ./overcloud/puppet/services/barbican-backend-simple-crypto.yaml
 
 parameter_defaults:
   BarbicanSimpleCryptoGlobalDefault: true
   BarbicanDebug: true
+  VerifyGlanceSignatures: true
