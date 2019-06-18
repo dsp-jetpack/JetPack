@@ -31,6 +31,7 @@ import errno
 import fcntl
 import time
 
+from dracclient import client
 from dracclient import utils
 from dracclient.constants import POWER_OFF
 from dracclient.constants import RebootRequired
@@ -45,12 +46,7 @@ from logging_helper import LoggingHelper
 import requests.packages
 from ironicclient.common.apiclient.exceptions import InternalServerError
 
-discover_nodes_path = os.path.join(os.path.expanduser('~'),
-                                   'pilot/discover_nodes')
 
-sys.path.append(discover_nodes_path)
-
-from discover_nodes.dracclient.client import DRACClient  # noqa
 requests.packages.urllib3.disable_warnings()
 
 # Perform basic configuration of the logging system, which configures the root
@@ -125,7 +121,7 @@ def parse_arguments():
                         metavar="ROLE")
     parser.add_argument("-f",
                         "--flavor-settings",
-                        default="~/pilot/flavors_settings.json",
+                        default="flavors_settings.json",
                         help="file that contains flavor settings",
                         metavar="FILENAME")
     parser.add_argument('-s',
@@ -237,7 +233,7 @@ def get_drac_client(node_definition_filename, node):
     drac_ip, drac_user, drac_password = \
         CredentialHelper.get_drac_creds_from_node(node,
                                                   node_definition_filename)
-    drac_client = DRACClient(drac_ip, drac_user, drac_password)
+    drac_client = client.DRACClient(drac_ip, drac_user, drac_password)
     # TODO: Validate the IP address is an iDRAC.
     #
     #       This could detect an error by an off-roading user who provided an
@@ -1432,8 +1428,11 @@ def main():
         args = parse_arguments()
 
         LoggingHelper.configure_logging(args.logging_level)
+        try:
+            flavor_settings_filename = os.path.expanduser(args.flavor_settings)
+        except:
+            flavor_settings_filename = os.path.join(os.getcwd(), args.flavor_settings)
 
-        flavor_settings_filename = os.path.expanduser(args.flavor_settings)
         flavor_settings = get_flavor_settings(flavor_settings_filename)
 
         if flavor_settings is None:
