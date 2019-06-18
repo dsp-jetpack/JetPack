@@ -304,6 +304,12 @@ class Settings():
         else:
             self.dvr_enable = False
             logger.info("DVR is disabled.")
+        if dellnfv_settings['barbican_enable'].lower() == 'true':
+            self.barbican_enable = True
+            logger.info("Barbican is enabled.")
+        else:
+            self.dvr_enable = False
+            logger.info("Barbican is disabled.")
         if dellnfv_settings['octavia_enable'].lower() == 'true':
             self.octavia_enable = True
             logger.info("Octavia is enabled.")

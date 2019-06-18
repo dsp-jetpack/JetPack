@@ -141,7 +141,7 @@ run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
 run_command "sudo yum -y install openstack-tempest"
-run_command "sudo yum install -y python-neutron-tests-tempest python-cinder-tests-tempest python-telemetry-tests-tempest python-keystone-tests-tempest python-horizon-tests-tempest python2-octavia-tests-tempest python2-manila-tests-tempest"
+run_command "sudo yum install -y python-neutron-tests-tempest python-cinder-tests-tempest python-telemetry-tests-tempest python-keystone-tests-tempest python-horizon-tests-tempest python2-octavia-tests-tempest python2-manila-tests-tempest python2-barbican-tests-tempest"
 echo "## Done."
 
 echo
@@ -331,6 +331,7 @@ else
  --namespace=registry.access.redhat.com/rhosp13 \
  -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
  -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
+ -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
  -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
  --set ceph_namespace=registry.access.redhat.com/rhceph \
  --set ceph_image=rhceph-3-rhel7 \
