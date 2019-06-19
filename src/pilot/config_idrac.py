@@ -21,6 +21,8 @@ import requests.packages
 import sys
 
 from arg_helper import ArgHelper
+from assign_role import place_node_in_available_state
+from assign_role import place_node_in_manageable_state
 from dracclient import client
 from dracclient import wsman
 from dracclient import exceptions
@@ -30,6 +32,7 @@ import boot_mode_helper
 from boot_mode_helper import BootModeHelper
 from constants import Constants
 from credential_helper import CredentialHelper
+from ironic_helper import IronicHelper
 from job_helper import JobHelper
 from logging_helper import LoggingHelper
 from time import sleep
@@ -531,22 +534,6 @@ def wait_for_jobs_to_complete(job_ids, drac_client, ip_service_tag):
     return success
 
 
-def clear_job_queue(drac_client, ip_service_tag):
-    LOG.info("Clearing the job queue on {}".format(ip_service_tag))
-    drac_client.delete_jobs(job_ids=['JID_CLEARALL_FORCE'])
-
-    # It takes a second or two for the iDRAC to switch from the ready state to
-    # the not-ready state, so wait for this transition to happen
-    sleep(5)
-
-    drac_client.wait_until_idrac_is_ready()
-
-
-def reset_idrac(drac_client, ip_service_tag):
-    LOG.info('Resetting the iDRAC on {}'.format(ip_service_tag))
-    drac_client.reset_idrac(wait=True)
-
-
 def config_idrac(instack_lock,
                  ip_service_tag,
                  node_definition=Constants.INSTACKENV_FILENAME,
@@ -577,12 +564,32 @@ def config_idrac(instack_lock,
         return
 
     drac_client = DRACClient(drac_ip, drac_user, drac_password)
+    ironic_client = IronicHelper.get_ironic_client()
+    node_uuid = IronicHelper.get_ironic_node(ironic_client,
+                                             node["service_tag"]).uuid
 
-    reset_idrac(drac_client, ip_service_tag)
+    # To manually clean the ironic node, it must be in the manageable state.
+    success = place_node_in_manageable_state(ironic_client, node_uuid)
 
-    # Clear out any pending jobs in the job queue and fix the condition where
-    # there are no pending jobs, but the iDRAC thinks there are
-    clear_job_queue(drac_client, ip_service_tag)
+    if not success:
+        LOG.critical("Could not place node into the manageable state")
+        return False
+
+    LOG.info("Executing known_good_state clean step on {}"
+        .format(ip_service_tag))
+    clean_steps = [{'interface': 'management', 'step': 'known_good_state'}]
+    ironic_client.node.set_provision_state(
+        node_uuid,
+        'clean',
+        cleansteps=clean_steps)
+
+    LOG.info("Waiting for known_good_state clean step to complete")
+    ironic_client.node.wait_for_provision_state(node_uuid, 'manageable')
+    LOG.info("Completed known_good_state clean step")
+
+    # Return the ironic node to the available state.
+    place_node_in_available_state(ironic_client, node_uuid)
+
     if skip_nic_config:
         target_boot_mode = BootModeHelper.get_boot_mode(drac_client)
     elif BootModeHelper.is_boot_order_flexibly_programmable(drac_client):
