@@ -80,11 +80,9 @@ To reduce time spent on specifying hardware for an initial system, the Architect
 * Storage nodes
 
 Dell EMC recommends starting with OpenStack software using components from this Architecture Guide -
-Version 13.1 because the hardware and operations processes comprise a flexible foundation upon which to
-expand as your cloud deployment grows, so your investment is protected.
+Version 13.1 flexible foundation expands as your cloud deployment grows, which protects investments.
 
-As noted throughout this Architecture Guide - Version 13, Dell EMC constantly adds capabilities to expand
-this offering, and other hardware may be available. [Please check the Architecture Guide for more details]("https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_ready_architecture_for_red_hat_openstack_platform_architecture_guide.pdf")
+Dell EMC Architecture Guide version 13 expands hardware capabilities. Please check the Architecture Guide for more details ("https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_ready_architecture_for_red_hat_openstack_platform_architecture_guide.pdf")
 
 ### Servers Options
 
@@ -96,7 +94,7 @@ The Dell EMC PowerEdge R640 is the ideal dual-socket, 1U platform for dense scal
 
 The Dell EMC PowerEdge R740/Dell EMC PowerEdge R740xd delivers a perfect balance between storage scalability and performance. The 2U two-socket platform is ideal for software defined storage. The R/740/R740xd versatility is highlighted with the ability to mix any drive type to create the optimum configuration of SSD and HDD for either performance, capacity or both.
 
-> Note: The Dell EMC PowerEdge R740/Dell EMC PowerEdge R740xd is the platform of choice for software defined storage and is the foundation for Red Hat Ceph Storage
+> Note: The Dell EMC PowerEdge R740/Dell EMC PowerEdge R740xd is the platform of choice for software defined storage and is the foundation for Red Hat Ceph Storage.
 
 
 ### Networking and network services
@@ -109,7 +107,7 @@ Network configuration is based upon using the Neutron-based options supported by
 * Network Function Virtualization (NFV)
 * 25GbE 100GbE networking
 * NIC bonding
-* Redundant trunking top-of-rack (ToR) switches into core routers
+* Redundant trunking top-of-rack (ToR) switches into core routers.
 
 This enables the Dell EMC Ready Architecture for Red Hat OpenStack Platform to operate in a full production environment. Detailed designs are available through Dell EMC consulting services. [rhosp.ra.ps@emc.com](malito:rhosp.ra.ps@emc.com)
 
@@ -132,16 +130,16 @@ The network consists of the following major network infrastructure layouts:
 
 * Support for the lastest release of Red Hat OpenStack Platform 13.1 including the latest updates.
 * Support for latest release of RHEL 7.6 including the latest updates.
-* Support for Red Hat Ceph Storage version 3.1
-* Added support for jumbo frames.
+* Support for Red Hat Ceph Storage version 3.1.
+* Added support for Jumbo Frames.
 * Added support for UEFI on all Overcloud nodes.
 * Added support for Dell EMC Networking S5248-ON switch.
 * Added support for 25GbE networking with Intel XXV710 network interface cards.
 * Added support for Red Hat Ceph Storage to use NVMe storage for OSD/Journal.
 * Enhancement of Huge Pages with JetPack CSP profile.
 * Enhancement of NUMA/CPU Pinning with JetPack CSP profile.
-* Support of OVS-DPDK with JetPack CSP profile.
-* Added support for of SR-IOV for 100G networking with Mellanox ConnectX-5 network interface cards.
+* Added support for of OVS-DPDK for 100G networking with Mellanox ConnectX-5 network interface cards (NICs).
+* Added support for of SR-IOV for 100G networking with Mellanox ConnectX-5 network interface cards (NICs).
 * Added support for Distributed Virtual Router, (DVR).
 * Added support for auto-generation of .ini and .properties files for use in automated deployments.
 * Added support for VLAN aware VM.
@@ -1339,7 +1337,7 @@ numa_hostos_cpu_count=4
 
 # Appendix F OVS-DPDK
 
-This appendix details the guidelines for configuration of OVS-DPDK at the time of deployment of Dell EMC Ready Architecture for RedHat OpenStack Platform v13.1.
+This appendix details the guideline for configuration of OVS-DPDK at the time of deployment of Dell EMC Ready Architecture for RedHat OpenStack Platform v13.1.
 
 
 #### OvS
@@ -1385,7 +1383,7 @@ Before starting the deployment of Dell EMC Ready Architecture for Red Hat OpenSt
 2.	Total number of CPU sockets should be 2 per compute nodes.
 3.	NUMA and Hugepages settings should be enabled in the .ini file.
 4.	Extra NICs:
-    Two extra Intel XXV710 NICs in the compute nodes are attached. For Dell EMC PowerEdge R640, OVS-DPDK NICs are plugged in PCI Slot 1 and 2 and for Dell EMC PowerEdge R740xd, OVS-DPDK NICs are plugged in PCI Slot 4 & 5.
+    Two extra Intel XXV710/Mellanox Connect X-5 NICs in the compute nodes are attached. For Dell EMC PowerEdge R640, OVS-DPDK NICs are plugged in PCI Slot 1 and 2 and for Dell EMC PowerEdge R740xd, OVS-DPDK NICs are plugged in PCI Slot 4 & 5.
 
 ##### System Requirements
 
@@ -1410,7 +1408,7 @@ For this scenario, switch configuration will have three major changes:
 
 a.	Creation of new bonds for the new ports that will be used for OVS-DPDK bond with LACP enabled on two ports.
 
-b.	Removal of Removal of tenant VLANs from NOVA1-bond0, NOVA2-bond0 and NOVA3-bond0 bonds.
+b.	Removal of tenant VLANs from NOVA1-bond0, NOVA2-bond0 and NOVA3-bond0 bonds.
 
 c.	Tagging of newly created bonds in tenant network VLANs.
 
@@ -1426,7 +1424,7 @@ Switch configurations for one interface on both switches according to the two po
 conf t
 # set port-channel to trunk mode
 interface port-channel 59
-#no switchport mode
+no switchport mode
 switchport mode trunk
 vlt-port-channel 59
 # add port channel to vlan
@@ -1616,7 +1614,7 @@ At the start of deployment a log message shows whether OVS-DPDK is enabled or no
 **There are two types of deployment failures that can occur:**
 
 1. At the start of deployment, failures related to settings and properties file input validation may occur.
-2. At the time of overcloud deployment preparations, in this part OVS-DPDK related parameters are
+2. At the time of overcloud deployment preparation, OVS-DPDK related parameters are
 configured.
 3. During the deployment, failure can be due to multiple reasons: a subset of these failures is related to “FAILED_OVERCLOUD”. The OVS-DPDK related failure are part of this subset. The most likely reasons for these failures are following:
 
@@ -1663,7 +1661,7 @@ $ openstack stack resource list <stack-name> | grep -v COMPLETE
 ```
 
 
-This will provide a general idea of which resource creation failed.
+This will provide a general idea of the resource whose creation got failed.
 
 The following command can be used to list all the software deployments, which are either in "IN PROGRESS" or "FAILED" state.
 
@@ -2017,7 +2015,7 @@ For this scenario, the following changes are required in the switch configuratio
 In the four ports SR-IOV reference diagram, PCI slot 1 and 2 are used just for reference. User can utilize different PCI slots according to the network environment.
 
 
-* Addition of additional four ports to the tenant VLANs on both the leaf switches.
+* Addition of four ports to the tenant VLANs on both the leaf switches.
 * Switch configuration (OS10) for SR-IOV on both the switches according to the reference diagram will be:
 
 ```bash
@@ -2093,7 +2091,7 @@ For this scenario, the following changes are required in the switch configuratio
 > In the two ports SR-IOV reference diagram, PCI slot 1 and 2 are used just for reference. User can utilize different PCI slots according to the network environment.
 
 
-* Addition of additional two ports to the tenant VLANs on both the leaf switches.
+* Addition of two ports to the tenant VLANs on both leaf switches.
 * Switch configuration for SR-IOV on both the switches according to the reference diagram will be:
 
 
@@ -2279,7 +2277,9 @@ Distributed Virtual Routing (DVR) offers an alternative routing design, which is
 ### Prerequisite
 
 Follow these steps to configure bonds interfaces of every compute node on both switches:
+
 **Switch with OS10**
+
 * Switch configurations for five port nics, port-channel of compute Bond1 interfaces should be in floating vlan:
 ```yaml
 # configure terminal
@@ -2425,7 +2425,7 @@ Verify that DVR is deployed on all the controller nodes
 
 **Verify that traffic between two compute nodes bypass the Controller node.**
 
-1.	Create two instance on different compute nodes and networks
+1.	Create two instances on different compute nodes and networks
 2.	SSH to both instances on the different tabs
 3.	Ping first instance from second instance.
 4.	SSH to controller node
@@ -2492,10 +2492,10 @@ Verify that DVR is deployed on all the controller nodes
 
 ### Introduction
 
-The OpenStack Load-balancing service (octavia) provides a Load Balancing-as-a-Service (LBaaS) version 2 implementation for Red Hat OpenStack platform director based installations. This section describes how to enable Octavia and assumes Octavia services are hosted on the same nodes as the Networking API server. By default, the Load-balancing services are on the controller nodes.
+The OpenStack Load-balancing service (octavia) provides a Load Balancing-as-a-Service (LBaaS) version 2 implementation for Red Hat OpenStack platform director based installations. This section describes how to enable Octavia and assumes Octavia services are hosted on the same nodes as the Networking API server. By default, the Load-balancing services are running on the controller nodes.
 **Load-Balancing Methods** 
 Load balancing methods are defined while creating pools using the attribute --lb-algorithm. There are three methods available:
-* Round robin - Rotates requests evenly between multiple instances.
+* Round Robin - Rotates requests evenly between multiple instances.
 * Source IP - Requests from a unique source IP address are consistently directed to the same instance.
 * Least connections - Allocates requests to the instance with the least number of active connections.
 
@@ -2505,7 +2505,7 @@ To enable Octavia in JetStream 13.1, perform the following steps:
 ```bash
     $ vi /root/<sample CSP profile INI file>
 ```
-* Change Octavia parameters provided in the following table in settings INI file: 
+* Change teh following Octavia paramters in settings INI file: 
 
 ```bash
     $ octavia_enable=true
@@ -2514,7 +2514,7 @@ To enable Octavia in JetStream 13.1, perform the following steps:
 **User defined Certificates and Keys for Octavia secure container communication**
 For secure communication Octavia containers use certificates and keys to communicate with the load balancers and with each other. The users can set the octavia_generate_certs attribute in settings.ini file to provide their own certificates and keys or keep octavia_generate_certs set to true (Default value) to let Octavia auto generate these certificates and keys.
 
-* To use user defined certificates and keys, the user needs to set octavia_generate_certs attribute to FALSE in the settings.ini file,
+* To use user defined certificates and keys, the user needs to set octavia_generate_certs attribute to FALSE in the settings.ini file.
 
 ```bash
     $ octavia_generate_certs=false
@@ -2523,7 +2523,7 @@ Moreover, when setting octavia_generate_certs parameter to false, it is required
 ```bash
     $ certificate_keys_path=/root/octavia-environment.yaml
 ```
-* The custom environment file should be yaml format and its name can be anything (such as octavia-environment.yaml). The sample file is given below and it needs only four parameters,
+* The custom environment file should be in yaml format (such as octavia-environment.yaml). The sample file is given below and it needs only four parameters,
 > OctaviaCaCert
 > OctaviaCaKey
 > OctaviaClientCert
