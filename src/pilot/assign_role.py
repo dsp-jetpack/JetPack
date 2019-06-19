@@ -121,7 +121,7 @@ def parse_arguments():
                         metavar="ROLE")
     parser.add_argument("-f",
                         "--flavor-settings",
-                        default="flavors_settings.json",
+                        default="~/pilot/flavors_settings.json",
                         help="file that contains flavor settings",
                         metavar="FILENAME")
     parser.add_argument('-s',
@@ -1428,11 +1428,8 @@ def main():
         args = parse_arguments()
 
         LoggingHelper.configure_logging(args.logging_level)
-        try:
-            flavor_settings_filename = os.path.expanduser(args.flavor_settings)
-        except:
-            flavor_settings_filename = os.path.join(os.getcwd(), args.flavor_settings)
 
+        flavor_settings_filename = os.path.expanduser(args.flavor_settings)
         flavor_settings = get_flavor_settings(flavor_settings_filename)
 
         if flavor_settings is None:

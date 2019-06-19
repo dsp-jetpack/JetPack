@@ -22,6 +22,7 @@ import sys
 
 from arg_helper import ArgHelper
 from credential_helper import CredentialHelper
+from dracclient import client
 from logging_helper import LoggingHelper
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being made
