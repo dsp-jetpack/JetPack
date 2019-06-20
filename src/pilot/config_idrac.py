@@ -35,12 +35,6 @@ from logging_helper import LoggingHelper
 from time import sleep
 from utils import Utils
 
-discover_nodes_path = os.path.join(os.path.expanduser('~'),
-                                   'pilot/discover_nodes')
-sys.path.append(discover_nodes_path)
-
-from discover_nodes.dracclient.client import DRACClient  # noqa
-
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being made
 requests.packages.urllib3.disable_warnings()
 
@@ -576,7 +570,7 @@ def config_idrac(instack_lock,
 
         return
 
-    drac_client = DRACClient(drac_ip, drac_user, drac_password)
+    drac_client = client.DRACClient(drac_ip, drac_user, drac_password)
 
     reset_idrac(drac_client, ip_service_tag)
 
@@ -645,7 +639,7 @@ def config_idrac(instack_lock,
 
         # If the user set the password, then we need to change creds
         if password:
-            new_drac_client = DRACClient(drac_ip, drac_user, password)
+            new_drac_client = client.DRACClient(drac_ip, drac_user, password)
 
             # Try every 10 seconds over 2 minutes to connect with the new creds
             password_changed = False
