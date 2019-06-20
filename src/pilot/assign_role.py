@@ -31,6 +31,7 @@ import errno
 import fcntl
 import time
 
+from dracclient import client
 from dracclient import utils
 from dracclient.constants import POWER_OFF
 from dracclient.constants import RebootRequired
@@ -45,12 +46,7 @@ from logging_helper import LoggingHelper
 import requests.packages
 from ironicclient.common.apiclient.exceptions import InternalServerError
 
-discover_nodes_path = os.path.join(os.path.expanduser('~'),
-                                   'pilot/discover_nodes')
 
-sys.path.append(discover_nodes_path)
-
-from discover_nodes.dracclient.client import DRACClient  # noqa
 requests.packages.urllib3.disable_warnings()
 
 # Perform basic configuration of the logging system, which configures the root
@@ -237,7 +233,7 @@ def get_drac_client(node_definition_filename, node):
     drac_ip, drac_user, drac_password = \
         CredentialHelper.get_drac_creds_from_node(node,
                                                   node_definition_filename)
-    drac_client = DRACClient(drac_ip, drac_user, drac_password)
+    drac_client = client.DRACClient(drac_ip, drac_user, drac_password)
     # TODO: Validate the IP address is an iDRAC.
     #
     #       This could detect an error by an off-roading user who provided an
