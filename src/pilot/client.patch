@@ -1,5 +1,5 @@
---- client_orig_14may.py.orig	2019-05-14 06:15:53.291771851 -0400
-+++ client_orig_14may.py	2019-06-04 05:49:42.711845066 -0400
+--- client.py.orig	2019-06-18 07:50:36.074404231 -0400
++++ client_new.py	2019-06-21 06:14:32.311037297 -0400
 @@ -33,7 +33,7 @@
  from dracclient import utils
  from dracclient import wsman
@@ -18,36 +18,147 @@
              retries=24)
  
          if not state_reached:
-@@ -468,7 +468,8 @@
+@@ -388,9 +388,12 @@
+             cim_name='DCIM:iDRACCardService',
+             target=idrac_fqdd)
+ 
+-    def list_lifecycle_settings(self):
++    def list_lifecycle_settings(self, by_name=False):
+         """List the Lifecycle Controller configuration settings
+ 
++        :param by_name: Controls whether returned dictionary uses Lifecycle
++                        attribute name as key. If set to False, instance_id
++                        will be used.
+         :returns: a dictionary with the Lifecycle Controller settings using its
+                   InstanceID as the key. The attributes are either
+                   LCEnumerableAttribute or LCStringAttribute objects.
+@@ -399,7 +402,49 @@
+         :raises: DRACOperationFailed on error reported back by the DRAC
+                  interface
+         """
+-        return self._lifecycle_cfg.list_lifecycle_settings()
++        return self._lifecycle_cfg.list_lifecycle_settings(by_name)
++
++    def is_lifecycle_in_recovery(self):
++        """Checks if Lifecycle Controller in recovery mode or not
++
++        This method checks the LCStatus value to determine if lifecycle
++        controller is in recovery mode by invoking GetRemoteServicesAPIStatus
++        from iDRAC.
++
++        :returns: a boolean indicating if lifecycle controller is in recovery
++        :raises: WSManRequestFailure on request failures
++        :raises: WSManInvalidResponse when receiving invalid response
++        :raises: DRACOperationFailed on error reported back by the DRAC
++                 interface
++        """
++
++        return self._lifecycle_cfg.is_lifecycle_in_recovery()
++
++    def set_lifecycle_settings(self, settings):
++        """Sets lifecycle controller configuration
++
++        It sets the pending_value parameter for each of the attributes
++        passed in. For the values to be applied, a config job must
++        be created.
++
++        :param settings: a dictionary containing the proposed values, with
++                         each key being the name of attribute and the value
++                         being the proposed value.
++        :returns: a dictionary containing:
++                 - The is_commit_required key with a boolean value indicating
++                   whether a config job must be created for the values to be
++                   applied.
++                 - The is_reboot_required key with a RebootRequired enumerated
++                   value indicating whether the server must be rebooted for the
++                   values to be applied. Possible values are true and false.
++        :raises: WSManRequestFailure on request failures
++        :raises: WSManInvalidResponse when receiving invalid response
++        :raises: DRACOperationFailed on error reported back by the DRAC
++                 interface
++        :raises: DRACUnexpectedReturnValue on return value mismatch
++        :raises: InvalidParameterValue on invalid Lifecycle attribute
++        """
++        return self._lifecycle_cfg.set_lifecycle_settings(settings)
+ 
+     def list_system_settings(self):
+         """List the System configuration settings
+@@ -468,7 +513,10 @@
                            cim_system_creation_class_name='DCIM_ComputerSystem',
                            cim_system_name='DCIM:ComputerSystem',
                            reboot=False,
 -                          start_time='TIME_NOW'):
 +                          start_time='TIME_NOW',
-+                          realtime=False):
++                          realtime=False,
++                          wait_for_idrac=True,
++                          method_name='CreateTargetedConfigJob'):
          """Creates a configuration job.
  
          In CIM (Common Information Model), weak association is used to name an
-@@ -492,6 +493,8 @@
+@@ -492,6 +540,12 @@
                             means execute immediately or None which means
                             the job will not execute until
                             schedule_job_execution is called
 +        :param realtime: Indicates if reatime mode should be used.
 +               Valid values are True and False.
++        :param wait_for_idrac: indicates whether or not to wait for the
++                               iDRAC to be ready to accept commands before
++                               issuing the command.
++        :param method_name: method of CIM object to invoke
          :returns: id of the created job
          :raises: WSManRequestFailure on request failures
          :raises: WSManInvalidResponse when receiving invalid response
-@@ -508,7 +511,8 @@
+@@ -508,7 +562,10 @@
              cim_system_creation_class_name=cim_system_creation_class_name,
              cim_system_name=cim_system_name,
              reboot=reboot,
 -            start_time=start_time)
 +            start_time=start_time,
-+            realtime=realtime)
++            realtime=realtime,
++            wait_for_idrac=wait_for_idrac,
++            method_name=method_name)
  
      def create_nic_config_job(
              self,
-@@ -784,8 +788,52 @@
+@@ -647,6 +704,37 @@
+             cim_creation_class_name='DCIM_BIOSService',
+             cim_name='DCIM:BIOSService', target=self.BIOS_DEVICE_FQDD)
+ 
++    def commit_pending_lifecycle_changes(
++            self,
++            reboot=False,
++            start_time='TIME_NOW'):
++        """Applies all pending changes on Lifecycle by creating a config job
++
++        :param reboot: indicates whether a RebootJob should also be
++                       created or not
++        :param start_time: start time for job execution in format
++                           yyyymmddhhmmss, the string 'TIME_NOW' which
++                           means execute immediately or None which means
++                           the job will not execute until
++                           schedule_job_execution is called
++        :returns: id of the created job
++        :raises: WSManRequestFailure on request failures
++        :raises: WSManInvalidResponse when receiving invalid response
++        :raises: DRACOperationFailed on error reported back by the DRAC
++                 interface, including start_time being in the past or
++                 badly formatted start_time
++        :raises: DRACUnexpectedReturnValue on return value mismatch
++        """
++        return self._job_mgmt.create_config_job(
++            resource_uri=uris.DCIM_LCService,
++            cim_creation_class_name='DCIM_LCService',
++            cim_name='DCIM:LCService',
++            target='',
++            reboot=reboot,
++            start_time=start_time,
++            wait_for_idrac=False,
++            method_name='CreateConfigJob')
++
+     def get_lifecycle_controller_version(self):
+         """Returns the Lifecycle controller version
+ 
+@@ -784,8 +872,52 @@
          """
          return self._raid_mgmt.delete_virtual_disk(virtual_disk)
  
@@ -101,7 +212,7 @@
          """Applies all pending changes on a RAID controller
  
           ...by creating a config job.
-@@ -798,6 +846,8 @@
+@@ -798,6 +930,8 @@
                 means execute immediately or None which means
                 the job will not execute until
                 schedule_job_execution is called
@@ -110,7 +221,7 @@
          :returns: id of the created job
          :raises: WSManRequestFailure on request failures
          :raises: WSManInvalidResponse when receiving invalid response
-@@ -811,7 +861,8 @@
+@@ -811,7 +945,8 @@
              cim_name='DCIM:RAIDService',
              target=raid_controller,
              reboot=reboot,
@@ -120,7 +231,7 @@
  
      def abandon_pending_raid_changes(self, raid_controller):
          """Deletes all pending changes on a RAID controller
-@@ -830,6 +881,14 @@
+@@ -830,6 +965,14 @@
              cim_creation_class_name='DCIM_RAIDService',
              cim_name='DCIM:RAIDService', target=raid_controller)
  
@@ -135,7 +246,7 @@
      def list_cpus(self):
          """Returns the list of CPUs
  
-@@ -962,15 +1021,23 @@
+@@ -962,53 +1105,71 @@
          """
          return self._raid_mgmt.is_jbod_capable(raid_controller_fqdd)
  
@@ -160,9 +271,80 @@
 +        return self._raid_mgmt.is_raid_controller(raid_controller_fqdd,
 +                                                  raid_controllers)
  
-     def is_boss_controller(self, raid_controller_fqdd):
+-    def is_boss_controller(self, raid_controller_fqdd):
++    def is_boss_controller(self, raid_controller_fqdd, raid_controllers=None):
          """Find out if a RAID controller a BOSS card or not
-@@ -1170,11 +1237,11 @@
+ 
+         :param raid_controller_fqdd: The object's fqdd we are testing to see
+                                      if it is a BOSS card or not.
++        :param raid_controllers: A list of RAIDController to scan for presence
++                                 of BOSS card, if None the drac will be queried
++                                 for the list of controllers which will then be
++                                 scanned.
+         :returns: boolean, True if the device is a BOSS card, False if not.
++        :raises: WSManRequestFailure on request failures
++        :raises: WSManInvalidResponse when receiving invalid response
++        :raises: DRACOperationFailed on error reported back by the DRAC
++                 interface
+         """
+-        return self._raid_mgmt.is_boss_controller(raid_controller_fqdd)
++        return self._raid_mgmt.is_boss_controller(raid_controller_fqdd,
++                                                  raid_controllers)
+ 
+     def change_physical_disk_state(self, mode,
+                                    controllers_to_physical_disk_ids=None):
+-        """Convert disks RAID status and return a list of controller IDs
++        """Convert disks RAID status
+ 
+-        Builds a list of controller ids that have had disks converted to the
+-        specified RAID status by:
+-        - Examining all the disks in the system and filtering out any that are
+-          not attached to a RAID/BOSS controller.
+-        - Inspect the controllers' disks to see if there are any that need to
+-          be converted, if so convert them. If a disk is already in the desired
+-          status the disk is ignored. Also check for failed or unknown disk
+-          statuses and raise an exception where appropriate.
+-        - Return a list of controller IDs for controllers whom have had any of
+-          their disks converted, and whether a reboot is required.
++        This method intelligently converts the requested physical disks from
++        RAID to JBOD or vice versa.  It does this by only converting the
++        disks that are not already in the correct state.
+ 
+-        The caller typically should then create a config job for the list of
+-        controllers returned to finalize the RAID configuration.
+-
+-        :param mode: constants.RaidStatus enumeration used to determine what
+-                     raid status to check for.
++        :param mode: constants.RaidStatus enumeration that indicates the mode
++                     to change the disks to.
+         :param controllers_to_physical_disk_ids: Dictionary of controllers and
+-               corresponding disk ids we are inspecting and creating jobs for
+-               when needed.
+-        :returns: a dict containing the following key/values:
++               corresponding disk ids to convert to the requested mode.
++        :returns: a dictionary containing:
++                  - conversion_results, a dictionary that maps controller ids
++                    to the conversion results for that controller.  The
++                    conversion results are a dict that contains:
++                    - The is_commit_required key with the value always set to
++                      True indicating that a config job must be created to
++                      complete disk conversion.
++                    - The is_reboot_required key with a RebootRequired
++                      enumerated value indicating whether the server must be
++                      rebooted to complete disk conversion.
++                  Also contained in the main dict are the following key/values,
++                  which are deprecated, should not be used, and will be removed
++                  in a future release:
+                   - is_reboot_required, a boolean stating whether a reboot is
+-                  required or not.
++                    required or not.
+                   - commit_required_ids, a list of controller ids that will
+-                  need to commit their pending RAID changes via a config job.
++                    need to commit their pending RAID changes via a config job.
+         :raises: DRACOperationFailed on error reported back by the DRAC and the
+                  exception message does not contain NOT_SUPPORTED_MSG constant.
+         :raises: Exception on unknown error.
+@@ -1170,11 +1331,11 @@
                               expected_return_value=utils.RET_SUCCESS,
                               wait_for_idrac=False)
  
