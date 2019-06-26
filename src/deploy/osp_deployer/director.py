@@ -1338,6 +1338,8 @@ class Director(InfraHost):
             cmd += " --sriov"
         if self.settings.dvr_enable is True:
             cmd += " --dvr_enable"
+        if self.settings.barbican_enable is True:
+            cmd += " --barbican_enable"
         if self.settings.octavia_enable is True:
             cmd += " --octavia_enable"
         if self.settings.octavia_user_certs_keys is True:
