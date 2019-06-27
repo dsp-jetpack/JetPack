@@ -163,11 +163,19 @@ class Director(InfraHost):
 
     def install_director(self):
         logger.debug("Installing the undercloud")
-        cmd = '~/pilot/install-director.sh --dns ' + \
-              self.settings.name_server + " --sm_user " + \
-              self.settings.subscription_manager_user + " --sm_pwd " + \
-              self.settings.subscription_manager_password + " --sm_pool " + \
-              self.settings.subscription_manager_vm_ceph
+        if self.settings.use_satellite:
+            cmd ='~/pilot/install-director.sh --dns ' + \
+                  self.settings.name_server + ' --satellite_hostname ' + \
+                  self.settings.satellite_hostname + ' --satellite_org ' + \
+                  self.settings.satellite_org + ' --satellite_key ' + \
+                  self.settings.satellite_activation_key
+        else:
+            cmd = '~/pilot/install-director.sh --dns ' + \
+                  self.settings.name_server + " --sm_user " + \
+                  self.settings.subscription_manager_user + " --sm_pwd " + \
+                  self.settings.subscription_manager_password + " --sm_pool " + \
+                  self.settings.subscription_manager_vm_ceph
+
         if len(self.settings.overcloud_nodes_pwd) > 0:
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
         stdout, stderr, exit_status = self.run(cmd)

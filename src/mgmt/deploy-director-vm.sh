@@ -101,6 +101,11 @@ do
   [[ ${iface} == smpassword ]] && echo "echo SMPassword=\'${ip}\' >> /tmp/ks_post_include.txt"
   [[ ${iface} == smpool ]] && echo "echo SMPool=${ip} >> /tmp/ks_post_include.txt"
 
+  [[ ${iface} == satellite_ip ]] && echo "echo SA_ip=${ip} >> /tmp/ks_post_include.txt"
+  [[ ${iface} == satellite_hostname ]] && echo "echo SA_host=${ip} >> /tmp/ks_post_include.txt"
+  [[ ${iface} == satellite_org ]] && echo "echo SA_org=${ip} >> /tmp/ks_post_include.txt"
+  [[ ${iface} == satellite_activation_key ]] && echo "echo SA_key=${ip} >> /tmp/ks_post_include.txt"
+
   [[ ${iface} == smproxy ]] && echo "echo SMProxy=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smproxyuser ]] && echo "echo SMProxyUser=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smproxypassword ]] && echo "echo SMProxyPassword=${ip} >> /tmp/ks_post_include.txt"
@@ -209,8 +214,14 @@ EOFPW
     chmod 0440 /etc/sudoers.d/proxy
 
     }
-
-  subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
+  if [[ -z ${SA_ip} ]]
+  then
+      subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
+  else
+      echo "$SA_ip    $SA_host" >> /etc/hosts
+      rpm -Uvh http://$SA_host/pub/katello-ca-consumer-latest.noarch.rpm
+      subscription-manager register --org=$SA_org --activationkey="$SA_key"
+  fi
 
   [[ x${SMPool} = x ]] \
     && SMPool=$( subscription-manager list --available ${ProxyInfo} | awk '/OpenStack/,/Pool/ {pool = $3} END {print pool}' )
@@ -233,6 +244,7 @@ EOFPW
 
   yum -y install yum-plugin-priorities
   yum -y install yum-utils
+  yum -y install virt-who
 
   yum-config-manager --enable rhel-7-server-rpms --setopt="rhel-7-server-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-extras-rpms --setopt="rhel-7-server-extras-rpms.priority=1"

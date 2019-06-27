@@ -236,6 +236,14 @@ class Settings():
                 'subscription_check_retries']
         else:
             self.subscription_check_retries = 20
+        if rhsm_settings['use_satellite'].lower() == 'true':
+            self.use_satellite = True
+            self.satellite_ip = rhsm_settings['satellite_ip']
+            self.satellite_hostname = rhsm_settings['satellite_hostname']
+            self.satellite_org = rhsm_settings['satellite_org']
+            self.satellite_activation_key = rhsm_settings['satellite_activation_key']
+        else:
+            self.use_satellite = False
 
         ipmi_settings = self.get_settings_section(
             "IPMI credentials Settings")
