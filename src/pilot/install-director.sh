@@ -17,10 +17,10 @@
 exec > >(tee $HOME/pilot/install-director.log)
 exec 2>&1
 
-USAGE="\nUsing RedHat CDN:$0 --dns <dns_ip> --sm_user <subscription_manager_user> --sm_pwd <subscription_manager_pass> [--sm_pool <subcription_manager_poolid>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>]"
+USAGE="\nUsing RedHat CDN:$0 --dns <dns_ip> --sm_user <subscription_manager_user> --sm_pwd <subscription_manager_pass> [--sm_pool <subcription_manager_poolid>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>]"
 
 
-TEMP=`getopt -o h --long dns:,sm_user:,sm_pwd:,sm_pool:,proxy:,nodes_pwd:,satellite_hostname:,satellite_org:,satellite_key: -n 'install-director.sh' -- "$@"`
+TEMP=`getopt -o h --long dns:,sm_user:,sm_pwd:,sm_pool:,proxy:,nodes_pwd:,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
 eval set -- "$TEMP"
 
 
@@ -45,6 +45,8 @@ while true ; do
                 satellite_org=$2; shift 2;;
         --satellite_key)
                 satellite_key=$2; shift 2;;
+        --containers_prefix)
+                containers_prefix=$2; shift 2;;
         --proxy)
                 proxy=$2; shift 2 ;;
         --nodes_pwd)
@@ -355,18 +357,43 @@ then
     echo "using locked containers versions"
 else
     echo "using latest available containers versions"
-    touch ~/overcloud_images.yaml
+    touch $HOME//overcloud_images.yaml
+    
+    if [ ! -z "${containers_prefix}" ]; then
 
-    openstack overcloud container image prepare --output-env-file ~/overcloud_images.yaml \
- --namespace=registry.access.redhat.com/rhosp13 \
- -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
- -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
- -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
- -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
- --set ceph_namespace=registry.access.redhat.com/rhceph \
- --set ceph_image=rhceph-3-rhel7 \
- --tag-from-label {version}-{release}
+       echo "openstack overcloud container image prepare   --namespace=${satellite_hostname}:5000\
+        --prefix=${containers_prefix}   \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
+        --tag-from-label {version}-{release}   \
+        --set ceph_namespace=${satellite_hostname}:5000 \
+        --set ceph_image=${containers_prefix}rhceph-3-rhel7 \
+        --output-env-file=$HOME/overcloud_images.yaml"
 
+        openstack overcloud container image prepare   --namespace=${satellite_hostname}:5000\
+        --prefix=${containers_prefix}   \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
+        --tag-from-label {version}-{release}   \
+        --set ceph_namespace=${satellite_hostname}:5000 \
+        --set ceph_image=${containers_prefix}rhceph-3-rhel7 \
+        --output-env-file=$HOME/overcloud_images.yaml
+     
+    else
+        openstack overcloud container image prepare --output-env-file $HOME/overcloud_images.yaml \
+        --namespace=registry.access.redhat.com/rhosp13 \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
+        --set ceph_namespace=registry.access.redhat.com/rhceph \
+        --set ceph_image=rhceph-3-rhel7 \
+        --tag-from-label {version}-{release}
+    fi
 fi
 
 sudo yum install -y os-cloud-config

@@ -169,6 +169,8 @@ class Director(InfraHost):
                   self.settings.satellite_hostname + ' --satellite_org ' + \
                   self.settings.satellite_org + ' --satellite_key ' + \
                   self.settings.satellite_activation_key
+            if self.settings.pull_containers_from_satellite is True:
+                cmd += " --containers_prefix " + self.settings.containers_prefix
         else:
             cmd = '~/pilot/install-director.sh --dns ' + \
                   self.settings.name_server + " --sm_user " + \
