@@ -235,10 +235,10 @@ class NfvParameters(object):
                 ref_node["uuid"] = node
                 ref_node["data"] = data
                 ref_node["cpus"] = data["cpus"]
-        if ref_node["cpus"] not in [40, 48, 56, 64, 72, 128]:
+        if ref_node["cpus"] not in [40, 48, 56, 64, 72, 80, 128]:
             raise Exception("The number of vCPUs, as specified in the"
                             " reference architecture, must be one of"
-                            " [40, 48, 56, 64, 72, 128]"
+                            " [40, 48, 56, 64, 72, 80, 128]"
                             " but number of vCPUs are " + str(
                                 ref_node["cpus"]))
         return ref_node["uuid"], ref_node["data"]
