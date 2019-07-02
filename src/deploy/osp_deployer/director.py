@@ -1733,15 +1733,26 @@ class Director(InfraHost):
         logger.info("Configure Dashboard")
         ip = self.settings.dashboard_node.public_api_ip
 
-        self.run_tty(self.source_stackrc + 'cd ' +
-                     self.pilot_dir +
-                     ';./config_dashboard.py ' +
-                     ip +
-                     ' ' + self.settings.dashboard_node.root_password +
-                     ' ' + self.settings.subscription_manager_user +
-                     ' ' + self.settings.subscription_manager_password +
-                     ' ' + self.settings.subscription_manager_pool_sah +
-                     ' ' + self.settings.subscription_manager_vm_ceph)
+        if self.settings.use_satellite is True:
+            self.run_tty(self.source_stackrc + 'cd ' +
+                         self.pilot_dir +
+                         ';./config_dashboard.py --dashboard_addr ' +
+                         ip +
+                         ' --dashboard_pass ' + self.settings.dashboard_node.root_password +
+                         ' --satOrg ' + self.settings.satellite_org +
+                         ' --satKey ' + self.settings.satellite_activation_key +
+                         ' --physId ' + self.settings.subscription_manager_pool_sah +
+                         ' --cephId ' + self.settings.subscription_manager_vm_ceph)
+        else:
+            self.run_tty(self.source_stackrc + 'cd ' +
+                         self.pilot_dir +
+                         ';./config_dashboard.py --dashboard_addr ' +
+                         ip +
+                         ' --dashboard_pass ' + self.settings.dashboard_node.root_password +
+                         ' --sbUser ' + self.settings.subscription_manager_user +
+                         ' --subPass ' + self.settings.subscription_manager_password +
+                         ' --physId ' + self.settings.subscription_manager_pool_sah +
+                         ' --cephId ' + self.settings.subscription_manager_vm_ceph)
 
     def enable_fencing(self):
         if self.settings.enable_fencing is True:

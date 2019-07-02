@@ -406,6 +406,12 @@ class Sah(InfraHost):
                 "nameserver " + self.settings.name_server,
                 "ntpserver " + self.settings.sah_node.provisioning_ip,
                 "# Iface     IP               NETMASK              MTU",)
+        if self.settings.use_satellite is True:
+            conf = conf + ("satellite_ip " + self.settings.satellite_ip,)
+            conf = conf + ( "satellite_hostname " + self.settings.satellite_hostname,)
+            conf = conf + ("satellite_org " + self.settings.satellite_org,)
+            conf = conf + ("satellite_activation_key " + self.settings.satellite_activation_key,)
+
         conf = conf + ("eth0        " +
                        self.settings.dashboard_node.public_api_ip +
                        "    " + self.settings.public_api_netmask +
