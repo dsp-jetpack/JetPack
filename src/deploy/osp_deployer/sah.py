@@ -246,6 +246,29 @@ class Sah(InfraHost):
                                       'br_priv_api_mtu="' +
                                       sets.private_api_network_mtu +
                                       '"')
+
+        if sets.use_satellite is True:
+             FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^SatelliteHostname=.*',
+                                      'SatelliteHostname="' +
+                                      sets.satellite_hostname +
+                                      '"')
+             FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^SatelliteIp=.*',
+                                      'SatelliteIp="' +
+                                      sets.satellite_ip +
+                                      '"')
+             FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^SatelliteOrganization=.*',
+                                      'SatelliteOrganization="' +
+                                      sets.satellite_org +
+                                      '"')
+             FileHelper.replace_expression(sets.sah_kickstart,
+                                      '^SatelliteActivationKey=.*',
+                                      'SatelliteActivationKey="' +
+                                      sets.satellite_activation_key +
+                                      '"')
+
         time.sleep(3)
 
     def upload_iso(self):
