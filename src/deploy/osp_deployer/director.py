@@ -162,7 +162,7 @@ class Director(InfraHost):
             self.upload_file(source_file, dest_file)
 
     def install_director(self):
-        logger.debug("Installing the undercloud")
+        logger.info("Installing the undercloud")
         if self.settings.use_satellite:
             cmd ='~/pilot/install-director.sh --dns ' + \
                   self.settings.name_server + ' --satellite_hostname ' + \
@@ -201,7 +201,7 @@ class Director(InfraHost):
             self.upload_file(self.settings.overcloud_image,
                              self.images_dir + "/overcloud-full.tar")
         else:
-            logger.info("will pull images from the cdn")
+            pass
 
     def node_discovery(self):
         setts = self.settings
