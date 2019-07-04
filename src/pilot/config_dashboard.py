@@ -159,24 +159,24 @@ def parse_arguments(dashboard_user):
     parser.add_argument("-dashboard_addr", "--dashboard_addr",
                         help="The IP address of the Ceph Storage Dashboard "
                         "on the external network", required=True)
-    parser.add_argument("-dashboard_pass","--dashboard_pass",
+    parser.add_argument("-dashboard_pass", "--dashboard_pass",
                         help="The password of the Ceph Storage Dashboard "
                         "node ", required=True)
-    parser.add_argument("-subUser","--sbUser",
+    parser.add_argument("-subUser", "--sbUser",
                         help="The username for Red Hat Subscription Access",
                         action='store', required=False)
     parser.add_argument("-subPass", "--subPass",
                         help="The password for Red Hat Subscription Access",
                         action='store', required=False)
-    parser.add_argument("-satOrg","--satOrg",
+    parser.add_argument("-satOrg", "--satOrg",
                         help="The Red Hat Satellite Organization",
                         action='store', required=False)
-    parser.add_argument("-satKey","--satKey",
+    parser.add_argument("-satKey", "--satKey",
                         help="The Red Hat Satellite Activation Key",
                         action='store', required=False)
-    parser.add_argument("-physId","--physId",
+    parser.add_argument("-physId", "--physId",
                         help="The subscription poolid for Physical Nodes",
-                       required=True)
+                        required=True)
     parser.add_argument("-cephId", "--cephId",
                         help="The subscription poolid for Ceph Nodes",
                         required=True)
@@ -290,7 +290,8 @@ def prep_dashboard_hosts(dashboard_node, ceph_nodes):
             LOG.debug("Adding '{}\t{}'"
                       .format(node.storage_ip, node.fqdn))
             f.write("{}\t{}\n"
-                    .format(node.storage_ip, node.fqdn))
+                    .format(node.storage_ip,
+                            node.fqdn))
         f.write(end_banner)
 
     # Upload the new file to the Ceph Storage Dashboard
@@ -708,6 +709,7 @@ def prep_subscription_json(subUser, subPass, physId, cephId):
     os.system('cp ' + tmp_file + ' ' + Node.subscription_json)
     os.unlink(tmp_file)
 
+
 def prep_subscription_json_satellite(satOrg, satKey, physId, cephId):
     # Prepares the subscription.json file
     LOG.info("Preparing the subscription json file.")
@@ -764,7 +766,7 @@ def main():
         dashboard_node.address, dashboard_node.fqdn))
 
     ceph_nodes = get_ceph_nodes(username="heat-admin")
-    if len(args.satOrg) > 1 :
+    if len(args.satOrg) > 1:
         prep_subscription_json_satellite(args.satOrg, args.satKey,
                                          args.physId, args.cephId)
     else:
@@ -782,6 +784,7 @@ def main():
     add_iptables_ports(ceph_nodes)
     unregister_overcloud_nodes()
     restart_prometheus(dashboard_node, ceph_nodes)
+
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -248,26 +248,26 @@ class Sah(InfraHost):
                                       '"')
 
         if sets.use_satellite is True:
-             FileHelper.replace_expression(sets.sah_kickstart,
-                                      '^SatelliteHostname=.*',
-                                      'SatelliteHostname="' +
-                                      sets.satellite_hostname +
-                                      '"')
-             FileHelper.replace_expression(sets.sah_kickstart,
-                                      '^SatelliteIp=.*',
-                                      'SatelliteIp="' +
-                                      sets.satellite_ip +
-                                      '"')
-             FileHelper.replace_expression(sets.sah_kickstart,
-                                      '^SatelliteOrganization=.*',
-                                      'SatelliteOrganization="' +
-                                      sets.satellite_org +
-                                      '"')
-             FileHelper.replace_expression(sets.sah_kickstart,
-                                      '^SatelliteActivationKey=.*',
-                                      'SatelliteActivationKey="' +
-                                      sets.satellite_activation_key +
-                                      '"')
+            FileHelper.replace_expression(sets.sah_kickstart,
+                                          '^SatelliteHostname=.*',
+                                          'SatelliteHostname="' +
+                                          sets.satellite_hostname +
+                                          '"')
+            FileHelper.replace_expression(sets.sah_kickstart,
+                                          '^SatelliteIp=.*',
+                                          'SatelliteIp="' +
+                                          sets.satellite_ip +
+                                          '"')
+            FileHelper.replace_expression(sets.sah_kickstart,
+                                          '^SatelliteOrganization=.*',
+                                          'SatelliteOrganization="' +
+                                          sets.satellite_org +
+                                          '"')
+            FileHelper.replace_expression(sets.sah_kickstart,
+                                          '^SatelliteActivationKey=.*',
+                                          'SatelliteActivationKey="' +
+                                          sets.satellite_activation_key +
+                                          '"')
 
         time.sleep(3)
 
@@ -338,11 +338,15 @@ class Sah(InfraHost):
                 "password " + self.settings.director_install_account_pwd,)
         if self.settings.use_satellite is True:
             conf = conf + ("satellite_ip " + self.settings.satellite_ip,)
-            conf = conf + ( "satellite_hostname " + self.settings.satellite_hostname,)
+            conf = conf + ("satellite_hostname " +
+                           self.settings.satellite_hostname,)
             conf = conf + ("satellite_org " + self.settings.satellite_org,)
-            conf = conf + ("satellite_activation_key " + self.settings.satellite_activation_key,)
+            conf = conf + ("satellite_activation_key " +
+                           self.settings.satellite_activation_key,)
 
-        conf = conf + ("# Iface     IP               NETMASK              MTU",)
+        conf = conf + ("# Iface     IP" +
+                       "               NETMASK" +
+                       "              MTU",)
         conf = conf + ("eth0        " +
                        self.settings.director_node.public_api_ip +
                        "    " + self.settings.public_api_netmask +
@@ -431,9 +435,12 @@ class Sah(InfraHost):
                 "# Iface     IP               NETMASK              MTU",)
         if self.settings.use_satellite is True:
             conf = conf + ("satellite_ip " + self.settings.satellite_ip,)
-            conf = conf + ( "satellite_hostname " + self.settings.satellite_hostname,)
-            conf = conf + ("satellite_org " + self.settings.satellite_org,)
-            conf = conf + ("satellite_activation_key " + self.settings.satellite_activation_key,)
+            conf = conf + ("satellite_hostname " +
+                           self.settings.satellite_hostname,)
+            conf = conf + ("satellite_org " +
+                           self.settings.satellite_org,)
+            conf = conf + ("satellite_activation_key " +
+                           self.settings.satellite_activation_key,)
 
         conf = conf + ("eth0        " +
                        self.settings.dashboard_node.public_api_ip +

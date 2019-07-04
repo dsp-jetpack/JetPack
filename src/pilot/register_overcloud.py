@@ -123,9 +123,9 @@ class RegisterOvercloud:
         self.logger.debug("cdn_password: " + self.cdn_password)
 
         self.satellite_org = self._get_credential("satellite_credentials",
-                                                   "satellite_organization")
+                                                  "satellite_organization")
         self.satellite_key = self._get_credential("satellite_credentials",
-                                                   "satellite_activation_key")
+                                                  "satellite_activation_key")
 
         # Get the proxy creds
         self.proxy_args = ""
@@ -263,7 +263,7 @@ class RegisterOvercloud:
 
             # The node isn't registered, so register it
             self.logger.info("Registering {} {}".format(role,
-                                                                 node_ip))
+                                                        node_ip))
 
             # If we're using satellite, then construct the args for
             # that
@@ -437,7 +437,7 @@ class RegisterOvercloud:
             # Iterate thru the IPs
             for node_ip in self.node_roles_to_nodes[role]:
 
-                # Register the node 
+                # Register the node
                 self._register_node(role, node_ip)
 
                 # Attach the node to the pool IDs

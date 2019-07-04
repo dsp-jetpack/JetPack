@@ -513,7 +513,7 @@ def main():
         # network-environment.yaml
         if args.barbican_enable:
             env_opts += " -e ~/pilot/templates/configure-barbican.yaml"
-            
+
         # The octavia.yaml must be included after the
         # network-environment.yaml
         if args.octavia_enable:
@@ -539,8 +539,8 @@ def main():
             host_config = True
         if args.ovs_dpdk:
             if not args.enable_hugepages or not args.enable_numa:
-                    raise ValueError("Both hugepages and numa must be" +
-                                     "enabled in order to use OVS-DPDK")
+                raise ValueError("Both hugepages and numa must be" +
+                                 "enabled in order to use OVS-DPDK")
             else:
                 env_opts += " -e ~/pilot/templates/neutron-ovs-dpdk.yaml"
 

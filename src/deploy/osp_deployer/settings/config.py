@@ -242,11 +242,11 @@ class Settings():
             self.satellite_hostname = rhsm_settings['satellite_hostname']
             self.satellite_org = rhsm_settings['satellite_org']
             self.satellite_activation_key = rhsm_settings['satellite_activation_key']
-            if rhsm_settings['pull_containers_from_satellite'].lower() == 'true' :
+            if rhsm_settings['pull_containers_from_satellite'].lower() == 'true':
                 self.pull_containers_from_satellite = True
                 self.containers_prefix = rhsm_settings['containers_prefix']
             else:
-                self.pull_containers_from_satellite= False
+                self.pull_containers_from_satellite = False
         else:
             self.use_satellite = False
 
@@ -582,7 +582,6 @@ class Settings():
             logger.info("OVS-DPDK is enabled.")
             if 'HostNicDriver' in nics_settings:
                 self.HostNicDriver = nics_settings['HostNicDriver']
-
 
         # TO enable SRIOV
         self.sriov_enable = dellnfv_settings['sriov_enable']
