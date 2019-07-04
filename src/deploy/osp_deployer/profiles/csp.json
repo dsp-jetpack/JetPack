@@ -235,6 +235,8 @@
             "validate": [
                   "should_be_valid_ip"
                ]
+        }
+       }
       },
       {
          "Advanced Settings":{
