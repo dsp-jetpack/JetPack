@@ -546,15 +546,15 @@ def get_lifecycle_out_of_recovery(drac_client, ip_service_tag):
     settings = {'Lifecycle Controller State': 'Enabled'}
     drac_client.set_lifecycle_settings(settings)
 
-    LOG.info("Waiting for lifecycle controller to get out of"
+    LOG.info("Waiting for lifecycle controller to get out of "
              "recovery mode")
     job_id = drac_client.commit_pending_lifecycle_changes(reboot=False)
     job_succeeded = wait_for_jobs_to_complete(
         [job_id], drac_client, ip_service_tag)
 
     if not job_succeeded:
-        raise RuntimeError("An error occurred while configuring "
-                           "the iDRAC on {}".format(ip_service_tag))
+        raise RuntimeError("An error occurred while taking the iDRAC on "
+                           "{} out of recovery mode".format(ip_service_tag))
 
 
 def config_idrac(instack_lock,
