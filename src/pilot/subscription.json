@@ -3,7 +3,14 @@
         "cdn_username": "CHANGEME_username",
         "cdn_password": "CHANGEME_password"
     },
-    "_comment": [ "If using a proxy, remove the leading underscore from",
+    "_comment1": [ "If using red hat satellite, remove the leading underscore from",
+                  "_satellite_credentials below and fill in the following satellite",
+                  "information." ],
+    "_satellite_credentials": {
+        "satellite_organization": "CHANGEME_organiaztion",
+        "satellite_activation_key": "CHANGEME_activationkey"
+    },
+    "_comment2": [ "If using a proxy, remove the leading underscore from",
                   "_proxy_credentials below and fill in the following proxy",
                   "information." ],
     "_proxy_credentials": {

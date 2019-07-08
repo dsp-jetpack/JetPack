@@ -156,24 +156,30 @@ def parse_arguments(dashboard_user):
         description="Configures the Ceph Storage Dashboard and Ceph nodes.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument("dashboard_addr",
+    parser.add_argument("-dashboard_addr", "--dashboard_addr",
                         help="The IP address of the Ceph Storage Dashboard "
-                        "on the external network", metavar="ADDR")
-    parser.add_argument("dashboard_pass",
+                        "on the external network", required=True)
+    parser.add_argument("-dashboard_pass", "--dashboard_pass",
                         help="The password of the Ceph Storage Dashboard "
-                        "node ", metavar="PASSWORD")
-    parser.add_argument("subUser",
-                        help="The username for Red Hat Subscription Access"
-                        " ", metavar="SUBSCRIPTION_USER")
-    parser.add_argument("subPass",
-                        help="The password for Red Hat Subscription Access"
-                        " ", metavar="SUBSCRIPTION_PASSWORD")
-    parser.add_argument("physId",
-                        help="The subscription poolid for Physical Nodes"
-                        " ", metavar="PHYSICAL_POOL_ID")
-    parser.add_argument("cephId",
-                        help="The subscription poolid for Ceph Nodes"
-                        " ", metavar="CEPH_POOL_ID")
+                        "node ", required=True)
+    parser.add_argument("-subUser", "--sbUser",
+                        help="The username for Red Hat Subscription Access",
+                        action='store', required=False)
+    parser.add_argument("-subPass", "--subPass",
+                        help="The password for Red Hat Subscription Access",
+                        action='store', required=False)
+    parser.add_argument("-satOrg", "--satOrg",
+                        help="The Red Hat Satellite Organization",
+                        action='store', required=False)
+    parser.add_argument("-satKey", "--satKey",
+                        help="The Red Hat Satellite Activation Key",
+                        action='store', required=False)
+    parser.add_argument("-physId", "--physId",
+                        help="The subscription poolid for Physical Nodes",
+                        required=True)
+    parser.add_argument("-cephId", "--cephId",
+                        help="The subscription poolid for Ceph Nodes",
+                        required=True)
 
     LoggingHelper.add_argument(parser)
 
@@ -284,7 +290,8 @@ def prep_dashboard_hosts(dashboard_node, ceph_nodes):
             LOG.debug("Adding '{}\t{}'"
                       .format(node.storage_ip, node.fqdn))
             f.write("{}\t{}\n"
-                    .format(node.storage_ip, node.fqdn))
+                    .format(node.storage_ip,
+                            node.fqdn))
         f.write(end_banner)
 
     # Upload the new file to the Ceph Storage Dashboard
@@ -703,6 +710,22 @@ def prep_subscription_json(subUser, subPass, physId, cephId):
     os.unlink(tmp_file)
 
 
+def prep_subscription_json_satellite(satOrg, satKey, physId, cephId):
+    # Prepares the subscription.json file
+    LOG.info("Preparing the subscription json file.")
+
+    tmp_file = os.path.join("/tmp", "subscription.json-mod")
+    os.system('cp ' + Node.subscription_json + ' ' + tmp_file)
+    sed_inplace(tmp_file, "_satellite_credentials", "satellite_credentials")
+    sed_inplace(tmp_file, "CHANGEME_organiaztion", satOrg)
+    sed_inplace(tmp_file, "CHANGEME_organiaztion", satOrg)
+    sed_inplace(tmp_file, "CHANGEME_activationkey", satKey)
+    sed_inplace(tmp_file, "CHANGEME_openstack_pool_id", physId)
+    sed_inplace(tmp_file, "CHANGEME_ceph_pool_id", cephId)
+    os.system('cp ' + tmp_file + ' ' + Node.subscription_json)
+    os.unlink(tmp_file)
+
+
 def register_overcloud_nodes():
     LOG.info("Register the overcloud nodes.")
     os.system("python register_overcloud.py")
@@ -743,9 +766,12 @@ def main():
         dashboard_node.address, dashboard_node.fqdn))
 
     ceph_nodes = get_ceph_nodes(username="heat-admin")
-
-    prep_subscription_json(args.subUser, args.subPass,
-                           args.physId, args.cephId)
+    if len(args.satOrg) > 1:
+        prep_subscription_json_satellite(args.satOrg, args.satKey,
+                                         args.physId, args.cephId)
+    else:
+        prep_subscription_json(args.subUser, args.subPass,
+                               args.physId, args.cephId)
     register_overcloud_nodes()
     prep_host_files(dashboard_node, ceph_nodes)
     prep_root_user(dashboard_node, ceph_nodes)
@@ -758,6 +784,7 @@ def main():
     add_iptables_ports(ceph_nodes)
     unregister_overcloud_nodes()
     restart_prometheus(dashboard_node, ceph_nodes)
+
 
 if __name__ == "__main__":
     sys.exit(main())

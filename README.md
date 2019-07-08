@@ -1,6 +1,6 @@
 # JetPack
 
-JetPack code and documentation is distributed under the Apache 2 license. Contributions back to the source are encouraged. 
+JetPack code and documentation is distributed under the Apache 2 license. Contributions back to the source are encouraged.  
 
 ## Description
 
