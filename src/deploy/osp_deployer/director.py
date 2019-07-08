@@ -1740,8 +1740,7 @@ class Director(InfraHost):
             self.run_tty(self.source_stackrc + 'cd ' +
                          self.pilot_dir +
                          ';./config_dashboard.py --dashboard_addr ' +
-                         ip +
-                         ' --dashboard_pass ' +
+                         ip + ' --dashboard_pass ' +
                          self.settings.dashboard_node.root_password +
                          ' --satOrg ' +
                          self.settings.satellite_org +

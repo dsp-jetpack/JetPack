@@ -265,8 +265,7 @@ class RegisterOvercloud:
             self.logger.info("Registering {} {}".format(role,
                                                         node_ip))
 
-            # If we're using satellite, then construct the args for
-            # that
+            # If we're using satellite, then construct the args for that
             cred_args = ""
             if len(self.satellite_org) > 1:
                 cred_args = "--org=" + self.satellite_org + " " + \
