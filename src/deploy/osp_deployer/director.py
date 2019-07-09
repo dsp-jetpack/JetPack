@@ -855,14 +855,6 @@ class Director(InfraHost):
         ]
 
         if self.settings.use_satellite:
-            #cinder_container = "openstack-cinder-volume-dellemc" + \
-            #    '"' + self.settings.cinder_unity_container_version
-            #remote_registry = self.settings.satellite_hostname + \
-            #    ":5000/" + self.settings.containers_prefix
-            #local_url = remote_registry + cinder_container
-            #cmds.append('sed -i "s|DockerCinderVolumeImage.*|' +
-            #    'DockerCinderVolumeImage: ' + local_url +
-            #    '|" ' + overcloud_images_file)
             pass
 
         else:
