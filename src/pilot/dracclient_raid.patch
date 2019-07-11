@@ -1,5 +1,5 @@
---- raid.py.orig	2019-06-04 06:05:21.552747110 -0400
-+++ raid_.py	2019-06-04 06:13:31.532261809 -0400
+--- /usr/lib/python2.7/site-packages/dracclient/resources/raid.py	2019-07-11 15:22:53.819829111 +0000
++++ raid.py	2019-07-11 15:22:42.813420025 +0000
 @@ -12,6 +12,7 @@
  #    under the License.
  
@@ -8,210 +8,7 @@
  import logging
  
  from dracclient import constants
-@@ -34,6 +35,11 @@
- 
- REVERSE_RAID_LEVELS = dict((v, k) for (k, v) in RAID_LEVELS.items())
- 
-+RAID_CONTROLLER_IS_REALTIME = {
-+    '1': True,
-+    '0': False
-+}
-+
- DISK_RAID_STATUS = {
-     '0': 'unknown',
-     '1': 'ready',
-@@ -78,6 +84,8 @@
-      'firmware_version', 'status', 'raid_status', 'sas_address',
-      'device_protocol'])
- 
-+NO_FOREIGN_DRIVE = "STOR018"
-+
- 
- class PhysicalDisk(PhysicalDiskTuple):
- 
-@@ -110,7 +118,8 @@
- 
- RAIDController = collections.namedtuple(
-     'RAIDController', ['id', 'description', 'manufacturer', 'model',
--                       'primary_status', 'firmware_version', 'bus'])
-+                       'primary_status', 'firmware_version', 'bus',
-+                       'supports_realtime'])
- 
- VirtualDiskTuple = collections.namedtuple(
-     'VirtualDisk',
-@@ -191,7 +200,10 @@
-                                                'PrimaryStatus')],
-             firmware_version=self._get_raid_controller_attr(
-                 drac_controller, 'ControllerFirmwareVersion'),
--            bus=self._get_raid_controller_attr(drac_controller, 'Bus'))
-+            bus=self._get_raid_controller_attr(drac_controller, 'Bus'),
-+            supports_realtime=RAID_CONTROLLER_IS_REALTIME[
-+                self._get_raid_controller_attr(
-+                    drac_controller, 'RealtimeCapability')])
- 
-     def _get_raid_controller_attr(self, drac_controller, attr_name):
-         return utils.get_wsman_resource_attr(
-@@ -518,6 +530,100 @@
-                                        include_commit_required=True,
-                                        is_commit_required_value=True)
- 
-+    def reset_raid_config(self, raid_controller):
-+        """Delete all virtual disk and unassign all hotspares
-+
-+        The job to reset the RAID controller config will be in pending state.
-+        For the changes to be applied, a config job must be created.
-+
-+        :param raid_controller: id of the RAID controller
-+        :returns: a dictionary containing:
-+                 - The is_commit_required key with the value always set to
-+                   True indicating that a config job must be created to
-+                   reset configuration.
-+                 - The is_reboot_required key with a RebootRequired enumerated
-+                   value indicating whether the server must be rebooted to
-+                   reset configuration.
-+        :raises: WSManRequestFailure on request failures
-+        :raises: WSManInvalidResponse when receiving invalid response
-+        :raises: DRACOperationFailed on error reported back by the DRAC
-+                 interface
-+        :raises: DRACUnexpectedReturnValue on return value mismatch
-+        """
-+
-+        selectors = {'SystemCreationClassName': 'DCIM_ComputerSystem',
-+                     'CreationClassName': 'DCIM_RAIDService',
-+                     'SystemName': 'DCIM:ComputerSystem',
-+                     'Name': 'DCIM:RAIDService'}
-+        properties = {'Target': raid_controller}
-+
-+        doc = self.client.invoke(uris.DCIM_RAIDService, 'ResetConfig',
-+                                 selectors, properties,
-+                                 expected_return_value=utils.RET_SUCCESS)
-+
-+        return utils.build_return_dict(doc, uris.DCIM_RAIDService,
-+                                       is_commit_required_value=True)
-+
-+    def clear_foreign_config(self, raid_controller):
-+        """Free up foreign drives
-+
-+        The job to clear foreign config will be in pending state.
-+        For the changes to be applied, a config job must be created.
-+
-+        :param raid_controller: id of the RAID controller
-+        :returns: a dictionary containing:
-+                 - The is_commit_required key with the value always set to
-+                   True indicating that a config job must be created to
-+                   clear foreign configuration.
-+                 - The is_reboot_required key with a RebootRequired enumerated
-+                   value indicating whether the server must be rebooted to
-+                   clear foreign configuration.
-+        :raises: WSManRequestFailure on request failures
-+        :raises: WSManInvalidResponse when receiving invalid response
-+        :raises: DRACOperationFailed on error reported back by the DRAC
-+                 interface
-+        :raises: DRACUnexpectedReturnValue on return value mismatch
-+        """
-+
-+        selectors = {'SystemCreationClassName': 'DCIM_ComputerSystem',
-+                     'CreationClassName': 'DCIM_RAIDService',
-+                     'SystemName': 'DCIM:ComputerSystem',
-+                     'Name': 'DCIM:RAIDService'}
-+        properties = {'Target': raid_controller}
-+
-+        doc = self.client.invoke(uris.DCIM_RAIDService, 'ClearForeignConfig',
-+                                 selectors, properties,
-+                                 check_return_value=False)
-+        
-+        is_commit_required_value = True
-+        is_reboot_required_value = None
-+        ret_value = utils.find_xml(doc,
-+                                   'ReturnValue',
-+                                   uris.DCIM_RAIDService).text
-+
-+        if ret_value == utils.RET_ERROR:
-+            message_id = utils.find_xml(doc,
-+                                        'MessageID',
-+                                        uris.DCIM_RAIDService).text
-+
-+            # A MessageID 'STOR018' indicates no foreign drive was
-+            # detected. Return a value which informs the caller nothing
-+            # further needs to be done.
-+            if message_id == NO_FOREIGN_DRIVE:
-+                is_commit_required_value = False
-+                is_reboot_required_value = constants.RebootRequired.false
-+            else:
-+                message = utils.find_xml(doc,
-+                                         'Message',
-+                                         uris.DCIM_RAIDService).text
-+                raise exceptions.DRACOperationFailed(
-+                        drac_messages=message)
-+
-+        return utils.build_return_dict(
-+                doc, uris.DCIM_RAIDService,
-+                is_commit_required_value=is_commit_required_value,
-+                is_reboot_required_value=is_reboot_required_value)
-+
-     def is_jbod_capable(self, raid_controller_fqdd):
-         """Find out if raid controller supports jbod
- 
-@@ -572,24 +678,41 @@
- 
-         return is_jbod_capable
- 
--    def is_raid_controller(self, raid_controller_fqdd):
-+    def is_raid_controller(self, raid_controller_fqdd, raid_controllers=None):
-         """Find out if object's fqdd is for a raid controller or not
- 
-         :param raid_controller_fqdd: The object's fqdd we are testing to see
-                                      if it is a raid controller or not.
-+        :param raid_controllers: A list of RAIDControllers used to check for
-+                                 the presence of BOSS cards.  If None, the
-+                                 iDRAC will be queried for the list of
-+                                 controllers.
-         :returns: boolean, True if the device is a RAID controller,
-                   False if not.
-         """
--        return raid_controller_fqdd.startswith('RAID.')
-+        return raid_controller_fqdd.startswith('RAID.') or \
-+            self.is_boss_controller(raid_controller_fqdd, raid_controllers)
- 
--    def is_boss_controller(self, raid_controller_fqdd):
-+    def is_boss_controller(self, raid_controller_fqdd, raid_controllers=None):
-         """Find out if a RAID controller a BOSS card or not
- 
-         :param raid_controller_fqdd: The object's fqdd we are testing to see
-                                      if it is a BOSS card or not.
-+        :param raid_controllers: A list of RAIDController to scan for presence
-+                                 of BOSS card, if None the drac will be queried
-+                                 for the list of controllers which will then be
-+                                 scanned.
-         :returns: boolean, True if the device is a BOSS card, False if not.
-+        :raises: WSManRequestFailure on request failures
-+        :raises: WSManInvalidResponse when receiving invalid response
-+        :raises: DRACOperationFailed on error reported back by the DRAC
-+                 interface
-         """
--        return raid_controller_fqdd.startswith('AHCI.')
-+        if raid_controllers is None:
-+            raid_controllers = self.list_raid_controllers()
-+        boss_raid_controllers = [
-+            c.id for c in raid_controllers if c.model.startswith('BOSS')]
-+        return raid_controller_fqdd in boss_raid_controllers
- 
-     def _check_disks_status(self, mode, physical_disks,
-                             controllers_to_physical_disk_ids):
-@@ -607,15 +730,17 @@
-         :param mode: constants.RaidStatus enumeration used to
-                      determine what raid status to check for.
-         :param physical_disks: all physical disks
--        :param controllers_to_physical_disk_ids: Dictionary of controllers
--                     we are inspecting and creating jobs for when needed. If
--                     needed modify this dict so that only drives that need to
--                     be changed to RAID or JBOD are in the list of disk keys
--                     for corresponding controller.
-+        :param controllers_to_physical_disk_ids: Dictionary of controllers and
-+               corresponding disk ids to convert to the requested mode.
-+        :returns: a dictionary mapping controller FQDDs to the list of
-+                  physical disks that need to be converted for that controller.
-         :raises: ValueError: Exception message will list failed drives and
+@@ -642,6 +643,9 @@
                       drives whose state cannot be changed at this time, drive
                       state is not "ready" or "non-RAID".
          """
@@ -221,7 +18,7 @@
          p_disk_id_to_status = {}
          for physical_disk in physical_disks:
              p_disk_id_to_status[physical_disk.id] = physical_disk.raid_status
-@@ -674,34 +799,37 @@
+@@ -700,34 +704,37 @@
  
              raise ValueError(error_msg)
  
@@ -280,21 +77,7 @@
          :raises: DRACOperationFailed on error reported back by the DRAC and the
                   exception message does not contain NOT_SUPPORTED_MSG constant.
          :raises: Exception on unknown error.
-@@ -713,10 +841,11 @@
-         if not controllers_to_physical_disk_ids:
-             controllers_to_physical_disk_ids = collections.defaultdict(list)
- 
-+            all_controllers = self.list_raid_controllers()
-             for physical_d in physical_disks:
-                 # Weed out disks that are not attached to a RAID controller
--                if (self.is_raid_controller(physical_d.controller)
--                        or self.is_boss_controller(physical_d.controller)):
-+                if self.is_raid_controller(physical_d.controller,
-+                                           all_controllers):
-                     physical_disk_ids = controllers_to_physical_disk_ids[
-                         physical_d.controller]
- 
-@@ -727,13 +856,14 @@
+@@ -754,13 +761,14 @@
          Raise exception if there are any failed drives or
          drives not in status 'ready' or 'non-RAID'
          '''
@@ -312,7 +95,7 @@
              if physical_disk_ids:
                  LOG.debug("Converting the following disks to {} on RAID "
                            "controller {}: {}".format(
-@@ -746,20 +876,52 @@
+@@ -773,23 +781,40 @@
                      if constants.NOT_SUPPORTED_MSG in str(ex):
                          LOG.debug("Controller {} does not support "
                                    "JBOD mode".format(controller))
@@ -340,6 +123,7 @@
 +                    controllers_to_results[controller] = conversion_results
  
 -        return {'is_reboot_required': is_reboot_required,
+-                'commit_required_ids': controllers}
 +                    # Remove the code below when is_reboot_required and
 +                    # commit_required_ids are deprecated
 +                    reboot_true = constants.RebootRequired.true
@@ -361,19 +145,7 @@
 +
 +        return {'conversion_results': controllers_to_results,
 +                'is_reboot_required': is_reboot_required,
-                 'commit_required_ids': controllers}
-+
-+    def is_realtime_supported(self, raid_controller_fqdd):
-+        """Find if controller supports realtime or not
-+
-+        :param raid_controller_fqdd: ID of RAID controller
-+        :returns: True or False
-+        """
-+        drac_raid_controllers = self.list_raid_controllers()
-+        realtime_controller = [cnt.id for cnt in drac_raid_controllers
-+                               if cnt.supports_realtime]
-+
-+        if raid_controller_fqdd in realtime_controller:
-+            return True
-+
-+        return False
++                 'commit_required_ids': controllers}
+ 
+     def is_realtime_supported(self, raid_controller_fqdd):
+         """Find if controller supports realtime or not
