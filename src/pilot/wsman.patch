@@ -1,5 +1,5 @@
---- /usr/lib/python2.7/site-packages/dracclient/wsman.py	2019-02-20 19:11:34.793090124 +0000
-+++ wsman.py	2019-02-20 19:11:23.104876748 +0000
+--- wsman.py	2019-07-12 06:05:33.739791639 -0500
++++ wsman.new	2019-07-12 06:28:59.132754435 -0500
 @@ -25,6 +25,8 @@
  
  LOG = logging.getLogger(__name__)
@@ -9,33 +9,16 @@
  NS_SOAP_ENV = 'http://www.w3.org/2003/05/soap-envelope'
  NS_WS_ADDR = 'http://schemas.xmlsoap.org/ws/2004/08/addressing'
  NS_WS_ADDR_ANONYM_ROLE = ('http://schemas.xmlsoap.org/ws/2004/08/addressing/'
-@@ -135,8 +137,9 @@
+@@ -135,7 +137,7 @@
          else:
              return resp
  
 -    def enumerate(self, resource_uri, optimization=True, max_elems=100,
--                  auto_pull=True, filter_query=None, filter_dialect='cql'):
-+    def enumerate(self, resource_uri, optimization=True,
-+                  max_elems=MAX_ELEMENTS, auto_pull=True, filter_query=None,
-+                  filter_dialect='cql'):
++    def enumerate(self, resource_uri, optimization=True, max_elems=MAX_ELEMENTS,
+                   auto_pull=True, filter_query=None, filter_dialect='cql'):
          """Executes enumerate operation over WSMan.
  
-         :param resource_uri: URI of resource to enumerate.
-@@ -163,8 +166,11 @@
-             resp_xml = ElementTree.fromstring(resp.content)
-         except ElementTree.XMLSyntaxError:
-             LOG.warning('Received invalid content from iDRAC.  Filtering out '
--                        'non-ASCII characters: ' + repr(resp.content))
--            resp_xml = ElementTree.fromstring(re.sub(six.b('[^\x00-\x7f]'),
-+                        'unprintable characters: ' + repr(resp.content))
-+
-+            # Filter out everything except for printable ASCII characters and
-+            # tab
-+            resp_xml = ElementTree.fromstring(re.sub(six.b('[^\x20-\x7e\t]'),
-                                                      six.b(''),
-                                                      resp.content))
-
-@@ -197,7 +203,7 @@
+@@ -200,7 +202,7 @@
          else:
              return resp_xml
  
@@ -44,23 +27,21 @@
          """Executes pull operation over WSMan.
  
          :param resource_uri: URI of resource to pull
-@@ -288,7 +294,8 @@
+@@ -291,7 +293,7 @@
      """Payload generation for WSMan enumerate operation."""
  
      def __init__(self, endpoint, resource_uri, optimization=True,
 -                 max_elems=100, filter_query=None, filter_dialect=None):
-+                 max_elems=MAX_ELEMENTS, filter_query=None,
-+                 filter_dialect=None):
++                 max_elems=MAX_ELEMENTS, filter_query=None, filter_dialect=None):
          self.endpoint = endpoint
          self.resource_uri = resource_uri
          self.filter_dialect = None
-@@ -348,7 +355,8 @@
+@@ -351,7 +353,7 @@
  class _PullPayload(_Payload):
      """Payload generation for WSMan pull operation."""
  
 -    def __init__(self, endpoint, resource_uri, context, max_elems=100):
-+    def __init__(self, endpoint, resource_uri, context,
-+                 max_elems=MAX_ELEMENTS):
++    def __init__(self, endpoint, resource_uri, context, max_elems=MAX_ELEMENTS):
          self.endpoint = endpoint
          self.resource_uri = resource_uri
          self.context = context
