@@ -1,5 +1,5 @@
---- raid.py.orig	2019-07-04 08:19:10.518151068 -0500
-+++ raid1.py	2019-07-04 08:59:04.027458927 -0500
+--- raid_old.py	2019-07-12 02:02:12.793064148 -0500
++++ raid_new.py	2019-07-12 02:40:01.534092745 -0500
 @@ -34,6 +34,7 @@
  from ironic.drivers.modules.drac import common as drac_common
  from ironic.drivers.modules.drac import job as drac_job
@@ -120,7 +120,7 @@
  
      try:
 -        return client.commit_pending_raid_changes(raid_controller, reboot)
-+        return client.commit_pending_raid_changes(raid_controller,
++        return client.commit_pending_raid_changes(raid_controller=raid_controller,
 +                                                  reboot=reboot,
 +                                                  realtime=realtime)
      except drac_exceptions.BaseClientException as exc:
@@ -207,33 +207,35 @@
      node.driver_internal_info = driver_internal_info
      node.save()
  
-@@ -735,10 +867,12 @@
+@@ -735,10 +867,10 @@
          logical_disks_to_create = _filter_logical_disks(
              logical_disks, create_root_volume, create_nonroot_volumes)
  
-+        realtime=True
-+        reboot_is_required = drac_constants.RebootRequired.true
-         controllers = set()
+-        controllers = set()
++        controllers = list()
          for logical_disk in logical_disks_to_create:
-             controllers.add(logical_disk['controller'])
+-            controllers.add(logical_disk['controller'])
 -            create_virtual_disk(
-+            result = create_virtual_disk(
++            controller = dict()
++            controller_cap = create_virtual_disk(
                  node,
                  raid_controller=logical_disk['controller'],
                  physical_disks=logical_disk['physical_disks'],
-@@ -748,7 +882,10 @@
+@@ -747,8 +879,12 @@
+                 disk_name=logical_disk.get('name'),
                  span_length=logical_disk.get('span_length'),
                  span_depth=logical_disk.get('span_depth'))
++            controller['raid_controller'] = logical_disk['controller']
++            controller['is_reboot_required'] = controller_cap[
++                'is_reboot_required']
++            controllers.append(controller)
  
 -        return _commit_to_controllers(node, list(controllers))
-+            if result['is_reboot_required'] == reboot_is_required:
-+                realtime = False
-+
-+        return _commit_to_controllers(node, list(controllers), realtime)
++        return _commit_to_controllers(node, controllers)
  
      @METRICS.timer('DracRAID.delete_configuration')
      @base.clean_step(priority=0)
-@@ -762,12 +899,19 @@
+@@ -762,12 +898,19 @@
          """
          node = task.node
  
@@ -258,16 +260,19 @@
  
      @METRICS.timer('DracRAID.get_logical_disks')
      def get_logical_disks(self, task):
-@@ -840,7 +984,7 @@
+@@ -840,9 +983,9 @@
          for config_job_id in raid_config_job_ids:
              config_job = drac_job.get_job(node, job_id=config_job_id)
  
 -            if config_job.state == 'Completed':
-+            if config_job is None and config_job.state == 'Completed':
++            if config_job is None or config_job.status == 'Completed':
                  finished_job_ids.append(config_job_id)
-             elif config_job.state == 'Failed':
+-            elif config_job.state == 'Failed':
++            elif config_job.status == 'Failed':
                  finished_job_ids.append(config_job_id)
-@@ -852,13 +996,58 @@
+                 self._set_raid_config_job_failure(node)
+ 
+@@ -852,13 +995,59 @@
          task.upgrade_lock()
          self._delete_cached_config_job_id(node, finished_job_ids)
  
@@ -275,6 +280,7 @@
 -            if not node.driver_internal_info.get('raid_config_job_failure',
 -                                                 False):
 -                self._resume_cleaning(task)
++
 +        if not node.driver_internal_info.get('raid_config_job_failure',
 +                                             False):
 +            if 'raid_config_substep' in node.driver_internal_info:
