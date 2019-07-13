@@ -100,6 +100,12 @@ SubscriptionManagerProxyPort=""
 SubscriptionManagerProxyUser=""
 SubscriptionManagerProxyPassword=""
 
+# Satellite credential/details (if using)
+SatelliteHostname="CHANGEME"
+SatelliteIp="CHANGEME"
+SatelliteOrganization="CHANGEME"
+SatelliteActivationKey="CHANGEME"
+
 
 # Network configuration
 Gateway="CHANGEME e.g. 10.148.44.254"
@@ -279,6 +285,12 @@ echo "bridges_mtu[br-pub-api]=\"${br_pub_api_mtu}\"" >> /tmp/ks_post_include.txt
 echo "SMUser=\"${SubscriptionManagerUser}\"" >> /tmp/ks_post_include.txt
 echo "SMPassword=\"${SubscriptionManagerPassword}\"" >> /tmp/ks_post_include.txt
 echo "SMPool=\"${SubscriptionManagerPool}\"" >> /tmp/ks_post_include.txt
+
+echo "SA_ip=\"${SatelliteIp}\"" >> /tmp/ks_post_include.txt
+echo "SA_host=\"${SatelliteHostname}\"" >> /tmp/ks_post_include.txt
+echo "SA_org=\"${SatelliteOrganization}\"" >> /tmp/ks_post_include.txt
+echo "SA_key=\"${SatelliteActivationKey}\"" >> /tmp/ks_post_include.txt
+
 
 [[ ${SubscriptionManagerProxy} ]] && {
   echo "SMProxy=\"${SubscriptionManagerProxy}\"" >> /tmp/ks_post_include.txt
@@ -564,8 +576,14 @@ echo "----------------------"
 
     }
 
-subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
-
+if [[ ${SA_ip} == "CHANGEME" ]]
+then
+    subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
+else
+      echo "$SA_ip    $SA_host" >> /etc/hosts
+      rpm -Uvh http://$SA_host/pub/katello-ca-consumer-latest.noarch.rpm
+      subscription-manager register --org=$SA_org --activationkey="$SA_key"
+fi
   [[ x${SMPool} = x ]] \
     && SMPool=$( subscription-manager list --available ${ProxyInfo} | awk '/Red Hat Enterprise Linux Server/,/Pool/ {pool = $3} END {print pool}' )
 
@@ -595,7 +613,7 @@ echo "POST: upgrade setuptools"
 pip install --upgrade setuptools
 pip install paramiko
 pip install selenium
-pip install cryptography==2.4.2
+pip install cryptography
 echo "POST: Done installing extra packages"
 
 echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/root/JetPack/src/deploy/' >> /root/.bashrc
