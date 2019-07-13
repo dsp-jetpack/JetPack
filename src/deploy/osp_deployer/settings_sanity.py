@@ -585,3 +585,11 @@ class DeployerSanity():
             raise AssertionError("SR-IOV and DVR can not be " +
                                  "enabled together.Please disable" +
                                  "one feature and verify the settings.")
+
+    def verify_hw_offload_dependencies(self):
+        logger.debug("verifying Smart NIC is enabled when SR-IOV is enabled")
+        if (self.settings.enable_sriov is False and
+                self.settings.enable_smart_nic is True):
+            raise AssertionError("SR-IOV hardware offload cant be " +
+                                 "enabled as SRIOV is not being enabled. " +
+                                 "Please verify the settings.")
