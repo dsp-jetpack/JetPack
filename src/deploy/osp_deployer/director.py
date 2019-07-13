@@ -1237,6 +1237,11 @@ class Director(InfraHost):
             cmds.append('sed -i -r \'s/(^\s*' + setting_name +    # noqa: W605
                         ':\s*).*/\\1' + setting_value + '/\' ' + remote_file)
 
+        # if smart NICs are used then use smart configuration for contoller and compute nodes
+        if self.settings.enable_smart_nic == True:
+            cmds.append('sed -i s/controller.yaml/controller_smart.yaml/' + remote_file)
+            cmds.append('sed -i s/dellcompute_sriov.yaml/dellcompute_sriov_smart.yaml/' + remote_file)
+
         # Execute the commands
         for cmd in cmds:
             self.run(cmd)
@@ -1266,15 +1271,33 @@ class Director(InfraHost):
         sriov_map_setting = []
         sriov_pci_passthrough = []
         physical_network = "physint"
+        physical_network1 = "tenant1"
+        physical_network2 = "tenant2"
+        check = 1
         for interface in sriov_interfaces:
             devname = interface
-            mapping = physical_network + ':' + interface
+            if self.settings.enable_smart_nic == True:
+                if check == 1:
+                    mapping = physical_network1 + ':' + interface
+                    nova_pci = '{devname: ' + \
+                               '"' + interface + '",' + \
+                               'physical_network: ' + \
+                               '"' + physical_network1 + '"}'
+                elif check == 2:
+                    mapping = physical_network2 + ':' + interface
+                    nova_pci = '{devname: ' + \
+                               '"' + interface + '",' + \
+                               'physical_network: ' + \
+                               '"' + physical_network1 + '"}'
+            else:
+                mapping = physical_network + ':' + interface
+                nova_pci = '{devname: ' + \
+                           '"' + interface + '",' + \
+                           'physical_network: ' + \
+                           '"' + physical_network + '"}'                
+            
             sriov_map_setting.append(mapping)
-
-            nova_pci = '{devname: ' + \
-                       '"' + interface + '",' + \
-                       'physical_network: ' + \
-                       '"' + physical_network + '"}'
+        
             sriov_pci_passthrough.append(nova_pci)
 
             interface = interface + ':' + \
