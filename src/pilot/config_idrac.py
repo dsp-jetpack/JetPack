@@ -541,7 +541,7 @@ def reset_idrac(drac_client, ip_service_tag):
     drac_client.reset_idrac(wait=True)
 
 
-def get_lifecycle_out_of_recovery(drac_client, ip_service_tag):
+def take_lifecycle_out_of_recovery(drac_client, ip_service_tag):
     LOG.info("Setting lifecycle settings on {}".format(ip_service_tag))
     settings = {'Lifecycle Controller State': 'Enabled'}
     drac_client.set_lifecycle_settings(settings)
@@ -591,7 +591,7 @@ def config_idrac(instack_lock,
     LOG.info("Checking if Lifecycle Controller is in recovery or not")
     if drac_client.is_lifecycle_in_recovery():
         LOG.info("Lifecycle Controller is in recovery mode")
-        get_lifecycle_out_of_recovery(drac_client, ip_service_tag)
+        take_lifecycle_out_of_recovery(drac_client, ip_service_tag)
     else:
         LOG.info("Lifecycle Controller is not in recovery mode")
 
