@@ -117,6 +117,10 @@ parameters:
     description: The bonding_options string for the bond interface. Set things like 'bond_mode=balance-tcp lacp=active' using
       this option.
     type: string
+  HostNicDriver: # Override this via parameter_defaults
+    default: mlx5_core
+    description: DPDK driver for Mellanox
+    type: string
   ExternalNetworkMTU: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
@@ -234,6 +238,8 @@ resources:
                   members:
                   - type: ovs_dpdk_port
                     name: dpdk0
+                    driver:
+                        get_param: HostNicDriver
                     members:
                     - type: interface
                       name:
@@ -242,6 +248,8 @@ resources:
                         get_param: DefaultBondMTU
                   - type: ovs_dpdk_port
                     name: dpdk1
+                    driver:
+                        get_param: HostNicDriver
                     members:
                     - type: interface
                       name:

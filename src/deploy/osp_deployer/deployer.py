@@ -22,7 +22,8 @@ import traceback
 import argparse
 import os
 from osp_deployer.director import Director
-from osp_deployer.sah import Sah, Settings
+from osp_deployer.sah import Sah
+from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from auto_common import Ipmi, Ssh, Scp
 
@@ -54,23 +55,40 @@ def get_settings():
                         help='Do not reinstall the Dashboard VM',
                         action='store_true',
                         required=False)
-    parser.add_argument('-validate_settings_only', '--validate_settings_only',
-                        help='Only validate ini and properties files ' +
-                        '(no deployment)',
-                        action='store_true', required=False)
-    args, ignore = parser.parse_known_args()
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-validate_only', '--validate_only',
+                       help='No deployment - just validate config values',
+                       action='store_true',
+                       required=False)
+    group.add_argument('-tempest_config_only', '--tempest_config_only',
+                       help='Only (re-)generate the tempest.conf file.',
+                       action='store_true', required=False)
+    group.add_argument('-run_tempest_only', '--run_tempest_only',
+                       help='(Re-)generate the tempest.conf file if needed '
+                       'and run tempest.',
+                       action='store_true', required=False)
+
+    args, unknown = parser.parse_known_args()
+    if len(unknown) > 0:
+        parser.print_help()
+        msg = "Invalid argument(s) :"
+        for each in unknown:
+            msg += " " + each + ";"
+        raise AssertionError(msg)
+
+    logger.info("Loading settings file: " + args.settings)
     settings = Settings(args.settings)
-    return settings
+    return settings, args
 
 
 def run_tempest():
-    settings = get_settings()
-    if settings.run_tempest is True:
+    settings, args = get_settings()
+    if settings.run_tempest is True or args.run_tempest_only:
         logger.info("=== Running tempest ==")
         director_vm = Director()
         director_vm.run_tempest()
     else:
-        logger.debug("not running tempest")
+        logger.debug("Not running tempest")
 
 
 def deploy():
@@ -80,34 +98,8 @@ def deploy():
     logger.debug("=================================")
     logger.info("=== Starting up ...")
     logger.debug("=================================")
-
-    parser = argparse.ArgumentParser(
-        description='JetPack 13.x deployer')
-    parser.add_argument('-s', '--settings',
-                        help='ini settings file, e.g settings/acme.ini',
-                        required=True)
-    parser.add_argument('-undercloud_only', '--undercloud_only',
-                        help='Only reinstall the undercloud',
-                        action='store_true', required=False)
-    parser.add_argument('-overcloud_only', '--overcloud_only',
-                        help='Only reinstall the overcloud',
-                        action='store_true', required=False)
-    parser.add_argument('-skip_dashboard_vm', '--skip_dashboard_vm',
-                        help='Do not reinstall the Dashboard VM',
-                        action='store_true',
-                        required=False)
-    parser.add_argument('-validate_only', '--validate_only',
-                        help='No deployment - just validate config values',
-                        action='store_true',
-                        required=False)
-    args, others = parser.parse_known_args()
     try:
-        if len(others) > 0:
-            parser.print_help()
-            msg = "Invalid argument(s) :"
-            for each in others:
-                msg += " " + each + ";"
-            raise AssertionError(msg)
+        settings, args = get_settings()
         if args.validate_only is True:
             logger.info("Only validating ini/properties config values")
         else:
@@ -116,8 +108,6 @@ def deploy():
             if args.skip_dashboard_vm is True:
                 logger.info("Skipping Dashboard VM install")
 
-        logger.debug("loading settings files " + args.settings)
-        settings = Settings(args.settings)
         logger.info("Settings .ini: " + settings.settings_file)
         logger.info("Settings .properties " + settings.network_conf)
         settings.get_version_info()
@@ -136,7 +126,22 @@ def deploy():
         sah_node = Sah()
 
         tester.sah_health_check()
-        logger.info("Uploading configs/iso/scripts..")
+        # mutually exclusive command, configure tempest and quit.
+        if args.tempest_config_only:
+            logger.info("Only (re-)generating tempest.conf")
+            director_vm = Director()
+            director_vm.configure_tempest()
+            os._exit(0)
+
+        # mutually exclusive command, run tempest and quit.
+        if args.run_tempest_only:
+            logger.info("Only running tempest, will configure "
+                        + "tempest.conf if needed.")
+            director_vm = Director()
+            director_vm.run_tempest()
+            os._exit(0)
+
+        logger.info("Uploading configs/iso/scripts.")
         sah_node.clear_known_hosts()
         sah_node.handle_lock_files()
         sah_node.upload_iso()
@@ -215,7 +220,7 @@ def deploy():
         director_vm.node_introspection()
         director_vm.update_sshd_conf()
         director_vm.assign_node_roles()
-        director_vm.revert_sshd_conf
+        director_vm.revert_sshd_conf()
 
         director_vm.setup_templates()
         logger.info("=== Installing the overcloud ")
@@ -254,8 +259,13 @@ def deploy():
             director_vm.configure_dashboard()
         director_vm.enable_fencing()
         director_vm.run_sanity_test()
-        director_vm.configure_tempest()
+
+        external_sub_guid = director_vm.get_sanity_subnet()
+        if external_sub_guid:
+            director_vm.configure_tempest()
+
         run_tempest()
+
         logger.info("Deployment summary info; useful ip's etc.. " +
                     "/auto_results/deployment_summary.log")
 

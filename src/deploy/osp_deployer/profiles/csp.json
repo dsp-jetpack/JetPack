@@ -67,6 +67,12 @@
                  "true",
                  "false"
               ]
+            },
+            "barbican_enable" :{
+              "valid_values": [
+                 "true",
+                 "false"
+              ]
             }
          }        
    },
@@ -218,6 +224,19 @@
             },
          "enable_fencing":""
          }
+      },
+      {
+       "Subscription Manager Settings":{
+            "use_satellite" : {
+                  "valid_values": [
+                  "true",
+                  "false"
+               ],
+            "validate": [
+                  "should_be_valid_ip"
+               ]
+        }
+       }
       },
       {
          "Advanced Settings":{

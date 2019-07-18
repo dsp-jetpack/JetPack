@@ -1,0 +1,11 @@
+# A Heat environment file which can be used to enable
+# Barbican with the default secret store backend.
+
+resource_registry:
+  OS::TripleO::Services::BarbicanApi: ./overcloud/docker/services/barbican-api.yaml
+  OS::TripleO::Services::BarbicanBackendSimpleCrypto: ./overcloud/puppet/services/barbican-backend-simple-crypto.yaml
+
+parameter_defaults:
+  BarbicanSimpleCryptoGlobalDefault: true
+  BarbicanDebug: true
+  VerifyGlanceSignatures: true
