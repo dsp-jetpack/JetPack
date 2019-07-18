@@ -114,6 +114,9 @@ parameter_defaults:
     osd_scenario: lvm
     osd_objectstore: bluestore
 
+  CephAnsibleExtraConfig:
+    nb_retry_wait_osd_up: 360
+    delay_wait_osd_up: 60
 
   NovaComputeExtraConfig:
     nova::migration::libvirt::live_migration_completion_timeout: 800
