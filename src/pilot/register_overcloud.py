@@ -122,6 +122,11 @@ class RegisterOvercloud:
         self.logger.debug("cdn_username: " + self.cdn_username)
         self.logger.debug("cdn_password: " + self.cdn_password)
 
+        self.satellite_org = self._get_credential("satellite_credentials",
+                                                  "satellite_organization")
+        self.satellite_key = self._get_credential("satellite_credentials",
+                                                  "satellite_activation_key")
+
         # Get the proxy creds
         self.proxy_args = ""
         proxy_url = self._get_credential("proxy_credentials",
@@ -247,7 +252,7 @@ class RegisterOvercloud:
         return_code, stdout = self._execute_cmd(cmd)
         if return_code == 0:
             self.logger.warn(role + " " + node_ip +
-                             " is already registered with CDN.  "
+                             " is already registered.  "
                              "Using existing registration")
         else:
             if "This system is not yet registered" not in stdout:
@@ -257,18 +262,14 @@ class RegisterOvercloud:
                 sys.exit(1)
 
             # The node isn't registered, so register it
-            self.logger.info("Registering {} {} with CDN".format(role,
-                                                                 node_ip))
+            self.logger.info("Registering {} {}".format(role,
+                                                        node_ip))
 
-            # If we're using an activation key, then construct the args for
-            # that
+            # If we're using satellite, then construct the args for that
             cred_args = ""
-            if self._using_activation_key(role):
-                a_key_info = \
-                    self.subscriptions["roles"][role]["activation_key_info"]
-
-                cred_args = "--org=" + a_key_info["organization"] + " " + \
-                    "--activationkey=" + a_key_info["activation_key"]
+            if len(self.satellite_org) > 1:
+                cred_args = "--org=" + self.satellite_org + " " + \
+                    "--activationkey=" + self.satellite_key
             else:
                 cred_args = "--username=" + self.cdn_username + \
                     " --password=" + "'{}'".format(self.cdn_password)
@@ -290,7 +291,7 @@ class RegisterOvercloud:
                 sys.exit(1)
 
     def _unregister_node(self, role, node_ip):
-        self.logger.info("Unregistering {} {} with CDN".format(role, node_ip))
+        self.logger.info("Unregistering {} {}".format(role, node_ip))
 
         cmd = ["ssh",
                "heat-admin@{}".format(node_ip),
@@ -344,8 +345,6 @@ class RegisterOvercloud:
         return consumed_pool_ids
 
     def _attach_node(self, role, node_ip):
-        if self._using_activation_key(role):
-            return
 
         # Build up a list of consumed pool IDs for this node
         consumed_pool_ids = self._get_consumed_pool_ids(node_ip)
@@ -437,7 +436,7 @@ class RegisterOvercloud:
             # Iterate thru the IPs
             for node_ip in self.node_roles_to_nodes[role]:
 
-                # Register the node with CDN
+                # Register the node
                 self._register_node(role, node_ip)
 
                 # Attach the node to the pool IDs

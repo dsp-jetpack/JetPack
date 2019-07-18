@@ -154,19 +154,11 @@ def create_volume_types():
     if not args.disable_rbd:
         types.append(["rbd_backend", "tripleo_ceph"])
 
-    if args.enable_dellsc or args.enable_unity:
-        cinder_file = open(home_dir +
-                           '/pilot/templates/dell-cinder-backends.yaml', 'r')
-        for line in cinder_file:
-            line = line.strip()
-            try:
-                found = re.search('cinder_user_enabled_backends: \[(.+?)\]',  # noqa: W605
-                                  line).group(1)
-                backends = found.split(",")
-                for backend in backends:
-                    types.append([backend + "_backend", backend])
-            except AttributeError:
-                found = ''
+    if args.enable_dellsc:
+        types.append(["dellsc_backend", "dellsc"])
+
+    if args.enable_unity:
+        types.append(["unity_backend", "tripleo_dellemc_unity"])
 
     overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 
@@ -190,6 +182,37 @@ def create_volume_types():
 
     os.system("source {} && "
               "cinder extra-specs-list".format(overcloudrc_name))
+
+
+def create_share_types():
+    logger.info("Creating manila share types...")
+    types = []
+
+    if args.enable_unity_manila:
+        types.append(["unity_share", "tripleo_manila_unity"])
+
+    overcloudrc_name = CredentialHelper.get_overcloudrc_name()
+
+    for type in types:
+        type_name = type[0]
+        cmd = "source {} && manila type-list | grep ' {} ' | " \
+              "awk '{{print $4}}'".format(overcloudrc_name, type_name)
+        proc = subprocess.Popen([cmd], stdout=subprocess.PIPE, shell=True)
+        return_output = proc.communicate()[0].strip()
+
+        if type_name == return_output:
+            logger.warning("Manila type exists, skipping {}".format(type[0]))
+            continue
+        else:
+            logger.info("Creating manila share type {}".format(type[0]))
+            cmd = "source {} && " \
+                  "manila type-create --is_public True {} true && " \
+                  "manila type-key {} set share_backend_name={}" \
+                  "".format(overcloudrc_name, type[0], type[0], type[1])
+            os.system(cmd)
+
+    os.system("source {} && "
+              "manila extra-specs-list".format(overcloudrc_name))
 
 
 def run_deploy_command(cmd):
@@ -221,6 +244,7 @@ def finalize_overcloud():
 
     create_flavors()
     create_volume_types()
+    create_share_types()
 
     # horizon_service = keystone_client.services.find(**{'name': 'horizon'})
     # horizon_endpoint = keystone_client.endpoints.find(
@@ -330,6 +354,10 @@ def main():
                             action='store_true',
                             default=False,
                             help="Enables Distributed Virtual Routing")
+        parser.add_argument('--barbican_enable',
+                            action='store_true',
+                            default=False,
+                            help="Enables Barbican key manager")
         parser.add_argument('--static_ips',
                             action='store_true',
                             default=False,
@@ -481,6 +509,11 @@ def main():
         if args.dvr_enable:
             env_opts += " -e ~/pilot/templates/neutron-ovs-dvr.yaml"
 
+        # The configure-barbican.yaml must be included after the
+        # network-environment.yaml
+        if args.barbican_enable:
+            env_opts += " -e ~/pilot/templates/configure-barbican.yaml"
+
         # The octavia.yaml must be included after the
         # network-environment.yaml
         if args.octavia_enable:
@@ -506,14 +539,13 @@ def main():
             host_config = True
         if args.ovs_dpdk:
             if not args.enable_hugepages or not args.enable_numa:
-                    raise ValueError("Both hugepages and numa must be" +
-                                     "enabled in order to use OVS-DPDK")
+                raise ValueError("Both hugepages and numa must be" +
+                                 "enabled in order to use OVS-DPDK")
             else:
                 env_opts += " -e ~/pilot/templates/neutron-ovs-dpdk.yaml"
 
         if args.sriov:
             env_opts += " -e ~/pilot/templates/neutron-sriov.yaml"
-            env_opts += " -e ~/pilot/templates/ovs-hw-offload.yaml"
             if not host_config:
                 env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                             "host-config-and-reboot.yaml"
