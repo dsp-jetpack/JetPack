@@ -155,7 +155,7 @@ def create_volume_types():
         types.append(["rbd_backend", "tripleo_ceph"])
 
     if args.enable_dellsc:
-        types.append(["dellsc_backend", "dellsc"])
+        types.append(["dellsc_backend", "tripleo_dellsc"])
 
     if args.enable_unity:
         types.append(["unity_backend", "tripleo_dellemc_unity"])
@@ -550,8 +550,10 @@ def main():
                 env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                             "host-config-and-reboot.yaml"
 
+        env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
+
         if args.enable_dellsc:
-            env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
+            env_opts += " -e ~/pilot/templates/dellsc-cinder-config.yaml"
 
         if args.enable_unity:
             env_opts += " -e ~/pilot/templates/dellemc-unity-cinder-" \
