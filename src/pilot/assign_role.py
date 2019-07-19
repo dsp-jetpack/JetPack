@@ -910,7 +910,19 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
     disks = spinners + ssds
 
     new_osd_config = None
-    new_osd_config = generate_osd_config_list(controllers, disks)
+    if len(ssds) > 0 and len(spinners) == 0:
+        # If we have an all flash config, then let Ceph colocate the journals
+        new_osd_config, mklvm = generate_osd_config_without_journals(controllers,
+                                                              ssds, system_id)
+    elif len(ssds) > 0 and len(spinners) > 0:
+        # If we have a mix of flash and spinners, then use the ssds as journals
+        new_osd_config, mklvm = generate_osd_config_with_journals(controllers,
+                                                           spinners,
+                                                           ssds, system_id)
+    else:
+        # We have all spinners, so let Ceph colocate the journals
+        new_osd_config, mklvm  = generate_osd_config_without_journals(controllers,
+                                                              spinners, system_id)
 
     # load the osd environment file
     osd_config_file = os.path.join(Constants.TEMPLATES, "ceph-osd-config.yaml")
@@ -1003,6 +1015,36 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
         fcntl.flock(stream, fcntl.LOCK_UN)
         stream.close()
 
+    # Generate the mklvm script that ll create LVM's on firstboot
+
+    mklvm_file = os.path.join(Constants.TEMPLATES, "mklvm.sh")
+    streammklvm = open(mklvm_file, 'r+')
+
+    while True:
+        try:
+            fcntl.flock(streammklvm, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            break
+        except IOError as e:
+            if e.errno != errno.EAGAIN:
+                raise
+            else:
+                time.sleep(1)
+    try:
+        try:
+            current_mklvm = streammklvm.readlines()
+        except:
+            raise
+        streammklvm.seek(0)
+        for each in mklvm:
+             LOG.info(each)
+        streammklvm.writelines("%s\n" % line for line in mklvm)
+        streammklvm.truncate()
+
+    finally:
+        fcntl.flock(streammklvm, fcntl.LOCK_UN)
+        streammklvm.close()
+        
+
 
 def get_drives(drac_client):
     spinners = []
@@ -1038,20 +1080,81 @@ def get_drives(drac_client):
 
     return spinners, ssds
 
-
-def generate_osd_config_list(controllers, drives):
-    # Let ceph-volume allocated WAL devices automatically if applicable.
+def generate_osd_config_without_journals(controllers, drives, system_id):
+    mklvm = []
+    mklvm.append('if [[ $(dmidecode -s system-uuid) == "' + system_id + '" ]]; then')
     osd_config = {
         'osd_scenario': 'lvm',
         'osd_objectstore': 'bluestore',
-        'devices': []}
+        'lvm_volumes': []}
+    drive_count = 0
     for osd_drive in drives:
         osd_drive_pci_bus_number = get_pci_bus_number(osd_drive, controllers)
         osd_drive_device_name = get_by_path_device_name(
             osd_drive_pci_bus_number, osd_drive)
-        osd_config['devices'].append(osd_drive_device_name)
+        mklvm.append('  device=$(ls -la ' + osd_drive_device_name + " |  awk -F \"../../\" '{ print $2 }')")
+        mklvm.append('  eval "wipefs -a /dev/${device}"')
+        mklvm.append('  pvcreate ${device}')
+        mklvm.append('  vgcreate ceph_vg' + str(drive_count) + ' ${device}')
+        mklvm.append("  size=$(sudo fdisk -l ${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
+        mklvm.append('  lvcreate -n ceph_lv' + str(drive_count) + '_data -L ${size} ceph_vg' + str(drive_count))
+        osd_config['lvm_volumes'].append({"data": "ceph_lv" + str(drive_count) + "_data",
+                                      "data_vg": "ceph_vg" + str(drive_count)})
+        drive_count += 1
+    mklvm.append("fi")
+    return osd_config, mklvm
 
-    return osd_config
+def generate_osd_config_with_journals(controllers, osd_drives, ssds, system_id):
+    if len(osd_drives) % len(ssds) != 0:
+        LOG.warning("There is not an even mapping of OSD drives to SSD "
+                    "journals.  This will cause inconsistent performance "
+                    "characteristics.")
+    mklvm = []
+    mklvm.append('if [[ $(dmidecode -s system-uuid) == "' + system_id + '" ]]; then')
+    osd_config = {
+        'osd_scenario': 'lvm',
+        'osd_objectstore': 'bluestore',
+        'lvm_volumes': []}
+    osd_index = 0
+    drive_count = 0
+    for ssd in ssds:
+        ssd_pci_bus_number = get_pci_bus_number(ssd, controllers)
+        ssd_device_name = get_by_path_device_name(ssd_pci_bus_number, ssd)
+
+        mklvm.append('  device=$(ls -la ' + ssd_device_name + " |  awk -F \"../../\" '{ print $2 }')")
+        mklvm.append('  eval "wipefs -a /dev/${device}"')
+        mklvm.append('  pvcreate ${device}')
+        mklvm.append('  vgcreate ceph_vg' + str(osd_index) + ' ${device}')
+        mklvm.append("  size=$(sudo fdisk -l ${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
+        mklvm.append("  half=`expr ${size} / 2`")
+        mklvm.append('  lvcreate -n ceph_lv' + str(osd_index) +  '__wal -L ${half} ceph_vg' + str(osd_index))
+        mklvm.append('  lvcreate -n ceph_lv' + str(osd_index) +  '__db -L ${half} ceph_vg' + str(osd_index))
+
+        osd_config['lvm_volumes'].append({"db": "ceph_lv" + str(osd_index) + "_db",
+                                  "db_vg": "ceph_vg" + str(osd_index),
+                                  "wal": "ceph_lv" + str(osd_index) + "_wal",
+                                  "wal_vg": "ceph_vg" + str(osd_index)})
+        osd_index += 1
+
+    for osd_drive in osd_drives:
+        osd_drive_pci_bus_number = get_pci_bus_number(osd_drive,
+                                                      controllers)
+        osd_drive_device_name = get_by_path_device_name(
+            osd_drive_pci_bus_number, osd_drive)
+
+        mklvm.append('  device=$(ls -la ' + osd_drive_device_name + " |  awk -F \"../../\" '{ print $2 }')")
+        mklvm.append('  eval "wipefs -a /dev/${device}"')
+        mklvm.append('  pvcreate ${device}')
+        mklvm.append('  vgcreate ceph_vg' + str(drive_count) + ' ${device}')
+        mklvm.append("  size=$(sudo fdisk -l ${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
+        mklvm.append('  lvcreate -n ceph_lv' + str(drive_count) + '_data -L ${size} ceph_vg' + str(drive_count))
+
+        osd_config['lvm_volumes'].append({"data": "ceph_lv" + str(drive_count) + "_data",
+                                  "data_vg": "ceph_vg" + str(drive_count)})
+        drive_count += 1
+
+    mklvm.append("fi")
+    return osd_config, mklvm
 
 
 def get_pci_bus_number(spinner, controllers):
