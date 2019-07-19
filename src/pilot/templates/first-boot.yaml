@@ -43,6 +43,11 @@ resources:
       - config: {get_resource: performance_optimization}
       - config: {get_resource: wipe_disk}
 
+  make_lvm:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      config: {get_file: mklvm.sh}
+
   set_os_limits:
     type: OS::Heat::CloudConfig
     properties:
