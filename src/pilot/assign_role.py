@@ -1035,8 +1035,6 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
         except:
             raise
         streammklvm.seek(0)
-        for each in mklvm:
-             LOG.info(each)
         streammklvm.writelines("%s\n" % line for line in mklvm)
         streammklvm.truncate()
 

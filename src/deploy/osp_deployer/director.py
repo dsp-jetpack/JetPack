@@ -375,7 +375,7 @@ class Director(InfraHost):
         logger.debug("Assigning roles to nodes")
         osd_yaml = os.path.join(self.templates_dir, "ceph-osd-config.yaml")
         mklvm_sh = os.path.join(self.templates_dir, "mklvm.sh.orig")
-        self.run("/bin/cp -rf " + osd_yaml " + ".orig " + osd_yaml)
+        self.run("/bin/cp -rf " + osd_yaml + ".orig " + osd_yaml)
         self.run("/bin/cp -rf " + mklvm_sh + ".orig " + mklvm_sh)
         common_path = os.path.join(os.path.expanduser(
             self.settings.cloud_repo_dir + '/src'), 'common')
