@@ -1125,8 +1125,8 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds, system_id):
         mklvm.append('  vgcreate ceph_vg' + str(osd_index) + ' ${device}')
         mklvm.append("  size=$(sudo fdisk -l ${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
         mklvm.append("  half=`expr ${size} / 2`")
-        mklvm.append('  lvcreate -n ceph_lv' + str(osd_index) +  '__wal -L ${half} ceph_vg' + str(osd_index))
-        mklvm.append('  lvcreate -n ceph_lv' + str(osd_index) +  '__db -L ${half} ceph_vg' + str(osd_index))
+        mklvm.append('  lvcreate -n ceph_lv' + str(osd_index) +  '__wal -L ${half}B ceph_vg' + str(osd_index))
+        mklvm.append('  lvcreate -n ceph_lv' + str(osd_index) +  '__db -L ${half}B ceph_vg' + str(osd_index))
 
         osd_config['lvm_volumes'].append({"db": "ceph_lv" + str(osd_index) + "_db",
                                   "db_vg": "ceph_vg" + str(osd_index),
