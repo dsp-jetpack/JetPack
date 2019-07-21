@@ -507,7 +507,10 @@ class Director(InfraHost):
         uuid_to_osd_configs = json.loads(node_data_lookup_str)
         for uuid in uuid_to_osd_configs:
             osd_config = uuid_to_osd_configs[uuid]
-            num_osds = len(osd_config["devices"])
+            num_osds = 0
+            for device in osd_config["lvm_volumes"]:
+                if "data" in device:
+                    num_osds += 1
             total_osds = total_osds + num_osds
 
         num_storage_nodes = len(self.settings.ceph_nodes)
