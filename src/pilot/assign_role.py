@@ -1018,7 +1018,7 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
     # Generate the mklvm script that ll create LVM's on firstboot
 
     mklvm_file = os.path.join(Constants.TEMPLATES, "mklvm.sh")
-    streammklvm = open(mklvm_file, 'r+')
+    streammklvm = open(mklvm_file, 'a+')
 
     while True:
         try:
