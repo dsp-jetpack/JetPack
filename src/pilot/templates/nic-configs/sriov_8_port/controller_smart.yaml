@@ -1,0 +1,292 @@
+heat_template_version: queens
+description: >
+  Bond and VLAN configuration for controller nodes. comment14_0: ' The values of the following parameters are overridden by
+  the entries in' comment15_0: ' network-environment.yaml'
+parameters:
+  ControlPlaneIp:
+    default: ''
+    description: IP address/subnet on the ctlplane network
+    type: string
+  ExternalIpSubnet:
+    default: ''
+    description: IP address/subnet on the external network
+    type: string
+  InternalApiIpSubnet:
+    default: ''
+    description: IP address/subnet on the internal API network
+    type: string
+  StorageIpSubnet:
+    default: ''
+    description: IP address/subnet on the storage network
+    type: string
+  StorageMgmtIpSubnet:
+    default: ''
+    description: IP address/subnet on the storage mgmt network
+    type: string
+  TenantIpSubnet:
+    default: ''
+    description: IP address/subnet on the tenant network
+    type: string
+  ManagementIpSubnet: # Only populated when including environments/network-management.yaml
+    default: ''
+    description: IP address/subnet on the management network
+    type: string
+  ExternalNetworkVlanID:
+    default: 10
+    description: Vlan ID for the external network traffic.
+    type: number
+  InternalApiNetworkVlanID:
+    default: 20
+    description: Vlan ID for the internal_api network traffic.
+    type: number
+  StorageNetworkVlanID:
+    default: 30
+    description: Vlan ID for the storage network traffic.
+    type: number
+  StorageMgmtNetworkVlanID:
+    default: 40
+    description: Vlan ID for the storage mgmt network traffic.
+    type: number
+  TenantNetworkVlanID:
+    default: 50
+    description: Vlan ID for the tenant network traffic.
+    type: number
+  ManagementNetworkVlanID:
+    default: 60
+    description: Vlan ID for the management network traffic.
+    type: number
+  ControlPlaneDefaultRoute: # Override this via parameter_defaults
+    description: The default route of the control plane network.
+    type: string
+  ExternalInterfaceDefaultRoute:
+    default: 10.0.0.1
+    description: default route for the external network
+    type: string
+  ManagementInterfaceDefaultRoute: # Commented out by default in this template
+    default: unset
+    description: The default route of the management network.
+    type: string
+  ControlPlaneSubnetCidr: # Override this via parameter_defaults
+    default: '24'
+    description: The subnet CIDR of the control plane network.
+    type: string
+  DnsServers: # Override this via parameter_defaults
+    default: []
+    description: A list of DNS servers (2 max for some implementations) that will be added to resolv.conf.
+    type: comma_delimited_list
+  EC2MetadataIp: # Override this via parameter_defaults
+    description: The IP address of the EC2 metadata server.
+    type: string
+  ManagementNetCidr: # Override this via parameter_defaults
+    default: 192.168.110.0/24
+    description: The CIDR of the management network.
+    type: string
+  ProvisioningNetworkGateway:
+    default: 192.168.120.1
+    description: The IP of the gateway on the provisioning network which will allow access to the management network.
+    type: string
+  ControllerBond0Interface1:
+    default: em1
+    description: Bond 0 interface 1 name
+    type: string
+  ControllerBond0Interface2:
+    default: p3p1
+    description: Bond 0 interface 2 name
+    type: string
+  ControllerBond1Interface1:
+    default: em2
+    description: Bond 1 interface 1 name
+    type: string
+  ControllerBond1Interface2:
+    default: p3p2
+    description: Bond 1 interface 2 name
+    type: string
+  ControllerBondInterfaceOptions:
+    default: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+    description: The bonding_options string for the bond interface.
+    type: string
+  InternalApiMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  StorageNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  StorageMgmtNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  TenantNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  ProvisioningNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  ManagementNetworkMTU: # Override this via parameter_defaults
+    default: 1500
+    description: MTU value for this network.
+    type: number
+  DefaultBondMTU: # Override this via parameter_defaults
+    default: 9000
+    description: MTU value for this network.
+    type: number
+  ExternalNetworkMTU: 
+    default: 1500
+    description: MTU value for this network.
+    type: number
+
+resources:
+  OsNetConfigImpl:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config:
+        str_replace:
+          template:
+            get_file: /usr/share/openstack-tripleo-heat-templates/network/scripts/run-os-net-config.sh
+          params:
+            $network_config:
+              network_config:
+              - type: ovs_bridge
+                name: br-tenant
+                use_dhcp: false
+                mtu:
+                  get_param: ProvisioningNetworkMTU
+                addresses:
+                - ip_netmask:
+                    list_join:
+                    - /
+                    - - get_param: ControlPlaneIp
+                      - get_param: ControlPlaneSubnetCidr
+                routes:
+                - ip_netmask: 169.254.169.254/32
+                  next_hop:
+                    get_param: EC2MetadataIp
+                # CHANGEME: The following route is used to route from the
+                # provisioning network to the management network.  If the
+                # iDRACs are on the provisioning network, then remove this
+                # route.
+                - ip_netmask:
+                    get_param: ManagementNetCidr
+                  next_hop:
+                    get_param: ProvisioningNetworkGateway
+                # CHANGEME: The following sets the default route on the
+                # controller nodes to be the IP of the Director node on
+                # the provisioning network.  This can be changed to a
+                # gateway IP on the external network if available.
+                #-
+                #  default: true
+                #  next_hop: {get_param: ControlPlaneDefaultRoute}
+                members:
+                - type: linux_bond
+                  name: bond0
+                  mtu:
+                    get_param: DefaultBondMTU
+                  bonding_options:
+                    get_param: ControllerBondInterfaceOptions
+                  members:
+                  - type: interface
+                    name:
+                      get_param: ControllerBond0Interface1
+                    mtu:
+                      get_param: DefaultBondMTU
+                    primary: true
+                  - type: interface
+                    name:
+                      get_param: ControllerBond0Interface2
+                    mtu:
+                      get_param: DefaultBondMTU
+                - type: vlan
+                  device: bond0
+                  vlan_id:
+                    get_param: TenantNetworkVlanID
+                  mtu:
+                    get_param: TenantNetworkMTU
+                  addresses:
+                  - ip_netmask:
+                      get_param: TenantIpSubnet
+                - type: vlan
+                  device: bond0
+                  vlan_id:
+                    get_param: InternalApiNetworkVlanID
+                  mtu:
+                    get_param: InternalApiMTU
+                  addresses:
+                  - ip_netmask:
+                      get_param: InternalApiIpSubnet
+                - type: vlan
+                  device: bond0
+                  vlan_id:
+                    get_param: StorageNetworkVlanID
+                  mtu:
+                    get_param: StorageNetworkMTU
+                  addresses:
+                  - ip_netmask:
+                      get_param: StorageIpSubnet
+              - type: ovs_bridge
+                name:
+                  bridge_name
+                dns_servers:
+                  get_param: DnsServers
+                mtu:
+                  get_param: DefaultBondMTU
+                members:
+                - type: linux_bond
+                  name: bond1
+                  bonding_options:
+                    get_param: ControllerBondInterfaceOptions
+                  mtu:
+                    get_param: DefaultBondMTU
+                  members:
+                  - type: interface
+                    name:
+                      get_param: ControllerBond1Interface1
+                    mtu:
+                      get_param: DefaultBondMTU
+                    primary: true
+                  - type: interface
+                    name:
+                      get_param: ControllerBond1Interface2
+                    mtu:
+                      get_param: DefaultBondMTU
+                - type: vlan
+                  device: bond1
+                  vlan_id:
+                    get_param: ExternalNetworkVlanID
+                  mtu:
+                    get_param: ExternalNetworkMTU
+                  addresses:
+                  - ip_netmask:
+                      get_param: ExternalIpSubnet
+                  routes:
+                  - ip_netmask: 0.0.0.0/0
+                    next_hop:
+                      get_param: ExternalInterfaceDefaultRoute
+              - type: ovs_bridge
+                name: mlx_br1
+                mtu:
+                  get_param: DefaultBondMTU
+                members:
+                - type: interface
+                  name: em1
+                  mtu:
+                    get_param: DefaultBondMTU
+                  use_dhcp: false
+              - type: ovs_bridge
+                name: mlx_br2
+                mtu:
+                  get_param: DefaultBondMTU
+                members:
+                - type: interface
+                  name: em2
+                  mtu:
+                    get_param: DefaultBondMTU
+                  use_dhcp: false
+outputs:
+  OS::stack_id:
+    description: The OsNetConfigImpl resource.
+    value:
+      get_resource: OsNetConfigImpl
