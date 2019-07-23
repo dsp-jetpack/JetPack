@@ -1,4 +1,4 @@
---- client.py.orig	2019-06-18 07:50:36.074404231 -0400
+--- /home/devel/client_stamp.py	2019-07-18 01:28:17.911655171 -0400
 +++ client_new.py	2019-06-21 06:14:32.311037297 -0400
 @@ -33,7 +33,7 @@
  from dracclient import utils
@@ -9,15 +9,6 @@
  
  LOG = logging.getLogger(__name__)
  
-@@ -272,7 +272,7 @@
-         state_reached = self._wait_for_host_state(
-             self.client.host,
-             alive=False,
--            ping_count=3,
-+            ping_count=2,
-             retries=24)
- 
-         if not state_reached:
 @@ -388,9 +388,12 @@
              cim_name='DCIM:iDRACCardService',
              target=idrac_fqdd)
@@ -83,24 +74,21 @@
  
      def list_system_settings(self):
          """List the System configuration settings
-@@ -468,7 +513,10 @@
-                           cim_system_creation_class_name='DCIM_ComputerSystem',
+@@ -469,7 +514,9 @@
                            cim_system_name='DCIM:ComputerSystem',
                            reboot=False,
--                          start_time='TIME_NOW'):
-+                          start_time='TIME_NOW',
+                           start_time='TIME_NOW',
+-                          realtime=False):
 +                          realtime=False,
 +                          wait_for_idrac=True,
 +                          method_name='CreateTargetedConfigJob'):
          """Creates a configuration job.
  
          In CIM (Common Information Model), weak association is used to name an
-@@ -492,6 +540,12 @@
-                            means execute immediately or None which means
-                            the job will not execute until
+@@ -495,6 +542,10 @@
                             schedule_job_execution is called
-+        :param realtime: Indicates if reatime mode should be used.
-+               Valid values are True and False.
+         :param realtime: Indicates if reatime mode should be used.
+                Valid values are True and False.
 +        :param wait_for_idrac: indicates whether or not to wait for the
 +                               iDRAC to be ready to accept commands before
 +                               issuing the command.
@@ -108,19 +96,18 @@
          :returns: id of the created job
          :raises: WSManRequestFailure on request failures
          :raises: WSManInvalidResponse when receiving invalid response
-@@ -508,7 +562,10 @@
-             cim_system_creation_class_name=cim_system_creation_class_name,
+@@ -512,7 +563,9 @@
              cim_system_name=cim_system_name,
              reboot=reboot,
--            start_time=start_time)
-+            start_time=start_time,
+             start_time=start_time,
+-            realtime=realtime)
 +            realtime=realtime,
 +            wait_for_idrac=wait_for_idrac,
 +            method_name=method_name)
  
      def create_nic_config_job(
              self,
-@@ -647,6 +704,37 @@
+@@ -651,6 +704,37 @@
              cim_creation_class_name='DCIM_BIOSService',
              cim_name='DCIM:BIOSService', target=self.BIOS_DEVICE_FQDD)
  
@@ -158,7 +145,7 @@
      def get_lifecycle_controller_version(self):
          """Returns the Lifecycle controller version
  
-@@ -784,8 +872,52 @@
+@@ -788,6 +872,50 @@
          """
          return self._raid_mgmt.delete_virtual_disk(virtual_disk)
  
@@ -207,89 +194,9 @@
 +        return self._raid_mgmt.clear_foreign_config(raid_controller)
 +
      def commit_pending_raid_changes(self, raid_controller, reboot=False,
--                                    start_time='TIME_NOW'):
-+                                    start_time='TIME_NOW', realtime=False):
+                                     start_time='TIME_NOW', realtime=False):
          """Applies all pending changes on a RAID controller
- 
-          ...by creating a config job.
-@@ -798,6 +930,8 @@
-                means execute immediately or None which means
-                the job will not execute until
-                schedule_job_execution is called
-+        :param realtime: Indicates if reatime mode should be used.
-+               Valid values are True and False.
-         :returns: id of the created job
-         :raises: WSManRequestFailure on request failures
-         :raises: WSManInvalidResponse when receiving invalid response
-@@ -811,7 +945,8 @@
-             cim_name='DCIM:RAIDService',
-             target=raid_controller,
-             reboot=reboot,
--            start_time=start_time)
-+            start_time=start_time,
-+            realtime=realtime)
- 
-     def abandon_pending_raid_changes(self, raid_controller):
-         """Deletes all pending changes on a RAID controller
-@@ -830,6 +965,14 @@
-             cim_creation_class_name='DCIM_RAIDService',
-             cim_name='DCIM:RAIDService', target=raid_controller)
- 
-+    def is_realtime_supported(self, raid_controller):
-+        """Find if controller supports realtime or not
-+
-+        :param raid_controller: ID of RAID controller
-+        :returns: True or False
-+        """
-+        return self._raid_mgmt.is_realtime_supported(raid_controller)
-+
-     def list_cpus(self):
-         """Returns the list of CPUs
- 
-@@ -962,53 +1105,71 @@
-         """
-         return self._raid_mgmt.is_jbod_capable(raid_controller_fqdd)
- 
--    def is_raid_controller(self, raid_controller_fqdd):
--        """Find out if object's fqdd is for a raid controller or not
-+    def is_raid_controller(self, raid_controller_fqdd, raid_controllers=None):
-+        """Determine if the given controller is a RAID controller
-+
-+        Since a BOSS controller is a type of RAID controller, this method will
-+        return True for both BOSS and RAID controllers.
- 
-         :param raid_controller_fqdd: The object's fqdd we are testing to see
-                                      if it is a raid controller or not.
-+        :param raid_controllers: A list of RAIDControllers used to check for
-+                                 the presence of BOSS cards.  If None, the
-+                                 iDRAC will be queried for the list of
-+                                 controllers.
-         :returns: boolean, True if the device is a RAID controller,
-                   False if not.
-         """
--        return self._raid_mgmt.is_raid_controller(raid_controller_fqdd)
-+        return self._raid_mgmt.is_raid_controller(raid_controller_fqdd,
-+                                                  raid_controllers)
- 
--    def is_boss_controller(self, raid_controller_fqdd):
-+    def is_boss_controller(self, raid_controller_fqdd, raid_controllers=None):
-         """Find out if a RAID controller a BOSS card or not
- 
-         :param raid_controller_fqdd: The object's fqdd we are testing to see
-                                      if it is a BOSS card or not.
-+        :param raid_controllers: A list of RAIDController to scan for presence
-+                                 of BOSS card, if None the drac will be queried
-+                                 for the list of controllers which will then be
-+                                 scanned.
-         :returns: boolean, True if the device is a BOSS card, False if not.
-+        :raises: WSManRequestFailure on request failures
-+        :raises: WSManInvalidResponse when receiving invalid response
-+        :raises: DRACOperationFailed on error reported back by the DRAC
-+                 interface
-         """
--        return self._raid_mgmt.is_boss_controller(raid_controller_fqdd)
-+        return self._raid_mgmt.is_boss_controller(raid_controller_fqdd,
-+                                                  raid_controllers)
+@@ -1015,32 +1143,33 @@
  
      def change_physical_disk_state(self, mode,
                                     controllers_to_physical_disk_ids=None):
@@ -344,7 +251,7 @@
          :raises: DRACOperationFailed on error reported back by the DRAC and the
                   exception message does not contain NOT_SUPPORTED_MSG constant.
          :raises: Exception on unknown error.
-@@ -1170,11 +1331,11 @@
+@@ -1202,11 +1331,11 @@
                               expected_return_value=utils.RET_SUCCESS,
                               wait_for_idrac=False)
  
