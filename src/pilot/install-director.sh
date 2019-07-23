@@ -262,6 +262,20 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resour
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
 
+# This hacks in a patch to allow lifecycle controller management.
+echo
+echo "## Patching Ironic iDRAC driver lifecycle_controller.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.py ${HOME}/pilot/lifecycle_controller.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyo
+
+# This hacks in a patch to apply constants.
+echo
+echo "## Patching Ironic iDRAC driver constants.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/constants.py ${HOME}/pilot/constants.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyo
+
 # This hacks in a patch to out-of-band inspection to set boot_mode on the node
 # being inspected.
 echo
