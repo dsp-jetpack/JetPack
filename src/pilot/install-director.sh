@@ -241,12 +241,40 @@ echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
+# This hacks in a patch to allow realtime RAID creation.
+echo
+echo "## Patching Ironic iDRAC driver client.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
+
+# This hacks in a patch to enable realtime RAID creation.
+echo
+echo "## Patching Ironic iDRAC driver job.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/job.py ${HOME}/pilot/job.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
+
 # This hacks in a patch to validate and retrieve raid and boss controller and physical disk status.
 echo
 echo "## Patching Ironic iDRAC driver raid.py..."
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
+
+# This hacks in a patch to allow lifecycle controller management.
+echo
+echo "## Patching Ironic iDRAC driver lifecycle_controller.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.py ${HOME}/pilot/lifecycle_controller.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyo
+
+# This hacks in a patch to apply constants.
+echo
+echo "## Patching Ironic iDRAC driver constants.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/constants.py ${HOME}/pilot/constants.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyo
 
 # This hacks in a patch to out-of-band inspection to set boot_mode on the node
 # being inspected.

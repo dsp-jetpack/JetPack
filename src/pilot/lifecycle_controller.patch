@@ -1,14 +1,17 @@
---- /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.py	2019-06-18 06:56:36.818471872 -0400
-+++ lifecycle_controller.py	2019-06-17 03:15:33.796000360 -0400
-@@ -14,7 +14,6 @@
- from dracclient import constants
+--- lifecycle_controller.py.orig	2018-11-26 21:48:01.000000000 +0000
++++ lifecycle_controller_new.py	2019-07-18 12:31:02.903353694 +0000
+@@ -11,9 +11,9 @@
+ #    License for the specific language governing permissions and limitations
+ #    under the License.
+ 
++from dracclient import constants
  from dracclient.resources import uris
  from dracclient import utils
 -from dracclient import wsman
  
  
  class LifecycleControllerManagement(object):
-@@ -43,47 +42,6 @@
+@@ -42,47 +42,6 @@
          return tuple(map(int, (lc_version_str.split('.'))))
  
  
@@ -56,7 +59,7 @@
  class LCAttribute(object):
      """Generic LC attribute class"""
  
-@@ -162,6 +120,17 @@
+@@ -161,6 +120,17 @@
                     lifecycle_attr.current_value, lifecycle_attr.pending_value,
                     lifecycle_attr.read_only, possible_values)
  
@@ -74,7 +77,7 @@
  
  class LCStringAttribute(LCAttribute):
      """String LC attribute class"""
-@@ -200,3 +169,96 @@
+@@ -199,3 +169,96 @@
          return cls(lifecycle_attr.name, lifecycle_attr.instance_id,
                     lifecycle_attr.current_value, lifecycle_attr.pending_value,
                     lifecycle_attr.read_only, min_length, max_length)
