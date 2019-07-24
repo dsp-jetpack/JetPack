@@ -161,6 +161,19 @@ class Director(InfraHost):
             dest_file = self.home_dir + yaml
             self.upload_file(source_file, dest_file)
 
+            unity_lock = "/unity_container_lock.ini"
+            unity_lock_file = self.settings.lock_files_dir + unity_lock
+            if self.settings.enable_unity_backend is True:
+               cmd = "grep unity_cinder__container_version " + unity_lock_file +
+                     " | awk -F '=' '{print $2}'"
+               self.settings.cinder_unity_container_version = self.run_tty(cmd)
+            if self.settings.enable_unity_manila_backend is True:
+               cmd = "grep unity_manila_container_version " + unity_lock_file +
+                     " | awk -F '=' '{print $2}'"
+               self.settings.manila_unity_container_version = self.run_tty(cmd)
+
+  
+
     def install_director(self):
         logger.info("Installing the undercloud")
         if self.settings.use_satellite:
