@@ -276,6 +276,13 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/consta
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyo
 
+# This hacks in a patch to handle various types of settings.
+echo
+echo "## Patching Ironic iDRAC driver utils.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/utils.py ${HOME}/pilot/utils.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/utils.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/utils.pyo
+
 # This hacks in a patch to out-of-band inspection to set boot_mode on the node
 # being inspected.
 echo
