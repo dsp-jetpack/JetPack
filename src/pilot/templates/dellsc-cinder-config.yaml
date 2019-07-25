@@ -6,7 +6,7 @@ resource_registry:
 parameter_defaults:
   CinderEnableDellScBackend: <enable_dellsc_backend>
   CinderDellScBackendName: 'tripleo_dellsc'
-  CinderDellScSanIp: <dellsc_san_ip_address>
+  CinderDellScSanIp: <dellsc_san_ip>
   CinderDellScSanLogin: <dellsc_san_login>
   CinderDellScSanPassword: <dellsc_san_password>
   CinderDellScSsn: <dellsc_ssn>
@@ -19,5 +19,5 @@ parameter_defaults:
   CinderDellScSecondarySanLogin: <dellsc_second_san_login>
   CinderDellScSecondarySanPassword: <dellsc_second_san_password>
   CinderDellScSecondaryScApiPort: <dellsc_second_api_port>
-  CinderDellScExcludedDomainIp: <dellsc_excluded_domainip>
+  CinderDellScExcludedDomainIp: <dellsc_excluded_domain_ip>
   CinderDellScMultipathXfer: <dellsc_multipath_xref>
