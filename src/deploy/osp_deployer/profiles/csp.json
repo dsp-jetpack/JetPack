@@ -248,8 +248,18 @@
                   "false"
                ]
             },
-         "use_ipmi_driver":"",
-         "use_in_band_introspection":"",
+         "use_ipmi_driver": {
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            },
+         "use_in_band_introspection": {
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            },
          "enable_version_locking":""
          }
       },
