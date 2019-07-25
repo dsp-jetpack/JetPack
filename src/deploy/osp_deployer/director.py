@@ -276,6 +276,17 @@ class Director(InfraHost):
             raise AssertionError(
                 "Number of nodes in instackenv.json does not add up"
                 " to the number of nodes defined in .properties file")
+        if setts.numa_enable is True or setts.hpg_enable is True:
+            grep_data = self.run_tty("grep -n pm_addr ~/instackenv.json")[0].rstrip()
+            instack_nodes = list(grep_data.split(","))
+            compute_nodes = self.settings.compute_nodes
+            for compute_node in compute_nodes:
+                for instack_node in instack_nodes:
+                    if instack_node.find(compute_node.idrac_ip) > 0:
+                        extracted_line = int(instack_node.split(':')[0])
+                        cmd = "sed -i "+""+str(extracted_line+2)+"s/pxe_drac/pxe_ipmitool/"+" ~/instackenv.json"
+                        logger.info(cmd)
+                        self.run_tty(cmd)
 
         if setts.use_ipmi_driver is True:
             logger.debug("Using pxe_ipmi driver")
