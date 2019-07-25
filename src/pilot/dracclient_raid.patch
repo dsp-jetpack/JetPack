@@ -1,5 +1,5 @@
---- /usr/lib/python2.7/site-packages/dracclient/resources/raid.py	2019-07-11 15:22:53.819829111 +0000
-+++ raid.py	2019-07-11 15:22:42.813420025 +0000
+--- /usr/lib/python2.7/site-packages/dracclient/resources/raid.py	2019-07-24 09:52:23.913807005 -0500
++++ raid.py	2019-07-24 09:52:09.175351978 -0500
 @@ -12,6 +12,7 @@
  #    under the License.
  
@@ -8,7 +8,7 @@
  import logging
  
  from dracclient import constants
-@@ -642,6 +643,9 @@
+@@ -616,6 +617,9 @@
                       drives whose state cannot be changed at this time, drive
                       state is not "ready" or "non-RAID".
          """
@@ -18,7 +18,7 @@
          p_disk_id_to_status = {}
          for physical_disk in physical_disks:
              p_disk_id_to_status[physical_disk.id] = physical_disk.raid_status
-@@ -700,34 +704,37 @@
+@@ -674,34 +678,37 @@
  
              raise ValueError(error_msg)
  
@@ -77,7 +77,7 @@
          :raises: DRACOperationFailed on error reported back by the DRAC and the
                   exception message does not contain NOT_SUPPORTED_MSG constant.
          :raises: Exception on unknown error.
-@@ -754,13 +761,14 @@
+@@ -727,13 +734,14 @@
          Raise exception if there are any failed drives or
          drives not in status 'ready' or 'non-RAID'
          '''
@@ -95,7 +95,7 @@
              if physical_disk_ids:
                  LOG.debug("Converting the following disks to {} on RAID "
                            "controller {}: {}".format(
-@@ -773,23 +781,40 @@
+@@ -746,20 +754,37 @@
                      if constants.NOT_SUPPORTED_MSG in str(ex):
                          LOG.debug("Controller {} does not support "
                                    "JBOD mode".format(controller))
@@ -121,9 +121,7 @@
 -                        if conversion_results["is_commit_required"]:
 -                            controllers.append(controller)
 +                    controllers_to_results[controller] = conversion_results
- 
--        return {'is_reboot_required': is_reboot_required,
--                'commit_required_ids': controllers}
++
 +                    # Remove the code below when is_reboot_required and
 +                    # commit_required_ids are deprecated
 +                    reboot_true = constants.RebootRequired.true
@@ -142,10 +140,8 @@
 +                        is_commit_required_value=False,
 +                        is_reboot_required_value=constants.
 +                        RebootRequired.false)
-+
+ 
+-        return {'is_reboot_required': is_reboot_required,
 +        return {'conversion_results': controllers_to_results,
 +                'is_reboot_required': is_reboot_required,
-+                 'commit_required_ids': controllers}
- 
-     def is_realtime_supported(self, raid_controller_fqdd):
-         """Find if controller supports realtime or not
+                 'commit_required_ids': controllers}
