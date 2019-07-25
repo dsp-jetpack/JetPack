@@ -690,6 +690,9 @@ class Director(InfraHost):
             'sed -i "s|sriov_enabled=.*|sriov_enabled=' +
             str(self.settings.enable_sriov) +
             '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|smart_nic_enabled=.*|smart_nic_enabled=' +
+            str(self.settings.enable_smart_nic) +
+            '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|dvr_enabled=.*|dvr_enabled=' +
             str(self.settings.dvr_enable) +
             '|" pilot/deployment-validation/sanity.ini',
