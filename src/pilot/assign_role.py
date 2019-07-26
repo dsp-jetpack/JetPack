@@ -1095,7 +1095,9 @@ def generate_osd_config_without_journals(controllers, drives, system_id):
         mklvm.append('  pvcreate ' + osd_drive_device_name)
         mklvm.append('  vgcreate ceph_vg' + str(drive_count) + ' ' + osd_drive_device_name)
         mklvm.append("  size=$(sudo fdisk -l /dev/${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
-        mklvm.append('  lvcreate -n ceph_lv' + str(drive_count) + '_data -L ${size}B ceph_vg' + str(drive_count))
+        mklvm.append("  sizeb=`expr $((${size} * 99 / 100))`")
+        mklvm.append("  sizeb=`expr $(${sizeb} / 512 * 512))`")
+        mklvm.append('  lvcreate -n ceph_lv' + str(drive_count) + '_data -L ${sizeb}B ceph_vg' + str(drive_count))
         osd_config['lvm_volumes'].append({"data": "ceph_lv" + str(drive_count) + "_data",
                                       "data_vg": "ceph_vg" + str(drive_count)})
         drive_count += 1
@@ -1114,7 +1116,6 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds, system_id):
         'osd_objectstore': 'bluestore',
         'lvm_volumes': []}
     osd_index = 0
-    drive_count = 0
     for ssd in ssds:
         ssd_pci_bus_number = get_pci_bus_number(ssd, controllers)
         ssd_device_name = get_by_path_device_name(ssd_pci_bus_number, ssd)
@@ -1124,7 +1125,8 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds, system_id):
         mklvm.append('  pvcreate ' + ssd_device_name)
         mklvm.append('  vgcreate ceph_vg' + str(osd_index) + ' ' + ssd_device_name)
         mklvm.append("  size=$(sudo fdisk -l /dev/${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
-        mklvm.append("  half=`expr ${size} / 2`")
+        mklvm.append("  half=`expr $((${size} * 49 / 100))`")
+        mklvm.append("  half=`expr $((${half} / 512 * 512))`")
         mklvm.append('  lvcreate -n ceph_lv' + str(osd_index) +  '__wal -L ${half}B ceph_vg' + str(osd_index))
         mklvm.append('  lvcreate -n ceph_lv' + str(osd_index) +  '__db -L ${half}B ceph_vg' + str(osd_index))
 
@@ -1133,7 +1135,7 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds, system_id):
                                   "wal": "ceph_lv" + str(osd_index) + "_wal",
                                   "wal_vg": "ceph_vg" + str(osd_index)})
         osd_index += 1
-
+    drive_count = osd_index + 1
     for osd_drive in osd_drives:
         osd_drive_pci_bus_number = get_pci_bus_number(osd_drive,
                                                       controllers)
@@ -1145,7 +1147,9 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds, system_id):
         mklvm.append('  pvcreate ' + osd_drive_device_name)
         mklvm.append('  vgcreate ceph_vg' + str(drive_count) + ' ' + osd_drive_device_name)
         mklvm.append("  size=$(sudo fdisk -l /dev/${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
-        mklvm.append('  lvcreate -n ceph_lv' + str(drive_count) + '_data -L ${size}B ceph_vg' + str(drive_count))
+        mklvm.append("  sizeb=`expr $((${size} * 99 / 100))`")
+        mklvm.append("  sizeb=`expr $((${sizeb} / 512 * 512))`")
+        mklvm.append('  lvcreate -n ceph_lv' + str(drive_count) + '_data -L ${sizeb}B ceph_vg' + str(drive_count))
 
         osd_config['lvm_volumes'].append({"data": "ceph_lv" + str(drive_count) + "_data",
                                   "data_vg": "ceph_vg" + str(drive_count)})
