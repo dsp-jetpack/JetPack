@@ -105,6 +105,22 @@ parameters:
     default: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
     description: The bonding_options string for the bond interface.
     type: string
+  ControllerSriovInterface1:
+    default: p2p1
+    description: SRIOV bridge interface 1
+    type: string
+  ControllerSriovInterface2:
+    default: p2p2
+    description: SRIOV bridge interface 2
+    type: string
+  ControllerSriovInterface3:
+    default: p2p3
+    description: SRIOV bridge interface 3
+    type: string
+  ControllerSriovInterface4:
+    default: p2p4
+    description: SRIOV bridge interface 4
+    type: string
   InternalApiMTU: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
@@ -137,7 +153,6 @@ parameters:
     default: 1500
     description: MTU value for this network.
     type: number
-
 resources:
   OsNetConfigImpl:
     type: OS::Heat::SoftwareConfig
@@ -271,7 +286,8 @@ resources:
                   get_param: DefaultBondMTU
                 members:
                 - type: interface
-                  name: em1
+                  name:
+                    get_param: ControllerSriovInterface1
                   mtu:
                     get_param: DefaultBondMTU
                   use_dhcp: false
@@ -281,7 +297,30 @@ resources:
                   get_param: DefaultBondMTU
                 members:
                 - type: interface
-                  name: em2
+                  name:
+                    get_param: ControllerSriovInterface2
+                  mtu:
+                    get_param: DefaultBondMTU
+                  use_dhcp: false
+              - type: ovs_bridge
+                name: mlx_br3
+                mtu:
+                  get_param: DefaultBondMTU
+                members:
+                - type: interface
+                  name:
+                    get_param: ControllerSriovInterface3
+                  mtu:
+                    get_param: DefaultBondMTU
+                  use_dhcp: false
+              - type: ovs_bridge
+                name: mlx_br4
+                mtu:
+                  get_param: DefaultBondMTU
+                members:
+                - type: interface
+                  name:
+                    get_param: ControllerSriovInterface4
                   mtu:
                     get_param: DefaultBondMTU
                   use_dhcp: false
@@ -290,3 +329,4 @@ outputs:
     description: The OsNetConfigImpl resource.
     value:
       get_resource: OsNetConfigImpl
+

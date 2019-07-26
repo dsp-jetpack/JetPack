@@ -170,7 +170,7 @@ class Director(InfraHost):
                   self.settings.satellite_org + ' --satellite_key ' + \
                   self.settings.satellite_activation_key
             if self.settings.pull_containers_from_satellite is True:
-                cmd += " --containers_prefix " + self.settings.containers_prefix
+                cmd += " --containers_prefix "+self.settings.containers_prefix
         else:
             cmd = '~/pilot/install-director.sh --dns ' + \
                   self.settings.name_server + \
@@ -337,6 +337,9 @@ class Director(InfraHost):
                                  "error: {}, stdout: {}".format(exit_status,
                                                                 stderr,
                                                                 stdout))
+        # Turning LLDP off before introspection
+        lldp_off_cmd = "sudo sed -i 's/ipa-collect-lldp=1/ipa-collect-lldp=0/g' /httpboot/inspector.ipxe"
+        self.run(lldp_off_cmd)
 
         introspection_cmd = self.source_stackrc + "~/pilot/introspect_nodes.py"
         if setts.use_in_band_introspection is True:
@@ -643,7 +646,8 @@ class Director(InfraHost):
 
             elif line.startswith(rbd_cinder_backend_param):
                 value = str(self.settings.enable_rbd_backend).lower()
-                tmp_file.write("{} {}\n".format(rbd_cinder_backend_param, value))
+                tmp_file.write("{} {}\n".format(
+                    rbd_cinder_backend_param, value))
 
             elif line.startswith(ceph_pools):
                 pool_str = line[len(ceph_pools):]
@@ -839,20 +843,21 @@ class Director(InfraHost):
         overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
 
         cmds = ['sed -i "s|<unity_san_ip>|' +
-            self.settings.unity_san_ip + '|" ' + dell_unity_cinder_yaml,
-            'sed -i "s|<unity_san_login>|' +
-            self.settings.unity_san_login + '|" ' + dell_unity_cinder_yaml,
-            'sed -i "s|<unity_san_password>|' +
-            self.settings.unity_san_password + '|" ' + dell_unity_cinder_yaml,
-            'sed -i "s|<unity_storage_protocol>|' +
-            self.settings.unity_storage_protocol + '|" ' +
-            dell_unity_cinder_yaml,
-            'sed -i "s|<unity_io_ports>|' +
-            self.settings.unity_io_ports + '|" ' + dell_unity_cinder_yaml,
-            'sed -i "s|<unity_storage_pool_names>|' +
-            self.settings.unity_storage_pool_names + '|" ' +
-            dell_unity_cinder_yaml,
-        ]
+                self.settings.unity_san_ip + '|" ' + dell_unity_cinder_yaml,
+                'sed -i "s|<unity_san_login>|' +
+                self.settings.unity_san_login + '|" ' + dell_unity_cinder_yaml,
+                'sed -i "s|<unity_san_password>|' +
+                self.settings.unity_san_password + '|" ' +
+                dell_unity_cinder_yaml,
+                'sed -i "s|<unity_storage_protocol>|' +
+                self.settings.unity_storage_protocol + '|" ' +
+                dell_unity_cinder_yaml,
+                'sed -i "s|<unity_io_ports>|' +
+                self.settings.unity_io_ports + '|" ' + dell_unity_cinder_yaml,
+                'sed -i "s|<unity_storage_pool_names>|' +
+                self.settings.unity_storage_pool_names + '|" ' +
+                dell_unity_cinder_yaml,
+                ]
 
         if self.settings.use_satellite:
             pass
@@ -860,7 +865,7 @@ class Director(InfraHost):
         else:
 
             cinder_container = "/dellemc/openstack-cinder-volume-dellemc:" + \
-            self.settings.cinder_unity_container_version
+                self.settings.cinder_unity_container_version
             remote_registry = "registry.connect.redhat.com"
             remote_url = remote_registry + cinder_container
             local_registry = self.provisioning_ip + ":8787"
@@ -896,33 +901,33 @@ class Director(InfraHost):
         overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
 
         cmds = ['sed -i "s|<manila_unity_driver_handles_share_servers>|' +
-            self.settings.manila_unity_driver_handles_share_servers +
-            '|" ' + unity_manila_yaml,
-            'sed -i "s|<manila_unity_nas_login>|' +
-            self.settings.manila_unity_nas_login + '|" ' +
-            unity_manila_yaml,
-            'sed -i "s|<manila_unity_nas_password>|' +
-            self.settings.manila_unity_nas_password + '|" ' +
-            unity_manila_yaml,
-            'sed -i "s|<manila_unity_nas_server>|' +
-            self.settings.manila_unity_nas_server + '|" ' +
-            unity_manila_yaml,
-            'sed -i "s|<manila_unity_server_meta_pool>|' +
-            self.settings.manila_unity_server_meta_pool + '|" ' +
-            unity_manila_yaml,
-            'sed -i "s|<manila_unity_share_data_pools>|' +
-            self.settings.manila_unity_share_data_pools + '|" ' +
-            unity_manila_yaml,
-            'sed -i "s|<manila_unity_ethernet_ports>|' +
-            self.settings.manila_unity_ethernet_ports + '|" ' +
-            unity_manila_yaml,
-            'sed -i "s|<manila_unity_ssl_cert_verify>|' +
-            self.settings.manila_unity_ssl_cert_verify + '|" ' +
-            unity_manila_yaml,
-            'sed -i "s|<manila_unity_ssl_cert_path>|' +
-            self.settings.manila_unity_ssl_cert_path + '|" ' +
-            unity_manila_yaml,
-        ]
+                self.settings.manila_unity_driver_handles_share_servers +
+                '|" ' + unity_manila_yaml,
+                'sed -i "s|<manila_unity_nas_login>|' +
+                self.settings.manila_unity_nas_login + '|" ' +
+                unity_manila_yaml,
+                'sed -i "s|<manila_unity_nas_password>|' +
+                self.settings.manila_unity_nas_password + '|" ' +
+                unity_manila_yaml,
+                'sed -i "s|<manila_unity_nas_server>|' +
+                self.settings.manila_unity_nas_server + '|" ' +
+                unity_manila_yaml,
+                'sed -i "s|<manila_unity_server_meta_pool>|' +
+                self.settings.manila_unity_server_meta_pool + '|" ' +
+                unity_manila_yaml,
+                'sed -i "s|<manila_unity_share_data_pools>|' +
+                self.settings.manila_unity_share_data_pools + '|" ' +
+                unity_manila_yaml,
+                'sed -i "s|<manila_unity_ethernet_ports>|' +
+                self.settings.manila_unity_ethernet_ports + '|" ' +
+                unity_manila_yaml,
+                'sed -i "s|<manila_unity_ssl_cert_verify>|' +
+                self.settings.manila_unity_ssl_cert_verify + '|" ' +
+                unity_manila_yaml,
+                'sed -i "s|<manila_unity_ssl_cert_path>|' +
+                self.settings.manila_unity_ssl_cert_path + '|" ' +
+                unity_manila_yaml,
+                ]
 
         if self.settings.use_satellite:
             manila_container = "openstack-manila-share-dellemc" + \
@@ -931,7 +936,7 @@ class Director(InfraHost):
                 ":5000/" + self.settings.containers_prefix
             local_url = remote_registry + manila_container
             cmds.append('sed -i "50i \  DockerManilaShareImage: ' + local_url +
-            '" ' + overcloud_images_file)
+                        '" ' + overcloud_images_file)
 
         else:
             manila_container = "/dellemc/openstack-manila-share-dellemc:" + \
@@ -1256,30 +1261,20 @@ class Director(InfraHost):
             cmds.append('sed -i -r \'s/(^\s*' + setting_name +    # noqa: W605
                         ':\s*).*/\\1' + setting_value + '/\' ' + remote_file)
 
-        # if smart NICs are used then use smart configuration for contoller and compute nodes
-        if self.settings.enable_smart_nic == True:
-            cmds.append('sed -i s/controller.yaml/controller_smart.yaml/' + remote_file)
-            cmds.append('sed -i s/dellcompute_sriov.yaml/dellcompute_sriov_smart.yaml/' + remote_file)
-
         # Execute the commands
         for cmd in cmds:
             self.run(cmd)
 
     def setup_sriov_nic_configuration(self):
         logger.debug("setting SR-IOV environment")
-        # Get seetings from .ini file
+        # Get settings from .ini file
         ini_nics_settings = self.settings.get_curated_nics_settings()
 
         cmds = []
-        sriov_conf = {}
         env_file = os.path.join(self.templates_dir, "neutron-sriov.yaml")
 
         # Get and sort the SR-IOV interfaces that user provided
-        for int_name, int_value in ini_nics_settings.iteritems():
-            if int_name.find('Sriov') != -1:
-                sriov_conf.update({int_name: int_value})
-        sriov_interfaces = [x[1] for x in sorted(sriov_conf.items())]
-
+        sriov_interfaces = self.get_sriov_compute_interfaces()
         interfaces = "'" + ",".join(sriov_interfaces) + "'"
 
         # Build up the sed command to perform variable substitution
@@ -1289,34 +1284,27 @@ class Director(InfraHost):
         sriov_vfs_setting = []
         sriov_map_setting = []
         sriov_pci_passthrough = []
-        physical_network = "physint"
-        physical_network1 = "tenant1"
-        physical_network2 = "tenant2"
-        check = 1
+        physical_network = ["physint", "physint1", "physint2", "physint3"]
+        check = 0
         for interface in sriov_interfaces:
             devname = interface
-            if self.settings.enable_smart_nic == True:
-                if check == 1:
-                    mapping = physical_network1 + ':' + interface
-                    nova_pci = '{devname: ' + \
-                               '"' + interface + '",' + \
-                               'physical_network: ' + \
-                               '"' + physical_network1 + '"}'
-                elif check == 2:
-                    mapping = physical_network2 + ':' + interface
-                    nova_pci = '{devname: ' + \
-                               '"' + interface + '",' + \
-                               'physical_network: ' + \
-                               '"' + physical_network1 + '"}'
-            else:
-                mapping = physical_network + ':' + interface
+            if (self.settings.enable_smart_nic is True):
+                mapping = physical_network[check] + ':' + interface
                 nova_pci = '{devname: ' + \
                            '"' + interface + '",' + \
                            'physical_network: ' + \
-                           '"' + physical_network + '"}'                
-            
+                           '"' + physical_network[check] + '"}'
+                check = check + 1
+
+            else:
+                mapping = physical_network[0] + ':' + interface
+                nova_pci = '{devname: ' + \
+                           '"' + interface + '",' + \
+                           'physical_network: ' + \
+                           '"' + physical_network[0] + '"}'
+
             sriov_map_setting.append(mapping)
-        
+
             sriov_pci_passthrough.append(nova_pci)
 
             interface = interface + ':' + \
@@ -1327,15 +1315,22 @@ class Director(InfraHost):
         sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"
         sriov_pci_passthrough = "[" + ",".join(sriov_pci_passthrough) + "]"
 
-        cmds.append('sed -i "s|NeutronSriovNumVFs:.*|NeutronSriovNumVFs: ' +
-                    sriov_vfs_setting + '|" ' + env_file)
+        if self.settings.enable_smart_nic is True:
+            cmds.append('sed -i "s|NeutronSriovNumVFs:.*|' +
+                        'NeutronSriovNumVFs: ' +
+                        sriov_vfs_setting + ':switchdev|" ' + env_file)
+        else:
+            cmds.append('sed -i "s|NeutronSriovNumVFs:.*|' +
+                        'NeutronSriovNumVFs: ' +
+                        sriov_vfs_setting + '|" ' + env_file)
         cmds.append('sed -i "s|NeutronPhysicalDevMappings:.*|' +
                     'NeutronPhysicalDevMappings: ' +
                     sriov_map_setting + '|" ' + env_file)
-        cmds.append('sed -i "s|NovaPCIPassthrough:.*|NovaPCIPassthrough: ' +
+        cmds.append('sed -i "s|NovaPCIPassthrough:.*|' +
+                    'NovaPCIPassthrough: ' +
                     sriov_pci_passthrough + '|" ' + env_file)
 
-        # Execute the command related to dpdk configuration
+        # Execute the command related to sriov configuration
         for cmd in cmds:
             self.run(cmd)
 
@@ -1391,6 +1386,10 @@ class Director(InfraHost):
             cmd += " --ovs_dpdk"
         if self.settings.enable_sriov is True:
             cmd += " --sriov"
+        if self.settings.enable_smart_nic is True:
+            cmd += " --hw_offload"
+            cmd += " --sriov_interfaces " + \
+                str(len(self.get_sriov_compute_interfaces()))
         if self.settings.dvr_enable is True:
             cmd += " --dvr_enable"
         if self.settings.barbican_enable is True:
@@ -1679,27 +1678,27 @@ class Director(InfraHost):
         setts = self.settings
         external_sub_guid = self.get_sanity_subnet()
         if not external_sub_guid:
-            err = ("Could not find public network, please run the "
-                   + "sanity test to create the appropriate networks "
-                   + "and re-run this script with the "
-                   + "--tempest_config_only flag.")
+            err = ("Could not find public network, please run the " +
+                   "sanity test to create the appropriate networks " +
+                   "and re-run this script with the " +
+                   "--tempest_config_only flag.")
             raise AssertionError(err)
 
         self._backup_tempest_conf()
 
         cmd_route = ("source ~/" + setts.overcloud_name + "rc;"
-                     "sudo ip route add " + setts.floating_ip_network
-                     + " dev eth0")
+                     "sudo ip route add " + setts.floating_ip_network +
+                     " dev eth0")
         cmd_config = ("source ~/" + setts.overcloud_name + "rc;"
-                      "if [ ! -d " + self.tempest_directory
-                      + " -o -z '$(ls -A " + self.tempest_directory
-                      + " 2>/dev/null)' ]; then tempest init "
-                      + self.tempest_directory + ";fi;cd "
-                      + self.tempest_directory
-                      + ";discover-tempest-config --deployer-input "
+                      "if [ ! -d " + self.tempest_directory +
+                      " -o -z '$(ls -A " + self.tempest_directory +
+                      " 2>/dev/null)' ]; then tempest init " +
+                      self.tempest_directory + ";fi;cd " +
+                      self.tempest_directory +
+                      ";discover-tempest-config --deployer-input "
                       "~/tempest-deployer-input.conf --debug --create "
-                      "--network-id " + external_sub_guid
-                      + " object-storage-feature-enabled.discoverability "
+                      "--network-id " + external_sub_guid +
+                      " object-storage-feature-enabled.discoverability "
                       "False object-storage-feature-enabled.discoverable_apis"
                       " container_quotas")
         cmd_roles = ("sed -i 's|tempest_roles =.*|tempest_roles "
@@ -1716,22 +1715,22 @@ class Director(InfraHost):
             self.configure_tempest()
 
         setts = self.settings
-        cmd = ("source ~/" + setts.overcloud_name + "rc;cd "
-               + self.tempest_directory
-               + ";tempest cleanup --init-saved-state")
+        cmd = ("source ~/" + setts.overcloud_name + "rc;cd " +
+               self.tempest_directory +
+               ";tempest cleanup --init-saved-state")
 
         self.run_tty(cmd)
 
         if setts.tempest_smoke_only is True:
             logger.info("Running tempest - smoke tests only.")
-            cmd = ("source ~/" + setts.overcloud_name + "rc;cd "
-                   + self.tempest_directory
-                   + ";ostestr '.*smoke' --concurrency=4")
+            cmd = ("source ~/" + setts.overcloud_name + "rc;cd " +
+                   self.tempest_directory +
+                   ";ostestr '.*smoke' --concurrency=4")
         else:
             logger.info("Running tempest - full tempest run.")
-            cmd = ("source ~/" + setts.overcloud_name
-                   + "rc;cd " + self.tempest_directory
-                   + ";ostestr --concurrency=4")
+            cmd = ("source ~/" + setts.overcloud_name +
+                   "rc;cd " + self.tempest_directory +
+                   ";ostestr --concurrency=4")
 
         self.run_tty(cmd)
         tempest_log_file = (self.tempest_directory + "/tempest.log")
@@ -1860,10 +1859,10 @@ class Director(InfraHost):
         else:
             nic_driver = 'vfio-pci'
         cmds.append(
-                    'sed -i "s|OvsDpdkDriverType:.*|OvsDpdkDriverType: \\"' +
-                    nic_driver +
-                    '\\" |" ' +
-                    neutron_ovs_dpdk_yaml)
+            'sed -i "s|OvsDpdkDriverType:.*|OvsDpdkDriverType: \\"' +
+            nic_driver +
+            '\\" |" ' +
+            neutron_ovs_dpdk_yaml)
         for cmd in cmds:
             status = os.system(cmd)
             if status != 0:
@@ -1872,3 +1871,15 @@ class Director(InfraHost):
                     " with error code {}".format(
                         cmd, status))
             logger.debug("cmd: {}".format(cmd))
+
+    def get_sriov_compute_interfaces(self):
+        # Get settings from .ini file
+        ini_nics_settings = self.settings.get_curated_nics_settings()
+        sriov_conf = {}
+
+        # Get and sort the SR-IOV interfaces that user provided
+        for int_name, int_value in ini_nics_settings.iteritems():
+            if int_name.find('ComputeSriov') != -1:
+                sriov_conf.update({int_name: int_value})
+        sriov_interfaces = [x[1] for x in sorted(sriov_conf.items())]
+        return sriov_interfaces
