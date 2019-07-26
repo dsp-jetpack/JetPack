@@ -101,6 +101,14 @@ parameters:
     default: p3p1
     description: SRIOV Interface 2 name
     type: string
+  ComputeSriovInterface3:
+    default: p2p2
+    description: SRIOV Interface 3 name
+    type: string
+  ComputeSriovInterface4:
+    default: p3p2
+    description: SRIOV Interface 4 name
+    type: string
   ExternalNetworkMTU: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
@@ -255,10 +263,32 @@ resources:
                     get_param: ComputeSriovInterface2
                   mtu:
                     get_param: DefaultBondMTU
-                  use_dhcp: false                                          
+                  use_dhcp: false                        
+              - type: ovs_bridge
+                name: mlx_br3
+                mtu:
+                  get_param: DefaultBondMTU
+                members:
+                - type: interface
+                  name:
+                    get_param: ComputeSriovInterface3
+                  mtu:
+                    get_param: DefaultBondMTU
+                  use_dhcp: false
+              - type: ovs_bridge
+                name: mlx_br4
+                mtu:
+                  get_param: DefaultBondMTU
+                members:
+                - type: interface
+                  name:
+                    get_param: ComputeSriovInterface4
+                  mtu:
+                    get_param: DefaultBondMTU
+                  use_dhcp: false                   
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.
     value:
       get_resource: OsNetConfigImpl
-      
+
