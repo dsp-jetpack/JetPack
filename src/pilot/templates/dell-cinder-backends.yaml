@@ -13,34 +13,7 @@
 # limitations under the License.
 
 # A Heat environment file which can be used to enable 
-# Cinder Dell Storage Center backend
+# Cinder Storage 
 
 parameter_defaults:
-  ExtraConfig:
-    cinder::config::cinder_config:
-      #DELLSC
-      dellsc/volume_backend_name:
-        value: dellsc
-      dellsc/volume_driver:
-        value: cinder.volume.drivers.dell.dell_storagecenter_iscsi.DellStorageCenterISCSIDriver
-      dellsc/san_ip:
-        value: <dellsc_san_ip>
-      dellsc/san_login:
-        value: <dellsc_san_login>
-      dellsc/san_password:
-        value: <dellsc_san_password>
-      dellsc/iscsi_ip_address:
-        value: <dellsc_iscsi_ip_address>
-      dellsc/iscsi_port:
-        value: <dellsc_iscsi_port>
-      dellsc/dell_sc_ssn:
-        value: <dellsc_sc_ssn>
-      dellsc/dell_sc_api_port:
-        value: <dellsc_sc_api_port>
-      dellsc/dell_sc_server_folder:
-        value: dellsc_server_folder
-      dellsc/dell_sc_volume_folder:
-        value: dellsc_volume_folder
-      #DELLSC-END
-    cinder_user_enabled_backends: ['dellsc']
   CinderEnableRbdBackend: <enable_rbd_backend>

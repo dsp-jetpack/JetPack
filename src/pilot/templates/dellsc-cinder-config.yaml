@@ -1,0 +1,23 @@
+# Heat environment file which can be used to enable a
+# Cinder Dell EMC Storage Center ISCSI backend, configured via puppet
+resource_registry:
+  OS::TripleO::Services::CinderBackendDellSc: ./overcloud/puppet/services/cinder-backend-dellsc.yaml
+
+parameter_defaults:
+  CinderEnableDellScBackend: <enable_dellsc_backend>
+  CinderDellScBackendName: 'tripleo_dellsc'
+  CinderDellScSanIp: <dellsc_san_ip_address>
+  CinderDellScSanLogin: <dellsc_san_login>
+  CinderDellScSanPassword: <dellsc_san_password>
+  CinderDellScSsn: <dellsc_ssn>
+  CinderDellScIscsiIpAddress: <dellsc_iscsi_ip_address>
+  CinderDellScIscsiPort: <dellsc_iscsi_port>
+  CinderDellScApiPort: <dellsc_api_port>
+  CinderDellScServerFolder: <dellsc_server_folder>
+  CinderDellScVolumeFolder: <dellsc_volume_folder>
+  CinderDellScSecondarySanIp: <dellsc_second_san_ip>
+  CinderDellScSecondarySanLogin: <dellsc_second_san_login>
+  CinderDellScSecondarySanPassword: <dellsc_second_san_password>
+  CinderDellScSecondaryScApiPort: <dellsc_second_api_port>
+  CinderDellScExcludedDomainIp: <dellsc_excluded_domainip>
+  CinderDellScMultipathXfer: <dellsc_multipath_xref>
