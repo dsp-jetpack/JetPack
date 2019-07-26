@@ -374,7 +374,7 @@ class Director(InfraHost):
     def assign_node_roles(self):
         logger.debug("Assigning roles to nodes")
         osd_yaml = os.path.join(self.templates_dir, "ceph-osd-config.yaml")
-        mklvm_sh = os.path.join(self.templates_dir, "mklvm.sh.orig")
+        mklvm_sh = os.path.join(self.templates_dir, "mklvm.sh")
         self.run("/bin/cp -rf " + osd_yaml + ".orig " + osd_yaml)
         self.run("/bin/cp -rf " + mklvm_sh + ".orig " + mklvm_sh)
         common_path = os.path.join(os.path.expanduser(
@@ -413,6 +413,8 @@ class Director(InfraHost):
             logger.info("assign_role failed on {} out of {} nodes".format(
                 failed_threads, len(threads)))
             sys.exit(1)
+        
+        self.run("sudo cp " + self.templates_dir + "/mklvm.sh /var/www/html/mklvm.sh")
 
     def update_sshd_conf(self):
         # Update sshd_config to allow for more than 10 ssh sessions
