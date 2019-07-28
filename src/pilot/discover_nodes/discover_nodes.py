@@ -456,7 +456,15 @@ def is_idrac(drac_client):
     requests_logger.disabled = True
 
     try:
-        drac_client.client.is_idrac_ready()
+        if drac_client.is_lifecycle_in_recovery():
+            settings = {'Lifecycle Controller State': 'Enabled'}
+            drac_client.set_lifecycle_settings(settings)
+
+            LOG.info("Waiting for lifecycle controller to get out of "
+                     "recovery mode")
+            drac_client.commit_pending_lifecycle_changes(reboot=False)
+        else:
+            LOG.info("IP address is an iDRAC and the iDRAC is ready")
     except dracclient.exceptions.WSManInvalidResponse as e:
         # Most likely the user credentials are unauthorized.
 
