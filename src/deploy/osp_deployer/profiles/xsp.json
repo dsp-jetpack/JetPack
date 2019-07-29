@@ -41,7 +41,6 @@
 
         "smart_nic": {
                 "valid_values": [
-                   "true",
                    "false"
                 ]
              }, 

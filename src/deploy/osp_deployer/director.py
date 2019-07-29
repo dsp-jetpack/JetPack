@@ -354,7 +354,7 @@ class Director(InfraHost):
                                                                 stderr,
                                                                 stdout))
         # Turning LLDP off before introspection
-        lldp_off_cmd = "sudo sed -i 's/ipa-collect-lldp=1/ipa-collect-lldp=0/g' /httpboot/inspector.ipxe"
+        lldp_off_cmd = "sudo sed -i 's/ipa-collect-lldp=1/ipa-collect-lldp=0/g' /httpboot/inspector.ipxe"  # noqa
         self.run(lldp_off_cmd)
 
         introspection_cmd = self.source_stackrc + "~/pilot/introspect_nodes.py"
@@ -892,7 +892,6 @@ class Director(InfraHost):
             self.settings.unity_storage_pool_names + '|" ' +
             dell_unity_cinder_yaml,
         ]
-        
         if self.settings.use_satellite:
             pass
 
@@ -1341,22 +1340,19 @@ class Director(InfraHost):
 
             sriov_pci_passthrough.append(nova_pci)
 
-            interface = interface + ':' + \
-                                    self.settings.sriov_vf_count
+            if (self.settings.enable_smart_nic is True):
+                interface = interface + ':' + \
+                                        self.settings.sriov_vf_count + \
+                                        ':switchdev'
             sriov_vfs_setting.append(interface)
 
         sriov_vfs_setting = "'" + ",".join(sriov_vfs_setting) + "'"
         sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"
         sriov_pci_passthrough = "[" + ",".join(sriov_pci_passthrough) + "]"
 
-        if self.settings.enable_smart_nic is True:
-            cmds.append('sed -i "s|NeutronSriovNumVFs:.*|' +
-                        'NeutronSriovNumVFs: ' +
-                        sriov_vfs_setting + ':switchdev|" ' + env_file)
-        else:
-            cmds.append('sed -i "s|NeutronSriovNumVFs:.*|' +
-                        'NeutronSriovNumVFs: ' +
-                        sriov_vfs_setting + '|" ' + env_file)
+        cmds.append('sed -i "s|NeutronSriovNumVFs:.*|' +
+                    'NeutronSriovNumVFs: ' +
+                    sriov_vfs_setting + '|" ' + env_file)
         cmds.append('sed -i "s|NeutronPhysicalDevMappings:.*|' +
                     'NeutronPhysicalDevMappings: ' +
                     sriov_map_setting + '|" ' + env_file)
