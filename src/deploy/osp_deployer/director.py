@@ -161,6 +161,21 @@ class Director(InfraHost):
             dest_file = self.home_dir + yaml
             self.upload_file(source_file, dest_file)
 
+            unity_lock = "/unity_container_lock.ini"
+            unity_lock_file = self.settings.lock_files_dir + unity_lock
+            if self.settings.enable_unity_backend is True:
+                cmd = "grep unity_cinder__container_version " + \
+                      unity_lock_file + \
+                      " | awk -F '=' '{print $2}'"
+                self.settings.cinder_unity_container_version = \
+                    self.run_tty(cmd)
+            if self.settings.enable_unity_manila_backend is True:
+                cmd = "grep unity_manila_container_version " + \
+                      unity_lock_file + \
+                      " | awk -F '=' '{print $2}'"
+                self.settings.manila_unity_container_version = \
+                    self.run_tty(cmd)
+
     def install_director(self):
         logger.info("Installing the undercloud")
         if self.settings.use_satellite:
@@ -170,7 +185,8 @@ class Director(InfraHost):
                   self.settings.satellite_org + ' --satellite_key ' + \
                   self.settings.satellite_activation_key
             if self.settings.pull_containers_from_satellite is True:
-                cmd += " --containers_prefix "+self.settings.containers_prefix
+                cmd += " --containers_prefix " + \
+                       self.settings.containers_prefix
         else:
             cmd = '~/pilot/install-director.sh --dns ' + \
                   self.settings.name_server + \
@@ -646,9 +662,8 @@ class Director(InfraHost):
 
             elif line.startswith(rbd_cinder_backend_param):
                 value = str(self.settings.enable_rbd_backend).lower()
-                tmp_file.write("{} {}\n".format(
-                    rbd_cinder_backend_param, value))
-
+                tmp_file.write("{} {}\n".
+                               format(rbd_cinder_backend_param, value))
             elif line.startswith(ceph_pools):
                 pool_str = line[len(ceph_pools):]
                 pools = json.loads(pool_str)
@@ -756,6 +771,14 @@ class Director(InfraHost):
 
         self.setup_dellsc(dell_storage_yaml)
 
+        # Dell Sc file
+        dellsc_cinder_yaml = self.templates_dir + "/dellsc-cinder-config.yaml"
+        self.upload_file(self.settings.dellsc_cinder_yaml,
+                         dellsc_cinder_yaml)
+        self.run_tty("cp " + dellsc_cinder_yaml +
+                     " " + dellsc_cinder_yaml + ".bak")
+        self.setup_dellsc(dellsc_cinder_yaml)
+
         # Unity is in a separate yaml file
         dell_unity_cinder_yaml = self.templates_dir + \
             "/dellemc-unity-cinder-backend.yaml"
@@ -771,18 +794,13 @@ class Director(InfraHost):
         enabled_backends = "["
 
         if self.settings.enable_dellsc_backend is True:
-            enabled_backends += "'dellsc'"
+            enabled_backends += "'tripleo_dellsc'"
 
         if self.settings.enable_unity_backend is True:
             enabled_backends += ",'tripleo_dellemc_unity'"
 
         enabled_backends += "]"
 
-        cmd = 'sed -i ' + \
-            '"s|cinder_user_enabled_backends:.*|' + \
-            'cinder_user_enabled_backends: ' + \
-            enabled_backends + '|" ' + dell_storage_yaml
-        self.run_tty(cmd)
         cmd = 'sed -i "s|<enable_rbd_backend>|' + \
             str(self.settings.enable_rbd_backend) + \
             '|" ' + dell_storage_yaml
@@ -801,7 +819,7 @@ class Director(InfraHost):
 
         self.setup_unity_manila(unity_manila_yaml)
 
-    def setup_dellsc(self, dell_storage_yaml):
+    def setup_dellsc(self, dellsc_cinder_yaml):
 
         if self.settings.enable_dellsc_backend is False:
             logger.debug("not setting up dellsc backend")
@@ -810,24 +828,40 @@ class Director(InfraHost):
         logger.debug("configuring dell sc backend")
 
         cmds = [
+            'sed -i "s|<enable_dellsc_backend>|' +
+            'True' + '|" ' + dellsc_cinder_yaml,
             'sed -i "s|<dellsc_san_ip>|' +
-            self.settings.dellsc_san_ip + '|" ' + dell_storage_yaml,
+            self.settings.dellsc_san_ip + '|" ' + dellsc_cinder_yaml,
             'sed -i "s|<dellsc_san_login>|' +
-            self.settings.dellsc_san_login + '|" ' + dell_storage_yaml,
+            self.settings.dellsc_san_login + '|" ' + dellsc_cinder_yaml,
             'sed -i "s|<dellsc_san_password>|' +
-            self.settings.dellsc_san_password + '|" ' + dell_storage_yaml,
-            'sed -i "s|<dellsc_sc_ssn>|' +
-            self.settings.dellsc_ssn + '|" ' + dell_storage_yaml,
+            self.settings.dellsc_san_password + '|" ' + dellsc_cinder_yaml,
+            'sed -i "s|<dellsc_ssn>|' +
+            self.settings.dellsc_ssn + '|" ' + dellsc_cinder_yaml,
             'sed -i "s|<dellsc_iscsi_ip_address>|' +
-            self.settings.dellsc_iscsi_ip_address + '|" ' + dell_storage_yaml,
+            self.settings.dellsc_iscsi_ip_address + '|" ' + dellsc_cinder_yaml,
             'sed -i "s|<dellsc_iscsi_port>|' +
-            self.settings.dellsc_iscsi_port + '|" ' + dell_storage_yaml,
-            'sed -i "s|<dellsc_sc_api_port>|' +
-            self.settings.dellsc_api_port + '|" ' + dell_storage_yaml,
-            'sed -i "s|dellsc_server_folder|' +
-            self.settings.dellsc_server_folder + '|" ' + dell_storage_yaml,
-            'sed -i "s|dellsc_volume_folder|' +
-            self.settings.dellsc_volume_folder + '|" ' + dell_storage_yaml,
+            self.settings.dellsc_iscsi_port + '|" ' + dellsc_cinder_yaml,
+            'sed -i "s|<dellsc_api_port>|' +
+            self.settings.dellsc_api_port + '|" ' + dellsc_cinder_yaml,
+            'sed -i "s|<dellsc_server_folder>|' +
+            self.settings.dellsc_server_folder + '|" ' + dellsc_cinder_yaml,
+            'sed -i "s|<dellsc_volume_folder>|' +
+            self.settings.dellsc_volume_folder + '|" ' + dellsc_cinder_yaml,
+            'sed -i "s|<dellsc_second_san_ip>|' +
+            self.settings.dellsc_second_san_ip + '|" ' + dellsc_cinder_yaml,
+            'sed -i "s|<dellsc_second_san_login>|' +
+            self.settings.dellsc_second_san_login + '|" ' + dellsc_cinder_yaml,
+            'sed -i "s|<dellsc_second_san_password>|' +
+            self.settings.dellsc_second_san_password + '|" ' +
+            dellsc_cinder_yaml,
+            'sed -i "s|<dellsc_second_api_port>|' +
+            self.settings.dellsc_second_api_port + '|" ' + dellsc_cinder_yaml,
+            'sed -i "s|<dellsc_excluded_domain_ip>|' +
+            self.settings.dellsc_excluded_domain_ip + '|" ' +
+            dellsc_cinder_yaml,
+            'sed -i "s|<dellsc_multipath_xref>|' +
+            self.settings.dellsc_multipath_xref + '|" ' + dellsc_cinder_yaml,
         ]
         for cmd in cmds:
             self.run_tty(cmd)
@@ -842,23 +876,23 @@ class Director(InfraHost):
 
         overcloud_images_file = self.home_dir + "/overcloud_images.yaml"
 
-        cmds = ['sed -i "s|<unity_san_ip>|' +
-                self.settings.unity_san_ip + '|" ' + dell_unity_cinder_yaml,
-                'sed -i "s|<unity_san_login>|' +
-                self.settings.unity_san_login + '|" ' + dell_unity_cinder_yaml,
-                'sed -i "s|<unity_san_password>|' +
-                self.settings.unity_san_password + '|" ' +
-                dell_unity_cinder_yaml,
-                'sed -i "s|<unity_storage_protocol>|' +
-                self.settings.unity_storage_protocol + '|" ' +
-                dell_unity_cinder_yaml,
-                'sed -i "s|<unity_io_ports>|' +
-                self.settings.unity_io_ports + '|" ' + dell_unity_cinder_yaml,
-                'sed -i "s|<unity_storage_pool_names>|' +
-                self.settings.unity_storage_pool_names + '|" ' +
-                dell_unity_cinder_yaml,
-                ]
-
+        cmds = [
+            'sed -i "s|<unity_san_ip>|' +
+            self.settings.unity_san_ip + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_san_login>|' +
+            self.settings.unity_san_login + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_san_password>|' +
+            self.settings.unity_san_password + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_storage_protocol>|' +
+            self.settings.unity_storage_protocol + '|" ' +
+            dell_unity_cinder_yaml,
+            'sed -i "s|<unity_io_ports>|' +
+            self.settings.unity_io_ports + '|" ' + dell_unity_cinder_yaml,
+            'sed -i "s|<unity_storage_pool_names>|' +
+            self.settings.unity_storage_pool_names + '|" ' +
+            dell_unity_cinder_yaml,
+        ]
+        
         if self.settings.use_satellite:
             pass
 
@@ -1686,20 +1720,21 @@ class Director(InfraHost):
 
         self._backup_tempest_conf()
 
-        cmd_route = ("source ~/" + setts.overcloud_name + "rc;"
+        cmd_route = ("source ~/" + setts.overcloud_name + "rc;" +
                      "sudo ip route add " + setts.floating_ip_network +
                      " dev eth0")
-        cmd_config = ("source ~/" + setts.overcloud_name + "rc;"
+        cmd_config = ("source ~/" + setts.overcloud_name + "rc;" +
+
                       "if [ ! -d " + self.tempest_directory +
                       " -o -z '$(ls -A " + self.tempest_directory +
                       " 2>/dev/null)' ]; then tempest init " +
                       self.tempest_directory + ";fi;cd " +
                       self.tempest_directory +
-                      ";discover-tempest-config --deployer-input "
-                      "~/tempest-deployer-input.conf --debug --create "
+                      ";discover-tempest-config --deployer-input " +
+                      "~/tempest-deployer-input.conf --debug --create " +
                       "--network-id " + external_sub_guid +
-                      " object-storage-feature-enabled.discoverability "
-                      "False object-storage-feature-enabled.discoverable_apis"
+                      " object-storage-feature-enabled.discoverability False" +
+                      " object-storage-feature-enabled.discoverable_apis" +
                       " container_quotas")
         cmd_roles = ("sed -i 's|tempest_roles =.*|tempest_roles "
                      "= _member_,Member|' " + self.tempest_conf)

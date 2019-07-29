@@ -364,6 +364,12 @@ class Settings():
                 'dellsc_server_folder']
             self.dellsc_volume_folder = backend_settings[
                 'dellsc_volume_folder']
+            self.dellsc_second_san_ip = backend_settings['dellsc_second_san_ip']
+            self.dellsc_second_san_login = backend_settings['dellsc_second_san_login']
+            self.dellsc_second_san_password = backend_settings['dellsc_second_san_password']
+            self.dellsc_second_api_port = backend_settings['dellsc_second_api_port']
+            self.dellsc_excluded_domain_ip = backend_settings['dellsc_excluded_domain_ip']
+            self.dellsc_multipath_xref = backend_settings['dellsc_multipath_xref']
         else:
             self.enable_dellsc_backend = False
 
@@ -535,6 +541,8 @@ class Settings():
             '/pilot/templates/network-environment.yaml'
         self.dell_storage_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-cinder-backends.yaml'
+        self.dellsc_cinder_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/dellsc-cinder-config.yaml'
         self.dell_unity_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellemc-unity-cinder-backend.yaml'
         self.unity_manila_yaml = self.foreman_configuration_scripts + \
