@@ -374,6 +374,14 @@ def main():
                             action='store_true',
                             default=False,
                             help="Enable SR-IOV")
+        parser.add_argument('--hw_offload',
+                            action='store_true',
+                            default=False,
+                            help="Enable SR-IOV Offload")
+        parser.add_argument('--sriov_interfaces',
+                            dest="sriov_interfaces",
+                            default=False,
+                            help="SR-IOV interfaces count")
         parser.add_argument('--node_placement',
                             action='store_true',
                             default=False,
@@ -453,6 +461,8 @@ def main():
             args.hostos_cpu_count,
             args.ovs_dpdk,
             args.sriov,
+            args.hw_offload,
+            args.sriov_interfaces,
             nic_env_file,
             args.mariadb_max_connections,
             args.innodb_buffer_pool_size,
@@ -546,6 +556,8 @@ def main():
 
         if args.sriov:
             env_opts += " -e ~/pilot/templates/neutron-sriov.yaml"
+            if args.hw_offload:
+                env_opts += " -e ~/pilot/templates/ovs-hw-offload.yaml"
             if not host_config:
                 env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                             "host-config-and-reboot.yaml"

@@ -593,7 +593,9 @@ class Settings():
 
         # TO enable SRIOV
         self.sriov_enable = dellnfv_settings['sriov_enable']
+        self.smart_nic = dellnfv_settings['smart_nic']
         self.enable_sriov = False
+        self.enable_smart_nic = False
         if self.sriov_enable.lower() == 'false':
             pass
         else:
@@ -604,6 +606,12 @@ class Settings():
             logger.info("SR-IOV is enabled.")
         else:
             logger.info("SR-IOV is disabled.")
+
+        if self.smart_nic.lower() == 'true':
+            self.enable_smart_nic = True
+            logger.info("Smart NIC for SR-IOV Hardware Offload is enabled.")
+        else:
+            logger.info("Smart NIC for SR-IOV Hardware Offload is disabled.")
 
         self.controller_nodes = []
         self.compute_nodes = []
