@@ -42,6 +42,12 @@
                    "false"
                 ]
              },
+            "smart_nic": {
+                "valid_values": [
+                   "true",
+                   "false"
+                ]
+             },
             "sriov_vf_count": {
                 "validate": [
                   "should_be_valid_int"
@@ -195,7 +201,13 @@
                   "ovs-dpdk_9_port/nic_environment.yaml",
                   "ovs-dpdk_7_port/nic_environment.yaml",
                   "sriov_9_port/nic_environment.yaml",
+                  "sriov_8_port/nic_environment.yaml",
                   "sriov_7_port/nic_environment.yaml",
+                  "sriov_6_port/nic_environment.yaml",
+                  "sriov_9_port_offload/nic_environment.yaml",
+                  "sriov_8_port_offload/nic_environment.yaml",
+                  "sriov_7_port_offload/nic_environment.yaml",
+                  "sriov_6_port_offload/nic_environment.yaml",
                   "dvr_6_port/nic_environment.yaml",
                   "dvr_7_port/nic_environment.yaml",
                   "ovs-dpdk_sriov_9_port/nic_environment.yaml"
