@@ -199,7 +199,9 @@
                   "4_port/nic_environment.yaml",
                   "5_port/nic_environment.yaml",
                   "ovs-dpdk_9_port/nic_environment.yaml",
+                  "ovs-dpdk_8_port/nic_environment.yaml",
                   "ovs-dpdk_7_port/nic_environment.yaml",
+                  "ovs-dpdk_6_port/nic_environment.yaml",
                   "sriov_9_port/nic_environment.yaml",
                   "sriov_8_port/nic_environment.yaml",
                   "sriov_7_port/nic_environment.yaml",
@@ -210,7 +212,8 @@
                   "sriov_6_port_offload/nic_environment.yaml",
                   "dvr_6_port/nic_environment.yaml",
                   "dvr_7_port/nic_environment.yaml",
-                  "ovs-dpdk_sriov_9_port/nic_environment.yaml"
+                  "ovs-dpdk_sriov_9_port/nic_environment.yaml",
+                  "ovs-dpdk_sriov_8_port/nic_environment.yaml"
                ]
             },
             "ControllerBondInterfaceOptions": "",
