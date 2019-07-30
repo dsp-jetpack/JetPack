@@ -273,8 +273,8 @@ class NfvParameters(object):
                 raise Exception("RAM size is less than 128GB"
                                 "make sure to have all prerequisites")
             # Subtracting
-            # 16384MB = (Host Memory 12GB + Kernel Memory 4GB)
-            memory_count = (memory_count - 16384)
+            # 28672MB = (Host Memory 20GB + Kernel Memory 8GB)
+            memory_count = (memory_count - 28672)
             if hugepage_size == "2MB":
                 hugepage_count = (memory_count / 2)
             if hugepage_size == "1GB":

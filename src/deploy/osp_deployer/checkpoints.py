@@ -46,6 +46,7 @@ class Checkpoints():
         checks.validate_profile()
         checks.verify_dpdk_dependencies()
         checks.verify_sriov_dependencies()
+        checks.verify_hw_offload_dependencies()
 
     @staticmethod
     def verify_subscription_status(public_api_ip, user, password, retries):

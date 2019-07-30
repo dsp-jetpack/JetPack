@@ -74,6 +74,8 @@ class ConfigOvercloud(object):
             hostos_cpu_count,
             ovs_dpdk,
             sriov,
+            hw_offload,
+            sriov_interfaces,
             nic_env_file,
             mariadb_max_connections,
             innodb_buffer_pool_size,
@@ -90,6 +92,7 @@ class ConfigOvercloud(object):
             logger.info("Editing dell environment file")
             file_path = home_dir + '/pilot/templates/dell-environment.yaml'
             dpdk_file = home_dir + '/pilot/templates/neutron-ovs-dpdk.yaml'
+            hw_off_file = home_dir + '/pilot/templates/ovs-hw-offload.yaml'
             cmds = []
             if not os.path.isfile(file_path):
                 raise Exception(
@@ -141,6 +144,63 @@ class ConfigOvercloud(object):
             kernel_args = ''
             if sriov or ovs_dpdk:
                 kernel_args = "iommu=pt intel_iommu=on"
+            if hw_offload:
+                vlan = str(vlan_range).split(':')
+                vlan_start = int(vlan[0])
+                vlan_end = int(vlan[1])
+                vlan_diff = vlan_end - vlan_start
+                if int(sriov_interfaces) == 2:
+                    vlan_a = (vlan_diff / 2) + vlan_start
+                    vlan_b = vlan_a + 1
+
+                    cmds.append(('sed -i "s|NeutronNetworkVLANRanges:.*' +
+                                 '|NeutronNetworkVLANRanges: ' +
+                                 'physint:' + str(vlan_start) +
+                                 ":" + str(vlan_a) +
+                                 ',physint1:' + str(vlan_b) +
+                                 ":" + str(vlan_end) +
+                                 ',physext' +
+                                 '|" ' +
+                                 file_path))
+                    cmds.append(('sed -i "s|NeutronBridgeMappings:.*' +
+                                 '|NeutronBridgeMappings: ' +
+                                 'physint:mlx_br1,' +
+                                 'physint1:mlx_br2,' +
+                                 'physext:br-ex' +
+                                 '|" ' +
+                                 file_path))
+
+                if int(sriov_interfaces) == 4:
+                    vlan_a = (vlan_diff / 4) + vlan_start
+                    vlan_b = vlan_a + 1
+                    vlan_c = (vlan_diff / 4) + vlan_b
+                    vlan_d = vlan_c + 1
+                    vlan_e = (vlan_diff / 4) + vlan_d
+                    vlan_f = vlan_e + 1
+
+                    cmds.append(('sed -i "s|NeutronNetworkVLANRanges:.*' +
+                                 '|NeutronNetworkVLANRanges: ' +
+                                 'physint:' + str(vlan_start) +
+                                 ":" + str(vlan_a) +
+                                 ',physint1:' + str(vlan_b) +
+                                 ":" + str(vlan_c) +
+                                 ',physint2:' + str(vlan_d) +
+                                 ":" + str(vlan_e) +
+                                 ',physint3:' + str(vlan_f) +
+                                 ":" + str(vlan_end) +
+                                 ',physext' +
+                                 '|" ' +
+                                 file_path))
+                    cmds.append(('sed -i "s|NeutronBridgeMappings:.*' +
+                                 '|NeutronBridgeMappings: ' +
+                                 'physint:mlx_br1,' +
+                                 'physint1:mlx_br2,' +
+                                 'physint2:mlx_br3,' +
+                                 'physint3:mlx_br4,' +
+                                 'physext:br-ex' +
+                                 '|" ' +
+                                 file_path))
+
             if enable_hugepage:
                 hpg_num = self.nfv_params.calculate_hugepage_count(
                     hugepage_size)
@@ -196,7 +256,7 @@ class ConfigOvercloud(object):
             # Performance and Optimization
             if innodb_buffer_pool_size != "dynamic":
                 BufferPoolSize = int(innodb_buffer_pool_size.replace(
-                    "G", ""))*1024
+                    "G", "")) * 1024
                 memory_mb = self.nfv_params.get_minimum_memory_size("control")
                 if memory_mb < BufferPoolSize:
                     raise Exception("innodb_buffer_pool_size is greater than"
