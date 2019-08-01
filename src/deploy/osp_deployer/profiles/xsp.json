@@ -224,9 +224,6 @@
                   "valid_values": [
                   "true",
                   "false"
-               ],
-            "validate": [
-                  "should_be_valid_ip"
                ]
         }
        }
