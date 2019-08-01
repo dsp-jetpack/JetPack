@@ -17,18 +17,18 @@
 exec > >(tee $HOME/pilot/install-director.log)
 exec 2>&1
 
-USAGE="$0 --dns <dns_ip> --sm_user <subscription_manager_user> --sm_pwd <subscription_manager_pass> [-- sm_pool <subcription_manager_poolid>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>]"
+USAGE="\nUsing RedHat CDN:$0 --dns <dns_ip> --sm_user <subscription_manager_user> --sm_pwd <subscription_manager_pass> [--sm_pool <subcription_manager_poolid>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>]"
 
 
-
-TEMP=`getopt -o h --long dns:,sm_user:,sm_pwd:,sm_pool:,proxy:,nodes_pwd: -n 'install-director.sh' -- "$@"`
+TEMP=`getopt -o h --long dns:,sm_user:,sm_pwd:,sm_pool:,proxy:,nodes_pwd:,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
 eval set -- "$TEMP"
+
 
 # extract options and their arguments into variables.
 while true ; do
     case "$1" in
         -h|help)
-            echo "$USAGE "
+            echo -e "$USAGE "
             exit 1
             ;;
         --dns)
@@ -39,17 +39,39 @@ while true ; do
                 subscription_manager_pass=$2 ; shift 2 ;;
         --sm_pool)
                 subcription_manager_poolid=$2; shift 2 ;; 
+        --satellite_hostname)
+                satellite_hostname=$2; shift 2;;
+        --satellite_org)
+                satellite_org=$2; shift 2;;
+        --satellite_key)
+                satellite_key=$2; shift 2;;
+        --containers_prefix)
+                containers_prefix=$2; shift 2;;
         --proxy)
                 proxy=$2; shift 2 ;;
         --nodes_pwd)
                 overcloud_nodes_pwd=$2; shift 2 ;;
         --) shift ; break ;;
-        *) echo "$USAGE" ; exit 1 ;;
+        *) echo -e "$USAGE" ; exit 1 ;;
     esac
 done
 
-if [ -z "${dns_ip}" ] || [ -z "${subscription_manager_user}" ] || [ -z "${subscription_manager_pass}" ]; then
-    echo $USAGE
+
+if [ ! -z "${satellite_hostname}" ]; then
+   
+    if [ -z "${dns_ip}" ] || [ -z "${satellite_hostname}" ] || [ -z "${satellite_org}" ] || [ -z ${satellite_key} ] ; then
+        echo -e "$USAGE"
+        exit 1
+    fi
+
+elif [ ! -z "${subscription_manager_user}" ];then
+
+    if [ -z "${dns_ip}" ] || [ -z "${subscription_manager_user}" ] || [ -z "${subscription_manager_pass}" ]; then
+        echo -e "$USAGE"
+        exit 1
+    fi
+else
+    echo -e "$USAGE"
     exit 1
 fi
 
@@ -141,7 +163,7 @@ run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
 run_command "sudo yum -y install openstack-tempest"
-run_command "sudo yum install -y python-neutron-tests-tempest python-cinder-tests-tempest python-telemetry-tests-tempest python-keystone-tests-tempest python-horizon-tests-tempest python2-octavia-tests-tempest python2-manila-tests-tempest"
+run_command "sudo yum install -y python-neutron-tests-tempest python-cinder-tests-tempest python-telemetry-tests-tempest python-keystone-tests-tempest python-horizon-tests-tempest python2-octavia-tests-tempest python2-manila-tests-tempest python2-barbican-tests-tempest"
 echo "## Done."
 
 echo
@@ -194,7 +216,17 @@ echo "## Done."
 
 echo 
 echo "## Customizing the overcloud image & uploading images"
-run_command "~/pilot/customize_image.sh ${subscription_manager_user} ${subscription_manager_pass} ${subcription_manager_poolid} ${proxy}"
+if [ ! -z "${satellite_hostname}" ]; then
+    run_command "~/pilot/customize_image.sh --satellite_hostname ${satellite_hostname} \
+                --satellite_org ${satellite_org} \
+                --satellite_key ${satellite_key} \
+                --proxy ${proxy}"
+                  
+elif [ ! -z "${subscription_manager_user}" ];then
+    run_command "~/pilot/customize_image.sh --sm_user ${subscription_manager_user} \
+                --sm_pwd ${subscription_manager_pass} \
+                --sm_pool ${subcription_manager_poolid} --proxy ${proxy}"
+fi
 
 echo
 if [ -n "${overcloud_nodes_pwd}" ]; then
@@ -240,20 +272,6 @@ echo
 echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
-
-# This hacks in a patch to allow realtime RAID creation.
-echo
-echo "## Patching Ironic iDRAC driver client.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
-
-# This hacks in a patch to enable realtime RAID creation.
-echo
-echo "## Patching Ironic iDRAC driver job.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/job.py ${HOME}/pilot/job.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
 
 # This hacks in a patch to validate and retrieve raid and boss controller and physical disk status.
 echo
@@ -325,17 +343,43 @@ then
     echo "using locked containers versions"
 else
     echo "using latest available containers versions"
-    touch ~/overcloud_images.yaml
+    touch $HOME//overcloud_images.yaml
+    
+    if [ ! -z "${containers_prefix}" ]; then
 
-    openstack overcloud container image prepare --output-env-file ~/overcloud_images.yaml \
- --namespace=registry.access.redhat.com/rhosp13 \
- -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
- -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
- -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
- --set ceph_namespace=registry.access.redhat.com/rhceph \
- --set ceph_image=rhceph-3-rhel7 \
- --tag-from-label {version}-{release}
+       echo "openstack overcloud container image prepare   --namespace=${satellite_hostname}:5000\
+        --prefix=${containers_prefix}   \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
+        --tag-from-label {version}-{release}   \
+        --set ceph_namespace=${satellite_hostname}:5000 \
+        --set ceph_image=${containers_prefix}rhceph-3-rhel7 \
+        --output-env-file=$HOME/overcloud_images.yaml"
 
+        openstack overcloud container image prepare   --namespace=${satellite_hostname}:5000\
+        --prefix=${containers_prefix}   \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
+        --tag-from-label {version}-{release}   \
+        --set ceph_namespace=${satellite_hostname}:5000 \
+        --set ceph_image=${containers_prefix}rhceph-3-rhel7 \
+        --output-env-file=$HOME/overcloud_images.yaml
+     
+    else
+        openstack overcloud container image prepare --output-env-file $HOME/overcloud_images.yaml \
+        --namespace=registry.access.redhat.com/rhosp13 \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
+        --set ceph_namespace=registry.access.redhat.com/rhceph \
+        --set ceph_image=rhceph-3-rhel7 \
+        --tag-from-label {version}-{release}
+    fi
 fi
 
 sudo yum install -y os-cloud-config

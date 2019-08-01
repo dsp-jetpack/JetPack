@@ -12,13 +12,4 @@ parameter_defaults:
 
   # Kernel arguments for ComputeSriov node
   DellComputeParameters:
-    # KernelArgs: "intel_iommu=on iommu=pt"
     OvsHwOffload: True
-    # Number of VFs that needs to be configured for a physical interface
-    #NeutronSriovNumVFs: ["ens3f0:4:switchdev"]
-    # Mapping of SR-IOV PF interface to neutron physical_network.
-    # In case of Vxlan/GRE physical_network should be null.
-    # In case of flat/vlan the physical_network should as configured in neutron.
-    #NovaPCIPassthrough:
-    #  - devname: "ens3f0"
-    #    physical_network: null
