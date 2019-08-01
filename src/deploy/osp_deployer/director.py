@@ -1347,6 +1347,10 @@ class Director(InfraHost):
                 interface = interface + ':' + \
                                         self.settings.sriov_vf_count + \
                                         ':switchdev'
+            else:
+                interface = interface + ':' + \
+                                        self.settings.sriov_vf_count
+
             sriov_vfs_setting.append(interface)
 
         sriov_vfs_setting = "'" + ",".join(sriov_vfs_setting) + "'"
