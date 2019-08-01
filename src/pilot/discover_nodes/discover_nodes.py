@@ -512,7 +512,7 @@ def is_idrac(drac_client):
 
             if not job_succeeded:
                 raise RuntimeError("An error occurred while taking the iDRAC"
-                                   " on {} out of recovery mode")
+                                   " out of recovery mode")
         else:
             LOG.info("IP address is an iDRAC and the iDRAC is ready")
     except dracclient.exceptions.WSManInvalidResponse as e:
