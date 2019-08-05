@@ -30,6 +30,7 @@ import dracclient.exceptions
 import dracclient.utils
 import netaddr
 import requests.packages
+from time import sleep
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being
 # made. See
@@ -341,6 +342,49 @@ def ip_network_from_address(address):
                 'version': ip_network.version})
 
 
+def determine_job_outcomes(drac_client, job_ids):
+    all_succeeded = True
+
+    for job_id in job_ids:
+        job_status = drac_client.get_job(job_id).status
+
+        if job_succeeded(job_status):
+            continue
+
+        all_succeeded = False
+        LOG.error(
+            "Configuration job {} encountered issues; its final status is "
+            "{}".format(job_id, job_status))
+
+    return all_succeeded
+
+
+def job_succeeded(job_status):
+    return job_status == 'Completed' or job_status == 'Reboot Completed'
+
+
+def wait_for_jobs_to_complete(job_ids, drac_client):
+    # Wait up to 10 minutes for the unfinished jobs to run
+    unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
+    retries = 60
+    while unfinished_jobs and retries > 0:
+        LOG.debug("{} jobs remain to complete".format(
+            len(unfinished_jobs)))
+        retries -= 1
+        if retries > 0:
+            sleep(10)
+            unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
+
+    if retries > 0:
+        LOG.debug("All jobs have completed")
+        success = determine_job_outcomes(drac_client, job_ids)
+    else:
+        LOG.error("Timed out while waiting for jobs to complete")
+        success = False
+
+    return success
+
+
 def scan(ip_set, user_name, password, provisioning_nics):
     # Scan each iDRAC.
     nodes = []
@@ -456,7 +500,21 @@ def is_idrac(drac_client):
     requests_logger.disabled = True
 
     try:
-        drac_client.client.is_idrac_ready()
+        if drac_client.is_lifecycle_in_recovery():
+            settings = {'Lifecycle Controller State': 'Enabled'}
+            drac_client.set_lifecycle_settings(settings)
+
+            LOG.info("Waiting for lifecycle controller to get out of "
+                     "recovery mode")
+            job_id = drac_client.commit_pending_lifecycle_changes(reboot=False)
+            job_succeeded = wait_for_jobs_to_complete(
+                [job_id], drac_client)
+
+            if not job_succeeded:
+                raise RuntimeError("An error occurred while taking the iDRAC"
+                                   " out of recovery mode")
+        else:
+            LOG.info("IP address is an iDRAC and the iDRAC is ready")
     except dracclient.exceptions.WSManInvalidResponse as e:
         # Most likely the user credentials are unauthorized.
 
