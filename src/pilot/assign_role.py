@@ -916,9 +916,9 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
                                                               ssds, system_id)
     elif len(ssds) > 0 and len(spinners) > 0:
         # If we have a mix of flash and spinners, then use the ssds as journals
-        new_osd_config, mklvm = generate_osd_config_with_journals(controllers,
-                                                           spinners,
-                                                           ssds, system_id)
+        #new_osd_config, mklvm = generate_osd_config_with_journals(controllers,
+        new_osd_config, mklvm = generate_osd_config_without_journals(controllers,
+                                                           disks, system_id)
     else:
         # We have all spinners, so let Ceph colocate the journals
         new_osd_config, mklvm  = generate_osd_config_without_journals(controllers,
@@ -1092,15 +1092,18 @@ def generate_osd_config_without_journals(controllers, drives, system_id):
             osd_drive_pci_bus_number, osd_drive)
         mklvm.append('  device=$(ls -la ' + osd_drive_device_name + " |  awk -F \"../../\" '{ print $2 }')")
         mklvm.append('  eval "wipefs -a /dev/${device}"')
+        mklvm.append('  sleep 2')
         mklvm.append('  pvcreate ' + osd_drive_device_name)
         mklvm.append('  vgcreate ceph_vg' + str(drive_count) + ' ' + osd_drive_device_name)
         mklvm.append("  size=$(sudo fdisk -l /dev/${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
         mklvm.append("  sizeb=`expr $((${size} * 99 / 100))`")
-        mklvm.append("  sizeb=`expr $(${sizeb} / 512 * 512))`")
+        mklvm.append("  sizeb=`expr $((${sizeb} / 512 * 512))`")
         mklvm.append('  lvcreate -n ceph_lv' + str(drive_count) + '_data -L ${sizeb}B ceph_vg' + str(drive_count))
+        mklvm.append('  sleep 2')
         osd_config['lvm_volumes'].append({"data": "ceph_lv" + str(drive_count) + "_data",
                                       "data_vg": "ceph_vg" + str(drive_count)})
         drive_count += 1
+        print ("hdd :: " + osd_drive_device_name)
     mklvm.append("fi")
     return osd_config, mklvm
 
@@ -1116,46 +1119,55 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds, system_id):
         'osd_objectstore': 'bluestore',
         'lvm_volumes': []}
     osd_index = 0
-    for ssd in ssds:
+    vg_index = 0
+    remaining_ssds = len(ssds)
+    for ssd in ssds:      
         ssd_pci_bus_number = get_pci_bus_number(ssd, controllers)
         ssd_device_name = get_by_path_device_name(ssd_pci_bus_number, ssd)
-
         mklvm.append('  device=$(ls -la ' + ssd_device_name + " |  awk -F \"../../\" '{ print $2 }')")
         mklvm.append('  eval "wipefs -a /dev/${device}"')
+        mklvm.append('  sleep 2')
         mklvm.append('  pvcreate ' + ssd_device_name)
-        mklvm.append('  vgcreate ceph_vg' + str(osd_index) + ' ' + ssd_device_name)
+        mklvm.append('  vgcreate ceph_vg' + str(vg_index) + ' ' + ssd_device_name)
         mklvm.append("  size=$(sudo fdisk -l /dev/${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
         mklvm.append("  half=`expr $((${size} * 49 / 100))`")
         mklvm.append("  half=`expr $((${half} / 512 * 512))`")
-        mklvm.append('  lvcreate -n ceph_lv' + str(osd_index) +  '__wal -L ${half}B ceph_vg' + str(osd_index))
-        mklvm.append('  lvcreate -n ceph_lv' + str(osd_index) +  '__db -L ${half}B ceph_vg' + str(osd_index))
+        mklvm.append('  lvcreate -n ceph_lv' + str(vg_index) +  '__wal -L ${half}B ceph_vg' + str(vg_index))
+        mklvm.append('  lvcreate -n ceph_lv' + str(vg_index) +  '__db -L ${half}B ceph_vg' + str(vg_index))
+        mklvm.append('  sleep 2')
 
-        osd_config['lvm_volumes'].append({"db": "ceph_lv" + str(osd_index) + "_db",
-                                  "db_vg": "ceph_vg" + str(osd_index),
-                                  "wal": "ceph_lv" + str(osd_index) + "_wal",
-                                  "wal_vg": "ceph_vg" + str(osd_index)})
-        osd_index += 1
-    drive_count = osd_index + 1
-    for osd_drive in osd_drives:
-        osd_drive_pci_bus_number = get_pci_bus_number(osd_drive,
-                                                      controllers)
-        osd_drive_device_name = get_by_path_device_name(
-            osd_drive_pci_bus_number, osd_drive)
+        num_osds_for_ssd = int(math.ceil((len(osd_drives)-osd_index) /
+                                         (remaining_ssds * 1.0)))
+        osds_for_ssd = osd_drives[osd_index:
+                                  osd_index + num_osds_for_ssd]
+        for osd_drive in osds_for_ssd:
+            vg_index += 1
+            osd_drive_pci_bus_number = get_pci_bus_number(osd_drive,
+                                                          controllers)
+            osd_drive_device_name = get_by_path_device_name(
+                osd_drive_pci_bus_number, osd_drive)
 
-        mklvm.append('  device=$(ls -la ' + osd_drive_device_name + " |  awk -F \"../../\" '{ print $2 }')")
-        mklvm.append('  eval "wipefs -a /dev/${device}"')
-        mklvm.append('  pvcreate ' + osd_drive_device_name)
-        mklvm.append('  vgcreate ceph_vg' + str(drive_count) + ' ' + osd_drive_device_name)
-        mklvm.append("  size=$(sudo fdisk -l /dev/${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
-        mklvm.append("  sizeb=`expr $((${size} * 99 / 100))`")
-        mklvm.append("  sizeb=`expr $((${sizeb} / 512 * 512))`")
-        mklvm.append('  lvcreate -n ceph_lv' + str(drive_count) + '_data -L ${sizeb}B ceph_vg' + str(drive_count))
-
-        osd_config['lvm_volumes'].append({"data": "ceph_lv" + str(drive_count) + "_data",
-                                  "data_vg": "ceph_vg" + str(drive_count)})
-        drive_count += 1
-
+            mklvm.append('  device=$(ls -la ' + osd_drive_device_name + " |  awk -F \"../../\" '{ print $2 }')")
+            mklvm.append('  eval "wipefs -a /dev/${device}"')
+            mklvm.append('  sleep 2')
+            mklvm.append('  pvcreate ' + osd_drive_device_name)
+            mklvm.append('  vgcreate ceph_vg' + str(vg_index) + ' ' + osd_drive_device_name)
+            mklvm.append("  size=$(sudo fdisk -l /dev/${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
+            mklvm.append("  sizeb=`expr $((${size} * 99 / 100))`")
+            mklvm.append("  sizeb=`expr $((${sizeb} / 512 * 512))`")
+            mklvm.append('  lvcreate -n ceph_lv' + str(vg_index) + '_data -L ${sizeb}B ceph_vg' + str(vg_index))
+            mklvm.append('  sleep 2')
+            osd_config['lvm_volumes'].append({"data": "ceph_lv" + str(vg_index) + "_data",
+                                      "data_vg": "ceph_vg" + str(vg_index),
+                                      "db": "ceph_lv" + str(osd_index) + "_db",
+                                      "db_vg": "ceph_vg" + str(osd_index),
+                                      "wal": "ceph_lv" + str(osd_index) + "_wal",
+                                      "wal_vg": "ceph_vg" + str(osd_index)})
+        osd_index += num_osds_for_ssd
+        remaining_ssds -= 1
+        vg_index += 1
     mklvm.append("fi")
+
     return osd_config, mklvm
 
 
@@ -1562,10 +1574,6 @@ def main():
     except:  # noqa: E722
         LOG.exception("Unexpected error")
         sys.exit(1)
-    finally:
-        # Leave the node powered off.
-        if drac_client is not None:
-            ensure_node_is_powered_off(drac_client)
 
 
 if __name__ == "__main__":
