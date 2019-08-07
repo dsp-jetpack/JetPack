@@ -1123,6 +1123,7 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds, system_id):
     for ssd in ssds:      
         ssd_pci_bus_number = get_pci_bus_number(ssd, controllers)
         ssd_device_name = get_by_path_device_name(ssd_pci_bus_number, ssd)
+        LOG.info( " SSD " + ssd_device_name + " ...  ceph_vg" + str(vg_index) )
         mklvm.append('  device=$(ls -la ' + ssd_device_name + " |  awk -F \"../../\" '{ print $2 }')")
         mklvm.append('  eval "wipefs -a /dev/${device}"')
         mklvm.append('  sleep 2')
@@ -1139,13 +1140,14 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds, system_id):
                                          (remaining_ssds * 1.0)))
         osds_for_ssd = osd_drives[osd_index:
                                   osd_index + num_osds_for_ssd]
+        journal_index = vg_index
         for osd_drive in osds_for_ssd:
             vg_index += 1
             osd_drive_pci_bus_number = get_pci_bus_number(osd_drive,
                                                           controllers)
             osd_drive_device_name = get_by_path_device_name(
                 osd_drive_pci_bus_number, osd_drive)
-
+            LOG.info( " HDD " + osd_drive_device_name + " ...  ceph_vg" + str(vg_index) )
             mklvm.append('  device=$(ls -la ' + osd_drive_device_name + " |  awk -F \"../../\" '{ print $2 }')")
             mklvm.append('  eval "wipefs -a /dev/${device}"')
             mklvm.append('  sleep 2')
@@ -1158,10 +1160,10 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds, system_id):
             mklvm.append('  sleep 2')
             osd_config['lvm_volumes'].append({"data": "ceph_lv" + str(vg_index) + "_data",
                                       "data_vg": "ceph_vg" + str(vg_index),
-                                      "db": "ceph_lv" + str(osd_index) + "_db",
-                                      "db_vg": "ceph_vg" + str(osd_index),
-                                      "wal": "ceph_lv" + str(osd_index) + "_wal",
-                                      "wal_vg": "ceph_vg" + str(osd_index)})
+                                      "db": "ceph_lv" + str(journal_index) + "_db",
+                                      "db_vg": "ceph_vg" + str(journal_index),
+                                      "wal": "ceph_lv" + str(journal_index) + "_wal",
+                                      "wal_vg": "ceph_vg" + str(journal_index)})
         osd_index += num_osds_for_ssd
         remaining_ssds -= 1
         vg_index += 1
