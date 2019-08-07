@@ -916,9 +916,8 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
                                                               ssds, system_id)
     elif len(ssds) > 0 and len(spinners) > 0:
         # If we have a mix of flash and spinners, then use the ssds as journals
-        #new_osd_config, mklvm = generate_osd_config_with_journals(controllers,
-        new_osd_config, mklvm = generate_osd_config_without_journals(controllers,
-                                                           disks, system_id)
+        new_osd_config, mklvm = generate_osd_config_with_journals(controllers,
+                                                           spinners, ssds, system_id)
     else:
         # We have all spinners, so let Ceph colocate the journals
         new_osd_config, mklvm  = generate_osd_config_without_journals(controllers,
@@ -1132,8 +1131,8 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds, system_id):
         mklvm.append("  size=$(sudo fdisk -l /dev/${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
         mklvm.append("  half=`expr $((${size} * 49 / 100))`")
         mklvm.append("  half=`expr $((${half} / 512 * 512))`")
-        mklvm.append('  lvcreate -n ceph_lv' + str(vg_index) +  '__wal -L ${half}B ceph_vg' + str(vg_index))
-        mklvm.append('  lvcreate -n ceph_lv' + str(vg_index) +  '__db -L ${half}B ceph_vg' + str(vg_index))
+        mklvm.append('  lvcreate -n ceph_lv' + str(vg_index) +  '_wal -L ${half}B ceph_vg' + str(vg_index))
+        mklvm.append('  lvcreate -n ceph_lv' + str(vg_index) +  '_db -L ${half}B ceph_vg' + str(vg_index))
         mklvm.append('  sleep 2')
 
         num_osds_for_ssd = int(math.ceil((len(osd_drives)-osd_index) /
