@@ -511,8 +511,7 @@ class Director(InfraHost):
             osd_config = uuid_to_osd_configs[uuid]
             num_osds = 0
             for device in osd_config["lvm_volumes"]:
-                if "data" in device:
-                    num_osds += 1
+                num_osds += 1
             total_osds = total_osds + num_osds
 
         num_storage_nodes = len(self.settings.ceph_nodes)
@@ -603,7 +602,7 @@ class Director(InfraHost):
                 tokens = line.split()
                 if len(tokens) > 0 and (tokens[0].startswith("#") or
                                         tokens[0].startswith("osd_scenario") or
-                                        tokens[0].startswith("devices") or
+                                        tokens[0].startswith("lvm_volumes") or
                                         tokens[0].startswith("-")):
                     continue
 
