@@ -51,7 +51,7 @@ resources:
         #!/usr/bin/env bash
         {
         if [[ `hostname` = *"ceph"* ]] || [[ `hostname` = *"hci"* ]]; then
-          curl http://192.168.120.10/mklvm.sh > /tmp/mklvm.sh
+          curl http://CHANGEME_UNDERCLOUD_PROVISIONING_IP/mklvm.sh > /tmp/mklvm.sh
           bash /tmp/mklvm.sh
         fi
         } 2>&1 > /root/mklvm_output.txt
