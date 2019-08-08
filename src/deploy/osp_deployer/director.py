@@ -654,6 +654,10 @@ class Director(InfraHost):
         self.upload_file(tmp_name, env_name)
         os.remove(tmp_name)
 
+        firstboot = os.path.join(self.templates_dir, "first-boot.yaml")
+        cmd = 'sed -i "s|CHANGEME_UNDERCLOUD_PROVISIONING_IP|' + self.settings.director_node.provisioning_ip + '|" ' + firstboot
+        self.run(cmd)
+
     def setup_sanity_ini(self):
         sanity_ini = self.sanity_dir + "/sanity.ini"
         self.upload_file(self.settings.sanity_ini,
