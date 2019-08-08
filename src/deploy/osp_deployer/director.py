@@ -562,7 +562,7 @@ class Director(InfraHost):
 
         if osd_disks:
             for osd in osd_disks:
-                # Format is ":OSD_DRIVE"
+                # Format is ":OSD_DRIVE",
                 # so split on the ':'
                 tokens = osd.split(':')
 
