@@ -1124,22 +1124,27 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds, system_id):
         ssd_pci_bus_number = get_pci_bus_number(ssd, controllers)
         ssd_device_name = get_by_path_device_name(ssd_pci_bus_number, ssd)
         LOG.info( " SSD " + ssd_device_name + " ...  ceph_vg" + str(vg_index) )
+        num_osds_for_ssd = int(math.ceil((len(osd_drives)-osd_index) /
+                                         (remaining_ssds * 1.0)))
+        # x2 volumes for each data osd (DB & WAL)
+        allocation_journals = 50 / num_osds_for_ssd - 1
         mklvm.append('  device=$(ls -la ' + ssd_device_name + " |  awk -F \"../../\" '{ print $2 }')")
         mklvm.append('  eval "wipefs -a /dev/${device}"')
         mklvm.append('  sleep 2')
         mklvm.append('  pvcreate ' + ssd_device_name)
         mklvm.append('  vgcreate ceph_vg' + str(vg_index) + ' ' + ssd_device_name)
         mklvm.append("  size=$(sudo fdisk -l /dev/${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
-        mklvm.append("  half=`expr $((${size} * 49 / 100))`")
-        mklvm.append("  half=`expr $((${half} / 512 * 512))`")
-        mklvm.append('  lvcreate -n ceph_lv' + str(vg_index) +  '_wal -L ${half}B ceph_vg' + str(vg_index))
-        mklvm.append('  lvcreate -n ceph_lv' + str(vg_index) +  '_db -L ${half}B ceph_vg' + str(vg_index))
-        mklvm.append('  sleep 2')
+        mklvm.append("  siz=`expr $((${size} * " + str(allocation_journals) + " / 100))`")
+        mklvm.append("  siz=`expr $((${siz} / 512 * 512))`")
+        for i in range(0, num_osds_for_ssd):
+            mklvm.append('  lvcreate -n ceph_lv' + str(vg_index) + "-" + str(i) + '_wal -L ${siz}B ceph_vg' + str(vg_index))
+            mklvm.append('  lvcreate -n ceph_lv' + str(vg_index) + "-" + str(i) + '_db -L ${siz}B ceph_vg' + str(vg_index))
+            mklvm.append('  sleep 2')
 
-        num_osds_for_ssd = int(math.ceil((len(osd_drives)-osd_index) /
-                                         (remaining_ssds * 1.0)))
+        LOG.info(" Num osds for ssd : " + str(num_osds_for_ssd) )
         osds_for_ssd = osd_drives[osd_index:
                                   osd_index + num_osds_for_ssd]
+        ind = 0
         journal_index = vg_index
         for osd_drive in osds_for_ssd:
             vg_index += 1
@@ -1160,10 +1165,11 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds, system_id):
             mklvm.append('  sleep 2')
             osd_config['lvm_volumes'].append({"data": "ceph_lv" + str(vg_index) + "_data",
                                       "data_vg": "ceph_vg" + str(vg_index),
-                                      "db": "ceph_lv" + str(journal_index) + "_db",
+                                      "db": "ceph_lv" + str(journal_index) + "-" + str(ind) + "_db",
                                       "db_vg": "ceph_vg" + str(journal_index),
-                                      "wal": "ceph_lv" + str(journal_index) + "_wal",
+                                      "wal": "ceph_lv" + str(journal_index) +  "-" + str(ind) + "_wal",
                                       "wal_vg": "ceph_vg" + str(journal_index)})
+            ind += 1
         osd_index += num_osds_for_ssd
         remaining_ssds -= 1
         vg_index += 1
