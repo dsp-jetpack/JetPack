@@ -1836,7 +1836,7 @@ class Director(InfraHost):
                          ip +
                          ' --dashboard_pass ' +
                          self.settings.dashboard_node.root_password +
-                         ' --sbUser ' +
+                         ' --subUser ' +
                          self.settings.subscription_manager_user +
                          ' --subPass ' +
                          self.settings.subscription_manager_password +
