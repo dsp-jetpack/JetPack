@@ -162,7 +162,7 @@ def parse_arguments(dashboard_user):
     parser.add_argument("-dashboard_pass", "--dashboard_pass",
                         help="The password of the Ceph Storage Dashboard "
                         "node ", required=True)
-    parser.add_argument("-subUser", "--subUser",
+    parser.add_argument("-sbUser", "--sbUser",
                         help="The username for Red Hat Subscription Access",
                         action='store', required=False)
     parser.add_argument("-subPass", "--subPass",
@@ -770,7 +770,7 @@ def main():
         prep_subscription_json_satellite(args.satOrg, args.satKey,
                                          args.physId, args.cephId)
     else:
-        prep_subscription_json(args.subUser, args.subPass,
+        prep_subscription_json(args.sbUser, args.subPass,
                                args.physId, args.cephId)
     register_overcloud_nodes()
     prep_host_files(dashboard_node, ceph_nodes)
