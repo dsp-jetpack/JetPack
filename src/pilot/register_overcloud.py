@@ -123,9 +123,11 @@ class RegisterOvercloud:
         self.logger.debug("cdn_password: " + self.cdn_password)
 
         self.satellite_org = self._get_credential("satellite_credentials",
-                                                  "satellite_organization")
+                                                  "satellite_organization",
+                                                  None, False)
         self.satellite_key = self._get_credential("satellite_credentials",
-                                                  "satellite_activation_key")
+                                                  "satellite_activation_key",
+                                                  None, False)
 
         # Get the proxy creds
         self.proxy_args = ""
@@ -267,7 +269,7 @@ class RegisterOvercloud:
 
             # If we're using satellite, then construct the args for that
             cred_args = ""
-            if len(self.satellite_org) > 1:
+            if self.satellite_org is not None:
                 cred_args = "--org=" + self.satellite_org + " " + \
                     "--activationkey=" + self.satellite_key
             else:
