@@ -42,6 +42,19 @@ resources:
       - config: {get_resource: set_os_limits}
       - config: {get_resource: performance_optimization}
       - config: {get_resource: wipe_disk}
+      - config: {get_resource: make_lvm}
+
+  make_lvm:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      config: |
+        #!/usr/bin/env bash
+        {
+        if [[ `hostname` = *"ceph"* ]] || [[ `hostname` = *"hci"* ]]; then
+          curl http://CHANGEME_UNDERCLOUD_PROVISIONING_IP/mklvm.sh > /tmp/mklvm.sh
+          bash /tmp/mklvm.sh
+        fi
+        } 2>&1 > /root/mklvm_output.txt
 
   set_os_limits:
     type: OS::Heat::CloudConfig

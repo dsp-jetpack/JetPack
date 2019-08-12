@@ -392,7 +392,10 @@ class Director(InfraHost):
 
     def assign_node_roles(self):
         logger.debug("Assigning roles to nodes")
-
+        osd_yaml = os.path.join(self.templates_dir, "ceph-osd-config.yaml")
+        mklvm_sh = os.path.join(self.templates_dir, "mklvm.sh")
+        self.run("/bin/cp -rf " + osd_yaml + ".orig " + osd_yaml)
+        self.run("/bin/cp -rf " + mklvm_sh + ".orig " + mklvm_sh)
         common_path = os.path.join(os.path.expanduser(
             self.settings.cloud_repo_dir + '/src'), 'common')
         sys.path.append(common_path)
@@ -429,6 +432,8 @@ class Director(InfraHost):
             logger.info("assign_role failed on {} out of {} nodes".format(
                 failed_threads, len(threads)))
             sys.exit(1)
+        
+        self.run("sudo cp " + self.templates_dir + "/mklvm.sh /var/www/html/mklvm.sh")
 
     def update_sshd_conf(self):
         # Update sshd_config to allow for more than 10 ssh sessions
@@ -523,7 +528,9 @@ class Director(InfraHost):
         uuid_to_osd_configs = json.loads(node_data_lookup_str)
         for uuid in uuid_to_osd_configs:
             osd_config = uuid_to_osd_configs[uuid]
-            num_osds = len(osd_config["devices"])
+            num_osds = 0
+            for device in osd_config["lvm_volumes"]:
+                num_osds += 1
             total_osds = total_osds + num_osds
 
         num_storage_nodes = len(self.settings.ceph_nodes)
@@ -563,9 +570,8 @@ class Director(InfraHost):
         # Leading whitespace for these variables is critical !!!
         osds_param = "  CephAnsibleDisksConfig:"
         osd_scenario_param = "    osd_scenario:"
-        osd_scenario = "collocated"  # Keep this as default, change if required
+        osd_scenario = "lvm"
         osd_devices = "    devices:\n"
-        osd_dedicated_devices = "    dedicated_devices:\n"
         ceph_pools = "  CephPools:"
         domain_param = "  CloudDomain:"
         rbd_backend_param = "  NovaEnableRbdBackend:"
@@ -575,7 +581,7 @@ class Director(InfraHost):
 
         if osd_disks:
             for osd in osd_disks:
-                # Format is ":OSD_DRIVE" or ":OSD_DRIVE:JOURNAL_DRIVE",
+                # Format is ":OSD_DRIVE",
                 # so split on the ':'
                 tokens = osd.split(':')
 
@@ -583,26 +589,10 @@ class Director(InfraHost):
                 if not tokens[1].startswith("/dev/"):
                     tokens[1] += "/dev/"
 
-                if len(tokens) == 3:
-                    # This OSD specifies a separate journal drive
-                    # Set the osd-scenario to non-collocated
-                    osd_scenario = "non-collocated"
+                if len(tokens) == 2:
+                    # Set all devices 
                     osd_devices = "{}      - {}\n".format(
                         osd_devices, tokens[1])
-                    osd_dedicated_devices = "{}      - {}\n".format(
-                        osd_dedicated_devices,
-                        tokens[2])
-                    osds_per_node += 1
-                elif len(tokens) == 2:
-                    # This OSD does not specify a separate journal
-                    # Add the same device as dedicated device
-                    # It is useful when there is a mix of collocated
-                    # and non-collocated devices
-                    osd_devices = "{}      - {}\n".format(
-                        osd_devices, tokens[1])
-                    osd_dedicated_devices = "{}      - {}\n".format(
-                        osd_dedicated_devices,
-                        tokens[1])
                     osds_per_node += 1
                 else:
                     logger.warning(
@@ -626,13 +616,12 @@ class Director(InfraHost):
 
             elif found_osds_param:
                 # Discard lines that begin with "#", "osd_scenario",
-                # "devices:", "dedicated_devices:" or "-" because these lines
+                # "lvm_volumes:" or "-" because these lines
                 # represent the original ceph.yaml file's OSD configuration.
                 tokens = line.split()
                 if len(tokens) > 0 and (tokens[0].startswith("#") or
                                         tokens[0].startswith("osd_scenario") or
-                                        tokens[0].startswith("devices") or
-                                        tokens[0].startswith("dedicated_devices") or  # noqa: E501
+                                        tokens[0].startswith("lvm_volumes") or
                                         tokens[0].startswith("-")):
                     continue
 
@@ -641,8 +630,6 @@ class Director(InfraHost):
                 tmp_file.write("{} {}\n".format(
                     osd_scenario_param, osd_scenario))
                 tmp_file.write(osd_devices)
-                if osd_scenario == "non-collocated":
-                    tmp_file.write(osd_dedicated_devices)
 
                 # This is the line that follows the original Ceph OSD config
                 tmp_file.write(line)
@@ -685,6 +672,10 @@ class Director(InfraHost):
         env_name = os.path.join(self.templates_dir, "dell-environment.yaml")
         self.upload_file(tmp_name, env_name)
         os.remove(tmp_name)
+
+        firstboot = os.path.join(self.templates_dir, "first-boot.yaml")
+        cmd = 'sed -i "s|CHANGEME_UNDERCLOUD_PROVISIONING_IP|' + self.settings.director_node.provisioning_ip + '|" ' + firstboot
+        self.run(cmd)
 
     def setup_sanity_ini(self):
         sanity_ini = self.sanity_dir + "/sanity.ini"
