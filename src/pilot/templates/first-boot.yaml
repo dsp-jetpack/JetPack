@@ -172,6 +172,13 @@ resources:
             echo $cmd
             $cmd
             echo
+
+            # Remove signatures
+            cmd="wipefs -a ${device}"
+            echo $cmd
+            $cmd
+            echo
+
           done
           partprobe
           parted -lm
