@@ -616,12 +616,12 @@ class Director(InfraHost):
 
             elif found_osds_param:
                 # Discard lines that begin with "#", "osd_scenario",
-                # "lvm_volumes:" or "-" because these lines
+                # "devices:" or "-" because these lines
                 # represent the original ceph.yaml file's OSD configuration.
                 tokens = line.split()
                 if len(tokens) > 0 and (tokens[0].startswith("#") or
                                         tokens[0].startswith("osd_scenario") or
-                                        tokens[0].startswith("lvm_volumes") or
+                                        tokens[0].startswith("devices") or
                                         tokens[0].startswith("-")):
                     continue
 
