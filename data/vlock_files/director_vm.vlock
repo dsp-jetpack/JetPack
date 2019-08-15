@@ -910,6 +910,7 @@
 0:perl-srpm-macros-1-8.el7.*
 1:python-glance-16.0.1-5.el7ost.*
 0:python-firewall-0.5.3-5.el7.*
+0:firewalld-0.5.3-5.el7.*
 0:libvirt-daemon-driver-storage-core-4.5.0-10.el7_6.3.*
 0:python-webtest-2.0.23-2.el7ost.*
 0:time-1.7-45.el7.*
