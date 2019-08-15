@@ -235,6 +235,7 @@
 0:python2-pycadf-2.7.0-1.el7ost.*
 0:openstack-mistral-api-6.0.6-2.el7ost.*
 0:python-firewall-0.5.3-5.el7.*
+0:firewalld-0.5.3-5.el7.*
 0:aic94xx-firmware-30-6.el7.*
 0:python-pika-0.10.0-3.el7ost.*
 0:osinfo-db-tools-1.1.0-1.el7.*
