@@ -38,6 +38,12 @@
                    "false"
                 ]
              },
+
+        "smart_nic": {
+                "valid_values": [
+                   "false"
+                ]
+             }, 
        "sriov_vf_count": {
                 "validate": [
                    "should_be_valid_int"
@@ -218,9 +224,6 @@
                   "valid_values": [
                   "true",
                   "false"
-               ],
-            "validate": [
-                  "should_be_valid_ip"
                ]
         }
        }
