@@ -885,6 +885,12 @@ end(){
 
 info "###Appendix-C Openstack Operations Functional Test ###"
 
+if [ "$SMART_NIC_ENABLED" != false ]
+then
+  info "### SRIOV OFFLOAD ENABLED. SKIPPING SANITY TEST"
+  exit
+fi
+
 init
 
 ### CLEANUP
