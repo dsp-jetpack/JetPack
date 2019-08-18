@@ -655,6 +655,12 @@ class Director(InfraHost):
                 pool_str = line[len(ceph_pools):]
                 pools = json.loads(pool_str)
                 for pool in pools:
+                    if "rgw" in pool["name"]:
+                        pool["application"] = "rgw"
+                    elif "metric" in pool["name"]:
+                        pool["application"] = "openstack_gnocchi"
+                    else:
+                        pool["application"] = "rbd"
                     if pool["name"] in HEAVY_POOLS:
                         pool["pg_num"] = heavy_pgs
                         pool["pgp_num"] = heavy_pgs
