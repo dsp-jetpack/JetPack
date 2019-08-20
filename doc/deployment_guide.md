@@ -15,11 +15,12 @@
 # Trademarks
 Copyright © 2014-2019 Dell Inc. or its subsidiaries. All rights reserved.
 
-Microsoft® and Windows® are registered trademarks of Microsoft Corporation in the United States and/or other countries.
+Intel® and Xeon® are registered trademarks of Intel Corporation. Oracle® and Java® are registered trademarks of Oracle Corporation and/or its affiliates
 
-Red Hat®, Red Hat Enterprise Linux®, and Ceph are trademarks or registered trademarks of Red Hat, Inc., registered in the U.S. and other countries. Linux® is the registered trademark of Linus Torvalds in the U.S. and other countries. Oracle® and Java® are registered trademarks of Oracle Corporation and/or its affiliates.
+Mellanox, the Mellanox logo, ConnectX, CORE-Direct, and GPUDirect are registered trademarks of Mellanox Technologies, Ltd. Mellanox Multi-Host is a trademark of Mellanox Technologies, Ltd. All rights reserved. 
 
-> DISCLAIMER: The OpenStack® Word Mark and OpenStack Logo are either registered trademarks/ service marks or trademarks/service marks of the OpenStack Foundation, in the United States and other countries, and are used with the OpenStack Foundation's permission. We are not affiliated with, endorsed or sponsored by the OpenStack Foundation or the OpenStack community.
+DISCLAIMER: The OpenStack® Word Mark and OpenStack Logo are either registered trademarks/ service marks or trademarks/service marks of the OpenStack Foundation, in the United States and other countries, and are used with the OpenStack Foundation's permission. We are not affiliated with, endorsed or sponsored by the OpenStack Foundation or the OpenStack community.
+
 
 <div style="page-break-after: always;"></div>
 
@@ -49,7 +50,7 @@ Red Hat®, Red Hat Enterprise Linux®, and Ceph are trademarks or registered tra
 
 - [Appendix G Neutron managed SR-IOV](#appendix-g-neutron-managed-sr-iov)
 
-- [Appendix H Neutron DVR support in JS 13.2](#appendix-h-neutron-dvr-support-in-js-13)
+- [Appendix H Neutron DVR support in JS 13.2](#appendix-h-neutron-dvr-support-in-js-13.2)
 
 - [Appendix I Octavia](#appendix-i-octavia)
 
@@ -78,15 +79,6 @@ Red Hat®, Red Hat Enterprise Linux®, and Ceph are trademarks or registered tra
 This guide provides information necessary to deploy the Dell EMC Ready Architecture for Red Hat OpenStack platform v13.2 using an automation framework developed by Dell EMC.
 
 ### General Hardware Options
-
-To reduce time spent on specifying hardware for an initial system, the Architecture Guide offers a full solution using validated Dell EMC PowerEdge server hardware designed to allow a wide range of configuration options, including optimized configurations for: 
-
-* Compute nodes
-* Infrastructure nodes
-* Storage nodes
-
-Dell EMC recommends starting with OpenStack software using components from this Architecture Guide -
-Version 13.2 flexible foundation expands as your cloud deployment grows, which protects investments.
 
 Dell EMC Architecture Guide version 13 expands hardware capabilities. Please check the Architecture Guide for more details ("https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_ready_architecture_for_red_hat_openstack_platform_architecture_guide.pdf")
 
@@ -117,7 +109,7 @@ Network configuration is based upon using the Neutron-based options supported by
 
 This enables the Dell EMC Ready Architecture for Red Hat OpenStack Platform to operate in a full production environment. Detailed designs are available through Dell EMC consulting services. [rhosp.ra.ps@emc.com](malito:rhosp.ra.ps@emc.com)
 
-The Dell EMC Ready Architecture for Red Hat OpenStack Platform uses the S5248-ON as the Top of Rack switches and the S3048-ON switch (S4048-ON optional) as the management switch.
+The Dell EMC Ready Architecture for Red Hat OpenStack Platform uses the S5232-ON as the Top of Rack switches and the S3048-ON switch (S4048-ON optional) as the management switch.
 
 **Infrastructure layouts**
 
@@ -132,31 +124,18 @@ The network consists of the following major network infrastructure layouts:
 
 ### Version 13.2 features
 
-**The following features are added in the JetPack Automation and the Ready Architecture for RedHat OpenStack:**
+* The following features are added in the JetPack Automation and the Ready Architecture for RedHat OpenStack:*
 
-* Support for the lastest release of Red Hat OpenStack Platform 13.2 including the latest updates.
+* Support for the latest release of Red Hat OpenStack Platform 13 including the latest updates.
+* Support for Dell EMC PowerEdge R640 and R740/740xd servers with 2nd Generation Intel® Xeon®Scalable Processors (Cascade Lake) and DDR4 2933MHz memory DIMMs
 * Support for latest release of RHEL 7.7 including the latest updates.
-* Support for Red Hat Ceph Storage version 3.2.2.
-* Added support for Jumbo Frames.
-* Added support for UEFI on all Overcloud nodes.
-* Added support for Dell EMC Networking S5248-ON switch.
-* Added support for 25GbE networking with Intel XXV710 network interface cards.
 * Added support for 100GbE networking with Mellanox ConnectX-5 network interface cards.
-* Added support for Red Hat Ceph Storage to use NVMe storage for OSD/Journal.
-* Enhancement of Huge Pages with JetPack CSP profile.
-* Enhancement of NUMA/CPU Pinning with JetPack CSP profile.
-* Added support of OVS-DPDK for 100G networking with Mellanox network interface cards (NICs).
 * Added support of SR-IOV offload for 100G networking with Connect X-5 Mellanox network interface cards (NICs) (Tech Preview in RedHat)
-* Added support of SR-IOV for 25GbE networking with Intel XXV710 network interface cards.
-* Added support for Cascade Lake 6230 processors
-* Added support for Distributed Virtual Router, (DVR).
-* Added support for auto-generation of .ini and .properties files for use in automated deployments.
-* Added support for VLAN aware VM.
-* Added support of Unity with Manila and Cinder
-* Added support of Octavia with Jetpack CSP profile
-* Added support of Barbican with Jetpack CSP profile
-* Added support of Satellite with Jetpack CSP profile
-* Added support for Bluestore
+* Added support for Dell EMC Unity storage for Cinder, Manila, and Glance
+* Added support for Red Hat OpenStack Platform Barbican for managing security keys
+* Added support for Red Hat OpenStack Platform Satellite Server 6.5 using the JetPack automation toolkit
+* Added support for Dell EMC H740P mini raid controller for use in storage nodes
+* Support for Red Hat Ceph Storage version 3.2 with BlueStore, a new back end object store for the OSDdaemons replacing FileStore
 
 
 ## Before
@@ -168,7 +147,7 @@ The high-level steps required to install the Dell EMC Ready Architecture for Red
 1.  Ensure that your environment meets the [Prerequisites](#Prerequisites)
 2.  Ensure that the [Dependencies](#Dependencies) are met.
 3.  *Determining Pool IDs*.
-4.  [Downloading and Extracting Automation Files]("https://github.com/dsp-jetpack/JetPack/").
+4.  [Downloading and Extracting Automation Files]("https://github.com/dsp-jetpack/JetPack/tree/JS-13.2").
 5.  [Preparing the Solution Admin Host Deployment](#Preparing-the-Solution-Admin-Host-Deployment).
 6.  [Deploying the SAH Node](#Deploying-the-SAH-Node).
 7.  [Deploying the Undercloud and the OpenStack Cluster](#Deploying-the-Undercloud-and-the-OpenStack-Cluster).
@@ -178,9 +157,9 @@ The following prerequisites must be satisfied before proceeding with a Dell EMC 
 
 > Note: All nodes in the same roles must be of the same server models, with identical HDD, RAM, and NIC configurations. So, all controller nodes must be identical to each other; all compute nodes must be identical to each other.
 
-* Hardware racked and wired per the [Dell EMC Ready Architecture for Red Hat OpenStack Platform Architecture Guide Version 13.1](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_red_hat_ready_architecture_guide_v13.1.pdf).
-* Hardware configured as per the [Dell EMC Ready Architecture for Red Hat OpenStack Platform Architecture Guide Version 13.1](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_red_hat_ready_architecture_guide_v13.1.pdf).
-* Hardware is powered off after the hardware is configured per the [Dell EMC Ready Architecture for Red Hat OpenStack Platform Architecture Guide Version 13.1](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_red_hat_ready_architecture_guide_v13.1.pdf).
+* Hardware racked and wired per the [Dell EMC Ready Architecture for Red Hat OpenStack Platform Architecture Guide Version 13.2](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_red_hat_ready_architecture_guide_v13.2.pdf).
+* Hardware configured as per the [Dell EMC Ready Architecture for Red Hat OpenStack Platform Architecture Guide Version 13.2](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_red_hat_ready_architecture_guide_v13.2.pdf).
+* Hardware is powered off after the hardware is configured per the [Dell EMC Ready Architecture for Red Hat OpenStack Platform Architecture Guide Version 13.2](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_red_hat_ready_architecture_guide_v13.2.pdf).
 * Internet access, including but not limited to, Red Hat’s subscription manager service and repositories
 * Valid Red Hat subscriptions
 * Workstation used to extract the JetPack-automation-13.2.tgz file and begin building the collateral for the SAH node.  Workstation must be a RHEL7.7 host.
@@ -188,7 +167,7 @@ The following prerequisites must be satisfied before proceeding with a Dell EMC 
 ## Dependencies
 For customers performing a self-installation, these files are available upon request from Dell EMC. Please contact your account representative, or email <a href="malito: openstack@dell.com" target="_blank">openstack@dell.com</a> for instructions.
 
-> NOTE: The files are also open sourced and can be obtained from <a href="https://github.com/dsp-jetpack/JetPack/tree/JS-13.1" target="_blank">https://github.com/dsp-jetpack/JetPack/tree/JS-13.1</a> 
+> NOTE: The files are also open sourced and can be obtained from <a href="https://github.com/dsp-jetpack/JetPack/tree/JS-13.2" target="_blank">https://github.com/dsp-jetpack/JetPack/tree/JS-13.2</a> 
 
 > NOTE: The automated install also requires that you have the ISO file “Red Hat Enterprise Linux 7.7 Binary DVD”. It can be downloaded from the Red Hat Customer Portal here: https://access.redhat.com/downloads/content/69/ver=/rhel---7/7.7/x86_64/product-software
 
@@ -315,16 +294,16 @@ This topic describes preparing for, and performing, the Solution Admin Host (SAH
 ```
     and
     ```bash
-    $ cp ~/JetPack/src/deploy/osp_deployer/settings/sample_csp_profile.ini ~/acme.ini
+    $ cp ~/JetPack/src/deploy/osp_deployer/settings/sample_csp_profile.ini ~/sample_csp_profile.ini
     ```
     or
     ```bash
-    $ cp ~/JetPack/src/deploy/osp_deployer/settings/sample_xsp_profile.ini ~/acme.ini
+    $ cp ~/JetPack/src/deploy/osp_deployer/settings/sample_xsp_profile.ini ~/sample_xsp_profile.ini
     ```
-4.  Edit your hardware stamp’s .ini and .properties files to match your hardware stamp configuration. Use a text editor of your choice; our example uses vi:
+4.  Edit your sample_csp_profile.ini and .properties files to match your hardware stamp configuration. Use a text editor of your choice; our example uses vi:
     
     ```bash
-    $ vi ~/acme.ini
+    $ vi ~/sample_xsp_profile.ini
     ```
     
     a. Change the pre-populated values in your stamp-specific .ini file to match your specific environment. In addition, the IP addresses and the Subscription Manager Pool IDs must be changed to match your deployment. Each section will have a brief description of the attributes.
@@ -416,7 +395,7 @@ This topic describes preparing for, and performing, the Solution Admin Host (SAH
     
             ```bash
             $ cd ~/JetPack/src/deploy/setup
-            $ python setup_usb_iDRAC.py -s /root/acme.ini -usb_key /dev/sdb
+            $ python setup_usb_iDRAC.py -s /root/sample_csp_profile.ini -usb_key /dev/sdb
             ```
 
     * **Using an iDRAC virtual media image file. This requires your RHEL 7.7 system to have access to the iDRAC consoles to attach the image.**
@@ -425,7 +404,7 @@ This topic describes preparing for, and performing, the Solution Admin Host (SAH
             
             ```bash
             $ cd ~/JetPack/src/deploy/setup
-            $ python setup_usb_iDRAC.py -s /root/acme.ini -iDRAC_vmedia_img
+            $ python setup_usb_iDRAC.py -s /root/sample_csp_profile.ini -iDRAC_vmedia_img
             ```
         2.  The output will be an image file generated in ~/ named osp_ks.img.
 
@@ -507,7 +486,7 @@ Now that the SAH node is installed you can deploy and validate the rest of the D
     * **run_sanity** - If set to true the sanity_test.sh script will be executed that will verify the basic functionality of your overcloud deployment.
     * **run_tempest** - If set to true the Tempest integration test suite will be executed against your overcloud deployment.
 
-    > ***Note:*** Tempest requires that the sanity test must be run first so run_sanity, above, must also be set to true. For some details on tempest results notes, please refer to Dell_EMC_Red_Hat_Ready_Architecture_Release_Notes_v13.1
+    > ***Note:*** Tempest requires that the sanity test must be run first so run_sanity, above, must also be set to true. For some details on tempest results notes, please refer to Dell_EMC_Red_Hat_Ready_Architecture_Release_Notes_v13.2
 
     * **tempest_smoke_only** - If run_tempest, above, is set to true this option, which is set to true by default, will cause Tempest to run only a small subset of the test suite, where the tests are tagged as "smoke". If set to false the entire Tempest suite will be run, which can take an hour or more to complete.
 
@@ -605,9 +584,9 @@ Now that the SAH node is installed you can deploy and validate the rest of the D
 
 <u>**Dell EMC Ready Architecture for Red Hat OpenStack Platform v13.2 includes:**</u>
 
-* https://github.com/dsp-jetpack/JetPack/tree/JS-13.1 - Contains all automation deployment solution scripts
-* [Dell_EMC_Red_Hat_Ready_Architecture_Guide_v13.1.pdf](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_red_hat_ready_architecture_guide_v13.1.pdf)
-* [Dell_EMC_Red_Hat_Ready_Architecture_Release_Notes_v13.1.pdf](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_red_hat_ready_architecture_release_note_v13.1.pdf)
+* https://github.com/dsp-jetpack/JetPack/tree/JS-13.2 - Contains all automation deployment solution scripts
+* [Dell_EMC_Red_Hat_Ready_Architecture_Guide_v13.2.pdf](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_red_hat_ready_architecture_guide_v13.2.pdf)
+* [Dell_EMC_Red_Hat_Ready_Architecture_Release_Notes_v13.2.pdf](https://www.dellemc.com/resources/en-us/asset/technical-guides-support-information/solutions/dell_emc_red_hat_ready_architecture_release_note_v13.2.pdf)
 
 
 
@@ -1099,7 +1078,7 @@ As an alternative to manually testing your deployment script, we provide sanity_
 
 # Appendix D Hugepages
 
-This appendix details the guidelines for configuration of Hugepages during the deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.2. The number of Hugepages is now calculated at runtime and no longer needs to be specified by the user.
+This appendix details the guidelines for configuration of Hugepages during the deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.2. 
 
 > **Topics:**
 > * Hugepages Overview
@@ -1116,8 +1095,6 @@ The Dell EMC Ready Architecture for Red Hat OpenStack Platform v13.2 provides th
 
 The Linux kernel partitions memory into basic units called pages. The default number of pages is 49152 in the x86 architecture. Hugepages allow the Linux kernel to utilize the multiple page size capabilities of modern hardware architecture.
 
-Earlier, in previous release, fixed values were used for the number of hugepages. The number of hugepages was set to 49152 and 96 when the hugepage size was set to 2MB and 1GB respectively.
-
 In Dell EMC Ready Architecture for Red Hat OpenStack Platform Software Deployment Guide - Version 13, the number of hugepages is computed during runtime. The OpenStack Ironic API is used to fetch the **total memory size** of a compute node, and the following formula is applied to calculate the number of hugepages:
 
 
@@ -1133,8 +1110,8 @@ The following requirements must be met before enabling hugepages:
 
    It is assumed that:
    
-   - The memory reserved for the host OS = 12GB
-   - The memory reserved for the kernel = 4GB
+   - The memory reserved for the host OS = 20GB
+   - The memory reserved for the kernel = 8GB
 
 2. Refer to the automated or manual deployment sections before setting these values.
 
@@ -1157,7 +1134,7 @@ hpg_size: 1GB/2MB (The hugepage size to be configured on every compute node. The
 1.  Open an SSH session to the SAH node.
 2.  Log in as the root user.
 3.  Refer to section Automation configuration files in this document.
-4.  Set hpg_enable=true
+4.  Set hpg_enable=true in ini file
 5.  Set hpg_size to the size of the hugepages to use
     
     > Note: Valid values are 1GB and 2MB
@@ -1165,15 +1142,7 @@ hpg_size: 1GB/2MB (The hugepage size to be configured on every compute node. The
 
 #### Deploying with hugepages
 
-After enabling hugepages in the hardware stamp's .ini file, perform the following steps to deploy hugepages in Dell EMC Ready Architecture for Red Hat OpenStack Platform.
-
-
-1.  Open an SSH session to the SAH node.
-2.  Run the following commands to deploy the overcloud with hugepages enabled:
-
-    a.  cd /root/JetPack/src/deploy/osp_deployer
-    
-    b.  python deployer.py -s <path_to_settings_ini_file>
+After enabling hugepages in the sample_csp_profile.ini file, run the deployment.
 
 **Note that during deployment, JetPack takes the following actions:**
 
@@ -1189,14 +1158,14 @@ After enabling hugepages in the hardware stamp's .ini file, perform the followin
 
 Status messages are logged to /auto_results/deployer.log<time_stamp> on the SAH node and ~/pilot/overcloud_deploy_out.log on the director node.
 
-15. When the deployment has successfully completed, the following message will be displayed in the log files:
+1. When the deployment has successfully completed, the following message will be displayed in the log files:
 
     ```bash
     HugePages has been successfully configured with size: 1GB
     ```
 
 
-16. If the deployment fails due to either a validation failure or other error, refere to the table below.
+2. If the deployment fails due to either a validation failure or other error, refere to the table below.
 
     Below is the table of log messages and actions to be taken upon encountering such errors. If other errors occur, please email openstack@dell.com
 
@@ -1226,8 +1195,6 @@ hpg_size=1GB
 # Appendix E NUMA
 
 This appendix details the guidelines for configuration of NUMA during the deployment of Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
-
-The last release offered basic and minimal NUMA enablement via Jetpack. The functionality was limited to the fixed and preset number of Host OS CPUs for NUMA enablement.
 
 This release version, 13, offers hardware supported dynamic values of parameters required for NUMA enablement. Values are retrieved from the Ironic API during RHOSP deployment.
 
@@ -1269,7 +1236,7 @@ numa_hostos_cpu_count: 2|4|6|8 (The number of CPU cores to reserve for the host 
 1.  Open an SSH session to the SAH node.
 2.  Log in as the root user.
 3.  Refer to section Automation configuration files in this document.
-4.  Set numa_enable=true.
+4.  Set numa_enable=true in sample_csp_profile.ini.
 5.  Set ```numa_hostos_cpu_count``` to the number of CPU cores to reserve for the host OS.
 
     > Note: Valid values are 2, 4, 6, and 8.
@@ -1278,15 +1245,7 @@ Refer to the [Dell NFV Settings] section of Example of sample_csp_profile.ini fo
 
 #### Deploying with NUMA
 
-After enabling NUMA in the hardware stamp's .ini file, perform the following steps to deploy NUMA in Dell EMC Ready Architecture for Red Hat OpenStack Platform.
-
-1.  Open an SSH session to the SAH node.
-2.  Run the following commands to deploy the Overcloud with NUMA enabled
-
-    a. cd /root/JetPack/src/deploy/osp_deployer
-
-    b. python deployer.py -s <path_to_settings_ini_file>
-
+After enabling NUMA in the sample_csp_profile.ini file, start deployment.
 
 Note: During deployment, JetPack takes the following actions:
 
@@ -1310,7 +1269,6 @@ Status messages are logged to /auto_results/deployer.log<time_stamp> on the SAH 
 
 
 
-
 Below is the table of log messages and actions to be taken upon encountering such errors. If other errors occur, please email openstack@dell.com.
 
 
@@ -1318,7 +1276,7 @@ Below is the table of log messages and actions to be taken upon encountering suc
 |----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
 | Failed to calculate vcpu list of Numa. | "Failed to calculate Numa Vcpu list"                                                                                                   | Check DRAC client is up. Redeploy or contact support if the problem persists.                  |
 | Hyper-threading not enabled.           | "Hyperthrea-ding is not enabled in node_id"                                                                                            | Enable hyper-threading in BIOS setting of all the compute nodes. Redeploy if problem persists. |
-| Invalid CPU count value.               | "The number of vCPUs, as specified in the reference architecture, must be one of [40, 48, 56, 64, 72, 128] but number of vCPUs are 32" | Verify in .ini file the values in Dell NFV Settings section are correct.                       |
+| Invalid CPU count value.               | "The number of vCPUs, as specified in the reference architecture, must be one of [40, 48, 56, 64, 72, 80, 128] but number of vCPUs are 32" | Verify in .ini file the values in Dell NFV Settings section are correct.                       |
 
 
 
@@ -1378,7 +1336,7 @@ OVS-DPDK requires an extra network bond; the already existing bonds (bond0 and b
 
 In this guide, it is assumed that the user has complete knowledge about the Dell EMC Ready Architecture for Red Hat OpenStack Platform Version 13. This includes:
 
-1.  Knowledge about different nodes in Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13, like SAH, Director, Controller, Compute and Ceph-storage as explained in  Dell_EMC_Red_Hat_Ready_Architecture_Guide_v13.1.pdf
+1.  Knowledge about different nodes in Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13, like SAH, Director, Controller, Compute and Ceph-storage as explained in  Dell_EMC_Red_Hat_Ready_Architecture_Guide_v13.2.pdf
 
 2.  Automation scripts, settings, and properties files required for deployment are open sourced and available in git hub https://github.com/dsp-jetpack/JetPack
 
@@ -1399,7 +1357,8 @@ Given below are the additional hardware requirements that must be supported to e
 | Device Name           | Quantity                                      |
 |-----------------------|-----------------------------------------------|
 | Intel XXV710 adapters | 3 or 6                                        |
-| QSFP  connectors      | 4  (Depends upon the implementation of S5248) |
+| Mellanox ConnectX-5   | 3 or 6                                        |
+| QSFP  connectors      | 4 (Depends upon the implementation of Switch) |
 | SFP  Connector        | 6 or 12                                       |
 
 
@@ -1421,7 +1380,7 @@ c.  Tagging of newly created bonds in tenant network VLANs.
 
 ![Figure 2: OVS-DPDK with two ports reference wiring diagram](media/Two_ports.jpg)
 
-> NOTE: In the reference diagram above, PCI Slot 1 and PCI Slot 2 are utilized on all the Compute nodes. PCI slots on the Compute nodes are connected to swp38, swp40, and swp42 interfaces on Leaf-1 and Leaf-2 switches according to the reference diagram.
+> NOTE: In the reference diagram above, PCI Slot 1 and PCI Slot 2 are utilized on all the Compute nodes. PCI slots on the Compute nodes are connected to 1/21/1, 1/21/3, and 1/23/1 interfaces on Leaf-1 and Leaf-2 switches according to the reference diagram.
 
 
 Switch configurations for one interface on both switches according to the two ports OVS-DPDK will be:
@@ -1435,7 +1394,7 @@ no switchport mode
 switchport mode trunk
 vlt-port-channel 59
 # add port channel to vlan
-switchport trunk allowed vlan 201-220
+switchport trunk allowed vlan 201-250
 # exit port-channel
 exit
 # add interface to port-channel
@@ -1467,7 +1426,7 @@ b.  Removal of tenant VLANs from NOVA1-bond0, NOVA2-bond0 and NOVA3-bond0 bonds.
 c.  Tagging of newly created bonds in tenant network VLANs.
 
 > Note: Tenant VLANs in JS 13.2:
-> Mention the VLAN range for tenant network from 201-220 in the INI file under SAH node.i.e. Default Tenant VLANs range: 201-220
+> Mention the VLAN range for tenant network from 201-250 in the INI file under SAH node.i.e. Default Tenant VLANs range: 201-250
 
 ![Figure 3: OVS-DPDK with four ports reference wiring diagram](media/Four_ports.jpg)
 
@@ -1484,7 +1443,7 @@ interface port-channel 59
 switchport mode trunk
 vlt-port-channel 59
 # add port channel to vlan
-switchport trunk allowed vlan 201-220
+switchport trunk allowed vlan 201-250
 # exit port-channel
 exit
 # add interface to port-channel
@@ -1596,21 +1555,8 @@ HostNicDriver= vfio-pci
 
 #### Start deployment
 
-Change the directory to /root/JetPack/src/deploy/osp_deployer.
 
-```bash
-# cd /root/JetPack/src/deploy/osp_deployer
-```
-
-
-Start the “deployer.py” script execution and pass the settings file using “-s” parameter.
-
-```bash
-# python deployer.py –s /root/sample_csp_profile.ini
-```
-
-
-Monitor the output of the script. For detailed logs open a new SSH terminal and tail the logs file in “/ auto_results/” directory. The log files are timestamped.
+Run the deployment script and monitor the output of the script. For detailed logs open a new SSH terminal and tail the logs file in “/ auto_results/” directory. The log files are timestamped.
 
 ```bash
 # tail -f /auto_results/<latest log file>
@@ -2002,11 +1948,11 @@ Neutron managed SR-IOV is enabled as a part of the automated RHOSP deployment so
 
 **Following are the hardware requirements for enabling Neutron-managed SR-IOV:**
 
-| Device Name                            | Total                                     |
-|----------------------------------------|-------------------------------------------|
-| Intel® Ethernet Network Adapter XXV710 | 3 or 6                                    |
-| SFP Connector                          | 6 or 12                                   |
-| QSFP connector                         | Depends upon the implementation of S5248) |
+| Device Name                            | Total                                      |
+|----------------------------------------|--------------------------------------------|
+| Intel® Ethernet Network Adapter XXV710 | 3 or 6                                     |
+| SFP Connector                          | 6 or 12                                    |
+| QSFP connector                         | Depends upon the implementation of Switch) |
 
 
 
@@ -2039,7 +1985,6 @@ For this scenario, the following changes are required in the switch configuratio
 ![Figure 8: SRIOV with four ports compute nodes wiring diagram](media/SRIOV4portsComputeNodes.PNG)
 ![Figure 9: SRIOV with four ports controller nodes wiring diagram](media/SRIOV4portsControllerNodes.PNG)
 
-
 > NOTE: PCI slots in reference diagram
 In the four ports SR-IOV reference diagram, PCI slot 1 and 2 are used just for reference. User can utilize different PCI slots according to the network environment.
 
@@ -2048,58 +1993,58 @@ In the four ports SR-IOV reference diagram, PCI slot 1 and 2 are used just for r
 * Switch configuration (OS10) for SR-IOV on both the switches according to the reference diagram will be:
 
 ```bash
-# add 201-220 vlans to compute node sriov port (for compute node 1)
+# add 201-250 vlans to compute node sriov port (for compute node 1)
 interface ethernet1/1/17
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
  
-# add 201-220 vlans to compute node sriov port (for compute node 1)
+# add 201-250 vlans to compute node sriov port (for compute node 1)
 interface ethernet1/1/18
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
  
  
-# add 201-220 vlans to compute node sriov port (for compute node 2)
+# add 201-250 vlans to compute node sriov port (for compute node 2)
 interface ethernet1/1/19
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
  
-# add 201-220 vlans to compute node sriov port (for compute node 2)
+# add 201-250 vlans to compute node sriov port (for compute node 2)
 interface ethernet1/1/20
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
 
-# add 201-220 vlans to compute node sriov port (for compute node 3)
+# add 201-250 vlans to compute node sriov port (for compute node 3)
 interface ethernet1/1/21
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
  
-# add 201-220 vlans to compute node sriov port (for compute node 3)
+# add 201-250 vlans to compute node sriov port (for compute node 3)
 interface ethernet1/1/22
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
 
@@ -2107,57 +2052,57 @@ exit
 ```
 * Additional four port switch configurations for SR-IOV Offload
 ```bash
-# add 201-220 vlans to controller node port-channel 2 (for controller node 1)
+# add 201-250 vlans to controller node port-channel 2 (for controller node 1)
 interface port-channel 2
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
  
-# add 201-220 vlans to controller node port-channel 3 (for controller node 2)
+# add 201-250 vlans to controller node port-channel 3 (for controller node 2)
 interface port-channel 3
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
  
-# add 201-220 vlans to controller node port-channel 4 (for controller node 3)
+# add 201-250 vlans to controller node port-channel 4 (for controller node 3)
 interface port-channel 4
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
 
-# add 201-220 vlans to controller node port-channel 2 (for controller node 1)
+# add 201-250 vlans to controller node port-channel 2 (for controller node 1)
 interface port-channel 5
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
  
-# add 201-220 vlans to controller node port-channel 3 (for controller node 2)
+# add 201-250 vlans to controller node port-channel 3 (for controller node 2)
 interface port-channel 6
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
  
-# add 201-220 vlans to controller node port-channel 4 (for controller node 3)
+# add 201-250 vlans to controller node port-channel 4 (for controller node 3)
 interface port-channel 7
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
 ```
@@ -2182,29 +2127,29 @@ For this scenario, the following changes are required in the switch configuratio
 
 
 ```bash
-# add 201-220 vlans to compute node sriov port (for compute node 1)
+# add 201-250 vlans to compute node sriov port (for compute node 1)
 interface ethernet1/1/17
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
  
-# add 201-220 vlans to compute node sriov port-channel 22 (for compute node 2)
+# add 201-250 vlans to compute node sriov port-channel 22 (for compute node 2)
 interface ethernet1/1/19
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
-# add 201-220 vlans to compute node sriov port-channel 23 (for compute node 3)
+# add 201-250 vlans to compute node sriov port-channel 23 (for compute node 3)
 interface ethernet1/1/21
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
 
@@ -2212,30 +2157,30 @@ exit
 
 * Additional two port switch configurations for SR-IOV Offload
 ```bash
-# add 201-220 vlans to controller node port-channel 2 (for controller node 1)
+# add 201-250 vlans to controller node port-channel 2 (for controller node 1)
 interface port-channel 2
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
  
-# add 201-220 vlans to controller node port-channel 3 (for controller node 2)
+# add 201-250 vlans to controller node port-channel 3 (for controller node 2)
 interface port-channel 3
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
  
-# add 201-220 vlans to controller node port-channel 4 (for controller node 3)
+# add 201-250 vlans to controller node port-channel 4 (for controller node 3)
 interface port-channel 4
 # set port-channel to trunk mode
 switchport mode trunk
 # add tagged vlans to port-channel
-switchport mode trunk allowed vlan 201-220
+switchport mode trunk allowed vlan 201-250
 # exit interface
 exit
 
@@ -2249,17 +2194,6 @@ exit
 
 To enable SR-IOV in JetStream 13.2, perform the following steps:
 
-* Open an SSH session as user root in SAH node.
-
-    ```bash
-    $ ssh root@<sah_node_ip>
-    ```
-
-* Open the settings INI file located in /root directory for SR-IOV configuration.
-
-    ```bash
-    $ vi /root/<sample CSP profile INI file>
-    ```
 
 * Change the SR-IOV parameters provided in the following table in settings INI file: 
     
@@ -2278,17 +2212,7 @@ To enable SR-IOV in JetStream 13.2, perform the following steps:
 | nic_env_file                                                                                                                | To enable SR-IOV with 6 nic ports with offload, choose sriov_6_port_offload/nic_environment.yaml. For 7 ports with offload, choose sriov_7_port_offload/nic_enviornment.yaml. For 8 ports with offload, choose sriov_8_port_offload/nic_enviornment.yaml. For 9 ports with offload, choose sriov_9_port_offload/nic_enviornment.yaml.  | Set NIC environment file according to the SR-IOV ports requirement. Example: nic_env_file=sriov_7_port_offload/nic_environment.yaml                               |
 | ControllerSriovInterface1=p3p1 ControllerSriovInterface2=p5p1 ControllerSriovInterface3=p3p1 ControllerSriovInterface4=p5p2 | Uncomment these lines when smart_nic is set to true.                                                                                                                                                                                                                                                                                   | Uncomment these interfaces according to the NIC environment file selected i.e. sriov_6_port_offload, sriov_7_port_offload, sriov_8_port_offload or sriov_9_port.  |
 
-* Change the directory to /root/JetPack/src/deploy/osp_deployer.
-
-    ```bash
-    # cd /root/JetPack/src/deploy/osp_deployer
-    ```
-
-* Execute the deployer.py script and pass the settings file using -s flag.
-
-    ```bash
-    python deployer.py –s /root/sample_csp_profile.ini
-    ```
+* Run the deployment script.
 
 > Note: For detailed logs and to monitor the output of the script, open a new SSH terminal and tail the latest logs file in /auto_results/ directory. 
 
@@ -2391,7 +2315,6 @@ parameter_defaults:
 
 
 
-
 <div style="page-break-after: always;"></div>
 
 # Appendix H Neutron DVR support in JS 13.2
@@ -2431,64 +2354,6 @@ Follow these steps to configure bonds interfaces of every compute node on both s
 Repeat the above configurations for bond’s other interface on switch 2.
 
 
-**Switch with OS9**
-
-Switch with OS9, configurations can be done using following commands:
-
-* Switch configurations for five port nics, port-channel of compute Bond1 interfaces should be in floating vlan:
-
-    ```yaml
-    # int vlan <floating-vlan> 
-    #tagged port-channel <name of channel which have interfaces of bond1>
-    # int vlan <publicApi-vlan> 
-    #tagged port-channel <name of channel which have interfaces of bond1>
-    ```
-
-* When using seven port nic environment file, additional bond interfaces should be in external and floating vlan. Below are the configurations to add interfaces to vlans:
-
-    ```yaml
-    # int port-channel <name of channel which have interfaces of bond2 >
-    # switchport
-    # exit
-    # int TwentyGigabitEthernet <interface of bond2>
-    # port-channel porotocol lacp
-    # port-channel <channel which have interfaces of bond2> mode active
-    # exit
-    # int vlan <floating-vlan>
-    #tagged port-channel <channel which have interfaces of bond2>
-    # int vlan <publicApi-vlan>
-    #tagged port-channel <channel which have interfaces of bond2>
-    Repeat the above configurations for bond’s other interface on switch 2.
-    Add port channel on vlt-peer-lag on both switches
-    # int port-channel <channel which have interfaces of bond2>
-    # vlt-peer-lag port-channel <channel which have interfaces of bond2>
-
-    ```
-
-
-**Switch with Cumulus OS**
-
-**Switch with Cumulus OS, configurations can be done using following commands:**
-
-* **Switch configurations for five port nics, port-channel of compute Bond1 interfaces should be in floating vlan:**
-
-    ```bash
-    $ net add bond <compute node bond1> bridge vids <floating ip vlan>
-    $ net commit
-    # This settings need to done for every compute node bond1.
-    ```
-
-* **When using seven port nic environment file, additional bond interfaces should be in external and floating vlan. Below are the configurations to add interfaces to vlans:**
-
-    ```bash
-    #net add bond <compute node bond2> slave <compute node bond2 port number e-g swp38>
-    #net add bond <compute node bond2> clag id <compute node bond2 clag id e-g 50>
-    #net add bond <compute node bond2> bridge vids <floating network vlan>
-    #net add bond <compute node bond2> mtu 9216
-    #net commit
-    Repeat the above configurations for bond’s other interface on switch 2 and also for every compute node.
-    ```
-
 
 ### Settings file parameter verification
 
@@ -2520,20 +2385,9 @@ Switch with OS9, configurations can be done using following commands:
     #ComputeBond2Interface2=p2p1
     ```
 
-
-
-### JS 13.2 deployment of undercloud and overcloud
-
-Assuming that SAH node is deployed and JetPack folder is at root location. Edit your hardware stamp’s .ini and .properties files to match your hardware stamp documentation. Run the deployment by executing the deployer.py command:
-
-```bash
-# cd /root/JetPack/src/deploy/osp_deployer
-# python deployer.py -s <path_to_settings_ini_file>
-```
-
 ### Deployment verification
 
-Different scenarios are tested to check the functionality of DVR:
+Run the deployment and verify it using different scenarios to test the functionality of DVR:
 
 Verify that DVR is deployed on all the controller nodes
 
@@ -2684,19 +2538,7 @@ Moreover, when setting octavia_generate_certs parameter to false, it is required
 ```
 > Note: The Octavia custom environment file containing user provided certificates and keys is only required when "octavia_generate_certs" parameter is set to false.
 
-* Change the directory to /root/JetPack/src/deploy/osp_deployer
-```bash
-    $ cd /root/JetPack/src/deploy/osp_deployer
-```
-* Start the “deployer.py” script execution and pass the settings file using “-s” parameter.
-```bash
-    $ python deployer.py –s /root/sample_csp_profile.ini
-```
-Monitor the output of the script. For detailed logs open a new SSH terminal and tail the logs file in “/auto_results/” directory. The log files are timestamped.
-A message will be shown at the start of the deployment indicating whether the Octavia feature is enabled or disabled.
-
-**Success**
-For a successful deployment, overcloud deployment status should be CREATE_COMPLETE. And if sanity test was set to true in the settings file, then it should pass.
+* Start the deployment
 
 # Appendix J Unity with Manila and Cinder
 
@@ -2739,14 +2581,8 @@ src/deploy/osp_deployer/settings/sample_csp_profile.ini
       manila_unity_ssl_cert_verify=false
       manila_unity_ssl_cert_path=''
 ``` 
-### JS 13.2 Deployment of Undercloud and Overcloud
+* Now run the deployment script
 
-Assuming that sah node is deployed and JetPack folder is at root location. Edit your hardware stamp’s .ini and .properties files to match your hardware stamp documentation. Run the deployment by executing the deployer.py command:
-
-```bash
-      cd /root/JetPack/src/deploy/osp_deployer
-      python deployer.py -s <path_to_settings_ini_file>
-```
 ### Post Deployment Steps
 **Check functionality of Manila with Unity**
 ```bash
@@ -2825,22 +2661,8 @@ Parameter related to the configuration of Barbican is described in the table bel
 |--------------------------------|---------------------------------|-----------------------------------------|
 | barbican_enable                | true/false                      | Barbican can be set to enable or disable with true/false option.|
 
-### Deployment
 
-1. Change the directory to /root/JetPack/src/deploy/osp_deployer.
-    ```bash
-            cd /root/JetPack/src/deploy/osp_deployer
-    ```
-2. Start the “deployer.py” script execution and pass the settings file using “-s” parameter.
-    ```bash
-            python deployer.py –s /root/sample_csp_profile.ini
-    ```
-3. Monitor the output of the script. For detailed logs open a new SSH terminal and tail the logs file in “/auto_results/” directory. The log files are timestamped.
-A message will be shown at the start of the deployment indicating whether the Barbican feature is enabled or disabled.
-
-**Success**
-
-For a successful deployment, overcloud deployment status should be CREATE_COMPLETE. And if sanity test was set to true in the settings file, then it should pass.
+* Run the deployment and for a successful deployment, overcloud deployment status should be CREATE_COMPLETE. If sanity test was set to true in the settings file, then it should pass.
 
 ### Post Deployment Steps
 * Create a new role called creator
@@ -2883,8 +2705,7 @@ Satellite is enabled as a part of the automated RHOSP deployment. In the setting
 **Settings File Parameters**
 To enable Satellite in the JS 13.2, following changes need to be made in the settings file.
 
-1. Open an SSH terminal as "root" user, to the SAH Node.
-2. Open the settings file, and find the section named "[Deployment Settings]". Assuming the name of settings file is "sample_csp_profile.ini" and it is present in the "/root" directory:
+1. In SAH node, open the settings file, and find the section named "[Deployment Settings]". Assuming the name of settings file is "sample_csp_profile.ini" and it is present in the "/root" directory:
 ```bash
         vi /root/sample_csp_profile.ini
 ```
@@ -2898,7 +2719,7 @@ Parameter related to the configuration of Satellite is described in the table be
 | satellite_org                  | organization name               | Name of the organization                                         |
 | satellite_activation_key       | activation key                  | Activation key for registration                                  |
 | pull_containers_from_satellite | true/false                      | Set to true, to pull the  container images from satellite        |
-| containers_prefix              | containers_prefix               | Containers_prefix format is organization-product                 |
+| containers_prefix              | containers_prefix               | Containers_prefix format is organization-product-                |
 
 **Sample parameters values to enable Satellite**
 ```bash
@@ -2913,21 +2734,7 @@ Parameter related to the configuration of Satellite is described in the table be
 
 ### Deployment
 
-1. Change the directory to /root/JetPack/src/deploy/osp_deployer.
-    ```bash
-            cd /root/JetPack/src/deploy/osp_deployer
-    ```
-2. Start the “deployer.py” script execution and pass the settings file using “-s” parameter.
-    ```bash
-            python deployer.py –s /root/sample_csp_profile.ini
-    ```
-3. Monitor the output of the script. For detailed logs open a new SSH terminal and tail the logs file in “/auto_results/” directory. The log files are timestamped.
-
-A message will be shown at the start of the deployment indicating whether the Satellite feature is enabled or disabled.
-
-**Success**
-
-For a successful deployment, overcloud deployment status should be CREATE_COMPLETE. And if sanity test was set to true in the settings file, then it should pass.
+Start deployment and for a successful deployment, overcloud deployment status should be CREATE_COMPLETE. If sanity test was set to true in the settings file, then it should pass.
 
 
 # Appendix M Bluestore
@@ -2936,6 +2743,8 @@ For a successful deployment, overcloud deployment status should be CREATE_COMPLE
 BlueStore is a new back end object store for the OSD daemons. The original object store, FileStore, requires a file system on top of raw block devices. Objects are then writen to the file system. BlueStore does not require a file system. It stores objects directly on the block device which improves the performance of the cluster.
 
 > Note: There are no changes in ini for the bluestore integration with JetPack. If defining the osds in the .properties file,  journals should not be listed in the :/dev/sdx/:/dev/journal format, all disks should be listed as /dev/sdx and ceph will assign the disks based on availability/disk types.
+
+> Note: the OSD mapping in the .properties is only required if not using 14g/HBA330 hardware controllers
 
 **Sample Properties file changes for Bluestore**
 ``` yaml
@@ -2996,27 +2805,7 @@ List of performance optimization user modifiable Parameters
     default : dynamic (This assigns 75% ram size of controller node.)
     ```
 
-
-* ```innodb_buffer_pool_instances``` : (8 - 48) The number of regions that the InnoDB buffer pool is divided into.
-
-    ```bash
-    default : 16
-    ```
-
-
-Follow the procedure provided below to apply performance optimization parameters with Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13:
-
-1.  Open an SSH session to the SAH node.
-
-2.  Log in as the root user.
-
-3.  Change the working directory to /root/JetPack/src/deploy/osp_deployer/settings/
-
-    ```bash
-    #cd /root/JetPack/src/deploy/osp_deployer/settings/
-    ```
-
-4.  Edit the sample_csp_profile.ini or sample_xsp_profile.ini file. Change the settings under section [Performance and Optimization]. Please refer sample_csp_profile.ini and sample_xsp_profile.ini for details.
+* Edit the sample_csp_profile.ini or sample_xsp_profile.ini file. Change the settings under section [Performance and Optimization]. Please refer sample_csp_profile.ini and sample_xsp_profile.ini for details.
 
      Note:
 
@@ -3028,20 +2817,11 @@ Follow the procedure provided below to apply performance optimization parameters
 **Deploy performance optimization parameters**
 
 After applying performance optimization parameters in sample_csp_profile.ini or
-sample_xsp_profile.ini file, perform the following steps to deploy performance and optimization parameters inDell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
+sample_xsp_profile.ini file, deploy performance and optimization parameters in Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
  
-1.  Open an SSH session to the SAH node.
-2.  Ensure all hardware in the OpenStack Cluster is powered off.
-3.  Run the following command to deploy performance optimization:
+Please refer section Logging for details.
 
-    ```bash
-    #cd /root/JetPack/src/deploy/osp_deployer
-    #python deployer.py -s < path-of-settings-file >
-    ```
-4.  Upon successful execution, success log will be generated. Please refer section Logging for details.
-
-There are more parameters which are by default optimized by Dell EMC Ready Architecture for Red Hat OpenStack Platform version 10.2. These parameters can be seen in List of parameters to be optimized by default .
-
+There are more parameters which are by default optimized by Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.2. These parameters can be seen in List of parameters to be optimized by default.
 
 
 ### Logging
@@ -3111,37 +2891,11 @@ Below is the table of log messages and actions to be taken upon encountering suc
 
 ### Openstack components
 
-1.  MariaDB (/etc/my.cnf.d/galera.cnf):
-    
-    ```yaml
-    [mysqld] / innodb_log_file_size=1500M
-    [mysqld] / innodb_log_files_in_group=2
-    [mysqld] / innodb_flush_method = O_DIRECT
-    [mysqld] / innodb_file_per_table = 1
-    [mysqld] / innodb_flush_log_at_trx_commit = 0
-    ```
-2.  HAproxy (/etc/haproxy/haproxy.cfg)
+1.  HAproxy (/etc/haproxy/haproxy.cfg)
     
     ```yaml
     defaults / maxconn 10000
     ```
-
-
-Example of sample_csp_profile.ini and sample_xsp_profile.ini
-
-```yaml
-[Performance and Optimization]
-
-#mariadb_max_connections takes value from 1000 to 100000, it is mandatory. 
-mariadb_max_connections = 15360
-
-#MariaDB innodb_buffer_pool_size should be given value in GB, Example : 64G.
-#Default is 'dynamic' which assigns 75% ram size of controller node.
-#Note that innodb_buffer_pool_size should be less than available ram size. innodb_buffer_pool_size = dynamic
-
-#innodb_buffer_pool_instances takes value from 8 to 48 
-innodb_buffer_pool_instances = 16
-```
 
 
 <div style="page-break-after: always;"></div>
@@ -3150,9 +2904,14 @@ innodb_buffer_pool_instances = 16
 
 This appendix details the sample properties file and describes the differences between the xSP and CSP sample profile files found in Dell EMC Ready Architecture for Red Hat OpenStack Platform version 13.
 
-
 ### Sample properties file
 
+* Default PXE NIC has been updated. Interface em3 is no longer dedicated for provisioning. To use em3 for provisioning pxe_nic has to be specified for each overcloud node in the sample.properties file as mentioned below. 
+
+```yaml
+    "pxe_nic": "NIC.Integrated.1-3-1"
+```
+* Use the same properties file when there is not a separate interface for provisioning.
 sample.properties
 
 ```yaml
@@ -3857,7 +3616,7 @@ cloud_repo_dir=/root/JetPack
 rhel_iso=/root/rhel77.iso
 
 # Overcloud deployment timeout value - default is 180mns, but can be tweaked here if required.
-overcloud_deploy_timeout=180
+overcloud_deploy_timeout=300
 
 # Default driver is DRAC.
 use_ipmi_driver=false
@@ -4473,7 +4232,7 @@ cloud_repo_dir=/root/JetPack
 rhel_iso=/root/rhel77.iso
 
 # Overcloud deployment timeout value - default is 180mns, but can be tweaked here if required.
-overcloud_deploy_timeout=180
+overcloud_deploy_timeout=3000
 
 # Default driver is DRAC.
 use_ipmi_driver=false
@@ -4529,8 +4288,7 @@ Validation of the complete solution is based on the hardware in the Ready Archit
 * Nodes 2 - 4: Dell EMC PowerEdge R640 OpenStack Controllers
 * Nodes 5 - 7 Dell EMC PowerEdge R640 Nova Compute Nodes
 * Nodes 8 - 10: Dell EMC PowerEdge R740xd Storage Nodes
-* Dell Networking S3048-ON Switch
-* Dell Networking S4048-ON Switch
+* Dell Networking S5232-ON Switch
 * Dell Networking S5248F Switch
 
 
@@ -6238,7 +5996,7 @@ If you need additional services or implementation help, please contact your Dell
 
 ### To learn more
 
-For more information on the Dell EMC Ready Architecture for Red Hat OpenStack Platform v13.1 visit https://www.dellemc.com/en-us/solutions/cloud/openstack/ready-bundle-for-openstack.htm.
+For more information on the Dell EMC Ready Architecture for Red Hat OpenStack Platform v13.2 visit https://www.dellemc.com/en-us/solutions/cloud/openstack/ready-bundle-for-openstack.htm.
 
 This document and all other related architecture and technical guides can be found in the Dell EMC TechCenter community at http://en.community.dell.com/techcenter/cloud/w/wiki/12047.dell-emc-red-hat-openstack-cloud-solutions
 
