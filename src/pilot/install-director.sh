@@ -241,24 +241,64 @@ echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
-# This hacks in a patch to allow realtime RAID creation.
-echo
-echo "## Patching Ironic iDRAC driver client.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
+rpm=$(rpm -qa | grep dracclient)
+if [[ $rpm= == *"1.6.0-1"* ]]; then
+   drac_version="1.6.0-1"
+elif [[ $rpm= == *"1.6.0-2"* ]]; then
+   drac_version="1.6.0-2"
+else
+   echo "ERROR: unkown drac client version - patches need to be reviewed"
+   exit 1
+fi
 
-# This hacks in a patch to enable realtime RAID creation.
-echo
-echo "## Patching Ironic iDRAC driver job.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/job.py ${HOME}/pilot/job.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
+
+if [ drac_version == "1.6.0-1" ]; then
+
+    # This hacks in a patch to allow realtime RAID creation.
+    echo
+    echo "## Patching Ironic iDRAC driver client.py..."
+    apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch.${drac_version}"
+    sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
+    sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
+    echo "## Done."
+    
+    # This hacks in a patch to enable realtime RAID creation.
+    echo
+    echo "## Patching Ironic iDRAC driver job.py..."
+    apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/job.py ${HOME}/pilot/job.patch.${drac_version}"
+    sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyc
+    sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/job.pyo
+    echo "## Done."    
+
+    #This patch fixes tempest cleanup
+    echo
+    echo "### Patching tempest cleanup..."
+    apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.py ${HOME}/pilot/tempest_cleanup.patch.${drac_version}"
+    sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyc
+    sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyo
+    echo "## Done."
+
+fi
+
+if [ drac_version == "1.6.0-2" ]; then
+
+    # This hacks in a patch to out-of-band inspection to set boot_mode on the node
+    # being inspected.
+    echo
+    echo "## Patching Ironic iDRAC driver inspect.py.."
+    apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.py ${HOME}/pilot/inspect.patch.${drac_version}"
+    sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.pyc
+    sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.pyo
+    echo "## Done."
+
+
+fi
+
 
 # This hacks in a patch to validate and retrieve raid and boss controller and physical disk status.
 echo
 echo "## Patching Ironic iDRAC driver raid.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch.${drac_version}"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
 
@@ -278,7 +318,7 @@ echo "## Done."
 # the director.
 echo
 echo "## Patching Ironic iDRAC driver wsman.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch.${drac_version}"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
 echo "## Done."
@@ -300,14 +340,6 @@ echo
 echo "## Patching 10-ironic_wsgi.conf"
 apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
 echo "## Done"
-
-# This patch fixes tempest cleanup
-echo
-echo "### Patching tempest cleanup..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.py ${HOME}/pilot/tempest_cleanup.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/tempest/cmd/cleanup_service.pyo
-echo "## Done."
 
 echo
 echo "## Restarting httpd"
