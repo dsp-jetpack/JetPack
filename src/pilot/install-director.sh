@@ -252,7 +252,7 @@ else
 fi
 
 
-if [ drac_version == "1.6.0-1" ]; then
+if [ ${drac_version} == "1.6.0-1" ]; then
 
     # This hacks in a patch to allow realtime RAID creation.
     echo
@@ -280,7 +280,7 @@ if [ drac_version == "1.6.0-1" ]; then
 
 fi
 
-if [ drac_version == "1.6.0-2" ]; then
+if [ ${drac_version} == "1.6.0-2" ]; then
 
     # This hacks in a patch to out-of-band inspection to set boot_mode on the node
     # being inspected.
