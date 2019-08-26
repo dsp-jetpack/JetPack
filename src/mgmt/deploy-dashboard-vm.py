@@ -257,14 +257,13 @@ EOIP
   echo "heat-admin ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/heat-admin
   echo "Defaults:heat-admin !requiretty" >> /etc/sudoers.d/heat-admin
 
-  /usr/bin/yum install -y cephmetrics-ansible libselinux-python
-
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
   [[ -e /tmp/mnt/versionlock.list ]] && {
     cp /tmp/mnt/versionlock.list /etc/yum/pluginconf.d
     chmod 644 /etc/yum/pluginconf.d/versionlock.list
     }
+  /usr/bin/yum install -y cephmetrics-ansible libselinux-python
 
   yum -y update
 
