@@ -621,7 +621,7 @@ test_neutron_networking (){
 
   for floating_ip in ${floating_ips[@]}
   do
-    if [ "$DVR_ENABLED" == "True" ]; then
+    if [ "$DVR_ENABLED" == "true" ]; then
       # Test pinging the floating IP of the instance from the snat
       # network namespace
       ping_from_snat_netns $floating_ip "snat-${router_id}"
