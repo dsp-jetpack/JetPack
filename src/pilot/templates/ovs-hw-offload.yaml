@@ -13,3 +13,5 @@ parameter_defaults:
   # Kernel arguments for ComputeSriov node
   DellComputeParameters:
     OvsHwOffload: True
+  DellComputeHCIParameters:
+    OvsHwOffload: True

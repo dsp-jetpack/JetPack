@@ -261,6 +261,7 @@ class Director(InfraHost):
             # Discover the nodes using static IPs for the iDRAC
             for node in (self.settings.controller_nodes +
                          self.settings.compute_nodes +
+                         self.settings.computehci_nodes +
                          self.settings.ceph_nodes):
                 if hasattr(node, "idrac_ip"):
                     cmd += ' ' + node.idrac_ip
@@ -286,7 +287,7 @@ class Director(InfraHost):
         logger.debug("Verify the number of nodes picked match up to settings")
         expected_nodes = len(self.settings.controller_nodes) + len(
             self.settings.compute_nodes) + len(
-            self.settings.ceph_nodes)
+            self.settings.ceph_nodes) + len(self.settings.computehci_nodes)
         found = self.run_tty(
             "grep pm_addr ~/instackenv.json | wc -l")[0].rstrip()
         logger.debug("Found " + found + " Expected : " + str(expected_nodes))
@@ -305,6 +306,7 @@ class Director(InfraHost):
     def configure_idracs(self):
         nodes = list(self.settings.controller_nodes)
         nodes.extend(self.settings.compute_nodes)
+        nodes.extend(self.settings.computehci_nodes)
         nodes.extend(self.settings.ceph_nodes)
         cmd = "~/pilot/config_idracs.py "
 
@@ -408,6 +410,7 @@ class Director(InfraHost):
         roles_to_nodes = {}
         roles_to_nodes["controller"] = self.settings.controller_nodes
         roles_to_nodes["compute"] = self.settings.compute_nodes
+        roles_to_nodes["computehci"] = self.settings.computehci_nodes
         roles_to_nodes["storage"] = self.settings.ceph_nodes
 
         threads = []
@@ -444,6 +447,7 @@ class Director(InfraHost):
         # Required for assign_role to run threaded if stamp has > 10 nodes
         non_sah_nodes = (self.settings.controller_nodes +
                          self.settings.compute_nodes +
+                         self.settings.computehci_nodes +
                          self.settings.ceph_nodes)
         # Allow for the number of nodes + a few extra sessions
         maxSessions = len(non_sah_nodes) + 10
@@ -537,8 +541,9 @@ class Director(InfraHost):
                 num_osds += 1
             total_osds = total_osds + num_osds
 
-        num_storage_nodes = len(self.settings.ceph_nodes)
+        num_storage_nodes = len(self.settings.ceph_nodes) + len(self.settings.computehci_nodes)
         num_unaccounted = num_storage_nodes - len(uuid_to_osd_configs)
+        # Also add nodes with osds defined in properties to allow for mix of configs
         if num_unaccounted < 0:
             raise AssertionError("There are extraneous servers listed in {}. "
                                  "Unable to calculate the number of OSDs in "
@@ -551,7 +556,7 @@ class Director(InfraHost):
                                      self.settings.ceph_osd_config_yaml))
 
         total_osds = total_osds + (num_unaccounted * default_osds_per_node)
-
+        logger.debug("Total osds : " + str(total_osds))
         return total_osds
 
     def setup_environment(self):
@@ -559,11 +564,15 @@ class Director(InfraHost):
 
         # If the osd_disks were not specified then just return
         osd_disks = None
-        if hasattr(self.settings.ceph_nodes[0], 'osd_disks'):
-            # If the OSD disks are specified on the first storage node, then
-            # use them.  This is the best we can do until the OSP Director
-            # supports more than a single, global OSD configuration.
-            osd_disks = self.settings.ceph_nodes[0].osd_disks
+        if len(self.settings.computehci_nodes) > 0 and hasattr(self.settings.computehci_nodes[0], 'osd_disks'):
+            osd_disks = self.settings.computehci_nodes[0].osd_disks
+
+        else:
+            if len(self.settings.ceph_nodes) > 0 and hasattr(self.settings.ceph_nodes[0], 'osd_disks'):
+               # If the OSD disks are specified on the first storage node, then
+               # use them.  This is the best we can do until the OSP Director
+               # supports more than a single, global OSD configuration.
+               osd_disks = self.settings.ceph_nodes[0].osd_disks
 
         src_file = open(self.settings.dell_env_yaml, 'r')
 
@@ -1202,6 +1211,7 @@ class Director(InfraHost):
             compute_tenant_tunnel_ips = ''
             compute_private_ips = ''
             compute_storage_ips = ''
+            compute_storage_cluster_ip = ''
 
             for node in self.settings.compute_nodes:
                 compute_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip
@@ -1211,6 +1221,22 @@ class Director(InfraHost):
                     compute_tenant_tunnel_ips += "\\n"
                     compute_private_ips += "\\n"
                     compute_storage_ips += "\\n"
+
+            computehci_tenant_tunnel_ips =''
+            computehci_private_ips = ''
+            computehci_storage_ips = ''
+            computehci_cluster_ips = ''
+
+            for node in self.settings.computehci_nodes:
+                computehci_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip
+                computehci_private_ips += "    - " + node.private_api_ip
+                computehci_storage_ips += "    - " + node.storage_ip
+                computehci_cluster_ips += "    - " + node.storage_cluster_ip
+                if node != self.settings.computehci_nodes[-1]:
+                    computehci_tenant_tunnel_ips += "\\n"
+                    computehci_private_ips += "\\n"
+                    computehci_storage_ips += "\\n"
+                    computehci_cluster_ips += "\\n"
 
             storage_storgage_ip = ''
             storage_cluster_ip = ''
@@ -1249,7 +1275,16 @@ class Director(InfraHost):
                     s/storage_mgmt:/storage_mgmt: \\n' +
                     storage_cluster_ip + "/\" " + static_ips_yaml
                     ]
-
+            if len(self.settings.computehci_nodes) > 0:
+                cmds.extend(['sed -i "/DellComputeHCIIPs:/,/tenant:/s/tenant:/tenant: \\n' +
+                           computehci_tenant_tunnel_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/DellComputeHCIIPs:/,/internal_api:/s/internal_api:/internal_api: \\n' +
+                           computehci_private_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/DellComputeHCIIPs:/,/storage:/s/storage:/storage: \\n' +
+                           computehci_storage_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/DellComputeHCIIPs:/,/storage_mgmt:/s/storage_mgmt:/storage_mgmt: \\n' +
+                           computehci_cluster_ips + "/\" " + static_ips_yaml
+                          ]) 
             for cmd in cmds:
                 self.run_tty(cmd)
 
@@ -1388,6 +1423,8 @@ class Director(InfraHost):
                                     " ~/pilot;./deploy-overcloud.py" \
                                     " --dell-computes " + \
                                     str(len(self.settings.compute_nodes)) + \
+                                    " --dell-computeshci " + \
+                                    str(len(self.settings.computehci_nodes)) + \
                                     " --controllers " + \
                                     str(len(self.settings.controller_nodes
                                             )) + \
