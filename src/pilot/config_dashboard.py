@@ -689,6 +689,7 @@ def prep_cluster_for_collection(dashboard_node, ceph_nodes, dashboard_addr):
     for node in ceph_nodes:
         if "controller-0" in node.fqdn:
             node.run("sudo pcs resource restart openstack-cinder-volume")
+            node.run("sudo pcs resource cleanup openstack-cinder-volume")
 
     LOG.info("Ceph Storage Dashboard configuration is complete")
     LOG.info("You may access the Ceph Storage Dashboard at:")
