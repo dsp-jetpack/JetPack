@@ -898,8 +898,14 @@ class Director(InfraHost):
             dell_unity_cinder_yaml,
         ]
         if self.settings.use_satellite:
-            pass
-
+            cinder_container = "openstack-cinder-volume-dellemc" + \
+                ':' + str(self.settings.cinder_unity_container_version)
+            remote_registry = self.settings.satellite_hostname + \
+                ":5000/" + self.settings.containers_prefix
+            local_url = remote_registry + cinder_container
+            cmds.append('sed -i "s|DockerCinderVolumeImage.*|' +
+                        'DockerCinderVolumeImage: ' + local_url +
+                        '|" ' + overcloud_images_file)
         else:
 
             cinder_container = "/dellemc/openstack-cinder-volume-dellemc:" + \
