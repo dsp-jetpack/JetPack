@@ -341,22 +341,18 @@ echo "## Done."
 if [ -e $HOME/overcloud_images.yaml ];
 then
     echo "using locked containers versions"
+
+    if [ ! -z "${containers_prefix}" ]; then
+        sed -i "s/registry.access.redhat.com\/rhosp13\/openstack-/${satellite_hostname}:5000\/${containers_prefix}/" $HOME/overcloud_images.yaml
+        sed -i "s/registry.access.redhat.com\/rhceph\//${satellite_hostname}:5000\/${containers_prefix}/" $HOME/overcloud_images.yaml
+
+    fi
+
 else
     echo "using latest available containers versions"
     touch $HOME//overcloud_images.yaml
-    
-    if [ ! -z "${containers_prefix}" ]; then
 
-       echo "openstack overcloud container image prepare   --namespace=${satellite_hostname}:5000\
-        --prefix=${containers_prefix}   \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
-        --tag-from-label {version}-{release}   \
-        --set ceph_namespace=${satellite_hostname}:5000 \
-        --set ceph_image=${containers_prefix}rhceph-3-rhel7 \
-        --output-env-file=$HOME/overcloud_images.yaml"
+    if [ ! -z "${containers_prefix}" ]; then
 
         openstack overcloud container image prepare   --namespace=${satellite_hostname}:5000\
         --prefix=${containers_prefix}   \
