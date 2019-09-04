@@ -590,7 +590,7 @@ def bin_physical_disks_by_size_gb(physical_disks, media_type_filter=None):
         # Apply media type filter, if present.
         if (media_type_filter is None or
                 physical_disk.media_type == media_type_filter):
-            disks_by_size[physical_disk.size_mb / 1024].append(physical_disk)
+            disks_by_size[physical_disk.free_size_mb / 1024].append(physical_disk)
 
     return disks_by_size
 
