@@ -1,5 +1,5 @@
---- raid.py.orig	2019-06-04 04:56:04.000000000 +0000
-+++ raid_new.py	2019-07-18 06:52:16.365170736 +0000
+--- raid_original.py	2019-09-13 12:14:30.364589808 +0000
++++ raid.py	2019-09-13 11:16:33.056818430 +0000
 @@ -12,6 +12,7 @@
  #    under the License.
  
@@ -8,16 +8,15 @@
  import logging
  
  from dracclient import constants
-@@ -83,6 +84,8 @@
+@@ -83,6 +84,7 @@
       'firmware_version', 'status', 'raid_status', 'sas_address',
       'device_protocol'])
  
-+NO_FOREIGN_DRIVE = "STOR018"
-+
++NO_FOREIGN_DRIVES = ["STOR058", "STOR018"]
  
  class PhysicalDisk(PhysicalDiskTuple):
  
-@@ -642,6 +645,9 @@
+@@ -642,6 +644,9 @@
                       drives whose state cannot be changed at this time, drive
                       state is not "ready" or "non-RAID".
          """
@@ -27,7 +26,7 @@
          p_disk_id_to_status = {}
          for physical_disk in physical_disks:
              p_disk_id_to_status[physical_disk.id] = physical_disk.raid_status
-@@ -700,34 +706,37 @@
+@@ -700,34 +705,37 @@
  
              raise ValueError(error_msg)
  
@@ -36,7 +35,8 @@
      def change_physical_disk_state(self, mode,
                                     controllers_to_physical_disk_ids=None):
 -        """Convert disks RAID status and return a list of controller IDs
--
++        """Convert disks RAID status
+ 
 -        Builds a list of controller ids that have had disks converted to the
 -        specified RAID status by:
 -        - Examining all the disks in the system and filtering out any that are
@@ -47,14 +47,13 @@
 -          statuses and raise an exception where appropriate.
 -        - Return a list of controller IDs for controllers whom have had any of
 -          their disks converted, and whether a reboot is required.
-+        """Convert disks RAID status
- 
--        The caller typically should then create a config job for the list of
--        controllers returned to finalize the RAID configuration.
 +        This method intelligently converts the requested physical disks from
 +        RAID to JBOD or vice versa.  It does this by only converting the
 +        disks that are not already in the correct state.
  
+-        The caller typically should then create a config job for the list of
+-        controllers returned to finalize the RAID configuration.
+-
 -        :param mode: constants.RaidStatus enumeration used to determine what
 -                     raid status to check for.
 +        :param mode: constants.RaidStatus enumeration that indicates the mode
@@ -86,7 +85,7 @@
          :raises: DRACOperationFailed on error reported back by the DRAC and the
                   exception message does not contain NOT_SUPPORTED_MSG constant.
          :raises: Exception on unknown error.
-@@ -754,13 +763,14 @@
+@@ -754,13 +762,14 @@
          Raise exception if there are any failed drives or
          drives not in status 'ready' or 'non-RAID'
          '''
@@ -104,7 +103,7 @@
              if physical_disk_ids:
                  LOG.debug("Converting the following disks to {} on RAID "
                            "controller {}: {}".format(
-@@ -773,22 +783,39 @@
+@@ -773,22 +782,39 @@
                      if constants.NOT_SUPPORTED_MSG in str(ex):
                          LOG.debug("Controller {} does not support "
                                    "JBOD mode".format(controller))
@@ -130,8 +129,7 @@
 -                        if conversion_results["is_commit_required"]:
 -                            controllers.append(controller)
 +                    controllers_to_results[controller] = conversion_results
- 
--        return {'is_reboot_required': is_reboot_required,
++
 +                    # Remove the code below when is_reboot_required and
 +                    # commit_required_ids are deprecated
 +                    reboot_true = constants.RebootRequired.true
@@ -150,13 +148,14 @@
 +                        is_commit_required_value=False,
 +                        is_reboot_required_value=constants.
 +                        RebootRequired.false)
-+
+ 
+-        return {'is_reboot_required': is_reboot_required,
 +        return {'conversion_results': controllers_to_results,
 +                'is_reboot_required': is_reboot_required,
                  'commit_required_ids': controllers}
  
      def is_realtime_supported(self, raid_controller_fqdd):
-@@ -805,3 +832,98 @@
+@@ -805,3 +831,100 @@
              return True
  
          return False
@@ -241,7 +240,9 @@
 +            # A MessageID 'STOR018' indicates no foreign drive was
 +            # detected. Return a value which informs the caller nothing
 +            # further needs to be done.
-+            if message_id == NO_FOREIGN_DRIVE:
++            no_foreign_drives_detected = any(
++                stor_id == message_id for stor_id in NO_FOREIGN_DRIVES)
++            if no_foreign_drives_detected:
 +                is_commit_required_value = False
 +                is_reboot_required_value = constants.RebootRequired.false
 +            else:
