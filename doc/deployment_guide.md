@@ -117,7 +117,7 @@ The network consists of the following major network infrastructure layouts:
 
 * Core Network Infrastructure - The connectivity of aggregation switches to the core for external connectivity.
 * Data Network Infrastructure - The server NICs, top-of-rack (ToR) switches, and the aggregation switches.
-* Management Network Infrastructure - The BMC management network, consisting of iDRAC ports and the out-of-band management ports of the switches, is aggregated into a 1-rack unit (RU) S3048-ON switch in one of the three racks in the cluster. This 1-RU switch in turn can connect to one of the aggregation or core switches to create a separate network with a separate VLAN.
+* Management Network Infrastructure - The BMC management network, consisting of idrac ports and the out-of-band management ports of the switches, is aggregated into a 1-rack unit (RU) S3048-ON switch in one of the three racks in the cluster. This 1-RU switch in turn can connect to one of the aggregation or core switches to create a separate network with a separate VLAN.
 
 
 > Note: Please contact your Dell EMC sales representative for a detailed parts list or contact Dell EMC Professional Services team for OpenStack using the email [rhosp.ra.ps@emc.com](malito:rhosp.ra.ps@emc.com)
@@ -334,7 +334,7 @@ This topic describes preparing for, and performing, the Solution Admin Host (SAH
     
     | **VLAN ID**           | **Name**                                                 |
     |-----------------------|----------------------------------------------------------|
-    | 110                   | Management/Out of Band (OOB) network (iDRAC)             |
+    | 110                   | Management/Out of Band (OOB) network (idrac)             |
     | 120                   | Provisioning Network                                     |
     | 130                   | Tenant Tunnel Network                                    |
     | 140                   | Private API Network                                      |
@@ -346,11 +346,11 @@ This topic describes preparing for, and performing, the Solution Admin Host (SAH
 
     > ***Note:*** The anaconda__ip is used for the initial installation of the SAH node, and requires an address that can access the Internet to obtain Red Hat software. When possible, the anaconda_iface must be a dedicated interface using 1GbE that is only used for this purpose, and is not used in any other part of the configuration. For 10GbE or 25GbE Intel NICs, "em4" (the fourth NIC on the motherboard) should be used.
 
-**Configure the overcloud nodes' iDRACs to use either DHCP or statically-assigned IP addresses. A mix of these two choices is supported.**
+**Configure the overcloud nodes' idracs to use either DHCP or statically-assigned IP addresses. A mix of these two choices is supported.**
 
-1.  Determine the service tag of the overcloud nodes whose iDRAC is configured to use DHCP.
+1.  Determine the service tag of the overcloud nodes whose idrac is configured to use DHCP.
 
-2.  Determine the IP addresses of the overcloud nodes whose iDRAC is configured to use static IP addresses.
+2.  Determine the IP addresses of the overcloud nodes whose idrac is configured to use static IP addresses.
 
 3.  When creating the automation .properties file:
     * Add the following line to each node using DHCP, substituting the service tag for the node:
@@ -361,17 +361,17 @@ This topic describes preparing for, and performing, the Solution Admin Host (SAH
     * Add the following line to each node using static IP addressing, substituting IP address:
     
         ```yaml
-        "iDRAC_ip": "<iDRACIpHere>",
+        "idrac_ip": "<idracIpHere>",
         ```
-        Only service_tag or iDRAC_ip should be specified for each overcloud node, not both.
+        Only service_tag or idrac_ip should be specified for each overcloud node, not both.
         
-        The iDRACs using DHCP will be assigned an IP address from the management allocation pool specified in the .ini file. The parameters that specify the pool range are:
+        The idracs using DHCP will be assigned an IP address from the management allocation pool specified in the .ini file. The parameters that specify the pool range are:
 
         * management_allocation_pool_start
         
         * management_allocation_pool_end
 
-        During deployment, the iDRACs using DHCP will be automatically assigned an IP address and discovered. The IP addresses assigned to the nodes can be seen after the undercloud is deployed:
+        During deployment, the idracs using DHCP will be automatically assigned an IP address and discovered. The IP addresses assigned to the nodes can be seen after the undercloud is deployed:
 
         * In /var/lib/dhcpd/dhcpd.leases on the SAH node
         * In ~/instackenv.json on the Director Node
@@ -395,16 +395,16 @@ This topic describes preparing for, and performing, the Solution Admin Host (SAH
     
             ```bash
             $ cd ~/JetPack/src/deploy/setup
-            $ python setup_usb_iDRAC.py -s /root/sample_csp_profile.ini -usb_key /dev/sdb
+            $ python setup_usb_idrac.py -s /root/sample_csp_profile.ini -usb_key /dev/sdb
             ```
 
-    * **Using an iDRAC virtual media image file. This requires your RHEL 7.7 system to have access to the iDRAC consoles to attach the image.**
+    * **Using an idrac virtual media image file. This requires your RHEL 7.7 system to have access to the idrac consoles to attach the image.**
         1.  Run the setup script to generate an image file that can later be attached to the SAH node.
             > Note:  Use full paths.
             
             ```bash
             $ cd ~/JetPack/src/deploy/setup
-            $ python setup_usb_iDRAC.py -s /root/sample_csp_profile.ini -iDRAC_vmedia_img
+            $ python setup_usb_idrac.py -s /root/sample_csp_profile.ini -idrac_vmedia_img
             ```
         2.  The output will be an image file generated in ~/ named osp_ks.img.
 
@@ -415,7 +415,7 @@ This topic describes preparing for, and performing, the Solution Admin Host (SAH
 
 **You can deploy the SAH node by one of two methods:**
 * Using a physical USB key generated above, plugged into the SAH node, or
-* Using an iDRAC virtual media image generated above, made available using the **Map Removable Media** option on the iDRAC.
+* Using an idrac virtual media image generated above, made available using the **Map Removable Media** option on the idrac.
 
     > Note: Proceed to [Presenting the Image to the RHEL OS Installation Process](#Presenting-the-Image-to-the-RHEL-OS-Installation-Process)
  
@@ -461,7 +461,7 @@ Now that the SAH node is installed you can deploy and validate the rest of the D
 
 **To deploy and validate the rest of the cluster:**
 
-1.  Log in through the iDRAC console as root, or ssh into the SAH node.
+1.  Log in through the idrac console as root, or ssh into the SAH node.
 
 2.  Mount the USB media:
 
@@ -2920,7 +2920,7 @@ sample.properties
     {
         "is_sah": "true",
         "hostname": "sah",
-        "iDRAC_ip": "192.168.110.20",
+        "idrac_ip": "192.168.110.20",
         "root_password": "xxxxxxxxxx",
 
         "anaconda_ip":"192.168.190.134",
@@ -2959,7 +2959,7 @@ sample.properties
     },
     {
         "is_controller": "true",
-        "iDRAC_ip": "192.168.110.21",
+        "idrac_ip": "192.168.110.21",
 
         "public_api_ip": "192.168.190.21",
         "private_api_ip": "192.168.140.21",
@@ -2977,7 +2977,7 @@ sample.properties
     },
     {
         "is_controller": "true",
-        "iDRAC_ip": "192.168.110.23",
+        "idrac_ip": "192.168.110.23",
 
         "public_api_ip": "192.168.190.23",
         "private_api_ip": "192.168.140.23",
@@ -2986,7 +2986,7 @@ sample.properties
     },
     {
         "is_compute": "true",
-        "iDRAC_ip": "192.168.110.31",
+        "idrac_ip": "192.168.110.31",
 
         "private_api_ip": "192.168.140.31",
         "storage_ip": "192.168.170.31",
@@ -3004,7 +3004,7 @@ sample.properties
     },
     {
         "is_compute": "true",
-        "iDRAC_ip": "192.168.110.33",
+        "idrac_ip": "192.168.110.33",
 
         "private_api_ip": "192.168.140.33",
         "storage_ip": "192.168.170.33",
@@ -3013,7 +3013,7 @@ sample.properties
     },
     {
         "is_ceph_storage": "true",
-        "iDRAC_ip": "192.168.110.76",
+        "idrac_ip": "192.168.110.76",
 
         "storage_ip": "192.168.170.76",
         "storage_cluster_ip": "192.168.180.76"
@@ -3027,7 +3027,7 @@ sample.properties
     },
     {
         "is_ceph_storage": "true",
-        "iDRAC_ip": "192.168.110.78",
+        "idrac_ip": "192.168.110.78",
 
         "storage_ip": "192.168.170.78",
         "storage_cluster_ip": "192.168.180.78"
