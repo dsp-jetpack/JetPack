@@ -78,7 +78,7 @@ def setup():
         iso_path = os.path.dirname(settings.rhel_iso)
         if args.idrac_vmedia_img is True:
             cmds = ['cd ~;rm -f osp_ks.img',
-                    'cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=5000',
+                    'cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=10000',
                     'cd ~;mkfs ext3 -F osp_ks.img',
                     'mkdir -p /mnt/usb',
                     'cd ~;mount -o loop osp_ks.img /mnt/usb',
