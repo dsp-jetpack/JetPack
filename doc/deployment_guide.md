@@ -127,7 +127,7 @@ The network consists of the following major network infrastructure layouts:
 * The following features are added in the JetPack Automation and the Ready Architecture for RedHat OpenStack:*
 
 * Support for the latest release of Red Hat OpenStack Platform 13 including the latest updates.
-* Support for Dell EMC PowerEdge R640 and R740/740xd servers with 2nd Generation Intel® Xeon®Scalable Processors (Cascade Lake) and DDR4 2933MHz memory DIMMs
+* Support for Dell EMC PowerEdge R640 and R740/740xd servers with second Generation Intel® Xeon®Scalable Processors (Cascade Lake) and DDR4 2933MHz memory DIMMs
 * Support for latest release of RHEL 7.7 including the latest updates.
 * Added support for 100GbE networking with Mellanox ConnectX-5 network interface cards.
 * Added support of SR-IOV offload for 100G networking with Connect X-5 Mellanox network interface cards (NICs) (Tech Preview in RedHat)
@@ -2626,7 +2626,7 @@ src/deploy/osp_deployer/settings/sample_csp_profile.ini
 
 ### Introduction
 
-Openstack Key Manager (barbican) is the secrets manager for Red Hat OpenStack Platform. Barbican is not enabled by default in Red Hat OpenStack Platform. We can use the barbican API and command line to centrally manage the certificates, keys, and passwords used by OpenStack services. Barbican runs as a containerized service.  Barbican currently supports the following use cases described in this guide: 
+Openstack Key Manager (Barbican) is the secrets manager for Red Hat OpenStack Platform. Barbican is not enabled by default in Red Hat OpenStack Platform. We can use the Barbican API and command line to centrally manage the certificates, keys, and passwords used by OpenStack services. Barbican runs as a containerized service.  Barbican currently supports the following use cases described in this guide: 
 * Symmetric encryption keys - used for Block Storage (cinder) volume encryption, ephemeral disk encryption, Object Storage (swift) encryption, among others.
 * Asymmetric keys and certificates - glance image signing and verification, octavia TLS load balancing, among others.
 #### Backend
@@ -2683,11 +2683,11 @@ Parameter related to the configuration of Barbican is described in the table bel
     openstack secret store --name testSecret --payload 'TestPayload'
     ```
 
-![Figure 12 barbican test secret](media/barbicantestsecret.png)
+![Figure 12 Barbican test secret](media/barbicantestsecret.png)
 
 * Retrieve the payload for the secret you just created
 
-![Figure 13 barbican retrive payload](media/barbicanpayload.png)
+![Figure 13 Barbican retrive payload](media/barbicanpayload.png)
 
 
 # Appendix L Satellite 
