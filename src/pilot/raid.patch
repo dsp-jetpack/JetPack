@@ -1,5 +1,5 @@
---- raid_old.py	2019-07-12 02:02:12.793064148 -0500
-+++ raid_new.py	2019-07-12 02:40:01.534092745 -0500
+--- raid.py.orig	2019-10-08 04:56:55.974951569 -0400
++++ raid.py	2019-10-08 05:22:51.224425273 -0400
 @@ -34,6 +34,7 @@
  from ironic.drivers.modules.drac import common as drac_common
  from ironic.drivers.modules.drac import job as drac_job
@@ -126,7 +126,7 @@
      except drac_exceptions.BaseClientException as exc:
          LOG.error('DRAC driver failed to commit pending RAID config for'
                    ' controller %(raid_controller_fqdd)s on node '
-@@ -630,27 +724,60 @@
+@@ -630,27 +724,69 @@
      return filtered_disks
  
  
@@ -134,7 +134,7 @@
 -    """Commit changes to RAID controllers on the node."""
 +def _commit_to_controllers(node, controllers, substep="completed"):
 +    """Commit changes to RAID controllers on the node.
- 
++
 +    :param node: an ironic node object
 +    :param controllers: a list of dictionary containing
 +                        - The raid_controller key with raid controller
@@ -153,9 +153,18 @@
 +    :returns: states.CLEANWAIT if deletion is in progress asynchronously
 +              or None if it is completed.
 +    """
++    # remove controller which does not require configuration job
++    controllers = [controller for controller in controllers
++                   if controller['is_commit_required']]
+ 
      if not controllers:
          LOG.debug('No changes on any of the controllers on node %s',
                    node.uuid)
++        driver_internal_info = node.driver_internal_info
++        driver_internal_info['raid_config_substep'] = substep
++        driver_internal_info['raid_config_parameters'] = []
++        node.driver_internal_info = driver_internal_info
++        node.save()
          return
  
      driver_internal_info = node.driver_internal_info
@@ -195,7 +204,7 @@
  
          LOG.info('Change has been committed to RAID controller '
                   '%(controller)s on node %(node)s. '
-@@ -660,6 +787,11 @@
+@@ -660,6 +796,11 @@
  
          driver_internal_info['raid_config_job_ids'].append(job_id)
  
@@ -207,7 +216,7 @@
      node.driver_internal_info = driver_internal_info
      node.save()
  
-@@ -735,10 +867,10 @@
+@@ -735,10 +876,10 @@
          logical_disks_to_create = _filter_logical_disks(
              logical_disks, create_root_volume, create_nonroot_volumes)
  
@@ -221,21 +230,24 @@
                  node,
                  raid_controller=logical_disk['controller'],
                  physical_disks=logical_disk['physical_disks'],
-@@ -747,8 +879,12 @@
+@@ -747,8 +888,15 @@
                  disk_name=logical_disk.get('name'),
                  span_length=logical_disk.get('span_length'),
                  span_depth=logical_disk.get('span_depth'))
 +            controller['raid_controller'] = logical_disk['controller']
 +            controller['is_reboot_required'] = controller_cap[
 +                'is_reboot_required']
-+            controllers.append(controller)
++            controller['is_commit_required'] = controller_cap[
++                'is_commit_required']
++            if controller not in controllers:
++                controllers.append(controller)
  
 -        return _commit_to_controllers(node, list(controllers))
 +        return _commit_to_controllers(node, controllers)
  
      @METRICS.timer('DracRAID.delete_configuration')
      @base.clean_step(priority=0)
-@@ -762,12 +898,19 @@
+@@ -762,12 +910,21 @@
          """
          node = task.node
  
@@ -252,6 +264,8 @@
 +                controller["raid_controller"] = cntrl.id
 +                controller["is_reboot_required"] = controller_cap[
 +                    "is_reboot_required"]
++                controller["is_commit_required"] = controller_cap[
++                    "is_commit_required"]
 +                controllers.append(controller)
  
 -        return _commit_to_controllers(node, list(controllers))
@@ -260,7 +274,7 @@
  
      @METRICS.timer('DracRAID.get_logical_disks')
      def get_logical_disks(self, task):
-@@ -840,9 +983,9 @@
+@@ -840,9 +997,9 @@
          for config_job_id in raid_config_job_ids:
              config_job = drac_job.get_job(node, job_id=config_job_id)
  
@@ -272,7 +286,7 @@
                  finished_job_ids.append(config_job_id)
                  self._set_raid_config_job_failure(node)
  
-@@ -852,13 +995,59 @@
+@@ -852,13 +1009,60 @@
          task.upgrade_lock()
          self._delete_cached_config_job_id(node, finished_job_ids)
  
@@ -306,10 +320,11 @@
 +                'raid_config_parameters']:
 +            controller_cap = clear_foreign_config(
 +                node, controller_id)
-+            controller = {'raid_controller': controller_id,
-+                          'is_reboot_required':
-+                              controller_cap[
-+                                  'is_reboot_required']}
++            controller = {
++                'raid_controller': controller_id,
++                'is_reboot_required': controller_cap['is_reboot_required'],
++                'is_commit_required': controller_cap['is_commit_required']}
++
 +            controllers.append(controller)
 +            jobs_required = jobs_required or controller_cap[
 +                'is_commit_required']
