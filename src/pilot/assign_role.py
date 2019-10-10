@@ -420,7 +420,6 @@ def define_storage_logical_disks(drac_client, raid_controller_ids):
         num_raid_cntlr_physical_disks = len(boss_cntrl_disks)
     else:
         num_raid_cntlr_physical_disks = len(raid_cntlr_physical_disks)
-
     if num_raid_cntlr_physical_disks < 2:
         LOG.critical(
             "Cannot configure RAID 1 with only {} drives; need at least two "
