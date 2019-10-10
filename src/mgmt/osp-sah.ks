@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#version=RHEL7
+#version=RHEL8
 
 install
 cdrom
@@ -67,9 +67,7 @@ eula --agreed
 @virtualization-hypervisor
 @virtualization-tools
 dhcp
-ntp
-ntpdate
--chrony
+chrony
 -firewalld
 system-config-firewall-base
 %end
@@ -221,7 +219,7 @@ echo "HostName=\"${HostName}\"" >> /tmp/ks_post_include.txt
 echo "Gateway=\"${Gateway}\"" >> /tmp/ks_post_include.txt
 echo "NameServers=\"${NameServers}\"" >> /tmp/ks_post_include.txt
 echo "NTPServers=\"${NTPServers}\"" >> /tmp/ks_post_include.txt
-echo "NTPSettings=\"${prov_network} netmask ${prov_netmask}\"" >> /tmp/ks_post_include.txt
+echo "NTPSettings=\"${prov_network}$(ipcalc -p 1.1.1.1 ${prov_netmask} | sed -n 's/^PREFIX=\(.*\)/\/\1/p')\"" >> /tmp/ks_post_include.txt
 
 
 echo "declare -A bonds" >> /tmp/ks_post_include.txt
@@ -367,18 +365,18 @@ do
   echo "nameserver ${ns}" >> /etc/resolv.conf
 done
 
-# Configure the ntp daemon
-systemctl enable ntpd
-sed -i -e "/^server /d" /etc/ntp.conf
+# Configure the chrony daemon for ntp
+systemctl enable chronyd
+sed -i -e "/^server /d" /etc/chrony.conf
 
 for ntps in ${NTPServers//,/ }
 do
-  echo "server ${ntps}" >> /etc/ntp.conf
+  echo "server ${ntps}" >> /etc/chrony.conf
 done
 
 
-echo "restrict ${NTPSettings} nomodify notrap" >> /etc/ntp.conf
-echo "server  127.127.1.0 # local clock" >> /etc/ntp.conf
+echo "allow ${NTPSettings}" >> /etc/chrony.conf
+echo "server  127.127.1.0 # local clock" >> /etc/chrony.conf
 
 
 # Configure Bonding and VLANS
