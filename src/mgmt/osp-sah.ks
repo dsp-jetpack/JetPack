@@ -53,11 +53,11 @@ firstboot --disable
 eula --agreed
 
 %packages
+@standard
 @python36
 @gnome-desktop
 @internet-browser
-@x11
-@dns-server
+@network-server
 @ftp-server
 @file-server
 @network-file-system-client
@@ -67,7 +67,6 @@ eula --agreed
 @virtualization-client
 @virtualization-hypervisor
 @virtualization-tools
-dhcp
 chrony
 %end
 
