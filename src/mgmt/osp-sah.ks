@@ -48,6 +48,7 @@ auth --enableshadow --passalgo=sha512
 
 skipx
 text
+firewall --disable
 firstboot --disable
 eula --agreed
 
@@ -68,8 +69,6 @@ eula --agreed
 @virtualization-tools
 dhcp
 chrony
--firewalld
-system-config-firewall-base
 %end
 
 
@@ -595,7 +594,6 @@ fi
 subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-optional-rpms
 
 systemctl disable NetworkManager
-systemctl disable firewalld
 systemctl disable chronyd
 
 mkdir -p /store/data/images
