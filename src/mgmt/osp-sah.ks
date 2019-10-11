@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#version=RHEL7
+#version=RHEL8
 
 install
 cdrom
@@ -48,14 +48,16 @@ auth --enableshadow --passalgo=sha512
 
 skipx
 text
+firewall --disable
 firstboot --disable
 eula --agreed
 
 %packages
+@standard
+@python36
 @gnome-desktop
 @internet-browser
-@x11
-@dns-server
+@network-server
 @ftp-server
 @file-server
 @network-file-system-client
@@ -65,12 +67,6 @@ eula --agreed
 @virtualization-client
 @virtualization-hypervisor
 @virtualization-tools
-dhcp
-ntp
-ntpdate
--chrony
--firewalld
-system-config-firewall-base
 %end
 
 
@@ -220,7 +216,7 @@ echo "HostName=\"${HostName}\"" >> /tmp/ks_post_include.txt
 echo "Gateway=\"${Gateway}\"" >> /tmp/ks_post_include.txt
 echo "NameServers=\"${NameServers}\"" >> /tmp/ks_post_include.txt
 echo "NTPServers=\"${NTPServers}\"" >> /tmp/ks_post_include.txt
-echo "NTPSettings=\"${prov_network} netmask ${prov_netmask}\"" >> /tmp/ks_post_include.txt
+echo "NTPSettings=\"${prov_network}$(ipcalc -p 1.1.1.1 ${prov_netmask} | sed -n 's/^PREFIX=\(.*\)/\/\1/p')\"" >> /tmp/ks_post_include.txt
 
 
 echo "declare -A bonds" >> /tmp/ks_post_include.txt
@@ -366,18 +362,18 @@ do
   echo "nameserver ${ns}" >> /etc/resolv.conf
 done
 
-# Configure the ntp daemon
-systemctl enable ntpd
-sed -i -e "/^server /d" /etc/ntp.conf
+# Configure the chrony daemon for ntp
+systemctl enable chronyd
+sed -i -e "/^server /d" /etc/chrony.conf
 
 for ntps in ${NTPServers//,/ }
 do
-  echo "server ${ntps}" >> /etc/ntp.conf
+  echo "server ${ntps}" >> /etc/chrony.conf
 done
 
 
-echo "restrict ${NTPSettings} nomodify notrap" >> /etc/ntp.conf
-echo "server  127.127.1.0 # local clock" >> /etc/ntp.conf
+echo "allow ${NTPSettings}" >> /etc/chrony.conf
+echo "server 127.127.1.0 # local clock" >> /etc/chrony.conf
 
 
 # Configure Bonding and VLANS
@@ -593,17 +589,13 @@ fi
          subscription-manager attach --auto ${ProxyInfo}
          )
 
-subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-optional-rpms
-
-systemctl disable NetworkManager
-systemctl disable firewalld
-systemctl disable chronyd
+subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-8-for-x86_64-baseos-rpms --enable=rhel-8-for-x86_64-appstream-rpms
 
 mkdir -p /store/data/images
 mkdir -p /store/data/iso
 
 echo "POST: Install other rerquired packages, paramiko, ..."
-yum install -y gcc libffi-devel python-devel openssl-devel python-setuptools ipmitool tmux git
+yum install -y gcc libffi-devel openssl-devel ipmitool tmux git
 
 echo "POST: get and install pip"
 curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
@@ -616,7 +608,7 @@ pip install selenium
 pip install cryptography
 echo "POST: Done installing extra packages"
 
-echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/root/JetPack/src/deploy/' >> /root/.bashrc
+echo 'export PYTHONPATH=/usr/bin/python:/lib/python3.6:/lib/python3.6/site-packages:/root/JetPack/src/deploy/' >> /root/.bashrc
 
 # chvt 1
 
