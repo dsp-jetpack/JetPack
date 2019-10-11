@@ -67,7 +67,6 @@ eula --agreed
 @virtualization-client
 @virtualization-hypervisor
 @virtualization-tools
-chrony
 %end
 
 
@@ -374,7 +373,7 @@ done
 
 
 echo "allow ${NTPSettings}" >> /etc/chrony.conf
-echo "server  127.127.1.0 # local clock" >> /etc/chrony.conf
+echo "server 127.127.1.0 # local clock" >> /etc/chrony.conf
 
 
 # Configure Bonding and VLANS
@@ -590,10 +589,7 @@ fi
          subscription-manager attach --auto ${ProxyInfo}
          )
 
-subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-optional-rpms
-
-systemctl disable NetworkManager
-systemctl disable chronyd
+subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-8-for-x86_64-baseos-rpms --enable=rhel-8-for-x86_64-appstream-rpms
 
 mkdir -p /store/data/images
 mkdir -p /store/data/iso
