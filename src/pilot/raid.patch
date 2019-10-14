@@ -1,5 +1,5 @@
---- raid.py.orig	2019-10-08 04:56:55.974951569 -0400
-+++ raid.py	2019-10-08 05:22:51.224425273 -0400
+--- raid_original.py	2019-10-14 11:16:03.397389106 +0000
++++ raid_new.py	2019-10-14 11:14:59.015102633 +0000
 @@ -34,6 +34,7 @@
  from ironic.drivers.modules.drac import common as drac_common
  from ironic.drivers.modules.drac import job as drac_job
@@ -126,12 +126,32 @@
      except drac_exceptions.BaseClientException as exc:
          LOG.error('DRAC driver failed to commit pending RAID config for'
                    ' controller %(raid_controller_fqdd)s on node '
-@@ -630,27 +724,69 @@
+@@ -630,35 +724,98 @@
      return filtered_disks
  
  
 -def _commit_to_controllers(node, controllers):
 -    """Commit changes to RAID controllers on the node."""
++
++def _create_config_job(node, controller, reboot=False, realtime=False,
++                       raid_config_job_ids=[],
++                       raid_config_parameters=[]):
++    job_id = commit_config(node, raid_controller=controller,
++                           reboot=reboot, realtime=realtime)
++
++    raid_config_job_ids.append(job_id)
++    if controller not in raid_config_parameters:
++        raid_config_parameters.append(controller)
++
++    LOG.info('Change has been committed to RAID controller '
++             '%(controller)s on node %(node)s. '
++             'DRAC job id: %(job_id)s',
++             {'controller': controller, 'node': node.uuid,
++              'job_id': job_id})
++    return {'raid_config_job_ids': raid_config_job_ids,
++            'raid_config_parameters': raid_config_parameters}
++
++
 +def _commit_to_controllers(node, controllers, substep="completed"):
 +    """Commit changes to RAID controllers on the node.
 +
@@ -175,48 +195,54 @@
          driver_internal_info['raid_config_job_ids'] = []
  
 -    controllers = list(controllers)
-+    all_realtime = True
-+    optional = drac_constants.RebootRequired.optional
-     for controller in controllers:
+-    for controller in controllers:
 -        # Do a reboot only for the last controller
-+        raid_controller = controller['raid_controller']
-+
-+        # Commit the configuration
-+        # The logic below will reboot the node if there is at least one
-+        # controller without real time support. In that case the reboot
-+        # is triggered when the configuration is committed to the last
-+        # controller.
-+
-+        realtime = controller['is_reboot_required'] == optional
-+        all_realtime = all_realtime and realtime
-         if controller == controllers[-1]:
+-        if controller == controllers[-1]:
 -            job_id = commit_config(node, raid_controller=controller,
 -                                   reboot=True)
-+            job_id = commit_config(node, raid_controller=raid_controller,
-+                                   reboot=not all_realtime,
-+                                   realtime=realtime)
-         else:
+-        else:
 -            job_id = commit_config(node, raid_controller=controller,
 -                                   reboot=False)
-+            job_id = commit_config(node, raid_controller=raid_controller,
-+                                   reboot=False,
-+                                   realtime=realtime)
++    all_realtime = True
++    optional = drac_constants.RebootRequired.optional
++    all_realtime = all(cntlr['is_reboot_required'] == optional
++                       for cntlr in controllers)
++    raid_config_job_ids = []
++    raid_config_parameters = []
++    if all_realtime:
++        for controller in controllers:
++            realtime_controller = controller['raid_controller']
++            job_details = _create_config_job(
++                node, controller=realtime_controller,
++                reboot=False, realtime=True,
++                raid_config_job_ids=raid_config_job_ids,
++                raid_config_parameters=raid_config_parameters)
  
-         LOG.info('Change has been committed to RAID controller '
-                  '%(controller)s on node %(node)s. '
-@@ -660,6 +796,11 @@
- 
-         driver_internal_info['raid_config_job_ids'].append(job_id)
- 
-+        if raid_controller not in driver_internal_info[
-+                'raid_config_parameters']:
-+            driver_internal_info['raid_config_parameters'].append(
-+                raid_controller)
+-        LOG.info('Change has been committed to RAID controller '
+-                 '%(controller)s on node %(node)s. '
+-                 'DRAC job id: %(job_id)s',
+-                 {'controller': controller, 'node': node.uuid,
+-                  'job_id': job_id})
++    else:
++        for controller in controllers:
++            mix_controller = controller['raid_controller']
++            reboot = True if controller == controllers[-1] else False
++            job_details = _create_config_job(
++                node, controller=mix_controller,
++                reboot=reboot, realtime=False,
++                raid_config_job_ids=raid_config_job_ids,
++                raid_config_parameters=raid_config_parameters)
 +
++    driver_internal_info['raid_config_job_ids'] = job_details[
++        'raid_config_job_ids']
+ 
+-        driver_internal_info['raid_config_job_ids'].append(job_id)
++    driver_internal_info['raid_config_parameters'] = job_details[
++        'raid_config_parameters']
+ 
      node.driver_internal_info = driver_internal_info
      node.save()
- 
-@@ -735,10 +876,10 @@
+@@ -735,10 +892,10 @@
          logical_disks_to_create = _filter_logical_disks(
              logical_disks, create_root_volume, create_nonroot_volumes)
  
@@ -230,7 +256,7 @@
                  node,
                  raid_controller=logical_disk['controller'],
                  physical_disks=logical_disk['physical_disks'],
-@@ -747,8 +888,15 @@
+@@ -747,8 +904,15 @@
                  disk_name=logical_disk.get('name'),
                  span_length=logical_disk.get('span_length'),
                  span_depth=logical_disk.get('span_depth'))
@@ -247,7 +273,7 @@
  
      @METRICS.timer('DracRAID.delete_configuration')
      @base.clean_step(priority=0)
-@@ -762,12 +910,21 @@
+@@ -762,12 +926,21 @@
          """
          node = task.node
  
@@ -274,7 +300,7 @@
  
      @METRICS.timer('DracRAID.get_logical_disks')
      def get_logical_disks(self, task):
-@@ -840,9 +997,9 @@
+@@ -840,9 +1013,9 @@
          for config_job_id in raid_config_job_ids:
              config_job = drac_job.get_job(node, job_id=config_job_id)
  
@@ -286,7 +312,7 @@
                  finished_job_ids.append(config_job_id)
                  self._set_raid_config_job_failure(node)
  
-@@ -852,13 +1009,60 @@
+@@ -852,13 +1025,60 @@
          task.upgrade_lock()
          self._delete_cached_config_job_id(node, finished_job_ids)
  
