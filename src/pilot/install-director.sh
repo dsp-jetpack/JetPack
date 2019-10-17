@@ -301,6 +301,14 @@ sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
 echo "## Done."
 
+# This hacks in a patch to add clean steps in management interface.
+echo
+echo "## Patching Ironic iDRAC driver management.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/management.py ${HOME}/pilot/management.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/management.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/management.pyo
+echo "## Done."
+
 # This hacks in a patch to filter out all non-printable characters during WSMAN
 # enumeration.
 # Note that this code must be here because we use this code prior to deploying
