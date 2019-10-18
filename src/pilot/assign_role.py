@@ -279,8 +279,6 @@ def get_raid_controller_id(drac_client):
     for cnt in disk_ctrls:
         if drac_client.is_raid_controller(cnt.id):
             raid_controller_ids.append(cnt.id)
-        elif drac_client.is_boss_controller(cnt.id):
-            raid_controller_ids.insert(0, cnt.id)
 
     return raid_controller_ids
 
@@ -459,18 +457,17 @@ def define_storage_logical_disks(drac_client, raid_controller_ids):
     #
     # A successful call returns a list, which may be empty; otherwise,
     # None is returned.
-    if not raid_controller:
-        raid_controller = boss_controller
-    jbod_capable = drac_client.is_jbod_capable(raid_controller)
-    jbod_logical_disks = define_jbod_logical_disks(
-        drac_client, remaining_physical_disks, raid_controller,
-        jbod_capable)
-
-    if jbod_logical_disks is None:
-        return None
-
     logical_disks = [os_logical_disk]
-    logical_disks.extend(jbod_logical_disks)
+    if raid_controller:
+        jbod_capable = drac_client.is_jbod_capable(raid_controller)
+        jbod_logical_disks = define_jbod_logical_disks(
+            drac_client, remaining_physical_disks, raid_controller,
+            jbod_capable)
+
+        if jbod_logical_disks is None:
+            return None
+
+        logical_disks.extend(jbod_logical_disks)
 
     return logical_disks
 
@@ -1123,25 +1120,30 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds):
 def get_by_path_device_name(physical_disk, controllers):
     disk_index = physical_disk.description.split(" ")[1]
     for controller in controllers:
+        pci_bus_number = get_pci_bus_number(controller)
         if physical_disk.controller == controller.id and \
                 controller.model.startswith("PERC H740P"):
             return ('/dev/disk/by-path/pci-0000:'
                     '{pci_bus_number}:00.0-scsi-0:2:{disk_index}:0').format(
-                pci_bus_number=controller.bus.lower(),
+                pci_bus_number=pci_bus_number,
                 disk_index=disk_index)
         elif physical_disk.controller == controller.id and \
-                controller.model.startswith("PERC H730P"):
+                controller.model.startswith("PERC H730"):
             return ('/dev/disk/by-path/pci-0000:'
                     '{pci_bus_number}:00.0-scsi-0:'
                     '{channel}:{disk_index}:0').format(
-                pci_bus_number=controller.bus.lower(),
-                channel=2 if physical_disk == "online" else 0,
+                pci_bus_number=pci_bus_number,
+                channel=2 if physical_disk.raid_status == "online" else 0,
                 disk_index=disk_index)
         else:
             return ('/dev/disk/by-path/pci-0000:'
                     '{pci_bus_number}:00.0-sas-0x{sas_address}-lun-0').format(
-                pci_bus_number=controller.bus.lower(),
+                pci_bus_number=pci_bus_number,
                 sas_address=physical_disk.sas_address.lower())
+
+
+def get_pci_bus_number(controller):
+    return controller.bus.lower()
 
 
 def get_fqdd(doc, namespace):
