@@ -301,6 +301,23 @@ sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
 echo "## Done."
 
+# This hacks in a patch to make conductor wait while completion of configuration job
+echo
+echo "## Patching Ironic iDRAC driver job.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/job.py ${HOME}/pilot/ironic_job.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/job.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/job.pyo
+echo "## Done."
+
+# This hacks in a patch to define maximum number of retries for the conductor
+# to wait during any configuration job completion.
+echo
+echo "## Patching Ironic iDRAC driver drac.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/conf/drac.py ${HOME}/pilot/drac.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/conf/drac.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/conf/drac.pyo
+echo "## Done."
+
 # This hacks in a patch to add clean steps in management interface.
 echo
 echo "## Patching Ironic iDRAC driver management.py..."

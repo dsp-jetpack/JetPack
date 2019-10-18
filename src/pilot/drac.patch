@@ -6,10 +6,10 @@
                        'checks to determine whether the asynchronous RAID '
 -                      'configuration was successfully finished or not.'))
 +                      'configuration was successfully finished or not.')),
-+    cfg.IntOpt('wait_job_status_timeout',
++    cfg.IntOpt('config_job_max_retries',
 +               default=240,
 +               min=1,
-+               help=_('Maximum amount of retries to wait for '
++               help=_('Maximum number of retries for '
 +                      'the configuration job to complete '
 +                      'successfully. '))
  ]
