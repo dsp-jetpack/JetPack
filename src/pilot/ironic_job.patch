@@ -1,0 +1,33 @@
+19a20
+> import retrying
+22a24
+> from ironic.conf import CONF
+28c30
+< 
+---
+> WAIT_CLOCK = 5
+82a85,108
+> 
+> 
+> @retrying.retry(
+>     retry_on_exception=lambda e: isinstance(e, exception.DracOperationError),
+>     stop_max_attempt_number=CONF.drac.config_job_max_retries,
+>     wait_fixed=WAIT_CLOCK * 1000)
+> def wait_for_job_completion(node,
+>                             retries=CONF.drac.config_job_max_retries):
+>     """Wait for job to complete
+> 
+>     It will wait for the job to complete for 20 minutes and raises timeout
+>     if job never complete within given interval of time.
+>     :param node: an ironic node object.
+>     :param retries: no of retries to make conductor wait.
+>     :raises: DracOperationError on exception raised from python-dracclient
+>     or a timeout while waiting for job completion.
+>     """
+>     if not list_unfinished_jobs(node):
+>         return
+>     err_msg = _(
+>         'There are unfinished jobs in the job '
+>         'queue on node %(node_uuid)s ') % {'node_uuid': node.uuid}
+>     LOG.warning(err_msg)
+>     raise exception.DracOperationError(error=err_msg)
