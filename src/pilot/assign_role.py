@@ -1143,7 +1143,12 @@ def get_by_path_device_name(physical_disk, controllers):
 
 
 def get_pci_bus_number(controller):
-    return controller.bus.lower()
+    if controller.model.startswith("PERC H730") and \
+           len(controller.bus.lower()) == 1:
+        pci_bus_number = '0' + controller.bus.lower()
+    else:
+        pci_bus_number = controller.bus.lower()
+    return pci_bus_number
 
 
 def get_fqdd(doc, namespace):
