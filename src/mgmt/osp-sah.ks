@@ -11,9 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#version=RHEL7
+#version=RHEL8
 
-install
 cdrom
 reboot
 
@@ -48,14 +47,16 @@ auth --enableshadow --passalgo=sha512
 
 skipx
 text
+firewall --disable
 firstboot --disable
 eula --agreed
 
 %packages
+@standard
+@python36
 @gnome-desktop
 @internet-browser
-@x11
-@dns-server
+@network-server
 @ftp-server
 @file-server
 @network-file-system-client
@@ -65,12 +66,6 @@ eula --agreed
 @virtualization-client
 @virtualization-hypervisor
 @virtualization-tools
-dhcp
-ntp
-ntpdate
--chrony
--firewalld
-system-config-firewall-base
 %end
 
 
@@ -123,41 +118,41 @@ anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 em4 no"
 # Define the bonds
 # Bond to handle external traffic
 extern_bond_name="CHANGEME e.g. bond1"
-extern_boot_opts="onboot none"
+extern_boot_opts="onboot"
 extern_bond_opts="mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1"
-extern_ifaces="CHANGEME e.g. em2 p1p2"
+extern_ifaces="CHANGEME e.g. eno2,enp4s0f1"
 extern_bond_mtu="CHANGEME e.g. 9000"
 
 # Bond to handle internal traffic
 internal_bond_name="CHANGEME e.g. bond0"
-internal_boot_opts="onboot none"
+internal_boot_opts="onboot"
 internal_bond_opts="mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1"
-internal_ifaces="CHANGEME e.g. em1 p1p1"
+internal_ifaces="CHANGEME e.g. eno1,enp4s0f0"
 internal_bond_mtu="CHANGEME e.g. 9000"
 
 # Management
 mgmt_bond_name="CHANGEME e.g. bond0.110"
-mgmt_boot_opts="onboot none vlan"
+mgmt_boot_opts="onboot br-mgmt"
 mgmt_bond_mtu= "1500"
 
 # Provisioning
 prov_bond_name="CHANGEME e.g. bond0.120"
-prov_boot_opts="onboot none vlan"
+prov_boot_opts="onboot br-prov"
 prov_bond_mtu="1500"
 
 # Storage
 stor_bond_name="CHANGEME e.g. bond0.170"
-stor_boot_opts="onboot none vlan"
+stor_boot_opts="onboot br-stor"
 stor_bond_mtu="CHANGEME e.g. 9000"
 
 # Public API
 pub_api_bond_name="CHANGEME e.g. bond1.190"
-pub_api_boot_opts="onboot none vlan"
+pub_api_boot_opts="onboot br-pub-api"
 pub_api_bond_mtu="CHANGEME e.g. 9000"
 
 # Private API
 priv_api_bond_name="CHANGEME e.g. bond0.140"
-priv_api_boot_opts="onboot none vlan"
+priv_api_boot_opts="onboot br-priv-api"
 priv_api_bond_mtu="CHANGEME e.g. 9000"
 
 # Define the bridges
@@ -220,7 +215,7 @@ echo "HostName=\"${HostName}\"" >> /tmp/ks_post_include.txt
 echo "Gateway=\"${Gateway}\"" >> /tmp/ks_post_include.txt
 echo "NameServers=\"${NameServers}\"" >> /tmp/ks_post_include.txt
 echo "NTPServers=\"${NTPServers}\"" >> /tmp/ks_post_include.txt
-echo "NTPSettings=\"${prov_network} netmask ${prov_netmask}\"" >> /tmp/ks_post_include.txt
+echo "NTPSettings=\"${prov_network}$(ipcalc -p 1.1.1.1 ${prov_netmask} | sed -n 's/^PREFIX=\(.*\)/\/\1/p')\"" >> /tmp/ks_post_include.txt
 
 
 echo "declare -A bonds" >> /tmp/ks_post_include.txt
@@ -230,7 +225,8 @@ echo "declare -A bridges" >> /tmp/ks_post_include.txt
 echo "declare -A bridge_iface" >> /tmp/ks_post_include.txt
 echo "declare -A bridges_mtu" >> /tmp/ks_post_include.txt
 echo "declare -A bonds_mtu" >> /tmp/ks_post_include.txt
-
+echo "declare -A vlans" >> /tmp/ks_post_include.txt
+echo "declare -A vlans_mtu" >> /tmp/ks_post_include.txt
 
 echo "bonds[${extern_bond_name}]=\"${extern_boot_opts}\"" >> /tmp/ks_post_include.txt
 echo "bond_opts[${extern_bond_name}]=\"${extern_bond_opts}\"" >> /tmp/ks_post_include.txt
@@ -245,21 +241,21 @@ echo "bond_ifaces[${internal_bond_name}]=\"${internal_ifaces}\"" >> /tmp/ks_post
 
 
 
-echo "bonds[${mgmt_bond_name}]=\"${mgmt_boot_opts}\"" >> /tmp/ks_post_include.txt
-echo "bonds_mtu[${mgmt_bond_name}]=\"${mgmt_bond_mtu}\"" >> /tmp/ks_post_include.txt
+echo "vlans[${mgmt_bond_name}]=\"${mgmt_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "vlans_mtu[${mgmt_bond_name}]=\"${mgmt_bond_mtu}\"" >> /tmp/ks_post_include.txt
 
-echo "bonds[${prov_bond_name}]=\"${prov_boot_opts}\"" >> /tmp/ks_post_include.txt
-echo "bonds_mtu[${prov_bond_name}]=\"${prov_bond_mtu}\"" >> /tmp/ks_post_include.txt
+echo "vlans[${prov_bond_name}]=\"${prov_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "vlans_mtu[${prov_bond_name}]=\"${prov_bond_mtu}\"" >> /tmp/ks_post_include.txt
 
-echo "bonds[${stor_bond_name}]=\"${stor_boot_opts}\"" >> /tmp/ks_post_include.txt
-echo "bonds_mtu[${stor_bond_name}]=\"${stor_bond_mtu}\"" >> /tmp/ks_post_include.txt
+echo "vlans[${stor_bond_name}]=\"${stor_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "vlans_mtu[${stor_bond_name}]=\"${stor_bond_mtu}\"" >> /tmp/ks_post_include.txt
 
-echo "bonds[${priv_api_bond_name}]=\"${priv_api_boot_opts}\"" >> /tmp/ks_post_include.txt
-echo "bonds_mtu[${priv_api_bond_name}]=\"${priv_api_bond_mtu}\"" >> /tmp/ks_post_include.txt
+echo "vlans[${priv_api_bond_name}]=\"${priv_api_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "vlans_mtu[${priv_api_bond_name}]=\"${priv_api_bond_mtu}\"" >> /tmp/ks_post_include.txt
 
 
-echo "bonds[${pub_api_bond_name}]=\"${pub_api_boot_opts}\"" >> /tmp/ks_post_include.txt
-echo "bonds_mtu[${pub_api_bond_name}]=\"${pub_api_bond_mtu}\"" >> /tmp/ks_post_include.txt
+echo "vlans[${pub_api_bond_name}]=\"${pub_api_boot_opts}\"" >> /tmp/ks_post_include.txt
+echo "vlans_mtu[${pub_api_bond_name}]=\"${pub_api_bond_mtu}\"" >> /tmp/ks_post_include.txt
 
 echo "bridges[br-mgmt]=\"${br_mgmt_boot_opts}\"" >> /tmp/ks_post_include.txt
 echo "bridge_iface[br-mgmt]=\"${mgmt_bond_name}\"" >> /tmp/ks_post_include.txt
@@ -298,6 +294,94 @@ echo "SA_key=\"${SatelliteActivationKey}\"" >> /tmp/ks_post_include.txt
   echo "SMProxyUser=\"${SubscriptionManagerProxyUser}\"" >> /tmp/ks_post_include.txt
   echo "SMProxyPassword=\"${SubscriptionManagerProxyPassword}\"" >> /tmp/ks_post_include.txt
   }
+
+# Source variables for network config
+. /tmp/ks_post_include.txt
+
+# Configure Bonding and Slaves
+#
+for bond in ${!bonds[@]}
+do
+  read parms <<< $( tr -d '\r' <<< ${bonds[$bond]} )
+
+  unset bond_info
+  declare -A bond_info=(  \
+                         [ONBOOT]="no"      \
+                         )
+
+  for parm in ${parms}
+  do
+    case $parm in
+          onboot ) bond_info[ONBOOT]="yes"
+                   ;;
+    esac
+  done
+
+echo "network --noipv6 --noipv4 --no-activate --device=${bond} --interfacename=${bond} --mtu=${bonds_mtu[$bond]}" \
+" --bondslaves=${bond_ifaces[$bond]} --bondopts=${bond_opts[$bond]} --onboot=yes" >> /tmp/ks_include.txt
+
+done
+
+
+# Configure VLANS
+#
+for vlan in ${!vlans[@]}
+do
+  read parms <<< $( tr -d '\r' <<< ${vlans[$vlan]} )
+
+  unset vlan_info
+  declare -A vlan_info=(  \
+                         [ONBOOT]="no"      \
+                         )
+
+  for parm in ${parms}
+  do
+    case $parm in
+          onboot ) vlan_info[ONBOOT]="yes"
+                   ;;
+    esac
+  done
+
+IFS='.' read -ra vlan_array <<< "${vlan}"
+vlan_info[MASTER_BOND]="${vlan_array[0]}"
+vlan_info[VLAN_ID]="${vlan_array[1]}"
+
+echo "network --noipv6 --noipv4 --no-activate --device=${vlan_info[MASTER_BOND]} --vlanid=${vlan_info[VLAN_ID]}" \
+" --onboot=yes --mtu=${vlans_mtu[$vlan]}" >> /tmp/ks_include.txt
+
+done
+
+
+# Configure Bridges
+#
+echo "# Configuring Bridges" >> /tmp/ks_include.txt
+for bridge in ${!bridges[@]}
+do
+  read parms <<< $( tr -d '\r' <<< ${bridges[$bridge]} )
+  
+  unset bridge_info
+  declare -A bridge_info=(  \
+                         [ONBOOT]="no"      \
+                         )
+
+  for parm in ${parms}
+  do
+    case $parm in
+          onboot ) bridge_info[ONBOOT]="yes"
+                   ;;
+                   
+ *.*.*.*/*.*.*.* ) read IP NETMASK <<< $( tr '/' ' ' <<< ${parm} )
+                   bridge_info[IP]="${IP}"
+                   bridge_info[NETMASK]="${NETMASK}"
+                   ;;
+    esac
+  done
+
+echo "network --noipv6 --no-activate --device=${bridge} --interfacename=${bridge} --bridgeslaves=${bridge_iface[$bridge]} --bootproto=static --onboot=yes --bridgeopts="stp=FALSE"" \
+" --mtu=${bridges_mtu[${bridge}]} --ip=${bridge_info[IP]} --netmask=${bridge_info[NETMASK]} --nameserver=8.8.8.8 --gateway=${Gateway}" >> /tmp/ks_include.txt
+
+done
+
 
 # Remove all existing LVM configuration before the installation begins
 echo "Determining LVM PVs"
@@ -350,6 +434,48 @@ lvscan
 . /root/ks_post_include.txt
 
 
+# Configure VLAN master Bridge
+#
+for vlan in ${!vlans[@]}
+do
+  read parms <<< $( tr -d '\r' <<< ${vlans[$vlan]} )
+
+  unset vlan_info
+  declare -A vlan_info=(  \
+                         [MASTER]="none"      \
+                         )
+
+  for parm in ${parms}
+  do
+    case $parm in
+          br-mgmt ) vlan_info[MASTER]="br-mgmt"
+                   ;;
+                   
+          br-stor ) vlan_info[MASTER]="br-stor"
+                   ;;
+                   
+          br-prov ) vlan_info[MASTER]="br-prov"
+                   ;;
+                   
+          br-pub-api ) vlan_info[MASTER]="br-pub-api"
+                   ;;
+                   
+          br-priv-api ) vlan_info[MASTER]="br-priv-api"
+                   ;;
+    esac
+  done
+
+# Work around for vlans not being enslaved
+rm /etc/sysconfig/network-scripts/ifcfg-${vlan_info[MASTER]}_slave_1
+echo "BRIDGE=${vlan_info[MASTER]}" >> /etc/sysconfig/network-scripts/ifcfg-${vlan}
+
+# Work around for stp and ONBOOT
+sed -i "s/STP=.*/STP=no/" /etc/sysconfig/network-scripts/ifcfg-${vlan_info[MASTER]}
+sed -i "s/ONBOOT=.*/ONBOOT=yes/" /etc/sysconfig/network-scripts/ifcfg-${vlan}
+
+done
+
+
 sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
 
 # Configure the system files
@@ -366,181 +492,18 @@ do
   echo "nameserver ${ns}" >> /etc/resolv.conf
 done
 
-# Configure the ntp daemon
-systemctl enable ntpd
-sed -i -e "/^server /d" /etc/ntp.conf
+# Configure the chrony daemon for ntp
+systemctl enable chronyd
+sed -i -e "s/rhel/centos/" /etc/chrony.conf
 
 for ntps in ${NTPServers//,/ }
 do
-  echo "server ${ntps}" >> /etc/ntp.conf
+  echo "pool ${ntps}" >> /etc/chrony.conf
 done
 
 
-echo "restrict ${NTPSettings} nomodify notrap" >> /etc/ntp.conf
-echo "server  127.127.1.0 # local clock" >> /etc/ntp.conf
-
-
-# Configure Bonding and VLANS
-#
-for bond in ${!bonds[@]}
-do
-  read parms <<< $( tr -d '\r' <<< ${bonds[$bond]} )
-
-  unset bond_info
-  declare -A bond_info=(  \
-                         [DEVICE]="${bond}" \
-                         [PROTO]="dhcp" \
-                         [ONBOOT]="no"      \
-                         [NM_CONTROLLED]="no"      \
-                         )
-
-  for parm in ${parms}
-  do
-    case $parm in
-          promisc ) bond_info[PROMISC]="yes"
-                   ;;
-
-          onboot ) bond_info[ONBOOT]="yes"
-                   ;;
-
-            none ) bond_info[PROTO]="none"
-                   ;;
-
-          static ) bond_info[PROTO]="static"
-                   ;;
-
-            dhcp ) bond_info[PROTO]="dhcp"
-                   ;;
-
-            vlan ) bond_info[VLAN]="yes"
-                   ;;
-
- *.*.*.*/*.*.*.* ) read IP NETMASK <<< $( tr '/' ' ' <<< ${parm} )
-                   bond_info[IP]="${IP}"
-                   bond_info[NETMASK]="${NETMASK}"
-                   ;;
-    esac
-  done
-
-  cat << EOB > /etc/sysconfig/network-scripts/ifcfg-${bond}
-NAME=${bond}
-DEVICE=${bond}
-TYPE=Bond
-ONBOOT=${bond_info[ONBOOT]}
-NM_CONTROLLED=${bond_info[NM_CONTROLLED]}
-BOOTPROTO=${bond_info[PROTO]}
-EOB
-
-  [[ ${bond_opts[${bond}]} ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}
-BONDING_OPTS="$( tr -d '\r' <<< ${bond_opts[$bond]} )"
-EOB
-
-  [[ ${bonds_mtu[${bond}]} ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}
-MTU="$( tr -d '\r' <<< ${bonds_mtu[$bond]} )"
-EOB
-
-  [[ "${bond_info[PROTO]}" = "static" ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}
-IPADDR=${bond_info[IP]}
-NETMASK=${bond_info[NETMASK]}
-EOB
-
-  [[ "${bond_info[PROMISC]}" = "yes" ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}
-PROMISC=${bond_info[PROMISC]}
-EOB
-
-  [[ "${bond_info[VLAN]}" = "yes" ]] && {
-    cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}
-VLAN=${bond_info[VLAN]}
-EOB
-  } || {
-    cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bond}
-BONDING_MASTER=yes
-EOB
-  }
-
-
-for iface in $( tr -d '\r' <<< ${bond_ifaces[$bond]} )
-do
-  unset mac
-  mac=$( ip addr sh dev ${iface} | awk '/link/ {print $2}' )
-
-  cat << EOI > /etc/sysconfig/network-scripts/ifcfg-${iface}
-NAME=${iface}
-DEVICE=${iface}
-TYPE=Ethernet
-HWADDR=${mac}
-BOOTPROTO=none
-ONBOOT=${bond_info[ONBOOT]}
-MASTER=${bond}
-SLAVE=yes
-NM_CONTROLLED=no
-EOI
-
-  [[ ${bonds_mtu[${bond}]} ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${iface}
-MTU="$( tr -d '\r' <<< ${bonds_mtu[$bond]} )"
-EOB
-  done
-  
-done
-
-
-
-# Configure Bridges
-#
-for bridge in ${!bridges[@]}
-do
-  read parms <<< $( tr -d '\r' <<< ${bridges[$bridge]} )
-
-  unset bridge_info
-  declare -A bridge_info=(  \
-                         [DEVICE]="${bond}" \
-                         [PROTO]="dhcp" \
-                         [ONBOOT]="no"      \
-                         [NM_CONTROLLED]="no"      \
-                         )
-
-  for parm in ${parms}
-  do
-    case $parm in
-          onboot ) bridge_info[ONBOOT]="yes"
-                   ;;
-
-            none ) bridge_info[PROTO]="none"
-                   ;;
-
-          static ) bridge_info[PROTO]="static"
-                   ;;
-
-            dhcp ) bridge_info[PROTO]="dhcp"
-                   ;;
-
- *.*.*.*/*.*.*.* ) read IP NETMASK <<< $( tr '/' ' ' <<< ${parm} )
-                   bridge_info[IP]="${IP}"
-                   bridge_info[NETMASK]="${NETMASK}"
-                   ;;
-    esac
-  done
-
-
-  cat << EOB > /etc/sysconfig/network-scripts/ifcfg-${bridge}
-NAME=${bridge}
-DEVICE=${bridge}
-TYPE=Bridge
-ONBOOT=${bridge_info[ONBOOT]}
-NM_CONTROLLED=${bridge_info[NM_CONTROLLED]}
-BOOTPROTO=${bridge_info[PROTO]}
-EOB
-
-  [[ "${bridge_info[PROTO]}" = "static" ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bridge}
-IPADDR=${bridge_info[IP]}
-NETMASK=${bridge_info[NETMASK]}
-EOB
-  [[ ${bridges_mtu[${bridge}]} ]] && cat << EOB >> /etc/sysconfig/network-scripts/ifcfg-${bridge}
-MTU="$( tr -d '\r' <<< ${bridges_mtu[$bridge]} )"
-EOB
-  [[ "${bridge_iface[${bridge}]}" ]] && echo "BRIDGE=${bridge}" >> /etc/sysconfig/network-scripts/ifcfg-${bridge_iface[${bridge}]}
-
-done
+echo "allow ${NTPSettings}" >> /etc/chrony.conf
+echo "server 127.127.1.0" >> /etc/chrony.conf
 
 
 [[ ${AnacondaIface_noboot} ]] && { 
@@ -593,17 +556,13 @@ fi
          subscription-manager attach --auto ${ProxyInfo}
          )
 
-subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-optional-rpms
-
-systemctl disable NetworkManager
-systemctl disable firewalld
-systemctl disable chronyd
+subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-8-for-x86_64-baseos-rpms --enable=rhel-8-for-x86_64-appstream-rpms
 
 mkdir -p /store/data/images
 mkdir -p /store/data/iso
 
 echo "POST: Install other rerquired packages, paramiko, ..."
-yum install -y gcc libffi-devel python-devel openssl-devel python-setuptools ipmitool tmux git
+yum install -y gcc libffi-devel openssl-devel ipmitool tmux git
 
 echo "POST: get and install pip"
 curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
@@ -616,7 +575,7 @@ pip install selenium
 pip install cryptography
 echo "POST: Done installing extra packages"
 
-echo 'export PYTHONPATH=/usr/bin/python:/lib/python2.7:/lib/python2.7/site-packages:/root/JetPack/src/deploy/' >> /root/.bashrc
+echo 'export PYTHONPATH=/usr/bin/python:/lib/python3.6:/lib/python3.6/site-packages:/root/JetPack/src/deploy/' >> /root/.bashrc
 
 # chvt 1
 
