@@ -161,20 +161,24 @@ class Director(InfraHost):
             dest_file = self.home_dir + yaml
             self.upload_file(source_file, dest_file)
 
-            unity_lock = "/unity_container_lock.ini"
-            unity_lock_file = self.settings.lock_files_dir + unity_lock
+            lock_file = "/unity_container_vlock.ini"
+            source_file = self.settings.lock_files_dir + lock_file
+            dest_file = self.home_dir + lock_file
+            self.upload_file(source_file, dest_file)
+
+            unity_lock_file = dest_file
             if self.settings.enable_unity_backend is True:
-                cmd = "grep cinder_unity_container_version " + \
+                cmd = "sudo grep cinder_unity_container_version " + \
                       unity_lock_file + \
                       " | awk -F '=' '{print $2}'"
                 self.settings.cinder_unity_container_version = \
-                    self.run_tty(cmd)
+                    self.run_tty(cmd)[0].replace('\r', '').rstrip()
             if self.settings.enable_unity_manila_backend is True:
-                cmd = "grep manila_unity_container_version " + \
+                cmd = "sudo grep manila_unity_container_version " + \
                       unity_lock_file + \
                       " | awk -F '=' '{print $2}'"
                 self.settings.manila_unity_container_version = \
-                    self.run_tty(cmd)
+                    self.run_tty(cmd)[0].replace('\r', '').rstrip()
 
     def install_director(self):
         logger.info("Installing the undercloud")
@@ -432,8 +436,8 @@ class Director(InfraHost):
             logger.info("assign_role failed on {} out of {} nodes".format(
                 failed_threads, len(threads)))
             sys.exit(1)
-        
-        self.run("sudo cp " + self.templates_dir + "/mklvm.sh /var/www/html/mklvm.sh")
+        self.run("sudo cp " + self.templates_dir +
+                 "/mklvm.sh /var/www/html/mklvm.sh")
 
     def update_sshd_conf(self):
         # Update sshd_config to allow for more than 10 ssh sessions
@@ -590,7 +594,7 @@ class Director(InfraHost):
                     tokens[1] += "/dev/"
 
                 if len(tokens) == 2:
-                    # Set all devices 
+                    # Set all devices
                     osd_devices = "{}      - {}\n".format(
                         osd_devices, tokens[1])
                     osds_per_node += 1
@@ -655,6 +659,12 @@ class Director(InfraHost):
                 pool_str = line[len(ceph_pools):]
                 pools = json.loads(pool_str)
                 for pool in pools:
+                    if "rgw" in pool["name"]:
+                        pool["application"] = "rgw"
+                    elif "metric" in pool["name"]:
+                        pool["application"] = "openstack_gnocchi"
+                    else:
+                        pool["application"] = "rbd"
                     if pool["name"] in HEAVY_POOLS:
                         pool["pg_num"] = heavy_pgs
                         pool["pgp_num"] = heavy_pgs
@@ -674,7 +684,8 @@ class Director(InfraHost):
         os.remove(tmp_name)
 
         firstboot = os.path.join(self.templates_dir, "first-boot.yaml")
-        cmd = 'sed -i "s|CHANGEME_UNDERCLOUD_PROVISIONING_IP|' + self.settings.director_node.provisioning_ip + '|" ' + firstboot
+        cmd = 'sed -i "s|CHANGEME_UNDERCLOUD_PROVISIONING_IP|' + \
+              self.settings.director_node.provisioning_ip + '|" ' + firstboot
         self.run(cmd)
 
     def setup_sanity_ini(self):
@@ -887,12 +898,18 @@ class Director(InfraHost):
             dell_unity_cinder_yaml,
         ]
         if self.settings.use_satellite:
-            pass
-
+            cinder_container = "openstack-cinder-volume-dellemc" + \
+                ':' + str(self.settings.cinder_unity_container_version)
+            remote_registry = self.settings.satellite_hostname + \
+                ":5000/" + self.settings.containers_prefix
+            local_url = remote_registry + cinder_container
+            cmds.append('sed -i "s|DockerCinderVolumeImage.*|' +
+                        'DockerCinderVolumeImage: ' + local_url +
+                        '|" ' + overcloud_images_file)
         else:
 
             cinder_container = "/dellemc/openstack-cinder-volume-dellemc:" + \
-                self.settings.cinder_unity_container_version
+                str(self.settings.cinder_unity_container_version)
             remote_registry = "registry.connect.redhat.com"
             remote_url = remote_registry + cinder_container
             local_registry = self.provisioning_ip + ":8787"
@@ -910,7 +927,7 @@ class Director(InfraHost):
                 '|" ' + overcloud_images_file,
                 'echo "  DockerInsecureRegistryAddress:" >> ' +
                 overcloud_images_file,
-                'echo "  - ' + local_registry + ' " >> ' +
+                'sudo echo "  - ' + local_registry + ' " >> ' +
                 overcloud_images_file,
                 'docker logout ' + remote_registry,
             ])
@@ -958,7 +975,7 @@ class Director(InfraHost):
 
         if self.settings.use_satellite:
             manila_container = "openstack-manila-share-dellemc" + \
-                ':' + self.settings.manila_unity_container_version
+                ':' + str(self.settings.manila_unity_container_version)
             remote_registry = self.settings.satellite_hostname + \
                 ":5000/" + self.settings.containers_prefix
             local_url = remote_registry + manila_container
@@ -967,7 +984,7 @@ class Director(InfraHost):
 
         else:
             manila_container = "/dellemc/openstack-manila-share-dellemc:" + \
-                               self.settings.manila_unity_container_version
+                           str(self.settings.manila_unity_container_version)
             remote_registry = "registry.connect.redhat.com"
             remote_url = remote_registry + manila_container
             local_registry = self.provisioning_ip + ":8787"

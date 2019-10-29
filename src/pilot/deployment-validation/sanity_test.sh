@@ -621,7 +621,7 @@ test_neutron_networking (){
 
   for floating_ip in ${floating_ips[@]}
   do
-    if [ "$DVR_ENABLED" == "True" ]; then
+    if [ "$DVR_ENABLED" == "true" ]; then
       # Test pinging the floating IP of the instance from the snat
       # network namespace
       ping_from_snat_netns $floating_ip "snat-${router_id}"
@@ -884,6 +884,12 @@ end(){
 
 
 info "###Appendix-C Openstack Operations Functional Test ###"
+
+if [ "$SMART_NIC_ENABLED" != false ]
+then
+  info "### SRIOV OFFLOAD ENABLED. SKIPPING SANITY TEST"
+  exit
+fi
 
 init
 
