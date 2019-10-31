@@ -56,9 +56,9 @@ def main():
         "+-----------------+---------------------------+-----------------+"
     )
     nodeinfo = "| {:<15} | {:<25} | {:<15} |"
-    print banner
-    print nodeinfo.format('iDRAC Addr', 'Node Name', 'Provision Addr')
-    print banner
+    print(banner)
+    print(nodeinfo.format('iDRAC Addr', 'Node Name', 'Provision Addr'))
+    print(banner)
     # Display the list ordered by the iDRAC address
     for n in sorted(nodes, key=lambda x: CredentialHelper.get_drac_ip(x)):
         idrac_addr = CredentialHelper.get_drac_ip(n)
@@ -74,8 +74,8 @@ def main():
             if nova_ips and 'ctlplane' in nova_ips:
                 prov_addr = nova_ips['ctlplane'][0]['addr']
 
-        print nodeinfo.format(idrac_addr, node_name, prov_addr)
-    print banner
+        print(nodeinfo.format(idrac_addr, node_name, prov_addr))
+    print(banner)
 
 
 if __name__ == "__main__":

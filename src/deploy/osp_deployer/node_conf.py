@@ -15,7 +15,7 @@
 # limitations under the License.
 
 
-class NodeConf():
+class NodeConf:
 
     def __init__(self, json):
         self.is_sah = False

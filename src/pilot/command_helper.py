@@ -21,7 +21,7 @@ import subprocess
 logger = logging.getLogger(__name__)
 
 
-class Scp():
+class Scp:
 
     @staticmethod
     def get_file(address, localfile, remotefile,
@@ -46,7 +46,7 @@ class Scp():
         client.close()
 
 
-class Ssh():
+class Ssh:
 
     @staticmethod
     def get_client(address, user=None, password=None, pkey=None):
@@ -76,7 +76,7 @@ class Ssh():
         return exit_code, stdout, stderr
 
 
-class Exec():
+class Exec:
 
     @staticmethod
     def execute_command(cmd):

@@ -20,13 +20,13 @@ import os
 import json
 import inspect
 import logging
-from ConfigParser import ConfigParser
+from configparser import ConfigParser
 from osp_deployer.settings.config import Settings
 
 logger = logging.getLogger("osp_deployer")
 
 
-class Profile():
+class Profile:
     def __init__(self):
 
         self.settings = Settings.settings
@@ -54,8 +54,8 @@ class Profile():
                             "/" + profile_definition['sample_ini'])
         Err = ''
         for items in profile_definition['associated_settings']:
-            for stanza, value in items.iteritems():
-                for set, vals in value.iteritems():
+            for stanza, value in items.items():
+                for set, vals in value.items():
                     allowed_settings = []
                     validated = False
                     try:

@@ -17,7 +17,7 @@
 import logging
 
 
-class LoggingHelper():
+class LoggingHelper:
 
     @staticmethod
     def add_argument(parser, default="INFO"):

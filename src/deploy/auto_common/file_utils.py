@@ -19,7 +19,7 @@ import codecs
 
 
 # noinspection PyClassHasNoInit
-class FileHelper():
+class FileHelper:
     @staticmethod
     def replace_expression(fileref, search_exp, replace_exp):
         fh = open(fileref, 'rU')

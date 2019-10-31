@@ -507,7 +507,7 @@ def find_physical_disks_for_storage_os(physical_disks):
         LOG.critical(
             "Could not find physical disks for operating system logical disk")
 
-    return (os_logical_disk_size_gb, os_physical_disk_names)
+    return os_logical_disk_size_gb, os_physical_disk_names
 
 
 def cardinality_of_smallest_spinning_disk_size_is_two(physical_disks):
@@ -523,7 +523,7 @@ def cardinality_of_smallest_spinning_disk_size_is_two(physical_disks):
 
     # Handle the case where we have no spinning disks
     if not ordered_disks_by_size:
-        return (0, None)
+        return 0, None
 
     # Obtain the bin for the smallest size.
     smallest_disks_bin = ordered_disks_by_size[0]
@@ -535,9 +535,9 @@ def cardinality_of_smallest_spinning_disk_size_is_two(physical_disks):
     if cardinality_of_smallest_disks == 2:
         sorted_smallest_disk_ids = sorted((d.id for d in smallest_disks),
                                           key=physical_disk_id_to_key)
-        return (smallest_disk_size, sorted_smallest_disk_ids)
+        return smallest_disk_size, sorted_smallest_disk_ids
     else:
-        return (0, None)
+        return 0, None
 
 
 def last_two_disks_by_location(physical_disks):
@@ -550,7 +550,7 @@ def last_two_disks_by_location(physical_disks):
     # The two disks (2) must be of the same media type, hard disk drive
     # (HDD) spinner or solid state drive (SSD).
     if last_two_disks[0].media_type != last_two_disks[1].media_type:
-        return (0, None)
+        return 0, None
 
     # Determine the smallest size of the two (2) disks, in gigabytes.
 
@@ -584,7 +584,7 @@ def last_two_disks_by_location(physical_disks):
 
     last_two_disk_ids = [d.id for d in last_two_disks]
 
-    return (logical_disk_size_gb, last_two_disk_ids)
+    return logical_disk_size_gb, last_two_disk_ids
 
 
 def bin_physical_disks_by_size_gb(physical_disks, media_type_filter=None):
@@ -709,9 +709,9 @@ def physical_disk_to_key(physical_disk):
 
 def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
                    drac_client):
-    '''TODO: Add some selective exception handling so we can determine
+    """TODO: Add some selective exception handling so we can determine
     when RAID configuration failed and return False. Further testing
-    should uncover interesting error conditions.'''
+    should uncover interesting error conditions."""
 
     if get_raid_controller_id(drac_client) is None:
         LOG.warning("No RAID controller is present.  Skipping RAID "

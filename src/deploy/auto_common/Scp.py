@@ -21,7 +21,7 @@ except ImportError:
 
 
 # noinspection PyClassHasNoInit
-class Scp():
+class Scp:
 
     @staticmethod
     def get_file(adress, user, passw, localfile, remotefile):

@@ -27,7 +27,7 @@ SEL = None
 
 
 # noinspection PyClassHasNoInit
-class UIManager():
+class UIManager:
 
     @staticmethod
     def driver():
@@ -37,7 +37,7 @@ class UIManager():
 
 
 # noinspection PyProtectedMember
-class Widget():
+class Widget:
 
     def __init__(self, locator):
         self.locator = locator

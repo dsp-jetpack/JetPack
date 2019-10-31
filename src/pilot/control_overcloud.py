@@ -47,7 +47,7 @@ def main():
 
         cmd = "ipmitool -H {} -I lanplus -U {} -P '{}' chassis power {}". \
             format(ip, username, password, args.power)
-        print cmd
+        print(cmd)
         os.system(cmd)
 
 

@@ -19,7 +19,7 @@ import time
 
 
 # noinspection PyClassHasNoInit,PyUnresolvedReferences,PyProtectedMember
-class UIHelper():
+class UIHelper:
     @staticmethod
     def verify_new_window_opened(page_title):
         """

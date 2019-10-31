@@ -21,9 +21,9 @@ import MySQLdb
 
 
 class MySqlDb(db_base.DbBase):
-    '''
+    """
     classdocs
-    '''
+    """
     def __get_connection__(self):
         return MySQLdb.connect(self.host, self.user,
                                self.passwd, self.db_name)

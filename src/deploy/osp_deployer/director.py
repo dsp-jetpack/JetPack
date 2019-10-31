@@ -1299,7 +1299,7 @@ class Director(InfraHost):
         cmds = []
         remote_file = os.path.join(self.nic_configs_dir,
                                    self.settings.nic_env_file)
-        for setting_name, setting_value in ini_nics_settings.iteritems():
+        for setting_name, setting_value in ini_nics_settings.items():
             # The following is executing a sed command of the following format:
             # sed -i -r 's/(^\s*StorageBond0Interface1:\s*).*/\1p1p2/'
             cmds.append('sed -i -r \'s/(^\s*' + setting_name +    # noqa: W605
@@ -1924,7 +1924,7 @@ class Director(InfraHost):
         sriov_conf = {}
 
         # Get and sort the SR-IOV interfaces that user provided
-        for int_name, int_value in ini_nics_settings.iteritems():
+        for int_name, int_value in ini_nics_settings.items():
             if int_name.find('ComputeSriov') != -1:
                 sriov_conf.update({int_name: int_value})
         sriov_interfaces = [x[1] for x in sorted(sriov_conf.items())]
