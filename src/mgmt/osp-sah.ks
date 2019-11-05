@@ -47,7 +47,6 @@ auth --enableshadow --passalgo=sha512
 
 skipx
 text
-firewall --disable
 firstboot --disable
 eula --agreed
 
@@ -481,7 +480,6 @@ sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
 # Configure the system files
 echo "POST: Configure the system files..."
 echo "HOSTNAME=${HostName}" >> /etc/sysconfig/network
-echo "GATEWAY=${Gateway}" >> /etc/sysconfig/network
 
 read -a htmp <<< ${public_bond}
 echo "${htmp[2]}  ${HostName}" >> /etc/hosts
@@ -564,15 +562,12 @@ mkdir -p /store/data/iso
 echo "POST: Install other rerquired packages, paramiko, ..."
 yum install -y gcc libffi-devel openssl-devel ipmitool tmux git
 
-echo "POST: get and install pip"
-curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
-python get-pip.py
 # temporary workaround for CES-7248 
 echo "POST: upgrade setuptools"
-pip install --upgrade setuptools
-pip install paramiko
-pip install selenium
-pip install cryptography
+pip3 install --upgrade setuptools
+pip3 install paramiko
+pip3 install selenium
+pip3 install cryptography
 echo "POST: Done installing extra packages"
 
 echo 'export PYTHONPATH=/usr/bin/python:/lib/python3.6:/lib/python3.6/site-packages:/root/JetPack/src/deploy/' >> /root/.bashrc
