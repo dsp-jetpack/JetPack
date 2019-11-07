@@ -21,7 +21,7 @@ import logging
 logger = logging.getLogger("osp_deployer")
 
 
-class Checkpoints():
+class Checkpoints:
     def __init__(self):
         self.settings = Settings.settings
         self.ping_success = "packets transmitted, 1 received"

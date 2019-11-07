@@ -19,7 +19,7 @@ from __future__ import print_function
 
 import argparse
 from collections import namedtuple
-from exceptions import ValueError
+from builtins import ValueError
 import json
 import logging
 import os.path

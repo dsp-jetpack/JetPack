@@ -20,13 +20,13 @@ import re
 import inspect
 import json
 import subprocess
-import ConfigParser
+import configparser
 from osp_deployer.node_conf import NodeConf
 
 logger = logging.getLogger("osp_deployer")
 
 
-class Settings():
+class Settings:
     CEPH_OSD_CONFIG_FILE = 'pilot/templates/ceph-osd-config.yaml'
     TEMPEST_DEFAULT_WORKSPACE_NAME = 'mytempest'
 
@@ -40,13 +40,13 @@ class Settings():
         f_name = "/sample_xsp_profile.ini"
         sample_ini = os.path.dirname(inspect.getfile(Settings)) + f_name
 
-        conf = ConfigParser.ConfigParser()
+        conf = configparser.ConfigParser()
         # The following line makes the parser return case sensitive keys
         conf.optionxform = str
         conf.read(sample_ini)
 
         your_ini = settings_file
-        yourConf = ConfigParser.ConfigParser()
+        yourConf = configparser.ConfigParser()
         # The following line makes the parser return case sensitive keys
         yourConf.optionxform = str
         yourConf.read(your_ini)
@@ -705,7 +705,7 @@ class Settings():
                 dictr[option] = self.conf.get(section, option)
                 if dictr[option] == -1:
                     logger.debug("skip: %s" % option)
-            except ConfigParser.NoSectionError:
+            except configparser.NoSectionError:
                 logger.debug("exception on %s!" % option)
                 dictr[option] = None
         return dictr

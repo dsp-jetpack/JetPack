@@ -224,7 +224,7 @@ def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
                     result = set_nic_legacy_boot_protocol_none(
                         nic_id, drac_client)
             except exceptions.InvalidParameterValue:
-                LOG.warn("Unable to check the legacy boot protocol of NIC {} "
+                LOG.warning("Unable to check the legacy boot protocol of NIC {} "
                          "on {}, and so cannot set it to None".format(
                              nic_id, ip_service_tag))
 
@@ -445,7 +445,7 @@ def config_idrac_settings(drac_client, ip_service_tag, password, node):
     }
 
     if password:
-        LOG.warn("Updating the password on {}".format(ip_service_tag))
+        LOG.warning("Updating the password on {}".format(ip_service_tag))
         idrac_settings["Users.2#Password"] = password
 
     # Set the iDRAC card attributes
@@ -569,10 +569,10 @@ def config_idrac(instack_lock,
                  "possible.".format(ip_service_tag, ironic_driver))
 
         if pxe_nic:
-            LOG.warn("Ignoring specified PXE NIC ({})".format(pxe_nic))
+            LOG.warning("Ignoring specified PXE NIC ({})".format(pxe_nic))
 
         if password:
-            LOG.warn("Ignoring specified password")
+            LOG.warning("Ignoring specified password")
 
         return
 
@@ -677,7 +677,7 @@ def config_idrac(instack_lock,
                 drac_client = new_drac_client
             else:
                 success = False
-                LOG.warn("Failed to change the password on {}".format(
+                LOG.warning("Failed to change the password on {}".format(
                     ip_service_tag))
 
         all_jobs_succeeded = wait_for_jobs_to_complete(

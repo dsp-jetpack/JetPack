@@ -229,7 +229,7 @@ def get_ceph_nodes(username):
             # as it is not ever used to coonfigure the dashboard
             node.fqdn = node.fqdn + ".mydomain"
             # if (node.fqdn.find(".")):
-            if ('.' in node.fqdn):
+            if '.' in node.fqdn:
                 node.fqdn, domain_name = node.fqdn.split('.', 1)
             else:
                 node.fqdn = node.fqdn

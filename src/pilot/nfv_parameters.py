@@ -81,7 +81,7 @@ class NfvParameters(object):
             if not socket.ht_enabled:
                 raise Exception("Hyperthreading is not enabled in "
                                 + str(node))
-        print "Hyperthreading enabled on %s" % node
+        print("Hyperthreading enabled on %s" % node)
         return True
 
     def get_nodes_uuids(self, nodetype):

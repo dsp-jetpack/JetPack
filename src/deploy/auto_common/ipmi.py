@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
 
 
-class Ipmi():
+class Ipmi:
     """
     this assumes CygWin is installed along with ipmi
     (if used on windows)
