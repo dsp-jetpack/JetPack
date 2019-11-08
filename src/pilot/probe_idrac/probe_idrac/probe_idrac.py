@@ -82,7 +82,7 @@ def main():
     # Probe each iDRAC specified on the command line.
     for i in args.idrac:
         # Identify the iDRAC.
-        print i + ':'
+        print(i + ':')
 
         # Create client for talking to the iDRAC over the WSMan protocol.
         client = dracclient.wsman.Client(i, args.username, args.password)
@@ -91,7 +91,7 @@ def main():
         for d in dcims:
             response = client.enumerate(
                 'http://schemas.dell.com/wbem/wscim/1/cim-schema/2/' + d)
-            print lxml.etree.tostring(response, pretty_print=True)
+            print(lxml.etree.tostring(response, pretty_print=True))
 
 if __name__ == "__main__":
     main()

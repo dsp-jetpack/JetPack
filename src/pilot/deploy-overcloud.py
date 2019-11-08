@@ -140,12 +140,12 @@ def create_flavors():
 
     for flavor in flavors:
         if flavor["id"] not in existing_flavor_ids:
-            print '    Creating ' + flavor["name"]
+            print('    Creating ' + flavor["name"])
             n_client.flavors.create(flavor["name"], flavor["memory"],
                                     flavor["cpus"], flavor["disk"],
                                     flavorid=flavor["id"])
         else:
-            print '    Flavor ' + flavor["name"] + " already exists"
+            print('    Flavor ' + flavor["name"] + " already exists")
 
 
 def create_volume_types():
@@ -597,7 +597,7 @@ def main():
                   'w') as f:
             f.write(cmd.replace(' -', ' \\\n -'))
             f.write('\n')
-        print cmd
+        print(cmd)
         start = time.time()
         status = run_deploy_command(cmd)
         end = time.time()
@@ -618,7 +618,7 @@ def main():
         if horizon_url:
             logger.info('\nHorizon Dashboard URL: {}\n'.format(horizon_url))
     except Exception as err:
-        print >> sys.stderr, err
+        print(sys.stderr, err)
         sys.exit(1)
 
 

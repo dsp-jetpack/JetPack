@@ -17,7 +17,7 @@
 from auto_common import Ssh, Scp
 
 
-class InfraHost():
+class InfraHost:
 
     def __init__(self):
 
