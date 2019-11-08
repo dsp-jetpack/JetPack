@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 # noinspection PyClassHasNoInit
-class Ssh():
+class Ssh:
     @staticmethod
     def execute_command_readlines(address, usr, pwd, command):
         try:

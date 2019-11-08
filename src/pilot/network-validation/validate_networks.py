@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ConfigParser
 import sys
 import argparse
 import json
@@ -316,7 +315,7 @@ class NetworkValidation(object):
                                             destination_ip,
                                             match.group(1)))
                         else:
-                            logger.warn("      FAILED {0: <20} - {1: <15} "
+                            logger.warning("      FAILED {0: <20} - {1: <15} "
                                         "({2}) network {2}!".format(
                                             destination_node.name,
                                             destination_ip,

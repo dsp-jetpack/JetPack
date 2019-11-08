@@ -119,8 +119,8 @@ def setup():
         logger.error(traceback.format_exc())
         e = sys.exc_info()[0]
         logger.error(e)
-        print e
-        print traceback.format_exc()
+        print(e)
+        print(traceback.format_exc())
 
 
 if __name__ == "__main__":

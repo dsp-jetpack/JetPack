@@ -25,7 +25,7 @@ import yaml
 logger = logging.getLogger("osp_deployer")
 
 
-class DeployerSanity():
+class DeployerSanity:
     def __init__(self):
         self.settings = Settings.settings
 
@@ -339,14 +339,14 @@ class DeployerSanity():
                 try:
                     os_volume_size_gb = int(node.os_volume_size_gb)
                 except ValueError:
-                    raise AssertionError("os_volume_size_gb of \"{}\" on node "
+                    raise AssertionError("os_volume_size_gb of \"{}\" on node " +
                                          "{} is not an integer".format(
                                              node.os_volume_size_gb,
                                              node.idrac_ip))
 
                 if os_volume_size_gb <= 0:
-                    raise AssertionError("os_volume_size_gb of \"{}\" on node "
-                                         "\"{}\" on node {} is not a positive "
+                    raise AssertionError("os_volume_size_gb of \"{}\" on node " +
+                                         "\"{}\" on node {} is not a positive " +
                                          "integer".format(
                                              node.os_volume_size_gb,
                                              node.idrac_ip))

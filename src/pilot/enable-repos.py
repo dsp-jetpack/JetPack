@@ -32,7 +32,7 @@ repos = [
 
 
 def execute(cmd):
-    print cmd
+    print(cmd)
     return_code = os.system(cmd)
     if return_code != 0:
         sys.exit(return_code)

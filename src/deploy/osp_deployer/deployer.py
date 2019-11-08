@@ -273,8 +273,8 @@ def deploy():
         logger.error(traceback.format_exc())
         e = sys.exc_info()[0]
         logger.error(e)
-        print e
-        print traceback.format_exc()
+        print(e)
+        print(traceback.format_exc())
         ret_code = 1
     logger.info("log : /auto_results/ ")
     sys.exit(ret_code)
