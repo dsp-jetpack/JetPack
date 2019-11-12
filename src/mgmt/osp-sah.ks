@@ -376,7 +376,7 @@ do
     esac
   done
 
-echo "network --noipv6 --no-activate --device=${bridge} --interfacename=${bridge} --bridgeslaves=${bridge_iface[$bridge]} --bootproto=static --onboot=yes --bridgeopts="stp=FALSE"" \
+echo "network --noipv6 --no-activate --device=${bridge} --interfacename=${bridge} --bridgeslaves=${bridge_iface[$bridge]} --bootproto=static --onboot=yes" \
 " --mtu=${bridges_mtu[${bridge}]} --ip=${bridge_info[IP]} --netmask=${bridge_info[NETMASK]} --nameserver=8.8.8.8 --gateway=${Gateway}" >> /tmp/ks_include.txt
 
 done
@@ -471,6 +471,7 @@ echo "BRIDGE=${vlan_info[MASTER]}" >> /etc/sysconfig/network-scripts/ifcfg-${vla
 # Work around for stp and ONBOOT
 sed -i "s/STP=.*/STP=no/" /etc/sysconfig/network-scripts/ifcfg-${vlan_info[MASTER]}
 sed -i "s/ONBOOT=.*/ONBOOT=yes/" /etc/sysconfig/network-scripts/ifcfg-${vlan}
+if [ ${vlan_info[MASTER]} != "br-pub-api" ]; then sed -i -e '/GATEWAY=/d' /etc/sysconfig/network-scripts/ifcfg-${vlan_info[MASTER]}; fi
 
 done
 
@@ -571,6 +572,9 @@ pip3 install cryptography
 echo "POST: Done installing extra packages"
 
 echo 'export PYTHONPATH=/usr/bin/python:/lib/python3.6:/lib/python3.6/site-packages:/root/JetPack/src/deploy/' >> /root/.bashrc
+
+# Remove ssh banners
+rm -rf /etc/motd.d/
 
 # chvt 1
 
