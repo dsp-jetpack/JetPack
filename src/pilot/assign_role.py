@@ -385,15 +385,15 @@ def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
         key=physical_disk_id_to_key)
 
 
-def define_storage_logical_disks(drac_client, raid_controller_ids):
-    raid_controllers = []
-    all_physical_disks = drac_client.list_physical_disks()
+def check_cntlr_physical_disks_len(cntrl_physical_disks):
+    # Make sure we have enough drives attached to the RAID controller to create
+    # a RAID1
+    if len(cntrl_physical_disks) >= 2:
+        return True
 
-    if len(raid_controller_ids) > 1:
-        for cntrl in raid_controller_ids:
-            raid_controllers.append(cntrl)
-    else:
-        raid_controllers.append(raid_controller_ids[0])
+
+def define_storage_logical_disks(drac_client, raid_controllers):
+    all_physical_disks = drac_client.list_physical_disks()
 
     # Get the drives controlled by the RAID controller
     raid_cntlr_physical_disks = {}
@@ -404,14 +404,6 @@ def define_storage_logical_disks(drac_client, raid_controller_ids):
             else:
                 raid_cntlr_physical_disks[disk.controller] = [disk]
 
-    # Make sure we have enough drives attached to the RAID controller to create
-    # a RAID1
-    if all(len(raid_cntlr_physical_disks[cntrl]) < 2
-            for cntrl in raid_controllers):
-        LOG.critical(
-            "For configuring RAID 1 needs at least two drives")
-        return None
-
     # Make sure we have at least one drive for Ceph OSD/journals
     if len(all_physical_disks) < 3:
         LOG.critical(
@@ -419,32 +411,29 @@ def define_storage_logical_disks(drac_client, raid_controller_ids):
             "configuration")
         return None
 
-    if len(raid_controllers) > 1:
-        boss_controller = [cntrl for cntrl in raid_controllers
-                           if drac_client.is_boss_controller(cntrl)][0]
-        if boss_controller:
-            os_logical_disk = define_storage_operating_system_logical_disk(
-                raid_cntlr_physical_disks[boss_controller],
-                drac_client, boss_controller)
-    else:
+    boss_controller = [cntrl for cntrl in raid_controllers
+                       if drac_client.is_boss_controller(cntrl)]
+    if boss_controller and check_cntlr_physical_disks_len(
+         raid_cntlr_physical_disks[boss_controller[0]]):
         os_logical_disk = define_storage_operating_system_logical_disk(
-            raid_cntlr_physical_disks[raid_controllers[0]],
-            drac_client, raid_controllers[0])
+            raid_cntlr_physical_disks[boss_controller[0]],
+            drac_client, boss_controller[0])
+    else:
+        raid_controller = [cntrl for cntrl in raid_controllers
+                           if len(raid_cntlr_physical_disks[cntrl]) >= 2]
+        if raid_controller:
+            os_logical_disk = define_storage_operating_system_logical_disk(
+                raid_cntlr_physical_disks[raid_controller[0]],
+                drac_client, raid_controller[0])
+        else:
+            LOG.critical("For configuring RAID 1 needs at least two drives")
+            return None
 
     if os_logical_disk is None:
         return None
 
-    # Determine the physical disks that remain for JBOD.
-    #
-    # The ironic RAID 'physical_disks' property is optional. While it is
-    # presently used by this script, it is envisioned that it will not
-    # be in the future.
-    remaining_physical_disks = []
-    if 'physical_disks' in os_logical_disk:
-        os_physical_disk_names = os_logical_disk['physical_disks']
-        for cntrl, disks in raid_cntlr_physical_disks.items():
-            _ = [remaining_physical_disks.append(disk) for disk in disks
-                 if disk.id not in os_physical_disk_names]
+    os_physical_disk_names = os_logical_disk['physical_disks'] \
+        if 'physical_disks' in os_logical_disk else None
 
     # Define JBOD logical disks with the remaining physical disks.
     #
@@ -453,6 +442,11 @@ def define_storage_logical_disks(drac_client, raid_controller_ids):
     logical_disks = [os_logical_disk]
     for raid_controller in raid_controllers:
         jbod_capable = drac_client.is_jbod_capable(raid_controller)
+
+        # Determine the physical disks that remain for JBOD.
+        remaining_physical_disks = [disk for disk in
+                                    raid_cntlr_physical_disks[raid_controller]
+                                    if disk.id not in os_physical_disk_names]
         jbod_logical_disks = define_jbod_logical_disks(
             drac_client, remaining_physical_disks, raid_controller,
             jbod_capable)
@@ -461,7 +455,6 @@ def define_storage_logical_disks(drac_client, raid_controller_ids):
             return None
 
         logical_disks.extend(jbod_logical_disks)
-    LOG.debug("logical_disks: {}".format(logical_disks))
     return logical_disks
 
 
@@ -1030,8 +1023,10 @@ def get_drives(drac_client):
 
     raid0_disks = [vd for vd in virtual_disks if vd.raid_level != '1']
 
-    raid1_disks = [vd.physical_disks for vd in virtual_disks
-                   if vd.raid_level == '1'][0]
+    raid1_disks = []
+    for vd in virtual_disks:
+        if vd.raid_level == '1':
+            raid1_disks.extend(vd.physical_disks)
 
     # Getting all physical disks of raid_disks except RAID1 disks
     physical_disks_of_raid = [pd for pd in drac_client.list_physical_disks()
@@ -1052,7 +1047,7 @@ def get_drives(drac_client):
         for physical_disk in physical_disks_of_raid:
             # Eliminate physical disks that in a state other than non-RAID
             if physical_disk.raid_status != "non-RAID" and \
-                    physical_disk.raid_status == "failed":
+               physical_disk.raid_status == "failed":
                 LOG.info("Skipping disk {id}, because it has a RAID status of "
                          "{raid_status}".format(
                              id=physical_disk.id,
@@ -1066,8 +1061,8 @@ def get_drives(drac_client):
                                               status=physical_disk.status))
                 continue
 
-            # Go ahead and use any physical drive that's not in an error
-            # state, but issue a warning if it's not in the ok or unknown state
+            # Go ahead and use any physical drive that's not in an error state,
+            # but issue a warning if it's not in the ok or unknown state
             if physical_disk.status != 'ok' and \
                     physical_disk.status != 'unknown':
                 LOG.warning("Using disk {id}, but it has a status of \""
