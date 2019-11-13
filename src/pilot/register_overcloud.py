@@ -320,7 +320,7 @@ class RegisterOvercloud:
             self.logger.debug("Unregistered {} {} successfully".format(
                 role, node_ip))
         else:
-            self.logger.warning(("Failed to unregister " + role + " " + node_ip +
+            self.logger.warning("Failed to unregister " + role + " " + node_ip +
                              ": " + stdout)
 
     def _get_consumed_pool_ids(self, node_ip):
@@ -360,7 +360,7 @@ class RegisterOvercloud:
         for pool_id in pool_ids:
             # Check to see if this node is already attached to this pool ID
             if pool_id in consumed_pool_ids:
-                self.logger.warning((role + " " + node_ip +
+                self.logger.warning(role + " " + node_ip +
                                  " is already attached to pool " + pool_id +
                                  ".  Skipping attach")
             else:
