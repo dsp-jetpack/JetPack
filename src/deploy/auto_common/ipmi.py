@@ -38,7 +38,7 @@ class Ipmi:
             and fix the missing dependencies etc.
         make
         make install
-        Add c:\cygwin\bin and c:\cygwin\usr\local\bin to your path
+        Add c:\\cygwin\\bin and c:\\cygwin\\usr\\local\\bin to your path
         (or the relevant paths for your setup)
         make sure you can talk to one of your servers :
         in cygwin :
