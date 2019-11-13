@@ -273,7 +273,7 @@ class Sah(InfraHost):
 
     def upload_iso(self):
         shutil.copyfile(self.settings.rhel_iso,
-                        "/store/data/iso/RHEL7.iso")
+                        "/store/data/iso/RHEL8.iso")
 
     def clear_known_hosts(self):
         hosts = [
@@ -347,19 +347,19 @@ class Sah(InfraHost):
         conf = conf + ("# Iface     IP" +
                        "               NETMASK" +
                        "              MTU",)
-        conf = conf + ("eth0        " +
+        conf = conf + ("enp1s0        " +
                        self.settings.director_node.public_api_ip +
                        "    " + self.settings.public_api_netmask +
                        "     " + self.settings.public_api_network_mtu,)
-        conf = conf + ("eth1        " +
+        conf = conf + ("enp2s0        " +
                        self.settings.director_node.provisioning_ip +
                        "    " + self.settings.provisioning_netmask +
                        "     " + self.settings.provisioning_network_mtu,)
-        conf = conf + ("eth2        " +
+        conf = conf + ("enp3s0        " +
                        self.settings.director_node.management_ip +
                        "    " + self.settings.management_netmask +
                        "     " + self.settings.management_network_mtu,)
-        conf = conf + ("eth3        " +
+        conf = conf + ("enp4s0        " +
                        self.settings.director_node.private_api_ip +
                        "    " + self.settings.private_api_netmask +
                        "     " + self.settings.private_api_network_mtu,)
@@ -371,7 +371,7 @@ class Sah(InfraHost):
                      director_conf)
         remote_file = "sh /root/deploy-director-vm.sh " + \
                       director_conf + " " + \
-                      "/store/data/iso/RHEL7.iso"
+                      "/store/data/iso/RHEL8.iso"
         re = self.run_tty(remote_file)
         startVM = True
         for ln in re[0].split("\n"):
