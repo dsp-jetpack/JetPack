@@ -1,5 +1,5 @@
---- /home/devel/client_stamp.py	2019-07-18 01:28:17.911655171 -0400
-+++ client_new.py	2019-06-21 06:14:32.311037297 -0400
+--- /usr/lib/python2.7/site-packages/dracclient/client.py	2019-11-14 19:39:49.304541029 +0000
++++ client.py.new	2019-11-14 19:39:24.639089436 +0000
 @@ -33,7 +33,7 @@
  from dracclient import utils
  from dracclient import wsman
@@ -107,7 +107,18 @@
  
      def create_nic_config_job(
              self,
-@@ -651,6 +704,37 @@
+@@ -619,6 +672,10 @@
+                            means execute immediately or None which means
+                            the job will not execute until
+                            schedule_job_execution is called
++        :param wait_for_idrac: indicates whether or not to wait for the
++                               iDRAC to be ready to accept commands before
++                               issuing the command.
++        :param method_name: method of CIM object to invoke
+         :returns: id of the created job
+         :raises: WSManRequestFailure on request failures
+         :raises: WSManInvalidResponse when receiving invalid response
+@@ -651,6 +708,37 @@
              cim_creation_class_name='DCIM_BIOSService',
              cim_name='DCIM:BIOSService', target=self.BIOS_DEVICE_FQDD)
  
@@ -145,7 +156,7 @@
      def get_lifecycle_controller_version(self):
          """Returns the Lifecycle controller version
  
-@@ -788,6 +872,50 @@
+@@ -788,6 +876,50 @@
          """
          return self._raid_mgmt.delete_virtual_disk(virtual_disk)
  
@@ -196,7 +207,7 @@
      def commit_pending_raid_changes(self, raid_controller, reboot=False,
                                      start_time='TIME_NOW', realtime=False):
          """Applies all pending changes on a RAID controller
-@@ -1015,32 +1143,33 @@
+@@ -1015,32 +1147,33 @@
  
      def change_physical_disk_state(self, mode,
                                     controllers_to_physical_disk_ids=None):
@@ -251,7 +262,7 @@
          :raises: DRACOperationFailed on error reported back by the DRAC and the
                   exception message does not contain NOT_SUPPORTED_MSG constant.
          :raises: Exception on unknown error.
-@@ -1202,11 +1331,11 @@
+@@ -1202,11 +1335,11 @@
                               expected_return_value=utils.RET_SUCCESS,
                               wait_for_idrac=False)
  
