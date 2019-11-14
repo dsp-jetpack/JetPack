@@ -1,5 +1,5 @@
---- job_orig.py	2019-07-18 05:36:14.893692073 -0400
-+++ job_new.py	2019-07-18 05:28:57.741358032 -0400
+--- /usr/lib/python2.7/site-packages/dracclient/resources/job.py	2019-11-14 20:02:11.154102871 +0000
++++ job.py.new	2019-11-14 20:01:49.195701015 +0000
 @@ -118,7 +118,9 @@
                            cim_system_name='DCIM:ComputerSystem',
                            reboot=False,
