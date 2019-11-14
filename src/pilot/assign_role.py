@@ -413,11 +413,16 @@ def define_storage_logical_disks(drac_client, raid_controllers):
 
     boss_controller = [cntrl for cntrl in raid_controllers
                        if drac_client.is_boss_controller(cntrl)]
-    if boss_controller and check_cntlr_physical_disks_len(
-         raid_cntlr_physical_disks[boss_controller[0]]):
-        os_logical_disk = define_storage_operating_system_logical_disk(
-            raid_cntlr_physical_disks[boss_controller[0]],
-            drac_client, boss_controller[0])
+    if boss_controller:
+        if check_cntlr_physical_disks_len(
+           raid_cntlr_physical_disks[boss_controller[0]]):
+            os_logical_disk = define_storage_operating_system_logical_disk(
+                raid_cntlr_physical_disks[boss_controller[0]],
+                drac_client, boss_controller[0])
+        else:
+            LOG.critical("At least 2 drives controlled by the same RAID "
+                         "controller are needed to configure a RAID 1")
+            return None
     else:
         raid_controller = [cntrl for cntrl in raid_controllers
                            if len(raid_cntlr_physical_disks[cntrl]) >= 2]
@@ -426,7 +431,8 @@ def define_storage_logical_disks(drac_client, raid_controllers):
                 raid_cntlr_physical_disks[raid_controller[0]],
                 drac_client, raid_controller[0])
         else:
-            LOG.critical("For configuring RAID 1 needs at least two drives")
+            LOG.critical("At least 2 drives controlled by the same RAID "
+                         "controller are needed to configure a RAID 1")
             return None
 
     if os_logical_disk is None:
@@ -1022,57 +1028,57 @@ def get_drives(drac_client):
     virtual_disks = drac_client.list_virtual_disks()
 
     raid0_disks = [vd for vd in virtual_disks if vd.raid_level != '1']
-
     raid1_disks = []
     for vd in virtual_disks:
         if vd.raid_level == '1':
             raid1_disks.extend(vd.physical_disks)
 
     # Getting all physical disks of raid_disks except RAID1 disks
-    physical_disks_of_raid = [pd for pd in drac_client.list_physical_disks()
-                              if pd.id not in raid1_disks]
+    physical_disks = {pd.id: pd for pd in drac_client.list_physical_disks()
+                      if pd.id not in raid1_disks}
 
     for virtual_disk in raid0_disks:
-        phy_disk = [pd for pd in physical_disks_of_raid
-                    if virtual_disk.physical_disks[0] == pd.id][0]
-
-        if phy_disk.media_type == 'hdd':
+        phy_disks = [physical_disks[pd_id] for pd_id
+                     in virtual_disk.physical_disks]
+        if phy_disks[0].media_type == 'hdd':
             spinners.append(virtual_disk)
         else:
             ssds.append(virtual_disk)
 
-        physical_disks_of_raid.remove(phy_disk)
+        {physical_disks.pop(pd.id) for pd in phy_disks}
 
-    if physical_disks_of_raid:
-        for physical_disk in physical_disks_of_raid:
+    if physical_disks:
+        for pd_id in physical_disks:
             # Eliminate physical disks that in a state other than non-RAID
-            if physical_disk.raid_status != "non-RAID" and \
-               physical_disk.raid_status == "failed":
+            if physical_disks[pd_id].raid_status != "non-RAID" and \
+                    physical_disks[pd_id].raid_status == "failed":
                 LOG.info("Skipping disk {id}, because it has a RAID status of "
                          "{raid_status}".format(
-                             id=physical_disk.id,
-                             raid_status=physical_disk.raid_status))
+                             id=physical_disks[pd_id].id,
+                             raid_status=physical_disks[pd_id].raid_status))
                 continue
 
             # Eliminate physical disks that have an error status
-            if physical_disk.status == 'error':
+            if physical_disks[pd_id].status == 'error':
                 LOG.warning("Not using disk {id}, because it has a status of "
-                            "{status}".format(id=physical_disk.id,
-                                              status=physical_disk.status))
+                            "{status}".format(
+                                id=physical_disks[pd_id].id,
+                                status=physical_disks[pd_id].status))
                 continue
 
             # Go ahead and use any physical drive that's not in an error state,
             # but issue a warning if it's not in the ok or unknown state
-            if physical_disk.status != 'ok' and \
-                    physical_disk.status != 'unknown':
+            if physical_disks[pd_id].status != 'ok' \
+               and physical_disks[pd_id].status != 'unknown':
                 LOG.warning("Using disk {id}, but it has a status of \""
-                            "{status}\"".format(id=physical_disk.id,
-                                                status=physical_disk.status))
+                            "{status}\"".format(
+                                id=physical_disks[pd_id].id,
+                                status=physical_disks[pd_id].status))
 
-            if physical_disk.media_type == "hdd":
-                spinners.append(physical_disk)
+            if physical_disks[pd_id].media_type == "hdd":
+                spinners.append(physical_disks[pd_id])
             else:
-                ssds.append(physical_disk)
+                ssds.append(physical_disks[pd_id])
 
     return spinners, ssds
 
