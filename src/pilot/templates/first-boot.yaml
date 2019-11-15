@@ -178,7 +178,7 @@ resources:
             echo $cmd
             $cmd
             echo
-
+            
           done
           partprobe
           parted -lm
