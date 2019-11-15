@@ -1050,9 +1050,16 @@ def get_drives(drac_client):
     if physical_disks:
         for pd_id in physical_disks:
             # Eliminate physical disks that in a state other than non-RAID
-            if physical_disks[pd_id].raid_status != "non-RAID" and \
-                    physical_disks[pd_id].raid_status == "failed":
+            if physical_disks[pd_id].raid_status != "non-RAID":
                 LOG.info("Skipping disk {id}, because it has a RAID status of "
+                         "{raid_status}".format(
+                             id=physical_disks[pd_id].id,
+                             raid_status=physical_disks[pd_id].raid_status))
+                continue
+
+            # Eliminate physical disks that have a failed status
+            if physical_disks[pd_id].raid_status == "failed":
+                LOG.info("Skipping disk {id}, because it has a status of "
                          "{raid_status}".format(
                              id=physical_disks[pd_id].id,
                              raid_status=physical_disks[pd_id].raid_status))
