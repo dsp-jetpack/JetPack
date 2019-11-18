@@ -420,8 +420,8 @@ def define_storage_logical_disks(drac_client, raid_controllers):
                 raid_cntlr_physical_disks[boss_controller[0]],
                 drac_client, boss_controller[0])
         else:
-            LOG.critical("At least 2 drives controlled by the same RAID "
-                         "controller are needed to configure a RAID 1")
+            LOG.critical("The BOSS card has only 1 SSD. "
+                         "2 SSDs are needed to configure a RAID 1")
             return None
     else:
         raid_controller = [cntrl for cntrl in raid_controllers
@@ -1049,17 +1049,10 @@ def get_drives(drac_client):
 
     if physical_disks:
         for pd_id in physical_disks:
-            # Eliminate physical disks that in a state other than non-RAID
+            # Eliminate physical disks in a state other than non-RAID
+            # including failed disks
             if physical_disks[pd_id].raid_status != "non-RAID":
                 LOG.info("Skipping disk {id}, because it has a RAID status of "
-                         "{raid_status}".format(
-                             id=physical_disks[pd_id].id,
-                             raid_status=physical_disks[pd_id].raid_status))
-                continue
-
-            # Eliminate physical disks that have a failed status
-            if physical_disks[pd_id].raid_status == "failed":
-                LOG.info("Skipping disk {id}, because it has a status of "
                          "{raid_status}".format(
                              id=physical_disks[pd_id].id,
                              raid_status=physical_disks[pd_id].raid_status))
