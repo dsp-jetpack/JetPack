@@ -57,7 +57,7 @@ def main():
     )
     nodeinfo = "| {:<15} | {:<25} | {:<15} |"
     print(banner)
-    print(nodeinfo.format('iDRAC Addr', 'Node Name', 'Provision Addr')
+    print(nodeinfo.format('iDRAC Addr', 'Node Name', 'Provision Addr'))
     print(banner)
     # Display the list ordered by the iDRAC address
     for n in sorted(nodes, key=lambda x: CredentialHelper.get_drac_ip(x)):
