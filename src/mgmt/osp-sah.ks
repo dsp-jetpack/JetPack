@@ -571,7 +571,7 @@ pip3 install selenium
 pip3 install cryptography
 echo "POST: Done installing extra packages"
 
-echo 'export PYTHONPATH=/usr/bin/python:/lib/python3.6:/lib/python3.6/site-packages:/root/JetPack/src/deploy/' >> /root/.bashrc
+echo 'export PYTHONPATH=/lib/python3.6:/usr/local/lib/python3.6/site-packages/:~/JetPack/src/deploy:~/JetPack/src/deploy/auto_common' >> /root/.bashrc
 
 # Remove ssh banners
 rm -rf /etc/motd.d/

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
 #
@@ -497,7 +497,7 @@ class Sah(InfraHost):
         # Check whether we're running from the SAH node
         out = subprocess.check_output("ip addr",
                                       stderr=subprocess.STDOUT,
-                                      shell=True)
+                                      shell=True).decode('utf-8')
 
         if self.settings.sah_node.public_api_ip in out:
             return True

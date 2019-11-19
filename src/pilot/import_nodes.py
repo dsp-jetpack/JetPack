@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 # Copyright (c) 2016-2019 Dell Inc. or its subsidiaries.
 #
