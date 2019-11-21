@@ -21,7 +21,6 @@ location=$2
 
 cat <<'EOFKS' > /tmp/director.ks
 
-install
 text
 cdrom
 reboot
@@ -53,14 +52,13 @@ eula --agreed
 
 %packages
 @core
--NetworkManager
--NetworkManager-*
-ntp
-ntpdate
-wget
--chrony
-system-config-firewall-base
+@standard
+@python36
 yum-plugin-versionlock
+firewall-config
+iptables-services
+yum-utils
+virt-who
 %end
 
 %pre --log /tmp/director-pre.log
@@ -110,23 +108,19 @@ do
   [[ ${iface} == smproxyuser ]] && echo "echo SMProxyUser=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == smproxypassword ]] && echo "echo SMProxyPassword=${ip} >> /tmp/ks_post_include.txt"
 
-  [[ ${iface} == eth0 ]] && {
+  [[ ${iface} == enp1s0 ]] && {
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --hostname=${HostName} --gateway=${Gateway} --nameserver=${NameServers} --mtu=${mtu} >> /tmp/ks_include.txt"
-    echo "echo ${iface}_mtu=${mtu} >> /tmp/ks_post_include.txt"
     }
 
-  [[ ${iface} == eth1 ]] && {
+  [[ ${iface} == enp2s0 ]] && {
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
-    echo "echo ${iface}_mtu=${mtu} >> /tmp/ks_post_include.txt"
     }
-  [[ ${iface} == eth2 ]] && {
+  [[ ${iface} == enp3s0 ]] && {
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
-    echo "echo ${iface}_mtu=${mtu} >> /tmp/ks_post_include.txt"
     }
     
-  [[ ${iface} == eth3 ]] && {
+  [[ ${iface} == enp4s0 ]] && {
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
-    echo "echo ${iface}_mtu=${mtu} >> /tmp/ks_post_include.txt"
     }
 done <<< "$( grep -Ev "^#|^;|^\s*$" ${cfg_file} )"
 } >> /tmp/director.ks
@@ -172,16 +166,10 @@ EOFPW
     echo "nameserver ${ns}" >> /etc/resolv.conf
   done
 
-  echo "GATEWAY=${Gateway}" >> /etc/sysconfig/network
-  echo "MTU=${eth0_mtu}" >> /etc/sysconfig/network-scripts/ifcfg-eth0
-  echo "MTU=${eth1_mtu}" >> /etc/sysconfig/network-scripts/ifcfg-eth1
-  echo "MTU=${eth2_mtu}" >> /etc/sysconfig/network-scripts/ifcfg-eth2
-  echo "MTU=${eth3_mtu}" >> /etc/sysconfig/network-scripts/ifcfg-eth3
-
-  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth0
-  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth1
-  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth2
-  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth3
+  sed -i -e '/^DNS/d' /etc/sysconfig/network-scripts/ifcfg-enp1s0
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-enp2s0
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-enp3s0
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-enp4s0
   host=`hostname -s`
   sed -i "s/\(127.0.0.1\s\+\)/\1${HostName} ${host} /" /etc/hosts
 
@@ -232,7 +220,7 @@ EOFPW
          subscription-manager attach --auto ${ProxyInfo}
          )
 
-  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-7-server-rpms --enable=rhel-7-server-extras-rpms --enable=rhel-7-server-rh-common-rpms --enable=rhel-ha-for-rhel-7-server-rpms --enable=rhel-7-server-openstack-13-rpms --enable=rhel-7-server-openstack-13-devtools-rpms --enable=rhel-7-server-rhceph-3-tools-rpms 
+  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-8-for-x86_64-baseos-rpms --enable=rhel-8-for-x86_64-appstream-rpms --enable=rhel-8-for-x86_64-highavailability-rpms --enable=ansible-2.8-for-rhel-8-x86_64-rpms --enable=openstack-15-for-rhel-8-x86_64-rpms --enable=fast-datapath-for-rhel-8-x86_64-rpms
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -242,14 +230,9 @@ EOFPW
     }
   umount /tmp/mnt
 
-  yum -y install yum-plugin-priorities
-  yum -y install yum-utils
-  yum -y install virt-who
-
-  yum-config-manager --enable rhel-7-server-rpms --setopt="rhel-7-server-rpms.priority=1"
-  yum-config-manager --enable rhel-7-server-extras-rpms --setopt="rhel-7-server-extras-rpms.priority=1"
-  yum-config-manager --enable rhel-7-server-rh-common-rpms --setopt="rhel-7-server-rh-common-rpms.priority=1"
-  yum-config-manager --enable rhel-ha-for-rhel-7-server-rpms --setopt="rhel-ha-for-rhel-7-server-rpms.priority=1"
+  yum-config-manager --enable rhel-8-for-x86_64-baseos-rpms --setopt="rhel-8-for-x86_64-baseos-rpms.priority=1"
+  yum-config-manager --enable rhel-8-for-x86_64-appstream-rpms --setopt="rhel-8-for-x86_64-appstream-rpms.priority=1"
+  yum-config-manager --enable rhel-8-for-x86_64-highavailability-rpms --setopt="rhel-8-for-x86_64-highavailability-rpms.priority=1"
   
   yum -y update
 
@@ -260,7 +243,7 @@ EOFPW
 :PREROUTING ACCEPT [0:0]
 :OUTPUT ACCEPT [0:0]
 :POSTROUTING ACCEPT [0:0]
--A POSTROUTING -o eth0 -j MASQUERADE
+-A POSTROUTING -o enp1s0 -j MASQUERADE
 COMMIT
 *filter
 :INPUT ACCEPT [0:0]
@@ -269,8 +252,8 @@ COMMIT
 -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 -A INPUT -p icmp -j ACCEPT
 -A INPUT -i lo -j ACCEPT
--A INPUT -i eth1 -j ACCEPT
--A INPUT -i eth2 -j ACCEPT
+-A INPUT -i enp2s0 -j ACCEPT
+-A INPUT -i enp3s0 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 22 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
@@ -293,13 +276,13 @@ EOIP
   echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
   sysctl -p
 
-  # Configure the ntp daemon
-  systemctl enable ntpd
-  sed -i -e "/^server /d" /etc/ntp.conf
+  # Configure the chrony daemon for ntp
+  systemctl enable chronyd
+  sed -i -e "s/rhel/centos/" /etc/chrony.conf
 
   for ntps in ${NTPServers//,/ }
   do
-    echo "server ${ntps}" >> /etc/ntp.conf
+    echo "server ${ntps}" >> /etc/chrony.conf
   done
 
   systemctl disable firewalld
@@ -308,6 +291,9 @@ EOIP
   sed -i -e "s/^SELINUX=.*/SELINUX=permissive/" /etc/selinux/config
 
 ) 2>&1 | /usr/bin/tee -a /root/director-posts.log
+
+# Remove ssh banners
+rm -rf /etc/motd.d/
 
 chvt 1
 
@@ -336,8 +322,8 @@ rm -f /store/data/images/director.img
     --vcpus 8 \
     --hvm \
     --os-type linux \
-    --os-variant rhel7 \
-    --disk /store/data/images/director.img,bus=virtio,size=80 \
+    --os-variant rhel8.1 \
+    --disk /store/data/images/director.img,bus=virtio,size=120 \
     --disk /store/data/images/floppy-director.img,device=floppy \
     --network bridge=br-pub-api \
     --network bridge=br-prov \
@@ -357,8 +343,8 @@ virt-install --name director \
   --vcpus 8 \
   --hvm \
   --os-type linux \
-  --os-variant rhel7 \
-  --disk /store/data/images/director.img,bus=virtio,size=80 \
+  --os-variant rhel8.1 \
+  --disk /store/data/images/director.img,bus=virtio,size=120 \
   --network bridge=br-pub-api \
   --network bridge=br-prov \
   --network bridge=br-mgmt \

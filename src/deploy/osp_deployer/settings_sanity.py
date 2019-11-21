@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
 #
@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from auto_common import Ipmi
-from settings.config import Settings
+from osp_deployer.settings.config import Settings
 from profile import Profile
 import logging
 import os.path
@@ -28,7 +28,6 @@ logger = logging.getLogger("osp_deployer")
 class DeployerSanity:
     def __init__(self):
         self.settings = Settings.settings
-
     @staticmethod
     def is_valid_ip(address):
         valid = True
