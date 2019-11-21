@@ -1,7 +1,6 @@
 # Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
+# Licensed under the Apache License, Version 2.0 (the "License");# you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
@@ -57,7 +56,6 @@ class Checkpoints:
             user,
             password,
             "subscription-manager status")[0]
-
         while "Current" not in subscription_status and i < retries:
             if "Unknown" in subscription_status:
                 return subscription_status

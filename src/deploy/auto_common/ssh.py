@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
 #
@@ -49,7 +49,7 @@ class Ssh:
             logger.warning(".. host " + address + " is not up")
             return "host not up", "host not up"
 
-        return r_out, r_err
+        return r_out.decode('utf-8'), r_err.decode('utf-8')
 
     @staticmethod
     def execute_command(address, usr, pwd, command):
@@ -105,7 +105,7 @@ class Ssh:
             logger.warning(".. host " + address + " is not up")
             return "host not up", "host not up", -1
 
-        return r_out, r_err, exit_status
+        return r_out.decode('utf-8'), r_err.decode('utf-8'), exit_status
 
     @staticmethod
     def ssh_edit_file(adress, user, passw, remotefile, regex, replace):

@@ -111,7 +111,7 @@ def deploy():
         logger.info("Settings .ini: " + settings.settings_file)
         logger.info("Settings .properties " + settings.network_conf)
         settings.get_version_info()
-        logger.info("source version # : " + settings.source_version)
+        logger.info("source version # : " + settings.source_version.decode('utf-8'))
         tester = Checkpoints()
         tester.verify_deployer_settings()
         if args.validate_only is True:
@@ -162,7 +162,7 @@ def deploy():
             logger.info("=== create the director vm")
             sah_node.create_director_vm()
             tester.director_vm_health_check()
-
+            
             logger.info("Preparing the Director VM")
             director_vm = Director()
             director_vm.apply_internal_repos()
