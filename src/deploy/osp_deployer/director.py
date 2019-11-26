@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from settings.config import Settings
+from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from collections import defaultdict
 from infra_host import InfraHost
@@ -128,11 +128,6 @@ class Director(InfraHost):
             'sed -i "s|local_ip = .*|local_ip = ' +
             self.settings.director_node.provisioning_ip +
             '/24|" pilot/undercloud.conf',
-            'sed -i "s|local_interface = .*|'
-            'local_interface = eth1|" pilot/undercloud.conf',
-            'sed -i "s|masquerade_network = .*|masquerade_network = ' +
-            self.settings.provisioning_network +
-            '|" pilot/undercloud.conf',
             'sed -i "s|dhcp_start = .*|dhcp_start = ' +
             self.settings.provisioning_net_dhcp_start +
             '|" pilot/undercloud.conf',
@@ -147,6 +142,9 @@ class Director(InfraHost):
             '|" pilot/undercloud.conf',
             'sed -i "s|inspection_iprange = .*|inspection_iprange = ' +
             self.settings.discovery_ip_range +
+            '|" pilot/undercloud.conf',
+            'sed -i "s|undercloud_nameservers = .*|undercloud_nameservers = ' +
+            self.settings.name_server +
             '|" pilot/undercloud.conf',
             'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' +
             self.settings.sah_node.provisioning_ip +

@@ -1,0 +1,22 @@
+# Generated with the following on 2019-11-25T11:49:03.206170
+#
+#   openstack tripleo container image prepare default --local-push-destination --output-env-file containers-prepare-parameter.yaml
+#
+
+parameter_defaults:
+  ContainerImagePrepare:
+  - push_destination: true
+    set:
+      ceph_image: rhceph-4-rhel8
+      ceph_namespace: registry.redhat.io/rhceph-beta
+      ceph_tag: latest
+      name_prefix: openstack-
+      name_suffix: ''
+      namespace: registry.redhat.io/rhosp15-rhel8
+      neutron_driver: ovn
+      tag: 15.0
+    tag_from_label: '{version}-{release}'
+
+  ContainerImageRegistryCredentials:
+    registry.redhat.io:
+      username: password
