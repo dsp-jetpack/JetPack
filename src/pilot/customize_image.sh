@@ -144,6 +144,11 @@ if [ ! -z "${satellite_hostname}" ]; then
 else
    run_command "virt-customize -a overcloud-full.qcow2 --run-command \"echo '${director_ip} ${director_short} ${director_long}' >> /etc/hosts\""
 
+   #Patch for configuring T10 PI format drives
+   run_command "virt-customize -a overcloud-full.qcow2  --run-command \"sed -i 's/GRUB_CMDLINE_LINUX=\\\"/GRUB_CMDLINE_LINUX=\\\"mpt3sas.prot_mask=1 /' /etc/default/grub\""
+   run_command "virt-customize -a overcloud-full.qcow2 --run-command \"grub2-mkconfig -o /boot/efi/EFI/redhat/grub.cfg\""
+
+
     run_command "virt-customize \
         --memsize 2000 \
         --add overcloud-full.qcow2 \
