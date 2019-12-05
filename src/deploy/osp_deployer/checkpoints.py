@@ -56,7 +56,7 @@ class Checkpoints:
             user,
             password,
             "subscription-manager status")[0]
-        while "Current" not in subscription_status and i < retries:
+        while "Current" not in subscription_status and int(i) < int(retries):
             if "Unknown" in subscription_status:
                 return subscription_status
             time.sleep(60)

@@ -500,7 +500,8 @@ do
   echo "pool ${ntps}" >> /etc/chrony.conf
 done
 
-
+echo "local stratum 10" >> /etc/chrony.conf
+echo "manual" >> /etc/chrony.conf
 echo "allow ${NTPSettings}" >> /etc/chrony.conf
 echo "server 127.127.1.0" >> /etc/chrony.conf
 

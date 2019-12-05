@@ -22,7 +22,7 @@ import codecs
 class FileHelper:
     @staticmethod
     def replace_expression(fileref, search_exp, replace_exp):
-        fh = open(fileref, 'rU')
+        fh = open(fileref, 'r')
         content = fh.readlines()
         fh.close()
         updated = []
@@ -30,7 +30,7 @@ class FileHelper:
             line = re.sub(search_exp, replace_exp, line)
             updated.append(line)
 
-        with codecs.open(fileref, 'wbU', encoding='utf8') as f:
+        with codecs.open(fileref, 'wb', encoding='utf8') as f:
             for line in updated:
                 f.write(line)
         f.close()
