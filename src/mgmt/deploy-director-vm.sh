@@ -59,6 +59,7 @@ firewall-config
 iptables-services
 yum-utils
 virt-who
+tmux
 %end
 
 %pre --log /tmp/director-pre.log
@@ -66,7 +67,6 @@ EOFKS
 
 
 { 
-ntp=""
 
 while read iface ip mask mtu
 do
@@ -90,7 +90,6 @@ do
     echo "echo Gateway=${ip} >> /tmp/ks_post_include.txt"
     }
 
-  [[ ${iface} == ntpserver ]] && echo "echo NTPServers=${ip} >> /tmp/ks_post_include.txt"
 
   [[ ${iface} == user ]] && echo "echo User=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == password ]] && echo "echo Password=${ip} >> /tmp/ks_post_include.txt"
@@ -166,7 +165,6 @@ EOFPW
     echo "nameserver ${ns}" >> /etc/resolv.conf
   done
 
-  sed -i -e '/^DNS/d' /etc/sysconfig/network-scripts/ifcfg-enp1s0
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-enp2s0
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-enp3s0
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-enp4s0
@@ -275,15 +273,6 @@ EOIP
   sed -i -e "/^net.ipv4.ip_forward/d" /etc/sysctl.conf
   echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
   sysctl -p
-
-  # Configure the chrony daemon for ntp
-  systemctl enable chronyd
-  sed -i -e "s/rhel/centos/" /etc/chrony.conf
-
-  for ntps in ${NTPServers//,/ }
-  do
-    echo "server ${ntps}" >> /etc/chrony.conf
-  done
 
   systemctl disable firewalld
 

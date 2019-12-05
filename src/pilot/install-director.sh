@@ -154,11 +154,12 @@ sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
 # Clean the nodes disks befor redeploying
 #sed -i "s/clean_nodes = false/clean_nodes = true/" $HOME/pilot/undercloud.conf
 cp $HOME/pilot/undercloud.conf $HOME
+cp $HOME/pilot/containers-prepare-parameter.yaml $HOME
 echo "## Done."
 
 echo
 echo "## Installing Director"
-run_command "sudo yum -y install python-tripleoclient"
+run_command "sudo yum -y install python3-tripleoclient"
 run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
