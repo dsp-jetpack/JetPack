@@ -201,6 +201,16 @@
       },
       {
          "Deployment Settings": {
+            "undercloud_admin_host": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            },
+            "undercloud_public_host": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            },
             "overcloud_static_ips": {
                "valid_values": [
                   "true",

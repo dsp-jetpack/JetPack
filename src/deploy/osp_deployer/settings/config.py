@@ -264,6 +264,10 @@ class Settings:
             'director_install_user']
         self.director_install_account_pwd = deploy_settings[
             'director_install_user_password']
+        self.undercloud_admin_host = deploy_settings[
+            'undercloud_admin_host']
+        self.undercloud_public_host = deploy_settings[
+            'undercloud_public_host']
         self.overcloud_name = deploy_settings[
             'overcloud_name']
         self.network_conf = deploy_settings[
