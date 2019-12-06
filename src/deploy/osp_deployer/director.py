@@ -145,10 +145,10 @@ class Director(InfraHost):
             '|" pilot/undercloud.conf',
             'sed -i "s|undercloud_nameservers = .*|undercloud_nameservers = ' +
             self.settings.name_server +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' +
-            self.settings.sah_node.provisioning_ip +
             '|" pilot/undercloud.conf'
+#            'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' +
+#            self.settings.sah_node.provisioning_ip +
+#            '|" pilot/undercloud.conf'
         ]
         for cmd in cmds:
             self.run(cmd)
