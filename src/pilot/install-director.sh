@@ -164,7 +164,7 @@ run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
 run_command "sudo yum -y install openstack-tempest"
-run_command "sudo yum install -y python-neutron-tests-tempest python-cinder-tests-tempest python-telemetry-tests-tempest python-keystone-tests-tempest python-horizon-tests-tempest python2-octavia-tests-tempest python2-manila-tests-tempest python2-barbican-tests-tempest"
+run_command "sudo yum install -y python3-neutron-tests-tempest python3-cinder-tests-tempest python3-telemetry-tests-tempest python3-keystone-tests-tempest python3-horizon-tests-tempest python3-octavia-tests-tempest python3-manila-tests-tempest python3-barbican-tests-tempest"
 echo "## Done."
 
 echo
@@ -209,7 +209,7 @@ then
 fi
 cd $HOME/pilot/images
 
-for i in /usr/share/rhosp-director-images/overcloud-full-latest-13.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-13.0.tar;
+for i in /usr/share/rhosp-director-images/overcloud-full-latest-15.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-15.0.tar;
 do
   tar -xvf $i;
 done
@@ -277,26 +277,26 @@ echo "## Done."
 # This hacks in a patch to validate and retrieve raid and boss controller and physical disk status.
 echo
 echo "## Patching Ironic iDRAC driver raid.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
+apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
+sudo rm -f /usr/lib/python3.6/site-packages/dracclient/resources/raid.pyc
+sudo rm -f /usr/lib/python3.6/site-packages/dracclient/resources/raid.pyo
 
 # This hacks in a patch to out-of-band inspection to set boot_mode on the node
 # being inspected.
 echo
 echo "## Patching Ironic iDRAC driver inspect.py.."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.py ${HOME}/pilot/inspect.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.pyo
+apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/inspect.py ${HOME}/pilot/inspect.patch"
+sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/inspect.pyc
+sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/inspect.pyo
 
 # This hacks in a patch to create a virtual disk using realtime mode.
 # Note that this code must be here because we use this code prior to deploying
 # the director.
 echo
 echo "## Patching Ironic iDRAC driver raid.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
+apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
+sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyc
+sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyo
 echo "## Done."
 
 # This hacks in a patch to filter out all non-printable characters during WSMAN
@@ -305,9 +305,9 @@ echo "## Done."
 # the director.
 echo
 echo "## Patching Ironic iDRAC driver wsman.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
+apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
+sudo rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyc
+sudo rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyo
 echo "## Done."
 
 # This patches workarounds for two issues into ironic.conf.
@@ -339,45 +339,45 @@ sudo systemctl restart openstack-ironic-conductor.service
 echo "## Done."
 
 # If deployment is unlocked, generate the overcloud container list from the latest.
-if [ -e $HOME/overcloud_images.yaml ];
-then
-    echo "using locked containers versions"
-
-    if [ ! -z "${containers_prefix}" ]; then
-        sed -i "s/registry.access.redhat.com\/rhosp13\/openstack-/${satellite_hostname}:5000\/${containers_prefix}/" $HOME/overcloud_images.yaml
-        sed -i "s/registry.access.redhat.com\/rhceph\//${satellite_hostname}:5000\/${containers_prefix}/" $HOME/overcloud_images.yaml
-
-    fi
-
-else
-    echo "using latest available containers versions"
-    touch $HOME//overcloud_images.yaml
-
-    if [ ! -z "${containers_prefix}" ]; then
-
-        openstack overcloud container image prepare   --namespace=${satellite_hostname}:5000\
-        --prefix=${containers_prefix}   \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
-        --tag-from-label {version}-{release}   \
-        --set ceph_namespace=${satellite_hostname}:5000 \
-        --set ceph_image=${containers_prefix}rhceph-3-rhel7 \
-        --output-env-file=$HOME/overcloud_images.yaml
-     
-    else
-        openstack overcloud container image prepare --output-env-file $HOME/overcloud_images.yaml \
-        --namespace=registry.access.redhat.com/rhosp13 \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
-        --set ceph_namespace=registry.access.redhat.com/rhceph \
-        --set ceph_image=rhceph-3-rhel7 \
-        --tag-from-label {version}-{release}
-    fi
-fi
+#if [ -e $HOME/overcloud_images.yaml ];
+#then
+#    echo "using locked containers versions"
+#
+#    if [ ! -z "${containers_prefix}" ]; then
+#        sed -i "s/registry.access.redhat.com\/rhosp15\/openstack-/${satellite_hostname}:5000\/${containers_prefix}/" $HOME/overcloud_images.yaml
+#        sed -i "s/registry.access.redhat.com\/rhceph\//${satellite_hostname}:5000\/${containers_prefix}/" $HOME/overcloud_images.yaml
+#
+#    fi
+#
+#else
+#    echo "using latest available containers versions"
+#    touch $HOME//overcloud_images.yaml
+#
+#    if [ ! -z "${containers_prefix}" ]; then
+#
+#        openstack overcloud container image prepare   --namespace=${satellite_hostname}:5000\
+#        --prefix=${containers_prefix}   \
+#        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
+#        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
+#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
+#        --tag-from-label {version}-{release}   \
+#        --set ceph_namespace=${satellite_hostname}:5000 \
+#        --set ceph_image=${containers_prefix}rhceph-3-rhel7 \
+#        --output-env-file=$HOME/overcloud_images.yaml
+#     
+#    else
+#        openstack overcloud container image prepare --output-env-file $HOME/overcloud_images.yaml \
+#        --namespace=registry.access.redhat.com/rhosp15 \
+#        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
+#        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
+#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
+#        --set ceph_namespace=registry.access.redhat.com/rhceph \
+#        --set ceph_image=rhceph-3-rhel7 \
+#        --tag-from-label {version}-{release}
+#    fi
+#fi
 
 sudo yum install -y os-cloud-config
 sudo yum install -y ceph-ansible

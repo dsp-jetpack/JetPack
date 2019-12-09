@@ -146,8 +146,14 @@ class Director(InfraHost):
             'sed -i "s|undercloud_nameservers = .*|undercloud_nameservers = ' +
             self.settings.name_server +
             '|" pilot/undercloud.conf',
-            'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' +
-            self.settings.sah_node.provisioning_ip +
+#            'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' +
+#            self.settings.sah_node.provisioning_ip +
+#            '|" pilot/undercloud.conf',
+            'sed -i "s|undercloud_admin_host = .*|undercloud_admin_host = ' +
+            self.settings.undercloud_admin_host +
+            '|" pilot/undercloud.conf',
+            'sed -i "s|undercloud_public_host = .*|undercloud_public_host = ' +
+            self.settings.undercloud_public_host +
             '|" pilot/undercloud.conf'
         ]
         for cmd in cmds:
