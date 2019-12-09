@@ -14,17 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Install the python-pip package.
-sudo easy_install pip
-
 cd ~/pilot/probe_idrac
 
 # Install the Python packages on which probe_idrac depends.
-sudo pip install -r ./requirements.txt
+sudo pip3 install -r ./requirements.txt
 
 # Create a pip installable package in tarball format.
 export PBR_VERSION=0.0.1
-python ./setup.py sdist
+python3 ./setup.py sdist
 
 # Copy the tarball to /tmp.
 cp -p dist/probe-idrac-${PBR_VERSION}.tar.gz /tmp
@@ -32,4 +29,4 @@ cp -p dist/probe-idrac-${PBR_VERSION}.tar.gz /tmp
 cd /tmp
 
 # Install the probe_idrac Python package.
-sudo pip install ./probe-idrac-${PBR_VERSION}.tar.gz
+sudo pip3 install ./probe-idrac-${PBR_VERSION}.tar.gz
