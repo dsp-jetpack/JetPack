@@ -156,6 +156,13 @@ class Director(InfraHost):
             self.settings.undercloud_public_host +
             '|" pilot/undercloud.conf'
         ]
+        
+        #Configure containers-prepare-parameter.yaml to retrieve container images
+        cmd = 'sed -i "s|[[:space:]]\+username: password|      ' + \
+              self.settings.subscription_manager_user + ': ' + self.settings.subscription_manager_password + \
+              '|" pilot/containers-prepare-parameter.yaml'
+        cmds.append(cmd)
+        
         for cmd in cmds:
             self.run(cmd)
 
