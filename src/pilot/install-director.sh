@@ -160,7 +160,7 @@ echo "## Done."
 echo
 echo "## Installing Director"
 run_command "sudo yum -y install python3-tripleoclient"
-run_command "sudo yum install -y ceph-ansible"
+#run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
 run_command "sudo yum -y install openstack-tempest"
@@ -209,7 +209,7 @@ then
 fi
 cd $HOME/pilot/images
 
-for i in /usr/share/rhosp-director-images/overcloud-full-latest-15.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-15.0.tar;
+for i in /usr/share/rhosp-director-images/overcloud-full-latest-16.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-16.0.tar;
 do
   tar -xvf $i;
 done
@@ -233,7 +233,9 @@ echo
 if [ -n "${overcloud_nodes_pwd}" ]; then
     echo "# Setting overcloud nodes password"
     run_command "sudo yum install libguestfs-tools -y"
-    run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd}"
+    run_command "sudo service libvirtd start"
+    run_command "export LIBGUESTFS_BACKEND=direct"
+    run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
 fi
 
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
