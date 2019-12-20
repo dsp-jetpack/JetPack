@@ -90,6 +90,7 @@ run_command(){
 echo "## install libguestfs-tools"
 cd ~/pilot/images
 run_command  "sudo yum install libguestfs-tools -y"
+run_comand "sudo service libvirtd start"
 
 export LIBGUESTFS_BACKEND=direct
 
@@ -104,12 +105,12 @@ fi
 
 
 repos=(
-    rhel-7-server-rpms
-    rhel-7-server-rhceph-3-tools-rpms
+    #rhel-7-server-rpms
+    #rhel-7-server-rhceph-3-tools-rpms
 )
 
 packages=(
-    cephmetrics-ansible
+    #cephmetrics-ansible
 )
 
 del_packages=(
