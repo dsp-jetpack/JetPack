@@ -154,7 +154,11 @@ class Director(InfraHost):
             '|" pilot/undercloud.conf',
             'sed -i "s|undercloud_public_host = .*|undercloud_public_host = ' +
             self.settings.undercloud_public_host +
-            '|" pilot/undercloud.conf'
+            '|" pilot/undercloud.conf',
+            'sed -i "s|image_path = .*|image_path = ' + self.images_dir + 
+            '|" pilot/undercloud.conf',
+            'sed -i "s|container_images_file = .*|container_images_file =' + self.home_dir +
+            '/containers-prepare-parameter.yaml|" pilot/undercloud.conf'
         ]
         
         #Configure containers-prepare-parameter.yaml to retrieve container images
