@@ -12,11 +12,11 @@ parameter_defaults:
       ceph_tag: latest
       name_prefix: openstack-
       name_suffix: ''
-      namespace: registry.redhat.io/rhosp15-rhel8
+      namespace: registry.redhat.io/rhosp-beta
       neutron_driver: ovn
-      tag: 15.0
+      tag: latest
     tag_from_label: '{version}-{release}'
 
   ContainerImageRegistryCredentials:
     registry.redhat.io:
-      username: password
+     username: password
