@@ -90,7 +90,7 @@ run_command(){
 echo "## install libguestfs-tools"
 cd ~/pilot/images
 run_command  "sudo yum install libguestfs-tools -y"
-run_comand "sudo service libvirtd start"
+run_command "sudo service libvirtd start"
 
 export LIBGUESTFS_BACKEND=direct
 
@@ -105,8 +105,9 @@ fi
 
 
 repos=(
-    #rhel-7-server-rpms
-    #rhel-7-server-rhceph-3-tools-rpms
+    rhel-8-for-x86_64-baseos-rpms
+    rhel-8-for-x86_64-appstream-rpms
+    #rhceph-4-tools-for-rhel-8-x86_64-rpms
 )
 
 packages=(
@@ -137,7 +138,7 @@ if [ ! -z "${satellite_hostname}" ]; then
         --run-command \"rpm -Uvh http://${satellite_hostname}/pub/katello-ca-consumer-latest.noarch.rpm\" \
         --run-command \"subscription-manager register --org=${satellite_org} --activationkey=${satellite_key}\" \
         --run-command \"subscription-manager repos --disable='*' ${repos[*]/#/--enable=}\" \
-        --install $(join \",\" ${packages[*]}) \
+        #--install $(join \",\" ${packages[*]}) \
         --uninstall $(join \",\" ${del_packages[*]}) \
         --sm-remove \
         --sm-unregister \
@@ -157,7 +158,7 @@ else
         --sm-register \
         --sm-attach \"pool:${subscription_manager_poolid}\" \
         --run-command \"subscription-manager repos --disable='*' ${repos[*]/#/--enable=}\" \
-        --install $(join \",\" ${packages[*]}) \
+        #--install $(join \",\" ${packages[*]}) \
         --uninstall $(join \",\" ${del_packages[*]}) \
         --sm-remove \
         --sm-unregister \
