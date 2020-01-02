@@ -160,7 +160,6 @@ echo "## Done."
 echo
 echo "## Installing Director"
 run_command "sudo yum -y install python3-tripleoclient"
-#run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
 run_command "sudo yum -y install openstack-tempest"
@@ -217,6 +216,7 @@ echo "## Done."
 
 echo 
 echo "## Customizing the overcloud image & uploading images"
+
 if [ ! -z "${satellite_hostname}" ]; then
     run_command "~/pilot/customize_image.sh --satellite_hostname ${satellite_hostname} \
                 --satellite_org ${satellite_org} \
@@ -261,7 +261,7 @@ echo "## Done."
 # This patch fixes an issue in tripleo-heat-templates
 echo
 echo "### Patching tripleo-heat-templates"
-sudo sed -i 's/$(get_python)/python/' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/per_node.yaml
+sudo sed -i 's/$(get_python)/python3/' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/per_node.yaml
 echo "## Done."
 
 echo
@@ -276,59 +276,59 @@ echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
-# This hacks in a patch to validate and retrieve raid and boss controller and physical disk status.
-echo
-echo "## Patching Ironic iDRAC driver raid.py..."
-apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
-sudo rm -f /usr/lib/python3.6/site-packages/dracclient/resources/raid.pyc
-sudo rm -f /usr/lib/python3.6/site-packages/dracclient/resources/raid.pyo
-
-# This hacks in a patch to out-of-band inspection to set boot_mode on the node
-# being inspected.
-echo
-echo "## Patching Ironic iDRAC driver inspect.py.."
-apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/inspect.py ${HOME}/pilot/inspect.patch"
-sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/inspect.pyc
-sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/inspect.pyo
-
-# This hacks in a patch to create a virtual disk using realtime mode.
-# Note that this code must be here because we use this code prior to deploying
-# the director.
-echo
-echo "## Patching Ironic iDRAC driver raid.py..."
-apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
-sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyc
-sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyo
-echo "## Done."
-
-# This hacks in a patch to filter out all non-printable characters during WSMAN
-# enumeration.
-# Note that this code must be here because we use this code prior to deploying
-# the director.
-echo
-echo "## Patching Ironic iDRAC driver wsman.py..."
-apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
-sudo rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyc
-sudo rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyo
-echo "## Done."
-
-# This patches workarounds for two issues into ironic.conf.
-# 1. node_locked_retry_attempts is increased to work around an issue where
-#    lock contention on the nodes in ironic can occur during RAID cleaning.
-# 2. sync_power_state_interval is increased to work around an issue where
-#    servers go into maintenance mode in ironic if polled for power state too
-#    aggressively.
-echo
-echo "## Patching ironic.conf..."
-apply_patch "sudo patch -b -s /etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
-echo "## Done."
-
-# This patches an issue where the  Ironic api service returns http 500 errors
-# https://bugzilla.redhat.com/show_bug.cgi?id=1613995
-echo
-echo "## Patching 10-ironic_wsgi.conf"
-apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
-echo "## Done"
+## This hacks in a patch to validate and retrieve raid and boss controller and physical disk status.
+#echo
+#echo "## Patching Ironic iDRAC driver raid.py..."
+#apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
+#sudo rm -f /usr/lib/python3.6/site-packages/dracclient/resources/raid.pyc
+#sudo rm -f /usr/lib/python3.6/site-packages/dracclient/resources/raid.pyo
+#
+## This hacks in a patch to out-of-band inspection to set boot_mode on the node
+## being inspected.
+#echo
+#echo "## Patching Ironic iDRAC driver inspect.py.."
+#apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/inspect.py ${HOME}/pilot/inspect.patch"
+#sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/inspect.pyc
+#sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/inspect.pyo
+#
+## This hacks in a patch to create a virtual disk using realtime mode.
+## Note that this code must be here because we use this code prior to deploying
+## the director.
+#echo
+#echo "## Patching Ironic iDRAC driver raid.py..."
+#apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
+#sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyc
+#sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyo
+#echo "## Done."
+#
+## This hacks in a patch to filter out all non-printable characters during WSMAN
+## enumeration.
+## Note that this code must be here because we use this code prior to deploying
+## the director.
+#echo
+#echo "## Patching Ironic iDRAC driver wsman.py..."
+#apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
+#sudo rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyc
+#sudo rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyo
+#echo "## Done."
+#
+## This patches workarounds for two issues into ironic.conf.
+## 1. node_locked_retry_attempts is increased to work around an issue where
+##    lock contention on the nodes in ironic can occur during RAID cleaning.
+## 2. sync_power_state_interval is increased to work around an issue where
+##    servers go into maintenance mode in ironic if polled for power state too
+##    aggressively.
+#echo
+#echo "## Patching ironic.conf..."
+#apply_patch "sudo patch -b -s /etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
+#echo "## Done."
+#
+## This patches an issue where the  Ironic api service returns http 500 errors
+## https://bugzilla.redhat.com/show_bug.cgi?id=1613995
+#echo
+#echo "## Patching 10-ironic_wsgi.conf"
+#apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
+#echo "## Done"
 
 echo
 echo "## Restarting httpd"
@@ -336,8 +336,8 @@ sudo systemctl restart httpd
 echo "## Done"
 
 echo
-echo "## Restarting openstack-ironic-conductor.service..."
-sudo systemctl restart openstack-ironic-conductor.service
+echo "## Restarting ironic-conductor..."
+sudo podman restart ironic_conductor
 echo "## Done."
 
 # If deployment is unlocked, generate the overcloud container list from the latest.
@@ -381,7 +381,7 @@ echo "## Done."
 #    fi
 #fi
 
-sudo yum install -y os-cloud-config
+#sudo yum install -y os-cloud-config
 sudo yum install -y ceph-ansible
 
 

@@ -384,14 +384,14 @@ class Checkpoints:
             raise AssertionError(
                 "Director & Undercloud did not install properly, "
                 "check /pilot/install-director.log for details")
-        cmd = " grep \"Undercloud install complete\" " \
-              "~/pilot/install-director.log"
+                
+        cmd = "grep \"The Undercloud has been successfully installed\" " + "~/pilot/install-director.log"
         setts = self.settings
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
-        if "Undercloud install complete." not in re[0]:
+        if "The Undercloud has been successfully installed" not in re[0]:
             raise AssertionError(
                 "Director & Undercloud did not install properly,"
                 " check /pilot/install-director.log for details")
@@ -417,6 +417,8 @@ class Checkpoints:
                 "Unable to find the overcloud image in glance - "
                 "check the install-director.log for possible package"
                 "download errors")
+                
+        logger.info("Undercloud installed Successfully!")
 
     def verify_computes_virtualization_enabled(self):
         logger.debug("*** Verify the Compute nodes have KVM enabled *** ")
