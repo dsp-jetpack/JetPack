@@ -1,5 +1,5 @@
---- raid.py.orig	2019-10-18 09:02:42.125751075 -0400
-+++ raid_new.py	2019-10-18 09:14:46.549693437 -0400
+--- raid_original.py	2019-12-30 10:29:42.226859376 +0000
++++ raid_modified.py	2019-12-30 10:29:18.381080327 +0000
 @@ -15,6 +15,7 @@
  DRAC RAID specific methods
  """
@@ -297,12 +297,7 @@
 +                reboot=False, realtime=True,
 +                raid_config_job_ids=raid_config_job_ids,
 +                raid_config_parameters=raid_config_parameters)
- 
--        LOG.info('Change has been committed to RAID controller '
--                 '%(controller)s on node %(node)s. '
--                 'DRAC job id: %(job_id)s',
--                 {'controller': controller, 'node': node.uuid,
--                  'job_id': job_id})
++
 +    else:
 +        for controller in controllers:
 +            mix_controller = controller['raid_controller']
@@ -312,7 +307,12 @@
 +                reboot=reboot, realtime=False,
 +                raid_config_job_ids=raid_config_job_ids,
 +                raid_config_parameters=raid_config_parameters)
-+
+ 
+-        LOG.info('Change has been committed to RAID controller '
+-                 '%(controller)s on node %(node)s. '
+-                 'DRAC job id: %(job_id)s',
+-                 {'controller': controller, 'node': node.uuid,
+-                  'job_id': job_id})
 +    driver_internal_info['raid_config_job_ids'].extend(job_details[
 +        'raid_config_job_ids'])
  
@@ -322,50 +322,21 @@
  
      node.driver_internal_info = driver_internal_info
      node.save()
-@@ -735,10 +958,39 @@
+@@ -735,10 +958,10 @@
          logical_disks_to_create = _filter_logical_disks(
              logical_disks, create_root_volume, create_nonroot_volumes)
  
 -        controllers = set()
-+        controllers_to_physical_disk_ids = defaultdict(list)
++        controllers = list()
          for logical_disk in logical_disks_to_create:
 -            controllers.add(logical_disk['controller'])
 -            create_virtual_disk(
-+            # Not applicable to JBOD logical disks.
-+            if logical_disk['raid_level'] == 'JBOD':
-+                continue
-+
-+            for physical_disk_name in logical_disk['physical_disks']:
-+                controllers_to_physical_disk_ids[
-+                    logical_disk['controller']].append(
-+                    physical_disk_name)
-+
-+        if logical_disks_to_create:
-+            LOG.debug(
-+                "Converting physical disks configured to back RAID "
-+                "logical disks to RAID mode for node %(node_uuid)s ",
-+                {"node_uuid": node.uuid})
-+            raid = drac_constants.RaidStatus.raid
-+            _change_physical_disk_mode(
-+                node, raid, controllers_to_physical_disk_ids)
-+
-+            LOG.debug("Waiting for physical disk conversion to complete "
-+                      "for node %(node_uuid)s. ", {"node_uuid": node.uuid})
-+            drac_job.wait_for_job_completion(node)
-+
-+            LOG.info(
-+                "Completed converting physical disks configured to back RAID "
-+                "logical disks to RAID mode for node %(node_uuid)s",
-+                {'node_uuid': node.uuid})
-+
-+        controllers = list()
-+        for logical_disk in logical_disks_to_create:
 +            controller = dict()
 +            controller_cap = create_virtual_disk(
                  node,
                  raid_controller=logical_disk['controller'],
                  physical_disks=logical_disk['physical_disks'],
-@@ -747,8 +999,15 @@
+@@ -747,8 +970,15 @@
                  disk_name=logical_disk.get('name'),
                  span_length=logical_disk.get('span_length'),
                  span_depth=logical_disk.get('span_depth'))
@@ -382,7 +353,7 @@
  
      @METRICS.timer('DracRAID.delete_configuration')
      @base.clean_step(priority=0)
-@@ -762,12 +1021,21 @@
+@@ -762,12 +992,21 @@
          """
          node = task.node
  
@@ -409,7 +380,7 @@
  
      @METRICS.timer('DracRAID.get_logical_disks')
      def get_logical_disks(self, task):
-@@ -840,9 +1108,9 @@
+@@ -840,9 +1079,9 @@
          for config_job_id in raid_config_job_ids:
              config_job = drac_job.get_job(node, job_id=config_job_id)
  
@@ -421,7 +392,7 @@
                  finished_job_ids.append(config_job_id)
                  self._set_raid_config_job_failure(node)
  
-@@ -852,13 +1120,60 @@
+@@ -852,13 +1091,60 @@
          task.upgrade_lock()
          self._delete_cached_config_job_id(node, finished_job_ids)
  
