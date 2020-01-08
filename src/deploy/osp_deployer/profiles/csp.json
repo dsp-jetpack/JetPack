@@ -42,6 +42,12 @@
                    "false"
                 ]
              },
+            "smart_nic": {
+                "valid_values": [
+                   "true",
+                   "false"
+                ]
+             },
             "sriov_vf_count": {
                 "validate": [
                   "should_be_valid_int"
@@ -63,6 +69,12 @@
               ]
              },
             "dvr_enable" :{
+              "valid_values": [
+                 "true",
+                 "false"
+              ]
+            },
+            "barbican_enable" :{
               "valid_values": [
                  "true",
                  "false"
@@ -187,12 +199,21 @@
                   "4_port/nic_environment.yaml",
                   "5_port/nic_environment.yaml",
                   "ovs-dpdk_9_port/nic_environment.yaml",
+                  "ovs-dpdk_8_port/nic_environment.yaml",
                   "ovs-dpdk_7_port/nic_environment.yaml",
+                  "ovs-dpdk_6_port/nic_environment.yaml",
                   "sriov_9_port/nic_environment.yaml",
+                  "sriov_8_port/nic_environment.yaml",
                   "sriov_7_port/nic_environment.yaml",
+                  "sriov_6_port/nic_environment.yaml",
+                  "sriov_9_port_offload/nic_environment.yaml",
+                  "sriov_8_port_offload/nic_environment.yaml",
+                  "sriov_7_port_offload/nic_environment.yaml",
+                  "sriov_6_port_offload/nic_environment.yaml",
                   "dvr_6_port/nic_environment.yaml",
                   "dvr_7_port/nic_environment.yaml",
-                  "ovs-dpdk_sriov_9_port/nic_environment.yaml"
+                  "ovs-dpdk_sriov_9_port/nic_environment.yaml",
+                  "ovs-dpdk_sriov_8_port/nic_environment.yaml"
                ]
             },
             "ControllerBondInterfaceOptions": "",
@@ -218,6 +239,16 @@
             },
          "enable_fencing":""
          }
+      },
+      {
+       "Subscription Manager Settings":{
+            "use_satellite" : {
+                  "valid_values": [
+                  "true",
+                  "false"
+               ]
+        }
+       }
       },
       {
          "Advanced Settings":{
