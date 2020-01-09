@@ -207,7 +207,7 @@ def main():
         parser.print_usage(file=sys.stderr)
         print(sys.argv[0],
               ': error: argument idrac:',
-              e.message,
+              str(e),
               file=sys.stderr)
         sys.exit(1)
 
@@ -261,14 +261,14 @@ def ip_set_from_address_range(start, end):
             {
                 'start': start,
                 'end': end,
-                'message': e.message})
+                'message': str(e)})
     except netaddr.AddrFormatError as e:
         raise ValueError(
             ("invalid IP range: '%(start)s-%(end)s' (%(message)s)") %
             {
                 'start': start,
                 'end': end,
-                'message': e.message})
+                'message': str(e)})
 
     if start_ip_address > end_ip_address:
         raise ValueError(
@@ -474,7 +474,7 @@ def is_idrac(client):
         # number of them can occur.
         LOG.debug(
             '%(message)s; host is not reachable or connection refused' % {
-                'message': e.message})
+                'message': str(e)})
         # Consider the IP address to not be an iDRAC.
         return False
     except Exception as e:
