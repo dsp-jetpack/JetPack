@@ -88,9 +88,6 @@ parameter_defaults:
   # Backend to use for glance, options are file, cinder, rbd
   GlanceBackend: rbd
 
-  #  devices:
-  #  - /dev/sda2
-  
   ## Whether to enable rbd (Ceph) backend for Cinder.
   CinderEnableRbdBackend: true
 
@@ -101,14 +98,8 @@ parameter_defaults:
   
   # Default pool size is 3, change to 2 if deployment fails on 13G. 
   CephPoolDefaultSize: 3
-  CephConfigOverrides:
-    journal_size: 10000
-    journal_collocation: false
-    raw_multi_journal: true
-    rgw_swift_enforce_content_length: true
-    rgw_swift_versioning_enabled: true
+
   CephAnsibleDisksConfig:
-    osd_scenario: non-collocated
     devices:
       - /dev/sdb
       - /dev/sdc
@@ -119,16 +110,13 @@ parameter_defaults:
       - /dev/sdh
       - /dev/sdi
       - /dev/sdj
-    dedicated_devices:
       - /dev/sdk
-      - /dev/sdk
-      - /dev/sdk
-      - /dev/sdk
-      - /dev/sdk
-      - /dev/sdk
-      - /dev/sdk
-      - /dev/sdk
-      - /dev/sdk
+    osd_scenario: lvm
+    osd_objectstore: bluestore
+
+  CephAnsibleExtraConfig:
+    nb_retry_wait_osd_up: 360
+    delay_wait_osd_up: 60
 
   NovaComputeExtraConfig:
     nova::migration::libvirt::live_migration_completion_timeout: 800

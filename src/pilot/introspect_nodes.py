@@ -208,9 +208,9 @@ def introspect_nodes(in_band, ironic_client, nodes,
 
     if use_oob_introspection:
         # Wait for the nodes to transition out of "inspecting"
-        # Allow 10 minutes to complete OOB introspection
+        # Allow 15 minutes to complete OOB introspection
         logger.info("Waiting for introspection to complete...")
-        introspection_timeout = 600
+        introspection_timeout = 900
         while introspection_timeout > 0:
             inspecting = refresh_nodes(ironic_client, inspecting)
             for node in inspecting:

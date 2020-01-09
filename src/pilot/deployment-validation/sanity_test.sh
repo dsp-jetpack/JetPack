@@ -68,6 +68,7 @@ BASE_PROJECT_NAME=$(get_value base_project_name)
 BASE_USER_NAME=$(get_value base_user_name)
 BASE_CONTAINER_NAME=$(get_value base_container_name)
 SRIOV_ENABLED=$(get_value_lower sriov_enabled)
+SMART_NIC_ENABLED=$(get_value_lower smart_nic_enabled)
 HPG_ENABLED=$(get_value_lower hugepages_enabled)
 NUMA_ENABLED=$(get_value_lower numa_enabled)
 
@@ -407,8 +408,12 @@ setup_glance(){
 sriov_port_creation(){
   #Creating ports in the tenant scope
   set_tenant_scope
+  if [ "$SMART_NIC_ENABLED" != false ];then
+    execute_command "openstack port create --network $TENANT_NETWORK_NAME --vnic-type direct $sriov_port_name --binding-profile capabilities=switchdev"
+  else
+    execute_command "openstack port create --network $TENANT_NETWORK_NAME --vnic-type direct $sriov_port_name"
+  fi
 
-  execute_command "openstack port create --network $TENANT_NETWORK_NAME --vnic-type direct $sriov_port_name"
 }
 
 spin_up_instances(){
@@ -616,7 +621,7 @@ test_neutron_networking (){
 
   for floating_ip in ${floating_ips[@]}
   do
-    if [ "$DVR_ENABLED" == "True" ]; then
+    if [ "$DVR_ENABLED" == "true" ]; then
       # Test pinging the floating IP of the instance from the snat
       # network namespace
       ping_from_snat_netns $floating_ip "snat-${router_id}"
@@ -879,6 +884,12 @@ end(){
 
 
 info "###Appendix-C Openstack Operations Functional Test ###"
+
+if [ "$SMART_NIC_ENABLED" != false ]
+then
+  info "### SRIOV OFFLOAD ENABLED. SKIPPING SANITY TEST"
+  exit
+fi
 
 init
 
