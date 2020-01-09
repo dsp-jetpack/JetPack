@@ -29,6 +29,8 @@ class Checkpoints():
         self.sah_ip = self.settings.sah_node.public_api_ip
         self.dashboard_ip = self.settings.dashboard_node.public_api_ip
         self.verify_rhsm_status = self.settings.verify_rhsm_status
+        if self.settings.use_satellite is True:
+            self.verify_rhsm_status = False
 
     @staticmethod
     def verify_deployer_settings():
@@ -44,6 +46,7 @@ class Checkpoints():
         checks.validate_profile()
         checks.verify_dpdk_dependencies()
         checks.verify_sriov_dependencies()
+        checks.verify_hw_offload_dependencies()
 
     @staticmethod
     def verify_subscription_status(public_api_ip, user, password, retries):

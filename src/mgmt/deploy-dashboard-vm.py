@@ -179,9 +179,15 @@ ${SMProxyPassword}"
     export https_proxy=${HTTP_Proxy}
 
     }
-
-  subscription-manager register --username ${SMUser} --password ${SMPassword} \
-${ProxyInfo}
+  
+if [[ -z ${SA_ip} ]]
+  then
+      subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
+  else
+      echo "$SA_ip    $SA_host" >> /etc/hosts
+      rpm -Uvh http://$SA_host/pub/katello-ca-consumer-latest.noarch.rpm
+      subscription-manager register --org=$SA_org --activationkey="$SA_key"
+fi
 
   [[ x${SMPool} = x ]] \\
     && SMPool=$( subscription-manager list --available ${ProxyInfo} \
@@ -251,14 +257,13 @@ EOIP
   echo "heat-admin ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/heat-admin
   echo "Defaults:heat-admin !requiretty" >> /etc/sudoers.d/heat-admin
 
-  /usr/bin/yum install -y cephmetrics-ansible libselinux-python
-
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
   [[ -e /tmp/mnt/versionlock.list ]] && {
     cp /tmp/mnt/versionlock.list /etc/yum/pluginconf.d
     chmod 644 /etc/yum/pluginconf.d/versionlock.list
     }
+  /usr/bin/yum install -y cephmetrics-ansible libselinux-python
 
   yum -y update
 
@@ -326,6 +331,22 @@ chvt 6
 
             elif tokens[0] == "smpool":
                 ks.write("echo SMPool='{}' >> {}\n".
+                         format(tokens[1], ks_post_include))
+
+            elif tokens[0] == "satellite_ip":
+                ks.write("echo SA_ip='{}' >> {}\n".
+                         format(tokens[1], ks_post_include))
+
+            elif tokens[0] == "satellite_hostname":
+                ks.write("echo SA_host='{}' >> {}\n".
+                         format(tokens[1], ks_post_include))
+
+            elif tokens[0] == "satellite_org":
+                ks.write("echo SA_org='{}' >> {}\n".
+                         format(tokens[1], ks_post_include))
+
+            elif tokens[0] == "satellite_activation_key":
+                ks.write("echo SA_key='{}' >> {}\n".
                          format(tokens[1], ks_post_include))
 
             elif tokens[0] == "smproxy":
