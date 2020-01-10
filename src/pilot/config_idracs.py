@@ -137,7 +137,7 @@ def main():
         LOG.error(ex)
         sys.exit(1)
     except Exception as ex:
-        LOG.exception(ex.message)
+        LOG.exception(str(ex))
         sys.exit(1)
 
 
