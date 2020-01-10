@@ -164,6 +164,8 @@ run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
 run_command "sudo yum -y install openstack-tempest"
 run_command "sudo yum install -y python3-neutron-tests-tempest python3-cinder-tests-tempest python3-telemetry-tests-tempest python3-keystone-tests-tempest python3-horizon-tests-tempest python3-octavia-tests-tempest python3-manila-tests-tempest python3-barbican-tests-tempest"
+run_command "sudo yum install -y gcc"
+run_command "sudo pip3 install ironic"
 echo "## Done."
 
 echo
