@@ -47,6 +47,7 @@ def main():
                                     shell=True)
 
     for node in nodes.splitlines():
+        node = node.decode("utf-8")
         if len(node) < 1:
             continue
         # Power off the node
