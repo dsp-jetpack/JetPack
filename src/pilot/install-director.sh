@@ -273,12 +273,40 @@ echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
+# This hacks in a patch to allow clearing foreign config and clearing RAID config
+echo
+echo "## Patching Ironic iDRAC driver client.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
+
 # This hacks in a patch to validate and retrieve raid and boss controller and physical disk status.
 echo
 echo "## Patching Ironic iDRAC driver raid.py..."
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
+
+# This hacks in a patch to allow lifecycle controller management.
+echo
+echo "## Patching Ironic iDRAC driver lifecycle_controller.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.py ${HOME}/pilot/lifecycle_controller.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyo
+
+# This hacks in a patch to apply constants.
+echo
+echo "## Patching Ironic iDRAC driver constants.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/constants.py ${HOME}/pilot/constants.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyo
+
+# This hacks in a patch to handle various types of settings.
+echo
+echo "## Patching Ironic iDRAC driver utils.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/utils.py ${HOME}/pilot/utils.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/utils.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/utils.pyo
 
 # This hacks in a patch to out-of-band inspection to set boot_mode on the node
 # being inspected.
@@ -296,6 +324,31 @@ echo "## Patching Ironic iDRAC driver raid.py..."
 apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
+echo "## Done."
+
+# This hacks in a patch to make conductor wait while completion of configuration job
+echo
+echo "## Patching Ironic iDRAC driver job.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/job.py ${HOME}/pilot/ironic_job.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/job.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/job.pyo
+echo "## Done."
+
+# This hacks in a patch to define maximum number of retries for the conductor
+# to wait during any configuration job completion.
+echo
+echo "## Patching Ironic iDRAC driver drac.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/conf/drac.py ${HOME}/pilot/drac.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/conf/drac.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/conf/drac.pyo
+echo "## Done."
+
+# This hacks in a patch to add clean steps in management interface.
+echo
+echo "## Patching Ironic iDRAC driver management.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/management.py ${HOME}/pilot/management.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/management.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/management.pyo
 echo "## Done."
 
 # This hacks in a patch to filter out all non-printable characters during WSMAN

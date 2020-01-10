@@ -1,0 +1,17 @@
+--- drac.py	2019-10-04 20:30:09.578111432 +0000
++++ drac.py.new	2019-10-04 20:27:57.323326034 +0000
+@@ -20,7 +20,13 @@
+                default=120,
+                help=_('Interval (in seconds) between periodic RAID job status '
+                       'checks to determine whether the asynchronous RAID '
+-                      'configuration was successfully finished or not.'))
++                      'configuration was successfully finished or not.')),
++    cfg.IntOpt('config_job_max_retries',
++               default=240,
++               min=1,
++               help=_('Maximum number of retries for '
++                      'the configuration job to complete '
++                      'successfully. '))
+ ]
+ 
+ 

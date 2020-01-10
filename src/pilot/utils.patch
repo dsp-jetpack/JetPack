@@ -1,0 +1,83 @@
+--- /usr/lib/python2.7/site-packages/dracclient/utils.py	2019-06-21 02:53:08.048945005 -0400
++++ utils_new.py	2019-06-20 07:48:57.191489514 -0400
+@@ -251,7 +251,7 @@
+ 
+ 
+ def list_settings(client, namespaces, by_name=True, fqdd_filter=None,
+-                  name_formatter=None):
++                  name_formatter=None, wait_for_idrac=True):
+     """List the configuration settings
+ 
+     :param client: an instance of WSManClient.
+@@ -263,6 +263,9 @@
+     :param name_formatter: a method used to format the keys in the
+                            returned dictionary.  By default,
+                            attribute.name will be used.
++    :param wait_for_idrac: indicates whether or not to wait for the
++                           iDRAC to be ready to accept commands before
++                           issuing the command.
+     :returns: a dictionary with the settings using name or instance_id as
+               the key.
+     :raises: WSManRequestFailure on request failures
+@@ -274,7 +277,7 @@
+     result = {}
+     for (namespace, attr_cls) in namespaces:
+         attribs = _get_config(client, namespace, attr_cls, by_name,
+-                              fqdd_filter, name_formatter)
++                              fqdd_filter, name_formatter, wait_for_idrac)
+         if not set(result).isdisjoint(set(attribs)):
+             raise exceptions.DRACOperationFailed(
+                 drac_messages=('Colliding attributes %r' % (
+@@ -284,10 +287,10 @@
+ 
+ 
+ def _get_config(client, resource, attr_cls, by_name, fqdd_filter,
+-                name_formatter):
++                name_formatter, wait_for_idrac):
+     result = {}
+ 
+-    doc = client.enumerate(resource)
++    doc = client.enumerate(resource, wait_for_idrac=wait_for_idrac)
+     items = doc.find('.//{%s}Items' % wsman.NS_WSMAN)
+ 
+     for item in items:
+@@ -316,7 +319,8 @@
+                  cim_name,
+                  target,
+                  name_formatter=None,
+-                 include_commit_required=False):
++                 include_commit_required=False,
++                 wait_for_idrac=True):
+     """Generically handles setting various types of settings on the iDRAC
+ 
+     This method pulls the current list of settings from the iDRAC then compares
+@@ -339,6 +343,9 @@
+                            attribute.name will be used.
+     :parm include_commit_required: Indicates if the deprecated commit_required
+                                    should be returned in the result.
++    :param wait_for_idrac: indicates whether or not to wait for the
++                           iDRAC to be ready to accept commands before issuing
++                           the command
+     :returns: a dictionary containing:
+              - The commit_required key with a boolean value indicating
+                whether a config job must be created for the values to be
+@@ -361,7 +368,8 @@
+     """
+ 
+     current_settings = list_settings(client, namespaces, by_name=True,
+-                                     name_formatter=name_formatter)
++                                     name_formatter=name_formatter,
++                                     wait_for_idrac=wait_for_idrac)
+ 
+     unknown_keys = set(new_settings) - set(current_settings)
+     if unknown_keys:
+@@ -428,7 +436,8 @@
+                   'AttributeValue': [new_settings[attr] for attr
+                                      in attrib_names]}
+     doc = client.invoke(resource_uri, 'SetAttributes',
+-                        selectors, properties)
++                        selectors, properties,
++                        wait_for_idrac=wait_for_idrac)
+ 
+     return build_return_dict(doc, resource_uri,
+                              include_commit_required=include_commit_required)
