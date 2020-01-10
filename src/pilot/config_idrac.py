@@ -657,7 +657,7 @@ def config_idrac(instack_lock,
                     new_drac_client.is_idrac_ready()
                     password_changed = True
                 except exceptions.WSManInvalidResponse as ex:
-                    if "unauthorized" in ex.message.lower():
+                    if "unauthorized" in str(ex).lower():
                         LOG.debug("Got an unauthorized exception on {}, so "
                                   "sleeping and trying again".format(
                                       ip_service_tag))
@@ -754,11 +754,11 @@ def main():
                      args.skip_nic_config)
     except ValueError as ex:
         LOG.error("An error occurred while configuring iDRAC {}: {}".format(
-            args.ip_service_tag, ex.message))
+            args.ip_service_tag, str(ex)))
         sys.exit(1)
     except Exception as ex:
         LOG.exception("An error occurred while configuring iDRAC {}: "
-                      "{}".format(args.ip_service_tag, ex.message))
+                      "{}".format(args.ip_service_tag, str(ex)))
         sys.exit(1)
 
 

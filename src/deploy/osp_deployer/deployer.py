@@ -212,8 +212,8 @@ def deploy():
 
         # The network-environment.yaml must be setup for use during DHCP
         # server configuration
-        director_vm.setup_net_envt()
-        director_vm.configure_dhcp_server()
+        #director_vm.setup_net_envt()
+        #director_vm.configure_dhcp_server()
         director_vm.node_discovery()
         director_vm.configure_idracs()
         director_vm.import_nodes()
