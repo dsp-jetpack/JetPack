@@ -160,6 +160,7 @@ echo "## Done."
 echo
 echo "## Installing Director"
 run_command "sudo yum -y install python3-tripleoclient"
+run_command "sudo yum install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
 run_command "sudo yum -y install openstack-tempest"
@@ -382,10 +383,6 @@ echo "## Done."
 #        --tag-from-label {version}-{release}
 #    fi
 #fi
-
-#sudo yum install -y os-cloud-config
-sudo yum install -y ceph-ansible
-
 
 echo
 echo "## Configuration complete!"

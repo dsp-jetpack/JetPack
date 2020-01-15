@@ -65,6 +65,8 @@ eula --agreed
 @virtualization-client
 @virtualization-hypervisor
 @virtualization-tools
+dhcp-server
+tmux
 %end
 
 

@@ -39,11 +39,11 @@ class Ssh:
             client.connect(address, username=usr, password=pwd)
             _, ss_stdout, ss_stderr = client.exec_command(command)
             r_out, r_err = ss_stdout.readlines(), ss_stderr.read()
-            logger.debug(r_err)
-            if len(r_err) > 5:
-                logger.error(r_err)
+            logger.debug(r_err.decode('utf-8'))
+            if len(r_err.decode('utf-8')) > 5:
+                logger.error(r_err.decode('utf-8'))
             else:
-                logger.debug(r_out)
+                logger.debug(r_out.decode('utf-8'))
             client.close()
         except IOError:
             logger.warning(".. host " + address + " is not up")
@@ -96,10 +96,10 @@ class Ssh:
             exit_status = ss_stdout.channel.recv_exit_status()
             if logger.getEffectiveLevel() == logging.DEBUG:
                 logger.debug("stdout={}, stderr={}, exit_status={}".format(
-                    r_out, r_err, exit_status))
-            elif len(r_err) > 5 or exit_status != 0:
+                    r_out.decode('utf-8'), r_err.decode('utf-8'), exit_status))
+            elif len(r_err.decode('utf-8')) > 5 or exit_status != 0:
                 logger.error("stdout={}, stderr={}, exit_status={}".format(
-                    r_out, r_err, exit_status))
+                    r_out.decode('utf-8'), r_err.decode('utf-8'), exit_status))
             client.close()
         except IOError:
             logger.warning(".. host " + address + " is not up")
