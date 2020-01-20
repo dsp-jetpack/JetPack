@@ -32,4 +32,4 @@ class ThreadWithExHandling(threading.Thread):
             threading.Thread.run(self)
         except:
             self.ex = sys.exc_info()[0]
-            self.logger.exception(self.ex.message)
+            self.logger.exception(str(self.ex))
