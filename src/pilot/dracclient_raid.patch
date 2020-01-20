@@ -1,5 +1,5 @@
---- raid.py.orig	2019-06-04 04:56:04.000000000 +0000
-+++ raid_new.py	2020-01-17 10:55:10.617055104 +0000
+--- raid_orignal.py	2020-01-20 14:25:54.861240530 +0000
++++ raid.py	2020-01-20 14:24:48.926908174 +0000
 @@ -12,6 +12,7 @@
  #    under the License.
  
@@ -18,16 +18,33 @@
  class PhysicalDisk(PhysicalDiskTuple):
  
      def __new__(cls, **kwargs):
-@@ -232,6 +236,8 @@
+@@ -232,6 +236,10 @@
          size_b = self._get_virtual_disk_attr(drac_disk, 'SizeInBytes')
          drac_status = self._get_virtual_disk_attr(drac_disk, 'PrimaryStatus')
          drac_raid_status = self._get_virtual_disk_attr(drac_disk, 'RAIDStatus')
-+        if not drac_raid_status:
-+            drac_raid_status = self._get_virtual_disk_attr(drac_disk, 'RaidStatus')
++        if drac_raid_status is None:
++            drac_raid_status = self._get_virtual_disk_attr(
++                drac_disk, 'RaidStatus', allow_missing=True)
++
          drac_pending_operations = self._get_virtual_disk_attr(
              drac_disk, 'PendingOperations')
  
-@@ -633,15 +639,17 @@
+@@ -256,10 +264,12 @@
+             physical_disks=self._get_virtual_disk_attrs(drac_disk,
+                                                         'PhysicalDiskIDs'))
+ 
+-    def _get_virtual_disk_attr(self, drac_disk, attr_name, nullable=False):
++    def _get_virtual_disk_attr(self, drac_disk, attr_name,
++                               nullable=False, allow_missing=False):
+         return utils.get_wsman_resource_attr(
+             drac_disk, uris.DCIM_VirtualDiskView, attr_name,
+-            nullable=nullable)
++            nullable=nullable,
++            allow_missing=allow_missing)
+ 
+     def _get_virtual_disk_attrs(self, drac_disk, attr_name):
+         return utils.get_all_wsman_resource_attrs(
+@@ -633,15 +643,17 @@
          :param mode: constants.RaidStatus enumeration used to
                       determine what raid status to check for.
          :param physical_disks: all physical disks
@@ -50,7 +67,7 @@
          p_disk_id_to_status = {}
          for physical_disk in physical_disks:
              p_disk_id_to_status[physical_disk.id] = physical_disk.raid_status
-@@ -700,34 +708,37 @@
+@@ -700,34 +712,37 @@
  
              raise ValueError(error_msg)
  
@@ -109,7 +126,7 @@
          :raises: DRACOperationFailed on error reported back by the DRAC and the
                   exception message does not contain NOT_SUPPORTED_MSG constant.
          :raises: Exception on unknown error.
-@@ -754,13 +765,14 @@
+@@ -754,13 +769,14 @@
          Raise exception if there are any failed drives or
          drives not in status 'ready' or 'non-RAID'
          '''
@@ -127,7 +144,7 @@
              if physical_disk_ids:
                  LOG.debug("Converting the following disks to {} on RAID "
                            "controller {}: {}".format(
-@@ -773,22 +785,39 @@
+@@ -773,22 +789,39 @@
                      if constants.NOT_SUPPORTED_MSG in str(ex):
                          LOG.debug("Controller {} does not support "
                                    "JBOD mode".format(controller))
@@ -179,7 +196,7 @@
                  'commit_required_ids': controllers}
  
      def is_realtime_supported(self, raid_controller_fqdd):
-@@ -805,3 +834,100 @@
+@@ -805,3 +838,100 @@
              return True
  
          return False
