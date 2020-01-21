@@ -66,14 +66,14 @@ class Ssh:
             stdout, stderr = stdout_stream.read(), stderr_stream.read()
             exit_code = stdout_stream.channel.recv_exit_status()
             logger.debug("exit_code: " + str(exit_code))
-            logger.debug("stdout: " + stdout)
-            logger.debug("stderr: " + stderr)
+            logger.debug("stdout: " + stdout.decode('utf-8'))
+            logger.debug("stderr: " + stderr.decode('utf-8'))
             client.close()
         except IOError:
             logger.warning(".. host " + address + " is not up")
             return -1, "host not up", "host not up"
 
-        return exit_code, stdout, stderr
+        return exit_code, stdout.decode('utf-8'), stderr.decode('utf-8')
 
 
 class Exec:
@@ -90,6 +90,6 @@ class Exec:
                      "    returncode={}\n"
                      "    stdout={}\n"
                      "    stderr={}".format(str(process.returncode),
-                                            stdout, stderr))
+                                            stdout.decode('utf-8'), stderr.decode('utf-8')))
 
-        return exit_code, stdout, stderr
+        return exit_code, stdout.decode('utf-8'), stderr.decode('utf-8')
