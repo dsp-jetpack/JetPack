@@ -28,21 +28,20 @@ class Scp:
         client = paramiko.SSHClient()
         client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        trans = paramiko.Transport((adress, 22))
-        trans.connect(username=user, password=passw)
-        sftp = paramiko.SFTPClient.from_transport(trans)
+        client.connect(hostname=adress, username=str(user), password=str(passw))
+        sftp=client.open_sftp()
         sftp.get(remotefile, localfile)
         sftp.close()
-        trans.close()
+        client.close()
 
     @staticmethod
     def put_file(adress, user, passw, localfile, remotefile):
         client = paramiko.SSHClient()
         client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        trans = paramiko.Transport((adress, 22))
-        trans.connect(username=user, password=passw)
-        sftp = paramiko.SFTPClient.from_transport(trans)
+        client.connect(hostname=adress, username=str(user), password=str(passw))
+        sftp=client.open_sftp()
         sftp.put(localfile, remotefile)
         sftp.close()
-        trans.close()
+        client.close()
+

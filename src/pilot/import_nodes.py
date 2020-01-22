@@ -52,7 +52,7 @@ def main():
     import_json = os.path.expanduser('~/nodes.json')
     content = json.load(open(args.node_definition))
     for node in content['nodes']:
-        for k in node.keys():
+        for k in list(node):
             if k in DOWNSTREAM_ATTRS:
                 node.pop(k)
     with open(import_json, 'w') as out:
