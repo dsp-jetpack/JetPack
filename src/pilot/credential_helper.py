@@ -30,7 +30,7 @@ class CredentialHelper:
     @staticmethod
     def get_creds(filename):
         command = ['bash', '-c', 'source %s && env' % filename]
-        ret = check_output(command)
+        ret = check_output(command).decode('utf-8')
         env_keys = {}
         for line in ret.split('\n'):
             if line:
