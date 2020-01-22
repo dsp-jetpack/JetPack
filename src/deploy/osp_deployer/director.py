@@ -1473,7 +1473,7 @@ class Director(InfraHost):
             cmd += " --debug"
 
         cmd += " > overcloud_deploy_out.log 2>&1"
-
+        print (str(cmd))
         self.run_tty(cmd)
 
     def delete_overcloud(self):
