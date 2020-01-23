@@ -44,7 +44,10 @@ BAREMETAL_FLAVOR = "baremetal"
 
 # Check to see if the sequence contains numbers that increase by 1
 def is_coherent(seq):
-    return seq == range(seq[0], seq[-1]+1)
+    r = []
+    for i in range(seq[0], seq[-1]+1):
+        r.append(i)
+    return seq == r
 
 
 def validate_node_placement():
@@ -79,7 +82,6 @@ def validate_node_placement():
         hyphen = node_capability.rfind("-")
         flavor = node_capability[0:hyphen]
         index = node_capability[hyphen + 1:]
-
         # Build up a dict that maps a flavor name to a sequence of placment
         # indices
         if flavor not in flavor_to_indices:
@@ -450,6 +452,7 @@ def main():
         # If disabled, default values will be set and
         # they won't be used for configuration
         # Create ConfigOvercloud object
+        print ("Configure environment file")
         config = ConfigOvercloud(args.overcloud_name)
         # Remove this when Numa siblings added
         # Edit the dellnfv_environment.yaml
@@ -478,7 +481,6 @@ def main():
             )
 
         # Launch the deployment
-
         overcloud_name_opt = ""
         if args.overcloud_name is not None:
             overcloud_name_opt = "--stack " + args.overcloud_name
@@ -539,9 +541,7 @@ def main():
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "storage-environment.yaml" \
                     " -e ~/overcloud_images.yaml" \
-                    " -e ~/pilot/templates/dell-environment.yaml" \
-                    " -e ~/pilot/templates/overcloud/environments/" \
-                    "puppet-pacemaker.yaml"
+                    " -e ~/pilot/templates/dell-environment.yaml" 
         host_config = False
         if args.enable_hugepages or args.enable_numa:
             env_opts += " -e ~/pilot/templates/overcloud/environments/" \
@@ -592,12 +592,10 @@ def main():
                         env_opts,
                         args.ntp_server_fqdn,
                         )
-
         with open(os.path.join(home_dir, 'pilot', 'overcloud_deploy_cmd.log'),
-                  'w') as f:
+                'w') as f:
             f.write(cmd.replace(' -', ' \\\n -'))
             f.write('\n')
-        print(cmd)
         start = time.time()
         status = run_deploy_command(cmd)
         end = time.time()
@@ -619,6 +617,7 @@ def main():
             logger.info('\nHorizon Dashboard URL: {}\n'.format(horizon_url))
     except Exception as err:
         print(sys.stderr, err)
+        raise
         sys.exit(1)
 
 

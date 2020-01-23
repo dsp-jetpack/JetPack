@@ -28,7 +28,7 @@ def main():
     os_auth_url, os_tenant_name, os_username, os_password, \
         os_user_domain_name, os_project_domain_name = \
         CredentialHelper.get_undercloud_creds()
-    auth_url = os_auth_url + "v3"
+    auth_url = os_auth_url + "/v3"
 
     kwargs = {'os_username': os_username,
               'os_password': os_password,
