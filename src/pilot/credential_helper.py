@@ -36,10 +36,9 @@ class CredentialHelper:
             if line:
                 (key, value) = line.split("=")[0:2]
                 env_keys[key] = value
-
         if 'hiera' in env_keys['OS_PASSWORD']:
-            env_keys['OS_PASSWORD'] = check_output(['sudo', 'hiera',
-                                                    'admin_password']).strip()
+             env_keys['OS_PASSWORD'] = check_output(['sudo', 'hiera',
+                                                     'admin_password']).decode('utf-8').strip()
         if 'OS_PROJECT_NAME' in env_keys:
             project_name = env_keys['OS_PROJECT_NAME']
         else:
@@ -181,7 +180,7 @@ class CredentialHelper:
               ";openstack stack list | grep CREATE | awk '{print $4}'"
         return subprocess.check_output(cmd,
                                        stderr=subprocess.STDOUT,
-                                       shell=True).strip()
+                                       shell=True).decode('utf-8').strip()
 
     @staticmethod
     def get_overcloud_stack_status():
@@ -189,4 +188,4 @@ class CredentialHelper:
               ";openstack stack list | grep CREATE | awk '{print $8}'"
         return subprocess.check_output(cmd,
                                        stderr=subprocess.STDOUT,
-                                       shell=True).strip()
+                                       shell=True).decode('utf-8').strip()

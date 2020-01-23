@@ -411,7 +411,7 @@ def main():
             os_user_domain_name, os_project_domain_name = \
             CredentialHelper.get_undercloud_creds()
 
-        #  Set up the default flavors
+        # Set up the default flavors
         control_flavor = "control"
         ceph_storage_flavor = "ceph-storage"
         swift_storage_flavor = "swift-storage"
@@ -427,7 +427,7 @@ def main():
             swift_storage_flavor = BAREMETAL_FLAVOR
             block_storage_flavor = BAREMETAL_FLAVOR
 
-        print (" Validate that the NIC envronment file exists")
+        # Validate that the NIC envronment file exists
         nic_env_file = os.path.join(home_dir,
                                     "pilot/templates/nic-configs",
                                     args.nic_env_file)
@@ -541,9 +541,7 @@ def main():
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "storage-environment.yaml" \
                     " -e ~/overcloud_images.yaml" \
-                    " -e ~/pilot/templates/dell-environment.yaml" \
-                    " -e ~/pilot/templates/overcloud/environments/" \
-                    "puppet-pacemaker.yaml"
+                    " -e ~/pilot/templates/dell-environment.yaml" 
         host_config = False
         if args.enable_hugepages or args.enable_numa:
             env_opts += " -e ~/pilot/templates/overcloud/environments/" \
