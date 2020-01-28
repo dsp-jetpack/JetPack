@@ -397,9 +397,7 @@ class Director(InfraHost):
     def assign_node_roles(self):
         logger.debug("Assigning roles to nodes")
         osd_yaml = os.path.join(self.templates_dir, "ceph-osd-config.yaml")
-        mklvm_sh = os.path.join(self.templates_dir, "mklvm.sh")
         self.run("/bin/cp -rf " + osd_yaml + ".orig " + osd_yaml)
-        self.run("/bin/cp -rf " + mklvm_sh + ".orig " + mklvm_sh)
         common_path = os.path.join(os.path.expanduser(
             self.settings.cloud_repo_dir + '/src'), 'common')
         sys.path.append(common_path)
@@ -436,8 +434,6 @@ class Director(InfraHost):
             logger.info("assign_role failed on {} out of {} nodes".format(
                 failed_threads, len(threads)))
             sys.exit(1)
-        self.run("sudo cp " + self.templates_dir +
-                 "/mklvm.sh /var/www/html/mklvm.sh")
 
     def update_sshd_conf(self):
         # Update sshd_config to allow for more than 10 ssh sessions
@@ -532,9 +528,7 @@ class Director(InfraHost):
         uuid_to_osd_configs = json.loads(node_data_lookup_str)
         for uuid in uuid_to_osd_configs:
             osd_config = uuid_to_osd_configs[uuid]
-            num_osds = 0
-            for device in osd_config["lvm_volumes"]:
-                num_osds += 1
+            num_osds = len(osd_config["devices"])
             total_osds = total_osds + num_osds
 
         num_storage_nodes = len(self.settings.ceph_nodes)
@@ -682,11 +676,6 @@ class Director(InfraHost):
         env_name = os.path.join(self.templates_dir, "dell-environment.yaml")
         self.upload_file(tmp_name, env_name)
         os.remove(tmp_name)
-
-        firstboot = os.path.join(self.templates_dir, "first-boot.yaml")
-        cmd = 'sed -i "s|CHANGEME_UNDERCLOUD_PROVISIONING_IP|' + \
-              self.settings.director_node.provisioning_ip + '|" ' + firstboot
-        self.run(cmd)
 
     def setup_sanity_ini(self):
         sanity_ini = self.sanity_dir + "/sanity.ini"
