@@ -104,7 +104,6 @@ class Ssh:
         except IOError:
             logger.warning(".. host " + address + " is not up")
             return "host not up", "host not up", -1
-
         return r_out.decode('utf-8'), r_err.decode('utf-8'), exit_status
 
     @staticmethod
