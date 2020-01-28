@@ -250,21 +250,21 @@ def get_drac_client(node_definition_filename, node):
 
 
 def define_target_raid_config(role, drac_client):
-    raid_controller_name = get_raid_controller_id(drac_client)
+    raid_controller_ids = get_raid_controller_ids(drac_client)
 
-    if not raid_controller_name:
+    if not raid_controller_ids:
         LOG.critical("Found no RAID controller")
         return None
 
     if role == 'controller':
         logical_disks = define_controller_logical_disks(drac_client,
-                                                        raid_controller_name)
+                                                        raid_controller_ids)
     elif role == 'compute':
         logical_disks = define_compute_logical_disks(drac_client,
-                                                     raid_controller_name)
+                                                     raid_controller_ids)
     elif role == 'storage':
         logical_disks = define_storage_logical_disks(drac_client,
-                                                     raid_controller_name)
+                                                     raid_controller_ids)
     else:
         LOG.critical(
             'Cannot define target RAID configuration for role "{}"').format(
@@ -275,29 +275,27 @@ def define_target_raid_config(role, drac_client):
         'logical_disks': logical_disks} if logical_disks is not None else None
 
 
-def get_raid_controller_id(drac_client):
+def get_raid_controller_ids(drac_client):
     disk_ctrls = drac_client.list_raid_controllers()
 
-    raid_controller_ids = [
-        c.id for c in disk_ctrls if drac_client.is_raid_controller(c.id)]
+    raid_controller_ids = []
 
-    number_raid_controllers = len(raid_controller_ids)
+    for cnt in disk_ctrls:
+        if drac_client.is_raid_controller(cnt.id):
+            raid_controller_ids.append(cnt.id)
 
-    if number_raid_controllers == 1:
-        return raid_controller_ids[0]
-    elif number_raid_controllers == 0:
-        LOG.critical("Found no RAID controllers")
-        return None
-    else:
+    return raid_controller_ids
+
+
+def define_controller_logical_disks(drac_client, raid_controller_ids):
+    if len(raid_controller_ids) > 1:
         LOG.critical(
             "Found more than one RAID controller:\n  {}".format(
                 "\n  ".join(raid_controller_ids)))
         return None
 
-
-def define_controller_logical_disks(drac_client, raid_controller_name):
     raid_10_logical_disk = define_single_raid_10_logical_disk(
-        drac_client, raid_controller_name)
+        drac_client, raid_controller_ids[0])
 
     # None indicates an error occurred.
     if raid_10_logical_disk is None:
@@ -312,9 +310,15 @@ def define_controller_logical_disks(drac_client, raid_controller_name):
     return logical_disks
 
 
-def define_compute_logical_disks(drac_client, raid_controller_name):
+def define_compute_logical_disks(drac_client, raid_controller_ids):
+    if len(raid_controller_ids) > 1:
+        LOG.critical(
+            "Found more than one RAID controller:\n  {}".format(
+                "\n  ".join(raid_controller_ids)))
+        return None
+
     raid_10_logical_disk = define_single_raid_10_logical_disk(
-        drac_client, raid_controller_name)
+        drac_client, raid_controller_ids[0])
 
     # None indicates an error occurred.
     if raid_10_logical_disk is None:
@@ -385,23 +389,24 @@ def get_raid_controller_physical_disk_ids(drac_client, raid_controller_fqdd):
         key=physical_disk_id_to_key)
 
 
-def define_storage_logical_disks(drac_client, raid_controller_name):
+def check_cntlr_physical_disks_len(cntrl_physical_disks):
+    # Make sure we have enough drives attached to the RAID controller to create
+    # a RAID1
+    if len(cntrl_physical_disks) >= 2:
+        return True
+
+
+def define_storage_logical_disks(drac_client, raid_controllers):
     all_physical_disks = drac_client.list_physical_disks()
 
     # Get the drives controlled by the RAID controller
-    raid_cntlr_physical_disks = []
+    raid_cntlr_physical_disks = {}
     for disk in all_physical_disks:
-        if disk.controller == raid_controller_name:
-            raid_cntlr_physical_disks.append(disk)
-
-    # Make sure we have enough drives attached to the RAID controller to create
-    # a RAID1
-    num_raid_cntlr_physical_disks = len(raid_cntlr_physical_disks)
-    if num_raid_cntlr_physical_disks < 2:
-        LOG.critical(
-            "Cannot configure RAID 1 with only {} drives; need at least two "
-            "drives".format(num_raid_cntlr_physical_disks))
-        return None
+        if disk.controller in raid_controllers:
+            if disk.controller in raid_cntlr_physical_disks:
+                raid_cntlr_physical_disks[disk.controller].append(disk)
+            else:
+                raid_cntlr_physical_disks[disk.controller] = [disk]
 
     # Make sure we have at least one drive for Ceph OSD/journals
     if len(all_physical_disks) < 3:
@@ -410,38 +415,56 @@ def define_storage_logical_disks(drac_client, raid_controller_name):
             "configuration")
         return None
 
-    os_logical_disk = define_storage_operating_system_logical_disk(
-        raid_cntlr_physical_disks, drac_client, raid_controller_name)
+    boss_controller = [cntrl for cntrl in raid_controllers
+                       if drac_client.is_boss_controller(cntrl)]
+    if boss_controller:
+        if check_cntlr_physical_disks_len(
+           raid_cntlr_physical_disks[boss_controller[0]]):
+            os_logical_disk = define_storage_operating_system_logical_disk(
+                raid_cntlr_physical_disks[boss_controller[0]],
+                drac_client, boss_controller[0])
+        else:
+            LOG.critical("The BOSS card has only 1 SSD. "
+                         "2 SSDs are needed to configure a RAID 1")
+            return None
+    else:
+        raid_controller = [cntrl for cntrl in raid_controllers
+                           if len(raid_cntlr_physical_disks[cntrl]) >= 2]
+        if raid_controller:
+            os_logical_disk = define_storage_operating_system_logical_disk(
+                raid_cntlr_physical_disks[raid_controller[0]],
+                drac_client, raid_controller[0])
+        else:
+            LOG.critical("At least 2 drives controlled by the same RAID "
+                         "controller are needed to configure a RAID 1")
+            return None
 
     if os_logical_disk is None:
         return None
 
-    # Determine the physical disks that remain for JBOD.
-    #
-    # The ironic RAID 'physical_disks' property is optional. While it is
-    # presently used by this script, it is envisioned that it will not
-    # be in the future.
-    if 'physical_disks' in os_logical_disk:
-        os_physical_disk_names = os_logical_disk['physical_disks']
-        remaining_physical_disks = [d for d in raid_cntlr_physical_disks
-                                    if d.id not in os_physical_disk_names]
-    else:
-        remaining_physical_disks = raid_cntlr_physical_disks
+    os_physical_disk_names = os_logical_disk['physical_disks'] \
+        if 'physical_disks' in os_logical_disk else None
 
     # Define JBOD logical disks with the remaining physical disks.
     #
     # A successful call returns a list, which may be empty; otherwise,
     # None is returned.
-    jbod_capable = drac_client.is_jbod_capable(raid_controller_name)
-    jbod_logical_disks = define_jbod_logical_disks(
-        drac_client, remaining_physical_disks, raid_controller_name,
-        jbod_capable)
-
-    if jbod_logical_disks is None:
-        return None
-
     logical_disks = [os_logical_disk]
-    logical_disks.extend(jbod_logical_disks)
+    for raid_controller in raid_controllers:
+        jbod_capable = drac_client.is_jbod_capable(raid_controller)
+
+        # Determine the physical disks that remain for JBOD.
+        remaining_physical_disks = [disk for disk in
+                                    raid_cntlr_physical_disks[raid_controller]
+                                    if disk.id not in os_physical_disk_names]
+        jbod_logical_disks = define_jbod_logical_disks(
+            drac_client, remaining_physical_disks, raid_controller,
+            jbod_capable)
+
+        if jbod_logical_disks is None:
+            return None
+
+        logical_disks.extend(jbod_logical_disks)
 
     return logical_disks
 
@@ -507,7 +530,7 @@ def find_physical_disks_for_storage_os(physical_disks):
         LOG.critical(
             "Could not find physical disks for operating system logical disk")
 
-    return os_logical_disk_size_gb, os_physical_disk_names
+    return (os_logical_disk_size_gb, os_physical_disk_names)
 
 
 def cardinality_of_smallest_spinning_disk_size_is_two(physical_disks):
@@ -523,7 +546,7 @@ def cardinality_of_smallest_spinning_disk_size_is_two(physical_disks):
 
     # Handle the case where we have no spinning disks
     if not ordered_disks_by_size:
-        return 0, None
+        return (0, None)
 
     # Obtain the bin for the smallest size.
     smallest_disks_bin = ordered_disks_by_size[0]
@@ -535,9 +558,9 @@ def cardinality_of_smallest_spinning_disk_size_is_two(physical_disks):
     if cardinality_of_smallest_disks == 2:
         sorted_smallest_disk_ids = sorted((d.id for d in smallest_disks),
                                           key=physical_disk_id_to_key)
-        return smallest_disk_size, sorted_smallest_disk_ids
+        return (smallest_disk_size, sorted_smallest_disk_ids)
     else:
-        return 0, None
+        return (0, None)
 
 
 def last_two_disks_by_location(physical_disks):
@@ -550,7 +573,7 @@ def last_two_disks_by_location(physical_disks):
     # The two disks (2) must be of the same media type, hard disk drive
     # (HDD) spinner or solid state drive (SSD).
     if last_two_disks[0].media_type != last_two_disks[1].media_type:
-        return 0, None
+        return (0, None)
 
     # Determine the smallest size of the two (2) disks, in gigabytes.
 
@@ -584,7 +607,7 @@ def last_two_disks_by_location(physical_disks):
 
     last_two_disk_ids = [d.id for d in last_two_disks]
 
-    return logical_disk_size_gb, last_two_disk_ids
+    return (logical_disk_size_gb, last_two_disk_ids)
 
 
 def bin_physical_disks_by_size_gb(physical_disks, media_type_filter=None):
@@ -594,7 +617,7 @@ def bin_physical_disks_by_size_gb(physical_disks, media_type_filter=None):
         # Apply media type filter, if present.
         if (media_type_filter is None or
                 physical_disk.media_type == media_type_filter):
-            disks_by_size[physical_disk.size_mb / 1024].append(physical_disk)
+            disks_by_size[physical_disk.free_size_mb / 1024].append(physical_disk)
 
     return disks_by_size
 
@@ -709,11 +732,11 @@ def physical_disk_to_key(physical_disk):
 
 def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
                    drac_client):
-    """TODO: Add some selective exception handling so we can determine
+    '''TODO: Add some selective exception handling so we can determine
     when RAID configuration failed and return False. Further testing
-    should uncover interesting error conditions."""
+    should uncover interesting error conditions.'''
 
-    if get_raid_controller_id(drac_client) is None:
+    if get_raid_controller_ids(drac_client) is None:
         LOG.warning("No RAID controller is present.  Skipping RAID "
                     "configuration")
         return True
@@ -733,9 +756,9 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
     # configuration, and then to create it. The workarounds are inserted
     # in-between.
 
-    """TODO: After those upstream bugs have been resolved, perform both
+    '''TODO: After those upstream bugs have been resolved, perform both
     clean steps, delete_configurtion() and create_configuration(),
-    during one (1) manual cleaning."""
+    during one (1) manual cleaning.'''
 
     LOG.info("Deleting the existing RAID configuration")
     clean_steps = [{'interface': 'raid', 'step': 'delete_configuration'}]
@@ -892,35 +915,16 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
 def generate_osd_config(ip_mac_service_tag, drac_client):
     controllers = drac_client.list_raid_controllers()
 
-    found_hba = False
-    for controller in controllers:
-        if "hba330" in controller.model.lower():
-            found_hba = True
-            break
-
-    if not found_hba:
-        LOG.info("Not generating OSD config for {ip} because no HBA330 is "
-                 "present.".format(ip=ip_mac_service_tag))
-        return
-
     LOG.info("Generating OSD config for {ip}".format(ip=ip_mac_service_tag))
     system_id = drac_client.get_system().uuid
 
     spinners, ssds = get_drives(drac_client)
 
     new_osd_config = None
-    if len(ssds) > 0 and len(spinners) == 0:
-        # If we have an all flash config, then let Ceph colocate the journals
-        new_osd_config, mklvm = generate_osd_config_without_journals(controllers,
-                                                              ssds, system_id)
-    elif len(ssds) > 0 and len(spinners) > 0:
-        # If we have a mix of flash and spinners, then use the ssds as journals
-        new_osd_config, mklvm = generate_osd_config_with_journals(controllers,
-                                                           spinners, ssds, system_id)
-    else:
-        # We have all spinners, so let Ceph colocate the journals
-        new_osd_config, mklvm  = generate_osd_config_without_journals(controllers,
-                                                              spinners, system_id)
+    # Let ceph handle journaling/disks assignment
+    disks = spinners + ssds
+    new_osd_config  = generate_osd_config_without_journals(controllers,
+                                                              disks)
 
     # load the osd environment file
     osd_config_file = os.path.join(Constants.TEMPLATES, "ceph-osd-config.yaml")
@@ -1013,180 +1017,142 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
         fcntl.flock(stream, fcntl.LOCK_UN)
         stream.close()
 
-    # Generate the mklvm script that ll create LVM's on firstboot
-
-    mklvm_file = os.path.join(Constants.TEMPLATES, "mklvm.sh")
-    streammklvm = open(mklvm_file, 'a+')
-
-    while True:
-        try:
-            fcntl.flock(streammklvm, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            break
-        except IOError as e:
-            if e.errno != errno.EAGAIN:
-                raise
-            else:
-                time.sleep(1)
-    try:
-        try:
-            current_mklvm = streammklvm.readlines()
-        except:
-            raise
-        streammklvm.seek(0)
-        streammklvm.writelines("%s\n" % line for line in mklvm)
-        streammklvm.truncate()
-
-    finally:
-        fcntl.flock(streammklvm, fcntl.LOCK_UN)
-        streammklvm.close()
-        
-
-
 def get_drives(drac_client):
     spinners = []
     ssds = []
-    physical_disks = drac_client.list_physical_disks()
-    for physical_disk in physical_disks:
-        # Eliminate physical disks that in a state other than non-RAID
-        if physical_disk.raid_status != "non-RAID":
-            LOG.info("Skipping disk {id}, because it has a RAID status of "
-                     "{raid_status}".format(
-                         id=physical_disk.id,
-                         raid_status=physical_disk.raid_status))
-            continue
+    virtual_disks = drac_client.list_virtual_disks()
 
-        # Eliminate physical disks that have an error status
-        if physical_disk.status == 'error':
-            LOG.warning("Not using disk {id}, because it has a status of "
-                        "{status}".format(id=physical_disk.id,
-                                          status=physical_disk.status))
-            continue
+    raid0_disks = [vd for vd in virtual_disks if vd.raid_level != '1']
+    raid1_disks = []
+    for vd in virtual_disks:
+        if vd.raid_level == '1':
+            raid1_disks.extend(vd.physical_disks)
 
-        # Go ahead and use any physical drive that's not in an error state, but
-        # issue a warning if it's not in the ok or unknown state
-        if physical_disk.status != 'ok' and physical_disk.status != 'unknown':
-            LOG.warning("Using disk {id}, but it has a status of \""
-                        "{status}\"".format(id=physical_disk.id,
-                                            status=physical_disk.status))
+    # Getting all physical disks of raid_disks except RAID1 disks
+    physical_disks = {pd.id: pd for pd in drac_client.list_physical_disks()
+                      if pd.id not in raid1_disks}
 
-        if physical_disk.media_type == "hdd":
-            spinners.append(physical_disk)
+    for virtual_disk in raid0_disks:
+        phy_disks = [physical_disks[pd_id] for pd_id
+                     in virtual_disk.physical_disks]
+        if phy_disks[0].media_type == 'hdd':
+            spinners.append(virtual_disk)
         else:
-            ssds.append(physical_disk)
+            ssds.append(virtual_disk)
+
+        {physical_disks.pop(pd.id) for pd in phy_disks}
+
+    if physical_disks:
+        for pd_id in physical_disks:
+            # Eliminate physical disks in a state other than non-RAID
+            # including failed disks
+            if physical_disks[pd_id].raid_status != "non-RAID":
+                LOG.info("Skipping disk {id}, because it has a RAID status of "
+                         "{raid_status}".format(
+                             id=physical_disks[pd_id].id,
+                             raid_status=physical_disks[pd_id].raid_status))
+                continue
+
+            # Eliminate physical disks that have an error status
+            if physical_disks[pd_id].status == 'error':
+                LOG.warning("Not using disk {id}, because it has a status of "
+                            "{status}".format(
+                                id=physical_disks[pd_id].id,
+                                status=physical_disks[pd_id].status))
+                continue
+
+            # Go ahead and use any physical drive that's not in an error state,
+            # but issue a warning if it's not in the ok or unknown state
+            if physical_disks[pd_id].status != 'ok' \
+               and physical_disks[pd_id].status != 'unknown':
+                LOG.warning("Using disk {id}, but it has a status of \""
+                            "{status}\"".format(
+                                id=physical_disks[pd_id].id,
+                                status=physical_disks[pd_id].status))
+
+            if physical_disks[pd_id].media_type == "hdd":
+                spinners.append(physical_disks[pd_id])
+            else:
+                ssds.append(physical_disks[pd_id])
 
     return spinners, ssds
 
-def generate_osd_config_without_journals(controllers, drives, system_id):
-    mklvm = []
-    mklvm.append('if [[ $(dmidecode -s system-uuid) == "' + system_id + '" ]]; then')
+def generate_osd_config_without_journals(controllers, drives):
+
     osd_config = {
         'osd_scenario': 'lvm',
         'osd_objectstore': 'bluestore',
-        'lvm_volumes': []}
-    drive_count = 0
-    for osd_drive in drives:
-        osd_drive_pci_bus_number = get_pci_bus_number(osd_drive, controllers)
-        osd_drive_device_name = get_by_path_device_name(
-            osd_drive_pci_bus_number, osd_drive)
-        mklvm.append('  device=$(ls -la ' + osd_drive_device_name + " |  awk -F \"../../\" '{ print $2 }')")
-        mklvm.append('  eval "wipefs -a /dev/${device}"')
-        mklvm.append('  sleep 2')
-        mklvm.append('  pvcreate ' + osd_drive_device_name)
-        mklvm.append('  vgcreate ceph_vg' + str(drive_count) + ' ' + osd_drive_device_name)
-        mklvm.append("  size=$(sudo fdisk -l /dev/${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
-        mklvm.append("  sizeb=`expr $((${size} * 99 / 100))`")
-        mklvm.append("  sizeb=`expr $((${sizeb} / 512 * 512))`")
-        mklvm.append('  lvcreate -n ceph_lv' + str(drive_count) + '_data -L ${sizeb}B ceph_vg' + str(drive_count))
-        mklvm.append('  sleep 2')
-        osd_config['lvm_volumes'].append({"data": "ceph_lv" + str(drive_count) + "_data",
-                                      "data_vg": "ceph_vg" + str(drive_count)})
-        drive_count += 1
-    mklvm.append("fi")
-    return osd_config, mklvm
+        'devices': []}
+    for drive in drives:
+        drive_device_name = get_by_path_device_name(
+             drive, controllers)
+        osd_config['devices'].append(drive_device_name)
+    return osd_config
 
-def generate_osd_config_with_journals(controllers, osd_drives, ssds, system_id):
+def generate_osd_config_with_journals(controllers, osd_drives, ssds):
     if len(osd_drives) % len(ssds) != 0:
         LOG.warning("There is not an even mapping of OSD drives to SSD "
                     "journals.  This will cause inconsistent performance "
                     "characteristics.")
-    mklvm = []
-    mklvm.append('if [[ $(dmidecode -s system-uuid) == "' + system_id + '" ]]; then')
     osd_config = {
         'osd_scenario': 'lvm',
         'osd_objectstore': 'bluestore',
-        'lvm_volumes': []}
+        'devices': []}
     osd_index = 0
-    vg_index = 0
     remaining_ssds = len(ssds)
-    for ssd in ssds:      
-        ssd_pci_bus_number = get_pci_bus_number(ssd, controllers)
-        ssd_device_name = get_by_path_device_name(ssd_pci_bus_number, ssd)
+    for ssd in ssds:
+        ssd_device_name = get_by_path_device_name(ssd, controllers)
+
         num_osds_for_ssd = int(math.ceil((len(osd_drives)-osd_index) /
                                          (remaining_ssds * 1.0)))
-        # x2 volumes for each data osd (DB & WAL)
-        allocation_journals = 50 / num_osds_for_ssd - 1
-        mklvm.append('  device=$(ls -la ' + ssd_device_name + " |  awk -F \"../../\" '{ print $2 }')")
-        mklvm.append('  eval "wipefs -a /dev/${device}"')
-        mklvm.append('  sleep 2')
-        mklvm.append('  pvcreate ' + ssd_device_name)
-        mklvm.append('  vgcreate ceph_vg' + str(vg_index) + ' ' + ssd_device_name)
-        mklvm.append("  size=$(sudo fdisk -l /dev/${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
-        mklvm.append("  siz=`expr $((${size} * " + str(allocation_journals) + " / 100))`")
-        mklvm.append("  siz=`expr $((${siz} / 512 * 512))`")
-        for i in range(0, num_osds_for_ssd):
-            mklvm.append('  lvcreate -n ceph_lv' + str(vg_index) + "-" + str(i) + '_wal -L ${siz}B ceph_vg' + str(vg_index))
-            mklvm.append('  lvcreate -n ceph_lv' + str(vg_index) + "-" + str(i) + '_db -L ${siz}B ceph_vg' + str(vg_index))
-            mklvm.append('  sleep 2')
 
         osds_for_ssd = osd_drives[osd_index:
                                   osd_index + num_osds_for_ssd]
-        ind = 0
-        journal_index = vg_index
         for osd_drive in osds_for_ssd:
-            vg_index += 1
-            osd_drive_pci_bus_number = get_pci_bus_number(osd_drive,
-                                                          controllers)
             osd_drive_device_name = get_by_path_device_name(
-                osd_drive_pci_bus_number, osd_drive)
-            mklvm.append('  device=$(ls -la ' + osd_drive_device_name + " |  awk -F \"../../\" '{ print $2 }')")
-            mklvm.append('  eval "wipefs -a /dev/${device}"')
-            mklvm.append('  sleep 2')
-            mklvm.append('  pvcreate ' + osd_drive_device_name)
-            mklvm.append('  vgcreate ceph_vg' + str(vg_index) + ' ' + osd_drive_device_name)
-            mklvm.append("  size=$(sudo fdisk -l /dev/${device} 2>/dev/null | grep -m1 \"Disk\" | awk '{print $5}')")
-            mklvm.append("  sizeb=`expr $((${size} * 99 / 100))`")
-            mklvm.append("  sizeb=`expr $((${sizeb} / 512 * 512))`")
-            mklvm.append('  lvcreate -n ceph_lv' + str(vg_index) + '_data -L ${sizeb}B ceph_vg' + str(vg_index))
-            mklvm.append('  sleep 2')
-            osd_config['lvm_volumes'].append({"data": "ceph_lv" + str(vg_index) + "_data",
-                                      "data_vg": "ceph_vg" + str(vg_index),
-                                      "db": "ceph_lv" + str(journal_index) + "-" + str(ind) + "_db",
-                                      "db_vg": "ceph_vg" + str(journal_index),
-                                      "wal": "ceph_lv" + str(journal_index) +  "-" + str(ind) + "_wal",
-                                      "wal_vg": "ceph_vg" + str(journal_index)})
-            ind += 1
+                osd_drive, controllers)
+            osd_config['devices'].append(osd_drive_device_name)
         osd_index += num_osds_for_ssd
         remaining_ssds -= 1
-        vg_index += 1
-    mklvm.append("fi")
 
-    return osd_config, mklvm
+    return osd_config
 
 
-def get_pci_bus_number(spinner, controllers):
-    bus = None
+def get_by_path_device_name(physical_disk, controllers):
+    if physical_disk.description.startswith("Virtual Disk"):
+        disk_index = physical_disk.description.split(" ")[2]
+    else:
+        disk_index = physical_disk.description.split(" ")[1]
     for controller in controllers:
-        if controller.id in spinner.id:
-            bus = controller.bus.lower()
-            break
-    return bus
-
-
-def get_by_path_device_name(pci_bus_number, physical_disk):
-    return ('/dev/disk/by-path/pci-0000:'
-            '{pci_bus_number}:00.0-sas-0x{sas_address}-lun-0').format(
+        pci_bus_number = get_pci_bus_number(controller)
+        if physical_disk.controller == controller.id and \
+                controller.model.startswith("PERC H740P"):
+            return ('/dev/disk/by-path/pci-0000:'
+                    '{pci_bus_number}:00.0-scsi-0:2:{disk_index}:0').format(
+                pci_bus_number=pci_bus_number,
+                disk_index=disk_index)
+        elif physical_disk.controller == controller.id and \
+                controller.model.startswith("PERC H730"):
+            return ('/dev/disk/by-path/pci-0000:'
+                    '{pci_bus_number}:00.0-scsi-0:'
+                    '{channel}:{disk_index}:0').format(
+                pci_bus_number=pci_bus_number,
+                channel=2 if physical_disk.raid_status == "online" else 0,
+                disk_index=disk_index)
+        else:
+            return ('/dev/disk/by-path/pci-0000:'
+                    '{pci_bus_number}:00.0-sas-0x{sas_address}-lun-0').format(
                 pci_bus_number=pci_bus_number,
                 sas_address=physical_disk.sas_address.lower())
+
+
+def get_pci_bus_number(controller):
+    if controller.model.startswith("PERC H730") and \
+       len(controller.bus.lower()) == 1:
+        pci_bus_number = '0' + controller.bus.lower()
+    else:
+        pci_bus_number = controller.bus.lower()
+    return pci_bus_number
 
 
 def get_fqdd(doc, namespace):
