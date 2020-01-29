@@ -239,7 +239,7 @@ the following configuration files where used to deploy jetpack 10.2 on DSS9000 s
 #### dss9k_v10_acme.ini
 
 ``` dosini
-# Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -934,7 +934,7 @@ nic_env_file=4_port/nic_environment.yaml
 Please find the full configuration file used below: 
 
 ``` dosini
-# Copyright (c) 2015-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
