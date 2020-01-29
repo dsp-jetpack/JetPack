@@ -1,0 +1,122 @@
+heat_template_version: queens
+ 
+description: >
+  This HOT Template creates:
+  - A flavor
+  - A security group
+  - A network port on the private network
+  - A static floating IP
+  - A DPE REST API instance and allocate the floating IP to it.
+ 
+parameters:
+  av_rest_api_flavor_name:
+    type: string
+    description: Flavor name to create
+    default: dpe-avamar-rest-api
+  av_rest_api_disk_size:
+    type: number
+    description: Size of the disk to associate to the flavor
+    default: 4
+  av_rest_api_ram_qty:
+    type: number
+    description: Amount of RAM to associate to the flavor
+    default: 6144
+  av_rest_api_vcpus_count:
+    type: number
+    description: vCPUs count to associate to the flavor
+    default: 4
+  av_rest_api_security_group_name:
+    type: string
+    description: Security Group name
+    default: dpe-avamar-rest-api-secgroup
+  avamar_private_net:
+    type: string
+    description: Private network for all Avamar instances
+    default: avamar-net
+  avamar_private_subnet:
+    type: string
+    description: Private subnet for all avamar instances
+    default: avamar-subnet
+  av_rest_api_instance_name:
+    type: string
+    description: Name of the instance to build
+    default: dpe-avamar-rest-api
+  av_rest_api_image_name:
+    type: string
+    description: Image name to build the instance on
+    default: dpe-avamar-rest-api
+  keypair_name:
+    type: string
+    description: Key Pair to use to ssh in
+    default: avamar_key
+  network_name:
+    type: string
+    description: Network name to buil the instance on
+    default: provider-1392-net
+  av_rest_api_ip:
+    type: string
+    description: Static floating IP
+    default: 100.67.139.72
+ 
+resources:
+  av_rest_api_flavor:
+    type: OS::Nova::Flavor
+    properties:
+      name: { get_param: av_rest_api_flavor_name }
+      is_public: False
+      tenants:
+        - avamar
+      disk: { get_param: av_rest_api_disk_size }
+      ram: { get_param: av_rest_api_ram_qty }
+      vcpus: { get_param: av_rest_api_vcpus_count }
+ 
+  av_rest_api_sec_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: { get_param: av_rest_api_security_group_name }
+      rules:
+        - protocol: icmp
+          remote_ip_prefix: 0.0.0.0/0
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 8543
+          port_range_max: 8543
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 443
+          port_range_max: 443
+ 
+  av_rest_api_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: avamar_private_net }
+      security_groups:
+        - { get_resource: av_rest_api_sec_group }
+      fixed_ips:
+        - subnet: { get_param: avamar_private_subnet }
+ 
+  av_rest_api_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: network_name }
+      port_id: { get_resource: av_rest_api_port }
+      floating_ip_address: { get_param: av_rest_api_ip }
+ 
+  av_rest_api_instance:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: av_rest_api_instance_name }
+      flavor: { get_resource: av_rest_api_flavor }
+      image: { get_param: av_rest_api_image_name }
+      key_name: { get_param: keypair_name }
+      networks:
+        - port: { get_resource: av_rest_api_port }
+      user_data_format: RAW
+      user_data: |
+        #cloud-config
+        bootcmd:
+        - /tmp/avamar_rest_postconfig.sh

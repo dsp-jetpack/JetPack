@@ -1,0 +1,149 @@
+heat_template_version: queens
+ 
+description: >
+  This HOT Template creates:
+  - A flavor
+  - A security group
+  - A DPE proxy instance and allocate a Floating IP to it
+ 
+parameters:
+  dpe_proxy_flavor_name:
+    type: string
+    description: Flavor name to create
+    default: dpe-avamar-proxy
+  dpe_proxy_disk_size:
+    type: number
+    description: Size of the disk to associate to the flavor
+    default: 16
+  dpe_proxy_ram_qty:
+    type: number
+    description: Amount of RAM to associate to the flavor
+    default: 2048
+  dpe_proxy_vcpus_count:
+    type: number
+    description: vCPUs count to associate to the flavor
+    default: 2
+  dpe_proxy_security_group_name:
+    type: string
+    description: Security Group name
+    default: dpe-avamar-proxy-secgroup
+  avamar_private_net:
+    type: string
+    description: Private network for all avamar instances
+    default: avamar-net
+  avamar_private_subnet:
+    type: string
+    description: Private subnet for all avamar instances
+    default: avamar-subnet
+  dpe_proxy_instance_name:
+    type: string
+    description: Name of the instance to build
+    default: dpe-avamar-proxy
+  dpe_proxy_image_name:
+    type: string
+    description: Image name to build the instance on
+    default: dpe-avamar-proxy
+  keypair_name:
+    type: string
+    description: Key Pair to use to ssh in
+    default: avamar_key
+  network_name:
+    type: string
+    description: Network name to buil the instance on
+    default: provider-1392-net
+  dpe_proxy_ip:
+    type: string
+    description: Static floating IP
+    default: 100.67.139.70
+  hostname_avamar:
+    type: string
+    description: IP or FQDN of Avamar server
+    default: 100.67.139.69
+  zoneid:
+    type: string
+    description: Default nova zone id
+    default: nova
+  username_proxy:
+    type: string
+    description: User name to use to connect to the proxy
+    default: backup_admin
+  password_proxy:
+    type: string
+    description: Password of the user
+    default: password
+  controller_hostname:
+    type: string
+    description: IP or FQDN of the controller node
+    default: 10.67.139.62
+  controller_port:
+    type: number
+    description: Port to use to connect to the controller dpe-proxy-service
+    default: 1947
+ 
+resources:
+  dpe_proxy_flavor:
+    type: OS::Nova::Flavor
+    properties:
+      name: { get_param: dpe_proxy_flavor_name }
+      is_public: False
+      tenants:
+        - avamar
+      disk: { get_param: dpe_proxy_disk_size }
+      ram: { get_param: dpe_proxy_ram_qty }
+      vcpus: { get_param: dpe_proxy_vcpus_count }
+ 
+  dpe_proxy_sec_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: { get_param: dpe_proxy_security_group_name }
+      rules:
+        - protocol: icmp
+          remote_ip_prefix: 0.0.0.0/0
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 28000
+          port_range_max: 31000
+ 
+  dpe_proxy_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: avamar_private_net }
+      security_groups:
+        - { get_resource: dpe_proxy_sec_group }
+      fixed_ips:
+        - subnet: { get_param: avamar_private_subnet }
+ 
+  dpe_proxy_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: network_name }
+      port_id: { get_resource: dpe_proxy_port }
+      floating_ip_address: { get_param: dpe_proxy_ip }
+ 
+  dpe_proxy_instance:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: dpe_proxy_instance_name }
+      flavor: { get_resource: dpe_proxy_flavor }
+      image: { get_param: dpe_proxy_image_name }
+      key_name: { get_param: keypair_name }
+      networks:
+        - port: { get_resource: dpe_proxy_port }
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: |
+            #cloud-config
+            bootcmd:
+            - /tmp/postconfig.sh $HOSTNAME_AVAMAR /clients/$ZONEID "http://$USERNAME_PROXY:$PASSWORD_PROXY@$CONTROLLER_HOSTNAME:$CONTROLLER_PORT"
+          params:
+            $HOSTNAME_AVAMAR: { get_param: hostname_avamar }
+            $ZONEID: { get_param: zoneid }
+            $USERNAME_PROXY: { get_param: username_proxy }
+            $PASSWORD_PROXY: { get_param: password_proxy }
+            $CONTROLLER_HOSTNAME: { get_param: controller_hostname }
+            $CONTROLLER_PORT: { get_param: controller_port }
