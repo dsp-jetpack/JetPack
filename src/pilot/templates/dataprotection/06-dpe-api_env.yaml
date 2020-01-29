@@ -1,0 +1,5 @@
+parameters:
+  keystone: http://100.67.87.53:5000
+  avamar_rest_api: 100.67.87.74
+  dpe_api_ip: 100.67.87.73
+  network_name: provider-872-net
