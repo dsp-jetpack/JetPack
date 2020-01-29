@@ -768,32 +768,6 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
 
     # Work around the bugs in the ironic DRAC driver's RAID clean steps.
 
-    '''TODO: After the upstream bugs have been resolved, remove the
-    workarounds.'''
-
-    '''TODO: Workaround 1:
-    Reset the RAID controller to delete all virtual disks and unassign
-    all hot spare physical disks.'''
-
-    '''TODO: Workaround 2:
-    Prepare any foreign physical disks for inclusion in the local RAID
-    configuration.'''
-
-    # Workaround 3:
-    # Attempt to convert all of the node's physical disks to JBOD mode.
-    # This may succeed or fail. A controller's capability to do that, or
-    # lack thereof, has no bearing on success or failure.
-    LOG.info("Converting all physical disks to JBOD mode")
-    succeeded = change_physical_disk_state_wait(
-        node_uuid, ironic_client, drac_client, 'JBOD')
-
-    if succeeded:
-        LOG.info("Completed converting all physical disks to JBOD mode")
-    else:
-        LOG.critical("Attempt to convert all physical disks to JBOD mode "
-                     "failed")
-        return False
-
     target_raid_config = define_target_raid_config(
         role, drac_client)
 
@@ -806,36 +780,6 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
 
     # Set the target RAID configuration on the ironic node.
     ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
-
-    # Workaround 4:
-    # Attempt to convert all of the physical disks in the target RAID
-    # configuration to RAID mode. This may succeed or fail. A
-    # controller's capability to do that, or lack thereof, has no
-    # bearing on success or failure.
-    controllers_to_physical_disk_ids = defaultdict(list)
-
-    for logical_disk in target_raid_config['logical_disks']:
-        # Not applicable to JBOD logical disks.
-        if logical_disk['raid_level'] == 'JBOD':
-            continue
-
-        for physical_disk_name in logical_disk['physical_disks']:
-            controllers_to_physical_disk_ids[
-                logical_disk['controller']].append(physical_disk_name)
-
-    LOG.info("Converting physical disks configured to back RAID logical disks "
-             "to RAID mode")
-    succeeded = change_physical_disk_state_wait(
-        node_uuid, ironic_client, drac_client, 'RAID',
-        controllers_to_physical_disk_ids)
-
-    if succeeded:
-        LOG.info("Completed converting physical disks configured to back RAID "
-                 "logical disks to RAID mode")
-    else:
-        LOG.critical("Attempt to convert physical disks configured to back "
-                     "RAID logical disks to RAID mode failed")
-        return False
 
     LOG.info("Applying the new RAID configuration")
     clean_steps = [{'interface': 'raid', 'step': 'create_configuration'}]
