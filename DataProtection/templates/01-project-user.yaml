@@ -1,0 +1,46 @@
+heat_template_version: queens
+ 
+description: This HOT Template creates an avamar project where all dpe instances will reside. It also changes quotas for this project.
+ 
+parameters:
+  avamar_project_name:
+    type: string
+    description: Avamar project name
+    default: avamar
+  avamar_project_vol_quota:
+    type: number
+    description: Volume quota for avamar project
+    default: 100
+  avamar_project_gig_quota:
+    type: number
+    description: Gigabytes quota for avamar project
+    default: 1000
+  backup_user_name:
+    type: string
+    description: Backup user
+    default: backup_admin
+  backup_user_passwd:
+    type: string
+    description: Backup user password
+    default: password
+ 
+resources:
+  avamar:
+    type: OS::Keystone::Project
+    properties:
+      name: { get_param: avamar_project_name }
+ 
+  avamar_quota:
+    type: OS::Cinder::Quota
+    properties:
+      project: { get_resource: avamar }
+      volumes: { get_param: avamar_project_vol_quota }
+      gigabytes: { get_param: avamar_project_gig_quota }
+ 
+  backup_user:
+    type: OS::Keystone::User
+    properties:
+      default_project: { get_resource: avamar }
+      name: { get_param: backup_user_name }
+      password: { get_param: backup_user_passwd }
+      roles: [{"role": _member_, "project": { get_resource: avamar }}, {"role": admin, "project": { get_resource: avamar }}]

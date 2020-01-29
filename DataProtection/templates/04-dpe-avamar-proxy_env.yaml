@@ -1,0 +1,8 @@
+parameters:
+  hostname_avamar: 100.67.87.7
+  username_proxy: backup_admin
+  password_proxy: password
+  controller_hostname: 100.67.87.53
+  controller_port: 1947
+  network_name: provider-872-net
+  dpe_proxy_ip: 100.67.87.75
