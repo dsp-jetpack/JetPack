@@ -916,18 +916,10 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
     spinners, ssds = get_drives(drac_client)
 
     new_osd_config = None
-    if len(ssds) > 0 and len(spinners) == 0:
-        # If we have an all flash config, then let Ceph colocate the journals
-        new_osd_config = generate_osd_config_without_journals(controllers,
-                                                              ssds)
-    elif len(ssds) > 0 and len(spinners) > 0:
-        # If we have a mix of flash and spinners, then use the ssds as journals
-        new_osd_config = generate_osd_config_with_journals(controllers,
-                                                           spinners, ssds)
-    else:
-        # We have all spinners, so let Ceph colocate the journals
-        new_osd_config  = generate_osd_config_without_journals(controllers,
-                                                              spinners)
+    # Let ceph handle journaling/disks assignment
+    disks = spinners + ssds
+    new_osd_config  = generate_osd_config_without_journals(controllers,
+                                                              disks)
 
     # load the osd environment file
     osd_config_file = os.path.join(Constants.TEMPLATES, "ceph-osd-config.yaml")
@@ -1086,10 +1078,10 @@ def generate_osd_config_without_journals(controllers, drives):
         'osd_scenario': 'lvm',
         'osd_objectstore': 'bluestore',
         'devices': []}
-    for osd_drive in drives:
-        osd_drive_device_name = get_by_path_device_name(
-             osd_drive, controllers)
-        osd_config['devices'].append(osd_drive_device_name)
+    for drive in drives:
+        drive_device_name = get_by_path_device_name(
+             drive, controllers)
+        osd_config['devices'].append(drive_device_name)
     return osd_config
 
 def generate_osd_config_with_journals(controllers, osd_drives, ssds):
