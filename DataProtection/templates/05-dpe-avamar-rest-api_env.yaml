@@ -1,0 +1,3 @@
+parameters:
+  network_name: provider-872-net
+  av_rest_api_ip: 100.67.87.74
