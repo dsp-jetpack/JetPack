@@ -32,6 +32,13 @@ resource_registry:
   OS::TripleO::DellCompute::Ports::StorageMgmtPort: ./overcloud/network/ports/noop.yaml
   OS::TripleO::DellCompute::Ports::TenantPort: ./overcloud/network/ports/tenant_from_pool.yaml
 
+  OS::TripleO::DellComputeHCI::Ports::ExternalPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::DellComputeHCI::Ports::InternalApiPort: ./overcloud/network/ports/internal_api_from_pool.yaml
+  OS::TripleO::DellComputeHCI::Ports::StoragePort: ./overcloud/network/ports/storage_from_pool.yaml
+  OS::TripleO::DellComputeHCI::Ports::StorageMgmtPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::DellComputeHCI::Ports::TenantPort: ./overcloud/network/ports/tenant_from_pool.yaml
+  OS::TripleO::DellComputeHCI::Ports::StorageMgmtPort: ./overcloud/network/ports/storage_mgmt_from_pool.yaml
+
   OS::TripleO::CephStorage::Ports::ExternalPort: ./overcloud/network/ports/noop.yaml
   OS::TripleO::CephStorage::Ports::InternalApiPort: ./overcloud/network/ports/noop.yaml
   OS::TripleO::CephStorage::Ports::StoragePort: ./overcloud/network/ports/storage_from_pool.yaml
@@ -112,3 +119,11 @@ parameter_defaults:
     - 192.168.180.76
     - 192.168.180.77
     - 192.168.180.78
+
+  # CHANGEME: The Compute HCI node ips
+  DellComputeHCIIPs:
+    tenant:
+    internal_api:
+    storage:
+    storage_mgmt:
+

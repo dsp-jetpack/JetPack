@@ -4,6 +4,13 @@
       "SriovGlobalEnable": "Disabled"
     }
   },
+  "computehci": {
+    "bios": {
+      "SriovGlobalEnable": "Disabled",
+      "ProcVirtualization": "Enabled"
+    }
+  },
+
   "compute": {
     "bios": {
       "ProcVirtualization": "Enabled"

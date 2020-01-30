@@ -267,6 +267,11 @@ def main():
                             type=int,
                             required=True,
                             help="The number of dell compute nodes")
+        parser.add_argument("--dell-computeshci",
+                            dest="num_dell_computeshci",
+                            type=int,
+                            required=True,
+                            help="The number of dell hci compute nodes")
         parser.add_argument("--storage",
                             dest="num_storage",
                             type=int,
@@ -474,7 +479,8 @@ def main():
             swift_storage_flavor,
             block_storage_flavor,
             args.vlan_range,
-            args.num_dell_computes
+            args.num_dell_computes,
+            args.num_dell_computeshci
             )
 
         # Launch the deployment

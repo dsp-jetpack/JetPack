@@ -31,8 +31,10 @@ parameter_defaults:
   # You would use this for the default floating network
   NeutronBridgeMappings: physint:br-tenant,physext:br-ex
 
-  # Flavor used as the regular compute
+  # Flavor used as the compute
   OvercloudDellComputeFlavor: baremetal
+  # Flavor used for HCI nodes
+  OvercloudDellComputeHCIFlavor: baremetal
   # Flavor to use for the Controller nodes
   OvercloudControllerFlavor: baremetal
   # Flavor to use for the ceph Storage nodes
@@ -56,6 +58,9 @@ parameter_defaults:
 
   # Number of Dell Compute nodes 
   DellComputeCount: 3
+
+  # Number of Dell Compute nodes 
+  DellComputeHCICount: 3
 
   # Apply tuned-adm profile on Compute Nodes
   ComputeTunedAdmProfile: virtual-host
@@ -117,6 +122,9 @@ parameter_defaults:
   CephAnsibleExtraConfig:
     nb_retry_wait_osd_up: 360
     delay_wait_osd_up: 60
+
+  DellComputeHCIExtraConfig:
+    NovaReservedHostMemory: 115000
 
   NovaComputeExtraConfig:
     nova::migration::libvirt::live_migration_completion_timeout: 800

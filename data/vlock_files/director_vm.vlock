@@ -713,6 +713,7 @@
 0:libselinux-utils-2.5-14.1.el7.*
 0:firewalld-0.6.3-2.el7.*
 0:firewalld-filesystem-0.6.3-2.el7.*
+0:firewalld-0.6.3-2.el7.*
 0:iwl7260-firmware-22.0.7.0-72.el7.*
 0:python-ldappool-1.0-4.el7ost.*
 0:python-gitdb-0.6.4-4.el7ost.*

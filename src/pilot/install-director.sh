@@ -76,7 +76,7 @@ else
 fi
 
 
-flavors="control compute ceph-storage"
+flavors="control compute ceph-storage computehci"
 subnet_name="ctlplane"
 
 # Create the requested flavor if it does not exist.
