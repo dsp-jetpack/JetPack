@@ -58,6 +58,14 @@ resource_registry:
   OS::TripleO::DellCompute::Ports::TenantPort: ../network/ports/tenant.yaml
   #OS::TripleO::DelvCompute::Ports::ManagementPort: ../network/ports/management.yaml
 
+  # Port assignments for the Dell compute HCI role
+  OS::TripleO::DellComputeHCI::Ports::ExternalPort: ../network/ports/noop.yaml
+  OS::TripleO::DellComputeHCI::Ports::InternalApiPort: ../network/ports/internal_api.yaml
+  OS::TripleO::DellComputeHCI::Ports::StoragePort: ../network/ports/storage.yaml
+  OS::TripleO::DellComputeHCI::Ports::StorageMgmtPort: ../network/ports/noop.yaml
+  OS::TripleO::DellComputeHCI::Ports::TenantPort: ../network/ports/tenant.yaml
+  OS::TripleO::DellComputeHCI::Ports::StorageMgmtPort: ../network/ports/storage_mgmt.yaml
+
   # Port assignments for the ceph storage role
   OS::TripleO::CephStorage::Ports::ExternalPort: ../network/ports/noop.yaml
   OS::TripleO::CephStorage::Ports::InternalApiPort: ../network/ports/noop.yaml

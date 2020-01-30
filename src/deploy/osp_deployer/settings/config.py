@@ -614,6 +614,7 @@ class Settings():
             logger.info("Smart NIC for SR-IOV Hardware Offload is disabled.")
 
         self.controller_nodes = []
+        self.computehci_nodes = []
         self.compute_nodes = []
         self.ceph_nodes = []
         self.switches = []
@@ -645,6 +646,14 @@ class Settings():
                 except AttributeError:
                     node.is_controller = False
                     pass
+                try:
+                    if node.is_computehci == "true":
+                        node.is_computehci = True
+                        self.computehci_nodes.append(node)
+                except AttributeError:
+                    node.is_computehci = False
+                    pass
+
                 try:
                     if node.is_compute == "true":
                         node.is_compute = True

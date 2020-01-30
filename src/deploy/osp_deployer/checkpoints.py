@@ -349,7 +349,8 @@ class Checkpoints():
         ls_nodes.pop()
         expected_nodes = len(self.settings.controller_nodes) + len(
             self.settings.compute_nodes) + len(
-            self.settings.ceph_nodes)
+            self.settings.ceph_nodes) + len(
+            self.settings.computehci_nodes)
         if len(ls_nodes) != expected_nodes:
             raise AssertionError(
                 "Expected amount of nodes registered in Ironic "

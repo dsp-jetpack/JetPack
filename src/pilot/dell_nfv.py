@@ -87,7 +87,8 @@ class ConfigOvercloud(object):
             swift_storage_flavor,
             block_storage_flavor,
             vlan_range,
-            dell_compute_count=0):
+            dell_compute_count=0,
+            dell_computehci_count=0):
         try:
             logger.info("Editing dell environment file")
             file_path = home_dir + '/pilot/templates/dell-environment.yaml'
@@ -106,6 +107,10 @@ class ConfigOvercloud(object):
             cmds.extend((
                 'sed -i "s|DellComputeCount:.*|DellComputeCount: ' +
                 str(dell_compute_count) +
+                '|" ' +
+                file_path,
+                'sed -i "s|DellComputeHCICount:.*|DellComputeHCICount: ' +
+                str(dell_computehci_count) +
                 '|" ' +
                 file_path,
                 'sed -i "s|ControllerCount:.*|ControllerCount: ' +
