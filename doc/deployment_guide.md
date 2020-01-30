@@ -13,7 +13,7 @@
 <div style="page-break-after: always;"></div>
 
 # Trademarks
-Copyright © 2014-2019 Dell Inc. or its subsidiaries. All rights reserved.
+Copyright © 2014-2020 Dell Inc. or its subsidiaries. All rights reserved.
 
 Intel® and Xeon® are registered trademarks of Intel Corporation. Oracle® and Java® are registered trademarks of Oracle Corporation and/or its affiliates
 
@@ -1700,7 +1700,7 @@ To create a custom flavor for OVS-DPDK instance, follow the steps below.
 dell-environment.yaml - Sample DPDK Parameters
 
 ```yaml
-# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1841,7 +1841,7 @@ parameter_defaults:
 
 
 neutron-ovs-dpdk.yaml
-# Copyright (c) 2016-2018 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -3044,7 +3044,7 @@ sample.properties
 
 
 ```yaml
-# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -3661,7 +3661,7 @@ Also in the assign_role.py, small tweak was done by changing SSD as media_type_f
 ### Sample xSP.ini file
 
 ```yaml
-# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -6000,7 +6000,7 @@ For more information on the Dell EMC Ready Architecture for Red Hat OpenStack Pl
 
 This document and all other related architecture and technical guides can be found in the Dell EMC TechCenter community at http://en.community.dell.com/techcenter/cloud/w/wiki/12047.dell-emc-red-hat-openstack-cloud-solutions
 
-Copyright © 2014-2019 Dell Inc. or its subsidiaries. All rights reserved. Trademarks and trade names may be used in this document to refer to either the entities claiming the marks and names or their products. Specifications are correct at date of publication but are subject to availability or change without notice
+Copyright © 2014-2020 Dell Inc. or its subsidiaries. All rights reserved. Trademarks and trade names may be used in this document to refer to either the entities claiming the marks and names or their products. Specifications are correct at date of publication but are subject to availability or change without notice
 
 at any time. Dell EMC and its affiliates cannot be responsible for errors or omissions in typography or photography. Dell EMC’s Terms and Conditions of Sales and Service apply and are available on request. Dell EMC service offerings do not affect consumer’s statutory rights.
 
