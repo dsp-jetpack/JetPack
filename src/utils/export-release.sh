@@ -73,7 +73,7 @@ mk_bundle() {
 
 # make bundles
 # mk_bundle <tar-file-name> <tar-root-dir-name> <src-dirs> <vlock-files>
-mk_bundle dell-mgmt-node sah mgmt dashboard_vm.vlock director_vm.vlock
+mk_bundle dell-mgmt-node sah mgmt director_vm.vlock
 mk_bundle dell-pilot manual pilot common
 mk_bundle dell-deploy automated deploy common
 

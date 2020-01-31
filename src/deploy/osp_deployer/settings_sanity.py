@@ -423,18 +423,6 @@ class DeployerSanity:
                              shouldhaveattributes,
                              shouldbbevalidips)
 
-        # Verify Dashboard VM node network definition
-        logger.debug("verifying Dashboard VM network settings")
-        shouldhaveattributes = ['hostname',
-                                'root_password',
-                                'storage_ip',
-                                'public_api_ip']
-        shouldbbevalidips = ['storage_ip', 'public_api_ip']
-
-        self.check_net_attrs(self.settings.dashboard_node,
-                             shouldhaveattributes,
-                             shouldbbevalidips)
-
         # Verify Controller nodes network definitioncls
         logger.debug("verifying controller nodes network settings")
         for controller in self.settings.controller_nodes:

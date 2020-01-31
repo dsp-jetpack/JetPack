@@ -71,12 +71,6 @@ def read_input_file(input_file):
                 p.setKey(key)
                 role_type = p.getRoleType()
                 node_id = p.getNodeId()
-            elif key.startswith("dashboard_"):
-                node_setting_key = key.split("dashboard_")[1]
-                p = parse_key_components()
-                p.setKey(key)
-                role_type = p.getRoleType()
-                node_id = p.getNodeId()
             elif key.startswith("controller_"):
                 p = parse_key_components()
                 p.setKey(key)
@@ -124,8 +118,6 @@ def read_input_file(input_file):
             node_id_settings['is_sah'] = 'true'
         elif role_type.startswith("director"):
             node_id_settings['is_director'] = 'true'
-        elif role_type.startswith("dashboard"):
-            node_id_settings['is_dashboard'] = 'true'
         elif role_type.startswith("compute"):
             node_id_settings['is_compute'] = 'true'
         elif role_type.startswith("controller"):

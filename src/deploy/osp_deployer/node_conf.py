@@ -19,8 +19,6 @@ class NodeConf:
 
     def __init__(self, json):
         self.is_sah = False
-        self.is_foreman = False
-        self.is_dashboard = False
         self.is_director = False
         self.is_ceph_storage = False
         self.is_switch = False
