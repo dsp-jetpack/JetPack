@@ -254,11 +254,11 @@ done
 create_flavor baremetal false
 echo "## Done."
 
-echo
-echo "## Setting DNS in Neutron ${subnet_name} subnet..."
-subnet_uuid=$(openstack network list | grep "${subnet_name}" | awk '{print $6}')
-openstack subnet set "${subnet_uuid}" --dns-nameserver "${dns_ip}"
-echo "## Done."
+#echo
+#echo "## Setting DNS in Neutron ${subnet_name} subnet..."
+#subnet_uuid=$(openstack network list | grep "${subnet_name}" | awk '{print $6}')
+#openstack subnet set "${subnet_uuid}" --dns-nameserver "${dns_ip}"
+#echo "## Done."
 
 # This patch fixes an issue in tripleo-heat-templates
 echo
