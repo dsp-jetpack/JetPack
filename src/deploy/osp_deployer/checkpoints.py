@@ -27,7 +27,6 @@ class Checkpoints:
         self.ping_success = "packets transmitted, 1 received"
         self.director_ip = self.settings.director_node.public_api_ip
         self.sah_ip = self.settings.sah_node.public_api_ip
-        self.dashboard_ip = self.settings.dashboard_node.public_api_ip
         self.verify_rhsm_status = self.settings.verify_rhsm_status
         if self.settings.use_satellite is True:
             self.verify_rhsm_status = False
@@ -252,89 +251,6 @@ class Checkpoints:
         if self.ping_success not in test:
             raise AssertionError(
                 "Director VM cannot ping idrac network (ip) : " + test)
-
-    def dashboard_vm_health_check(self):
-        logger.info("Dashboard VM health checks")
-        if self.verify_rhsm_status:
-            logger.debug(
-                "*** Verify the Dashboard VM registered properly ***")
-            subscription_status = self.verify_subscription_status(
-                self.dashboard_ip,
-                "root",
-                self.settings.dashboard_node.root_password,
-                self.settings.subscription_check_retries)
-            if "Current" not in subscription_status:
-                raise AssertionError(
-                    "Dashboard VM did not register properly : " +
-                    subscription_status)
-
-        logger.debug(
-            "*** Verify the Dashboard VM can ping its public gateway")
-        test = self.ping_host(self.dashboard_ip,
-                              "root",
-                              self.settings.dashboard_node.root_password,
-                              self.settings.public_api_gateway)
-        if self.ping_success not in test:
-            raise AssertionError(
-                "Dashboard VM cannot ping its public gateway : " + test)
-        logger.debug(
-            "*** Verify the Dashboard VM " +
-            "can ping the outside world (IP)")
-        test = self.ping_host(self.dashboard_ip,
-                              "root",
-                              self.settings.dashboard_node.root_password,
-                              "8.8.8.8")
-        if self.ping_success not in test:
-            raise AssertionError(
-                "Dashboard VM cannot ping the outside world (IP) : " +
-                test)
-
-        logger.debug("*** Verify the Dashboard VM can ping "
-                     "the outside world (DNS)")
-        test = self.ping_host(self.dashboard_ip,
-                              "root",
-                              self.settings.dashboard_node.root_password,
-                              "google.com")
-        if self.ping_success not in test:
-            raise AssertionError(
-                "Dashboard VM cannot ping the outside world (DNS) : " +
-                test)
-
-        logger.debug(
-            "*** Verify the Dashboard VM can ping the SAH node "
-            "through the storage network")
-        test = self.ping_host(self.dashboard_ip,
-                              "root",
-                              self.settings.dashboard_node.root_password,
-                              self.settings.sah_node.storage_ip)
-        if self.ping_success not in test:
-            raise AssertionError(
-                "Dashboard VM cannot ping the SAH node "
-                "through the storage network : " + test)
-
-        logger.debug(
-            "*** Verify the Dashboard VM can ping the SAH "
-            "node through the public network")
-        test = self.ping_host(self.dashboard_ip,
-                              "root",
-                              self.settings.dashboard_node.root_password,
-                              self.sah_ip)
-        if self.ping_success not in test:
-            raise AssertionError(
-                "Dashboard VM cannot ping the SAH node through "
-                "the public network : " + test)
-
-        logger.debug(
-            "*** Verify the Dashboard VM can ping the Director VM "
-            "through the public network")
-        test = self.ping_host(self.dashboard_ip,
-                              "root",
-                              self.settings.dashboard_node.root_password,
-                              self.director_ip)
-        if self.ping_success not in test:
-            raise AssertionError(
-                "Dashboard VM cannot ping the Director VM through "
-                "the provisioning network : " + test)
 
     def verify_nodes_registered_in_ironic(self):
         logger.debug("Verify the expected amount of nodes imported in ironic")

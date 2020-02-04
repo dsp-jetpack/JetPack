@@ -163,7 +163,7 @@ class Director(InfraHost):
         
         #Configure containers-prepare-parameter.yaml to retrieve container images
         cmd = 'sed -i "s|[[:space:]]\+username: password|      ' + \
-              self.settings.subscription_manager_user + ': ' + self.settings.subscription_manager_password + \
+              self.settings.subscription_manager_user + ': ' + "'" + self.settings.subscription_manager_password + "'" + \
               '|" pilot/containers-prepare-parameter.yaml'
         cmds.append(cmd)
         
@@ -1832,40 +1832,6 @@ class Director(InfraHost):
                          % new_conf)
             cmd = ("mv " + self.tempest_conf + " " + new_conf + " 2>/dev/null")
             self.run_tty(cmd)
-
-    def configure_dashboard(self):
-        logger.info("Configure Dashboard")
-        ip = self.settings.dashboard_node.public_api_ip
-
-        if self.settings.use_satellite is True:
-            self.run_tty(self.source_stackrc + 'cd ' +
-                         self.pilot_dir +
-                         ';./config_dashboard.py --dashboard_addr ' +
-                         ip + ' --dashboard_pass ' +
-                         self.settings.dashboard_node.root_password +
-                         ' --satOrg ' +
-                         self.settings.satellite_org +
-                         ' --satKey ' +
-                         self.settings.satellite_activation_key +
-                         ' --physId ' +
-                         self.settings.subscription_manager_pool_sah +
-                         ' --cephId ' +
-                         self.settings.subscription_manager_vm_ceph)
-        else:
-            self.run_tty(self.source_stackrc + 'cd ' +
-                         self.pilot_dir +
-                         ';./config_dashboard.py --dashboard_addr ' +
-                         ip +
-                         ' --dashboard_pass ' +
-                         self.settings.dashboard_node.root_password +
-                         ' --subUser ' +
-                         self.settings.subscription_manager_user +
-                         ' --subPass ' +
-                         self.settings.subscription_manager_password +
-                         ' --physId ' +
-                         self.settings.subscription_manager_pool_sah +
-                         ' --cephId ' +
-                         self.settings.subscription_manager_vm_ceph)
 
     def enable_fencing(self):
         if self.settings.enable_fencing is True:

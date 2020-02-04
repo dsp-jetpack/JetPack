@@ -664,14 +664,6 @@ verify_rhsm_status=true
         "private_api_ip":"192.168.140.10"
     },
     {
-        "is_dashboard": "true",
-        "hostname": "dss9k-dashboard",
-        "root_password": "xxxx",
-
-        "public_api_ip": "100.82.35.11",
-        "storage_ip": "192.168.170.11"
-    },
-    {
         "is_controller": "true",
         "idrac_ip": "192.168.110.12",
 
@@ -1404,14 +1396,6 @@ verify_rhsm_status=true
         "public_api_ip":"100.82.35.10",
 
         "private_api_ip":"192.168.140.10"
-    },
-    {
-        "is_dashboard": "true",
-        "hostname": "dss9k-dashboard",
-        "root_password": "xxxx",
-
-        "public_api_ip": "100.82.35.11",
-        "storage_ip": "192.168.170.11"
     },
     {
         "is_controller": "true",

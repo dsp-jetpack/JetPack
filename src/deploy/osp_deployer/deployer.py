@@ -51,10 +51,6 @@ def get_settings():
     parser.add_argument('-overcloud_only', '--overcloud_only',
                         help='Only reinstall the overcloud',
                         action='store_true', required=False)
-    parser.add_argument('-skip_dashboard_vm', '--skip_dashboard_vm',
-                        help='Do not reinstall the Dashboard VM',
-                        action='store_true',
-                        required=False)
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-validate_only', '--validate_only',
                        help='No deployment - just validate config values',
@@ -105,8 +101,6 @@ def deploy():
         else:
             if args.overcloud_only is True:
                 logger.info("Only redeploying the overcloud")
-            if args.skip_dashboard_vm is True:
-                logger.info("Skipping Dashboard VM install")
 
         logger.info("Settings .ini: " + settings.settings_file)
         logger.info("Settings .properties " + settings.network_conf)
@@ -185,29 +179,6 @@ def deploy():
             logger.debug("Deleting overcloud stack")
             director_vm.delete_overcloud()
 
-        if args.skip_dashboard_vm is False:
-            logger.debug("Delete the Dashboard VM")
-            dashboard_ip = settings.dashboard_node.public_api_ip
-            logger.debug(
-                Ssh.execute_command(dashboard_ip,
-                                    "root",
-                                    settings.dashboard_node.root_password,
-                                    "subscription-manager remove --all"))
-            Ssh.execute_command(dashboard_ip,
-                                "root",
-                                settings.dashboard_node.root_password,
-                                "subscription-manager unregister")
-
-            sah_node.delete_dashboard_vm()
-
-            logger.info("=== creating Dashboard VM")
-            sah_node.create_dashboard_vm()
-
-            tester.dashboard_vm_health_check()
-
-        else:
-            logger.info("Skipped the Dashboard VM install")
-
         logger.info("=== Preparing the overcloud ===")
 
         # The network-environment.yaml must be setup for use during DHCP
@@ -255,8 +226,6 @@ def deploy():
         director_vm.summarize_deployment()
         tester.verify_computes_virtualization_enabled()
         tester.verify_backends_connectivity()
-        if args.skip_dashboard_vm is False:
-            director_vm.configure_dashboard()
         director_vm.enable_fencing()
         director_vm.run_sanity_test()
 

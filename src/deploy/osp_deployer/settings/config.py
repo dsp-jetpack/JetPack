@@ -530,9 +530,6 @@ class Settings:
         self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
         self.director_deploy_sh = self.foreman_configuration_scripts +\
             '/mgmt/deploy-director-vm.sh'
-        self.dashboard_deploy_py = self.foreman_configuration_scripts +\
-            '/mgmt/deploy-dashboard-vm.py'
-
         self.undercloud_conf = self.foreman_configuration_scripts +\
             '/pilot/undercloud.conf'
         self.install_director_sh = self.foreman_configuration_scripts +\
@@ -635,11 +632,6 @@ class Settings:
                 try:
                     if node.is_director == "true":
                         self.director_node = node
-                except AttributeError:
-                    pass
-                try:
-                    if node.is_dashboard == "true":
-                        self.dashboard_node = node
                 except AttributeError:
                     pass
                 try:
