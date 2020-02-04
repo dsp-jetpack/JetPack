@@ -550,7 +550,7 @@ def reset_idrac(drac_client, ip_service_tag):
 def config_idrac(instack_lock,
                  ip_service_tag,
                  node_definition=Constants.INSTACKENV_FILENAME,
-                 model_properties=Constants.MODEL_PROPERTIES_FILENAME,
+                 model_properties=Utils.get_model_properties(Constants.MODEL_PROPERTIES_FILENAME),
                  pxe_nic=None,
                  password=None,
                  skip_nic_config=False):
