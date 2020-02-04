@@ -241,7 +241,6 @@ System Type:	Physical
 |-----------------------------------|---------------------------------|-----------------------------------|
 | Solution Admin Host (SAH)         | Red Hat Enterprise Linux Server | Physical                          |
 | Director node                     | Red Hat OpenStack               | Virtual                           |
-| Red Hat Ceph Storage Dashboard VM | Red Hat Ceph Storage Dashboard  | physical (no virtual available at this time |
 | Controller node                   | Red Hat OpenStack               | Physical                          |
 | Compute node                      | Red Hat OpenStack               | Physical                          |
 | Storage node                      | Red Hat Ceph Storage            | Physical                          |
@@ -507,14 +506,13 @@ Now that the SAH node is installed you can deploy and validate the rest of the D
 
     ```bash
     $ cd /root/JetPack/src/deploy/osp_deployer
-    $ python deployer.py -s <path_to_settings_ini_file> [-undercloud_only] [-overcloud_only] [-skip_dashboard_vm]
+    $ python deployer.py -s <path_to_settings_ini_file> [-undercloud_only] [-overcloud_only]
     ```
     
     Optional arguments include:
     
     * -undercloud_only = Reinstall only the undercloud
     * -overcloud_only = Reinstall only the overcloud
-    * -skip_dashboard_vm = Do not reinstall the Red Hat Ceph Storage Dashboard VM
 
 7.	For installation details, execute a tail command on the /auto_results/deployer.log.xxx file on the SAH node. For example:
 
@@ -609,7 +607,7 @@ Now that the SAH node is installed you can deploy and validate the rest of the D
 
 # Appendix B Updating RPMs on version locked nodes
 
-At a high level, updating RPMs on a version locked node (Red Hat OpenStack Platform Director Node or Red Hat Ceph Storage Dashboard VM):
+At a high level, updating RPMs on a version locked node (Red Hat OpenStack Platform Director Node):
 
 1. Identifies the RPMs that need to be updated.
 2. Updated RPMs removed from the version lock list for that node.
@@ -2677,14 +2675,6 @@ sample.properties
         "private_api_ip":"192.168.140.13"
     },
     {
-        "is_dashboard": "true",
-        "hostname": "dashboard",
-        "root_password": "xxxxxxxxx",
-
-        "public_api_ip": "192.168.190.14",
-        "storage_ip": "192.168.170.14"
-    },
-    {
         "is_controller": "true",
         "iDRAC_ip": "192.168.110.21",
 
@@ -3713,7 +3703,7 @@ Validation of the complete solution is based on the hardware in the Ready Archit
 
 **Hardware components used in the solution include:**
 
-* Node 1: Dell EMC PowerEdge R640 Solution Admin Host with the Red Hat OpenStack Platform Director and the Red Hat Ceph Storage Dashboard Installed
+* Node 1: Dell EMC PowerEdge R640 Solution Admin Host with the Red Hat OpenStack Platform Director Installed
 * Nodes 2 - 4: Dell EMC PowerEdge R640 OpenStack Controllers
 * Nodes 5 - 7 Dell EMC PowerEdge R640 Nova Compute Nodes
 * Nodes 8 - 10: Dell EMC PowerEdge R740xd Storage Nodes
