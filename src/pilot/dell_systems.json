@@ -33,7 +33,7 @@
     "pxe_nic": "NIC.Integrated.1-1-1"
   },
   "PowerEdge XE2420": {
-    "pxe_nic": "NIC.Slot.4-1-1"
+    "pxe_nic": "NIC.Mezzanine.1-1-1"
   },
   "DSS 9600": {
     "pxe_nic": "NIC.Mezzanine.3-1-1"
