@@ -1,0 +1,135 @@
+heat_template_version: queens
+ 
+description: >
+  This HOT Template creates:
+  - A flavor
+  - A security group
+  - A network port on the private network
+  - A static floating IP
+  - A DPE API instance and allocate the floating IP to it.
+ 
+parameters:
+  av_api_flavor_name:
+    type: string
+    description: Flavor name to create
+    default: dpe-api
+  av_api_disk_size:
+    type: number
+    description: Size of the disk to associate to the flavor
+    default: 16
+  av_api_ram_qty:
+    type: number
+    description: Amount of RAM to associate to the flavor
+    default: 6144
+  av_api_vcpus_count:
+    type: number
+    description: vCPUs count to associate to the flavor
+    default: 2
+  av_api_security_group_name:
+    type: string
+    description: Security Group name
+    default: dpe-avamar-api-secgroup
+  avamar_private_net:
+    type: string
+    description: Private network for all Avamar instances
+    default: avamar-net
+  avamar_private_subnet:
+    type: string
+    description: Private subnet for all avamar instances
+    default: avamar-subnet
+  av_api_instance_name:
+    type: string
+    description: Name of the instance to build
+    default: dpe-api
+  av_api_image_name:
+    type: string
+    description: Image name to build the instance on
+    default: dpe-api
+  keypair_name:
+    type: string
+    description: Key Pair to use to ssh in
+    default: avamar_key
+  network_name:
+    type: string
+    description: Network name to buil the instance on
+    default: provider-1392-net
+  dpe_api_ip:
+    type: string
+    description: Static floating IP
+    default: 100.67.139.71
+  keystone:
+    type: string
+    description: Keystone catalog URL
+    default: http://100.67.139.62:5000
+  avamar_rest_api:
+    type: string
+    description: IP address or hostname of the Avamar REST API instance
+    default: 100.67.139.70
+ 
+resources:
+  av_api_flavor:
+    type: OS::Nova::Flavor
+    properties:
+      name: { get_param: av_api_flavor_name }
+      is_public: False
+      tenants:
+        - avamar
+      disk: { get_param: av_api_disk_size }
+      ram: { get_param: av_api_ram_qty }
+      vcpus: { get_param: av_api_vcpus_count }
+ 
+  av_api_sec_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: { get_param: av_api_security_group_name }
+      rules:
+        - protocol: icmp
+          remote_ip_prefix: 0.0.0.0/0
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 8443
+          port_range_max: 8443
+        - protocol: tcp
+          remote_ip_prefix: 0.0.0.0/0
+          port_range_min: 443
+          port_range_max: 443
+ 
+  av_api_port:
+    type: OS::Neutron::Port
+    properties:
+      network: { get_param: avamar_private_net }
+      security_groups:
+        - { get_resource: av_api_sec_group }
+      fixed_ips:
+        - subnet: { get_param: avamar_private_subnet }
+ 
+  av_api_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: network_name }
+      port_id: { get_resource: av_api_port }
+      floating_ip_address: { get_param: dpe_api_ip }
+ 
+  av_api_instance:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: av_api_instance_name }
+      flavor: { get_resource: av_api_flavor }
+      image: { get_param: av_api_image_name }
+      key_name: { get_param: keypair_name }
+      networks:
+        - port: { get_resource: av_api_port }
+      user_data_format: RAW
+      user_data:
+        str_replace:
+          template: |
+            #cloud-config
+            bootcmd:
+            - /tmp/postconfig.sh $KEYSTONE $AVAMAR_REST_API
+          params:
+            $KEYSTONE: { get_param: keystone }
+            $AVAMAR_REST_API: { get_param: avamar_rest_api }

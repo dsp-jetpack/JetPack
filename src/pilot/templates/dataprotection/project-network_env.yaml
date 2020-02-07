@@ -1,0 +1,9 @@
+parameters:
+  project_name: avamar
+  project_network_name: avamar-net
+  project_subnet_name: avamar-subnet
+  project_subnet_cidr: 192.168.240.0/24
+  project_router_name: avamar-router
+  ext_network: provider-872-net
+  ext_network_ip: 100.67.87.69
+  ext_subnet: provider-872-subnet

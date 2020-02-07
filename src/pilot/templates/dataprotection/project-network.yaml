@@ -1,0 +1,61 @@
+heat_template_version: queens
+ 
+description: >
+  This HOT Template creates:
+  - A project network
+  - A project subnet
+  - A router to interconnect this project with the external network
+ 
+ 
+parameters:
+  project_name:
+    type: string
+    description: Project name
+  project_network_name:
+    type: string
+    description: Project network name
+  project_subnet_name:
+    type: string
+    description: Project subnet name
+  project_subnet_cidr:
+    type: string
+    description: Project subnet CIDR
+  project_router_name:
+    type: string
+    description: Project router name
+  ext_network:
+    type: string
+    description: External network name
+  ext_network_ip:
+    type: string
+    description: External network fixed ip used for gateway
+  ext_subnet:
+    type: string
+    description: External subnet which owns the fixed ip
+ 
+resources:
+  project_network:
+    type: OS::Neutron::Net
+    properties:
+      name: { get_param: project_network_name }
+ 
+  project_subnet:
+    type: OS::Neutron::Subnet
+    properties:
+      name: { get_param: project_subnet_name }
+      network: { get_resource: project_network }
+      cidr: { get_param: project_subnet_cidr }
+ 
+  project_router:
+    type: OS::Neutron::Router
+    properties:
+      name: { get_param: project_router_name }
+      external_gateway_info: 
+        network: { get_param: ext_network }
+        external_fixed_ips: [ { subnet: { get_param: ext_subnet }, ip_address: { get_param: ext_network_ip } } ]
+ 
+  project_router_interface:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: { get_resource: project_router }
+      subnet_id: { get_resource: project_subnet }
