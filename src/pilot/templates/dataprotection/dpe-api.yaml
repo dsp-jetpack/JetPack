@@ -12,7 +12,7 @@ parameters:
   av_api_flavor_name:
     type: string
     description: Flavor name to create
-    default: dpe-avamar-api
+    default: dpe-api
   av_api_disk_size:
     type: number
     description: Size of the disk to associate to the flavor
@@ -40,11 +40,11 @@ parameters:
   av_api_instance_name:
     type: string
     description: Name of the instance to build
-    default: dpe-avamar-api
+    default: dpe-api
   av_api_image_name:
     type: string
     description: Image name to build the instance on
-    default: dpe-avamar-api
+    default: dpe-api
   keypair_name:
     type: string
     description: Key Pair to use to ssh in
