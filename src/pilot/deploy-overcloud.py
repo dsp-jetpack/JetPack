@@ -540,7 +540,7 @@ def main():
         # storage-environment.yaml and ceph-radosgw.yaml
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "storage-environment.yaml" \
-                    " -e ~/overcloud_images.yaml" \
+                    " -e ~/containers-prepare-parameter.yaml" \
                     " -e ~/pilot/templates/dell-environment.yaml" 
         host_config = False
         if args.enable_hugepages or args.enable_numa:
