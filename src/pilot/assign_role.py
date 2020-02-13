@@ -857,11 +857,11 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
     LOG.info("Generating OSD config for {ip}".format(ip=ip_mac_service_tag))
     system_id = drac_client.get_system().uuid
 
-    spinners, ssds = get_drives(drac_client)
+    spinners, ssds, nvme_drives = get_drives(drac_client)
 
     new_osd_config = None
     # Let ceph handle journaling/disks assignment
-    disks = spinners + ssds
+    disks = spinners + ssds + nvme_drives
     new_osd_config  = generate_osd_config_without_journals(controllers,
                                                               disks)
 
@@ -959,6 +959,11 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
 def get_drives(drac_client):
     spinners = []
     ssds = []
+    # Getting all NVMe drives
+    nvme_drives = [drives for drives in drac_client.list_physical_disks()
+            if drives.device_protocol is not None  and
+            drives.device_protocol.startswith("NVMe")]
+
     virtual_disks = drac_client.list_virtual_disks()
 
     raid0_disks = [vd for vd in virtual_disks if vd.raid_level != '1']
@@ -1014,7 +1019,7 @@ def get_drives(drac_client):
             else:
                 ssds.append(physical_disks[pd_id])
 
-    return spinners, ssds
+    return spinners, ssds, nvme_drives
 
 def generate_osd_config_without_journals(controllers, drives):
 
@@ -1023,9 +1028,14 @@ def generate_osd_config_without_journals(controllers, drives):
         'osd_objectstore': 'bluestore',
         'devices': []}
     for drive in drives:
-        drive_device_name = get_by_path_device_name(
-             drive, controllers)
-        osd_config['devices'].append(drive_device_name)
+        # Get by-path device name for NVMe drives
+        if drive.controller.startswith('PCIe'):
+            nvme_device_name = get_by_path_nvme_device_name(drive)
+            osd_config['devices'].append(nvme_device_name)
+        else:
+            drive_device_name = get_by_path_device_name(
+                    drive, controllers)
+            osd_config['devices'].append(drive_device_name)
     return osd_config
 
 def generate_osd_config_with_journals(controllers, osd_drives, ssds):
@@ -1055,6 +1065,11 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds):
         remaining_ssds -= 1
 
     return osd_config
+
+
+def get_by_path_nvme_device_name(physical_disk):
+    bus = physical_disk.bus.lower()
+    return ('/dev/disk/by-path/pci-0000:'+ str(bus) + ':00.0-nvme-1')
 
 
 def get_by_path_device_name(physical_disk, controllers):
