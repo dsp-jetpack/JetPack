@@ -959,10 +959,7 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
 def get_drives(drac_client):
     spinners = []
     ssds = []
-    # Getting all NVMe drives
-    nvme_drives = [drives for drives in drac_client.list_physical_disks()
-            if drives.device_protocol is not None  and
-            drives.device_protocol.startswith("NVMe")]
+    nvme_drives = []
 
     virtual_disks = drac_client.list_virtual_disks()
 
@@ -988,6 +985,9 @@ def get_drives(drac_client):
 
     if physical_disks:
         for pd_id in physical_disks:
+            # Get all NVMe drives
+            if is_nvme_drive(physical_disks[pd_id]):
+                nvme_drives.append(physical_disks[pd_id])
             # Eliminate physical disks in a state other than non-RAID
             # including failed disks
             if physical_disks[pd_id].raid_status != "non-RAID":
@@ -1022,14 +1022,13 @@ def get_drives(drac_client):
     return spinners, ssds, nvme_drives
 
 def generate_osd_config_without_journals(controllers, drives):
-
     osd_config = {
         'osd_scenario': 'lvm',
         'osd_objectstore': 'bluestore',
         'devices': []}
     for drive in drives:
         # Get by-path device name for NVMe drives
-        if drive.controller.startswith('PCIe'):
+        if is_nvme_drive(drive):
             nvme_device_name = get_by_path_nvme_device_name(drive)
             osd_config['devices'].append(nvme_device_name)
         else:
@@ -1066,11 +1065,14 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds):
 
     return osd_config
 
+def is_nvme_drive(disk):
+    return True\
+        if hasattr(disk, "device_protocol") and disk.device_protocol and\
+        disk.device_protocol.startswith("NVMe") else False
 
 def get_by_path_nvme_device_name(physical_disk):
     bus = physical_disk.bus.lower()
     return ('/dev/disk/by-path/pci-0000:'+ str(bus) + ':00.0-nvme-1')
-
 
 def get_by_path_device_name(physical_disk, controllers):
     if physical_disk.description.startswith("Virtual Disk"):
