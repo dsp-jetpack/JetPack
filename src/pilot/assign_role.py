@@ -988,6 +988,7 @@ def get_drives(drac_client):
             # Get all NVMe drives
             if is_nvme_drive(physical_disks[pd_id]):
                 nvme_drives.append(physical_disks[pd_id])
+                continue
             # Eliminate physical disks in a state other than non-RAID
             # including failed disks
             if physical_disks[pd_id].raid_status != "non-RAID":
@@ -1065,6 +1066,10 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds):
 
     return osd_config
 
+# This method can be called with either physical or virtual disk.
+# Only physical disks can be NVMe drives, and only physical disks
+# have attribute named 'device_protocol'. As a result, the method
+# return True only if device_protocol is present and indicates NVMe.
 def is_nvme_drive(disk):
     return True\
         if hasattr(disk, "device_protocol") and disk.device_protocol and\
