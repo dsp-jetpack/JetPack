@@ -1,5 +1,5 @@
---- raid_orig.py	2020-01-22 09:17:48.024016166 +0000
-+++ raid.py	2020-01-22 09:16:40.606540230 +0000
+--- raid.py.orig	2019-06-04 04:56:04.000000000 +0000
++++ raid_modified.py	2020-02-17 11:58:54.234844526 +0000
 @@ -12,6 +12,7 @@
  #    under the License.
  
@@ -8,16 +8,27 @@
  import logging
  
  from dracclient import constants
-@@ -84,6 +85,9 @@
-      'device_protocol'])
- 
- 
+@@ -81,7 +82,10 @@
+     ['id', 'description', 'controller', 'manufacturer', 'model', 'media_type',
+      'interface_type', 'size_mb', 'free_size_mb', 'serial_number',
+      'firmware_version', 'status', 'raid_status', 'sas_address',
+-     'device_protocol'])
++     'device_protocol', 'bus'])
++
++
 +NO_FOREIGN_DRIVES = ["STOR058", "STOR018"]
-+
-+
- class PhysicalDisk(PhysicalDiskTuple):
  
-     def __new__(cls, **kwargs):
+ 
+ class PhysicalDisk(PhysicalDiskTuple):
+@@ -197,7 +201,7 @@
+                                                'PrimaryStatus')],
+             firmware_version=self._get_raid_controller_attr(
+                 drac_controller, 'ControllerFirmwareVersion'),
+-            bus=self._get_raid_controller_attr(drac_controller, 'Bus'),
++            bus=self._get_raid_controller_attr(drac_controller, 'Bus').upper(),
+             supports_realtime=RAID_CONTROLLER_IS_REALTIME[
+                 self._get_raid_controller_attr(
+                     drac_controller, 'RealtimeCapability')])
 @@ -231,7 +235,12 @@
          drac_raid_level = self._get_virtual_disk_attr(drac_disk, 'RAIDTypes')
          size_b = self._get_virtual_disk_attr(drac_disk, 'SizeInBytes')
@@ -47,7 +58,31 @@
  
      def _get_virtual_disk_attrs(self, drac_disk, attr_name):
          return utils.get_all_wsman_resource_attrs(
-@@ -633,15 +644,17 @@
+@@ -315,7 +326,12 @@
+         drac_media_type = self._get_physical_disk_attr(drac_disk, 'MediaType',
+                                                        uri)
+         drac_bus_protocol = self._get_physical_disk_attr(drac_disk,
+-                                                         'BusProtocol', uri)
++                                                         'BusProtocol', uri),
++        bus = self._get_physical_disk_attr(drac_disk,
++                                           'Bus', uri,  allow_missing=True)
++
++        if bus is not None:
++            bus = bus.upper()
+ 
+         return PhysicalDisk(
+             id=fqdd,
+@@ -341,7 +357,8 @@
+             device_protocol=self._get_physical_disk_attr(drac_disk,
+                                                          'DeviceProtocol',
+                                                          uri,
+-                                                         allow_missing=True))
++                                                         allow_missing=True),
++            bus=bus)
+ 
+     def _get_physical_disk_attr(self, drac_disk, attr_name, uri,
+                                 allow_missing=False):
+@@ -633,15 +650,17 @@
          :param mode: constants.RaidStatus enumeration used to
                       determine what raid status to check for.
          :param physical_disks: all physical disks
@@ -70,7 +105,7 @@
          p_disk_id_to_status = {}
          for physical_disk in physical_disks:
              p_disk_id_to_status[physical_disk.id] = physical_disk.raid_status
-@@ -700,34 +713,37 @@
+@@ -700,34 +719,37 @@
  
              raise ValueError(error_msg)
  
@@ -79,7 +114,8 @@
      def change_physical_disk_state(self, mode,
                                     controllers_to_physical_disk_ids=None):
 -        """Convert disks RAID status and return a list of controller IDs
--
++        """Convert disks RAID status
+ 
 -        Builds a list of controller ids that have had disks converted to the
 -        specified RAID status by:
 -        - Examining all the disks in the system and filtering out any that are
@@ -90,14 +126,13 @@
 -          statuses and raise an exception where appropriate.
 -        - Return a list of controller IDs for controllers whom have had any of
 -          their disks converted, and whether a reboot is required.
-+        """Convert disks RAID status
- 
--        The caller typically should then create a config job for the list of
--        controllers returned to finalize the RAID configuration.
 +        This method intelligently converts the requested physical disks from
 +        RAID to JBOD or vice versa.  It does this by only converting the
 +        disks that are not already in the correct state.
  
+-        The caller typically should then create a config job for the list of
+-        controllers returned to finalize the RAID configuration.
+-
 -        :param mode: constants.RaidStatus enumeration used to determine what
 -                     raid status to check for.
 +        :param mode: constants.RaidStatus enumeration that indicates the mode
@@ -129,7 +164,7 @@
          :raises: DRACOperationFailed on error reported back by the DRAC and the
                   exception message does not contain NOT_SUPPORTED_MSG constant.
          :raises: Exception on unknown error.
-@@ -754,13 +770,14 @@
+@@ -754,13 +776,14 @@
          Raise exception if there are any failed drives or
          drives not in status 'ready' or 'non-RAID'
          '''
@@ -147,7 +182,7 @@
              if physical_disk_ids:
                  LOG.debug("Converting the following disks to {} on RAID "
                            "controller {}: {}".format(
-@@ -773,22 +790,39 @@
+@@ -773,22 +796,39 @@
                      if constants.NOT_SUPPORTED_MSG in str(ex):
                          LOG.debug("Controller {} does not support "
                                    "JBOD mode".format(controller))
@@ -173,8 +208,7 @@
 -                        if conversion_results["is_commit_required"]:
 -                            controllers.append(controller)
 +                    controllers_to_results[controller] = conversion_results
- 
--        return {'is_reboot_required': is_reboot_required,
++
 +                    # Remove the code below when is_reboot_required and
 +                    # commit_required_ids are deprecated
 +                    reboot_true = constants.RebootRequired.true
@@ -193,13 +227,14 @@
 +                        is_commit_required_value=False,
 +                        is_reboot_required_value=constants.
 +                        RebootRequired.false)
-+
+ 
+-        return {'is_reboot_required': is_reboot_required,
 +        return {'conversion_results': controllers_to_results,
 +                'is_reboot_required': is_reboot_required,
                  'commit_required_ids': controllers}
  
      def is_realtime_supported(self, raid_controller_fqdd):
-@@ -805,3 +839,100 @@
+@@ -805,3 +845,100 @@
              return True
  
          return False
