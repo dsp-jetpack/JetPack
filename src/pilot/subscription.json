@@ -25,7 +25,6 @@
                        "rhel-7-server-extras-rpms",
                        "rhel-ha-for-rhel-7-server-rpms",
                        "rhel-7-server-openstack-13-rpms",
-                       "rhel-7-server-openstack-13-devtools-rpms",
                        "rhel-7-server-rhceph-3-mon-rpms",
                        "rhel-7-server-rhceph-3-tools-rpms" ]
         },
@@ -35,7 +34,6 @@
                        "rhel-7-server-extras-rpms",
                        "rhel-ha-for-rhel-7-server-rpms",
                        "rhel-7-server-openstack-13-rpms",
-                       "rhel-7-server-openstack-13-devtools-rpms",
                        "rhel-7-server-rhceph-3-mon-rpms",
                        "rhel-7-server-rhceph-3-tools-rpms" ]
         },
@@ -46,7 +44,6 @@
                        "rhel-7-server-extras-rpms",
                        "rhel-ha-for-rhel-7-server-rpms",
                        "rhel-7-server-openstack-13-rpms",
-                       "rhel-7-server-openstack-13-devtools-rpms",
                        "rhel-7-server-rhceph-3-mon-rpms",
                        "rhel-7-server-rhceph-3-osd-rpms",
                        "rhel-7-server-rhceph-3-tools-rpms" ]
