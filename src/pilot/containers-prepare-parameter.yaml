@@ -8,11 +8,11 @@ parameter_defaults:
   - push_destination: true
     set:
       ceph_image: rhceph-4-rhel8
-      ceph_namespace: registry.redhat.io/rhceph-beta
+      ceph_namespace: registry.redhat.io/rhceph
       ceph_tag: latest
       name_prefix: openstack-
       name_suffix: ''
-      namespace: registry.redhat.io/rhosp-beta
+      namespace: registry.redhat.io/rhosp-rhel8
 # Use Null value for standard neutron-container and use ovn for OVN-based-container
       neutron_driver:
       tag: 16.0
