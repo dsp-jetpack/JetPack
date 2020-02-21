@@ -513,8 +513,14 @@ class Settings:
         else:
             logger.info("using default repo settings")
             self.rhsm_repos = [
-                'rhel-7-server-openstack-13-rpms',
-                'rhel-7-server-openstack-13-devtools-rpms',
+                'rhel-8-for-x86_64-baseos-rpms',
+                'rhel-8-for-x86_64-appstream-rpms',
+                'rhel-8-for-x86_64-highavailability-rpms',
+                'ansible-2.8-for-rhel-8-x86_64-rpms',
+                'advanced-virt-for-rhel-8-x86_64-rpms',
+                'satellite-tools-6.5-for-rhel-8-x86_64-rpms',
+                'openstack-16-for-rhel-8-x86_64-rpms',
+                'fast-datapath-for-rhel-8-x86_64-rpms',
                 'rhceph-4-tools-for-rhel-8-x86_64-rpms']
         if dev_settings['verify_rhsm_status'].lower() \
                 == 'true':
