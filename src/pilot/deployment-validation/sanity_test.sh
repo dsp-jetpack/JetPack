@@ -229,7 +229,11 @@ create_the_networks(){
   net_exists=$(openstack network list -c Name -f value | grep "$TENANT_NETWORK_NAME")
   if [ "$net_exists" != "$TENANT_NETWORK_NAME" ]
   then
-    execute_command "openstack network create $TENANT_NETWORK_NAME "
+    if [ "$SMART_NIC_ENABLED" != false ];then
+      execute_command "openstack network create $TENANT_NETWORK_NAME --provider-physical-network physint --provider-network-type vlan --share"
+    else
+      execute_command "openstack network create $TENANT_NETWORK_NAME "
+    fi
   else
     info "#----- Tenant network '$TENANT_NETWORK_NAME' exists. Skipping"
   fi
@@ -717,7 +721,7 @@ setup_manila(){
   fi   
   execute_command "manila share-network-list"
   
-	  
+    
   execute_command "manila list"
 
   info "### Kicking off share creation..."
@@ -871,7 +875,12 @@ setup_project(){
   then
     execute_command "openstack project create $PROJECT_NAME"
     execute_command "openstack user create --project $PROJECT_NAME --password $SANITY_USER_PASSWORD --email $SANITY_USER_EMAIL $USER_NAME"
-    execute_command "openstack role add --project $PROJECT_NAME --user $USER_NAME member"
+    if [ "$SMART_NIC_ENABLED" != false ];then
+      execute_command "openstack role add --project $PROJECT_NAME --user $USER_NAME admin"
+    else
+      execute_command "openstack role add --project $PROJECT_NAME --user $USER_NAME member"
+    fi
+
   else
     info "#Project $PROJECT_NAME exists ---- Skipping"
   fi
@@ -884,12 +893,6 @@ end(){
 
 
 info "###Appendix-C Openstack Operations Functional Test ###"
-
-if [ "$SMART_NIC_ENABLED" != false ]
-then
-  info "### SRIOV OFFLOAD ENABLED. SKIPPING SANITY TEST"
-  exit
-fi
 
 init
 
