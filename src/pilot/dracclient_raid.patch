@@ -63,7 +63,7 @@
                                                         uri)
          drac_bus_protocol = self._get_physical_disk_attr(drac_disk,
 -                                                         'BusProtocol', uri)
-+                                                         'BusProtocol', uri),
++                                                         'BusProtocol', uri)
 +        bus = self._get_physical_disk_attr(drac_disk,
 +                                           'Bus', uri,  allow_missing=True)
 +
