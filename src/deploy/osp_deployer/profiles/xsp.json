@@ -262,6 +262,22 @@
                ]
             }
          }
-      }
+      },
+     {
+       "Storage back-end Settings":{
+            "unity_storage_protocol" : {
+                  "valid_values": [
+                  "iSCSI",
+                  "FC"
+               ]
+             },
+            "powermax_protocol" : {
+                  "valid_values": [
+                  "iSCSI",
+                  "FC"
+               ]
+        }
+       }
+      },
    ]
 }
