@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import ConfigParser
 import json
 import os
 from constants import Constants
@@ -40,3 +41,17 @@ class Utils:
             raise
 
         return model_properties
+
+    @staticmethod
+    def is_enable_routed_networks():
+        conf = ConfigParser.SafeConfigParser()
+        conf.read(Constants.UNDERCLOUD_CONF)
+        enable_routed_networks = False
+        try:
+            enable_routed_networks = conf.getboolean('DEFAULT',
+                                                     'enable_routed_networks')
+        except ValueError as ex:
+            ex.message = ("Could not find enable_routed_networks "
+                          + "in undercloud.conf")
+
+        return enable_routed_networks

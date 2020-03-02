@@ -14,13 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-import time
-import subprocess
-import logging
-import traceback
 import argparse
+import logging
 import os
+import sys
+import traceback
 from osp_deployer.director import Director
 from osp_deployer.sah import Sah
 from osp_deployer.settings.config import Settings
@@ -104,6 +102,8 @@ def deploy():
     logger.debug("=================================")
     try:
         settings, args = get_settings()
+        logger.debug("Settings: %s" % settings)
+
         if args.validate_only is True:
             logger.info("Only validating ini/properties config values")
         else:

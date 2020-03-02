@@ -18,6 +18,7 @@ import argparse
 import logging
 import os
 import sys
+import utils
 from arg_helper import ArgHelper
 from credential_helper import CredentialHelper
 from ironic_helper import IronicHelper
@@ -152,7 +153,6 @@ def introspect_nodes(in_band, ironic_client, nodes,
     inspecting = []
     for node in nodes:
         use_oob_introspection = is_introspection_oob(in_band, node, logger)
-
         introspection_type = "out-of-band"
         if not use_oob_introspection:
             introspection_type = "in-band"
@@ -265,14 +265,34 @@ def introspect_nodes(in_band, ironic_client, nodes,
             introspect_nodes(False, ironic_client, bad_nodes,
                              transition_nodes=False)
 
+    if utils.Utils.is_enable_routed_networks():
+        for node in nodes:
+            assign_physcial_port(ironic_client, node)
+
     if transition_nodes:
         nodes = transition_to_state(ironic_client, nodes,
                                     'provide', 'available')
 
 
+def assign_physcial_port(ironic_client, node):
+    # TODO: delete unused? ip = CredentialHelper.get_drac_ip(node)
+    # TODO: Hard-coding ctlplane to test overcloud, we will eventually need
+    # to use convention to figure out correct networks for
+    # edge sites and create ports for the edge site compute nodes as well.
+    physical_network = 'ctlplane'
+    for port in ironic_client.node.list_ports(node.uuid):
+        # for now do all ports may only need provisiong interface
+        # if port.address.lower() == \
+        #        node.properties["provisioning_mac"].lower():
+
+        cmd = "openstack baremetal port set --physical-network {} {}".format(
+            physical_network, port.uuid)
+        logger.info("Assigning physical network to port, cmd: %s", cmd)
+        os.system(cmd)
+
+
 def main():
     args = parse_arguments()
-
     LoggingHelper.configure_logging(args.logging_level)
 
     ironic_client = IronicHelper.get_ironic_client()
