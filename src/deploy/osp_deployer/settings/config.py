@@ -16,7 +16,6 @@
 
 import logging
 import os
-import re
 import inspect
 import json
 import subprocess
@@ -29,8 +28,16 @@ logger = logging.getLogger("osp_deployer")
 class Settings():
     CEPH_OSD_CONFIG_FILE = 'pilot/templates/ceph-osd-config.yaml'
     TEMPEST_DEFAULT_WORKSPACE_NAME = 'mytempest'
+    UNDERCLOUD_CONFIG_FILE = 'pilot/undercloud.conf'
 
     settings = ''
+
+    def __str__(self):
+        _settings = {}
+        _settings["node_types"] = str(self.node_types)
+        _settings["node_type_subnets"] = str(self.node_type_subnets)
+        _settings["undercloud_conf"] = str(self.undercloud_conf)
+        return str(_settings)
 
     def __init__(self, settings_file):
 
@@ -527,9 +534,6 @@ class Settings():
             '/mgmt/deploy-director-vm.sh'
         self.dashboard_deploy_py = self.foreman_configuration_scripts +\
             '/mgmt/deploy-dashboard-vm.py'
-
-        self.undercloud_conf = self.foreman_configuration_scripts +\
-            '/pilot/undercloud.conf'
         self.install_director_sh = self.foreman_configuration_scripts +\
             '/pilot/install-director.sh'
         self.deploy_overcloud_sh = self.foreman_configuration_scripts + \
@@ -563,7 +567,17 @@ class Settings():
             'test.noarch.rpm'
         self.neutron_sriov_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/neutron-sriov.yaml'
+        self.undercloud_conf_path = self.foreman_configuration_scripts + \
+            '/' + Settings.UNDERCLOUD_CONFIG_FILE
 
+        # New custom node type and edge related fields
+        self.node_types = None
+        self.node_type_subnets = {}
+        self.undercloud_conf = self._parse_undercloud_conf()
+        # Process node types for edge sites etc
+        if ('node_types' in dev_settings
+                and len(dev_settings['node_types']) > 0):
+            self._process_node_type_settings(dev_settings['node_types'])
         # The NIC configurations settings are validated after the Settings
         # class has been instanciated.  Guard against the case where the two
         # fixed are missing here to prevent an exception before validation
@@ -735,3 +749,21 @@ class Settings():
             logger.debug("unconventional setup...can t" +
                          " pick source version info")
             self.source_version = "????"
+
+    def _process_node_type_settings(self, node_types):
+        self.node_types = (list(map(str.strip, node_types.split(','))))
+        logger.debug("Node types: %s", str(self.node_types))
+        for _node_type in self.node_types:
+            # if we have ini section name that mathes node type
+            # this is edge an site subnet definition to be injected into
+            # undercloud.com
+            if self.conf.has_section(_node_type):
+                _node_type_section = self.get_settings_section(_node_type)
+                self.node_type_subnets[_node_type] = _node_type_section
+
+    def _parse_undercloud_conf(self):
+        undercloud_conf = ConfigParser.ConfigParser()
+        # The following line makes the parser return case sensitive keys
+        undercloud_conf.optionxform = str
+        undercloud_conf.read(self.undercloud_conf_path)
+        return undercloud_conf
