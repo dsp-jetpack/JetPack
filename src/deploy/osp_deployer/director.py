@@ -846,6 +846,16 @@ class Director(InfraHost):
 
         self.setup_unity_manila(unity_manila_yaml)
 
+        #  Now powermax
+        powermax_manila_yaml = self.templates_dir + "/powermax-manila-config.yaml"
+        self.upload_file(self.settings.powermax_manila_yaml,
+                         powermax_manila_yaml)
+        # Backup before modifying
+        self.run_tty("cp " + powermax_manila_yaml +
+                     " " + powermax_manila_yaml + ".bak")
+
+        self.setup_powermax_manila(powermax_manila_yaml)
+
     def setup_dellsc(self, dellsc_cinder_yaml):
 
         if self.settings.enable_dellsc_backend is False:
@@ -1056,6 +1066,41 @@ class Director(InfraHost):
         ]
         for cmd in cmds:
             self.run_tty(cmd)
+
+    def setup_powermax_manila(self, powermax_manila_yaml):
+
+        if self.settings.enable_powermax_manila_backend is False:
+            logger.debug("Not setting up powermax manila backend.")
+            return
+
+        logger.debug("Configuring dell emc powermax manila backend.")
+
+        cmds = ['sed -i "s|<manila_powermax_driver_handles_share_servers>|' +
+                self.settings.manila_powermax_driver_handles_share_servers +
+                '|" ' + powermax_manila_yaml,
+                'sed -i "s|<manila_powermax_nas_login>|' +
+                self.settings.manila_powermax_nas_login + '|" ' +
+                powermax_manila_yaml,
+                'sed -i "s|<manila_powermax_nas_password>|' +
+                self.settings.manila_powermax_nas_password + '|" ' +
+                powermax_manila_yaml,
+                'sed -i "s|<manila_powermax_nas_server>|' +
+                self.settings.manila_powermax_nas_server + '|" ' +
+                powermax_manila_yaml,
+                'sed -i "s|<manila_powermax_server_container>|' +
+                self.settings.manila_powermax_server_container + '|" ' +
+                powermax_manila_yaml,
+                'sed -i "s|<manila_powermax_share_data_pools>|' +
+                self.settings.manila_powermax_share_data_pools + '|" ' +
+                powermax_manila_yaml,
+                'sed -i "s|<manila_powermax_ethernet_ports>|' +
+                self.settings.manila_powermax_ethernet_ports + '|" ' +
+                powermax_manila_yaml,
+                ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
+
 
     def setup_net_envt(self):
 
@@ -1503,6 +1548,10 @@ class Director(InfraHost):
             cmd += " --enable_powermax"
             cmd += " --powermax_protocol "
             cmd += self.settings.powermax_protocol
+        if self.settings.enable_powermax_backend is True:
+            cmd += " --enable_powermax"
+        if self.settings.enable_powermax_manila_backend is True:
+            cmd += " --enable_powermax_manila"
         if self.settings.enable_rbd_backend is False:
             cmd += " --disable_rbd"
         if self.settings.overcloud_static_ips is True:

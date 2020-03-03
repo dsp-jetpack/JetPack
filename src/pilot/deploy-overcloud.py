@@ -194,6 +194,9 @@ def create_share_types():
     if args.enable_unity_manila:
         types.append(["unity_share", "tripleo_manila_unity"])
 
+    if args.enable_powermax_manila:
+        types.append(["powermax_share", "tripleo_manila_powermax"])
+
     overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 
     for type in types:
@@ -354,6 +357,10 @@ def main():
                             required=False,
                             default="iSCSI",
                             help="Dell EMC Powermax Protocol - iSCSI or FC")
+        parser.add_argument('--enable_powermax_manila',
+                            action='store_true',
+                            default=False,
+                            help="Enable Dell EMC Unity Manila backend")
         parser.add_argument('--disable_rbd',
                             action='store_true',
                             default=False,
@@ -598,6 +605,8 @@ def main():
            else:
                env_opts += " -e ~/pilot/templates/dellemc-powermax-fc-cinder-" \
                         "backend.yaml"
+        if args.enable_powermax_manila:
+            env_opts += " -e ~/pilot/templates/powermax-manila-config.yaml"
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
