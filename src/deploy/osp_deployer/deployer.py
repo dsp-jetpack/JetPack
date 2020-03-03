@@ -53,10 +53,6 @@ def get_settings():
                         help='Do not reinstall the Dashboard VM',
                         action='store_true',
                         required=False)
-    parser.add_argument('-skip_idrac_config', '--skip_idrac_config',
-                        help='Skip configuring iDRACs',
-                        action='store_true',
-                        required=False)
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-validate_only', '--validate_only',
                        help='No deployment - just validate config values',
@@ -111,8 +107,6 @@ def deploy():
                 logger.info("Only redeploying the overcloud")
             if args.skip_dashboard_vm is True:
                 logger.info("Skipping Dashboard VM install")
-            if args.skip_idrac_config is True:
-                logger.info("Skipping iDRAC configuration")
 
         logger.info("Settings .ini: " + settings.settings_file)
         logger.info("Settings .properties " + settings.network_conf)
@@ -221,8 +215,7 @@ def deploy():
         director_vm.setup_net_envt()
         director_vm.configure_dhcp_server()
         director_vm.node_discovery()
-        if args.skip_idrac_config is False:
-            director_vm.configure_idracs()
+        director_vm.configure_idracs()
         director_vm.import_nodes()
         director_vm.node_introspection()
         director_vm.update_sshd_conf()
