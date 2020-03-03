@@ -265,16 +265,12 @@ def introspect_nodes(in_band, ironic_client, nodes,
             introspect_nodes(False, ironic_client, bad_nodes,
                              transition_nodes=False)
 
-    if utils.Utils.is_enable_routed_networks():
-        for node in nodes:
-            assign_physcial_port(ironic_client, node)
-
     if transition_nodes:
         nodes = transition_to_state(ironic_client, nodes,
                                     'provide', 'available')
 
 
-def assign_physcial_port(ironic_client, node):
+def assign_physcial_network_to_ports(ironic_client, node):
     # TODO: delete unused? ip = CredentialHelper.get_drac_ip(node)
     # TODO: Hard-coding ctlplane to test overcloud, we will eventually need
     # to use convention to figure out correct networks for
