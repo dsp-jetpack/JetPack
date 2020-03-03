@@ -454,6 +454,26 @@ class Settings():
             self.enable_powermax_backend = False
 
 
+        # PowerMax Manila
+        if backend_settings['enable_powermax_manila_backend'].lower() == 'true':
+            self.enable_powermax_manila_backend = True
+            self.manila_powermax_driver_handles_share_servers = \
+                backend_settings['manila_powermax_driver_handles_share_servers']
+            self.manila_powermax_nas_login = \
+                backend_settings['manila_powermax_nas_login']
+            self.manila_powermax_nas_password = \
+                backend_settings['manila_powermax_nas_password']
+            self.manila_powermax_nas_server = \
+                backend_settings['manila_powermax_nas_server']
+            self.manila_powermax_server_container = \
+                backend_settings['manila_powermax_server_container']
+            self.manila_powermax_share_data_pools = \
+                backend_settings['manila_powermax_share_data_pools']
+            self.manila_powermax_ethernet_ports = \
+                backend_settings['manila_powermax_ethernet_ports']
+        else:
+            self.enable_powermax_manila_backend = False
+
         sanity_settings = self.get_settings_section(
             "Sanity Test Settings")
         self.floating_ip_network = sanity_settings['floating_ip_network']
@@ -586,7 +606,9 @@ class Settings():
             '/pilot/templates/dellemc-powermax-iscsi-cinder-backend.yaml'
         self.dell_powermax_fc_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellemc-powermax-fc-cinder-backend.yaml'
-        self.dell_env_yaml = self.foreman_configuration_scripts + \
+        self.powermax_manila_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/powermax-manila-config.yaml' 
+       self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
         self.ceph_osd_config_yaml = self.foreman_configuration_scripts + \
             '/' + Settings.CEPH_OSD_CONFIG_FILE
