@@ -1,0 +1,20 @@
+parameter_defaults:
+  ControllerExtraConfig:
+    cinder::config::cinder_config:
+        powermax_fc/volume_driver:
+            value: cinder.volume.drivers.dell_emc.vmax.fc.VMAXFCDriver
+        powermax_fc/volume_backend_name:
+            value: powermax_fc
+        powermax_fc/san_ip:
+            value: <powermax_san_ip>
+        powermax_fc/san_login:
+            value: <powermax_san_login>
+        powermax_fc/san_password:
+            value: <powermax_fc_san_password>
+        powermax_fc/vmax_port_groups:
+            value: '<powermax_port_groups>'
+        powermax_fc/vmax_array:
+            value: <powermax_array>
+        powermax_fc/vmax_srp:
+            value: <powermax_srp>
+    cinder_user_enabled_backends: ['powermax_fc'] 
