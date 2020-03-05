@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -420,6 +422,14 @@ class Checkpoints():
                 "Unable to find the overcloud image in glance - "
                 "check the install-director.log for possible package"
                 "download errors")
+
+        cmd = "cat "\
+              " /etc/rhosp-release"
+        re = Ssh.execute_command_tty(self.director_ip,
+                                     setts.director_install_account_user,
+                                     setts.director_install_account_pwd,
+                                     cmd)
+        logger.debug("Undercloud version : " + re[0])
 
     def verify_computes_virtualization_enabled(self):
         logger.debug("*** Verify the Compute nodes have KVM enabled *** ")

@@ -1746,6 +1746,10 @@ class Director(InfraHost):
             except:  # noqa: E722
                 pass
             ip_info.append("====================================")
+            re= self.run_tty("cat /etc/rhosp-release")
+            ip_info.append("Undercloud version : " + re[0])
+            ip_info.append("====================================")
+
         except:  # noqa: E722
             logger.debug(" Failed to retrieve the nodes ip information ")
         finally:
