@@ -1,0 +1,19 @@
+# This environment file enables Manila with the VMAX backend.
+resource_registry:
+  OS::TripleO::Services::ManilaApi: ./overcloud/docker/services/manila-api.yaml
+  OS::TripleO::Services::ManilaScheduler: ./overcloud/docker/services/manila-scheduler.yaml
+  # Only manila-share is pacemaker managed:
+  OS::TripleO::Services::ManilaShare: ./overcloud/docker/services/pacemaker/manila-share.yaml
+  OS::TripleO::Services::ManilaBackendVMAX: ./overcloud/puppet/services/manila-backend-vmax.yaml
+
+parameter_defaults:
+  ManilaVMAXBackendName: tripleo_manila_vmax
+  ManilaVMAXDriverHandlesShareServers: <manila_powermax_driver_handles_share_servers>
+  ManilaVMAXNasLogin: <manila_powermax_nas_login>
+  ManilaVMAXNasPassword: <manila_powermax_nas_password>
+  ManilaVMAXNasServer: <manila_powermax_nas_server>
+  ManilaVMAXServerContainer: <manila_powermax_server_container>
+  ManilaVMAXShareDataPools: <manila_powermax_share_data_pools>
+  ManilaVMAXEthernetPorts: <manila_powermax_ethernet_ports>
+
+
