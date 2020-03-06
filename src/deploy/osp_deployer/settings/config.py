@@ -608,7 +608,7 @@ class Settings():
             '/pilot/templates/dellemc-powermax-fc-cinder-backend.yaml'
         self.powermax_manila_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/powermax-manila-config.yaml' 
-       self.dell_env_yaml = self.foreman_configuration_scripts + \
+        self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
         self.ceph_osd_config_yaml = self.foreman_configuration_scripts + \
             '/' + Settings.CEPH_OSD_CONFIG_FILE
