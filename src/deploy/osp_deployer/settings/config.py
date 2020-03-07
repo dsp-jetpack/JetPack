@@ -89,6 +89,9 @@ class Settings():
                                 "\" setting in your ini file [" + \
                                 stanza + "] section is deprecated and " +\
                                 "should be removed\n"
+            elif self._is_valid_subnet(yourConf, stanza):
+                logger.info("Found a valid subnet stanza in configuration: %s",
+                            stanza)
             else:
                 warning_msg = warning_msg + "Section [" + stanza + \
                     "] in your ini file is deprecated" +\
@@ -382,12 +385,12 @@ class Settings():
 
         # unity
         if backend_settings['enable_unity_backend'].lower() == 'true':
-           
-            if (backend_settings['unity_storage_protocol'] != 'iSCSI' and  
-               backend_settings['unity_storage_protocol'] != 'FC'): 
+
+            if (backend_settings['unity_storage_protocol'] != 'iSCSI' and
+               backend_settings['unity_storage_protocol'] != 'FC'):
                   error_msg = "Invalid Unity Storage Protocol " + \
                       "in your ini file '" + backend_settings['unity_storage_protocol'] + \
-                      "'. Valid protocols are iSCSI or FC" 
+                      "'. Valid protocols are iSCSI or FC"
                   raise AssertionError(error_msg)
             self.enable_unity_backend = True
             self.cinder_unity_container_version = backend_settings[
@@ -807,3 +810,12 @@ class Settings():
         undercloud_conf.optionxform = str
         undercloud_conf.read(self.undercloud_conf_path)
         return undercloud_conf
+
+    def _is_valid_subnet(self, conf, stanza):
+        if conf.has_option('Advanced Settings', 'node_types'):
+            node_types = (
+                list(map(str.strip, conf.get('Advanced Settings',
+                                             'node_types').split(','))))
+            if stanza in node_types and conf.has_section(stanza):
+                return True
+        return False
