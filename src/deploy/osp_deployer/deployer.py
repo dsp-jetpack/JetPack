@@ -156,7 +156,7 @@ def deploy():
             logger.info("=== create the director vm")
             sah_node.create_director_vm()
             tester.director_vm_health_check()
-            
+
             logger.info("Preparing the Director VM")
             director_vm = Director()
             director_vm.apply_internal_repos()
@@ -176,8 +176,8 @@ def deploy():
         else:
             logger.info("=== Skipped Director VM/Undercloud install")
             director_vm = Director()
-            logger.debug("Deleting overcloud stack")
-            director_vm.delete_overcloud()
+            # logger.debug("Deleting overcloud stack")
+            # director_vm.delete_overcloud()
 
         logger.info("=== Preparing the overcloud ===")
 
@@ -185,8 +185,8 @@ def deploy():
         # server configuration
         director_vm.setup_net_envt()
         director_vm.configure_dhcp_server()
-        director_vm.node_discovery()
-        director_vm.configure_idracs()
+        # director_vm.node_discovery()
+        # director_vm.configure_idracs()
         director_vm.import_nodes()
         director_vm.node_introspection()
         director_vm.update_sshd_conf()
