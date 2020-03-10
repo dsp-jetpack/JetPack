@@ -20,6 +20,7 @@ import logging
 import os
 import sys
 import subprocess
+import utils
 from arg_helper import ArgHelper
 from command_helper import Exec
 from ironic_helper import IronicHelper
@@ -105,6 +106,13 @@ def main():
             patch.append({'op': 'add',
                           'value': node["provisioning_mac"],
                           'path': '/properties/provisioning_mac'})
+            if utils.Utils.is_enable_routed_networks():
+                logger.info("Adding port with physical address to node: %s",
+                            str(ironic_node.uuid))
+                kwargs = {'address': node["provisioning_mac"],
+                          'physical_network': 'ctlplane',
+                          'node_uuid': ironic_node.uuid}
+                ironic_client.port.create(**kwargs)
 
         ironic_client.node.update(ironic_node.uuid, patch)
 

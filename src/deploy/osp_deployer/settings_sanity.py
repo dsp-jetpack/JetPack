@@ -87,8 +87,8 @@ class DeployerSanity():
             self.settings.director_deploy_sh + \
             " script doesn't seem to exist"
         assert os.path.isfile(
-            self.settings.undercloud_conf), \
-            self.settings.undercloud_conf + \
+            self.settings.undercloud_conf_path), \
+            self.settings.undercloud_conf_path + \
             " file doesn't seem to exist"
         if self.settings.use_custom_instack_json is True:
             assert os.path.isfile(

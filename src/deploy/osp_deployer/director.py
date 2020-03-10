@@ -22,7 +22,6 @@ from auto_common import Scp
 import json
 import logging
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -110,7 +109,6 @@ class Director(InfraHost):
                     sys.exit(1)
 
     def upload_update_conf_files(self):
-
         logger.debug("tar up the required pilot files")
         os.system("cd " +
                   self.settings.foreman_configuration_scripts +
@@ -119,41 +117,7 @@ class Director(InfraHost):
                          self.home_dir + "/pilot.tar.gz")
 
         self.run('cd;tar zxvf pilot.tar.gz')
-
-        cmds = [
-            'sed -i "s|undercloud_hostname = .*|undercloud_hostname = ' +
-            self.settings.director_node.hostname + "." +
-            self.settings.domain +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|local_ip = .*|local_ip = ' +
-            self.settings.director_node.provisioning_ip +
-            '/24|" pilot/undercloud.conf',
-            'sed -i "s|local_interface = .*|'
-            'local_interface = eth1|" pilot/undercloud.conf',
-            'sed -i "s|masquerade_network = .*|masquerade_network = ' +
-            self.settings.provisioning_network +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|dhcp_start = .*|dhcp_start = ' +
-            self.settings.provisioning_net_dhcp_start +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|dhcp_end = .*|dhcp_end = ' +
-            self.settings.provisioning_net_dhcp_end +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|cidr = .*|cidr = ' +
-            self.settings.provisioning_network +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|gateway = .*|gateway = ' +
-            self.settings.director_node.provisioning_ip +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|inspection_iprange = .*|inspection_iprange = ' +
-            self.settings.discovery_ip_range +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' +
-            self.settings.sah_node.provisioning_ip +
-            '|" pilot/undercloud.conf'
-        ]
-        for cmd in cmds:
-            self.run(cmd)
+        self._update_and_upload_undercloud_conf()
 
         if self.settings.version_locking_enabled is True:
             yaml = "/overcloud_images.yaml"
@@ -1370,7 +1334,7 @@ class Director(InfraHost):
                            computehci_storage_ips + "/\" " + static_ips_yaml,
                            'sed -i "/DellComputeHCIIPs:/,/storage_mgmt:/s/storage_mgmt:/storage_mgmt: \\n' +
                            computehci_cluster_ips + "/\" " + static_ips_yaml
-                          ]) 
+                          ])
             for cmd in cmds:
                 self.run_tty(cmd)
 
@@ -2064,3 +2028,60 @@ class Director(InfraHost):
                 sriov_conf.update({int_name: int_value})
         sriov_interfaces = [x[1] for x in sorted(sriov_conf.items())]
         return sriov_interfaces
+
+    def _update_and_upload_undercloud_conf(self):
+        setts = self.settings
+        uconf = setts.undercloud_conf
+        hostname = (setts.director_node.hostname + '.'
+                    + setts.domain)
+        subnets = ['ctlplane-subnet']
+
+        uconf.set('DEFAULT', 'undercloud_hostname', hostname)
+        uconf.set('DEFAULT', 'local_ip',
+                  setts.director_node.provisioning_ip + '/24')
+        uconf.set('DEFAULT', 'local_interface', 'eth1')
+        uconf.set('DEFAULT', 'masquerade_network',
+                  setts.provisioning_network)
+        uconf.set('DEFAULT', 'undercloud_ntp_servers',
+                  setts.sah_node.provisioning_ip)
+
+        # Always need control plane subnet
+        uconf.set('ctlplane-subnet', 'cidr',
+                  setts.provisioning_network)
+        uconf.set('ctlplane-subnet', 'dhcp_start',
+                  setts.provisioning_net_dhcp_start)
+        uconf.set('ctlplane-subnet', 'dhcp_end',
+                  setts.provisioning_net_dhcp_end)
+        uconf.set('ctlplane-subnet', 'inspection_iprange',
+                  setts.discovery_ip_range)
+        uconf.set('ctlplane-subnet', 'gateway',
+                  setts.director_node.provisioning_ip)
+        # set enable_routed_networks create and deine routed networks
+        is_enable_routed_networks = bool(setts.node_type_subnets)
+
+        uconf.set('DEFAULT', 'enable_routed_networks',
+                  is_enable_routed_networks)
+
+        for node_type, subnet_section in setts.node_type_subnets.iteritems():
+            subnet_name = node_type + "-subnet"
+            subnets.append(subnet_name)
+            if uconf.has_section(subnet_name):
+                uconf.remove_section(subnet_name)
+            uconf.add_section(subnet_name)
+            for opt, val in subnet_section.iteritems():
+                uconf.set(subnet_name, opt, val)
+
+        uconf.set('DEFAULT', 'subnets', ','.join(subnets))
+        timestamp = str(int(round(time.time() * 1000)))
+        tmp_undercloud_conf_path = ("/auto_results/undercloud_" + timestamp
+                                    + ".conf")
+
+        with open(tmp_undercloud_conf_path, 'w+b') as tmp_undercloud_conf:
+            uconf.write(tmp_undercloud_conf)
+            tmp_undercloud_conf.flush()
+            tmp_undercloud_conf.seek(0)
+            logger.debug("Temp undercloud.conf path: %s, contents:\n%s",
+                         tmp_undercloud_conf_path, tmp_undercloud_conf.read())
+            tmp_undercloud_conf.close()
+        dest_file = self.home_dir + "/" + setts.UNDERCLOUD_CONFIG_FILE
+        self.upload_file(tmp_undercloud_conf_path, dest_file)
