@@ -1081,8 +1081,8 @@ class Director(InfraHost):
             'sed -i "s|ExternalInterfaceDefaultRoute:.*|'
             'ExternalInterfaceDefaultRoute: ' +
             self.settings.public_api_gateway + '|" ' + network_yaml,
-            'sed -i "s|ManagementNetworkGateway:.*|'
-            'ManagementNetworkGateway: ' +
+            'sed -i "s|ManagementInterfaceDefaultRoute:.*|'
+            'ManagementInterfaceDefaultRoute: ' +
             self.settings.management_gateway + '|" ' + network_yaml,
             'sed -i "s|ManagementNetCidr:.*|ManagementNetCidr: ' +
             self.settings.management_network + '|" ' + network_yaml,
@@ -1113,21 +1113,21 @@ class Director(InfraHost):
             self.settings.public_api_vlanid + '|" ' + network_yaml,
             'sed -i "s|TenantNetworkVlanID:.*|TenantNetworkVlanID: ' +
             self.settings.tenant_tunnel_vlanid + '|" ' + network_yaml,
-            'sed -i "s|ExternalNetworkMTU:.*|ExternalNetworkMTU: ' +
+            'sed -i "s|ExternalMtu:.*|ExternalMtu: ' +
             self.settings.public_api_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|InternalApiMTU:.*|InternalApiMTU: ' +
+            'sed -i "s|InternalApiMtu:.*|InternalApiMtu: ' +
             self.settings.private_api_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|StorageNetworkMTU:.*|StorageNetworkMTU: ' +
+            'sed -i "s|StorageMtu:.*|StorageMtu: ' +
             self.settings.storage_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|StorageMgmtNetworkMTU:.*|StorageMgmtNetworkMTU: ' +
+            'sed -i "s|StorageMgmtMtu:.*|StorageMgmtMtu: ' +
             self.settings.storage_cluster_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|TenantNetworkMTU:.*|TenantNetworkMTU: ' +
+            'sed -i "s|TenantMtu:.*|TenantMtu: ' +
             self.settings.tenant_tunnel_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|ProvisioningNetworkMTU:.*|ProvisioningNetworkMTU: ' +
+            'sed -i "s|ProvisioningMtu:.*|ProvisioningMtu: ' +
             self.settings.provisioning_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|ManagementNetworkMTU:.*|ManagementNetworkMTU: ' +
+            'sed -i "s|ManagementMtu:.*|ManagementMtu: ' +
             self.settings.management_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|DefaultBondMTU:.*|DefaultBondMTU: ' +
+            'sed -i "s|DefaultBondMtu:.*|DefaultBondMtu: ' +
             self.settings.default_bond_mtu + '|" ' + network_yaml,
             'sed -i "s|NeutronGlobalPhysnetMtu:.*|NeutronGlobalPhysnetMtu: ' +
             self.settings.tenant_network_mtu + '|" ' + network_yaml,
