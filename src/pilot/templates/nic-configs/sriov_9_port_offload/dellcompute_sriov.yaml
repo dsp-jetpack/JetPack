@@ -1,4 +1,4 @@
-heat_template_version: queens
+heat_template_version: rocky
 description: >
   Bond and VLAN configuration for compute nodes. comment14_0: ' The values of the following parameters are overridden by the
   entries in' comment15_0: ' network-environment.yaml'
@@ -205,7 +205,7 @@ resources:
                   device: bond0
                   vlan_id:
                     get_param: TenantNetworkVlanID
-                  mtu: 
+                  mtu:
                     get_param: TenantNetworkMTU
                   addresses:
                   - ip_netmask:
@@ -272,7 +272,7 @@ resources:
                     get_param: ComputeSriovInterface2
                   mtu:
                     get_param: DefaultBondMTU
-                  use_dhcp: false                        
+                  use_dhcp: false
               - type: ovs_bridge
                 name: mlx_br3
                 mtu:
@@ -294,10 +294,9 @@ resources:
                     get_param: ComputeSriovInterface4
                   mtu:
                     get_param: DefaultBondMTU
-                  use_dhcp: false                     
+                  use_dhcp: false
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.
     value:
       get_resource: OsNetConfigImpl
-

@@ -14,14 +14,16 @@
 
 ## A Heat environment that can be used to deploy DPDK with OVS
 resource_registry:
-  OS::TripleO::Services::ComputeNeutronOvsDpdk: ./overcloud/docker/services/neutron-ovs-dpdk-agent.yaml
+  OS::TripleO::Services::ComputeNeutronOvsDpdk: ./overcloud/deployment/neutron/neutron-ovs-dpdk-agent-container-puppet.yaml
   OS::TripleO::Services::ComputeNeutronOvsAgent: OS::Heat::None
 
 parameter_defaults:
   NeutronDatapathType: "netdev"
   NeutronVhostuserSocketDir: "/var/lib/vhost_sockets"
+# DELL-NFV Overrides
   NovaSchedulerDefaultFilters: "RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,NUMATopologyFilter"
   OvsDpdkDriverType: "mlx5_core"
+  NeutronPluginExtensions: "qos,port_security"
   NeutronOVSFirewallDriver: openvswitch
   DellComputeParameters:
     VhostuserSocketGroup: "hugetlbfs"

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-heat_template_version: 2014-10-16
+heat_template_version: rocky
 
 parameters:
   ComputeTunedAdmProfile:
@@ -72,14 +72,14 @@ resources:
               sed -i "s/transport_url    \=.*/&\n    rpc_response_timeout    => 180,/" /etc/puppet/modules/cinder/manifests/init.pp
               # Openstack Service - Glance
               sed -i 's/rpc_response_timeout \=.*/rpc_response_timeout = 180,/' /etc/puppet/modules/oslo/manifests/messaging/default.pp
-              
-              # MariaDB Optimization 
-              
+
+              # MariaDB Optimization
+
               bsize=_BufferPoolSize_
-              if [ "$bsize" == "dynamic" ]; then 
+              if [ "$bsize" == "dynamic" ]; then
               buffer=$(echo $((`free -m | awk 'NR==2{printf "%d", $2*0.75 }'`/1024))G)
               sed -i "s/innodb_buffer_pool_size    \=.*/innodb_buffer_pool_size    = $buffer,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              else 
+              else
               sed -i "s/innodb_buffer_pool_size    \=.*/innodb_buffer_pool_size    = _BufferPoolSize_,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
               fi
               #sed -i "s/max_connections'         \=.*/&\n        'innodb_log_file_size' => 1500M,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
