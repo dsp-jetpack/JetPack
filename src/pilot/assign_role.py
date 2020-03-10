@@ -1408,14 +1408,24 @@ def ensure_node_is_powered_off(drac_client):
     # (http://en.community.dell.com/techcenter/extras/m/white_papers/20440458/download).
     # See section 8.1 DCIM_ComputerSystem.RequestStateChange(), beginning on p.
     # 22 of 25.
-    #
-    # An alternative approach was considered, unconditionally powering off the
-    # node, catching the DRACOperationFailed exception, and ignoring it.
-    # However, because neither the documentation nor exception provides details
-    # about the cause, that approach could mask an interesting error condition.
     if drac_client.get_power_state() is not POWER_OFF:
         LOG.info("Powering off the node")
-        drac_client.set_power_state(POWER_OFF)
+        max_attempts = 40
+        for i in range (0, max_attempts):
+            try:
+                LOG.debug("..." + drac_client.get_power_state())
+                if drac_client.get_power_state() is not POWER_OFF:
+                    drac_client.set_power_state(POWER_OFF)
+                else:
+                    return
+            except Exception as e:
+                if "The command failed to set RequestedState" in e.message:
+                    LOG.debug("Trying again ... (SYS021) " + str(i) + '/' + str(max_attempts))
+                    time.sleep(5)
+                else:
+                    raise e
+                if i == max_attempts:
+                    raise e
 
 
 def change_physical_disk_state_wait(
