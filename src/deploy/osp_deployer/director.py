@@ -17,8 +17,12 @@
 from settings.config import Settings
 from checkpoints import Checkpoints
 from collections import defaultdict
+from collections import OrderedDict
 from infra_host import InfraHost
 from auto_common import Scp
+from auto_common.yaml_utils import OrderedDumper
+from auto_common.yaml_utils import OrderedLoader
+import re
 import json
 import logging
 import os
@@ -46,8 +50,59 @@ OTHER_POOLS = ['.rgw.buckets',
                'default.rgw.meta',
                'metrics']
 
+SERVICES_DEFAULT = ['OS::TripleO::Services::Aide',
+                    'OS::TripleO::Services::AuditD',
+                    'OS::TripleO::Services::BootParams',
+                    'OS::TripleO::Services::CACerts',
+                    'OS::TripleO::Services::CephClient',
+                    'OS::TripleO::Services::CephExternal',
+                    'OS::TripleO::Services::CertmongerUser',
+                    'OS::TripleO::Services::Collectd',
+                    'OS::TripleO::Services::ComputeCeilometerAgent',
+                    'OS::TripleO::Services::ComputeNeutronCorePlugin',
+                    'OS::TripleO::Services::ComputeNeutronL3Agent',
+                    'OS::TripleO::Services::ComputeNeutronMetadataAgent',
+                    'OS::TripleO::Services::ComputeNeutronOvsAgent',
+                    'OS::TripleO::Services::Docker',
+                    'OS::TripleO::Services::Fluentd',
+                    'OS::TripleO::Services::IpaClient',
+                    'OS::TripleO::Services::Ipsec',
+                    'OS::TripleO::Services::Iscsid',
+                    'OS::TripleO::Services::Kernel',
+                    'OS::TripleO::Services::LoginDefs',
+                    'OS::TripleO::Services::MetricsQdr',
+                    'OS::TripleO::Services::MySQLClient',
+                    'OS::TripleO::Services::NeutronBgpVpnBagpipe',
+                    'OS::TripleO::Services::NeutronSriovAgent',
+                    'OS::TripleO::Services::NeutronSriovHostConfig',
+                    'OS::TripleO::Services::NeutronVppAgent',
+                    'OS::TripleO::Services::NovaCompute',
+                    'OS::TripleO::Services::NovaLibvirt',
+                    'OS::TripleO::Services::NovaLibvirtGuests',
+                    'OS::TripleO::Services::NovaMigrationTarget',
+                    'OS::TripleO::Services::Ntp',
+                    'OS::TripleO::Services::ContainersLogrotateCrond',
+                    'OS::TripleO::Services::OpenDaylightOvs',
+                    'OS::TripleO::Services::Rhsm',
+                    'OS::TripleO::Services::RsyslogSidecar',
+                    'OS::TripleO::Services::Securetty',
+                    'OS::TripleO::Services::SensuClient',
+                    'OS::TripleO::Services::SkydiveAgent',
+                    'OS::TripleO::Services::Snmp',
+                    'OS::TripleO::Services::Sshd',
+                    'OS::TripleO::Services::Timezone',
+                    'OS::TripleO::Services::TripleoFirewall',
+                    'OS::TripleO::Services::TripleoPackages',
+                    'OS::TripleO::Services::Vpp',
+                    'OS::TripleO::Services::OVNController',
+                    'OS::TripleO::Services::OVNMetadataAgent',
+                    'OS::TripleO::Services::Ptp']
+
 # tempest configuraton file
 TEMPEST_CONF = "tempest.conf"
+
+STAGING_PATH = '/deployment_staging'
+STAGING_TEMPLATES_PATH = STAGING_PATH + "/templates"
 
 
 class Director(InfraHost):
@@ -439,6 +494,7 @@ class Director(InfraHost):
         self.setup_networking()
         self.setup_dell_storage()
         self.setup_manila()
+        self.setup_roles()
         self.setup_environment()
         self.setup_sanity_ini()
 
@@ -777,7 +833,7 @@ class Director(InfraHost):
             self.setup_powermax_cinder(dell_powermax_iscsi_cinder_yaml)
         else:
             self.setup_powermax_cinder(dell_powermax_fc_cinder_yaml)
-      
+
         # Enable multiple backends now
         enabled_backends = "["
 
@@ -1016,7 +1072,7 @@ class Director(InfraHost):
             'sed -i "s|<powermax_port_groups>|' +
             self.settings.powermax_port_groups + '|" ' + powermax_cinder_yaml,
             'sed -i "s|<powermax_srp>|' +
-            self.settings.powermax_srp + '|" ' + powermax_cinder_yaml,            
+            self.settings.powermax_srp + '|" ' + powermax_cinder_yaml,
         ]
         for cmd in cmds:
             self.run_tty(cmd)
@@ -2019,10 +2075,10 @@ class Director(InfraHost):
                 uconf.set(subnet_name, opt, val)
 
         uconf.set('DEFAULT', 'subnets', ','.join(subnets))
-        timestamp = str(int(round(time.time() * 1000)))
-        tmp_undercloud_conf_path = ("/auto_results/undercloud_" + timestamp
-                                    + ".conf")
 
+        tmp_undercloud_conf_path = self.get_timestamped_path(STAGING_PATH,
+                                                             "undercloud",
+                                                             "conf")
         with open(tmp_undercloud_conf_path, 'w+b') as tmp_undercloud_conf:
             uconf.write(tmp_undercloud_conf)
             tmp_undercloud_conf.flush()
@@ -2032,3 +2088,58 @@ class Director(InfraHost):
             tmp_undercloud_conf.close()
         dest_file = self.home_dir + "/" + setts.UNDERCLOUD_CONFIG_FILE
         self.upload_file(tmp_undercloud_conf_path, dest_file)
+
+    def setup_roles(self):
+        setts = self.settings
+        ntypes = setts.node_types
+        subnets = setts.node_type_subnets
+        roles = []
+        roles_list = []
+        for node_type in ntypes:
+            # If there is a subnet for node_type we have edge site
+            # and need to generate templates
+            if node_type.lower() in subnets:
+                roles.append(self._generate_role_dict(node_type))
+        if len(roles) is not 0:
+            logger.debug("Edge roles to be added: %s", str(roles))
+
+            with open(setts.roles_yaml) as roles_f:
+                roles_list = yaml.load(roles_f, Loader=OrderedLoader)
+
+            for role in roles:
+                roles_list.append(role)
+            stg_roles_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
+                                                       "roles_data",
+                                                       "yaml")
+            with open(stg_roles_file, 'w') as t_role_file:
+                yaml.dump(roles_list, t_role_file, OrderedDumper)
+
+            dst_roles_yaml = self.home_dir + "/" + setts.ROLES_YAML_FILE
+            self.upload_file(stg_roles_file, dst_roles_yaml)
+
+    def _generate_role_dict(self, node_type):
+        # find non-alphanumerics in node type
+        # and replace with space then camel case that and strip spaces
+        node_type_cc = (re.sub(r'[^a-z0-9]', " ",
+                               node_type.lower()).title()).replace(" ", "")
+        role_d = OrderedDict()
+        role_d['name'] = node_type_cc
+        role_d['description'] = node_type_cc + " compute node role.\n"
+        role_d['CountDefault'] = 0
+        role_d['networks'] = ['InternalApi' + node_type_cc + "Subnet",
+                              'Tenant' + node_type_cc + "Subnet",
+                              'Storage' + node_type_cc + "Subnet"]
+        role_d['HostnameFormatDefault'] = ("%stackname%-"
+                                           + node_type + "-%index%")
+        role_d['disable_upgrade_deployment'] = True
+        role_d['uses_deprecated_params'] = True
+        role_d['deprecated_param_image'] = 'NovaImage'
+        role_d['deprecated_param_extraconfig'] = 'NovaComputeExtraConfig'
+        role_d['deprecated_param_metadata'] = 'NovaComputeServerMetadata'
+        role_d['deprecated_param_scheduler_hints'] = \
+            'NovaComputeSchedulerHints'
+        role_d['deprecated_param_ips'] = 'NovaComputeIPs'
+        role_d['deprecated_server_resource_name'] = 'NovaCompute'
+        role_d['deprecated_nic_config_name'] = 'compute.yaml'
+        role_d['ServicesDefault'] = SERVICES_DEFAULT
+        return role_d

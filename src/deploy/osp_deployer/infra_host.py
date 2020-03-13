@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import time
 from auto_common import Ssh, Scp
 
 
@@ -78,3 +80,9 @@ class InfraHost():
                      self.pwd,
                      local_file,
                      remote_file)
+
+    def get_timestamped_path(self, path, filename, ext="conf"):
+        timestamp = time.strftime('%Y%m%d%H%M%S')
+        _filename = filename + "_" + timestamp + "." + ext
+        _path = os.path.join(path, _filename)
+        return _path

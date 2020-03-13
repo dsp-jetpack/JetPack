@@ -36,6 +36,13 @@ def setup_logging():
         os.makedirs(path)
     logging.config.fileConfig('logging.conf')
 
+def setup_staging():
+    staging_path = '/deployment_staging'
+    staging_templates_path = staging_path + "/templates"
+    if not os.path.exists(staging_path):
+        os.makedirs(staging_path)
+    if not os.path.exists(staging_templates_path):
+        os.makedirs(staging_templates_path)
 
 def get_settings():
     parser = argparse.ArgumentParser(
@@ -118,7 +125,7 @@ def deploy():
             logger.info("Settings validated")
             os._exit(0)
         tester.retreive_switches_config()
-
+        # TODO non_sah_nodes never used, delete me below
         non_sah_nodes = (settings.controller_nodes +
                          settings.compute_nodes +
                          settings.ceph_nodes)
@@ -182,6 +189,10 @@ def deploy():
         else:
             logger.info("=== Skipped Director VM/Undercloud install")
             director_vm = Director()
+            # TODO delete test code below
+            director_vm.setup_templates()
+            logger.info("=== setup_templates complete, quit")
+            sys.exit(0)
             logger.debug("Deleting overcloud stack")
             director_vm.delete_overcloud()
 
@@ -282,4 +293,5 @@ def deploy():
 
 if __name__ == "__main__":
     setup_logging()
+    setup_staging()
     deploy()

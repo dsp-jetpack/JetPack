@@ -29,6 +29,7 @@ class Settings():
     CEPH_OSD_CONFIG_FILE = 'pilot/templates/ceph-osd-config.yaml'
     TEMPEST_DEFAULT_WORKSPACE_NAME = 'mytempest'
     UNDERCLOUD_CONFIG_FILE = 'pilot/undercloud.conf'
+    ROLES_YAML_FILE = 'pilot/templates/roles_data.yaml'
 
     settings = ''
 
@@ -612,6 +613,8 @@ class Settings():
             '/pilot/templates/neutron-sriov.yaml'
         self.undercloud_conf_path = self.foreman_configuration_scripts + \
             '/' + Settings.UNDERCLOUD_CONFIG_FILE
+        self.roles_yaml = self.foreman_configuration_scripts + \
+            '/' + Settings.ROLES_YAML_FILE
 
         # New custom node type and edge related fields
         self.node_types = None
