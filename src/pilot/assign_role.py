@@ -1173,7 +1173,7 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
             lst_physical_disks = drac_client.list_physical_disks()
             for disks in lst_physical_disks:
                 if disks.controller in boss_disk:
-                    os_volume_size_gb = disks.size_mb / 1024
+                    os_volume_size_gb = int(disks.size_mb / 1024)
                     LOG.info("Detect BOSS Card {} and volume size {}".format(
                         disks.controller,
                         os_volume_size_gb))
@@ -1542,9 +1542,9 @@ def main():
     except:  # noqa: E722
         LOG.exception("Unexpected error")
         sys.exit(1)
-    finally:	
-        # Leave the node powered off.	
-        if drac_client is not None:	
+    finally:
+        # Leave the node powered off.
+        if drac_client is not None:
             ensure_node_is_powered_off(drac_client)
 
 if __name__ == "__main__":
