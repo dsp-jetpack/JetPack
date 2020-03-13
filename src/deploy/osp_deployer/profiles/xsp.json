@@ -241,8 +241,7 @@
             },
             "use_ipmi_driver":"",
             "use_in_band_introspection":"",
-            "enable_version_locking":"",
-            "node_types":""
+            "enable_version_locking":""
        }
       },
       {
@@ -279,6 +278,6 @@
                ]
         }
        }
-      },
+      }
    ]
 }
