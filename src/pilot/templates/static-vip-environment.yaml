@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2019 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,46 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-resource_registry:
-  OS::TripleO::Network::Ports::NetVipMap: ./overcloud/network/ports/net_vip_map_external.yaml
-  OS::TripleO::Network::Ports::ExternalVipPort: ./overcloud/network/ports/noop.yaml
-  OS::TripleO::Network::Ports::InternalApiVipPort: ./overcloud/network/ports/noop.yaml
-  OS::TripleO::Network::Ports::StorageVipPort: ./overcloud/network/ports/noop.yaml
-  OS::TripleO::Network::Ports::StorageMgmtVipPort: ./overcloud/network/ports/noop.yaml
-  OS::TripleO::Network::Ports::RedisVipPort: ./overcloud/network/ports/from_service.yaml
+#resource_registry:
+  #OS::TripleO::Network::Ports::NetVipMap: ./overcloud/network/ports/net_ip_map.yaml
+  #OS::TripleO::Network::Ports::ExternalVipPort: ./overcloud/network/ports/noop.yaml
+  #OS::TripleO::Network::Ports::InternalApiVipPort: ./overcloud/network/ports/noop.yaml
+  #OS::TripleO::Network::Ports::StorageVipPort: ./overcloud/network/ports/noop.yaml
+  #OS::TripleO::Network::Ports::StorageMgmtVipPort: ./overcloud/network/ports/noop.yaml
+
 
 parameter_defaults:
-  ServiceVips:
-    # CHANGEME: Change the following to the VIP for the redis service on the
-    # Private API/internal_api network.
-    # Note that this IP must lie outside the InternalApiAllocationPools range
-    # specified in network-environment.yaml.
-    redis: 192.168.140.251
 
-  # CHANGEME: Change the following to the VIP on the Provisioning network
-  # Note that this IP must lie outside the dhcp_start/dhcp_end range
-  # specified in undercloud.conf.
-  ControlPlaneIP: 192.168.120.250
-
-  # CHANGEME: Change the following to the VIP on the Private API network.
-  # Note that this IP must lie outside the InternalApiAllocationPools range
-  # specified in network-environment.yaml.
-  InternalApiNetworkVip: 192.168.140.250
-
-  # CHANGEME: Change the following to the VIP on the Public API network.
-  # Note that this IP must lie outside the ExternalAllocationPools range
-  # specified in network-environment.yaml.
-  ExternalNetworkVip: 192.168.190.250
-
-  # CHANGEME: Change the following to the VIP on the Storage network
-  # Note that this IP must lie outside the StorageAllocationPools range
-  # specified in network-environment.yaml.
-  StorageNetworkVip: 192.168.170.250
-
-  # CHANGEME: Change the following to the VIP on the Provisioning network.
-  # The Storage Clustering network is not connected to the controller nodes,
-  # so the VIP for this network must be mapped to the provisioning network.
-  # Note that this IP must lie outside the dhcp_start/dhcp_end range
-  # specified in undercloud.conf.
-  StorageMgmtNetworkVip: 192.168.120.249
-  
+  ControlFixedIPs: [{'ip_address':'192.168.120.250'}]
+  InternalApiVirtualFixedIPs: [{'ip_address':'192.168.140.250'}]
+  PublicVirtualFixedIPs: [{'ip_address':'100.67.59.51'}]
+  StorageVirtualFixedIPs: [{'ip_address':'192.168.170.250'}]
+  StorageMgmtVirtualFixedIPs: [{'ip_address':'192.168.120.249'}]
+  RedisVirtualFixedIPs: [{'ip_address':'192.168.140.250'}]
