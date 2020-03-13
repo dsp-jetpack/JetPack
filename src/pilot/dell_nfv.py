@@ -224,11 +224,11 @@ class ConfigOvercloud(object):
                 cmds.append(
                     'sed -i "s|# NovaVcpuPinSet:.*|NovaVcpuPinSet: ' +
                     self.nfv_params.nova_cpus + '|" ' + file_path)
-            cmds.append(
-                'sed -i "s|# DellComputeParameters:' +
-                '|DellComputeParameters:|" ' +
-                file_path)
             if kernel_args:
+                cmds.append(
+                    'sed -i "s|# DellComputeParameters:' +
+                    '|DellComputeParameters:|" ' +
+                    file_path)
                 cmds.append(
                     'sed -i "s|# KernelArgs:.*|KernelArgs: \\"' +
                     kernel_args + '\\" |" ' + file_path)
