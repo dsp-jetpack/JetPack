@@ -34,7 +34,7 @@ parameter_defaults:
     TunedProfileName: "cpu-partitioning"
     NumDpdkInterfaceRxQueues: 1
     OvsEnableDpdk: true
- DellComputeHCIParameters:
+  DellComputeHCIParameters:
     VhostuserSocketGroup: "hugetlbfs"
     OvsPmdCoreList: "4-7,28-31"
     OvsDpdkCoreList: "0-3,24-27"
