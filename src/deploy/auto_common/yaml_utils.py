@@ -14,12 +14,9 @@ class OrderedDumper(yaml.SafeDumper):
         return True
 
 
-# REPRESENT_ORDERED_DICT = (lambda self,
-#                           data: self.represent_mapping('tag:yaml.org,2002:map',
-#                                                       data.items()))
-
 def ordered_map_representer(dumper, data):
     return dumper.represent_mapping('tag:yaml.org,2002:map', data.items())
+
 
 def literal_representer(dumper, data):
     ''' Pyyaml should do this by default but doesn't for some reason.

@@ -30,6 +30,7 @@ class Settings():
     TEMPEST_DEFAULT_WORKSPACE_NAME = 'mytempest'
     UNDERCLOUD_CONFIG_FILE = 'pilot/undercloud.conf'
     ROLES_YAML_FILE = 'pilot/templates/roles_data.yaml'
+    NIC_ENV_DIR_PATH = '/pilot/templates/nic-configs/'
 
     settings = ''
 
@@ -37,6 +38,11 @@ class Settings():
         _settings = {}
         _settings["node_types"] = str(self.node_types)
         _settings["node_type_subnets"] = str(self.node_type_subnets)
+        if self.node_types_map:
+            _settings["node_types_map"] = {}
+            _node_types_map = _settings["node_types_map"]
+            for node_type, nodes in self.node_types_map.items():
+                _node_types_map[node_type] = [str(node) for node in nodes]
         _settings["undercloud_conf"] = str(self.undercloud_conf)
         return str(_settings)
 
@@ -633,6 +639,8 @@ class Settings():
             'test.noarch.rpm'
         self.neutron_sriov_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/neutron-sriov.yaml'
+        self.nic_env_dir_abs_path = self.foreman_configuration_scripts + \
+            Settings.NIC_ENV_DIR_PATH
         self.undercloud_conf_path = self.foreman_configuration_scripts + \
             '/' + Settings.UNDERCLOUD_CONFIG_FILE
         self.roles_yaml = self.foreman_configuration_scripts + \
@@ -652,8 +660,8 @@ class Settings():
         nics_settings = self.get_nics_settings()
         if 'nic_env_file' in nics_settings:
             self.nic_env_file = nics_settings['nic_env_file']
-            self.nic_env_file_path = self.foreman_configuration_scripts + \
-                '/pilot/templates/nic-configs/' + self.nic_env_file
+            self.nic_env_file_path = (self.nic_env_dir_abs_path
+                                      + self.nic_env_file)
         if 'sah_bond_opts' in nics_settings:
             self.sah_bond_opts = nics_settings['sah_bond_opts']
 
@@ -700,6 +708,7 @@ class Settings():
         self.ceph_nodes = []
         self.switches = []
         self.nodes = []
+        self.node_types_map = {}
 
         with open(self.network_conf) as config_file:
             json_data = json.load(config_file)
@@ -773,6 +782,12 @@ class Settings():
                 except AttributeError:
                     node.skip_nic_config = False
                     pass
+                if "node_type" in node.__dict__:
+                    logger.info("node.node_type not in self.node_types_map: %s",
+                                str(node.node_type not in self.node_types_map))
+                    if node.node_type not in self.node_types_map:
+                        self.node_types_map[node.node_type] = []
+                    self.node_types_map[node.node_type].append(node)
 
         Settings.settings = self
 

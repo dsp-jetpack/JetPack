@@ -1296,6 +1296,10 @@ class Director(InfraHost):
         if self.settings.enable_sriov is True:
             self.setup_sriov_nic_configuration()
 
+        # If there are subnets generate and upload nic templates.
+        if self.settings.node_type_subnets:
+            self.setup_edge_nic_configuration()
+
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
             # static_ips_yaml
@@ -2156,8 +2160,8 @@ class Director(InfraHost):
         if len(roles) is not 0:
             logger.debug("Edge roles to be added: %s", str(roles))
 
-            with open(setts.roles_yaml) as roles_f:
-                roles_list = yaml.load(roles_f, Loader=OrderedLoader)
+            with open(setts.roles_yaml) as roles_stream:
+                roles_list = yaml.load(roles_stream, Loader=OrderedLoader)
 
             for role in roles:
                 roles_list.append(role)
@@ -2167,21 +2171,82 @@ class Director(InfraHost):
             with open(stg_roles_file, 'w') as t_role_file:
                 yaml.dump(roles_list, t_role_file, OrderedDumper)
 
-            dst_roles_yaml = self.home_dir + "/" + setts.ROLES_YAML_FILE
+            dst_roles_yaml = os.path.join(self.home_dir,setts.ROLES_YAML_FILE)
             self.upload_file(stg_roles_file, dst_roles_yaml)
+
+    def setup_edge_nic_configuration(self):
+        setts = self.settings
+        nic_params = ['ComputeProvisioningInterface',
+                      'ComputeBond0Interface1',
+                      'ComputeBond0Interface2',
+                      'ComputeBond1Interface1',
+                      'ComputeBond1Interface2']
+        for subnet_name, subnet_dict in setts.node_type_subnets.iteritems():
+            num_nics = subnet_dict['nic_port_count']
+            port_dir = "{}_port".format(num_nics)
+            local_nic_env_file = os.path.join(setts.nic_env_dir_abs_path,
+                                              port_dir,
+                                              "dellcompute.yaml")
+
+            stg_nic_template_path = os.path.join(STAGING_TEMPLATES_PATH,
+                                                 "nic-configs", port_dir)
+
+            if not os.path.exists(stg_nic_template_path):
+                os.makedirs(stg_nic_template_path)
+
+            nic_config_name = self._generate_nic_config_name(subnet_name)
+            stg_nic_path = self.get_timestamped_path(stg_nic_template_path,
+                                                     nic_config_name,
+                                                     "yaml")
+            dst_nic_yaml = os.path.join(self.nic_configs_dir, port_dir,
+                                        nic_config_name + ".yaml")
+
+            with open(local_nic_env_file) as nic_stream:
+                nic_tmpl = yaml.load(nic_stream, Loader=OrderedLoader)
+                params = nic_tmpl['parameters']
+                net_configs = (nic_tmpl['resources']
+                               ['OsNetConfigImpl']
+                               ['properties']['config']['str_replace']
+                               ['params']['$network_config']['network_config'])
+
+                for net_config in net_configs:
+                    if net_config['type'] != 'interface':
+                        continue
+                    if (net_config['name']['get_param']
+                            == 'ComputeProvisioningInterface'):
+
+                        subnet_gw = subnet_dict['gateway']
+
+                        ec2_route = {'ip_netmask': '169.254.169.254/32',
+                                     'next_hop': subnet_gw}
+                        default_route = {'default': True,
+                                         'next_hop': subnet_gw}
+                        prov_route = {'ip_netmask': setts.provisioning_network,
+                                      'next_hop': subnet_gw}
+                        net_config['routes'] = [ec2_route, default_route,
+                                                prov_route]
+
+                for nic_param in nic_params:
+                    if nic_param in subnet_dict:
+                        params[nic_param]['default'] = subnet_dict[nic_param]
+
+            with open(stg_nic_path, 'w') as stg_nic_stream:
+                yaml.dump(nic_tmpl, stg_nic_stream, OrderedDumper,
+                          default_flow_style=False)
+
+            self.upload_file(stg_nic_path, dst_nic_yaml)
 
     def _generate_role_dict(self, node_type):
         # find non-alphanumerics in node type
         # and replace with space then camel case that and strip spaces
-        node_type_cc = (re.sub(r'[^a-z0-9]', " ",
-                               node_type.lower()).title()).replace(" ", "")
+        role_name = self._generate_camel_case_role(node_type)
         role_d = OrderedDict()
-        role_d['name'] = node_type_cc
-        role_d['description'] = node_type_cc + " compute node role.\n"
+        role_d['name'] = role_name
+        role_d['description'] = role_name + " compute node role.\n"
         role_d['CountDefault'] = 0
-        role_d['networks'] = ['InternalApi' + node_type_cc + "Subnet",
-                              'Tenant' + node_type_cc + "Subnet",
-                              'Storage' + node_type_cc + "Subnet"]
+        role_d['networks'] = ['InternalApi' + role_name + "Subnet",
+                              'Tenant' + role_name + "Subnet",
+                              'Storage' + role_name + "Subnet"]
         role_d['HostnameFormatDefault'] = ("%stackname%-"
                                            + node_type + "-%index%")
         role_d['disable_upgrade_deployment'] = True
@@ -2196,3 +2261,13 @@ class Director(InfraHost):
         role_d['deprecated_nic_config_name'] = 'compute.yaml'
         role_d['ServicesDefault'] = SERVICES_DEFAULT
         return role_d
+
+    def _generate_camel_case_role(self, node_type):
+        _node_type_cc = (re.sub(r'[^a-z0-9]', " ",
+                                node_type.lower()).title()).replace(" ", "")
+        return _node_type_cc
+
+    def _generate_nic_config_name(self, node_type):
+        # should look like denveredgecompute.yaml if following existing pattern
+        _nic_config_name = re.sub(r'[^a-z0-9]', "", node_type.lower())
+        return _nic_config_name
