@@ -19,6 +19,7 @@ from checkpoints import Checkpoints
 from collections import defaultdict
 from collections import OrderedDict
 from infra_host import InfraHost
+from infra_host import directory_check
 from auto_common import Scp
 from auto_common.yaml_utils import OrderedDumper
 from auto_common.yaml_utils import OrderedLoader
@@ -104,6 +105,8 @@ TEMPEST_CONF = "tempest.conf"
 STAGING_PATH = '/deployment_staging'
 STAGING_TEMPLATES_PATH = STAGING_PATH + "/templates"
 NIC_ENV = "nic_environment"
+NODE_PLACEMENT = "node-placement"
+DELL_ENV = "dell-environment"
 
 class Director(InfraHost):
 
@@ -172,7 +175,7 @@ class Director(InfraHost):
                          self.home_dir + "/pilot.tar.gz")
 
         self.run('cd;tar zxvf pilot.tar.gz')
-        self._update_and_upload_undercloud_conf()
+        self.update_and_upload_undercloud_conf()
 
         if self.settings.version_locking_enabled is True:
             yaml = "/overcloud_images.yaml"
@@ -605,7 +608,6 @@ class Director(InfraHost):
         glance_backend_param = "  GlanceBackend:"
         rbd_cinder_backend_param = "  CinderEnableRbdBackend:"
         osds_per_node = 0
-
         if osd_disks:
             for osd in osd_disks:
                 # Format is ":OSD_DRIVE",
@@ -1299,6 +1301,8 @@ class Director(InfraHost):
         # If there are subnets generate and upload nic templates.
         if self.settings.node_type_subnets:
             self.setup_edge_nic_configuration()
+            self.update_node_placement()
+            self.update_environment_edge()
 
 
         if self.settings.overcloud_static_ips is True:
@@ -2090,7 +2094,9 @@ class Director(InfraHost):
         sriov_interfaces = [x[1] for x in sorted(sriov_conf.items())]
         return sriov_interfaces
 
-    def _update_and_upload_undercloud_conf(self):
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def update_and_upload_undercloud_conf(self):
+        logger.info("Updating undercloud.conf")
         setts = self.settings
         uconf = setts.undercloud_conf
         hostname = (setts.director_node.hostname + '.'
@@ -2134,19 +2140,21 @@ class Director(InfraHost):
 
         uconf.set('DEFAULT', 'subnets', ','.join(subnets))
 
-        tmp_undercloud_conf_path = self.get_timestamped_path(STAGING_PATH,
-                                                             "undercloud",
-                                                             "conf")
-        with open(tmp_undercloud_conf_path, 'w+b') as tmp_undercloud_conf:
-            uconf.write(tmp_undercloud_conf)
-            tmp_undercloud_conf.flush()
-            tmp_undercloud_conf.seek(0)
-            logger.debug("Temp undercloud.conf path: %s, contents:\n%s",
-                         tmp_undercloud_conf_path, tmp_undercloud_conf.read())
-            tmp_undercloud_conf.close()
-        dest_file = self.home_dir + "/" + setts.UNDERCLOUD_CONFIG_FILE
-        self.upload_file(tmp_undercloud_conf_path, dest_file)
+        stg_undercloud_conf_path = self.get_timestamped_path(STAGING_PATH,
+                                                             "undercloud")
+        with open(stg_undercloud_conf_path, 'w+b') as undercloud_conf_stream:
+            uconf.write(undercloud_conf_stream)
+            undercloud_conf_stream.flush()
+            undercloud_conf_stream.seek(0)
+            logger.debug("Staging undercloud.conf path: %s, contents:\n%s",
+                         stg_undercloud_conf_path,
+                         undercloud_conf_stream.read())
+            # stg_undercloud_conf_path.close()
+        undercloud_conf_dst = os.path.join(self.home_dir,
+                                           setts.UNDERCLOUD_CONFIG_FILE)
+        self.upload_file(stg_undercloud_conf_path, undercloud_conf_dst)
 
+    @directory_check(STAGING_TEMPLATES_PATH)
     def setup_roles(self):
         setts = self.settings
         ntypes = setts.node_types
@@ -2169,8 +2177,8 @@ class Director(InfraHost):
             stg_roles_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
                                                        "roles_data",
                                                        "yaml")
-            with open(stg_roles_file, 'w') as t_role_file:
-                yaml.dump(roles_list, t_role_file, OrderedDumper)
+            with open(stg_roles_file, 'w') as role_stream:
+                yaml.dump(roles_list, role_stream, OrderedDumper)
 
             dst_roles_yaml = os.path.join(self.home_dir,setts.ROLES_YAML_FILE)
             self.upload_file(stg_roles_file, dst_roles_yaml)
@@ -2277,6 +2285,59 @@ class Director(InfraHost):
                           default_flow_style=False)
             self.upload_file(stg_nic_env_path, remote_nic_env_file)
 
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def update_node_placement(self):
+        remote_plcmnt_file = os.path.join(self.templates_dir,
+                                          NODE_PLACEMENT + ".yaml")
+
+        stg_plcmnt_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
+                                                    NODE_PLACEMENT, "yaml")
+
+        self.download_file(stg_plcmnt_path, remote_plcmnt_file)
+        stg_plcmnt_tmpl = {}
+        with open(stg_plcmnt_path) as stg_plcmnt_stream:
+            stg_plcmnt_tmpl = yaml.load(stg_plcmnt_stream,
+                                        Loader=OrderedLoader)
+            for type in self.settings.node_types:
+                exp = self._generate_node_placement_exp(type)
+                role = self._generate_camel_case_role(type)
+                param_def = stg_plcmnt_tmpl['parameter_defaults']
+                _role_hints = role + 'SchedulerHints'
+                param_def[_role_hints] = {"capabilities:node": exp}
+
+        with open(stg_plcmnt_path, 'w') as stg_plcmnt_stream:
+            yaml.dump(stg_plcmnt_tmpl, stg_plcmnt_stream, OrderedDumper,
+                      default_flow_style=False,
+                      default_style="'")
+        self.upload_file(stg_plcmnt_path, remote_plcmnt_file)
+
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def update_environment_edge(self):
+        logger.debug("Updating dell environment for edge sites.")
+        setts = self.settings
+        dell_env_file = os.path.join(self.templates_dir, DELL_ENV + ".yaml")
+
+        stg_dell_env_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
+                                                      DELL_ENV, "yaml")
+
+        self.download_file(stg_dell_env_path, dell_env_file)
+        stg_dell_env_tmpl = {}
+        with open(stg_dell_env_path) as stg_dell_env_stream:
+            stg_dell_env_tmpl = yaml.load(stg_dell_env_stream,
+                                          Loader=OrderedLoader)
+            param_def = stg_dell_env_tmpl['parameter_defaults']
+            for node_type, nodes in setts.node_types_map.iteritems():
+                role = self._generate_camel_case_role(node_type)
+                role_count_key = role + "Count"
+                param_def[role_count_key] = len(nodes)
+
+        with open(stg_dell_env_path, 'w') as stg_dell_env_stream:
+            yaml.dump(stg_dell_env_tmpl, stg_dell_env_stream, OrderedDumper,
+                      default_flow_style=False)
+
+        self.upload_file(stg_dell_env_path, dell_env_file)
+
+
     def _generate_role_dict(self, node_type):
         # find non-alphanumerics in node type
         # and replace with space then camel case that and strip spaces
@@ -2308,7 +2369,12 @@ class Director(InfraHost):
                           type.lower()).title()).replace(" ", "")
         return role_cc
 
-    def _generate_nic_config_name(self, node_type):
+    def _generate_nic_config_name(self, type):
         # should look like denveredgecompute.yaml if following existing pattern
-        _nic_config_name = re.sub(r'[^a-z0-9]', "", node_type.lower())
+        _nic_config_name = re.sub(r'[^a-z0-9]', "", type.lower())
         return _nic_config_name
+
+    def _generate_node_placement_exp(self, type):
+        placement_exp = (re.sub(r'[^a-z0-9]', " ",
+                         type.lower())).replace(" ", "-") + "-%index%"
+        return placement_exp

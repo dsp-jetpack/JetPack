@@ -86,3 +86,11 @@ class InfraHost():
         _filename = filename + "_" + timestamp + "." + ext
         _path = os.path.join(path, _filename)
         return _path
+
+
+def directory_check(_path):
+    def inner(func):
+        if not os.path.exists(_path):
+            os.makedirs(_path)
+        return func
+    return inner
