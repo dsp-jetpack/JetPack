@@ -103,7 +103,7 @@ TEMPEST_CONF = "tempest.conf"
 
 STAGING_PATH = '/deployment_staging'
 STAGING_TEMPLATES_PATH = STAGING_PATH + "/templates"
-
+NIC_ENV = "nic_environment"
 
 class Director(InfraHost):
 
@@ -1300,6 +1300,7 @@ class Director(InfraHost):
         if self.settings.node_type_subnets:
             self.setup_edge_nic_configuration()
 
+
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
             # static_ips_yaml
@@ -2181,8 +2182,13 @@ class Director(InfraHost):
                       'ComputeBond0Interface2',
                       'ComputeBond1Interface1',
                       'ComputeBond1Interface2']
+        edge_nic_dict = {}
         for subnet_name, subnet_dict in setts.node_type_subnets.iteritems():
             num_nics = subnet_dict['nic_port_count']
+            if num_nics not in edge_nic_dict:
+                edge_nic_dict[num_nics] = []
+            edge_nic_dict[num_nics].append(subnet_name)
+
             port_dir = "{}_port".format(num_nics)
             local_nic_env_file = os.path.join(setts.nic_env_dir_abs_path,
                                               port_dir,
@@ -2198,8 +2204,9 @@ class Director(InfraHost):
             stg_nic_path = self.get_timestamped_path(stg_nic_template_path,
                                                      nic_config_name,
                                                      "yaml")
-            dst_nic_yaml = os.path.join(self.nic_configs_dir, port_dir,
-                                        nic_config_name + ".yaml")
+            dst_nic_yaml = nic_config_name + ".yaml"
+            dst_nic_path = os.path.join(self.nic_configs_dir, port_dir,
+                                        dst_nic_yaml)
 
             with open(local_nic_env_file) as nic_stream:
                 nic_tmpl = yaml.load(nic_stream, Loader=OrderedLoader)
@@ -2234,7 +2241,41 @@ class Director(InfraHost):
                 yaml.dump(nic_tmpl, stg_nic_stream, OrderedDumper,
                           default_flow_style=False)
 
-            self.upload_file(stg_nic_path, dst_nic_yaml)
+            self.upload_file(stg_nic_path, dst_nic_path)
+        self.update_nic_environment(edge_nic_dict)
+
+    def update_nic_environment(self, edge_nic_dict):
+        for num_nics, subnet_lst in edge_nic_dict.iteritems():
+            port_dir = "{}_port".format(num_nics)
+            remote_nic_env_file = os.path.join(self.nic_configs_dir,
+                                               port_dir,
+                                               NIC_ENV + ".yaml")
+
+            stg_nic_template_path = os.path.join(STAGING_TEMPLATES_PATH,
+                                                 "nic-configs", port_dir)
+
+            if not os.path.exists(stg_nic_template_path):
+                os.makedirs(stg_nic_template_path)
+
+            stg_nic_env_path = self.get_timestamped_path(stg_nic_template_path,
+                                                         NIC_ENV, "yaml")
+            self.download_file(stg_nic_env_path, remote_nic_env_file)
+            nic_env_tmpl = OrderedDict()
+            with open(stg_nic_env_path) as nic_env_stream:
+                nic_env_tmpl = yaml.load(nic_env_stream, Loader=OrderedLoader)
+                res_reg = nic_env_tmpl['resource_registry']
+                for subnet in subnet_lst:
+                    role = self._generate_camel_case_role(subnet)
+                    role_nic_key = ("OS::TripleO::"
+                                    + role + "::Net::SoftwareConfig")
+                    nic_config_name = ("./"
+                                       + self._generate_nic_config_name(subnet)
+                                       + ".yaml")
+                    res_reg[role_nic_key] = nic_config_name
+            with open(stg_nic_env_path, 'w') as stg_nic_stream:
+                yaml.dump(nic_env_tmpl, stg_nic_stream, OrderedDumper,
+                          default_flow_style=False)
+            self.upload_file(stg_nic_env_path, remote_nic_env_file)
 
     def _generate_role_dict(self, node_type):
         # find non-alphanumerics in node type
@@ -2262,10 +2303,10 @@ class Director(InfraHost):
         role_d['ServicesDefault'] = SERVICES_DEFAULT
         return role_d
 
-    def _generate_camel_case_role(self, node_type):
-        _node_type_cc = (re.sub(r'[^a-z0-9]', " ",
-                                node_type.lower()).title()).replace(" ", "")
-        return _node_type_cc
+    def _generate_camel_case_role(self, type):
+        role_cc = (re.sub(r'[^a-z0-9]', " ",
+                          type.lower()).title()).replace(" ", "")
+        return role_cc
 
     def _generate_nic_config_name(self, node_type):
         # should look like denveredgecompute.yaml if following existing pattern
