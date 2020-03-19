@@ -190,9 +190,13 @@ def deploy():
             logger.info("=== Skipped Director VM/Undercloud install")
             director_vm = Director()
             # TODO delete test code below
-            director_vm.upload_update_conf_files()
+            # director_vm.upload_update_conf_files()
             director_vm.setup_templates()
-
+            director_vm.node_discovery()
+            director_vm.configure_idracs()
+            director_vm.update_sshd_conf()
+            director_vm.assign_node_roles()
+            director_vm.revert_sshd_conf()
             logger.info("=== setup_templates complete, quit")
             sys.exit(0)
             logger.debug("Deleting overcloud stack")

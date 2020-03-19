@@ -107,6 +107,7 @@ STAGING_TEMPLATES_PATH = STAGING_PATH + "/templates"
 NIC_ENV = "nic_environment"
 NODE_PLACEMENT = "node-placement"
 DELL_ENV = "dell-environment"
+NET_ISO = "network-isolation"
 
 class Director(InfraHost):
 
@@ -287,9 +288,15 @@ class Director(InfraHost):
                          self.settings.ceph_nodes):
                 if hasattr(node, "idrac_ip"):
                     cmd += ' ' + node.idrac_ip
+            # Add edge nodes if there are any defined
+            for node_type, edge_site_nodes in setts.node_types_map.iteritems():
+                for edge_node in edge_site_nodes:
+                    if hasattr(edge_node, "idrac_ip"):
+                        cmd += ' ' + edge_node.idrac_ip
 
             cmd += '> ~/instackenv.json'
-
+            logger.info("Node discovery command %s", cmd)
+            return
             self.run_tty(cmd)
 
             cmd = "ls -la ~/instackenv.json | awk '{print $5;}'"
@@ -326,11 +333,15 @@ class Director(InfraHost):
             self.run_tty(cmd)
 
     def configure_idracs(self):
-        nodes = list(self.settings.controller_nodes)
-        nodes.extend(self.settings.compute_nodes)
-        nodes.extend(self.settings.computehci_nodes)
-        nodes.extend(self.settings.ceph_nodes)
+        setts = self.settings
+        nodes = list(setts.controller_nodes)
+        nodes.extend(setts.compute_nodes)
+        nodes.extend(setts.computehci_nodes)
+        nodes.extend(setts.ceph_nodes)
         cmd = "~/pilot/config_idracs.py "
+
+        for node_type, edge_site_nodes in setts.node_types_map.iteritems():
+            nodes.extend(edge_site_nodes)
 
         json_config = defaultdict(dict)
         for node in nodes:
@@ -342,14 +353,15 @@ class Director(InfraHost):
             if hasattr(node, 'pxe_nic'):
                 json_config[node_id]["pxe_nic"] = node.pxe_nic
 
-            new_ipmi_password = self.settings.new_ipmi_password
+            new_ipmi_password = setts.new_ipmi_password
             if new_ipmi_password:
                 json_config[node_id]["password"] = new_ipmi_password
             if node.skip_nic_config:
                 json_config[node_id]["skip_nic_config"] = node.skip_nic_config
         if json_config.items():
             cmd += "-j '{}'".format(json.dumps(json_config))
-
+        logger.info("Configuring iDRACs command: %s", cmd)
+        return
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
             raise AssertionError("An error occurred while running "
@@ -402,6 +414,8 @@ class Director(InfraHost):
     def assign_role(self, node, role, index):
         assign_role_command = self._create_assign_role_command(
             node, role, index)
+        logger.info("Assign role command: %s", assign_role_command)
+        return
         stdout, stderr, exit_status = self.run(self.source_stackrc +
                                                "cd ~/pilot;" +
                                                assign_role_command)
@@ -419,19 +433,24 @@ class Director(InfraHost):
                                      exit_status))
 
     def assign_node_roles(self):
+        setts = self.settings
         logger.debug("Assigning roles to nodes")
         osd_yaml = os.path.join(self.templates_dir, "ceph-osd-config.yaml")
         self.run("/bin/cp -rf " + osd_yaml + ".orig " + osd_yaml)
         common_path = os.path.join(os.path.expanduser(
-            self.settings.cloud_repo_dir + '/src'), 'common')
+            setts.cloud_repo_dir + '/src'), 'common')
         sys.path.append(common_path)
         from thread_helper import ThreadWithExHandling  # noqa
 
         roles_to_nodes = {}
-        roles_to_nodes["controller"] = self.settings.controller_nodes
-        roles_to_nodes["compute"] = self.settings.compute_nodes
-        roles_to_nodes["computehci"] = self.settings.computehci_nodes
-        roles_to_nodes["storage"] = self.settings.ceph_nodes
+        roles_to_nodes["controller"] = setts.controller_nodes
+        roles_to_nodes["compute"] = setts.compute_nodes
+        roles_to_nodes["computehci"] = setts.computehci_nodes
+        roles_to_nodes["storage"] = setts.ceph_nodes
+
+        # Add edge nodes if there are any defined
+        for node_type, edge_site_nodes in setts.node_types_map.iteritems():
+            roles_to_nodes[node_type] = edge_site_nodes
 
         threads = []
         for role in roles_to_nodes.keys():
@@ -461,15 +480,20 @@ class Director(InfraHost):
             sys.exit(1)
 
     def update_sshd_conf(self):
+        setts = self.settings
         # Update sshd_config to allow for more than 10 ssh sessions
         # Required for assign_role to run threaded if stamp has > 10 nodes
-        non_sah_nodes = (self.settings.controller_nodes +
-                         self.settings.compute_nodes +
-                         self.settings.computehci_nodes +
-                         self.settings.ceph_nodes)
+        non_sah_nodes = (setts.controller_nodes +
+                         setts.compute_nodes +
+                         setts.computehci_nodes +
+                         setts.ceph_nodes)
+
+        for node_type, edge_site_nodes in setts.node_types_map.iteritems():
+            non_sah_nodes.extend(edge_site_nodes)
         # Allow for the number of nodes + a few extra sessions
         maxSessions = len(non_sah_nodes) + 10
-
+        logger.info("Updating SSH configuration, setting max sessions to: %s",
+                    str(maxSessions))
         setts = ['MaxStartups', 'MaxSessions']
         for each in setts:
             re = self.run("sudo grep " + each +
@@ -1303,6 +1327,7 @@ class Director(InfraHost):
             self.setup_edge_nic_configuration()
             self.update_node_placement()
             self.update_environment_edge()
+            self.update_network_isolation()
 
 
         if self.settings.overcloud_static_ips is True:
@@ -2336,6 +2361,41 @@ class Director(InfraHost):
                       default_flow_style=False)
 
         self.upload_file(stg_dell_env_path, dell_env_file)
+
+
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def update_network_isolation(self):
+        logger.debug("Updating network isolation for edge sites.")
+        port_map = {'ExternalPort': '../network/ports/noop.yaml',
+                    'InternalApiPort': '../network/ports/internal_api.yaml',
+                    'StoragePort': '../network/ports/storage.yaml',
+                    'StorageMgmtPort': '../network/ports/noop.yaml',
+                    'TenantPort': '../network/ports/tenant.yaml'}
+        setts = self.settings
+        net_iso_file = os.path.join(self.templates_dir, NET_ISO + ".yaml")
+
+        stg_net_iso_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
+                                                      NET_ISO, "yaml")
+
+        self.download_file(stg_net_iso_path, net_iso_file)
+        stg_net_iso_tmpl = {}
+
+        with open(stg_net_iso_path) as stg_net_iso_stream:
+            stg_net_iso_tmpl = yaml.load(stg_net_iso_stream,
+                                          Loader=OrderedLoader)
+            res_reg = stg_net_iso_tmpl['resource_registry']
+            for node_type in setts.node_types:
+                role = self._generate_camel_case_role(node_type)
+                role_key = "OS::TripleO::" + role + "::Ports::"
+                for role_port, port_yaml_file in port_map.iteritems():
+                    _role = role_key + role_port
+                    res_reg[_role] =  port_yaml_file
+
+        with open(stg_net_iso_path, 'w') as stg_net_iso_stream:
+            yaml.dump(stg_net_iso_tmpl, stg_net_iso_stream, OrderedDumper,
+                      default_flow_style=False)
+
+        self.upload_file(stg_net_iso_path, net_iso_file)
 
 
     def _generate_role_dict(self, node_type):
