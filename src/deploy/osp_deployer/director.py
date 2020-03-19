@@ -715,6 +715,30 @@ class Director(InfraHost):
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_vlantest_network=.*|sanity_vlantest_network=' +
             self.settings.sanity_vlantest_network +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|storage_network=.*|storage_network=' +
+            self.settings.storage_network +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|storage_network_start_ip=.*|' +
+            'storage_network_start_ip=' +
+            self.settings.storage_network_start_ip +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|storage_network_end_ip=.*|' +
+            'storage_network_end_ip=' +
+            self.settings.storage_network_end_ip +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|storage_network_gateway=.*|'
+            'storage_network_gateway=' +
+            self.settings.storage_network_gateway +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|storage_network_vlan=.*|storage_network_vlan=' +
+            self.settings.storage_network_vlan +
+            '|" pilot/deployment-validation/sanity.ini',
+           'sed -i "s|storage_network_name=.*|storage_network_name=' +
+            self.settings.storage_network_name +
+            '|" pilot/deployment-validation/sanity.ini',
+           'sed -i "s|storage_subnet_name=.*|storage_subnet_name=' +
+            self.settings.storage_subnet_name +
             '|" pilot/deployment-validation/sanity.ini'
         ]
         for cmd in cmds:
