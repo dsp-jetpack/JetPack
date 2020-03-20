@@ -14,10 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
 import time
 from auto_common import Ssh, Scp
 
+logger = logging.getLogger("osp_deployer")
 
 class InfraHost():
 
@@ -68,6 +70,8 @@ class InfraHost():
                                  replace)
 
     def upload_file(self, local_file, remote_file):
+        logger.info("Uploading local file: %s, to remote file: %s",
+                    local_file, remote_file)
         Scp.put_file(self.ip,
                      "root",
                      self.root_pwd,

@@ -107,6 +107,7 @@ STAGING_TEMPLATES_PATH = STAGING_PATH + "/templates"
 NIC_ENV = "nic_environment"
 NODE_PLACEMENT = "node-placement"
 DELL_ENV = "dell-environment"
+NET_ENV = "network-environment"
 NET_ISO = "network-isolation"
 
 class Director(InfraHost):
@@ -728,9 +729,15 @@ class Director(InfraHost):
         src_file.close()
         tmp_file.close()
 
-        env_name = os.path.join(self.templates_dir, "dell-environment.yaml")
+        env_name = os.path.join(self.templates_dir, DELL_ENV + ".yaml")
         self.upload_file(tmp_name, env_name)
         os.remove(tmp_name)
+        # If we have edge sites we need to make another round trip
+        # downloading and uploading dell-environment.yaml
+        # TODO: Refactor above code so we can do all this work in one pass,
+        # out of scope for JS 13.3, address in 16.1
+        if self.settings.node_type_subnets:
+            self.update_environment_edge()
 
     def setup_sanity_ini(self):
         sanity_ini = self.sanity_dir + "/sanity.ini"
@@ -1152,7 +1159,7 @@ class Director(InfraHost):
 
         logger.debug("Configuring network-environment.yaml for overcloud")
 
-        network_yaml = self.templates_dir + "/network-environment.yaml"
+        network_yaml = self.templates_dir + "/" + NET_ENV + ".yaml"
         octavia_yaml = self.templates_dir + "/octavia.yaml"
 
         self.upload_file(self.settings.network_env_yaml,
@@ -1326,7 +1333,6 @@ class Director(InfraHost):
         if self.settings.node_type_subnets:
             self.setup_edge_nic_configuration()
             self.update_node_placement()
-            self.update_environment_edge()
             self.update_network_isolation()
 
 
@@ -2155,7 +2161,7 @@ class Director(InfraHost):
                   is_enable_routed_networks)
 
         for node_type, subnet_section in setts.node_type_subnets.iteritems():
-            subnet_name = node_type + "-subnet"
+            subnet_name = self._generate_subnet_from_node_type(node_type)
             subnets.append(subnet_name)
             if uconf.has_section(subnet_name):
                 uconf.remove_section(subnet_name)
@@ -2210,7 +2216,7 @@ class Director(InfraHost):
 
     def setup_edge_nic_configuration(self):
         setts = self.settings
-        nic_params = ['ComputeProvisioningInterface',
+        nic_keys = ['ComputeProvisioningInterface',
                       'ComputeBond0Interface1',
                       'ComputeBond0Interface2',
                       'ComputeBond1Interface1',
@@ -2248,13 +2254,25 @@ class Director(InfraHost):
                                ['OsNetConfigImpl']
                                ['properties']['config']['str_replace']
                                ['params']['$network_config']['network_config'])
-
+                role = self._generate_camel_case_role(subnet_name)
+                role_def_route = role + 'DefaultRoute'
+                params[role_def_route] = {'type': 'string'}
                 for net_config in net_configs:
-                    if net_config['type'] != 'interface':
+                    logger.info("oooooooo net_config['name'] is %s",
+                                str(net_config['name']))
+                    if (net_config['type'] not in ['interface', 'ovs_bridge']
+                        or net_config['name'] == 'bridge_name'):
                         continue
-                    if (net_config['name']['get_param']
+                    elif (net_config['type'] == 'ovs_bridge'
+                          and net_config['name'] == 'br-tenant'):
+                        routes_dict = {'default': True,
+                                       'next_hop':
+                                           {'get_param': role_def_route}}
+                        net_config['routes'] = routes_dict
+                    elif (net_config['name']['get_param']
                             == 'ComputeProvisioningInterface'):
-
+                        # TODO: May not need these routes, verify after
+                        # successful deployment
                         subnet_gw = subnet_dict['gateway']
 
                         ec2_route = {'ip_netmask': '169.254.169.254/32',
@@ -2266,9 +2284,9 @@ class Director(InfraHost):
                         net_config['routes'] = [ec2_route, default_route,
                                                 prov_route]
 
-                for nic_param in nic_params:
-                    if nic_param in subnet_dict:
-                        params[nic_param]['default'] = subnet_dict[nic_param]
+                for nic_key in nic_keys:
+                    if nic_key in subnet_dict:
+                        params[nic_key]['default'] = subnet_dict[nic_key]
 
             with open(stg_nic_path, 'w') as stg_nic_stream:
                 yaml.dump(nic_tmpl, stg_nic_stream, OrderedDumper,
@@ -2353,9 +2371,19 @@ class Director(InfraHost):
             param_def = stg_dell_env_tmpl['parameter_defaults']
             for node_type, nodes in setts.node_types_map.iteritems():
                 role = self._generate_camel_case_role(node_type)
-                role_count_key = role + "Count"
-                param_def[role_count_key] = len(nodes)
+                role_count_key = role + 'Count'
+                role_subnet_key = role + 'ControlPlaneSubnet'
+                role_def_route_key = role + 'DefaultRoute'
 
+                param_def[role_count_key] = len(nodes)
+                edge_subnet = self._generate_subnet_from_node_type(node_type)
+                param_def[role_subnet_key] = edge_subnet
+                def_route = setts.node_type_subnets[node_type]['gateway']
+                param_def[role_def_route_key] = def_route
+                # ControlPlaneEdge2DefaultRoute: 192.168.120.190
+                # ControlPlaneEdge2SubnetCidr: '26'
+
+        # logger.info("dell env params:\n%s", str(stg_dell_env_tmpl))
         with open(stg_dell_env_path, 'w') as stg_dell_env_stream:
             yaml.dump(stg_dell_env_tmpl, stg_dell_env_stream, OrderedDumper,
                       default_flow_style=False)
@@ -2396,6 +2424,19 @@ class Director(InfraHost):
                       default_flow_style=False)
 
         self.upload_file(stg_net_iso_path, net_iso_file)
+
+    def update_edge_net_envt(self):
+
+        logger.debug("Updating network-environment.yaml for edge sites")
+
+        network_yaml = self.templates_dir + "/" + NET_ENV + ".yaml"
+        # TODO what about ocatvia an DCN??????
+        #octavia_yaml = self.templates_dir + "/octavia.yaml"
+
+        # self.upload_file(self.settings.network_env_yaml,
+        #                 network_yaml)
+
+
 
 
     def _generate_role_dict(self, node_type):
@@ -2438,3 +2479,6 @@ class Director(InfraHost):
         placement_exp = (re.sub(r'[^a-z0-9]', " ",
                          type.lower())).replace(" ", "-") + "-%index%"
         return placement_exp
+
+    def _generate_subnet_from_node_type(self, type):
+        return type + "-subnet"

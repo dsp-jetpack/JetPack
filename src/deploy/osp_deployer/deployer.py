@@ -191,6 +191,8 @@ def deploy():
             director_vm = Director()
             # TODO delete test code below
             # director_vm.upload_update_conf_files()
+            director_vm.setup_net_envt()
+            director_vm.update_edge_net_envt()
             director_vm.setup_templates()
             director_vm.node_discovery()
             director_vm.configure_idracs()
