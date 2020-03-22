@@ -1294,6 +1294,9 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
 
+        if self.settings.node_type_subnets:
+            self.update_edge_net_envt()
+
     def configure_dhcp_server(self):
         cmd = 'cd ' + self.pilot_dir + ';./config_idrac_dhcp.py ' + \
             self.settings.sah_node.provisioning_ip + \
@@ -2426,18 +2429,30 @@ class Director(InfraHost):
         self.upload_file(stg_net_iso_path, net_iso_file)
 
     def update_edge_net_envt(self):
-
         logger.debug("Updating network-environment.yaml for edge sites")
+        setts = self.settings
+        net_env_file = os.path.join(self.templates_dir, NET_ENV + ".yaml")
 
-        network_yaml = self.templates_dir + "/" + NET_ENV + ".yaml"
-        # TODO what about ocatvia an DCN??????
-        #octavia_yaml = self.templates_dir + "/octavia.yaml"
+        stg_net_env_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
+                                                      NET_ENV, "yaml")
 
-        # self.upload_file(self.settings.network_env_yaml,
-        #                 network_yaml)
+        self.download_file(stg_net_env_path, net_env_file)
+        stg_net_env_tmpl = {}
+        with open(stg_net_env_path) as stg_net_env_stream:
+            stg_net_env_tmpl = yaml.load(stg_net_env_stream,
+                                          Loader=OrderedLoader)
+            param_def = stg_net_env_tmpl['parameter_defaults']
+            for node_type, nodes in setts.node_types_map.iteritems():
+                role = self._generate_camel_case_role(node_type)
+                role_subnet_key = role + 'ControlPlaneSubnet'
+                edge_subnet = self._generate_subnet_from_node_type(node_type)
+                param_def[role_subnet_key] = edge_subnet
 
+        with open(stg_net_env_path, 'w') as stg_net_env_stream:
+            yaml.dump(stg_net_env_tmpl, stg_net_env_stream, OrderedDumper,
+                      default_flow_style=False)
 
-
+        self.upload_file(stg_net_env_path, net_env_file)
 
     def _generate_role_dict(self, node_type):
         # find non-alphanumerics in node type
