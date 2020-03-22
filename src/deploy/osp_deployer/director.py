@@ -416,7 +416,6 @@ class Director(InfraHost):
         assign_role_command = self._create_assign_role_command(
             node, role, index)
         logger.info("Assign role command: %s", assign_role_command)
-        return
         stdout, stderr, exit_status = self.run(self.source_stackrc +
                                                "cd ~/pilot;" +
                                                assign_role_command)

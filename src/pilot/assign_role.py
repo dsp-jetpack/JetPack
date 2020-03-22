@@ -151,15 +151,16 @@ def role_index(string):
     index = None
 
     if string.find("-") != -1:
-        role_tokens = role.split("-")
+        role_tokens = role.rsplit('-', 1)
         role = role_tokens[0]
         index = role_tokens[1]
 
-    if role not in ROLES.keys():
-        raise argparse.ArgumentTypeError(
-            "{} is not a valid role; choices are {}".format(
-                role, str(
-                    ROLES.keys())))
+    # do not check roles as we may have edge nodes
+    #if role not in ROLES.keys():
+    #    raise argparse.ArgumentTypeError(
+    #        "{} is not a valid role; choices are {}".format(
+    #            role, str(
+    #                ROLES.keys())))
 
     if index and not index.isdigit():
         raise argparse.ArgumentTypeError(
@@ -186,17 +187,17 @@ def get_flavor_settings(json_filename):
     return flavor_settings
 
 
-def calculate_bios_settings(role, flavor_settings, json_filename):
+def calculate_bios_settings(super_role, flavor_settings, json_filename):
     return calculate_category_settings_for_role(
         'bios',
-        role,
+        super_role,
         flavor_settings,
         json_filename)
 
 
 def calculate_category_settings_for_role(
         category,
-        role,
+        super_role,
         flavor_settings,
         json_filename):
     default = {}
@@ -204,7 +205,7 @@ def calculate_category_settings_for_role(
     if 'default' in flavor_settings and category in flavor_settings['default']:
         default = flavor_settings['default'][category]
 
-    flavor = ROLES[role]
+    flavor = ROLES[super_role]
     flavor_specific = {}
 
     if flavor in flavor_settings and category in flavor_settings[flavor]:
@@ -246,29 +247,29 @@ def get_drac_client(node_definition_filename, node):
     return drac_client
 
 
-def define_target_raid_config(role, drac_client):
+def define_target_raid_config(super_role, drac_client):
     raid_controller_ids = get_raid_controller_ids(drac_client)
 
     if not raid_controller_ids:
         LOG.critical("Found no RAID controller")
         return None
 
-    if role == 'controller':
+    if super_role == 'controller':
         logical_disks = define_controller_logical_disks(drac_client,
                                                         raid_controller_ids)
-    elif role == 'compute':
+    elif super_role == 'compute':
         logical_disks = define_compute_logical_disks(drac_client,
                                                      raid_controller_ids)
-    elif role == 'storage':
+    elif super_role == 'storage':
         logical_disks = define_storage_logical_disks(drac_client,
                                      raid_controller_ids)
-    elif role == 'computehci':
+    elif super_role == 'computehci':
         logical_disks = define_storage_logical_disks(drac_client,
                                                      raid_controller_ids)
     else:
         LOG.critical(
             'Cannot define target RAID configuration for role "{}"').format(
-                role)
+                super_role)
         return None
 
     return {
@@ -729,7 +730,7 @@ def physical_disk_to_key(physical_disk):
     return physical_disk_id_to_key(physical_disk.id)
 
 
-def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
+def configure_raid(ironic_client, node_uuid, super_role, os_volume_size_gb,
                    drac_client):
     '''TODO: Add some selective exception handling so we can determine
     when RAID configuration failed and return False. Further testing
@@ -799,7 +800,7 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
         return False
 
     target_raid_config = define_target_raid_config(
-        role, drac_client)
+        super_role, drac_client)
 
     if target_raid_config is None:
         return False
@@ -878,7 +879,10 @@ def place_node_in_available_state(ironic_client, node_uuid):
 
 def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
                 ironic_client, drac_client):
-    flavor = ROLES[role_index.role]
+    if role_index.role not in ROLES.keys():
+        flavor = 'compute'
+    else:
+        flavor = ROLES[role_index.role]
     LOG.info(
         "Setting role for {} to {}, flavor {}".format(
             ip_mac_service_tag,
@@ -1437,7 +1441,7 @@ def change_physical_disk_state_wait(
 
     job_ids = []
     is_reboot_required = False
-    # Remove the line below to turn back on realtime conversion	
+    # Remove the line below to turn back on realtime conversion
     is_reboot_required = True
 
     conversion_results = change_state_result['conversion_results']
@@ -1450,8 +1454,8 @@ def change_physical_disk_state_wait(
         if controller_result['is_commit_required']:
             realtime = controller_result['is_reboot_required'] == \
                 RebootRequired.optional
-            # Remove the line below to turn back on realtime conversion	
-            realtime = False 
+            # Remove the line below to turn back on realtime conversion
+            realtime = False
             job_id = drac_client.commit_pending_raid_changes(
                 controller_id,
                 reboot=False,
@@ -1476,7 +1480,6 @@ def change_physical_disk_state_wait(
 
 
 def main():
-
     try:
         drac_client = None
 
@@ -1500,10 +1503,15 @@ def main():
             sys.exit(1)
 
         drac_client = get_drac_client(args.node_definition, node)
+        # Assume all node roles that are not in ROLES are edge computes
+        # and act accordingly and set bios to compute settings
+        super_role = args.role_index.role
+        if super_role not in ROLES.keys():
+            super_role = 'compute'
 
         if node.driver == "pxe_drac":
             bios_settings = calculate_bios_settings(
-                args.role_index.role,
+                super_role,
                 flavor_settings,
                 flavor_settings_filename)
 
@@ -1514,7 +1522,7 @@ def main():
                 succeeded = configure_raid(
                     ironic_client,
                     node.uuid,
-                    args.role_index.role,
+                    super_role,
                     args.os_volume_size_gb,
                     drac_client)
 
@@ -1552,9 +1560,9 @@ def main():
     except:  # noqa: E722
         LOG.exception("Unexpected error")
         sys.exit(1)
-    finally:	
-        # Leave the node powered off.	
-        if drac_client is not None:	
+    finally:
+        # Leave the node powered off.
+        if drac_client is not None:
             ensure_node_is_powered_off(drac_client)
 
 if __name__ == "__main__":
