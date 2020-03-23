@@ -213,7 +213,9 @@ def create_share_types():
             logger.info("Creating manila share type {}".format(type[0]))
             cmd = "source {} && " \
                   "manila type-create --is_public True {} true && " \
-                  "manila type-key {} set share_backend_name={}" \
+                  "manila type-key {} set share_backend_name={} && " \
+                  "manila type-key {} set snapshot_support=True && " \
+                  "manila type-key {} set create_share_from_snapshot_support=True" \
                   "".format(overcloudrc_name, type[0], type[0], type[1])
             os.system(cmd)
 
