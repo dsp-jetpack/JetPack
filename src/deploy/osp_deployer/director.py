@@ -109,6 +109,7 @@ NODE_PLACEMENT = "node-placement"
 DELL_ENV = "dell-environment"
 NET_ENV = "network-environment"
 NET_ISO = "network-isolation"
+INSTACK = "instackenv"
 
 class Director(InfraHost):
 
@@ -297,7 +298,7 @@ class Director(InfraHost):
 
             cmd += '> ~/instackenv.json'
             logger.info("Node discovery command %s", cmd)
-            return
+            #### return
             self.run_tty(cmd)
 
             cmd = "ls -la ~/instackenv.json | awk '{print $5;}'"
@@ -318,9 +319,11 @@ class Director(InfraHost):
         expected_nodes = len(self.settings.controller_nodes) + len(
             self.settings.compute_nodes) + len(
             self.settings.ceph_nodes) + len(self.settings.computehci_nodes)
+        for node_type, nodes in setts.node_types_map.iteritems():
+            expected_nodes += len(nodes)
         found = self.run_tty(
             "grep pm_addr ~/instackenv.json | wc -l")[0].rstrip()
-        logger.debug("Found " + found + " Expected : " + str(expected_nodes))
+        logger.info("Found " + found + " Expected : " + str(expected_nodes))
         if int(found) == expected_nodes:
             pass
         else:
@@ -332,6 +335,8 @@ class Director(InfraHost):
             logger.debug("Using pxe_ipmi driver")
             cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ~/instackenv.json'
             self.run_tty(cmd)
+        if self.settings.node_type_subnets:
+            self.update_instack_edge_subnets()
 
     def configure_idracs(self):
         setts = self.settings
@@ -362,7 +367,7 @@ class Director(InfraHost):
         if json_config.items():
             cmd += "-j '{}'".format(json.dumps(json_config))
         logger.info("Configuring iDRACs command: %s", cmd)
-        return
+        #### return
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
             raise AssertionError("An error occurred while running "
@@ -632,6 +637,7 @@ class Director(InfraHost):
         glance_backend_param = "  GlanceBackend:"
         rbd_cinder_backend_param = "  CinderEnableRbdBackend:"
         osds_per_node = 0
+
         if osd_disks:
             for osd in osd_disks:
                 # Format is ":OSD_DRIVE",
@@ -2453,6 +2459,56 @@ class Director(InfraHost):
 
         self.upload_file(stg_net_env_path, net_env_file)
 
+    def create_edge_subnet_routes(self):
+        logger.info('Setting routes for edge subnets on Director VM and '
+                    'restarting VM, as it is required to get the routes to '
+                    'register with virsh properly')
+        setts = self.settings
+        mgmt_gw = setts.management_gateway
+        # prov_gw = setts.provisioning
+        route_eth2 = " > /etc/sysconfig/network-scripts/route-eth2"
+        #route_br_ctlplane = '/etc/sysconfig/network-scripts/route-br-ctlplane'
+        mgmt_cmd = ""
+        for node_type, subnet in setts.node_type_subnets.iteritems():
+            mgmt_cidr = subnet['mgmt_cidr']
+            mgmt_nic = "eth2"
+            mgmt_cmd += "{} via {} dev {}\n".format(mgmt_cidr,
+                                                    mgmt_gw,
+                                                    mgmt_nic)
+
+        mgmt_cmd = "echo $'" + mgmt_cmd + "'" + route_eth2
+        self.run_as_root(mgmt_cmd)
+        logger.info('Restarting Director VM')
+        self.run_as_root('init 6')
+
+    def update_instack_edge_subnets(self):
+        instack_file = self.home_dir + "/" + INSTACK + ".json"
+        mgmt_net = self.settings.management_network.rsplit(".", 1)[0]
+        stg_instack_path = self.get_timestamped_path(STAGING_PATH,
+                                                     INSTACK, "json")
+
+        self.download_file(stg_instack_path, instack_file)
+        instack = {}
+        with open(stg_instack_path, 'r') as stg_instack_stream:
+            instack = json.load(stg_instack_stream)
+            nodes = instack['nodes']
+            for node in nodes:
+                node_mgmt_net = node['pm_addr'].rsplit('.', 1)[0]
+                if node_mgmt_net != mgmt_net:
+                    node['subnet'] = self._subnet_name_from_net(node_mgmt_net)
+
+        with open(stg_instack_path, 'w') as stg_instack_stream:
+            json.dump(instack, stg_instack_stream, indent=2)
+
+        self.upload_file(stg_instack_path, instack_file)
+
+    def _subnet_name_from_net(self, node_mgmt_net):
+        setts = self.settings
+        for node_type, subnet in setts.node_type_subnets.iteritems():
+            subnet_net = subnet['mgmt_cidr'].rsplit('.', 1)[0]
+            if node_mgmt_net == subnet_net:
+                return self._generate_subnet_from_node_type(node_type)
+
     def _generate_role_dict(self, node_type):
         # find non-alphanumerics in node type
         # and replace with space then camel case that and strip spaces
@@ -2486,8 +2542,8 @@ class Director(InfraHost):
 
     def _generate_nic_config_name(self, type):
         # should look like denveredgecompute.yaml if following existing pattern
-        _nic_config_name = re.sub(r'[^a-z0-9]', "", type.lower())
-        return _nic_config_name
+        nic_config_name = re.sub(r'[^a-z0-9]', "", type.lower())
+        return nic_config_name
 
     def _generate_node_placement_exp(self, type):
         placement_exp = (re.sub(r'[^a-z0-9]', " ",

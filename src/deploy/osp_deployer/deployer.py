@@ -151,6 +151,8 @@ def deploy():
         logger.info("Uploading configs/iso/scripts.")
         sah_node.clear_known_hosts()
         sah_node.handle_lock_files()
+        if settings.node_type_subnets:
+            sah_node.create_edge_subnet_routes()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
 
@@ -183,24 +185,20 @@ def deploy():
             director_vm.inject_ssh_key()
             director_vm.upload_cloud_images()
             director_vm.install_director()
+            if settings.node_type_subnets:
+                director_vm.create_edge_subnet_routes()
+                dir_pub_ip = settings.director_node.public_api_ip
+                dir_pw = settings.director_node.root_password
+                director_vm.wait_for_vm_to_come_up(dir_pub_ip,
+                                                   "root",
+                                                   dir_pw)
+                logger.info('Director VM routes set and VM is running')
             tester.verify_undercloud_installed()
             if args.undercloud_only:
                 return
         else:
             logger.info("=== Skipped Director VM/Undercloud install")
             director_vm = Director()
-            # TODO delete test code below
-            # director_vm.upload_update_conf_files()
-            director_vm.setup_net_envt()
-            # director_vm.update_edge_net_envt()
-            director_vm.setup_templates()
-            director_vm.node_discovery()
-            director_vm.configure_idracs()
-            director_vm.update_sshd_conf()
-            director_vm.assign_node_roles()
-            director_vm.revert_sshd_conf()
-            logger.info("=== setup_templates complete, quit")
-            sys.exit(0)
             logger.debug("Deleting overcloud stack")
             director_vm.delete_overcloud()
 
@@ -242,6 +240,8 @@ def deploy():
         director_vm.revert_sshd_conf()
 
         director_vm.setup_templates()
+        logger.info("=== TESTING QUIT NEXT")
+        os._exit(0)
         logger.info("=== Installing the overcloud ")
         logger.debug("installing the overcloud ... this might take a while")
         director_vm.deploy_overcloud()

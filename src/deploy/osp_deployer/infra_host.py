@@ -87,9 +87,23 @@ class InfraHost():
 
     def get_timestamped_path(self, path, filename, ext="conf"):
         timestamp = time.strftime('%Y%m%d%H%M%S')
-        _filename = filename + "_" + timestamp + "." + ext
-        _path = os.path.join(path, _filename)
-        return _path
+        filename = filename + "_" + timestamp + "." + ext
+        path = os.path.join(path, filename)
+        return path
+
+    def wait_for_vm_to_come_up(self, target_ip, user, password):
+        while True:
+            status = Ssh.execute_command(
+                target_ip,
+                user,
+                password,
+                "ps")[0]
+
+            if status != "host not up":
+                break
+
+            logger.debug("vm is not up.  Sleeping...")
+            time.sleep(10)
 
 
 def directory_check(_path):

@@ -35,16 +35,16 @@ class Settings():
     settings = ''
 
     def __str__(self):
-        _settings = {}
-        _settings["node_types"] = str(self.node_types)
-        _settings["node_type_subnets"] = str(self.node_type_subnets)
+        settings = {}
+        settings["node_types"] = str(self.node_types)
+        settings["node_type_subnets"] = str(self.node_type_subnets)
         if self.node_types_map:
-            _settings["node_types_map"] = {}
-            _node_types_map = _settings["node_types_map"]
+            settings["node_types_map"] = {}
+            _node_types_map = settings["node_types_map"]
             for node_type, nodes in self.node_types_map.items():
                 _node_types_map[node_type] = [str(node) for node in nodes]
-        _settings["undercloud_conf"] = str(self.undercloud_conf)
-        return str(_settings)
+        settings["undercloud_conf"] = str(self.undercloud_conf)
+        return str(settings)
 
     def __init__(self, settings_file):
 
@@ -96,7 +96,7 @@ class Settings():
                                 "\" setting in your ini file [" + \
                                 stanza + "] section is deprecated and " +\
                                 "should be removed\n"
-            elif self._is_valid_subnet(yourConf, stanza):
+            elif self.is_valid_subnet(yourConf, stanza):
                 logger.info("Found a valid subnet stanza in configuration: %s",
                             stanza)
             else:
@@ -649,11 +649,11 @@ class Settings():
         # New custom node type and edge related fields
         self.node_types = None
         self.node_type_subnets = {}
-        self.undercloud_conf = self._parse_undercloud_conf()
+        self.undercloud_conf = self.parse_undercloud_conf()
         # Process node types for edge sites etc
         if ('node_types' in dev_settings
                 and len(dev_settings['node_types']) > 0):
-            self._process_node_type_settings(dev_settings['node_types'])
+            self.process_node_type_settings(dev_settings['node_types'])
         # The NIC configurations settings are validated after the Settings
         # class has been instanciated.  Guard against the case where the two
         # fixed are missing here to prevent an exception before validation
@@ -833,25 +833,25 @@ class Settings():
                          " pick source version info")
             self.source_version = "????"
 
-    def _process_node_type_settings(self, node_types):
+    def process_node_type_settings(self, node_types):
         self.node_types = (list(map(str.strip, node_types.split(','))))
         logger.debug("Node types: %s", str(self.node_types))
-        for _node_type in self.node_types:
+        for node_type in self.node_types:
             # if we have ini section name that mathes node type
             # this is edge an site subnet definition to be injected into
             # undercloud.com
-            if self.conf.has_section(_node_type):
-                _node_type_section = self.get_settings_section(_node_type)
-                self.node_type_subnets[_node_type] = _node_type_section
+            if self.conf.has_section(node_type):
+                node_type_section = self.get_settings_section(node_type)
+                self.node_type_subnets[node_type] = node_type_section
 
-    def _parse_undercloud_conf(self):
+    def parse_undercloud_conf(self):
         undercloud_conf = ConfigParser.ConfigParser()
         # The following line makes the parser return case sensitive keys
         undercloud_conf.optionxform = str
         undercloud_conf.read(self.undercloud_conf_path)
         return undercloud_conf
 
-    def _is_valid_subnet(self, conf, stanza):
+    def is_valid_subnet(self, conf, stanza):
         if conf.has_option('Advanced Settings', 'node_types'):
             node_types = (
                 list(map(str.strip, conf.get('Advanced Settings',

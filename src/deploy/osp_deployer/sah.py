@@ -392,20 +392,6 @@ class Sah(InfraHost):
                                     self.settings.director_node.root_password)
         logger.debug("director host is up")
 
-    def wait_for_vm_to_come_up(self, target_ip, user, password):
-        while True:
-            status = Ssh.execute_command(
-                target_ip,
-                user,
-                password,
-                "ps")[0]
-
-            if status != "host not up":
-                break
-
-            logger.debug("vm is not up.  Sleeping...")
-            time.sleep(10)
-
     def delete_director_vm(self):
         while "director" in \
                 self.run("virsh list --all | grep director")[0]:
@@ -503,3 +489,33 @@ class Sah(InfraHost):
             return True
         else:
             return False
+
+    def create_edge_subnet_routes(self):
+        logger.info('Setting routes for edge subnets on SAH and '
+                    'restarting bridge interfaces')
+        setts = self.settings
+        route_br_mgmt = '/etc/sysconfig/network-scripts/route-br-mgmt'
+        route_br_prov = '/etc/sysconfig/network-scripts/route-br-prov'
+        with open(route_br_mgmt, 'w') as route_br_mgmt_stream:
+            for node_type, subnet in setts.node_type_subnets.iteritems():
+                mgmt_cidr = subnet['mgmt_cidr']
+                mgmt_bridge = 'br-mgmt'
+                route = "{} via {} dev {}\n".format(mgmt_cidr,
+                                                    setts.management_gateway,
+                                                    mgmt_bridge)
+                route_br_mgmt_stream.write(route)
+        with open(route_br_prov, 'w') as route_br_prov_stream:
+            for node_type, subnet in setts.node_type_subnets.iteritems():
+                prov_cidr = subnet['cidr']
+                prov_bridge = 'br-prov'
+                route = "{} via {} dev {}\n".format(prov_cidr,
+                                                    setts.provisioning_gateway,
+                                                    prov_bridge)
+                route_br_prov_stream.write(route)
+        # Restart networks
+        for bridge in ['br-mgmt', 'br-prov']:
+            cmd = 'ifdown {} ; ifup {}'.format(bridge, bridge)
+            subprocess.check_output(cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
+        logger.info('Routes for edge subnets on SAH updated')
