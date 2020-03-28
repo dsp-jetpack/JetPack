@@ -105,6 +105,19 @@ class InfraHost():
             logger.debug("vm is not up.  Sleeping...")
             time.sleep(10)
 
+    def wait_for_vm_to_go_down(self, target_ip, user, password):
+        while True:
+            status = Ssh.execute_command(
+                target_ip,
+                user,
+                password,
+                "ps")[0]
+
+            if status == "host not up":
+                break
+            logger.debug("vm is still running,  Sleeping...")
+            time.sleep(5)
+
 
 def directory_check(_path):
     def inner(func):

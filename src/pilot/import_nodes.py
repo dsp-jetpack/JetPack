@@ -60,6 +60,7 @@ def main():
         json.dump(content, out)
     logger.info("Importing {} into ironic".format(args.node_definition))
     cmd = ["openstack", "overcloud", "node", "import", import_json]
+    logger.info("Import nodes command: %s", str(cmd))
     exit_code, stdin, stderr = Exec.execute_command(cmd)
     if exit_code != 0:
         logger.error("Failed to import nodes into ironic: {}, {}".format(

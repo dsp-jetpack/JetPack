@@ -240,8 +240,8 @@ def deploy():
         director_vm.revert_sshd_conf()
 
         director_vm.setup_templates()
-        logger.info("=== TESTING QUIT NEXT")
-        os._exit(0)
+        # logger.info("=== TESTING QUIT NEXT")
+        # os._exit(0)
         logger.info("=== Installing the overcloud ")
         logger.debug("installing the overcloud ... this might take a while")
         director_vm.deploy_overcloud()

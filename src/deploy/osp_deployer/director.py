@@ -235,8 +235,8 @@ class Director(InfraHost):
                                  "/pilot/install-director.log" +
                                  " for details")
 
-        tester = Checkpoints()
-        tester.verify_undercloud_installed()
+        # tester = Checkpoints()
+        # tester.verify_undercloud_installed()
 
     def upload_cloud_images(self):
         if self.settings.pull_images_from_cdn is False:
@@ -2161,7 +2161,7 @@ class Director(InfraHost):
         uconf.set('ctlplane-subnet', 'inspection_iprange',
                   setts.discovery_ip_range)
         uconf.set('ctlplane-subnet', 'gateway',
-                  setts.director_node.provisioning_ip)
+                  setts.provisioning_gateway)
         # set enable_routed_networks create and deine routed networks
         is_enable_routed_networks = bool(setts.node_type_subnets)
 
@@ -2480,6 +2480,11 @@ class Director(InfraHost):
         self.run_as_root(mgmt_cmd)
         logger.info('Restarting Director VM')
         self.run_as_root('init 6')
+        dir_pub_ip = setts.director_node.public_api_ip
+        dir_pw = setts.director_node.root_password
+        self.wait_for_vm_to_go_down(dir_pub_ip,
+                                    "root",
+                                    dir_pw)
 
     def update_instack_edge_subnets(self):
         instack_file = self.home_dir + "/" + INSTACK + ".json"
