@@ -104,6 +104,7 @@ TEMPEST_CONF = "tempest.conf"
 
 STAGING_PATH = '/deployment_staging'
 STAGING_TEMPLATES_PATH = STAGING_PATH + "/templates"
+STAGING_NIC_CONFIGS = STAGING_TEMPLATES_PATH + "/nic-configs"
 NIC_ENV = "nic_environment"
 NODE_PLACEMENT = "node-placement"
 DELL_ENV = "dell-environment"
@@ -2222,13 +2223,9 @@ class Director(InfraHost):
             dst_roles_yaml = os.path.join(self.home_dir,setts.ROLES_YAML_FILE)
             self.upload_file(stg_roles_file, dst_roles_yaml)
 
+    @directory_check(STAGING_NIC_CONFIGS)
     def setup_edge_nic_configuration(self):
         setts = self.settings
-        nic_keys = ['ComputeProvisioningInterface',
-                      'ComputeBond0Interface1',
-                      'ComputeBond0Interface2',
-                      'ComputeBond1Interface1',
-                      'ComputeBond1Interface2']
         edge_nic_dict = {}
         for subnet_name, subnet_dict in setts.node_type_subnets.iteritems():
             num_nics = subnet_dict['nic_port_count']
@@ -2257,44 +2254,14 @@ class Director(InfraHost):
 
             with open(local_nic_env_file) as nic_stream:
                 nic_tmpl = yaml.load(nic_stream, Loader=OrderedLoader)
-                params = nic_tmpl['parameters']
+
                 net_configs = (nic_tmpl['resources']
                                ['OsNetConfigImpl']
                                ['properties']['config']['str_replace']
-                               ['params']['$network_config']['network_config'])
-                role = self._generate_camel_case_role(subnet_name)
-                role_def_route = role + 'DefaultRoute'
-                params[role_def_route] = {'type': 'string'}
-                for net_config in net_configs:
-                    logger.info("oooooooo net_config['name'] is %s",
-                                str(net_config['name']))
-                    if (net_config['type'] not in ['interface', 'ovs_bridge']
-                        or net_config['name'] == 'bridge_name'):
-                        continue
-                    elif (net_config['type'] == 'ovs_bridge'
-                          and net_config['name'] == 'br-tenant'):
-                        routes_dict = {'default': True,
-                                       'next_hop':
-                                           {'get_param': role_def_route}}
-                        net_config['routes'] = routes_dict
-                    elif (net_config['name']['get_param']
-                            == 'ComputeProvisioningInterface'):
-                        # TODO: May not need these routes, verify after
-                        # successful deployment
-                        subnet_gw = subnet_dict['gateway']
-
-                        ec2_route = {'ip_netmask': '169.254.169.254/32',
-                                     'next_hop': subnet_gw}
-                        default_route = {'default': True,
-                                         'next_hop': subnet_gw}
-                        prov_route = {'ip_netmask': setts.provisioning_network,
-                                      'next_hop': subnet_gw}
-                        net_config['routes'] = [ec2_route, default_route,
-                                                prov_route]
-
-                for nic_key in nic_keys:
-                    if nic_key in subnet_dict:
-                        params[nic_key]['default'] = subnet_dict[nic_key]
+                               ['params']['$network_config'])
+                _net_config = self._generate_edge_network_config(subnet_name,
+                                                                 subnet_dict)
+                net_configs['network_config'] = _net_config
 
             with open(stg_nic_path, 'w') as stg_nic_stream:
                 yaml.dump(nic_tmpl, stg_nic_stream, OrderedDumper,
@@ -2539,6 +2506,83 @@ class Director(InfraHost):
         role_d['deprecated_nic_config_name'] = 'compute.yaml'
         role_d['ServicesDefault'] = SERVICES_DEFAULT
         return role_d
+
+    def _generate_edge_network_config(self, subnet_name, subnet):
+        setts = self.settings
+        prov_if = OrderedDict({"type": "interface"})
+        tenant_br = OrderedDict({"type": "ovs_bridge"})
+        ex_br = OrderedDict({"type": "ovs_bridge"})
+
+        prov_if["name"] = subnet["ComputeProvisioningInterface"]
+        prov_if["mtu"] = {"get_param": "ProvisioningNetworkMTU"}
+        prov_if["use_dhcp"] = False
+        prov_if["dns_servers"] = {"get_param": "DnsServers"}
+        prov_if["addresses"] = [{"ip_netmask": {"list_join": ["/",
+                                  [{"get_param":
+                                    "ControlPlaneIp"},
+                                   {"get_param":
+                                    "ControlPlaneSubnetCidr"}]]}}]
+        subnet_gw = subnet["gateway"]
+
+        ec2_route = {"ip_netmask": "169.254.169.254/32",
+                     "next_hop": subnet_gw}
+        default_route = {"default": True,
+                         "next_hop": subnet_gw}
+        prov_route = {"ip_netmask": setts.provisioning_network,
+                      "next_hop": subnet_gw}
+
+        prov_if["routes"] = [ec2_route, default_route, prov_route]
+
+        tenant_br["name"] = "br-tenant"
+        tenant_br["mtu"] = {"get_param": "DefaultBondMTU"}
+        bond_0 = OrderedDict({"type": "linux_bond"})
+        bond_0["name"] = "bond0"
+        bond_0["bonding_options"] = {"get_param":"ComputeBondInterfaceOptions"}
+        bond_0["mtu"] = {"get_param": "DefaultBondMTU"}
+        bond_0_if_1 = OrderedDict({"type": "interface"})
+        bond_0_if_1["name"] = subnet["ComputeBond0Interface1"]
+        bond_0_if_1["mtu"] = {"get_param": "DefaultBondMTU"}
+        bond_0_if_1["primary"] = True
+        bond_0_if_2 = OrderedDict({"type": "interface"})
+        bond_0_if_2["name"] = subnet["ComputeBond0Interface2"]
+        bond_0_if_2["mtu"] = {"get_param": "DefaultBondMTU"}
+        bond_0["members"] = [bond_0_if_1, bond_0_if_2]
+
+        internal_api_vlan = OrderedDict({"type": "vlan"})
+        internal_api_vlan["device"] = "bond0"
+        internal_api_vlan["vlan_id"] = subnet["private_api_vlanid"]
+        internal_api_vlan["mtu"] = {"get_param": "InternalApiMTU"}
+        internal_api_vlan["addresses"] = [{"ip_netmask":
+            {"get_param": "InternalApiIpSubnet"}}]
+
+        tenant_vlan = OrderedDict({"type": "vlan"})
+        tenant_vlan["device"] = "bond0"
+        tenant_vlan["vlan_id"] = subnet["tenant_tunnel_network_vlanid"]
+        tenant_vlan["mtu"] = {"get_param": "TenantNetworkMTU"}
+        tenant_vlan["addresses"] = [{"ip_netmask":
+            {"get_param": "TenantIpSubnet"}}]
+
+        tenant_br["members"] = [bond_0, internal_api_vlan, tenant_vlan]
+
+        ex_br["name"] = "bridge_name"
+        ex_br["mtu"] = {"get_param": "DefaultBondMTU"}
+        bond_1_if_1 = OrderedDict({"type": "interface"})
+        bond_1_if_1["name"] = subnet["ComputeBond1Interface1"]
+        bond_1_if_1["mtu"] = {"get_param": "DefaultBondMTU"}
+        bond_1_if_1["primary"] = True
+        bond_1_if_2 = OrderedDict({"type": "interface"})
+        bond_1_if_2["name"] = subnet["ComputeBond1Interface2"]
+        bond_1_if_2["mtu"] = {"get_param": "DefaultBondMTU"}
+        bond_1 = OrderedDict({"type": "linux_bond"})
+        bond_1["name"] = "bond1"
+        bond_1["bonding_options"] = {"get_param":
+                                     "ComputeBondInterfaceOptions"}
+        bond_1["mtu"] = {"get_param": "DefaultBondMTU"}
+        bond_1["members"] = [bond_1_if_1, bond_1_if_2]
+        ex_br["members"] = [bond_1]
+        network_config = [prov_if, tenant_br, ex_br]
+        logger.info("network_config is: %s", str(network_config))
+        return network_config
 
     def _generate_camel_case_role(self, type):
         role_cc = (re.sub(r'[^a-z0-9]', " ",
