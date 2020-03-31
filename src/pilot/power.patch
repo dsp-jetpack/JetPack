@@ -1,0 +1,35 @@
+--- power.py	2019-06-06 01:43:18.000000000 -0500
++++ power_modified.py	2020-03-26 03:23:09.408232354 -0500
+@@ -100,6 +100,20 @@
+     _commit_boot_list_change(node)
+ 
+     client = drac_common.get_drac_client(node)
++
++    # The iDRAC will return a SYS021 error if the server is powered off and a
++    # reboot is requested.  In this situation, convert the requested reboot
++    # into a power on to avoid this error.
++    # To minimize the chance of a race condition, it is critical to do this
++    # check immediately before sending the power state change command.  This
++    # keeps the window during which the server could change power states
++    # without us knowing about it as small as possible.
++    if power_state == states.REBOOT:
++        current_power_state = _get_power_state(node)
++        # If the server is not on, then power it on instead of rebooting
++        if current_power_state != states.POWER_ON:
++            power_state = states.POWER_ON
++
+     target_power_state = REVERSE_POWER_STATES[power_state]
+ 
+     try:
+@@ -187,10 +201,4 @@
+                         "timeout=%(timeout)s",
+                         {'timeout': timeout})
+ 
+-        current_power_state = _get_power_state(task.node)
+-        if current_power_state == states.POWER_ON:
+-            target_power_state = states.REBOOT
+-        else:
+-            target_power_state = states.POWER_ON
+-
+-        _set_power_state(task.node, target_power_state)
++        _set_power_state(task.node, states.REBOOT)
