@@ -326,6 +326,16 @@ sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
 echo "## Done."
 
+# This hacks in a patch to fix issue where server fails to reboot.
+# Note that this code must be here because we use this code prior to deploying
+# the director.
+echo
+echo "## Patching Ironic iDRAC driver power.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/power.py ${HOME}/pilot/power.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/power.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/power.pyo
+echo "## Done."
+
 # This hacks in a patch to make conductor wait while completion of configuration job
 echo
 echo "## Patching Ironic iDRAC driver job.py..."
