@@ -494,19 +494,20 @@ class Sah(InfraHost):
         logger.info('Setting routes for edge subnets on SAH and '
                     'restarting bridge interfaces')
         setts = self.settings
+        ntdm = setts.node_type_data_map
         route_br_mgmt = '/etc/sysconfig/network-scripts/route-br-mgmt'
         route_br_prov = '/etc/sysconfig/network-scripts/route-br-prov'
         with open(route_br_mgmt, 'w') as route_br_mgmt_stream:
-            for node_type, subnet in setts.node_type_subnets.iteritems():
-                mgmt_cidr = subnet['mgmt_cidr']
+            for node_type, node_type_data in ntdm.iteritems():
+                mgmt_cidr = node_type_data['mgmt_cidr']
                 mgmt_bridge = 'br-mgmt'
                 route = "{} via {} dev {}\n".format(mgmt_cidr,
                                                     setts.management_gateway,
                                                     mgmt_bridge)
                 route_br_mgmt_stream.write(route)
         with open(route_br_prov, 'w') as route_br_prov_stream:
-            for node_type, subnet in setts.node_type_subnets.iteritems():
-                prov_cidr = subnet['cidr']
+            for node_type, node_type_data in ntdm.iteritems():
+                prov_cidr = node_type_data['cidr']
                 prov_bridge = 'br-prov'
                 route = "{} via {} dev {}\n".format(prov_cidr,
                                                     setts.provisioning_gateway,

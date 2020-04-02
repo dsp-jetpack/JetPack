@@ -151,7 +151,7 @@ def deploy():
         logger.info("Uploading configs/iso/scripts.")
         sah_node.clear_known_hosts()
         sah_node.handle_lock_files()
-        if settings.node_type_subnets:
+        if settings.node_type_data_map:
             sah_node.create_edge_subnet_routes()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
@@ -185,7 +185,7 @@ def deploy():
             director_vm.inject_ssh_key()
             director_vm.upload_cloud_images()
             director_vm.install_director()
-            if settings.node_type_subnets:
+            if settings.node_type_data_map:
                 director_vm.create_edge_subnet_routes()
                 dir_pub_ip = settings.director_node.public_api_ip
                 dir_pw = settings.director_node.root_password

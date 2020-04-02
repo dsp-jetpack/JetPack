@@ -29,7 +29,6 @@ class Settings():
     CEPH_OSD_CONFIG_FILE = 'pilot/templates/ceph-osd-config.yaml'
     TEMPEST_DEFAULT_WORKSPACE_NAME = 'mytempest'
     UNDERCLOUD_CONFIG_FILE = 'pilot/undercloud.conf'
-    ROLES_YAML_FILE = 'pilot/templates/roles_data.yaml'
     NIC_ENV_DIR_PATH = '/pilot/templates/nic-configs/'
 
     settings = ''
@@ -37,11 +36,11 @@ class Settings():
     def __str__(self):
         settings = {}
         settings["node_types"] = str(self.node_types)
-        settings["node_type_subnets"] = str(self.node_type_subnets)
+        settings["node_type_data_map"] = str(self.node_type_data_map)
         if self.node_types_map:
             settings["node_types_map"] = {}
             _node_types_map = settings["node_types_map"]
-            for node_type, nodes in self.node_types_map.items():
+            for node_type, nodes in self.node_types_map.iteritems():
                 _node_types_map[node_type] = [str(node) for node in nodes]
         settings["undercloud_conf"] = str(self.undercloud_conf)
         return str(settings)
@@ -97,7 +96,7 @@ class Settings():
                                 stanza + "] section is deprecated and " +\
                                 "should be removed\n"
             elif self.is_valid_subnet(yourConf, stanza):
-                logger.info("Found a valid subnet stanza in configuration: %s",
+                logger.info("Found a valid node_type_tuples stanza in configuration: %s",
                             stanza)
             else:
                 warning_msg = warning_msg + "Section [" + stanza + \
@@ -643,12 +642,12 @@ class Settings():
             Settings.NIC_ENV_DIR_PATH
         self.undercloud_conf_path = self.foreman_configuration_scripts + \
             '/' + Settings.UNDERCLOUD_CONFIG_FILE
-        self.roles_yaml = self.foreman_configuration_scripts + \
-            '/' + Settings.ROLES_YAML_FILE
+        self.templates_dir = self.foreman_configuration_scripts + \
+            '/pilot/templates'
 
         # New custom node type and edge related fields
         self.node_types = None
-        self.node_type_subnets = {}
+        self.node_type_data_map = {}
         self.undercloud_conf = self.parse_undercloud_conf()
         # Process node types for edge sites etc
         if ('node_types' in dev_settings
@@ -842,7 +841,7 @@ class Settings():
             # undercloud.com
             if self.conf.has_section(node_type):
                 node_type_section = self.get_settings_section(node_type)
-                self.node_type_subnets[node_type] = node_type_section
+                self.node_type_data_map[node_type] = node_type_section
 
     def parse_undercloud_conf(self):
         undercloud_conf = ConfigParser.ConfigParser()
