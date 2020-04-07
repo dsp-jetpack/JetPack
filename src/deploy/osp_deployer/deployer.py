@@ -184,6 +184,7 @@ def deploy():
             logger.info("=== installing the director & undercloud ===")
             director_vm.inject_ssh_key()
             director_vm.upload_cloud_images()
+            director_vm.setup_roles()
             director_vm.install_director()
             if settings.node_type_data_map:
                 director_vm.create_edge_subnet_routes()

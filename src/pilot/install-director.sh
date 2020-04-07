@@ -38,7 +38,7 @@ while true ; do
         --sm_pwd)
                 subscription_manager_pass=$2 ; shift 2 ;;
         --sm_pool)
-                subcription_manager_poolid=$2; shift 2 ;; 
+                subcription_manager_poolid=$2; shift 2 ;;
         --satellite_hostname)
                 satellite_hostname=$2; shift 2;;
         --satellite_org)
@@ -58,7 +58,7 @@ done
 
 
 if [ ! -z "${satellite_hostname}" ]; then
-   
+
     if [ -z "${dns_ip}" ] || [ -z "${satellite_hostname}" ] || [ -z "${satellite_org}" ] || [ -z ${satellite_key} ] ; then
         echo -e "$USAGE"
         exit 1
@@ -143,7 +143,7 @@ then
   export no_proxy=$no_proxy_list
   export http_proxy=$proxy
   export https_proxy=$proxy
-  export -p 
+  export -p
   echo "## Done."
 fi
 
@@ -214,14 +214,14 @@ do
 done
 echo "## Done."
 
-echo 
+echo
 echo "## Customizing the overcloud image & uploading images"
 if [ ! -z "${satellite_hostname}" ]; then
     run_command "~/pilot/customize_image.sh --satellite_hostname ${satellite_hostname} \
                 --satellite_org ${satellite_org} \
                 --satellite_key ${satellite_key} \
                 --proxy ${proxy}"
-                  
+
 elif [ ! -z "${subscription_manager_user}" ];then
     run_command "~/pilot/customize_image.sh --sm_user ${subscription_manager_user} \
                 --sm_pwd ${subscription_manager_pass} \
@@ -264,6 +264,7 @@ echo "## Done."
 echo
 echo "## Copying heat templates..."
 cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overcloud
+# TODO:dpaterson, why do we copy roles_data to overcloud?
 cp $HOME/pilot/templates/roles_data.yaml $HOME/pilot/templates/overcloud/roles_data.yaml
 cp $HOME/pilot/templates/network-isolation.yaml $HOME/pilot/templates/overcloud/environments/network-isolation.yaml
 echo "## Done."
@@ -417,7 +418,7 @@ else
         --set ceph_namespace=${satellite_hostname}:5000 \
         --set ceph_image=${containers_prefix}rhceph-3-rhel7 \
         --output-env-file=$HOME/overcloud_images.yaml
-     
+
     else
         openstack overcloud container image prepare --output-env-file $HOME/overcloud_images.yaml \
         --namespace=registry.access.redhat.com/rhosp13 \

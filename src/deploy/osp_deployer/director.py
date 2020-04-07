@@ -118,6 +118,10 @@ STATIC_IP_ENV = 'static-ip-environment'
 ROLES_DATA = 'roles_data'
 NET_DATA = 'network_data'
 
+INTERNAL_API_NET = ('InternalApi', 'internal_api')
+STORAGE_NET = ('Storage', 'storage')
+TENANT_NET = ('Tenant', 'tenant')
+
 class Director(InfraHost):
 
     def __init__(self):
@@ -1306,8 +1310,8 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
 
-        #x if self.settings.node_type_data_map:
-            #x self.update_edge_net_envt()
+        if self.settings.node_type_data_map:
+            self.update_edge_net_envt()
 
     def configure_dhcp_server(self):
         cmd = 'cd ' + self.pilot_dir + ';./config_idrac_dhcp.py ' + \
@@ -1346,9 +1350,9 @@ class Director(InfraHost):
 
         # If there are subnets generate and upload nic templates.
         if self.settings.node_type_data_map:
+            self.create_network_data()
             self.setup_edge_nic_configuration()
             self.update_node_placement()
-            self.create_network_data()
 
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
@@ -1382,7 +1386,7 @@ class Director(InfraHost):
                     compute_private_ips += "\\n"
                     compute_storage_ips += "\\n"
 
-            computehci_tenant_tunnel_ips =''
+            computehci_tenant_tunnel_ips = ''
             computehci_private_ips = ''
             computehci_storage_ips = ''
             computehci_cluster_ips = ''
@@ -2180,7 +2184,7 @@ class Director(InfraHost):
                   is_enable_routed_networks)
 
         for node_type, node_type_data in setts.node_type_data_map.iteritems():
-            subnet_name = self._generate_subnet_from_node_type(node_type)
+            subnet_name = self._generate_subnet_name(node_type)
             subnets.append(subnet_name)
             if uconf.has_section(subnet_name):
                 uconf.remove_section(subnet_name)
@@ -2212,30 +2216,32 @@ class Director(InfraHost):
         ntypes_data_map = setts.node_type_data_map
 
         roles_file = os.path.join(self.templates_dir, ROLES_DATA + '.yaml')
-        oc_roles_file = os.path.join(self.templates_dir,
-                                     OVERCLOUD_PATH,
-                                     ROLES_DATA + '.yaml')
+        # oc_roles_file = os.path.join(self.templates_dir,
+        #                             OVERCLOUD_PATH,
+        #                             ROLES_DATA + '.yaml')
         stg_roles_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
                                                    ROLES_DATA,
                                                    "yaml")
 
         self.download_file(stg_roles_file, roles_file)
-        roles = []
+        stg_roles = []
         roles_list = []
         for node_type in ntypes:
             # If there is a subnet for node_type we have edge site
             # and need to generate templates
             if node_type.lower() in ntypes_data_map:
-                roles.append(self._generate_role_dict(node_type))
-        if len(roles) is not 0:
-            logger.debug("Edge roles to be added: %s", str(roles))
+                stg_roles.append(self._generate_role_dict(node_type))
+        if len(stg_roles) is not 0:
 
             with open(stg_roles_file) as stg_roles_stream:
                 roles_list = yaml.load(stg_roles_stream, Loader=OrderedLoader)
 
-            for role in roles:
+            roles_list = self._delete_existing_roles(roles_list, stg_roles)
+
+            for role in stg_roles:
                 roles_list.append(role)
 
+            logger.debug("Roles to be uploaded: %s", str(roles_list))
             with open(stg_roles_file, 'w') as stg_role_stream:
                 yaml.dump(roles_list, stg_role_stream, OrderedDumper)
 
@@ -2243,13 +2249,13 @@ class Director(InfraHost):
             # Need to copy to pilot/templates/overcloud as
             # we copy the roles_data file there during undercloud
             # installation and it is used during overcloud deployment
-            self.upload_file(stg_roles_file, oc_roles_file)
+            # self.upload_file(stg_roles_file, oc_roles_file)
 
     @directory_check(STAGING_NIC_CONFIGS)
     def setup_edge_nic_configuration(self):
         setts = self.settings
         for node_type, node_type_data in setts.node_type_data_map.iteritems():
-            role = self._generate_camel_case_role(node_type)
+            role = self._generate_cc_role(node_type)
             num_nics = node_type_data['nic_port_count']
 
             port_dir = "{}_port".format(num_nics)
@@ -2274,7 +2280,7 @@ class Director(InfraHost):
             with open(local_nic_env_file) as nic_stream:
                 nic_tmpl = yaml.load(nic_stream, Loader=OrderedLoader)
                 params = nic_tmpl['parameters']
-                edge_params = self._generate_nic_params(role)
+                edge_params = self._generate_nic_params(node_type)
                 params.update(edge_params)
                 net_configs = (nic_tmpl['resources']
                                ['OsNetConfigImpl']
@@ -2326,7 +2332,7 @@ class Director(InfraHost):
                     ne_params = self._generate_nic_env_params(node_type,
                                                               node_type_data)
                     params.update(ne_params)
-                    role = self._generate_camel_case_role(node_type)
+                    role = self._generate_cc_role(node_type)
                     role_nic_key = ("OS::TripleO::"
                                     + role + "::Net::SoftwareConfig")
                     nic_config_name = ("./"
@@ -2354,7 +2360,7 @@ class Director(InfraHost):
                                         Loader=OrderedLoader)
             for type in self.settings.node_types:
                 exp = self._generate_node_placement_exp(type)
-                role = self._generate_camel_case_role(type)
+                role = self._generate_cc_role(type)
                 param_def = stg_plcmnt_tmpl['parameter_defaults']
                 _role_hints = role + 'SchedulerHints'
                 param_def[_role_hints] = {"capabilities:node": exp}
@@ -2382,13 +2388,13 @@ class Director(InfraHost):
             param_def = stg_dell_env_tmpl['parameter_defaults']
 
             for node_type, node_type_data in setts.node_type_data_map.iteritems():
-                role = self._generate_camel_case_role(node_type)
-                edge_subnet = self._generate_subnet_from_node_type(node_type)
+                role = self._generate_cc_role(node_type)
+                edge_subnet = self._generate_subnet_name(node_type)
                 role_subnet_key = role + 'ControlPlaneSubnet'
                 param_def[role_subnet_key] = edge_subnet
 
             for node_type, nodes in setts.node_types_map.iteritems():
-                role = self._generate_camel_case_role(node_type)
+                role = self._generate_cc_role(node_type)
                 role_count_key = role + 'Count'
                 param_def[role_count_key] = len(nodes)
         # logger.info("dell env params:\n%s", str(stg_dell_env_tmpl))
@@ -2407,18 +2413,17 @@ class Director(InfraHost):
 
         stg_net_data_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
                                                       NET_DATA, "yaml")
-        stg_net_data_lst = []
+        stg_net_data_lst = self._generate_default_networks_data()
 
-        # with open(stg_net_data_file) as stg_net_data_stream:
-        #    stg_net_data_lst = yaml.load(stg_net_data_stream,
-        #                                 Loader=OrderedLoader)
         for node_type, node_type_data in setts.node_type_data_map.iteritems():
             nd = self._generate_network_data(node_type, node_type_data)
             stg_net_data_lst.extend(nd)
         with open(stg_net_data_file, 'w') as stg_net_data_stream:
             yaml.dump(stg_net_data_lst, stg_net_data_stream, OrderedDumper,
                       default_flow_style=False)
-
+        # pyyaml has bug in it where if you pass in 'string',
+        # you get '''string''', sed the file prior to uploading
+        subprocess.call(['sed', '-i', '-e',  "s/'''/'/g", stg_net_data_file])
         self.upload_file(stg_net_data_file, net_data_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
@@ -2435,47 +2440,55 @@ class Director(InfraHost):
         with open(stg_net_env_path) as stg_net_env_stream:
             stg_net_env_tmpl = yaml.load(stg_net_env_stream,
                                          Loader=OrderedLoader)
-            param_def = stg_net_env_tmpl['parameter_defaults']
+            params = stg_net_env_tmpl['parameter_defaults']
             for node_type, node_type_data in setts.node_type_data_map.iteritems():
                 logger.info("yyyyyy configuring network env for node_type_data: %s",
                             str(node_type_data))
-                role = self._generate_camel_case_role(node_type)
-                edge_subnet = self._generate_subnet_from_node_type(node_type)
-                int_api_network = 'InternalApi' + role
-                tenant_network = 'Tenant' + role
-                storage_network = 'Storage' + role
-                # don' think I need control plane ones.
-                # TODO: delete control plane
-                cp_subnet =  role + 'ControlPlaneSubnet'
-                cp_default_route = role + 'ControlPlaneDefaultRoute'
+                role = self._generate_cc_role(node_type)
+                edge_subnet = self._generate_subnet_name(node_type)
+                # format - ControlPlane[SubnetNameCC]DefaultRoute:
+                cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
+                # format - ControlPlane[SubnetNameCC]SubnetCidr:
+                cp_subnet_cidr = 'ControlPlane' + role + 'SubnetCidr'
+                # should be [RoleCC]ControlPlaneSubnet: subnet-name
+                cp_subnet = role + 'ControlPlaneSubnet'
+                int_api_network = INTERNAL_API_NET[0] + role
+                tenant_network = TENANT_NET[0] + role
+                storage_network = STORAGE_NET[0] + role
                 int_api_cidr = int_api_network + 'NetCidr'
-                int_api_pools = int_api_network + 'AllocationPools'
                 int_api_vlan = int_api_network + 'NetworkVlanID'
+                int_api_subnet = int_api_network + 'IpSubnet'
+                int_api_gateway = int_api_network + 'Gateway'
                 tenant_net_cidr = tenant_network + 'NetCidr'
-                tenant_pools = tenant_network + 'AllocationPools'
                 tenant_vlan = tenant_network + 'NetworkVlanID'
+                tenant_subnet = tenant_network + 'IpSubnet'
+                tenant_gateway = tenant_network + 'Gateway'
                 storage_net_cidr = storage_network + 'NetCidr'
-                storage_pools = storage_network + 'AllocationPools'
                 storage_vlan = storage_network + 'NetworkVlanID'
+                storage_subnet = storage_network + 'IpSubnet'
+                storage_gateway = storage_network + 'Gateway'
+                params[cp_subnet] = edge_subnet
+                params[cp_subnet_cidr] = node_type_data['cidr']
+                params[cp_default_route] = node_type_data['gateway']
 
-                param_def[cp_subnet] = edge_subnet
-                param_def[cp_default_route] = node_type_data['gateway']
-                param_def[int_api_cidr] = node_type_data['private_api_network']
-                param_def[int_api_pools] = [{"start":
-                    node_type_data['private_api_allocation_pool_start'],
-                    "end": node_type_data['private_api_allocation_pool_end']}]
-                param_def[int_api_vlan] = node_type_data['private_api_vlanid']
-                param_def[tenant_net_cidr] = node_type_data['tenant_network']
-                param_def[tenant_pools] = [{"start":
-                    node_type_data['tenant_allocation_pool_start'],
-                    "end":
-                    node_type_data['tenant_allocation_pool_end']}]
-                param_def[tenant_vlan] = node_type_data['tenant_vlanid']
-                param_def[storage_net_cidr] = node_type_data['storage_network']
-                param_def[storage_pools] = [{"start":
-                    node_type_data['storage_allocation_pool_start'],
-                    "end": node_type_data['storage_allocation_pool_end']}]
-                param_def[storage_vlan] = node_type_data['storage_vlanid']
+                _int_api = node_type_data['private_api_network']
+                params[int_api_subnet] = _int_api
+                params[int_api_cidr] = _int_api
+                params[int_api_vlan] = node_type_data['private_api_vlanid']
+                params[int_api_gateway] = node_type_data['private_api_gateway']
+
+                params[tenant_vlan] = node_type_data['tenant_vlanid']
+                _tenant_net = node_type_data['tenant_network']
+                params[tenant_subnet] = _tenant_net
+                params[tenant_net_cidr] = _tenant_net
+                params[tenant_gateway] = node_type_data['tenant_gateway']
+
+                params[storage_vlan] = node_type_data['storage_vlanid']
+                _storage_net = node_type_data['storage_network']
+                params[storage_subnet] = _storage_net
+                params[storage_net_cidr] = _storage_net
+                params[storage_gateway] = node_type_data['storage_gateway']
+
 
         with open(stg_net_env_path, 'w') as stg_net_env_stream:
             yaml.dump(stg_net_env_tmpl, stg_net_env_stream, OrderedDumper,
@@ -2489,9 +2502,9 @@ class Director(InfraHost):
                     'register with virsh properly')
         setts = self.settings
         mgmt_gw = setts.management_gateway
-        # prov_gw = setts.provisioning
+        #X prov_gw = setts.provisioning
         route_eth2 = " > /etc/sysconfig/network-scripts/route-eth2"
-        #route_br_ctlplane = '/etc/sysconfig/network-scripts/route-br-ctlplane'
+        #X route_br_ctlplane = '/etc/sysconfig/network-scripts/route-br-ctlplane'
         mgmt_cmd = ""
         for node_type, node_type_data in setts.node_type_data_map.iteritems():
             mgmt_cidr = node_type_data['mgmt_cidr']
@@ -2559,7 +2572,7 @@ class Director(InfraHost):
 
         with open(stg_static_ip_env_path, 'w') as stg_static_ip_env_stream:
             yaml.dump(stg_static_ip_env_tmpl, stg_static_ip_env_stream,
-                      OrderedDumper,default_flow_style=False)
+                      OrderedDumper, default_flow_style=False)
 
         self.upload_file(stg_static_ip_env_path, static_ip_env_file)
 
@@ -2568,28 +2581,36 @@ class Director(InfraHost):
         for node_type, node_type_data in setts.node_type_data_map.iteritems():
             subnet_net = node_type_data['mgmt_cidr'].rsplit('.', 1)[0]
             if node_mgmt_net == subnet_net:
-                return self._generate_subnet_from_node_type(node_type)
+                return self._generate_subnet_name(node_type)
 
     def _generate_static_ip_ports(self, node_type):
         port_dict = OrderedDict()
-        role = self._generate_camel_case_role(node_type)
-        # For the key I think we want:
-        # OS::TripleO::[$role]::Ports::InternalApi[$role]Port:
-        # value./overcloud/network/ports/internal_api_from_pool.yaml
+        role = self._generate_cc_role(node_type)
+        role_network = self._generate_role_network_lower(node_type)
+
         role_port = 'OS::TripleO::' + role + '::Ports::'
-        int_api_port = role_port + 'InternalApiPort'
-        storage_port = role_port + 'StoragePort'
-        tenant_port = role_port + 'TenantPort'
-        int_api_yaml = './overcloud/network/ports/internal_api_from_pool.yaml'
-        storage_yaml = './overcloud/network/ports/storage_from_pool.yaml'
-        tenant_yaml = './overcloud/network/ports/tenant_from_pool.yaml'
+        int_api_port = role_port + 'InternalApi' + role + 'Port'
+        storage_port = role_port + 'Storage' + role + 'Port'
+        tenant_port = role_port + 'Tenant' + role + 'Port'
+        # dummy ports needed for StorageMgmtPort and ExternalApIPort
+        storage_mgmt_port = role_port + 'StorageMgmtPort'
+        external_port = role_port + 'ExternalPort'
+        noop_yaml = './overcloud/network/ports/noop.yaml'
+        int_api_yaml = ('./overcloud/network/ports/internal_api_'
+                        + role_network + '_from_pool.yaml')
+        storage_yaml = ('./overcloud/network/ports/storage_'
+                        + role_network + '_from_pool.yaml')
+        tenant_yaml = ('./overcloud/network/ports/tenant_'
+                       + role_network + '_from_pool.yaml')
         port_dict[int_api_port] = int_api_yaml
         port_dict[storage_port] = storage_yaml
         port_dict[tenant_port] = tenant_yaml
+        port_dict[storage_mgmt_port] = noop_yaml
+        port_dict[external_port] = noop_yaml
         return port_dict
 
     def _generate_static_ip_params(self, node_type, nodes):
-        role = self._generate_camel_case_role(node_type)
+        role = self._generate_cc_role(node_type)
         ip_params = OrderedDict()
         role_ips = role + 'IPs'
         network_dict = OrderedDict()
@@ -2600,73 +2621,101 @@ class Director(InfraHost):
             int_api_ips.append(node.private_api_ip)
             storage_ips.append(node.storage_ip)
             tenant_ips.append(node.tenant_tunnel_ip)
-        network_dict['internal_api'] = int_api_ips
-        network_dict['storage'] = storage_ips
-        network_dict['tenant'] = tenant_ips
+
+        suffix = '_' + self._generate_role_network_lower(node_type)
+
+        network_dict[INTERNAL_API_NET[1] + suffix] = int_api_ips
+        network_dict[STORAGE_NET[1] + suffix] = storage_ips
+        network_dict[TENANT_NET[1] + suffix] = tenant_ips
         ip_params[role_ips] = network_dict
         return ip_params
+
+    def _delete_existing_roles(self, roles_list, stg_roles):
+        filtered_roles = []
+        for role in roles_list:
+            role_name = role['name']
+            has_role = False
+            for stg_role in stg_roles:
+                if stg_role['name'] == role_name:
+                    has_role = True
+            if not has_role:
+                filtered_roles.append(role)
+
+        return filtered_roles
 
     def _generate_role_dict(self, node_type):
         # find non-alphanumerics in node type
         # and replace with space then camel case that and strip spaces
-        role_name = self._generate_camel_case_role(node_type)
+        role_name = self._generate_cc_role(node_type)
         role_d = OrderedDict()
         role_d['name'] = role_name
         role_d['description'] = role_name + " compute node role.\n"
         role_d['CountDefault'] = 0
         # Not sure why but I had Subnet after each network name
         # Removing:  + "Subnet from each network
-        role_d['networks'] = ['InternalApi' + role_name,
-                              'Tenant' + role_name,
-                              'Storage' + role_name]
+        role_d['networks'] = [INTERNAL_API_NET[0] + role_name,
+                              TENANT_NET[0] + role_name,
+                              STORAGE_NET[0] + role_name]
         role_d['HostnameFormatDefault'] = ("%stackname%-"
                                            + node_type + "-%index%")
         role_d['disable_upgrade_deployment'] = True
-        role_d['uses_deprecated_params'] = True
-        role_d['deprecated_param_image'] = 'NovaImage'
-        role_d['deprecated_param_extraconfig'] = 'NovaComputeExtraConfig'
-        role_d['deprecated_param_metadata'] = 'NovaComputeServerMetadata'
-        role_d['deprecated_param_scheduler_hints'] = \
-            'NovaComputeSchedulerHints'
-        role_d['deprecated_param_ips'] = 'NovaComputeIPs'
-        role_d['deprecated_server_resource_name'] = 'NovaCompute'
-        role_d['deprecated_nic_config_name'] = 'compute.yaml'
+        role_d['uses_deprecated_params'] = False
+        # role_d['deprecated_param_image'] = 'NovaImage'
+        # role_d['deprecated_param_extraconfig'] = 'NovaComputeExtraConfig'
+        # role_d['deprecated_param_metadata'] = 'NovaComputeServerMetadata'
+        # role_d['deprecated_param_scheduler_hints'] = \
+        #     'NovaComputeSchedulerHints'
+        # role_d['deprecated_param_ips'] = 'NovaComputeIPs'
+        # role_d['deprecated_server_resource_name'] = 'NovaCompute'
+        # role_d['deprecated_nic_config_name'] = 'compute.yaml'
         role_d['ServicesDefault'] = SERVICES_DEFAULT
         return role_d
 
-    def _generate_nic_params(self, role):
+    def _generate_nic_params(self, node_type):
+        role = self._generate_cc_role(node_type)
+        # oc_int_api = 'InternalApiNetCidr'
+        # ControlPlane[ROLE]DefaultRoute: 192.168.120.126
+        cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
+        # ControlPlane[ROLE]SubnetCidr: '26'
+        cp_subnet_cidr = 'ControlPlane' + role + 'SubnetCidr'
+        # [ROLE]ControlPlaneSubnet: [subnet]
+        cp_subnet = role + 'ControlPlaneSubnet'
         params = {}
-        # TODO: delete control plane params if we don't need.
-        cp_cidr = role + 'ControlPlaneSubnet'
-        cp_default_route = role + 'ControlPlaneDefaultRoute'
-        int_api_network = 'InternalApi' + role
-        tenant_network = 'Tenant' + role
-        storage_network = 'Storage' + role
+        int_api_network = INTERNAL_API_NET[0] + role
+        tenant_network = TENANT_NET[0] + role
+        storage_network = STORAGE_NET[0] + role
         int_api_cidr = int_api_network + 'NetCidr'
         int_api_vlan = int_api_network + 'NetworkVlanID'
         int_api_subnet = int_api_network + 'IpSubnet'
+        int_api_gateway = int_api_network + 'Gateway'
         tenant_net_cidr = tenant_network + 'NetCidr'
         tenant_vlan = tenant_network + 'NetworkVlanID'
         tenant_subnet = tenant_network + 'IpSubnet'
+        tenant_gateway = tenant_network + 'Gateway'
         storage_net_cidr = storage_network + 'NetCidr'
         storage_vlan = storage_network + 'NetworkVlanID'
         storage_subnet = storage_network + 'IpSubnet'
+        storage_gateway = storage_network + 'Gateway'
         prov_if = role + 'ProvisioningInterface'
         bond_0_if_1 = role + 'Bond0Interface1'
         bond_0_if_2 = role + 'Bond0Interface2'
         bond_1_if_1 = role + 'Bond1Interface1'
         bond_1_if_2 = role + 'Bond1Interface2'
-        params[cp_cidr] = {"default": '', "type": "string"}
+        params[cp_subnet_cidr] = {"default": '', "type": "string"}
+        params[cp_subnet] = {"default": '', "type": "string"}
         params[cp_default_route] = {"default": '', "type": "string"}
         params[int_api_subnet] = {"default": '', "type": "string"}
         params[int_api_cidr] = {"default": '', "type": "string"}
         params[int_api_vlan] = {"default": 0, "type": "number"}
+        params[int_api_gateway] = {"default": '', "type": "string"}
         params[tenant_net_cidr] = {"default": '', "type": "string"}
         params[tenant_vlan] = {"default": 0, "type": "number"}
         params[tenant_subnet] = {"default": '', "type": "string"}
+        params[tenant_gateway] = {"default": '', "type": "string"}
         params[storage_net_cidr] = {"default": '', "type": "string"}
         params[storage_vlan] = {"default": 0, "type": "number"}
         params[storage_subnet] = {"default": '', "type": "string"}
+        params[storage_gateway] = {"default": '', "type": "string"}
         params[prov_if] = {"default": '', "type": "string"}
         params[bond_0_if_1] = {"default": '', "type": "string"}
         params[bond_0_if_2] = {"default": '', "type": "string"}
@@ -2675,13 +2724,24 @@ class Director(InfraHost):
         return params
 
     def _generate_nic_env_params(self, node_type, node_type_data):
-        role = self._generate_camel_case_role(node_type)
+        role = self._generate_cc_role(node_type)
         params = OrderedDict()
+        # ControlPlane[ROLE]DefaultRoute: 192.168.120.126
+        cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
+        # ControlPlane[ROLE]SubnetCidr: '26'
+        cp_subnet_cidr = 'ControlPlane' + role + 'SubnetCidr'
+        # [ROLE]ControlPlaneSubnet: [subnet]
+        cp_subnet = role + 'ControlPlaneSubnet'
         prov_if = role + 'ProvisioningInterface'
         bond_0_if_1 = role + 'Bond0Interface1'
         bond_0_if_2 = role + 'Bond0Interface2'
         bond_1_if_1 = role + 'Bond1Interface1'
         bond_1_if_2 = role + 'Bond1Interface2'
+        # cidr = 192.168.122.0/24
+        cc_cidr = node_type_data['cidr'].rsplit("/", 1)[1]
+        params[cp_default_route] = node_type_data['gateway']
+        params[cp_subnet_cidr] = cc_cidr
+        params[cp_subnet] = self._generate_subnet_name(node_type)
         params[prov_if] = node_type_data['ProvisioningInterface']
         params[bond_0_if_1] = node_type_data['Bond0Interface1']
         params[bond_0_if_2] = node_type_data['Bond0Interface2']
@@ -2691,7 +2751,13 @@ class Director(InfraHost):
 
     def _generate_nic_network_config(self, node_type, node_type_data):
         setts = self.settings
-        role = self._generate_camel_case_role(node_type)
+        role = self._generate_cc_role(node_type)
+        # ControlPlane[ROLE]DefaultRoute: 192.168.120.126
+        cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
+        # ControlPlane[ROLE]SubnetCidr: '26'
+        cp_subnet_cidr = 'ControlPlane' + role + 'SubnetCidr'
+        # [ROLE]ControlPlaneSubnet: [subnet]
+        cp_subnet = role + 'ControlPlaneSubnet'
         prov_if_param = role + 'ProvisioningInterface'
         bond_0_if_1_param = role + 'Bond0Interface1'
         bond_0_if_2_param = role + 'Bond0Interface2'
@@ -2700,34 +2766,35 @@ class Director(InfraHost):
         prov_if = OrderedDict({"type": "interface"})
         tenant_br = OrderedDict({"type": "ovs_bridge"})
         ex_br = OrderedDict({"type": "ovs_bridge"})
-        role = self._generate_camel_case_role(node_type)
-        int_api_network = 'InternalApi' + role
-        tenant_network = 'Tenant' + role
-        storage_network = 'Storage' + role
+        int_api_network = INTERNAL_API_NET[0] + role
+        tenant_network = TENANT_NET[0] + role
+        storage_network = STORAGE_NET[0] + role
         int_api_subnet = int_api_network + 'IpSubnet'
+        int_api_gateway = int_api_network + 'Gateway'
         int_api_vlan_id = int_api_network + 'NetworkVlanID'
         tenant_subnet = tenant_network + 'IpSubnet'
+        tenant_gateway = tenant_network + 'Gateway'
         tenant_vlan_id = tenant_network + 'NetworkVlanID'
         storage_subnet = storage_network + 'IpSubnet'
+        storage_gateway = storage_network + 'Gateway'
         storage_vlan_id = storage_network + 'NetworkVlanID'
 
         prov_if["name"] = {"get_param": prov_if_param}
         prov_if["mtu"] = {"get_param": "ProvisioningNetworkMTU"}
         prov_if["use_dhcp"] = False
         prov_if["dns_servers"] = {"get_param": "DnsServers"}
-        prov_if["addresses"] = [{"ip_netmask": {"list_join": ["/",
-                                  [{"get_param":
-                                    "ControlPlaneIp"},
-                                   {"get_param":
-                                    "ControlPlaneSubnetCidr"}]]}}]
-        #x subnet_gw = node_type_data["gateway"]
-        cp_def_route = role + 'ControlPlaneDefaultRoute'
+        _cp_add = [{"ip_netmask": {"list_join":
+                                   ["/", [{"get_param": "ControlPlaneIp"},
+                                          {"get_param":
+                                              "ControlPlaneSubnetCidr"}]]}}]
+        prov_if["addresses"] = _cp_add
+
         ec2_route = {"ip_netmask": "169.254.169.254/32",
-                     "next_hop": {"get_param": cp_def_route}}
+                     "next_hop": {"get_param": cp_default_route}}
         default_route = {"default": True,
-                         "next_hop": {"get_param": cp_def_route}}
+                         "next_hop": {"get_param": cp_default_route}}
         prov_route = {"ip_netmask": setts.provisioning_network,
-                      "next_hop": {"get_param": cp_def_route}}
+                      "next_hop": {"get_param": cp_default_route}}
 
         prov_if["routes"] = [ec2_route, default_route, prov_route]
 
@@ -2736,7 +2803,7 @@ class Director(InfraHost):
         bond_0 = OrderedDict({"type": "linux_bond"})
         bond_0["name"] = "bond0"
         bond_0["bonding_options"] = {"get_param":
-            "ComputeBondInterfaceOptions"}
+                                     "ComputeBondInterfaceOptions"}
         bond_0["mtu"] = {"get_param": "DefaultBondMTU"}
         bond_0_if_1 = OrderedDict({"type": "interface"})
         bond_0_if_1["name"] = {"get_param": bond_0_if_1_param}
@@ -2753,22 +2820,32 @@ class Director(InfraHost):
         internal_api_vlan["vlan_id"] = {"get_param": int_api_vlan_id}
         internal_api_vlan["mtu"] = {"get_param": "InternalApiMTU"}
         internal_api_vlan["addresses"] = [{"ip_netmask":
-            {"get_param": int_api_subnet}}]
+                                           {"get_param": int_api_subnet}}]
+
+        int_api_route = {"ip_netmask": {"get_param": 'InternalApiIpSubnet'},
+                         "next_hop":
+                         {"get_param": int_api_gateway}}
+        internal_api_vlan['routes'] = [int_api_route]
 
         tenant_vlan = OrderedDict({"type": "vlan"})
         tenant_vlan["device"] = "bond0"
         tenant_vlan["vlan_id"] = {"get_param": tenant_vlan_id}
         tenant_vlan["mtu"] = {"get_param": "TenantNetworkMTU"}
         tenant_vlan["addresses"] = [{"ip_netmask":
-            {"get_param": tenant_subnet}}]
+                                     {"get_param": tenant_subnet}}]
+        tenant_route = {"ip_netmask": {"get_param": 'TenantIpSubnet'},
+                        "next_hop": {"get_param": tenant_gateway}}
+        tenant_vlan['routes'] = [tenant_route]
 
         storage_vlan = OrderedDict({"type": "vlan"})
         storage_vlan["device"] = "bond0"
         storage_vlan["vlan_id"] = {"get_param": storage_vlan_id}
         storage_vlan["mtu"] = {"get_param": "TenantNetworkMTU"}
         storage_vlan["addresses"] = [{"ip_netmask":
-            {"get_param": storage_subnet}}]
-
+                                      {"get_param": storage_subnet}}]
+        storage_route = {"ip_netmask": {"get_param": 'StorageIpSubnet'},
+                         "next_hop": {"get_param": storage_gateway}}
+        storage_vlan['routes'] = [storage_route]
         tenant_br["members"] = [bond_0, internal_api_vlan,
                                 tenant_vlan, storage_vlan]
 
@@ -2792,59 +2869,142 @@ class Director(InfraHost):
         logger.info("network_config is: %s", str(network_config))
         return network_config
 
+    def _generate_default_networks_data(self):
+        setts = self.settings
+
+        default_network_data_list = []
+        external = OrderedDict({'name': 'External'})
+        external['name_lower'] = 'external'
+        _ex_ip_subnet = "'{}'".format(setts.public_api_network)
+        external['ip_subnet'] = _ex_ip_subnet
+        external['vip'] = True
+        external['vlan'] = int(setts.public_api_vlanid)
+        _ex_gw = "'{}'".format(setts.public_api_gateway)
+        external['gateway_ip'] = _ex_gw
+        _ex_s = "'{}'".format(setts.public_api_allocation_pool_start)
+        _ex_e = "'{}'".format(setts.public_api_allocation_pool_end)
+        external['allocation_pools'] = [{'start': _ex_s, 'end': _ex_e}]
+        default_network_data_list.append(external)
+
+        management = OrderedDict({'name': 'Management'})
+        management['name_lower'] = 'management'
+        _mgmt_ip_subnet = "'{}'".format(setts.management_network)
+        management['ip_subnet'] = _mgmt_ip_subnet
+        management['vip'] = False
+        management['vlan'] = int(setts.management_vlanid)
+        _mgmt_gw = "'{}'".format(setts.management_gateway)
+        management['gateway_ip'] = _mgmt_gw
+        _mgmt_s = "'{}'".format(setts.management_allocation_pool_start)
+        _mgmt_e = "'{}'".format(setts.management_allocation_pool_end)
+        management['allocation_pools'] = [{'start': _mgmt_s, 'end': _mgmt_e}]
+        default_network_data_list.append(management)
+
+        internal_api = OrderedDict({'name': INTERNAL_API_NET[0]})
+        internal_api['name_lower'] = 'internal_api'
+        _int_ip_subnet = "'{}'".format(setts.private_api_network)
+        internal_api['ip_subnet'] = _int_ip_subnet
+        internal_api['vip'] = True
+        internal_api['vlan'] = int(setts.private_api_vlanid)
+        _int_s = "'{}'".format(setts.management_allocation_pool_start)
+        _int_e = "'{}'".format(setts.management_allocation_pool_end)
+        internal_api['allocation_pools'] = [{'start': _int_s, 'end': _int_e}]
+        default_network_data_list.append(internal_api)
+
+        storage = OrderedDict({'name': STORAGE_NET[0]})
+        storage['name_lower'] = STORAGE_NET[1]
+        _st_ip_subnet = "'{}'".format(setts.storage_network)
+        storage['ip_subnet'] = _st_ip_subnet
+        storage['vip'] = True
+        storage['vlan'] = int(setts.storage_vlanid)
+        _st_s = "'{}'".format(setts.storage_allocation_pool_start)
+        _st_e = "'{}'".format(setts.storage_allocation_pool_end)
+        storage['allocation_pools'] = [{'start': _st_s, 'end': _st_e}]
+        default_network_data_list.append(storage)
+
+        storage_mgmt = OrderedDict({'name': 'StorageMgMt'})
+        storage_mgmt['name_lower'] = 'storage_mgmt'
+        _stmgmt_ip_subnet = "'{}'".format(setts.storage_cluster_network)
+        storage_mgmt['ip_subnet'] = _stmgmt_ip_subnet
+        storage_mgmt['vip'] = True
+        storage_mgmt['vlan'] = int(setts.storage_cluster_vlanid)
+        _stmgmt_s = "'{}'".format(setts.storage_cluster_allocation_pool_start)
+        _stmgmt_e = "'{}'".format(setts.storage_cluster_allocation_pool_end)
+        storage_mgmt['allocation_pools'] = [{'start': _stmgmt_s,
+                                             'end': _stmgmt_e}]
+        default_network_data_list.append(storage_mgmt)
+
+        tenant = OrderedDict({'name': TENANT_NET[0]})
+        tenant['name_lower'] = TENANT_NET[1]
+        _t_ip_subnet = "'{}'".format(setts.tenant_tunnel_network)
+        tenant['ip_subnet'] = _t_ip_subnet
+        tenant['vip'] = False
+        tenant['vlan'] = int(setts.tenant_tunnel_vlanid)
+        _t_s = "'{}'".format(setts.tenant_tunnel_network_allocation_pool_start)
+        _t_e = "'{}'".format(setts.tenant_tunnel_network_allocation_pool_end)
+        tenant['allocation_pools'] = [{'start': _t_s, 'end': _t_e }]
+        default_network_data_list.append(tenant)
+
+        return default_network_data_list
+
     def _generate_network_data(self, node_type, node_type_data):
-        role = self._generate_camel_case_role(node_type)
-        suffix = self._generate_network_suffix_lower_case(node_type)
+        role = self._generate_cc_role(node_type)
         networks_param_mapping = {}
         int_api = {}
         int_api['vlan'] = 'private_api_vlanid'
+        int_api['lower'] = INTERNAL_API_NET[1]
         int_api['ip_subnet'] = 'private_api_network'
         int_api['allocation_pools'] = ('private_api_allocation_pool_start',
                                        'private_api_allocation_pool_end')
         int_api['gateway_ip'] = 'private_api_gateway'
         tenant = {}
         tenant['vlan'] = 'tenant_vlanid'
+        tenant['lower'] = TENANT_NET[1]
         tenant['ip_subnet'] = 'tenant_network'
         tenant['allocation_pools'] = ('tenant_allocation_pool_start',
                                       'tenant_allocation_pool_end')
         tenant['gateway_ip'] = 'tenant_gateway'
         storage = {}
         storage['vlan'] = 'storage_vlanid'
+        storage['lower'] = STORAGE_NET[1]
         storage['ip_subnet'] = 'storage_network'
         storage['allocation_pools'] = ('storage_allocation_pool_start',
                                        'storage_allocation_pool_end')
         storage['gateway_ip'] = 'storage_gateway'
-        networks_param_mapping['InternalApi'] = int_api
-        networks_param_mapping['Tenant'] = tenant
-        networks_param_mapping['Storage'] = storage
+        networks_param_mapping[INTERNAL_API_NET[0]] = int_api
+        networks_param_mapping[TENANT_NET[0]] = tenant
+        networks_param_mapping[STORAGE_NET[0]] = storage
         logger.info("eeeeeeee networks_param_mapping : %s",
                     str(networks_param_mapping))
         network_data_list = []
+        suffix = '_' + self._generate_role_network_lower(node_type)
         for network, mapping in networks_param_mapping.iteritems():
             nd = OrderedDict()
             name_cc = network + role
-            name_lower = network.lower() + '_' + suffix
+            name_lower = mapping['lower']
+
             nd['name'] = name_cc
-            nd['name_lower'] = name_lower
+            nd['name_lower'] = name_lower + suffix
             nd['vip'] = False
-            nd['vlan'] = node_type_data[mapping['vlan']]
-            nd['ip_subnet'] = node_type_data[mapping['ip_subnet']]
-            nap = [{'start': node_type_data[mapping['allocation_pools'][0]],
-                    'end': node_type_data[mapping['allocation_pools'][1]]}]
+            nd['vlan'] = int(node_type_data[mapping['vlan']])
+            _ip_subnet = "'{}'".format(node_type_data[mapping['ip_subnet']])
+            nd['ip_subnet'] = _ip_subnet
+            _s = "'{}'".format(node_type_data[mapping['allocation_pools'][0]])
+            _e = "'{}'".format(node_type_data[mapping['allocation_pools'][1]])
+            nap = [{'start': _s, 'end': _e}]
             nd['allocation_pools'] = nap
-            nd['gateway_ip'] = node_type_data[mapping['gateway_ip']]
+            gw = "'{}'".format(node_type_data[mapping['gateway_ip']])
+            nd['gateway_ip'] = gw
             network_data_list.append(nd)
         return network_data_list
 
-    def _generate_camel_case_role(self, type):
+    def _generate_cc_role(self, type):
         role_cc = (re.sub(r'[^a-z0-9]', " ",
                           type.lower()).title()).replace(" ", "")
         return role_cc
 
-    def _generate_network_suffix_lower_case(self, type):
-        role_cc = (re.sub(r'[^a-z0-9]', " ",
-                          type.lower()).replace(" ", "_"))
-        return role_cc
+    def _generate_role_network_lower(self, type):
+        suffix = (re.sub(r'[^a-z0-9]', " ", type.lower()).replace(" ", "_"))
+        return suffix
 
     def _generate_nic_config_name(self, type):
         # should look like denveredgecompute.yaml if following existing pattern
@@ -2852,9 +3012,10 @@ class Director(InfraHost):
         return nic_config_name
 
     def _generate_node_placement_exp(self, type):
-        placement_exp = (re.sub(r'[^a-z0-9]', " ",
-                         type.lower())).replace(" ", "-") + "-%index%"
+        placement_exp = ((re.sub(r'[^a-z0-9]', " ",
+                                 type.lower())).replace(" ", "-") + "-%index%")
         return placement_exp
 
-    def _generate_subnet_from_node_type(self, type):
-        return type + "-subnet"
+    def _generate_subnet_name(self, type):
+        type_dash = re.sub(r'[^a-z0-9]', " ", type.lower()).replace(" ", "-")
+        return type_dash + '-subnet'
