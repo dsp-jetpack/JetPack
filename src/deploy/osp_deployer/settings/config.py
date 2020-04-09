@@ -646,8 +646,14 @@ class Settings():
             '/pilot/templates'
 
         # New custom node type and edge related fields
-        self.node_types = None
+        # Advanced Settings[node_types] in ini
+        self.node_types = []
+        # node_type_data_map maps the various node types to the networking
+        # attribute definitions in the .ini stanza that matches each node_type
         self.node_type_data_map = {}
+        # node_types_map is a key/list map of all nodes in .properties
+        # that have a matching node_type attribute. Key is each node_type.
+        self.node_types_map = {}
         self.undercloud_conf = self.parse_undercloud_conf()
         # Process node types for edge sites etc
         if ('node_types' in dev_settings
@@ -707,7 +713,6 @@ class Settings():
         self.ceph_nodes = []
         self.switches = []
         self.nodes = []
-        self.node_types_map = {}
 
         with open(self.network_conf) as config_file:
             json_data = json.load(config_file)

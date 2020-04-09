@@ -1142,7 +1142,7 @@ def get_by_path_device_name(physical_disk, controllers):
                 pci_bus_number=pci_bus_number,
                 channel=2 if physical_disk.raid_status == "online" else 0,
                 disk_index=disk_index)
-        else:
+        else: # TODO: dpaterson, this case covers both BOSS and HBA330 drives?
             return ('/dev/disk/by-path/pci-0000:'
                     '{pci_bus_number}:00.0-sas-0x{sas_address}-lun-0').format(
                 pci_bus_number=pci_bus_number,
