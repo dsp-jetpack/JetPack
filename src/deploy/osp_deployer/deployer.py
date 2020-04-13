@@ -203,9 +203,6 @@ def deploy():
         logger.info("Configuring heat templates")
         director_vm.setup_templates()
 
-        logger.info("Exiting ....")
-        exit()
-
         logger.info("=== Installing the overcloud ")
         logger.debug("installing the overcloud ... this might take a while")
         director_vm.deploy_overcloud()

@@ -199,7 +199,8 @@ class Director(InfraHost):
         logger.info("Installing the undercloud")
         if self.settings.use_satellite:
             cmd = '~/pilot/install-director.sh --dns ' + \
-                  self.settings.name_server + ' --satellite_hostname ' + \
+                  self.settings.name_server + ' --director_ip ' + \
+                  self.ip + ' --satellite_hostname ' + \
                   self.settings.satellite_hostname + ' --satellite_org ' + \
                   self.settings.satellite_org + ' --satellite_key ' + \
                   self.settings.satellite_activation_key
@@ -209,6 +210,8 @@ class Director(InfraHost):
         else:
             cmd = '~/pilot/install-director.sh --dns ' + \
                   self.settings.name_server + \
+                  " --director_ip " + \
+                  self.ip + \
                   " --sm_user " + \
                   self.settings.subscription_manager_user + \
                   " --sm_pwd " + \

@@ -62,7 +62,7 @@ logging.basicConfig()
 
 # Create this script's logger. Give it a more friendly name than __main__.
 LOG = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
-
+LOG.setLevel(logging.DEBUG)
 # Create a factory function for creating tuple-like objects that contain the
 # role that the node will play and an optional index that indicates placement
 # order in the rack.
@@ -894,15 +894,18 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
         role = "node:{}-{}".format(flavor, role_index.index)
 
     if 'capabilities' in node.properties:
-        value = "{},{}".format(role, node.properties['capabilities'])
+        value = "{},{},boot_mode:uefi,boot_option:local".format(role, node.properties['capabilities'])
+        LOG.info(str(node.properties))
+        LOG.info(str(value))
     else:
         value = "{},boot_option:local".format(role)
+        LOG.info("..!")
 
     patch = [{'op': 'add',
               'value': value,
               'path': '/properties/capabilities'}]
     ironic_client.node.update(node_uuid, patch)
-
+    LOG.info(str(patch))
     # Select the volume for the OS to be installed on
     select_os_volume(os_volume_size_gb, ironic_client, drac_client,
                      node_uuid)
@@ -1198,6 +1201,19 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                                            DCIM_VirtualDiskView).text
 
                 if raid_type != NORAID and raid_type != RAID0:
+                    LOG.info("...")
+                    if lst_ctrls[0].model.startswith("PERC H740P"):
+                        LOG.info("using bypath for VD hint")
+                        pci_bus_number = get_pci_bus_number(lst_ctrls[0])
+                        by_path='/dev/disk/by-path/pci-0000:' \
+                        + str(pci_bus_number) + ':00.0-scsi-0:2:0:0'
+                        LOG.info(".. " + str(by_path))
+                        patch = [{'op': 'add',
+                                'value': {"by_path": by_path},                                                                                                                                                                          'path': '/properties/root_device'}]
+                        ironic_client.node.update(node_uuid, patch)
+                        return
+
+
                     # Get the size
                     raid_size = get_size_in_bytes(virtual_disk_doc,
                                                   DCIM_VirtualDiskView)
