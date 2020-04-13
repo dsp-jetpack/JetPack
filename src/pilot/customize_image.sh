@@ -16,9 +16,9 @@
 
 
 
-USAGE="\nUsing RedHat CDN :$0 --sm_user <subscription_manager_user> --sm_pwd <subscription_manager_pass> - sm_pool [<subcription_manager_poolid>] [--proxy <proxy>]   \nUsing Satellite : $0 --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> ]  [--proxy <proxy> ]"
+USAGE="\nUsing RedHat CDN :$0 [--director_ip <director_public_ip>] --sm_user <subscription_manager_user> --sm_pwd <subscription_manager_pass> - sm_pool [<subcription_manager_poolid>] [--proxy <proxy>]  \nUsing Satellite : $0 [--director_ip <director_public_ip>] --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> ]  [--proxy <proxy> ]"
 
-TEMP=`getopt -o h --long sm_user:,sm_pwd:,sm_pool:,proxy:,satellite_hostname:,satellite_org:,satellite_key: -n 'customize_image.sh' -- "$@"`
+TEMP=`getopt -o h --long sm_user:,sm_pwd:,sm_pool:,proxy:,satellite_hostname:,satellite_org:,satellite_key:,director_ip: -n 'customize_image.sh' -- "$@"`
 eval set -- "$TEMP"
 
 # extract options and their arguments into variables.
@@ -28,6 +28,8 @@ while true ; do
             echo -e "$USAGE "
             exit 1
             ;;
+        --director_ip)
+                director_public_ip=$2; shift 2 ;;
         --sm_user)
                 subscription_manager_user=$2 ; shift 2 ;;
         --sm_pwd)
@@ -75,7 +77,7 @@ fi
 
 
 run_command(){
-  
+
   cmd=$*
   echo "Executing: $cmd"
 
@@ -122,7 +124,7 @@ function join { local IFS="$1"; shift; echo "$*"; }
 
 echo "## Updating the overcloud image"
 cd ~/pilot
-director_ip=`grep 'network_gateway = ' undercloud.conf | awk -F" = " '{print $2}'`
+# director_ip=`grep 'network_gateway = ' undercloud.conf | awk -F" = " '{print $2}'`
 director_short=`hostname -s`
 director_long=`hostname`
 cd ~/pilot/images
@@ -144,7 +146,7 @@ if [ ! -z "${satellite_hostname}" ]; then
         --sm-unregister \
         --selinux-relabel -v"
 else
-   run_command "virt-customize -a overcloud-full.qcow2 --run-command \"echo '${director_ip} ${director_short} ${director_long}' >> /etc/hosts\""
+   run_command "virt-customize -a overcloud-full.qcow2 --run-command \"echo '${director_public_ip} ${director_short} ${director_long}' >> /etc/hosts\""
 
    #Patch for configuring T10 PI format drives
    run_command "virt-customize -a overcloud-full.qcow2  --run-command \"sed -i 's/GRUB_CMDLINE_LINUX=\\\"/GRUB_CMDLINE_LINUX=\\\"mpt3sas.prot_mask=1 /' /etc/default/grub\""

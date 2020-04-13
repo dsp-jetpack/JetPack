@@ -17,10 +17,10 @@
 exec > >(tee $HOME/pilot/install-director.log)
 exec 2>&1
 
-USAGE="\nUsing RedHat CDN:$0 --dns <dns_ip> --sm_user <subscription_manager_user> --sm_pwd <subscription_manager_pass> [--sm_pool <subcription_manager_poolid>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>]"
+USAGE="\nUsing RedHat CDN:$0 --director_ip <director public ip> --dns <dns_ip> --sm_user <subscription_manager_user> --sm_pwd <subscription_manager_pass> [--sm_pool <subcription_manager_poolid>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>]"
 
 
-TEMP=`getopt -o h --long dns:,sm_user:,sm_pwd:,sm_pool:,proxy:,nodes_pwd:,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
+TEMP=`getopt -o h --long director_ip:,dns:,sm_user:,sm_pwd:,sm_pool:,proxy:,nodes_pwd:,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
 eval set -- "$TEMP"
 
 
@@ -31,14 +31,16 @@ while true ; do
             echo -e "$USAGE "
             exit 1
             ;;
+        --director_ip)
+                director_public_ip=$2 ; shift 2 ;;
         --dns)
-            dns_ip=$2 ; shift 2 ;;
+                dns_ip=$2 ; shift 2 ;;
         --sm_user)
                 subscription_manager_user=$2 ; shift 2 ;;
         --sm_pwd)
                 subscription_manager_pass=$2 ; shift 2 ;;
         --sm_pool)
-                subcription_manager_poolid=$2; shift 2 ;; 
+                subcription_manager_poolid=$2; shift 2 ;;
         --satellite_hostname)
                 satellite_hostname=$2; shift 2;;
         --satellite_org)
@@ -58,15 +60,15 @@ done
 
 
 if [ ! -z "${satellite_hostname}" ]; then
-   
-    if [ -z "${dns_ip}" ] || [ -z "${satellite_hostname}" ] || [ -z "${satellite_org}" ] || [ -z ${satellite_key} ] ; then
+
+    if [ -z "${satellite_hostname}" ] || [ -z "${dns_ip}" ] || [ -z "${satellite_org}" ] || [ -z ${satellite_key} ] ; then
         echo -e "$USAGE"
         exit 1
     fi
 
 elif [ ! -z "${subscription_manager_user}" ];then
 
-    if [ -z "${dns_ip}" ] || [ -z "${subscription_manager_user}" ] || [ -z "${subscription_manager_pass}" ]; then
+    if [ -z "${director_public_ip}" ] || [ -z "${dns_ip}" ] || [ -z "${subscription_manager_user}" ] || [ -z "${subscription_manager_pass}" ]; then
         echo -e "$USAGE"
         exit 1
     fi
@@ -143,7 +145,7 @@ then
   export no_proxy=$no_proxy_list
   export http_proxy=$proxy
   export https_proxy=$proxy
-  export -p 
+  export -p
   echo "## Done."
 fi
 
@@ -216,17 +218,19 @@ do
 done
 echo "## Done."
 
-echo 
+echo
 echo "## Customizing the overcloud image & uploading images"
 
 if [ ! -z "${satellite_hostname}" ]; then
-    run_command "~/pilot/customize_image.sh --satellite_hostname ${satellite_hostname} \
+    run_command "~/pilot/customize_image.sh --director_ip ${director_public_ip} \
+                --satellite_hostname ${satellite_hostname} \
                 --satellite_org ${satellite_org} \
                 --satellite_key ${satellite_key} \
                 --proxy ${proxy}"
-                  
+
 elif [ ! -z "${subscription_manager_user}" ];then
-    run_command "~/pilot/customize_image.sh --sm_user ${subscription_manager_user} \
+    run_command "~/pilot/customize_image.sh --director_ip ${director_public_ip} \
+                --sm_user ${subscription_manager_user} \
                 --sm_pwd ${subscription_manager_pass} \
                 --sm_pool ${subcription_manager_poolid} --proxy ${proxy}"
 fi
@@ -363,7 +367,7 @@ echo "## Done."
 #        --set ceph_namespace=${satellite_hostname}:5000 \
 #        --set ceph_image=${containers_prefix}rhceph-3-rhel7 \
 #        --output-env-file=$HOME/overcloud_images.yaml
-#     
+#
 #    else
 #        openstack overcloud container image prepare --output-env-file $HOME/overcloud_images.yaml \
 #        --namespace=registry.access.redhat.com/rhosp15 \
