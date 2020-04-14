@@ -121,7 +121,8 @@ NET_DATA = 'network_data'
 INTERNAL_API_NET = ('InternalApi', 'internal_api')
 STORAGE_NET = ('Storage', 'storage')
 TENANT_NET = ('Tenant', 'tenant')
-EDGE_NETWORKS = (INTERNAL_API_NET, STORAGE_NET, TENANT_NET)
+EXTERNAL_NET = ('External', 'external')
+EDGE_NETWORKS = (INTERNAL_API_NET, STORAGE_NET, TENANT_NET, EXTERNAL_NET)
 
 
 class Director(InfraHost):
@@ -248,7 +249,8 @@ class Director(InfraHost):
                                  "/pilot/install-director.log" +
                                  " for details")
 
-        # tester = Checkpoints()
+        # TODO: delete, moved to deployer.py tester = Checkpoints()
+        # TODO: delete, moved to deployer.py
         # tester.verify_undercloud_installed()
 
     def upload_cloud_images(self):
@@ -310,8 +312,7 @@ class Director(InfraHost):
                         cmd += ' ' + edge_node.idrac_ip
 
             cmd += '> ~/instackenv.json'
-            logger.info("Node discovery command %s", cmd)
-            #### return
+
             self.run_tty(cmd)
 
             cmd = "ls -la ~/instackenv.json | awk '{print $5;}'"
@@ -379,8 +380,7 @@ class Director(InfraHost):
                 json_config[node_id]["skip_nic_config"] = node.skip_nic_config
         if json_config.items():
             cmd += "-j '{}'".format(json.dumps(json_config))
-        logger.info("Configuring iDRACs command: %s", cmd)
-        #### return
+
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
             raise AssertionError("An error occurred while running "
@@ -390,8 +390,8 @@ class Director(InfraHost):
                                                                 stdout))
 
     def import_nodes(self):
-        stdout, stderr, exit_status = self.run(self.source_stackrc +
-                                               "~/pilot/import_nodes.py")
+        stdout, stderr, exit_status = self.run(self.source_stackrc
+                                               + "~/pilot/import_nodes.py")
         if exit_status:
             raise AssertionError("Unable to import nodes into Ironic.  "
                                  "exit_status: {}, error: {}, "
@@ -2218,9 +2218,6 @@ class Director(InfraHost):
         ntypes_data_map = setts.node_type_data_map
 
         roles_file = os.path.join(self.templates_dir, ROLES_DATA + '.yaml')
-        # oc_roles_file = os.path.join(self.templates_dir,
-        #                             OVERCLOUD_PATH,
-        #                             ROLES_DATA + '.yaml')
         stg_roles_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
                                                    ROLES_DATA,
                                                    "yaml")
@@ -2389,9 +2386,9 @@ class Director(InfraHost):
                                           Loader=OrderedLoader)
             param_def = stg_dell_env_tmpl['parameter_defaults']
 
-            for node_type, node_type_data in setts.node_type_data_map.iteritems():
-                role = self._generate_cc_role(node_type)
-                edge_subnet = self._generate_subnet_name(node_type)
+            for nt, nt_data in setts.node_type_data_map.iteritems():
+                role = self._generate_cc_role(nt)
+                edge_subnet = self._generate_subnet_name(nt)
                 role_subnet_key = role + 'ControlPlaneSubnet'
                 param_def[role_subnet_key] = edge_subnet
 
@@ -2457,18 +2454,28 @@ class Director(InfraHost):
                 int_api_network = INTERNAL_API_NET[0] + role
                 tenant_network = TENANT_NET[0] + role
                 storage_network = STORAGE_NET[0] + role
+                external_network = EXTERNAL_NET[0] + role
+
                 int_api_cidr = int_api_network + 'NetCidr'
                 int_api_vlan = int_api_network + 'NetworkVlanID'
                 int_api_subnet = int_api_network + 'IpSubnet'
                 int_api_gateway = int_api_network + 'Gateway'
+
                 tenant_net_cidr = tenant_network + 'NetCidr'
                 tenant_vlan = tenant_network + 'NetworkVlanID'
                 tenant_subnet = tenant_network + 'IpSubnet'
                 tenant_gateway = tenant_network + 'Gateway'
+
                 storage_net_cidr = storage_network + 'NetCidr'
                 storage_vlan = storage_network + 'NetworkVlanID'
                 storage_subnet = storage_network + 'IpSubnet'
                 storage_gateway = storage_network + 'Gateway'
+
+                external_net_cidr = external_network + 'NetCidr'
+                external_vlan = external_network + 'NetworkVlanID'
+                external_subnet = external_network + 'IpSubnet'
+                external_gateway = external_network + 'Gateway'
+
                 params[cp_subnet] = edge_subnet
                 _cp_subnet_cidr = node_type_data['cidr'].rsplit("/", 1)[1]
                 params[cp_subnet_cidr] = _cp_subnet_cidr
@@ -2495,6 +2502,12 @@ class Director(InfraHost):
                 params[storage_net_cidr] = _storage_net
                 params[storage_gateway] = node_type_data['storage_gateway']
 
+                _external_vlanid = int(node_type_data['external_vlanid'])
+                params[external_vlan] = _external_vlanid
+                _external_net = node_type_data['external_network']
+                params[external_subnet] = _external_net
+                params[external_net_cidr] = _external_net
+                params[external_gateway] = node_type_data['external_gateway']
 
         with open(stg_net_env_path, 'w') as stg_net_env_stream:
             yaml.dump(stg_net_env_tmpl, stg_net_env_stream, OrderedDumper,
@@ -2600,6 +2613,7 @@ class Director(InfraHost):
         # comment out and see.
         storage_port = role_port + 'Storage' + role + 'Port'
         tenant_port = role_port + 'Tenant' + role + 'Port'
+        external_port = role_port + 'External' + role + 'Port'
         # dummy ports needed for StorageMgmtPort and ExternalApIPort
         # storage_mgmt_port = role_port + 'StorageMgmt' + role + 'Port'
         # external_port = role_port + 'External' + role + 'Port'
@@ -2610,11 +2624,13 @@ class Director(InfraHost):
                         + role_network + '_from_pool.yaml')
         tenant_yaml = ('./overcloud/network/ports/tenant_'
                        + role_network + '_from_pool.yaml')
+        external_yaml = ('./overcloud/network/ports/external_'
+                         + role_network + '_from_pool.yaml')
         port_dict[int_api_port] = int_api_yaml
         port_dict[storage_port] = storage_yaml
         port_dict[tenant_port] = tenant_yaml
-        # port_dict[storage_mgmt_port] = noop_yaml
-        # port_dict[external_port] = noop_yaml
+        port_dict[external_port] = external_yaml
+
         return port_dict
 
     def _generate_static_ip_params(self, node_type, nodes):
@@ -2625,16 +2641,19 @@ class Director(InfraHost):
         int_api_ips = []
         storage_ips = []
         tenant_ips = []
+        external_ips = []
         for node in nodes:
             int_api_ips.append(node.private_api_ip)
             storage_ips.append(node.storage_ip)
             tenant_ips.append(node.tenant_tunnel_ip)
+            external_ips.append(node.external_ip)
 
         suffix = '_' + self._generate_role_network_lower(node_type)
 
         network_dict[INTERNAL_API_NET[1] + suffix] = int_api_ips
         network_dict[STORAGE_NET[1] + suffix] = storage_ips
         network_dict[TENANT_NET[1] + suffix] = tenant_ips
+        network_dict[EXTERNAL_NET[1] + suffix] = external_ips
         ip_params[role_ips] = network_dict
         return ip_params
 
@@ -2663,7 +2682,8 @@ class Director(InfraHost):
         # Removing:  + "Subnet from each network
         role_d['networks'] = [INTERNAL_API_NET[0] + role_name,
                               TENANT_NET[0] + role_name,
-                              STORAGE_NET[0] + role_name]
+                              STORAGE_NET[0] + role_name,
+                              EXTERNAL_NET[0] + role_name]
         role_d['HostnameFormatDefault'] = ("%stackname%-"
                                            + node_type + "-%index%")
         role_d['disable_upgrade_deployment'] = True
@@ -2693,6 +2713,7 @@ class Director(InfraHost):
         int_api_network = INTERNAL_API_NET[0] + role
         tenant_network = TENANT_NET[0] + role
         storage_network = STORAGE_NET[0] + role
+        external_network = EXTERNAL_NET[0] + role
         int_api_cidr = int_api_network + 'NetCidr'
         int_api_vlan = int_api_network + 'NetworkVlanID'
         int_api_subnet = int_api_network + 'IpSubnet'
@@ -2705,6 +2726,12 @@ class Director(InfraHost):
         storage_vlan = storage_network + 'NetworkVlanID'
         storage_subnet = storage_network + 'IpSubnet'
         storage_gateway = storage_network + 'Gateway'
+
+        external_net_cidr = external_network + 'NetCidr'
+        external_vlan = external_network + 'NetworkVlanID'
+        external_subnet = external_network + 'IpSubnet'
+        external_gateway = external_network + 'Gateway'
+
         prov_if = role + 'ProvisioningInterface'
         bond_0_if_1 = role + 'Bond0Interface1'
         bond_0_if_2 = role + 'Bond0Interface2'
@@ -2730,6 +2757,10 @@ class Director(InfraHost):
         params[storage_vlan] = {"default": 0, "type": "number"}
         params[storage_subnet] = {"default": '', "type": "string"}
         params[storage_gateway] = {"default": '', "type": "string"}
+        params[external_net_cidr] = {"default": '', "type": "string"}
+        params[external_vlan] = {"default": 0, "type": "number"}
+        params[external_subnet] = {"default": '', "type": "string"}
+        params[external_gateway] = {"default": '', "type": "string"}
         params[prov_if] = {"default": '', "type": "string"}
         params[bond_0_if_1] = {"default": '', "type": "string"}
         params[bond_0_if_2] = {"default": '', "type": "string"}
@@ -2783,6 +2814,7 @@ class Director(InfraHost):
         int_api_network = INTERNAL_API_NET[0] + role
         tenant_network = TENANT_NET[0] + role
         storage_network = STORAGE_NET[0] + role
+        external_network = EXTERNAL_NET[0] + role
         int_api_subnet = int_api_network + 'IpSubnet'
         int_api_gateway = int_api_network + 'Gateway'
         int_api_vlan_id = int_api_network + 'NetworkVlanID'
@@ -2792,6 +2824,9 @@ class Director(InfraHost):
         storage_subnet = storage_network + 'IpSubnet'
         storage_gateway = storage_network + 'Gateway'
         storage_vlan_id = storage_network + 'NetworkVlanID'
+        external_subnet = external_network + 'IpSubnet'
+        external_gateway = external_network + 'Gateway'
+        external_vlan_id = external_network + 'NetworkVlanID'
 
         prov_if["name"] = {"get_param": prov_if_param}
         prov_if["mtu"] = {"get_param": "ProvisioningNetworkMTU"}
@@ -2860,8 +2895,20 @@ class Director(InfraHost):
         storage_route = {"ip_netmask": {"get_param": 'StorageNetCidr'},
                          "next_hop": {"get_param": storage_gateway}}
         storage_vlan['routes'] = [storage_route]
+
+        external_vlan = OrderedDict({"type": "vlan"})
+        external_vlan["device"] = "bond0"
+        external_vlan["vlan_id"] = {"get_param": external_vlan_id}
+        external_vlan["mtu"] = {"get_param": "TenantNetworkMTU"}
+        external_vlan["addresses"] = [{"ip_netmask":
+                                      {"get_param": external_subnet}}]
+        external_route = {"ip_netmask": {"get_param": 'StorageNetCidr'},
+                          "next_hop": {"get_param": external_gateway}}
+        external_vlan['routes'] = [external_route]
+
         tenant_br["members"] = [bond_0, internal_api_vlan,
-                                tenant_vlan, storage_vlan]
+                                tenant_vlan, storage_vlan,
+                                external_vlan]
 
         ex_br["name"] = "bridge_name"
         ex_br["mtu"] = {"get_param": "DefaultBondMTU"}
@@ -2935,7 +2982,7 @@ class Director(InfraHost):
         storage['allocation_pools'] = [{'start': _st_s, 'end': _st_e}]
         default_network_data_list.append(storage)
 
-        storage_mgmt = OrderedDict({'name': 'StorageMgMt'})
+        storage_mgmt = OrderedDict({'name': 'StorageMgmt'})
         storage_mgmt['name_lower'] = 'storage_mgmt'
         _stmgmt_ip_subnet = "'{}'".format(setts.storage_cluster_network)
         storage_mgmt['ip_subnet'] = _stmgmt_ip_subnet
@@ -2977,6 +3024,7 @@ class Director(InfraHost):
         tenant['allocation_pools'] = ('tenant_allocation_pool_start',
                                       'tenant_allocation_pool_end')
         tenant['gateway_ip'] = 'tenant_gateway'
+
         storage = {}
         storage['vlan'] = 'storage_vlanid'
         storage['lower'] = STORAGE_NET[1]
@@ -2984,9 +3032,19 @@ class Director(InfraHost):
         storage['allocation_pools'] = ('storage_allocation_pool_start',
                                        'storage_allocation_pool_end')
         storage['gateway_ip'] = 'storage_gateway'
+
+        external = {}
+        external['vlan'] = 'external_vlanid'
+        external['lower'] = EXTERNAL_NET[1]
+        external['ip_subnet'] = 'external_network'
+        external['allocation_pools'] = ('external_allocation_pool_start',
+                                        'external_allocation_pool_end')
+        external['gateway_ip'] = 'external_gateway'
+
         networks_param_mapping[INTERNAL_API_NET[0]] = int_api
         networks_param_mapping[TENANT_NET[0]] = tenant
         networks_param_mapping[STORAGE_NET[0]] = storage
+        networks_param_mapping[EXTERNAL_NET[0]] = external
         logger.info("eeeeeeee networks_param_mapping : %s",
                     str(networks_param_mapping))
         network_data_list = []

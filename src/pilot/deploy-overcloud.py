@@ -618,7 +618,7 @@ def main():
                         "backend.yaml"
         if args.enable_powermax_manila:
             env_opts += " -e ~/pilot/templates/powermax-manila-config.yaml"
-
+        # add --no-cleanup  to keep generated /tmp templates
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
               " --log-file ~/pilot/overcloud_deployment.log" \

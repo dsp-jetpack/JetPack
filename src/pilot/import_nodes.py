@@ -61,6 +61,9 @@ def main():
     logger.info("Importing {} into ironic".format(args.node_definition))
     cmd = ["openstack", "overcloud", "node", "import", import_json]
     logger.info("Import nodes command: %s", str(cmd))
+    is_enable_routed_networks = utils.Utils.is_enable_routed_networks()
+    logger.info("Import nodes, are routed networks enabled: %s",
+                str(is_enable_routed_networks))
     exit_code, stdin, stderr = Exec.execute_command(cmd)
     if exit_code != 0:
         logger.error("Failed to import nodes into ironic: {}, {}".format(
@@ -107,7 +110,7 @@ def main():
             patch.append({'op': 'add',
                           'value': node["provisioning_mac"],
                           'path': '/properties/provisioning_mac'})
-            if utils.Utils.is_enable_routed_networks():
+            if is_enable_routed_networks:
                 logger.info("Adding port with physical address to node: %s",
                             str(ironic_node.uuid))
                 subnet = "ctlplane"
