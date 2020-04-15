@@ -716,70 +716,82 @@ class Settings():
             for each in json_data:
                 node = NodeConf(each)
                 try:
-                    if node.is_sah == "true":
+                    node.is_sah = (True if node.is_sah
+                                   == "true" else False)
+                    if node.is_sah:
                         self.sah_node = node
                 except AttributeError:
                     pass
                 try:
-                    if node.is_director == "true":
+                    node.is_director = (True if node.is_director
+                                        == "true" else False)
+                    if node.is_director:
                         self.director_node = node
                 except AttributeError:
                     pass
                 try:
-                    if node.is_dashboard == "true":
+                    node.is_dashboard = (True if node.is_dashboard
+                                         == "true" else False)
+                    if node.is_dashboard:
                         self.dashboard_node = node
                 except AttributeError:
                     pass
                 try:
-                    if node.is_controller == "true":
-                        node.is_controller = True
+                    node.is_controller = (True if node.is_controller
+                                          == "true" else False)
+                    if node.is_controller:
                         self.controller_nodes.append(node)
                 except AttributeError:
                     node.is_controller = False
                     pass
                 try:
-                    if node.is_computehci == "true":
-                        node.is_computehci = True
+                    node.is_computehci = (True if node.is_computehci
+                                          == "true" else False)
+                    if node.is_computehci:
                         self.computehci_nodes.append(node)
                 except AttributeError:
                     node.is_computehci = False
                     pass
 
                 try:
-                    if node.is_compute == "true":
-                        node.is_compute = True
+                    node.is_compute = (True if node.is_compute
+                                       == "true" else False)
+                    if node.is_compute:
                         self.compute_nodes.append(node)
                 except AttributeError:
                     node.is_compute = False
                     pass
                 try:
-                    if node.is_ceph_storage == "true":
+                    node.is_storage = (True if node.is_ceph_storage
+                                       == "true" else False)
+                    if node.is_storage:
                         self.ceph_nodes.append(node)
-                        node.is_storage = True
                 except AttributeError:
                     node.is_storage = False
                     pass
                 try:
-                    if node.is_switch == "true":
+                    node.is_switch = (True if node.is_switch
+                                      == "true" else False)
+                    if node.is_switch:
                         self.switches.append(node)
                 except AttributeError:
                     self.nodes.append(node)
                     pass
                 try:
-                    if node.skip_raid_config == "true":
-                        node.skip_raid_config = True
+                    node.skip_raid_config = (True if node.skip_raid_config
+                                             == "true" else False)
                 except AttributeError:
                     node.skip_raid_config = False
                     pass
                 try:
-                    if node.skip_bios_config == "true":
-                        node.skip_bios_config = True
+                    node.skip_bios_config = (True if node.skip_bios_config
+                                             == "true" else False)
                 except AttributeError:
                     node.skip_bios_config = False
                     pass
                 try:
-                    if node.skip_nic_config == "true":
-                        node.skip_nic_config = True
+                    node.skip_nic_config = (True if node.skip_nic_config
+                                            == "true" else False)
                 except AttributeError:
                     node.skip_nic_config = False
                     pass
