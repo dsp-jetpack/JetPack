@@ -2288,7 +2288,6 @@ class Director(InfraHost):
                 _net_config = self._generate_nic_network_config(node_type,
                                                                 node_type_data)
                 net_configs['network_config'] = _net_config
-            logger.info("fffffffffffff net_configs: %s", str(net_configs))
             with open(stg_nic_path, 'w') as stg_nic_stream:
                 yaml.dump(nic_tmpl, stg_nic_stream, OrderedDumper,
                           default_flow_style=False)
@@ -2391,6 +2390,8 @@ class Director(InfraHost):
                 edge_subnet = self._generate_subnet_name(nt)
                 role_subnet_key = role + 'ControlPlaneSubnet'
                 param_def[role_subnet_key] = edge_subnet
+                xtra_cfg_key = role + 'ExtraConfig'
+                param_def[xtra_cfg_key] = self._generate_extra_config(nt)
 
             for node_type, nodes in setts.node_types_map.iteritems():
                 role = self._generate_cc_role(node_type)
@@ -2440,11 +2441,11 @@ class Director(InfraHost):
             stg_net_env_tmpl = yaml.load(stg_net_env_stream,
                                          Loader=OrderedLoader)
             params = stg_net_env_tmpl['parameter_defaults']
-            for node_type, node_type_data in setts.node_type_data_map.iteritems():
-                logger.info("yyyyyy configuring network env for node_type_data: %s",
+            for nt, node_type_data in setts.node_type_data_map.iteritems():
+                logger.info("yyyyyy config network env for node_type_data: %s",
                             str(node_type_data))
-                role = self._generate_cc_role(node_type)
-                edge_subnet = self._generate_subnet_name(node_type)
+                role = self._generate_cc_role(nt)
+                edge_subnet = self._generate_subnet_name(nt)
                 # format - ControlPlane[SubnetNameCC]DefaultRoute:
                 cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
                 # format - ControlPlane[SubnetNameCC]SubnetCidr:
@@ -2583,8 +2584,6 @@ class Director(InfraHost):
             res_reg = stg_static_ip_env_tmpl['resource_registry']
             params = stg_static_ip_env_tmpl['parameter_defaults']
             for node_type, nodes in setts.node_types_map.iteritems():
-                logger.info("yyyyyy configuring network env for node_type: %s",
-                            str(node_type))
                 res_reg.update(self._generate_static_ip_ports(node_type))
                 params.update(self._generate_static_ip_params(node_type,
                                                               nodes))
@@ -2818,15 +2817,19 @@ class Director(InfraHost):
         int_api_subnet = int_api_network + 'IpSubnet'
         int_api_gateway = int_api_network + 'Gateway'
         int_api_vlan_id = int_api_network + 'NetworkVlanID'
+        int_api_cidr = int_api_network + 'NetCidr'
         tenant_subnet = tenant_network + 'IpSubnet'
         tenant_gateway = tenant_network + 'Gateway'
         tenant_vlan_id = tenant_network + 'NetworkVlanID'
+        tenant_cidr = tenant_network + 'NetCidr'
         storage_subnet = storage_network + 'IpSubnet'
         storage_gateway = storage_network + 'Gateway'
         storage_vlan_id = storage_network + 'NetworkVlanID'
+        storage_cidr = storage_network + 'NetCidr'
         external_subnet = external_network + 'IpSubnet'
         external_gateway = external_network + 'Gateway'
         external_vlan_id = external_network + 'NetworkVlanID'
+        external_cidr = external_network + 'NetCidr'
 
         prov_if["name"] = {"get_param": prov_if_param}
         prov_if["mtu"] = {"get_param": "ProvisioningNetworkMTU"}
@@ -2844,8 +2847,8 @@ class Director(InfraHost):
                          "next_hop": {"get_param": cp_default_route}}
         prov_route = {"ip_netmask": setts.provisioning_network,
                       "next_hop": {"get_param": cp_default_route}}
-
-        prov_if["routes"] = [ec2_route, default_route, prov_route]
+        prov_if["routes"] = [ec2_route, prov_route]
+        # prov_if["routes"] = [ec2_route, default_route, prov_route]
 
         tenant_br["name"] = "br-tenant"
         tenant_br["mtu"] = {"get_param": "DefaultBondMTU"}
@@ -2879,36 +2882,25 @@ class Director(InfraHost):
         tenant_vlan = OrderedDict({"type": "vlan"})
         tenant_vlan["device"] = "bond0"
         tenant_vlan["vlan_id"] = {"get_param": tenant_vlan_id}
-        tenant_vlan["mtu"] = {"get_param": "TenantNetworkMTU"}
+        tenant_vlan["mtu"] = {"get_param": "DefaultBondMTU"}
         tenant_vlan["addresses"] = [{"ip_netmask":
                                      {"get_param": tenant_subnet}}]
-        tenant_route = {"ip_netmask": {"get_param": 'TenantNetCidr'},
+        tenant_route = {"ip_netmask": {"get_param": tenant_cidr},
                         "next_hop": {"get_param": tenant_gateway}}
         tenant_vlan['routes'] = [tenant_route]
 
         storage_vlan = OrderedDict({"type": "vlan"})
         storage_vlan["device"] = "bond0"
         storage_vlan["vlan_id"] = {"get_param": storage_vlan_id}
-        storage_vlan["mtu"] = {"get_param": "TenantNetworkMTU"}
+        storage_vlan["mtu"] = {"get_param": "DefaultBondMTU"}
         storage_vlan["addresses"] = [{"ip_netmask":
                                       {"get_param": storage_subnet}}]
-        storage_route = {"ip_netmask": {"get_param": 'StorageNetCidr'},
+        storage_route = {"ip_netmask": {"get_param": storage_cidr},
                          "next_hop": {"get_param": storage_gateway}}
         storage_vlan['routes'] = [storage_route]
 
-        external_vlan = OrderedDict({"type": "vlan"})
-        external_vlan["device"] = "bond0"
-        external_vlan["vlan_id"] = {"get_param": external_vlan_id}
-        external_vlan["mtu"] = {"get_param": "TenantNetworkMTU"}
-        external_vlan["addresses"] = [{"ip_netmask":
-                                      {"get_param": external_subnet}}]
-        external_route = {"ip_netmask": {"get_param": 'StorageNetCidr'},
-                          "next_hop": {"get_param": external_gateway}}
-        external_vlan['routes'] = [external_route]
-
         tenant_br["members"] = [bond_0, internal_api_vlan,
-                                tenant_vlan, storage_vlan,
-                                external_vlan]
+                                tenant_vlan, storage_vlan]
 
         ex_br["name"] = "bridge_name"
         ex_br["mtu"] = {"get_param": "DefaultBondMTU"}
@@ -2925,7 +2917,22 @@ class Director(InfraHost):
                                      "ComputeBondInterfaceOptions"}
         bond_1["mtu"] = {"get_param": "DefaultBondMTU"}
         bond_1["members"] = [bond_1_if_1, bond_1_if_2]
-        ex_br["members"] = [bond_1]
+        external_vlan = OrderedDict({"type": "vlan"})
+        external_vlan["device"] = "bond0"
+        external_vlan["vlan_id"] = {"get_param": external_vlan_id}
+        external_vlan["mtu"] = {"get_param": "DefaultBondMTU"}
+        external_vlan["addresses"] = [
+            {"ip_netmask": {"get_param": external_subnet}}]
+        # external_route = {"ip_netmask": {"get_param": external_cidr},
+        #                   "next_hop": {"get_param": external_gateway}}
+        # external_vlan['routes'] = [external_route]
+        def_ex_route = {"default": True,
+                        "next_hop": {"get_param": external_gateway}}
+        external_vlan["routes"] = [def_ex_route]
+        ex_br["members"] = [bond_1, external_vlan]
+        # need this route for internet access to get container images
+
+        # ex_br["routes"] = [def_ex_route]
         network_config = [prov_if, tenant_br, ex_br]
         logger.info("network_config is: %s", str(network_config))
         return network_config
@@ -3068,6 +3075,39 @@ class Director(InfraHost):
             nd['gateway_ip'] = gw
             network_data_list.append(nd)
         return network_data_list
+
+    def _generate_extra_config(self, type):
+        net_suffix = '_' + self._generate_role_network_lower(type)
+        api_net = INTERNAL_API_NET[1] + net_suffix
+        tenant_net = TENANT_NET[1] + net_suffix
+
+        xtra_cfg = {}
+
+        xtra_cfg['nova::compute::libvirt::vncserver_listen'] = \
+            '%{hiera("' + api_net + '")}'
+        xtra_cfg['nova::compute::vncserver_proxyclient_address'] = \
+            '%{hiera("' + api_net + '")}'
+        xtra_cfg['neutron::agents::ml2::ovs::local_ip'] = \
+            '%{hiera("' + tenant_net + '")}'
+        xtra_cfg['cold_migration_ssh_inbound_addr'] = \
+            '%{hiera("' + api_net + '")}'
+        xtra_cfg['live_migration_ssh_inbound_addr'] = \
+            '%{hiera("' + api_net + '")}'
+        xtra_cfg['nova::migration::libvirt::live_migration_inbound_addr'] = \
+            '%{hiera("' + api_net + '")}'
+        xtra_cfg['nova::my_ip'] = '%{hiera("' + api_net + '")}'
+        _mysql_key = 'tripleo::profile::base::database::mysql' \
+            + '::client::mysql_client_bind_address'
+        xtra_cfg[_mysql_key] = '%{hiera("' + api_net + '")}'
+        # TODO not sure below are needed
+        xtra_cfg['nova::cpu_allocation_ratio'] = 1
+        xtra_cfg['nova::compute::resume_guests_state_on_host_boot'] = True
+        xtra_cfg['nova::compute::libvirt::libvirt_cpu_model'] = \
+            'host-passthrough'
+        xtra_cfg['nova::compute::libvirt::libvirt_cpu_model_extra_flags'] = \
+            'host-tsc-deadline'
+        xtra_cfg['nova::compute::libvirt::mem_stats_period_seconds'] = 0
+        return xtra_cfg
 
     def _generate_cc_role(self, type):
         role_cc = (re.sub(r'[^a-z0-9]', " ",

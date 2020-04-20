@@ -284,7 +284,7 @@ def get_raid_controller_ids(drac_client):
     for cnt in disk_ctrls:
         if drac_client.is_raid_controller(cnt.id):
             raid_controller_ids.append(cnt.id)
-
+    LOG.info("xxxxxx Raid controller ids: %s", str(raid_controller_ids))
     return raid_controller_ids
 
 
@@ -829,7 +829,7 @@ def configure_raid(ironic_client, node_uuid, super_role, os_volume_size_gb,
                 logical_disk['controller']].append(physical_disk_name)
 
     LOG.info("Converting physical disks configured to back RAID logical disks "
-             "to RAID mode")
+             "to RAID mode, PD IDs: %s", str(controllers_to_physical_disk_ids))
     succeeded = change_physical_disk_state_wait(
         node_uuid, ironic_client, drac_client, 'RAID',
         controllers_to_physical_disk_ids)
@@ -1167,19 +1167,32 @@ def get_size_in_bytes(doc, namespace):
 
 
 def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
+    volume_name = None
+    LOG.info("os_volume_size_gb: {}, "
+             "node id: {}".format(str(os_volume_size_gb),
+                                  node_uuid))
     if os_volume_size_gb is None:
         # Detect BOSS Card and find the volume size
         lst_ctrls = drac_client.list_raid_controllers()
+        LOG.info("List of controllers: {}".format(str(lst_ctrls)))
         boss_disk = \
             [ctrl.id for ctrl in lst_ctrls if ctrl.model.startswith("BOSS")]
         if boss_disk:
             lst_physical_disks = drac_client.list_physical_disks()
+            lst_virt_disks = drac_client.list_virtual_disks()
             for disks in lst_physical_disks:
                 if disks.controller in boss_disk:
                     os_volume_size_gb = disks.size_mb / 1024
                     LOG.info("Detect BOSS Card {} and volume size {}".format(
                         disks.controller,
                         os_volume_size_gb))
+            for vdisk in lst_virt_disks:
+                LOG.info("BOSS Card vdisk: {}, controller: {}, "
+                         "and boss_disk: {}".format(
+                             str(vdisk), vdisk.controller, boss_disk))
+                if vdisk.controller in boss_disk:
+                    volume_name = vdisk.name
+                    break
         else:
             drac_client = drac_client.client
             # Get the virtual disks
@@ -1335,11 +1348,17 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
         volume_type = RAID_TYPE_TO_DESCRIPTION[raid_type]
 
     # Set the root_device property in ironic to the volume size in gigs
-    LOG.info(
-        "Setting the OS volume for this node to the {} with size "
-        "{} GB".format(volume_type, raid_size_gb))
+    # BUG: dpaterson, if there are two disks on boss card with same size as
+    # HB330 managed non-raid SSD the OS is being installed on the nonRAID drive
+    # instead of the BOSS RAID1 VD
+    LOG.info("Setting the OS volume for this node to the {} with size "
+             "{} GB and volume name: {}".format(volume_type, raid_size_gb,
+                                                volume_name))
+    root_device_hints = {"size": raid_size_gb}
+    if volume_name:
+        root_device_hints["name"] = volume_name
     patch = [{'op': 'add',
-              'value': {"size": raid_size_gb},
+              'value': root_device_hints,
               'path': '/properties/root_device'}]
     ironic_client.node.update(node_uuid, patch)
 
