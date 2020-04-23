@@ -117,12 +117,17 @@ INSTACK = 'instackenv'
 STATIC_IP_ENV = 'static-ip-environment'
 ROLES_DATA = 'roles_data'
 NET_DATA = 'network_data'
+NET_ISO = 'network-isolation'
+CONTROLLER = 'controller'
 
+CONTROL_PLANE_NET = ('ControlPlane', "ctlplane")
 INTERNAL_API_NET = ('InternalApi', 'internal_api')
 STORAGE_NET = ('Storage', 'storage')
 TENANT_NET = ('Tenant', 'tenant')
 EXTERNAL_NET = ('External', 'external')
-EDGE_NETWORKS = (INTERNAL_API_NET, STORAGE_NET, TENANT_NET, EXTERNAL_NET)
+
+EDGE_NETWORKS = (INTERNAL_API_NET, STORAGE_NET,
+                 TENANT_NET, EXTERNAL_NET)
 
 
 class Director(InfraHost):
@@ -1354,6 +1359,7 @@ class Director(InfraHost):
         if self.settings.node_type_data_map:
             self.create_network_data()
             self.setup_edge_nic_configuration()
+            self.update_nic_config_edge_routes()
             self.update_node_placement()
 
         if self.settings.overcloud_static_ips is True:
@@ -1456,6 +1462,7 @@ class Director(InfraHost):
 
             if self.settings.node_type_data_map:
                 self.update_edge_static_ips()
+                self.update_network_isolation_edge()
 
         if self.settings.use_static_vips is True:
             logger.debug("Updating static vip yaml")
@@ -2199,13 +2206,13 @@ class Director(InfraHost):
 
         stg_undercloud_conf_path = self.get_timestamped_path(STAGING_PATH,
                                                              "undercloud")
-        with open(stg_undercloud_conf_path, 'w+b') as undercloud_conf_stream:
-            uconf.write(undercloud_conf_stream)
-            undercloud_conf_stream.flush()
-            undercloud_conf_stream.seek(0)
+        with open(stg_undercloud_conf_path, 'w+b') as undercloud_conf_fp:
+            uconf.write(undercloud_conf_fp)
+            undercloud_conf_fp.flush()
+            undercloud_conf_fp.seek(0)
             logger.debug("Staging undercloud.conf path: %s, contents:\n%s",
                          stg_undercloud_conf_path,
-                         undercloud_conf_stream.read())
+                         undercloud_conf_fp.read())
             # stg_undercloud_conf_path.close()
         undercloud_conf_dst = os.path.join(self.home_dir,
                                            setts.UNDERCLOUD_CONFIG_FILE)
@@ -2218,6 +2225,10 @@ class Director(InfraHost):
         ntypes_data_map = setts.node_type_data_map
 
         roles_file = os.path.join(self.templates_dir, ROLES_DATA + '.yaml')
+        oc_roles_file = os.path.join(self.templates_dir,
+                                     'overcloud',
+                                     NET_ISO + ".yaml")
+
         stg_roles_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
                                                    ROLES_DATA,
                                                    "yaml")
@@ -2232,8 +2243,8 @@ class Director(InfraHost):
                 stg_roles.append(self._generate_role_dict(node_type))
         if len(stg_roles) is not 0:
 
-            with open(stg_roles_file) as stg_roles_stream:
-                roles_list = yaml.load(stg_roles_stream, Loader=OrderedLoader)
+            with open(stg_roles_file) as stg_roles_fp:
+                roles_list = yaml.load(stg_roles_fp, Loader=OrderedLoader)
 
             roles_list = self._delete_existing_roles(roles_list, stg_roles)
 
@@ -2241,20 +2252,57 @@ class Director(InfraHost):
                 roles_list.append(role)
 
             logger.debug("Roles to be uploaded: %s", str(roles_list))
-            with open(stg_roles_file, 'w') as stg_role_stream:
-                yaml.dump(roles_list, stg_role_stream, OrderedDumper)
+            with open(stg_roles_file, 'w') as stg_role_fp:
+                yaml.dump(roles_list, stg_role_fp, OrderedDumper)
 
             self.upload_file(stg_roles_file, roles_file)
             # Need to copy to pilot/templates/overcloud as
             # we copy the roles_data file there during undercloud
             # installation and it is used during overcloud deployment
-            # self.upload_file(stg_roles_file, oc_roles_file)
+            self.upload_file(stg_roles_file, oc_roles_file)
+
+    @directory_check(STAGING_NIC_CONFIGS)
+    def update_nic_config_edge_routes(self):
+        setts = self.settings
+        nic_dict_by_port_num = self._group_node_types_by_num_nics()
+        for num_nics, node_type_tuples in nic_dict_by_port_num.iteritems():
+
+            port_dir = "{}_port".format(num_nics)
+            cntl_file = os.path.join(self.nic_configs_dir,
+                                           port_dir,
+                                           CONTROLLER + ".yaml")
+
+            stg_nic_template_path = os.path.join(STAGING_TEMPLATES_PATH,
+                                                 "nic-configs", port_dir)
+
+            if not os.path.exists(stg_nic_template_path):
+                os.makedirs(stg_nic_template_path)
+
+            stg_cntl_path = self.get_timestamped_path(stg_nic_template_path,
+                                                      CONTROLLER, "yaml")
+            self.download_file(stg_cntl_path, cntl_file)
+
+            with open(stg_cntl_path) as cntl_fp:
+                cntl_tmpl = yaml.load(cntl_fp, Loader=OrderedLoader)
+                params = cntl_tmpl['parameters']
+                net_cfg_lst = (cntl_tmpl['resources']
+                               ['OsNetConfigImpl']
+                               ['properties']['config']['str_replace']
+                               ['params']['$network_config']['network_config'])
+                for nt_tup in node_type_tuples:
+                    node_type = nt_tup[0]
+                    cdc_params = self._generate_cdc_cloud_nic_params(node_type)
+                    params.update(cdc_params)
+                    self._update_cdc_nic_net_cfg(node_type, net_cfg_lst)
+            with open(stg_cntl_path, 'w') as stg_cntl_fp:
+                yaml.dump(cntl_tmpl, stg_cntl_fp, OrderedDumper,
+                          default_flow_style=False)
+        self.upload_file(stg_cntl_path, cntl_file)
 
     @directory_check(STAGING_NIC_CONFIGS)
     def setup_edge_nic_configuration(self):
         setts = self.settings
         for node_type, node_type_data in setts.node_type_data_map.iteritems():
-            role = self._generate_cc_role(node_type)
             num_nics = node_type_data['nic_port_count']
 
             port_dir = "{}_port".format(num_nics)
@@ -2276,8 +2324,8 @@ class Director(InfraHost):
             dst_nic_path = os.path.join(self.nic_configs_dir, port_dir,
                                         dst_nic_yaml)
 
-            with open(local_nic_env_file) as nic_stream:
-                nic_tmpl = yaml.load(nic_stream, Loader=OrderedLoader)
+            with open(local_nic_env_file) as nic_fp:
+                nic_tmpl = yaml.load(nic_fp, Loader=OrderedLoader)
                 params = nic_tmpl['parameters']
                 edge_params = self._generate_nic_params(node_type)
                 params.update(edge_params)
@@ -2288,8 +2336,8 @@ class Director(InfraHost):
                 _net_config = self._generate_nic_network_config(node_type,
                                                                 node_type_data)
                 net_configs['network_config'] = _net_config
-            with open(stg_nic_path, 'w') as stg_nic_stream:
-                yaml.dump(nic_tmpl, stg_nic_stream, OrderedDumper,
+            with open(stg_nic_path, 'w') as stg_nic_fp:
+                yaml.dump(nic_tmpl, stg_nic_fp, OrderedDumper,
                           default_flow_style=False)
 
             self.upload_file(stg_nic_path, dst_nic_path)
@@ -2297,14 +2345,7 @@ class Director(InfraHost):
 
     @directory_check(STAGING_NIC_CONFIGS)
     def update_edge_nic_environment(self):
-        setts = self.settings
-        nic_dict_by_port_num = {}
-        for node_type, node_type_data in setts.node_type_data_map.iteritems():
-            num_nics = node_type_data['nic_port_count']
-            if num_nics not in nic_dict_by_port_num:
-                nic_dict_by_port_num[num_nics] = []
-            nic_dict_by_port_num[num_nics].append((node_type, node_type_data))
-
+        nic_dict_by_port_num = self._group_node_types_by_num_nics()
         for num_nics, node_type_tuples in nic_dict_by_port_num.iteritems():
             port_dir = "{}_port".format(num_nics)
             nic_env_file = os.path.join(self.nic_configs_dir,
@@ -2320,8 +2361,8 @@ class Director(InfraHost):
                                                          NIC_ENV, "yaml")
             self.download_file(stg_nic_env_path, nic_env_file)
             nic_env_tmpl = OrderedDict()
-            with open(stg_nic_env_path) as nic_env_stream:
-                nic_env_tmpl = yaml.load(nic_env_stream, Loader=OrderedLoader)
+            with open(stg_nic_env_path) as nic_env_fp:
+                nic_env_tmpl = yaml.load(nic_env_fp, Loader=OrderedLoader)
                 res_reg = nic_env_tmpl['resource_registry']
                 params = nic_env_tmpl['parameter_defaults']
                 for node_type_tuple in node_type_tuples:
@@ -2338,8 +2379,8 @@ class Director(InfraHost):
                                            node_type)
                                        + ".yaml")
                     res_reg[role_nic_key] = nic_config_name
-            with open(stg_nic_env_path, 'w') as stg_nic_stream:
-                yaml.dump(nic_env_tmpl, stg_nic_stream, OrderedDumper,
+            with open(stg_nic_env_path, 'w') as stg_nic_fp:
+                yaml.dump(nic_env_tmpl, stg_nic_fp, OrderedDumper,
                           default_flow_style=False)
             self.upload_file(stg_nic_env_path, nic_env_file)
 
@@ -2353,8 +2394,8 @@ class Director(InfraHost):
 
         self.download_file(stg_plcmnt_path, remote_plcmnt_file)
         stg_plcmnt_tmpl = {}
-        with open(stg_plcmnt_path) as stg_plcmnt_stream:
-            stg_plcmnt_tmpl = yaml.load(stg_plcmnt_stream,
+        with open(stg_plcmnt_path) as stg_plcmnt_fp:
+            stg_plcmnt_tmpl = yaml.load(stg_plcmnt_fp,
                                         Loader=OrderedLoader)
             for node_type in self.settings.node_types:
                 exp = self._generate_node_placement_exp(node_type)
@@ -2363,11 +2404,43 @@ class Director(InfraHost):
                 _role_hints = role + 'SchedulerHints'
                 param_def[_role_hints] = {"capabilities:node": exp}
 
-        with open(stg_plcmnt_path, 'w') as stg_plcmnt_stream:
-            yaml.dump(stg_plcmnt_tmpl, stg_plcmnt_stream, OrderedDumper,
+        with open(stg_plcmnt_path, 'w') as stg_plcmnt_fp:
+            yaml.dump(stg_plcmnt_tmpl, stg_plcmnt_fp, OrderedDumper,
                       default_flow_style=False,
                       default_style="'")
         self.upload_file(stg_plcmnt_path, remote_plcmnt_file)
+
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def update_network_isolation_edge(self):
+        logger.debug("Updating network isolation for edge sites.")
+        setts = self.settings
+        net_iso_file = os.path.join(self.templates_dir, NET_ISO + ".yaml")
+        oc_net_iso_file = os.path.join(self.templates_dir,
+                                       'overcloud',
+                                       'environments',
+                                       NET_ISO + ".yaml")
+
+        stg_net_iso_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
+                                                      NET_ISO, "yaml")
+
+        self.download_file(stg_net_iso_path, net_iso_file)
+        stg_net_iso_tmpl = {}
+        with open(stg_net_iso_path) as stg_net_iso_fp:
+            stg_net_iso_tmpl = yaml.load(stg_net_iso_fp,
+                                         Loader=OrderedLoader)
+            res_reg = stg_net_iso_tmpl['resource_registry']
+
+            for nt, nt_data in setts.node_type_data_map.iteritems():
+                res_reg.update(self._generate_net_iso(nt))
+
+        with open(stg_net_iso_path, 'w') as stg_net_iso_fp:
+            yaml.dump(stg_net_iso_tmpl, stg_net_iso_fp, OrderedDumper,
+                      default_flow_style=False)
+
+        self.upload_file(stg_net_iso_path, net_iso_file)
+        # have to upload twice as we specify overcloud/environments/
+        # when deploying overcloud
+        self.upload_file(stg_net_iso_path, oc_net_iso_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
     def update_environment_edge(self):
@@ -2380,8 +2453,8 @@ class Director(InfraHost):
 
         self.download_file(stg_dell_env_path, dell_env_file)
         stg_dell_env_tmpl = {}
-        with open(stg_dell_env_path) as stg_dell_env_stream:
-            stg_dell_env_tmpl = yaml.load(stg_dell_env_stream,
+        with open(stg_dell_env_path) as stg_dell_env_fp:
+            stg_dell_env_tmpl = yaml.load(stg_dell_env_fp,
                                           Loader=OrderedLoader)
             param_def = stg_dell_env_tmpl['parameter_defaults']
 
@@ -2398,8 +2471,8 @@ class Director(InfraHost):
                 role_count_key = role + 'Count'
                 param_def[role_count_key] = len(nodes)
         # logger.info("dell env params:\n%s", str(stg_dell_env_tmpl))
-        with open(stg_dell_env_path, 'w') as stg_dell_env_stream:
-            yaml.dump(stg_dell_env_tmpl, stg_dell_env_stream, OrderedDumper,
+        with open(stg_dell_env_path, 'w') as stg_dell_env_fp:
+            yaml.dump(stg_dell_env_tmpl, stg_dell_env_fp, OrderedDumper,
                       default_flow_style=False)
 
         self.upload_file(stg_dell_env_path, dell_env_file)
@@ -2418,8 +2491,8 @@ class Director(InfraHost):
         for node_type, node_type_data in setts.node_type_data_map.iteritems():
             nd = self._generate_network_data(node_type, node_type_data)
             stg_net_data_lst.extend(nd)
-        with open(stg_net_data_file, 'w') as stg_net_data_stream:
-            yaml.dump(stg_net_data_lst, stg_net_data_stream, OrderedDumper,
+        with open(stg_net_data_file, 'w') as stg_net_data_fp:
+            yaml.dump(stg_net_data_lst, stg_net_data_fp, OrderedDumper,
                       default_flow_style=False)
         # pyyaml has bug in it where if you pass in 'string',
         # you get '''string''', sed the file prior to uploading
@@ -2437,81 +2510,29 @@ class Director(InfraHost):
 
         self.download_file(stg_net_env_path, net_env_file)
         stg_net_env_tmpl = OrderedDict()
-        with open(stg_net_env_path) as stg_net_env_stream:
-            stg_net_env_tmpl = yaml.load(stg_net_env_stream,
+        with open(stg_net_env_path) as stg_net_env_fp:
+            stg_net_env_tmpl = yaml.load(stg_net_env_fp,
                                          Loader=OrderedLoader)
             params = stg_net_env_tmpl['parameter_defaults']
-            for nt, node_type_data in setts.node_type_data_map.iteritems():
-                logger.info("yyyyyy config network env for node_type_data: %s",
-                            str(node_type_data))
-                role = self._generate_cc_role(nt)
-                edge_subnet = self._generate_subnet_name(nt)
-                # format - ControlPlane[SubnetNameCC]DefaultRoute:
-                cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
-                # format - ControlPlane[SubnetNameCC]SubnetCidr:
-                cp_subnet_cidr = 'ControlPlane' + role + 'SubnetCidr'
-                # should be [RoleCC]ControlPlaneSubnet: subnet-name
-                cp_subnet = role + 'ControlPlaneSubnet'
-                int_api_network = INTERNAL_API_NET[0] + role
-                tenant_network = TENANT_NET[0] + role
-                storage_network = STORAGE_NET[0] + role
-                external_network = EXTERNAL_NET[0] + role
+            # stamp control plane/provistioning net params
+            params["ProvisioningNetworkGateway"] = setts.provisioning_gateway
+            params["ControlPlaneNetCidr"] = setts.provisioning_network
+            params["ControlPlaneNetworkVlanID"] = setts.provisioning_vlanid
+            params = stg_net_env_tmpl['parameter_defaults']
+            int_key = INTERNAL_API_NET[0] + "InterfaceDefaultRoute"
+            str_key = STORAGE_NET[0] + "InterfaceDefaultRoute"
+            ten_key = TENANT_NET[0] + "InterfaceDefaultRoute"
+            ext_key = EXTERNAL_NET[0] + "InterfaceDefaultRoute"
+            params[int_key] = setts.private_api_gateway
+            params[str_key] = setts.storage_gateway
+            params[ten_key] = setts.tenant_tunnel_gateway
+            params[ext_key] = setts.public_api_gateway
 
-                int_api_cidr = int_api_network + 'NetCidr'
-                int_api_vlan = int_api_network + 'NetworkVlanID'
-                int_api_subnet = int_api_network + 'IpSubnet'
-                int_api_gateway = int_api_network + 'Gateway'
+            for nt, nt_data in setts.node_type_data_map.iteritems():
+                params.update(self._generate_net_env_params(nt, nt_data))
 
-                tenant_net_cidr = tenant_network + 'NetCidr'
-                tenant_vlan = tenant_network + 'NetworkVlanID'
-                tenant_subnet = tenant_network + 'IpSubnet'
-                tenant_gateway = tenant_network + 'Gateway'
-
-                storage_net_cidr = storage_network + 'NetCidr'
-                storage_vlan = storage_network + 'NetworkVlanID'
-                storage_subnet = storage_network + 'IpSubnet'
-                storage_gateway = storage_network + 'Gateway'
-
-                external_net_cidr = external_network + 'NetCidr'
-                external_vlan = external_network + 'NetworkVlanID'
-                external_subnet = external_network + 'IpSubnet'
-                external_gateway = external_network + 'Gateway'
-
-                params[cp_subnet] = edge_subnet
-                _cp_subnet_cidr = node_type_data['cidr'].rsplit("/", 1)[1]
-                params[cp_subnet_cidr] = _cp_subnet_cidr
-                params[cp_default_route] = node_type_data['gateway']
-
-                _int_api = node_type_data['private_api_network']
-                params[int_api_subnet] = _int_api
-                params[int_api_cidr] = _int_api
-                _int_api_vlanid = int(node_type_data['private_api_vlanid'])
-                params[int_api_vlan] = _int_api_vlanid
-                params[int_api_gateway] = node_type_data['private_api_gateway']
-
-                _tenant_vlanid = int(node_type_data['tenant_vlanid'])
-                params[tenant_vlan] = _tenant_vlanid
-                _tenant_net = node_type_data['tenant_network']
-                params[tenant_subnet] = _tenant_net
-                params[tenant_net_cidr] = _tenant_net
-                params[tenant_gateway] = node_type_data['tenant_gateway']
-
-                _storage_vlanid = int(node_type_data['storage_vlanid'])
-                params[storage_vlan] = _storage_vlanid
-                _storage_net = node_type_data['storage_network']
-                params[storage_subnet] = _storage_net
-                params[storage_net_cidr] = _storage_net
-                params[storage_gateway] = node_type_data['storage_gateway']
-
-                _external_vlanid = int(node_type_data['external_vlanid'])
-                params[external_vlan] = _external_vlanid
-                _external_net = node_type_data['external_network']
-                params[external_subnet] = _external_net
-                params[external_net_cidr] = _external_net
-                params[external_gateway] = node_type_data['external_gateway']
-
-        with open(stg_net_env_path, 'w') as stg_net_env_stream:
-            yaml.dump(stg_net_env_tmpl, stg_net_env_stream, OrderedDumper,
+        with open(stg_net_env_path, 'w') as stg_net_env_fp:
+            yaml.dump(stg_net_env_tmpl, stg_net_env_fp, OrderedDumper,
                       default_flow_style=False)
 
         self.upload_file(stg_net_env_path, net_env_file)
@@ -2552,16 +2573,16 @@ class Director(InfraHost):
 
         self.download_file(stg_instack_path, instack_file)
         instack = {}
-        with open(stg_instack_path, 'r') as stg_instack_stream:
-            instack = json.load(stg_instack_stream)
+        with open(stg_instack_path, 'r') as stg_instack_fp:
+            instack = json.load(stg_instack_fp)
             nodes = instack['nodes']
             for node in nodes:
                 node_mgmt_net = node['pm_addr'].rsplit('.', 1)[0]
                 if node_mgmt_net != mgmt_net:
                     node['subnet'] = self._subnet_name_from_net(node_mgmt_net)
 
-        with open(stg_instack_path, 'w') as stg_instack_stream:
-            json.dump(instack, stg_instack_stream, indent=2)
+        with open(stg_instack_path, 'w') as stg_instack_fp:
+            json.dump(instack, stg_instack_fp, indent=2)
 
         self.upload_file(stg_instack_path, instack_file)
 
@@ -2578,8 +2599,8 @@ class Director(InfraHost):
 
         self.download_file(stg_static_ip_env_path, static_ip_env_file)
         stg_static_ip_env_tmpl = OrderedDict()
-        with open(stg_static_ip_env_path) as stg_static_ip_env_tmpl_stream:
-            stg_static_ip_env_tmpl = yaml.load(stg_static_ip_env_tmpl_stream,
+        with open(stg_static_ip_env_path) as stg_static_ip_env_tmpl_fp:
+            stg_static_ip_env_tmpl = yaml.load(stg_static_ip_env_tmpl_fp,
                                                Loader=OrderedLoader)
             res_reg = stg_static_ip_env_tmpl['resource_registry']
             params = stg_static_ip_env_tmpl['parameter_defaults']
@@ -2588,8 +2609,8 @@ class Director(InfraHost):
                 params.update(self._generate_static_ip_params(node_type,
                                                               nodes))
 
-        with open(stg_static_ip_env_path, 'w') as stg_static_ip_env_stream:
-            yaml.dump(stg_static_ip_env_tmpl, stg_static_ip_env_stream,
+        with open(stg_static_ip_env_path, 'w') as stg_static_ip_env_fp:
+            yaml.dump(stg_static_ip_env_tmpl, stg_static_ip_env_fp,
                       OrderedDumper, default_flow_style=False)
 
         self.upload_file(stg_static_ip_env_path, static_ip_env_file)
@@ -2656,6 +2677,124 @@ class Director(InfraHost):
         ip_params[role_ips] = network_dict
         return ip_params
 
+    def _generate_net_iso(self, type):
+        role = self._generate_cc_role(type)
+        edge_net = self._generate_role_network_lower(type)
+        _res_reg = OrderedDict()
+        for net_tuple in EDGE_NETWORKS:
+            net_key = "OS::TripleO::Network::{}{}".format(net_tuple[0],
+                                                          role)
+            net_val = "../network/{}_{}.yaml".format(net_tuple[1],
+                                                     edge_net)
+            _res_reg[net_key] = net_val
+
+        for net_tuple in EDGE_NETWORKS:
+            port_key = "OS::TripleO::{}::Ports::{}{}Port".format(role,
+                                                                 net_tuple[0],
+                                                                 role)
+
+            port_val = "../network/ports/{}_{}.yaml".format(net_tuple[1],
+                                                            edge_net)
+            _res_reg[port_key] = port_val
+        return _res_reg
+
+    def _generate_net_env_params(self, type, node_type_data):
+        setts = self.settings
+        params = OrderedDict()
+        logger.debug("config network env for node_type_data: %s",
+                     str(node_type_data))
+        role = self._generate_cc_role(type)
+        edge_subnet = self._generate_subnet_name(type)
+
+        cp_net_cidr = 'ControlPlane' + role + 'NetCidr'
+        cp_subnet_cidr = 'ControlPlane' + role + 'SubnetCidr'
+        cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
+        cp_subnet = role + 'ControlPlaneSubnet'
+        params[cp_net_cidr] = node_type_data['cidr']
+        params[cp_subnet] = edge_subnet
+        _cp_subnet_cidr = node_type_data['cidr'].rsplit("/", 1)[1]
+        params[cp_subnet_cidr] = _cp_subnet_cidr
+        params[cp_net_cidr] = node_type_data['cidr']
+        params[cp_default_route] = node_type_data['gateway']
+
+        int_api_network = INTERNAL_API_NET[0] + role
+        int_api_cidr = int_api_network + 'NetCidr'
+        int_api_vlan = int_api_network + 'NetworkVlanID'
+        int_api_subnet = int_api_network + 'IpSubnet'
+        int_api_gateway = int_api_network + 'InterfaceDefaultRoute'
+        int_api_pools = int_api_network + 'AllocationPools'
+        int_def_route = "{}{}InterfaceDefaultRoute".format(INTERNAL_API_NET[0],
+                                                           role)
+        _int_api = node_type_data['private_api_network']
+        params[int_api_subnet] = _int_api
+        params[int_api_cidr] = _int_api
+        _int_api_vlanid = int(node_type_data['private_api_vlanid'])
+        params[int_api_vlan] = _int_api_vlanid
+        params[int_api_gateway] = node_type_data['private_api_gateway']
+        params[int_def_route] = node_type_data['private_api_gateway']
+        _int_s = node_type_data['private_api_allocation_pool_start']
+        _int_e = node_type_data['private_api_allocation_pool_end']
+        params[int_api_pools] = [{'start': _int_s, 'end': _int_e}]
+
+        tenant_network = TENANT_NET[0] + role
+        tenant_net_cidr = tenant_network + 'NetCidr'
+        tenant_vlan = tenant_network + 'NetworkVlanID'
+        tenant_subnet = tenant_network + 'IpSubnet'
+        tenant_gateway = tenant_network + 'InterfaceDefaultRoute'
+        tenant_pools = tenant_network + 'AllocationPools'
+        tenant_def_route = "{}{}InterfaceDefaultRoute".format(TENANT_NET[0],
+                                                              role)
+        _tenant_vlanid = int(node_type_data['tenant_vlanid'])
+        params[tenant_vlan] = _tenant_vlanid
+        _tenant_net = node_type_data['tenant_network']
+        params[tenant_subnet] = _tenant_net
+        params[tenant_net_cidr] = _tenant_net
+        params[tenant_gateway] = node_type_data['tenant_gateway']
+        params[tenant_def_route] = node_type_data['tenant_gateway']
+        _ten_s = node_type_data['tenant_allocation_pool_start']
+        _ten_e = node_type_data['tenant_allocation_pool_end']
+        params[tenant_pools] = [{'start': _ten_s, 'end': _ten_e}]
+
+        storage_network = STORAGE_NET[0] + role
+        storage_net_cidr = storage_network + 'NetCidr'
+        storage_vlan = storage_network + 'NetworkVlanID'
+        storage_subnet = storage_network + 'IpSubnet'
+        storage_gateway = storage_network + 'InterfaceDefaultRoute'
+        storage_pools = storage_network + 'AllocationPools'
+        storage_def_route = "{}{}InterfaceDefaultRoute".format(STORAGE_NET[0],
+                                                               role)
+        _storage_vlanid = int(node_type_data['storage_vlanid'])
+        params[storage_vlan] = _storage_vlanid
+        _storage_net = node_type_data['storage_network']
+        params[storage_subnet] = _storage_net
+        params[storage_net_cidr] = _storage_net
+        params[storage_gateway] = node_type_data['storage_gateway']
+        params[storage_def_route] = node_type_data['storage_gateway']
+        _str_s = node_type_data['storage_allocation_pool_start']
+        _str_e = node_type_data['storage_allocation_pool_end']
+        params[storage_pools] = [{'start': _str_s, 'end': _str_e}]
+
+        external_network = EXTERNAL_NET[0] + role
+        external_net_cidr = external_network + 'NetCidr'
+        external_vlan = external_network + 'NetworkVlanID'
+        external_subnet = external_network + 'IpSubnet'
+        external_gateway = external_network + 'InterfaceDefaultRoute'
+        external_pools = external_network + 'AllocationPools'
+        external_def_route = "{}{}InterfaceDefaultRoute".format(
+            EXTERNAL_NET[0], role)
+        _external_vlanid = int(node_type_data['external_vlanid'])
+        params[external_vlan] = _external_vlanid
+        _external_net = node_type_data['external_network']
+        params[external_subnet] = _external_net
+        params[external_net_cidr] = _external_net
+        params[external_gateway] = node_type_data['external_gateway']
+        params[external_def_route] = node_type_data['external_gateway']
+        _ext_s = node_type_data['external_allocation_pool_start']
+        _ext_e = node_type_data['external_allocation_pool_end']
+        params[external_pools] = [{'start': _ext_s, 'end': _ext_e}]
+
+        return params
+
     def _delete_existing_roles(self, roles_list, stg_roles):
         filtered_roles = []
         for role in roles_list:
@@ -2698,15 +2837,82 @@ class Director(InfraHost):
         role_d['ServicesDefault'] = SERVICES_DEFAULT
         return role_d
 
+    def _update_cdc_nic_net_cfg(self, node_type, net_cfg_lst):
+        role = self._generate_cc_role(node_type)
+        flt_vlans = ["TenantNetworkVlanID", "InternalApiNetworkVlanID",
+                     "StorageNetworkVlanID"]
+        prov_if = list(filter(lambda cfg:
+            (cfg["type"] == "interface" and cfg["name"]['get_param']
+             == "ControllerProvisioningInterface"), net_cfg_lst))[0]
+
+        prov_edge_route = {"ip_netmask": {"get_param":
+            "{}{}NetCidr".format(CONTROL_PLANE_NET[0], role)},
+            "next_hop": {"get_param": "ProvisioningNetworkGateway"}}
+
+        prov_if['routes'].append(prov_edge_route)
+
+        tenant_bridge = list(filter(lambda cfg:
+            (cfg["type"] == "ovs_bridge"
+             and cfg["name"] == "br-tenant"), net_cfg_lst))[0]
+        vlans = list(filter(lambda br:
+            (br["type"] == "vlan" and br["vlan_id"]["get_param"] in flt_vlans),
+            tenant_bridge["members"]))
+        for vlan in vlans:
+            vlan_param = vlan["vlan_id"]["get_param"]
+            if "routes" in vlan.keys():
+                routes = vlan["routes"]
+            else:
+                routes = vlan["routes"] = []
+            if vlan_param == "TenantNetworkVlanID":
+                tenant_route = {"ip_netmask":
+                    {"get_param": "Tenant{}NetCidr".format(role)},
+                    "next_hop": {"get_param":
+                        "TenantInterfaceDefaultRoute"}}
+                routes.append(tenant_route)
+
+            elif vlan_param == "InternalApiNetworkVlanID":
+                int_api_route = {"ip_netmask":
+                    {"get_param": "InternalApi{}NetCidr".format(role)},
+                    "next_hop": {"get_param":
+                        "InternalApiInterfaceDefaultRoute"}}
+                routes.append(int_api_route)
+            else:
+                storage_route = {"ip_netmask":
+                    {"get_param": "Storage{}NetCidr".format(role)},
+                    "next_hop": {"get_param":
+                        "StorageInterfaceDefaultRoute"}}
+                routes.append(storage_route)
+
+
+    def _generate_cdc_cloud_nic_params(self, node_type):
+        """
+        For each node type and network we need to route the edge subnet to
+        the local gateway
+        ip route add 192.168.142.0/24 via 192.168.140.1
+        """
+        role = self._generate_cc_role(node_type)
+        params = OrderedDict()
+        for net_tup in EDGE_NETWORKS:
+            net_cidr = "{}{}NetCidr".format(net_tup[0], role)
+            if_def_route = "{}InterfaceDefaultRoute".format(net_tup[0])
+            params[net_cidr] = {"default": '', "type": "string"}
+            params[if_def_route] = {"default": '', "type": "string"}
+        _cp_edge_key = "{}{}NetCidr".format(CONTROL_PLANE_NET[0], role)
+        params[_cp_edge_key] = {"default": '', "type": "string"}
+        return params
+
     def _generate_nic_params(self, node_type):
         role = self._generate_cc_role(node_type)
-        # oc_int_api = 'InternalApiNetCidr'
-        # ControlPlane[ROLE]DefaultRoute: 192.168.120.126
-        cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
-        # ControlPlane[ROLE]SubnetCidr: '26'
-        cp_subnet_cidr = 'ControlPlane' + role + 'SubnetCidr'
-        # [ROLE]ControlPlaneSubnet: [subnet]
-        cp_subnet = role + 'ControlPlaneSubnet'
+        cp_default_route = "{}{}DefaultRoute".format(CONTROL_PLANE_NET[0],
+                                                     role)
+        cp_subnet_cidr = "{}{}SubnetCidr".format(CONTROL_PLANE_NET[0],
+                                                 role)
+        cp_net_cidr = "{}{}NetCidr".format(CONTROL_PLANE_NET[0], role)
+        # TODO: this one is backwards, typically it's suppsed to  be
+        # [NetWorkName][Role]SomeKey, but role comes first for CP subet
+        # for some reason, try to refactor at some point so it's consistant
+        cp_subnet = "{}{}Subnet".format(role, CONTROL_PLANE_NET[0])
+
         params = {}
 
         int_api_network = INTERNAL_API_NET[0] + role
@@ -2716,20 +2922,20 @@ class Director(InfraHost):
         int_api_cidr = int_api_network + 'NetCidr'
         int_api_vlan = int_api_network + 'NetworkVlanID'
         int_api_subnet = int_api_network + 'IpSubnet'
-        int_api_gateway = int_api_network + 'Gateway'
+        int_api_gateway = int_api_network + 'InterfaceDefaultRoute'
         tenant_net_cidr = tenant_network + 'NetCidr'
         tenant_vlan = tenant_network + 'NetworkVlanID'
         tenant_subnet = tenant_network + 'IpSubnet'
-        tenant_gateway = tenant_network + 'Gateway'
+        tenant_gateway = tenant_network + 'InterfaceDefaultRoute'
         storage_net_cidr = storage_network + 'NetCidr'
         storage_vlan = storage_network + 'NetworkVlanID'
         storage_subnet = storage_network + 'IpSubnet'
-        storage_gateway = storage_network + 'Gateway'
+        storage_gateway = storage_network + 'InterfaceDefaultRoute'
 
         external_net_cidr = external_network + 'NetCidr'
         external_vlan = external_network + 'NetworkVlanID'
         external_subnet = external_network + 'IpSubnet'
-        external_gateway = external_network + 'Gateway'
+        external_gateway = external_network + 'InterfaceDefaultRoute'
 
         prov_if = role + 'ProvisioningInterface'
         bond_0_if_1 = role + 'Bond0Interface1'
@@ -2744,6 +2950,7 @@ class Director(InfraHost):
         params[cp_subnet_cidr] = {"default": '', "type": "string"}
         params[cp_subnet] = {"default": '', "type": "string"}
         params[cp_default_route] = {"default": '', "type": "string"}
+        params[cp_net_cidr] = {"default": '', "type": "string"}
         params[int_api_subnet] = {"default": '', "type": "string"}
         params[int_api_cidr] = {"default": '', "type": "string"}
         params[int_api_vlan] = {"default": 0, "type": "number"}
@@ -2796,7 +3003,6 @@ class Director(InfraHost):
     def _generate_nic_network_config(self, node_type, node_type_data):
         setts = self.settings
         role = self._generate_cc_role(node_type)
-        # ControlPlane[ROLE]DefaultRoute: 192.168.120.126
         cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
         # ControlPlane[ROLE]SubnetCidr: '26'
         cp_subnet_cidr = 'ControlPlane' + role + 'SubnetCidr'
@@ -2815,21 +3021,21 @@ class Director(InfraHost):
         storage_network = STORAGE_NET[0] + role
         external_network = EXTERNAL_NET[0] + role
         int_api_subnet = int_api_network + 'IpSubnet'
-        int_api_gateway = int_api_network + 'Gateway'
+        int_api_gateway = int_api_network + 'InterfaceDefaultRoute'
         int_api_vlan_id = int_api_network + 'NetworkVlanID'
-        int_api_cidr = int_api_network + 'NetCidr'
+        # int_api_cidr = int_api_network + 'NetCidr'
         tenant_subnet = tenant_network + 'IpSubnet'
-        tenant_gateway = tenant_network + 'Gateway'
+        tenant_gateway = tenant_network + 'InterfaceDefaultRoute'
         tenant_vlan_id = tenant_network + 'NetworkVlanID'
-        tenant_cidr = tenant_network + 'NetCidr'
+        # tenant_cidr = tenant_network + 'NetCidr'
         storage_subnet = storage_network + 'IpSubnet'
-        storage_gateway = storage_network + 'Gateway'
+        storage_gateway = storage_network + 'InterfaceDefaultRoute'
         storage_vlan_id = storage_network + 'NetworkVlanID'
-        storage_cidr = storage_network + 'NetCidr'
+        # storage_cidr = storage_network + 'NetCidr'
         external_subnet = external_network + 'IpSubnet'
-        external_gateway = external_network + 'Gateway'
+        external_gateway = external_network + 'InterfaceDefaultRoute'
         external_vlan_id = external_network + 'NetworkVlanID'
-        external_cidr = external_network + 'NetCidr'
+        # external_cidr = external_network + 'NetCidr'
 
         prov_if["name"] = {"get_param": prov_if_param}
         prov_if["mtu"] = {"get_param": "ProvisioningNetworkMTU"}
@@ -2845,8 +3051,9 @@ class Director(InfraHost):
                      "next_hop": {"get_param": cp_default_route}}
         default_route = {"default": True,
                          "next_hop": {"get_param": cp_default_route}}
-        prov_route = {"ip_netmask": setts.provisioning_network,
-                      "next_hop": {"get_param": cp_default_route}}
+        prov_route = {"ip_netmask": {"get_param":
+            "{}NetCidr".format(CONTROL_PLANE_NET[0])},
+            "next_hop": {"get_param": cp_default_route}}
         prov_if["routes"] = [ec2_route, prov_route]
         # prov_if["routes"] = [ec2_route, default_route, prov_route]
 
@@ -2885,7 +3092,7 @@ class Director(InfraHost):
         tenant_vlan["mtu"] = {"get_param": "DefaultBondMTU"}
         tenant_vlan["addresses"] = [{"ip_netmask":
                                      {"get_param": tenant_subnet}}]
-        tenant_route = {"ip_netmask": {"get_param": tenant_cidr},
+        tenant_route = {"ip_netmask": {"get_param": 'TenantNetCidr'},
                         "next_hop": {"get_param": tenant_gateway}}
         tenant_vlan['routes'] = [tenant_route]
 
@@ -2895,7 +3102,7 @@ class Director(InfraHost):
         storage_vlan["mtu"] = {"get_param": "DefaultBondMTU"}
         storage_vlan["addresses"] = [{"ip_netmask":
                                       {"get_param": storage_subnet}}]
-        storage_route = {"ip_netmask": {"get_param": storage_cidr},
+        storage_route = {"ip_netmask": {"get_param": 'StorageNetCidr'},
                          "next_hop": {"get_param": storage_gateway}}
         storage_vlan['routes'] = [storage_route]
 
@@ -2938,8 +3145,11 @@ class Director(InfraHost):
         return network_config
 
     def _generate_default_networks_data(self):
-        setts = self.settings
+        """Generate network_data.yaml file with default networks
 
+        :returns: list of network data dicts
+        """
+        setts = self.settings
         default_network_data_list = []
         external = OrderedDict({'name': 'External'})
         external['name_lower'] = 'external'
@@ -2953,7 +3163,8 @@ class Director(InfraHost):
         _ex_e = "'{}'".format(setts.public_api_allocation_pool_end)
         external['allocation_pools'] = [{'start': _ex_s, 'end': _ex_e}]
         default_network_data_list.append(external)
-
+        ''' mgmt is turned off by default
+        TODO: DELETEME
         management = OrderedDict({'name': 'Management'})
         management['name_lower'] = 'management'
         _mgmt_ip_subnet = "'{}'".format(setts.management_network)
@@ -2966,7 +3177,7 @@ class Director(InfraHost):
         _mgmt_e = "'{}'".format(setts.management_allocation_pool_end)
         management['allocation_pools'] = [{'start': _mgmt_s, 'end': _mgmt_e}]
         default_network_data_list.append(management)
-
+        '''
         internal_api = OrderedDict({'name': INTERNAL_API_NET[0]})
         internal_api['name_lower'] = 'internal_api'
         _int_ip_subnet = "'{}'".format(setts.private_api_network)
@@ -3052,7 +3263,7 @@ class Director(InfraHost):
         networks_param_mapping[TENANT_NET[0]] = tenant
         networks_param_mapping[STORAGE_NET[0]] = storage
         networks_param_mapping[EXTERNAL_NET[0]] = external
-        logger.info("eeeeeeee networks_param_mapping : %s",
+        logger.debug("networks_param_mapping : %s",
                     str(networks_param_mapping))
         network_data_list = []
         suffix = '_' + self._generate_role_network_lower(node_type)
@@ -3130,3 +3341,13 @@ class Director(InfraHost):
         placement_exp = ((re.sub(r'[^a-z0-9]', " ",
                                  type.lower())).replace(" ", "-") + "-%index%")
         return placement_exp
+
+    def _group_node_types_by_num_nics(self):
+        setts = self.settings
+        nic_dict_by_port_num = {}
+        for node_type, node_type_data in setts.node_type_data_map.iteritems():
+            num_nics = node_type_data['nic_port_count']
+            if num_nics not in nic_dict_by_port_num:
+                nic_dict_by_port_num[num_nics] = []
+            nic_dict_by_port_num[num_nics].append((node_type, node_type_data))
+        return nic_dict_by_port_num

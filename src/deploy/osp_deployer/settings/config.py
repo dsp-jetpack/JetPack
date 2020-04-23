@@ -122,6 +122,8 @@ class Settings():
             'provisioning_network']
         self.private_api_network = network_settings[
             'private_api_network']
+        self.private_api_gateway = network_settings[
+            'private_api_gateway']
         self.private_api_allocation_pool_start = network_settings[
             'private_api_allocation_pool_start']
         self.private_api_allocation_pool_end = network_settings[
@@ -146,6 +148,7 @@ class Settings():
         self.provisioning_gateway = network_settings[
             'provisioning_gateway']
         self.storage_vlanid = network_settings['storage_vlanid']
+        self.storage_gateway = network_settings['storage_gateway']
         self.storage_netmask = network_settings['storage_netmask']
         self.public_api_vlanid = network_settings['public_api_vlanid']
         self.public_api_netmask = network_settings[
@@ -173,6 +176,7 @@ class Settings():
         self.discovery_ip_range = network_settings[
             'discovery_ip_range']
         self.tenant_tunnel_network = network_settings['tenant_tunnel_network']
+        self.tenant_tunnel_gateway = network_settings['tenant_tunnel_gateway']
         self.tenant_tunnel_network_allocation_pool_start = network_settings[
             'tenant_tunnel_network_allocation_pool_start']
         self.tenant_tunnel_network_allocation_pool_end = network_settings[

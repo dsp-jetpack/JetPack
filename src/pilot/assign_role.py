@@ -1167,10 +1167,6 @@ def get_size_in_bytes(doc, namespace):
 
 
 def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
-    volume_name = None
-    LOG.info("os_volume_size_gb: {}, "
-             "node id: {}".format(str(os_volume_size_gb),
-                                  node_uuid))
     if os_volume_size_gb is None:
         # Detect BOSS Card and find the volume size
         lst_ctrls = drac_client.list_raid_controllers()
@@ -1179,20 +1175,12 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
             [ctrl.id for ctrl in lst_ctrls if ctrl.model.startswith("BOSS")]
         if boss_disk:
             lst_physical_disks = drac_client.list_physical_disks()
-            lst_virt_disks = drac_client.list_virtual_disks()
             for disks in lst_physical_disks:
                 if disks.controller in boss_disk:
                     os_volume_size_gb = disks.size_mb / 1024
                     LOG.info("Detect BOSS Card {} and volume size {}".format(
                         disks.controller,
                         os_volume_size_gb))
-            for vdisk in lst_virt_disks:
-                LOG.info("BOSS Card vdisk: {}, controller: {}, "
-                         "and boss_disk: {}".format(
-                             str(vdisk), vdisk.controller, boss_disk))
-                if vdisk.controller in boss_disk:
-                    volume_name = vdisk.name
-                    break
         else:
             drac_client = drac_client.client
             # Get the virtual disks
@@ -1348,17 +1336,14 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
         volume_type = RAID_TYPE_TO_DESCRIPTION[raid_type]
 
     # Set the root_device property in ironic to the volume size in gigs
-    # BUG: dpaterson, if there are two disks on boss card with same size as
-    # HB330 managed non-raid SSD the OS is being installed on the nonRAID drive
-    # instead of the BOSS RAID1 VD
+    # BUG: dpaterson, if the boss card drives match any of the HBA330
+    # drives sizes ironic will just pick first one it finds that matches
+    # the root_device size hint. So sometimes it will pick the BOSS RAID1
+    # volume sometimes an HBA300 nonRAID drive
     LOG.info("Setting the OS volume for this node to the {} with size "
-             "{} GB and volume name: {}".format(volume_type, raid_size_gb,
-                                                volume_name))
-    root_device_hints = {"size": raid_size_gb}
-    if volume_name:
-        root_device_hints["name"] = volume_name
+             "{} GB".format(volume_type, raid_size_gb))
     patch = [{'op': 'add',
-              'value': root_device_hints,
+              'value': {"size": raid_size_gb},
               'path': '/properties/root_device'}]
     ironic_client.node.update(node_uuid, patch)
 
