@@ -773,32 +773,6 @@ def configure_raid(ironic_client, node_uuid, super_role, os_volume_size_gb,
 
     # Work around the bugs in the ironic DRAC driver's RAID clean steps.
 
-    '''TODO: After the upstream bugs have been resolved, remove the
-    workarounds.'''
-
-    '''TODO: Workaround 1:
-    Reset the RAID controller to delete all virtual disks and unassign
-    all hot spare physical disks.'''
-
-    '''TODO: Workaround 2:
-    Prepare any foreign physical disks for inclusion in the local RAID
-    configuration.'''
-
-    # Workaround 3:
-    # Attempt to convert all of the node's physical disks to JBOD mode.
-    # This may succeed or fail. A controller's capability to do that, or
-    # lack thereof, has no bearing on success or failure.
-    LOG.info("Converting all physical disks to JBOD mode")
-    succeeded = change_physical_disk_state_wait(
-        node_uuid, ironic_client, drac_client, 'JBOD')
-
-    if succeeded:
-        LOG.info("Completed converting all physical disks to JBOD mode")
-    else:
-        LOG.critical("Attempt to convert all physical disks to JBOD mode "
-                     "failed")
-        return False
-
     target_raid_config = define_target_raid_config(
         super_role, drac_client)
 
@@ -811,36 +785,6 @@ def configure_raid(ironic_client, node_uuid, super_role, os_volume_size_gb,
 
     # Set the target RAID configuration on the ironic node.
     ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
-
-    # Workaround 4:
-    # Attempt to convert all of the physical disks in the target RAID
-    # configuration to RAID mode. This may succeed or fail. A
-    # controller's capability to do that, or lack thereof, has no
-    # bearing on success or failure.
-    controllers_to_physical_disk_ids = defaultdict(list)
-
-    for logical_disk in target_raid_config['logical_disks']:
-        # Not applicable to JBOD logical disks.
-        if logical_disk['raid_level'] == 'JBOD':
-            continue
-
-        for physical_disk_name in logical_disk['physical_disks']:
-            controllers_to_physical_disk_ids[
-                logical_disk['controller']].append(physical_disk_name)
-
-    LOG.info("Converting physical disks configured to back RAID logical disks "
-             "to RAID mode, PD IDs: %s", str(controllers_to_physical_disk_ids))
-    succeeded = change_physical_disk_state_wait(
-        node_uuid, ironic_client, drac_client, 'RAID',
-        controllers_to_physical_disk_ids)
-
-    if succeeded:
-        LOG.info("Completed converting physical disks configured to back RAID "
-                 "logical disks to RAID mode")
-    else:
-        LOG.critical("Attempt to convert physical disks configured to back "
-                     "RAID logical disks to RAID mode failed")
-        return False
 
     LOG.info("Applying the new RAID configuration")
     clean_steps = [{'interface': 'raid', 'step': 'create_configuration'}]
@@ -921,13 +865,13 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
     LOG.info("Generating OSD config for {ip}".format(ip=ip_mac_service_tag))
     system_id = drac_client.get_system().uuid
 
-    spinners, ssds = get_drives(drac_client)
+    spinners, ssds, nvme_drives = get_drives(drac_client)
 
     new_osd_config = None
     # Let ceph handle journaling/disks assignment
-    disks = spinners + ssds
-    new_osd_config  = generate_osd_config_without_journals(controllers,
-                                                              disks)
+    disks = spinners + ssds + nvme_drives
+    new_osd_config = generate_osd_config_without_journals(controllers,
+                                                          disks)
 
     # load the osd environment file
     osd_config_file = os.path.join(Constants.TEMPLATES, "ceph-osd-config.yaml")
@@ -1023,6 +967,8 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
 def get_drives(drac_client):
     spinners = []
     ssds = []
+    nvme_drives = []
+
     virtual_disks = drac_client.list_virtual_disks()
 
     raid0_disks = [vd for vd in virtual_disks if vd.raid_level != '1']
@@ -1047,6 +993,10 @@ def get_drives(drac_client):
 
     if physical_disks:
         for pd_id in physical_disks:
+            # Get all NVMe drives
+            if is_nvme_drive(physical_disks[pd_id]):
+                nvme_drives.append(physical_disks[pd_id])
+                continue
             # Eliminate physical disks in a state other than non-RAID
             # including failed disks
             if physical_disks[pd_id].raid_status != "non-RAID":
@@ -1078,7 +1028,7 @@ def get_drives(drac_client):
             else:
                 ssds.append(physical_disks[pd_id])
 
-    return spinners, ssds
+    return spinners, ssds, nvme_drives
 
 def generate_osd_config_without_journals(controllers, drives):
 
@@ -1087,9 +1037,14 @@ def generate_osd_config_without_journals(controllers, drives):
         'osd_objectstore': 'bluestore',
         'devices': []}
     for drive in drives:
-        drive_device_name = get_by_path_device_name(
-             drive, controllers)
-        osd_config['devices'].append(drive_device_name)
+        # Get by-path device name for NVMe drives
+        if is_nvme_drive(drive):
+            nvme_device_name = get_by_path_nvme_device_name(drive)
+            osd_config['devices'].append(nvme_device_name)
+        else:
+            drive_device_name = get_by_path_device_name(
+                    drive, controllers)
+            osd_config['devices'].append(drive_device_name)
     return osd_config
 
 def generate_osd_config_with_journals(controllers, osd_drives, ssds):
@@ -1119,6 +1074,21 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds):
         remaining_ssds -= 1
 
     return osd_config
+
+
+# This method can be called with either physical or virtual disk.
+# Only physical disks can be NVMe drives, and only physical disks
+# have attribute named 'device_protocol'. As a result, the method
+# return True only if device_protocol is present and indicates NVMe.
+def is_nvme_drive(disk):
+    return True\
+        if hasattr(disk, "device_protocol") and disk.device_protocol and\
+        disk.device_protocol.startswith("NVMe") else False
+
+
+def get_by_path_nvme_device_name(physical_disk):
+    bus = physical_disk.bus.lower()
+    return ('/dev/disk/by-path/pci-0000:' + str(bus) + ':00.0-nvme-1')
 
 
 def get_by_path_device_name(physical_disk, controllers):
