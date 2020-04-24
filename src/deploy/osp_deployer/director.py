@@ -254,10 +254,6 @@ class Director(InfraHost):
                                  "/pilot/install-director.log" +
                                  " for details")
 
-        # TODO: delete, moved to deployer.py tester = Checkpoints()
-        # TODO: delete, moved to deployer.py
-        # tester.verify_undercloud_installed()
-
     def upload_cloud_images(self):
         if self.settings.pull_images_from_cdn is False:
             logger.debug("Uploading cloud images to the Director vm")
@@ -1176,8 +1172,6 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
 
-
-
     def setup_net_envt(self):
 
         logger.debug("Configuring network-environment.yaml for overcloud")
@@ -1264,6 +1258,10 @@ class Director(InfraHost):
             '"' +
             self.settings.provisioning_network.split("/")[
                 1] + '"' + "|' " + network_yaml,
+            'sed -i "s|ControlPlaneNetCidr:.*|' +
+            'ControlPlaneNetCidr: ' +
+            self.settings.provisioning_network +
+            '|" ' + network_yaml,
             'sed -i "s|EC2MetadataIp:.*|EC2MetadataIp: ' +
             self.settings.director_node.provisioning_ip + '|" ' + network_yaml,
             "sed -i 's|DnsServers:.*|DnsServers: " + '["' +
@@ -2543,9 +2541,7 @@ class Director(InfraHost):
                     'register with virsh properly')
         setts = self.settings
         mgmt_gw = setts.management_gateway
-        #X prov_gw = setts.provisioning
         route_eth2 = " > /etc/sysconfig/network-scripts/route-eth2"
-        #X route_br_ctlplane = '/etc/sysconfig/network-scripts/route-br-ctlplane'
         mgmt_cmd = ""
         for node_type, node_type_data in setts.node_type_data_map.iteritems():
             mgmt_cidr = node_type_data['mgmt_cidr']
@@ -2629,15 +2625,9 @@ class Director(InfraHost):
 
         role_port = 'OS::TripleO::' + role + '::Ports::'
         int_api_port = role_port + 'InternalApi' + role + 'Port'
-        # did this break storage_management network?
-        # comment out and see.
         storage_port = role_port + 'Storage' + role + 'Port'
         tenant_port = role_port + 'Tenant' + role + 'Port'
         external_port = role_port + 'External' + role + 'Port'
-        # dummy ports needed for StorageMgmtPort and ExternalApIPort
-        # storage_mgmt_port = role_port + 'StorageMgmt' + role + 'Port'
-        # external_port = role_port + 'External' + role + 'Port'
-        # noop_yaml = './overcloud/network/ports/noop.yaml'
         int_api_yaml = ('./overcloud/network/ports/internal_api_'
                         + role_network + '_from_pool.yaml')
         storage_yaml = ('./overcloud/network/ports/storage_'
@@ -2699,7 +2689,6 @@ class Director(InfraHost):
         return _res_reg
 
     def _generate_net_env_params(self, type, node_type_data):
-        setts = self.settings
         params = OrderedDict()
         logger.debug("config network env for node_type_data: %s",
                      str(node_type_data))
@@ -2826,14 +2815,6 @@ class Director(InfraHost):
                                            + node_type + "-%index%")
         role_d['disable_upgrade_deployment'] = True
         role_d['uses_deprecated_params'] = False
-        # role_d['deprecated_param_image'] = 'NovaImage'
-        # role_d['deprecated_param_extraconfig'] = 'NovaComputeExtraConfig'
-        # role_d['deprecated_param_metadata'] = 'NovaComputeServerMetadata'
-        # role_d['deprecated_param_scheduler_hints'] = \
-        #     'NovaComputeSchedulerHints'
-        # role_d['deprecated_param_ips'] = 'NovaComputeIPs'
-        # role_d['deprecated_server_resource_name'] = 'NovaCompute'
-        # role_d['deprecated_nic_config_name'] = 'compute.yaml'
         role_d['ServicesDefault'] = SERVICES_DEFAULT
         return role_d
 
@@ -2882,7 +2863,6 @@ class Director(InfraHost):
                     "next_hop": {"get_param":
                         "StorageInterfaceDefaultRoute"}}
                 routes.append(storage_route)
-
 
     def _generate_cdc_cloud_nic_params(self, node_type):
         """
@@ -3001,12 +2981,9 @@ class Director(InfraHost):
         return params
 
     def _generate_nic_network_config(self, node_type, node_type_data):
-        setts = self.settings
         role = self._generate_cc_role(node_type)
         cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
-        # ControlPlane[ROLE]SubnetCidr: '26'
         cp_subnet_cidr = 'ControlPlane' + role + 'SubnetCidr'
-        # [ROLE]ControlPlaneSubnet: [subnet]
         cp_subnet = role + 'ControlPlaneSubnet'
         prov_if_param = role + 'ProvisioningInterface'
         bond_0_if_1_param = role + 'Bond0Interface1'
@@ -3023,19 +3000,18 @@ class Director(InfraHost):
         int_api_subnet = int_api_network + 'IpSubnet'
         int_api_gateway = int_api_network + 'InterfaceDefaultRoute'
         int_api_vlan_id = int_api_network + 'NetworkVlanID'
-        # int_api_cidr = int_api_network + 'NetCidr'
+
         tenant_subnet = tenant_network + 'IpSubnet'
         tenant_gateway = tenant_network + 'InterfaceDefaultRoute'
         tenant_vlan_id = tenant_network + 'NetworkVlanID'
-        # tenant_cidr = tenant_network + 'NetCidr'
+
         storage_subnet = storage_network + 'IpSubnet'
         storage_gateway = storage_network + 'InterfaceDefaultRoute'
         storage_vlan_id = storage_network + 'NetworkVlanID'
-        # storage_cidr = storage_network + 'NetCidr'
+
         external_subnet = external_network + 'IpSubnet'
         external_gateway = external_network + 'InterfaceDefaultRoute'
         external_vlan_id = external_network + 'NetworkVlanID'
-        # external_cidr = external_network + 'NetCidr'
 
         prov_if["name"] = {"get_param": prov_if_param}
         prov_if["mtu"] = {"get_param": "ProvisioningNetworkMTU"}
@@ -3055,7 +3031,6 @@ class Director(InfraHost):
             "{}NetCidr".format(CONTROL_PLANE_NET[0])},
             "next_hop": {"get_param": cp_default_route}}
         prov_if["routes"] = [ec2_route, prov_route]
-        # prov_if["routes"] = [ec2_route, default_route, prov_route]
 
         tenant_br["name"] = "br-tenant"
         tenant_br["mtu"] = {"get_param": "DefaultBondMTU"}
@@ -3130,18 +3105,13 @@ class Director(InfraHost):
         external_vlan["mtu"] = {"get_param": "DefaultBondMTU"}
         external_vlan["addresses"] = [
             {"ip_netmask": {"get_param": external_subnet}}]
-        # external_route = {"ip_netmask": {"get_param": external_cidr},
-        #                   "next_hop": {"get_param": external_gateway}}
-        # external_vlan['routes'] = [external_route]
+
         def_ex_route = {"default": True,
                         "next_hop": {"get_param": external_gateway}}
         external_vlan["routes"] = [def_ex_route]
         ex_br["members"] = [bond_1, external_vlan]
-        # need this route for internet access to get container images
 
-        # ex_br["routes"] = [def_ex_route]
         network_config = [prov_if, tenant_br, ex_br]
-        logger.info("network_config is: %s", str(network_config))
         return network_config
 
     def _generate_default_networks_data(self):
@@ -3163,21 +3133,7 @@ class Director(InfraHost):
         _ex_e = "'{}'".format(setts.public_api_allocation_pool_end)
         external['allocation_pools'] = [{'start': _ex_s, 'end': _ex_e}]
         default_network_data_list.append(external)
-        ''' mgmt is turned off by default
-        TODO: DELETEME
-        management = OrderedDict({'name': 'Management'})
-        management['name_lower'] = 'management'
-        _mgmt_ip_subnet = "'{}'".format(setts.management_network)
-        management['ip_subnet'] = _mgmt_ip_subnet
-        management['vip'] = False
-        management['vlan'] = int(setts.management_vlanid)
-        _mgmt_gw = "'{}'".format(setts.management_gateway)
-        management['gateway_ip'] = _mgmt_gw
-        _mgmt_s = "'{}'".format(setts.management_allocation_pool_start)
-        _mgmt_e = "'{}'".format(setts.management_allocation_pool_end)
-        management['allocation_pools'] = [{'start': _mgmt_s, 'end': _mgmt_e}]
-        default_network_data_list.append(management)
-        '''
+
         internal_api = OrderedDict({'name': INTERNAL_API_NET[0]})
         internal_api['name_lower'] = 'internal_api'
         _int_ip_subnet = "'{}'".format(setts.private_api_network)
@@ -3220,7 +3176,7 @@ class Director(InfraHost):
         tenant['vlan'] = int(setts.tenant_tunnel_vlanid)
         _t_s = "'{}'".format(setts.tenant_tunnel_network_allocation_pool_start)
         _t_e = "'{}'".format(setts.tenant_tunnel_network_allocation_pool_end)
-        tenant['allocation_pools'] = [{'start': _t_s, 'end': _t_e }]
+        tenant['allocation_pools'] = [{'start': _t_s, 'end': _t_e}]
         default_network_data_list.append(tenant)
 
         return default_network_data_list
@@ -3263,8 +3219,6 @@ class Director(InfraHost):
         networks_param_mapping[TENANT_NET[0]] = tenant
         networks_param_mapping[STORAGE_NET[0]] = storage
         networks_param_mapping[EXTERNAL_NET[0]] = external
-        logger.debug("networks_param_mapping : %s",
-                    str(networks_param_mapping))
         network_data_list = []
         suffix = '_' + self._generate_role_network_lower(node_type)
         for network, mapping in networks_param_mapping.iteritems():
@@ -3293,7 +3247,6 @@ class Director(InfraHost):
         tenant_net = TENANT_NET[1] + net_suffix
 
         xtra_cfg = {}
-
         xtra_cfg['nova::compute::libvirt::vncserver_listen'] = \
             '%{hiera("' + api_net + '")}'
         xtra_cfg['nova::compute::vncserver_proxyclient_address'] = \
