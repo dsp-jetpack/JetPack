@@ -1030,7 +1030,6 @@ def get_drives(drac_client):
     return spinners, ssds, nvme_drives
 
 def generate_osd_config_without_journals(controllers, drives):
-
     osd_config = {
         'osd_scenario': 'lvm',
         'osd_objectstore': 'bluestore',
@@ -1074,6 +1073,18 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds):
 
     return osd_config
 
+# This method can be called with either physical or virtual disk.
+# Only physical disks can be NVMe drives, and only physical disks
+# have attribute named 'device_protocol'. As a result, the method
+# return True only if device_protocol is present and indicates NVMe.
+def is_nvme_drive(disk):
+    return True\
+        if hasattr(disk, "device_protocol") and disk.device_protocol and\
+        disk.device_protocol.startswith("NVMe") else False
+
+def get_by_path_nvme_device_name(physical_disk):
+    bus = physical_disk.bus.lower()
+    return ('/dev/disk/by-path/pci-0000:'+ str(bus) + ':00.0-nvme-1')
 
 # This method can be called with either physical or virtual disk.
 # Only physical disks can be NVMe drives, and only physical disks

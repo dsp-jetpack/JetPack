@@ -81,6 +81,16 @@ PARENT_PORT1="tenant_pp1"
 TRUNK_PORT1="tenant_trunk1"
 VLAN_NETWORK_NAME="tenant_vlan_net"
 
+## storage network for manila shares
+SHARE_STORAGE_NETWORK=$(get_value share_storage_network)
+SHARE_STORAGE_NETWORK_START_IP=$(get_value share_storage_network_start_ip)
+SHARE_STORAGE_NETWORK_END_IP=$(get_value share_storage_network_end_ip)
+SHARE_STORAGE_NETWORK_GATEWAY=$(get_value share_storage_network_gateway)
+SHARE_STORAGE_NETWORK_VLAN=$(get_value share_storage_network_vlan)
+SHARE_STORAGE_NETWORK_NAME=$(get_value share_storage_network_name)
+SHARE_STORAGE_SUBNET_NAME=$(get_value share_storage_subnet_name)
+
+
 shopt -s nullglob
 
 LOG_FILE=./sanity_test.log
@@ -707,6 +717,21 @@ setup_manila(){
     return 1
   fi
 
+
+  info "### Creating storage network"
+  set_admin_scope
+  ext_net_exists=$(openstack network list -c Name -f value | grep "$SHARE_STORAGE_NETWORK_NAME")
+  if [ "$ext_net_exists" != "$SHARE_STORAGE_NETWORK_NAME" ]
+  then
+    execute_command "openstack network create $SHARE_STORAGE_NETWORK_NAME --external --provider-network-type vlan --provider-physical-network physext --provider-segment $SHARE_STORAGE_NETWORK_VLAN"
+    execute_command "openstack subnet create $SHARE_STORAGE_SUBNET_NAME --network $SHARE_STORAGE_NETWORK_NAME --subnet-range $SHARE_STORAGE_NETWORK --allocation-pool start=$SHARE_STORAGE_NETWORK_START_IP,end=$SHARE_STORAGE_NETWORK_END_IP --gateway $SHARE_STORAGE_NETWORK_GATEWAY --no-dhcp"
+  else
+    info "#----- External network '$SHARE_STORAGE_NETWORK_NAME' exists. Skipping"
+  fi
+
+  set_tenant_scope
+  execute_command "openstack network list"
+
   info "### Create manila share network (unity requires)..."
 
   set_tenant_scope #Create shares in tenant aka sanity scope
@@ -714,8 +739,8 @@ setup_manila(){
   execute_command "manila share-network-list"  
   manila_share_network_exists=$(manila share-network-list | grep unity_share_net | awk '{print $4}')
   if [ "$manila_share_network_exists" != "unity_share_net" ]; then
-    net_id=$(openstack network list | grep " $FLOATING_IP_NETWORK_NAME " | head -n 1 | awk '{print $2}')
-    subnet_id=$(openstack network list | grep $FLOATING_IP_NETWORK_NAME | head -n 1 | awk '{print $6}')
+    net_id=$(openstack network list | grep " $SHARE_STORAGE_NETWORK_NAME " | head -n 1 | awk '{print $2}')
+    subnet_id=$(openstack network list | grep $SHARE_STORAGE_NETWORK_NAME | head -n 1 | awk '{print $6}')
     
     execute_command "manila share-network-create --neutron-net-id  $net_id --neutron-subnet-id $subnet_id --name unity_share_net" 
   fi   
@@ -1058,7 +1083,7 @@ then
   done 
   
   info "### Deleting networks"
-  network_ids=$(openstack network list | grep -E "$BASE_TENANT_NETWORK_NAME|$VLAN_NETWORK_NAME|$FLOATING_IP_NETWORK_NAME" | awk '{print $2}')
+  network_ids=$(openstack network list | grep -E "$BASE_TENANT_NETWORK_NAME|$VLAN_NETWORK_NAME|$FLOATING_IP_NETWORK_NAME|$SHARE_STORAGE_NETWORK_NAME" | awk '{print $2}')
   public_id=$(openstack network list | grep $FLOATING_IP_NETWORK_NAME | head -n 1 | awk '{print $2}')
   for network_id in $network_ids
   do
