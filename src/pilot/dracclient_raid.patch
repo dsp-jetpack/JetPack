@@ -2,11 +2,11 @@
 +++ raid_modified.py	2020-02-17 11:58:54.234844526 +0000
 @@ -12,6 +12,7 @@
  #    under the License.
-
+ 
  import collections
 +import copy
  import logging
-
+ 
  from dracclient import constants
 @@ -81,7 +82,10 @@
      ['id', 'description', 'controller', 'manufacturer', 'model', 'media_type',
@@ -17,8 +17,8 @@
 +
 +
 +NO_FOREIGN_DRIVES = ["STOR058", "STOR018"]
-
-
+ 
+ 
  class PhysicalDisk(PhysicalDiskTuple):
 @@ -197,7 +201,7 @@
                                                 'PrimaryStatus')],
@@ -42,11 +42,11 @@
 +
          drac_pending_operations = self._get_virtual_disk_attr(
              drac_disk, 'PendingOperations')
-
+ 
 @@ -256,10 +265,12 @@
              physical_disks=self._get_virtual_disk_attrs(drac_disk,
                                                          'PhysicalDiskIDs'))
-
+ 
 -    def _get_virtual_disk_attr(self, drac_disk, attr_name, nullable=False):
 +    def _get_virtual_disk_attr(self, drac_disk, attr_name,
 +                               nullable=False, allow_missing=False):
@@ -55,7 +55,7 @@
 -            nullable=nullable)
 +            nullable=nullable,
 +            allow_missing=allow_missing)
-
+ 
      def _get_virtual_disk_attrs(self, drac_disk, attr_name):
          return utils.get_all_wsman_resource_attrs(
 @@ -315,7 +326,12 @@
@@ -69,7 +69,7 @@
 +
 +        if bus is not None:
 +            bus = bus.upper()
-
+ 
          return PhysicalDisk(
              id=fqdd,
 @@ -341,7 +357,8 @@
@@ -79,7 +79,7 @@
 -                                                         allow_missing=True))
 +                                                         allow_missing=True),
 +            bus=bus)
-
+ 
      def _get_physical_disk_attr(self, drac_disk, attr_name, uri,
                                  allow_missing=False):
 @@ -633,15 +650,17 @@
@@ -106,16 +106,16 @@
          for physical_disk in physical_disks:
              p_disk_id_to_status[physical_disk.id] = physical_disk.raid_status
 @@ -700,34 +719,37 @@
-
+ 
              raise ValueError(error_msg)
-
+ 
 +        return controllers_to_physical_disk_ids
 +
      def change_physical_disk_state(self, mode,
                                     controllers_to_physical_disk_ids=None):
 -        """Convert disks RAID status and return a list of controller IDs
 +        """Convert disks RAID status
-
+ 
 -        Builds a list of controller ids that have had disks converted to the
 -        specified RAID status by:
 -        - Examining all the disks in the system and filtering out any that are
@@ -129,7 +129,7 @@
 +        This method intelligently converts the requested physical disks from
 +        RAID to JBOD or vice versa.  It does this by only converting the
 +        disks that are not already in the correct state.
-
+ 
 -        The caller typically should then create a config job for the list of
 -        controllers returned to finalize the RAID configuration.
 -
@@ -172,7 +172,7 @@
 -                                 controllers_to_physical_disk_ids)
 +        final_ctls_to_phys_disk_ids = self._check_disks_status(
 +                mode, physical_disks, controllers_to_physical_disk_ids)
-
+ 
          is_reboot_required = False
          controllers = []
 +        controllers_to_results = {}
@@ -227,16 +227,16 @@
 +                        is_commit_required_value=False,
 +                        is_reboot_required_value=constants.
 +                        RebootRequired.false)
-
+ 
 -        return {'is_reboot_required': is_reboot_required,
 +        return {'conversion_results': controllers_to_results,
 +                'is_reboot_required': is_reboot_required,
                  'commit_required_ids': controllers}
-
+ 
      def is_realtime_supported(self, raid_controller_fqdd):
 @@ -805,3 +845,100 @@
              return True
-
+ 
          return False
 +
 +    def reset_raid_config(self, raid_controller):
