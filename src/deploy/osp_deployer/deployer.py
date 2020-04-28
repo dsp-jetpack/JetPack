@@ -184,7 +184,6 @@ def deploy():
             logger.info("=== installing the director & undercloud ===")
             director_vm.inject_ssh_key()
             director_vm.upload_cloud_images()
-            director_vm.setup_roles()
             director_vm.install_director()
             if settings.node_type_data_map:
                 director_vm.create_edge_subnet_routes()
@@ -194,6 +193,7 @@ def deploy():
                                                    "root",
                                                    dir_pw)
                 logger.info('Director VM routes set and VM is running')
+            director_vm.setup_roles()
             tester.verify_undercloud_installed()
             if args.undercloud_only:
                 return
@@ -240,7 +240,6 @@ def deploy():
         director_vm.assign_node_roles()
         director_vm.revert_sshd_conf()
         director_vm.setup_templates()
-
         logger.info("=== Installing the overcloud ")
         logger.debug("installing the overcloud ... this might take a while")
         director_vm.deploy_overcloud()

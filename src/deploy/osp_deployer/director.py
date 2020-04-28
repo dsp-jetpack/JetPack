@@ -52,54 +52,6 @@ OTHER_POOLS = ['.rgw.buckets',
                'default.rgw.meta',
                'metrics']
 
-SERVICES_DEFAULT = ['OS::TripleO::Services::Aide',
-                    'OS::TripleO::Services::AuditD',
-                    'OS::TripleO::Services::BootParams',
-                    'OS::TripleO::Services::CACerts',
-                    'OS::TripleO::Services::CephClient',
-                    'OS::TripleO::Services::CephExternal',
-                    'OS::TripleO::Services::CertmongerUser',
-                    'OS::TripleO::Services::Collectd',
-                    'OS::TripleO::Services::ComputeCeilometerAgent',
-                    'OS::TripleO::Services::ComputeNeutronCorePlugin',
-                    'OS::TripleO::Services::ComputeNeutronL3Agent',
-                    'OS::TripleO::Services::ComputeNeutronMetadataAgent',
-                    'OS::TripleO::Services::ComputeNeutronOvsAgent',
-                    'OS::TripleO::Services::Docker',
-                    'OS::TripleO::Services::Fluentd',
-                    'OS::TripleO::Services::IpaClient',
-                    'OS::TripleO::Services::Ipsec',
-                    'OS::TripleO::Services::Iscsid',
-                    'OS::TripleO::Services::Kernel',
-                    'OS::TripleO::Services::LoginDefs',
-                    'OS::TripleO::Services::MetricsQdr',
-                    'OS::TripleO::Services::MySQLClient',
-                    'OS::TripleO::Services::NeutronBgpVpnBagpipe',
-                    'OS::TripleO::Services::NeutronSriovAgent',
-                    'OS::TripleO::Services::NeutronSriovHostConfig',
-                    'OS::TripleO::Services::NeutronVppAgent',
-                    'OS::TripleO::Services::NovaCompute',
-                    'OS::TripleO::Services::NovaLibvirt',
-                    'OS::TripleO::Services::NovaLibvirtGuests',
-                    'OS::TripleO::Services::NovaMigrationTarget',
-                    'OS::TripleO::Services::Ntp',
-                    'OS::TripleO::Services::ContainersLogrotateCrond',
-                    'OS::TripleO::Services::OpenDaylightOvs',
-                    'OS::TripleO::Services::Rhsm',
-                    'OS::TripleO::Services::RsyslogSidecar',
-                    'OS::TripleO::Services::Securetty',
-                    'OS::TripleO::Services::SensuClient',
-                    'OS::TripleO::Services::SkydiveAgent',
-                    'OS::TripleO::Services::Snmp',
-                    'OS::TripleO::Services::Sshd',
-                    'OS::TripleO::Services::Timezone',
-                    'OS::TripleO::Services::TripleoFirewall',
-                    'OS::TripleO::Services::TripleoPackages',
-                    'OS::TripleO::Services::Vpp',
-                    'OS::TripleO::Services::OVNController',
-                    'OS::TripleO::Services::OVNMetadataAgent',
-                    'OS::TripleO::Services::Ptp']
-
 # tempest configuraton file
 TEMPEST_CONF = 'tempest.conf'
 
@@ -119,7 +71,9 @@ ROLES_DATA = 'roles_data'
 NET_DATA = 'network_data'
 NET_ISO = 'network-isolation'
 CONTROLLER = 'controller'
-
+DEF_COMPUTE_ROLE_FILE = 'Compute.yaml'
+DEF_COMPUTE_REMOTE_PATH = ('/usr/share/openstack-tripleo-heat-templates/'
+                           'roles/{}'.format(DEF_COMPUTE_ROLE_FILE))
 CONTROL_PLANE_NET = ('ControlPlane', "ctlplane")
 INTERNAL_API_NET = ('InternalApi', 'internal_api')
 STORAGE_NET = ('Storage', 'storage')
@@ -156,6 +110,7 @@ class Director(InfraHost):
                                               self.settings.tempest_workspace)
         self.tempest_conf = os.path.join(self.tempest_directory,
                                          "etc", TEMPEST_CONF)
+        self.default_compute_services = []
 
         cmd = "mkdir -p " + self.pilot_dir
         self.run(cmd)
@@ -534,8 +489,10 @@ class Director(InfraHost):
             self.run_as_root(cmd)
 
     def setup_templates(self):
-        # Re-upload the yaml files in case we're trying to leave the undercloud
-        # intact but want to redeploy with a different config.
+        """Re-process and re-upload the yaml files in the case where
+        the undercloud is left intact but want to redeploy the overcloud
+        with a different config.
+        """
 
         self.setup_networking()
         self.setup_dell_storage()
@@ -1381,7 +1338,7 @@ class Director(InfraHost):
         if self.settings.node_type_data_map:
             self.create_network_data()
             self.setup_edge_nic_configuration()
-            self.update_nic_config_edge_routes()
+            self.update_stamp_nic_config_edge_routes()
             self.update_node_placement()
 
         if self.settings.overcloud_static_ips is True:
@@ -2181,6 +2138,15 @@ class Director(InfraHost):
 
     @directory_check(STAGING_TEMPLATES_PATH)
     def update_and_upload_undercloud_conf(self):
+        """Updadate and upload undercloud.conf to director vm
+
+        Note: if there are any edge sites defined in the .ini and .properties
+        enable_routed_networks must be set to True in order for edge sites to
+        function as DCN depends on Neutron's routed L3 networks feature.
+
+        Also if there are defined edge sites the provisioning subnets must be
+        added to undercloud.conf prior to deploying the undercloud.
+        """
         logger.info("Updating undercloud.conf")
         setts = self.settings
         uconf = setts.undercloud_conf
@@ -2235,13 +2201,14 @@ class Director(InfraHost):
             logger.debug("Staging undercloud.conf path: %s, contents:\n%s",
                          stg_undercloud_conf_path,
                          undercloud_conf_fp.read())
-            # stg_undercloud_conf_path.close()
         undercloud_conf_dst = os.path.join(self.home_dir,
                                            setts.UNDERCLOUD_CONFIG_FILE)
         self.upload_file(stg_undercloud_conf_path, undercloud_conf_dst)
 
     @directory_check(STAGING_TEMPLATES_PATH)
     def setup_roles(self):
+        """Add generated edge site roles to roles_data.yaml and upload it.
+        """
         setts = self.settings
         ntypes = setts.node_types
         ntypes_data_map = setts.node_type_data_map
@@ -2249,7 +2216,7 @@ class Director(InfraHost):
         roles_file = os.path.join(self.templates_dir, ROLES_DATA + '.yaml')
         oc_roles_file = os.path.join(self.templates_dir,
                                      'overcloud',
-                                     NET_ISO + ".yaml")
+                                     ROLES_DATA + ".yaml")
 
         stg_roles_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
                                                    ROLES_DATA,
@@ -2284,8 +2251,16 @@ class Director(InfraHost):
             self.upload_file(stg_roles_file, oc_roles_file)
 
     @directory_check(STAGING_NIC_CONFIGS)
-    def update_nic_config_edge_routes(self):
-        setts = self.settings
+    def update_stamp_nic_config_edge_routes(self):
+        """Loop through node_types, grouped by the number of nics, and update
+        the overcloud nic config templates, where appropriate, settting the
+        correct routes enabling communication between the control plane and
+        edge sites. Upload the stagged templete to the appropriate
+        template director.
+
+        For example, if num_nics is 5 the modified controller template will be
+        uploaded to: ~/pilot/templates/nic_configs/5_port/controller.yaml
+        """
         nic_dict_by_port_num = self._group_node_types_by_num_nics()
         for num_nics, node_type_tuples in nic_dict_by_port_num.iteritems():
 
@@ -2323,6 +2298,22 @@ class Director(InfraHost):
 
     @directory_check(STAGING_NIC_CONFIGS)
     def setup_edge_nic_configuration(self):
+        """Loop through settings.node_type_data_map, generate the nic config
+        template for each node_type, and upload the template to the director
+        vm.
+
+        Based on the number of nics for a site the corresponding
+        dellcompute.yaml is used as a baseline for creating the edge node
+        nic configs.
+
+        For example, if num_nics is 5 and the node_type is compute-boston, the
+        generated file will be uploaded to:
+        ~/pilot/templates/nic_configs/5_port/computeboston.yaml
+
+        Once all the nic configuration files are uploaded for each site
+        nic_environment.yaml for each site is also updated and uploaded,
+        see: update_edge_nic_environment()
+        """
         setts = self.settings
         for node_type, node_type_data in setts.node_type_data_map.iteritems():
             num_nics = node_type_data['nic_port_count']
@@ -2367,6 +2358,20 @@ class Director(InfraHost):
 
     @directory_check(STAGING_NIC_CONFIGS)
     def update_edge_nic_environment(self):
+        """Update and upload nic_environment.yaml template for edge sites
+
+        Loop through the node_types, grouped by number of nics, and update
+        the template resource_registry and parameter_defaults with site-specific
+        parameters contained in the .ini file.
+
+        This results in a file that corresoponds to the node type,
+        which is uploaded to the correct nic-configs sub-directory based on the
+        number of ports declared in node_type_data.nic_port_count
+
+        For example if num_nics is 5 and node_type is boston-compute
+        the modified file will be uploaded to:
+        to ~/pilot/templates/nic_configs/5_port/nic_environement.yaml
+        """
         nic_dict_by_port_num = self._group_node_types_by_num_nics()
         for num_nics, node_type_tuples in nic_dict_by_port_num.iteritems():
             port_dir = "{}_port".format(num_nics)
@@ -2434,6 +2439,9 @@ class Director(InfraHost):
 
     @directory_check(STAGING_TEMPLATES_PATH)
     def update_network_isolation_edge(self):
+        """Update and upload network-isolation.yaml based on
+        node types
+        """
         logger.debug("Updating network isolation for edge sites.")
         setts = self.settings
         net_iso_file = os.path.join(self.templates_dir, NET_ISO + ".yaml")
@@ -2501,6 +2509,8 @@ class Director(InfraHost):
 
     @directory_check(os.path.join(STAGING_TEMPLATES_PATH))
     def create_network_data(self):
+        """Generate and upload network_data.yaml for default overcloud networks
+        and edge site specific networks"""
         logger.debug("Creating network_data.yaml for edge networks.")
         setts = self.settings
         net_data_path = self.templates_dir
@@ -2523,6 +2533,8 @@ class Director(InfraHost):
 
     @directory_check(STAGING_TEMPLATES_PATH)
     def update_edge_net_envt(self):
+        """Update and upload network-environment.yaml for overcloud networks
+        and edge site specific networks"""
         logger.debug("Updating network-environment.yaml for edge sites")
         setts = self.settings
         net_env_file = os.path.join(self.templates_dir, NET_ENV + ".yaml")
@@ -2536,7 +2548,8 @@ class Director(InfraHost):
             stg_net_env_tmpl = yaml.load(stg_net_env_fp,
                                          Loader=OrderedLoader)
             params = stg_net_env_tmpl['parameter_defaults']
-            # stamp control plane/provistioning net params
+            # central stamp networks InterfaceDefaultRoute referenced for
+            # bulding edge network routes back to central stamp.
             params["ProvisioningNetworkGateway"] = setts.provisioning_gateway
             params["ControlPlaneNetCidr"] = setts.provisioning_network
             params["ControlPlaneNetworkVlanID"] = setts.provisioning_vlanid
@@ -2560,6 +2573,9 @@ class Director(InfraHost):
         self.upload_file(stg_net_env_path, net_env_file)
 
     def create_edge_subnet_routes(self):
+        """Create routes for Director VM and reboot it, which is required
+        for routes to take effect
+        """
         logger.info('Setting routes for edge subnets on Director VM and '
                     'restarting VM, as it is required to get the routes to '
                     'register with virsh properly')
@@ -2607,7 +2623,10 @@ class Director(InfraHost):
         self.upload_file(stg_instack_path, instack_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def update_edge_static_ips(self, path=None):
+    def update_edge_static_ips(self):
+        """Update and upload static-ip-environment.yaml based on
+        node types
+        """
         logger.debug("Updating static-ip-environment.yaml for edge sites")
         setts = self.settings
         static_ip_env_file = os.path.join(self.templates_dir,
@@ -2643,6 +2662,15 @@ class Director(InfraHost):
                 return self._generate_subnet_name(node_type)
 
     def _generate_static_ip_ports(self, node_type):
+        """Generate resource_resource registry port mapping dict for specific
+        node type based on Tripleo heat template naming conventions
+        :returns: dict of node type port mappings
+        example: {
+        'OS::TripleO::BostonCompute::Ports::InternalApiBostonComputePort':
+        './overcloud/network/ports/internal_api_boston_compute_from_pool.yaml',
+        ...
+        }
+        """
         port_dict = OrderedDict()
         role = self._generate_cc_role(node_type)
         role_network = self._generate_role_network_lower(node_type)
@@ -2668,6 +2696,15 @@ class Director(InfraHost):
         return port_dict
 
     def _generate_static_ip_params(self, node_type, nodes):
+        """Generate resource_resource registry port mapping dict for specific
+        node type based on Tripleo heat template naming conventions
+        :returns: OrderedDict which maps node_type to a list of static ips
+        example: {
+        'BostonComputeIPs':
+           'internal_api_boston_compute': ['192.168.142.40', '192.168.142.41'],
+            ...,
+        }
+        """
         role = self._generate_cc_role(node_type)
         ip_params = OrderedDict()
         role_ips = role + 'IPs'
@@ -2692,6 +2729,18 @@ class Director(InfraHost):
         return ip_params
 
     def _generate_net_iso(self, type):
+        """Generate network isolation resource_registry network and port
+        parameters using Tripleo heat template naming conventions
+        :returns: OrderedDict of network isolation parameters
+        example: {
+            'OS::TripleO::BostonCompute::Ports::InternalApiBostonComputePort':
+            '../network/ports/internal_api_boston_compute.yaml',
+            ...
+            'OS::TripleO::Network::InternalApiBostonCompute':
+            '../network/internal_api_boston_compute.yaml',
+            ...
+        }
+        """
         role = self._generate_cc_role(type)
         edge_net = self._generate_role_network_lower(type)
         _res_reg = OrderedDict()
@@ -2713,9 +2762,20 @@ class Director(InfraHost):
         return _res_reg
 
     def _generate_net_env_params(self, type, node_type_data):
+        """Generate network-environment.yaml parameters for edge sites
+        :returns: OrderedDict of edge site networks
+        example:{
+            'InternalApiBostonComputeIpSubnet': '192.168.141.0/24',
+            'InternalApiBostonComputeNetCidr': '192.168.141.0/24',
+            'InternalApiBostonComputeNetworkVlanID': 141,
+            'InternalApiBostonComputeInterfaceDefaultRoute': '192.168.141.1',
+            'InternalApiBostonComputeAllocationPools':
+                [{'end': '192.168.141.60', 'start': '192.168.141.20'}],
+            ...}
+        """
+        logger.debug("Generate network environment params for node type: %s",
+                     type)
         params = OrderedDict()
-        logger.debug("config network env for node_type_data: %s",
-                     str(node_type_data))
         role = self._generate_cc_role(type)
         edge_subnet = self._generate_subnet_name(type)
 
@@ -2822,24 +2882,24 @@ class Director(InfraHost):
         return filtered_roles
 
     def _generate_role_dict(self, node_type):
-        # find non-alphanumerics in node type
-        # and replace with space then camel case that and strip spaces
         role_name = self._generate_cc_role(node_type)
         role_d = OrderedDict()
         role_d['name'] = role_name
         role_d['description'] = role_name + " compute node role.\n"
         role_d['CountDefault'] = 0
-        # Not sure why but I had Subnet after each network name
-        # Removing:  + "Subnet from each network
+
         role_d['networks'] = [INTERNAL_API_NET[0] + role_name,
                               TENANT_NET[0] + role_name,
                               STORAGE_NET[0] + role_name,
                               EXTERNAL_NET[0] + role_name]
         role_d['HostnameFormatDefault'] = ("%stackname%-"
                                            + node_type + "-%index%")
+        role_params = OrderedDict()
+        role_params['TunedProfileName'] = "virtual-host"
+        role_d['RoleParametersDefault'] = role_params
         role_d['disable_upgrade_deployment'] = True
         role_d['uses_deprecated_params'] = False
-        role_d['ServicesDefault'] = SERVICES_DEFAULT
+        role_d['ServicesDefault'] = self._get_default_compute_services()
         return role_d
 
     def _update_cdc_nic_net_cfg(self, node_type, net_cfg_lst):
@@ -2979,6 +3039,16 @@ class Director(InfraHost):
         return params
 
     def _generate_nic_env_params(self, node_type, node_type_data):
+        """Generate default_parameters subsequently injected into
+        nic_environment.yaml for a specific edge site.
+
+        :param node_type: one of the node types defined in .ini file
+        :param node_type_data: node type data from node_type stanza in ini.
+        For edge sites node_type_data contains all the networking
+        params a site requires.
+        :returns: OrderedDict of params added to the template's
+        parameter_defaults map.
+        """
         role = self._generate_cc_role(node_type)
         params = OrderedDict()
         # ControlPlane[ROLE]DefaultRoute: 192.168.120.126
@@ -3005,6 +3075,24 @@ class Director(InfraHost):
         return params
 
     def _generate_nic_network_config(self, node_type, node_type_data):
+        """Generate nic configuration template for a node type and network data
+        provided.  This results in a file that corresoponds to the node type,
+        which is uploaded to the correct nic_configs sub-directory based on the
+        number of ports declared in node_type_data.
+
+        For example if node_type is boston-compute and
+        node_type_data.nic_port_count is 5, the resultant file will be uploaded
+        to ~/pilot/templates/nic_configs/5_port/bostoncompute.yaml
+
+        Nic configs contain nic bonding, ovs bridges, vlans and
+        L3 routing between an edge site and central cloud networks.
+
+        :param node_type: one of the node types defined in .ini file
+        :param node_type_data: node type data from node_type stanza in ini.
+        For edge sites node_type_data contains all the networking
+        params a site requires.
+        :returns: list of nic configuration dicts
+        """
         role = self._generate_cc_role(node_type)
         cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
         cp_subnet_cidr = 'ControlPlane' + role + 'SubnetCidr'
@@ -3141,7 +3229,18 @@ class Director(InfraHost):
     def _generate_default_networks_data(self):
         """Generate network_data.yaml file with default networks
 
-        :returns: list of network data dicts
+        :returns: list of dicts for overcloud networks
+        example:
+            [{'name': InternalApi
+              'name_lower': internal_api
+              'ip_subnet': '192.168.140.0/24'
+              'vip': true
+              'vlan': 140
+              'allocation_pools': [{end: '192.168.110.20',
+                                    start: '192.168.110.20'}
+               },
+            ...
+            ]
         """
         setts = self.settings
         default_network_data_list = []
@@ -3206,6 +3305,25 @@ class Director(InfraHost):
         return default_network_data_list
 
     def _generate_network_data(self, node_type, node_type_data):
+        """Generate network_data.yaml networks based on node type network
+        definitions
+
+        :param node_type: The node type network data is being generated for
+        :param node_type_data: dict containing all the site specific networking
+        configuration data
+        :returns: list of dicts for edge networks
+        example:
+            [{'name': InternalApiBostonCompute
+              'name_lower': internal_api_boston_compute
+              'ip_subnet': '192.168.141.0/24'
+              'vip': true
+              'vlan': 141
+              'allocation_pools': [{end: '192.168.111.20',
+                                    start: '192.168.111.20'}
+               },
+            ...
+            ]
+        """
         role = self._generate_cc_role(node_type)
         networks_param_mapping = {}
         int_api = {}
@@ -3266,6 +3384,13 @@ class Director(InfraHost):
         return network_data_list
 
     def _generate_extra_config(self, type):
+        """Each edge site requires some overrides, for connecting to mysql for
+        example.  Generate hiera data parameters puppet will consume at edge
+        sites to provide overrrides.
+
+        :param type: the node type the extra params are being generated for
+        :returns: dict containing parameter overrides
+        """
         net_suffix = '_' + self._generate_role_network_lower(type)
         api_net = INTERNAL_API_NET[1] + net_suffix
         tenant_net = TENANT_NET[1] + net_suffix
@@ -3298,6 +3423,10 @@ class Director(InfraHost):
         return xtra_cfg
 
     def _generate_cc_role(self, type):
+        """Find non-alphanumerics in node type and replace with space then
+        camel-case that and strip spaces
+        :returns:  CamelCaseRoleName from my-node_type
+        """
         role_cc = (re.sub(r'[^a-z0-9]', " ",
                           type.lower()).title()).replace(" ", "")
         return role_cc
@@ -3328,3 +3457,20 @@ class Director(InfraHost):
                 nic_dict_by_port_num[num_nics] = []
             nic_dict_by_port_num[num_nics].append((node_type, node_type_data))
         return nic_dict_by_port_num
+
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def _get_default_compute_services(self):
+        """Lazy loading of default compute role services
+        :returns: list of default compute services for edge role generation
+        """
+        if not self.default_compute_services:
+            stg_compute_file = os.path.join(STAGING_TEMPLATES_PATH,
+                                            DEF_COMPUTE_ROLE_FILE)
+            self.download_file(stg_compute_file, DEF_COMPUTE_REMOTE_PATH)
+            with open(stg_compute_file) as stg_compute_fp:
+                compute_yaml = yaml.load(stg_compute_fp, Loader=OrderedLoader)
+                # Role yamls are always list, even for single-role
+                # template files
+                _srv_defs = compute_yaml[0]['ServicesDefault']
+                self.default_compute_services = _srv_defs
+        return self.default_compute_services
