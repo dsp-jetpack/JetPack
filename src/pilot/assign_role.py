@@ -284,7 +284,6 @@ def get_raid_controller_ids(drac_client):
     for cnt in disk_ctrls:
         if drac_client.is_raid_controller(cnt.id):
             raid_controller_ids.append(cnt.id)
-    LOG.info("xxxxxx Raid controller ids: %s", str(raid_controller_ids))
     return raid_controller_ids
 
 
@@ -1122,7 +1121,7 @@ def get_by_path_device_name(physical_disk, controllers):
                 pci_bus_number=pci_bus_number,
                 channel=2 if physical_disk.raid_status == "online" else 0,
                 disk_index=disk_index)
-        else: # TODO: dpaterson, this case covers both BOSS and HBA330 drives?
+        else:
             return ('/dev/disk/by-path/pci-0000:'
                     '{pci_bus_number}:00.0-sas-0x{sas_address}-lun-0').format(
                 pci_bus_number=pci_bus_number,
@@ -1150,7 +1149,6 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
     if os_volume_size_gb is None:
         # Detect BOSS Card and find the volume size
         lst_ctrls = drac_client.list_raid_controllers()
-        LOG.info("List of controllers: {}".format(str(lst_ctrls)))
         boss_disk = \
             [ctrl.id for ctrl in lst_ctrls if ctrl.model.startswith("BOSS")]
         if boss_disk:

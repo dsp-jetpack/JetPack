@@ -58,12 +58,11 @@ def main():
                 node.pop(k)
     with open(import_json, 'w') as out:
         json.dump(content, out)
-    logger.info("Importing {} into ironic".format(args.node_definition))
+
     cmd = ["openstack", "overcloud", "node", "import", import_json]
-    logger.info("Import nodes command: %s", str(cmd))
     is_enable_routed_networks = utils.Utils.is_enable_routed_networks()
-    logger.info("Import nodes, are routed networks enabled: %s",
-                str(is_enable_routed_networks))
+    logger.debug("Is routed networks enabled: %s",
+                 str(is_enable_routed_networks))
     exit_code, stdin, stderr = Exec.execute_command(cmd)
     if exit_code != 0:
         logger.error("Failed to import nodes into ironic: {}, {}".format(

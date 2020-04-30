@@ -29,7 +29,7 @@ class Settings():
     CEPH_OSD_CONFIG_FILE = 'pilot/templates/ceph-osd-config.yaml'
     TEMPEST_DEFAULT_WORKSPACE_NAME = 'mytempest'
     UNDERCLOUD_CONFIG_FILE = 'pilot/undercloud.conf'
-    NIC_ENV_DIR_PATH = '/pilot/templates/nic-configs/'
+    NIC_CONFIGS_PATH = '/pilot/templates/nic-configs/'
 
     settings = ''
 
@@ -656,8 +656,8 @@ class Settings():
             'test.noarch.rpm'
         self.neutron_sriov_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/neutron-sriov.yaml'
-        self.nic_env_dir_abs_path = self.foreman_configuration_scripts + \
-            Settings.NIC_ENV_DIR_PATH
+        self.nic_configs_abs_path = self.foreman_configuration_scripts + \
+            Settings.NIC_CONFIGS_PATH
         self.undercloud_conf_path = self.foreman_configuration_scripts + \
             '/' + Settings.UNDERCLOUD_CONFIG_FILE
         self.templates_dir = self.foreman_configuration_scripts + \
@@ -683,7 +683,7 @@ class Settings():
         nics_settings = self.get_nics_settings()
         if 'nic_env_file' in nics_settings:
             self.nic_env_file = nics_settings['nic_env_file']
-            self.nic_env_file_path = (self.nic_env_dir_abs_path
+            self.nic_env_file_path = (self.nic_configs_abs_path
                                       + self.nic_env_file)
         if 'sah_bond_opts' in nics_settings:
             self.sah_bond_opts = nics_settings['sah_bond_opts']
