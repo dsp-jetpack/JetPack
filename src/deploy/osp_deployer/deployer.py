@@ -125,10 +125,6 @@ def deploy():
             logger.info("Settings validated")
             os._exit(0)
         tester.retreive_switches_config()
-        # TODO non_sah_nodes never used, delete me below
-        non_sah_nodes = (settings.controller_nodes +
-                         settings.compute_nodes +
-                         settings.ceph_nodes)
 
         sah_node = Sah()
 
@@ -152,7 +148,7 @@ def deploy():
         sah_node.clear_known_hosts()
         sah_node.handle_lock_files()
         if settings.node_type_data_map:
-            sah_node.create_edge_subnet_routes()
+            sah_node.create_subnet_routes_edge()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
 
@@ -186,14 +182,14 @@ def deploy():
             director_vm.upload_cloud_images()
             director_vm.install_director()
             if settings.node_type_data_map:
-                director_vm.create_edge_subnet_routes()
+                director_vm.create_subnet_routes_edge()
                 dir_pub_ip = settings.director_node.public_api_ip
                 dir_pw = settings.director_node.root_password
                 director_vm.wait_for_vm_to_come_up(dir_pub_ip,
                                                    "root",
                                                    dir_pw)
                 logger.info('Director VM routes set and VM is running')
-            director_vm.setup_roles()
+            director_vm.setup_roles_edge()
             tester.verify_undercloud_installed()
             if args.undercloud_only:
                 return

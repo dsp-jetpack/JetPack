@@ -293,7 +293,7 @@ class Director(InfraHost):
             expected_nodes += len(nodes)
         found = self.run_tty(
             "grep pm_addr ~/instackenv.json | wc -l")[0].rstrip()
-        logger.info("Found " + found + " Expected : " + str(expected_nodes))
+        logger.debug("Found " + found + " Expected : " + str(expected_nodes))
         if int(found) == expected_nodes:
             pass
         else:
@@ -306,7 +306,7 @@ class Director(InfraHost):
             cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ~/instackenv.json'
             self.run_tty(cmd)
         if self.settings.node_type_data_map:
-            self.update_instack_edge_subnets()
+            self.update_instack_env_subnets_edge()
 
     def configure_idracs(self):
         setts = self.settings
@@ -389,7 +389,6 @@ class Director(InfraHost):
     def assign_role(self, node, role, index):
         assign_role_command = self._create_assign_role_command(
             node, role, index)
-        logger.info("Assign role command: %s", assign_role_command)
         stdout, stderr, exit_status = self.run(self.source_stackrc +
                                                "cd ~/pilot;" +
                                                assign_role_command)
@@ -466,8 +465,6 @@ class Director(InfraHost):
             non_sah_nodes.extend(edge_site_nodes)
         # Allow for the number of nodes + a few extra sessions
         maxSessions = len(non_sah_nodes) + 10
-        logger.info("Updating SSH configuration, setting max sessions to: %s",
-                    str(maxSessions))
         setts = ['MaxStartups', 'MaxSessions']
         for each in setts:
             re = self.run("sudo grep " + each +
@@ -497,7 +494,7 @@ class Director(InfraHost):
         self.setup_networking()
         self.setup_dell_storage()
         self.setup_manila()
-        self.setup_roles()
+        self.setup_roles_edge()
         self.setup_environment()
         self.setup_sanity_ini()
 
@@ -713,7 +710,7 @@ class Director(InfraHost):
         # TODO: Refactor above code so we can do all this work in one pass,
         # out of scope for JS 13.3, address in 16.1
         if self.settings.node_type_data_map:
-            self.update_environment_edge()
+            self.update_dell_environment_edge()
 
     def setup_sanity_ini(self):
         sanity_ini = self.sanity_dir + "/sanity.ini"
@@ -1297,7 +1294,7 @@ class Director(InfraHost):
             self.run_tty(cmd)
 
         if self.settings.node_type_data_map:
-            self.update_edge_net_envt()
+            self.update_network_environment_edge()
 
     def configure_dhcp_server(self):
         cmd = 'cd ' + self.pilot_dir + ';./config_idrac_dhcp.py ' + \
@@ -1337,9 +1334,9 @@ class Director(InfraHost):
         # If there are subnets generate and upload nic templates.
         if self.settings.node_type_data_map:
             self.create_network_data()
-            self.setup_edge_nic_configuration()
-            self.update_stamp_nic_config_edge_routes()
-            self.update_node_placement()
+            self.setup_nic_configuration_edge()
+            self.update_stamp_nic_config_routes_edge()
+            self.update_node_placement_edge()
 
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
@@ -1440,7 +1437,7 @@ class Director(InfraHost):
                 self.run_tty(cmd)
 
             if self.settings.node_type_data_map:
-                self.update_edge_static_ips()
+                self.update_static_ips_edge()
                 self.update_network_isolation_edge()
 
         if self.settings.use_static_vips is True:
@@ -2186,7 +2183,6 @@ class Director(InfraHost):
             if uconf.has_section(subnet_name):
                 uconf.remove_section(subnet_name)
             uconf.add_section(subnet_name)
-            # TODO: only add provisioning subnet params
             for opt, val in node_type_data.iteritems():
                 uconf.set(subnet_name, opt, val)
 
@@ -2206,7 +2202,7 @@ class Director(InfraHost):
         self.upload_file(stg_undercloud_conf_path, undercloud_conf_dst)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def setup_roles(self):
+    def setup_roles_edge(self):
         """Add generated edge site roles to roles_data.yaml and upload it.
         """
         setts = self.settings
@@ -2251,7 +2247,7 @@ class Director(InfraHost):
             self.upload_file(stg_roles_file, oc_roles_file)
 
     @directory_check(STAGING_NIC_CONFIGS)
-    def update_stamp_nic_config_edge_routes(self):
+    def update_stamp_nic_config_routes_edge(self):
         """Loop through node_types, grouped by the number of nics, and update
         the overcloud nic config templates, where appropriate, settting the
         correct routes enabling communication between the control plane and
@@ -2297,7 +2293,7 @@ class Director(InfraHost):
         self.upload_file(stg_cntl_path, cntl_file)
 
     @directory_check(STAGING_NIC_CONFIGS)
-    def setup_edge_nic_configuration(self):
+    def setup_nic_configuration_edge(self):
         """Loop through settings.node_type_data_map, generate the nic config
         template for each node_type, and upload the template to the director
         vm.
@@ -2312,14 +2308,14 @@ class Director(InfraHost):
 
         Once all the nic configuration files are uploaded for each site
         nic_environment.yaml for each site is also updated and uploaded,
-        see: update_edge_nic_environment()
+        see: update_nic_environment_edge()
         """
         setts = self.settings
         for node_type, node_type_data in setts.node_type_data_map.iteritems():
             num_nics = node_type_data['nic_port_count']
 
             port_dir = "{}_port".format(num_nics)
-            local_nic_env_file = os.path.join(setts.nic_env_dir_abs_path,
+            local_nic_env_file = os.path.join(setts.nic_configs_abs_path,
                                               port_dir,
                                               "dellcompute.yaml")
 
@@ -2354,10 +2350,10 @@ class Director(InfraHost):
                           default_flow_style=False)
 
             self.upload_file(stg_nic_path, dst_nic_path)
-        self.update_edge_nic_environment()
+        self.update_nic_environment_edge()
 
     @directory_check(STAGING_NIC_CONFIGS)
-    def update_edge_nic_environment(self):
+    def update_nic_environment_edge(self):
         """Update and upload nic_environment.yaml template for edge sites
 
         Loop through the node_types, grouped by number of nics, and update
@@ -2412,7 +2408,7 @@ class Director(InfraHost):
             self.upload_file(stg_nic_env_path, nic_env_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def update_node_placement(self):
+    def update_node_placement_edge(self):
         remote_plcmnt_file = os.path.join(self.templates_dir,
                                           NODE_PLACEMENT + ".yaml")
 
@@ -2461,7 +2457,7 @@ class Director(InfraHost):
             res_reg = stg_net_iso_tmpl['resource_registry']
 
             for nt, nt_data in setts.node_type_data_map.iteritems():
-                res_reg.update(self._generate_net_iso(nt))
+                res_reg.update(self._generate_network_isolation(nt))
 
         with open(stg_net_iso_path, 'w') as stg_net_iso_fp:
             yaml.dump(stg_net_iso_tmpl, stg_net_iso_fp, OrderedDumper,
@@ -2473,7 +2469,7 @@ class Director(InfraHost):
         self.upload_file(stg_net_iso_path, oc_net_iso_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def update_environment_edge(self):
+    def update_dell_environment_edge(self):
         logger.debug("Updating dell environment for edge sites.")
         setts = self.settings
         dell_env_file = os.path.join(self.templates_dir, DELL_ENV + ".yaml")
@@ -2532,7 +2528,7 @@ class Director(InfraHost):
         self.upload_file(stg_net_data_file, net_data_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def update_edge_net_envt(self):
+    def update_network_environment_edge(self):
         """Update and upload network-environment.yaml for overcloud networks
         and edge site specific networks"""
         logger.debug("Updating network-environment.yaml for edge sites")
@@ -2564,7 +2560,8 @@ class Director(InfraHost):
             params[ext_key] = setts.public_api_gateway
 
             for nt, nt_data in setts.node_type_data_map.iteritems():
-                params.update(self._generate_net_env_params(nt, nt_data))
+                params.update(
+                    self._generate_network_environment_params(nt, nt_data))
 
         with open(stg_net_env_path, 'w') as stg_net_env_fp:
             yaml.dump(stg_net_env_tmpl, stg_net_env_fp, OrderedDumper,
@@ -2572,7 +2569,7 @@ class Director(InfraHost):
 
         self.upload_file(stg_net_env_path, net_env_file)
 
-    def create_edge_subnet_routes(self):
+    def create_subnet_routes_edge(self):
         """Create routes for Director VM and reboot it, which is required
         for routes to take effect
         """
@@ -2601,7 +2598,7 @@ class Director(InfraHost):
                                     dir_pw)
 
     @directory_check(STAGING_PATH)
-    def update_instack_edge_subnets(self):
+    def update_instack_env_subnets_edge(self):
         instack_file = self.home_dir + "/" + INSTACK + ".json"
         mgmt_net = self.settings.management_network.rsplit(".", 1)[0]
         stg_instack_path = self.get_timestamped_path(STAGING_PATH,
@@ -2623,7 +2620,7 @@ class Director(InfraHost):
         self.upload_file(stg_instack_path, instack_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def update_edge_static_ips(self):
+    def update_static_ips_edge(self):
         """Update and upload static-ip-environment.yaml based on
         node types
         """
@@ -2728,7 +2725,7 @@ class Director(InfraHost):
         ip_params[role_ips] = network_dict
         return ip_params
 
-    def _generate_net_iso(self, type):
+    def _generate_network_isolation(self, type):
         """Generate network isolation resource_registry network and port
         parameters using Tripleo heat template naming conventions
         :returns: OrderedDict of network isolation parameters
@@ -2761,7 +2758,7 @@ class Director(InfraHost):
             _res_reg[port_key] = port_val
         return _res_reg
 
-    def _generate_net_env_params(self, type, node_type_data):
+    def _generate_network_environment_params(self, type, node_type_data):
         """Generate network-environment.yaml parameters for edge sites
         :returns: OrderedDict of edge site networks
         example:{

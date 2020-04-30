@@ -490,7 +490,7 @@ class Sah(InfraHost):
         else:
             return False
 
-    def create_edge_subnet_routes(self):
+    def create_subnet_routes_edge(self):
         logger.info('Setting routes for edge subnets on SAH and '
                     'restarting bridge interfaces')
         setts = self.settings

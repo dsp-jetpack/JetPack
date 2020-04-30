@@ -507,7 +507,7 @@ def wait_for_jobs_to_complete(job_ids, drac_client, ip_service_tag):
     unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
     retries = 60
     while unfinished_jobs and retries > 0:
-        LOG.info("{} jobs remain to complete on {}".format(
+        LOG.debug("{} jobs remain to complete on {}".format(
             len(unfinished_jobs), ip_service_tag))
         retries -= 1
         if retries > 0:
