@@ -36,6 +36,13 @@ def setup_logging():
         os.makedirs(path)
     logging.config.fileConfig('logging.conf')
 
+def setup_staging():
+    staging_path = '/deployment_staging'
+    staging_templates_path = staging_path + "/templates"
+    if not os.path.exists(staging_path):
+        os.makedirs(staging_path)
+    if not os.path.exists(staging_templates_path):
+        os.makedirs(staging_templates_path)
 
 def get_settings():
     parser = argparse.ArgumentParser(
@@ -119,10 +126,6 @@ def deploy():
             os._exit(0)
         tester.retreive_switches_config()
 
-        non_sah_nodes = (settings.controller_nodes +
-                         settings.compute_nodes +
-                         settings.ceph_nodes)
-
         sah_node = Sah()
 
         tester.sah_health_check()
@@ -144,6 +147,8 @@ def deploy():
         logger.info("Uploading configs/iso/scripts.")
         sah_node.clear_known_hosts()
         sah_node.handle_lock_files()
+        if settings.node_type_data_map:
+            sah_node.create_subnet_routes_edge()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
 
@@ -176,6 +181,15 @@ def deploy():
             director_vm.inject_ssh_key()
             director_vm.upload_cloud_images()
             director_vm.install_director()
+            if settings.node_type_data_map:
+                director_vm.create_subnet_routes_edge()
+                dir_pub_ip = settings.director_node.public_api_ip
+                dir_pw = settings.director_node.root_password
+                director_vm.wait_for_vm_to_come_up(dir_pub_ip,
+                                                   "root",
+                                                   dir_pw)
+                logger.info('Director VM routes set and VM is running')
+            director_vm.setup_roles_edge()
             tester.verify_undercloud_installed()
             if args.undercloud_only:
                 return
@@ -221,7 +235,6 @@ def deploy():
         director_vm.update_sshd_conf()
         director_vm.assign_node_roles()
         director_vm.revert_sshd_conf()
-
         director_vm.setup_templates()
         logger.info("=== Installing the overcloud ")
         logger.debug("installing the overcloud ... this might take a while")
@@ -282,4 +295,5 @@ def deploy():
 
 if __name__ == "__main__":
     setup_logging()
+    setup_staging()
     deploy()

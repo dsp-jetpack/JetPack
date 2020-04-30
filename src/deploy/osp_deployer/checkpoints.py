@@ -353,6 +353,9 @@ class Checkpoints():
             self.settings.compute_nodes) + len(
             self.settings.ceph_nodes) + len(
             self.settings.computehci_nodes)
+        for node_type, nodes in self.settings.node_types_map.iteritems():
+            logger.info("Number of %s nodes: %s", node_type, str(len(nodes)))
+            expected_nodes += len(nodes)
         if len(ls_nodes) != expected_nodes:
             raise AssertionError(
                 "Expected amount of nodes registered in Ironic "

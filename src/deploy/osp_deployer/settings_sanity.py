@@ -177,6 +177,9 @@ class DeployerSanity():
         start = self.settings.private_api_allocation_pool_start.split(".")[-1]
         end = self.settings.private_api_allocation_pool_end.split(".")[-1]
         for each in self.settings.nodes:
+            if hasattr(each, 'node_type'):
+                logger.info("Skip validating this node as it is edge node")
+                continue
             if hasattr(each, 'private_api_ip'):
                 ip = each.private_api_ip.split(".")[-1]
                 if int(start) <= int(ip) <= int(end):
@@ -207,7 +210,7 @@ class DeployerSanity():
         start = self.settings.storage_allocation_pool_start.split(".")[-1]
         end = self.settings.storage_allocation_pool_end.split(".")[-1]
         for each in self.settings.nodes:
-            if hasattr(each, 'storage_ip'):
+            if hasattr(each, 'storage_ip') and not hasattr(each, 'node_type'):
                 ip = each.storage_ip.split(".")[-1]
                 if int(start) <= int(ip) <= int(end):
                     raise AssertionError(each.storage_ip + " in " +
