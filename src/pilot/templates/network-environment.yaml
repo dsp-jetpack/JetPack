@@ -82,6 +82,9 @@ parameter_defaults:
   # CHANGEME: Set to the CIDR of the control plane network
   ControlPlaneSubnetCidr: "24"
 
+  # CHANGEME: Set to the network/cidr of the control plane network
+  ControlPlaneNetCidr: 192.168.120.0/24
+
   # CHANGEME: Set to the IP address of the Undercloud
   EC2MetadataIp: 192.168.120.13
 
@@ -111,7 +114,7 @@ parameter_defaults:
   # External network
   ExternalNetworkMTU: 1500
   # CHANGEME: Change the following to the MTU value to use on the
-  # internal network  
+  # internal network
   InternalApiMTU: 1500
   # CHANGEME: Change the following to the MTU value to use on the
   # Storage network
@@ -131,7 +134,7 @@ parameter_defaults:
   # CHANGEME: Change the following to the MTU value to use on the
   # Default Bonds MTU
   DefaultBondMTU: 9000
-  
+
   # CHANGEME: Change the following to mtu size used for the floating network
   ExtraConfig:
     neutron::plugins::ml2::physical_network_mtus: physext:1500
@@ -172,4 +175,3 @@ parameter_defaults:
     CephStorageHostnameResolveNetwork: storage
     NovaColdMigrationNetwork: internal_api
     NovaLibvirtNetwork: internal_api
-

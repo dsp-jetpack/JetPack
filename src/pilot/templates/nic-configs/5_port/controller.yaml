@@ -58,6 +58,9 @@ parameters:
   ControlPlaneDefaultRoute: # Override this via parameter_defaults
     description: The default route of the control plane network.
     type: string
+  ControlPlaneNetCidr:
+    description: Control plane/provisioning network and mask
+    type: string
   ExternalInterfaceDefaultRoute:
     default: 10.0.0.1
     description: default route for the external network
@@ -137,7 +140,7 @@ parameters:
     default: 9000
     description: MTU value for this network.
     type: number
-  ExternalNetworkMTU: 
+  ExternalNetworkMTU:
     default: 1500
     description: MTU value for this network.
     type: number
@@ -279,4 +282,3 @@ outputs:
     description: The OsNetConfigImpl resource.
     value:
       get_resource: OsNetConfigImpl
-

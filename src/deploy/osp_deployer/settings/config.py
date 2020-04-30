@@ -29,15 +29,21 @@ class Settings():
     CEPH_OSD_CONFIG_FILE = 'pilot/templates/ceph-osd-config.yaml'
     TEMPEST_DEFAULT_WORKSPACE_NAME = 'mytempest'
     UNDERCLOUD_CONFIG_FILE = 'pilot/undercloud.conf'
+    NIC_CONFIGS_PATH = '/pilot/templates/nic-configs/'
 
     settings = ''
 
     def __str__(self):
-        _settings = {}
-        _settings["node_types"] = str(self.node_types)
-        _settings["node_type_subnets"] = str(self.node_type_subnets)
-        _settings["undercloud_conf"] = str(self.undercloud_conf)
-        return str(_settings)
+        settings = {}
+        settings["node_types"] = str(self.node_types)
+        settings["node_type_data_map"] = str(self.node_type_data_map)
+        if self.node_types_map:
+            settings["node_types_map"] = {}
+            _node_types_map = settings["node_types_map"]
+            for node_type, nodes in self.node_types_map.iteritems():
+                _node_types_map[node_type] = [str(node) for node in nodes]
+        settings["undercloud_conf"] = str(self.undercloud_conf)
+        return str(settings)
 
     def __init__(self, settings_file):
 
@@ -89,8 +95,9 @@ class Settings():
                                 "\" setting in your ini file [" + \
                                 stanza + "] section is deprecated and " +\
                                 "should be removed\n"
-            elif self._is_valid_subnet(yourConf, stanza):
-                logger.info("Found a valid subnet stanza in configuration: %s",
+            elif self.is_valid_subnet(yourConf, stanza):
+                logger.info("Found a valid node_type_tuples "
+                            "stanza in configuration: %s",
                             stanza)
             else:
                 warning_msg = warning_msg + "Section [" + stanza + \
@@ -115,6 +122,8 @@ class Settings():
             'provisioning_network']
         self.private_api_network = network_settings[
             'private_api_network']
+        self.private_api_gateway = network_settings[
+            'private_api_gateway']
         self.private_api_allocation_pool_start = network_settings[
             'private_api_allocation_pool_start']
         self.private_api_allocation_pool_end = network_settings[
@@ -139,6 +148,7 @@ class Settings():
         self.provisioning_gateway = network_settings[
             'provisioning_gateway']
         self.storage_vlanid = network_settings['storage_vlanid']
+        self.storage_gateway = network_settings['storage_gateway']
         self.storage_netmask = network_settings['storage_netmask']
         self.public_api_vlanid = network_settings['public_api_vlanid']
         self.public_api_netmask = network_settings[
@@ -166,6 +176,7 @@ class Settings():
         self.discovery_ip_range = network_settings[
             'discovery_ip_range']
         self.tenant_tunnel_network = network_settings['tenant_tunnel_network']
+        self.tenant_tunnel_gateway = network_settings['tenant_tunnel_gateway']
         self.tenant_tunnel_network_allocation_pool_start = network_settings[
             'tenant_tunnel_network_allocation_pool_start']
         self.tenant_tunnel_network_allocation_pool_end = network_settings[
@@ -627,7 +638,7 @@ class Settings():
         self.dell_powermax_fc_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellemc-powermax-fc-cinder-backend.yaml'
         self.powermax_manila_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/powermax-manila-config.yaml' 
+            '/pilot/templates/powermax-manila-config.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
         self.ceph_osd_config_yaml = self.foreman_configuration_scripts + \
@@ -645,25 +656,35 @@ class Settings():
             'test.noarch.rpm'
         self.neutron_sriov_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/neutron-sriov.yaml'
+        self.nic_configs_abs_path = self.foreman_configuration_scripts + \
+            Settings.NIC_CONFIGS_PATH
         self.undercloud_conf_path = self.foreman_configuration_scripts + \
             '/' + Settings.UNDERCLOUD_CONFIG_FILE
+        self.templates_dir = self.foreman_configuration_scripts + \
+            '/pilot/templates'
 
         # New custom node type and edge related fields
-        self.node_types = None
-        self.node_type_subnets = {}
-        self.undercloud_conf = self._parse_undercloud_conf()
+        # Advanced Settings[node_types] in ini
+        self.node_types = []
+        # node_type_data_map maps the various node types to the networking
+        # attribute definitions in the .ini stanza that matches each node_type
+        self.node_type_data_map = {}
+        # node_types_map is a key/list map of all nodes in .properties
+        # that have a matching node_type attribute. Key is each node_type.
+        self.node_types_map = {}
+        self.undercloud_conf = self.parse_undercloud_conf()
         # Process node types for edge sites etc
         if ('node_types' in dev_settings
                 and len(dev_settings['node_types']) > 0):
-            self._process_node_type_settings(dev_settings['node_types'])
+            self.process_node_type_settings(dev_settings['node_types'])
         # The NIC configurations settings are validated after the Settings
         # class has been instanciated.  Guard against the case where the two
         # fixed are missing here to prevent an exception before validation
         nics_settings = self.get_nics_settings()
         if 'nic_env_file' in nics_settings:
             self.nic_env_file = nics_settings['nic_env_file']
-            self.nic_env_file_path = self.foreman_configuration_scripts + \
-                '/pilot/templates/nic-configs/' + self.nic_env_file
+            self.nic_env_file_path = (self.nic_configs_abs_path
+                                      + self.nic_env_file)
         if 'sah_bond_opts' in nics_settings:
             self.sah_bond_opts = nics_settings['sah_bond_opts']
 
@@ -710,7 +731,6 @@ class Settings():
         self.ceph_nodes = []
         self.switches = []
         self.nodes = []
-
         with open(self.network_conf) as config_file:
             json_data = json.load(config_file)
             for each in json_data:
@@ -795,6 +815,12 @@ class Settings():
                 except AttributeError:
                     node.skip_nic_config = False
                     pass
+                if "node_type" in node.__dict__:
+                    logger.debug("node_type not in self.node_types_map: %s",
+                                 str(node.node_type not in self.node_types_map))
+                    if node.node_type not in self.node_types_map:
+                        self.node_types_map[node.node_type] = []
+                    self.node_types_map[node.node_type].append(node)
 
         Settings.settings = self
 
@@ -840,25 +866,25 @@ class Settings():
                          " pick source version info")
             self.source_version = "????"
 
-    def _process_node_type_settings(self, node_types):
+    def process_node_type_settings(self, node_types):
         self.node_types = (list(map(str.strip, node_types.split(','))))
         logger.debug("Node types: %s", str(self.node_types))
-        for _node_type in self.node_types:
+        for node_type in self.node_types:
             # if we have ini section name that mathes node type
             # this is edge an site subnet definition to be injected into
             # undercloud.com
-            if self.conf.has_section(_node_type):
-                _node_type_section = self.get_settings_section(_node_type)
-                self.node_type_subnets[_node_type] = _node_type_section
+            if self.conf.has_section(node_type):
+                node_type_section = self.get_settings_section(node_type)
+                self.node_type_data_map[node_type] = node_type_section
 
-    def _parse_undercloud_conf(self):
+    def parse_undercloud_conf(self):
         undercloud_conf = ConfigParser.ConfigParser()
         # The following line makes the parser return case sensitive keys
         undercloud_conf.optionxform = str
         undercloud_conf.read(self.undercloud_conf_path)
         return undercloud_conf
 
-    def _is_valid_subnet(self, conf, stanza):
+    def is_valid_subnet(self, conf, stanza):
         if conf.has_option('Advanced Settings', 'node_types'):
             node_types = (
                 list(map(str.strip, conf.get('Advanced Settings',

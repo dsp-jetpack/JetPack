@@ -424,6 +424,12 @@ def main():
                             required=True,
                             default=1500,
                             help="Tenant Network MTU")
+        parser.add_argument('--network_data',
+                            action='store_true',
+                            default=False,
+                            help="Use network_data.yaml to create edge site "
+                                 "networks")
+
         LoggingHelper.add_argument(parser)
         args = parser.parse_args()
         LoggingHelper.configure_logging(args.logging_level)
@@ -517,10 +523,15 @@ def main():
         # The order of the environment files is important as a later inclusion
         # overrides resources defined in prior inclusions.
 
+        env_opts = ""
+        # If there are edge sites we have to use network_data.yaml and
+        # it must in as first argument.
+        if args.network_data:
+            env_opts += "-n ~/pilot/templates/network_data.yaml "
         # The roles_data.yaml must be included at the beginning.
         # This is needed to enable the custome role Dell Compute.
         # It overrides the default roles_data.yaml
-        env_opts = "-r ~/pilot/templates/roles_data.yaml"
+        env_opts += "-r ~/pilot/templates/roles_data.yaml"
 
         # The network-environment.yaml must be included after the
         # network-isolation.yaml
@@ -609,7 +620,7 @@ def main():
                         "backend.yaml"
         if args.enable_powermax_manila:
             env_opts += " -e ~/pilot/templates/powermax-manila-config.yaml"
-
+        # add --no-cleanup  to keep generated /tmp templates
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
               " --log-file ~/pilot/overcloud_deployment.log" \

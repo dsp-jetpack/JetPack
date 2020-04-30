@@ -59,6 +59,9 @@ parameters:
     default: '24'
     description: The subnet CIDR of the control plane network.
     type: string
+  ControlPlaneNetCidr:
+    description: Control plane/provisioning network and mask
+    type: string
   ControlPlaneDefaultRoute: # Override this via parameter_defaults
     description: The default route of the control plane network.
     type: string
@@ -232,4 +235,3 @@ outputs:
     description: The OsNetConfigImpl resource.
     value:
       get_resource: OsNetConfigImpl
-

@@ -62,7 +62,9 @@ resource_registry:
   OS::TripleO::DellComputeHCI::Ports::ExternalPort: ../network/ports/noop.yaml
   OS::TripleO::DellComputeHCI::Ports::InternalApiPort: ../network/ports/internal_api.yaml
   OS::TripleO::DellComputeHCI::Ports::StoragePort: ../network/ports/storage.yaml
-  OS::TripleO::DellComputeHCI::Ports::StorageMgmtPort: ../network/ports/noop.yaml
+  # TODO: dpaterson below is a duplicate, I'm guessing for HCI we do Not
+  # want noop.yaml
+  # OS::TripleO::DellComputeHCI::Ports::StorageMgmtPort: ../network/ports/noop.yaml
   OS::TripleO::DellComputeHCI::Ports::TenantPort: ../network/ports/tenant.yaml
   OS::TripleO::DellComputeHCI::Ports::StorageMgmtPort: ../network/ports/storage_mgmt.yaml
 
@@ -89,4 +91,3 @@ resource_registry:
   OS::TripleO::BlockStorage::Ports::StorageMgmtPort: ../network/ports/storage_mgmt.yaml
   OS::TripleO::BlockStorage::Ports::TenantPort: ../network/ports/noop.yaml
   #OS::TripleO::BlockStorage::Ports::ManagementPort: ../network/ports/management.yaml
-
