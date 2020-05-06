@@ -287,6 +287,14 @@ apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resour
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
 sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
 
+# This hacks in a patch to add Schema definitions and resource URIs for the classes implemented by the DRAC WS-Man API..
+echo
+echo "## Patching Ironic iDRAC driver uris.py..."
+apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/uris.py ${HOME}/pilot/dracclient_uris.patch"
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyc
+sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/uris.pyo
+
+
 # This hacks in a patch to allow lifecycle controller management.
 echo
 echo "## Patching Ironic iDRAC driver lifecycle_controller.py..."
