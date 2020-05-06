@@ -1,5 +1,5 @@
---- raid.py.orig	2019-06-04 04:56:04.000000000 +0000
-+++ raid_modified.py	2020-02-17 11:58:54.234844526 +0000
+--- raid.py.orig	2019-06-03 23:56:04.000000000 -0500
++++ raid_new.py	2020-05-06 07:51:39.732602457 -0500
 @@ -12,6 +12,7 @@
  #    under the License.
  
@@ -8,7 +8,7 @@
  import logging
  
  from dracclient import constants
-@@ -81,7 +82,10 @@
+@@ -81,7 +82,283 @@
      ['id', 'description', 'controller', 'manufacturer', 'model', 'media_type',
       'interface_type', 'size_mb', 'free_size_mb', 'serial_number',
       'firmware_version', 'status', 'raid_status', 'sas_address',
@@ -17,10 +17,283 @@
 +
 +
 +NO_FOREIGN_DRIVES = ["STOR058", "STOR018"]
++
++
++
++class RAIDAttribute(object):
++    """Generic RAID attribute class"""
++
++    def __init__(self, name, instance_id, current_value, pending_value,
++                 read_only, fqdd):
++        """Creates RAIDAttribute object
++
++        :param name: name of the RAID attribute
++        :param instance_id: InstanceID of the RAID attribute
++        :param current_value: list containing the current values of the
++                RAID attribute
++        :param pending_value: pending value of the RAID attribute, reflecting
++                an unprocessed change (eg. config job not completed)
++        :param read_only: indicates whether this RAID attribute can be changed
++        :param fqdd: Fully Qualified Device Description of the RAID Attribute
++        """
++
++        self.name = name
++        self.instance_id = instance_id
++        self.current_value = current_value
++        self.pending_value = pending_value
++        self.read_only = read_only
++        self.fqdd = fqdd
++
++    def __eq__(self, other):
++        return self.__dict__ == other.__dict__
++
++    @classmethod
++    def parse(cls, namespace, raid_attr_xml):
++        """Parses XML and creates RAIDAttribute object"""
++
++        name = utils.get_wsman_resource_attr(
++            raid_attr_xml, namespace, 'AttributeName')
++        instance_id = utils.get_wsman_resource_attr(
++            raid_attr_xml, namespace, 'InstanceID')
++        current_value = [attr.text for attr in
++                         utils.find_xml(raid_attr_xml, 'CurrentValue',
++                                        namespace, find_all=True)]
++        pending_value = utils.get_wsman_resource_attr(
++            raid_attr_xml, namespace, 'PendingValue', nullable=True)
++        read_only = utils.get_wsman_resource_attr(
++            raid_attr_xml, namespace, 'IsReadOnly')
++        fqdd = utils.get_wsman_resource_attr(
++            raid_attr_xml, namespace, 'FQDD')
++
++        return cls(name, instance_id, current_value, pending_value,
++                   (read_only == 'true'), fqdd)
++
++
++class RAIDEnumerableAttribute(RAIDAttribute):
++    """Enumerable RAID attribute class"""
++
++    namespace = uris.DCIM_RAIDEnumeration
++
++    def __init__(self, name, instance_id, current_value, pending_value,
++                 read_only, fqdd, possible_values):
++        """Creates RAIDEnumerableAttribute object
++
++        :param name: name of the RAID attribute
++        :param instance_id: InstanceID of the RAID attribute
++        :param current_value: list containing the current values of the
++                RAID attribute
++        :param pending_value: pending value of the RAID attribute, reflecting
++                an unprocessed change (eg. config job not completed)
++        :param read_only: indicates whether this RAID attribute can be changed
++        :param fqdd: Fully Qualified Device Description of the RAID
++                Attribute
++        :param possible_values: list containing the allowed values for the RAID
++                attribute
++        """
++        super(RAIDEnumerableAttribute, self).__init__(name, instance_id,
++                                                      current_value,
++                                                      pending_value,
++                                                      read_only, fqdd)
++
++        self.possible_values = possible_values
++
++    @classmethod
++    def parse(cls, raid_attr_xml):
++        """Parses XML and creates RAIDEnumerableAttribute object"""
++
++        raid_attr = RAIDAttribute.parse(cls.namespace, raid_attr_xml)
++        possible_values = [attr.text for attr
++                           in utils.find_xml(raid_attr_xml,
++                                             'PossibleValues',
++                                             cls.namespace, find_all=True)]
++
++        return cls(raid_attr.name, raid_attr.instance_id,
++                   raid_attr.current_value, raid_attr.pending_value,
++                   raid_attr.read_only, raid_attr.fqdd, possible_values)
++
++    def validate(self, new_value):
++        """Validates new value"""
++
++        if str(new_value) not in self.possible_values:
++            msg = ("Attribute '%(attr)s' cannot be set to value '%(val)s'."
++                   " It must be in %(possible_values)r.") % {
++                   'attr': self.name,
++                   'val': new_value,
++                   'possible_values': self.possible_values}
++            return msg
++
++
++class RAIDStringAttribute(RAIDAttribute):
++    """String RAID attribute class"""
++
++    namespace = uris.DCIM_RAIDString
++
++    def __init__(self, name, instance_id, current_value, pending_value,
++                 read_only, fqdd, min_length, max_length):
++        """Creates RAIDStringAttribute object
++
++        :param name: name of the RAID attribute
++        :param instance_id: InstanceID of the RAID attribute
++        :param current_value:  list containing the current values of the
++                RAID attribute
++        :param pending_value: pending value of the RAID attribute, reflecting
++                an unprocessed change (eg. config job not completed)
++        :param read_only: indicates whether this RAID attribute can be changed
++        :param fqdd: Fully Qualified Device Description of the RAID
++                Attribute
++        :param min_length: minimum length of the string
++        :param max_length: maximum length of the string
++        """
++        super(RAIDStringAttribute, self).__init__(name, instance_id,
++                                                  current_value, pending_value,
++                                                  read_only, fqdd)
++        self.min_length = min_length
++        self.max_length = max_length
++
++    @classmethod
++    def parse(cls, raid_attr_xml):
++        """Parses XML and creates RAIDStringAttribute object"""
++
++        raid_attr = RAIDAttribute.parse(cls.namespace, raid_attr_xml)
++        min_length = int(utils.get_wsman_resource_attr(
++            raid_attr_xml, cls.namespace, 'MinLength'))
++        max_length = int(utils.get_wsman_resource_attr(
++            raid_attr_xml, cls.namespace, 'MaxLength'))
++
++        return cls(raid_attr.name, raid_attr.instance_id,
++                   raid_attr.current_value, raid_attr.pending_value,
++                   raid_attr.read_only, raid_attr.fqdd,
++                   min_length, max_length)
++
++
++class RAIDIntegerAttribute(RAIDAttribute):
++    """Integer RAID attribute class"""
++
++    namespace = uris.DCIM_RAIDInteger
++
++    def __init__(self, name, instance_id, current_value, pending_value,
++                 read_only, fqdd, lower_bound, upper_bound):
++        """Creates RAIDIntegerAttribute object
++
++        :param name: name of the RAID attribute
++        :param instance_id: InstanceID of the RAID attribute
++        :param current_value: list containing the current value of the
++                RAID attribute
++        :param pending_value: pending value of the RAID attribute,
++                reflecting an unprocessed change
++                (eg. config job not completed)
++        :param read_only: indicates whether this RAID attribute can be
++                changed
++        :param fqdd: Fully Qualified Device Description of the RAID
++                Attribute
++        :param lower_bound: minimum value for the RAID attribute
++        :param upper_bound: maximum value for the RAID attribute
++        """
++        super(RAIDIntegerAttribute, self).__init__(name, instance_id,
++                                                   current_value,
++                                                   pending_value,
++                                                   read_only, fqdd)
++        self.lower_bound = lower_bound
++        self.upper_bound = upper_bound
++
++    @classmethod
++    def parse(cls, raid_attr_xml):
++        """Parses XML and creates RAIDIntegerAttribute object"""
++
++        raid_attr = RAIDAttribute.parse(cls.namespace, raid_attr_xml)
++        lower_bound = utils.get_wsman_resource_attr(
++            raid_attr_xml, cls.namespace, 'LowerBound')
++        upper_bound = utils.get_wsman_resource_attr(
++            raid_attr_xml, cls.namespace, 'UpperBound')
++
++        if raid_attr.current_value:
++            raid_attr.current_value = int(raid_attr.current_value[0])
++        if raid_attr.pending_value:
++            raid_attr.pending_value = int(raid_attr.pending_value)
++
++        return cls(raid_attr.name, raid_attr.instance_id,
++                   raid_attr.current_value, raid_attr.pending_value,
++                   raid_attr.read_only, raid_attr.fqdd,
++                   int(lower_bound), int(upper_bound))
++
++    def validate(self, new_value):
++        """Validates new value"""
++
++        val = int(new_value)
++        if val < self.lower_bound or val > self.upper_bound:
++            msg = ('Attribute %(attr)s cannot be set to value %(val)d.'
++                   ' It must be between %(lower)d and %(upper)d.') % {
++                       'attr': self.name,
++                       'val': new_value,
++                       'lower': self.lower_bound,
++                       'upper': self.upper_bound}
++            return msg
++
++
++class RAIDManagement(object):
++
++    NAMESPACES = [(uris.DCIM_RAIDEnumeration, RAIDEnumerableAttribute),
++                  (uris.DCIM_RAIDString, RAIDStringAttribute),
++                  (uris.DCIM_RAIDInteger, RAIDIntegerAttribute)]
++
++    def __init__(self, client):
++        """Creates RAIDManagement object
++
++        :param client: an instance of WSManClient
++        """
++        self.client = client
++
++    def list_raid_settings(self):
++        """List the RAID configuration settings
++
++        :returns: a dictionary with the RAID settings using InstanceID as the
++                  key. The attributes are either RAIDEnumerableAttribute,
++                  RAIDStringAttribute objects.
++        :raises: WSManRequestFailure on request failures
++        :raises: WSManInvalidResponse when receiving invalid response
++        :raises: DRACOperationFailed on error reported back by the DRAC
++                interface
++        """
++
++        return utils.list_settings(self.client, self.NAMESPACES,
++                                   by_name=False)
++
++    def set_raid_settings(self, raid_fqdd, new_settings):
++        """Sets the RAID configuration
++
++        It sets the pending_value parameter for each of the attributes
++        passed in. For the values to be applied, a config job must
++        be created.
++        :param raid_fqdd: the FQDD of the RAID setting.
++        :param new_settings: a dictionary containing the proposed values, with
++                         each key being the name of attribute and the value
++                         being the proposed value.
++        :returns: a dictionary containing:
++                 - The is_commit_required key with a boolean value indicating
++                   whether a config job must be created for the values to be
++                   applied.
++                 - The is_reboot_required key with a RebootRequired enumerated
++                   value indicating whether the server must be rebooted for the
++                   values to be applied. Possible values are true and false.
++        :raises: WSManRequestFailure on request failures
++        :raises: WSManInvalidResponse when receiving invalid response
++        :raises: DRACOperationFailed on error reported back by the DRAC
++                interface
++        """
++
++        return utils.set_settings('RAID',
++                                  self.client,
++                                  self.NAMESPACES,
++                                  new_settings,
++                                  uris.DCIM_RAIDService,
++                                  "DCIM_RAIDService",
++                                  "DCIM:RAIDService",
++                                  raid_fqdd,
++                                  by_name=False)
  
  
  class PhysicalDisk(PhysicalDiskTuple):
-@@ -197,7 +201,7 @@
+@@ -197,7 +474,7 @@
                                                 'PrimaryStatus')],
              firmware_version=self._get_raid_controller_attr(
                  drac_controller, 'ControllerFirmwareVersion'),
@@ -29,7 +302,7 @@
              supports_realtime=RAID_CONTROLLER_IS_REALTIME[
                  self._get_raid_controller_attr(
                      drac_controller, 'RealtimeCapability')])
-@@ -231,7 +235,12 @@
+@@ -231,7 +508,12 @@
          drac_raid_level = self._get_virtual_disk_attr(drac_disk, 'RAIDTypes')
          size_b = self._get_virtual_disk_attr(drac_disk, 'SizeInBytes')
          drac_status = self._get_virtual_disk_attr(drac_disk, 'PrimaryStatus')
@@ -43,7 +316,7 @@
          drac_pending_operations = self._get_virtual_disk_attr(
              drac_disk, 'PendingOperations')
  
-@@ -256,10 +265,12 @@
+@@ -256,10 +538,12 @@
              physical_disks=self._get_virtual_disk_attrs(drac_disk,
                                                          'PhysicalDiskIDs'))
  
@@ -58,12 +331,10 @@
  
      def _get_virtual_disk_attrs(self, drac_disk, attr_name):
          return utils.get_all_wsman_resource_attrs(
-@@ -315,7 +326,12 @@
-         drac_media_type = self._get_physical_disk_attr(drac_disk, 'MediaType',
+@@ -316,6 +600,11 @@
                                                         uri)
          drac_bus_protocol = self._get_physical_disk_attr(drac_disk,
--                                                         'BusProtocol', uri)
-+                                                         'BusProtocol', uri)
+                                                          'BusProtocol', uri)
 +        bus = self._get_physical_disk_attr(drac_disk,
 +                                           'Bus', uri,  allow_missing=True)
 +
@@ -72,7 +343,7 @@
  
          return PhysicalDisk(
              id=fqdd,
-@@ -341,7 +357,8 @@
+@@ -341,7 +630,8 @@
              device_protocol=self._get_physical_disk_attr(drac_disk,
                                                           'DeviceProtocol',
                                                           uri,
@@ -82,7 +353,7 @@
  
      def _get_physical_disk_attr(self, drac_disk, attr_name, uri,
                                  allow_missing=False):
-@@ -633,15 +650,17 @@
+@@ -633,15 +923,17 @@
          :param mode: constants.RaidStatus enumeration used to
                       determine what raid status to check for.
          :param physical_disks: all physical disks
@@ -105,7 +376,7 @@
          p_disk_id_to_status = {}
          for physical_disk in physical_disks:
              p_disk_id_to_status[physical_disk.id] = physical_disk.raid_status
-@@ -700,34 +719,37 @@
+@@ -700,34 +992,37 @@
  
              raise ValueError(error_msg)
  
@@ -114,8 +385,7 @@
      def change_physical_disk_state(self, mode,
                                     controllers_to_physical_disk_ids=None):
 -        """Convert disks RAID status and return a list of controller IDs
-+        """Convert disks RAID status
- 
+-
 -        Builds a list of controller ids that have had disks converted to the
 -        specified RAID status by:
 -        - Examining all the disks in the system and filtering out any that are
@@ -126,13 +396,14 @@
 -          statuses and raise an exception where appropriate.
 -        - Return a list of controller IDs for controllers whom have had any of
 -          their disks converted, and whether a reboot is required.
++        """Convert disks RAID status
+ 
+-        The caller typically should then create a config job for the list of
+-        controllers returned to finalize the RAID configuration.
 +        This method intelligently converts the requested physical disks from
 +        RAID to JBOD or vice versa.  It does this by only converting the
 +        disks that are not already in the correct state.
  
--        The caller typically should then create a config job for the list of
--        controllers returned to finalize the RAID configuration.
--
 -        :param mode: constants.RaidStatus enumeration used to determine what
 -                     raid status to check for.
 +        :param mode: constants.RaidStatus enumeration that indicates the mode
@@ -164,7 +435,7 @@
          :raises: DRACOperationFailed on error reported back by the DRAC and the
                   exception message does not contain NOT_SUPPORTED_MSG constant.
          :raises: Exception on unknown error.
-@@ -754,13 +776,14 @@
+@@ -754,13 +1049,14 @@
          Raise exception if there are any failed drives or
          drives not in status 'ready' or 'non-RAID'
          '''
@@ -182,7 +453,7 @@
              if physical_disk_ids:
                  LOG.debug("Converting the following disks to {} on RAID "
                            "controller {}: {}".format(
-@@ -773,22 +796,39 @@
+@@ -773,22 +1069,39 @@
                      if constants.NOT_SUPPORTED_MSG in str(ex):
                          LOG.debug("Controller {} does not support "
                                    "JBOD mode".format(controller))
@@ -234,7 +505,7 @@
                  'commit_required_ids': controllers}
  
      def is_realtime_supported(self, raid_controller_fqdd):
-@@ -805,3 +845,100 @@
+@@ -805,3 +1118,100 @@
              return True
  
          return False
