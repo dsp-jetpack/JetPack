@@ -1,5 +1,5 @@
 --- utils.py.orig	2018-11-26 15:48:01.000000000 -0600
-+++ utils_new.py	2020-05-06 08:07:47.245995658 -0500
++++ utils_new.py	2020-05-07 01:30:31.943702424 -0500
 @@ -251,7 +251,7 @@
  
  
@@ -104,8 +104,11 @@
          else:
              validation_msg = current_settings[attr].validate(
                  new_settings[attr])
-@@ -425,8 +448,22 @@
-                   'AttributeName': attrib_names,
+@@ -422,11 +445,24 @@
+                  'SystemCreationClassName': 'DCIM_ComputerSystem',
+                  'SystemName': 'DCIM:ComputerSystem'}
+     properties = {'Target': target,
+-                  'AttributeName': attrib_names,
                    'AttributeValue': [new_settings[attr] for attr
                                       in attrib_names]}
 +    # To set RAID settings, above we fetched list raid settings using
