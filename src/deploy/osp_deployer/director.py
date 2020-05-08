@@ -160,13 +160,13 @@ class Director(InfraHost):
             'sedl -f "s|container_images_file = |container_images_file =' + self.home_dir +
             '/containers-prepare-parameter.yaml|" pilot/undercloud.conf'
         ]
-        
+
         #Configure containers-prepare-parameter.yaml to retrieve container images
         cmd = 'sed -i "s|[[:space:]]\+username: password|      ' + \
               self.settings.subscription_manager_user + ': ' + "'" + self.settings.subscription_manager_password + "'" + \
               '|" pilot/containers-prepare-parameter.yaml'
         cmds.append(cmd)
-        
+
         for cmd in cmds:
             self.run(cmd)
 
@@ -199,7 +199,8 @@ class Director(InfraHost):
         logger.info("Installing the undercloud")
         if self.settings.use_satellite:
             cmd = '~/pilot/install-director.sh --dns ' + \
-                  self.settings.name_server + ' --satellite_hostname ' + \
+                  self.settings.name_server + ' --director_ip ' + \
+                  self.ip + ' --satellite_hostname ' + \
                   self.settings.satellite_hostname + ' --satellite_org ' + \
                   self.settings.satellite_org + ' --satellite_key ' + \
                   self.settings.satellite_activation_key
@@ -209,6 +210,8 @@ class Director(InfraHost):
         else:
             cmd = '~/pilot/install-director.sh --dns ' + \
                   self.settings.name_server + \
+                  " --director_ip " + \
+                  self.ip + \
                   " --sm_user " + \
                   self.settings.subscription_manager_user + \
                   " --sm_pwd " + \
@@ -540,7 +543,7 @@ class Director(InfraHost):
 
         node_data_lookup_str = osd_configs_yaml["parameter_defaults"][
             "NodeDataLookup"]
-        uuid_to_osd_configs = json.loads(node_data_lookup_str)
+        uuid_to_osd_configs = json.loads(json.dumps(node_data_lookup_str))
         for uuid in uuid_to_osd_configs:
             osd_config = uuid_to_osd_configs[uuid]
             num_osds = len(osd_config["devices"])
@@ -1081,8 +1084,8 @@ class Director(InfraHost):
             'sed -i "s|ExternalInterfaceDefaultRoute:.*|'
             'ExternalInterfaceDefaultRoute: ' +
             self.settings.public_api_gateway + '|" ' + network_yaml,
-            'sed -i "s|ManagementNetworkGateway:.*|'
-            'ManagementNetworkGateway: ' +
+            'sed -i "s|ManagementInterfaceDefaultRoute:.*|'
+            'ManagementInterfaceDefaultRoute: ' +
             self.settings.management_gateway + '|" ' + network_yaml,
             'sed -i "s|ManagementNetCidr:.*|ManagementNetCidr: ' +
             self.settings.management_network + '|" ' + network_yaml,
@@ -1113,21 +1116,21 @@ class Director(InfraHost):
             self.settings.public_api_vlanid + '|" ' + network_yaml,
             'sed -i "s|TenantNetworkVlanID:.*|TenantNetworkVlanID: ' +
             self.settings.tenant_tunnel_vlanid + '|" ' + network_yaml,
-            'sed -i "s|ExternalNetworkMTU:.*|ExternalNetworkMTU: ' +
+            'sed -i "s|ExternalMtu:.*|ExternalMtu: ' +
             self.settings.public_api_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|InternalApiMTU:.*|InternalApiMTU: ' +
+            'sed -i "s|InternalApiMtu:.*|InternalApiMtu: ' +
             self.settings.private_api_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|StorageNetworkMTU:.*|StorageNetworkMTU: ' +
+            'sed -i "s|StorageMtu:.*|StorageMtu: ' +
             self.settings.storage_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|StorageMgmtNetworkMTU:.*|StorageMgmtNetworkMTU: ' +
+            'sed -i "s|StorageMgmtMtu:.*|StorageMgmtMtu: ' +
             self.settings.storage_cluster_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|TenantNetworkMTU:.*|TenantNetworkMTU: ' +
+            'sed -i "s|TenantMtu:.*|TenantMtu: ' +
             self.settings.tenant_tunnel_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|ProvisioningNetworkMTU:.*|ProvisioningNetworkMTU: ' +
+            'sed -i "s|ProvisioningMtu:.*|ProvisioningMtu: ' +
             self.settings.provisioning_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|ManagementNetworkMTU:.*|ManagementNetworkMTU: ' +
+            'sed -i "s|ManagementMtu:.*|ManagementMtu: ' +
             self.settings.management_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|DefaultBondMTU:.*|DefaultBondMTU: ' +
+            'sed -i "s|DefaultBondMtu:.*|DefaultBondMtu: ' +
             self.settings.default_bond_mtu + '|" ' + network_yaml,
             'sed -i "s|NeutronGlobalPhysnetMtu:.*|NeutronGlobalPhysnetMtu: ' +
             self.settings.tenant_network_mtu + '|" ' + network_yaml,
@@ -1259,22 +1262,34 @@ class Director(InfraHost):
 
         if self.settings.use_static_vips is True:
             logger.debug("Updating static vip yaml")
-            cmds = ['sed -i "s/redis: .*/redis: ' +
-                    self.settings.redis_vip + '/" ' + static_vip_yaml,
-                    'sed -i "s/ControlPlaneIP: .*/ControlPlaneIP: ' +
-                    self.settings.provisioning_vip + '/" ' + static_vip_yaml,
-                    'sed -i "s/InternalApiNetworkVip: ' +
-                    '.*/InternalApiNetworkVip: ' +
-                    self.settings.private_api_vip + '/" ' + static_vip_yaml,
-                    'sed -i "s/ExternalNetworkVip: ' +
-                    '.*/ExternalNetworkVip: ' +
-                    self.settings.public_api_vip + '/" ' + static_vip_yaml,
-                    'sed -i "s/StorageNetworkVip: ' +
-                    '.*/StorageNetworkVip: ' +
-                    self.settings.storage_vip + '/" ' + static_vip_yaml,
-                    'sed -i "s/StorageMgmtNetworkVip: ' +
-                    '.*/StorageMgmtNetworkVip: ' +
-                    self.settings.storage_cluster_vip + '/" ' + static_vip_yaml
+            cmds = ["""sed -i "s/RedisVirtualFixedIPs: .*/RedisVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.redis_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/ControlFixedIPs: .*/ControlFixedIPs: [{'ip_address':'""" +
+                    self.settings.provisioning_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/InternalApiVirtualFixedIPs: .*/InternalApiVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.private_api_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/PublicVirtualFixedIPs: .*/PublicVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.public_api_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/StorageVirtualFixedIPs: .*/StorageVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.storage_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/StorageMgmtVirtualFixedIPs: .*/StorageMgmtVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.storage_cluster_vip + """'}]/" """ + static_vip_yaml
+                    # 'sed -i "s/redis: .*/redis: ' +
+                    # self.settings.redis_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/ControlPlaneIP: .*/ControlPlaneIP: ' +
+                    # self.settings.provisioning_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/InternalApiNetworkVip: ' +
+                    # '.*/InternalApiNetworkVip: ' +
+                    # self.settings.private_api_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/ExternalNetworkVip: ' +
+                    # '.*/ExternalNetworkVip: ' +
+                    # self.settings.public_api_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/StorageNetworkVip: ' +
+                    # '.*/StorageNetworkVip: ' +
+                    # self.settings.storage_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/StorageMgmtNetworkVip: ' +
+                    # '.*/StorageMgmtNetworkVip: ' +
+                    # self.settings.storage_cluster_vip + '/" ' + static_vip_yaml
                     ]
             for cmd in cmds:
                 self.run_tty(cmd)
