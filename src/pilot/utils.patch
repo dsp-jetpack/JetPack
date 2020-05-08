@@ -1,5 +1,5 @@
---- /usr/lib/python2.7/site-packages/dracclient/utils.py	2019-06-21 02:53:08.048945005 -0400
-+++ utils_new.py	2019-06-20 07:48:57.191489514 -0400
+--- utils.py.orig	2018-11-26 15:48:01.000000000 -0600
++++ utils_new.py	2020-05-07 01:30:31.943702424 -0500
 @@ -251,7 +251,7 @@
  
  
@@ -41,39 +41,89 @@
      items = doc.find('.//{%s}Items' % wsman.NS_WSMAN)
  
      for item in items:
-@@ -316,7 +319,8 @@
+@@ -316,7 +319,9 @@
                   cim_name,
                   target,
                   name_formatter=None,
 -                 include_commit_required=False):
 +                 include_commit_required=False,
-+                 wait_for_idrac=True):
++                 wait_for_idrac=True,
++                 by_name=True):
      """Generically handles setting various types of settings on the iDRAC
  
      This method pulls the current list of settings from the iDRAC then compares
-@@ -339,6 +343,9 @@
+@@ -339,6 +344,11 @@
                             attribute.name will be used.
      :parm include_commit_required: Indicates if the deprecated commit_required
                                     should be returned in the result.
 +    :param wait_for_idrac: indicates whether or not to wait for the
 +                           iDRAC to be ready to accept commands before issuing
 +                           the command
++    :param by_name: Controls whether returned dictionary uses RAID
++                    attribute name or instance_id as key
      :returns: a dictionary containing:
               - The commit_required key with a boolean value indicating
                 whether a config job must be created for the values to be
-@@ -361,7 +368,8 @@
+@@ -360,8 +370,9 @@
+     :raises: InvalidParameterValue on invalid new setting
      """
  
-     current_settings = list_settings(client, namespaces, by_name=True,
+-    current_settings = list_settings(client, namespaces, by_name=True,
 -                                     name_formatter=name_formatter)
++    current_settings = list_settings(client, namespaces, by_name=by_name,
 +                                     name_formatter=name_formatter,
 +                                     wait_for_idrac=wait_for_idrac)
  
      unknown_keys = set(new_settings) - set(current_settings)
      if unknown_keys:
-@@ -428,7 +436,8 @@
+@@ -376,11 +387,23 @@
+     candidates = set(new_settings)
+ 
+     for attr in candidates:
+-        if str(new_settings[attr]) == str(
+-                current_settings[attr].current_value):
+-            unchanged_attribs.append(attr)
+-        elif current_settings[attr].read_only:
++        # There are RAID settings that can have multiple values,
++        # however these are all read-only attributes.
++        # Filter out all read-only attributes first so that we exclude
++        # these settings from further consideration
++        current_setting_value = current_settings[attr].current_value
++        if type(current_setting_value) is list:
++            current_setting_value = current_setting_value[0]
++
++        unchanged_attribute = str(new_settings[attr]) == str(
++            current_setting_value)
++
++        # check if read-only attribute is unchanged
++        if current_settings[attr].read_only and not unchanged_attribute:
+             read_only_keys.append(attr)
++
++        if unchanged_attribute:
++            unchanged_attribs.append(attr)
+         else:
+             validation_msg = current_settings[attr].validate(
+                 new_settings[attr])
+@@ -422,11 +445,24 @@
+                  'SystemCreationClassName': 'DCIM_ComputerSystem',
+                  'SystemName': 'DCIM:ComputerSystem'}
+     properties = {'Target': target,
+-                  'AttributeName': attrib_names,
                    'AttributeValue': [new_settings[attr] for attr
                                       in attrib_names]}
++    # To set RAID settings, above we fetched list raid settings using
++    # instance_id to retrieve attribute values. When we pass instance_id in
++    # setattribute method for setting any new RAID settings, wsman raises
++    # an error. So another approach to set those settings is to list raid
++    # settings using instance_id and for settings new settings, pass the
++    # attribute names in list to SetAttributes method along with the target.
++    # That's the reason, we need to handle RAID specific settings like below
++    if settings_type == 'RAID':
++        properties['AttributeName'] = [current_settings[attr].name for
++                                       attr in attrib_names]
++    else:
++        properties['AttributeName'] = attrib_names
++    
      doc = client.invoke(resource_uri, 'SetAttributes',
 -                        selectors, properties)
 +                        selectors, properties,
