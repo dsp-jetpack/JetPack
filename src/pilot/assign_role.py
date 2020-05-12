@@ -1173,7 +1173,7 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
             lst_physical_disks = drac_client.list_physical_disks()
             for disks in lst_physical_disks:
                 if disks.controller in boss_disk:
-                    os_volume_size_gb = disks.size_mb / 1024
+                    os_volume_size_gb = int(disks.size_mb / 1024)
                     LOG.info("Detect BOSS Card {} and volume size {}".format(
                         disks.controller,
                         os_volume_size_gb))
@@ -1201,7 +1201,7 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                     # Get the size
                     raid_size = get_size_in_bytes(virtual_disk_doc,
                                                   DCIM_VirtualDiskView)
-                    raid_size_gb = int(raid_size) / units.Gi
+                    raid_size_gb = int(int(raid_size) / units.Gi)
 
                     # Get the physical disks that back this RAID
                     raid_physical_disk_docs = utils.find_xml(
@@ -1237,7 +1237,7 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                         if raid_type == RAID0:
                             raid_size = get_size_in_bytes(virtual_disk_doc,
                                                           DCIM_VirtualDiskView)
-                            raid_size_gb = int(raid_size) / units.Gi
+                            raid_size_gb = raid_size_gb = int(int(raid_size) / units.Gi)
                             raid0_disk_sizes.append(raid_size_gb)
 
                             # Get the physical disks that back this RAID
@@ -1291,7 +1291,7 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                             "to install the OS on,"
                             "or os-volume-size-gb must be specified.")
 
-                    os_volume_size_gb = int(physical_disk_sizes[0]) / units.Gi
+                    os_volume_size_gb = int(int(physical_disk_sizes[0]) / units.Gi)
 
             # Now check to see if we have any physical disks that don't back
             # the RAID that are the same size as the RAID
@@ -1309,7 +1309,7 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                 if fqdd not in raid_physical_disk_ids:
                     physical_disk_size = get_size_in_bytes(
                         physical_disk_doc, DCIM_PhysicalDiskView)
-                    physical_disk_size_gb = int(physical_disk_size) / units.Gi
+                    physical_disk_size_gb = int(int(physical_disk_size) / units.Gi)
 
                     if physical_disk_size_gb == raid_size_gb:
                         # If we did find a disk that's the same size as the
@@ -1542,9 +1542,9 @@ def main():
     except:  # noqa: E722
         LOG.exception("Unexpected error")
         sys.exit(1)
-    finally:	
-        # Leave the node powered off.	
-        if drac_client is not None:	
+    finally:
+        # Leave the node powered off.
+        if drac_client is not None:
             ensure_node_is_powered_off(drac_client)
 
 if __name__ == "__main__":

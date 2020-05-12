@@ -3,7 +3,7 @@
 # compute nodes. The feature supported in OVS 2.8.0
 
 resource_registry:
-  OS::TripleO::Services::NeutronSriovHostConfig: ./overcloud/puppet/services/neutron-sriov-host-config.yaml
+  OS::TripleO::Services::NeutronSriovHostConfig: ./overcloud/deployment/deprecated/neutron/neutron-sriov-host-config.yaml
 
 parameter_defaults:
 
