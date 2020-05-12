@@ -23,7 +23,7 @@ parameter_defaults:
   DockerCinderApiImage: registry.access.redhat.com/rhosp13/openstack-cinder-api:13.0-113
   DockerCinderConfigImage: registry.access.redhat.com/rhosp13/openstack-cinder-api:13.0-113
   DockerCinderSchedulerImage: registry.access.redhat.com/rhosp13/openstack-cinder-scheduler:13.0-114
-  DockerCinderVolumeImage: 192.168.120.10:8787/dellemc/openstack-cinder-volume-dellemc:latest
+  DockerCinderVolumeImage: registry.access.redhat.com/rhosp13/openstack-cinder-volume:13.0-118
   DockerClustercheckConfigImage: registry.access.redhat.com/rhosp13/openstack-mariadb:13.0-110
   DockerClustercheckImage: registry.access.redhat.com/rhosp13/openstack-mariadb:13.0-110
   DockerCrondConfigImage: registry.access.redhat.com/rhosp13/openstack-cron:13.0-115
