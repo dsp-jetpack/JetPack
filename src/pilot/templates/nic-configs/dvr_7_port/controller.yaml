@@ -1,4 +1,4 @@
-heat_template_version: queens
+heat_template_version: rocky
 description: >
   Bond and VLAN configuration for controller nodes. comment14_0: ' The values of the following parameters are overridden by
   the entries in' comment15_0: ' network-environment.yaml'
@@ -137,7 +137,7 @@ parameters:
     default: 9000
     description: MTU value for this network.
     type: number
-  ExternalNetworkMTU: 
+  ExternalNetworkMTU:
     default: 1500
     description: MTU value for this network.
     type: number

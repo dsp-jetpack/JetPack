@@ -156,7 +156,7 @@ def deploy():
             logger.info("=== create the director vm")
             sah_node.create_director_vm()
             tester.director_vm_health_check()
-            
+
             logger.info("Preparing the Director VM")
             director_vm = Director()
             director_vm.apply_internal_repos()
@@ -183,17 +183,26 @@ def deploy():
 
         # The network-environment.yaml must be setup for use during DHCP
         # server configuration
+        logger.info("Setting up network environment")
         director_vm.setup_net_envt()
+        logger.info("Setting up dhcp server")
         director_vm.configure_dhcp_server()
+        logger.info("Discovering nodes")
         director_vm.node_discovery()
+        logger.info("Configuring iDRACs")
         director_vm.configure_idracs()
+        logger.info("Importing nodes")
         director_vm.import_nodes()
+        logger.info("Introspecting nodes")
         director_vm.node_introspection()
+        logger.info("Assigning roles")
         director_vm.update_sshd_conf()
         director_vm.assign_node_roles()
         director_vm.revert_sshd_conf()
 
+        logger.info("Configuring heat templates")
         director_vm.setup_templates()
+
         logger.info("=== Installing the overcloud ")
         logger.debug("installing the overcloud ... this might take a while")
         director_vm.deploy_overcloud()
