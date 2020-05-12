@@ -54,5 +54,3 @@ parameter_defaults:
   # Note that this IP must lie outside the dhcp_start/dhcp_end range
   # specified in undercloud.conf.
   StorageMgmtNetworkVip: 192.168.120.249
-
-  

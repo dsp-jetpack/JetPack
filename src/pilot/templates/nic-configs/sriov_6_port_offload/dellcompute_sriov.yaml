@@ -261,4 +261,3 @@ outputs:
     description: The OsNetConfigImpl resource.
     value:
       get_resource: OsNetConfigImpl
-
