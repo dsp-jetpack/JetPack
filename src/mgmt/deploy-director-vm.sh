@@ -218,7 +218,9 @@ EOFPW
          subscription-manager attach --auto ${ProxyInfo}
          )
 
-  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-8-for-x86_64-baseos-rpms --enable=rhel-8-for-x86_64-appstream-rpms --enable=rhel-8-for-x86_64-highavailability-rpms --enable=ansible-2.8-for-rhel-8-x86_64-rpms --enable=advanced-virt-for-rhel-8-x86_64-rpms --enable=satellite-tools-6.5-for-rhel-8-x86_64-rpms --enable=openstack-16-for-rhel-8-x86_64-rpms --enable=fast-datapath-for-rhel-8-x86_64-rpms --enable=rhceph-4-tools-for-rhel-8-x86_64-rpms
+  subscription-manager release --set=8.1
+
+  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-8-for-x86_64-baseos-eus-rpms --enable=rhel-8-for-x86_64-appstream-rpms --enable=rhel-8-for-x86_64-highavailability-eus-rpms --enable=ansible-2.8-for-rhel-8-x86_64-rpms --enable=openstack-16-for-rhel-8-x86_64-rpms --enable=fast-datapath-for-rhel-8-x86_64-rpms --enable=rhceph-4-tools-for-rhel-8-x86_64-rpms --enable=advanced-virt-for-rhel-8-x86_64-rpms --enable=satellite-tools-6.5-for-rhel-8-x86_64-rpms
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -228,11 +230,11 @@ EOFPW
     }
   umount /tmp/mnt
 
-  yum-config-manager --enable rhel-8-for-x86_64-baseos-rpms --setopt="rhel-8-for-x86_64-baseos-rpms.priority=1"
+  yum-config-manager --enable rhel-8-for-x86_64-baseos-eus-rpms --setopt="rhel-8-for-x86_64-baseos-eus-rpms.priority=1"
   yum-config-manager --enable rhel-8-for-x86_64-appstream-rpms --setopt="rhel-8-for-x86_64-appstream-rpms.priority=1"
-  yum-config-manager --enable rhel-8-for-x86_64-highavailability-rpms --setopt="rhel-8-for-x86_64-highavailability-rpms.priority=1"
+  yum-config-manager --enable rhel-8-for-x86_64-highavailability-eus-rpms --setopt="rhel-8-for-x86_64-highavailability-eus-rpms.priority=1"
   
-  yum -y update
+  dnf update -y
 
   # Firewall rules to allow traffic for the http, https, dns, and tftp services and tcp port 8140.
 

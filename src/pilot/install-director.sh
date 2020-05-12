@@ -161,12 +161,13 @@ echo "## Done."
 
 echo
 echo "## Installing Director"
-run_command "sudo yum -y install python3-tripleoclient"
+run_command "sudo dnf install -y python3-tripleoclient"
+run_command "sudo dnf install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
-run_command "sudo yum -y install openstack-tempest"
-run_command "sudo yum install -y python3-neutron-tests-tempest python3-cinder-tests-tempest python3-telemetry-tests-tempest python3-keystone-tests-tempest python3-horizon-tests-tempest python3-octavia-tests-tempest python3-manila-tests-tempest python3-barbican-tests-tempest"
-run_command "sudo yum install -y gcc"
+run_command "sudo dnf install -y openstack-tempest"
+run_command "sudo dnf install -y python3-neutron-tests-tempest python3-cinder-tests-tempest python3-telemetry-tests-tempest python3-keystone-tests-tempest python3-horizon-tests-tempest python3-octavia-tests-tempest python3-manila-tests-tempest python3-barbican-tests-tempest"
+run_command "sudo dnf install -y gcc"
 run_command "sudo pip3 install ironic"
 echo "## Done."
 
@@ -181,19 +182,19 @@ echo
 images_tar_path='.'
 if [ ! -d $HOME/pilot/images ];
 then
-  sudo yum install rhosp-director-images rhosp-director-images-ipa octavia-amphora-image -y
+  sudo dnf install -y rhosp-director-images rhosp-director-images-ipa octavia-amphora-image
 
   # It's not uncommon to get connection reset errors when installing this 1.2G
   # RPM.  Keep retrying to complete the download
   echo "Downloading and installing rhosp-director-image"
   while :
   do
-    yum_out=$(sudo yum install rhosp-director-images rhosp-director-images-ipa -y 2>&1)
-    yum_rc=$?
-    echo $yum_out
-    if [ $yum_rc -eq 1 ]
+    dnf_out=$(sudo dnf install -y rhosp-director-images rhosp-director-images-ipa 2>&1)
+    dnf_rc=$?
+    echo $dnf_out
+    if [ $dnf_rc -eq 1 ]
     then
-        if [[ $yum_out == *"TCP connection reset by peer"* ]];
+        if [[ $dnf_out == *"TCP connection reset by peer"* ]];
         then
           echo "Got a TCP connection reset.  Retrying..."
           continue
@@ -238,7 +239,7 @@ fi
 echo
 if [ -n "${overcloud_nodes_pwd}" ]; then
     echo "# Setting overcloud nodes password"
-    run_command "sudo yum install libguestfs-tools -y"
+    run_command "sudo dnf install -y libguestfs-tools"
     run_command "sudo service libvirtd start"
     run_command "export LIBGUESTFS_BACKEND=direct"
     run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
@@ -382,8 +383,6 @@ echo "## Done."
 #fi
 
 #sudo yum install -y os-cloud-config
-sudo yum install -y ceph-ansible
-
 
 echo
 echo "## Configuration complete!"
