@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-resource_registry:
-  OS::TripleO::CephStorageExtraConfigPre: ./overcloud/puppet/extraconfig/pre_deploy/per_node.yaml
 
 parameter_defaults:
-  NodeDataLookup: >
+  NodeDataLookup: 
     {}

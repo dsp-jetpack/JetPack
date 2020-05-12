@@ -543,7 +543,7 @@ class Director(InfraHost):
 
         node_data_lookup_str = osd_configs_yaml["parameter_defaults"][
             "NodeDataLookup"]
-        uuid_to_osd_configs = json.loads(node_data_lookup_str)
+        uuid_to_osd_configs = json.loads(json.dumps(node_data_lookup_str))
         for uuid in uuid_to_osd_configs:
             osd_config = uuid_to_osd_configs[uuid]
             num_osds = len(osd_config["devices"])
