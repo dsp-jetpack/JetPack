@@ -951,7 +951,8 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
         if not node_data_lookup_str:
             node_data_lookup = {}
         else:
-            node_data_lookup = json.loads(node_data_lookup_str)
+            LOG.info(str(node_data_lookup_str))
+            node_data_lookup = json.loads(json.dumps(node_data_lookup_str))
         LOG.info("Checking for existing config ")
         if system_id in node_data_lookup:
             current_osd_config = node_data_lookup[system_id]
@@ -1170,8 +1171,12 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
     if os_volume_size_gb is None:
         # Detect BOSS Card and find the volume size
         lst_ctrls = drac_client.list_raid_controllers()
+        for ct in lst_ctrls :
+            if ct.model.startswith("BOSS"):
+                pci_bus_number = ct.bus.lower()
         boss_disk = \
             [ctrl.id for ctrl in lst_ctrls if ctrl.model.startswith("BOSS")]
+        LOG.info("Boss : " + str(boss_disk))
         if boss_disk:
             lst_physical_disks = drac_client.list_physical_disks()
             for disks in lst_physical_disks:
@@ -1180,6 +1185,15 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                     LOG.info("Detect BOSS Card {} and volume size {}".format(
                         disks.controller,
                         os_volume_size_gb))
+                    by_path = '/dev/disk/by-path/pci-0000:' \
+                              + str(pci_bus_number) + ':00.0-ata-1'
+                    LOG.info("..> " + str(by_path))
+                    patch = [{'op': 'add',
+                              'value': {"by_path": by_path},
+                              'path': '/properties/root_device'}]
+                    ironic_client.node.update(node_uuid, patch)
+
+                    return
         else:
             drac_client = drac_client.client
             # Get the virtual disks
@@ -1202,17 +1216,29 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
 
                 if raid_type != NORAID and raid_type != RAID0:
                     LOG.info("...")
+                    LOG.info("using bypath for VD hint")
                     if lst_ctrls[0].model.startswith("PERC H740P"):
-                        LOG.info("using bypath for VD hint")
                         pci_bus_number = get_pci_bus_number(lst_ctrls[0])
                         by_path='/dev/disk/by-path/pci-0000:' \
-                        + str(pci_bus_number) + ':00.0-scsi-0:2:0:0'
+                                + str(pci_bus_number) + ':00.0-scsi-0:2:0:0'
                         LOG.info(".. " + str(by_path))
                         patch = [{'op': 'add',
-                                'value': {"by_path": by_path},                                                                                                                                                                          'path': '/properties/root_device'}]
+                                'value': {"by_path": by_path},
+                                'path': '/properties/root_device'}]
                         ironic_client.node.update(node_uuid, patch)
-                        return
 
+                    elif lst_ctrls[0].model.startswith("PERC H730"):
+                        LOG.info("using bypath for VD hint")
+                        pci_bus_number = get_pci_bus_number(lst_ctrls[0])
+                        LOG.info(">> " + str(lst_ctrls[0].description))
+                        by_path = ('/dev/disk/by-path/pci-0000:'
+                                '{pci_bus_number}:00.0-scsi-0:2:0:0').format(
+                                pci_bus_number=pci_bus_number)
+                        LOG.info(".. " + str(by_path))
+                        patch = [{'op': 'add',
+                                  'value': {"by_path": by_path},
+                                  'path': '/properties/root_device'}]
+                        ironic_client.node.update(node_uuid, patch)
 
                     # Get the size
                     raid_size = get_size_in_bytes(virtual_disk_doc,
@@ -1237,7 +1263,7 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                             raid_size,
                             "\n  ".join(raid_physical_disk_ids)))
 
-                    break
+                    return
 
             # Note: This code block represents single disk scenario.
             if raid_size_gb == 0:
@@ -1337,6 +1363,8 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                             "Physical disk {} has the same size in GB ({}) "
                             "as the RAID.  Unable to specify the OS disk to "
                             "Ironic.".format(fqdd, physical_disk_size_gb))
+
+
 
     if os_volume_size_gb is not None:
         # If os_volume_size_gb was specified then just blindly use that
