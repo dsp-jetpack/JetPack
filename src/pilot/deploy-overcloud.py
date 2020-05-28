@@ -497,15 +497,6 @@ def main():
         # It overrides the default roles_data.yaml
         env_opts = "-r ~/pilot/templates/roles_data.yaml"
 
-        # The network-environment.yaml must be included after the
-        # network-isolation.yaml
-        env_opts += " -e ~/pilot/templates/overcloud/environments/" \
-                    "network-isolation.yaml" \
-                    " -e ~/pilot/templates/network-environment.yaml" \
-                    " -e {}" \
-                    " -e ~/pilot/templates/ceph-osd-config.yaml" \
-                    "".format(nic_env_file)
-
         # The static-ip-environment.yaml must be included after the
         # network-environment.yaml
         if args.static_ips:
@@ -541,7 +532,7 @@ def main():
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "storage-environment.yaml" \
                     " -e ~/containers-prepare-parameter.yaml" \
-                    " -e ~/pilot/templates/dell-environment.yaml" 
+                    " -e ~/pilot/templates/dell-environment.yaml"
         host_config = False
         if args.enable_hugepages or args.enable_numa:
             env_opts += " -e ~/pilot/templates/overcloud/environments/" \
@@ -572,6 +563,15 @@ def main():
                         "backend.yaml"
         if args.enable_unity_manila:
             env_opts += " -e ~/pilot/templates/unity-manila-config.yaml"
+
+        # The network-environment.yaml must be included after other templates
+        # for effective parameter overrides (External vlan default route)
+        env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+                    "network-isolation.yaml" \
+                    " -e ~/pilot/templates/network-environment.yaml" \
+                    " -e {}" \
+                    " -e ~/pilot/templates/ceph-osd-config.yaml" \
+                    "".format(nic_env_file)
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
