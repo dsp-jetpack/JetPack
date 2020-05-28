@@ -27,11 +27,16 @@
     - primary
     - controller
   networks:
-    - External
-    - InternalApi
-    - Storage
-    - StorageMgmt
-    - Tenant
+    External:
+      subnet: external_subnet
+    InternalApi:
+      subnet: internal_api_subnet
+    Storage:
+      subnet: storage_subnet
+    StorageMgmt:
+      subnet: storage_mgmt_subnet
+    Tenant:
+      subnet: tenant_subnet
   # For systems with both IPv4 and IPv6, you may specify a gateway network for
   # each, such as ['ControlPlane', 'External']
   default_route_networks: ['External']
@@ -289,12 +294,15 @@
   # tags:
   #   - external_bridge
   networks:
-    - InternalApi
-    - Tenant
-    - Storage
+    InternalApi:
+      subnet: internal_api_subnet
+    Tenant:
+      subnet: tenant_subnet
+    Storage:
+      subnet: storage_subnet
   HostnameFormatDefault: '%stackname%-dell-compute-%index%'
-  # RoleParametersDefault:
-    # TunedProfileName: "virtual-host"
+  RoleParametersDefault:
+    TunedProfileName: "virtual-host"
   # Deprecated & backward-compatible values (FIXME: Make parameters consistent)
   # Set uses_deprecated_params to True if any deprecated params are used.
   uses_deprecated_params: True
@@ -368,9 +376,12 @@
   description: |
     Cinder Block Storage node role
   networks:
-    - InternalApi
-    - Storage
-    - StorageMgmt
+    InternalApi:
+      subnet: internal_api_subnet
+    Storage:
+      subnet: storage_subnet
+    StorageMgmt:
+      subnet: storage_mgmt_subnet
   uses_deprecated_params: False
   deprecated_nic_config_name: 'cinder-storage.yaml'
   # update_serial: 25
@@ -416,9 +427,12 @@
   description: |
     Swift Object Storage node role
   networks:
-    - InternalApi
-    - Storage
-    - StorageMgmt
+    InternalApi:
+      subnet: internal_api_subnet
+    Storage:
+      subnet: storage_subnet
+    StorageMgmt:
+      subnet: storage_mgmt_subnet
   # Deprecated & backward-compatible values (FIXME: Make parameters consistent)
   # Set uses_deprecated_params to True if any deprecated params are used.
   uses_deprecated_params: True
@@ -472,8 +486,10 @@
   description: |
     Ceph OSD Storage node role
   networks:
-    - Storage
-    - StorageMgmt
+    Storage:
+      subnet: storage_subnet
+    StorageMgmt:
+      subnet: storage_mgmt_subnet
   uses_deprecated_params: False
   deprecated_nic_config_name: 'ceph-storage.yaml'
   # CephOSD present so serial has to be 1
