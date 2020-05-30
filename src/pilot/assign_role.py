@@ -1100,34 +1100,6 @@ def generate_osd_config_without_journals(controllers, drives):
         osd_config['devices'].append(drive_device_name)
     return osd_config
 
-def generate_osd_config_with_journals(controllers, osd_drives, ssds):
-    if len(osd_drives) % len(ssds) != 0:
-        LOG.warning("There is not an even mapping of OSD drives to SSD "
-                    "journals.  This will cause inconsistent performance "
-                    "characteristics.")
-    osd_config = {
-        'osd_scenario': 'lvm',
-        'osd_objectstore': 'bluestore',
-        'devices': []}
-    osd_index = 0
-    remaining_ssds = len(ssds)
-    for ssd in ssds:
-        ssd_device_name = get_by_path_device_name(ssd, controllers,ssds[0].sas_address.lower()[:-2])
-
-        num_osds_for_ssd = int(math.ceil((len(osd_drives)-osd_index) /
-                                         (remaining_ssds * 1.0)))
-
-        osds_for_ssd = osd_drives[osd_index:
-                                  osd_index + num_osds_for_ssd]
-        for osd_drive in osds_for_ssd:
-            osd_drive_device_name = get_by_path_device_name(
-                    osd_drive, controllers, osds_for_ssd[0].sas_address.lower()[:-2])
-            osd_config['devices'].append(osd_drive_device_name)
-        osd_index += num_osds_for_ssd
-        remaining_ssds -= 1
-
-    return osd_config
-
 
 def get_by_path_device_name(physical_disk, controllers, ref_sas):
     if physical_disk.description.startswith("Virtual Disk"):
