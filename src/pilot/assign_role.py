@@ -1087,9 +1087,16 @@ def generate_osd_config_without_journals(controllers, drives):
         'osd_scenario': 'lvm',
         'osd_objectstore': 'bluestore',
         'devices': []}
+    # RHEL 8 generate a list of by path with a common sas adress for both HDD & SDD's
+    # based on the first sas adress found by alphabetical order
+    sas_ls = []
+    for drive in drives:
+        sas_ls.append(drive.sas_address.lower()[:-2])
+    sas_ls.sort()
+    base_sas = sas_ls[0]
     for drive in drives:
         drive_device_name = get_by_path_device_name(
-             drive, controllers)
+                drive, controllers, base_sas)
         osd_config['devices'].append(drive_device_name)
     return osd_config
 
@@ -1105,7 +1112,7 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds):
     osd_index = 0
     remaining_ssds = len(ssds)
     for ssd in ssds:
-        ssd_device_name = get_by_path_device_name(ssd, controllers)
+        ssd_device_name = get_by_path_device_name(ssd, controllers,ssds[0].sas_address.lower()[:-2])
 
         num_osds_for_ssd = int(math.ceil((len(osd_drives)-osd_index) /
                                          (remaining_ssds * 1.0)))
@@ -1114,7 +1121,7 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds):
                                   osd_index + num_osds_for_ssd]
         for osd_drive in osds_for_ssd:
             osd_drive_device_name = get_by_path_device_name(
-                osd_drive, controllers)
+                    osd_drive, controllers, osds_for_ssd[0].sas_address.lower()[:-2])
             osd_config['devices'].append(osd_drive_device_name)
         osd_index += num_osds_for_ssd
         remaining_ssds -= 1
@@ -1122,7 +1129,7 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds):
     return osd_config
 
 
-def get_by_path_device_name(physical_disk, controllers):
+def get_by_path_device_name(physical_disk, controllers, ref_sas):
     if physical_disk.description.startswith("Virtual Disk"):
         disk_index = physical_disk.description.split(" ")[2]
     else:
@@ -1145,9 +1152,11 @@ def get_by_path_device_name(physical_disk, controllers):
                 disk_index=disk_index)
         else:
             return ('/dev/disk/by-path/pci-0000:'
-                    '{pci_bus_number}:00.0-sas-0x{sas_address}-lun-0').format(
+                    '{pci_bus_number}:00.0-sas-exp0x{sas_address}ff-phy{dindex}-lun-0').format(
                 pci_bus_number=pci_bus_number,
-                sas_address=physical_disk.sas_address.lower())
+                sas_address=ref_sas, dindex=disk_index)
+
+
 
 
 def get_pci_bus_number(controller):
