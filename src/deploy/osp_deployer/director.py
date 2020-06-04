@@ -1512,7 +1512,7 @@ class Director(InfraHost):
         logger.info("**** Retrieving nodes information ")
         deployment_log = '/auto_results/deployment_summary.log'
         ip_info = []
-        fi = open(deployment_log, "wb")
+        fi = open(deployment_log, "w")
         try:
             logger.debug("retrieving node ip details ..")
             ip_info.append("====================================")
@@ -1751,7 +1751,7 @@ class Director(InfraHost):
 
         cmd_route = ("source ~/" + setts.overcloud_name + "rc;" +
                      "sudo ip route add " + setts.floating_ip_network +
-                     " dev eth0")
+                     " dev enp1s0")
         cmd_config = ("source ~/" + setts.overcloud_name + "rc;" +
 
                       "if [ ! -d " + self.tempest_directory +
