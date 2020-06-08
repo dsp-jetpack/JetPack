@@ -1687,7 +1687,7 @@ class Director(InfraHost):
         finally:
             for each in ip_info:
                 logger.debug(each)
-                fi.write(each + "\n")
+                fi.write((each + "\n").encode('utf-8'))
             fi.close()
 
     def inject_ssh_key(self):
