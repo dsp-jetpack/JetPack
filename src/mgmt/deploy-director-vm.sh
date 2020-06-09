@@ -67,11 +67,11 @@ EOFKS
 
 
 { 
-
+ntp=""
 while read iface ip mask mtu
 do
   flag=""
-
+  [[ ${iface} == ntpserver ]] && echo "echo NTPServers=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == rootpassword ]] && echo "echo rootpw ${ip} >> /tmp/ks_include.txt"
   [[ ${iface} == timezone ]] && echo "echo timezone ${ip} --utc >> /tmp/ks_include.txt"
 
@@ -147,6 +147,13 @@ chvt 8
 (
   # Source the variables from the %pre section
   . /root/ks_post_include.txt
+
+  #Configure Chrony
+  sed -i -e "/^server /d" /etc/ntp.conf
+  for ntps in ${NTPServers//,/ }
+  do
+    echo "server ${ntps}" >> /etc/chrony.conf
+  done
 
   # Create a new user
   useradd ${User}
