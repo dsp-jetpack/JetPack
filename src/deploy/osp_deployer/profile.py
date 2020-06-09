@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from settings.config import Settings
+from .settings.config import Settings
 import re
 import os
 import json
@@ -54,8 +54,8 @@ class Profile:
                             "/" + profile_definition['sample_ini'])
         Err = ''
         for items in profile_definition['associated_settings']:
-            for stanza, value in items.items():
-                for set, vals in value.items():
+            for stanza, value in list(items.items()):
+                for set, vals in list(value.items()):
                     allowed_settings = []
                     validated = False
                     try:
@@ -154,7 +154,7 @@ class Profile:
         list = input.split('-')
         min = int(list[0])
         max = int(list[1]) + 1
-        if int(value) not in range(min, max):
+        if int(value) not in list(range(min, max)):
             valid = False
         return valid
 

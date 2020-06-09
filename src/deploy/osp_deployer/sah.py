@@ -16,7 +16,7 @@
 
 from osp_deployer.settings.config import Settings
 from osp_deployer.checkpoints import Checkpoints
-from infra_host import InfraHost
+from .infra_host import InfraHost
 from auto_common import Scp, Ssh, FileHelper
 import logging
 import time
