@@ -422,3 +422,10 @@ class Sah(InfraHost):
             return True
         else:
             return False
+
+    def enable_chrony_ports(self):
+        cmds = ["firewall-cmd --permanent --zone=public --add-port=123/udp",
+                "sudo firewall-cmd --reload"
+               ]
+        for cmd in cmds:
+            self.run_as_root(cmd)
