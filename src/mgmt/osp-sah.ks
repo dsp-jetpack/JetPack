@@ -497,7 +497,7 @@ done
 systemctl enable chronyd
 sed -i -e "s/rhel/centos/" /etc/chrony.conf
 sed -i -e "/^server /d" /etc/chrony.conf
-ed -i -e "/^pool /d" /etc/chrony.conf
+sed -i -e "/^pool /d" /etc/chrony.conf
 
 for ntps in ${NTPServers//,/ }
 do
