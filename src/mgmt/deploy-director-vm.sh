@@ -149,7 +149,7 @@ chvt 8
   . /root/ks_post_include.txt
 
   #Configure Chrony
-  sed -i -e "/^server /d" /etc/ntp.conf
+  sed -i -e "/^server /d" /etc/chrony.conf
   for ntps in ${NTPServers//,/ }
   do
     echo "server ${ntps}" >> /etc/chrony.conf
