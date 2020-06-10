@@ -16,7 +16,7 @@
 
 from auto_common import Ipmi
 from osp_deployer.settings.config import Settings
-from profile import Profile
+from .profile import Profile
 import logging
 import os.path
 import collections
@@ -316,7 +316,7 @@ class DeployerSanity:
                 if self.is_valid_ip(str(getattr(each, att))):
                     ips.append(getattr(each, att))
         dups = [item for item,
-                count in collections.Counter(ips).items() if count > 1]
+                count in list(collections.Counter(ips).items()) if count > 1]
         if len(dups) > 0:
             raise AssertionError("Duplicate ips found in your \
                                  .properties/.ini :" + ', '.join(dups))
