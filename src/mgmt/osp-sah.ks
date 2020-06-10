@@ -496,16 +496,16 @@ done
 # Configure the chrony daemon for ntp
 systemctl enable chronyd
 sed -i -e "s/rhel/centos/" /etc/chrony.conf
+sed -i -e "/^server /d" /etc/chrony.conf
+ed -i -e "/^pool /d" /etc/chrony.conf
 
 for ntps in ${NTPServers//,/ }
 do
   echo "pool ${ntps}" >> /etc/chrony.conf
 done
 
-echo "local stratum 10" >> /etc/chrony.conf
-echo "manual" >> /etc/chrony.conf
 echo "allow ${NTPSettings}" >> /etc/chrony.conf
-echo "server 127.127.1.0" >> /etc/chrony.conf
+echo "local stratum 10" >> /etc/chrony.conf
 
 
 [[ ${AnacondaIface_noboot} ]] && { 

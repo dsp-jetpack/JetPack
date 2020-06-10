@@ -331,6 +331,7 @@ class Sah(InfraHost):
                 self.settings.domain,
                 "gateway " + self.settings.public_api_gateway,
                 "nameserver " + self.settings.name_server,
+                "ntpserver " + self.settings.sah_node.provisioning_ip,
                 "user " + self.settings.director_install_account_user,
                 "password " + self.settings.director_install_account_pwd,)
         if self.settings.use_satellite is True:
@@ -421,3 +422,10 @@ class Sah(InfraHost):
             return True
         else:
             return False
+
+    def enable_chrony_ports(self):
+        cmds = ["firewall-cmd --permanent --zone=public --add-port=123/udp",
+                "sudo firewall-cmd --reload"
+               ]
+        for cmd in cmds:
+            self.run_as_root(cmd)
