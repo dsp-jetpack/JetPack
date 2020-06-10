@@ -140,6 +140,7 @@ def deploy():
         sah_node.handle_lock_files()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
+        sah_node.enable_chrony_ports()
 
         director_ip = settings.director_node.public_api_ip
         if args.overcloud_only is False:
