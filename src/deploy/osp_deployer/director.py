@@ -14,16 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from osp_deployer.settings.config import Settings
-from checkpoints import Checkpoints
-from collections import defaultdict
-from infra_host import InfraHost
-from infra_host import directory_check
-from auto_common import Scp
 import json
 import logging
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -330,20 +323,15 @@ class Director(InfraHost):
             self.update_instack_env_subnets_edge()
 
     def configure_idracs(self):
-<<<<<<< HEAD
+        setts = self.settings
         nodes = list(self.settings.controller_nodes)
         nodes.extend(self.settings.compute_nodes)
         nodes.extend(self.settings.computehci_nodes)
         nodes.extend(self.settings.ceph_nodes)
-=======
-        setts = self.settings
-        nodes = list(setts.controller_nodes)
-        nodes.extend(setts.compute_nodes)
-        nodes.extend(setts.ceph_nodes)
->>>>>>> Edge WIP - merge master and refactoring
+
         cmd = "~/pilot/config_idracs.py "
 
-        for node_type, edge_site_nodes in setts.node_types_map.iteritems():
+        for node_type, edge_site_nodes in setts.node_types_map.items():
             nodes.extend(edge_site_nodes)
 
         json_config = defaultdict(dict)
@@ -443,10 +431,17 @@ class Director(InfraHost):
         from thread_helper import ThreadWithExHandling  # noqa
 
         roles_to_nodes = {}
+<<<<<<< HEAD
         roles_to_nodes["controller"] = self.settings.controller_nodes
         roles_to_nodes["compute"] = self.settings.compute_nodes
         roles_to_nodes["storage"] = self.settings.ceph_nodes
         roles_to_nodes["computehci"] = self.settings.computehci_nodes
+=======
+        roles_to_nodes["controller"] = setts.controller_nodes
+        roles_to_nodes["compute"] = setts.compute_nodes
+        roles_to_nodes["storage"] = setts.ceph_nodes
+
+>>>>>>> Edge WIP - merge master and refactoring
         # Add edge nodes if there are any defined
         for node_type, edge_site_nodes in setts.node_types_map.iteritems():
             roles_to_nodes[node_type] = edge_site_nodes
@@ -482,19 +477,15 @@ class Director(InfraHost):
         setts = self.settings
         # Update sshd_config to allow for more than 10 ssh sessions
         # Required for assign_role to run threaded if stamp has > 10 nodes
-<<<<<<< HEAD
+
         non_sah_nodes = (self.settings.controller_nodes +
                          self.settings.compute_nodes +
                          self.settings.computehci_nodes +
                          self.settings.ceph_nodes)
-=======
-        non_sah_nodes = (setts.controller_nodes +
-                         setts.compute_nodes +
-                         setts.ceph_nodes)
 
         for node_type, edge_site_nodes in setts.node_types_map.iteritems():
             non_sah_nodes.extend(edge_site_nodes)
->>>>>>> Edge WIP - merge master and refactoring
+
         # Allow for the number of nodes + a few extra sessions
         maxSessions = len(non_sah_nodes) + 10
         setts = ['MaxStartups', 'MaxSessions']
