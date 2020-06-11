@@ -79,6 +79,12 @@ parameter_defaults:
   # CHANGEME: Set to the router gateway on the provisioning network (or Undercloud IP)
   ControlPlaneDefaultRoute: 192.168.120.13
 
+  # CHANGEME: Set to the CIDR of the control plane network
+  ControlPlaneSubnetCidr: "24"
+
+  # CHANGEME: Set to the network/cidr of the control plane network
+  ControlPlaneNetCidr: 192.168.120.0/24
+
   # CHANGEME: Set to the IP address of the Undercloud
   EC2MetadataIp: 192.168.120.13
 

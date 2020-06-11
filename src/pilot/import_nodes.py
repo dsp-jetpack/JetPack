@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright (c) 2016-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import logging
 import os
 import sys
 import subprocess
+import utils
 from arg_helper import ArgHelper
 from command_helper import Exec
 from ironic_helper import IronicHelper
@@ -28,7 +29,7 @@ from logging_helper import LoggingHelper
 logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
-DOWNSTREAM_ATTRS = ["model", "provisioning_mac", "service_tag"]
+DOWNSTREAM_ATTRS = ["model", "provisioning_mac", "service_tag", "subnet"]
 
 
 def parse_arguments():
@@ -52,13 +53,16 @@ def main():
     import_json = os.path.expanduser('~/nodes.json')
     content = json.load(open(args.node_definition))
     for node in content['nodes']:
-        for k in list(node):
+        for k in list(node.keys()):
             if k in DOWNSTREAM_ATTRS:
                 node.pop(k)
     with open(import_json, 'w') as out:
         json.dump(content, out)
     logger.info("Importing {} into ironic".format(args.node_definition))
     cmd = ["openstack", "overcloud", "node", "import", import_json]
+    is_enable_routed_networks = utils.Utils.is_enable_routed_networks()
+    logger.debug("Is routed networks enabled: %s",
+                 str(is_enable_routed_networks))
     exit_code, stdin, stderr = Exec.execute_command(cmd)
     if exit_code != 0:
         logger.error("Failed to import nodes into ironic: {}, {}".format(
@@ -105,6 +109,16 @@ def main():
             patch.append({'op': 'add',
                           'value': node["provisioning_mac"],
                           'path': '/properties/provisioning_mac'})
+            if is_enable_routed_networks:
+                logger.info("Adding port with physical address to node: %s",
+                            str(ironic_node.uuid))
+                subnet = "ctlplane"
+                if "subnet" in node:
+                    subnet = node["subnet"]
+                kwargs = {'address': node["provisioning_mac"],
+                          'physical_network': subnet,
+                          'node_uuid': ironic_node.uuid}
+                ironic_client.port.create(**kwargs)
 
         ironic_client.node.update(ironic_node.uuid, patch)
 

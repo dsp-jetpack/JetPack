@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -390,20 +390,6 @@ class Sah(InfraHost):
                                     self.settings.director_node.root_password)
         logger.debug("director host is up")
 
-    def wait_for_vm_to_come_up(self, target_ip, user, password):
-        while True:
-            status = Ssh.execute_command(
-                target_ip,
-                user,
-                password,
-                "ps")[0]
-
-            if status != "host not up":
-                break
-
-            logger.debug("vm is not up.  Sleeping...")
-            time.sleep(10)
-
     def delete_director_vm(self):
         while "director" in \
                 self.run("virsh list --all | grep director")[0]:
@@ -429,3 +415,33 @@ class Sah(InfraHost):
                ]
         for cmd in cmds:
             self.run_as_root(cmd)
+    def create_subnet_routes_edge(self):
+        logger.info('Setting routes for edge subnets on SAH and '
+                    'restarting bridge interfaces')
+        setts = self.settings
+        ntdm = setts.node_type_data_map
+        route_br_mgmt = '/etc/sysconfig/network-scripts/route-br-mgmt'
+        route_br_prov = '/etc/sysconfig/network-scripts/route-br-prov'
+        with open(route_br_mgmt, 'w') as route_br_mgmt_stream:
+            for node_type, node_type_data in ntdm.iteritems():
+                mgmt_cidr = node_type_data['mgmt_cidr']
+                mgmt_bridge = 'br-mgmt'
+                route = "{} via {} dev {}\n".format(mgmt_cidr,
+                                                    setts.management_gateway,
+                                                    mgmt_bridge)
+                route_br_mgmt_stream.write(route)
+        with open(route_br_prov, 'w') as route_br_prov_stream:
+            for node_type, node_type_data in ntdm.iteritems():
+                prov_cidr = node_type_data['cidr']
+                prov_bridge = 'br-prov'
+                route = "{} via {} dev {}\n".format(prov_cidr,
+                                                    setts.provisioning_gateway,
+                                                    prov_bridge)
+                route_br_prov_stream.write(route)
+        # Restart networks
+        for bridge in ['br-mgmt', 'br-prov']:
+            cmd = 'ifdown {} ; ifup {}'.format(bridge, bridge)
+            subprocess.check_output(cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
+        logger.info('Routes for edge subnets on SAH updated')

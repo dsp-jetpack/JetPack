@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -39,4 +39,8 @@ class NodeConf:
         self.provisioning_netmask = None
         self.provisioning_slaves = None
         self.name_server = None
+        self.node_type = None
         self.__dict__ = json
+
+    def __str__(self):
+        return str(self.__dict__)

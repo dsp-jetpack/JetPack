@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 import logging
 import os
-import re
 import inspect
 import json
 import subprocess
@@ -29,8 +28,22 @@ logger = logging.getLogger("osp_deployer")
 class Settings:
     CEPH_OSD_CONFIG_FILE = 'pilot/templates/ceph-osd-config.yaml'
     TEMPEST_DEFAULT_WORKSPACE_NAME = 'mytempest'
+    UNDERCLOUD_CONFIG_FILE = 'pilot/undercloud.conf'
+    NIC_CONFIGS_PATH = '/pilot/templates/nic-configs/'
 
     settings = ''
+
+    def __str__(self):
+        settings = {}
+        settings["node_types"] = str(self.node_types)
+        settings["node_type_data_map"] = str(self.node_type_data_map)
+        if self.node_types_map:
+            settings["node_types_map"] = {}
+            _node_types_map = settings["node_types_map"]
+            for node_type, nodes in self.node_types_map.iteritems():
+                _node_types_map[node_type] = [str(node) for node in nodes]
+        settings["undercloud_conf"] = str(self.undercloud_conf)
+        return str(settings)
 
     def __init__(self, settings_file):
 
@@ -82,6 +95,10 @@ class Settings:
                                 "\" setting in your ini file [" + \
                                 stanza + "] section is deprecated and " +\
                                 "should be removed\n"
+            elif self.is_valid_subnet(yourConf, stanza):
+                logger.info("Found a valid node_type_tuples "
+                            "stanza in configuration: %s",
+                            stanza)
             else:
                 warning_msg = warning_msg + "Section [" + stanza + \
                     "] in your ini file is deprecated" +\
@@ -105,6 +122,8 @@ class Settings:
             'provisioning_network']
         self.private_api_network = network_settings[
             'private_api_network']
+        self.private_api_gateway = network_settings[
+            'private_api_gateway']
         self.private_api_allocation_pool_start = network_settings[
             'private_api_allocation_pool_start']
         self.private_api_allocation_pool_end = network_settings[
@@ -129,6 +148,7 @@ class Settings:
         self.provisioning_gateway = network_settings[
             'provisioning_gateway']
         self.storage_vlanid = network_settings['storage_vlanid']
+        self.storage_gateway = network_settings['storage_gateway']
         self.storage_netmask = network_settings['storage_netmask']
         self.public_api_vlanid = network_settings['public_api_vlanid']
         self.public_api_netmask = network_settings[
@@ -156,6 +176,7 @@ class Settings:
         self.discovery_ip_range = network_settings[
             'discovery_ip_range']
         self.tenant_tunnel_network = network_settings['tenant_tunnel_network']
+        self.tenant_tunnel_gateway = network_settings['tenant_tunnel_gateway']
         self.tenant_tunnel_network_allocation_pool_start = network_settings[
             'tenant_tunnel_network_allocation_pool_start']
         self.tenant_tunnel_network_allocation_pool_end = network_settings[
@@ -538,6 +559,8 @@ class Settings:
             '/mgmt/deploy-director-vm.sh'
         self.undercloud_conf = self.foreman_configuration_scripts +\
             '/pilot/undercloud.conf'
+        self.dashboard_deploy_py = self.foreman_configuration_scripts +\
+            '/mgmt/deploy-dashboard-vm.py'
         self.install_director_sh = self.foreman_configuration_scripts +\
             '/pilot/install-director.sh'
         self.deploy_overcloud_sh = self.foreman_configuration_scripts + \
@@ -569,17 +592,35 @@ class Settings:
         self.ipxe_rpm = self.foreman_configuration_scripts + \
             '/pilot/ipxe/ipxe-bootimgs-20151005-1.git6847232.el7.' \
             'test.noarch.rpm'
-        self.neutron_sriov_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/neutron-sriov.yaml'
+        self.nic_configs_abs_path = self.foreman_configuration_scripts + \
+            Settings.NIC_CONFIGS_PATH
+        self.undercloud_conf_path = self.foreman_configuration_scripts + \
+            '/' + Settings.UNDERCLOUD_CONFIG_FILE
+        self.templates_dir = self.foreman_configuration_scripts + \
+            '/pilot/templates'
 
+        # New custom node type and edge related fields
+        # Advanced Settings[node_types] in ini
+        self.node_types = []
+        # node_type_data_map maps the various node types to the networking
+        # attribute definitions in the .ini stanza that matches each node_type
+        self.node_type_data_map = {}
+        # node_types_map is a key/list map of all nodes in .properties
+        # that have a matching node_type attribute. Key is each node_type.
+        self.node_types_map = {}
+        self.undercloud_conf = self.parse_undercloud_conf()
+        # Process node types for edge sites etc
+        if ('node_types' in dev_settings
+                and len(dev_settings['node_types']) > 0):
+            self.process_node_type_settings(dev_settings['node_types'])
         # The NIC configurations settings are validated after the Settings
         # class has been instanciated.  Guard against the case where the two
         # fixed are missing here to prevent an exception before validation
         nics_settings = self.get_nics_settings()
         if 'nic_env_file' in nics_settings:
             self.nic_env_file = nics_settings['nic_env_file']
-            self.nic_env_file_path = self.foreman_configuration_scripts + \
-                '/pilot/templates/nic-configs/' + self.nic_env_file
+            self.nic_env_file_path = (self.nic_configs_abs_path
+                                      + self.nic_env_file)
         if 'sah_bond_opts' in nics_settings:
             self.sah_bond_opts = nics_settings['sah_bond_opts']
 
@@ -621,70 +662,101 @@ class Settings:
             logger.info("Smart NIC for SR-IOV Hardware Offload is disabled.")
 
         self.controller_nodes = []
+        self.computehci_nodes = []
         self.compute_nodes = []
         self.ceph_nodes = []
         self.switches = []
         self.nodes = []
-
         with open(self.network_conf) as config_file:
             json_data = json.load(config_file)
             for each in json_data:
                 node = NodeConf(each)
                 try:
-                    if node.is_sah == "true":
+                    node.is_sah = (True if node.is_sah
+                                   == "true" else False)
+                    if node.is_sah:
                         self.sah_node = node
                 except AttributeError:
                     pass
                 try:
-                    if node.is_director == "true":
+                    node.is_director = (True if node.is_director
+                                        == "true" else False)
+                    if node.is_director:
                         self.director_node = node
                 except AttributeError:
                     pass
                 try:
-                    if node.is_controller == "true":
-                        node.is_controller = True
+                    node.is_dashboard = (True if node.is_dashboard
+                                         == "true" else False)
+                    if node.is_dashboard:
+                        self.dashboard_node = node
+                except AttributeError:
+                    pass
+                try:
+                    node.is_controller = (True if node.is_controller
+                                          == "true" else False)
+                    if node.is_controller:
                         self.controller_nodes.append(node)
                 except AttributeError:
                     node.is_controller = False
                     pass
                 try:
-                    if node.is_compute == "true":
-                        node.is_compute = True
+                    node.is_computehci = (True if node.is_computehci
+                                          == "true" else False)
+                    if node.is_computehci:
+                        self.computehci_nodes.append(node)
+                except AttributeError:
+                    node.is_computehci = False
+                    pass
+
+                try:
+                    node.is_compute = (True if node.is_compute
+                                       == "true" else False)
+                    if node.is_compute:
                         self.compute_nodes.append(node)
                 except AttributeError:
                     node.is_compute = False
                     pass
                 try:
-                    if node.is_ceph_storage == "true":
+                    node.is_storage = (True if node.is_ceph_storage
+                                       == "true" else False)
+                    if node.is_storage:
                         self.ceph_nodes.append(node)
-                        node.is_storage = True
                 except AttributeError:
                     node.is_storage = False
                     pass
                 try:
-                    if node.is_switch == "true":
+                    node.is_switch = (True if node.is_switch
+                                      == "true" else False)
+                    if node.is_switch:
                         self.switches.append(node)
                 except AttributeError:
                     self.nodes.append(node)
                     pass
                 try:
-                    if node.skip_raid_config == "true":
-                        node.skip_raid_config = True
+                    node.skip_raid_config = (True if node.skip_raid_config
+                                             == "true" else False)
                 except AttributeError:
                     node.skip_raid_config = False
                     pass
                 try:
-                    if node.skip_bios_config == "true":
-                        node.skip_bios_config = True
+                    node.skip_bios_config = (True if node.skip_bios_config
+                                             == "true" else False)
                 except AttributeError:
                     node.skip_bios_config = False
                     pass
                 try:
-                    if node.skip_nic_config == "true":
-                        node.skip_nic_config = True
+                    node.skip_nic_config = (True if node.skip_nic_config
+                                            == "true" else False)
                 except AttributeError:
                     node.skip_nic_config = False
                     pass
+                if "node_type" in node.__dict__:
+                    logger.debug("node_type not in self.node_types_map: %s",
+                                 str(node.node_type not in self.node_types_map))
+                    if node.node_type not in self.node_types_map:
+                        self.node_types_map[node.node_type] = []
+                    self.node_types_map[node.node_type].append(node)
 
         Settings.settings = self
 
@@ -729,3 +801,30 @@ class Settings:
             logger.debug("unconventional setup...can t" +
                          " pick source version info")
             self.source_version = "????"
+
+    def process_node_type_settings(self, node_types):
+        self.node_types = (list(map(str.strip, node_types.split(','))))
+        logger.debug("Node types: %s", str(self.node_types))
+        for node_type in self.node_types:
+            # if we have ini section name that mathes node type
+            # this is edge an site subnet definition to be injected into
+            # undercloud.com
+            if self.conf.has_section(node_type):
+                node_type_section = self.get_settings_section(node_type)
+                self.node_type_data_map[node_type] = node_type_section
+
+    def parse_undercloud_conf(self):
+        undercloud_conf = ConfigParser.ConfigParser()
+        # The following line makes the parser return case sensitive keys
+        undercloud_conf.optionxform = str
+        undercloud_conf.read(self.undercloud_conf_path)
+        return undercloud_conf
+
+    def is_valid_subnet(self, conf, stanza):
+        if conf.has_option('Advanced Settings', 'node_types'):
+            node_types = (
+                list(map(str.strip, conf.get('Advanced Settings',
+                                             'node_types').split(','))))
+            if stanza in node_types and conf.has_section(stanza):
+                return True
+        return False
