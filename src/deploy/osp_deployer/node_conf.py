@@ -39,4 +39,8 @@ class NodeConf:
         self.provisioning_netmask = None
         self.provisioning_slaves = None
         self.name_server = None
+        self.node_type = None
         self.__dict__ = json
+
+    def __str__(self):
+        return str(self.__dict__)

@@ -121,6 +121,8 @@ class Settings:
             'provisioning_network']
         self.private_api_network = network_settings[
             'private_api_network']
+        self.private_api_gateway = network_settings[
+            'private_api_gateway']
         self.private_api_allocation_pool_start = network_settings[
             'private_api_allocation_pool_start']
         self.private_api_allocation_pool_end = network_settings[
@@ -145,6 +147,7 @@ class Settings:
         self.provisioning_gateway = network_settings[
             'provisioning_gateway']
         self.storage_vlanid = network_settings['storage_vlanid']
+        self.storage_gateway = network_settings['storage_gateway']
         self.storage_netmask = network_settings['storage_netmask']
         self.public_api_vlanid = network_settings['public_api_vlanid']
         self.public_api_netmask = network_settings[
@@ -172,6 +175,7 @@ class Settings:
         self.discovery_ip_range = network_settings[
             'discovery_ip_range']
         self.tenant_tunnel_network = network_settings['tenant_tunnel_network']
+        self.tenant_tunnel_gateway = network_settings['tenant_tunnel_gateway']
         self.tenant_tunnel_network_allocation_pool_start = network_settings[
             'tenant_tunnel_network_allocation_pool_start']
         self.tenant_tunnel_network_allocation_pool_end = network_settings[
@@ -604,6 +608,8 @@ class Settings:
         self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
         self.director_deploy_sh = self.foreman_configuration_scripts +\
             '/mgmt/deploy-director-vm.sh'
+        self.dashboard_deploy_py = self.foreman_configuration_scripts +\
+            '/mgmt/deploy-dashboard-vm.py'
         self.install_director_sh = self.foreman_configuration_scripts +\
             '/pilot/install-director.sh'
         self.deploy_overcloud_sh = self.foreman_configuration_scripts + \
@@ -616,7 +622,7 @@ class Settings:
             '/pilot/templates/dell-cinder-backends.yaml'
         self.dellsc_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellsc-cinder-config.yaml'
-       self.dell_unity_cinder_yaml = self.foreman_configuration_scripts + \
+        self.dell_unity_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellemc-unity-cinder-backend.yaml'
         self.unity_manila_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/unity-manila-config.yaml'
@@ -712,12 +718,12 @@ class Settings:
             logger.info("Smart NIC for SR-IOV Hardware Offload is disabled.")
 
         self.controller_nodes = []
+        self.computehci_nodes = []
         self.compute_nodes = []
         self.computehci_nodes = []
         self.ceph_nodes = []
         self.switches = []
         self.nodes = []
-
         with open(self.network_conf) as config_file:
             json_data = json.load(config_file)
             for each in json_data:
@@ -747,7 +753,7 @@ class Settings:
                 try:
                     node.is_computehci = (True if node.is_computehci
                                           == "true" else False)
-                    if node.is_computehci: 
+                    if node.is_computehci:
                         self.computehci_nodes.append(node)
                 except AttributeError:
                     node.is_computehci = False

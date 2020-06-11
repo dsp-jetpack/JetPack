@@ -409,7 +409,7 @@ def set_nic_setting(nic_id, attribute_name, value, drac_client):
 
 def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):
     LOG.info("Setting {} to {} boot".format(
-        ip_service_tag, boot_mode.upper()))
+             ip_service_tag, boot_mode.upper()))
     settings = {"BootMode": boot_mode}
     response = drac_client.set_bios_settings(settings)
 
@@ -431,7 +431,7 @@ def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):
 
 def config_idrac_settings(drac_client, ip_service_tag, password, node):
     LOG.info("Configuring initial iDRAC settings on {}".format(
-        ip_service_tag))
+             ip_service_tag))
 
     idrac_settings = {
         "IPMILan.1#Enable": "Enabled",
@@ -490,7 +490,7 @@ def config_hard_disk_drive_boot_sequence(drac_client, ip_service_tag):
             drac_client.change_boot_device_order('BCV', bcv_boot_device_ids)
 
             LOG.info("Rebooting {} to apply configuration".format(
-                ip_service_tag))
+                     ip_service_tag))
             job_id = drac_client.commit_pending_bios_changes(reboot=True)
 
             LOG.info("Waiting for iDRAC configuration to complete on "
@@ -544,7 +544,7 @@ def clear_job_queue(drac_client, ip_service_tag):
 
 def reset_idrac(drac_client, ip_service_tag):
     LOG.info('Resetting the iDRAC on {}'.format(ip_service_tag))
-    drac_client.reset_idrac(wait=True,ready_wait_time=60)
+    drac_client.reset_idrac(wait=True, ready_wait_time=60)
 
 
 def config_idrac(instack_lock,

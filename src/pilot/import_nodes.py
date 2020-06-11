@@ -29,7 +29,7 @@ from logging_helper import LoggingHelper
 logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
-DOWNSTREAM_ATTRS = ["model", "provisioning_mac", "service_tag"]
+DOWNSTREAM_ATTRS = ["model", "provisioning_mac", "service_tag", "subnet"]
 
 
 def parse_arguments():
@@ -109,11 +109,14 @@ def main():
             patch.append({'op': 'add',
                           'value': node["provisioning_mac"],
                           'path': '/properties/provisioning_mac'})
-            if utils.Utils.is_enable_routed_networks():
+            if is_enable_routed_networks:
                 logger.info("Adding port with physical address to node: %s",
                             str(ironic_node.uuid))
+                subnet = "ctlplane"
+                if "subnet" in node:
+                    subnet = node["subnet"]
                 kwargs = {'address': node["provisioning_mac"],
-                          'physical_network': 'ctlplane',
+                          'physical_network': subnet,
                           'node_uuid': ironic_node.uuid}
                 ironic_client.port.create(**kwargs)
 
