@@ -1,4 +1,6 @@
-# Copyright (c) 2015-2019 Dell Inc. or its subsidiaries.
+#!/usr/bin/env python
+
+# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,7 +58,8 @@ class Checkpoints:
             user,
             password,
             "subscription-manager status")[0]
-        while "Current" not in subscription_status and int(i) < int(retries):
+
+        while "Current" not in subscription_status and i < retries:
             if "Unknown" in subscription_status:
                 return subscription_status
             time.sleep(60)
@@ -265,6 +268,9 @@ class Checkpoints:
         expected_nodes = len(self.settings.controller_nodes) + len(
             self.settings.compute_nodes) + len(
             self.settings.ceph_nodes)
+        for node_type, nodes in self.settings.node_types_map.iteritems():
+            logger.info("Number of %s nodes: %s", node_type, str(len(nodes)))
+            expected_nodes += len(nodes)
         if len(ls_nodes) != expected_nodes:
             raise AssertionError(
                 "Expected amount of nodes registered in Ironic "
@@ -301,14 +307,14 @@ class Checkpoints:
             raise AssertionError(
                 "Director & Undercloud did not install properly, "
                 "check /pilot/install-director.log for details")
-                
-        cmd = "grep \"The Undercloud has been successfully installed\" " + "~/pilot/install-director.log"
+        cmd = " grep \"Undercloud install complete\" " \
+              "~/pilot/install-director.log"
         setts = self.settings
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
-        if "The Undercloud has been successfully installed" not in re[0]:
+        if "Undercloud install complete." not in re[0]:
             raise AssertionError(
                 "Director & Undercloud did not install properly,"
                 " check /pilot/install-director.log for details")
