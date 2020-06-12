@@ -24,7 +24,7 @@ import tempfile
 import time
 import yaml
 from jinja2 import Template
-from settings.config import Settings
+from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from collections import defaultdict
 from collections import OrderedDict
@@ -54,7 +54,7 @@ OTHER_POOLS = ['.rgw.buckets',
                'metrics']
 
 TEMPEST_CONF = 'tempest.conf'
-
+UNDERCLOUD_LOCAL_INTERFACE = 'enp2s0'
 OVERCLOUD_PATH = 'overcloud'
 OVERCLOUD_ENVS_PATH = OVERCLOUD_PATH + '/environments'
 
@@ -219,7 +219,7 @@ class Director(InfraHost):
                                  "/pilot/install-director.log" +
                                  " for details")
 
-        # TODO: believe this was moved to deployer.py 
+        # TODO: believe this was moved to deployer.py
         # tester = Checkpoints()
         # tester.verify_undercloud_installed()
 
@@ -275,7 +275,7 @@ class Director(InfraHost):
                 if hasattr(node, "idrac_ip"):
                     cmd += ' ' + node.idrac_ip
             # Add edge nodes if there are any defined
-            for node_type, edge_site_nodes in setts.node_types_map.iteritems():
+            for node_type, edge_site_nodes in setts.node_types_map.items():
                 for edge_node in edge_site_nodes:
                     if hasattr(edge_node, "idrac_ip"):
                         cmd += ' ' + edge_node.idrac_ip
@@ -302,7 +302,7 @@ class Director(InfraHost):
         expected_nodes = len(self.settings.controller_nodes) + len(
             self.settings.compute_nodes) + len(
             self.settings.ceph_nodes)
-        for node_type, nodes in setts.node_types_map.iteritems():
+        for node_type, nodes in setts.node_types_map.items():
             expected_nodes += len(nodes)
         found = self.run_tty(
             "grep pm_addr ~/instackenv.json | wc -l")[0].rstrip()
@@ -328,7 +328,7 @@ class Director(InfraHost):
         nodes.extend(setts.ceph_nodes)
         cmd = "~/pilot/config_idracs.py "
 
-        for node_type, edge_site_nodes in setts.node_types_map.iteritems():
+        for node_type, edge_site_nodes in setts.node_types_map.items():
             nodes.extend(edge_site_nodes)
 
         json_config = defaultdict(dict)
@@ -433,7 +433,7 @@ class Director(InfraHost):
         roles_to_nodes["storage"] = setts.ceph_nodes
 
         # Add edge nodes if there are any defined
-        for node_type, edge_site_nodes in setts.node_types_map.iteritems():
+        for node_type, edge_site_nodes in setts.node_types_map.items():
             roles_to_nodes[node_type] = edge_site_nodes
 
         threads = []
@@ -471,7 +471,7 @@ class Director(InfraHost):
                          setts.compute_nodes +
                          setts.ceph_nodes)
 
-        for node_type, edge_site_nodes in setts.node_types_map.iteritems():
+        for node_type, edge_site_nodes in setts.node_types_map.items():
             non_sah_nodes.extend(edge_site_nodes)
         # Allow for the number of nodes + a few extra sessions
         maxSessions = len(non_sah_nodes) + 10
@@ -1988,8 +1988,8 @@ class Director(InfraHost):
         function as DCN depends on Neutron's routed L3 networks feature.
 
         Also if there are defined edge sites the provisioning subnets must be
-        added to undercloud.conf prior to deploying the undercloud.
-        """
+        added to undercloud.conf prior to deploying the undercloud."""
+
         logger.info("Updating undercloud.conf")
         setts = self.settings
         uconf = setts.undercloud_conf
@@ -2000,11 +2000,20 @@ class Director(InfraHost):
         uconf.set('DEFAULT', 'undercloud_hostname', hostname)
         uconf.set('DEFAULT', 'local_ip',
                   setts.director_node.provisioning_ip + '/24')
-        uconf.set('DEFAULT', 'local_interface', 'eth1')
-        uconf.set('DEFAULT', 'masquerade_network',
-                  setts.provisioning_network)
+        uconf.set('DEFAULT', 'local_interface', UNDERCLOUD_LOCAL_INTERFACE)
+        uconf.set('DEFAULT', 'image_path', self.images_dir)
+
+        _cnt_images_file = self.home_dir + '/containers-prepare-parameter.yaml'
+        uconf.set('DEFAULT', 'container_images_file', _cnt_images_file)
+
+        uconf.set('DEFAULT', 'undercloud_nameservers',
+                  setts.name_server)
         uconf.set('DEFAULT', 'undercloud_ntp_servers',
                   setts.sah_node.provisioning_ip)
+        uconf.set('DEFAULT', 'undercloud_public_host',
+                  setts.undercloud_public_host)
+        uconf.set('DEFAULT', 'undercloud_admin_host',
+                  setts.undercloud_admin_host)
 
         # Always need control plane subnet
         uconf.set('ctlplane-subnet', 'cidr',
@@ -2018,25 +2027,25 @@ class Director(InfraHost):
         uconf.set('ctlplane-subnet', 'gateway',
                   setts.provisioning_gateway)
         # set enable_routed_networks create and deine routed networks
-        is_enable_routed_networks = bool(setts.node_type_data_map)
+        is_enable_routed_networks = str(bool(setts.node_type_data_map))
 
         uconf.set('DEFAULT', 'enable_routed_networks',
                   is_enable_routed_networks)
 
-        for node_type, node_type_data in setts.node_type_data_map.iteritems():
+        for node_type, node_type_data in setts.node_type_data_map.items():
             subnet_name = self._generate_subnet_name(node_type)
             subnets.append(subnet_name)
             if uconf.has_section(subnet_name):
                 uconf.remove_section(subnet_name)
             uconf.add_section(subnet_name)
-            for opt, val in node_type_data.iteritems():
+            for opt, val in node_type_data.items():
                 uconf.set(subnet_name, opt, val)
 
         uconf.set('DEFAULT', 'subnets', ','.join(subnets))
 
         stg_undercloud_conf_path = self.get_timestamped_path(STAGING_PATH,
                                                              "undercloud")
-        with open(stg_undercloud_conf_path, 'w+b') as undercloud_conf_fp:
+        with open(stg_undercloud_conf_path, 'w+') as undercloud_conf_fp:
             uconf.write(undercloud_conf_fp)
             undercloud_conf_fp.flush()
             undercloud_conf_fp.seek(0)
@@ -2104,7 +2113,7 @@ class Director(InfraHost):
         uploaded to: ~/pilot/templates/nic_configs/5_port/controller.yaml
         """
         nic_dict_by_port_num = self._group_node_types_by_num_nics()
-        for num_nics, node_type_tuples in nic_dict_by_port_num.iteritems():
+        for num_nics, node_type_tuples in nic_dict_by_port_num.items():
 
             port_dir = "{}_port".format(num_nics)
             cntl_file = os.path.join(self.nic_configs_dir,
@@ -2157,7 +2166,7 @@ class Director(InfraHost):
         see: update_nic_environment_edge()
         """
         setts = self.settings
-        for node_type, node_type_data in setts.node_type_data_map.iteritems():
+        for node_type, node_type_data in setts.node_type_data_map.items():
             num_nics = node_type_data['nic_port_count']
 
             port_dir = "{}_port".format(num_nics)
@@ -2215,7 +2224,7 @@ class Director(InfraHost):
         to ~/pilot/templates/nic_configs/5_port/nic_environement.yaml
         """
         nic_dict_by_port_num = self._group_node_types_by_num_nics()
-        for num_nics, node_type_tuples in nic_dict_by_port_num.iteritems():
+        for num_nics, node_type_tuples in nic_dict_by_port_num.items():
             port_dir = "{}_port".format(num_nics)
             nic_env_file = os.path.join(self.nic_configs_dir,
                                         port_dir,
@@ -2302,7 +2311,7 @@ class Director(InfraHost):
                                          Loader=OrderedLoader)
             res_reg = stg_net_iso_tmpl['resource_registry']
 
-            for nt, nt_data in setts.node_type_data_map.iteritems():
+            for nt, nt_data in setts.node_type_data_map.items():
                 res_reg.update(self._generate_network_isolation(nt))
 
         with open(stg_net_iso_path, 'w') as stg_net_iso_fp:
@@ -2330,7 +2339,7 @@ class Director(InfraHost):
                                           Loader=OrderedLoader)
             param_def = stg_dell_env_tmpl['parameter_defaults']
 
-            for nt, nt_data in setts.node_type_data_map.iteritems():
+            for nt, nt_data in setts.node_type_data_map.items():
                 role = self._generate_cc_role(nt)
                 edge_subnet = self._generate_subnet_name(nt)
                 role_subnet_key = role + 'ControlPlaneSubnet'
@@ -2338,7 +2347,7 @@ class Director(InfraHost):
                 xtra_cfg_key = role + 'ExtraConfig'
                 param_def[xtra_cfg_key] = self._generate_extra_config(nt)
 
-            for node_type, nodes in setts.node_types_map.iteritems():
+            for node_type, nodes in setts.node_types_map.items():
                 role = self._generate_cc_role(node_type)
                 role_count_key = role + 'Count'
                 param_def[role_count_key] = len(nodes)
@@ -2362,7 +2371,7 @@ class Director(InfraHost):
                                                       NET_DATA, "yaml")
         stg_net_data_lst = self._generate_default_networks_data()
 
-        for node_type, node_type_data in setts.node_type_data_map.iteritems():
+        for node_type, node_type_data in setts.node_type_data_map.items():
             nd = self._generate_network_data(node_type, node_type_data)
             stg_net_data_lst.extend(nd)
         with open(stg_net_data_file, 'w') as stg_net_data_fp:
@@ -2405,7 +2414,7 @@ class Director(InfraHost):
             params[ten_key] = setts.tenant_tunnel_gateway
             params[ext_key] = setts.public_api_gateway
 
-            for nt, nt_data in setts.node_type_data_map.iteritems():
+            for nt, nt_data in setts.node_type_data_map.items():
                 params.update(
                     self._generate_network_environment_params(nt, nt_data))
 
@@ -2426,7 +2435,7 @@ class Director(InfraHost):
         mgmt_gw = setts.management_gateway
         route_eth2 = " > /etc/sysconfig/network-scripts/route-eth2"
         mgmt_cmd = ""
-        for node_type, node_type_data in setts.node_type_data_map.iteritems():
+        for node_type, node_type_data in setts.node_type_data_map.items():
             mgmt_cidr = node_type_data['mgmt_cidr']
             mgmt_nic = "eth2"
             mgmt_cmd += "{} via {} dev {}\n".format(mgmt_cidr,
@@ -2486,7 +2495,7 @@ class Director(InfraHost):
                                                Loader=OrderedLoader)
             res_reg = stg_static_ip_env_tmpl['resource_registry']
             params = stg_static_ip_env_tmpl['parameter_defaults']
-            for node_type, nodes in setts.node_types_map.iteritems():
+            for node_type, nodes in setts.node_types_map.items():
                 res_reg.update(self._generate_static_ip_ports(node_type))
                 params.update(self._generate_static_ip_params(node_type,
                                                               nodes))
@@ -2499,7 +2508,7 @@ class Director(InfraHost):
 
     def _subnet_name_from_net(self, node_mgmt_net):
         setts = self.settings
-        for node_type, node_type_data in setts.node_type_data_map.iteritems():
+        for node_type, node_type_data in setts.node_type_data_map.items():
             subnet_net = node_type_data['mgmt_cidr'].rsplit('.', 1)[0]
             if node_mgmt_net == subnet_net:
                 return self._generate_subnet_name(node_type)
@@ -3206,7 +3215,7 @@ class Director(InfraHost):
         networks_param_mapping[EXTERNAL_NET[0]] = external
         network_data_list = []
         suffix = '_' + self._generate_role_network_lower(node_type)
-        for network, mapping in networks_param_mapping.iteritems():
+        for network, mapping in networks_param_mapping.items():
             nd = OrderedDict()
             name_cc = network + role
             name_lower = mapping['lower']
@@ -3294,7 +3303,7 @@ class Director(InfraHost):
     def _group_node_types_by_num_nics(self):
         setts = self.settings
         nic_dict_by_port_num = {}
-        for node_type, node_type_data in setts.node_type_data_map.iteritems():
+        for node_type, node_type_data in setts.node_type_data_map.items():
             num_nics = node_type_data['nic_port_count']
             if num_nics not in nic_dict_by_port_num:
                 nic_dict_by_port_num[num_nics] = []

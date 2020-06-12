@@ -40,7 +40,7 @@ class Settings:
         if self.node_types_map:
             settings["node_types_map"] = {}
             _node_types_map = settings["node_types_map"]
-            for node_type, nodes in self.node_types_map.iteritems():
+            for node_type, nodes in self.node_types_map.items():
                 _node_types_map[node_type] = [str(node) for node in nodes]
         settings["undercloud_conf"] = str(self.undercloud_conf)
         return str(settings)
@@ -557,8 +557,6 @@ class Settings:
         self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
         self.director_deploy_sh = self.foreman_configuration_scripts +\
             '/mgmt/deploy-director-vm.sh'
-        self.undercloud_conf = self.foreman_configuration_scripts +\
-            '/pilot/undercloud.conf'
         self.dashboard_deploy_py = self.foreman_configuration_scripts +\
             '/mgmt/deploy-dashboard-vm.py'
         self.install_director_sh = self.foreman_configuration_scripts +\
@@ -814,7 +812,7 @@ class Settings:
                 self.node_type_data_map[node_type] = node_type_section
 
     def parse_undercloud_conf(self):
-        undercloud_conf = ConfigParser.ConfigParser()
+        undercloud_conf = configparser.ConfigParser()
         # The following line makes the parser return case sensitive keys
         undercloud_conf.optionxform = str
         undercloud_conf.read(self.undercloud_conf_path)
