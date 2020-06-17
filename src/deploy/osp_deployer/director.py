@@ -1671,10 +1671,20 @@ class Director(InfraHost):
                 overcloud_pass = self.run('grep "OS_PASSWORD=" ~/' +
                                           self.settings.overcloud_name +
                                           'rc')[0].split('=')[1]
+                dashboard_pwd = self.run_tty('sudo grep dashboard_admin_password /var/lib/mistral/' +
+                                             self.settings.overcloud_name +
+                                             '/ceph-ansible/group_vars/all.yml')[0].split(' ')[1]
+                dashboard_ip = self.run_tty('sudo grep dashboard_frontend /var/lib/mistral/' +
+                                            self.settings.overcloud_name + 
+                                            '/ceph-ansible/group_vars/mgrs.yml')[0].split(' ')[1]
                 ip_info.append("OverCloud Horizon        : " +
                                overcloud_endpoint)
                 ip_info.append("OverCloud admin password : " +
                                overcloud_pass)
+                ip_info.append("Ceph Dashboard           : " +
+                               "http://" + dashboard_ip.rstrip()+ ":8444")
+                ip_info.append("Dashboard admin password : " + 
+                               dashboard_pwd)
                 ip_info.append("cloud_repo # " +
                                self.settings.cloud_repo_version)
                 ip_info.append("deploy-auto # " +

@@ -570,7 +570,6 @@ def main():
                     "network-isolation.yaml" \
                     " -e ~/pilot/templates/network-environment.yaml" \
                     " -e {}" \
-                    " -e ~/pilot/templates/ceph-osd-config.yaml" \
                     "".format(nic_env_file)
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
@@ -583,6 +582,8 @@ def main():
               "environments/ceph-ansible/ceph-ansible.yaml" \
               " -e /usr/share/openstack-tripleo-heat-templates/" \
               "environments/ceph-ansible/ceph-rgw.yaml" \
+              " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-dashboard.yaml" \
+              " -e ~/pilot/templates/ceph_dashboard_admin.yaml " \
               " {}" \
               " --libvirt-type kvm" \
               " --ntp-server {}" \
