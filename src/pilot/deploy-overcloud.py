@@ -400,7 +400,7 @@ def main():
                             required=True,
                             default=1500,
                             help="Tenant Network MTU")
-        parder.add_argument("--dashboard_enable",
+        parser.add_argument("--dashboard_enable",
                             action='store_true',
                             default=False,
                             help="Enable the ceph dashboard deployment")
