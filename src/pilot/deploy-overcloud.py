@@ -569,7 +569,7 @@ def main():
             env_opts += " -e ~/pilot/templates/unity-manila-config.yaml"
         if args.dashboard_enable:
             env_opts += " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-dashboard.yaml"
-            env_opts += "" -e ~/pilot/templates/ceph_dashboard_admin.yaml "
+            env_opts += " -e ~/pilot/templates/ceph_dashboard_admin.yaml "
         # The network-environment.yaml must be included after other templates
         # for effective parameter overrides (External vlan default route)
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
