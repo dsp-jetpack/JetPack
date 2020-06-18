@@ -1475,6 +1475,8 @@ class Director(InfraHost):
             self.settings.innodb_buffer_pool_instances
         if self.settings.deploy_overcloud_debug:
             cmd += " --debug"
+        if selfsettings.enable_dashboard is True:
+            cmd += " --dashboard_enable"
 
         cmd += " > overcloud_deploy_out.log 2>&1"
         self.run_tty(cmd)
@@ -1512,7 +1514,7 @@ class Director(InfraHost):
         logger.info("**** Retrieving nodes information ")
         deployment_log = '/auto_results/deployment_summary.log'
         ip_info = []
-        fi = open(deployment_log, "w")
+        fi = open(deployment_log, "wb")
         try:
             logger.debug("retrieving node ip details ..")
             ip_info.append("====================================")

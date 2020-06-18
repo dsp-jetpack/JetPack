@@ -400,6 +400,10 @@ def main():
                             required=True,
                             default=1500,
                             help="Tenant Network MTU")
+        parder.add_argument("--dashboard_enable",
+                            action='store_true',
+                            default=False,
+                            help="Enable the ceph dashboard deployment")
         LoggingHelper.add_argument(parser)
         args = parser.parse_args()
         LoggingHelper.configure_logging(args.logging_level)
@@ -563,7 +567,9 @@ def main():
                         "backend.yaml"
         if args.enable_unity_manila:
             env_opts += " -e ~/pilot/templates/unity-manila-config.yaml"
-
+        if args.dashboard_enable:
+            env_opts += " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-dashboard.yaml"
+            env_opts += "" -e ~/pilot/templates/ceph_dashboard_admin.yaml "
         # The network-environment.yaml must be included after other templates
         # for effective parameter overrides (External vlan default route)
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
@@ -582,8 +588,6 @@ def main():
               "environments/ceph-ansible/ceph-ansible.yaml" \
               " -e /usr/share/openstack-tripleo-heat-templates/" \
               "environments/ceph-ansible/ceph-rgw.yaml" \
-              " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-dashboard.yaml" \
-              " -e ~/pilot/templates/ceph_dashboard_admin.yaml " \
               " {}" \
               " --libvirt-type kvm" \
               " --ntp-server {}" \
