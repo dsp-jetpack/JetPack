@@ -1475,7 +1475,7 @@ class Director(InfraHost):
             self.settings.innodb_buffer_pool_instances
         if self.settings.deploy_overcloud_debug:
             cmd += " --debug"
-        if selfsettings.enable_dashboard is True:
+        if self.settings.enable_dashboard is True:
             cmd += " --dashboard_enable"
 
         cmd += " > overcloud_deploy_out.log 2>&1"
