@@ -400,6 +400,10 @@ def main():
                             required=True,
                             default=1500,
                             help="Tenant Network MTU")
+        parser.add_argument("--dashboard_enable",
+                            action='store_true',
+                            default=False,
+                            help="Enable the ceph dashboard deployment")
         LoggingHelper.add_argument(parser)
         args = parser.parse_args()
         LoggingHelper.configure_logging(args.logging_level)
@@ -563,14 +567,15 @@ def main():
                         "backend.yaml"
         if args.enable_unity_manila:
             env_opts += " -e ~/pilot/templates/unity-manila-config.yaml"
-
+        if args.dashboard_enable:
+            env_opts += " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-dashboard.yaml"
+            env_opts += " -e ~/pilot/templates/ceph_dashboard_admin.yaml "
         # The network-environment.yaml must be included after other templates
         # for effective parameter overrides (External vlan default route)
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "network-isolation.yaml" \
                     " -e ~/pilot/templates/network-environment.yaml" \
                     " -e {}" \
-                    " -e ~/pilot/templates/ceph-osd-config.yaml" \
                     "".format(nic_env_file)
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
