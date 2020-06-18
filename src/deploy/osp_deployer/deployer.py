@@ -191,7 +191,7 @@ def deploy():
         logger.info("Discovering nodes")
         director_vm.node_discovery()
         logger.info("Configuring iDRACs")
-        director_vm.configure_idracs()
+        #director_vm.configure_idracs()
         logger.info("Importing nodes")
         director_vm.import_nodes()
         logger.info("Introspecting nodes")
