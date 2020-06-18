@@ -1683,10 +1683,11 @@ class Director(InfraHost):
                                overcloud_endpoint)
                 ip_info.append("OverCloud admin password : " +
                                overcloud_pass)
-                ip_info.append("Ceph Dashboard           : " +
-                               "http://" + dashboard_ip.rstrip()+ ":8444")
-                ip_info.append("Dashboard admin password : " + 
-                               dashboard_pwd)
+                if self.settings.enable_dashboard is True:
+                    ip_info.append("Ceph Dashboard           : " +
+                                   "http://" + dashboard_ip.rstrip()+ ":8444")
+                    ip_info.append("Dashboard admin password : " + 
+                                   dashboard_pwd)
                 ip_info.append("cloud_repo # " +
                                self.settings.cloud_repo_version)
                 ip_info.append("deploy-auto # " +
