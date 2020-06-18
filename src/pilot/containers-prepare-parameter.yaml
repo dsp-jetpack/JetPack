@@ -10,9 +10,9 @@ parameter_defaults:
       ceph_alertmanager_image: ose-prometheus-alertmanager
       ceph_alertmanager_namespace: registry.redhat.io/openshift4
       ceph_alertmanager_tag: 4.1
-      ceph_grafana_image: rhceph-3-dashboard-rhel7
+      ceph_grafana_image: rhceph-4-dashboard-rhel8
       ceph_grafana_namespace: registry.redhat.io/rhceph
-      ceph_grafana_tag: 3
+      ceph_grafana_tag: 4
       ceph_image: rhceph-4-rhel8
       ceph_namespace: registry.redhat.io/rhceph
       ceph_node_exporter_image: ose-prometheus-node-exporter
