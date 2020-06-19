@@ -30,12 +30,6 @@ def main():
         CredentialHelper.get_undercloud_creds()
     auth_url = os_auth_url + "/v3"
 
-    kwargs = {'os_username': os_username,
-              'os_password': os_password,
-              'os_auth_url': os_auth_url,
-              'os_tenant_name': os_tenant_name,
-              'os_user_domain_name': os_user_domain_name,
-              'os_project_domain_name': os_project_domain_name}
     ironic = IronicHelper.get_ironic_client()
     nodes = ironic.node.list(detail=True)
 
