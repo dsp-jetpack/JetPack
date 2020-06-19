@@ -22,7 +22,7 @@ from novaclient import client as novaclient
 from os import path
 from subprocess import check_output
 from credential_helper import CredentialHelper
-
+from ironic_helper import IronicHelper
 
 def main():
     os_auth_url, os_tenant_name, os_username, os_password, \
@@ -36,7 +36,7 @@ def main():
               'os_tenant_name': os_tenant_name,
               'os_user_domain_name': os_user_domain_name,
               'os_project_domain_name': os_project_domain_name}
-    ironic = ironicclient.client.get_client(1, **kwargs)
+    ironic = IronicHelper.get_ironic_client()
     nodes = ironic.node.list(detail=True)
 
     auth = v3.Password(
