@@ -2433,16 +2433,16 @@ class Director(InfraHost):
                     'register with virsh properly')
         setts = self.settings
         mgmt_gw = setts.management_gateway
-        route_eth2 = " > /etc/sysconfig/network-scripts/route-eth2"
+        route_file = (" > /etc/sysconfig/network-scripts/route-"
+                      + UNDERCLOUD_LOCAL_INTERFACE)
         mgmt_cmd = ""
         for node_type, node_type_data in setts.node_type_data_map.items():
             mgmt_cidr = node_type_data['mgmt_cidr']
-            mgmt_nic = "eth2"
             mgmt_cmd += "{} via {} dev {}\n".format(mgmt_cidr,
                                                     mgmt_gw,
-                                                    mgmt_nic)
+                                                    UNDERCLOUD_LOCAL_INTERFACE)
 
-        mgmt_cmd = "echo $'" + mgmt_cmd + "'" + route_eth2
+        mgmt_cmd = "echo $'" + mgmt_cmd + "'" + route_file
         self.run_as_root(mgmt_cmd)
         logger.info('Restarting Director VM')
         self.run_as_root('init 6')
