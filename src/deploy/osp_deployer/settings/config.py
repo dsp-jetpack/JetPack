@@ -46,7 +46,6 @@ class Settings:
         return str(settings)
 
     def __init__(self, settings_file):
-
         assert os.path.isfile(
             settings_file), settings_file + " file does not exist"
 
@@ -553,6 +552,8 @@ class Settings:
 
         self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
         self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
+        self.jinja2_templates = (self.foreman_configuration_scripts
+                                 + "/deploy/jinja2_templates")
 
         self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
         self.director_deploy_sh = self.foreman_configuration_scripts +\
@@ -757,6 +758,8 @@ class Settings:
                     self.node_types_map[node.node_type].append(node)
 
         Settings.settings = self
+        logger.info("Settings.settings is: %s",
+                    str(Settings.settings))
 
     def get_curated_nics_settings(self):
         nics_settings = self.get_nics_settings()
