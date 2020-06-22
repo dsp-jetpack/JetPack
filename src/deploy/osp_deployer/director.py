@@ -22,6 +22,8 @@ import sys
 import tempfile
 import time
 import yaml
+from jinja2 import Environment
+from jinja2 import FileSystemLoader
 from jinja2 import Template
 from settings.config import Settings
 from checkpoints import Checkpoints
@@ -34,7 +36,10 @@ from auto_common.yaml_utils import OrderedDumper
 from auto_common.yaml_utils import OrderedLoader
 
 
-logger = logging.getLogger("osp_deployer")
+# logger = logging.getLogger("osp_deployer")
+#TODO after testing delete two logging config lines below
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+logger = logging.getLogger()
 
 exitFlag = 0
 
@@ -88,6 +93,7 @@ class Director(InfraHost):
     def __init__(self):
 
         self.settings = Settings.settings
+        logger.info("Settings.settings: %s", str(Settings.settings))
         self.user = self.settings.director_install_account_user
         self.ip = self.settings.director_node.public_api_ip
         self.provisioning_ip = self.settings.director_node.provisioning_ip
@@ -110,6 +116,9 @@ class Director(InfraHost):
         self.tempest_conf = os.path.join(self.tempest_directory,
                                          "etc", TEMPEST_CONF)
         self.default_compute_services = []
+
+        self.jinja2_env = Environment(
+            loader=FileSystemLoader(self.settings.jinja2_templates))
 
         cmd = "mkdir -p " + self.pilot_dir
         self.run(cmd)
@@ -2516,6 +2525,7 @@ class Director(InfraHost):
         """Generate and upload network_data.yaml for default overcloud networks
         and edge site specific networks"""
         logger.debug("Creating network_data.yaml for edge networks.")
+
         setts = self.settings
         net_data_path = self.templates_dir
         net_data_file = os.path.join(net_data_path, NET_DATA + ".yaml")
@@ -2523,16 +2533,22 @@ class Director(InfraHost):
         stg_net_data_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
                                                       NET_DATA, "yaml")
         stg_net_data_lst = self._generate_default_networks_data()
+        _tmplt_f = "network_data_subnets_routed.j2.yaml"
+        tmplt = self.jinja2_env.get_template(_tmplt_f)
 
         for node_type, node_type_data in setts.node_type_data_map.iteritems():
             nd = self._generate_network_data(node_type, node_type_data)
             stg_net_data_lst.extend(nd)
+        tmplt_data = {'networks': stg_net_data_lst}
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
         with open(stg_net_data_file, 'w') as stg_net_data_fp:
-            yaml.dump(stg_net_data_lst, stg_net_data_fp, OrderedDumper,
-                      default_flow_style=False)
+            stg_net_data_fp.write(rendered_tmplt)
+            # yaml.dump(stg_net_data_lst, stg_net_data_fp, OrderedDumper,
+            #          default_flow_style=False)
         # pyyaml has bug in it where if you pass in 'string',
         # you get '''string''', sed the file prior to uploading
-        subprocess.call(['sed', '-i', '-e',  "s/'''/'/g", stg_net_data_file])
+        # subprocess.call(['sed', '-i', '-e',  "s/'''/'/g", stg_net_data_file])
         self.upload_file(stg_net_data_file, net_data_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
@@ -3236,13 +3252,33 @@ class Director(InfraHost):
 
         :returns: list of dicts for overcloud networks
         example:
-            [{'name': InternalApi
-              'name_lower': internal_api
-              'ip_subnet': '192.168.140.0/24'
-              'vip': true
-              'vlan': 140
+            [{'name': InternalApi,
+              'name_lower': internal_api_custom_name,
+              # if name_lower is set to a custom name this should be set
+              # to original default (optional).  This field is only necessary
+              # when changing the default network names,
+              # not when adding a new custom network.
+              'service_net_map_replace': 'internal_api',
+              # for existing stack you may need to override the default
+              # transformation for the resource's name.
+              'compat_name': DeprecatedInternalApiName,
+              'vip': true,
+              'enabled': true,
+              'vlan': 140,
+              'ip_subnet': '192.168.140.0/24',
               'allocation_pools': [{end: '192.168.110.20',
-                                    start: '192.168.110.20'}
+                                    start: '192.168.110.20'}],
+              'routes': [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}],
+              'gateway_ip': '192.168.140.1',
+
+              'ipv6': '{{network.ipv6}}',
+              'ipv6_subnet': '{{network.ipv6_subnet}}',
+              'ipv6_allocation_pools': [{'start': '2001:db8:fd00:1000::10',
+                  'end': '2001:db8:fd00:1000:ffff:ffff:ffff:fffe'}],
+              'gateway_ipv6': '2001:db8:fd00:1000::/64',
+              'routes_ipv6': [{'destination':'fd00:fd00:fd00:3004::/64',
+                               'nexthop':'fd00:fd00:fd00:3000::1'}],
+
                },
             ...
             ]
@@ -3479,3 +3515,9 @@ class Director(InfraHost):
                 _srv_defs = compute_yaml[0]['ServicesDefault']
                 self.default_compute_services = _srv_defs
         return self.default_compute_services
+
+if __name__ == "__main__":
+    settings = Settings("/root/R62.ini")
+    director = Director()
+
+    director.create_network_data()

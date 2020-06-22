@@ -604,6 +604,8 @@ class Settings:
 
         self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
         self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
+        self.jinja2_templates = (self.foreman_configuration_scripts
+                                 + "/deploy/jinja2_templates")
 
         self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
         self.director_deploy_sh = self.foreman_configuration_scripts +\
