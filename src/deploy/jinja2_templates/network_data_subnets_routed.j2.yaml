@@ -77,20 +77,31 @@
 {%- for network in networks %}
 - name: {{network.name}}
   name_lower: {{network.name_lower}}
+  {%- if network.compat_name %}
   compat_name: {{network.compat_name}}
-  vip: {{network.needs_vip}}
-  enabled: {{network.is_enabled}}
+  {%- endif %}
+  vip: {{network.vip}}
+  enabled: {{network.enabled}}
   vlan: {{network.vlan}}
   ip_subnet: '{{network.ip_subnet}}'
-  allocation_pools: [{'start': '{{network.pool_start}}', 'end': '{{network.pool_end}}'}]
-  routes: '{{network.routes}}'
-  gateway_ip: '{{network.gateway}}'
+  allocation_pools: [{%- for pool in network.allocation_pools %}{'start': '{{pool.start}}', 'end': '{{pool.end}}'}{{ "," if not loop.last }}{%- endfor %}]
+  {%- if network.routes %}
+  routes: {{network.routes}}
+  {%- endif %}
+  {%- if network.gateway_ip %}
+  gateway_ip: '{{network.gateway_ip}}'
+  {%- endif %}
+  {%- if network.service_net_map_replace %}
   service_net_map_replace: '{{network.service_net_map_replace}}'
+  {%- endif %}
+  {%- if network.ipv6 %}
   ipv6: '{{network.ipv6}}'
   ipv6_subnet: '{{network.ipv6_subnet}}'
-  ipv6_allocation_pools: [{'start': '{{network.ipv6_pool_start}}', 'end': '{{network.ipv6_pool_end}}'}]
+  ipv6_allocation_pools: [{'start': '{{network.ipv6_start}}', 'end': '{{network.ipv6_end}}'}]
   gateway_ipv6: '{{network.gateway_ipv6}}'
   routes_ipv6: '{{network.routes_ipv6}}'
+  {%- endif %}
+  {%- if network.subnets %}
   subnets:
   {%- for subnet in network.subnets %}
     {{subnet.name}}:
@@ -98,11 +109,12 @@
       vlan: {{subnet.vlan}}
       ip_subnet: '{{subnet.ip_subnet}}'
       allocation_pools: [{'start': '{{subnet.pool_start}}', 'end': '{{subnet.pool_end}}'}]
-      gateway_ip: '{{subnet.gateway}}'
+      gateway_ip: '{{subnet.gateway_ip}}'
       routes: '{{subnet.routes}}'
       ipv6_subnet: '{{subnet.ipv6_subnet}}'
       ipv6_allocation_pools: [{'start': '{{subnet.ipv6_pool_start}}', 'end': '{{subnet.ipv6_pool_end}}'}]
       gateway_ipv6: '{{subnet.gateway_ipv6}}'
       routes_ipv6: '{{subnet.routes_ipv6}}'
   {%- endfor %}
+  {%- endif %}
 {%- endfor %}
