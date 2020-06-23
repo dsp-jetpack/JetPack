@@ -87,6 +87,8 @@ EXTERNAL_NET = ('External', 'external')
 EDGE_NETWORKS = (INTERNAL_API_NET, STORAGE_NET,
                  TENANT_NET, EXTERNAL_NET)
 
+# Jinja2 template constants
+NETWORK_DATA_J2 = 'network_data_subnets_routed.j2.yaml'
 
 class Director(InfraHost):
 
@@ -440,17 +442,10 @@ class Director(InfraHost):
         from thread_helper import ThreadWithExHandling  # noqa
 
         roles_to_nodes = {}
-<<<<<<< HEAD
         roles_to_nodes["controller"] = self.settings.controller_nodes
         roles_to_nodes["compute"] = self.settings.compute_nodes
         roles_to_nodes["storage"] = self.settings.ceph_nodes
         roles_to_nodes["computehci"] = self.settings.computehci_nodes
-=======
-        roles_to_nodes["controller"] = setts.controller_nodes
-        roles_to_nodes["compute"] = setts.compute_nodes
-        roles_to_nodes["storage"] = setts.ceph_nodes
-
->>>>>>> Edge WIP - merge master and refactoring
         # Add edge nodes if there are any defined
         for node_type, edge_site_nodes in setts.node_types_map.iteritems():
             roles_to_nodes[node_type] = edge_site_nodes
@@ -2533,12 +2528,12 @@ class Director(InfraHost):
         stg_net_data_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
                                                       NET_DATA, "yaml")
         stg_net_data_lst = self._generate_default_networks_data()
-        _tmplt_f = "network_data_subnets_routed.j2.yaml"
-        tmplt = self.jinja2_env.get_template(_tmplt_f)
+        tmplt = self.jinja2_env.get_template(NETWORK_DATA_J2)
 
         for node_type, node_type_data in setts.node_type_data_map.iteritems():
             nd = self._generate_network_data(node_type, node_type_data)
             stg_net_data_lst.extend(nd)
+        logger.info("Network data dump: %s", str(stg_net_data_lst))
         tmplt_data = {'networks': stg_net_data_lst}
         rendered_tmplt = tmplt.render(**tmplt_data)
 
@@ -3285,61 +3280,66 @@ class Director(InfraHost):
         """
         setts = self.settings
         default_network_data_list = []
-        external = OrderedDict({'name': 'External'})
+        external = {'name': 'External'}
         external['name_lower'] = 'external'
-        _ex_ip_subnet = "'{}'".format(setts.public_api_network)
-        external['ip_subnet'] = _ex_ip_subnet
+        external['compat_name'] = "compat name"
+        external['ip_subnet'] = setts.public_api_network
         external['vip'] = True
+        external['enabled'] = True
         external['vlan'] = int(setts.public_api_vlanid)
-        _ex_gw = "'{}'".format(setts.public_api_gateway)
-        external['gateway_ip'] = _ex_gw
-        _ex_s = "'{}'".format(setts.public_api_allocation_pool_start)
-        _ex_e = "'{}'".format(setts.public_api_allocation_pool_end)
+        external['gateway_ip'] = setts.public_api_gateway
+        _ex_s = setts.public_api_allocation_pool_start
+        _ex_e = setts.public_api_allocation_pool_end
         external['allocation_pools'] = [{'start': _ex_s, 'end': _ex_e}]
         default_network_data_list.append(external)
 
-        internal_api = OrderedDict({'name': INTERNAL_API_NET[0]})
+        internal_api = {'name': INTERNAL_API_NET[0]}
         internal_api['name_lower'] = 'internal_api'
-        _int_ip_subnet = "'{}'".format(setts.private_api_network)
+        _int_ip_subnet = setts.private_api_network
         internal_api['ip_subnet'] = _int_ip_subnet
         internal_api['vip'] = True
+        internal_api['enabled'] = True
         internal_api['vlan'] = int(setts.private_api_vlanid)
-        _int_s = "'{}'".format(setts.management_allocation_pool_start)
-        _int_e = "'{}'".format(setts.management_allocation_pool_end)
+        internal_api['gateway_ip'] = setts.private_api_gateway
+        _int_s = setts.management_allocation_pool_start
+        _int_e = setts.management_allocation_pool_end
         internal_api['allocation_pools'] = [{'start': _int_s, 'end': _int_e}]
         default_network_data_list.append(internal_api)
 
-        storage = OrderedDict({'name': STORAGE_NET[0]})
+        storage = {'name': STORAGE_NET[0]}
         storage['name_lower'] = STORAGE_NET[1]
-        _st_ip_subnet = "'{}'".format(setts.storage_network)
-        storage['ip_subnet'] = _st_ip_subnet
+        storage['ip_subnet'] = setts.storage_network
         storage['vip'] = True
+        storage['enabled'] = True
         storage['vlan'] = int(setts.storage_vlanid)
-        _st_s = "'{}'".format(setts.storage_allocation_pool_start)
-        _st_e = "'{}'".format(setts.storage_allocation_pool_end)
+        storage['gateway_ip'] = setts.storage_gateway
+        _st_s = setts.storage_allocation_pool_start
+        _st_e = setts.storage_allocation_pool_end
         storage['allocation_pools'] = [{'start': _st_s, 'end': _st_e}]
         default_network_data_list.append(storage)
 
-        storage_mgmt = OrderedDict({'name': 'StorageMgmt'})
+        storage_mgmt = {'name': 'StorageMgmt'}
         storage_mgmt['name_lower'] = 'storage_mgmt'
-        _stmgmt_ip_subnet = "'{}'".format(setts.storage_cluster_network)
-        storage_mgmt['ip_subnet'] = _stmgmt_ip_subnet
+        storage_mgmt['ip_subnet'] = setts.storage_cluster_network
         storage_mgmt['vip'] = True
+        storage_mgmt['enabled'] = True
         storage_mgmt['vlan'] = int(setts.storage_cluster_vlanid)
-        _stmgmt_s = "'{}'".format(setts.storage_cluster_allocation_pool_start)
-        _stmgmt_e = "'{}'".format(setts.storage_cluster_allocation_pool_end)
+        _stmgmt_s = setts.storage_cluster_allocation_pool_start
+        _stmgmt_e = setts.storage_cluster_allocation_pool_end
         storage_mgmt['allocation_pools'] = [{'start': _stmgmt_s,
                                              'end': _stmgmt_e}]
         default_network_data_list.append(storage_mgmt)
 
-        tenant = OrderedDict({'name': TENANT_NET[0]})
+        tenant = {'name': TENANT_NET[0]}
         tenant['name_lower'] = TENANT_NET[1]
-        _t_ip_subnet = "'{}'".format(setts.tenant_tunnel_network)
+        _t_ip_subnet = setts.tenant_tunnel_network
         tenant['ip_subnet'] = _t_ip_subnet
         tenant['vip'] = False
+        tenant['enabled'] = True
         tenant['vlan'] = int(setts.tenant_tunnel_vlanid)
-        _t_s = "'{}'".format(setts.tenant_tunnel_network_allocation_pool_start)
-        _t_e = "'{}'".format(setts.tenant_tunnel_network_allocation_pool_end)
+        tenant['gateway_ip'] = setts.tenant_tunnel_gateway
+        _t_s = setts.tenant_tunnel_network_allocation_pool_start
+        _t_e = setts.tenant_tunnel_network_allocation_pool_end
         tenant['allocation_pools'] = [{'start': _t_s, 'end': _t_e}]
         default_network_data_list.append(tenant)
 
@@ -3360,7 +3360,7 @@ class Director(InfraHost):
               'vip': true
               'vlan': 141
               'allocation_pools': [{end: '192.168.111.20',
-                                    start: '192.168.111.20'}
+                                    start: '192.168.111.20'}]
                },
             ...
             ]
@@ -3404,8 +3404,8 @@ class Director(InfraHost):
         networks_param_mapping[EXTERNAL_NET[0]] = external
         network_data_list = []
         suffix = '_' + self._generate_role_network_lower(node_type)
-        for network, mapping in networks_param_mapping.iteritems():
-            nd = OrderedDict()
+        for network, mapping in networks_param_mapping.items():
+            nd = {'enabled': True}
             name_cc = network + role
             name_lower = mapping['lower']
 
@@ -3413,13 +3413,13 @@ class Director(InfraHost):
             nd['name_lower'] = name_lower + suffix
             nd['vip'] = False
             nd['vlan'] = int(node_type_data[mapping['vlan']])
-            _ip_subnet = "'{}'".format(node_type_data[mapping['ip_subnet']])
+            _ip_subnet = node_type_data[mapping['ip_subnet']]
             nd['ip_subnet'] = _ip_subnet
-            _s = "'{}'".format(node_type_data[mapping['allocation_pools'][0]])
-            _e = "'{}'".format(node_type_data[mapping['allocation_pools'][1]])
+            _s = node_type_data[mapping['allocation_pools'][0]]
+            _e = node_type_data[mapping['allocation_pools'][1]]
             nap = [{'start': _s, 'end': _e}]
             nd['allocation_pools'] = nap
-            gw = "'{}'".format(node_type_data[mapping['gateway_ip']])
+            gw = node_type_data[mapping['gateway_ip']]
             nd['gateway_ip'] = gw
             network_data_list.append(nd)
         return network_data_list
@@ -3515,6 +3515,7 @@ class Director(InfraHost):
                 _srv_defs = compute_yaml[0]['ServicesDefault']
                 self.default_compute_services = _srv_defs
         return self.default_compute_services
+
 
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
