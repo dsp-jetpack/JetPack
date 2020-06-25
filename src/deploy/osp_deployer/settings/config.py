@@ -317,6 +317,11 @@ class Settings:
         else:
             self.enable_fencing = False
 
+        if deploy_settings['enable_dashboard'].lower() == 'true':
+            self.enable_dashboard = True
+        else:
+            self.enable_dashboard = False
+
         self.overcloud_nodes_pwd = deploy_settings['overcloud_nodes_pwd']
         dellnfv_settings = self.get_settings_section(
             "Dell NFV Settings")
@@ -589,6 +594,7 @@ class Settings:
             '/' + Settings.UNDERCLOUD_CONFIG_FILE
         self.templates_dir = self.foreman_configuration_scripts + \
             '/pilot/templates'
+        self.neutron_sriov_yaml = self.templates_dir + '/neutron-sriov.yaml'
 
         # New custom node type and edge related fields
         # Advanced Settings[node_types] in ini
@@ -684,7 +690,6 @@ class Settings:
                 except AttributeError:
                     node.is_controller = False
                     pass
-
                 try:
                     node.is_compute = (True if node.is_compute
                                        == "true" else False)
