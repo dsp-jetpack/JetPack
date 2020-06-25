@@ -15,6 +15,7 @@
 # limitations under the License.
 
 from auto_common import Ssh, Scp
+import os
 
 
 class InfraHost:
@@ -78,3 +79,11 @@ class InfraHost:
                      self.pwd,
                      local_file,
                      remote_file)
+
+
+def directory_check(_path):
+    def inner(func):
+        if not os.path.exists(_path):
+            os.makedirs(_path)
+        return func
+    return inner
