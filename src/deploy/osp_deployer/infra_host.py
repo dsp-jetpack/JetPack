@@ -14,8 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from auto_common import Ssh, Scp
+
 import os
+import time
+from auto_common import Ssh, Scp
 
 
 class InfraHost:
@@ -79,6 +81,37 @@ class InfraHost:
                      self.pwd,
                      local_file,
                      remote_file)
+
+    def get_timestamped_path(self, path, filename, ext="conf"):
+        timestamp = time.strftime('%Y%m%d%H%M%S')
+        filename = filename + "_" + timestamp + "." + ext
+        path = os.path.join(path, filename)
+        return path
+
+    def wait_for_vm_to_come_up(self, target_ip, user, password):
+        while True:
+            status = Ssh.execute_command(
+                target_ip,
+                user,
+                password,
+                "ps")[0]
+
+            if status != "host not up":
+                break
+
+            time.sleep(10)
+
+    def wait_for_vm_to_go_down(self, target_ip, user, password):
+        while True:
+            status = Ssh.execute_command(
+                target_ip,
+                user,
+                password,
+                "ps")[0]
+
+            if status == "host not up":
+                break
+            time.sleep(5)
 
 
 def directory_check(_path):
