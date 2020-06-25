@@ -311,11 +311,6 @@ class Settings:
         else:
             self.enable_fencing = False
 
-        if deploy_settings['enable_dashboard'].lower() == 'true':
-            self.enable_dashboard = True
-        else:
-            self.enable_dashboard = False
-
         self.overcloud_nodes_pwd = deploy_settings['overcloud_nodes_pwd']
         dellnfv_settings = self.get_settings_section(
             "Dell NFV Settings")
