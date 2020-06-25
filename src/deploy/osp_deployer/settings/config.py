@@ -29,6 +29,7 @@ class Settings:
     CEPH_OSD_CONFIG_FILE = 'pilot/templates/ceph-osd-config.yaml'
     TEMPEST_DEFAULT_WORKSPACE_NAME = 'mytempest'
     UNDERCLOUD_CONFIG_FILE = 'pilot/undercloud.conf'
+    NIC_CONFIGS_PATH = '/pilot/templates/nic-configs/'
 
     settings = ''
 
