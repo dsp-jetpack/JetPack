@@ -18,6 +18,7 @@ from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from collections import defaultdict
 from infra_host import InfraHost
+from infra_host import directory_check
 from auto_common import Scp
 import json
 import logging
@@ -1662,7 +1663,7 @@ class Director(InfraHost):
                                                  self.settings.overcloud_name +
                                                  '/ceph-ansible/group_vars/all.yml')[0].split(' ')[1]
                     dashboard_ip = self.run_tty('sudo grep dashboard_frontend /var/lib/mistral/' +
-                                                self.settings.overcloud_name + 
+                                                self.settings.overcloud_name +
                                                 '/ceph-ansible/group_vars/mgrs.yml')[0].split(' ')[1]
                 ip_info.append("OverCloud Horizon        : " +
                                overcloud_endpoint)
@@ -1671,7 +1672,7 @@ class Director(InfraHost):
                 if self.settings.enable_dashboard is True:
                     ip_info.append("Ceph Dashboard           : " +
                                    "http://" + dashboard_ip.rstrip()+ ":8444")
-                    ip_info.append("Dashboard admin password : " + 
+                    ip_info.append("Dashboard admin password : " +
                                    dashboard_pwd)
                 ip_info.append("cloud_repo # " +
                                self.settings.cloud_repo_version)
