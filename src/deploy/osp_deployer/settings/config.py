@@ -38,6 +38,7 @@ class Settings:
         _settings["node_type_subnets"] = str(self.node_type_subnets)
         _settings["undercloud_conf"] = str(self.undercloud_conf)
         return str(_settings)
+
     def __init__(self, settings_file):
 
         assert os.path.isfile(
