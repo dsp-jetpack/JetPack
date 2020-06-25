@@ -1989,3 +1989,10 @@ class Director(InfraHost):
         undercloud_conf_dst = os.path.join(self.home_dir,
                                            setts.UNDERCLOUD_CONFIG_FILE)
         self.upload_file(stg_undercloud_conf_path, undercloud_conf_dst)
+
+    def _generate_role_network_lower(self, type):
+        _type_lwr = (re.sub(r'[^a-z0-9]', " ", type.lower()).replace(" ", "_"))
+        return _type_lwr
+
+    def _generate_subnet_name(self, type):
+        return self._generate_role_network_lower(type) + '_subnet'
