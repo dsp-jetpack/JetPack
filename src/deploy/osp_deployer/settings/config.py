@@ -767,7 +767,7 @@ class Settings:
                 self.node_type_subnets[_node_type] = _node_type_section
 
     def _parse_undercloud_conf(self):
-        undercloud_conf = ConfigParser.ConfigParser()
+        undercloud_conf = configparser.ConfigParser()
         # The following line makes the parser return case sensitive keys
         undercloud_conf.optionxform = str
         undercloud_conf.read(self.undercloud_conf_path)
