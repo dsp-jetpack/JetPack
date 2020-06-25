@@ -25,3 +25,5 @@ class Constants:
     INSTACKENV_FILENAME = os.path.join(HOME,
                                        'instackenv.json')
     TEMPLATES = os.path.join(HOME, "pilot", "templates")
+    UNDERCLOUD_CONF = (os.path.join(os.path.expanduser('~'),
+                                    'undercloud.conf'))
