@@ -88,7 +88,7 @@ class Settings:
                                 "\" setting in your ini file [" + \
                                 stanza + "] section is deprecated and " +\
                                 "should be removed\n"
-            elif self.is_valid_subnet(yourConf, stanza):
+            elif self._is_valid_subnet(yourConf, stanza):
                 logger.info("Found a valid node_type_tuples "
                             "stanza in configuration: %s",
                             stanza)
