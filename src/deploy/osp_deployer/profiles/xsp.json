@@ -43,7 +43,7 @@
                 "valid_values": [
                    "false"
                 ]
-             }, 
+             },
        "sriov_vf_count": {
                 "validate": [
                    "should_be_valid_int"
@@ -74,7 +74,7 @@
                   "false"
                ]
             }
-        }         
+        }
     },
       {
          "MTU Settings": {
@@ -226,7 +226,8 @@
             },
          "use_ipmi_driver":"",
          "use_in_band_introspection":"",
-         "enable_version_locking":""
+         "enable_version_locking":"",
+         "node_types":""
          }
       },
       {
