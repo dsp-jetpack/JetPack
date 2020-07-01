@@ -66,17 +66,6 @@ parameter_defaults:
   # Number of Ceph Storage nodes
   CephStorageCount: 3
 
-
-  # Configures MySQL max_connections config setting
-  MysqlMaxConnections: 15360
-
-  # Configures MariaDB Buffer Pool Size
-  # Setting 'dynamic' will apply 75% of total memory to innodb_buffer_pool_size
-  BufferPoolSize: dynamic
-
-  # Configures MariaDB Buffer Pool Instances
-  BufferPoolInstances: 16
-
   # To customize the domain name of the overcloud nodes, change "localdomain"
   # in the following line to the desired domain name.
   CloudDomain: localdomain

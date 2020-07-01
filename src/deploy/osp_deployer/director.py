@@ -1466,13 +1466,6 @@ class Director(InfraHost):
         # of the nodes is the order in which they are defined in the
         # .properties file
         cmd += " --node_placement"
-        # Performance and Optimization parameters
-        cmd += " --mariadb_max_connections " \
-            + self.settings.mariadb_max_connections
-        cmd += " --innodb_buffer_pool_size " \
-            + self.settings.innodb_buffer_pool_size
-        cmd += " --innodb_buffer_pool_instances " + \
-            self.settings.innodb_buffer_pool_instances
         if self.settings.deploy_overcloud_debug:
             cmd += " --debug"
         if self.settings.enable_dashboard is True:
