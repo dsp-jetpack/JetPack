@@ -18,6 +18,7 @@ from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from collections import defaultdict
 from infra_host import InfraHost
+from infra_host import directory_check
 from auto_common import Scp
 import json
 import logging
@@ -47,8 +48,35 @@ OTHER_POOLS = ['.rgw.buckets',
                'default.rgw.meta',
                'metrics']
 
-# tempest configuraton file
-TEMPEST_CONF = "tempest.conf"
+TEMPEST_CONF = 'tempest.conf'
+UNDERCLOUD_LOCAL_INTERFACE = 'enp2s0'
+OVERCLOUD_PATH = 'overcloud'
+OVERCLOUD_ENVS_PATH = OVERCLOUD_PATH + '/environments'
+
+STAGING_PATH = '/deployment_staging'
+STAGING_TEMPLATES_PATH = STAGING_PATH + '/templates'
+STAGING_NIC_CONFIGS = STAGING_TEMPLATES_PATH + '/nic-configs'
+NIC_ENV = 'nic_environment'
+NODE_PLACEMENT = 'node-placement'
+DELL_ENV = 'dell-environment'
+NET_ENV = 'network-environment'
+INSTACK = 'instackenv'
+STATIC_IP_ENV = 'static-ip-environment'
+ROLES_DATA = 'roles_data'
+NET_DATA = 'network_data'
+NET_ISO = 'network-isolation'
+CONTROLLER = 'controller'
+DEF_COMPUTE_ROLE_FILE = 'Compute.yaml'
+DEF_COMPUTE_REMOTE_PATH = ('/usr/share/openstack-tripleo-heat-templates/'
+                           'roles/{}'.format(DEF_COMPUTE_ROLE_FILE))
+CONTROL_PLANE_NET = ('ControlPlane', "ctlplane")
+INTERNAL_API_NET = ('InternalApi', 'internal_api')
+STORAGE_NET = ('Storage', 'storage')
+TENANT_NET = ('Tenant', 'tenant')
+EXTERNAL_NET = ('External', 'external')
+
+EDGE_NETWORKS = (INTERNAL_API_NET, STORAGE_NET,
+                 TENANT_NET, EXTERNAL_NET)
 
 
 class Director(InfraHost):
@@ -119,56 +147,13 @@ class Director(InfraHost):
                          self.home_dir + "/pilot.tar.gz")
 
         self.run('cd;tar zxvf pilot.tar.gz')
-
-        cmds = [
-            'sed -i "s|undercloud_hostname = .*|undercloud_hostname = ' +
-            self.settings.director_node.hostname + "." +
-            self.settings.domain +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|local_ip = .*|local_ip = ' +
-            self.settings.director_node.provisioning_ip +
-            '/24|" pilot/undercloud.conf',
-            'sed -i "s|dhcp_start = .*|dhcp_start = ' +
-            self.settings.provisioning_net_dhcp_start +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|dhcp_end = .*|dhcp_end = ' +
-            self.settings.provisioning_net_dhcp_end +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|cidr = .*|cidr = ' +
-            self.settings.provisioning_network +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|gateway = .*|gateway = ' +
-            self.settings.director_node.provisioning_ip +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|inspection_iprange = .*|inspection_iprange = ' +
-            self.settings.discovery_ip_range +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|undercloud_nameservers = .*|undercloud_nameservers = ' +
-            self.settings.name_server +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|undercloud_ntp_servers = .*|undercloud_ntp_servers = ' +
-            self.settings.sah_node.provisioning_ip +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|undercloud_admin_host = .*|undercloud_admin_host = ' +
-            self.settings.undercloud_admin_host +
-            '|" pilot/undercloud.conf',
-            'sed -i "s|undercloud_public_host = .*|undercloud_public_host = ' +
-            self.settings.undercloud_public_host +
-            '|" pilot/undercloud.conf',
-            'sedl -f "s|image_path = |image_path = ' + self.images_dir +
-            '|" pilot/undercloud.conf',
-            'sedl -f "s|container_images_file = |container_images_file =' + self.home_dir +
-            '/containers-prepare-parameter.yaml|" pilot/undercloud.conf'
-        ]
+        self.update_and_upload_undercloud_conf()
 
         #Configure containers-prepare-parameter.yaml to retrieve container images
         cmd = 'sed -i "s|[[:space:]]\+username: password|      ' + \
               self.settings.subscription_manager_user + ': ' + "'" + self.settings.subscription_manager_password + "'" + \
               '|" pilot/containers-prepare-parameter.yaml'
-        cmds.append(cmd)
-
-        for cmd in cmds:
-            self.run(cmd)
+        self.run(cmd)
 
         if self.settings.version_locking_enabled is True:
             yaml = "/overcloud_images.yaml"
@@ -1678,7 +1663,7 @@ class Director(InfraHost):
                                                  self.settings.overcloud_name +
                                                  '/ceph-ansible/group_vars/all.yml')[0].split(' ')[1]
                     dashboard_ip = self.run_tty('sudo grep dashboard_frontend /var/lib/mistral/' +
-                                                self.settings.overcloud_name + 
+                                                self.settings.overcloud_name +
                                                 '/ceph-ansible/group_vars/mgrs.yml')[0].split(' ')[1]
                 ip_info.append("OverCloud Horizon        : " +
                                overcloud_endpoint)
@@ -1687,7 +1672,7 @@ class Director(InfraHost):
                 if self.settings.enable_dashboard is True:
                     ip_info.append("Ceph Dashboard           : " +
                                    "http://" + dashboard_ip.rstrip()+ ":8444")
-                    ip_info.append("Dashboard admin password : " + 
+                    ip_info.append("Dashboard admin password : " +
                                    dashboard_pwd)
                 ip_info.append("cloud_repo # " +
                                self.settings.cloud_repo_version)
@@ -1927,3 +1912,87 @@ class Director(InfraHost):
                 sriov_conf.update({int_name: int_value})
         sriov_interfaces = [x[1] for x in sorted(sriov_conf.items())]
         return sriov_interfaces
+
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def update_and_upload_undercloud_conf(self):
+        """Updadate and upload undercloud.conf to director vm
+
+        Note: if there are any edge sites defined in the .ini and .properties
+        enable_routed_networks must be set to True in order for edge sites to
+        function as DCN depends on Neutron's routed L3 networks feature.
+
+        Also if there are defined edge sites the provisioning subnets must be
+        added to undercloud.conf prior to deploying the undercloud."""
+
+        logger.info("Updating undercloud.conf")
+        setts = self.settings
+        uconf = setts.undercloud_conf
+        hostname = (setts.director_node.hostname + '.'
+                    + setts.domain)
+        subnets = ['ctlplane-subnet']
+
+        uconf.set('DEFAULT', 'undercloud_hostname', hostname)
+        uconf.set('DEFAULT', 'local_ip',
+                  setts.director_node.provisioning_ip + '/24')
+        uconf.set('DEFAULT', 'local_interface', UNDERCLOUD_LOCAL_INTERFACE)
+        uconf.set('DEFAULT', 'image_path', self.images_dir)
+
+        _cnt_images_file = self.home_dir + '/containers-prepare-parameter.yaml'
+        uconf.set('DEFAULT', 'container_images_file', _cnt_images_file)
+
+        uconf.set('DEFAULT', 'undercloud_nameservers',
+                  setts.name_server)
+        uconf.set('DEFAULT', 'undercloud_ntp_servers',
+                  setts.sah_node.provisioning_ip)
+        uconf.set('DEFAULT', 'undercloud_public_host',
+                  setts.undercloud_public_host)
+        uconf.set('DEFAULT', 'undercloud_admin_host',
+                  setts.undercloud_admin_host)
+
+        # Always need control plane subnet
+        uconf.set('ctlplane-subnet', 'cidr',
+                  setts.provisioning_network)
+        uconf.set('ctlplane-subnet', 'dhcp_start',
+                  setts.provisioning_net_dhcp_start)
+        uconf.set('ctlplane-subnet', 'dhcp_end',
+                  setts.provisioning_net_dhcp_end)
+        uconf.set('ctlplane-subnet', 'inspection_iprange',
+                  setts.discovery_ip_range)
+        uconf.set('ctlplane-subnet', 'gateway',
+                  setts.director_node.provisioning_ip)
+        # set enable_routed_networks create and deine routed networks
+        is_enable_routed_networks = str(bool(setts.node_type_data_map)).lower()
+
+        uconf.set('DEFAULT', 'enable_routed_networks',
+                  is_enable_routed_networks)
+
+        for node_type, node_type_data in setts.node_type_data_map.items():
+            subnet_name = self._generate_subnet_name(node_type)
+            subnets.append(subnet_name)
+            if uconf.has_section(subnet_name):
+                uconf.remove_section(subnet_name)
+            uconf.add_section(subnet_name)
+            for opt, val in node_type_data.items():
+                uconf.set(subnet_name, opt, val)
+
+        uconf.set('DEFAULT', 'subnets', ','.join(subnets))
+
+        stg_undercloud_conf_path = self.get_timestamped_path(STAGING_PATH,
+                                                             "undercloud")
+        with open(stg_undercloud_conf_path, 'w+') as undercloud_conf_fp:
+            uconf.write(undercloud_conf_fp)
+            undercloud_conf_fp.flush()
+            undercloud_conf_fp.seek(0)
+            logger.debug("Staging undercloud.conf path: %s, contents:\n%s",
+                         stg_undercloud_conf_path,
+                         undercloud_conf_fp.read())
+        undercloud_conf_dst = os.path.join(self.home_dir,
+                                           setts.UNDERCLOUD_CONFIG_FILE)
+        self.upload_file(stg_undercloud_conf_path, undercloud_conf_dst)
+
+    def _generate_role_network_lower(self, type):
+        _type_lwr = (re.sub(r'[^a-z0-9]', " ", type.lower()).replace(" ", "_"))
+        return _type_lwr
+
+    def _generate_subnet_name(self, type):
+        return self._generate_role_network_lower(type) + '_subnet'
