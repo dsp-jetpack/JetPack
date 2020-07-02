@@ -22,18 +22,6 @@ parameters:
     type: string
     default: "virtual-host"
 
-  BufferPoolSize:
-    description: >
-      Configures MariaDB BufferPoolSize
-    type: string
-    default: "dynamic"
-
-  BufferPoolInstances:
-    description: >
-      Configures MariaDB BufferPoolInstances
-    type: number
-    default: 16
-
 resources:
   userdata:
     type: OS::Heat::MultipartMime
@@ -73,27 +61,11 @@ resources:
               # Openstack Service - Glance
               sed -i 's/rpc_response_timeout \=.*/rpc_response_timeout = 180,/' /etc/puppet/modules/oslo/manifests/messaging/default.pp
 
-              # MariaDB Optimization
-
-              bsize=_BufferPoolSize_
-              if [ "$bsize" == "dynamic" ]; then
-              buffer=$(echo $((`free -m | awk 'NR==2{printf "%d", $2*0.75 }'`/1024))G)
-              sed -i "s/innodb_buffer_pool_size    \=.*/innodb_buffer_pool_size    = $buffer,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              else
-              sed -i "s/innodb_buffer_pool_size    \=.*/innodb_buffer_pool_size    = _BufferPoolSize_,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              fi
-              #sed -i "s/max_connections'         \=.*/&\n        'innodb_log_file_size' => 1500M,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              #sed -i "s/max_connections'         \=.*/&\n        'innodb_log_files_in_group'         => 2,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              #sed -i "s/max_connections'         \=.*/&\n        'innodb_flush_method'         => O_DIRECT,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              #sed -i "s/max_connections'         \=.*/&\n        'innodb_file_per_table'         => 1,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              #sed -i "s/max_connections'         \=.*/&\n        'innodb_buffer_pool_instances'         => _BufferPoolInstances_,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-
+          
             fi >> /tmp/performance_optimization.log 2>&1
 
           params:
             _TunedProfile_: {get_param: ComputeTunedAdmProfile}
-            _BufferPoolSize_: {get_param: BufferPoolSize}
-            _BufferPoolInstances_: {get_param: BufferPoolInstances}
 
   wipe_disk:
     type: OS::Heat::SoftwareConfig

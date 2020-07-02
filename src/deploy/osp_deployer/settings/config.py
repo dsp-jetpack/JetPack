@@ -361,15 +361,6 @@ class Settings:
             self.certificate_keys_path = \
                 dellnfv_settings['certificate_keys_path']
 
-        # Performance and Optimization
-        performance_and_optimization = self.get_settings_section(
-            "Performance and Optimization")
-        self.mariadb_max_connections = \
-            performance_and_optimization['mariadb_max_connections']
-        self.innodb_buffer_pool_size = \
-            performance_and_optimization['innodb_buffer_pool_size']
-        self.innodb_buffer_pool_instances = performance_and_optimization[
-            'innodb_buffer_pool_instances']
         backend_settings = self.get_settings_section(
             "Storage back-end Settings")
         if backend_settings['enable_dellsc_backend'].lower() == 'true':
