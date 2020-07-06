@@ -26,8 +26,8 @@ parameter_defaults:
   # The neutron ML2 and OpenvSwith VLAN Mapping ranges to support.
   NeutronNetworkVLANRanges: physint:201:250,physext
 
-  # The logical to physical bridge mappings to use. 
-  # Defaults to mapping the external bridge on hosts (br-ex) to a physical name (datacentre). 
+  # The logical to physical bridge mappings to use.
+  # Defaults to mapping the external bridge on hosts (br-ex) to a physical name (datacentre).
   # You would use this for the default floating network
   NeutronBridgeMappings: physint:br-tenant,physext:br-ex
 
@@ -56,7 +56,7 @@ parameter_defaults:
   # DellComputeParameters:
     # KernelArgs: "default_hugepagesz=1GB hugepagesz=1G hugepages=176 iommu=pt intel_iommu=on"
 
-  # Number of Dell Compute nodes 
+  # Number of Dell Compute nodes
   DellComputeCount: 3
 
   # Number of HCI nodes 
@@ -89,8 +89,8 @@ parameter_defaults:
   CephPools: [{"name": "volumes", "pg_num": 128, "pgp_num": 128}, {"name": "vms", "pg_num": 128, "pgp_num": 128}, {"name": "images", "pg_num": 128, "pgp_num": 128}, {"name": ".rgw.buckets", "pg_num": 64, "pgp_num": 64}, {"name": "backups", "pg_num": 64, "pgp_num": 64}, {"name": "metrics", "pg_num": 64, "pgp_num": 64}, {"name": ".rgw.root", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.control", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.meta", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.log", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.buckets.index", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.buckets.data", "pg_num": 64, "pgp_num": 64}]
 
   CephAnsiblePlaybookVerbosity: 1
-  
-  # Default pool size is 3, change to 2 if deployment fails on 13G. 
+
+  # Default pool size is 3, change to 2 if deployment fails on 13G.
   CephPoolDefaultSize: 3
 
   CephAnsibleDisksConfig:
@@ -102,19 +102,10 @@ parameter_defaults:
     nb_retry_wait_osd_up: 360
     delay_wait_osd_up: 60
 
-  DellComputeHCIExtraConfig:
-    NovaReservedHostMemory: 115000
 
-  NovaComputeExtraConfig:
-    nova::migration::libvirt::live_migration_completion_timeout: 800
-    nova::migration::libvirt::live_migration_progress_timeout: 150
   ControllerExtraConfig:
-    nova::api::osapi_max_limit: 10000
+    nova::api::max_limit: 10000
     nova::rpc_response_timeout: 180
-    nova::keystone::authtoken::revocation_cache_time: 300
     neutron::rpc_response_timeout: 180
-    neutron::keystone::authtoken::revocation_cache_time: 300
-    cinder::keystone::authtoken::revocation_cache_time: 300
-    glance::api::authtoken::revocation_cache_time: 300
     tripleo::profile::pacemaker::database::mysql::innodb_flush_log_at_trx_commit: 0
     tripleo::haproxy::haproxy_default_maxconn: 10000
