@@ -921,11 +921,11 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
     LOG.info("Generating OSD config for {ip}".format(ip=ip_mac_service_tag))
     system_id = drac_client.get_system().uuid
 
-    spinners, ssds = get_drives(drac_client)
+    spinners, ssds, nvme_drives  = get_drives(drac_client)
 
     new_osd_config = None
     # Let ceph handle journaling/disks assignment
-    disks = spinners + ssds
+    disks = spinners + ssds + nvme_drives 
     new_osd_config  = generate_osd_config_without_journals(controllers,
                                                               disks)
 
@@ -1022,9 +1022,11 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
         stream.close()
 
 def get_drives(drac_client):
+
     spinners = []
     ssds = []
     virtual_disks = drac_client.list_virtual_disks()
+    nvme_drives = []
 
     raid0_disks = [vd for vd in virtual_disks if vd.raid_level != '1']
     raid1_disks = []
@@ -1048,6 +1050,12 @@ def get_drives(drac_client):
 
     if physical_disks:
         for pd_id in physical_disks:
+
+            # Get all NVMe drives
+            if is_nvme_drive(physical_disks[pd_id]):
+                nvme_drives.append(physical_disks[pd_id])
+                continue
+
             # Eliminate physical disks in a state other than non-RAID
             # including failed disks
             if physical_disks[pd_id].raid_status != "non-RAID":
@@ -1079,7 +1087,7 @@ def get_drives(drac_client):
             else:
                 ssds.append(physical_disks[pd_id])
 
-    return spinners, ssds
+    return spinners, ssds, nvme_drives
 
 def generate_osd_config_without_journals(controllers, drives):
 
@@ -1091,15 +1099,34 @@ def generate_osd_config_without_journals(controllers, drives):
     # based on the first sas adress found by alphabetical order
     sas_ls = []
     for drive in drives:
-        sas_ls.append(drive.sas_address.lower()[:-2])
+        if is_nvme_drive(drive):
+            continue
+        else:
+            sas_ls.append(drive.sas_address.lower()[:-2])
     sas_ls.sort()
-    base_sas = sas_ls[0]
     for drive in drives:
-        drive_device_name = get_by_path_device_name(
+        if is_nvme_drive(drive):
+            nvme_device_name = get_by_path_nvme_device_name(drive)
+            osd_config['devices'].append(nvme_device_name)
+        else:
+            base_sas = sas_ls[0]
+            drive_device_name = get_by_path_device_name(
                 drive, controllers, base_sas)
-        osd_config['devices'].append(drive_device_name)
+            osd_config['devices'].append(drive_device_name)
     return osd_config
 
+# This method can be called with either physical or virtual disk.
+# Only physical disks can be NVMe drives, and only physical disks
+# have attribute named 'device_protocol'. As a result, the method
+# return True only if device_protocol is present and indicates NVMe.
+def is_nvme_drive(disk):
+        return True\
+            if hasattr(disk, "device_protocol") and disk.device_protocol and\
+            disk.device_protocol.startswith("NVMe") else False
+
+def get_by_path_nvme_device_name(physical_disk):
+        bus = physical_disk.bus.lower()
+        return ('/dev/disk/by-path/pci-0000:'+ str(bus) + ':00.0-nvme-1')
 
 def get_by_path_device_name(physical_disk, controllers, ref_sas):
     if physical_disk.description.startswith("Virtual Disk"):
