@@ -13,7 +13,7 @@
 # limitations under the License.
 
 resource_registry:
-    OS::TripleO::NodeUserData: ./first-boot.yaml
+  OS::TripleO::NodeUserData: ./first-boot.yaml
 
 parameter_defaults:
 
@@ -62,9 +62,6 @@ parameter_defaults:
   # Number of HCI nodes 
   DellComputeHCICount: 3
 
-  # Apply tuned-adm profile on Compute Nodes
-  ComputeTunedAdmProfile: virtual-host
-
   # Number of Controller nodes
   ControllerCount: 3
 
@@ -107,5 +104,7 @@ parameter_defaults:
     nova::api::max_limit: 10000
     nova::rpc_response_timeout: 180
     neutron::rpc_response_timeout: 180
+    cinder::rpc_response_timeout: 180
+    glance::rpc_response_timeout: 180
     tripleo::profile::pacemaker::database::mysql::innodb_flush_log_at_trx_commit: 0
     tripleo::haproxy::haproxy_default_maxconn: 10000
