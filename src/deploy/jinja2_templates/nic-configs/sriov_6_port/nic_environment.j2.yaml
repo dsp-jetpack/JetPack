@@ -1,0 +1,60 @@
+# Copyright (c)2018-2019 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+resource_registry:
+  OS::TripleO::Controller::Net::SoftwareConfig: ./controller.yaml
+  OS::TripleO::DellCompute::Net::SoftwareConfig: ./dellcompute_sriov.yaml
+  OS::TripleO::CephStorage::Net::SoftwareConfig: ./storage.yaml
+
+
+parameter_defaults:
+  # CHANGEME: Change the interface names in the following lines for the
+  # controller nodes provisioning interface and to include in the controller
+  # nodes bonds
+  #ControllerProvisioningInterface: em3
+  ControllerBond0Interface1: em1
+  ControllerBond0Interface2: p3p1
+  ControllerBond1Interface1: em2
+  ControllerBond1Interface2: p3p2
+  # The bonding mode to use for controller nodes
+  ControllerBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+
+  # CHANGEME: Change the interface names in the following lines for the
+  # compute nodes provisioning interface and to include in the compute
+  # nodes bonds
+  #ComputeProvisioningInterface: em3
+  ComputeBond0Interface1: em1
+  ComputeBond0Interface2: p3p1
+  ComputeBond1Interface1: em2
+  ComputeBond1Interface2: p3p2
+  # The bonding mode to use for compute nodes
+  ComputeBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+
+  # CHANGEME: Change the interface names in the following lines for the
+  # storage nodes provisioning interface and to include in the storage
+  # nodes bonds
+  #StorageProvisioningInterface: em3
+  StorageBond0Interface1: em1
+  StorageBond0Interface2: p2p1
+  StorageBond1Interface1: em2
+  StorageBond1Interface2: p2p2
+  # The bonding mode to use for storage nodes
+  StorageBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+  
+  # CHANGEME: Change the interface names in the following lines for the
+  # compute nodes provisioning interface and to include in the compute
+  # SRIOV bonds
+  ComputeSriovInterface1: p1p1
+  ComputeSriovInterface2: p4p1
+
