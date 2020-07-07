@@ -651,6 +651,7 @@ class Settings:
 
         self.controller_nodes = []
         self.compute_nodes = []
+        self.computehci_nodes = []
         self.ceph_nodes = []
         self.switches = []
         self.nodes = []
@@ -680,6 +681,14 @@ class Settings:
                         self.controller_nodes.append(node)
                 except AttributeError:
                     node.is_controller = False
+                    pass
+                try:
+                    node.is_computehci = (True if node.is_computehci
+                                          == "true" else False)
+                    if node.is_computehci: 
+                        self.computehci_nodes.append(node)
+                except AttributeError:
+                    node.is_computehci = False
                     pass
                 try:
                     node.is_compute = (True if node.is_compute
