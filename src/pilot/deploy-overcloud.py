@@ -15,18 +15,13 @@
 # limitations under the License.
 
 import argparse
-import distutils.dir_util
 import os
 import re
 import sys
 import subprocess
-import paramiko
 import logging
-import string
 import novaclient.client as nova_client
 import time
-from command_helper import Ssh
-from novaclient.v2 import aggregates
 from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
 from credential_helper import CredentialHelper
@@ -309,21 +304,6 @@ def main():
                             required=False,
                             default="4",
                             help="HostOs Cpus to be configured")
-        parser.add_argument("--mariadb_max_connections",
-                            dest="mariadb_max_connections",
-                            required=False,
-                            default="15360",
-                            help="Maximum number of connections for MariaDB")
-        parser.add_argument("--innodb_buffer_pool_size",
-                            dest="innodb_buffer_pool_size",
-                            required=False,
-                            default="dynamic",
-                            help="InnoDB buffer pool size")
-        parser.add_argument("--innodb_buffer_pool_instances",
-                            dest="innodb_buffer_pool_instances",
-                            required=False,
-                            default="16",
-                            help="InnoDB buffer pool instances.")
         parser.add_argument('--enable_dellsc',
                             action='store_true',
                             default=False,
@@ -402,6 +382,10 @@ def main():
                             default=False,
                             help="Use network_data.yaml to create edge site "
                                  "networks")
+        parser.add_argument("--dashboard_enable",
+                            action='store_true',
+                            default=False,
+                            help="Enable the ceph dashboard deployment")
 
         LoggingHelper.add_argument(parser)
         args = parser.parse_args()
@@ -455,7 +439,7 @@ def main():
         # If disabled, default values will be set and
         # they won't be used for configuration
         # Create ConfigOvercloud object
-        print ("Configure environment file")
+        print("Configure environment file")
         config = ConfigOvercloud(args.overcloud_name)
         # Remove this when Numa siblings added
         # Edit the dellnfv_environment.yaml
@@ -470,9 +454,6 @@ def main():
             args.hw_offload,
             args.sriov_interfaces,
             nic_env_file,
-            args.mariadb_max_connections,
-            args.innodb_buffer_pool_size,
-            args.innodb_buffer_pool_instances,
             args.num_controllers,
             args.num_storage,
             control_flavor,

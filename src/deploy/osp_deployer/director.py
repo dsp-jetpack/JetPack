@@ -1541,17 +1541,12 @@ class Director(InfraHost):
         # of the nodes is the order in which they are defined in the
         # .properties file
         cmd += " --node_placement"
-        # Performance and Optimization parameters
-        cmd += " --mariadb_max_connections " \
-            + self.settings.mariadb_max_connections
-        cmd += " --innodb_buffer_pool_size " \
-            + self.settings.innodb_buffer_pool_size
-        cmd += " --innodb_buffer_pool_instances " + \
-            self.settings.innodb_buffer_pool_instances
         if self.settings.deploy_overcloud_debug:
             cmd += " --debug"
         if self.settings.node_type_data_map:
             cmd += " --network_data"
+        if self.settings.enable_dashboard is True:
+            cmd += " --dashboard_enable"
         cmd += " > overcloud_deploy_out.log 2>&1"
         self.run_tty(cmd)
 
@@ -1588,7 +1583,7 @@ class Director(InfraHost):
         logger.info("**** Retrieving nodes information ")
         deployment_log = '/auto_results/deployment_summary.log'
         ip_info = []
-        fi = open(deployment_log, "w")
+        fi = open(deployment_log, "wb")
         try:
             logger.debug("retrieving node ip details ..")
             ip_info.append("====================================")
@@ -1747,10 +1742,22 @@ class Director(InfraHost):
                 overcloud_pass = self.run('grep "OS_PASSWORD=" ~/' +
                                           self.settings.overcloud_name +
                                           'rc')[0].split('=')[1]
+                if self.settings.enable_dashboard is True:
+                    dashboard_pwd = self.run_tty('sudo grep dashboard_admin_password /var/lib/mistral/' +
+                                                 self.settings.overcloud_name +
+                                                 '/ceph-ansible/group_vars/all.yml')[0].split(' ')[1]
+                    dashboard_ip = self.run_tty('sudo grep dashboard_frontend /var/lib/mistral/' +
+                                                self.settings.overcloud_name +
+                                                '/ceph-ansible/group_vars/mgrs.yml')[0].split(' ')[1]
                 ip_info.append("OverCloud Horizon        : " +
                                overcloud_endpoint)
                 ip_info.append("OverCloud admin password : " +
                                overcloud_pass)
+                if self.settings.enable_dashboard is True:
+                    ip_info.append("Ceph Dashboard           : " +
+                                   "http://" + dashboard_ip.rstrip()+ ":8444")
+                    ip_info.append("Dashboard admin password : " +
+                                   dashboard_pwd)
                 ip_info.append("cloud_repo # " +
                                self.settings.cloud_repo_version)
                 ip_info.append("deploy-auto # " +

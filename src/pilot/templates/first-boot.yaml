@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,33 +14,12 @@
 
 heat_template_version: rocky
 
-parameters:
-  ComputeTunedAdmProfile:
-    description: >
-      Apply tuned profile on compute nodes.
-      Example: "tuned-adm profile virtual-host"
-    type: string
-    default: "virtual-host"
-
-  BufferPoolSize:
-    description: >
-      Configures MariaDB BufferPoolSize
-    type: string
-    default: "dynamic"
-
-  BufferPoolInstances:
-    description: >
-      Configures MariaDB BufferPoolInstances
-    type: number
-    default: 16
-
 resources:
   userdata:
     type: OS::Heat::MultipartMime
     properties:
       parts:
       - config: {get_resource: set_os_limits}
-      - config: {get_resource: performance_optimization}
       - config: {get_resource: wipe_disk}
 
   set_os_limits:
@@ -52,48 +31,6 @@ resources:
         - sed -ie 's/[[:space:]]\+/ /g' /etc/security/limits.conf; grep -v '^#' /etc/security/limits.conf | grep -q '^* hard nofile' && sed -i 's/^* hard nofile.*/* hard nofile 64000/' /etc/security/limits.conf || echo '* hard nofile 64000' >> /etc/security/limits.conf
         - sed -ie 's/[[:space:]]\+/ /g' /etc/security/limits.d/20-nproc.conf; grep -v '^#' /etc/security/limits.d/20-nproc.conf | grep -q '^* soft nproc' && sed -i 's/^* soft nproc.*/* soft nproc 10240/' /etc/security/limits.d/20-nproc.conf || echo '* soft nproc 10240' >> /etc/security/limits.d/20-nproc.conf
         - sed -ie 's/[[:space:]]\+/ /g' /etc/security/limits.d/20-nproc.conf; grep -v '^#' /etc/security/limits.d/20-nproc.conf | grep -q '^root soft nproc' && sed -i 's/^root soft nproc.*/root soft nproc unlimited/' /etc/security/limits.d/20-nproc.conf || echo 'root soft nproc unlimited' >> /etc/security/limits.d/20-nproc.conf
-
-  performance_optimization:
-    type: OS::Heat::SoftwareConfig
-    properties:
-      config:
-        str_replace:
-          template: |
-            #!/bin/bash
-            if [[ $(hostname) == *compute* ]] ; then
-              echo "Performing tuned-profile"
-              tuned-adm profile _TunedProfile_
-              echo "Applied _TunedProfile_ profile"
-            fi >> /tmp/tuned-applied.log 2>&1
-
-            if [[ $(hostname) == *controller* ]] ; then
-
-              # Openstack Service - Cinder
-              sed -i "s/transport_url    \=.*/&\n    rpc_response_timeout    => 180,/" /etc/puppet/modules/cinder/manifests/init.pp
-              # Openstack Service - Glance
-              sed -i 's/rpc_response_timeout \=.*/rpc_response_timeout = 180,/' /etc/puppet/modules/oslo/manifests/messaging/default.pp
-
-              # MariaDB Optimization
-
-              bsize=_BufferPoolSize_
-              if [ "$bsize" == "dynamic" ]; then
-              buffer=$(echo $((`free -m | awk 'NR==2{printf "%d", $2*0.75 }'`/1024))G)
-              sed -i "s/innodb_buffer_pool_size    \=.*/innodb_buffer_pool_size    = $buffer,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              else
-              sed -i "s/innodb_buffer_pool_size    \=.*/innodb_buffer_pool_size    = _BufferPoolSize_,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              fi
-              #sed -i "s/max_connections'         \=.*/&\n        'innodb_log_file_size' => 1500M,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              #sed -i "s/max_connections'         \=.*/&\n        'innodb_log_files_in_group'         => 2,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              #sed -i "s/max_connections'         \=.*/&\n        'innodb_flush_method'         => O_DIRECT,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              #sed -i "s/max_connections'         \=.*/&\n        'innodb_file_per_table'         => 1,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-              #sed -i "s/max_connections'         \=.*/&\n        'innodb_buffer_pool_instances'         => _BufferPoolInstances_,/" /etc/puppet/modules/tripleo/manifests/profile/base/database/mysql.pp
-
-            fi >> /tmp/performance_optimization.log 2>&1
-
-          params:
-            _TunedProfile_: {get_param: ComputeTunedAdmProfile}
-            _BufferPoolSize_: {get_param: BufferPoolSize}
-            _BufferPoolInstances_: {get_param: BufferPoolInstances}
 
   wipe_disk:
     type: OS::Heat::SoftwareConfig

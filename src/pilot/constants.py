@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright (c) 2017-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,3 +25,5 @@ class Constants:
     INSTACKENV_FILENAME = os.path.join(HOME,
                                        'instackenv.json')
     TEMPLATES = os.path.join(HOME, "pilot", "templates")
+    UNDERCLOUD_CONF = (os.path.join(os.path.expanduser('~'),
+                                    'undercloud.conf'))

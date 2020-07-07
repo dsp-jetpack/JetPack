@@ -19,7 +19,6 @@ import json
 import logging
 import os
 import sys
-import subprocess
 import utils
 from arg_helper import ArgHelper
 from command_helper import Exec

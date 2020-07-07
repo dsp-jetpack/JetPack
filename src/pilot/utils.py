@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright (c) 2017-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import configparser
 import json
 import os
 from constants import Constants
@@ -40,3 +41,17 @@ class Utils:
             raise
 
         return model_properties
+
+    @staticmethod
+    def is_enable_routed_networks():
+        conf = configparser.SafeConfigParser()
+        conf.read(Constants.UNDERCLOUD_CONF)
+        enable_routed_networks = False
+        try:
+            enable_routed_networks = conf.getboolean('DEFAULT',
+                                                     'enable_routed_networks')
+        except ValueError as ex:
+            ex.message = ("Could not find enable_routed_networks "
+                          + "in undercloud.conf")
+
+        return enable_routed_networks

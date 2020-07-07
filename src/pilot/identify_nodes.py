@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright (c) 2016-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ from novaclient import client as novaclient
 from os import path
 from subprocess import check_output
 from credential_helper import CredentialHelper
-
+from ironic_helper import IronicHelper
 
 def main():
     os_auth_url, os_tenant_name, os_username, os_password, \
@@ -30,13 +30,7 @@ def main():
         CredentialHelper.get_undercloud_creds()
     auth_url = os_auth_url + "/v3"
 
-    kwargs = {'os_username': os_username,
-              'os_password': os_password,
-              'os_auth_url': os_auth_url,
-              'os_tenant_name': os_tenant_name,
-              'os_user_domain_name': os_user_domain_name,
-              'os_project_domain_name': os_project_domain_name}
-    ironic = ironicclient.client.get_client(1, **kwargs)
+    ironic = IronicHelper.get_ironic_client()
     nodes = ironic.node.list(detail=True)
 
     auth = v3.Password(

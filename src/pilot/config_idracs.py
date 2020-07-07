@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright (c) 2017-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import os
 import requests.packages
 import sys
 import threading
+import time
 from arg_helper import ArgHelper
 from logging_helper import LoggingHelper
 from utils import Utils
@@ -57,6 +58,7 @@ def parse_arguments():
 
 
 def main():
+    t_start = int(time.time())
     args = parse_arguments()
 
     LoggingHelper.configure_logging(args.logging_level)
@@ -139,6 +141,8 @@ def main():
     except Exception as ex:
         LOG.exception(str(ex))
         sys.exit(1)
+    t_end = int(time.time()) - t_start
+    LOG.info("config_idracs took %i seconds to run", t_end)
 
 
 if __name__ == "__main__":

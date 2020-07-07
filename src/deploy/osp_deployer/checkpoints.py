@@ -306,7 +306,7 @@ class Checkpoints:
             raise AssertionError(
                 "Director & Undercloud did not install properly, "
                 "check /pilot/install-director.log for details")
-                
+
         cmd = "grep \"The Undercloud has been successfully installed\" " + "~/pilot/install-director.log"
         setts = self.settings
         re = Ssh.execute_command_tty(self.director_ip,
@@ -339,7 +339,7 @@ class Checkpoints:
                 "Unable to find the overcloud image in glance - "
                 "check the install-director.log for possible package"
                 "download errors")
-                
+
         logger.info("Undercloud installed Successfully!")
 
     def verify_computes_virtualization_enabled(self):

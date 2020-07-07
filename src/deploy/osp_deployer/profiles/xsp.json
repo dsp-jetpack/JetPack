@@ -76,31 +76,6 @@
             }
         }
     },
-    {
-         "Performance and Optimization": {
-            "innodb_buffer_pool_instances": {
-               "validate": [
-                  "should_be_valid_int"
-               ],
-               "in_range": [
-                  "8-48"
-               ]
-            },
-            "innodb_buffer_pool_size": {
-               "validate": [
-                  "valid_buffer_pool_size"
-               ]
-            },
-            "mariadb_max_connections": {
-               "validate": [
-                  "should_be_valid_int"
-               ],
-               "in_range": [
-                  "1000-100000"
-               ]
-            }
-         }
-      },
       {
          "MTU Settings": {
             "mtu_selection": {
@@ -249,10 +224,11 @@
                   "false"
                ]
             },
-            "use_ipmi_driver":"",
-            "use_in_band_introspection":"",
-            "enable_version_locking":""
-       }
+         "use_ipmi_driver":"",
+         "use_in_band_introspection":"",
+         "enable_version_locking":"",
+         "node_types":""
+         }
       },
       {
          "Network Settings": {

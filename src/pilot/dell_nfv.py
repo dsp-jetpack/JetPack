@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright (c) 2018-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2018-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -77,9 +77,6 @@ class ConfigOvercloud(object):
             hw_offload,
             sriov_interfaces,
             nic_env_file,
-            mariadb_max_connections,
-            innodb_buffer_pool_size,
-            innodb_buffer_pool_instances,
             controller_count,
             ceph_storage_count,
             controller_flavor,
@@ -252,34 +249,6 @@ class ConfigOvercloud(object):
                 cmds.append(
                     'sed -i "s|# IsolCpusList:.*|IsolCpusList: ' +
                     self.nfv_params.isol_cpus + '|" ' + dpdk_file)
-
-            # Performance and Optimization
-            if innodb_buffer_pool_size != "dynamic":
-                BufferPoolSize = int(innodb_buffer_pool_size.replace(
-                    "G", "")) * 1024
-                memory_mb = self.nfv_params.get_minimum_memory_size("control")
-                if memory_mb < BufferPoolSize:
-                    raise Exception("innodb_buffer_pool_size is greater than"
-                                    " available memory size")
-            cmds.append(
-                'sed -i "s|MysqlMaxConnections.*|MysqlMaxConnections: ' +
-                mariadb_max_connections +
-                '|" ' +
-                file_path)
-            if ovs_dpdk:
-                f_path = dpdk_file
-            else:
-                f_path = file_path
-            cmds.append(
-                'sed -i "s|BufferPoolSize.*|BufferPoolSize: ' +
-                innodb_buffer_pool_size +
-                '|" ' +
-                f_path)
-            cmds.append(
-                'sed -i "s|BufferPoolInstances.*|BufferPoolInstances: ' +
-                innodb_buffer_pool_instances +
-                '|" ' +
-                f_path)
 
             for cmd in cmds:
                 status = os.system(cmd)

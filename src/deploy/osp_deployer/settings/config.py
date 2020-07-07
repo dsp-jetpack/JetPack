@@ -321,6 +321,11 @@ class Settings:
         else:
             self.enable_fencing = False
 
+        if deploy_settings['enable_dashboard'].lower() == 'true':
+            self.enable_dashboard = True
+        else:
+            self.enable_dashboard = False
+
         self.overcloud_nodes_pwd = deploy_settings['overcloud_nodes_pwd']
         dellnfv_settings = self.get_settings_section(
             "Dell NFV Settings")
@@ -360,15 +365,6 @@ class Settings:
             self.certificate_keys_path = \
                 dellnfv_settings['certificate_keys_path']
 
-        # Performance and Optimization
-        performance_and_optimization = self.get_settings_section(
-            "Performance and Optimization")
-        self.mariadb_max_connections = \
-            performance_and_optimization['mariadb_max_connections']
-        self.innodb_buffer_pool_size = \
-            performance_and_optimization['innodb_buffer_pool_size']
-        self.innodb_buffer_pool_instances = performance_and_optimization[
-            'innodb_buffer_pool_instances']
         backend_settings = self.get_settings_section(
             "Storage back-end Settings")
         if backend_settings['enable_dellsc_backend'].lower() == 'true':
@@ -597,6 +593,7 @@ class Settings:
             '/' + Settings.UNDERCLOUD_CONFIG_FILE
         self.templates_dir = self.foreman_configuration_scripts + \
             '/pilot/templates'
+        self.neutron_sriov_yaml = self.templates_dir + '/neutron-sriov.yaml'
 
         # New custom node type and edge related fields
         # Advanced Settings[node_types] in ini
@@ -752,7 +749,8 @@ class Settings:
                     pass
                 if "node_type" in node.__dict__:
                     logger.debug("node_type not in self.node_types_map: %s",
-                                 str(node.node_type not in self.node_types_map))
+                                 str(node.node_type
+                                     not in self.node_types_map))
                     if node.node_type not in self.node_types_map:
                         self.node_types_map[node.node_type] = []
                     self.node_types_map[node.node_type].append(node)
@@ -799,7 +797,7 @@ class Settings:
                                               shell=True).rstrip()
             self.source_version = re_
         except:  # noqa: E722
-            logger.debug("unconventional setup...can t" +
+            logger.debug("unconventional setup...can't"
                          " pick source version info")
             self.source_version = "????"
 
