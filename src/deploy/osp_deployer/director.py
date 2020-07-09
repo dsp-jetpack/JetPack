@@ -86,11 +86,14 @@ EXTERNAL_NET = ('External', 'external')
 
 EDGE_NETWORKS = (INTERNAL_API_NET, STORAGE_NET,
                  TENANT_NET, EXTERNAL_NET)
+EDGE_VLANS = ["TenantNetworkVlanID", "InternalApiNetworkVlanID",
+              "StorageNetworkVlanID"]
 
 # Jinja2 template constants
 J2_EXT = '.j2.yaml'
 NIC_ENV_J2 = NIC_ENV + J2_EXT
 COMPUTE_J2 = 'compute' + J2_EXT
+CONTROLLER_J2 = CONTROLLER + J2_EXT
 NIC_ENV_J2 = NIC_ENV + J2_EXT
 NETWORK_DATA_J2 = NET_DATA + J2_EXT
 NETWORK_ENV_J2 = NET_ENV + J2_EXT
@@ -1272,6 +1275,7 @@ class Director(InfraHost):
             self.create_network_data()
             self.setup_nic_configuration_edge()
             self.update_nic_environment_edge()
+            # TODO: how will functions like below work with multiple stacks?!?
             self.update_stamp_nic_config_routes_edge()
             self.update_and_upload_node_placement_edge()
 
@@ -2176,11 +2180,15 @@ class Director(InfraHost):
         """
         nic_dict_by_port_num = self._group_node_types_by_num_nics()
         for num_nics, node_type_tuples in nic_dict_by_port_num.items():
-
+            logger.debug("Number of nics: %s", num_nics)
             port_dir = "{}_port".format(num_nics)
+            _tmplt_path = os.path.join('nic-configs', port_dir, CONTROLLER_J2)
+            tmplt = self.jinja2_env.get_template(_tmplt_path)
+            tmplt_data = {}
+            _params = tmplt_data['parameters'] = {}
             cntl_file = os.path.join(self.nic_configs_dir,
-                                           port_dir,
-                                           CONTROLLER + ".yaml")
+                                     port_dir,
+                                     CONTROLLER + ".yaml")
 
             stg_nic_template_path = os.path.join(STAGING_TEMPLATES_PATH,
                                                  "nic-configs", port_dir)
@@ -2190,24 +2198,33 @@ class Director(InfraHost):
 
             stg_cntl_path = self.get_timestamped_path(stg_nic_template_path,
                                                       CONTROLLER, "yaml")
-            self.download_file(stg_cntl_path, cntl_file)
+            net_cfgs = []
+            if (num_nics == 5):
+                prov_if = {'type': 'interface',
+                           'name': 'ControllerProvisioningInterface'}
+                tenant_bridge = {'type': 'ovs_bridge',
+                                 'name': 'br-tenant',
+                                 'members': []}
+                for vlan in EDGE_VLANS:
+                    tenant_bridge['members'].append({'type': 'vlan',
+                                                     'vlan_id': vlan,
+                                                     'routes': []})
+                ex_bridge = {'type': 'ovs_bridge',
+                             'name': 'bridge_name'}
+                net_cfgs = [prov_if, tenant_bridge, ex_bridge]
+            for nt_tup in node_type_tuples:
+                node_type = nt_tup[0]
+                cdc_params = self._generate_cdc_cloud_nic_params(node_type)
+                _params.update(cdc_params)
+                self._update_cdc_nic_net_cfg(node_type, net_cfgs, num_nics)
 
-            with open(stg_cntl_path) as cntl_fp:
-                cntl_tmpl = yaml.load(cntl_fp, Loader=OrderedLoader)
-                params = cntl_tmpl['parameters']
-                net_cfg_lst = (cntl_tmpl['resources']
-                               ['OsNetConfigImpl']
-                               ['properties']['config']['str_replace']
-                               ['params']['$network_config']['network_config'])
-                for nt_tup in node_type_tuples:
-                    node_type = nt_tup[0]
-                    cdc_params = self._generate_cdc_cloud_nic_params(node_type)
-                    params.update(cdc_params)
-                    self._update_cdc_nic_net_cfg(node_type, net_cfg_lst)
+            tmplt_data['network_config'] = net_cfgs
+
+            logger.info("template data: %s", str(tmplt_data))
+            rendered_tmplt = tmplt.render(**tmplt_data)
             with open(stg_cntl_path, 'w') as stg_cntl_fp:
-                yaml.dump(cntl_tmpl, stg_cntl_fp, OrderedDumper,
-                          default_flow_style=False)
-        self.upload_file(stg_cntl_path, cntl_file)
+                stg_cntl_fp.write(rendered_tmplt)
+            self.upload_file(stg_cntl_path, cntl_file)
 
     @directory_check(STAGING_NIC_CONFIGS)
     def setup_nic_configuration_edge(self):
@@ -2250,7 +2267,7 @@ class Director(InfraHost):
             dst_nic_path = os.path.join(self.nic_configs_dir, port_dir,
                                         dst_nic_yaml)
 
-            tmplt_data['params'] = self._generate_nic_params(node_type)
+            tmplt_data['parameters'] = self._generate_nic_params(node_type)
             _net_config = self._generate_nic_network_config(node_type,
                                                             node_type_data)
             tmplt_data['network_config'] = _net_config
@@ -2904,51 +2921,56 @@ class Director(InfraHost):
         role_d['ServicesDefault'] = self._get_default_compute_services()
         return role_d
 
-    def _update_cdc_nic_net_cfg(self, node_type, net_cfg_lst):
+    def _update_cdc_nic_net_cfg(self, node_type, net_cfgs, num_nics):
         role = self._generate_cc_role(node_type)
-        flt_vlans = ["TenantNetworkVlanID", "InternalApiNetworkVlanID",
-                     "StorageNetworkVlanID"]
-        prov_if = list(filter(lambda cfg:
-            (cfg["type"] == "interface" and cfg["name"]['get_param']
-             == "ControllerProvisioningInterface"), net_cfg_lst))[0]
 
-        prov_edge_route = {"ip_netmask": {"get_param":
-            "{}{}NetCidr".format(CONTROL_PLANE_NET[0], role)},
-            "next_hop": {"get_param": "ProvisioningNetworkGateway"}}
+        # TODO: dpaterson, we should probably break this out into seperate
+        # functions based on num_nics, hard coding to 5 for now to reach
+        # parity with 13.3
+        if num_nics == 5:
+            prov_if = list(filter(lambda cfg:
+                           (cfg["type"] == "interface"
+                            and cfg["name"]
+                            == "ControllerProvisioningInterface"),
+                           net_cfgs))[0]
+            tenant_br = list(filter(lambda cfg:
+                             (cfg["type"] == "ovs_bridge"
+                              and cfg["name"]
+                              == "br-tenant"),
+                              net_cfgs))[0]
 
-        prov_if['routes'].append(prov_edge_route)
+            prov_edge_route = {"ip_netmask":
+                               "{}{}NetCidr".format(CONTROL_PLANE_NET[0],
+                                                    role),
+                               "next_hop": "ProvisioningNetworkGateway"}
 
-        tenant_bridge = list(filter(lambda cfg:
-            (cfg["type"] == "ovs_bridge"
-             and cfg["name"] == "br-tenant"), net_cfg_lst))[0]
-        vlans = list(filter(lambda br:
-            (br["type"] == "vlan" and br["vlan_id"]["get_param"] in flt_vlans),
-            tenant_bridge["members"]))
-        for vlan in vlans:
-            vlan_param = vlan["vlan_id"]["get_param"]
-            if "routes" in vlan.keys():
-                routes = vlan["routes"]
-            else:
-                routes = vlan["routes"] = []
-            if vlan_param == "TenantNetworkVlanID":
-                tenant_route = {"ip_netmask":
-                    {"get_param": "Tenant{}NetCidr".format(role)},
-                    "next_hop": {"get_param":
-                        "TenantInterfaceDefaultRoute"}}
-                routes.append(tenant_route)
+            prov_if['routes'] = (prov_if['routes'] if 'routes'
+                                 in prov_if else [])
+            prov_if['routes'].append(prov_edge_route)
 
-            elif vlan_param == "InternalApiNetworkVlanID":
-                int_api_route = {"ip_netmask":
-                    {"get_param": "InternalApi{}NetCidr".format(role)},
-                    "next_hop": {"get_param":
-                        "InternalApiInterfaceDefaultRoute"}}
-                routes.append(int_api_route)
-            else:
-                storage_route = {"ip_netmask":
-                    {"get_param": "Storage{}NetCidr".format(role)},
-                    "next_hop": {"get_param":
-                        "StorageInterfaceDefaultRoute"}}
-                routes.append(storage_route)
+            for vlan_id in EDGE_VLANS:
+                _vlan_routes = list(filter(lambda member:
+                                    (member["type"] == "vlan"
+                                     and member["vlan_id"]
+                                     == vlan_id),
+                                     tenant_br['members']))[0]['routes']
+                if vlan_id == "TenantNetworkVlanID":
+                    tenant_route = {"ip_netmask":
+                                    "Tenant{}NetCidr".format(role),
+                                    "next_hop": "TenantInterfaceDefaultRoute"}
+                    _vlan_routes.append(tenant_route)
+                elif vlan_id == "InternalApiNetworkVlanID":
+                    int_api_route = {"ip_netmask":
+                                     "InternalApi{}NetCidr".format(role),
+                                     "next_hop":
+                                     "InternalApiInterfaceDefaultRoute"}
+                    _vlan_routes.append(int_api_route)
+                else:
+                    storage_route = {"ip_netmask":
+                                     "Storage{}NetCidr".format(role),
+                                     "next_hop":
+                                     "StorageInterfaceDefaultRoute"}
+                    _vlan_routes.append(storage_route)
 
     def _generate_cdc_cloud_nic_params(self, node_type):
         """
@@ -2957,7 +2979,7 @@ class Director(InfraHost):
         ip route add 192.168.142.0/24 via 192.168.140.1
         """
         role = self._generate_cc_role(node_type)
-        params = OrderedDict()
+        params = {}
         for net_tup in EDGE_NETWORKS:
             net_cidr = "{}{}NetCidr".format(net_tup[0], role)
             if_def_route = "{}InterfaceDefaultRoute".format(net_tup[0])
@@ -3475,7 +3497,7 @@ class Director(InfraHost):
         setts = self.settings
         nic_dict_by_port_num = {}
         for node_type, node_type_data in setts.node_type_data_map.items():
-            num_nics = node_type_data['nic_port_count']
+            num_nics = int(node_type_data['nic_port_count'])
             if num_nics not in nic_dict_by_port_num:
                 nic_dict_by_port_num[num_nics] = []
             nic_dict_by_port_num[num_nics].append((node_type, node_type_data))
@@ -3506,4 +3528,5 @@ if __name__ == "__main__":
     # director.update_and_upload_network_environmment()
     # director.update_and_upload_node_placement_edge()
     # director.setup_nic_configuration_edge()
-    director.update_nic_environment_edge()
+    # director.update_nic_environment_edge()
+    director.update_stamp_nic_config_routes_edge()

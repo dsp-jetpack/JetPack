@@ -170,7 +170,7 @@ parameters:
     default: 9000
     description: MTU value for this network.
     type: number
-{%- for key, _dict in params.items() %}
+{%- for key, _dict in parameters.items() %}
   {{key}}:
   {%- for _key, _val in _dict.items() %}
     {{_key}}: {{_val}}
