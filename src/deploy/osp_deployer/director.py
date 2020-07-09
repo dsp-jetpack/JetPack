@@ -25,7 +25,6 @@ import time
 import yaml
 from jinja2 import Environment
 from jinja2 import FileSystemLoader
-from jinja2 import Template
 from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from collections import defaultdict
@@ -89,7 +88,18 @@ EDGE_NETWORKS = (INTERNAL_API_NET, STORAGE_NET,
                  TENANT_NET, EXTERNAL_NET)
 
 # Jinja2 template constants
-NETWORK_DATA_J2 = 'network_data_subnets_routed.j2.yaml'
+J2_EXT = '.j2.yaml'
+NIC_ENV_J2 = NIC_ENV + J2_EXT
+COMPUTE_J2 = 'compute' + J2_EXT
+NETWORK_DATA_J2 = NET_DATA + J2_EXT
+NETWORK_ENV_J2 = NET_ENV + J2_EXT
+NODE_PLACEMENT_J2 = NODE_PLACEMENT + J2_EXT
+# TODO: dpaterson: migrating dell-environment template involves a bit of rework for
+# ceph osd stuff, wait for now
+DELL_ENV_J2 = DELL_ENV + J2_EXT
+
+EC2_IPCIDR = '169.254.169.254/32'
+EC2_PUBLIC_IPCIDR_PARAM = 'EC2MetadataPublicIpCidr'
 
 class Director(InfraHost):
 
@@ -1074,7 +1084,7 @@ class Director(InfraHost):
     def setup_net_envt(self):
 
         logger.debug("Configuring network-environment.yaml for overcloud")
-
+        self.update_and_upload_network_environmment()
         network_yaml = self.templates_dir + "/" + NET_ENV + ".yaml"
         octavia_yaml = self.templates_dir + "/octavia.yaml"
 
@@ -1257,7 +1267,7 @@ class Director(InfraHost):
             self.create_network_data()
             self.setup_nic_configuration_edge()
             self.update_stamp_nic_config_routes_edge()
-            self.update_node_placement_edge()
+            self.update_and_upload_node_placement_edge()
 
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
@@ -2183,14 +2193,14 @@ class Director(InfraHost):
         nic_environment.yaml for each site is also updated and uploaded,
         see: update_nic_environment_edge()
         """
+        logger.debug("setup_nic_configuration_edge called !!!!!")
         setts = self.settings
         for node_type, node_type_data in setts.node_type_data_map.items():
             num_nics = node_type_data['nic_port_count']
-
             port_dir = "{}_port".format(num_nics)
-            local_nic_env_file = os.path.join(setts.nic_configs_abs_path,
-                                              port_dir,
-                                              "dellcompute.yaml")
+            _tmplt_path = os.path.join('nic-configs', port_dir, COMPUTE_J2)
+            tmplt = self.jinja2_env.get_template(_tmplt_path)
+            tmplt_data = {}
 
             stg_nic_template_path = os.path.join(STAGING_TEMPLATES_PATH,
                                                  "nic-configs", port_dir)
@@ -2206,23 +2216,18 @@ class Director(InfraHost):
             dst_nic_path = os.path.join(self.nic_configs_dir, port_dir,
                                         dst_nic_yaml)
 
-            with open(local_nic_env_file) as nic_fp:
-                nic_tmpl = yaml.load(nic_fp, Loader=OrderedLoader)
-                params = nic_tmpl['parameters']
-                edge_params = self._generate_nic_params(node_type)
-                params.update(edge_params)
-                net_configs = (nic_tmpl['resources']
-                               ['OsNetConfigImpl']
-                               ['properties']['config']['str_replace']
-                               ['params']['$network_config'])
-                _net_config = self._generate_nic_network_config(node_type,
-                                                                node_type_data)
-                net_configs['network_config'] = _net_config
+            tmplt_data['params'] = self._generate_nic_params(node_type)
+            _net_config = self._generate_nic_network_config(node_type,
+                                                            node_type_data)
+            tmplt_data['network_config'] = _net_config
+            logger.info("xxxxx tmplt_data: %s",
+                        str(tmplt_data))
+            rendered_tmplt = tmplt.render(**tmplt_data)
             with open(stg_nic_path, 'w') as stg_nic_fp:
-                yaml.dump(nic_tmpl, stg_nic_fp, OrderedDumper,
-                          default_flow_style=False)
+                stg_nic_fp.write(rendered_tmplt)
 
             self.upload_file(stg_nic_path, dst_nic_path)
+        return
         self.update_nic_environment_edge()
 
     @directory_check(STAGING_NIC_CONFIGS)
@@ -2281,29 +2286,27 @@ class Director(InfraHost):
             self.upload_file(stg_nic_env_path, nic_env_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def update_node_placement_edge(self):
-        remote_plcmnt_file = os.path.join(self.templates_dir,
-                                          NODE_PLACEMENT + ".yaml")
+    def update_and_upload_node_placement_edge(self):
+        logger.debug("update_and_upload_node_placement_edge called!")
+        setts = self.settings
+        tmplt = self.jinja2_env.get_template(NODE_PLACEMENT_J2)
+        tmplt_data = {'scheduler_hints': {}}
+        _sched_hints = tmplt_data['scheduler_hints']
+        for node_type in setts.node_types:
+            exp = self._generate_node_placement_exp(node_type)
+            role = self._generate_cc_role(node_type)
+            _role_hints = role + 'SchedulerHints'
+            _sched_hints[_role_hints] = exp
+
+        rendered_tmplt = tmplt.render(**tmplt_data)
 
         stg_plcmnt_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
                                                     NODE_PLACEMENT, "yaml")
-
-        self.download_file(stg_plcmnt_path, remote_plcmnt_file)
-        stg_plcmnt_tmpl = {}
-        with open(stg_plcmnt_path) as stg_plcmnt_fp:
-            stg_plcmnt_tmpl = yaml.load(stg_plcmnt_fp,
-                                        Loader=OrderedLoader)
-            for node_type in self.settings.node_types:
-                exp = self._generate_node_placement_exp(node_type)
-                role = self._generate_cc_role(node_type)
-                param_def = stg_plcmnt_tmpl['parameter_defaults']
-                _role_hints = role + 'SchedulerHints'
-                param_def[_role_hints] = {"capabilities:node": exp}
-
         with open(stg_plcmnt_path, 'w') as stg_plcmnt_fp:
-            yaml.dump(stg_plcmnt_tmpl, stg_plcmnt_fp, OrderedDumper,
-                      default_flow_style=False,
-                      default_style="'")
+            stg_plcmnt_fp.write(rendered_tmplt)
+
+        remote_plcmnt_file = os.path.join(self.templates_dir,
+                                          NODE_PLACEMENT + ".yaml")
         self.upload_file(stg_plcmnt_path, remote_plcmnt_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
@@ -2400,11 +2403,7 @@ class Director(InfraHost):
 
         with open(stg_net_data_file, 'w') as stg_net_data_fp:
             stg_net_data_fp.write(rendered_tmplt)
-            # yaml.dump(stg_net_data_lst, stg_net_data_fp, OrderedDumper,
-            #          default_flow_style=False)
-        # pyyaml has bug in it where if you pass in 'string',
-        # you get '''string''', sed the file prior to uploading
-        # subprocess.call(['sed', '-i', '-e',  "s/'''/'/g", stg_net_data_file])
+
         self.upload_file(stg_net_data_file, net_data_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
@@ -2530,6 +2529,99 @@ class Director(InfraHost):
                       OrderedDumper, default_flow_style=False)
 
         self.upload_file(stg_static_ip_env_path, static_ip_env_file)
+
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def update_and_upload_network_environmment(self):
+        logger.debug("update_and_upload_network_environmment called !!!!!")
+        setts = self.settings
+        tmplt = self.jinja2_env.get_template(NETWORK_ENV_J2)
+        tmplt_data = {}
+
+        _prov_ip = setts.director_node.provisioning_ip
+        tmplt_data["ControlPlaneDefaultRoute"] = _prov_ip
+        tmplt_data["EC2MetadataIp"] = _prov_ip
+        tmplt_data["InternalApiNetCidr"] = setts.private_api_network
+        tmplt_data["StorageNetCidr"] = setts.storage_network
+        tmplt_data["StorageMgmtNetCidr"] = setts.storage_cluster_network
+        tmplt_data["ExternalNetCidr"] = setts.public_api_network
+        _mgmt_pls = [{'start': setts.management_allocation_pool_start,
+                      'end': setts.management_allocation_pool_end}]
+        tmplt_data["ManagementAllocationPools"] = _mgmt_pls
+        _int_pls = [{'start': setts.private_api_allocation_pool_start,
+                     'end': setts.private_api_allocation_pool_end}]
+        tmplt_data["InternalApiAllocationPools"] = _int_pls
+        _strg_pls = [{'start': setts.storage_allocation_pool_start,
+                     'end': setts.storage_allocation_pool_end}]
+        tmplt_data["StorageAllocationPools"] = _strg_pls
+        _smgmt_pls = [{'start': setts.storage_cluster_allocation_pool_start,
+                       'end': setts.storage_cluster_allocation_pool_end}]
+        tmplt_data["StorageMgmtAllocationPools"] = _smgmt_pls
+        _ext_pls = [{'start': setts.public_api_allocation_pool_start,
+                     'end': setts.public_api_allocation_pool_end}]
+        tmplt_data["ExternalAllocationPools"] = _ext_pls
+        tmplt_data["ExternalInterfaceDefaultRoute"] = setts.public_api_gateway
+        tmplt_data["ManagementNetworkGateway"] = setts.management_gateway
+        tmplt_data["ManagementNetCidr"] = setts.management_network
+        tmplt_data["ProvisioningNetworkGateway"] = setts.provisioning_gateway
+        tmplt_data["ControlPlaneDefaultRoute"] = _prov_ip
+        _ctl_pln_cidr = setts.provisioning_network.split("/")[1]
+        tmplt_data["ControlPlaneSubnetCidr"] = _ctl_pln_cidr
+        tmplt_data["ControlPlaneNetCidr"] = setts.provisioning_network
+        tmplt_data["DnsServers"] = setts.name_server
+        tmplt_data["InternalApiNetworkVlanID"] = setts.private_api_vlanid
+        tmplt_data["StorageNetworkVlanID"] = setts.storage_vlanid
+        tmplt_data["StorageMgmtNetworkVlanID"] = setts.storage_cluster_vlanid
+        tmplt_data["ExternalNetworkVlanID"] = setts.public_api_vlanid
+        tmplt_data["TenantNetworkVlanID"] = setts.tenant_tunnel_vlanid
+        tmplt_data["ExternalMtu"] = setts.public_api_network_mtu
+        tmplt_data["InternalApiMtu"] = setts.private_api_network_mtu
+        tmplt_data["StorageMtu"] = setts.storage_network_mtu
+        tmplt_data["StorageMgmtMtu"] = setts.storage_cluster_network_mtu
+        tmplt_data["TenantMtu"] = setts.tenant_tunnel_network_mtu
+        tmplt_data["ProvisioningMtu"] = setts.provisioning_network_mtu
+        tmplt_data["ManagementMtu"] = setts.management_network_mtu
+        tmplt_data["DefaultBondMtu"] = setts.default_bond_mtu
+        tmplt_data["NeutronGlobalPhysnetMtu"] = setts.tenant_network_mtu
+        _ntrn_mtus = 'physext:' + setts.floating_ip_network_mtu
+        tmplt_data["neutron_plugins_ml2_physical_network_mtus"] = _ntrn_mtus
+
+        tmplt_data["ProvisioningNetworkGateway"] = setts.provisioning_gateway
+        tmplt_data["ControlPlaneNetCidr"] = setts.provisioning_network
+        tmplt_data["ControlPlaneNetworkVlanID"] = setts.provisioning_vlanid
+        int_key = INTERNAL_API_NET[0] + "InterfaceDefaultRoute"
+        str_key = STORAGE_NET[0] + "InterfaceDefaultRoute"
+        ten_key = TENANT_NET[0] + "InterfaceDefaultRoute"
+        ext_key = EXTERNAL_NET[0] + "InterfaceDefaultRoute"
+        tmplt_data[int_key] = setts.private_api_gateway
+        tmplt_data[str_key] = setts.storage_gateway
+        tmplt_data[ten_key] = setts.tenant_tunnel_gateway
+        tmplt_data[ext_key] = setts.public_api_gateway
+
+        if setts.tenant_tunnel_network:
+            tmplt_data["TenantNetCidr"] = setts.tenant_tunnel_network
+            _tnt_pls = [{'start':
+                         setts.tenant_tunnel_network_allocation_pool_start,
+                         'end':
+                         setts.tenant_tunnel_network_allocation_pool_end}]
+            tmplt_data["TenantAllocationPools"] = _tnt_pls
+        # TODO: dpaterson finish this......................
+        if setts.node_type_data_map:
+            _edge_nw = {}
+            for nt, nt_data in setts.node_type_data_map.items():
+                _edge_nw.update(
+                    self._generate_network_environment_params(nt, nt_data))
+        tmplt_data['edge_networks'] = _edge_nw
+        logger.debug("tmplt_data['edge_networks']: %s",
+                     str(tmplt_data['edge_networks']))
+
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        net_env_file = os.path.join(self.templates_dir, NET_ENV + ".yaml")
+
+        stg_net_env_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
+                                                     NET_ENV, "yaml")
+        with open(stg_net_env_file, 'w') as stg_net_env_fp:
+            stg_net_env_fp.write(rendered_tmplt)
+        self.upload_file(stg_net_env_file, net_env_file)
 
     def _subnet_name_from_net(self, node_mgmt_net):
         setts = self.settings
@@ -2887,7 +2979,8 @@ class Director(InfraHost):
         for network_tup in EDGE_NETWORKS:
             _key = network_tup[0] + 'NetCidr'
             params[_key] = {"default": '', "type": "string"}
-
+        params[EC2_PUBLIC_IPCIDR_PARAM] = {"default": EC2_IPCIDR,
+                                             "type": "string"}
         params[cp_subnet_cidr] = {"default": '', "type": "string"}
         params[cp_subnet] = {"default": '', "type": "string"}
         params[cp_default_route] = {"default": '', "type": "string"}
@@ -2979,9 +3072,9 @@ class Director(InfraHost):
         bond_0_if_2_param = role + 'Bond0Interface2'
         bond_1_if_1_param = role + 'Bond1Interface1'
         bond_1_if_2_param = role + 'Bond1Interface2'
-        prov_if = OrderedDict({"type": "interface"})
-        tenant_br = OrderedDict({"type": "ovs_bridge"})
-        ex_br = OrderedDict({"type": "ovs_bridge"})
+        prov_if = {"type": "interface"}
+        tenant_br = {"type": "ovs_bridge"}
+        ex_br = {"type": "ovs_bridge"}
         int_api_network = INTERNAL_API_NET[0] + role
         tenant_network = TENANT_NET[0] + role
         storage_network = STORAGE_NET[0] + role
@@ -3002,101 +3095,96 @@ class Director(InfraHost):
         external_gateway = external_network + 'InterfaceDefaultRoute'
         external_vlan_id = external_network + 'NetworkVlanID'
 
-        prov_if["name"] = {"get_param": prov_if_param}
-        prov_if["mtu"] = {"get_param": "ProvisioningNetworkMTU"}
+        prov_if["name"] = prov_if_param
+        prov_if["mtu"] = "ProvisioningNetworkMTU"
         prov_if["use_dhcp"] = False
-        prov_if["dns_servers"] = {"get_param": "DnsServers"}
-        _cp_add = [{"ip_netmask": {"list_join":
-                                   ["/", [{"get_param": "ControlPlaneIp"},
-                                          {"get_param":
-                                              "ControlPlaneSubnetCidr"}]]}}]
+        prov_if["dns_servers"] = "DnsServers"
+        _cp_add = [{"ip": "ControlPlaneIp",
+                    "cidr": "ControlPlaneSubnetCidr"}]
         prov_if["addresses"] = _cp_add
 
-        ec2_route = {"ip_netmask": "169.254.169.254/32",
-                     "next_hop": {"get_param": cp_default_route}}
+        ec2_route = {"ip_netmask": EC2_PUBLIC_IPCIDR_PARAM,
+                     "next_hop": cp_default_route}
         default_route = {"default": True,
-                         "next_hop": {"get_param": cp_default_route}}
-        prov_route = {"ip_netmask": {"get_param":
-            "{}NetCidr".format(CONTROL_PLANE_NET[0])},
-            "next_hop": {"get_param": cp_default_route}}
+                         "next_hop": cp_default_route}
+        prov_route = {"ip_netmask": "{}NetCidr".format(CONTROL_PLANE_NET[0]),
+                      "next_hop": cp_default_route}
         prov_if["routes"] = [ec2_route, prov_route]
 
         tenant_br["name"] = "br-tenant"
-        tenant_br["mtu"] = {"get_param": "DefaultBondMTU"}
-        bond_0 = OrderedDict({"type": "linux_bond"})
+        tenant_br["mtu"] = "DefaultBondMTU"
+        bond_0 = {"type": "linux_bond"}
         bond_0["name"] = "bond0"
-        bond_0["bonding_options"] = {"get_param":
-                                     "ComputeBondInterfaceOptions"}
-        bond_0["mtu"] = {"get_param": "DefaultBondMTU"}
-        bond_0_if_1 = OrderedDict({"type": "interface"})
-        bond_0_if_1["name"] = {"get_param": bond_0_if_1_param}
-        bond_0_if_1["mtu"] = {"get_param": "DefaultBondMTU"}
+        bond_0["bonding_options"] = "ComputeBondInterfaceOptions"
+        bond_0["mtu"] = "DefaultBondMTU"
+        bond_0_if_1 = {"type": "interface"}
+        bond_0_if_1["name"] = bond_0_if_1_param
+        bond_0_if_1["mtu"] = "DefaultBondMTU"
         bond_0_if_1["primary"] = True
-        bond_0_if_2 = OrderedDict({"type": "interface"})
-        bond_0_if_2["name"] = {"get_param": bond_0_if_2_param}
-        bond_0_if_2["mtu"] = {"get_param": "DefaultBondMTU"}
+        bond_0_if_2 = {"type": "interface"}
+        bond_0_if_2["name"] = bond_0_if_2_param
+        bond_0_if_2["mtu"] = "DefaultBondMTU"
         bond_0["members"] = [bond_0_if_1, bond_0_if_2]
 
-        internal_api_vlan = OrderedDict({"type": "vlan"})
+        internal_api_vlan = {"type": "vlan"}
         internal_api_vlan["device"] = "bond0"
 
-        internal_api_vlan["vlan_id"] = {"get_param": int_api_vlan_id}
-        internal_api_vlan["mtu"] = {"get_param": "InternalApiMTU"}
+        internal_api_vlan["vlan_id"] = int_api_vlan_id
+        internal_api_vlan["mtu"] = "InternalApiMTU"
         internal_api_vlan["addresses"] = [{"ip_netmask":
-                                           {"get_param": int_api_subnet}}]
+                                           int_api_subnet}]
 
-        int_api_route = {"ip_netmask": {"get_param": 'InternalApiNetCidr'},
+        int_api_route = {"ip_netmask": 'InternalApiNetCidr',
                          "next_hop":
-                         {"get_param": int_api_gateway}}
+                         int_api_gateway}
         internal_api_vlan['routes'] = [int_api_route]
 
-        tenant_vlan = OrderedDict({"type": "vlan"})
+        tenant_vlan = {"type": "vlan"}
         tenant_vlan["device"] = "bond0"
-        tenant_vlan["vlan_id"] = {"get_param": tenant_vlan_id}
-        tenant_vlan["mtu"] = {"get_param": "DefaultBondMTU"}
+        tenant_vlan["vlan_id"] = tenant_vlan_id
+        tenant_vlan["mtu"] = "DefaultBondMTU"
         tenant_vlan["addresses"] = [{"ip_netmask":
-                                     {"get_param": tenant_subnet}}]
-        tenant_route = {"ip_netmask": {"get_param": 'TenantNetCidr'},
-                        "next_hop": {"get_param": tenant_gateway}}
+                                     tenant_subnet}]
+        tenant_route = {"ip_netmask": 'TenantNetCidr',
+                        "next_hop": tenant_gateway}
         tenant_vlan['routes'] = [tenant_route]
 
-        storage_vlan = OrderedDict({"type": "vlan"})
+        storage_vlan = {"type": "vlan"}
         storage_vlan["device"] = "bond0"
-        storage_vlan["vlan_id"] = {"get_param": storage_vlan_id}
-        storage_vlan["mtu"] = {"get_param": "DefaultBondMTU"}
+        storage_vlan["vlan_id"] = storage_vlan_id
+        storage_vlan["mtu"] = "DefaultBondMTU"
         storage_vlan["addresses"] = [{"ip_netmask":
-                                      {"get_param": storage_subnet}}]
-        storage_route = {"ip_netmask": {"get_param": 'StorageNetCidr'},
-                         "next_hop": {"get_param": storage_gateway}}
+                                      storage_subnet}]
+        storage_route = {"ip_netmask": 'StorageNetCidr',
+                         "next_hop": storage_gateway}
         storage_vlan['routes'] = [storage_route]
 
         tenant_br["members"] = [bond_0, internal_api_vlan,
                                 tenant_vlan, storage_vlan]
 
         ex_br["name"] = "bridge_name"
-        ex_br["mtu"] = {"get_param": "DefaultBondMTU"}
-        bond_1_if_1 = OrderedDict({"type": "interface"})
-        bond_1_if_1["name"] = {"get_param": bond_1_if_1_param}
-        bond_1_if_1["mtu"] = {"get_param": "DefaultBondMTU"}
+        ex_br["mtu"] = "DefaultBondMTU"
+        bond_1_if_1 = {"type": "interface"}
+        bond_1_if_1["name"] = bond_1_if_1_param
+        bond_1_if_1["mtu"] = "DefaultBondMTU"
         bond_1_if_1["primary"] = True
-        bond_1_if_2 = OrderedDict({"type": "interface"})
-        bond_1_if_2["name"] = {"get_param": bond_1_if_2_param}
-        bond_1_if_2["mtu"] = {"get_param": "DefaultBondMTU"}
-        bond_1 = OrderedDict({"type": "linux_bond"})
+        bond_1_if_2 = {"type": "interface"}
+        bond_1_if_2["name"] = bond_1_if_2_param
+        bond_1_if_2["mtu"] = "DefaultBondMTU"
+        bond_1 = {"type": "linux_bond"}
         bond_1["name"] = "bond1"
-        bond_1["bonding_options"] = {"get_param":
-                                     "ComputeBondInterfaceOptions"}
-        bond_1["mtu"] = {"get_param": "DefaultBondMTU"}
+        bond_1["bonding_options"] = "ComputeBondInterfaceOptions"
+        bond_1["mtu"] = "DefaultBondMTU"
         bond_1["members"] = [bond_1_if_1, bond_1_if_2]
-        external_vlan = OrderedDict({"type": "vlan"})
+        external_vlan = {"type": "vlan"}
         external_vlan["device"] = "bond0"
-        external_vlan["vlan_id"] = {"get_param": external_vlan_id}
-        external_vlan["mtu"] = {"get_param": "DefaultBondMTU"}
+        external_vlan["vlan_id"] = external_vlan_id
+        external_vlan["mtu"] = "DefaultBondMTU"
         external_vlan["addresses"] = [
-            {"ip_netmask": {"get_param": external_subnet}}]
+            {"ip_netmask": external_subnet}]
 
         def_ex_route = {"default": True,
-                        "next_hop": {"get_param": external_gateway}}
+                        "next_hop": external_gateway}
         external_vlan["routes"] = [def_ex_route]
         ex_br["members"] = [bond_1, external_vlan]
 
@@ -3381,4 +3469,7 @@ if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
 
-    director.create_network_data()
+    # director.create_network_data()
+    # director.update_and_upload_network_environmment()
+    # director.update_and_upload_node_placement_edge()
+    director.setup_nic_configuration_edge()
