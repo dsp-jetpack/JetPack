@@ -1,0 +1,104 @@
+# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+resource_registry:
+  OS::TripleO::NodeUserData: ./first-boot.yaml
+
+parameter_defaults:
+
+  # Defines the interface to bridge onto br-ex for network nodes
+  NeutronPublicInterface: bond1
+  # The tenant network type for Neutron
+  NeutronNetworkType: vlan
+  ## >neutron-disable-tunneling no mapping.
+
+  # The neutron ML2 and OpenvSwith VLAN Mapping ranges to support.
+  NeutronNetworkVLANRanges: physint:201:250,physext
+
+  # The logical to physical bridge mappings to use.
+  # Defaults to mapping the external bridge on hosts (br-ex) to a physical name (datacentre).
+  # You would use this for the default floating network
+  NeutronBridgeMappings: physint:br-tenant,physext:br-ex
+
+  # Flavor used as the regular compute
+  OvercloudDellComputeFlavor: baremetal
+  # Flavor to use for the Controller nodes
+  OvercloudControllerFlavor: baremetal
+  # Flavor to use for the ceph Storage nodes
+  OvercloudCephStorageFlavor: baremetal
+  # Flavor to use for the Swift storage nodes
+  OvercloudSwiftStorageFlavor: baremetal
+  # Flavor to use for the Cinder nodes
+  OvercloudBlockStorageFlavor: baremetal
+
+  # List of Default Filters to pass to the nova Scheduler
+  # Default filters are used if profile is set to XSP
+  # This line is uncommented when using with CSP profile
+  # NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','RamFilter','DiskFilter', 'ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter', 'CoreFilter', 'NUMATopologyFilter', 'AggregateInstanceExtraSpecsFilter']
+
+  # List of CPUs reserver for Host OS operation
+  # Disabled by default for XSP Profile
+  # This line is uncommented and updated when using CSP Profile
+  # NovaVcpuPinSet: "8-23,32-47"
+  # DellComputeParameters:
+    # KernelArgs: "default_hugepagesz=1GB hugepagesz=1G hugepages=176 iommu=pt intel_iommu=on"
+
+  # Number of Dell Compute nodes
+  DellComputeCount: 3
+
+  # Number of Controller nodes
+  ControllerCount: 3
+
+  # Number of Ceph Storage nodes
+  CephStorageCount: 3
+
+  # To customize the domain name of the overcloud nodes, change "localdomain"
+  # in the following line to the desired domain name.
+  CloudDomain: localdomain
+
+  # Set to true to enable Nova usage of Ceph for ephemeral storage.
+  # If set to false, Nova uses the storage local to the compute.
+  NovaEnableRbdBackend: true
+
+  # Backend to use for glance, options are file, cinder, rbd
+  GlanceBackend: rbd
+
+  ## Whether to enable rbd (Ceph) backend for Cinder.
+  CinderEnableRbdBackend: true
+
+  # Configure Ceph Placement Group (PG) values for the indicated pools
+  CephPools: [{"name": "volumes", "pg_num": 128, "pgp_num": 128}, {"name": "vms", "pg_num": 128, "pgp_num": 128}, {"name": "images", "pg_num": 128, "pgp_num": 128}, {"name": ".rgw.buckets", "pg_num": 64, "pgp_num": 64}, {"name": "backups", "pg_num": 64, "pgp_num": 64}, {"name": "metrics", "pg_num": 64, "pgp_num": 64}, {"name": ".rgw.root", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.control", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.meta", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.log", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.buckets.index", "pg_num": 64, "pgp_num": 64}, {"name": "default.rgw.buckets.data", "pg_num": 64, "pgp_num": 64}]
+
+  CephAnsiblePlaybookVerbosity: 1
+
+  # Default pool size is 3, change to 2 if deployment fails on 13G.
+  CephPoolDefaultSize: 3
+
+  CephAnsibleDisksConfig:
+    osd_auto_discovery: true
+    osd_scenario: lvm
+    osd_objectstore: bluestore
+
+  CephAnsibleExtraConfig:
+    nb_retry_wait_osd_up: 360
+    delay_wait_osd_up: 60
+
+  ControllerExtraConfig:
+    nova::api::max_limit: 10000
+    nova::rpc_response_timeout: 180
+    neutron::rpc_response_timeout: 180
+    cinder::rpc_response_timeout: 180
+    glance::rpc_response_timeout: 180
+    tripleo::profile::pacemaker::database::mysql::innodb_flush_log_at_trx_commit: 0
+    tripleo::haproxy::haproxy_default_maxconn: 10000

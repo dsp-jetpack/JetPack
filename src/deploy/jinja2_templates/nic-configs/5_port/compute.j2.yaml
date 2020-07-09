@@ -170,6 +170,12 @@ parameters:
     default: 9000
     description: MTU value for this network.
     type: number
+{%- for key, _dict in params.items() %}
+  {{key}}:
+  {%- for _key, _val in _dict.items() %}
+    {{_key}}: {{_val}}
+  {%- endfor %}
+{%- endfor %}
 
 resources:
   OsNetConfigImpl:
@@ -183,101 +189,71 @@ resources:
           params:
             $network_config:
               network_config:
-              - type: interface
-                name:
-                  get_param: ComputeProvisioningInterface
+              {%- for cfg in network_config %}
+              - type: {{cfg.type}}
+                name: {{cfg.name}}
                 mtu:
-                  get_param: ProvisioningMtu
-                use_dhcp: false
+                  get_param: {{cfg.mtu}}
+                {%- if cfg.type == 'interface' %}
+                use_dhcp: {{cfg.use_dhcp}}
                 dns_servers:
-                  get_param: DnsServers
+                  get_param: {{cfg.dns_servers}}
                 addresses:
+                  {%- for address in cfg.addresses %}
                 - ip_netmask:
                     list_join:
                     - /
-                    - - get_param: ControlPlaneIp
-                      - get_param: ControlPlaneSubnetCidr
+                    - - get_param: {{address.ip}}
+                      - get_param: {{address.cidr}}
+                  {%- endfor %}
                 routes:
-                - ip_netmask: 169.254.169.254/32
+                  {%- for route in cfg.routes %}
+                    {%- if 'default' in route %}
+                - default: {{route.default}}
+                    {%- endif %}
+                    {%- if 'ip_netmask' in route %}
+                - ip_netmask:
+                    get_param: {{route.ip_netmask}}
+                    {%- endif %}
                   next_hop:
-                    get_param: EC2MetadataIp
-                - default: true
-                  next_hop:
-                    get_param: ControlPlaneDefaultRoute
-              - type: ovs_bridge
-                name: br-tenant
-                mtu:
-                  get_param: DefaultBondMtu
-                members:
-                - type: linux_bond
-                  name: bond0
-                  bonding_options:
-                    get_param: ComputeBondInterfaceOptions
-                  mtu:
-                    get_param: DefaultBondMtu
+                    get_param: {{route.next_hop}}
+                  {%- endfor %}
+                {% elif cfg.type == 'ovs_bridge' %}
                   members:
-                  - type: interface
-                    name:
-                      get_param: ComputeBond0Interface1
+                  {%- for bridge_member in cfg.members %}
+                  - type: {{bridge_member.type}}
+                    {%- if bridge_member.type == 'linux_bond' %}
+                    name: {{bridge_member.name}}
+                    bonding_options:
+                      get_param: {{bridge_member.bonding_options}}
                     mtu:
-                      get_param: DefaultBondMtu
-                    primary: true
-                  - type: interface
-                    name:
-                      get_param: ComputeBond0Interface2
+                      get_param: {{bridge_member.mtu}}
+                    members:
+                      {%- for bond_member in bridge_member.members %}
+                    - type: {{bond_member.type}}
+                      name:
+                        get_param: {{bond_member.name}}
+                      mtu:
+                        get_param: {{bond_member.mtu}}
+                        {%- if 'primary' in bond_member %}
+                      primary: {{bond_member.primary}}
+                        {%- endif %}
+                      {%- endfor %}
+                    {%- elif bridge_member.type == 'vlan' %}
+                    device: {{bridge_member.device}}
+                    vlan_id:
+                      get_param: {{bridge_member.vlan_id}}
                     mtu:
-                      get_param: DefaultBondMtu
-                - type: vlan
-                  device: bond0
-                  vlan_id:
-                    get_param: TenantNetworkVlanID
-                  mtu:
-                    get_param: TenantMtu
-                  addresses:
-                  - ip_netmask:
-                      get_param: TenantIpSubnet
-                - type: vlan
-                  device: bond0
-                  vlan_id:
-                    get_param: InternalApiNetworkVlanID
-                  mtu:
-                    get_param: InternalApiMtu
-                  addresses:
-                  - ip_netmask:
-                      get_param: InternalApiIpSubnet
-              - type: ovs_bridge
-                name:
-                  bridge_name
-                mtu:
-                  get_param: DefaultBondMtu
-                members:
-                - type: linux_bond
-                  name: bond1
-                  bonding_options:
-                    get_param: ComputeBondInterfaceOptions
-                  mtu:
-                    get_param: DefaultBondMtu
-                  members:
-                  - type: interface
-                    name:
-                      get_param: ComputeBond1Interface1
-                    mtu:
-                      get_param: DefaultBondMtu
-                    primary: true
-                  - type: interface
-                    name:
-                      get_param: ComputeBond1Interface2
-                    mtu:
-                      get_param: DefaultBondMtu
-                - type: vlan
-                  device: bond1
-                  vlan_id:
-                    get_param: StorageNetworkVlanID
-                  mtu:
-                    get_param: StorageMtu
-                  addresses:
-                  - ip_netmask:
-                      get_param: StorageIpSubnet
+                      get_param: {{bridge_member.mtu}}
+                    addresses:
+                      {%- for vlan_address in bridge_member.addresses %}
+                    - ip_netmask:
+                        get_param: {{vlan_address.ip_netmask}}
+                      {%- endfor %}
+                    {%- endif %}
+                  {%- endfor %}
+                {%- endif %}
+              {%- endfor %}
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.
