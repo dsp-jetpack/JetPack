@@ -263,10 +263,10 @@ class Checkpoints:
                                      cmd)
         ls_nodes = re[0].split("\n")
         ls_nodes.pop()
-        expected_nodes = len(self.settings.controller_nodes) + len(
-            self.settings.compute_nodes) + len(
-            self.settings.ceph_nodes) + len(
-            self.settings.computehci_nodes)
+        expected_nodes = (len(setts.controller_nodes)
+                          + len(setts.compute_nodes)
+                          + len(setts.ceph_nodes)
+                          + len(setts.computehci_nodes))
 
         for node_type, nodes in self.settings.node_types_map.items():
             logger.info("Number of %s nodes: %s", node_type, str(len(nodes)))
