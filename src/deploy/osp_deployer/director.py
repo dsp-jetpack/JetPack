@@ -1368,6 +1368,7 @@ class Director(InfraHost):
         if self.settings.node_type_data_map:
             self.create_network_data()
             self.setup_nic_configuration_edge()
+            self.update_nic_environment_edge()
             self.update_stamp_nic_config_routes_edge()
             self.update_and_upload_node_placement_edge()
 
@@ -2366,8 +2367,6 @@ class Director(InfraHost):
                 stg_nic_fp.write(rendered_tmplt)
 
             self.upload_file(stg_nic_path, dst_nic_path)
-        return
-        self.update_nic_environment_edge()
 
     @directory_check(STAGING_NIC_CONFIGS)
     def update_nic_environment_edge(self):
@@ -2391,6 +2390,13 @@ class Director(InfraHost):
             nic_env_file = os.path.join(self.nic_configs_dir,
                                         port_dir,
                                         NIC_ENV + ".yaml")
+
+            _tmplt_path = os.path.join('nic-configs', port_dir, NIC_ENV_J2)
+            tmplt = self.jinja2_env.get_template(_tmplt_path)
+            tmplt_data = {}
+            _res_reg = tmplt_data['resource_registry'] = {}
+            _params = tmplt_data['parameter_defaults'] = {}
+
             stg_nic_template_path = os.path.join(STAGING_TEMPLATES_PATH,
                                                  "nic-configs", port_dir)
 
