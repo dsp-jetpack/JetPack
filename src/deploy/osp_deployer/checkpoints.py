@@ -264,17 +264,19 @@ class Checkpoints:
                                      cmd)
         ls_nodes = re[0].split("\n")
         ls_nodes.pop()
-        expected_nodes = len(self.settings.controller_nodes) + len(
-            self.settings.compute_nodes) + len(
-            self.settings.ceph_nodes)
-        for node_type, nodes in self.settings.node_types_map.items():
-            logger.info("Number of %s nodes: %s", node_type, str(len(nodes)))
+        expected_nodes = (len(setts.controller_nodes)
+                          + len(setts.compute_nodes)
+                          + len(setts.ceph_nodes
+                          + len(setts.computehci_nodes))
+
+        for node_type, nodes in setts.node_types_map.items():
+            logger.debug("Number of %s nodes: %s", node_type, str(len(nodes)))
             expected_nodes += len(nodes)
         if len(ls_nodes) != expected_nodes:
             raise AssertionError(
                 "Expected amount of nodes registered in Ironic "
-                "does not add up " +
-                str(len(ls_nodes)) + "/" + str(expected_nodes))
+                "does not add up "
+                + str(len(ls_nodes)) + "/" + str(expected_nodes))
 
     def verify_introspection_sucessfull(self):
         logger.debug("Verify the introspection did not encounter any errors")

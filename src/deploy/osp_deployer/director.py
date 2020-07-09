@@ -91,6 +91,7 @@ EDGE_NETWORKS = (INTERNAL_API_NET, STORAGE_NET,
 J2_EXT = '.j2.yaml'
 NIC_ENV_J2 = NIC_ENV + J2_EXT
 COMPUTE_J2 = 'compute' + J2_EXT
+NIC_ENV_J2 = NIC_ENV + J2_EXT
 NETWORK_DATA_J2 = NET_DATA + J2_EXT
 NETWORK_ENV_J2 = NET_ENV + J2_EXT
 NODE_PLACEMENT_J2 = NODE_PLACEMENT + J2_EXT
@@ -292,7 +293,8 @@ class Director(InfraHost):
             # Discover the nodes using static IPs for the iDRAC
             for node in (self.settings.controller_nodes +
                          self.settings.compute_nodes +
-                         self.settings.ceph_nodes):
+                         self.settings.ceph_nodes +
+                         self.settings.computehci_nodes ):
                 if hasattr(node, "idrac_ip"):
                     cmd += ' ' + node.idrac_ip
             # Add edge nodes if there are any defined
@@ -320,11 +322,13 @@ class Director(InfraHost):
                 logger.debug("nodes appear to have been picked up")
 
         logger.debug("Verify the number of nodes picked match up to settings")
-        expected_nodes = len(self.settings.controller_nodes) + len(
-            self.settings.compute_nodes) + len(
-            self.settings.ceph_nodes)
+        expected_nodes = (len(self.settings.controller_nodes)
+                          + len(self.settings.compute_nodes)
+                          + len(self.settings.ceph_nodes)
+                          + len(self.settings.computehci_nodes))
         for node_type, nodes in setts.node_types_map.items():
             expected_nodes += len(nodes)
+
         found = self.run_tty(
             "grep pm_addr ~/instackenv.json | wc -l")[0].rstrip()
         logger.debug("Found " + found + " Expected : " + str(expected_nodes))
@@ -452,7 +456,7 @@ class Director(InfraHost):
         roles_to_nodes["controller"] = setts.controller_nodes
         roles_to_nodes["compute"] = setts.compute_nodes
         roles_to_nodes["storage"] = setts.ceph_nodes
-
+        roles_to_nodes["computehci"] = setts.computehci_nodes
         # Add edge nodes if there are any defined
         for node_type, edge_site_nodes in setts.node_types_map.items():
             roles_to_nodes[node_type] = edge_site_nodes
@@ -488,9 +492,10 @@ class Director(InfraHost):
         setts = self.settings
         # Update sshd_config to allow for more than 10 ssh sessions
         # Required for assign_role to run threaded if stamp has > 10 nodes
-        non_sah_nodes = (setts.controller_nodes +
-                         setts.compute_nodes +
-                         setts.ceph_nodes)
+        non_sah_nodes = (setts.controller_nodes
+                         + setts.compute_nodes
+                         + setts.computehci_nodes
+                         + setts.ceph_nodes)
 
         for node_type, edge_site_nodes in setts.node_types_map.items():
             non_sah_nodes.extend(edge_site_nodes)
@@ -586,7 +591,7 @@ class Director(InfraHost):
             num_osds = len(osd_config["devices"])
             total_osds = total_osds + num_osds
 
-        num_storage_nodes = len(self.settings.ceph_nodes)
+        num_storage_nodes = len(self.settings.ceph_nodes) + len(self.settings.computehci_nodes)
         num_unaccounted = num_storage_nodes - len(uuid_to_osd_configs)
         if num_unaccounted < 0:
             raise AssertionError("There are extraneous servers listed in {}. "
@@ -608,12 +613,12 @@ class Director(InfraHost):
 
         # If the osd_disks were not specified then just return
         osd_disks = None
-        if hasattr(self.settings.ceph_nodes[0], 'osd_disks'):
-            # If the OSD disks are specified on the first storage node, then
-            # use them.  This is the best we can do until the OSP Director
-            # supports more than a single, global OSD configuration.
-            osd_disks = self.settings.ceph_nodes[0].osd_disks
-
+        if len(self.settings.computehci_nodes) > 0 and hasattr(self.settings.computehci_nodes[0], 'osd_disks'):
+            if len(self.settings.ceph_nodes) > 0 and hasattr(self.settings.ceph_nodes[0], 'osd_disks'):
+                # If the OSD disks are specified on the first storage node, then
+                # use them.  This is the best we can do until the OSP Director
+                # supports more than a single, global OSD configuration.
+               osd_disks = self.settings.ceph_nodes[0].osd_disks
         src_file = open(self.settings.dell_env_yaml, 'r')
 
         # Temporary local file used to stage the modified environment file
@@ -1290,6 +1295,7 @@ class Director(InfraHost):
             compute_tenant_tunnel_ips = ''
             compute_private_ips = ''
             compute_storage_ips = ''
+            compute_storage_cluster_ip = ''
 
             for node in self.settings.compute_nodes:
                 compute_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip
@@ -1299,6 +1305,22 @@ class Director(InfraHost):
                     compute_tenant_tunnel_ips += "\\n"
                     compute_private_ips += "\\n"
                     compute_storage_ips += "\\n"
+
+            computehci_tenant_tunnel_ips =''
+            computehci_private_ips = ''
+            computehci_storage_ips = ''
+            computehci_cluster_ips = ''
+
+            for node in self.settings.computehci_nodes:
+                computehci_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip
+                computehci_private_ips += "    - " + node.private_api_ip
+                computehci_storage_ips += "    - " + node.storage_ip
+                computehci_cluster_ips += "    - " + node.storage_cluster_ip
+                if node != self.settings.computehci_nodes[-1]:
+                    computehci_tenant_tunnel_ips += "\\n"
+                    computehci_private_ips += "\\n"
+                    computehci_storage_ips += "\\n"
+                    computehci_cluster_ips += "\\n"
 
             storage_storgage_ip = ''
             storage_cluster_ip = ''
@@ -1337,6 +1359,16 @@ class Director(InfraHost):
                     s/storage_mgmt:/storage_mgmt: \\n' +
                     storage_cluster_ip + "/\" " + static_ips_yaml
                     ]
+            if len(self.settings.computehci_nodes) > 0:
+                cmds.extend(['sed -i "/DellComputeHCIIPs:/,/tenant:/s/tenant:/tenant: \\n' +
+                           computehci_tenant_tunnel_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/DellComputeHCIIPs:/,/internal_api:/s/internal_api:/internal_api: \\n' +
+                           computehci_private_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/DellComputeHCIIPs:/,/storage:/s/storage:/storage: \\n' +
+                           computehci_storage_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/DellComputeHCIIPs:/,/storage_mgmt:/s/storage_mgmt:/storage_mgmt: \\n' +
+                           computehci_cluster_ips + "/\" " + static_ips_yaml
+                          ])
 
             for cmd in cmds:
                 self.run_tty(cmd)
@@ -1493,8 +1525,9 @@ class Director(InfraHost):
                                     " --dell-computes " + \
                                     str(len(self.settings.compute_nodes)) + \
                                     " --controllers " + \
-                                    str(len(self.settings.controller_nodes
-                                            )) + \
+                                    str(len(self.settings.controller_nodes)) + \
+                                    " --dell-computeshci " + \
+                                    str(len(self.settings.computehci_nodes)) + \
                                     " --storage " + \
                                     str(len(self.settings.ceph_nodes)) + \
                                     " --vlan " + \
@@ -2193,7 +2226,7 @@ class Director(InfraHost):
         nic_environment.yaml for each site is also updated and uploaded,
         see: update_nic_environment_edge()
         """
-        logger.debug("setup_nic_configuration_edge called !!!!!")
+        logger.debug("setup_nic_configuration_edge called!")
         setts = self.settings
         for node_type, node_type_data in setts.node_type_data_map.items():
             num_nics = node_type_data['nic_port_count']
@@ -2246,12 +2279,15 @@ class Director(InfraHost):
         the modified file will be uploaded to:
         to ~/pilot/templates/nic_configs/5_port/nic_environement.yaml
         """
+        logger.debug("update_nic_environment_edge called!")
         nic_dict_by_port_num = self._group_node_types_by_num_nics()
         for num_nics, node_type_tuples in nic_dict_by_port_num.items():
             port_dir = "{}_port".format(num_nics)
-            nic_env_file = os.path.join(self.nic_configs_dir,
-                                        port_dir,
-                                        NIC_ENV + ".yaml")
+            _tmplt_path = os.path.join('nic-configs', port_dir, NIC_ENV_J2)
+            tmplt = self.jinja2_env.get_template(_tmplt_path)
+            tmplt_data = {}
+            _res_reg = tmplt_data['resource_registry'] = {}
+            _params = tmplt_data['parameter_defaults'] = {}
             stg_nic_template_path = os.path.join(STAGING_TEMPLATES_PATH,
                                                  "nic-configs", port_dir)
 
@@ -2260,29 +2296,24 @@ class Director(InfraHost):
 
             stg_nic_env_path = self.get_timestamped_path(stg_nic_template_path,
                                                          NIC_ENV, "yaml")
-            self.download_file(stg_nic_env_path, nic_env_file)
-            nic_env_tmpl = OrderedDict()
-            with open(stg_nic_env_path) as nic_env_fp:
-                nic_env_tmpl = yaml.load(nic_env_fp, Loader=OrderedLoader)
-                res_reg = nic_env_tmpl['resource_registry']
-                params = nic_env_tmpl['parameter_defaults']
-                for node_type_tuple in node_type_tuples:
-                    node_type = node_type_tuple[0]
-                    node_type_data = node_type_tuple[1]
-                    ne_params = self._generate_nic_env_params(node_type,
-                                                              node_type_data)
-                    params.update(ne_params)
-                    role = self._generate_cc_role(node_type)
-                    role_nic_key = ("OS::TripleO::"
-                                    + role + "::Net::SoftwareConfig")
-                    nic_config_name = ("./"
-                                       + self._generate_nic_config_name(
-                                           node_type)
-                                       + ".yaml")
-                    res_reg[role_nic_key] = nic_config_name
-            with open(stg_nic_env_path, 'w') as stg_nic_fp:
-                yaml.dump(nic_env_tmpl, stg_nic_fp, OrderedDumper,
-                          default_flow_style=False)
+            for node_type_tuple in node_type_tuples:
+                node_type = node_type_tuple[0]
+                node_type_data = node_type_tuple[1]
+                ne_params = self._generate_nic_env_params(node_type,
+                                                          node_type_data)
+                _params.update(ne_params)
+                role = self._generate_cc_role(node_type)
+                role_nic_key = ("OS::TripleO::"
+                                + role + "::Net::SoftwareConfig")
+                nic_config_name = ("./"
+                                   + self._generate_nic_config_name(
+                                       node_type)
+                                   + ".yaml")
+                _res_reg[role_nic_key] = nic_config_name
+            logger.info("template data: %s", str(tmplt_data))
+            rendered_tmplt = tmplt.render(**tmplt_data)
+            with open(stg_nic_env_path, 'w') as stg_nic_env_fp:
+                stg_nic_env_fp.write(rendered_tmplt)
             self.upload_file(stg_nic_env_path, nic_env_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
@@ -3020,7 +3051,7 @@ class Director(InfraHost):
         parameter_defaults map.
         """
         role = self._generate_cc_role(node_type)
-        params = OrderedDict()
+        params = {}
         # ControlPlane[ROLE]DefaultRoute: 192.168.120.126
         cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
         # ControlPlane[ROLE]SubnetCidr: '26'
@@ -3472,4 +3503,5 @@ if __name__ == "__main__":
     # director.create_network_data()
     # director.update_and_upload_network_environmment()
     # director.update_and_upload_node_placement_edge()
-    director.setup_nic_configuration_edge()
+    # director.setup_nic_configuration_edge()
+    director.update_nic_environment_edge()
