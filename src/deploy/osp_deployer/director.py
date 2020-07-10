@@ -98,6 +98,7 @@ NIC_ENV_J2 = NIC_ENV + J2_EXT
 NETWORK_DATA_J2 = NET_DATA + J2_EXT
 NETWORK_ENV_J2 = NET_ENV + J2_EXT
 NODE_PLACEMENT_J2 = NODE_PLACEMENT + J2_EXT
+ROLES_DATA_J2 = ROLES_DATA + J2_EXT
 # TODO: dpaterson: migrating dell-environment template involves a bit of rework for
 # ceph osd stuff, wait for now
 DELL_ENV_J2 = DELL_ENV + J2_EXT
@@ -1090,7 +1091,9 @@ class Director(InfraHost):
             self.run_tty(cmd)
 
     def setup_net_envt(self):
-
+        """ TODO: dpaterson -
+        need to Jinja2-ize this function which is not simple.
+        """
         logger.debug("Configuring network-environment.yaml for overcloud")
         self.update_and_upload_network_environmment()
         network_yaml = self.templates_dir + "/" + NET_ENV + ".yaml"
@@ -2129,6 +2132,10 @@ class Director(InfraHost):
         setts = self.settings
         ntypes = setts.node_types
         ntypes_data_map = setts.node_type_data_map
+        logger.debug("setup_roles_edge called!")
+        setts = self.settings
+        tmplt = self.jinja2_env.get_template(ROLES_DATA_J2)
+        tmplt_data = {"roles": []}
 
         roles_file = os.path.join(self.templates_dir, ROLES_DATA + '.yaml')
         oc_roles_file = os.path.join(self.templates_dir,
@@ -2139,37 +2146,25 @@ class Director(InfraHost):
                                                    ROLES_DATA,
                                                    "yaml")
 
-        self.download_file(stg_roles_file, roles_file)
-        stg_roles = []
-        roles_list = []
         for node_type in ntypes:
             # If there is a subnet for node_type we have edge site
             # and need to generate templates
             if node_type.lower() in ntypes_data_map:
-                stg_roles.append(self._generate_role_dict(node_type))
-        if len(stg_roles) is not 0:
+                tmplt_data["roles"].append(self._generate_role_dict(node_type))
+        logger.debug("template data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_roles_file, 'w') as stg_roles_fp:
+            stg_roles_fp.write(rendered_tmplt)
 
-            with open(stg_roles_file) as stg_roles_fp:
-                roles_list = yaml.load(stg_roles_fp, Loader=OrderedLoader)
-
-            roles_list = self._delete_existing_roles(roles_list, stg_roles)
-
-            for role in stg_roles:
-                roles_list.append(role)
-
-            logger.debug("Roles to be uploaded: %s", str(roles_list))
-            with open(stg_roles_file, 'w') as stg_role_fp:
-                yaml.dump(roles_list, stg_role_fp, OrderedDumper)
-
-            self.upload_file(stg_roles_file, roles_file)
-            # Need to copy to pilot/templates/overcloud as
-            # we copy the roles_data file there during undercloud
-            # installation and it is used during overcloud deployment
-            self.upload_file(stg_roles_file, oc_roles_file)
+        self.upload_file(stg_roles_file, roles_file)
+        # Need to copy to pilot/templates/overcloud as
+        # we copy the roles_data file there during undercloud
+        # installation and it is used during overcloud deployment
+        self.upload_file(stg_roles_file, oc_roles_file)
 
     @directory_check(STAGING_NIC_CONFIGS)
     def update_stamp_nic_config_routes_edge(self):
-        """Loop through node_types, grouped by the number of nics, and update
+        """Loop through node_types, grouped by the number of nics, and
         the overcloud nic config templates, where appropriate, settting the
         correct routes enabling communication between the control plane and
         edge sites. Upload the stagged templete to the appropriate
@@ -2459,7 +2454,8 @@ class Director(InfraHost):
     @directory_check(STAGING_TEMPLATES_PATH)
     def update_network_environment_edge(self):
         """Update and upload network-environment.yaml for overcloud networks
-        and edge site specific networks"""
+        and edge site specific networks
+        TODO: dpaterson, need to jinja2-ize this function."""
         logger.debug("Updating network-environment.yaml for edge sites")
         setts = self.settings
         net_env_file = os.path.join(self.templates_dir, NET_ENV + ".yaml")
@@ -2902,18 +2898,39 @@ class Director(InfraHost):
 
     def _generate_role_dict(self, node_type):
         role_name = self._generate_cc_role(node_type)
-        role_d = OrderedDict()
+        role_d = {}
         role_d['name'] = role_name
-        role_d['description'] = role_name + " compute node role.\n"
+        role_d['description'] = role_name + " compute node role."
         role_d['CountDefault'] = 0
 
-        role_d['networks'] = [INTERNAL_API_NET[0] + role_name,
-                              TENANT_NET[0] + role_name,
-                              STORAGE_NET[0] + role_name,
-                              EXTERNAL_NET[0] + role_name]
+        _int_api_name = INTERNAL_API_NET[0] + role_name
+        _int_api_subnet = self._generate_subnet_name(INTERNAL_API_NET[1]
+                                                     + "_" + role_name)
+        _int_api = {'name': _int_api_name,
+                    'subnet': _int_api_subnet}
+
+        _tenant_name = TENANT_NET[0] + role_name
+        _tenant_subnet = self._generate_subnet_name(TENANT_NET[1]
+                                                    + "_" + role_name)
+        _tenant = {'name': _tenant_name,
+                   'subnet': _tenant_subnet}
+
+        _storage_name = STORAGE_NET[0] + role_name
+        _storage_subnet = self._generate_subnet_name(STORAGE_NET[1]
+                                                     + "_" + role_name)
+        _storage = {'name': _storage_name,
+                    'subnet': _storage_subnet}
+
+        _external_name = EXTERNAL_NET[0] + role_name
+        _external_subnet = self._generate_subnet_name(EXTERNAL_NET[1]
+                                                      + "_" + role_name)
+        _external = {'name': _external_name,
+                     'subnet': _external_subnet}
+
+        role_d['networks'] = [_int_api, _tenant, _storage, _external]
         role_d['HostnameFormatDefault'] = ("%stackname%-"
                                            + node_type + "-%index%")
-        role_params = OrderedDict()
+        role_params = {}
         role_params['TunedProfileName'] = "virtual-host"
         role_d['RoleParametersDefault'] = role_params
         role_d['disable_upgrade_deployment'] = True
@@ -3523,10 +3540,10 @@ class Director(InfraHost):
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
-
     # director.create_network_data()
     # director.update_and_upload_network_environmment()
     # director.update_and_upload_node_placement_edge()
     # director.setup_nic_configuration_edge()
     # director.update_nic_environment_edge()
-    director.update_stamp_nic_config_routes_edge()
+    # director.update_stamp_nic_config_routes_edge()
+    director.setup_roles_edge()
