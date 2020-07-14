@@ -70,6 +70,7 @@ DELL_ENV = 'dell-environment'
 NET_ENV = 'network-environment'
 INSTACK = 'instackenv'
 STATIC_IP_ENV = 'static-ip-environment'
+STATIC_VIP_ENV = 'static-ip-environment'
 ROLES_DATA = 'roles_data'
 NET_DATA = 'network_data'
 NET_ISO = 'network-isolation'
@@ -96,6 +97,8 @@ CONTROLLER_J2 = CONTROLLER + J2_EXT
 NIC_ENV_J2 = NIC_ENV + J2_EXT
 NETWORK_DATA_J2 = NET_DATA + J2_EXT
 NETWORK_ENV_J2 = NET_ENV + J2_EXT
+STATIC_IP_ENV_J2 = STATIC_IP_ENV + J2_EXT
+STATIC_VIP_ENV_J2 = STATIC_VIP_ENV + J2_EXT
 NODE_PLACEMENT_J2 = NODE_PLACEMENT + J2_EXT
 ROLES_DATA_J2 = ROLES_DATA + J2_EXT
 # TODO: dpaterson: migrating dell-environment template involves a bit of rework for
@@ -1382,140 +1385,15 @@ class Director(InfraHost):
 
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
-            # static_ips_yaml
-            control_external_ips = ''
-            control_private_ips = ''
-            control_storage_ips = ''
-            control_tenant_tunnel_ips = ''
-            for node in self.settings.controller_nodes:
-                control_external_ips += "    - " + node.public_api_ip
-                control_private_ips += "    - " + node.private_api_ip
-                control_storage_ips += "    - " + node.storage_ip
-                control_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip
-                if node != self.settings.controller_nodes[-1]:
-                    control_external_ips += "\\n"
-                    control_private_ips += "\\n"
-                    control_storage_ips += "\\n"
-                    control_tenant_tunnel_ips += "\\n"
+            self.update_and_upload_static_ips()
 
-            compute_tenant_tunnel_ips = ''
-            compute_private_ips = ''
-            compute_storage_ips = ''
-            compute_storage_cluster_ip = ''
-
-            for node in self.settings.compute_nodes:
-                compute_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip
-                compute_private_ips += "    - " + node.private_api_ip
-                compute_storage_ips += "    - " + node.storage_ip
-                if node != self.settings.compute_nodes[-1]:
-                    compute_tenant_tunnel_ips += "\\n"
-                    compute_private_ips += "\\n"
-                    compute_storage_ips += "\\n"
-
-            computehci_tenant_tunnel_ips =''
-            computehci_private_ips = ''
-            computehci_storage_ips = ''
-            computehci_cluster_ips = ''
-
-            for node in self.settings.computehci_nodes:
-                computehci_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip
-                computehci_private_ips += "    - " + node.private_api_ip
-                computehci_storage_ips += "    - " + node.storage_ip
-                computehci_cluster_ips += "    - " + node.storage_cluster_ip
-                if node != self.settings.computehci_nodes[-1]:
-                    computehci_tenant_tunnel_ips += "\\n"
-                    computehci_private_ips += "\\n"
-                    computehci_storage_ips += "\\n"
-                    computehci_cluster_ips += "\\n"
-
-            storage_storgage_ip = ''
-            storage_cluster_ip = ''
-            for node in self.settings.ceph_nodes:
-                storage_storgage_ip += "    - " + node.storage_ip
-                storage_cluster_ip += "    - " + node.storage_cluster_ip
-                if node != self.settings.ceph_nodes[-1]:
-                    storage_storgage_ip += "\\n"
-                    storage_cluster_ip += "\\n"
-
-            cmds = ['sed -i "/192.168/d" ' + static_ips_yaml,
-                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
-                    s/tenant:/tenant: \\n' +
-                    control_tenant_tunnel_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
-                    s/external:/external: \\n' +
-                    control_external_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
-                    s/internal_api:/internal_api: \\n' +
-                    control_private_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
-                    s/storage:/storage: \\n' +
-                    control_storage_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/DellComputeIPs:/,/CephStorageIPs:/ \
-                    s/tenant:/tenant: \\n' +
-                    compute_tenant_tunnel_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/DellComputeIPs:/,/CephStorageIPs:/ \
-                    s/internal_api:/internal_api: \\n' +
-                    compute_private_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/DellComputeIPs:/,/CephStorageIPs:/ \
-                    s/storage:/storage: \\n' +
-                    compute_storage_ips + "/\" " + static_ips_yaml,
-                    'sed -i "/CephStorageIPs:/,/$p/ s/storage:/storage: \\n' +
-                    storage_storgage_ip + "/\" " + static_ips_yaml,
-                    'sed -i "/CephStorageIPs:/,/$p/ \
-                    s/storage_mgmt:/storage_mgmt: \\n' +
-                    storage_cluster_ip + "/\" " + static_ips_yaml
-                    ]
-            if len(self.settings.computehci_nodes) > 0:
-                cmds.extend(['sed -i "/DellComputeHCIIPs:/,/tenant:/s/tenant:/tenant: \\n' +
-                           computehci_tenant_tunnel_ips + "/\" " + static_ips_yaml,
-                           'sed -i "/DellComputeHCIIPs:/,/internal_api:/s/internal_api:/internal_api: \\n' +
-                           computehci_private_ips + "/\" " + static_ips_yaml,
-                           'sed -i "/DellComputeHCIIPs:/,/storage:/s/storage:/storage: \\n' +
-                           computehci_storage_ips + "/\" " + static_ips_yaml,
-                           'sed -i "/DellComputeHCIIPs:/,/storage_mgmt:/s/storage_mgmt:/storage_mgmt: \\n' +
-                           computehci_cluster_ips + "/\" " + static_ips_yaml
-                          ])
-
-            for cmd in cmds:
-                self.run_tty(cmd)
 
             if self.settings.node_type_data_map:
                 self.update_static_ips_edge()
                 self.update_network_isolation_edge()
 
         if self.settings.use_static_vips is True:
-            logger.debug("Updating static vip yaml")
-            cmds = ["""sed -i "s/RedisVirtualFixedIPs: .*/RedisVirtualFixedIPs: [{'ip_address':'""" +
-                    self.settings.redis_vip + """'}]/" """ + static_vip_yaml,
-                    """sed -i "s/ControlFixedIPs: .*/ControlFixedIPs: [{'ip_address':'""" +
-                    self.settings.provisioning_vip + """'}]/" """ + static_vip_yaml,
-                    """sed -i "s/InternalApiVirtualFixedIPs: .*/InternalApiVirtualFixedIPs: [{'ip_address':'""" +
-                    self.settings.private_api_vip + """'}]/" """ + static_vip_yaml,
-                    """sed -i "s/PublicVirtualFixedIPs: .*/PublicVirtualFixedIPs: [{'ip_address':'""" +
-                    self.settings.public_api_vip + """'}]/" """ + static_vip_yaml,
-                    """sed -i "s/StorageVirtualFixedIPs: .*/StorageVirtualFixedIPs: [{'ip_address':'""" +
-                    self.settings.storage_vip + """'}]/" """ + static_vip_yaml,
-                    """sed -i "s/StorageMgmtVirtualFixedIPs: .*/StorageMgmtVirtualFixedIPs: [{'ip_address':'""" +
-                    self.settings.storage_cluster_vip + """'}]/" """ + static_vip_yaml
-                    # 'sed -i "s/redis: .*/redis: ' +
-                    # self.settings.redis_vip + '/" ' + static_vip_yaml,
-                    # 'sed -i "s/ControlPlaneIP: .*/ControlPlaneIP: ' +
-                    # self.settings.provisioning_vip + '/" ' + static_vip_yaml,
-                    # 'sed -i "s/InternalApiNetworkVip: ' +
-                    # '.*/InternalApiNetworkVip: ' +
-                    # self.settings.private_api_vip + '/" ' + static_vip_yaml,
-                    # 'sed -i "s/ExternalNetworkVip: ' +
-                    # '.*/ExternalNetworkVip: ' +
-                    # self.settings.public_api_vip + '/" ' + static_vip_yaml,
-                    # 'sed -i "s/StorageNetworkVip: ' +
-                    # '.*/StorageNetworkVip: ' +
-                    # self.settings.storage_vip + '/" ' + static_vip_yaml,
-                    # 'sed -i "s/StorageMgmtNetworkVip: ' +
-                    # '.*/StorageMgmtNetworkVip: ' +
-                    # self.settings.storage_cluster_vip + '/" ' + static_vip_yaml
-                    ]
-            for cmd in cmds:
-                self.run_tty(cmd)
+            self.update_and_updload_static_vips()
 
     def setup_nic_configuration(self):
         # Upload all yaml files in the NIC config directory
@@ -2468,6 +2346,134 @@ class Director(InfraHost):
         self.upload_file(stg_plcmnt_path, remote_plcmnt_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
+    def update_and_upload_static_ips(self):
+        logger.debug("update_and_upload_static_ips called!")
+        setts = self.settings
+        tmplt = self.jinja2_env.get_template(STATIC_IP_ENV_J2)
+        tmplt_data = {}
+        param_def = tmplt_data['parameter_defaults'] = {}
+        res_reg = tmplt_data['resource_registry'] = {}
+
+        control_external_ips = []
+        control_private_ips = []
+        control_storage_ips = []
+        control_tenant_tunnel_ips = []
+        for node in setts.controller_nodes:
+            control_external_ips.append(node.public_api_ip)
+            control_private_ips.append(node.private_api_ip)
+            control_storage_ips.append(node.storage_ip)
+            control_tenant_tunnel_ips.append(node.tenant_tunnel_ip)
+
+        if setts.controller_nodes:
+            cntl_ips = param_def['ControllerIPs'] = {}
+            cntl_ips['external'] = control_external_ips
+            cntl_ips['internal_api'] = control_private_ips
+            cntl_ips['storage'] = control_storage_ips
+            cntl_ips['tenant'] = control_tenant_tunnel_ips
+
+        compute_tenant_tunnel_ips = []
+        compute_private_ips = []
+        compute_storage_ips = []
+
+        for node in setts.compute_nodes:
+            compute_tenant_tunnel_ips.append(node.tenant_tunnel_ip)
+            compute_private_ips.append(node.private_api_ip)
+            compute_storage_ips.append(node.storage_ip)
+
+        if setts.compute_nodes:
+            compute_ips = param_def['DellComputeIPs'] = {}
+            compute_ips['internal_api'] = compute_private_ips
+            compute_ips['storage'] = compute_storage_ips
+            compute_ips['tenant'] = compute_tenant_tunnel_ips
+
+        computehci_tenant_tunnel_ips = []
+        computehci_private_ips = []
+        computehci_storage_ips = []
+        computehci_cluster_ips = []
+
+        for node in setts.computehci_nodes:
+            computehci_tenant_tunnel_ips.append(node.tenant_tunnel_ip)
+            computehci_private_ips.append(node.private_api_ip)
+            computehci_storage_ips.append(node.storage_ip)
+            computehci_cluster_ips.append(node.storage_cluster_ip)
+
+        if setts.computehci_nodes:
+            hci_ips = param_def['DellComputeHCIIPs'] = {}
+            hci_ips['storage'] = computehci_storage_ips
+            hci_ips['storage_mgmt'] = computehci_cluster_ips
+            hci_ips['internal_api'] = computehci_private_ips
+            hci_ips['tenant'] = computehci_tenant_tunnel_ips
+
+        storage_storgage_ip = []
+        storage_cluster_ip = []
+        for node in setts.ceph_nodes:
+            storage_storgage_ip.append(node.storage_ip)
+            storage_cluster_ip.append(node.storage_cluster_ip)
+
+        if setts.ceph_nodes:
+            storage_ips = param_def['CephStorageIPs'] = {}
+            storage_ips['storage'] = storage_storgage_ip
+            storage_ips['storage_mgmt'] = storage_cluster_ip
+
+        if self.settings.node_type_data_map:
+            for node_type, nodes in setts.node_types_map.items():
+                res_reg.update(self._generate_static_ip_ports(node_type))
+                param_def.update(self._generate_static_ip_params(node_type,
+                                                                 nodes))
+
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
+        stg_static_ip_env_path = self.get_timestamped_path(
+            STAGING_TEMPLATES_PATH,
+            STATIC_IP_ENV, "yaml")
+        with open(stg_static_ip_env_path, 'w') as stg_static_ip_env_fp:
+            stg_static_ip_env_fp.write(rendered_tmplt)
+
+        remote_static_ip_env_file = os.path.join(self.templates_dir,
+                                                 STATIC_IP_ENV
+                                                 + ".yaml")
+        self.upload_file(stg_static_ip_env_path, remote_static_ip_env_file)
+
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def update_and_upload_static_vips(self):
+        logger.debug("update_and_updload_static_vips called!")
+        setts = self.settings
+        tmplt = self.jinja2_env.get_template(STATIC_VIP_ENV_J2)
+        tmplt_data = {'scheduler_hints': {}}
+        cmds = ["""sed -i "s/RedisVirtualFixedIPs: .*/RedisVirtualFixedIPs: [{'ip_address':'""" +
+                setts.redis_vip + """'}]/" """ + static_vip_yaml,
+                """sed -i "s/ControlFixedIPs: .*/ControlFixedIPs: [{'ip_address':'""" +
+                setts.provisioning_vip + """'}]/" """ + static_vip_yaml,
+                """sed -i "s/InternalApiVirtualFixedIPs: .*/InternalApiVirtualFixedIPs: [{'ip_address':'""" +
+                setts.private_api_vip + """'}]/" """ + static_vip_yaml,
+                """sed -i "s/PublicVirtualFixedIPs: .*/PublicVirtualFixedIPs: [{'ip_address':'""" +
+                setts.public_api_vip + """'}]/" """ + static_vip_yaml,
+                """sed -i "s/StorageVirtualFixedIPs: .*/StorageVirtualFixedIPs: [{'ip_address':'""" +
+                setts.storage_vip + """'}]/" """ + static_vip_yaml,
+                """sed -i "s/StorageMgmtVirtualFixedIPs: .*/StorageMgmtVirtualFixedIPs: [{'ip_address':'""" +
+                setts.storage_cluster_vip + """'}]/" """ + static_vip_yaml
+                # 'sed -i "s/redis: .*/redis: ' +
+                # setts.redis_vip + '/" ' + static_vip_yaml,
+                # 'sed -i "s/ControlPlaneIP: .*/ControlPlaneIP: ' +
+                # setts.provisioning_vip + '/" ' + static_vip_yaml,
+                # 'sed -i "s/InternalApiNetworkVip: ' +
+                # '.*/InternalApiNetworkVip: ' +
+                # setts.private_api_vip + '/" ' + static_vip_yaml,
+                # 'sed -i "s/ExternalNetworkVip: ' +
+                # '.*/ExternalNetworkVip: ' +
+                # setts.public_api_vip + '/" ' + static_vip_yaml,
+                # 'sed -i "s/StorageNetworkVip: ' +
+                # '.*/StorageNetworkVip: ' +
+                # setts.storage_vip + '/" ' + static_vip_yaml,
+                # 'sed -i "s/StorageMgmtNetworkVip: ' +
+                # '.*/StorageMgmtNetworkVip: ' +
+                # setts.storage_cluster_vip + '/" ' + static_vip_yaml
+                ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
+    @directory_check(STAGING_TEMPLATES_PATH)
     def update_network_isolation_edge(self):
         """Update and upload network-isolation.yaml based on
         node types
@@ -2799,7 +2805,7 @@ class Director(InfraHost):
         ...
         }
         """
-        port_dict = OrderedDict()
+        port_dict = {}
         role = self._generate_cc_role(node_type)
         role_network = self._generate_role_network_lower(node_type)
 
@@ -3660,4 +3666,5 @@ if __name__ == "__main__":
     # director.setup_nic_configuration_edge()
     # director.update_nic_environment_edge()
     # director.update_stamp_nic_config_routes_edge()
-    director.setup_roles_edge()
+    # director.setup_roles_edge()
+    director.update_and_upload_static_ips()
