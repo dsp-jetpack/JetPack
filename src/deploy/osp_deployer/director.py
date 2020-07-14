@@ -363,7 +363,7 @@ class Director(InfraHost):
                                                                 stderr,
                                                                 stdout))
         # Turning LLDP off before introspection
-        lldp_off_cmd = "sudo sed -i 's/ipa-collect-lldp=1/ipa-collect-lldp=0/g' /httpboot/inspector.ipxe"  # noqa
+        lldp_off_cmd = "sudo sed -i 's/ipa-collect-lldp=1/ipa-collect-lldp=0/g' /var/lib/ironic/httpboot/inspector.ipxe"  # noqa
         self.run(lldp_off_cmd)
 
         introspection_cmd = self.source_stackrc + "~/pilot/introspect_nodes.py"
