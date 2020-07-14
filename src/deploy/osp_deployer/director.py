@@ -37,7 +37,7 @@ from auto_common.yaml_utils import OrderedLoader
 
 
 # logger = logging.getLogger("osp_deployer")
-#TODO after testing delete two logging config lines below
+# TODO after testing delete two logging config lines below
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 logger = logging.getLogger()
 
@@ -71,7 +71,7 @@ DELL_ENV = 'dell-environment'
 NET_ENV = 'network-environment'
 INSTACK = 'instackenv'
 STATIC_IP_ENV = 'static-ip-environment'
-STATIC_VIP_ENV = 'static-ip-environment'
+STATIC_VIP_ENV = 'static-vip-environment'
 ROLES_DATA = 'roles_data'
 NET_DATA = 'network_data'
 NET_ISO = 'network-isolation'
@@ -1254,8 +1254,8 @@ class Director(InfraHost):
     def setup_networking(self):
         logger.debug("Configuring network settings for overcloud")
 
-        static_ips_yaml = self.templates_dir + "/static-ip-environment.yaml"
-        static_vip_yaml = self.templates_dir + "/static-vip-environment.yaml"
+        # static_ips_yaml = self.templates_dir + "/static-ip-environment.yaml"
+        # static_vip_yaml = self.templates_dir + "/static-vip-environment.yaml"
         neutron_ovs_dpdk_yaml = self.templates_dir + "/neutron-ovs-dpdk.yaml"
         neutron_sriov_yaml = self.templates_dir + "/neutron-sriov.yaml"
 
@@ -1265,8 +1265,9 @@ class Director(InfraHost):
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy
         # with a different config
-        self.upload_file(self.settings.static_ips_yaml, static_ips_yaml)
-        self.upload_file(self.settings.static_vip_yaml, static_vip_yaml)
+        self.update_and_upload_static_ips()
+        self.update_and_upload_static_vips()
+
         self.upload_file(self.settings.neutron_ovs_dpdk_yaml,
                          neutron_ovs_dpdk_yaml)
         self.upload_file(self.settings.neutron_sriov_yaml, neutron_sriov_yaml)
@@ -2327,38 +2328,34 @@ class Director(InfraHost):
         logger.debug("update_and_updload_static_vips called!")
         setts = self.settings
         tmplt = self.jinja2_env.get_template(STATIC_VIP_ENV_J2)
-        tmplt_data = {'scheduler_hints': {}}
-        cmds = ["""sed -i "s/RedisVirtualFixedIPs: .*/RedisVirtualFixedIPs: [{'ip_address':'""" +
-                setts.redis_vip + """'}]/" """ + static_vip_yaml,
-                """sed -i "s/ControlFixedIPs: .*/ControlFixedIPs: [{'ip_address':'""" +
-                setts.provisioning_vip + """'}]/" """ + static_vip_yaml,
-                """sed -i "s/InternalApiVirtualFixedIPs: .*/InternalApiVirtualFixedIPs: [{'ip_address':'""" +
-                setts.private_api_vip + """'}]/" """ + static_vip_yaml,
-                """sed -i "s/PublicVirtualFixedIPs: .*/PublicVirtualFixedIPs: [{'ip_address':'""" +
-                setts.public_api_vip + """'}]/" """ + static_vip_yaml,
-                """sed -i "s/StorageVirtualFixedIPs: .*/StorageVirtualFixedIPs: [{'ip_address':'""" +
-                setts.storage_vip + """'}]/" """ + static_vip_yaml,
-                """sed -i "s/StorageMgmtVirtualFixedIPs: .*/StorageMgmtVirtualFixedIPs: [{'ip_address':'""" +
-                setts.storage_cluster_vip + """'}]/" """ + static_vip_yaml
-                # 'sed -i "s/redis: .*/redis: ' +
-                # setts.redis_vip + '/" ' + static_vip_yaml,
-                # 'sed -i "s/ControlPlaneIP: .*/ControlPlaneIP: ' +
-                # setts.provisioning_vip + '/" ' + static_vip_yaml,
-                # 'sed -i "s/InternalApiNetworkVip: ' +
-                # '.*/InternalApiNetworkVip: ' +
-                # setts.private_api_vip + '/" ' + static_vip_yaml,
-                # 'sed -i "s/ExternalNetworkVip: ' +
-                # '.*/ExternalNetworkVip: ' +
-                # setts.public_api_vip + '/" ' + static_vip_yaml,
-                # 'sed -i "s/StorageNetworkVip: ' +
-                # '.*/StorageNetworkVip: ' +
-                # setts.storage_vip + '/" ' + static_vip_yaml,
-                # 'sed -i "s/StorageMgmtNetworkVip: ' +
-                # '.*/StorageMgmtNetworkVip: ' +
-                # setts.storage_cluster_vip + '/" ' + static_vip_yaml
-                ]
-        for cmd in cmds:
-            self.run_tty(cmd)
+        tmplt_data = {}
+        param_defs = tmplt_data["parameter_defaults"] = {}
+        param_defs["RedisVirtualFixedIPs"] = [{'ip_address':
+                                               setts.redis_vip}]
+        param_defs["ControlFixedIPs"] = [{'ip_address':
+                                          setts.provisioning_vip}]
+        param_defs["InternalApiVirtualFixedIPs"] = [{'ip_address':
+                                                     setts.private_api_vip}]
+        param_defs["PublicVirtualFixedIPs"] = [{'ip_address':
+                                                setts.public_api_vip}]
+        param_defs["StorageVirtualFixedIPs"] = [{'ip_address':
+                                                 setts.storage_vip}]
+        param_defs["StorageMgmtVirtualFixedIPs"] = [{'ip_address':
+                                                     setts.storage_cluster_vip
+                                                     }]
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
+        stg_static_vip_env_path = self.get_timestamped_path(
+            STAGING_TEMPLATES_PATH,
+            STATIC_VIP_ENV, "yaml")
+        with open(stg_static_vip_env_path, 'w') as stg_static_vip_env_fp:
+            stg_static_vip_env_fp.write(rendered_tmplt)
+
+        remote_static_vip_env_file = os.path.join(self.templates_dir,
+                                                  STATIC_VIP_ENV
+                                                  + ".yaml")
+        self.upload_file(stg_static_vip_env_path, remote_static_vip_env_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
     def update_network_isolation_edge(self):
@@ -3543,6 +3540,7 @@ class Director(InfraHost):
                 self.default_compute_services = _srv_defs
         return self.default_compute_services
 
+
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
@@ -3553,4 +3551,5 @@ if __name__ == "__main__":
     # director.update_nic_environment_edge()
     # director.update_stamp_nic_config_routes_edge()
     # director.setup_roles_edge()
-    director.update_and_upload_static_ips()
+    # director.update_and_upload_static_ips()
+    director.update_and_upload_static_vips()

@@ -21,10 +21,6 @@
 
 
 parameter_defaults:
-
-  ControlFixedIPs: [{'ip_address':'192.168.120.250'}]
-  InternalApiVirtualFixedIPs: [{'ip_address':'192.168.140.250'}]
-  PublicVirtualFixedIPs: [{'ip_address':'100.67.59.51'}]
-  StorageVirtualFixedIPs: [{'ip_address':'192.168.170.250'}]
-  StorageMgmtVirtualFixedIPs: [{'ip_address':'192.168.120.249'}]
-  RedisVirtualFixedIPs: [{'ip_address':'192.168.140.250'}]
+  {%- for role, ips in parameter_defaults.items() %}
+  {{role}}: {{ips}}
+  {%- endfor %}
