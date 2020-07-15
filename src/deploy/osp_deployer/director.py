@@ -102,6 +102,7 @@ STATIC_IP_ENV_J2 = STATIC_IP_ENV + J2_EXT
 STATIC_VIP_ENV_J2 = STATIC_VIP_ENV + J2_EXT
 NODE_PLACEMENT_J2 = NODE_PLACEMENT + J2_EXT
 ROLES_DATA_J2 = ROLES_DATA + J2_EXT
+NET_ISO_J2 = NET_ISO + J2_EXT
 # TODO: dpaterson: migrating dell-environment template involves a bit of rework for
 # ceph osd stuff, wait for now
 DELL_ENV_J2 = DELL_ENV + J2_EXT
@@ -1289,11 +1290,7 @@ class Director(InfraHost):
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
             self.update_and_upload_static_ips()
-
-
-            if self.settings.node_type_data_map:
-                self.update_static_ips_edge()
-                self.update_network_isolation_edge()
+            self.update_and_upload_network_isolation()
 
         if self.settings.use_static_vips is True:
             self.update_and_updload_static_vips()
@@ -2358,39 +2355,36 @@ class Director(InfraHost):
         self.upload_file(stg_static_vip_env_path, remote_static_vip_env_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def update_network_isolation_edge(self):
+    def update_and_upload_network_isolation(self):
         """Update and upload network-isolation.yaml based on
         node types
         """
-        logger.debug("Updating network isolation for edge sites.")
+        logger.debug("updated_and_upload_network_isolation called!")
         setts = self.settings
-        net_iso_file = os.path.join(self.templates_dir, NET_ISO + ".yaml")
-        oc_net_iso_file = os.path.join(self.templates_dir,
-                                       'overcloud',
-                                       'environments',
-                                       NET_ISO + ".yaml")
+        tmplt = self.jinja2_env.get_template(NET_ISO_J2)
+        tmplt_data = {}
+        res_reg = tmplt_data["resource_registry"] = {}
+        for nt, nt_data in setts.node_type_data_map.items():
+            res_reg.update(self._generate_network_isolation(nt))
 
-        stg_net_iso_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
-                                                      NET_ISO, "yaml")
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
 
-        self.download_file(stg_net_iso_path, net_iso_file)
-        stg_net_iso_tmpl = {}
-        with open(stg_net_iso_path) as stg_net_iso_fp:
-            stg_net_iso_tmpl = yaml.load(stg_net_iso_fp,
-                                         Loader=OrderedLoader)
-            res_reg = stg_net_iso_tmpl['resource_registry']
-
-            for nt, nt_data in setts.node_type_data_map.items():
-                res_reg.update(self._generate_network_isolation(nt))
-
+        stg_net_iso_path = self.get_timestamped_path(
+            STAGING_TEMPLATES_PATH,
+            STATIC_VIP_ENV, "yaml")
         with open(stg_net_iso_path, 'w') as stg_net_iso_fp:
-            yaml.dump(stg_net_iso_tmpl, stg_net_iso_fp, OrderedDumper,
-                      default_flow_style=False)
+            stg_net_iso_fp.write(rendered_tmplt)
 
-        self.upload_file(stg_net_iso_path, net_iso_file)
-        # have to upload twice as we specify overcloud/environments/
-        # when deploying overcloud
-        self.upload_file(stg_net_iso_path, oc_net_iso_file)
+        remote_net_iso_file = os.path.join(self.templates_dir,
+                                           NET_ISO
+                                           + ".yaml")
+        remote_oc_net_iso_file = os.path.join(self.templates_dir,
+                                              'overcloud',
+                                              'environments',
+                                              NET_ISO + ".yaml")
+        self.upload_file(stg_net_iso_path, remote_net_iso_file)
+        self.upload_file(stg_net_iso_path, remote_oc_net_iso_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
     def update_dell_environment_edge(self):
@@ -2761,7 +2755,7 @@ class Director(InfraHost):
         """
         role = self._generate_cc_role(type)
         edge_net = self._generate_role_network_lower(type)
-        _res_reg = OrderedDict()
+        _res_reg = {}
         for net_tuple in EDGE_NETWORKS:
             net_key = "OS::TripleO::Network::{}{}".format(net_tuple[0],
                                                           role)
@@ -3552,4 +3546,5 @@ if __name__ == "__main__":
     # director.update_stamp_nic_config_routes_edge()
     # director.setup_roles_edge()
     # director.update_and_upload_static_ips()
-    director.update_and_upload_static_vips()
+    # director.update_and_upload_static_vips()
+    director.update_and_upload_network_isolation()
