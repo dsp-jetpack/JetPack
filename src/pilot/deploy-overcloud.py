@@ -404,11 +404,6 @@ def main():
                             required=True,
                             default=1500,
                             help="Tenant Network MTU")
-        parser.add_argument('--network_data',
-                            action='store_true',
-                            default=False,
-                            help="Use network_data.yaml to create edge site "
-                                 "networks")
         parser.add_argument("--dashboard_enable",
                             action='store_true',
                             default=False,
