@@ -231,7 +231,7 @@ def deploy():
                                     settings.director_install_account_user,
                                     settings.director_install_account_pwd,
                                     cmd)[0]
-        logger.debug("=== Overcloud stack state : " + overcloud_status)
+        logger.debug("=== Overcloud stack state %s: " + overcloud_status)
         if settings.hpg_enable:
             logger.info(
                 " HugePages has been successfully configured with size: " +

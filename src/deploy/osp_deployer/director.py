@@ -103,12 +103,13 @@ STATIC_VIP_ENV_J2 = STATIC_VIP_ENV + J2_EXT
 NODE_PLACEMENT_J2 = NODE_PLACEMENT + J2_EXT
 ROLES_DATA_J2 = ROLES_DATA + J2_EXT
 NET_ISO_J2 = NET_ISO + J2_EXT
-# TODO: dpaterson: migrating dell-environment template involves a bit of rework for
-# ceph osd stuff, wait for now
+# TODO: dpaterson: migrating dell-environment template involves a bit of
+# rework for ceph osd stuff, wait for now
 DELL_ENV_J2 = DELL_ENV + J2_EXT
 
 EC2_IPCIDR = '169.254.169.254/32'
 EC2_PUBLIC_IPCIDR_PARAM = 'EC2MetadataPublicIpCidr'
+
 
 class Director(InfraHost):
 
@@ -751,6 +752,8 @@ class Director(InfraHost):
         if self.settings.node_type_data_map:
             self.update_dell_environment_edge()
 
+    # TODO: dpaterson, refactor to use ini parser like was done
+    # in undercloud.conf
     def setup_sanity_ini(self):
         sanity_ini = self.sanity_dir + "/sanity.ini"
         self.upload_file(self.settings.sanity_ini,
@@ -816,30 +819,6 @@ class Director(InfraHost):
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_vlantest_network=.*|sanity_vlantest_network=' +
             self.settings.sanity_vlantest_network +
-            '|" pilot/deployment-validation/sanity.ini',
-            'sed -i "s|share_storage_network=.*|share_storage_network=' +
-            self.settings.share_storage_network +
-            '|" pilot/deployment-validation/sanity.ini',
-            'sed -i "s|share_storage_network_start_ip=.*|' +
-            'share_storage_network_start_ip=' +
-            self.settings.share_storage_network_start_ip +
-            '|" pilot/deployment-validation/sanity.ini',
-            'sed -i "s|share_storage_network_end_ip=.*|' +
-            'share_storage_network_end_ip=' +
-            self.settings.share_storage_network_end_ip +
-            '|" pilot/deployment-validation/sanity.ini',
-            'sed -i "s|share_storage_network_gateway=.*|'
-            'share_storage_network_gateway=' +
-            self.settings.share_storage_network_gateway +
-            '|" pilot/deployment-validation/sanity.ini',
-            'sed -i "s|share_storage_network_vlan=.*|share_storage_network_vlan=' +
-            self.settings.share_storage_network_vlan +
-            '|" pilot/deployment-validation/sanity.ini',
-           'sed -i "s|share_storage_network_name=.*|share_storage_network_name=' +
-            self.settings.share_storage_network_name +
-            '|" pilot/deployment-validation/sanity.ini',
-           'sed -i "s|share_storage_subnet_name=.*|share_storage_subnet_name=' +
-            self.settings.share_storage_subnet_name +
             '|" pilot/deployment-validation/sanity.ini'
         ]
         for cmd in cmds:
@@ -1263,12 +1242,6 @@ class Director(InfraHost):
         if self.settings.enable_ovs_dpdk is True:
             self.set_ovs_dpdk_driver(self.settings.neutron_ovs_dpdk_yaml)
 
-        # Re - Upload the yaml files in case we're trying to
-        # leave the undercloud intact but want to redeploy
-        # with a different config
-        self.update_and_upload_static_ips()
-        self.update_and_upload_static_vips()
-
         self.upload_file(self.settings.neutron_ovs_dpdk_yaml,
                          neutron_ovs_dpdk_yaml)
         self.upload_file(self.settings.neutron_sriov_yaml, neutron_sriov_yaml)
@@ -1293,7 +1266,7 @@ class Director(InfraHost):
             self.update_and_upload_network_isolation()
 
         if self.settings.use_static_vips is True:
-            self.update_and_updload_static_vips()
+            self.update_and_upload_static_vips()
 
     def setup_nic_configuration(self):
         # Upload all yaml files in the NIC config directory
@@ -1972,7 +1945,7 @@ class Director(InfraHost):
         uconf.set('ctlplane-subnet', 'gateway',
                   setts.provisioning_gateway)
         # set enable_routed_networks create and deine routed networks
-        is_enable_routed_networks = str(bool(setts.node_type_data_map))
+        is_enable_routed_networks = str(True)  # TODO after test use variable: str(bool(setts.node_type_data_map))
 
         uconf.set('DEFAULT', 'enable_routed_networks',
                   is_enable_routed_networks)
@@ -2142,8 +2115,7 @@ class Director(InfraHost):
             _net_config = self._generate_nic_network_config(node_type,
                                                             node_type_data)
             tmplt_data['network_config'] = _net_config
-            logger.info("xxxxx tmplt_data: %s",
-                        str(tmplt_data))
+            logger.info("tmplt_data: %s", str(tmplt_data))
             rendered_tmplt = tmplt.render(**tmplt_data)
             with open(stg_nic_path, 'w') as stg_nic_fp:
                 stg_nic_fp.write(rendered_tmplt)
@@ -2155,8 +2127,8 @@ class Director(InfraHost):
         """Update and upload nic_environment.yaml template for edge sites
 
         Loop through the node_types, grouped by number of nics, and update
-        the template resource_registry and parameter_defaults with site-specific
-        parameters contained in the .ini file.
+        the template resource_registry and parameter_defaults with
+        site-specific parameters contained in the .ini file.
 
         This results in a file that corresoponds to the node type,
         which is uploaded to the correct nic-configs sub-directory based on the
@@ -2425,7 +2397,7 @@ class Director(InfraHost):
     def create_network_data(self):
         """Generate and upload network_data.yaml for default overcloud networks
         and edge site specific networks"""
-        logger.debug("Creating network_data.yaml for edge networks.")
+        logger.debug("Creating network_data.yaml")
 
         setts = self.settings
         net_data_path = self.templates_dir
@@ -2653,10 +2625,9 @@ class Director(InfraHost):
             for nt, nt_data in setts.node_type_data_map.items():
                 _edge_nw.update(
                     self._generate_network_environment_params(nt, nt_data))
-        tmplt_data['edge_networks'] = _edge_nw
-        logger.debug("tmplt_data['edge_networks']: %s",
-                     str(tmplt_data['edge_networks']))
+            tmplt_data['edge_networks'] = _edge_nw
 
+        logger.debug("tmplt_data: %s", str(tmplt_data))
         rendered_tmplt = tmplt.render(**tmplt_data)
         net_env_file = os.path.join(self.templates_dir, NET_ENV + ".yaml")
 
@@ -3538,7 +3509,7 @@ class Director(InfraHost):
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
-    # director.create_network_data()
+    director.create_network_data()
     # director.update_and_upload_network_environmment()
     # director.update_and_upload_node_placement_edge()
     # director.setup_nic_configuration_edge()
@@ -3547,4 +3518,4 @@ if __name__ == "__main__":
     # director.setup_roles_edge()
     # director.update_and_upload_static_ips()
     # director.update_and_upload_static_vips()
-    director.update_and_upload_network_isolation()
+    # director.update_and_upload_network_isolation()
