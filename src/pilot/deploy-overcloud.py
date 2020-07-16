@@ -39,7 +39,10 @@ BAREMETAL_FLAVOR = "baremetal"
 
 # Check to see if the sequence contains numbers that increase by 1
 def is_coherent(seq):
-    return seq == range(seq[0], seq[-1]+1)
+    r = []
+    for i in range(seq[0], seq[-1]+1):
+        r.append(i)
+    return seq == r
 
 
 def validate_node_placement():
