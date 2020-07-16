@@ -616,7 +616,7 @@ class Settings:
             '/pilot/templates/dell-cinder-backends.yaml'
         self.dellsc_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellsc-cinder-config.yaml'
-       self.dell_unity_cinder_yaml = self.foreman_configuration_scripts + \
+        self.dell_unity_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellemc-unity-cinder-backend.yaml'
         self.unity_manila_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/unity-manila-config.yaml'
