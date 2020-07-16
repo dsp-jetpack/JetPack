@@ -224,8 +224,8 @@ def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
                     result = set_nic_legacy_boot_protocol_none(
                         nic_id, drac_client)
             except exceptions.InvalidParameterValue:
-                LOG.warning("Unable to check the legacy boot protocol of NIC {} "
-                         "on {}, and so cannot set it to None".format(
+                LOG.warning("Unable to check the legacy boot protocol of NIC "
+                            "{} on {}, and so cannot set it to None".format(
                              nic_id, ip_service_tag))
 
         if result is None:
@@ -273,7 +273,8 @@ def is_nic_legacy_boot_protocol_none(nic_id, drac_client):
              interface
     :raises: InvalidParameterValue on invalid NIC attribute
     """
-    return get_nic_legacy_boot_protocol(nic_id, drac_client).current_value == 'NONE'
+    return (get_nic_legacy_boot_protocol(nic_id, drac_client)
+            .current_value == 'NONE')
 
 
 def is_nic_legacy_boot_protocol_pxe(nic_id, drac_client):
@@ -290,7 +291,8 @@ def is_nic_legacy_boot_protocol_pxe(nic_id, drac_client):
              interface
     :raises: InvalidParameterValue on invalid NIC attribute
     """
-    return get_nic_legacy_boot_protocol(nic_id, drac_client).current_value == 'PXE'
+    return (get_nic_legacy_boot_protocol(nic_id, drac_client)
+            .current_value == 'PXE')
 
 
 def set_nic_legacy_boot_protocol(nic_id, value, drac_client):
@@ -702,8 +704,8 @@ def config_idrac(instack_lock,
 
     if new_password is not None or \
         "provisioning_mac" not in node or \
-        ("provisioning_mac" in node and
-         node["provisioning_mac"] != provisioning_mac):
+        ("provisioning_mac" in node
+         and node["provisioning_mac"] != provisioning_mac):
 
         # Synchronize to prevent thread collisions while saving the instack
         # file

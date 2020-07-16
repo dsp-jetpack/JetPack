@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -268,14 +270,14 @@ class Checkpoints:
                           + len(setts.ceph_nodes)
                           + len(setts.computehci_nodes))
 
-        for node_type, nodes in self.settings.node_types_map.items():
-            logger.info("Number of %s nodes: %s", node_type, str(len(nodes)))
+        for node_type, nodes in setts.node_types_map.items():
+            logger.debug("Number of %s nodes: %s", node_type, str(len(nodes)))
             expected_nodes += len(nodes)
         if len(ls_nodes) != expected_nodes:
             raise AssertionError(
                 "Expected amount of nodes registered in Ironic "
-                "does not add up " +
-                str(len(ls_nodes)) + "/" + str(expected_nodes))
+                "does not add up "
+                + str(len(ls_nodes)) + "/" + str(expected_nodes))
 
     def verify_introspection_sucessfull(self):
         logger.debug("Verify the introspection did not encounter any errors")
@@ -307,8 +309,10 @@ class Checkpoints:
             raise AssertionError(
                 "Director & Undercloud did not install properly, "
                 "check /pilot/install-director.log for details")
-        cmd = " grep \"Undercloud install complete\" " \
-              "~/pilot/install-director.log"
+
+        cmd = ("grep \"The Undercloud has been successfully installed\" "
+               + "~/pilot/install-director.log")
+
         setts = self.settings
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,

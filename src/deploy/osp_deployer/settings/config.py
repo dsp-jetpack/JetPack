@@ -745,6 +745,13 @@ class Settings:
                 except AttributeError:
                     pass
                 try:
+                    node.is_dashboard = (True if node.is_dashboard
+                                         == "true" else False)
+                    if node.is_dashboard:
+                        self.dashboard_node = node
+                except AttributeError:
+                    pass
+                try:
                     node.is_controller = (True if node.is_controller
                                           == "true" else False)
                     if node.is_controller:
@@ -760,6 +767,7 @@ class Settings:
                 except AttributeError:
                     node.is_computehci = False
                     pass
+
                 try:
                     node.is_compute = (True if node.is_compute
                                        == "true" else False)
@@ -804,7 +812,8 @@ class Settings:
                     pass
                 if "node_type" in node.__dict__:
                     logger.debug("node_type not in self.node_types_map: %s",
-                                 str(node.node_type not in self.node_types_map))
+                                 str(node.node_type
+                                     not in self.node_types_map))
                     if node.node_type not in self.node_types_map:
                         self.node_types_map[node.node_type] = []
                     self.node_types_map[node.node_type].append(node)
@@ -851,7 +860,7 @@ class Settings:
                                               shell=True).rstrip()
             self.source_version = re_
         except:  # noqa: E722
-            logger.debug("unconventional setup...can t" +
+            logger.debug("unconventional setup...can't"
                          " pick source version info")
             self.source_version = "????"
 

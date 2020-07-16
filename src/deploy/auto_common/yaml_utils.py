@@ -33,7 +33,6 @@ def list_representer(dumper, data):
 
 
 OrderedDumper.add_representer(OrderedDict, ordered_map_representer)
-OrderedDumper.add_representer(unicode, literal_representer)
 OrderedDumper.add_representer(str, literal_representer)
 OrderedDumper.add_representer(list, list_representer)
 

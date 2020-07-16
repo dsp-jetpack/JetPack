@@ -423,7 +423,7 @@ class Sah(InfraHost):
         route_br_mgmt = '/etc/sysconfig/network-scripts/route-br-mgmt'
         route_br_prov = '/etc/sysconfig/network-scripts/route-br-prov'
         with open(route_br_mgmt, 'w') as route_br_mgmt_stream:
-            for node_type, node_type_data in ntdm.iteritems():
+            for node_type, node_type_data in ntdm.items():
                 mgmt_cidr = node_type_data['mgmt_cidr']
                 mgmt_bridge = 'br-mgmt'
                 route = "{} via {} dev {}\n".format(mgmt_cidr,
@@ -431,7 +431,7 @@ class Sah(InfraHost):
                                                     mgmt_bridge)
                 route_br_mgmt_stream.write(route)
         with open(route_br_prov, 'w') as route_br_prov_stream:
-            for node_type, node_type_data in ntdm.iteritems():
+            for node_type, node_type_data in ntdm.items():
                 prov_cidr = node_type_data['cidr']
                 prov_bridge = 'br-prov'
                 route = "{} via {} dev {}\n".format(prov_cidr,

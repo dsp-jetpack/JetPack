@@ -15,18 +15,13 @@
 # limitations under the License.
 
 import argparse
-import distutils.dir_util
 import os
 import re
 import sys
 import subprocess
-import paramiko
 import logging
-import string
 import novaclient.client as nova_client
 import time
-from command_helper import Ssh
-from novaclient.v2 import aggregates
 from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
 from credential_helper import CredentialHelper
@@ -406,6 +401,11 @@ def main():
                             required=True,
                             default=1500,
                             help="Tenant Network MTU")
+        parser.add_argument('--network_data',
+                            action='store_true',
+                            default=False,
+                            help="Use network_data.yaml to create edge site "
+                                 "networks")
         parser.add_argument("--dashboard_enable",
                             action='store_true',
                             default=False,
@@ -468,7 +468,7 @@ def main():
         # If disabled, default values will be set and
         # they won't be used for configuration
         # Create ConfigOvercloud object
-        print ("Configure environment file")
+        print("Configure environment file")
         config = ConfigOvercloud(args.overcloud_name)
         # Remove this when Numa siblings added
         # Edit the dellnfv_environment.yaml
