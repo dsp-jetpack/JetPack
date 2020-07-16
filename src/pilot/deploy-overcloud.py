@@ -162,6 +162,9 @@ def create_volume_types():
     if args.enable_unity:
         types.append(["unity_backend", "tripleo_dellemc_unity"])
 
+    if args.enable_powermax:
+        types.append(["powermax_backend", "tripleo_dellemc_powermax"])
+
     overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 
     for type in types:
@@ -192,6 +195,9 @@ def create_share_types():
 
     if args.enable_unity_manila:
         types.append(["unity_share", "tripleo_manila_unity"])
+
+    if args.enable_powermax_manila:
+        types.append(["powermax_share", "tripleo_manila_powermax"])
 
     overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 
@@ -329,6 +335,19 @@ def main():
                             action='store_true',
                             default=False,
                             help="Enable Dell EMC Unity Manila backend")
+        parser.add_argument('--enable_powermax',
+                            action='store_true',
+                            default=False,
+                            help="Enable Dell EMC Powermax backend")
+        parser.add_argument('--powermax_protocol',
+                            dest='powermax_protocol',
+                            required=False,
+                            default="iSCSI",
+                            help="Dell EMC Powermax Protocol - iSCSI or FC")
+        parser.add_argument('--enable_powermax_manila',
+                            action='store_true',
+                            default=False,
+                            help="Enable Dell EMC PowerMax  Manila backend")
         parser.add_argument('--disable_rbd',
                             action='store_true',
                             default=False,
@@ -555,6 +574,17 @@ def main():
                         "backend.yaml"
         if args.enable_unity_manila:
             env_opts += " -e ~/pilot/templates/unity-manila-config.yaml"
+
+        if args.enable_powermax:
+           if args.powermax_protocol == "iSCSI":
+               env_opts += " -e ~/pilot/templates/dellemc-powermax-iscsi-cinder-" \
+                        "backend.yaml"
+           else:
+               env_opts += " -e ~/pilot/templates/dellemc-powermax-fc-cinder-" \
+                        "backend.yaml"
+        if args.enable_powermax_manila:
+            env_opts += " -e ~/pilot/templates/powermax-manila-config.yaml"
+
         if args.dashboard_enable:
             env_opts += " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-dashboard.yaml"
             env_opts += " -e ~/pilot/templates/ceph_dashboard_admin.yaml "

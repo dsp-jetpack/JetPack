@@ -1,0 +1,23 @@
+parameter_defaults: 
+  CinderEnableIscsiBackend:true
+
+parameter_defaults:
+  ControllerExtraConfig:
+    cinder::config::cinder_config:
+        tripleo_dellemc_powermax/volume_driver:
+            value: cinder.volume.drivers.dell_emc.vmax.iscsi.VMAXISCSIDriver
+        tripleo_dellemc_powermax/volume_backend_name:
+            value: tripleo_dellemc_powermax
+        tripleo_dellemc_powermax/san_ip:
+            value: <powermax_san_ip>
+        tripleo_dellemc_powermax/san_login:
+            value: <powermax_san_login>
+        tripleo_dellemc_powermax/san_password:
+            value: <powermax_san_password>
+        tripleo_dellemc_powermax/vmax_port_groups:
+            value: '<powermax_port_groups>'
+        tripleo_dellemc_powermax/vmax_array:
+            value: <powermax_array>
+        tripleo_dellemc_powermax/vmax_srp:
+            value: <powermax_srp>
+    cinder_user_enabled_backends: ['tripleo_dellemc_powermax'] 

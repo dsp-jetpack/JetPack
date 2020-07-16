@@ -391,6 +391,13 @@ class Settings:
 
         # unity
         if backend_settings['enable_unity_backend'].lower() == 'true':
+
+            if (backend_settings['unity_storage_protocol'] != 'iSCSI' and
+               backend_settings['unity_storage_protocol'] != 'FC'):
+                  error_msg = "Invalid Unity Storage Protocol " + \
+                      "in your ini file '" + backend_settings['unity_storage_protocol'] + \
+                      "'. Valid protocols are iSCSI or FC"
+                  raise AssertionError(error_msg)
             self.enable_unity_backend = True
             self.cinder_unity_container_version = backend_settings[
                 'cinder_unity_container_version']
@@ -408,7 +415,7 @@ class Settings:
         else:
             self.enable_unity_backend = False
 
-        # Unity Manila
+       # Unity Manila
         if backend_settings['enable_unity_manila_backend'].lower() == 'true':
             self.enable_unity_manila_backend = True
             self.manila_unity_container_version = backend_settings[
@@ -433,6 +440,55 @@ class Settings:
                 backend_settings['manila_unity_ssl_cert_path']
         else:
             self.enable_unity_manila_backend = False
+
+        # powermax
+        if backend_settings['enable_powermax_backend'].lower() == 'true':
+            if (backend_settings['powermax_protocol'] != 'iSCSI' and
+               backend_settings['powermax_protocol'] != 'FC'):
+                error_msg = "Invalid Powermax Protocol " +\
+                    "in your ini file '" + backend_settings['powermax_protocol'] +\
+                    "'. Valid protocols are iSCSI or FC"
+                raise AssertionError(error_msg)
+
+            self.enable_powermax_backend = True
+            self.powermax_backend_name = backend_settings['powermax_backend_name']
+            self.powermax_san_ip = backend_settings['powermax_san_ip']
+            self.powermax_san_login = backend_settings[
+                'powermax_san_login']
+            self.powermax_san_password = backend_settings[
+                'powermax_san_password']
+            self.powermax_protocol = backend_settings[
+                'powermax_protocol']
+            self.powermax_array = backend_settings[
+                'powermax_array']
+            self.powermax_port_groups = backend_settings[
+                'powermax_port_groups']
+            self.powermax_srp = backend_settings[
+                'powermax_srp']
+        else:
+            self.powermax_protocol = 'iSCSI'
+            self.enable_powermax_backend = False
+
+        # PowerMax Manila
+        if backend_settings['enable_powermax_manila_backend'].lower() == 'true':
+            self.enable_powermax_manila_backend = True
+            self.manila_powermax_driver_handles_share_servers = \
+                backend_settings['manila_powermax_driver_handles_share_servers']
+            self.manila_powermax_nas_login = \
+                backend_settings['manila_powermax_nas_login']
+            self.manila_powermax_nas_password = \
+                backend_settings['manila_powermax_nas_password']
+            self.manila_powermax_nas_server = \
+                backend_settings['manila_powermax_nas_server']
+            self.manila_powermax_server_container = \
+                backend_settings['manila_powermax_server_container']
+            self.manila_powermax_share_data_pools = \
+                backend_settings['manila_powermax_share_data_pools']
+            self.manila_powermax_ethernet_ports = \
+                backend_settings['manila_powermax_ethernet_ports']
+        else:
+            self.enable_powermax_manila_backend = False
+
 
         sanity_settings = self.get_settings_section(
             "Sanity Test Settings")
@@ -560,10 +616,16 @@ class Settings:
             '/pilot/templates/dell-cinder-backends.yaml'
         self.dellsc_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellsc-cinder-config.yaml'
-        self.dell_unity_cinder_yaml = self.foreman_configuration_scripts + \
+       self.dell_unity_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellemc-unity-cinder-backend.yaml'
         self.unity_manila_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/unity-manila-config.yaml'
+        self.dell_powermax_iscsi_cinder_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/dellemc-powermax-iscsi-cinder-backend.yaml'
+        self.dell_powermax_fc_cinder_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/dellemc-powermax-fc-cinder-backend.yaml'
+        self.powermax_manila_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/powermax-manila-config.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
         self.ceph_osd_config_yaml = self.foreman_configuration_scripts + \
