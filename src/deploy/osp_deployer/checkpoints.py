@@ -318,7 +318,7 @@ class Checkpoints:
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
-        if "Undercloud install complete." not in re[0]:
+        if "The Undercloud has been successfully installed" not in re[0]:
             raise AssertionError(
                 "Director & Undercloud did not install properly,"
                 " check /pilot/install-director.log for details")
