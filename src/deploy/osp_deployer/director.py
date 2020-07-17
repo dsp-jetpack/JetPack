@@ -2050,7 +2050,7 @@ class Director(InfraHost):
         uconf.set('ctlplane-subnet', 'inspection_iprange',
                   setts.discovery_ip_range)
         uconf.set('ctlplane-subnet', 'gateway',
-                  setts.provisioning_gateway)
+                  setts.director_node.provisioning_ip)
         # set enable_routed_networks create and deine routed networks
         is_enable_routed_networks = str(True)  # TODO after test use variable: str(bool(setts.node_type_data_map))
 
