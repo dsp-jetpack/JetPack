@@ -519,9 +519,7 @@ def main():
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "network-isolation.yaml" \
                     " -e ~/pilot/templates/network-environment.yaml" \
-                    " -e {}" \
-                    " -e ~/pilot/templates/ceph-osd-config.yaml" \
-                    "".format(nic_env_file)
+                    " -e {}".format(nic_env_file)
 
         # The static-ip-environment.yaml must be included after the
         # network-environment.yaml
@@ -605,11 +603,11 @@ def main():
             env_opts += " -e ~/pilot/templates/ceph_dashboard_admin.yaml "
         # The network-environment.yaml must be included after other templates
         # for effective parameter overrides (External vlan default route)
-        env_opts += " -e ~/pilot/templates/overcloud/environments/" \
-                    "network-isolation.yaml" \
-                    " -e ~/pilot/templates/network-environment.yaml" \
-                    " -e {}" \
-                    "".format(nic_env_file)
+        # env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+        #            "network-isolation.yaml" \
+        #            " -e ~/pilot/templates/network-environment.yaml" \
+        #            " -e {}" \
+        #            "".format(nic_env_file)
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \

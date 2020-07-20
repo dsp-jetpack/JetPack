@@ -929,13 +929,13 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
     LOG.info("Generating OSD config for {ip}".format(ip=ip_mac_service_tag))
     system_id = drac_client.get_system().uuid
 
-    spinners, ssds, nvme_drives  = get_drives(drac_client)
+    spinners, ssds, nvme_drives = get_drives(drac_client)
 
     new_osd_config = None
     # Let ceph handle journaling/disks assignment
-    disks = spinners + ssds + nvme_drives 
-    new_osd_config  = generate_osd_config_without_journals(controllers,
-                                                              disks)
+    disks = spinners + ssds + nvme_drives
+    new_osd_config = generate_osd_config_without_journals(controllers,
+                                                          disks)
 
     # load the osd environment file
     osd_config_file = os.path.join(Constants.TEMPLATES, "ceph-osd-config.yaml")
