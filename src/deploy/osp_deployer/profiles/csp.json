@@ -271,6 +271,7 @@
          }
       },
       {
+<<<<<<< HEAD
        "Storage back-end Settings":{
             "unity_storage_protocol" : {
                   "valid_values": [
@@ -283,9 +284,34 @@
                   "iSCSI",
                   "FC"
                ]
+         }
         }
-
-       }
+       },
+       {
+         "PowerFlex Settings": {
+            "enable_powerflex_backend": {
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            },
+            "powerflex_rpms_method": {
+               "valid_values": [
+                  "local",
+                  "external"
+               ]
+            },
+            "powerflex_cluster_config": {
+               "valid_values": [
+                  "3_node"
+               ]
+            },
+			"powerflex_cluster_virtualip": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            }
+         }
       }
    ]
 }
