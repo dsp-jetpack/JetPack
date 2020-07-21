@@ -112,20 +112,12 @@ parameters:
   ControlPlaneDefaultRoute: # Override this via parameter_defaults
     description: The default route of the control plane network.
     type: string
-  ControlPlaneNetCidr:
-    description: Control plane/provisioning network and mask
-    type: string
   ExternalInterfaceDefaultRoute:
-    default: ''
     description: default route for the external network
     type: string
   ManagementInterfaceDefaultRoute: # Commented out by default in this template
     default: unset
     description: The default route of the management network.
-    type: string
-  ControlPlaneSubnetCidr: # Override this via parameter_defaults
-    default: '24'
-    description: The subnet CIDR of the control plane network.
     type: string
   DnsServers: # Override this via parameter_defaults
     default: []
@@ -141,10 +133,6 @@ parameters:
   ProvisioningNetworkGateway:
     default: 192.168.120.1
     description: The IP of the gateway on the provisioning network which will allow access to the management network.
-    type: string
-  ControllerProvisioningInterface:
-    default: em3
-    description: Provisioning interface name
     type: string
   ControllerBond0Interface1:
     default: em1
@@ -223,13 +211,12 @@ resources:
             $network_config:
               network_config:
               {%- for cfg in network_config %}
-                {%- if cfg.type == 'interface' and cfg.name == 'ControllerProvisioningInterface' %}
-              - type: interface
-                name:
-                  get_param: ControllerProvisioningInterface
-                use_dhcp: false
+                {%- if cfg.type == 'ovs_bridge' and cfg.name == 'br-tenant' %}
+              - type: ovs_bridge
+                name: br-tenant
                 mtu:
-                  get_param: ProvisioningMtu
+                    get_param: ProvisioningMtu
+                use_dhcp: false
                 addresses:
                 - ip_netmask:
                     list_join:
@@ -255,22 +242,21 @@ resources:
                 #-
                 #  default: true
                 #  next_hop: {get_param: ControlPlaneDefaultRoute}
-                  {%- for route in cfg.routes %}
-                    {%- if 'default' in route %}
+                {%- for member in cfg.members | selectattr('vlan_id', '==', 'TenantNetworkVlanID') %}
+                  {%- if member.routes|length > 0 %}
+                    {%- for route in member.routes %}
+                      {%- if 'default' in route %}
                 - default: {{route.default}}
-                    {%- endif %}
-                    {%- if 'ip_netmask' in route %}
+                      {%- endif %}
+                      {%- if 'ip_netmask' in route %}
                 - ip_netmask:
                     get_param: {{route.ip_netmask}}
-                    {%- endif %}
+                      {%- endif %}
                   next_hop:
                     get_param: {{route.next_hop}}
-                  {%- endfor %}
-                {%- elif cfg.type == 'ovs_bridge' and cfg.name == 'br-tenant' %}
-              - type: ovs_bridge
-                name: br-tenant
-                mtu:
-                  get_param: DefaultBondMtu
+                    {%- endfor %}
+                  {%- endif %}
+                {%- endfor %}
                 members:
                 - type: linux_bond
                   name: bond0
@@ -299,22 +285,6 @@ resources:
                   addresses:
                   - ip_netmask:
                       get_param: TenantIpSubnet
-                  {%- for member in cfg.members | selectattr('vlan_id', '==', 'TenantNetworkVlanID') %}
-                    {%- if member.routes|length > 0 %}
-                  routes:
-                      {%- for route in member.routes %}
-                        {%- if 'default' in route %}
-                  - default: {{route.default}}
-                        {%- endif %}
-                        {%- if 'ip_netmask' in route %}
-                  - ip_netmask:
-                      get_param: {{route.ip_netmask}}
-                        {%- endif %}
-                    next_hop:
-                      get_param: {{route.next_hop}}
-                      {%- endfor %}
-                    {%- endif %}
-                  {%- endfor %}
                 - type: vlan
                   device: bond0
                   vlan_id:
@@ -402,7 +372,7 @@ resources:
                   - ip_netmask:
                       get_param: ExternalIpSubnet
                   routes:
-                  - default: true
+                  - ip_netmask: 0.0.0.0/0
                     next_hop:
                       get_param: ExternalInterfaceDefaultRoute
                   {%- for member in cfg.members | selectattr('vlan_id', '==', 'ExternalNetworkVlanID') %}
