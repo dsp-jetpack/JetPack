@@ -510,16 +510,9 @@ def main():
         if args.network_data:
             env_opts += "-n ~/pilot/templates/network_data.yaml "
         # The roles_data.yaml must be included at the beginning.
-        # This is needed to enable the custome role Dell Compute.
+        # This is needed to enable the custom role Dell Compute.
         # It overrides the default roles_data.yaml
         env_opts += "-r ~/pilot/templates/roles_data.yaml"
-
-        # The network-environment.yaml must be included after the
-        # network-isolation.yaml
-        env_opts += " -e ~/pilot/templates/overcloud/environments/" \
-                    "network-isolation.yaml" \
-                    " -e ~/pilot/templates/network-environment.yaml" \
-                    " -e {}".format(nic_env_file)
 
         # The static-ip-environment.yaml must be included after the
         # network-environment.yaml
@@ -601,13 +594,15 @@ def main():
         if args.dashboard_enable:
             env_opts += " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-dashboard.yaml"
             env_opts += " -e ~/pilot/templates/ceph_dashboard_admin.yaml "
+
         # The network-environment.yaml must be included after other templates
         # for effective parameter overrides (External vlan default route)
-        # env_opts += " -e ~/pilot/templates/overcloud/environments/" \
-        #            "network-isolation.yaml" \
-        #            " -e ~/pilot/templates/network-environment.yaml" \
-        #            " -e {}" \
-        #            "".format(nic_env_file)
+        # The network-environment.yaml must be included after the
+        # network-isolation.yaml
+        env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+                    "network-isolation.yaml" \
+                    " -e ~/pilot/templates/network-environment.yaml" \
+                    " -e {}".format(nic_env_file)
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
