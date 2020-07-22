@@ -113,10 +113,11 @@ parameters:
     description: The default route of the control plane network.
     type: string
   ControlPlaneNetCidr:
+    default: ''
     description: Control plane/provisioning network and mask
     type: string
   ExternalInterfaceDefaultRoute:
-    default: 10.0.0.1
+    default: ''
     description: default route for the external network
     type: string
   ManagementInterfaceDefaultRoute: # Commented out by default in this template

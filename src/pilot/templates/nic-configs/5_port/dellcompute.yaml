@@ -52,7 +52,7 @@ parameters:
     description: Vlan ID for the management network traffic.
     type: number
   ControlPlaneSubnetCidr: # Override this via parameter_defaults
-    default: '24'
+    default: ''
     description: The subnet CIDR of the control plane network.
     type: string
   ControlPlaneNetCidr:
@@ -94,7 +94,7 @@ parameters:
     description: The default route of the control plane network.
     type: string
   ExternalInterfaceDefaultRoute: # Not used by default in this template
-    default: 10.0.0.1
+    default: ''
     description: The default route of the external network.
     type: string
   ManagementInterfaceDefaultRoute: # Commented out by default in this template
