@@ -103,7 +103,7 @@ ROLES_DATA_J2 = ROLES_DATA + J2_EXT
 NET_ISO_J2 = NET_ISO + J2_EXT
 # TODO: dpaterson: migrating dell-environment template involves a bit of
 # rework for ceph osd stuff, wait for now
-DELL_ENV_J2 = DELL_ENV + J2_EXT
+# DELL_ENV_J2 = DELL_ENV + J2_EXT
 
 EC2_IPCIDR = '169.254.169.254/32'
 EC2_PUBLIC_IPCIDR_PARAM = 'EC2MetadataPublicIpCidr'
