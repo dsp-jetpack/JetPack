@@ -1517,9 +1517,6 @@ class Director(InfraHost):
             cmd += " --network_data"
         if self.settings.enable_dashboard is True:
             cmd += " --dashboard_enable"
-
-        if self.settings.node_type_data_map:
-            cmd += " --network_data"
         cmd += " > overcloud_deploy_out.log 2>&1"
         self.run_tty(cmd)
 
