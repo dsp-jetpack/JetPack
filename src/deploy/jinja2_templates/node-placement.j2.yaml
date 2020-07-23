@@ -21,9 +21,10 @@ parameter_defaults:
 
   CephStorageSchedulerHints:
     'capabilities:node': 'ceph-storage-%index%'
-
-{%- for key, value in scheduler_hints.items() %}
+{%- if scheduler_hints %}
+  {%- for key, value in scheduler_hints.items() %}
 
   {{key}}:
     'capabilities:node': '{{value}}'
-{%- endfor %}
+  {%- endfor %}
+{%- endif %}

@@ -16,10 +16,11 @@ resource_registry:
   OS::TripleO::Controller::Net::SoftwareConfig: ./controller.yaml
   OS::TripleO::DellCompute::Net::SoftwareConfig: ./dellcompute.yaml
   OS::TripleO::CephStorage::Net::SoftwareConfig: ./storage.yaml
-  # Start edge resources
-  {%- for key, val in resource_registry.items() %}
+  {%- if resource_registry %}
+    {%- for key, val in resource_registry.items() %}
   {{key}}: {{val}}
-  {%- endfor %}
+    {%- endfor %}
+  {%- endif %}
 
 
 parameter_defaults:
@@ -55,7 +56,8 @@ parameter_defaults:
   StorageBond1Interface2: p2p2
   # The bonding mode to use for storage nodes
   StorageBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
-  # Start edge params
-  {%- for key, val in parameter_defaults.items() %}
+  {%- if parameter_defaults %}
+    {%- for key, val in parameter_defaults.items() %}
   {{key}}: {{val}}
-  {%- endfor %}
+    {%- endfor %}
+  {%- endif %}

@@ -677,6 +677,8 @@ class Settings:
         nics_settings = self.get_nics_settings()
         if 'nic_env_file' in nics_settings:
             self.nic_env_file = nics_settings['nic_env_file']
+            self.nic_dir = self.nic_env_file.split('/')[0]
+            self.num_nics = self._find_number_of_nics(self.nic_dir)
             self.nic_env_file_path = (self.nic_configs_abs_path
                                       + self.nic_env_file)
         if 'sah_bond_opts' in nics_settings:
@@ -890,3 +892,7 @@ class Settings:
             if stanza in node_types and conf.has_section(stanza):
                 return True
         return False
+
+    def _find_number_of_nics(self, nic_dir):
+        num_nics = int(list(filter(str.isdigit, nic_dir))[0])
+        return num_nics
