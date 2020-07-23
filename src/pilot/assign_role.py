@@ -1392,10 +1392,6 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
         volume_type = RAID_TYPE_TO_DESCRIPTION[raid_type]
 
     # Set the root_device property in ironic to the volume size in gigs
-    # BUG: dpaterson, if the boss card drives match any of the HBA330
-    # drives sizes ironic will just pick first one it finds that matches
-    # the root_device size hint. So sometimes it will pick the BOSS RAID1
-    # volume sometimes an HBA300 nonRAID drive
     LOG.info("Setting the OS volume for this node to the {} with size "
              "{} GB".format(volume_type, raid_size_gb))
     patch = [{'op': 'add',

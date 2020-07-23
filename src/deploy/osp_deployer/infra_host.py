@@ -113,21 +113,6 @@ class InfraHost:
                 break
             time.sleep(5)
 
-    def deep_dict_merge(self, merge_to, merge_from):
-        """ Recursive dict merge. Function recurses down into dicts nested
-        to an arbitrary depth, updating keys. The ``merge_from`` is merged into
-        ``merge_to``.
-        :param merge_to: dict onto which the merge is executed
-        :param merge_from: merged into merge_to
-        :return: None
-        """
-        for k, v in merge_from.items():
-            if (k in merge_to and isinstance(merge_to[k], dict)
-                    and isinstance(merge_from[k], collections.Mapping)):
-                self.deep_dict_merge(merge_to[k], merge_from[k])
-            else:
-                merge_to[k] = merge_from[k]
-
 
 def directory_check(_path):
     def inner(func):

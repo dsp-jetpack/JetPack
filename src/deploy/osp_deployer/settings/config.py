@@ -121,8 +121,6 @@ class Settings:
             'provisioning_network']
         self.private_api_network = network_settings[
             'private_api_network']
-        self.private_api_gateway = network_settings[
-            'private_api_gateway']
         self.private_api_allocation_pool_start = network_settings[
             'private_api_allocation_pool_start']
         self.private_api_allocation_pool_end = network_settings[
@@ -610,8 +608,6 @@ class Settings:
         self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
         self.director_deploy_sh = self.foreman_configuration_scripts +\
             '/mgmt/deploy-director-vm.sh'
-        self.dashboard_deploy_py = self.foreman_configuration_scripts +\
-            '/mgmt/deploy-dashboard-vm.py'
         self.install_director_sh = self.foreman_configuration_scripts +\
             '/pilot/install-director.sh'
         self.deploy_overcloud_sh = self.foreman_configuration_scripts + \
@@ -747,13 +743,6 @@ class Settings:
                 except AttributeError:
                     pass
                 try:
-                    node.is_dashboard = (True if node.is_dashboard
-                                         == "true" else False)
-                    if node.is_dashboard:
-                        self.dashboard_node = node
-                except AttributeError:
-                    pass
-                try:
                     node.is_controller = (True if node.is_controller
                                           == "true" else False)
                     if node.is_controller:
@@ -769,7 +758,6 @@ class Settings:
                 except AttributeError:
                     node.is_computehci = False
                     pass
-
                 try:
                     node.is_compute = (True if node.is_compute
                                        == "true" else False)
