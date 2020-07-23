@@ -51,13 +51,16 @@ parameters:
     default: 60
     description: Vlan ID for the management network traffic.
     type: number
-  ControlPlaneSubnetCidr: # Override this via parameter_defaults
+  ControlPlaneSubnetCidr:
     default: ''
-    description: The subnet CIDR of the control plane network.
+    description: >
+      The subnet CIDR of the control plane network. (The parameter is
+      automatically resolved from the ctlplane subnet's cidr attribute.)
     type: string
   ControlPlaneNetCidr:
     description: Control plane/provisioning network and mask
     type: string
+    default: ''
   ControlPlaneStaticRoutes:
     default: []
     description: >
