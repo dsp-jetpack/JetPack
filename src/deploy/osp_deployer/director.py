@@ -1341,7 +1341,7 @@ class Director(InfraHost):
                          neutron_ovs_dpdk_yaml)
         self.upload_file(self.settings.neutron_sriov_yaml, neutron_sriov_yaml)
 
-        self.setup_nic_configuration()
+        # TODO: delete me self.setup_nic_configuration()
 
         if self.settings.enable_sriov is True:
             self.setup_sriov_nic_configuration()
@@ -1363,40 +1363,6 @@ class Director(InfraHost):
 
         if self.settings.use_static_vips is True:
             self.render_and_upload_static_vips()
-
-    def setup_nic_configuration(self):
-        # Upload all yaml files in the NIC config directory
-        local_nic_env_file_path = self.settings.nic_env_file_path
-        local_nic_configs_dir = os.path.dirname(local_nic_env_file_path)
-        nic_config_dirname = os.path.dirname(self.settings.nic_env_file)
-        for nic_config_file in os.listdir(local_nic_configs_dir):
-            if nic_config_file.endswith(".yaml"):
-                local_file_path = os.path.join(local_nic_configs_dir,
-                                               nic_config_file)
-                remote_file_path = os.path.join(self.nic_configs_dir,
-                                                nic_config_dirname,
-                                                nic_config_file)
-                logger.info("Uploading {} to {} on the director node".format(
-                    local_file_path, remote_file_path))
-                self.upload_file(local_file_path, remote_file_path)
-
-        # Get the user supplied NIC settings from the .ini
-        ini_nics_settings = self.settings.get_curated_nics_settings()
-
-        # Build up a series of sed commands to perform variable substitution
-        # in the NIC environment file
-        cmds = []
-        remote_file = os.path.join(self.nic_configs_dir,
-                                   self.settings.nic_env_file)
-        for setting_name, setting_value in ini_nics_settings.items():
-            # The following is executing a sed command of the following format:
-            # sed -i -r 's/(^\s*StorageBond0Interface1:\s*).*/\1p1p2/'
-            cmds.append('sed -i -r \'s/(^\s*' + setting_name +    # noqa: W605
-                        ':\s*).*/\\1' + setting_value + '/\' ' + remote_file)
-
-        # Execute the commands
-        for cmd in cmds:
-            self.run(cmd)
 
     def setup_sriov_nic_configuration(self):
         logger.debug("setting SR-IOV environment")
@@ -2175,7 +2141,7 @@ class Director(InfraHost):
         vm.
 
         Based on the number of nics for a site the corresponding
-        dellcompute.yaml is used as a baseline for creating the edge node
+        edge_compute.yaml is used as a baseline for creating the edge node
         nic configs.
 
         For example, if num_nics is 5 and the node_type is compute-boston, the
@@ -2237,18 +2203,50 @@ class Director(InfraHost):
         to ~/pilot/templates/nic_configs/5_port/nic_environement.yaml
         """
         logger.debug("render_and_upload_nic_environment called!")
-        self.render_and_upload_stamp_nic_environment()
+        setts = self.settings
+
         nic_dict_by_port_num = self._group_node_types_by_num_nics()
+        _stamp_param = self._generate_stamp_nic_env_params()
+        # if no edge sites render and upload stamp nic_environment.yaml
+        if (not self._has_edge_sites()):
+            tmplt_data = {}
+            tmplt_data['parameter_defaults'] = _stamp_param
+            _tmplt_path = os.path.join(NIC_CONFIGS, setts.nic_dir, NIC_ENV_J2)
+            tmplt = self.jinja2_env.get_template(_tmplt_path)
+            nic_env_file = os.path.join(self.nic_configs_dir,
+                                        setts.nic_env_file)
+
+            stg_nic_template_path = os.path.join(STAGING_TEMPLATES_PATH,
+                                                 NIC_CONFIGS, setts.nic_dir)
+
+            if not os.path.exists(stg_nic_template_path):
+                os.makedirs(stg_nic_template_path)
+
+            stg_nic_env_path = self.get_timestamped_path(stg_nic_template_path,
+                                                         NIC_ENV, "yaml")
+
+            logger.info("template data: %s", str(tmplt_data))
+            rendered_tmplt = tmplt.render(**tmplt_data)
+            with open(stg_nic_env_path, 'w') as stg_nic_env_fp:
+                stg_nic_env_fp.write(rendered_tmplt)
+            self.upload_file(stg_nic_env_path, nic_env_file)
+
         for num_nics, node_type_tuples in nic_dict_by_port_num.items():
             port_dir = "{}_port".format(num_nics)
+            _rel_nic_env_path = os.path.join(port_dir,
+                                             NIC_ENV + ".yaml")
+            # nic_env_file=5_port/nic_environment.yaml
             nic_env_file = os.path.join(self.nic_configs_dir,
-                                        port_dir,
-                                        NIC_ENV + ".yaml")
+                                        _rel_nic_env_path)
             _tmplt_path = os.path.join(NIC_CONFIGS, port_dir, NIC_ENV_J2)
             tmplt = self.jinja2_env.get_template(_tmplt_path)
             tmplt_data = {}
             _res_reg = tmplt_data['resource_registry'] = {}
             _params = tmplt_data['parameter_defaults'] = {}
+            # If we are dealing with stamp nic config need to setup nic bonds
+            if setts.nic_env_file == _rel_nic_env_path:
+                _params.update(_stamp_param)
+
             stg_nic_template_path = os.path.join(STAGING_TEMPLATES_PATH,
                                                  NIC_CONFIGS, port_dir)
 
@@ -2762,49 +2760,21 @@ class Director(InfraHost):
         self.upload_file(stg_cntl_path, cntl_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def render_and_upload_stamp_nic_environment(self):
-        setts = self.settings
-        _tmplt_path = os.path.join(NIC_CONFIGS,
-                                   setts.nic_dir, NIC_ENV_J2)
-        tmplt = self.jinja2_env.get_template(_tmplt_path)
-        nic_env_file = os.path.join(self.nic_configs_dir,
-                                    setts.nic_dir,
-                                    NIC_ENV + ".yaml")
-
-        stg_nic_template_path = os.path.join(STAGING_TEMPLATES_PATH,
-                                             NIC_CONFIGS, setts.nic_dir)
-
-        if not os.path.exists(stg_nic_template_path):
-            os.makedirs(stg_nic_template_path)
-
-        stg_nic_env_path = self.get_timestamped_path(stg_nic_template_path,
-                                                     NIC_ENV, "yaml")
-        rendered_tmplt = tmplt.render(**{})
-        logger.debug("template staging path: %s", stg_nic_env_path)
-        with open(stg_nic_env_path, 'w') as stg_nic_env_fp:
-            stg_nic_env_fp.write(rendered_tmplt)
-        self.upload_file(stg_nic_env_path, nic_env_file)
-
     def render_and_upload_stamp_node_placement(self):
-        setts = self.settings
         tmplt = self.jinja2_env.get_template(NODE_PLACEMENT_J2)
-        node_plcmnt_file = os.path.join(self.nic_configs_dir,
-                                        setts.nic_dir,
-                                        NODE_PLACEMENT_J2 + ".yaml")
+        remote_plcmnt_file = os.path.join(self.templates_dir,
+                                          NODE_PLACEMENT + ".yaml")
 
-        stg_node_plcmt_path = os.path.join(STAGING_TEMPLATES_PATH,
-                                           NIC_CONFIGS, setts.nic_dir)
-
-        if not os.path.exists(stg_node_plcmt_path):
-            os.makedirs(stg_node_plcmt_path)
-
-        stg_node_plcmnt_path = self.get_timestamped_path(stg_node_plcmt_path,
-                                                         NIC_ENV, "yaml")
+        stg_plcmnt_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
+                                                    NODE_PLACEMENT, "yaml")
         rendered_tmplt = tmplt.render(**{})
-        logger.debug("template staging path: %s", stg_node_plcmnt_path)
-        with open(stg_node_plcmnt_path, 'w') as stg_node_plcmnt_fp:
+        logger.debug("template staging path: %s", stg_plcmnt_path)
+        with open(stg_plcmnt_path, 'w') as stg_node_plcmnt_fp:
             stg_node_plcmnt_fp.write(rendered_tmplt)
-        self.upload_file(stg_node_plcmnt_path, node_plcmnt_file)
+        self.upload_file(stg_plcmnt_path, remote_plcmnt_file)
+
+    def _has_edge_sites(self):
+        return bool(self.settings.node_type_data_map)
 
     def _subnet_name_from_net(self, node_mgmt_net):
         setts = self.settings
@@ -3244,6 +3214,18 @@ class Director(InfraHost):
         params[bond_1_if_2] = node_type_data['Bond1Interface2']
         return params
 
+    def _generate_stamp_nic_env_params(self):
+        """Generate default_parameters subsequently injected into
+        nic_environment.yaml for overcloud nodes.
+        :returns: dict of params added to the template's
+        parameter_defaults map.
+        """
+        ini_nics_settings = self.settings.get_curated_nics_settings()
+        params = {}
+        for setting_name, setting_value in ini_nics_settings.items():
+            params[setting_name] = setting_value
+        return params
+
     def _generate_nic_network_config(self, node_type, node_type_data):
         """Generate nic configuration template for a node type and network data
         provided.  This results in a file that corresoponds to the node type,
@@ -3669,14 +3651,14 @@ class Director(InfraHost):
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
-    director.render_and_upload_network_data()
+    # director.render_and_upload_network_data()
     # director.render_and_upload_network_environmment()
-    director.render_and_upload_node_placement()
-    director.render_and_upload_edge_compute_templates()
+    # director.render_and_upload_node_placement()
+    # director.render_and_upload_edge_compute_templates()
     director.render_and_upload_nic_environment()
-    director.update_stamp_nic_config_routes()
-    director.render_and_upload_roles_data()
-    director.render_and_upload_static_ips()
-    director.render_and_upload_static_vips()
-    director.render_and_upload_network_isolation()
+    # director.update_stamp_nic_config_routes()
+    # director.render_and_upload_roles_data()
+    # director.render_and_upload_static_ips()
+    # director.render_and_upload_static_vips()
+    # director.render_and_upload_network_isolation()
     # director.setup_net_envt()
