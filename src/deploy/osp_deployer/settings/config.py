@@ -720,8 +720,8 @@ class Settings:
             logger.info("Smart NIC for SR-IOV Hardware Offload is disabled.")
 
         self.controller_nodes = []
-        self.computehci_nodes = []
         self.compute_nodes = []
+        self.computehci_nodes = []
         self.ceph_nodes = []
         self.switches = []
         self.nodes = []
