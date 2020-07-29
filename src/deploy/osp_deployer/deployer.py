@@ -187,7 +187,7 @@ def deploy():
                                                    "root",
                                                    dir_pw)
                 logger.info('Director VM routes set and VM is running')
-            director_vm.render_and_upload_roles_data()
+            # director_vm.render_and_upload_roles_data()
             tester.verify_undercloud_installed()
             if args.undercloud_only:
                 return

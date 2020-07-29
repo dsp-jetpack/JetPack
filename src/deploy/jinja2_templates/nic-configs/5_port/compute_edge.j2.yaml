@@ -2,6 +2,12 @@ heat_template_version: rocky
 description: >
   Bond and VLAN configuration for compute nodes. comment14_0: ' The values of the following parameters are overridden by the
   entries in' comment15_0: ' network-environment.yaml'
+{%- if resource_registry%}
+resource_registry:
+  {%- for port, port_path in resource_registry.items() %}
+  {{port}}: {{port_path}}
+  {%- endfor %}
+{%- endif %}
 parameters:
   ControlPlaneIp:
     default: ''

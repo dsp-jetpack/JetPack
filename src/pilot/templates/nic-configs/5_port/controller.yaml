@@ -134,6 +134,10 @@ parameters:
     default: 192.168.120.1
     description: The IP of the gateway on the provisioning network which will allow access to the management network.
     type: string
+  ControllerProvisioningInterface:
+    default: em3
+    description: Provisioning interface name
+    type: string
   ControllerBond0Interface1:
     default: em1
     description: Bond 0 interface 1 name
@@ -192,12 +196,7 @@ parameters:
     default: 1500
     description: MTU value for this network.
     type: number
-{%- for key, _dict in parameters.items() %}
-  {{key}}:
-  {%- for _key, _val in _dict.items() %}
-    {{_key}}: {{_val}}
-  {%- endfor %}
-{%- endfor %}
+
 resources:
   OsNetConfigImpl:
     type: OS::Heat::SoftwareConfig
@@ -210,13 +209,12 @@ resources:
           params:
             $network_config:
               network_config:
-              {%- for cfg in network_config %}
-                {%- if cfg.type == 'ovs_bridge' and cfg.name == 'br-tenant' %}
-              - type: ovs_bridge
-                name: br-tenant
-                mtu:
-                    get_param: ProvisioningMtu
+              - type: interface
+                name:
+                  get_param: ControllerProvisioningInterface
                 use_dhcp: false
+                mtu:
+                  get_param: ProvisioningMtu
                 addresses:
                 - ip_netmask:
                     list_join:
@@ -242,21 +240,10 @@ resources:
                 #-
                 #  default: true
                 #  next_hop: {get_param: ControlPlaneDefaultRoute}
-                {%- for member in cfg.members | selectattr('vlan_id', '==', 'TenantNetworkVlanID') %}
-                  {%- if member.routes|length > 0 %}
-                    {%- for route in member.routes %}
-                      {%- if 'default' in route %}
-                - default: {{route.default}}
-                      {%- endif %}
-                      {%- if 'ip_netmask' in route %}
-                - ip_netmask:
-                    get_param: {{route.ip_netmask}}
-                      {%- endif %}
-                  next_hop:
-                    get_param: {{route.next_hop}}
-                    {%- endfor %}
-                  {%- endif %}
-                {%- endfor %}
+              - type: ovs_bridge
+                name: br-tenant
+                mtu:
+                  get_param: DefaultBondMtu
                 members:
                 - type: linux_bond
                   name: bond0
@@ -294,22 +281,6 @@ resources:
                   addresses:
                   - ip_netmask:
                       get_param: InternalApiIpSubnet
-                  {%- for member in cfg.members | selectattr('vlan_id', '==', 'InternalApiNetworkVlanID') %}
-                    {%- if member.routes|length > 0 %}
-                  routes:
-                      {%- for route in member.routes %}
-                        {%- if 'default' in route %}
-                  - default: {{route.default}}
-                        {%- endif %}
-                        {%- if 'ip_netmask' in route %}
-                  - ip_netmask:
-                      get_param: {{route.ip_netmask}}
-                        {%- endif %}
-                    next_hop:
-                      get_param: {{route.next_hop}}
-                      {%- endfor %}
-                    {%- endif %}
-                  {%- endfor %}
                 - type: vlan
                   device: bond0
                   vlan_id:
@@ -319,23 +290,6 @@ resources:
                   addresses:
                   - ip_netmask:
                       get_param: StorageIpSubnet
-                  {%- for member in cfg.members | selectattr('vlan_id', '==', 'StorageNetworkVlanID') %}
-                    {%- if member.routes|length > 0 %}
-                  routes:
-                      {%- for route in member.routes %}
-                        {%- if 'default' in route %}
-                  - default: {{route.default}}
-                        {%- endif %}
-                        {%- if 'ip_netmask' in route %}
-                  - ip_netmask:
-                      get_param: {{route.ip_netmask}}
-                        {%- endif %}
-                    next_hop:
-                      get_param: {{route.next_hop}}
-                      {%- endfor %}
-                    {%- endif %}
-                  {%- endfor %}
-                {%- elif cfg.type == 'ovs_bridge' and cfg.name == 'bridge_name' %}
               - type: ovs_bridge
                 name:
                   bridge_name
@@ -375,21 +329,6 @@ resources:
                   - ip_netmask: 0.0.0.0/0
                     next_hop:
                       get_param: ExternalInterfaceDefaultRoute
-                  {%- for member in cfg.members | selectattr('vlan_id', '==', 'ExternalNetworkVlanID') %}
-                    {%- for route in member.routes %}
-                      {%- if 'default' in route %}
-                  - default: {{route.default}}
-                      {%- endif %}
-                      {%- if 'ip_netmask' in route %}
-                  - ip_netmask:
-                      get_param: {{route.ip_netmask}}
-                        {%- endif %}
-                    next_hop:
-                      get_param: {{route.next_hop}}
-                    {%- endfor %}
-                  {%- endfor %}
-                {%- endif %}
-              {%- endfor %}
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.

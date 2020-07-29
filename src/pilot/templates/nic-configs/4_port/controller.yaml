@@ -112,20 +112,12 @@ parameters:
   ControlPlaneDefaultRoute: # Override this via parameter_defaults
     description: The default route of the control plane network.
     type: string
-  ControlPlaneNetCidr:
-    description: Control plane/provisioning network and mask
-    type: string
   ExternalInterfaceDefaultRoute:
-    default: ''
     description: default route for the external network
     type: string
   ManagementInterfaceDefaultRoute: # Commented out by default in this template
     default: unset
     description: The default route of the management network.
-    type: string
-  ControlPlaneSubnetCidr: # Override this via parameter_defaults
-    default: '24'
-    description: The subnet CIDR of the control plane network.
     type: string
   DnsServers: # Override this via parameter_defaults
     default: []
@@ -141,10 +133,6 @@ parameters:
   ProvisioningNetworkGateway:
     default: 192.168.120.1
     description: The IP of the gateway on the provisioning network which will allow access to the management network.
-    type: string
-  ControllerProvisioningInterface:
-    default: em3
-    description: Provisioning interface name
     type: string
   ControllerBond0Interface1:
     default: em1
@@ -204,14 +192,7 @@ parameters:
     default: 1500
     description: MTU value for this network.
     type: number
-{%- if parameters %}
-  {%- for key, _dict in parameters.items() %}
-  {{key}}:
-    {%- for _key, _val in _dict.items() %}
-    {{_key}}: {{_val}}
-    {%- endfor %}
-  {%- endfor %}
-{%- endif %}
+
 resources:
   OsNetConfigImpl:
     type: OS::Heat::SoftwareConfig
@@ -224,12 +205,11 @@ resources:
           params:
             $network_config:
               network_config:
-              - type: interface
-                name:
-                  get_param: ControllerProvisioningInterface
-                use_dhcp: false
+              - type: ovs_bridge
+                name: br-tenant
                 mtu:
-                  get_param: ProvisioningMtu
+                    get_param: ProvisioningMtu
+                use_dhcp: false
                 addresses:
                 - ip_netmask:
                     list_join:
@@ -255,23 +235,6 @@ resources:
                 #-
                 #  default: true
                 #  next_hop: {get_param: ControlPlaneDefaultRoute}
-                {%- if routes and routes.prov_if|length > 0 %}
-                  {%- for route in routes.prov_if %}
-                    {%- if 'default' in route %}
-                - default: {{route.default}}
-                    {%- endif %}
-                    {%- if 'ip_netmask' in route %}
-                - ip_netmask:
-                    get_param: {{route.ip_netmask}}
-                    {%- endif %}
-                  next_hop:
-                    get_param: {{route.next_hop}}
-                  {%- endfor %}
-                {%- endif %}
-              - type: ovs_bridge
-                name: br-tenant
-                mtu:
-                  get_param: DefaultBondMtu
                 members:
                 - type: linux_bond
                   name: bond0
@@ -300,20 +263,6 @@ resources:
                   addresses:
                   - ip_netmask:
                       get_param: TenantIpSubnet
-                  {%- if routes and routes.br_tenant.tenant_vlan|length > 0 %}
-                  routes:
-                    {%- for route in routes.br_tenant.tenant_vlan %}
-                      {%- if 'default' in route %}
-                  - default: {{route.default}}
-                      {%- endif %}
-                      {%- if 'ip_netmask' in route %}
-                  - ip_netmask:
-                      get_param: {{route.ip_netmask}}
-                      {%- endif %}
-                    next_hop:
-                      get_param: {{route.next_hop}}
-                    {%- endfor %}
-                  {%- endif %}
                 - type: vlan
                   device: bond0
                   vlan_id:
@@ -323,20 +272,6 @@ resources:
                   addresses:
                   - ip_netmask:
                       get_param: InternalApiIpSubnet
-                  {%- if routes and routes.br_tenant.internal_api_vlan|length > 0 %}
-                  routes:
-                    {%- for route in routes.br_tenant.internal_api_vlan %}
-                      {%- if 'default' in route %}
-                  - default: {{route.default}}
-                      {%- endif %}
-                      {%- if 'ip_netmask' in route %}
-                  - ip_netmask:
-                      get_param: {{route.ip_netmask}}
-                      {%- endif %}
-                    next_hop:
-                      get_param: {{route.next_hop}}
-                    {%- endfor %}
-                  {%- endif %}
                 - type: vlan
                   device: bond0
                   vlan_id:
@@ -346,20 +281,6 @@ resources:
                   addresses:
                   - ip_netmask:
                       get_param: StorageIpSubnet
-                  {%- if routes and routes.br_tenant.storage_vlan|length > 0 %}
-                  routes:
-                    {%- for route in routes.br_tenant.storage_vlan %}
-                      {%- if 'default' in route %}
-                  - default: {{route.default}}
-                      {%- endif %}
-                      {%- if 'ip_netmask' in route %}
-                  - ip_netmask:
-                      get_param: {{route.ip_netmask}}
-                      {%- endif %}
-                    next_hop:
-                      get_param: {{route.next_hop}}
-                    {%- endfor %}
-                  {%- endif %}
               - type: ovs_bridge
                 name:
                   bridge_name
@@ -396,10 +317,9 @@ resources:
                   - ip_netmask:
                       get_param: ExternalIpSubnet
                   routes:
-                  - default: true
+                  - ip_netmask: 0.0.0.0/0
                     next_hop:
                       get_param: ExternalInterfaceDefaultRoute
-
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.
