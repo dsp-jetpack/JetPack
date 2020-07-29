@@ -45,22 +45,85 @@ resource_registry:
   OS::TripleO::CephStorage::Ports::StoragePort: ./overcloud/network/ports/storage_from_pool.yaml
   OS::TripleO::CephStorage::Ports::StorageMgmtPort: ./overcloud/network/ports/storage_mgmt_from_pool.yaml
   OS::TripleO::CephStorage::Ports::TenantPort: ./overcloud/network/ports/noop.yaml
-  {%- for port_key, port_path in resource_registry.items() %}
-  {{port_key}}: {{port_path}}
-  {%- endfor %}
+
 parameter_defaults:
+  # Specify the IPs for the overcloud nodes on the indicated networks below.
   # The IPs are listed in the order: node0, node1, node2 for each network.
   #
   # Note that the IPs chosen must lie outside the allocation pools defined in
   # network-environment.yaml, and must not collide with the IPs assigned to
   # other nodes or networking equipment on the network, such as the SAH,
   # OSP Director node, Ceph Storage Admin node, etc.
-  {%- for node_type, networks in parameter_defaults.items() %}
-  {{node_type}}:
-    {%- for network, ips in networks.items() %}
-    {{network}}:
-      {%- for ip in ips %}
-    - {{ip}}
-      {%- endfor %}
-    {%- endfor %}
-  {%- endfor %}
+  ControllerIPs:
+    # CHANGEME: Change the following IPs to the static IPs for the controllers
+    # on the Tenant network
+    tenant:
+    - 192.168.130.21
+    - 192.168.130.22
+    - 192.168.130.23
+    # CHANGEME: Change the following to the static IPs for the controllers
+    # on the Private API network
+    internal_api:
+    - 192.168.140.21
+    - 192.168.140.22
+    - 192.168.140.23
+    # CHANGEME: Change the following to the static IPs for the controllers
+    # on the Storage network
+    storage:
+    - 192.168.170.21
+    - 192.168.170.22
+    - 192.168.170.23
+    # CHANGEME: Change the following to the static IPs for the controllers
+    # on the Public API network
+    external:
+    - 192.168.190.21
+    - 192.168.190.22
+    - 192.168.190.23
+
+  # The NovaComputeIPs section below is not used.  Set the Compute nodes
+  # static IPs in the DellComputeIPs section.
+  NovaComputeIPs:
+    tenant:
+    internal_api:
+    storage:
+
+  DellComputeIPs:
+    # CHANGEME: Change the following IPs to the static IPs for the computes on
+    # the Tenant network
+    tenant:
+    - 192.168.130.31
+    - 192.168.130.32
+    - 192.168.130.33
+    # CHANGEME: Change the following IPs to the static IPs for the computes on
+    # the Private API network
+    internal_api:
+    - 192.168.140.31
+    - 192.168.140.32
+    - 192.168.140.33
+    # CHANGEME: Change the following IPs to the static IPs for the computes on
+    # the Storage network
+    storage:
+    - 192.168.170.31
+    - 192.168.170.32
+    - 192.168.170.33
+
+  CephStorageIPs:
+    # CHANGEME: Change the following to the static IPs for the ceph storage
+    # nodes on the Storage network
+    storage:
+    - 192.168.170.76
+    - 192.168.170.77
+    - 192.168.170.78
+    # CHANGEME: Change the following to the static IPs for the ceph storage
+    # nodes on the Storage Clustering network
+    storage_mgmt:
+    - 192.168.180.76
+    - 192.168.180.77
+    - 192.168.180.78
+
+  # CHANGEME: The Compute HCI node ips
+  DellComputeHCIIPs:
+    tenant:
+    internal_api:
+    storage:
+    storage_mgmt:

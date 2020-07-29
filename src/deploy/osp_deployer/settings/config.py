@@ -722,7 +722,6 @@ class Settings:
         self.controller_nodes = []
         self.computehci_nodes = []
         self.compute_nodes = []
-        self.computehci_nodes = []
         self.ceph_nodes = []
         self.switches = []
         self.nodes = []

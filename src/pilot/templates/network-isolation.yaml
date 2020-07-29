@@ -90,7 +90,3 @@ resource_registry:
   OS::TripleO::BlockStorage::Ports::StorageMgmtPort: ../network/ports/storage_mgmt.yaml
   OS::TripleO::BlockStorage::Ports::TenantPort: ../network/ports/noop.yaml
   #OS::TripleO::BlockStorage::Ports::ManagementPort: ../network/ports/management.yaml
-
-  {%- for port, port_path in resource_registry.items() %}
-  {{port}}: {{port_path}}
-  {%- endfor %}

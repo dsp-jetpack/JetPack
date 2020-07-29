@@ -1,4 +1,4 @@
-# Copyright (c)2018-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,19 +13,16 @@
 # limitations under the License.
 
 resource_registry:
-  OS::TripleO::Controller::Net::SoftwareConfig: ./controller.yaml
-  OS::TripleO::DellCompute::Net::SoftwareConfig: ./dellcompute.yaml
-  OS::TripleO::CephStorage::Net::SoftwareConfig: ./storage.yaml
-  {%- if resource_registry %}
-    {%- for key, val in resource_registry.items() %}
-  {{key}}: {{val}}
-    {%- endfor %}
-  {%- endif %}
-
-
+{%- for port_key, port_path in resource_registry.items() %}
+  {{port_key}}: {{port_path}}
+{%- endfor %}
 parameter_defaults:
-  {%- if parameter_defaults %}
-    {%- for key, val in parameter_defaults.items() %}
-  {{key}}: {{val}}
+{%- for node_type, networks in parameter_defaults.items() %}
+  {{node_type}}:
+  {%- for network, ips in networks.items() %}
+    {{network}}:
+    {%- for ip in ips %}
+    - {{ip}}
     {%- endfor %}
-  {%- endif %}
+  {%- endfor %}
+{%- endfor %}

@@ -12,22 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+resource_registry:
+  OS::TripleO::NodeUserData: ./first-boot.yaml
+
 parameter_defaults:
-  ControllerSchedulerHints:
-    'capabilities:node': 'control-%index%'
-
-  DellComputeSchedulerHints:
-    'capabilities:node': 'compute-%index%'
-
-  DellComputeHCISchedulerHints:
-    'capabilities:node': 'computehci-%index%'
-
-  CephStorageSchedulerHints:
-    'capabilities:node': 'ceph-storage-%index%'
-{%- if scheduler_hints %}
-  {%- for key, value in scheduler_hints.items() %}
-
-  {{key}}:
-    'capabilities:node': '{{value}}'
-  {%- endfor %}
-{%- endif %}
+{%- for key, val in parameter_defaults.items() %}
+  {{key}}: {{val}}
+{%- endfor %}

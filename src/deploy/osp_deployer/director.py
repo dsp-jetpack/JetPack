@@ -35,10 +35,10 @@ from auto_common import Scp
 from auto_common.yaml_utils import OrderedDumper
 from auto_common.yaml_utils import OrderedLoader
 
-# logger = logging.getLogger("osp_deployer")
+logger = logging.getLogger("osp_deployer")
 # TODO after testing delete two logging config lines below
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
-logger = logging.getLogger()
+# logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+# logger = logging.getLogger()
 
 exitFlag = 0
 
@@ -92,16 +92,16 @@ EDGE_VLANS = ["TenantNetworkVlanID", "InternalApiNetworkVlanID",
 
 # Jinja2 template constants
 J2_EXT = '.j2.yaml'
-NIC_ENV_J2 = NIC_ENV + J2_EXT
-EDGE_COMPUTE_J2 = 'edge_compute' + J2_EXT
+NIC_ENV_EDGE_J2 = NIC_ENV + "_edge" + J2_EXT
+EDGE_COMPUTE_J2 = 'compute_edge' + J2_EXT
 CONTROLLER_J2 = CONTROLLER + J2_EXT
 NETWORK_DATA_J2 = NET_DATA + J2_EXT
-NETWORK_ENV_J2 = NET_ENV + J2_EXT
-STATIC_IP_ENV_J2 = STATIC_IP_ENV + J2_EXT
-STATIC_VIP_ENV_J2 = STATIC_VIP_ENV + J2_EXT
-NODE_PLACEMENT_J2 = NODE_PLACEMENT + J2_EXT
-ROLES_DATA_J2 = ROLES_DATA + J2_EXT
-NET_ISO_J2 = NET_ISO + J2_EXT
+NETWORK_ENV_EDGE_J2 = NET_ENV + "-edge" + J2_EXT
+DELL_ENV_EDGE_J2 = DELL_ENV + "-edge" + J2_EXT
+STATIC_IP_ENV_EDGE_J2 = STATIC_IP_ENV + "-edge" + J2_EXT
+NODE_PLACEMENT_EDGE_J2 = NODE_PLACEMENT + "-edge" + J2_EXT
+ROLES_DATA_EDGE_J2 = ROLES_DATA + "_edge" + J2_EXT
+NET_ISO_EDGE_J2 = NET_ISO + "-edge" + J2_EXT
 # TODO: dpaterson: migrating dell-environment template involves a bit of
 # rework for ceph osd stuff, wait for now
 # DELL_ENV_J2 = DELL_ENV + J2_EXT
@@ -351,7 +351,7 @@ class Director(InfraHost):
             logger.debug("Using pxe_ipmi driver")
             cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ~/instackenv.json'
             self.run_tty(cmd)
-        if self.settings.node_type_data_map:
+        if self._has_edge_sites():
             self.update_instack_env_subnets_edge()
 
     def configure_idracs(self):
@@ -360,7 +360,6 @@ class Director(InfraHost):
         nodes.extend(self.settings.compute_nodes)
         nodes.extend(self.settings.computehci_nodes)
         nodes.extend(self.settings.ceph_nodes)
-
         cmd = "~/pilot/config_idracs.py "
 
         for node_type, edge_site_nodes in setts.node_types_map.items():
@@ -511,6 +510,7 @@ class Director(InfraHost):
             non_sah_nodes.extend(edge_site_nodes)
         # Allow for the number of nodes + a few extra sessions
         maxSessions = len(non_sah_nodes) + 10
+
         setts = ['MaxStartups', 'MaxSessions']
         for each in setts:
             re = self.run("sudo grep " + each +
@@ -532,15 +532,16 @@ class Director(InfraHost):
             self.run_as_root(cmd)
 
     def setup_templates(self):
-        """Re-process and re-upload the yaml files in the case where
+        """Re-upload the yaml files in the case where
         the undercloud is left intact but want to redeploy the overcloud
         with a different config.
         """
 
         self.setup_networking()
+        if self._has_edge_sites():
+            self.render_and_upload_roles_data_edge()
         self.setup_dell_storage()
         self.setup_manila()
-        self.render_and_upload_roles_data()
         self.setup_environment()
         self.setup_sanity_ini()
 
@@ -750,8 +751,8 @@ class Director(InfraHost):
         # downloading and uploading dell-environment.yaml
         # TODO: Refactor above code so we can do all this work in one pass,
         # out of scope for JS 13.3, address in 16.1
-        if self.settings.node_type_data_map:
-            self.update_dell_environment_edge()
+        if self._has_edge_sites():
+            self.render_and_upload_dell_environment_edge()
 
     # TODO: dpaterson, refactor to use ini parser like was done
     # in undercloud.conf
@@ -1171,12 +1172,10 @@ class Director(InfraHost):
             self.run_tty(cmd)
 
     def setup_net_envt(self):
-        """ TODO: dpaterson -
-        need to Jinja2-ize this function which is not simple.
-        """
+
         logger.debug("Configuring network-environment.yaml for overcloud")
-        # self.render_and_upload_network_environmment()
-        network_yaml = self.templates_dir + "/" + NET_ENV + ".yaml"
+
+        network_yaml = self.templates_dir + "/network-environment.yaml"
         octavia_yaml = self.templates_dir + "/octavia.yaml"
 
         self.upload_file(self.settings.network_env_yaml,
@@ -1315,8 +1314,8 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
 
-        if self.settings.node_type_data_map:
-            self.update_network_environment_edge()
+        if self._has_edge_sites():
+            self.render_and_upload_network_environment_edge()
 
     def configure_dhcp_server(self):
         cmd = 'cd ' + self.pilot_dir + ';./config_idrac_dhcp.py ' + \
@@ -1331,38 +1330,206 @@ class Director(InfraHost):
     def setup_networking(self):
         logger.debug("Configuring network settings for overcloud")
 
+        static_ips_yaml = self.templates_dir + "/static-ip-environment.yaml"
+        static_vip_yaml = self.templates_dir + "/static-vip-environment.yaml"
         neutron_ovs_dpdk_yaml = self.templates_dir + "/neutron-ovs-dpdk.yaml"
         neutron_sriov_yaml = self.templates_dir + "/neutron-sriov.yaml"
 
         if self.settings.enable_ovs_dpdk is True:
             self.set_ovs_dpdk_driver(self.settings.neutron_ovs_dpdk_yaml)
 
+        # Re - Upload the yaml files in case we're trying to
+        # leave the undercloud intact but want to redeploy
+        # with a different config
+        self.upload_file(self.settings.static_ips_yaml, static_ips_yaml)
+        self.upload_file(self.settings.static_vip_yaml, static_vip_yaml)
         self.upload_file(self.settings.neutron_ovs_dpdk_yaml,
                          neutron_ovs_dpdk_yaml)
         self.upload_file(self.settings.neutron_sriov_yaml, neutron_sriov_yaml)
 
-        # TODO: delete me self.setup_nic_configuration()
+        self.setup_nic_configuration()
 
         if self.settings.enable_sriov is True:
             self.setup_sriov_nic_configuration()
 
-        # TODO: how will functions like below work with multiple stacks?!?
-        self.render_and_upload_nic_environment()
-        self.update_stamp_nic_config_routes()
-        self.render_and_upload_node_placement()
-
-        # If there are subnets generate and upload nic templates.
-        if self.settings.node_type_data_map:
-            self.render_and_upload_network_data()
-            self.render_and_upload_edge_compute_templates()
-
         if self.settings.overcloud_static_ips is True:
             logger.debug("Updating static_ips yaml for the overcloud nodes")
-            self.render_and_upload_static_ips()
-            self.render_and_upload_network_isolation()
+            # static_ips_yaml
+            control_external_ips = ''
+            control_private_ips = ''
+            control_storage_ips = ''
+            control_tenant_tunnel_ips = ''
+            for node in self.settings.controller_nodes:
+                control_external_ips += "    - " + node.public_api_ip
+                control_private_ips += "    - " + node.private_api_ip
+                control_storage_ips += "    - " + node.storage_ip
+                control_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip
+                if node != self.settings.controller_nodes[-1]:
+                    control_external_ips += "\\n"
+                    control_private_ips += "\\n"
+                    control_storage_ips += "\\n"
+                    control_tenant_tunnel_ips += "\\n"
+
+            compute_tenant_tunnel_ips = ''
+            compute_private_ips = ''
+            compute_storage_ips = ''
+            compute_storage_cluster_ip = ''
+
+            for node in self.settings.compute_nodes:
+                compute_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip
+                compute_private_ips += "    - " + node.private_api_ip
+                compute_storage_ips += "    - " + node.storage_ip
+                if node != self.settings.compute_nodes[-1]:
+                    compute_tenant_tunnel_ips += "\\n"
+                    compute_private_ips += "\\n"
+                    compute_storage_ips += "\\n"
+
+            computehci_tenant_tunnel_ips =''
+            computehci_private_ips = ''
+            computehci_storage_ips = ''
+            computehci_cluster_ips = ''
+
+            for node in self.settings.computehci_nodes:
+                computehci_tenant_tunnel_ips += "    - " + node.tenant_tunnel_ip
+                computehci_private_ips += "    - " + node.private_api_ip
+                computehci_storage_ips += "    - " + node.storage_ip
+                computehci_cluster_ips += "    - " + node.storage_cluster_ip
+                if node != self.settings.computehci_nodes[-1]:
+                    computehci_tenant_tunnel_ips += "\\n"
+                    computehci_private_ips += "\\n"
+                    computehci_storage_ips += "\\n"
+                    computehci_cluster_ips += "\\n"
+
+            storage_storgage_ip = ''
+            storage_cluster_ip = ''
+            for node in self.settings.ceph_nodes:
+                storage_storgage_ip += "    - " + node.storage_ip
+                storage_cluster_ip += "    - " + node.storage_cluster_ip
+                if node != self.settings.ceph_nodes[-1]:
+                    storage_storgage_ip += "\\n"
+                    storage_cluster_ip += "\\n"
+
+            cmds = ['sed -i "/192.168/d" ' + static_ips_yaml,
+                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
+                    s/tenant:/tenant: \\n' +
+                    control_tenant_tunnel_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
+                    s/external:/external: \\n' +
+                    control_external_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
+                    s/internal_api:/internal_api: \\n' +
+                    control_private_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/ControllerIPs:/,/NovaComputeIPs:/ \
+                    s/storage:/storage: \\n' +
+                    control_storage_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/DellComputeIPs:/,/CephStorageIPs:/ \
+                    s/tenant:/tenant: \\n' +
+                    compute_tenant_tunnel_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/DellComputeIPs:/,/CephStorageIPs:/ \
+                    s/internal_api:/internal_api: \\n' +
+                    compute_private_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/DellComputeIPs:/,/CephStorageIPs:/ \
+                    s/storage:/storage: \\n' +
+                    compute_storage_ips + "/\" " + static_ips_yaml,
+                    'sed -i "/CephStorageIPs:/,/$p/ s/storage:/storage: \\n' +
+                    storage_storgage_ip + "/\" " + static_ips_yaml,
+                    'sed -i "/CephStorageIPs:/,/$p/ \
+                    s/storage_mgmt:/storage_mgmt: \\n' +
+                    storage_cluster_ip + "/\" " + static_ips_yaml
+                    ]
+            if len(self.settings.computehci_nodes) > 0:
+                cmds.extend(['sed -i "/DellComputeHCIIPs:/,/tenant:/s/tenant:/tenant: \\n' +
+                           computehci_tenant_tunnel_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/DellComputeHCIIPs:/,/internal_api:/s/internal_api:/internal_api: \\n' +
+                           computehci_private_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/DellComputeHCIIPs:/,/storage:/s/storage:/storage: \\n' +
+                           computehci_storage_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/DellComputeHCIIPs:/,/storage_mgmt:/s/storage_mgmt:/storage_mgmt: \\n' +
+                           computehci_cluster_ips + "/\" " + static_ips_yaml
+                          ])
+
+            for cmd in cmds:
+                self.run_tty(cmd)
 
         if self.settings.use_static_vips is True:
-            self.render_and_upload_static_vips()
+            logger.debug("Updating static vip yaml")
+            cmds = ["""sed -i "s/RedisVirtualFixedIPs: .*/RedisVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.redis_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/ControlFixedIPs: .*/ControlFixedIPs: [{'ip_address':'""" +
+                    self.settings.provisioning_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/InternalApiVirtualFixedIPs: .*/InternalApiVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.private_api_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/PublicVirtualFixedIPs: .*/PublicVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.public_api_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/StorageVirtualFixedIPs: .*/StorageVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.storage_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/StorageMgmtVirtualFixedIPs: .*/StorageMgmtVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.storage_cluster_vip + """'}]/" """ + static_vip_yaml
+                    # 'sed -i "s/redis: .*/redis: ' +
+                    # self.settings.redis_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/ControlPlaneIP: .*/ControlPlaneIP: ' +
+                    # self.settings.provisioning_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/InternalApiNetworkVip: ' +
+                    # '.*/InternalApiNetworkVip: ' +
+                    # self.settings.private_api_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/ExternalNetworkVip: ' +
+                    # '.*/ExternalNetworkVip: ' +
+                    # self.settings.public_api_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/StorageNetworkVip: ' +
+                    # '.*/StorageNetworkVip: ' +
+                    # self.settings.storage_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/StorageMgmtNetworkVip: ' +
+                    # '.*/StorageMgmtNetworkVip: ' +
+                    # self.settings.storage_cluster_vip + '/" ' + static_vip_yaml
+                    ]
+            for cmd in cmds:
+                self.run_tty(cmd)
+
+        if self._has_edge_sites():
+            self.render_and_upload_network_data()
+            self.render_and_upload_network_data_edge()
+            self.render_and_upload_network_environment_edge()
+            self.render_and_upload_network_isolation_edge()
+            self.render_and_upload_node_placement_edge()
+            self.render_and_upload_nic_env_edge()
+            self.render_and_upload_compute_templates_edge()
+
+            if self.settings.overcloud_static_ips is True:
+                self.render_and_upload_static_ips_edge()
+
+    def setup_nic_configuration(self):
+        # Upload all yaml files in the NIC config directory
+        local_nic_env_file_path = self.settings.nic_env_file_path
+        local_nic_configs_dir = os.path.dirname(local_nic_env_file_path)
+        nic_config_dirname = os.path.dirname(self.settings.nic_env_file)
+        for nic_config_file in os.listdir(local_nic_configs_dir):
+            if nic_config_file.endswith(".yaml"):
+                local_file_path = os.path.join(local_nic_configs_dir,
+                                               nic_config_file)
+                remote_file_path = os.path.join(self.nic_configs_dir,
+                                                nic_config_dirname,
+                                                nic_config_file)
+                logger.info("Uploading {} to {} on the director node".format(
+                    local_file_path, remote_file_path))
+                self.upload_file(local_file_path, remote_file_path)
+
+        # Get the user supplied NIC settings from the .ini
+        ini_nics_settings = self.settings.get_curated_nics_settings()
+
+        # Build up a series of sed commands to perform variable substitution
+        # in the NIC environment file
+        cmds = []
+        remote_file = os.path.join(self.nic_configs_dir,
+                                   self.settings.nic_env_file)
+        for setting_name, setting_value in ini_nics_settings.items():
+            # The following is executing a sed command of the following format:
+            # sed -i -r 's/(^\s*StorageBond0Interface1:\s*).*/\1p1p2/'
+            cmds.append('sed -i -r \'s/(^\s*' + setting_name +    # noqa: W605
+                        ':\s*).*/\\1' + setting_value + '/\' ' + remote_file)
+
+        # Execute the commands
+        for cmd in cmds:
+            self.run(cmd)
 
     def setup_sriov_nic_configuration(self):
         logger.debug("setting SR-IOV environment")
@@ -1513,10 +1680,11 @@ class Director(InfraHost):
         cmd += " --node_placement"
         if self.settings.deploy_overcloud_debug:
             cmd += " --debug"
-        if self.settings.node_type_data_map:
+        if self._has_edge_sites():
             cmd += " --network_data"
         if self.settings.enable_dashboard is True:
             cmd += " --dashboard_enable"
+
         cmd += " > overcloud_deploy_out.log 2>&1"
         self.run_tty(cmd)
 
@@ -2014,11 +2182,8 @@ class Director(InfraHost):
                   setts.discovery_ip_range)
         uconf.set('ctlplane-subnet', 'gateway',
                   setts.director_node.provisioning_ip)
-        # set enable_routed_networks create and deine routed networks
-        is_enable_routed_networks = str(True)  # TODO after test use variable: str(bool(setts.node_type_data_map))
-
         uconf.set('DEFAULT', 'enable_routed_networks',
-                  is_enable_routed_networks)
+                  str(True))
 
         for node_type, node_type_data in setts.node_type_data_map.items():
             subnet_name = self._generate_subnet_name(node_type)
@@ -2045,42 +2210,42 @@ class Director(InfraHost):
         self.upload_file(stg_undercloud_conf_path, undercloud_conf_dst)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def render_and_upload_roles_data(self):
+    def render_and_upload_roles_data_edge(self):
         """Add generated edge site roles to roles_data.yaml and upload it.
         """
         setts = self.settings
-        ntypes = setts.node_types
-        ntypes_data_map = setts.node_type_data_map
-        logger.debug("render_and_upload_roles_data called!")
+
+        logger.debug("render_and_upload_roles_data_edge called!")
         setts = self.settings
-        tmplt = self.jinja2_env.get_template(ROLES_DATA_J2)
-        tmplt_data = {"roles": []}
+        tmplt = self.jinja2_env.get_template(ROLES_DATA_EDGE_J2)
 
-        roles_file = os.path.join(self.templates_dir, ROLES_DATA + '.yaml')
-        oc_roles_file = os.path.join(self.templates_dir,
-                                     'overcloud',
-                                     ROLES_DATA + ".yaml")
+        for node_type, node_type_data in setts.node_type_data_map.items():
+            tmplt_data = {}
+            _nt_lower = self._generate_node_type_lower(node_type)
+            _roles_name = ROLES_DATA + "_" + _nt_lower
+            roles_file = os.path.join(self.templates_dir,
+                                      _roles_name + '.yaml')
+            oc_roles_file = os.path.join(self.templates_dir,
+                                         'overcloud',
+                                         _roles_name + ".yaml")
 
-        stg_roles_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
-                                                   ROLES_DATA,
-                                                   "yaml")
+            stg_roles_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
+                                                       _roles_name,
+                                                       "yaml")
 
-        for node_type in ntypes:
-            # If there is a subnet for node_type we have edge site
-            # and need to generate templates
-            if node_type.lower() in ntypes_data_map:
-                tmplt_data["roles"].append(self._generate_role_dict(node_type))
-        logger.debug("template data: %s", str(tmplt_data))
-        rendered_tmplt = tmplt.render(**tmplt_data)
-        with open(stg_roles_file, 'w') as stg_roles_fp:
-            stg_roles_fp.write(rendered_tmplt)
+            tmplt_data["roles"] = [self._generate_role_dict(node_type)]
+            logger.debug("template data: %s", str(tmplt_data))
+            rendered_tmplt = tmplt.render(**tmplt_data)
+            with open(stg_roles_file, 'w') as stg_roles_fp:
+                stg_roles_fp.write(rendered_tmplt)
 
-        self.upload_file(stg_roles_file, roles_file)
-        # Need to copy to pilot/templates/overcloud as
-        # we copy the roles_data file there during undercloud
-        # installation and it is used during overcloud deployment
-        self.upload_file(stg_roles_file, oc_roles_file)
+            self.upload_file(stg_roles_file, roles_file)
+            # Need to copy to pilot/templates/overcloud as
+            # we copy the roles_data file there during undercloud
+            # installation and it is used during overcloud deployment
+            self.upload_file(stg_roles_file, oc_roles_file)
 
+    ''' TODO: dpaterson, DELETE ME if unused
     @directory_check(STAGING_NIC_CONFIGS)
     def update_stamp_nic_config_routes(self):
         """Loop through node_types, grouped by the number of nics, and
@@ -2130,9 +2295,10 @@ class Director(InfraHost):
             with open(stg_cntl_path, 'w') as stg_cntl_fp:
                 stg_cntl_fp.write(rendered_tmplt)
             self.upload_file(stg_cntl_path, cntl_file)
+    '''
 
     @directory_check(STAGING_NIC_CONFIGS)
-    def render_and_upload_edge_compute_templates(self):
+    def render_and_upload_compute_templates_edge(self):
         """Loop through settings.node_type_data_map, generate the nic config
         template for each node_type, and upload the template to the director
         vm.
@@ -2147,9 +2313,9 @@ class Director(InfraHost):
 
         Once all the nic configuration files are uploaded for each site
         nic_environment.yaml for each site is also updated and uploaded,
-        see: render_and_upload_nic_environment()
+        see: render_and_upload_nic_env_edge()
         """
-        logger.debug("render_and_upload_edge_compute_templates called!")
+        logger.debug("render_and_upload_compute_templates_edge called!")
         setts = self.settings
         for node_type, node_type_data in setts.node_type_data_map.items():
             num_nics = node_type_data['nic_port_count']
@@ -2157,14 +2323,17 @@ class Director(InfraHost):
             _tmplt_path = os.path.join(NIC_CONFIGS, port_dir, EDGE_COMPUTE_J2)
             tmplt = self.jinja2_env.get_template(_tmplt_path)
             tmplt_data = {}
-
+            tmplt_data["parameters"] = self._generate_nic_params(node_type)
+            tmplt_data["network_config"] = self._generate_nic_network_config(
+                node_type,
+                node_type_data)
             stg_nic_template_path = os.path.join(STAGING_TEMPLATES_PATH,
                                                  NIC_CONFIGS, port_dir)
 
             if not os.path.exists(stg_nic_template_path):
                 os.makedirs(stg_nic_template_path)
 
-            nic_config_name = self._generate_nic_config_name(node_type)
+            nic_config_name = self._generate_node_type_lower(node_type)
             stg_nic_path = self.get_timestamped_path(stg_nic_template_path,
                                                      nic_config_name,
                                                      "yaml")
@@ -2172,10 +2341,6 @@ class Director(InfraHost):
             dst_nic_path = os.path.join(self.nic_configs_dir, port_dir,
                                         dst_nic_yaml)
 
-            tmplt_data['parameters'] = self._generate_nic_params(node_type)
-            _net_config = self._generate_nic_network_config(node_type,
-                                                            node_type_data)
-            tmplt_data['network_config'] = _net_config
             logger.info("tmplt_data: %s", str(tmplt_data))
             rendered_tmplt = tmplt.render(**tmplt_data)
             with open(stg_nic_path, 'w') as stg_nic_fp:
@@ -2184,8 +2349,8 @@ class Director(InfraHost):
             self.upload_file(stg_nic_path, dst_nic_path)
 
     @directory_check(STAGING_NIC_CONFIGS)
-    def render_and_upload_nic_environment(self):
-        """Update and upload nic_environment.yaml template for edge sites
+    def render_and_upload_nic_env_edge(self):
+        """Update and upload nic_environment_*.yaml templates for edge sites
 
         Loop through the node_types, grouped by number of nics, and update
         the template resource_registry and parameter_defaults with
@@ -2197,304 +2362,190 @@ class Director(InfraHost):
 
         For example if num_nics is 5 and node_type is boston-compute
         the modified file will be uploaded to:
-        to ~/pilot/templates/nic_configs/5_port/nic_environement.yaml
+        to:
+        ~/pilot/templates/nic_configs/5_port/nic_environement_bostoncompute.yaml
         """
-        logger.debug("render_and_upload_nic_environment called!")
-        setts = self.settings
+        logger.debug("render_and_upload_nic_env_edge called!")
 
         nic_dict_by_port_num = self._group_node_types_by_num_nics()
-        _stamp_param = self._generate_stamp_nic_env_params()
-        # if no edge sites render and upload stamp nic_environment.yaml
-        if (not self._has_edge_sites()):
-            tmplt_data = {}
-            tmplt_data['parameter_defaults'] = _stamp_param
-            _tmplt_path = os.path.join(NIC_CONFIGS, setts.nic_dir, NIC_ENV_J2)
-            tmplt = self.jinja2_env.get_template(_tmplt_path)
-            nic_env_file = os.path.join(self.nic_configs_dir,
-                                        setts.nic_env_file)
-
-            stg_nic_template_path = os.path.join(STAGING_TEMPLATES_PATH,
-                                                 NIC_CONFIGS, setts.nic_dir)
-
-            if not os.path.exists(stg_nic_template_path):
-                os.makedirs(stg_nic_template_path)
-
-            stg_nic_env_path = self.get_timestamped_path(stg_nic_template_path,
-                                                         NIC_ENV, "yaml")
-
-            logger.info("template data: %s", str(tmplt_data))
-            rendered_tmplt = tmplt.render(**tmplt_data)
-            with open(stg_nic_env_path, 'w') as stg_nic_env_fp:
-                stg_nic_env_fp.write(rendered_tmplt)
-            self.upload_file(stg_nic_env_path, nic_env_file)
 
         for num_nics, node_type_tuples in nic_dict_by_port_num.items():
             port_dir = "{}_port".format(num_nics)
-            _rel_nic_env_path = os.path.join(port_dir,
-                                             NIC_ENV + ".yaml")
-            # nic_env_file=5_port/nic_environment.yaml
-            nic_env_file = os.path.join(self.nic_configs_dir,
-                                        _rel_nic_env_path)
-            _tmplt_path = os.path.join(NIC_CONFIGS, port_dir, NIC_ENV_J2)
+
+            _tmplt_path = os.path.join(NIC_CONFIGS, port_dir, NIC_ENV_EDGE_J2)
             tmplt = self.jinja2_env.get_template(_tmplt_path)
-            tmplt_data = {}
-            _res_reg = tmplt_data['resource_registry'] = {}
-            _params = tmplt_data['parameter_defaults'] = {}
-            # If we are dealing with stamp nic config need to setup nic bonds
-            if setts.nic_env_file == _rel_nic_env_path:
-                _params.update(_stamp_param)
+            stg_nic_tmplt_path = os.path.join(STAGING_TEMPLATES_PATH,
+                                              NIC_CONFIGS, port_dir)
 
-            stg_nic_template_path = os.path.join(STAGING_TEMPLATES_PATH,
-                                                 NIC_CONFIGS, port_dir)
+            if not os.path.exists(stg_nic_tmplt_path):
+                os.makedirs(stg_nic_tmplt_path)
 
-            if not os.path.exists(stg_nic_template_path):
-                os.makedirs(stg_nic_template_path)
-
-            stg_nic_env_path = self.get_timestamped_path(stg_nic_template_path,
-                                                         NIC_ENV, "yaml")
             for node_type_tuple in node_type_tuples:
                 node_type = node_type_tuple[0]
                 node_type_data = node_type_tuple[1]
-                ne_params = self._generate_nic_env_params(node_type,
-                                                          node_type_data)
+                _nt_lower = self._generate_node_type_lower(node_type)
+                _nic_env_name = NIC_ENV + "_" + _nt_lower
+                _rel_nic_env_path = os.path.join(port_dir,
+                                                 _nic_env_name + ".yaml")
+                # nic_env_file=5_port/nic_environment_edgecomputeboston.yaml
+                nic_env_file = os.path.join(self.nic_configs_dir,
+                                            _rel_nic_env_path)
+                tmplt_data = {}
+                _res_reg = tmplt_data['resource_registry'] = {}
+                _params = tmplt_data['parameter_defaults'] = {}
+
+                stg_nic_env_path = self.get_timestamped_path(
+                    stg_nic_tmplt_path,
+                    _nic_env_name,
+                    "yaml")
+
+                ne_params = self._generate_nic_environment_edge(tmplt_data,
+                                                                node_type,
+                                                                node_type_data)
                 _params.update(ne_params)
                 role = self._generate_cc_role(node_type)
                 role_nic_key = ("OS::TripleO::"
                                 + role + "::Net::SoftwareConfig")
-                nic_config_name = ("./"
-                                   + self._generate_nic_config_name(
-                                       node_type)
-                                   + ".yaml")
+                nic_config_name = ("./" + _nt_lower + ".yaml")
                 _res_reg[role_nic_key] = nic_config_name
-            logger.info("template data: %s", str(tmplt_data))
-            rendered_tmplt = tmplt.render(**tmplt_data)
-            with open(stg_nic_env_path, 'w') as stg_nic_env_fp:
-                stg_nic_env_fp.write(rendered_tmplt)
-            self.upload_file(stg_nic_env_path, nic_env_file)
+                logger.info("template data: %s", str(tmplt_data))
+                rendered_tmplt = tmplt.render(**tmplt_data)
+                with open(stg_nic_env_path, 'w') as stg_nic_env_fp:
+                    stg_nic_env_fp.write(rendered_tmplt)
+                self.upload_file(stg_nic_env_path, nic_env_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def render_and_upload_node_placement(self):
-        logger.debug("render_and_upload_node_placement called!")
+    def render_and_upload_node_placement_edge(self):
+        logger.debug("render_and_upload_node_placement_edge called!")
         self.render_and_upload_stamp_node_placement()
         setts = self.settings
-        tmplt = self.jinja2_env.get_template(NODE_PLACEMENT_J2)
-        tmplt_data = {'scheduler_hints': {}}
-        _sched_hints = tmplt_data['scheduler_hints']
+        tmplt = self.jinja2_env.get_template(NODE_PLACEMENT_EDGE_J2)
+
         for node_type in setts.node_types:
+            tmplt_data = {'scheduler_hints': {}}
+            _sched_hints = tmplt_data['scheduler_hints']
             exp = self._generate_node_placement_exp(node_type)
             role = self._generate_cc_role(node_type)
+            edge_name = self._generate_node_type_lower(node_type)
+            node_plcmnt_name = NODE_PLACEMENT + "_" + edge_name
             _role_hints = role + 'SchedulerHints'
             _sched_hints[_role_hints] = exp
 
-        rendered_tmplt = tmplt.render(**tmplt_data)
+            rendered_tmplt = tmplt.render(**tmplt_data)
 
-        stg_plcmnt_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
-                                                    NODE_PLACEMENT, "yaml")
-        with open(stg_plcmnt_path, 'w') as stg_plcmnt_fp:
-            stg_plcmnt_fp.write(rendered_tmplt)
+            stg_plcmnt_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
+                                                        node_plcmnt_name,
+                                                        "yaml")
+            with open(stg_plcmnt_path, 'w') as stg_plcmnt_fp:
+                stg_plcmnt_fp.write(rendered_tmplt)
 
-        remote_plcmnt_file = os.path.join(self.templates_dir,
-                                          NODE_PLACEMENT + ".yaml")
-        self.upload_file(stg_plcmnt_path, remote_plcmnt_file)
+            remote_plcmnt_file = os.path.join(self.templates_dir,
+                                              node_plcmnt_name + ".yaml")
+            self.upload_file(stg_plcmnt_path, remote_plcmnt_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def render_and_upload_static_ips(self):
-        logger.debug("render_and_upload_static_ips called!")
+    def render_and_upload_static_ips_edge(self):
+        logger.debug("render_and_upload_static_ips_edge called!")
         setts = self.settings
-        tmplt = self.jinja2_env.get_template(STATIC_IP_ENV_J2)
-        tmplt_data = {}
-        param_def = tmplt_data['parameter_defaults'] = {}
-        res_reg = tmplt_data['resource_registry'] = {}
+        tmplt = self.jinja2_env.get_template(STATIC_IP_ENV_EDGE_J2)
 
-        control_external_ips = []
-        control_private_ips = []
-        control_storage_ips = []
-        control_tenant_tunnel_ips = []
-        for node in setts.controller_nodes:
-            control_external_ips.append(node.public_api_ip)
-            control_private_ips.append(node.private_api_ip)
-            control_storage_ips.append(node.storage_ip)
-            control_tenant_tunnel_ips.append(node.tenant_tunnel_ip)
+        for node_type, nodes in setts.node_types_map.items():
+            tmplt_data = {}
+            nt_lower = self._generate_node_type_lower(node_type)
+            static_ip_env_edge = STATIC_IP_ENV + "_" + nt_lower
+            stg_static_ip_env_path = self.get_timestamped_path(
+                STAGING_TEMPLATES_PATH,
+                static_ip_env_edge, "yaml")
+            remote_static_ip_env_file = os.path.join(self.templates_dir,
+                                                     static_ip_env_edge
+                                                     + ".yaml")
+            tmplt_data['resource_registry'] = self._generate_static_ip_ports(
+                node_type)
+            tmplt_data['parameter_defaults'] = self._generate_static_ip_params(
+                node_type,
+                nodes)
 
-        if setts.controller_nodes:
-            cntl_ips = param_def['ControllerIPs'] = {}
-            cntl_ips['external'] = control_external_ips
-            cntl_ips['internal_api'] = control_private_ips
-            cntl_ips['storage'] = control_storage_ips
-            cntl_ips['tenant'] = control_tenant_tunnel_ips
+            logger.debug("tmplt_data: %s", str(tmplt_data))
+            rendered_tmplt = tmplt.render(**tmplt_data)
 
-        compute_tenant_tunnel_ips = []
-        compute_private_ips = []
-        compute_storage_ips = []
+            with open(stg_static_ip_env_path, 'w') as stg_static_ip_env_fp:
+                stg_static_ip_env_fp.write(rendered_tmplt)
 
-        for node in setts.compute_nodes:
-            compute_tenant_tunnel_ips.append(node.tenant_tunnel_ip)
-            compute_private_ips.append(node.private_api_ip)
-            compute_storage_ips.append(node.storage_ip)
-
-        if setts.compute_nodes:
-            compute_ips = param_def['DellComputeIPs'] = {}
-            compute_ips['internal_api'] = compute_private_ips
-            compute_ips['storage'] = compute_storage_ips
-            compute_ips['tenant'] = compute_tenant_tunnel_ips
-
-        computehci_tenant_tunnel_ips = []
-        computehci_private_ips = []
-        computehci_storage_ips = []
-        computehci_cluster_ips = []
-
-        for node in setts.computehci_nodes:
-            computehci_tenant_tunnel_ips.append(node.tenant_tunnel_ip)
-            computehci_private_ips.append(node.private_api_ip)
-            computehci_storage_ips.append(node.storage_ip)
-            computehci_cluster_ips.append(node.storage_cluster_ip)
-
-        if setts.computehci_nodes:
-            hci_ips = param_def['DellComputeHCIIPs'] = {}
-            hci_ips['storage'] = computehci_storage_ips
-            hci_ips['storage_mgmt'] = computehci_cluster_ips
-            hci_ips['internal_api'] = computehci_private_ips
-            hci_ips['tenant'] = computehci_tenant_tunnel_ips
-
-        storage_storgage_ip = []
-        storage_cluster_ip = []
-        for node in setts.ceph_nodes:
-            storage_storgage_ip.append(node.storage_ip)
-            storage_cluster_ip.append(node.storage_cluster_ip)
-
-        if setts.ceph_nodes:
-            storage_ips = param_def['CephStorageIPs'] = {}
-            storage_ips['storage'] = storage_storgage_ip
-            storage_ips['storage_mgmt'] = storage_cluster_ip
-
-        if self.settings.node_type_data_map:
-            for node_type, nodes in setts.node_types_map.items():
-                res_reg.update(self._generate_static_ip_ports(node_type))
-                param_def.update(self._generate_static_ip_params(node_type,
-                                                                 nodes))
-
-        logger.debug("tmplt_data: %s", str(tmplt_data))
-        rendered_tmplt = tmplt.render(**tmplt_data)
-
-        stg_static_ip_env_path = self.get_timestamped_path(
-            STAGING_TEMPLATES_PATH,
-            STATIC_IP_ENV, "yaml")
-        with open(stg_static_ip_env_path, 'w') as stg_static_ip_env_fp:
-            stg_static_ip_env_fp.write(rendered_tmplt)
-
-        remote_static_ip_env_file = os.path.join(self.templates_dir,
-                                                 STATIC_IP_ENV
-                                                 + ".yaml")
-        self.upload_file(stg_static_ip_env_path, remote_static_ip_env_file)
+            self.upload_file(stg_static_ip_env_path, remote_static_ip_env_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def render_and_upload_static_vips(self):
-        logger.debug("update_and_updload_static_vips called!")
-        setts = self.settings
-        tmplt = self.jinja2_env.get_template(STATIC_VIP_ENV_J2)
-        tmplt_data = {}
-        param_defs = tmplt_data["parameter_defaults"] = {}
-        param_defs["RedisVirtualFixedIPs"] = [{'ip_address':
-                                               setts.redis_vip}]
-        param_defs["ControlFixedIPs"] = [{'ip_address':
-                                          setts.provisioning_vip}]
-        param_defs["InternalApiVirtualFixedIPs"] = [{'ip_address':
-                                                     setts.private_api_vip}]
-        param_defs["PublicVirtualFixedIPs"] = [{'ip_address':
-                                                setts.public_api_vip}]
-        param_defs["StorageVirtualFixedIPs"] = [{'ip_address':
-                                                 setts.storage_vip}]
-        param_defs["StorageMgmtVirtualFixedIPs"] = [{'ip_address':
-                                                     setts.storage_cluster_vip
-                                                     }]
-        logger.debug("tmplt_data: %s", str(tmplt_data))
-        rendered_tmplt = tmplt.render(**tmplt_data)
-
-        stg_static_vip_env_path = self.get_timestamped_path(
-            STAGING_TEMPLATES_PATH,
-            STATIC_VIP_ENV, "yaml")
-        with open(stg_static_vip_env_path, 'w') as stg_static_vip_env_fp:
-            stg_static_vip_env_fp.write(rendered_tmplt)
-
-        remote_static_vip_env_file = os.path.join(self.templates_dir,
-                                                  STATIC_VIP_ENV
-                                                  + ".yaml")
-        self.upload_file(stg_static_vip_env_path, remote_static_vip_env_file)
-
-    @directory_check(STAGING_TEMPLATES_PATH)
-    def render_and_upload_network_isolation(self):
+    def render_and_upload_network_isolation_edge(self):
         """Update and upload network-isolation.yaml based on
         node types
         """
-        logger.debug("updated_and_upload_network_isolation called!")
+        logger.debug("Updating network isolation for edge sites.")
         setts = self.settings
-        tmplt = self.jinja2_env.get_template(NET_ISO_J2)
-        tmplt_data = {}
-        res_reg = tmplt_data["resource_registry"] = {}
+
+        tmplt = self.jinja2_env.get_template(NET_ISO_EDGE_J2)
+
         for nt, nt_data in setts.node_type_data_map.items():
+            _edge_name = "_" + self._generate_node_type_lower(nt)
+            edge_net_iso_fn = NET_ISO + _edge_name
+            tmplt_data = {}
+            res_reg = tmplt_data["resource_registry"] = {}
             res_reg.update(self._generate_network_isolation(nt))
+            logger.debug("tmplt_data: %s", str(tmplt_data))
 
-        logger.debug("tmplt_data: %s", str(tmplt_data))
-        rendered_tmplt = tmplt.render(**tmplt_data)
+            rendered_tmplt = tmplt.render(**tmplt_data)
+            net_iso_file = os.path.join(self.templates_dir,
+                                        edge_net_iso_fn + ".yaml")
+            oc_net_iso_file = os.path.join(self.templates_dir,
+                                           'overcloud',
+                                           'environments',
+                                           edge_net_iso_fn + ".yaml")
 
-        stg_net_iso_path = self.get_timestamped_path(
-            STAGING_TEMPLATES_PATH,
-            STATIC_VIP_ENV, "yaml")
-        with open(stg_net_iso_path, 'w') as stg_net_iso_fp:
-            stg_net_iso_fp.write(rendered_tmplt)
+            stg_n_iso_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
+                                                       edge_net_iso_fn,
+                                                       "yaml")
 
-        remote_net_iso_file = os.path.join(self.templates_dir,
-                                           NET_ISO
-                                           + ".yaml")
-        remote_oc_net_iso_file = os.path.join(self.templates_dir,
-                                              'overcloud',
-                                              'environments',
-                                              NET_ISO + ".yaml")
-        self.upload_file(stg_net_iso_path, remote_net_iso_file)
-        self.upload_file(stg_net_iso_path, remote_oc_net_iso_file)
+            with open(stg_n_iso_path, 'w') as stg_net_iso_fp:
+                stg_net_iso_fp.write(rendered_tmplt)
+
+            self.upload_file(stg_n_iso_path, net_iso_file)
+            # have to upload twice as we specify overcloud/environments/
+            # when deploying overcloud
+            self.upload_file(stg_n_iso_path, oc_net_iso_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def update_dell_environment_edge(self):
+    def render_and_upload_dell_environment_edge(self):
         logger.debug("Updating dell environment for edge sites.")
         setts = self.settings
-        dell_env_file = os.path.join(self.templates_dir, DELL_ENV + ".yaml")
+        tmplt = self.jinja2_env.get_template(DELL_ENV_EDGE_J2)
 
-        stg_dell_env_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
-                                                      DELL_ENV, "yaml")
+        for nt, nt_data in setts.node_type_data_map.items():
+            _nt_lower = self._generate_node_type_lower(nt)
+            _dell_env_name = DELL_ENV + "_" + _nt_lower
+            dell_env_file = os.path.join(self.templates_dir,
+                                         _dell_env_name + ".yaml")
+            stg_dell_env_path = self.get_timestamped_path(
+                STAGING_TEMPLATES_PATH,
+                dell_env_file, "yaml")
+            tmplt_data = {}
+            param_def = tmplt_data["parameter_defaults"] = {}
+            role = self._generate_cc_role(nt)
+            edge_subnet = self._generate_subnet_name(nt)
+            role_subnet_key = role + 'ControlPlaneSubnet'
+            param_def[role_subnet_key] = edge_subnet
+            xtra_cfg_key = role + 'ExtraConfig'
+            param_def[xtra_cfg_key] = self._generate_extra_config(nt)
+            role_count_key = role + 'Count'
+            nodes = setts.node_types_map[nt]
+            param_def[role_count_key] = len(nodes)
+            rendered_tmplt = tmplt.render(**tmplt_data)
+            with open(stg_dell_env_path, 'w') as stg_dell_env_fp:
+                stg_dell_env_fp.write(rendered_tmplt)
+            self.upload_file(stg_dell_env_path, dell_env_file)
 
-        self.download_file(stg_dell_env_path, dell_env_file)
-        stg_dell_env_tmpl = {}
-        with open(stg_dell_env_path) as stg_dell_env_fp:
-            stg_dell_env_tmpl = yaml.load(stg_dell_env_fp,
-                                          Loader=OrderedLoader)
-            param_def = stg_dell_env_tmpl['parameter_defaults']
-
-            for nt, nt_data in setts.node_type_data_map.items():
-                role = self._generate_cc_role(nt)
-                edge_subnet = self._generate_subnet_name(nt)
-                role_subnet_key = role + 'ControlPlaneSubnet'
-                param_def[role_subnet_key] = edge_subnet
-                xtra_cfg_key = role + 'ExtraConfig'
-                param_def[xtra_cfg_key] = self._generate_extra_config(nt)
-
-            for node_type, nodes in setts.node_types_map.items():
-                role = self._generate_cc_role(node_type)
-                role_count_key = role + 'Count'
-                param_def[role_count_key] = len(nodes)
-        # logger.info("dell env params:\n%s", str(stg_dell_env_tmpl))
-        with open(stg_dell_env_path, 'w') as stg_dell_env_fp:
-            yaml.dump(stg_dell_env_tmpl, stg_dell_env_fp, OrderedDumper,
-                      default_flow_style=False)
-
-        self.upload_file(stg_dell_env_path, dell_env_file)
-
-    @directory_check(os.path.join(STAGING_TEMPLATES_PATH))
+    @directory_check(STAGING_TEMPLATES_PATH)
     def render_and_upload_network_data(self):
         """Generate and upload network_data.yaml for default overcloud networks
         and edge site specific networks"""
         logger.debug("Creating network_data.yaml")
-
-        setts = self.settings
         net_data_path = self.templates_dir
         net_data_file = os.path.join(net_data_path, NET_DATA + ".yaml")
 
@@ -2503,9 +2554,6 @@ class Director(InfraHost):
         stg_net_data_lst = self._generate_default_networks_data()
         tmplt = self.jinja2_env.get_template(NETWORK_DATA_J2)
 
-        for node_type, node_type_data in setts.node_type_data_map.items():
-            nd = self._generate_network_data(node_type, node_type_data)
-            stg_net_data_lst.extend(nd)
         logger.info("Network data dump: %s", str(stg_net_data_lst))
         tmplt_data = {'networks': stg_net_data_lst}
         rendered_tmplt = tmplt.render(**tmplt_data)
@@ -2516,47 +2564,53 @@ class Director(InfraHost):
         self.upload_file(stg_net_data_file, net_data_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def update_network_environment_edge(self):
-        """Update and upload network-environment.yaml for overcloud networks
-        and edge site specific networks
-        TODO: dpaterson, need to jinja2-ize this function."""
-        logger.debug("Updating network-environment.yaml for edge sites")
+    def render_and_upload_network_data_edge(self):
+        """Generate and upload network_data.yaml for edge site networks"""
+        logger.debug("render_and_upload_network_data_edge called!")
         setts = self.settings
-        net_env_file = os.path.join(self.templates_dir, NET_ENV + ".yaml")
+        tmplt = self.jinja2_env.get_template(NETWORK_DATA_J2)
 
-        stg_net_env_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
-                                                     NET_ENV, "yaml")
+        for node_type, node_type_data in setts.node_type_data_map.items():
+            _nt_lower = self._generate_node_type_lower(node_type)
+            _nd_name = NET_DATA + "_" + _nt_lower
+            nd_file = os.path.join(self.templates_dir, _nd_name + ".yaml")
 
-        self.download_file(stg_net_env_path, net_env_file)
-        stg_net_env_tmpl = OrderedDict()
-        with open(stg_net_env_path) as stg_net_env_fp:
-            stg_net_env_tmpl = yaml.load(stg_net_env_fp,
-                                         Loader=OrderedLoader)
-            params = stg_net_env_tmpl['parameter_defaults']
-            # central stamp networks InterfaceDefaultRoute referenced for
-            # bulding edge network routes back to central stamp.
-            params["ProvisioningNetworkGateway"] = setts.provisioning_gateway
-            params["ControlPlaneNetCidr"] = setts.provisioning_network
-            params["ControlPlaneNetworkVlanID"] = setts.provisioning_vlanid
-            params = stg_net_env_tmpl['parameter_defaults']
-            int_key = INTERNAL_API_NET[0] + "InterfaceDefaultRoute"
-            str_key = STORAGE_NET[0] + "InterfaceDefaultRoute"
-            ten_key = TENANT_NET[0] + "InterfaceDefaultRoute"
-            ext_key = EXTERNAL_NET[0] + "InterfaceDefaultRoute"
-            params[int_key] = setts.private_api_gateway
-            params[str_key] = setts.storage_gateway
-            params[ten_key] = setts.tenant_tunnel_gateway
-            params[ext_key] = setts.public_api_gateway
+            stg_nd_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
+                                                    _nd_name, "yaml")
+            nd = self._generate_network_data(node_type, node_type_data)
+            logger.info("Network data dump: %s", str(nd))
+            tmplt_data = {'networks': nd}
+            rendered_tmplt = tmplt.render(**tmplt_data)
 
-            for nt, nt_data in setts.node_type_data_map.items():
-                params.update(
-                    self._generate_network_environment_params(nt, nt_data))
+            with open(stg_nd_file, 'w') as stg_nd_fp:
+                stg_nd_fp.write(rendered_tmplt)
 
-        with open(stg_net_env_path, 'w') as stg_net_env_fp:
-            yaml.dump(stg_net_env_tmpl, stg_net_env_fp, OrderedDumper,
-                      default_flow_style=False)
+            self.upload_file(stg_nd_file, nd_file)
 
-        self.upload_file(stg_net_env_path, net_env_file)
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def render_and_upload_network_environment_edge(self):
+        """Update and upload network-environment-*.yaml for
+        edge site specific networks
+        """
+        logger.debug("render_and_upload_network_environment_edge called")
+        setts = self.settings
+        tmplt = self.jinja2_env.get_template(NETWORK_ENV_EDGE_J2)
+        for nt, nt_data in setts.node_type_data_map.items():
+            _nt_lower = self._generate_node_type_lower(nt)
+            _net_env_name = NET_ENV + "_" + _nt_lower
+            net_env_file = os.path.join(self.templates_dir,
+                                        _net_env_name + ".yaml")
+
+            stg_net_env_path = self.get_timestamped_path(
+                STAGING_TEMPLATES_PATH,
+                _net_env_name, "yaml")
+            params = self._generate_network_environment_params_edge(nt,
+                                                                    nt_data)
+            tmplt_data = {"parameter_defaults": params}
+            rendered_tmplt = tmplt.render(**tmplt_data)
+            with open(stg_net_env_path, 'w') as stg_net_env_fp:
+                stg_net_env_fp.write(rendered_tmplt)
+            self.upload_file(stg_net_env_path, net_env_file)
 
     def create_subnet_routes_edge(self):
         """Create routes for Director VM and reboot it, which is required
@@ -2609,130 +2663,6 @@ class Director(InfraHost):
         self.upload_file(stg_instack_path, instack_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def update_static_ips_edge(self):
-        """Update and upload static-ip-environment.yaml based on
-        node types
-        """
-        logger.debug("Updating static-ip-environment.yaml for edge sites")
-        setts = self.settings
-        static_ip_env_file = os.path.join(self.templates_dir,
-                                          STATIC_IP_ENV + ".yaml")
-
-        stg_static_ip_env_path = self.get_timestamped_path(
-            STAGING_TEMPLATES_PATH,
-            STATIC_IP_ENV, "yaml")
-
-        self.download_file(stg_static_ip_env_path, static_ip_env_file)
-        stg_static_ip_env_tmpl = OrderedDict()
-        with open(stg_static_ip_env_path) as stg_static_ip_env_tmpl_fp:
-            stg_static_ip_env_tmpl = yaml.load(stg_static_ip_env_tmpl_fp,
-                                               Loader=OrderedLoader)
-            res_reg = stg_static_ip_env_tmpl['resource_registry']
-            params = stg_static_ip_env_tmpl['parameter_defaults']
-            for node_type, nodes in setts.node_types_map.items():
-                res_reg.update(self._generate_static_ip_ports(node_type))
-                params.update(self._generate_static_ip_params(node_type,
-                                                              nodes))
-
-        with open(stg_static_ip_env_path, 'w') as stg_static_ip_env_fp:
-            yaml.dump(stg_static_ip_env_tmpl, stg_static_ip_env_fp,
-                      OrderedDumper, default_flow_style=False)
-
-        self.upload_file(stg_static_ip_env_path, static_ip_env_file)
-
-    @directory_check(STAGING_TEMPLATES_PATH)
-    def render_and_upload_network_environmment(self):
-        logger.debug("render_and_upload_network_environmment called !!!!!")
-        setts = self.settings
-        tmplt = self.jinja2_env.get_template(NETWORK_ENV_J2)
-        tmplt_data = {}
-
-        _prov_ip = setts.director_node.provisioning_ip
-        tmplt_data["ControlPlaneDefaultRoute"] = _prov_ip
-        tmplt_data["EC2MetadataIp"] = _prov_ip
-        tmplt_data["InternalApiNetCidr"] = setts.private_api_network
-        tmplt_data["StorageNetCidr"] = setts.storage_network
-        tmplt_data["StorageMgmtNetCidr"] = setts.storage_cluster_network
-        tmplt_data["ExternalNetCidr"] = setts.public_api_network
-        _mgmt_pls = [{'start': setts.management_allocation_pool_start,
-                      'end': setts.management_allocation_pool_end}]
-        tmplt_data["ManagementAllocationPools"] = _mgmt_pls
-        _int_pls = [{'start': setts.private_api_allocation_pool_start,
-                     'end': setts.private_api_allocation_pool_end}]
-        tmplt_data["InternalApiAllocationPools"] = _int_pls
-        _strg_pls = [{'start': setts.storage_allocation_pool_start,
-                     'end': setts.storage_allocation_pool_end}]
-        tmplt_data["StorageAllocationPools"] = _strg_pls
-        _smgmt_pls = [{'start': setts.storage_cluster_allocation_pool_start,
-                       'end': setts.storage_cluster_allocation_pool_end}]
-        tmplt_data["StorageMgmtAllocationPools"] = _smgmt_pls
-        _ext_pls = [{'start': setts.public_api_allocation_pool_start,
-                     'end': setts.public_api_allocation_pool_end}]
-        tmplt_data["ExternalAllocationPools"] = _ext_pls
-        tmplt_data["ExternalInterfaceDefaultRoute"] = setts.public_api_gateway
-        tmplt_data["ManagementNetworkGateway"] = setts.management_gateway
-        tmplt_data["ManagementNetCidr"] = setts.management_network
-        tmplt_data["ProvisioningNetworkGateway"] = setts.provisioning_gateway
-        tmplt_data["ControlPlaneDefaultRoute"] = _prov_ip
-        _ctl_pln_cidr = setts.provisioning_network.split("/")[1]
-        tmplt_data["ControlPlaneSubnetCidr"] = _ctl_pln_cidr
-        tmplt_data["ControlPlaneNetCidr"] = setts.provisioning_network
-        tmplt_data["DnsServers"] = setts.name_server
-        tmplt_data["InternalApiNetworkVlanID"] = setts.private_api_vlanid
-        tmplt_data["StorageNetworkVlanID"] = setts.storage_vlanid
-        tmplt_data["StorageMgmtNetworkVlanID"] = setts.storage_cluster_vlanid
-        tmplt_data["ExternalNetworkVlanID"] = setts.public_api_vlanid
-        tmplt_data["TenantNetworkVlanID"] = setts.tenant_tunnel_vlanid
-        tmplt_data["ExternalMtu"] = setts.public_api_network_mtu
-        tmplt_data["InternalApiMtu"] = setts.private_api_network_mtu
-        tmplt_data["StorageMtu"] = setts.storage_network_mtu
-        tmplt_data["StorageMgmtMtu"] = setts.storage_cluster_network_mtu
-        tmplt_data["TenantMtu"] = setts.tenant_tunnel_network_mtu
-        tmplt_data["ProvisioningMtu"] = setts.provisioning_network_mtu
-        tmplt_data["ManagementMtu"] = setts.management_network_mtu
-        tmplt_data["DefaultBondMtu"] = setts.default_bond_mtu
-        tmplt_data["NeutronGlobalPhysnetMtu"] = setts.tenant_network_mtu
-        _ntrn_mtus = 'physext:' + setts.floating_ip_network_mtu
-        tmplt_data["neutron_plugins_ml2_physical_network_mtus"] = _ntrn_mtus
-
-        tmplt_data["ProvisioningNetworkGateway"] = setts.provisioning_gateway
-        tmplt_data["ControlPlaneNetCidr"] = setts.provisioning_network
-        tmplt_data["ControlPlaneNetworkVlanID"] = setts.provisioning_vlanid
-        int_key = INTERNAL_API_NET[0] + "InterfaceDefaultRoute"
-        str_key = STORAGE_NET[0] + "InterfaceDefaultRoute"
-        ten_key = TENANT_NET[0] + "InterfaceDefaultRoute"
-        ext_key = EXTERNAL_NET[0] + "InterfaceDefaultRoute"
-        tmplt_data[int_key] = setts.private_api_gateway
-        tmplt_data[str_key] = setts.storage_gateway
-        tmplt_data[ten_key] = setts.tenant_tunnel_gateway
-        tmplt_data[ext_key] = setts.public_api_gateway
-
-        if setts.tenant_tunnel_network:
-            tmplt_data["TenantNetCidr"] = setts.tenant_tunnel_network
-            _tnt_pls = [{'start':
-                         setts.tenant_tunnel_network_allocation_pool_start,
-                         'end':
-                         setts.tenant_tunnel_network_allocation_pool_end}]
-            tmplt_data["TenantAllocationPools"] = _tnt_pls
-        # TODO: dpaterson finish this......................
-        if setts.node_type_data_map:
-            _edge_nw = {}
-            for nt, nt_data in setts.node_type_data_map.items():
-                _edge_nw.update(
-                    self._generate_network_environment_params(nt, nt_data))
-            tmplt_data['edge_networks'] = _edge_nw
-
-        logger.debug("tmplt_data: %s", str(tmplt_data))
-        rendered_tmplt = tmplt.render(**tmplt_data)
-        net_env_file = os.path.join(self.templates_dir, NET_ENV + ".yaml")
-
-        stg_net_env_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
-                                                     NET_ENV, "yaml")
-        with open(stg_net_env_file, 'w') as stg_net_env_fp:
-            stg_net_env_fp.write(rendered_tmplt)
-        self.upload_file(stg_net_env_file, net_env_file)
-
-    @directory_check(STAGING_TEMPLATES_PATH)
     def render_and_upload_stamp_controller_nic(self):
         setts = self.settings
         _tmplt_path = os.path.join(NIC_CONFIGS,
@@ -2758,7 +2688,7 @@ class Director(InfraHost):
 
     @directory_check(STAGING_TEMPLATES_PATH)
     def render_and_upload_stamp_node_placement(self):
-        tmplt = self.jinja2_env.get_template(NODE_PLACEMENT_J2)
+        tmplt = self.jinja2_env.get_template(NODE_PLACEMENT_EDGE_J2)
         remote_plcmnt_file = os.path.join(self.templates_dir,
                                           NODE_PLACEMENT + ".yaml")
 
@@ -2817,7 +2747,7 @@ class Director(InfraHost):
     def _generate_static_ip_params(self, node_type, nodes):
         """Generate resource_resource registry port mapping dict for specific
         node type based on Tripleo heat template naming conventions
-        :returns: OrderedDict which maps node_type to a list of static ips
+        :returns: dict which maps node_type to a list of static ips
         example: {
         'BostonComputeIPs':
            'internal_api_boston_compute': ['192.168.142.40', '192.168.142.41'],
@@ -2825,9 +2755,9 @@ class Director(InfraHost):
         }
         """
         role = self._generate_cc_role(node_type)
-        ip_params = OrderedDict()
+        ip_params = {}
         role_ips = role + 'IPs'
-        network_dict = OrderedDict()
+        network_dict = {}
         int_api_ips = []
         storage_ips = []
         tenant_ips = []
@@ -2850,7 +2780,6 @@ class Director(InfraHost):
     def _generate_network_isolation(self, type):
         """Generate network isolation resource_registry network and port
         parameters using Tripleo heat template naming conventions
-        :returns: OrderedDict of network isolation parameters
         example: {
             'OS::TripleO::BostonCompute::Ports::InternalApiBostonComputePort':
             '../network/ports/internal_api_boston_compute.yaml',
@@ -2880,9 +2809,9 @@ class Director(InfraHost):
             _res_reg[port_key] = port_val
         return _res_reg
 
-    def _generate_network_environment_params(self, type, node_type_data):
+    def _generate_network_environment_params_edge(self, type, node_type_data):
         """Generate network-environment.yaml parameters for edge sites
-        :returns: OrderedDict of edge site networks
+        :returns: dict of edge site networks
         example:{
             'InternalApiBostonComputeIpSubnet': '192.168.141.0/24',
             'InternalApiBostonComputeNetCidr': '192.168.141.0/24',
@@ -2894,7 +2823,7 @@ class Director(InfraHost):
         """
         logger.debug("Generate network environment params for node type: %s",
                      type)
-        params = OrderedDict()
+        params = {}
         role = self._generate_cc_role(type)
         edge_subnet = self._generate_subnet_name(type)
 
@@ -2987,19 +2916,6 @@ class Director(InfraHost):
 
         return params
 
-    def _delete_existing_roles(self, roles_list, stg_roles):
-        filtered_roles = []
-        for role in roles_list:
-            role_name = role['name']
-            has_role = False
-            for stg_role in stg_roles:
-                if stg_role['name'] == role_name:
-                    has_role = True
-            if not has_role:
-                filtered_roles.append(role)
-
-        return filtered_roles
-
     def _generate_role_dict(self, node_type):
         role_name = self._generate_cc_role(node_type)
         role_d = {}
@@ -3042,6 +2958,7 @@ class Director(InfraHost):
         role_d['ServicesDefault'] = self._get_default_compute_services()
         return role_d
 
+    ''' TODO: dpaterson DELETE ME if unused
     def _update_stamp_controller_nic_net_cfg(self, r_map, node_type, num_nics):
         role = self._generate_cc_role(node_type)
 
@@ -3083,7 +3000,9 @@ class Director(InfraHost):
                                      "next_hop":
                                      "StorageInterfaceDefaultRoute"}
                     br_tenant["storage_vlan"].append(storage_route)
+    '''
 
+    ''' TODO: dpaterson DELETE ME if unused
     def _generate_stamp_controller_nic_params(self, node_type):
         """
         For each node type and network we need to route the edge subnet to
@@ -3100,9 +3019,11 @@ class Director(InfraHost):
         _cp_edge_key = "{}{}NetCidr".format(CONTROL_PLANE_NET[0], role)
         params[_cp_edge_key] = {"default": '', "type": "string"}
         return params
+    '''
 
     def _generate_nic_params(self, node_type):
         role = self._generate_cc_role(node_type)
+
         cp_default_route = "{}{}DefaultRoute".format(CONTROL_PLANE_NET[0],
                                                      role)
         cp_subnet_cidr = "{}{}SubnetCidr".format(CONTROL_PLANE_NET[0],
@@ -3175,7 +3096,7 @@ class Director(InfraHost):
         params[bond_1_if_2] = {"default": '', "type": "string"}
         return params
 
-    def _generate_nic_env_params(self, node_type, node_type_data):
+    def _generate_nic_environment_edge(self, node_type, node_type_data):
         """Generate default_parameters subsequently injected into
         nic_environment.yaml for a specific edge site.
 
@@ -3186,6 +3107,7 @@ class Director(InfraHost):
         :returns: OrderedDict of params added to the template's
         parameter_defaults map.
         """
+        logger.debug("_generate_nic_environment_edge called!")
         role = self._generate_cc_role(node_type)
         params = {}
         # ControlPlane[ROLE]DefaultRoute: 192.168.120.126
@@ -3209,18 +3131,6 @@ class Director(InfraHost):
         params[bond_0_if_2] = node_type_data['Bond0Interface2']
         params[bond_1_if_1] = node_type_data['Bond1Interface1']
         params[bond_1_if_2] = node_type_data['Bond1Interface2']
-        return params
-
-    def _generate_stamp_nic_env_params(self):
-        """Generate default_parameters subsequently injected into
-        nic_environment.yaml for overcloud nodes.
-        :returns: dict of params added to the template's
-        parameter_defaults map.
-        """
-        ini_nics_settings = self.settings.get_curated_nics_settings()
-        params = {}
-        for setting_name, setting_value in ini_nics_settings.items():
-            params[setting_name] = setting_value
         return params
 
     def _generate_nic_network_config(self, node_type, node_type_data):
@@ -3367,8 +3277,7 @@ class Director(InfraHost):
         external_vlan["routes"] = [def_ex_route]
         ex_br["members"] = [bond_1, external_vlan]
 
-        network_config = [prov_if, tenant_br, ex_br]
-        return network_config
+        return [prov_if, tenant_br, ex_br]
 
     def _generate_default_networks_data(self):
         """Generate network_data.yaml file with default networks
@@ -3607,10 +3516,25 @@ class Director(InfraHost):
     def _generate_subnet_name(self, type):
         return self._generate_role_network_lower(type) + '_subnet'
 
-    def _generate_nic_config_name(self, type):
+    def _generate_node_type_lower(self, type):
         # should look like denveredgecompute.yaml if following existing pattern
         nic_config_name = re.sub(r'[^a-z0-9]', "", type.lower())
         return nic_config_name
+
+    def _generate_node_placement(self, tmplt_data, node_type):
+        tmplt_data["parameter_defaults"] = (tmplt_data["parameter_defaults"]
+                                            if "parameter_defaults"
+                                            in tmplt_data else {})
+        _param_def = tmplt_data["parameter_defaults"]
+        _param_def["scheduler_hints"] = (_param_def["scheduler_hints"]
+                                         if "scheduler_hints"
+                                         in _param_def else {})
+        _sched_hints = _param_def["scheduler_hints"]
+
+        exp = self._generate_node_placement_exp(node_type)
+        role = self._generate_cc_role(node_type)
+        _role_hints = role + 'SchedulerHints'
+        _sched_hints[_role_hints] = exp
 
     def _generate_node_placement_exp(self, type):
         placement_exp = ((re.sub(r'[^a-z0-9]', " ",
@@ -3648,14 +3572,12 @@ class Director(InfraHost):
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
-    director.render_and_upload_network_data()
-    # director.render_and_upload_network_environmment()
-    director.render_and_upload_node_placement()
-    director.render_and_upload_edge_compute_templates()
-    director.render_and_upload_nic_environment()
-    director.update_stamp_nic_config_routes()
-    director.render_and_upload_roles_data()
-    director.render_and_upload_static_ips()
-    director.render_and_upload_static_vips()
-    director.render_and_upload_network_isolation()
-    director.setup_net_envt()
+    # director.render_and_upload_compute_templates_edge()
+    # director.render_and_upload_network_isolation_edge()
+    # director.render_and_upload_node_placement_edge()
+    # director.render_and_upload_roles_data_edge()
+    # director.render_and_upload_static_ips_edge()
+    # director.render_and_upload_network_data_edge()
+    # director.render_and_upload_nic_env_edge()
+    # director.render_and_upload_compute_templates_edge()
+    # director.render_and_upload_network_environment_edge()
