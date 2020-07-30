@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,5 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+resource_registry:
+  OS::TripleO::NodeUserData: ./first-boot.yaml
+
 parameter_defaults:
-  NodeDataLookup: {}
+{%- for key, val in parameter_defaults.items() %}
+  {{key}}: {{val}}
+{%- endfor %}

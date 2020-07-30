@@ -57,10 +57,6 @@ parameters:
       The subnet CIDR of the control plane network. (The parameter is
       automatically resolved from the ctlplane subnet's cidr attribute.)
     type: string
-  ControlPlaneNetCidr:
-    description: Control plane/provisioning network and mask
-    type: string
-    default: ''
   ControlPlaneStaticRoutes:
     default: []
     description: >
@@ -97,7 +93,6 @@ parameters:
     description: The default route of the control plane network.
     type: string
   ExternalInterfaceDefaultRoute: # Not used by default in this template
-    default: ''
     description: The default route of the external network.
     type: string
   ManagementInterfaceDefaultRoute: # Commented out by default in this template
@@ -110,10 +105,6 @@ parameters:
     type: comma_delimited_list
   EC2MetadataIp: # Override this via parameter_defaults
     description: The IP address of the EC2 metadata server.
-    type: string
-  ComputeProvisioningInterface:
-    default: em3
-    description: Provisioning interface name
     type: string
   ComputeBond0Interface1:
     default: em1
@@ -186,12 +177,11 @@ resources:
           params:
             $network_config:
               network_config:
-              - type: interface
-                name:
-                  get_param: ComputeProvisioningInterface
+              - type: ovs_bridge
+                name: br-tenant
+                use_dhcp: false
                 mtu:
                   get_param: ProvisioningMtu
-                use_dhcp: false
                 dns_servers:
                   get_param: DnsServers
                 addresses:
@@ -207,10 +197,6 @@ resources:
                 - default: true
                   next_hop:
                     get_param: ControlPlaneDefaultRoute
-              - type: ovs_bridge
-                name: br-tenant
-                mtu:
-                  get_param: DefaultBondMtu
                 members:
                 - type: linux_bond
                   name: bond0
@@ -243,8 +229,6 @@ resources:
                   device: bond0
                   vlan_id:
                     get_param: InternalApiNetworkVlanID
-                  mtu:
-                    get_param: InternalApiMtu
                   addresses:
                   - ip_netmask:
                       get_param: InternalApiIpSubnet

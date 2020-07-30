@@ -61,6 +61,10 @@ parameters:
       The subnet CIDR of the control plane network. (The parameter is
       automatically resolved from the ctlplane subnet's cidr attribute.)
     type: string
+  ControlPlaneNetCidr:
+    description: Control plane/provisioning network and mask
+    type: string
+    default: ''
   ControlPlaneStaticRoutes:
     default: []
     description: >
@@ -89,6 +93,7 @@ parameters:
     description: The default route of the control plane network.
     type: string
   ExternalInterfaceDefaultRoute: # Not used by default in this template
+    default: ''
     description: The default route of the external network.
     type: string
   ManagementInterfaceDefaultRoute: # Commented out by default in this template

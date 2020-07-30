@@ -1,4 +1,4 @@
-# Copyright (c) 2017-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,5 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+resource_registry:
+{%- for port_key, port_path in resource_registry.items() %}
+  {{port_key}}: {{port_path}}
+{%- endfor %}
 parameter_defaults:
-  NodeDataLookup: {}
+{%- for node_type, networks in parameter_defaults.items() %}
+  {{node_type}}:
+  {%- for network, ips in networks.items() %}
+    {{network}}:
+    {%- for ip in ips %}
+    - {{ip}}
+    {%- endfor %}
+  {%- endfor %}
+{%- endfor %}

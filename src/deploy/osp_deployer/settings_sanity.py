@@ -176,6 +176,9 @@ class DeployerSanity:
         start = self.settings.private_api_allocation_pool_start.split(".")[-1]
         end = self.settings.private_api_allocation_pool_end.split(".")[-1]
         for each in self.settings.nodes:
+            if hasattr(each, 'node_type'):
+                logger.info("Skip validating this node as it is edge node")
+                continue
             if hasattr(each, 'private_api_ip'):
                 ip = each.private_api_ip.split(".")[-1]
                 if int(start) <= int(ip) <= int(end):
@@ -206,7 +209,7 @@ class DeployerSanity:
         start = self.settings.storage_allocation_pool_start.split(".")[-1]
         end = self.settings.storage_allocation_pool_end.split(".")[-1]
         for each in self.settings.nodes:
-            if hasattr(each, 'storage_ip'):
+            if hasattr(each, 'storage_ip') and not hasattr(each, 'node_type'):
                 ip = each.storage_ip.split(".")[-1]
                 if int(start) <= int(ip) <= int(end):
                     raise AssertionError(each.storage_ip + " in " +
@@ -338,14 +341,14 @@ class DeployerSanity:
                 try:
                     os_volume_size_gb = int(node.os_volume_size_gb)
                 except ValueError:
-                    raise AssertionError("os_volume_size_gb of \"{}\" on node " +
+                    raise AssertionError("os_volume_size_gb of \"{}\" on node "
                                          "{} is not an integer".format(
                                              node.os_volume_size_gb,
                                              node.idrac_ip))
 
                 if os_volume_size_gb <= 0:
-                    raise AssertionError("os_volume_size_gb of \"{}\" on node " +
-                                         "\"{}\" on node {} is not a positive " +
+                    raise AssertionError("os_volume_size_gb of \"{}\" on node "
+                                         "\"{}\" on node {} is not a positive "
                                          "integer".format(
                                              node.os_volume_size_gb,
                                              node.idrac_ip))
