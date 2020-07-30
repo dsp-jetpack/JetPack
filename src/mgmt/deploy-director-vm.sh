@@ -66,7 +66,7 @@ tmux
 EOFKS
 
 
-{ 
+{
 ntp=""
 while read iface ip mask mtu
 do
@@ -76,17 +76,17 @@ do
   [[ ${iface} == timezone ]] && echo "echo timezone ${ip} --utc >> /tmp/ks_include.txt"
 
   [[ ${iface} == hostname ]] && {
-    HostName=${ip} 
+    HostName=${ip}
     echo "echo HostName=${ip} >> /tmp/ks_post_include.txt"
     }
 
   [[ ${iface} == nameserver ]] && {
-    NameServers=${ip} 
+    NameServers=${ip}
     echo "echo NameServers=${ip} >> /tmp/ks_post_include.txt"
     }
 
   [[ ${iface} == gateway ]] && {
-    Gateway=${ip} 
+    Gateway=${ip}
     echo "echo Gateway=${ip} >> /tmp/ks_post_include.txt"
     }
 
@@ -117,7 +117,7 @@ do
   [[ ${iface} == enp3s0 ]] && {
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
     }
-    
+
   [[ ${iface} == enp4s0 ]] && {
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
     }
@@ -201,7 +201,7 @@ EOFPW
     export no_proxy=$no_proxy_list
     export http_proxy=${HTTP_Proxy}
     export https_proxy=${HTTP_Proxy}
-	
+
     # Add file so proxy environment variables are maintaned with sudo commands
     echo 'Defaults env_keep += "http_proxy https_proxy no_proxy"' > /etc/sudoers.d/proxy
     chmod 0440 /etc/sudoers.d/proxy
@@ -225,9 +225,9 @@ EOFPW
          subscription-manager attach --auto ${ProxyInfo}
          )
 
-  subscription-manager release --set=8.1
+  subscription-manager release --set=8.2
 
-  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-8-for-x86_64-baseos-eus-rpms --enable=rhel-8-for-x86_64-appstream-rpms --enable=rhel-8-for-x86_64-highavailability-eus-rpms --enable=ansible-2.8-for-rhel-8-x86_64-rpms --enable=openstack-16-for-rhel-8-x86_64-rpms --enable=fast-datapath-for-rhel-8-x86_64-rpms --enable=rhceph-4-tools-for-rhel-8-x86_64-rpms --enable=advanced-virt-for-rhel-8-x86_64-rpms --enable=satellite-tools-6.5-for-rhel-8-x86_64-rpms
+  subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-8-for-x86_64-baseos-eus-rpms --enable=rhel-8-for-x86_64-appstream-eus-rpms --enable=rhel-8-for-x86_64-highavailability-eus-rpms --enable=ansible-2.9-for-rhel-8-x86_64-rpms --enable=openstack-16.1-for-rhel-8-x86_64-rpms --enable=fast-datapath-for-rhel-8-x86_64-rpms --enable=rhceph-4-tools-for-rhel-8-x86_64-rpms --enable=advanced-virt-for-rhel-8-x86_64-rpms --enable=satellite-tools-6.5-for-rhel-8-x86_64-rpms
 
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
@@ -238,9 +238,9 @@ EOFPW
   umount /tmp/mnt
 
   yum-config-manager --enable rhel-8-for-x86_64-baseos-eus-rpms --setopt="rhel-8-for-x86_64-baseos-eus-rpms.priority=1"
-  yum-config-manager --enable rhel-8-for-x86_64-appstream-rpms --setopt="rhel-8-for-x86_64-appstream-rpms.priority=1"
+  yum-config-manager --enable rhel-8-for-x86_64-appstream-rpms --setopt="rhel-8-for-x86_64-appstream-eus-rpms.priority=1"
   yum-config-manager --enable rhel-8-for-x86_64-highavailability-eus-rpms --setopt="rhel-8-for-x86_64-highavailability-eus-rpms.priority=1"
-  
+
   dnf update -y
 
   # Firewall rules to allow traffic for the http, https, dns, and tftp services and tcp port 8140.
@@ -320,7 +320,7 @@ rm -f /store/data/images/director.img
     --vcpus 8 \
     --hvm \
     --os-type linux \
-    --os-variant rhel8.1 \
+    --os-variant rhel8.2 \
     --disk /store/data/images/director.img,bus=virtio,size=120 \
     --disk /store/data/images/floppy-director.img,device=floppy \
     --network bridge=br-pub-api \
@@ -332,7 +332,7 @@ rm -f /store/data/images/director.img
     --noautoconsole \
     --graphics spice \
     --autostart \
-    --location ${location} 
+    --location ${location}
 
   } || {
 
@@ -341,7 +341,7 @@ virt-install --name director \
   --vcpus 8 \
   --hvm \
   --os-type linux \
-  --os-variant rhel8.1 \
+  --os-variant rhel8.2 \
   --disk /store/data/images/director.img,bus=virtio,size=120 \
   --network bridge=br-pub-api \
   --network bridge=br-prov \
