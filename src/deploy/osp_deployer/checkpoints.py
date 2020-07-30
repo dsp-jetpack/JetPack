@@ -338,6 +338,39 @@ class Checkpoints:
                 
         logger.info("Undercloud installed Successfully!")
 
+    def verify_overcloud_deployed(self):
+        logger.debug("Verify the overcloud installed properly")
+        setts = self.settings
+        overcloud_name = setts.overcloud_name
+        install_fail=False
+
+        # Verify the overcloud RC file was created
+        cmd = "test -f ~/" + overcloud_name + "rc; echo $?;"
+        re = Ssh.execute_command_tty(self.director_ip,
+                                     setts.director_install_account_user,
+                                     setts.director_install_account_pwd,
+                                     cmd)
+        is_conf = not bool(int(re[0]))
+        if is_conf is False:
+            logger.error("Error : overcloud RC file missing")
+            install_fail=True
+
+        # Check log for successful deployment
+        success = "Overcloud Deployed"
+        cmd = "grep \"" + success + "\" " + "~/pilot/overcloud_deploy_out.log"
+        re = Ssh.execute_command_tty(self.director_ip,
+                                     setts.director_install_account_user,
+                                     setts.director_install_account_pwd,
+                                     cmd)
+        if success not in re[0]:
+            logger.error("Error: Overcloud did not install successfully, check ~/pilot/overcloud_deploy_out.log")
+            install_fail=True
+        if install_fail is True:
+            raise AssertionError("Overcloud did not install successfully")
+        else:
+            logger.info("Overcloud install successful")
+
+
     def verify_computes_virtualization_enabled(self):
         logger.debug("*** Verify the Compute nodes have KVM enabled *** ")
         cmd = "source ~/stackrc;nova list | grep compute"
