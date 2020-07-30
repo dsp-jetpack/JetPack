@@ -121,6 +121,8 @@ class Settings:
             'provisioning_network']
         self.private_api_network = network_settings[
             'private_api_network']
+        self.private_api_gateway = network_settings[
+            'private_api_gateway']
         self.private_api_allocation_pool_start = network_settings[
             'private_api_allocation_pool_start']
         self.private_api_allocation_pool_end = network_settings[
@@ -145,6 +147,7 @@ class Settings:
         self.provisioning_gateway = network_settings[
             'provisioning_gateway']
         self.storage_vlanid = network_settings['storage_vlanid']
+        self.storage_gateway = network_settings['storage_gateway']
         self.storage_netmask = network_settings['storage_netmask']
         self.public_api_vlanid = network_settings['public_api_vlanid']
         self.public_api_netmask = network_settings[
@@ -172,6 +175,7 @@ class Settings:
         self.discovery_ip_range = network_settings[
             'discovery_ip_range']
         self.tenant_tunnel_network = network_settings['tenant_tunnel_network']
+        self.tenant_tunnel_gateway = network_settings['tenant_tunnel_gateway']
         self.tenant_tunnel_network_allocation_pool_start = network_settings[
             'tenant_tunnel_network_allocation_pool_start']
         self.tenant_tunnel_network_allocation_pool_end = network_settings[
@@ -600,6 +604,8 @@ class Settings:
 
         self.lock_files_dir = self.cloud_repo_dir + "/data/vlock_files"
         self.foreman_configuration_scripts = self.cloud_repo_dir + "/src"
+        self.jinja2_templates = (self.foreman_configuration_scripts
+                                 + "/deploy/jinja2_templates")
 
         self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
         self.director_deploy_sh = self.foreman_configuration_scripts +\
@@ -669,6 +675,8 @@ class Settings:
         nics_settings = self.get_nics_settings()
         if 'nic_env_file' in nics_settings:
             self.nic_env_file = nics_settings['nic_env_file']
+            self.nic_dir = self.nic_env_file.split('/')[0]
+            self.num_nics = self._find_number_of_nics(self.nic_dir)
             self.nic_env_file_path = (self.nic_configs_abs_path
                                       + self.nic_env_file)
         if 'sah_bond_opts' in nics_settings:
@@ -717,7 +725,6 @@ class Settings:
         self.ceph_nodes = []
         self.switches = []
         self.nodes = []
-
         with open(self.network_conf) as config_file:
             json_data = json.load(config_file)
             for each in json_data:
@@ -747,7 +754,7 @@ class Settings:
                 try:
                     node.is_computehci = (True if node.is_computehci
                                           == "true" else False)
-                    if node.is_computehci: 
+                    if node.is_computehci:
                         self.computehci_nodes.append(node)
                 except AttributeError:
                     node.is_computehci = False
@@ -796,7 +803,8 @@ class Settings:
                     pass
                 if "node_type" in node.__dict__:
                     logger.debug("node_type not in self.node_types_map: %s",
-                                 str(node.node_type not in self.node_types_map))
+                                 str(node.node_type
+                                     not in self.node_types_map))
                     if node.node_type not in self.node_types_map:
                         self.node_types_map[node.node_type] = []
                     self.node_types_map[node.node_type].append(node)
@@ -843,7 +851,7 @@ class Settings:
                                               shell=True).rstrip()
             self.source_version = re_
         except:  # noqa: E722
-            logger.debug("unconventional setup...can t" +
+            logger.debug("unconventional setup...can't"
                          " pick source version info")
             self.source_version = "????"
 
@@ -873,3 +881,7 @@ class Settings:
             if stanza in node_types and conf.has_section(stanza):
                 return True
         return False
+
+    def _find_number_of_nics(self, nic_dir):
+        num_nics = int(list(filter(str.isdigit, nic_dir))[0])
+        return num_nics

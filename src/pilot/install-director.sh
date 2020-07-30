@@ -259,6 +259,12 @@ done
 create_flavor baremetal false
 echo "## Done."
 
+echo
+echo "## Setting DNS in Neutron ${subnet_name} subnet..."
+subnet_uuid=$(openstack network list | grep "${subnet_name}" | awk '{print $6}')
+openstack subnet set "${subnet_uuid}" --dns-nameserver "${dns_ip}"
+echo "## Done."
+
 # This patch fixes an issue in tripleo-heat-templates
 echo
 echo "### Patching tripleo-heat-templates"
@@ -268,6 +274,7 @@ echo "## Done."
 echo
 echo "## Copying heat templates..."
 cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overcloud
+# TODO:dpaterson, why do we copy roles_data to ~/pilot/templates/overcloud/ ?
 cp $HOME/pilot/templates/roles_data.yaml $HOME/pilot/templates/overcloud/roles_data.yaml
 cp $HOME/pilot/templates/network-isolation.yaml $HOME/pilot/templates/overcloud/environments/network-isolation.yaml
 echo "## Done."

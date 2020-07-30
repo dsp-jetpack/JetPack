@@ -15,18 +15,13 @@
 # limitations under the License.
 
 import argparse
-import distutils.dir_util
 import os
 import re
 import sys
 import subprocess
-import paramiko
 import logging
-import string
 import novaclient.client as nova_client
 import time
-from command_helper import Ssh
-from novaclient.v2 import aggregates
 from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
 from credential_helper import CredentialHelper
@@ -413,6 +408,12 @@ def main():
                             action='store_true',
                             default=False,
                             help="Enable the ceph dashboard deployment")
+        parser.add_argument('--network_data',
+                            action='store_true',
+                            default=False,
+                            help="Use network_data.yaml to create edge site "
+                                 "networks")
+
         LoggingHelper.add_argument(parser)
         args = parser.parse_args()
         LoggingHelper.configure_logging(args.logging_level)
@@ -465,7 +466,7 @@ def main():
         # If disabled, default values will be set and
         # they won't be used for configuration
         # Create ConfigOvercloud object
-        print ("Configure environment file")
+        print("Configure environment file")
         config = ConfigOvercloud(args.overcloud_name)
         # Remove this when Numa siblings added
         # Edit the dellnfv_environment.yaml
@@ -503,10 +504,15 @@ def main():
         # The order of the environment files is important as a later inclusion
         # overrides resources defined in prior inclusions.
 
+        env_opts = ""
+        # If there are edge sites we have to use network_data.yaml and
+        # it must in as first argument.
+        if args.network_data:
+            env_opts += "-n ~/pilot/templates/network_data.yaml "
         # The roles_data.yaml must be included at the beginning.
-        # This is needed to enable the custome role Dell Compute.
+        # This is needed to enable the custom role Dell Compute.
         # It overrides the default roles_data.yaml
-        env_opts = "-r ~/pilot/templates/roles_data.yaml"
+        env_opts += "-r ~/pilot/templates/roles_data.yaml"
 
         # The static-ip-environment.yaml must be included after the
         # network-environment.yaml
@@ -588,13 +594,15 @@ def main():
         if args.dashboard_enable:
             env_opts += " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-dashboard.yaml"
             env_opts += " -e ~/pilot/templates/ceph_dashboard_admin.yaml "
+
         # The network-environment.yaml must be included after other templates
         # for effective parameter overrides (External vlan default route)
+        # The network-environment.yaml must be included after the
+        # network-isolation.yaml
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "network-isolation.yaml" \
                     " -e ~/pilot/templates/network-environment.yaml" \
-                    " -e {}" \
-                    "".format(nic_env_file)
+                    " -e {}".format(nic_env_file)
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
@@ -616,7 +624,7 @@ def main():
                         args.ntp_server_fqdn,
                         )
         with open(os.path.join(home_dir, 'pilot', 'overcloud_deploy_cmd.log'),
-                'w') as f:
+                  'w') as f:
             f.write(cmd.replace(' -', ' \\\n -'))
             f.write('\n')
         start = time.time()

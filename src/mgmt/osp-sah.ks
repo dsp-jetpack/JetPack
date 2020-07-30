@@ -21,7 +21,7 @@ ignoredisk --only-use=sda
 zerombr
 bootloader --boot-drive=sda
 
-clearpart --all --initlabel 
+clearpart --all --initlabel
 
 part biosboot --ondisk=sda --size=2
 part /boot --fstype=ext4 --size=1024
@@ -67,6 +67,7 @@ eula --agreed
 @virtualization-tools
 dhcp-server
 tmux
+python3-jinja2
 %end
 
 
@@ -202,16 +203,16 @@ echo "network --activate --noipv6 --device=${anaconda_name} ${anaconda_vlanid_op
 echo "rootpw ${SystemPassword}" >> /tmp/ks_include.txt
 echo "timezone ${TimeZone} --utc" >> /tmp/ks_include.txt
 
-[[ ${anaconda_if_name} ]] && { 
-  echo "AnacondaIface_device=\"${anaconda_if_name}\"" >> /tmp/ks_post_include.txt 
+[[ ${anaconda_if_name} ]] && {
+  echo "AnacondaIface_device=\"${anaconda_if_name}\"" >> /tmp/ks_post_include.txt
   }
 
-[[ ${itmp[3]} = no ]] && { 
-  echo "AnacondaIface_noboot=\"${itmp[3]}\"" >> /tmp/ks_post_include.txt 
+[[ ${itmp[3]} = no ]] && {
+  echo "AnacondaIface_noboot=\"${itmp[3]}\"" >> /tmp/ks_post_include.txt
   }
 
 
-#Post_include Environment 
+#Post_include Environment
 echo "HostName=\"${HostName}\"" >> /tmp/ks_post_include.txt
 echo "Gateway=\"${Gateway}\"" >> /tmp/ks_post_include.txt
 echo "NameServers=\"${NameServers}\"" >> /tmp/ks_post_include.txt
@@ -221,7 +222,7 @@ echo "NTPSettings=\"${prov_network}$(ipcalc -p 1.1.1.1 ${prov_netmask} | sed -n 
 
 echo "declare -A bonds" >> /tmp/ks_post_include.txt
 echo "declare -A bond_opts" >> /tmp/ks_post_include.txt
-echo "declare -A bond_ifaces" >> /tmp/ks_post_include.txt 
+echo "declare -A bond_ifaces" >> /tmp/ks_post_include.txt
 echo "declare -A bridges" >> /tmp/ks_post_include.txt
 echo "declare -A bridge_iface" >> /tmp/ks_post_include.txt
 echo "declare -A bridges_mtu" >> /tmp/ks_post_include.txt
@@ -359,7 +360,7 @@ echo "# Configuring Bridges" >> /tmp/ks_include.txt
 for bridge in ${!bridges[@]}
 do
   read parms <<< $( tr -d '\r' <<< ${bridges[$bridge]} )
-  
+
   unset bridge_info
   declare -A bridge_info=(  \
                          [ONBOOT]="no"      \
@@ -370,7 +371,7 @@ do
     case $parm in
           onboot ) bridge_info[ONBOOT]="yes"
                    ;;
-                   
+
  *.*.*.*/*.*.*.* ) read IP NETMASK <<< $( tr '/' ' ' <<< ${parm} )
                    bridge_info[IP]="${IP}"
                    bridge_info[NETMASK]="${NETMASK}"
@@ -422,7 +423,7 @@ lvscan
   mkdir -p /mnt/sysimage/root/osp-sah-ks-logs
   cp -v /tmp/sah-pre.log /mnt/sysimage/root/osp-sah-ks-logs
   cp -v /tmp/ks_include.txt /mnt/sysimage/root/osp-sah-ks-logs
-  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/osp-sah-ks-logs  
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/osp-sah-ks-logs
 %end
 
 
@@ -451,16 +452,16 @@ do
     case $parm in
           br-mgmt ) vlan_info[MASTER]="br-mgmt"
                    ;;
-                   
+
           br-stor ) vlan_info[MASTER]="br-stor"
                    ;;
-                   
+
           br-prov ) vlan_info[MASTER]="br-prov"
                    ;;
-                   
+
           br-pub-api ) vlan_info[MASTER]="br-pub-api"
                    ;;
-                   
+
           br-priv-api ) vlan_info[MASTER]="br-priv-api"
                    ;;
     esac
@@ -508,10 +509,10 @@ echo "allow ${NTPSettings}" >> /etc/chrony.conf
 echo "local stratum 10" >> /etc/chrony.conf
 
 
-[[ ${AnacondaIface_noboot} ]] && { 
-  sed -i -e '/DEFROUTE=/d' /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_device} 
-  sed -i -e '/ONBOOT=/d' /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_device} 
-  echo "ONBOOT=no" >> /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_device} 
+[[ ${AnacondaIface_noboot} ]] && {
+  sed -i -e '/DEFROUTE=/d' /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_device}
+  sed -i -e '/ONBOOT=/d' /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_device}
+  echo "ONBOOT=no" >> /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_device}
   }
 
 
@@ -566,7 +567,7 @@ mkdir -p /store/data/iso
 echo "POST: Install other rerquired packages, paramiko, ..."
 yum install -y gcc libffi-devel openssl-devel ipmitool tmux git
 
-# temporary workaround for CES-7248 
+# temporary workaround for CES-7248
 echo "POST: upgrade setuptools"
 pip3 install --upgrade setuptools
 pip3 install paramiko

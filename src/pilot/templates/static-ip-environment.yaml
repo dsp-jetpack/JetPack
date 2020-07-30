@@ -86,7 +86,7 @@ parameter_defaults:
     tenant:
     internal_api:
     storage:
-    
+
   DellComputeIPs:
     # CHANGEME: Change the following IPs to the static IPs for the computes on
     # the Tenant network
