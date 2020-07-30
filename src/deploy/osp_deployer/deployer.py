@@ -224,14 +224,7 @@ def deploy():
         logger.info("=== Installing the overcloud ")
         logger.debug("installing the overcloud ... this might take a while")
         director_vm.deploy_overcloud()
-        cmd = "source ~/stackrc; openstack stack list | grep " \
-              + settings.overcloud_name + " | awk '{print $8}'"
-        overcloud_status = \
-            Ssh.execute_command_tty(director_ip,
-                                    settings.director_install_account_user,
-                                    settings.director_install_account_pwd,
-                                    cmd)[0]
-        logger.debug("=== Overcloud stack state : " + overcloud_status)
+        tester.verify_overcloud_deployed()
         if settings.hpg_enable:
             logger.info(
                 " HugePages has been successfully configured with size: " +
@@ -241,14 +234,6 @@ def deploy():
                 " NUMA has been successfully configured"
                 " with hostos_cpus count: " +
                 settings.hostos_cpu_count)
-
-        logger.info("====================================")
-        logger.info(" OverCloud deployment status: " + overcloud_status)
-        logger.info(" log : /auto_results/ ")
-        logger.info("====================================")
-        if "CREATE_COMPLETE" not in overcloud_status:
-            raise AssertionError(
-                "OverCloud did not install properly : " + overcloud_status)
 
         director_vm.summarize_deployment()
         tester.verify_computes_virtualization_enabled()
