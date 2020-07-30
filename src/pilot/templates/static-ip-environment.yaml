@@ -38,6 +38,12 @@ resource_registry:
   OS::TripleO::CephStorage::Ports::StorageMgmtPort: ./overcloud/network/ports/storage_mgmt_from_pool.yaml
   OS::TripleO::CephStorage::Ports::TenantPort: ./overcloud/network/ports/noop.yaml
 
+  OS::TripleO::PowerflexStorage::Ports::ExternalPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::PowerflexStorage::Ports::InternalApiPort: ./overcloud/network/ports/internal_api_from_pool.yaml
+  OS::TripleO::PowerflexStorage::Ports::StoragePort: ./overcloud/network/ports/storage_from_pool.yaml
+  OS::TripleO::PowerflexStorage::Ports::StorageMgmtPort: ./overcloud/network/ports/storage_mgmt_from_pool.yaml
+  OS::TripleO::PowerflexStorage::Ports::TenantPort: ./overcloud/network/ports/noop.yaml
+
 parameter_defaults:
   # Specify the IPs for the overcloud nodes on the indicated networks below.
   # The IPs are listed in the order: node0, node1, node2 for each network.
@@ -112,3 +118,17 @@ parameter_defaults:
     - 192.168.180.76
     - 192.168.180.77
     - 192.168.180.78
+
+  PowerflexStorageIPs:
+    internal_api:
+    - 192.168.140.34
+    - 192.168.140.35
+    - 192.168.140.36
+    storage:
+    - 192.168.170.34
+    - 192.168.170.35
+    - 192.168.170.36
+    storage_mgmt:
+    - 192.168.180.34
+    - 192.168.180.35
+    - 192.168.180.36

@@ -41,6 +41,8 @@ parameter_defaults:
   OvercloudSwiftStorageFlavor: baremetal
   # Flavor to use for the Cinder nodes
   OvercloudBlockStorageFlavor: baremetal
+  # Flavor to use for the PowerFlex nodes
+  OvercloudPowerflexStorageFlavor: baremetal
 
   # List of Default Filters to pass to the nova Scheduler
   # Default filters are used if profile is set to XSP
@@ -65,6 +67,9 @@ parameter_defaults:
 
   # Number of Ceph Storage nodes
   CephStorageCount: 3
+
+  # Number of PowerFlex Storage nodes
+  PowerflexStorageCount: 0
 
   # To customize the domain name of the overcloud nodes, change "localdomain"
   # in the following line to the desired domain name.
