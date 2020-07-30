@@ -28,7 +28,7 @@ parameter_defaults:
 # Use Null value for standard neutron-container and use ovn for OVN-based-container
       neutron_driver:
       rhel_containers: false
-      tag: '16.0'
+      tag: '16.1'
     tag_from_label: '{version}-{release}'
 
   ContainerImageRegistryCredentials:
