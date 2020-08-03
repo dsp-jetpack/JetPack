@@ -35,10 +35,10 @@ from auto_common import Scp
 from auto_common.yaml_utils import OrderedDumper
 from auto_common.yaml_utils import OrderedLoader
 
-logger = logging.getLogger("osp_deployer")
+# logger = logging.getLogger("osp_deployer")
 # TODO after testing delete two logging config lines below
-# logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
-# logger = logging.getLogger()
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+logger = logging.getLogger()
 
 exitFlag = 0
 
@@ -56,10 +56,16 @@ OTHER_POOLS = ['.rgw.buckets',
                'default.rgw.meta',
                'metrics']
 
+NOVA_AZ_CONFIG = ("/usr/share/openstack-tripleo-heat-templates"
+                  "/deployment/nova/nova-az-config.yaml")
+NOVA_AZ = "nova-az"
+OVERRIDES = "overrides"
+CONTROL_PLANE_EXPORT_TEMPLATE = "control-plane-export.yaml"
 TEMPEST_CONF = 'tempest.conf'
 UNDERCLOUD_LOCAL_INTERFACE = 'enp2s0'
 OVERCLOUD_PATH = 'overcloud'
 OVERCLOUD_ENVS_PATH = OVERCLOUD_PATH + '/environments'
+EDGE_COMMON_PATH = "edge_common"
 
 STAGING_PATH = '/deployment_staging'
 STAGING_TEMPLATES_PATH = STAGING_PATH + '/templates'
@@ -102,6 +108,8 @@ STATIC_IP_ENV_EDGE_J2 = STATIC_IP_ENV + "-edge" + J2_EXT
 NODE_PLACEMENT_EDGE_J2 = NODE_PLACEMENT + "-edge" + J2_EXT
 ROLES_DATA_EDGE_J2 = ROLES_DATA + "_edge" + J2_EXT
 NET_ISO_EDGE_J2 = NET_ISO + "-edge" + J2_EXT
+NOVA_AZ_EDGE_J2 = NOVA_AZ + "-edge" + J2_EXT
+OVERRIDES_EDGE_J2 = OVERRIDES + "-edge" + J2_EXT
 # TODO: dpaterson: migrating dell-environment template involves a bit of
 # rework for ceph osd stuff, wait for now
 # DELL_ENV_J2 = DELL_ENV + J2_EXT
@@ -2039,6 +2047,30 @@ class Director(InfraHost):
         is_conf = not bool(int(resp))
         return is_conf
 
+    def deploy_edge_site(self, node_type):
+    """
+    TODO: dpaterson, implement this method
+    !/bin/bash
+    STACK=dcn0
+    source ~/stackrc
+    if [[ ! -e distributed_compute_hci.yaml ]]; then
+        openstack overcloud roles generate DistributedComputeHCI -o distributed_compute_hci.yaml
+    fi
+    time openstack overcloud deploy \
+     --stack $STACK \
+     --templates /usr/share/openstack-tripleo-heat-templates/ \
+     -r distributed_compute_hci.yaml \
+     -e /usr/share/openstack-tripleo-heat-templates/environments/disable-telemetry.yaml \
+     -e /usr/share/openstack-tripleo-heat-templates/environments/podman.yaml \
+     -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+     -e /usr/share/openstack-tripleo-heat-templates/environments/cinder-volume-active-active.yaml \
+     -e ~/dcn-common/control-plane-export.yaml \
+     -e ~/containers-env-file.yaml \
+     -e ceph.yaml \
+     -e nova-az.yaml \
+     -e overrides.yaml
+     """
+
     def get_sanity_subnet(self):
         logger.debug("Retrieving sanity test subnet.")
         setts = self.settings
@@ -2417,7 +2449,6 @@ class Director(InfraHost):
     @directory_check(STAGING_TEMPLATES_PATH)
     def render_and_upload_node_placement_edge(self):
         logger.debug("render_and_upload_node_placement_edge called!")
-        self.render_and_upload_stamp_node_placement()
         setts = self.settings
         tmplt = self.jinja2_env.get_template(NODE_PLACEMENT_EDGE_J2)
 
@@ -2442,6 +2473,67 @@ class Director(InfraHost):
             remote_plcmnt_file = os.path.join(self.templates_dir,
                                               node_plcmnt_name + ".yaml")
             self.upload_file(stg_plcmnt_path, remote_plcmnt_file)
+
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def render_and_upload_nova_az_edge(self):
+        logger.debug("render_and_upload_nova_az_edge called!")
+        setts = self.settings
+        tmplt = self.jinja2_env.get_template(NOVA_AZ_EDGE_J2)
+
+        for node_type in setts.node_types:
+            tmplt_data = {'resource_registry': {},
+                          'parameter_defaults': {}}
+            edge_site_directory = self._generate_role_lower(node_type)
+            stg_edge_site_tmplt_path = os.path.join(STAGING_TEMPLATES_PATH,
+                                                    edge_site_directory)
+            if not os.path.exists(stg_edge_site_tmplt_path):
+                os.makedirs(stg_edge_site_tmplt_path)
+
+            _res = self._generate_az_edge(node_type)
+            tmplt_data['resource_registry'] = _res[0]
+            tmplt_data['parameter_defaults'] = _res[1]
+            logger.debug("tmplt_data: %s", str(tmplt_data))
+            rendered_tmplt = tmplt.render(**tmplt_data)
+
+            stg_az_path = self.get_timestamped_path(stg_edge_site_tmplt_path,
+                                                    NOVA_AZ,
+                                                    "yaml")
+            with open(stg_az_path, 'w') as stg_az_fp:
+                stg_az_fp.write(rendered_tmplt)
+            remote_site_directory = self.home_dir + "/" + edge_site_directory
+            remote_az_file = os.path.join(remote_site_directory,
+                                          NOVA_AZ + ".yaml")
+            self.create_directory(remote_site_directory)
+            self.upload_file(stg_az_path, remote_az_file)
+
+    def render_and_upload_overrides_edge(self):
+        logger.debug("render_and_upload_overrides_edge called!")
+        setts = self.settings
+        tmplt = self.jinja2_env.get_template(OVERRIDES_EDGE_J2)
+
+        for node_type in setts.node_types:
+            tmplt_data = {}
+            edge_site_directory = self._generate_role_lower(node_type)
+            stg_edge_site_tmplt_path = os.path.join(STAGING_TEMPLATES_PATH,
+                                                    edge_site_directory)
+            if not os.path.exists(stg_edge_site_tmplt_path):
+                os.makedirs(stg_edge_site_tmplt_path)
+
+            tmplt_data['parameter_defaults'] = self._generate_overrides_edge(
+                node_type)
+            logger.debug("tmplt_data: %s", str(tmplt_data))
+            rendered_tmplt = tmplt.render(**tmplt_data)
+
+            stg_or_path = self.get_timestamped_path(stg_edge_site_tmplt_path,
+                                                    NOVA_AZ,
+                                                    "yaml")
+            with open(stg_or_path, 'w') as stg_or_fp:
+                stg_or_fp.write(rendered_tmplt)
+            remote_site_directory = self.home_dir + "/" + edge_site_directory
+            remote_or_file = os.path.join(remote_site_directory,
+                                          OVERRIDES + ".yaml")
+            self.create_directory(remote_site_directory)
+            self.upload_file(stg_or_path, remote_or_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
     def render_and_upload_static_ips_edge(self):
@@ -2686,20 +2778,6 @@ class Director(InfraHost):
             stg_cntl_fp.write(rendered_tmplt)
         self.upload_file(stg_cntl_path, cntl_file)
 
-    @directory_check(STAGING_TEMPLATES_PATH)
-    def render_and_upload_stamp_node_placement(self):
-        tmplt = self.jinja2_env.get_template(NODE_PLACEMENT_EDGE_J2)
-        remote_plcmnt_file = os.path.join(self.templates_dir,
-                                          NODE_PLACEMENT + ".yaml")
-
-        stg_plcmnt_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
-                                                    NODE_PLACEMENT, "yaml")
-        rendered_tmplt = tmplt.render(**{})
-        logger.debug("template staging path: %s", stg_plcmnt_path)
-        with open(stg_plcmnt_path, 'w') as stg_node_plcmnt_fp:
-            stg_node_plcmnt_fp.write(rendered_tmplt)
-        self.upload_file(stg_plcmnt_path, remote_plcmnt_file)
-
     def _has_edge_sites(self):
         return bool(self.settings.node_type_data_map)
 
@@ -2722,7 +2800,7 @@ class Director(InfraHost):
         """
         port_dict = {}
         role = self._generate_cc_role(node_type)
-        role_network = self._generate_role_network_lower(node_type)
+        role_network = self._generate_role_lower(node_type)
 
         role_port = 'OS::TripleO::' + role + '::Ports::'
         int_api_port = role_port + 'InternalApi' + role + 'Port'
@@ -2768,7 +2846,7 @@ class Director(InfraHost):
             tenant_ips.append(node.tenant_tunnel_ip)
             external_ips.append(node.external_ip)
 
-        suffix = '_' + self._generate_role_network_lower(node_type)
+        suffix = '_' + self._generate_role_lower(node_type)
 
         network_dict[INTERNAL_API_NET[1] + suffix] = int_api_ips
         network_dict[STORAGE_NET[1] + suffix] = storage_ips
@@ -2790,7 +2868,7 @@ class Director(InfraHost):
         }
         """
         role = self._generate_cc_role(type)
-        edge_net = self._generate_role_network_lower(type)
+        edge_net = self._generate_role_lower(type)
         _res_reg = {}
         for net_tuple in EDGE_NETWORKS:
             net_key = "OS::TripleO::Network::{}{}".format(net_tuple[0],
@@ -3440,7 +3518,7 @@ class Director(InfraHost):
         networks_param_mapping[STORAGE_NET[0]] = storage
         networks_param_mapping[EXTERNAL_NET[0]] = external
         network_data_list = []
-        suffix = '_' + self._generate_role_network_lower(node_type)
+        suffix = '_' + self._generate_role_lower(node_type)
         for network, mapping in networks_param_mapping.items():
             nd = {'enabled': True}
             name_cc = network + role
@@ -3469,7 +3547,7 @@ class Director(InfraHost):
         :param type: the node type the extra params are being generated for
         :returns: dict containing parameter overrides
         """
-        net_suffix = '_' + self._generate_role_network_lower(type)
+        net_suffix = '_' + self._generate_role_lower(type)
         api_net = INTERNAL_API_NET[1] + net_suffix
         tenant_net = TENANT_NET[1] + net_suffix
 
@@ -3509,12 +3587,12 @@ class Director(InfraHost):
                           type.lower()).title()).replace(" ", "")
         return role_cc
 
-    def _generate_role_network_lower(self, type):
+    def _generate_role_lower(self, type):
         _type_lwr = (re.sub(r'[^a-z0-9]', " ", type.lower()).replace(" ", "_"))
         return _type_lwr
 
     def _generate_subnet_name(self, type):
-        return self._generate_role_network_lower(type) + '_subnet'
+        return self._generate_role_lower(type) + '_subnet'
 
     def _generate_node_type_lower(self, type):
         # should look like denveredgecompute.yaml if following existing pattern
@@ -3536,10 +3614,47 @@ class Director(InfraHost):
         _role_hints = role + 'SchedulerHints'
         _sched_hints[_role_hints] = exp
 
+    def _generate_az_edge(self, node_type):
+        res_reg = {}
+        param_defs = {}
+        res_reg["OS::TripleO::Services::NovaAZConfig"] = NOVA_AZ_CONFIG
+        _az = self._generate_node_type_az(node_type)
+        param_defs["NovaComputeAvailabilityZone"] = _az
+        param_defs["RootStackName"] = self.settings.overcloud_name
+        return res_reg, param_defs
+
+    def _generate_overrides_edge(self, node_type):
+        """
+        parameter_defaults:
+          DistributedComputeHCICount: 3
+          DistributedComputeHCIFlavor: baremetal
+          DistributedComputeHCISchedulerHints:
+            'capabilities:node': '0-ceph-%index%'
+          CinderStorageAvailabilityZone: dcn0
+          NovaAZAttach: false
+        """
+        setts = self.settings
+        role = self._generate_cc_role(node_type)
+        param_defs = {}
+        param_defs[role + "Count"] = len(setts.node_types_map[node_type])
+        param_defs[role + "Flavor"] = "baremetal"
+        _hints = {'capabilities:node':
+                  self._generate_node_placement_exp(node_type)}
+        param_defs[role + "SchedulerHints"] = _hints
+        _az = self._generate_node_type_az(node_type)
+        param_defs["CinderStorageAvailabilityZone"] = _az
+        param_defs["NovaAZAttach"] = str(False).lower()
+        return param_defs
+
     def _generate_node_placement_exp(self, type):
         placement_exp = ((re.sub(r'[^a-z0-9]', " ",
                                  type.lower())).replace(" ", "-") + "-%index%")
         return placement_exp
+
+    def _generate_node_type_az(self, type):
+        az = ((re.sub(r'[^a-z0-9]', " ",
+                      type.lower())).replace(" ", "-") + "-az")
+        return az
 
     def _group_node_types_by_num_nics(self):
         setts = self.settings
@@ -3568,10 +3683,29 @@ class Director(InfraHost):
                 self.default_compute_services = _srv_defs
         return self.default_compute_services
 
+    def export_control_plane_config(self):
+        """
+        openstack overcloud export -f --stack R59 --output-file \
+        ~/edge-common/control-plane-export.yaml
+        """
+        export_path = self.home_dir + "/" + EDGE_COMMON_PATH
+        self.create_directory(export_path)
+        cmd = (self.source_stackrc + " openstack overcloud export -f --stack "
+               + self.settings.overcloud_name + " --output-file "
+               + export_path + "/" + CONTROL_PLANE_EXPORT_TEMPLATE)
+        self.run(cmd)
+
 
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
+
+    # new functions
+    director.render_and_upload_overrides_edge()
+    # director.export_control_plane_config()
+    # director.render_and_upload_nova_az_edge()
+    # end new functions
+
     # director.render_and_upload_compute_templates_edge()
     # director.render_and_upload_network_isolation_edge()
     # director.render_and_upload_node_placement_edge()

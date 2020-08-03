@@ -81,6 +81,12 @@ class InfraHost:
                      local_file,
                      remote_file)
 
+    def create_directory(self, directory):
+        Scp.mkdir(self.ip,
+                  self.user,
+                  self.pwd,
+                  directory)
+
     def get_timestamped_path(self, path, filename, ext="conf"):
         timestamp = time.strftime('%Y%m%d%H%M%S')
         filename = filename + "_" + timestamp + "." + ext
