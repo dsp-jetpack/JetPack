@@ -547,7 +547,7 @@ class Director(InfraHost):
 
         self.setup_networking()
         if self._has_edge_sites():
-            self.render_and_upload_roles_data_edge()
+            self.render_and_upload_roles_data_edge_all()
         self.setup_dell_storage()
         self.setup_manila()
         self.setup_environment()
@@ -1498,12 +1498,12 @@ class Director(InfraHost):
             self.render_and_upload_network_data_edge()
             self.render_and_upload_network_environment_edge()
             self.render_and_upload_network_isolation_edge()
-            self.render_and_upload_node_placement_edge()
+            self.render_and_upload_node_placement_edge_all()
             self.render_and_upload_nic_env_edge()
-            self.render_and_upload_compute_templates_edge()
+            self.render_and_upload_compute_edge_all()
 
             if self.settings.overcloud_static_ips is True:
-                self.render_and_upload_static_ips_edge()
+                self.render_and_upload_static_ips_edge_all()
 
     def setup_nic_configuration(self):
         # Upload all yaml files in the NIC config directory
@@ -2048,28 +2048,29 @@ class Director(InfraHost):
         return is_conf
 
     def deploy_edge_site(self, node_type):
-    """
-    TODO: dpaterson, implement this method
-    !/bin/bash
-    STACK=dcn0
-    source ~/stackrc
-    if [[ ! -e distributed_compute_hci.yaml ]]; then
-        openstack overcloud roles generate DistributedComputeHCI -o distributed_compute_hci.yaml
-    fi
-    time openstack overcloud deploy \
-     --stack $STACK \
-     --templates /usr/share/openstack-tripleo-heat-templates/ \
-     -r distributed_compute_hci.yaml \
-     -e /usr/share/openstack-tripleo-heat-templates/environments/disable-telemetry.yaml \
-     -e /usr/share/openstack-tripleo-heat-templates/environments/podman.yaml \
-     -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-     -e /usr/share/openstack-tripleo-heat-templates/environments/cinder-volume-active-active.yaml \
-     -e ~/dcn-common/control-plane-export.yaml \
-     -e ~/containers-env-file.yaml \
-     -e ceph.yaml \
-     -e nova-az.yaml \
-     -e overrides.yaml
-     """
+        """
+        TODO: dpaterson, implement this method
+        !/bin/bash
+        STACK=dcn0
+        source ~/stackrc
+        if [[ ! -e distributed_compute_hci.yaml ]]; then
+            openstack overcloud roles generate DistributedComputeHCI -o distributed_compute_hci.yaml
+        fi
+        time openstack overcloud deploy \
+         --stack $STACK \
+         --templates /usr/share/openstack-tripleo-heat-templates/ \
+         -r distributed_compute_hci.yaml \
+         -e /usr/share/openstack-tripleo-heat-templates/environments/disable-telemetry.yaml \
+         -e /usr/share/openstack-tripleo-heat-templates/environments/podman.yaml \
+         -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+         -e /usr/share/openstack-tripleo-heat-templates/environments/cinder-volume-active-active.yaml \
+         -e ~/dcn-common/control-plane-export.yaml \
+         -e ~/containers-env-file.yaml \
+         -e ceph.yaml \
+         -e nova-az.yaml \
+         -e overrides.yaml
+         """
+        return None
 
     def get_sanity_subnet(self):
         logger.debug("Retrieving sanity test subnet.")
@@ -2242,40 +2243,26 @@ class Director(InfraHost):
         self.upload_file(stg_undercloud_conf_path, undercloud_conf_dst)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def render_and_upload_roles_data_edge(self):
+    def render_and_upload_roles_data_edge_all(self):
         """Add generated edge site roles to roles_data.yaml and upload it.
         """
-        setts = self.settings
 
-        logger.debug("render_and_upload_roles_data_edge called!")
+        logger.debug("render_and_upload_roles_data_edge_all called!")
         setts = self.settings
-        tmplt = self.jinja2_env.get_template(ROLES_DATA_EDGE_J2)
-
         for node_type, node_type_data in setts.node_type_data_map.items():
-            tmplt_data = {}
-            _nt_lower = self._generate_node_type_lower(node_type)
-            _roles_name = ROLES_DATA + "_" + _nt_lower
-            roles_file = os.path.join(self.templates_dir,
-                                      _roles_name + '.yaml')
-            oc_roles_file = os.path.join(self.templates_dir,
-                                         'overcloud',
-                                         _roles_name + ".yaml")
+            self.render_and_upload_roles_data_edge(node_type)
 
-            stg_roles_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
-                                                       _roles_name,
-                                                       "yaml")
-
-            tmplt_data["roles"] = [self._generate_role_dict(node_type)]
-            logger.debug("template data: %s", str(tmplt_data))
-            rendered_tmplt = tmplt.render(**tmplt_data)
-            with open(stg_roles_file, 'w') as stg_roles_fp:
-                stg_roles_fp.write(rendered_tmplt)
-
-            self.upload_file(stg_roles_file, roles_file)
-            # Need to copy to pilot/templates/overcloud as
-            # we copy the roles_data file there during undercloud
-            # installation and it is used during overcloud deployment
-            self.upload_file(stg_roles_file, oc_roles_file)
+    def render_and_upload_roles_data_edge(self, node_type):
+        paths = self._generate_edge_template_paths(node_type, ROLES_DATA)
+        stg_roles_file, roles_file = paths
+        tmplt = self.jinja2_env.get_template(ROLES_DATA_EDGE_J2)
+        tmplt_data = {}
+        tmplt_data["roles"] = [self._generate_role_dict(node_type)]
+        logger.debug("template data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_roles_file, 'w') as stg_roles_fp:
+            stg_roles_fp.write(rendered_tmplt)
+        self.upload_file(stg_roles_file, roles_file)
 
     ''' TODO: dpaterson, DELETE ME if unused
     @directory_check(STAGING_NIC_CONFIGS)
@@ -2329,8 +2316,7 @@ class Director(InfraHost):
             self.upload_file(stg_cntl_path, cntl_file)
     '''
 
-    @directory_check(STAGING_NIC_CONFIGS)
-    def render_and_upload_compute_templates_edge(self):
+    def render_and_upload_compute_edge_all(self):
         """Loop through settings.node_type_data_map, generate the nic config
         template for each node_type, and upload the template to the director
         vm.
@@ -2347,41 +2333,32 @@ class Director(InfraHost):
         nic_environment.yaml for each site is also updated and uploaded,
         see: render_and_upload_nic_env_edge()
         """
-        logger.debug("render_and_upload_compute_templates_edge called!")
+        logger.debug("render_and_upload_compute_edge_all called!")
         setts = self.settings
         for node_type, node_type_data in setts.node_type_data_map.items():
-            num_nics = node_type_data['nic_port_count']
-            port_dir = "{}_port".format(num_nics)
-            _tmplt_path = os.path.join(NIC_CONFIGS, port_dir, EDGE_COMPUTE_J2)
-            tmplt = self.jinja2_env.get_template(_tmplt_path)
-            tmplt_data = {}
-            tmplt_data["parameters"] = self._generate_nic_params(node_type)
-            tmplt_data["network_config"] = self._generate_nic_network_config(
-                node_type,
-                node_type_data)
-            stg_nic_template_path = os.path.join(STAGING_TEMPLATES_PATH,
-                                                 NIC_CONFIGS, port_dir)
+            self.render_and_upload_compute_edge(node_type, node_type_data)
 
-            if not os.path.exists(stg_nic_template_path):
-                os.makedirs(stg_nic_template_path)
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def render_and_upload_compute_edge(self, node_type, node_type_data):
+        paths = self._generate_edge_template_paths(node_type)
+        stg_nic_path, dst_nic_path = paths
+        num_nics = node_type_data['nic_port_count']
+        port_dir = "{}_port".format(num_nics)
+        _tmplt_path = os.path.join(NIC_CONFIGS, port_dir, EDGE_COMPUTE_J2)
+        tmplt = self.jinja2_env.get_template(_tmplt_path)
+        tmplt_data = {}
+        tmplt_data["parameters"] = self._generate_nic_params(node_type)
+        tmplt_data["network_config"] = self._generate_nic_network_config(
+            node_type,
+            node_type_data)
+        logger.info("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_nic_path, 'w') as stg_nic_fp:
+            stg_nic_fp.write(rendered_tmplt)
 
-            nic_config_name = self._generate_node_type_lower(node_type)
-            stg_nic_path = self.get_timestamped_path(stg_nic_template_path,
-                                                     nic_config_name,
-                                                     "yaml")
-            dst_nic_yaml = nic_config_name + ".yaml"
-            dst_nic_path = os.path.join(self.nic_configs_dir, port_dir,
-                                        dst_nic_yaml)
+        self.upload_file(stg_nic_path, dst_nic_path)
 
-            logger.info("tmplt_data: %s", str(tmplt_data))
-            rendered_tmplt = tmplt.render(**tmplt_data)
-            with open(stg_nic_path, 'w') as stg_nic_fp:
-                stg_nic_fp.write(rendered_tmplt)
-
-            self.upload_file(stg_nic_path, dst_nic_path)
-
-    @directory_check(STAGING_NIC_CONFIGS)
-    def render_and_upload_nic_env_edge(self):
+    def render_and_upload_nic_env_edge_all(self):
         """Update and upload nic_environment_*.yaml templates for edge sites
 
         Loop through the node_types, grouped by number of nics, and update
@@ -2402,168 +2379,128 @@ class Director(InfraHost):
         nic_dict_by_port_num = self._group_node_types_by_num_nics()
 
         for num_nics, node_type_tuples in nic_dict_by_port_num.items():
-            port_dir = "{}_port".format(num_nics)
-
-            _tmplt_path = os.path.join(NIC_CONFIGS, port_dir, NIC_ENV_EDGE_J2)
-            tmplt = self.jinja2_env.get_template(_tmplt_path)
-            stg_nic_tmplt_path = os.path.join(STAGING_TEMPLATES_PATH,
-                                              NIC_CONFIGS, port_dir)
-
-            if not os.path.exists(stg_nic_tmplt_path):
-                os.makedirs(stg_nic_tmplt_path)
-
-            for node_type_tuple in node_type_tuples:
-                node_type = node_type_tuple[0]
-                node_type_data = node_type_tuple[1]
-                _nt_lower = self._generate_node_type_lower(node_type)
-                _nic_env_name = NIC_ENV + "_" + _nt_lower
-                _rel_nic_env_path = os.path.join(port_dir,
-                                                 _nic_env_name + ".yaml")
-                # nic_env_file=5_port/nic_environment_edgecomputeboston.yaml
-                nic_env_file = os.path.join(self.nic_configs_dir,
-                                            _rel_nic_env_path)
-                tmplt_data = {}
-                _res_reg = tmplt_data['resource_registry'] = {}
-                _params = tmplt_data['parameter_defaults'] = {}
-
-                stg_nic_env_path = self.get_timestamped_path(
-                    stg_nic_tmplt_path,
-                    _nic_env_name,
-                    "yaml")
-
-                ne_params = self._generate_nic_environment_edge(tmplt_data,
-                                                                node_type,
-                                                                node_type_data)
-                _params.update(ne_params)
-                role = self._generate_cc_role(node_type)
-                role_nic_key = ("OS::TripleO::"
-                                + role + "::Net::SoftwareConfig")
-                nic_config_name = ("./" + _nt_lower + ".yaml")
-                _res_reg[role_nic_key] = nic_config_name
-                logger.info("template data: %s", str(tmplt_data))
-                rendered_tmplt = tmplt.render(**tmplt_data)
-                with open(stg_nic_env_path, 'w') as stg_nic_env_fp:
-                    stg_nic_env_fp.write(rendered_tmplt)
-                self.upload_file(stg_nic_env_path, nic_env_file)
+            self.render_and_upload_nic_env_edge(num_nics, node_type_tuples)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def render_and_upload_node_placement_edge(self):
-        logger.debug("render_and_upload_node_placement_edge called!")
-        setts = self.settings
-        tmplt = self.jinja2_env.get_template(NODE_PLACEMENT_EDGE_J2)
+    def render_and_upload_nic_env_edge(self, num_nics, node_type_tuples):
 
-        for node_type in setts.node_types:
-            tmplt_data = {'scheduler_hints': {}}
-            _sched_hints = tmplt_data['scheduler_hints']
-            exp = self._generate_node_placement_exp(node_type)
+        port_dir = "{}_port".format(num_nics)
+
+        _tmplt_path = os.path.join(NIC_CONFIGS, port_dir, NIC_ENV_EDGE_J2)
+        tmplt = self.jinja2_env.get_template(_tmplt_path)
+
+        for node_type_tuple in node_type_tuples:
+
+            node_type, node_type_data = node_type_tuple
+            paths = self._generate_edge_template_paths(node_type, NIC_ENV)
+            stg_nic_env_path, nic_env_file = paths
+            _nt_lower = self._generate_node_type_lower(node_type)
+
+            tmplt_data = {}
+            _res_reg = tmplt_data['resource_registry'] = {}
+            _params = tmplt_data['parameter_defaults'] = {}
+
+            ne_params = self._generate_nic_environment_edge(node_type,
+                                                            node_type_data)
+            _params.update(ne_params)
             role = self._generate_cc_role(node_type)
-            edge_name = self._generate_node_type_lower(node_type)
-            node_plcmnt_name = NODE_PLACEMENT + "_" + edge_name
-            _role_hints = role + 'SchedulerHints'
-            _sched_hints[_role_hints] = exp
-
+            role_nic_key = ("OS::TripleO::"
+                            + role + "::Net::SoftwareConfig")
+            nic_config_name = ("./" + _nt_lower + ".yaml")
+            _res_reg[role_nic_key] = nic_config_name
+            logger.info("template data: %s", str(tmplt_data))
             rendered_tmplt = tmplt.render(**tmplt_data)
+            with open(stg_nic_env_path, 'w') as stg_nic_env_fp:
+                stg_nic_env_fp.write(rendered_tmplt)
+            self.upload_file(stg_nic_env_path, nic_env_file)
 
-            stg_plcmnt_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
-                                                        node_plcmnt_name,
-                                                        "yaml")
-            with open(stg_plcmnt_path, 'w') as stg_plcmnt_fp:
-                stg_plcmnt_fp.write(rendered_tmplt)
+    def render_and_upload_node_placement_edge_all(self):
+        logger.debug("render_and_upload_node_placement_edge_all called!")
 
-            remote_plcmnt_file = os.path.join(self.templates_dir,
-                                              node_plcmnt_name + ".yaml")
-            self.upload_file(stg_plcmnt_path, remote_plcmnt_file)
+        for node_type in self.settings.node_types:
+            self.render_and_upload_node_placement_edge(node_type)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def render_and_upload_nova_az_edge(self):
-        logger.debug("render_and_upload_nova_az_edge called!")
-        setts = self.settings
+    def render_and_upload_node_placement_edge(self, node_type):
+        tmplt = self.jinja2_env.get_template(NODE_PLACEMENT_EDGE_J2)
+        paths = self._generate_edge_template_paths(node_type, NODE_PLACEMENT)
+        stg_plcmnt_path, remote_plcmnt_file = paths
+        tmplt_data = {'scheduler_hints': {}}
+        _sched_hints = tmplt_data['scheduler_hints']
+        exp = self._generate_node_placement_exp(node_type)
+        role = self._generate_cc_role(node_type)
+        _role_hints = role + 'SchedulerHints'
+        _sched_hints[_role_hints] = exp
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_plcmnt_path, 'w') as stg_plcmnt_fp:
+            stg_plcmnt_fp.write(rendered_tmplt)
+        self.upload_file(stg_plcmnt_path, remote_plcmnt_file)
+
+    def render_and_upload_nova_az_edge_all(self):
+        logger.debug("render_and_upload_nova_az_edge_all called!")
+        for node_type in self.settings.node_types:
+            self.render_and_upload_nova_az_edge(node_type)
+
+    def render_and_upload_nova_az_edge(self, node_type):
+        paths = self._generate_edge_template_paths(node_type, NOVA_AZ)
+        stg_az_path, remote_az_file = paths
         tmplt = self.jinja2_env.get_template(NOVA_AZ_EDGE_J2)
+        tmplt_data = {'resource_registry': {},
+                      'parameter_defaults': {}}
 
-        for node_type in setts.node_types:
-            tmplt_data = {'resource_registry': {},
-                          'parameter_defaults': {}}
-            edge_site_directory = self._generate_role_lower(node_type)
-            stg_edge_site_tmplt_path = os.path.join(STAGING_TEMPLATES_PATH,
-                                                    edge_site_directory)
-            if not os.path.exists(stg_edge_site_tmplt_path):
-                os.makedirs(stg_edge_site_tmplt_path)
+        _res = self._generate_az_edge(node_type)
+        tmplt_data['resource_registry'] = _res[0]
+        tmplt_data['parameter_defaults'] = _res[1]
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
 
-            _res = self._generate_az_edge(node_type)
-            tmplt_data['resource_registry'] = _res[0]
-            tmplt_data['parameter_defaults'] = _res[1]
-            logger.debug("tmplt_data: %s", str(tmplt_data))
-            rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_az_path, 'w') as stg_az_fp:
+            stg_az_fp.write(rendered_tmplt)
+        self.upload_file(stg_az_path, remote_az_file)
 
-            stg_az_path = self.get_timestamped_path(stg_edge_site_tmplt_path,
-                                                    NOVA_AZ,
-                                                    "yaml")
-            with open(stg_az_path, 'w') as stg_az_fp:
-                stg_az_fp.write(rendered_tmplt)
-            remote_site_directory = self.home_dir + "/" + edge_site_directory
-            remote_az_file = os.path.join(remote_site_directory,
-                                          NOVA_AZ + ".yaml")
-            self.create_directory(remote_site_directory)
-            self.upload_file(stg_az_path, remote_az_file)
-
-    def render_and_upload_overrides_edge(self):
-        logger.debug("render_and_upload_overrides_edge called!")
+    def render_and_upload_overrides_edge_all(self):
+        logger.debug("render_and_upload_overrides_edge_all called!")
         setts = self.settings
-        tmplt = self.jinja2_env.get_template(OVERRIDES_EDGE_J2)
-
         for node_type in setts.node_types:
-            tmplt_data = {}
-            edge_site_directory = self._generate_role_lower(node_type)
-            stg_edge_site_tmplt_path = os.path.join(STAGING_TEMPLATES_PATH,
-                                                    edge_site_directory)
-            if not os.path.exists(stg_edge_site_tmplt_path):
-                os.makedirs(stg_edge_site_tmplt_path)
+            self.render_and_upload_overrides_edge(node_type)
 
-            tmplt_data['parameter_defaults'] = self._generate_overrides_edge(
-                node_type)
-            logger.debug("tmplt_data: %s", str(tmplt_data))
-            rendered_tmplt = tmplt.render(**tmplt_data)
+    def render_and_upload_overrides_edge(self, node_type):
+        tmplt = self.jinja2_env.get_template(OVERRIDES_EDGE_J2)
+        paths = self._generate_edge_template_paths(node_type, OVERRIDES)
+        stg_or_path, remote_or_file = paths[0], paths[1]
+        tmplt_data = {}
 
-            stg_or_path = self.get_timestamped_path(stg_edge_site_tmplt_path,
-                                                    NOVA_AZ,
-                                                    "yaml")
-            with open(stg_or_path, 'w') as stg_or_fp:
-                stg_or_fp.write(rendered_tmplt)
-            remote_site_directory = self.home_dir + "/" + edge_site_directory
-            remote_or_file = os.path.join(remote_site_directory,
-                                          OVERRIDES + ".yaml")
-            self.create_directory(remote_site_directory)
-            self.upload_file(stg_or_path, remote_or_file)
+        tmplt_data['parameter_defaults'] = self._generate_overrides_edge(
+            node_type)
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
+        with open(stg_or_path, 'w') as stg_or_fp:
+            stg_or_fp.write(rendered_tmplt)
+        self.upload_file(stg_or_path, remote_or_file)
+
+    def render_and_upload_static_ips_edge_all(self):
+        logger.debug("render_and_upload_static_ips_edge_all called!")
+
+        for node_type, nodes in self.settings.node_types_map.items():
+            self.render_and_upload_static_ips_edge(node_type, nodes)
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def render_and_upload_static_ips_edge(self):
-        logger.debug("render_and_upload_static_ips_edge called!")
-        setts = self.settings
+    def render_and_upload_static_ips_edge(self, node_type, nodes):
+        paths = self._generate_edge_template_paths(node_type, STATIC_IP_ENV)
+        stg_static_ip_env_path, remote_static_ip_env_file = paths
         tmplt = self.jinja2_env.get_template(STATIC_IP_ENV_EDGE_J2)
-
-        for node_type, nodes in setts.node_types_map.items():
-            tmplt_data = {}
-            nt_lower = self._generate_node_type_lower(node_type)
-            static_ip_env_edge = STATIC_IP_ENV + "_" + nt_lower
-            stg_static_ip_env_path = self.get_timestamped_path(
-                STAGING_TEMPLATES_PATH,
-                static_ip_env_edge, "yaml")
-            remote_static_ip_env_file = os.path.join(self.templates_dir,
-                                                     static_ip_env_edge
-                                                     + ".yaml")
-            tmplt_data['resource_registry'] = self._generate_static_ip_ports(
-                node_type)
-            tmplt_data['parameter_defaults'] = self._generate_static_ip_params(
-                node_type,
-                nodes)
-
-            logger.debug("tmplt_data: %s", str(tmplt_data))
-            rendered_tmplt = tmplt.render(**tmplt_data)
-
-            with open(stg_static_ip_env_path, 'w') as stg_static_ip_env_fp:
-                stg_static_ip_env_fp.write(rendered_tmplt)
-
-            self.upload_file(stg_static_ip_env_path, remote_static_ip_env_file)
+        tmplt_data = {}
+        tmplt_data['resource_registry'] = self._generate_static_ip_ports(
+            node_type)
+        tmplt_data['parameter_defaults'] = self._generate_static_ip_params(
+            node_type,
+            nodes)
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_static_ip_env_path, 'w') as stg_static_ip_env_fp:
+            stg_static_ip_env_fp.write(rendered_tmplt)
+        self.upload_file(stg_static_ip_env_path, remote_static_ip_env_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
     def render_and_upload_network_isolation_edge(self):
@@ -2576,32 +2513,19 @@ class Director(InfraHost):
         tmplt = self.jinja2_env.get_template(NET_ISO_EDGE_J2)
 
         for nt, nt_data in setts.node_type_data_map.items():
-            _edge_name = "_" + self._generate_node_type_lower(nt)
-            edge_net_iso_fn = NET_ISO + _edge_name
+            paths = self._generate_edge_template_paths(nt, NET_ISO)
+            stg_n_iso_path, net_iso_file = paths[0], paths[1]
             tmplt_data = {}
             res_reg = tmplt_data["resource_registry"] = {}
             res_reg.update(self._generate_network_isolation(nt))
             logger.debug("tmplt_data: %s", str(tmplt_data))
 
             rendered_tmplt = tmplt.render(**tmplt_data)
-            net_iso_file = os.path.join(self.templates_dir,
-                                        edge_net_iso_fn + ".yaml")
-            oc_net_iso_file = os.path.join(self.templates_dir,
-                                           'overcloud',
-                                           'environments',
-                                           edge_net_iso_fn + ".yaml")
-
-            stg_n_iso_path = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
-                                                       edge_net_iso_fn,
-                                                       "yaml")
 
             with open(stg_n_iso_path, 'w') as stg_net_iso_fp:
                 stg_net_iso_fp.write(rendered_tmplt)
 
             self.upload_file(stg_n_iso_path, net_iso_file)
-            # have to upload twice as we specify overcloud/environments/
-            # when deploying overcloud
-            self.upload_file(stg_n_iso_path, oc_net_iso_file)
 
     @directory_check(STAGING_TEMPLATES_PATH)
     def render_and_upload_dell_environment_edge(self):
@@ -2610,13 +2534,9 @@ class Director(InfraHost):
         tmplt = self.jinja2_env.get_template(DELL_ENV_EDGE_J2)
 
         for nt, nt_data in setts.node_type_data_map.items():
-            _nt_lower = self._generate_node_type_lower(nt)
-            _dell_env_name = DELL_ENV + "_" + _nt_lower
-            dell_env_file = os.path.join(self.templates_dir,
-                                         _dell_env_name + ".yaml")
-            stg_dell_env_path = self.get_timestamped_path(
-                STAGING_TEMPLATES_PATH,
-                dell_env_file, "yaml")
+            paths = self._generate_edge_template_paths(nt, DELL_ENV)
+            logger.debug("xxxxxxx paths: %s", str(paths))
+            stg_dell_env_path, dell_env_file = paths[0], paths[1]
             tmplt_data = {}
             param_def = tmplt_data["parameter_defaults"] = {}
             role = self._generate_cc_role(nt)
@@ -3683,6 +3603,24 @@ class Director(InfraHost):
                 self.default_compute_services = _srv_defs
         return self.default_compute_services
 
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def _generate_edge_template_paths(self, node_type, template=None):
+        _nt_lower = self._generate_node_type_lower(node_type)
+        _tmplt_name = template + "_" + _nt_lower if template else _nt_lower
+        edge_site_directory = self._generate_role_lower(node_type)
+        stg_edge_site_tmplt_path = os.path.join(STAGING_TEMPLATES_PATH,
+                                                edge_site_directory)
+        if not os.path.exists(stg_edge_site_tmplt_path):
+            os.makedirs(stg_edge_site_tmplt_path)
+        remote_site_directory = self.home_dir + "/" + edge_site_directory
+        remote_file = os.path.join(remote_site_directory,
+                                   _tmplt_name + ".yaml")
+        stg_path = self.get_timestamped_path(
+            stg_edge_site_tmplt_path,
+            _tmplt_name, "yaml")
+        self.create_directory(remote_site_directory)
+        return stg_path, remote_file
+
     def export_control_plane_config(self):
         """
         openstack overcloud export -f --stack R59 --output-file \
@@ -3701,17 +3639,23 @@ if __name__ == "__main__":
     director = Director()
 
     # new functions
-    director.render_and_upload_overrides_edge()
+    # director.render_and_upload_overrides_edge_all()
+    # director.render_and_upload_roles_data_edge_all()
+    # director.render_and_upload_dell_environment_edge()
+    # director.render_and_upload_network_isolation_edge()
+    # director.render_and_upload_compute_edge_all()
+    # director.render_and_upload_nic_env_edge_all()
+    # director.render_and_upload_node_placement_edge_all()
+    director.render_and_upload_static_ips_edge_all()
     # director.export_control_plane_config()
-    # director.render_and_upload_nova_az_edge()
+    # director.render_and_upload_nova_az_edge_all()
     # end new functions
 
-    # director.render_and_upload_compute_templates_edge()
     # director.render_and_upload_network_isolation_edge()
-    # director.render_and_upload_node_placement_edge()
-    # director.render_and_upload_roles_data_edge()
-    # director.render_and_upload_static_ips_edge()
+
+    # director.render_and_upload_roles_data_edge_all()
+
     # director.render_and_upload_network_data_edge()
     # director.render_and_upload_nic_env_edge()
-    # director.render_and_upload_compute_templates_edge()
+
     # director.render_and_upload_network_environment_edge()
