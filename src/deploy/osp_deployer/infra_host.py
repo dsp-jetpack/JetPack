@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import os
+import re
 import time
 from auto_common import Ssh, Scp
 
@@ -118,10 +119,49 @@ class InfraHost:
                 break
             time.sleep(5)
 
+    def _generate_node_placement_exp(self, type):
+        placement_exp = ((re.sub(r'[^a-z0-9]', " ",
+                                 type.lower())).replace(" ", "-") + "-%index%")
+        return placement_exp
+
+    def _generate_node_type_az(self, type):
+        az = ((re.sub(r'[^a-z0-9]', " ",
+                      type.lower())).replace(" ", "-") + "-az")
+        return az
+
+    def _generate_cc_role(self, type):
+        """Find non-alphanumerics in node type and replace with space then
+        camel-case that and strip spaces
+        :returns:  CamelCaseRoleName from my-node_type
+        """
+        role_cc = (re.sub(r'[^a-z0-9]', " ",
+                          type.lower()).title()).replace(" ", "")
+        return role_cc
+
+    def _generate_role_lower(self, type):
+        _type_lwr = (re.sub(r'[^a-z0-9]', " ", type.lower()).replace(" ", "_"))
+        return _type_lwr
+
+    def _generate_subnet_name(self, type):
+        return self._generate_role_lower(type) + '_subnet'
+
+    def _generate_node_type_lower(self, type):
+        # should look like denveredgecompute.yaml if following existing pattern
+        nic_config_name = re.sub(r'[^a-z0-9]', "", type.lower())
+        return nic_config_name
+
 
 def directory_check(_path):
-    def inner(func):
-        if not os.path.exists(_path):
-            os.makedirs(_path)
-        return func
-    return inner
+    def wrap(f):
+
+        def wrapped_f(*args):
+            path = _path
+            if len(args) > 1:
+                _type_lwr = (re.sub(r'[^a-z0-9]', " ",
+                             args[1].lower()).replace(" ", "_"))
+                path = os.path.join(_path, _type_lwr)
+            if not os.path.exists(path):
+                os.makedirs(path)
+            return f(*args)
+        return wrapped_f
+    return wrap

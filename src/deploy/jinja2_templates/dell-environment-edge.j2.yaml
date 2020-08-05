@@ -17,5 +17,12 @@ resource_registry:
 
 parameter_defaults:
 {%- for key, val in parameter_defaults.items() %}
+  {%- if key.endswith("ExtraConfig") %}
+  {{key}}:
+    {%- for extra_key, extra_val in val.items() %}
+    {{extra_key}}: {{extra_val}}
+    {%- endfor %}
+  {%- else %}
   {{key}}: {{val}}
+  {%- endif %}
 {%- endfor %}
