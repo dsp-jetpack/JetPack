@@ -145,7 +145,7 @@ def deploy():
         sah_node.clear_known_hosts()
         sah_node.handle_lock_files()
         if settings.node_type_data_map:
-            sah_node.create_subnet_routes_edge()
+            sah_node.create_mgmt_subnet_routes_edge_all()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
         sah_node.enable_chrony_ports()
@@ -180,7 +180,7 @@ def deploy():
             director_vm.upload_cloud_images()
             director_vm.install_director()
             if settings.node_type_data_map:
-                director_vm.create_subnet_routes_edge()
+                director_vm.create_mgmt_subnet_routes_edge_all()
                 dir_pub_ip = settings.director_node.public_api_ip
                 dir_pw = settings.director_node.root_password
                 director_vm.wait_for_vm_to_come_up(dir_pub_ip,
@@ -208,7 +208,7 @@ def deploy():
         logger.info("Discovering nodes")
         director_vm.node_discovery()
         logger.info("Configuring iDRACs")
-        director_vm.configure_idracs()
+        director_vm.configure_idracs_core()
         logger.info("Importing nodes")
         director_vm.import_nodes()
         logger.info("Introspecting nodes")

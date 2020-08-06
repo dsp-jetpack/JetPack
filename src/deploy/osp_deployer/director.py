@@ -358,21 +358,35 @@ class Director(InfraHost):
             logger.debug("Using pxe_ipmi driver")
             cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ~/instackenv.json'
             self.run_tty(cmd)
-        if self._has_edge_sites():
-            self.update_instack_env_subnets_edge()
 
-    def configure_idracs(self):
+    def configure_idracs_core(self):
         setts = self.settings
-        nodes = list(self.settings.controller_nodes)
-        nodes.extend(self.settings.compute_nodes)
-        nodes.extend(self.settings.computehci_nodes)
-        nodes.extend(self.settings.ceph_nodes)
-        cmd = "~/pilot/config_idracs.py "
+        nodes = list(setts.controller_nodes)
+        nodes.extend(setts.compute_nodes)
+        nodes.extend(setts.computehci_nodes)
+        nodes.extend(setts.ceph_nodes)
+        self.configure_idracs(nodes)
 
+    def configure_idracs_edge_all(self):
+        setts = self.settings
+        # TODO: dpaterson, improve this so only one call is made to
+        # config_idracs, this will require concatinating edge instack files,
+        # and json
         for node_type, edge_site_nodes in setts.node_types_map.items():
-            nodes.extend(edge_site_nodes)
+            paths = self._generate_edge_template_paths(node_type,
+                                                       INSTACK, "json")
+            stg_instack_path, remote_instack_file = paths
+            nodes = list(edge_site_nodes)
+            self.configure_idracs(nodes, remote_instack_file)
 
+    def configure_idracs_edge(self, node_type):
+        nodes = list(self.settings.node_types_map[node_type])
+        self.configure_idracs(nodes)
+
+    def configure_idracs(self, nodes, instack=None):
+        setts = self.settings
         json_config = defaultdict(dict)
+        cmd = "~/pilot/config_idracs.py "
         for node in nodes:
             if hasattr(node, 'idrac_ip'):
                 node_id = node.idrac_ip
@@ -389,6 +403,9 @@ class Director(InfraHost):
                 json_config[node_id]["skip_nic_config"] = node.skip_nic_config
         if json_config.items():
             cmd += "-j '{}'".format(json.dumps(json_config))
+
+        if instack:
+            cmd += " -n {}".format(instack)
 
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
@@ -2555,7 +2572,7 @@ class Director(InfraHost):
             stg_net_env_fp.write(rendered_tmplt)
         self.upload_file(stg_net_env_path, net_env_file)
 
-    def create_subnet_routes_edge(self):
+    def create_mgmt_subnet_routes_edge_all(self):
         """Create routes for Director VM and reboot it, which is required
         for routes to take effect
         """
@@ -2563,18 +2580,9 @@ class Director(InfraHost):
                     'restarting VM, as it is required to get the routes to '
                     'register with virsh properly')
         setts = self.settings
-        mgmt_gw = setts.management_gateway
-        route_file = (" > /etc/sysconfig/network-scripts/route-"
-                      + UNDERCLOUD_LOCAL_INTERFACE)
-        mgmt_cmd = ""
         for node_type, node_type_data in setts.node_type_data_map.items():
-            mgmt_cidr = node_type_data['mgmt_cidr']
-            mgmt_cmd += "{} via {} dev {}\n".format(mgmt_cidr,
-                                                    mgmt_gw,
-                                                    UNDERCLOUD_LOCAL_INTERFACE)
+            self.create_mgmt_subnet_routes_edge(node_type, node_type_data)
 
-        mgmt_cmd = "echo $'" + mgmt_cmd + "'" + route_file
-        self.run_as_root(mgmt_cmd)
         logger.info('Restarting Director VM')
         self.run_as_root('init 6')
         dir_pub_ip = setts.director_node.public_api_ip
@@ -2583,9 +2591,24 @@ class Director(InfraHost):
                                     "root",
                                     dir_pw)
 
+    def create_mgmt_subnet_routes_edge(self, node_type, node_type_data):
+        setts = self.settings
+        mgmt_gw = setts.management_gateway
+        route_file = (" > /etc/sysconfig/network-scripts/route-"
+                      + UNDERCLOUD_LOCAL_INTERFACE)
+        mgmt_cmd = ""
+        mgmt_cidr = node_type_data['mgmt_cidr']
+        mgmt_cmd += "{} via {} dev {}\n".format(mgmt_cidr,
+                                                mgmt_gw,
+                                                UNDERCLOUD_LOCAL_INTERFACE)
+
+        mgmt_cmd = "echo $'" + mgmt_cmd + "'" + route_file
+        self.run_as_root(mgmt_cmd)
+
     @directory_check(STAGING_PATH)
-    def update_instack_env_subnets_edge(self):
-        instack_file = self.home_dir + "/" + INSTACK + ".json"
+    def update_instack_env_subnets_edge(self, instack_file=None):
+        if not instack_file:
+            instack_file = self.home_dir + "/" + INSTACK + ".json"
         mgmt_net = self.settings.management_network.rsplit(".", 1)[0]
         stg_instack_path = self.get_timestamped_path(STAGING_PATH,
                                                      INSTACK, "json")
@@ -3524,28 +3547,19 @@ class Director(InfraHost):
         cmd = "rm " + remote_instack_file + " -f"
         self.run_tty(cmd)
 
-        # self.upload_file(stg_instack_path, remote_instack_file)
-        # cmd = "sudo chown " + setts.director_install_account_user + ":" + \
-        #    setts.director_install_account_user + " " + remote_instack_file
-        # self.run_tty(cmd)
-
         cmd = "cd ~/pilot/discover_nodes;./discover_nodes.py  -u " + \
               setts.ipmi_user + \
               " -p '" + setts.ipmi_password + "'"
-
-        # Discover the nodes using DHCP for the iDRAC
-        # cmd += ' ' + setts.management_allocation_pool_start + "-" + \
-        #    setts.management_allocation_pool_end
 
         for node in nodes:
             if hasattr(node, "idrac_ip"):
                 cmd += ' ' + node.idrac_ip
 
-        cmd += '> ~/instackenv.json'
+        cmd += '> ' + remote_instack_file
 
         self.run_tty(cmd)
 
-        cmd = "ls -la ~/instackenv.json | awk '{print $5;}'"
+        cmd = "ls -la " + remote_instack_file + " | awk '{print $5;}'"
         size = self.run_tty(cmd)[0]
         if int(size) <= 50:
             logger.fatal("did not manage to pick up the nodes..")
@@ -3560,7 +3574,7 @@ class Director(InfraHost):
         logger.debug("Verify the number of nodes picked match up to settings")
 
         found = self.run_tty(
-            "grep pm_addr ~/instackenv.json | wc -l")[0].rstrip()
+            "grep pm_addr " + remote_instack_file + " | wc -l")[0].rstrip()
         logger.debug("Found " + found + " Expected : " + str(len(nodes)))
         if int(found) == len(nodes):
             pass
@@ -3571,10 +3585,10 @@ class Director(InfraHost):
 
         if setts.use_ipmi_driver is True:
             logger.debug("Using pxe_ipmi driver")
-            cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ~/instackenv.json'
+            cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ' + remote_instack_file
             self.run_tty(cmd)
-        # if self._has_edge_sites():
-        #    self.update_instack_env_subnets_edge()
+
+        self.update_instack_env_subnets_edge(remote_instack_file)
 
 
 if __name__ == "__main__":
@@ -3582,7 +3596,9 @@ if __name__ == "__main__":
     director = Director()
 
     # new functions
-    director.node_discovery_edge_all()
+    # director.create_mgmt_subnet_routes_edge_all()
+    # director.node_discovery_edge_all()
+    director.configure_idracs_edge_all()
     '''
     director.export_control_plane_config()
     director.discover_edge_nodes_all()
