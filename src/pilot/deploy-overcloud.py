@@ -599,7 +599,7 @@ def main():
         # for effective parameter overrides (External vlan default route)
         # The network-environment.yaml must be included after the network-isolation.yaml
         # The neutron-ovs.yaml must be included to enable ovs and disable ovn
- 	# in OSP16.1. In case we need to use OVN in future, please delete this line
+        # in OSP16.1. In case we need to use OVN in future, please delete this line
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "network-isolation.yaml" \
                     " -e ~/pilot/templates/network-environment.yaml" \
