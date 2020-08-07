@@ -518,7 +518,6 @@ class Settings:
         else:
             self.enable_powermax_manila_backend = False
 
-
         sanity_settings = self.get_settings_section(
             "Sanity Test Settings")
         self.floating_ip_network = sanity_settings['floating_ip_network']
