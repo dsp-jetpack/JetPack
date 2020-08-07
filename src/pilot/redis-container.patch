@@ -1,0 +1,10 @@
+--- /usr/share/openstack-tripleo-heat-templates/deployment/database/redis-container-puppet.yaml	2020-05-18 05:32:49.000000000 -0500
++++ redis-container-puppet.yaml	2020-08-06 17:17:40.885504028 -0500
+@@ -173,7 +173,6 @@
+                 healthcheck:
+                   test: /openstack/healthcheck
+                 volumes:
+-                  - /run:/run
+                   - /var/lib/kolla/config_files/redis.json:/var/lib/kolla/config_files/config.json:ro
+                   - /var/lib/config-data/puppet-generated/redis:/var/lib/kolla/config_files/src:ro
+                   - /etc/localtime:/etc/localtime:ro
