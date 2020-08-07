@@ -415,7 +415,8 @@ class Sah(InfraHost):
                ]
         for cmd in cmds:
             self.run_as_root(cmd)
-    def create_mgmt_subnet_routes_edge_all(self):
+
+    def create_subnet_routes_edge_all(self):
         logger.info('Setting routes for edge subnets on SAH and '
                     'restarting bridge interfaces')
         setts = self.settings

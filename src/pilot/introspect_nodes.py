@@ -23,7 +23,7 @@ from credential_helper import CredentialHelper
 from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
 from time import sleep
-from update_ssh_config import get_nodes
+# from update_ssh_config import get_nodes
 
 common_path = os.path.join(os.path.expanduser('~'), 'common')
 sys.path.append(common_path)
@@ -44,6 +44,12 @@ def parse_arguments():
     ArgHelper.add_inband_arg(parser)
     LoggingHelper.add_argument(parser)
 
+    parser.add_argument("-n",
+                        "--node_type",
+                        default=None,
+                        help="""Introspection for this specific
+                         node type only""")
+
     return parser.parse_args()
 
 
@@ -62,8 +68,36 @@ def is_introspection_oob(in_band, node, logger):
     return out_of_band
 
 
-def get_nodes(ironic_client):
-    return ironic_client.node.list(detail=True)
+def get_nodes(ironic_client, node_type=None):
+    nodes = ironic_client.node.list(detail=True)
+    '''
+    cmd = "openstack baremetal node list --fields uuid properties -f json"
+    # nodes = subprocess.check_output(cmd,
+    #                                 stderr=subprocess.STDOUT,
+    #                                 shell=True)
+    nodes = json.loads(subprocess.check_output(cmd,
+                                               stderr=subprocess.STDOUT,
+                                               shell=True))
+
+    for node in nodes:
+        props = node["Properties"]
+        _node_type = props["node_type"] if "node_type" in props else None
+        match = ((not args.node_type) or (bool(_node_type)
+                                          and args.node_type == _node_type))
+        if (not match):
+            continue
+    '''
+    for node in nodes[:]:
+        props = node.properties
+        _node_type = props["node_type"] if "node_type" in props else None
+        match = ((not node_type)
+                 or (bool(_node_type) and node_type == _node_type))
+        if not match:
+            nodes.remove(node)
+
+    logger.info("ppppppppppp len(nodes) is: %s",
+                str(len(nodes)))
+    return nodes
 
 
 def refresh_nodes(ironic_client, nodes):
@@ -276,8 +310,9 @@ def main():
     LoggingHelper.configure_logging(args.logging_level)
 
     ironic_client = IronicHelper.get_ironic_client()
-    nodes = get_nodes(ironic_client)
-
+    nodes = get_nodes(ironic_client, args.node_type)
+    # logger.info("oooooooooooooooo nodes %s", str(nodes))
+    # os._exit(0)
     introspect_nodes(args.in_band, ironic_client, nodes)
 
 

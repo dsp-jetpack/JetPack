@@ -61,7 +61,7 @@ NOVA_AZ = "nova-az"
 OVERRIDES = "overrides"
 CONTROL_PLANE_EXPORT_TEMPLATE = "control-plane-export.yaml"
 TEMPEST_CONF = 'tempest.conf'
-UNDERCLOUD_LOCAL_INTERFACE = 'enp2s0'
+UNDERCLOUD_LOCAL_INTERFACE = 'enp3s0'
 OVERCLOUD_PATH = 'overcloud'
 OVERCLOUD_ENVS_PATH = OVERCLOUD_PATH + '/environments'
 EDGE_COMMON_PATH = "edge_common"
@@ -439,11 +439,12 @@ class Director(InfraHost):
         for node_type in self.settings.node_types:
             self.import_nodes(node_type)
 
-    def node_introspection(self):
+    def node_introspection(self, node_type=None):
         setts = self.settings
-
-        stdout, stderr, exit_status = self.run(
-            self.source_stackrc + "~/pilot/prep_overcloud_nodes.py")
+        cmd = self.source_stackrc + "~/pilot/prep_overcloud_nodes.py"
+        if node_type:
+            cmd += " -n " + node_type
+        stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
             raise AssertionError("An error occurred while running "
                                  "prep_overcloud_nodes.  exit_status: {}, "
@@ -457,6 +458,9 @@ class Director(InfraHost):
         introspection_cmd = self.source_stackrc + "~/pilot/introspect_nodes.py"
         if setts.use_in_band_introspection is True:
             introspection_cmd += " -i"
+
+        if node_type:
+            introspection_cmd += " -n " + node_type
 
         stdout, stderr, exit_status = self.run(introspection_cmd)
         if exit_status:
@@ -2269,6 +2273,8 @@ class Director(InfraHost):
         undercloud_conf_dst = os.path.join(self.home_dir,
                                            setts.UNDERCLOUD_CONFIG_FILE)
         self.upload_file(stg_undercloud_conf_path, undercloud_conf_dst)
+        logger.debug("Undercloud.conf uploaded to: %s",
+                     undercloud_conf_dst)
 
     def render_and_upload_roles_data_edge_all(self):
         """Add generated edge site roles to roles_data.yaml and upload it.
@@ -2584,7 +2590,7 @@ class Director(InfraHost):
             stg_net_env_fp.write(rendered_tmplt)
         self.upload_file(stg_net_env_path, net_env_file)
 
-    def create_mgmt_subnet_routes_edge_all(self):
+    def create_subnet_routes_edge_all(self):
         """Create routes for Director VM and reboot it, which is required
         for routes to take effect
         """
@@ -2593,7 +2599,7 @@ class Director(InfraHost):
                     'register with virsh properly')
         setts = self.settings
         for node_type, node_type_data in setts.node_type_data_map.items():
-            self.create_mgmt_subnet_routes_edge(node_type, node_type_data)
+            self.create_subnet_routes_edge(node_type, node_type_data)
 
         logger.info('Restarting Director VM')
         self.run_as_root('init 6')
@@ -2603,19 +2609,28 @@ class Director(InfraHost):
                                     "root",
                                     dir_pw)
 
-    def create_mgmt_subnet_routes_edge(self, node_type, node_type_data):
+    def create_subnet_routes_edge(self, node_type, node_type_data):
         setts = self.settings
+        route_mgmt_file = (" >> /etc/sysconfig/network-scripts/route-"
+                           + UNDERCLOUD_LOCAL_INTERFACE)
+        route_prov_file = (" >> /etc/sysconfig/network-scripts/"
+                           "route-br-ctlplane")
         mgmt_gw = setts.management_gateway
-        route_file = (" > /etc/sysconfig/network-scripts/route-"
-                      + UNDERCLOUD_LOCAL_INTERFACE)
-        mgmt_cmd = ""
         mgmt_cidr = node_type_data['mgmt_cidr']
-        mgmt_cmd += "{} via {} dev {}\n".format(mgmt_cidr,
-                                                mgmt_gw,
-                                                UNDERCLOUD_LOCAL_INTERFACE)
+        mgmt_cmd = "{} via {} dev {}".format(mgmt_cidr,
+                                             mgmt_gw,
+                                             UNDERCLOUD_LOCAL_INTERFACE)
+        prov_gw = setts.provisioning_gateway
+        prov_cidr = node_type_data['cidr']
+        prov_cmd = "{} via {} dev {}".format(prov_cidr,
+                                             prov_gw,
+                                             "br-ctlplane")
 
-        mgmt_cmd = "echo $'" + mgmt_cmd + "'" + route_file
+        mgmt_cmd = "echo '" + mgmt_cmd + "'" + route_mgmt_file
+        prov_cmd = "echo '" + prov_cmd + "'" + route_prov_file
+        logger.info("Route commands: %s, %s", mgmt_cmd, prov_cmd)
         self.run_as_root(mgmt_cmd)
+        self.run_as_root(prov_cmd)
 
     def update_instack_env_edge(self, node_type=None):
         mgmt_net = self.settings.management_network.rsplit(".", 1)[0]
@@ -3607,10 +3622,13 @@ if __name__ == "__main__":
     director = Director()
 
     # new functions
-    # director.create_mgmt_subnet_routes_edge_all()
     # director.node_discovery_edge_all()
     # director.configure_idracs_edge_all()
     # director.import_nodes_edge_all()
+    # director.render_and_upload_undercloud_conf()
+    # director.create_subnet_routes_edge_all()
+    for node_type in settings.node_types:
+        director.node_introspection(node_type)
     '''
     director.export_control_plane_config()
     director.discover_edge_nodes_all()
