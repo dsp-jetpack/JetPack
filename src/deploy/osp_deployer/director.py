@@ -415,9 +415,15 @@ class Director(InfraHost):
                                                                 stderr,
                                                                 stdout))
 
-    def import_nodes(self):
-        stdout, stderr, exit_status = self.run(self.source_stackrc
-                                               + "~/pilot/import_nodes.py")
+    def import_nodes(self, node_type=None):
+        cmd = self.source_stackrc + "~/pilot/import_nodes.py"
+        if node_type:
+            logging.debug("Import edge nodes for node type: %s", node_type)
+            paths = self._generate_edge_template_paths(node_type, INSTACK,
+                                                       "json")
+            _stg_instack, instack = paths
+            cmd += " -n " + instack
+        stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
             raise AssertionError("Unable to import nodes into Ironic.  "
                                  "exit_status: {}, error: {}, "
@@ -425,7 +431,13 @@ class Director(InfraHost):
                                      exit_status, stderr, stdout))
 
         tester = Checkpoints()
-        tester.verify_nodes_registered_in_ironic()
+        tester.verify_nodes_registered_in_ironic(node_type)
+
+    def import_nodes_edge_all(self):
+        logging.debug("Import nodes edge all node types: %s",
+                      str(self.settings.node_types))
+        for node_type in self.settings.node_types:
+            self.import_nodes(node_type)
 
     def node_introspection(self):
         setts = self.settings
@@ -2605,13 +2617,10 @@ class Director(InfraHost):
         mgmt_cmd = "echo $'" + mgmt_cmd + "'" + route_file
         self.run_as_root(mgmt_cmd)
 
-    @directory_check(STAGING_PATH)
-    def update_instack_env_subnets_edge(self, instack_file=None):
-        if not instack_file:
-            instack_file = self.home_dir + "/" + INSTACK + ".json"
+    def update_instack_env_edge(self, node_type=None):
         mgmt_net = self.settings.management_network.rsplit(".", 1)[0]
-        stg_instack_path = self.get_timestamped_path(STAGING_PATH,
-                                                     INSTACK, "json")
+        paths = self._generate_edge_template_paths(node_type, INSTACK, "json")
+        stg_instack_path, instack_file = paths
 
         self.download_file(stg_instack_path, instack_file)
         instack = {}
@@ -2622,6 +2631,8 @@ class Director(InfraHost):
                 node_mgmt_net = node['pm_addr'].rsplit('.', 1)[0]
                 if node_mgmt_net != mgmt_net:
                     node['subnet'] = self._subnet_name_from_net(node_mgmt_net)
+                if node_type:
+                    node['node_type'] = node_type
 
         with open(stg_instack_path, 'w') as stg_instack_fp:
             json.dump(instack, stg_instack_fp, indent=2)
@@ -3588,7 +3599,7 @@ class Director(InfraHost):
             cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ' + remote_instack_file
             self.run_tty(cmd)
 
-        self.update_instack_env_subnets_edge(remote_instack_file)
+        self.update_instack_env_edge(node_type)
 
 
 if __name__ == "__main__":
@@ -3598,7 +3609,8 @@ if __name__ == "__main__":
     # new functions
     # director.create_mgmt_subnet_routes_edge_all()
     # director.node_discovery_edge_all()
-    director.configure_idracs_edge_all()
+    # director.configure_idracs_edge_all()
+    # director.import_nodes_edge_all()
     '''
     director.export_control_plane_config()
     director.discover_edge_nodes_all()

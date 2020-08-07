@@ -17,6 +17,7 @@
 from auto_common import Ssh
 from osp_deployer.settings.config import Settings
 from osp_deployer.settings_sanity import DeployerSanity
+import json
 import time
 import logging
 
@@ -255,7 +256,7 @@ class Checkpoints:
             raise AssertionError(
                 "Director VM cannot ping idrac network (ip) : " + test)
 
-    def verify_nodes_registered_in_ironic(self):
+    def verify_nodes_registered_in_ironic(self, node_type=None):
         logger.debug("Verify the expected amount of nodes imported in ironic")
         cmd = "source ~/stackrc;openstack baremetal node list | grep None"
         setts = self.settings
@@ -269,15 +270,42 @@ class Checkpoints:
                           + len(setts.compute_nodes)
                           + len(setts.ceph_nodes)
                           + len(setts.computehci_nodes))
-
-        for node_type, nodes in setts.node_types_map.items():
-            logger.debug("Number of %s nodes: %s", node_type, str(len(nodes)))
-            expected_nodes += len(nodes)
-        if len(ls_nodes) != expected_nodes:
+        # hack, checking we have at least the correct number of core nodes
+        # TODO, we should get more specific for core node validation
+        if len(ls_nodes) < expected_nodes:
             raise AssertionError(
                 "Expected amount of nodes registered in Ironic "
                 "does not add up "
                 + str(len(ls_nodes)) + "/" + str(expected_nodes))
+        if node_type:
+            self.verify_nodes_registered_in_ironic_edge(node_type)
+
+    def verify_nodes_registered_in_ironic_edge(self, node_type):
+        expected_node_type_count = len(self.settings.node_types_map[node_type])
+        cmd = ("source ~/stackrc;openstack baremetal node list "
+               "--fields properties -f json")
+        setts = self.settings
+        stdout, stderr, exit_status = Ssh.execute_command_tty(
+            self.director_ip,
+            setts.director_install_account_user,
+            setts.director_install_account_pwd,
+            cmd)
+        nodes = json.loads(stdout)
+        registered_node_type_count = 0
+        for node in nodes:
+            props = node["Properties"]
+            if "node_type" in props and props["node_type"] == node_type:
+                registered_node_type_count += 1
+        if expected_node_type_count != registered_node_type_count:
+            raise AssertionError(
+                "Expected number of nodes registered in Ironic for node type: "
+                "{}, does not match, expected: {}, "
+                "imported: {}".format(node_type,
+                                      str(expected_node_type_count),
+                                      str(registered_node_type_count)))
+        logger.info("Validated node type: %s, "
+                    "has the correct number of nodes imported "
+                    "into Ironic: %s", node_type, registered_node_type_count)
 
     def verify_introspection_sucessfull(self):
         logger.debug("Verify the introspection did not encounter any errors")
