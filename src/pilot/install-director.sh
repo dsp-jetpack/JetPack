@@ -271,6 +271,13 @@ echo "### Patching tripleo-heat-templates"
 sudo sed -i 's/$(get_python)/python3/' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/per_node.yaml
 echo "## Done."
 
+# Patch a fix for https://bugzilla.redhat.com/show_bug.cgi?id=1846020
+echo "### Patching tripleo-heat-templates part II"
+apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/swift/swift-proxy-container-puppet.yaml ${HOME}/pilot/swift-proxy-container.patch"
+apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/nova/nova-scheduler-container-puppet.yaml ${HOME}/pilot/nova-scheduler-container.patch"
+apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/database/redis-container-puppet.yaml ${HOME}/pilot/redis-container.patch"
+echo "## Done"
+
 echo
 echo "## Copying heat templates..."
 cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overcloud
