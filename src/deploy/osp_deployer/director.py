@@ -81,7 +81,7 @@ ROLES_DATA = 'roles_data'
 NETWORK_DATA = 'network_data'
 NET_ISO = 'network-isolation'
 CONTROLLER = 'controller'
-DEF_COMPUTE_ROLE_FILE = 'Compute.yaml'
+DEF_COMPUTE_ROLE_FILE = 'DistributedCompute.yaml'
 DEF_COMPUTE_REMOTE_PATH = ('/usr/share/openstack-tripleo-heat-templates/'
                            'roles/{}'.format(DEF_COMPUTE_ROLE_FILE))
 CONTROL_PLANE_NET = ('ControlPlane', "ctlplane")
@@ -472,9 +472,9 @@ class Director(InfraHost):
         tester = Checkpoints()
         tester.verify_introspection_sucessfull(node_type)
 
-    def assign_role(self, node, role, index):
+    def assign_role(self, node, role, index, instack=None):
         assign_role_command = self._create_assign_role_command(
-            node, role, index)
+            node, role, index, instack)
         stdout, stderr, exit_status = self.run(self.source_stackrc +
                                                "cd ~/pilot;" +
                                                assign_role_command)
@@ -534,6 +534,49 @@ class Director(InfraHost):
             logger.info("Successfully assigned roles to all nodes")
         else:
             logger.info("assign_role failed on {} out of {} nodes".format(
+                failed_threads, len(threads)))
+            sys.exit(1)
+
+    def assign_node_role_edge_all(self):
+        setts = self.settings
+        logger.debug("Assigning roles to all edge sites")
+        for node_type, nodes in setts.node_types_map.items():
+            self.assign_node_role_edge(node_type, nodes)
+
+    def assign_node_role_edge(self, node_type, nodes):
+        logger.debug("Assigning roles to node_type: %s", node_type)
+        common_path = os.path.join(os.path.expanduser(
+            self.settings.cloud_repo_dir + '/src'), 'common')
+        sys.path.append(common_path)
+        from thread_helper import ThreadWithExHandling  # noqa
+        paths = self._generate_edge_template_paths(node_type, INSTACK, "json")
+        stg_instack_path, instack_file = paths
+
+        threads = []
+        index = 0
+        for node in nodes:
+
+            thread = ThreadWithExHandling(logger,
+                                          target=self.assign_role,
+                                          args=(node, node_type,
+                                                index, instack_file))
+            threads.append(thread)
+            thread.start()
+            index += 1
+
+        for thread in threads:
+            thread.join()
+
+        failed_threads = 0
+        for thread in threads:
+            if thread.ex is not None:
+                failed_threads += 1
+
+        if failed_threads == 0:
+            logger.info("Successfully assigned role: %s to site nodes: %s",
+                        node_type, nodes)
+        else:
+            logger.info("assign_role failed on {} out of {} edge nodes".format(
                 failed_threads, len(threads)))
             sys.exit(1)
 
@@ -2140,7 +2183,8 @@ class Director(InfraHost):
                   ' enable'
             self.run_tty(cmd)
 
-    def _create_assign_role_command(self, node, role, index):
+    def _create_assign_role_command(self, node, role, index, instack=None):
+        logger.debug("Create assign role command for node: %s", str(node))
         node_identifier = ""
         if hasattr(node, 'service_tag'):
             node_identifier = node.service_tag
@@ -2159,13 +2203,18 @@ class Director(InfraHost):
         if hasattr(node, 'os_volume_size_gb'):
             os_volume_size_gb = "-o {}".format(node.os_volume_size_gb)
 
-        return './assign_role.py {} {} {} {} {}-{}'.format(
+        cmd = ('./assign_role.py {} {} {} {} {}-{}'.format(
             os_volume_size_gb,
             skip_raid_config,
             skip_bios_config,
             node_identifier,
             role,
-            str(index))
+            str(index)))
+
+        if instack:
+            cmd += " -n " + instack
+
+        return cmd
 
     def set_ovs_dpdk_driver(self, neutron_ovs_dpdk_yaml):
         cmds = []
@@ -2909,6 +2958,7 @@ class Director(InfraHost):
         role_d['RoleParametersDefault'] = role_params
         role_d['disable_upgrade_deployment'] = True
         role_d['uses_deprecated_params'] = False
+        role_d["update_serial"] = 25
         role_d['ServicesDefault'] = self._get_default_compute_services()
         return role_d
 
@@ -3627,13 +3677,16 @@ if __name__ == "__main__":
     # director.import_nodes_edge_all()
     # director.render_and_upload_undercloud_conf()
     # director.create_subnet_routes_edge_all()
-    for node_type in settings.node_types:
-        director.node_introspection(node_type)
+    #for node_type in settings.node_types:
+    #    director.node_introspection(node_type)
+    # director.render_and_upload_roles_data_edge_all()
+    for node_type, nodes in settings.node_types_map.items():
+        director.assign_node_role_edge(node_type, nodes)
     '''
     director.export_control_plane_config()
     director.discover_edge_nodes_all()
     director.render_and_upload_overrides_edge_all()
-    director.render_and_upload_roles_data_edge_all()
+
     director.render_and_upload_compute_edge_all()
     director.render_and_upload_nic_env_edge_all()
     director.render_and_upload_node_placement_edge_all()

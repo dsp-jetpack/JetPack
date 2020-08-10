@@ -895,21 +895,34 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
             flavor))
 
     node = ironic_client.node.get(node_uuid, fields=['properties'])
-
-    role = "profile:{}".format(flavor)
-
-    if role_index.index:
-        role = "node:{}-{}".format(flavor, role_index.index)
+    _is_index = True if bool(role_index.index) else False
+    _role = ({"node": "{}-{}".format(flavor, role_index.index)}
+             if _is_index else {"profile": flavor})
 
     if 'capabilities' in node.properties:
-        value = "{},{},boot_mode:uefi,boot_option:local".format(role, node.properties['capabilities'])
-        LOG.info(str(node.properties))
-        LOG.info(str(value))
-    else:
-        value = "{},boot_option:local".format(role)
-        LOG.info("..!")
+        _caps = (dict(item.split(":")
+                      for item in node.properties['capabilities'].split(",")))
+        # delete any existing node roles (will either be node or
+        # profile capabilities)
+        _caps.pop("node", None)
+        _caps.pop("profile", None)
+        _caps.update(_role)
+        _caps["boot_mode"] = "uefi"
+        _caps["boot_option"] = "local"
 
-    patch = [{'op': 'add',
+        _op = "replace"
+        LOG.info(str(node.properties))
+        LOG.info(str(_caps))
+    else:
+        _caps = {"boot_option": "local"}
+        _caps.update(_role)
+        _op = "add"
+        LOG.info("..!")
+    # convert dict to "key:value,..." list
+    value = ",".join(['%s:%s' % (key, value)
+                      for (key, value) in _caps.items()])
+
+    patch = [{'op': _op,
               'value': value,
               'path': '/properties/capabilities'}]
     ironic_client.node.update(node_uuid, patch)
