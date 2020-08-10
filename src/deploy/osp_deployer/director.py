@@ -470,7 +470,7 @@ class Director(InfraHost):
                                      exit_status, stderr, stdout))
 
         tester = Checkpoints()
-        tester.verify_introspection_sucessfull()
+        tester.verify_introspection_sucessfull(node_type)
 
     def assign_role(self, node, role, index):
         assign_role_command = self._create_assign_role_command(

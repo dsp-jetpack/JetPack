@@ -307,23 +307,56 @@ class Checkpoints:
                     "has the correct number of nodes imported "
                     "into Ironic: %s", node_type, registered_node_type_count)
 
-    def verify_introspection_sucessfull(self):
+    def verify_introspection_sucessfull(self, node_type=None):
         logger.debug("Verify the introspection did not encounter any errors")
-        cmd = "source ~/stackrc;openstack baremetal node list | grep None"
+        if node_type:
+            self.verify_introspection_sucessfull_edge(node_type)
+        else:
+            cmd = "source ~/stackrc;openstack baremetal node list | grep None"
+            setts = self.settings
+            re = Ssh.execute_command_tty(self.director_ip,
+                                         setts.director_install_account_user,
+                                         setts.director_install_account_pwd,
+                                         cmd)
+            # TODO :: i fnode failed introspection - set to to PXE - reboot
+            ls_nodes = re[0].split("\n")
+            ls_nodes.pop()
+            for node in ls_nodes:
+                state = node.split("|")[5]
+                if "available" not in state:
+                    raise AssertionError(
+                        "Node state not available post bulk introspection"
+                        + "\n " + re[0])
+
+    def verify_introspection_sucessfull_edge(self, node_type):
+        node_type_count = len(self.settings.node_types_map[node_type])
+        cmd = ("source ~/stackrc;openstack baremetal node list "
+               "--fields uuid properties provision_state -f json")
         setts = self.settings
-        re = Ssh.execute_command_tty(self.director_ip,
-                                     setts.director_install_account_user,
-                                     setts.director_install_account_pwd,
-                                     cmd)
-        # TODO :: i fnode failed introspection - set to to PXE - reboot
-        ls_nodes = re[0].split("\n")
-        ls_nodes.pop()
-        for node in ls_nodes:
-            state = node.split("|")[5]
-            if "available" not in state:
-                raise AssertionError(
-                    "Node state not available post bulk introspection" +
-                    "\n " + re[0])
+        stdout, stderr, exit_status = Ssh.execute_command_tty(
+            self.director_ip,
+            setts.director_install_account_user,
+            setts.director_install_account_pwd,
+            cmd)
+        nodes = json.loads(stdout)
+        introspected_node_type_count = 0
+        for node in nodes:
+            props = node["Properties"]
+            uuid = node["UUID"]
+            state = node["Provisioning State"]
+            if ("node_type" in props and props["node_type"] == node_type
+                    and state == "available"):
+                introspected_node_type_count += 1
+        if node_type_count != introspected_node_type_count:
+            raise AssertionError(
+                "Expected number of nodes introspected for node type: "
+                "{}, does not match, expected: {}, "
+                "introspected: {}".format(node_type,
+                                          str(node_type_count),
+                                          str(introspected_node_type_count)))
+        logger.info("Validated node type: %s, "
+                    "has the correct number of nodes introspected: %s",
+                    node_type, introspected_node_type_count)
 
     def verify_undercloud_installed(self):
         logger.debug("Verify the undercloud installed properly")
