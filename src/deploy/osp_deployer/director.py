@@ -55,8 +55,8 @@ OTHER_POOLS = ['.rgw.buckets',
                'default.rgw.meta',
                'metrics']
 
-NOVA_AZ_CONFIG = ("/usr/share/openstack-tripleo-heat-templates"
-                  "/deployment/nova/nova-az-config.yaml")
+FIRST_BOOT = "first-boot"
+NOVA_AZ_CONFIG = ("deployment/nova/nova-az-config.yaml")
 NOVA_AZ = "nova-az"
 OVERRIDES = "overrides"
 CONTROL_PLANE_EXPORT_TEMPLATE = "control-plane-export.yaml"
@@ -82,8 +82,7 @@ NETWORK_DATA = 'network_data'
 NET_ISO = 'network-isolation'
 CONTROLLER = 'controller'
 DEF_COMPUTE_ROLE_FILE = 'DistributedCompute.yaml'
-DEF_COMPUTE_REMOTE_PATH = ('/usr/share/openstack-tripleo-heat-templates/'
-                           'roles/{}'.format(DEF_COMPUTE_ROLE_FILE))
+DEF_COMPUTE_REMOTE_PATH = ('roles/{}'.format(DEF_COMPUTE_ROLE_FILE))
 CONTROL_PLANE_NET = ('ControlPlane', "ctlplane")
 INTERNAL_API_NET = ('InternalApi', 'internal_api')
 STORAGE_NET = ('Storage', 'storage')
@@ -109,9 +108,6 @@ ROLES_DATA_EDGE_J2 = ROLES_DATA + "_edge" + J2_EXT
 NET_ISO_EDGE_J2 = NET_ISO + "-edge" + J2_EXT
 NOVA_AZ_EDGE_J2 = NOVA_AZ + "-edge" + J2_EXT
 OVERRIDES_EDGE_J2 = OVERRIDES + "-edge" + J2_EXT
-# TODO: dpaterson: migrating dell-environment template involves a bit of
-# rework for ceph osd stuff, wait for now
-# DELL_ENV_J2 = DELL_ENV + J2_EXT
 
 EC2_IPCIDR = '169.254.169.254/32'
 EC2_PUBLIC_IPCIDR_PARAM = 'EC2MetadataPublicIpCidr'
@@ -134,6 +130,8 @@ class Director(InfraHost):
         self.sanity_dir = os.path.join(self.pilot_dir, "deployment-validation")
         self.images_dir = os.path.join(self.pilot_dir, "images")
         self.templates_dir = os.path.join(self.pilot_dir, "templates")
+        self.templates_overcloud_dir = os.path.join(self.templates_dir,
+                                                    "overcloud")
         self.nic_configs_dir = os.path.join(self.templates_dir,
                                             NIC_CONFIGS)
         self.validation_dir = os.path.join(self.pilot_dir,
@@ -2559,6 +2557,7 @@ class Director(InfraHost):
         paths = self._generate_edge_template_paths(node_type, DELL_ENV)
         stg_dell_env_path, dell_env_file = paths
         tmplt_data = {}
+        tmplt_data["resource_registry"] = self._generate_dell_env_res_reg()
         param_def = tmplt_data["parameter_defaults"] = {}
         role = self._generate_cc_role(node_type)
         edge_subnet = self._generate_subnet_name(node_type)
@@ -2712,6 +2711,13 @@ class Director(InfraHost):
             subnet_net = node_type_data['mgmt_cidr'].rsplit('.', 1)[0]
             if node_mgmt_net == subnet_net:
                 return self._generate_subnet_name(node_type)
+
+    def _generate_dell_env_res_reg(self):
+        res_reg = {}
+        first_boot_file = os.path.join(self.templates_dir,
+                                       FIRST_BOOT + ".yaml")
+        res_reg["OS::TripleO::NodeUserData"] = first_boot_file
+        return res_reg
 
     def _generate_static_ip_ports(self, node_type):
         """Generate resource_resource registry port mapping dict for specific
@@ -2951,8 +2957,8 @@ class Director(InfraHost):
                      'subnet': _external_subnet}
 
         role_d['networks'] = [_int_api, _tenant, _storage, _external]
-        role_d['HostnameFormatDefault'] = ("%stackname%-"
-                                           + node_type + "-%index%")
+        role_d['HostnameFormatDefault'] = ("'%stackname%-"
+                                           + node_type + "-%index%'")
         role_params = {}
         role_params['TunedProfileName'] = "virtual-host"
         role_d['RoleParametersDefault'] = role_params
@@ -3479,21 +3485,21 @@ class Director(InfraHost):
 
         xtra_cfg = {}
         xtra_cfg['nova::compute::libvirt::vncserver_listen'] = \
-            '%{hiera("' + api_net + '")}'
+            "'%{hiera(" + api_net + ")}'"
         xtra_cfg['nova::compute::vncserver_proxyclient_address'] = \
-            '%{hiera("' + api_net + '")}'
+            "'%{hiera(" + api_net + ")}'"
         xtra_cfg['neutron::agents::ml2::ovs::local_ip'] = \
-            '%{hiera("' + tenant_net + '")}'
+            "'%{hiera(" + tenant_net + ")}'"
         xtra_cfg['cold_migration_ssh_inbound_addr'] = \
-            '%{hiera("' + api_net + '")}'
+            "'%{hiera(" + api_net + ")}'"
         xtra_cfg['live_migration_ssh_inbound_addr'] = \
-            '%{hiera("' + api_net + '")}'
+            "'%{hiera(" + api_net + ")}'"
         xtra_cfg['nova::migration::libvirt::live_migration_inbound_addr'] = \
-            '%{hiera("' + api_net + '")}'
-        xtra_cfg['nova::my_ip'] = '%{hiera("' + api_net + '")}'
+            "'%{hiera(" + api_net + ")}'"
+        xtra_cfg['nova::my_ip'] = "'%{hiera(" + api_net + ")}'"
         _mysql_key = 'tripleo::profile::base::database::mysql' \
             + '::client::mysql_client_bind_address'
-        xtra_cfg[_mysql_key] = '%{hiera("' + api_net + '")}'
+        xtra_cfg[_mysql_key] = "'%{hiera(" + api_net + ")}'"
         # TODO not sure below are needed
         xtra_cfg['nova::cpu_allocation_ratio'] = 1
         xtra_cfg['nova::compute::resume_guests_state_on_host_boot'] = True
@@ -3522,10 +3528,13 @@ class Director(InfraHost):
     def _generate_az_edge(self, node_type):
         res_reg = {}
         param_defs = {}
-        res_reg["OS::TripleO::Services::NovaAZConfig"] = NOVA_AZ_CONFIG
+        _nova_az_tmplt = os.path.join(self.templates_overcloud_dir,
+                                      NOVA_AZ_CONFIG)
+        res_reg["OS::TripleO::Services::NovaAZConfig"] = _nova_az_tmplt
         _az = self._generate_node_type_az(node_type)
+        _stack = self._generate_role_lower(node_type)
         param_defs["NovaComputeAvailabilityZone"] = _az
-        param_defs["RootStackName"] = self.settings.overcloud_name
+        param_defs["RootStackName"] = _stack
         return res_reg, param_defs
 
     def _generate_overrides_edge(self, node_type):
@@ -3569,7 +3578,9 @@ class Director(InfraHost):
         if not self.default_compute_services:
             stg_compute_file = os.path.join(STAGING_TEMPLATES_PATH,
                                             DEF_COMPUTE_ROLE_FILE)
-            self.download_file(stg_compute_file, DEF_COMPUTE_REMOTE_PATH)
+            _role_tmplt_path = os.path.join(self.templates_overcloud_dir,
+                                            DEF_COMPUTE_REMOTE_PATH)
+            self.download_file(stg_compute_file, _role_tmplt_path)
             with open(stg_compute_file) as stg_compute_fp:
                 compute_yaml = yaml.load(stg_compute_fp, Loader=OrderedLoader)
                 # Role yamls are always list, even for single-role
@@ -3600,14 +3611,26 @@ class Director(InfraHost):
 
     def export_control_plane_config(self):
         """
-        openstack overcloud export -f --stack R59 --output-file \
+        openstack overcloud export -f --stack r62 --output-file \
         ~/edge-common/control-plane-export.yaml
         """
-        export_path = self.home_dir + "/" + EDGE_COMMON_PATH
+        export_path = os.path.join(self.home_dir, EDGE_COMMON_PATH)
         self.create_directory(export_path)
         cmd = (self.source_stackrc + " openstack overcloud export -f --stack "
                + self.settings.overcloud_name + " --output-file "
                + export_path + "/" + CONTROL_PLANE_EXPORT_TEMPLATE)
+        self.run(cmd)
+
+    def overcloud_config_download(self):
+        """
+        openstack overcloud config download --name r62 --config-dir ~/r62-config
+        """
+        download_path = os.path.join(self.home_dir,
+                                     self.settings.overcloud_name + "-config")
+        self.create_directory(download_path)
+        cmd = (self.source_stackrc + " openstack overcloud config download "
+               "--name " + self.settings.overcloud_name
+               + " --config-dir " + download_path)
         self.run(cmd)
 
     def node_discovery_edge_all(self):
@@ -3677,13 +3700,17 @@ if __name__ == "__main__":
     # director.import_nodes_edge_all()
     # director.render_and_upload_undercloud_conf()
     # director.create_subnet_routes_edge_all()
-    #for node_type in settings.node_types:
+    # for node_type in settings.node_types:
     #    director.node_introspection(node_type)
-    # director.render_and_upload_roles_data_edge_all()
-    for node_type, nodes in settings.node_types_map.items():
-        director.assign_node_role_edge(node_type, nodes)
+    director.overcloud_config_download()
+    ## director.render_and_upload_roles_data_edge_all()
+    # director.export_control_plane_config()
+    ## director.render_and_upload_nova_az_edge_all()
+    ## director.render_and_upload_dell_environment_edge_all()
+    # for node_type, nodes in settings.node_types_map.items():
+    #     director.assign_node_role_edge(node_type, nodes)
     '''
-    director.export_control_plane_config()
+
     director.discover_edge_nodes_all()
     director.render_and_upload_overrides_edge_all()
 
@@ -3692,8 +3719,8 @@ if __name__ == "__main__":
     director.render_and_upload_node_placement_edge_all()
     director.render_and_upload_static_ips_edge_all()
     director.render_and_upload_network_isolation_edge_all()
-    director.render_and_upload_dell_environment_edge_all()
+
     director.render_and_upload_network_data_edge_all()
     director.render_and_upload_network_environment_edge_all()
-    director.render_and_upload_nova_az_edge_all()
+
     '''
