@@ -47,9 +47,11 @@ parameter_defaults:
   # List of Default Filters to pass to the nova Scheduler
   # Default filters are used if profile is set to XSP
   # This line is uncommented when using with CSP profile
-  # NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','NUMATopologyFilter', 'AggregateInstanceExtraSpecsFilter']
+  # NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','NUMATopologyFilter','AggregateInstanceExtraSpecsFilter']
 
-  # List of CPUs reserver for Host OS operation
+  # List or range of physical CPU cores to reserve for virtual machine processes.
+  # This parameter is depricated in 16.1. In the future releases, use
+  # NovaComputeCpuDedicatedSet and NovaComputeCpuSharedSet instead. 
   # Disabled by default for XSP Profile
   # This line is uncommented and updated when using CSP Profile
   # NovaVcpuPinSet: "8-23,32-47"

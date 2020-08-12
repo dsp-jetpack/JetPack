@@ -1082,7 +1082,7 @@ class Director(InfraHost):
             dell_unity_cinder_yaml,
         ]
         if self.settings.use_satellite:
-            cinder_container = "openstack-cinder-volume-dellemc" + \
+            cinder_container = "openstack-cinder-volume-dellemc-rhosp16" + \
                 ':' + str(self.settings.cinder_unity_container_version)
             remote_registry = self.settings.satellite_hostname + \
                 ":5000/" + self.settings.containers_prefix
@@ -1092,7 +1092,7 @@ class Director(InfraHost):
                         '|" ' + overcloud_images_file)
         else:
 
-            cinder_container = "/dellemc/openstack-cinder-volume-dellemc:" + \
+            cinder_container = "/dellemc/openstack-cinder-volume-dellemc-rhosp16:" + \
                 str(self.settings.cinder_unity_container_version)
             remote_registry = "registry.connect.redhat.com"
             remote_url = remote_registry + cinder_container
@@ -1158,7 +1158,7 @@ class Director(InfraHost):
                 ]
 
         if self.settings.use_satellite:
-            manila_container = "openstack-manila-share-dellemc" + \
+            manila_container = "openstack-manila-share-dellemc-rhosp16" + \
                 ':' + str(self.settings.manila_unity_container_version)
             remote_registry = self.settings.satellite_hostname + \
                 ":5000/" + self.settings.containers_prefix
@@ -1167,7 +1167,7 @@ class Director(InfraHost):
                         '" ' + overcloud_images_file)
 
         else:
-            manila_container = "/dellemc/openstack-manila-share-dellemc:" + \
+            manila_container = "/dellemc/openstack-manila-share-dellemc-rhosp16:" + \
                            str(self.settings.manila_unity_container_version)
             remote_registry = "registry.connect.redhat.com"
             remote_url = remote_registry + manila_container
