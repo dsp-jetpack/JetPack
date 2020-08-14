@@ -828,10 +828,6 @@ class Director(InfraHost):
 
     def setup_dell_storage(self):
 
-        # Clean the local docker registry
-        #if len(self.run_tty("sudo docker images -a -q")[0]) > 1:
-            #self.run_tty("sudo docker rmi $(sudo docker images -a -q) --force")
-
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy with
         # a different config
@@ -857,11 +853,20 @@ class Director(InfraHost):
             "/dellemc-unity-cinder-backend.yaml"
         self.upload_file(self.settings.dell_unity_cinder_yaml,
                          dell_unity_cinder_yaml)
+
+        dell_unity_cinder_container_yaml = self.templates_dir + \
+            "/dellemc-unity-cinder-container.yaml"
+        self.upload_file(self.settings.dell_unity_cinder_container_yaml,
+                         dell_unity_cinder_container_yaml)
+
         # Backup before modifying
         self.run_tty("cp " + dell_unity_cinder_yaml +
                      " " + dell_unity_cinder_yaml + ".bak")
+        self.run_tty("cp " + dell_unity_cinder_container_yaml +
+                     " " + dell_unity_cinder_container_yaml + ".bak")
 
-        self.setup_unity_cinder(dell_unity_cinder_yaml)
+        self.setup_unity_cinder(dell_unity_cinder_yaml, \
+                                dell_unity_cinder_container_yaml )
 
         # Powermax
         dell_powermax_iscsi_cinder_yaml = self.templates_dir + \
@@ -912,11 +917,17 @@ class Director(InfraHost):
         unity_manila_yaml = self.templates_dir + "/unity-manila-config.yaml"
         self.upload_file(self.settings.unity_manila_yaml,
                          unity_manila_yaml)
+        unity_manila_container_yaml = self.templates_dir + "/unity-manila-container.yaml"
+        self.upload_file(self.settings.unity_manila_container_yaml,
+                         unity_manila_container_yaml)
+
         # Backup before modifying
         self.run_tty("cp " + unity_manila_yaml +
                      " " + unity_manila_yaml + ".bak")
+        self.run_tty("cp " + unity_manila_container_yaml +
+                     " " + unity_manila_container_yaml + ".bak")
 
-        self.setup_unity_manila(unity_manila_yaml)
+        self.setup_unity_manila(unity_manila_yaml, unity_manila_container_yaml)
 
         #  Now powermax
         powermax_manila_yaml = self.templates_dir + "/powermax-manila-config.yaml"
@@ -974,7 +985,8 @@ class Director(InfraHost):
         ]
         for cmd in cmds:
             self.run_tty(cmd)
-    def setup_unity_cinder(self, dell_unity_cinder_yaml):
+    def setup_unity_cinder(self, dell_unity_cinder_yaml, \
+                           dell_unity_cinder_container_yaml):
 
         if self.settings.enable_unity_backend is False:
             logger.debug("Not setting up unity cinder backend.")
@@ -1000,44 +1012,50 @@ class Director(InfraHost):
             self.settings.unity_storage_pool_names + '|" ' +
             dell_unity_cinder_yaml,
         ]
-        if self.settings.use_satellite:
-            cinder_container = "openstack-cinder-volume-dellemc-rhosp16" + \
-                ':' + str(self.settings.cinder_unity_container_version)
-            remote_registry = self.settings.satellite_hostname + \
-                ":5000/" + self.settings.containers_prefix
-            local_url = remote_registry + cinder_container
-            cmds.append('sed -i "s|DockerCinderVolumeImage.*|' +
-                        'DockerCinderVolumeImage: ' + local_url +
-                        '|" ' + overcloud_images_file)
-        else:
 
+        if self.settings.use_satellite:
+            cinder_container = "openstack-cinder-volume-dellemc-rhosp16:" + \
+                str(self.settings.cinder_unity_container_version) 
+            remote_registry = self.settings.satellite_hostname + \
+                ":5000/" 
+            local_url = remote_registry + self.settings.containers_prefix + \
+                cinder_container
+            cmds.append('sed -i "s|ContainerCinderVolumeImage.*|' +
+                        'ContainerCinderVolumeImage: ' + local_url +
+                        '|" ' + dell_unity_cinder_container_yaml)
+            cmds.append('sed -i "s|<dellemc_container_registry>|' + remote_registry +
+                        '|" ' + dell_unity_cinder_container_yaml)             
+        else:
+            undercloud_domain_name = self.settings.director_node.hostname + \
+                                 ".ctlplane.localdomain"
             cinder_container = "/dellemc/openstack-cinder-volume-dellemc-rhosp16:" + \
                 str(self.settings.cinder_unity_container_version)
             remote_registry = "registry.connect.redhat.com"
             remote_url = remote_registry + cinder_container
             local_registry = self.provisioning_ip + ":8787"
-            local_url = local_registry + cinder_container
+            local_registry_domain = undercloud_domain_name + ":8787"
+            local_url = local_registry_domain + cinder_container
 
             cmds.extend([
-                'docker login -u ' + self.settings.subscription_manager_user +
+                'sudo podman login -u ' + self.settings.subscription_manager_user +
                 ' -p ' + self.settings.subscription_manager_password +
                 ' ' + remote_registry,
-                'docker pull ' + remote_url,
-                'docker tag ' + remote_url + ' ' + local_url,
-                'docker push ' + local_url,
-                'sed -i "s|DockerCinderVolumeImage.*|' +
-                'DockerCinderVolumeImage: ' + local_url +
-                '|" ' + overcloud_images_file,
-                'echo "  DockerInsecureRegistryAddress:" >> ' +
-                overcloud_images_file,
-                'sudo echo "  - ' + local_registry + ' " >> ' +
-                overcloud_images_file,
-                'docker logout ' + remote_registry,
+                'sudo podman pull ' + remote_url,
+                'sudo openstack tripleo container image push --local ' + remote_url,
+                'sudo podman tag ' + remote_url + ' ' + local_url,
+                'sed -i "s|ContainerCinderVolumeImage.*|' +
+                'ContainerCinderVolumeImage: ' + local_url +
+                '|" ' + dell_unity_cinder_container_yaml,
+                'sed -i "s|<dellemc_container_registry>|' + local_registry +
+                '|" ' + dell_unity_cinder_container_yaml,
+                'sed -i "s|<dellemc_container_registry_domain>|' + local_registry_domain +
+                        '|" ' + dell_unity_cinder_container_yaml,
+                'sudo podman logout ' + remote_registry,
             ])
         for cmd in cmds:
             self.run_tty(cmd)
 
-    def setup_unity_manila(self, unity_manila_yaml):
+    def setup_unity_manila(self, unity_manila_yaml, unity_manila_container_yaml):
 
         if self.settings.enable_unity_manila_backend is False:
             logger.debug("Not setting up unity manila backend.")
@@ -1080,33 +1098,43 @@ class Director(InfraHost):
             manila_container = "openstack-manila-share-dellemc-rhosp16" + \
                 ':' + str(self.settings.manila_unity_container_version)
             remote_registry = self.settings.satellite_hostname + \
-                ":5000/" + self.settings.containers_prefix
-            local_url = remote_registry + manila_container
-            cmds.append('sed -i "50i \  DockerManilaShareImage: ' + local_url +
-                        '" ' + overcloud_images_file)
+                ":5000/"
+            local_url = remote_registry + self.settings.containers_prefix + \
+                manila_container
+            cmds.append('sed -i "s|ContainerManilaShareImage.*|' +
+                        'ContainerManilaShareImage: ' + local_url +
+                        '|" ' + unity_manila_container_yaml)
+            cmds.append('sed -i "s|<undercloud_registry>|' + remote_registry +
+                        '|" ' + unity_manila_container_yaml)
 
         else:
+            undercloud_domain_name = self.settings.director_node.hostname + \
+                                ".ctlplane.localdomain"
             manila_container = "/dellemc/openstack-manila-share-dellemc-rhosp16:" + \
-                           str(self.settings.manila_unity_container_version)
+                               str(self.settings.manila_unity_container_version)
             remote_registry = "registry.connect.redhat.com"
             remote_url = remote_registry + manila_container
             local_registry = self.provisioning_ip + ":8787"
-            local_url = local_registry + manila_container
+            local_registry_domain = undercloud_domain_name + ":8787"
+            local_url = local_registry_domain + manila_container
 
             cmds.extend([
-                'docker login -u ' + self.settings.subscription_manager_user +
+                'sudo podman login -u ' + self.settings.subscription_manager_user +
                 ' -p ' + self.settings.subscription_manager_password +
                 ' ' + remote_registry,
-                'docker pull ' + remote_url,
-                'docker tag ' + remote_url + ' ' + local_url,
-                'docker push ' + local_url,
-                'sed -i "50i \  DockerManilaShareImage: ' + local_url +
-                '" ' + overcloud_images_file,
-                'echo "  DockerInsecureRegistryAddress:" >> ' +
-                overcloud_images_file,
-                'echo "  - ' + local_registry + ' " >> ' +
-                overcloud_images_file,
+                'sudo podman pull ' + remote_url,
+                'sudo openstack tripleo container image push --local ' + remote_url,
+                'sudo podman tag ' + remote_url + ' ' + local_url,
+                'sed -i "s|ContainerManilaShareImage.*|' +
+                'ContainerManilaShareImage: ' + local_url +
+                '|" ' + unity_manila_container_yaml,
+                'sed -i "s|<dellemc_container_registry>|' + local_registry +
+                '|" ' + unity_manila_container_yaml,
+                'sed -i "s|<dellemc_container_registry_domain>|' + local_registry_domain +
+                        '|" ' + unity_manila_container_yaml,
+                'sudo podman logout ' + remote_registry,
             ])
+
         for cmd in cmds:
             self.run_tty(cmd)
 

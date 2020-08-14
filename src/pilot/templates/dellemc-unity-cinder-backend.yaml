@@ -6,9 +6,9 @@ resource_registry:
 parameter_defaults:
   CinderEnableDellEMCUnityBackend: true
   CinderDellEMCUnityBackendName: 'tripleo_dellemc_unity'
-  CinderDellEMCUnitySanIp: <unity_san_ip>
-  CinderDellEMCUnitySanLogin: <unity_san_login>
-  CinderDellEMCUnitySanPassword: <unity_san_password>
-  CinderDellEMCUnityStorageProtocol: <unity_storage_protocol>
-  CinderDellEMCUnityIoPorts: <unity_io_ports>
-  CinderDellEMCUnityStoragePoolNames: <unity_storage_pool_names>
+  CinderDellEMCUnitySanIp: '<unity_san_ip>'
+  CinderDellEMCUnitySanLogin: '<unity_san_login>'
+  CinderDellEMCUnitySanPassword: '<unity_san_password>'
+  CinderDellEMCUnityStorageProtocol: '<unity_storage_protocol>'
+  CinderDellEMCUnityIoPorts: '<unity_io_ports>'
+  CinderDellEMCUnityStoragePoolNames: '<unity_storage_pool_names>'
