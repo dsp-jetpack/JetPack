@@ -1,0 +1,8 @@
+---
+- name: Install PowerFlex SW from local RPMs hosted in the overcloud image
+  include: "install_powerflex_redhat_local.yaml"
+  when: rpms_method == "local"
+
+- name: Install PowerFlex SW from local RPMs hosted on the Directord
+  include: "install_powerflex_redhat_external.yaml"
+  when: rpms_method == "external"

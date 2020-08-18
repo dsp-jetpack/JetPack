@@ -13,5 +13,5 @@ parameter_defaults:
       powerflex/san_password:
         value: <powerflex_san_password>
       powerflex/sio_storage_pools:
-        value: domain1:pool1
+        value: <powerflex_storage_pools>
     cinder_user_enabled_backends: ['powerflex']

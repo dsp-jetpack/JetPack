@@ -1,0 +1,30 @@
+- name: login to primary MDM
+  command: scli --login --username admin --password "{{ password }}" --approve_certificate
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}"
+
+- name: create the protection domain
+  command: scli --add_protection_domain --protection_domain_name {{ protection_domain }}
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}"
+  register: add_pd
+  changed_when: "'already_exists' not in add_pd.stderr"
+
+- name: create storage pool and add it to the protection domain
+  command: scli --add_storage_pool --protection_domain_name {{ protection_domain }} --storage_pool_name {{ storage_pool }} --media_type SSD
+  run_once: true
+  register: add_sp
+  delegate_to: "{{ powerflex_config_ip }}"
+  changed_when: add_sp.rc == 0
+
+- name: modify spare policy based upon SDSs count
+  command: scli --modify_spare_policy --protection_domain_name {{ protection_domain }} --storage_pool_name {{ storage_pool }} --spare_percentage {{ spare_policy_pct }} --i_am_sure
+  run_once: tru
+  delegate_to: "{{ powerflex_config_ip }}"
+  when:
+    - sds_count | int < 10
+
+- name: enable zero-padding
+  command: scli --modify_zero_padding_policy --protection_domain_name {{ protection_domain }} --storage_pool_name {{ storage_pool }} --enable_zero_padding
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}" 

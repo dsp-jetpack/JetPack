@@ -1,0 +1,72 @@
+---
+- hosts:
+  - mdms
+  - tbs
+  - sdss
+  - sdcs
+  - lias
+  
+  tags:
+    - always
+  
+  pre_tasks:
+    - name: gather and delegate facts
+      setup:
+      delegate_to: "{{ item }}"
+      delegate_facts: true
+      with_items: "{{ groups['all'] }}"
+      run_once: true
+
+- hosts: all
+  name: "Set facts"
+  gather_facts: no 
+  roles: 
+    - powerflex-facts
+  tags: powerflex-facts
+
+- hosts: mdms
+  name: "Install PowerFlex MDM"
+  gather_facts: no
+  become: true
+  roles:
+   - powerflex-mdm
+  tags: powerflex-mdm
+
+- hosts: tbs
+  name: "Install PowerFlex TB"
+  gather_facts: no
+  become: true
+  roles:
+   - powerflex-tb
+  tags: powerflex-tb
+
+- hosts: mdms
+  name: "Configure PowerFlex storage"
+  gather_facts: no
+  roles:
+    - powerflex-config
+  tags: powerflex-config
+                
+- hosts: sdss
+  name: "Install PowerFlex SDS"
+  gather_facts: no
+  become: true
+  roles:
+    - powerflex-sds
+  tags: powerflex-sds
+
+- hosts: all
+  name: "Install PowerFlex LIA"
+  gather_facts: no
+  become: true
+  roles: 
+    - powerflex-lia
+  tags: powerflex-lia
+                
+- hosts: sdcs
+  name: "Install PowerFlex SDC"
+  gather_facts: no
+  become: true
+  roles:
+    - powerflex-sdc
+  tags: powerflex-sdc

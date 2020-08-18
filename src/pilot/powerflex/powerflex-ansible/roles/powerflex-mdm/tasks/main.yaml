@@ -1,0 +1,67 @@
+- name: include vars
+  include_vars: "../vars/main.yaml"
+
+- include: ../../powerflex-common/tasks/install_powerflex.yaml
+
+- name: wait for mdm to be active
+  wait_for: port=9011 state=started
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}"
+
+- name: add primary MDM with a virtual IP
+  command: >
+   scli --create_mdm_cluster
+   --master_mdm_ip {{ powerflex_mdm_primary_ip }}
+   --master_mdm_management_ip {{ powerflex_mdm_primary_mgmt_ip }}
+   --master_mdm_name {{ powerflex_mdm_primary_hostname }}
+   --master_mdm_virtual_ip_interface {{ cluster_interface }}
+   --cluster_virtual_ip {{ cluster_vip }}
+   --accept_license 
+   --approve_certificate
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}"
+  until: "{{ add_primary_mdm.rc }} == 0"
+  register: add_primary_mdm
+
+- name: wait for cluster to be active
+  wait_for: port=6611 state=started
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}"
+
+- name: initial login
+  command: scli --login --username admin --password admin
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}"
+  register: initial_login
+  
+- name: change password
+  command: scli --set_password --old_password admin --new_password "{{ password }}"
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}"
+  when: initial_login.rc == 0
+  
+- name: login with new password
+  command: scli --login --username admin --password "{{ password }}" --approve_certificate
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}"
+
+- name: add secondary MDM
+  command: >
+    scli --add_standby_mdm
+    --new_mdm_ip {{ powerflex_mdm_secondary_ip }}
+    --new_mdm_name {{ powerflex_mdm_secondary_hostname }}
+    --new_mdm_management_ip {{ powerflex_mdm_secondary_mgmt_ip }}
+    --mdm_role manager
+    --new_mdm_virtual_ip_interface {{ cluster_interface }}
+    --force_clean --i_am_sure
+    --approve_certificate
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}"
+  when: add_primary_mdm.rc == 0
+
+- name: rename system 
+  command: >
+    scli --rename_system 
+    --new_name {{ cluster_name }}
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}"

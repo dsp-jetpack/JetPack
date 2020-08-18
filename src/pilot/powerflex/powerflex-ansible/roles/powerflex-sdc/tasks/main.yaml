@@ -1,0 +1,65 @@
+- name: include vars
+  include_vars: ../vars/main.yaml
+
+- name: create file enforcement file
+  copy:
+    dest: "/tmp/scini.fe"
+    owner: root
+    group: root
+    content: |
+      /usr/bin/emc/scaleio/(.*).ko system_u:object_r:modules_object_t:s0
+      /bin/emc/scaleio/(.*).ko system_u:object_r:modules_object_t:s0 
+
+- name: create type enforcement file
+  copy:
+    dest: "/tmp/scini.te"
+    owner: root
+    group: root
+    content: |
+      module scini 1.0;
+
+      require {
+              type bin_t;
+              type kmod_t;
+              class system module_load;
+      }
+
+      #============= kmod_t ==============
+      allow kmod_t bin_t:system module_load;
+
+- name: build a policy module file
+  command: checkmodule -M -m -o /tmp/scini.mod /tmp/scini.te
+
+- name: create the policy package file
+  command: semodule_package -o /tmp/scini.pp -m /tmp/scini.mod -f /tmp/scini.fe
+
+- name: load the policy package file into SElinux
+  command: semodule -i /tmp/scini.pp
+
+- include: ../../powerflex-common/tasks/install_powerflex.yaml
+
+- name: restore SElinux context
+  command: restorecon -R -v /bin/emc/scaleio
+
+- name: login to MDM
+  command: scli --login --username admin --password "{{ password }}" --approve_certificate
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}"
+
+- name: Add multiple SDC
+  command: >
+    scli --add_sdc 
+    --sdc_ip {{ hostvars[inventory_hostname]['ansible_'+cluster_interface]['ipv4']['address'] }}  
+    --sdc_name "{{ hostvars[inventory_hostname]['ansible_hostname'] }}"
+  delegate_to: "{{ powerflex_config_ip }}"
+
+- name: Configure MDM IPs in drv_cfg
+  replace:
+   path: /etc/emc/scaleio/drv_cfg.txt 
+   regexp: '^#mdm(.*)'
+   replace: 'mdm {{ cluster_vip }}'
+
+- name: Restart scini service
+  service:
+    name: scini
+    state: restarted

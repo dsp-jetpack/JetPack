@@ -1,0 +1,42 @@
+resource_registry:
+  OS::TripleO::Services::PowerFlexLIA: ../../deployment/powerflex-ansible/powerflex-lia.yaml
+  OS::TripleO::Services::PowerFlexMDM: ../../deployment/powerflex-ansible/powerflex-mdm.yaml
+  OS::TripleO::Services::PowerFlexSDC: ../../deployment/powerflex-ansible/powerflex-sdc.yaml
+  OS::TripleO::Services::PowerFlexSDS: ../../deployment/powerflex-ansible/powerflex-sds.yaml
+
+parameter_defaults:
+
+  # Can be either local or external  
+  PowerFlexRpmsMethod: external
+
+  # Used to override default RPMs path.
+  PowerFlexRpmsPath: '/opt/dellemc/powerflex/rpms'
+
+  PowerFlexClusterName: powerflex
+  PowerFlexProtectionDomain: domain1
+  PowerFlexStoragePool: pool1
+
+  # Only 3-node cluster config is supported at this time
+  PowerFlexClusterConfig: 3_node
+
+  # Interface used for configuration by Ansible. Added for RHOSP 16 as the ctlplane ip is not blocked.
+  PowerFlexConfigInterface: eno3
+  
+  # Interface used for Management access. Must be accessible from external. (Optional)
+  PowerFlexMgmtInterface: vlan881
+
+  # Current Interface for MDM communication with SDC and SDS. Should be split up into two
+  # physical ports as bonding is really not recommended in production.
+  PowerFlexClusterInterface: vlan170
+
+  PowerFlexClusterVirtualIP: 192.168.170.40
+
+  # By default, All traffic including SDS-SDS and SDS-SDC goes to the same network
+  # Uncomment the below line when using dedicated network rebuild and rebalance which can
+  # traffic intensive based upon the eventual failure of a SDS node. (Optional)
+  #PowerFlexRebuildInterface: 
+  
+  PowerFlexDisks: ['/dev/nvme0n1','/dev/nvme1n1','/dev/nvme2n1','/dev/nvme3n1','/dev/nvme4n1','/dev/nvme5n1','/dev/nvme6n1','/dev/nvme7n1']
+
+  PowerFlexPassword: 'Vxflex123'
+  PowerFlexLiaToken: 'Vxflex123'

@@ -1,0 +1,14 @@
+- name: uninstall PowerFlex
+  hosts: all
+  gather_facts: no
+  become: yes
+  tasks:
+    - name: uninstall package
+      environment:
+        I_AM_SURE: 1
+      package: name="{{ item }}" state=absent
+      with_items:
+        - EMC-ScaleIO-lia
+        - EMC-ScaleIO-mdm
+        - EMC-ScaleIO-sds
+        - EMC-ScaleIO-sdc

@@ -1,0 +1,20 @@
+- name: include vars
+  include_vars: "../vars/main.yaml"
+
+- include: ../../powerflex-common/tasks/install_powerflex.yaml
+
+- name: login with password
+  command: scli --login --username admin --password "{{ password }}"
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}"
+
+- name: add tie breaker
+  command: scli --add_standby_mdm --new_mdm_ip "{{ powerflex_tb_primary_ip }}" --new_mdm_management_ip "{{ powerflex_tb_primary_mgmt_ip }}" --new_mdm_name "{{ powerflex_tb_primary_hostname }}" --mdm_role tb
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}"
+  register: add_primary_tb
+
+- name: switch to cluster three node
+  command: scli --switch_cluster_mode --cluster_mode "{{ cluster_config }}" --add_slave_mdm_ip "{{ powerflex_mdm_secondary_ip }}" --add_tb_ip "{{ powerflex_tb_primary_ip }}" 
+  run_once: true
+  delegate_to: "{{ powerflex_config_ip }}"

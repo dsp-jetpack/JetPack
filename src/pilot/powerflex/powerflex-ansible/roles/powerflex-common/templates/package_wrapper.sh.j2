@@ -1,0 +1,6 @@
+#!/bin/sh
+PATH=/bin:/usr/bin:/sbin:/usr/sbin; export PATH
+{% for env in powerflex_role_environment %}
+{{ env.key }}="{{ env.value }}" ; export {{ env.key }}
+{% endfor %}
+$@
