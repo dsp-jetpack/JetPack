@@ -24,3 +24,7 @@ parameter_defaults:
 
   CephStorageSchedulerHints:
     'capabilities:node': 'ceph-storage-%index%'
+
+  PowerflexStorageSchedulerHints:
+    'capabilities:node': 'powerflex-storage-%index%'
+

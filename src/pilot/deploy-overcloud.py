@@ -280,7 +280,11 @@ def main():
                             type=int,
                             required=True,
                             help="The number of storage nodes")
-
+        parser.add_argument("--powerflex",
+                            dest="num_powerflex",
+                            type=int,
+                            required=True,
+                            help="The number of powerflex storage nodes")
         parser.add_argument("--enable_hugepages",
                             action='store_true',
                             default=False,
@@ -490,6 +494,7 @@ def main():
             args.vlan_range,
             args.num_dell_computes,
             args.num_dell_computeshci
+            args.num_powerflex
             )
 
         # Launch the deployment
