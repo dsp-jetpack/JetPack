@@ -268,7 +268,8 @@ class Checkpoints:
         expected_nodes = (len(setts.controller_nodes)
                           + len(setts.compute_nodes)
                           + len(setts.ceph_nodes)
-                          + len(setts.computehci_nodes))
+                          + len(setts.computehci_nodes)
+                          + len(setts.powerflex_nodes))
 
         for node_type, nodes in setts.node_types_map.items():
             logger.debug("Number of %s nodes: %s", node_type, str(len(nodes)))

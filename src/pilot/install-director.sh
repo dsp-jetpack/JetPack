@@ -63,7 +63,7 @@ if [ ! -z "${satellite_hostname}" ]; then
 fi
 
 
-flavors="control compute ceph-storage computehci"
+flavors="control compute ceph-storage computehcii powerflex-storage"
 subnet_name="ctlplane"
 
 # Create the requested flavor if it does not exist.

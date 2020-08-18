@@ -15,6 +15,13 @@
 resource_registry:
   OS::TripleO::NodeUserData: ./first-boot.yaml
 
+  # Until PowerFlex resource registry is in-tree in the overcloud-resource-registry
+  OS::TripleO::Services::PowerFlexLIA: OS::Heat::None
+  OS::TripleO::Services::PowerFlexMDM: OS::Heat::None
+  OS::TripleO::Services::PowerFlexSDC: OS::Heat::None
+  OS::TripleO::Services::PowerFlexSDS: OS::Heat::None
+
+
 parameter_defaults:
 
   # Defines the interface to bridge onto br-ex for network nodes
@@ -43,6 +50,9 @@ parameter_defaults:
   OvercloudSwiftStorageFlavor: baremetal
   # Flavor to use for the Cinder nodes
   OvercloudBlockStorageFlavor: baremetal
+  # Flavor to use for the Powerflex nodes
+  OvercloudPowerflexStorageFlavor: baremetal
+
 
   # List of Default Filters to pass to the nova Scheduler
   # Default filters are used if profile is set to XSP
@@ -67,6 +77,10 @@ parameter_defaults:
 
   # Number of Ceph Storage nodes
   CephStorageCount: 3
+
+  # Number of Powerflex Storage nodes
+  PowerflexStorageCount: 0
+
 
   # To customize the domain name of the overcloud nodes, change "localdomain"
   # in the following line to the desired domain name.

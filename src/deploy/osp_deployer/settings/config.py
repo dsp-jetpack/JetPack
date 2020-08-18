@@ -750,6 +750,7 @@ class Settings:
         self.compute_nodes = []
         self.computehci_nodes = []
         self.ceph_nodes = []
+        self.powerflex_nodes = []
         self.switches = []
         self.nodes = []
         with open(self.network_conf) as config_file:
@@ -801,6 +802,14 @@ class Settings:
                         self.ceph_nodes.append(node)
                 except AttributeError:
                     node.is_storage = False
+                    pass
+                try:
+                    node.is_powerflex = (True if node.is_powerflex
+                                         == "true" else False)
+                    if node.is_powerflex:
+                        self.powerflex_nodes.append(node)
+                except AttributeError:
+                    node.is_powerflex = False
                     pass
                 try:
                     node.is_switch = (True if node.is_switch

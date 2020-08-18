@@ -90,3 +90,12 @@ resource_registry:
   OS::TripleO::BlockStorage::Ports::StorageMgmtPort: ../network/ports/storage_mgmt.yaml
   OS::TripleO::BlockStorage::Ports::TenantPort: ../network/ports/noop.yaml
   #OS::TripleO::BlockStorage::Ports::ManagementPort: ../network/ports/management.yaml
+  
+  # Port assignments for the PowerFlex storage role
+  OS::TripleO::PowerflexStorage::Ports::ExternalPort: ../network/ports/noop.yaml
+  OS::TripleO::PowerflexStorage::Ports::InternalApiPort: ../network/ports/internal_api.yam
+  OS::TripleO::PowerflexStorage::Ports::StoragePort: ../network/ports/storage.yaml
+  OS::TripleO::PowerflexStorage::Ports::StorageMgmtPort: ../network/ports/storage_mgmt.yaml
+  OS::TripleO::PowerflexStorage::Ports::TenantPort: ../network/ports/noop.yaml
+  #OS::TripleO::PowerflexStorage::Ports::ManagementPort: ../network/ports/management.yaml
+

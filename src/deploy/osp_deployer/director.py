@@ -296,7 +296,8 @@ class Director(InfraHost):
             for node in (self.settings.controller_nodes +
                          self.settings.compute_nodes +
                          self.settings.ceph_nodes +
-                         self.settings.computehci_nodes ):
+                         self.settings.computehci_nodes +
+                         self.settings.powerflex_nodes ):
                 if hasattr(node, "idrac_ip"):
                     cmd += ' ' + node.idrac_ip
             # Add edge nodes if there are any defined
@@ -327,7 +328,8 @@ class Director(InfraHost):
         expected_nodes = (len(self.settings.controller_nodes)
                           + len(self.settings.compute_nodes)
                           + len(self.settings.ceph_nodes)
-                          + len(self.settings.computehci_nodes))
+                          + len(self.settings.computehci_nodes)
+                          + len(self.settings.powerflex_nodes))
         for node_type, nodes in setts.node_types_map.items():
             expected_nodes += len(nodes)
 
@@ -354,6 +356,7 @@ class Director(InfraHost):
         nodes.extend(self.settings.compute_nodes)
         nodes.extend(self.settings.computehci_nodes)
         nodes.extend(self.settings.ceph_nodes)
+        nodes.extend(self.settings.powerflex_nodes)
         cmd = "~/pilot/config_idracs.py "
 
         for node_type, edge_site_nodes in setts.node_types_map.items():
@@ -460,6 +463,7 @@ class Director(InfraHost):
         roles_to_nodes["compute"] = setts.compute_nodes
         roles_to_nodes["storage"] = setts.ceph_nodes
         roles_to_nodes["computehci"] = setts.computehci_nodes
+        roles_to_nodes["powerflex"] = setts.powerflex_nodes
         # Add edge nodes if there are any defined
         for node_type, edge_site_nodes in setts.node_types_map.items():
             roles_to_nodes[node_type] = edge_site_nodes
@@ -498,7 +502,8 @@ class Director(InfraHost):
         non_sah_nodes = (setts.controller_nodes
                          + setts.compute_nodes
                          + setts.computehci_nodes
-                         + setts.ceph_nodes)
+                         + setts.ceph_nodes
+                         + setts.powerflex_nodes)
 
         for node_type, edge_site_nodes in setts.node_types_map.items():
             non_sah_nodes.extend(edge_site_nodes)
@@ -1422,6 +1427,20 @@ class Director(InfraHost):
                     computehci_storage_ips += "\\n"
                     computehci_cluster_ips += "\\n"
 
+            powerflex_private_ips = ''
+            powerflex_storage_ips = ''
+            powerflex_cluster_ips = ''
+
+            for node in self.settings.powerflex_nodes:
+                powerflex_private_ips += "    - " + node.private_api_ip
+                powerflex_storage_ips += "    - " + node.storage_ip
+                powerflex_cluster_ips += "    - " + node.storage_cluster_ip
+                if node != self.settings.powerflex_nodes[-1]:
+                    powerflex_private_ips += "\\n"
+                    powerflex_storage_ips += "\\n"
+                    powerflex_cluster_ips += "\\n"
+
+
             storage_storgage_ip = ''
             storage_cluster_ip = ''
             for node in self.settings.ceph_nodes:
@@ -1469,6 +1488,14 @@ class Director(InfraHost):
                            'sed -i "/DellComputeHCIIPs:/,/storage_mgmt:/s/storage_mgmt:/storage_mgmt: \\n' +
                            computehci_cluster_ips + "/\" " + static_ips_yaml
                           ])
+            if len(self.settings.powerflex_nodes) > 0:
+                cmds.extend(['sed -i "/PowerflexStorageIPs:/,/internal_api:/s/internal_api:/internal_api: \\n' +
+                           powerflex_private_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/PowerflexStorageIPs:/,/storage:/s/storage:/storage: \\n' +
+                           powerflex_storage_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/PowerflexStorageIPs:/,/storage_mgmt:/s/storage_mgmt:/storage_mgmt: \\n' +
+                           powerflex_cluster_ips + "/\" " + static_ips_yaml
+                           ])
 
             for cmd in cmds:
                 self.run_tty(cmd)
@@ -1626,6 +1653,8 @@ class Director(InfraHost):
                                     str(len(self.settings.computehci_nodes)) + \
                                     " --storage " + \
                                     str(len(self.settings.ceph_nodes)) + \
+                                    " --powerflex " + \
+                                    str(len(self.settings.powerflex_nodes)) + \
                                     " --vlan " + \
                                     self.settings.tenant_vlan_range + \
                                     " --nic_env_file " + \
