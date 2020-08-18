@@ -889,6 +889,15 @@ class Director(InfraHost):
         else:
             self.setup_powermax_cinder(dell_powermax_fc_cinder_yaml)
 
+        # PowerFlex
+        dell_powerflex_cinder_yaml = self.templates_dir + \
+            "/dellemc-powerflex-cinder-conf.yaml"
+        self.upload_file(self.settings.dell_powerflex_cinder_yaml,
+                         dell_powerflex_cinder_yaml)
+        self.run_tty("cp " + dell_powerflex_cinder_yaml +
+                     " " + dell_powerflex_cinder_yaml + ".bak")
+        self.setup_powerflex_cinder(dell_powerflex_cinder_yaml)
+
 
         # Enable multiple backends now
         enabled_backends = "["
@@ -1172,6 +1181,30 @@ class Director(InfraHost):
                 'sed -i "s|<manila_powermax_ethernet_ports>|' +
                 self.settings.manila_powermax_ethernet_ports + '|" ' +
                 powermax_manila_yaml,
+                ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
+    def setup_powerflex_cinder(self, powerflex_cinder_yaml):
+
+        if self.settings.enable_powerflex_cinder_backend is False:
+            logger.debug("Not setting up powerflex  backend.")
+            return
+
+        logger.debug("Configuring dell emc powerflex backend.")
+
+        cmds = ['sed -i "s|<powerflex_san_ip>|' +
+                self.settings.powerflex_san_ip +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_san_login>|' +
+                self.settings.powerflex_san_login +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_san_password>|' +
+                self.settings.powerflex_san_password +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_storage_pools>|' +
+                self.settings.powerflex_storage_pools +
+                '|" ' + powerflex_cinder_yaml,
                 ]
         for cmd in cmds:
             self.run_tty(cmd)
