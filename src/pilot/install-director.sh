@@ -288,8 +288,8 @@ echo "## Done."
 
 echo
 echo "## Copying powerflex and tripleo-powerflex ansible playbooks..."
-cp -R $HOME/pilot/powerflex/powerflex-ansible /usr/share/powerflex-ansible
-cp -R $HOME/pilot/powerflex/tripleo-powerflex-run-ansible /usr/share/ansible/tripleo-powerflex-run-ansible
+sudo cp -R $HOME/pilot/powerflex/powerflex-ansible /usr/share/powerflex-ansible
+sudo cp -R $HOME/pilot/powerflex/tripleo-powerflex-run-ansible /usr/share/ansible/tripleo-powerflex-run-ansible
 cp -R $HOME/pilot/powerflex/templates/overcloud/environments/powerflex-ansible $HOME/pilot/templates/overcloud/environments/powerflex-ansible
 cp -R $HOME/pilot/powerflex/templates/overcloud/deployment/powerflex-ansible $HOME/pilot/templates/overcloud/deployment/powerflex-ansible
 
