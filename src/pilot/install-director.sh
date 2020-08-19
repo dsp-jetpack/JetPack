@@ -17,10 +17,10 @@
 exec > >(tee $HOME/pilot/install-director.log)
 exec 2>&1
 
-USAGE="\nUsing RedHat CDN:$0 --director_ip <director public ip> --dns <dns_ip> --sm_user <subscription_manager_user> --sm_pwd <subscription_manager_pass> [--sm_pool <subcription_manager_poolid>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>]"
+USAGE="\nUsing RedHat CDN:$0 --director_ip <director public ip> --dns <dns_ip> --sm_user <subscription_manager_user> --sm_pwd <subscription_manager_pass> [--sm_pool <subcription_manager_poolid>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] [--enable_powerflex]\nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] [--enable_powerflex]"
 
 
-TEMP=`getopt -o h --long director_ip:,dns:,sm_user:,sm_pwd:,sm_pool:,proxy:,nodes_pwd:,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
+TEMP=`getopt -o h --long director_ip:,dns:,sm_user:,sm_pwd:,sm_pool:,proxy:,nodes_pwd:,enable_powerflex,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
 eval set -- "$TEMP"
 
 
@@ -54,7 +54,7 @@ while true ; do
         --nodes_pwd)
                 overcloud_nodes_pwd=$2; shift 2 ;;
         --enable_powerflex)
-                enable_powerflex=$2; shift 2;;
+                enable_powerflex=1; shift 1;;
         --) shift ; break ;;
         *) echo -e "$USAGE" ; exit 1 ;;
     esac
@@ -247,10 +247,10 @@ if [ -n "${overcloud_nodes_pwd}" ]; then
     run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
 fi
 
-if [ -n "${enable_powerflex}" ] && [ ${enable_powerflex = 1 ]; then
+if [ ${enable_powerflex == 1 ]; then
     echo "# PowerFlex backend enabled, injecting rpms"
-    run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex/rpms"
-    run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/rpms"
+    run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
+    run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
 fi
 
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
