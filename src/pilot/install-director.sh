@@ -53,6 +53,8 @@ while true ; do
                 proxy=$2; shift 2 ;;
         --nodes_pwd)
                 overcloud_nodes_pwd=$2; shift 2 ;;
+        --enable_powerflex)
+                enable_powerflex=$2; shift 2;;
         --) shift ; break ;;
         *) echo -e "$USAGE" ; exit 1 ;;
     esac
@@ -243,6 +245,12 @@ if [ -n "${overcloud_nodes_pwd}" ]; then
     run_command "sudo service libvirtd start"
     run_command "export LIBGUESTFS_BACKEND=direct"
     run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
+fi
+
+if [ -n "${enable_powerflex}" ] && [ ${enable_powerflex = 1 ]; then
+    echo "# PowerFlex backend enabled, injecting rpms"
+    run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex/rpms"
+    run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/rpms"
 fi
 
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images

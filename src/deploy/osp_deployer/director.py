@@ -239,10 +239,12 @@ class Director(InfraHost):
                   " --sm_pwd " + \
                   self.settings.subscription_manager_password + \
                   " --sm_pool " + \
-                  self.settings.subscription_manager_vm_ceph
+                  self.settings.subscription_manager_vm_ceph 
 
         if len(self.settings.overcloud_nodes_pwd) > 0:
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
+        if self.settings.enable_powerflex_backend is True:
+            cmd += " --enable_powerflex 1"
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
             raise AssertionError("Director/Undercloud did not " +
