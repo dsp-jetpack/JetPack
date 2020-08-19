@@ -347,6 +347,10 @@ def main():
                             action='store_true',
                             default=False,
                             help="Enable Dell EMC PowerMax  Manila backend")
+        parser.add_argument('--enable_powerflex',
+                            action='store_true',
+                            default=False,
+                            help="Enable Dell EMC PowrFlex backend')
         parser.add_argument('--disable_rbd',
                             action='store_true',
                             default=False,
@@ -595,6 +599,9 @@ def main():
                         "backend.yaml"
         if args.enable_powermax_manila:
             env_opts += " -e ~/pilot/templates/powermax-manila-config.yaml"
+
+        if args.enable_powerflex:
+            env_opts += " -e ~/pilot/templates/overcloud/environments/powerflex-ansible/powerflex-ansible/powerflex-ansible.yaml
 
         if args.dashboard_enable:
             env_opts += " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-dashboard.yaml"

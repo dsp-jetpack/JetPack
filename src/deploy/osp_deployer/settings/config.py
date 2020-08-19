@@ -444,31 +444,34 @@ class Settings:
                 backend_settings['manila_unity_ssl_cert_path']
         else:
             self.enable_unity_manila_backend = False
+        
         # PowerFlex OS settings
-        powerflex_settings = self.get_settings_section(
-            "PowerFlex Settings")
-        self.enable_powerflex_backend = \
-            powerflex_settings['enable_powerflex_backend']
-        self.powerflex_rpms_method = \
-            powerflex_settings['powerflex_rpms_method']
-        self.powerflex_cluster_name = \
-            powerflex_settings['powerflex_cluster_name']
-        self.powerflex_protection_domain = \
-            powerflex_settings['powerflex_protection_domain']
-        self.powerflex_storage_pool = \
-            powerflex_settings['powerflex_storage_pool']
-        self.powerflex_cluster_config = \
-            powerflex_settings['powerflex_cluster_config']
-        self.powerflex_mgmt_interface = \
-            powerflex_settings['powerflex_mgmt_interface']
-        self.powerflex_cluster_interface = \
-            powerflex_settings['powerflex_cluster_interface']
-        self.powerflex_cluster_virtualip = \
-            powerflex_settings['powerflex_cluster_virtualip']
-        self.powerflex_password = \
-            powerflex_settings['powerflex_password']
-        self.powerflex_liatoken = \
-            powerflex_settings['powerflex_liatoken']
+        if backend_settings['enable_powerflex_backend'].lower() == 'true':
+            self.enable_powerflex_backend = True
+            powerflex_settings = self.get_settings_section(
+                "PowerFlex Settings")
+            self.powerflex_rpms_method = \
+                powerflex_settings['powerflex_rpms_method']
+            self.powerflex_cluster_name = \
+                powerflex_settings['powerflex_cluster_name']
+            self.powerflex_protection_domain = \
+                powerflex_settings['powerflex_protection_domain']
+            self.powerflex_storage_pool = \
+                powerflex_settings['powerflex_storage_pool']
+            self.powerflex_cluster_config = \
+                powerflex_settings['powerflex_cluster_config']
+            self.powerflex_mgmt_interface = \
+                powerflex_settings['powerflex_mgmt_interface']
+            self.powerflex_cluster_interface = \
+                powerflex_settings['powerflex_cluster_interface']
+            self.powerflex_cluster_virtualip = \
+                powerflex_settings['powerflex_cluster_virtualip']
+            self.powerflex_password = \
+                powerflex_settings['powerflex_password']
+            self.powerflex_liatoken = \
+              powerflex_settings['powerflex_liatoken']
+        else:
+            self.enable_powerflex_backend = False
 
         # powermax
         if backend_settings['enable_powermax_backend'].lower() == 'true':

@@ -216,20 +216,6 @@ class Director(InfraHost):
                 self.settings.manila_unity_container_version = \
                     self.run_tty(cmd)[0].replace('\r', '').rstrip()
 
-        if self.settings.enable_powerflex_cinder_backend is True:
-            cmds = ['sudo cp -R ' + \
-                    home_dir + \
-                    '/pilot/powerflex/powerflex-ansible ' + \
-                    '/usr/share/powerflex-ansible',
-                    'sudo cp -R ' + \
-                    home_dir + \
-                    '/pilot/powerflex/tripleo-powerflex-run-ansible ' + \
-                    '/usr/share/ansible/tripleo-powerflex-run-ansible'
-                    ]
-
-            for cmd in cmds:
-                self.run_as_root(cmd)
-
 
     def install_director(self):
         logger.info("Installing the undercloud")
