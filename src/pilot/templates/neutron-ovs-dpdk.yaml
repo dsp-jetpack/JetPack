@@ -29,6 +29,7 @@ parameter_defaults:
     VhostuserSocketGroup: "hugetlbfs"
     OvsPmdCoreList: "4-7,28-31"
     OvsDpdkCoreList: "0-3,24-27"
+    NovaComputeCpuSharedSet: "0-3,40-43"
     IsolCpusList: "4-23,28-47"
     OvsDpdkMemoryChannels: "4"
     NovaReservedHostMemory: 4096
@@ -40,6 +41,7 @@ parameter_defaults:
     VhostuserSocketGroup: "hugetlbfs"
     OvsPmdCoreList: "4-7,28-31"
     OvsDpdkCoreList: "0-3,24-27"
+    NovaComputeCpuSharedSet: "0-3,40-43"
     IsolCpusList: "4-23,28-47"
     OvsDpdkMemoryChannels: "4"
     NovaReservedHostMemory: 4096

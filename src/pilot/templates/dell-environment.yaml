@@ -50,11 +50,9 @@ parameter_defaults:
   # NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','NUMATopologyFilter','AggregateInstanceExtraSpecsFilter']
 
   # List or range of physical CPU cores to reserve for virtual machine processes.
-  # This parameter is depricated in 16.1. In the future releases, use
-  # NovaComputeCpuDedicatedSet and NovaComputeCpuSharedSet instead. 
   # Disabled by default for XSP Profile
   # This line is uncommented and updated when using CSP Profile
-  # NovaVcpuPinSet: "8-23,32-47"
+  # NovaComputeCpuDedicatedSet: "8-23,32-47"
   # DellComputeParameters:
     # KernelArgs: "default_hugepagesz=1GB hugepagesz=1G hugepages=176 iommu=pt intel_iommu=on"
 
