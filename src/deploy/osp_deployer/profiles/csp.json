@@ -300,7 +300,7 @@
                   "3_node"
                ]
             },
-            "powerflex_cluster_virtualip": {
+            "powerflex_cluster_vip": {
                "validate": [
                   "should_be_valid_ip"
                ]

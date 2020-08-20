@@ -166,7 +166,8 @@
             "nic_env_file": {
                "valid_values": [
                   "4_port/nic_environment.yaml",
-                  "5_port/nic_environment.yaml"
+                  "5_port/nic_environment.yaml",
+                  "5_port_powerflex/nic_environment.yaml"
                ]
             },
             "ControllerBondInterfaceOptions": "",
@@ -279,7 +280,7 @@
                   "3_node"
                ]
             },
-            "powerflex_cluster_virtualip": {
+            "powerflex_cluster_vip": {
                "validate": [
                   "should_be_valid_ip"
                ]
