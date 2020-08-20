@@ -445,13 +445,25 @@ class Settings:
         else:
             self.enable_unity_manila_backend = False
         
-        # PowerFlex OS settings
+        # PowerFlex
         if backend_settings['enable_powerflex_backend'].lower() == 'true':
             self.enable_powerflex_backend = True
+            
+            # Cinder parameters
+            self.powerflex_san_login = \
+                 backend_settings['powerflex_san_login']
+            self.powerflex_san_password = \
+                 backend_settings['powerflex_san_password']
+            self.powerflex_storage_pools = \
+                 backend_settings['powerflex_storage_pools']
+            
+            # Powerflex parameters
             powerflex_settings = self.get_settings_section(
                 "PowerFlex Settings")
             self.powerflex_rpms_method = \
                 powerflex_settings['powerflex_rpms_method']
+            self.powerflex_rpms_path = \
+                powerflex_settings['powerflex_rpms_path']
             self.powerflex_cluster_name = \
                 powerflex_settings['powerflex_cluster_name']
             self.powerflex_protection_domain = \
@@ -460,16 +472,22 @@ class Settings:
                 powerflex_settings['powerflex_storage_pool']
             self.powerflex_cluster_config = \
                 powerflex_settings['powerflex_cluster_config']
+            self.powerflex_config_interface = \
+                powerflex_settings['powerflex_config_interface']
             self.powerflex_mgmt_interface = \
                 powerflex_settings['powerflex_mgmt_interface']
             self.powerflex_cluster_interface = \
                 powerflex_settings['powerflex_cluster_interface']
-            self.powerflex_cluster_virtualip = \
-                powerflex_settings['powerflex_cluster_virtualip']
+            self.powerflex_cluster_vip = \
+                powerflex_settings['powerflex_cluster_vip']
+            self.powerflex_rebuild_interface = \
+                powerflex_settings['powerflex_rebuild_interface']
+            self.powerflex_disks = \
+                powerflex_settings['powerflex_disks']
             self.powerflex_password = \
                 powerflex_settings['powerflex_password']
-            self.powerflex_liatoken = \
-              powerflex_settings['powerflex_liatoken']
+            self.powerflex_lia_token = \
+              powerflex_settings['powerflex_lia_token']
         else:
             self.enable_powerflex_backend = False
 
@@ -659,6 +677,10 @@ class Settings:
             '/pilot/templates/dellemc-powermax-fc-cinder-backend.yaml'
         self.powermax_manila_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/powermax-manila-config.yaml'
+        self.dell_powerflex_cinder_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/dellemc-powerflex-cinder-conf.yaml'
+        self.dell_powerflex_ansible_yaml = self.foreman_configuration_scripts + \
+            '/pilot/powerflex/templates/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
         self.ceph_osd_config_yaml = self.foreman_configuration_scripts + \

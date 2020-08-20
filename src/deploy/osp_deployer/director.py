@@ -141,7 +141,7 @@ class Director(InfraHost):
 
         self.jinja2_env = Environment(
             loader=FileSystemLoader(self.settings.jinja2_templates))
-
+         
         cmd = "mkdir -p " + self.pilot_dir
         self.run(cmd)
 
@@ -550,7 +550,8 @@ class Director(InfraHost):
             self.render_and_upload_roles_data_edge()
         self.setup_dell_storage()
         self.setup_manila()
-        self.setup_environment()
+        if self.settings.enable_powerflex_backend == False:
+            self.setup_environment()
         self.setup_sanity_ini()
 
     def clamp_min_pgs(self, num_pgs):
@@ -899,7 +900,14 @@ class Director(InfraHost):
                          dell_powerflex_cinder_yaml)
         self.run_tty("cp " + dell_powerflex_cinder_yaml +
                      " " + dell_powerflex_cinder_yaml + ".bak")
-        self.setup_powerflex_cinder(dell_powerflex_cinder_yaml)
+
+        dell_powerflex_ansible_yaml = self.templates_dir  + \
+            "/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml"
+        self.upload_file(self.settings.dell_powerflex_ansible_yaml,
+                         dell_powerflex_ansible_yaml)
+        self.run_tty("cp " + dell_powerflex_ansible_yaml +
+                     " " + dell_powerflex_ansible_yaml + ".bak")
+        self.setup_powerflex(dell_powerflex_cinder_yaml,dell_powerflex_ansible_yaml)
 
 
         # Enable multiple backends now
@@ -1188,10 +1196,10 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
 
-    def setup_powerflex_cinder(self, powerflex_cinder_yaml):
+    def setup_powerflex(self, powerflex_cinder_yaml, powerflex_ansible_yaml):
 
-        if self.settings.enable_powerflex_cinder_backend is False:
-            logger.debug("Not setting up powerflex  backend.")
+        if self.settings.enable_powerflex_backend is False:
+            logger.debug("Not setting up powerflex backend.")
             return
 
         logger.debug("Configuring dell emc powerflex backend.")
@@ -1211,6 +1219,55 @@ class Director(InfraHost):
                 ]
         for cmd in cmds:
             self.run_tty(cmd)
+
+        logger.debug("Configuring ansible playbook for powerflex deployment.")
+
+        cmds = ['sed -i "s|<powerflex_rpms_method>|' +
+                self.settings.powerflex_rpms_method +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_rpms_path>|' +
+                self.settings.powerflex_rpms_path +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_name>|' +
+                self.settings.powerflex_cluster_name +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_protection_domain>|' +
+                self.settings.powerflex_protection_domain +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_storage_pool>|' +
+                self.settings.powerflex_storage_pool +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_config>|' +
+                self.settings.powerflex_cluster_config +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_config_interface>|' +
+                self.settings.powerflex_config_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_mgmt_interface>|' +
+                self.settings.powerflex_mgmt_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_interface>|' +
+                self.settings.powerflex_cluster_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_vip>|' +
+                self.settings.powerflex_cluster_vip +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_rebuild_interface>|' +
+                self.settings.powerflex_rebuild_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_disks>|' +
+                self.settings.powerflex_disks +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_password>|' +
+                self.settings.powerflex_password +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_lia_token>|' +
+                self.settings.powerflex_lia_token +
+                '|" ' + powerflex_ansible_yaml,
+                ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
 
     def setup_net_envt(self):
 
@@ -1747,7 +1804,7 @@ class Director(InfraHost):
             cmd += " --debug"
         if self._has_edge_sites():
             cmd += " --network_data"
-        if self.settings.enable_dashboard is True:
+        if self.settings.enable_dashboard is True and self.settings.enable_powerflex_backend is False:
             cmd += " --dashboard_enable"
 
         cmd += " > overcloud_deploy_out.log 2>&1"
@@ -3635,7 +3692,7 @@ class Director(InfraHost):
 
 
 if __name__ == "__main__":
-    settings = Settings("/root/R62.ini")
+    settings = Settings("/root/r88.ini")
     director = Director()
     # director.render_and_upload_compute_templates_edge()
     # director.render_and_upload_network_isolation_edge()
