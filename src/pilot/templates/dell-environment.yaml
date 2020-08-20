@@ -98,7 +98,7 @@ parameter_defaults:
     osd_objectstore: bluestore
 
   CephAnsibleExtraConfig:
-    nb_retry_wait_osd_up: 360
+    nb_retry_wait_osd_up: 500
     delay_wait_osd_up: 60
 
 
