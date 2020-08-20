@@ -244,7 +244,7 @@ class Director(InfraHost):
         if len(self.settings.overcloud_nodes_pwd) > 0:
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
         if self.settings.enable_powerflex_backend is True:
-            cmd += " --enable_powerflex 1"
+            cmd += " --enable_powerflex"
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
             raise AssertionError("Director/Undercloud did not " +
