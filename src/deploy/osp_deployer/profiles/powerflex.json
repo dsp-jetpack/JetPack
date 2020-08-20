@@ -1,12 +1,11 @@
 {
-   "name": "CSP",
-   "sample_ini": "sample_csp_profile.ini",
+   "name": "powerflex",
+   "sample_ini": "sample_powerflex_profile.ini",
    "associated_settings": [
       {
          "Dell NFV Settings": {
             "hpg_enable": {
                "valid_values": [
-                  "true",
                   "false"
                ]
             },
@@ -18,80 +17,65 @@
             },
             "numa_enable": {
                "valid_values": [
-                  "true",
                   "false"
                ]
             },
             "numa_hostos_cpu_count": {
-                 "valid_values": [
-                   "2",
-                   "4",
-                   "6",
-                   "8"
-                ]
-             },
+               "valid_values": [
+                  "2",
+                  "4",
+                  "6",
+                  "8"
+        ]
+        },
             "ovs_dpdk_enable": {
+               "valid_values": [
+                  "false"
+               ]
+            },
+        "sriov_enable": {
                 "valid_values": [
-                   "true",
                    "false"
                 ]
              },
-            "sriov_enable": {
+
+        "smart_nic": {
                 "valid_values": [
-                   "true",
                    "false"
                 ]
              },
-            "smart_nic": {
-                "valid_values": [
-                   "true",
-                   "false"
-                ]
-             },
-            "sriov_vf_count": {
+       "sriov_vf_count": {
                 "validate": [
-                  "should_be_valid_int"
+                   "should_be_valid_int"
                 ],
                 "in_range": [
                    "1-64"
                 ]
              },
-            "octavia_enable": {
-              "valid_values": [
-                 "true",
-                 "false"
-              ]
+       "octavia_enable": {
+               "valid_values": [
+                  "false"
+               ]
              },
-            "octavia_generate_certs": {
-              "valid_values": [
-                 "true",
-                 "false"
-              ]
-             },
-            "dvr_enable" :{
-              "valid_values": [
-                 "true",
-                 "false"
-              ]
+       "octavia_generate_certs": {
+         "valid_values": [
+            "true",
+            "false"
+         ]
+        },
+        "dvr_enable" :{
+               "valid_values": [
+                  "false"
+               ]
             },
-            "barbican_enable" :{
-              "valid_values": [
-                 "true",
-                 "false"
-              ]
-            }
-         }        
-   },
-      {
-         "Vips Settings": {
-            "use_static_vips" :{
+        "barbican_enable" :{
                "valid_values": [
                   "true",
                   "false"
                ]
             }
-         }
-      }, 
+        }
+    },
       {
          "MTU Settings": {
             "mtu_selection": {
@@ -100,7 +84,7 @@
                   "per_network"
                ]
             },
-             "mtu_size_global_default": {
+            "mtu_size_global_default": {
                "validate": [
                   "should_be_valid_int"
                ],
@@ -108,7 +92,7 @@
                   "1500-9000"
                ]
             },
-             "public_api_network_mtu": {
+            "public_api_network_mtu": {
                "validate": [
                   "should_be_valid_int"
                ],
@@ -167,28 +151,22 @@
          }
       },
       {
+         "Vips Settings": {
+            "use_static_vips": {
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            }
+         }
+      },
+      {
          "Nodes Nics and Bonding Settings": {
             "sah_bond_opts": "",
             "nic_env_file": {
                "valid_values": [
-                  "4_port/nic_environment.yaml",
-                  "5_port/nic_environment.yaml",
-                  "ovs-dpdk_9_port/nic_environment.yaml",
-                  "ovs-dpdk_8_port/nic_environment.yaml",
-                  "ovs-dpdk_7_port/nic_environment.yaml",
-                  "ovs-dpdk_6_port/nic_environment.yaml",
-                  "sriov_9_port/nic_environment.yaml",
-                  "sriov_8_port/nic_environment.yaml",
-                  "sriov_7_port/nic_environment.yaml",
-                  "sriov_6_port/nic_environment.yaml",
-                  "sriov_9_port_offload/nic_environment.yaml",
-                  "sriov_8_port_offload/nic_environment.yaml",
-                  "sriov_7_port_offload/nic_environment.yaml",
-                  "sriov_6_port_offload/nic_environment.yaml",
-                  "dvr_6_port/nic_environment.yaml",
-                  "dvr_7_port/nic_environment.yaml",
-                  "ovs-dpdk_sriov_9_port/nic_environment.yaml",
-                  "ovs-dpdk_sriov_8_port/nic_environment.yaml"
+                  "4_port_powerflex/nic_environment.yaml",
+                  "5_port_powerflex/nic_environment.yaml"
                ]
             },
             "ControllerBondInterfaceOptions": "",
@@ -197,7 +175,7 @@
          }
       },
       {
-         "Deployment Settings":{
+         "Deployment Settings": {
             "undercloud_admin_host": {
                "validate": [
                   "should_be_valid_ip"
@@ -208,7 +186,7 @@
                   "should_be_valid_ip"
                ]
             },
-            "overcloud_static_ips" :{
+            "overcloud_static_ips": {
                "valid_values": [
                   "true",
                   "false"
@@ -225,7 +203,7 @@
          "enable_fencing":""
          }
       },
-      {
+     {
        "Subscription Manager Settings":{
             "use_satellite" : {
                   "valid_values": [
@@ -235,10 +213,11 @@
         }
        }
       },
+
       {
-         "Advanced Settings":{
-            "rhsm_repos":"",
-            "use_internal_repo":"",
+         "Advanced Settings": {
+            "rhsm_repos": "",
+            "use_internal_repo": "",
             "deploy_overcloud_debug": {
                "valid_values": [
                   "true",
@@ -270,7 +249,7 @@
             }
          }
       },
-      {
+	  {
        "Storage back-end Settings":{
             "unity_storage_protocol" : {
                   "valid_values": [

@@ -247,7 +247,7 @@ if [ -n "${overcloud_nodes_pwd}" ]; then
     run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
 fi
 
-if [ ${enable_powerflex == 1 ]; then
+if [ ${enable_powerflex} == 1 ]; then
     echo "# PowerFlex backend enabled, injecting rpms"
     run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
     run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
