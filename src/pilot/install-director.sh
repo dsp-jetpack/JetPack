@@ -355,6 +355,21 @@ echo "## Restarting ironic-conductor..."
 sudo podman restart ironic_conductor
 echo "## Done."
 
+
+# Satellite , if using 
+if [ ! -z "${containers_prefix}" ]; then
+    container_yaml=$HOME/containers-prepare-parameter.yaml
+    sed -i "s/namespace:.*/namespace: ${satellite_hostname}:5000/" ${container_yaml}
+    sed -i "s/rhceph-4-dashboard-rhel8/${containers_prefix}rhceph_rhceph-4-dashboard-rhel8/" ${container_yaml}
+    sed -i "s/ose-prometheus-alertmanager/${containers_prefix}openshift4_ose-prometheus-alertmanager/" ${container_yaml}
+    sed -i "s/rhceph-4-rhel8/${containers_prefix}rhceph_rhceph-4-rhel8/" ${container_yaml}
+    sed -i "s/ose-prometheus-node-exporter/${containers_prefix}openshift4_ose-prometheus-node-exporter/" ${container_yaml}
+    sed -i "s/ose-prometheus$/${containers_prefix}openshift4_ose-prometheus/" ${container_yaml}
+    sed -i "s/openstack-/${containers_prefix}rhosp-rhel8_openstack-/" ${container_yaml}
+    sed -i "s/tag_from_label:.*/tag_from_label: '16.1'/" ${container_yaml}
+fi
+
+
 # If deployment is unlocked, generate the overcloud container list from the latest.
 #if [ -e $HOME/overcloud_images.yaml ];
 #then
