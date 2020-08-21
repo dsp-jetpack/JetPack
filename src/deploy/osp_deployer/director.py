@@ -232,13 +232,7 @@ class Director(InfraHost):
             cmd = '~/pilot/install-director.sh --dns ' + \
                   self.settings.name_server + \
                   " --director_ip " + \
-                  self.ip + \
-                  " --sm_user " + \
-                  self.settings.subscription_manager_user + \
-                  " --sm_pwd " + \
-                  self.settings.subscription_manager_password + \
-                  " --sm_pool " + \
-                  self.settings.subscription_manager_vm_ceph
+                  self.ip 
 
         if len(self.settings.overcloud_nodes_pwd) > 0:
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
