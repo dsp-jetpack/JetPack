@@ -535,7 +535,7 @@ def wait_for_jobs_to_complete(job_ids, drac_client, ip_service_tag):
 
 def clear_job_queue(drac_client, ip_service_tag):
     LOG.info("Clearing the job queue on {}".format(ip_service_tag))
-    drac_client.delete_jobs(job_ids=['JID_CLEARALL_FORCE'])
+    drac_client.delete_jobs(job_ids=['JID_CLEARALL'])
 
     # It takes a second or two for the iDRAC to switch from the ready state to
     # the not-ready state, so wait for this transition to happen
@@ -587,11 +587,14 @@ def config_idrac(instack_lock,
     clear_job_queue(drac_client, ip_service_tag)
     if skip_nic_config:
         target_boot_mode = BootModeHelper.get_boot_mode(drac_client)
+        LOG.info("wwww skip_nic_config target boot mode {}".format(target_boot_mode))
     elif BootModeHelper.is_boot_order_flexibly_programmable(drac_client):
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_UEFI
+        LOG.info("wwww is_boot_order_flexibly_programmable target boot mode {}".format(target_boot_mode))
     else:
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_BIOS
-
+        LOG.info("xxxxxxxxxxxxxx esle!!!!!!!")
+    LOG.info("qqqq  target boot mode {}".format(target_boot_mode))
     config_boot_mode(drac_client, ip_service_tag, node, target_boot_mode)
 
     job_ids = list()

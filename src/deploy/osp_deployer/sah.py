@@ -420,29 +420,38 @@ class Sah(InfraHost):
         logger.info('Setting routes for edge subnets on SAH and '
                     'restarting bridge interfaces')
         setts = self.settings
-        ntdm = setts.node_type_data_map
+        for node_type, node_type_data in setts.node_type_data_map.items():
+            self.create_subnet_routes_edge(node_type)
+        logger.info('Routes for edge subnets on SAH updated')
+
+    def create_subnet_routes_edge(self, node_type):
+        logger.info('Setting route for edge subnet for node_type: %s',
+                    node_type)
+        setts = self.settings
+        logger.info('setts.node_type_data_map: %s',
+                    setts.node_type_data_map)
+        node_type_data = setts.node_type_data_map[node_type]
         route_br_mgmt = '/etc/sysconfig/network-scripts/route-br-mgmt'
         route_br_prov = '/etc/sysconfig/network-scripts/route-br-prov'
         with open(route_br_mgmt, 'w') as route_br_mgmt_stream:
-            for node_type, node_type_data in ntdm.items():
-                mgmt_cidr = node_type_data['mgmt_cidr']
-                mgmt_bridge = 'br-mgmt'
-                route = "{} via {} dev {}\n".format(mgmt_cidr,
-                                                    setts.management_gateway,
-                                                    mgmt_bridge)
-                route_br_mgmt_stream.write(route)
+            mgmt_cidr = node_type_data['mgmt_cidr']
+            mgmt_bridge = 'br-mgmt'
+            route = "{} via {} dev {}\n".format(mgmt_cidr,
+                                                setts.management_gateway,
+                                                mgmt_bridge)
+            route_br_mgmt_stream.write(route)
         with open(route_br_prov, 'w') as route_br_prov_stream:
-            for node_type, node_type_data in ntdm.items():
-                prov_cidr = node_type_data['cidr']
-                prov_bridge = 'br-prov'
-                route = "{} via {} dev {}\n".format(prov_cidr,
-                                                    setts.provisioning_gateway,
-                                                    prov_bridge)
-                route_br_prov_stream.write(route)
-        # Restart networks
+            prov_cidr = node_type_data['cidr']
+            prov_bridge = 'br-prov'
+            route = "{} via {} dev {}\n".format(prov_cidr,
+                                                setts.provisioning_gateway,
+                                                prov_bridge)
+            route_br_prov_stream.write(route)
+
+    def restart_networks(self):
+        logger.info("Restarting networks on SAH")
         for bridge in ['br-mgmt', 'br-prov']:
             cmd = 'ifdown {} ; ifup {}'.format(bridge, bridge)
             subprocess.check_output(cmd,
                                     stderr=subprocess.STDOUT,
                                     shell=True)
-        logger.info('Routes for edge subnets on SAH updated')

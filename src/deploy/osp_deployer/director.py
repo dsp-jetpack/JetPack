@@ -27,11 +27,9 @@ from jinja2 import FileSystemLoader
 from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from collections import defaultdict
-from collections import OrderedDict
 from infra_host import InfraHost
 from infra_host import directory_check
 from auto_common import Scp
-from auto_common.yaml_utils import OrderedDumper
 from auto_common.yaml_utils import OrderedLoader
 
 # logger = logging.getLogger("osp_deployer")
@@ -504,9 +502,10 @@ class Director(InfraHost):
         roles_to_nodes["compute"] = setts.compute_nodes
         roles_to_nodes["storage"] = setts.ceph_nodes
         roles_to_nodes["computehci"] = setts.computehci_nodes
+        # only do this if --deploy-all-edge-sites flag is sent to deployer
         # Add edge nodes if there are any defined
-        for node_type, edge_site_nodes in setts.node_types_map.items():
-            roles_to_nodes[node_type] = edge_site_nodes
+        # for node_type, edge_site_nodes in setts.node_types_map.items():
+        #    roles_to_nodes[node_type] = edge_site_nodes
 
         threads = []
         for role in roles_to_nodes.keys():
@@ -2647,18 +2646,13 @@ class Director(InfraHost):
                     'register with virsh properly')
         setts = self.settings
         for node_type, node_type_data in setts.node_type_data_map.items():
-            self.create_subnet_routes_edge(node_type, node_type_data)
+            self.create_subnet_routes_edge(node_type)
+        self.restart_director_vm()
+        logger.info('Director VM edge routes set')
 
-        logger.info('Restarting Director VM')
-        self.run_as_root('init 6')
-        dir_pub_ip = setts.director_node.public_api_ip
-        dir_pw = setts.director_node.root_password
-        self.wait_for_vm_to_go_down(dir_pub_ip,
-                                    "root",
-                                    dir_pw)
-
-    def create_subnet_routes_edge(self, node_type, node_type_data):
+    def create_subnet_routes_edge(self, node_type):
         setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
         route_mgmt_file = (" >> /etc/sysconfig/network-scripts/route-"
                            + UNDERCLOUD_LOCAL_INTERFACE)
         route_prov_file = (" >> /etc/sysconfig/network-scripts/"
@@ -3609,6 +3603,16 @@ class Director(InfraHost):
                      stg_path, remote_file)
         return stg_path, remote_file
 
+    def restart_director_vm(self):
+        setts = self.settings
+        logger.info('Restarting Director VM')
+        self.run_as_root('init 6')
+        dir_pub_ip = setts.director_node.public_api_ip
+        dir_pw = setts.director_node.root_password
+        self.wait_for_vm_to_go_down(dir_pub_ip, "root", dir_pw)
+        self.wait_for_vm_to_come_up(dir_pub_ip, "root", dir_pw)
+        logger.info('Director VM restarted')
+
     def export_control_plane_config(self):
         """
         openstack overcloud export -f --stack r62 --output-file \
@@ -3702,7 +3706,8 @@ if __name__ == "__main__":
     # director.create_subnet_routes_edge_all()
     # for node_type in settings.node_types:
     #    director.node_introspection(node_type)
-    director.overcloud_config_download()
+    ###### director.overcloud_config_download()
+    director.assign_node_roles()
     ## director.render_and_upload_roles_data_edge_all()
     # director.export_control_plane_config()
     ## director.render_and_upload_nova_az_edge_all()

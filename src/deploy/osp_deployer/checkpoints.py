@@ -362,14 +362,16 @@ class Checkpoints:
         logger.debug("Verify the undercloud installed properly")
         cmd = "stat ~/stackrc"
         setts = self.settings
+        install_fail = False
+        _error = None
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
         if "No such file or directory" in re[0]:
-            raise AssertionError(
-                "Director & Undercloud did not install properly, "
-                "check /pilot/install-director.log for details")
+            _error = AssertionError("Director & Undercloud did not install "
+                                    "properly, check "
+                                    "/pilot/install-director.log for details")
 
         cmd = ("grep \"The Undercloud has been successfully installed\" "
                + "~/pilot/install-director.log")
@@ -380,9 +382,9 @@ class Checkpoints:
                                      setts.director_install_account_pwd,
                                      cmd)
         if "The Undercloud has been successfully installed" not in re[0]:
-            raise AssertionError(
-                "Director & Undercloud did not install properly,"
-                " check /pilot/install-director.log for details")
+            _error = AssertionError("Director & Undercloud did not install "
+                                    "properly, check "
+                                    "/pilot/install-director.log for details")
 
         cmd = "cat "\
               "~/pilot/install-director.log"
@@ -391,9 +393,8 @@ class Checkpoints:
                                      setts.director_install_account_pwd,
                                      cmd)
         if "There are no enabled repos" in re[0]:
-            raise AssertionError(
-                "Unable to attach to pool ID while updating the overcloud\
-                image")
+            _error = AssertionError("Unable to attach to pool ID while "
+                                    "updating the overcloud image")
 
         cmd = "source ~/stackrc;glance image-list"
         re = Ssh.execute_command_tty(self.director_ip,
@@ -401,18 +402,22 @@ class Checkpoints:
                                      setts.director_install_account_pwd,
                                      cmd)
         if "overcloud-full" not in re[0]:
-            raise AssertionError(
-                "Unable to find the overcloud image in glance - "
-                "check the install-director.log for possible package"
-                "download errors")
+            _error = AssertionError("Unable to find the overcloud image "
+                                    "in glance - check the "
+                                    "install-director.log for possible "
+                                    "package download errors")
 
         logger.info("Undercloud installed Successfully!")
+        if _error:
+            install_fail = True
+        return install_fail, _error
 
     def verify_overcloud_deployed(self):
         logger.debug("Verify the overcloud installed properly")
         setts = self.settings
         overcloud_name = setts.overcloud_name
-        install_fail=False
+        install_fail = False
+        error = None
 
         # Verify the overcloud RC file was created
         cmd = "test -f ~/" + overcloud_name + "rc; echo $?;"
@@ -422,8 +427,9 @@ class Checkpoints:
                                      cmd)
         is_conf = not bool(int(re[0]))
         if is_conf is False:
-            logger.error("Error : overcloud RC file missing")
-            install_fail=True
+            msg = "Overcloud RC file missing"
+            logger.error("Error: %s", msg)
+            error = AssertionError(msg)
 
         # Check log for successful deployment
         success = "Overcloud Deployed"
@@ -433,13 +439,14 @@ class Checkpoints:
                                      setts.director_install_account_pwd,
                                      cmd)
         if success not in re[0]:
-            logger.error("Error: Overcloud did not install successfully, check ~/pilot/overcloud_deploy_out.log")
-            install_fail=True
-        if install_fail is True:
-            raise AssertionError("Overcloud did not install successfully")
+            msg = ("Overcloud did not install successfully, "
+                   "check ~/pilot/overcloud_deploy_out.log")
+            logger.error("Error: %s", msg)
+            error = AssertionError(msg)
+
         else:
             logger.info("Overcloud install successful")
-
+        return install_fail, error
 
     def verify_computes_virtualization_enabled(self):
         logger.debug("*** Verify the Compute nodes have KVM enabled *** ")
