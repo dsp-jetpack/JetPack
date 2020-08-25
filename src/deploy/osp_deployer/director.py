@@ -1547,7 +1547,6 @@ class Director(InfraHost):
         # in the neutron-sriov.yaml (sriov environment file)
 
         # Specify number of VFs for sriov mentioned interfaces
-        sriov_vfs_setting = []
         sriov_map_setting = []
         sriov_pci_passthrough = []
         physical_network = ["physint", "physint1", "physint2", "physint3"]
@@ -1573,23 +1572,12 @@ class Director(InfraHost):
 
             sriov_pci_passthrough.append(nova_pci)
 
-            if (self.settings.enable_smart_nic is True):
-                interface = interface + ':' + \
-                                        self.settings.sriov_vf_count + \
-                                        ':switchdev'
-            else:
-                interface = interface + ':' + \
-                                        self.settings.sriov_vf_count
-
-            sriov_vfs_setting.append(interface)
-
-        sriov_vfs_setting = "'" + ",".join(sriov_vfs_setting) + "'"
         sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"
         sriov_pci_passthrough = "[" + ",".join(sriov_pci_passthrough) + "]"
 
-        cmds.append('sed -i "s|NeutronSriovNumVFs:.*|' +
-                    'NeutronSriovNumVFs: ' +
-                    sriov_vfs_setting + '|" ' + env_file)
+        cmds.append('sed -i "s|NumSriovVfs:.*|' +
+                    'NumSriovVfs: ' +
+                    self.settings.sriov_vf_count + '|" ' + env_file)
         cmds.append('sed -i "s|NeutronPhysicalDevMappings:.*|' +
                     'NeutronPhysicalDevMappings: ' +
                     sriov_map_setting + '|" ' + env_file)
