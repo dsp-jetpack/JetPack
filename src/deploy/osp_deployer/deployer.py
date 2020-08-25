@@ -143,14 +143,14 @@ def deploy_overcloud(director_vm):
     director_vm.deploy_overcloud()
 
 
-def deploy_edge(args, setts, director_vm):
+def deploy_edge(args, director_vm):
     logger.info("=== Installing edge site(s)")
-    logger.info("=== Installing edge site(s), args: %s", str(args))
     if args.edge_site:
         logger.info("=== Installing edge site, args: %s", str(args.edge_site))
+        director_vm.deploy_edge_site(args.edge_site)
     elif args.edge_site_all:
-        logger.info("=== Installing all edge site, args: %s",
-                    str(setts.node_types))
+        logger.info("=== Installing all edge sites defined in ini")
+        director_vm.deploy_edge_site_all()
 
 
 def get_is_deploy_overcloud():
@@ -303,7 +303,7 @@ def deploy():
 
                 _is_oc_failed, _err_oc = tester.verify_overcloud_deployed()
                 if not _is_oc_failed:
-                    deploy_edge(args, settings, director_vm)
+                    deploy_edge(args, director_vm)
                 else:
                     raise _err_oc
             else:

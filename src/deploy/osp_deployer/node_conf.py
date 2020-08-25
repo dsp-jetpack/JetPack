@@ -40,6 +40,10 @@ class NodeConf:
         self.provisioning_slaves = None
         self.name_server = None
         self.node_type = None
+        self.management_if = None
+        self.private_api_if = None
+        self.public_api_if = None
+        self.provisioning_if = None
         self.__dict__ = json
 
     def __str__(self):

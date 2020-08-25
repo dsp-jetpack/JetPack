@@ -342,25 +342,29 @@ class Sah(InfraHost):
             conf = conf + ("satellite_activation_key " +
                            self.settings.satellite_activation_key,)
 
-        conf = conf + ("# Iface     IP" +
-                       "               NETMASK" +
-                       "              MTU",)
-        conf = conf + ("enp1s0        " +
-                       self.settings.director_node.public_api_ip +
-                       "    " + self.settings.public_api_netmask +
-                       "     " + self.settings.public_api_network_mtu,)
-        conf = conf + ("enp2s0        " +
-                       self.settings.director_node.provisioning_ip +
-                       "    " + self.settings.provisioning_netmask +
-                       "     " + self.settings.provisioning_network_mtu,)
-        conf = conf + ("enp3s0        " +
-                       self.settings.director_node.management_ip +
-                       "    " + self.settings.management_netmask +
-                       "     " + self.settings.management_network_mtu,)
-        conf = conf + ("enp4s0        " +
-                       self.settings.director_node.private_api_ip +
-                       "    " + self.settings.private_api_netmask +
-                       "     " + self.settings.private_api_network_mtu,)
+        conf = conf + ("# Iface     IP"
+                       + "               NETMASK"
+                       + "              MTU",)
+        conf = conf + (self.settings.director_node.public_api_ip
+                       + "        "
+                       + self.settings.director_node.public_api_ip
+                       + "    " + self.settings.public_api_netmask
+                       + "     " + self.settings.public_api_network_mtu,)
+        conf = conf + (self.settings.director_node.provisioning_if
+                       + "        "
+                       + self.settings.director_node.provisioning_ip
+                       + "    " + self.settings.provisioning_netmask
+                       + "     " + self.settings.provisioning_network_mtu,)
+        conf = conf + (self.settings.director_node.management_if
+                       + "        "
+                       + self.settings.director_node.management_ip
+                       + "    " + self.settings.management_netmask
+                       + "     " + self.settings.management_network_mtu,)
+        conf = conf + (self.settings.director_node.private_api_if
+                       + "        "
+                       + self.settings.director_node.private_api_ip
+                       + "    " + self.settings.private_api_netmask
+                       + "     " + self.settings.private_api_network_mtu,)
 
         for line in conf:
             self.run("echo '" +
