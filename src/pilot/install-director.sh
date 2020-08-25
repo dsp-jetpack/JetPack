@@ -17,10 +17,10 @@
 exec > >(tee $HOME/pilot/install-director.log)
 exec 2>&1
 
-USAGE="\nUsing RedHat CDN:$0 --director_ip <director public ip> --dns <dns_ip> --sm_user <subscription_manager_user> --sm_pwd <subscription_manager_pass> [--sm_pool <subcription_manager_poolid>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>]"
+USAGE="\nUsing RedHat CDN:$0 --director_ip <director public ip> --dns <dns_ip> [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>]"
 
 
-TEMP=`getopt -o h --long director_ip:,dns:,sm_user:,sm_pwd:,sm_pool:,proxy:,nodes_pwd:,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
+TEMP=`getopt -o h --long director_ip:,dns:,proxy:,nodes_pwd:,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
 eval set -- "$TEMP"
 
 
@@ -35,12 +35,6 @@ while true ; do
                 director_public_ip=$2 ; shift 2 ;;
         --dns)
                 dns_ip=$2 ; shift 2 ;;
-        --sm_user)
-                subscription_manager_user=$2 ; shift 2 ;;
-        --sm_pwd)
-                subscription_manager_pass=$2 ; shift 2 ;;
-        --sm_pool)
-                subcription_manager_poolid=$2; shift 2 ;;
         --satellite_hostname)
                 satellite_hostname=$2; shift 2;;
         --satellite_org)
@@ -66,15 +60,6 @@ if [ ! -z "${satellite_hostname}" ]; then
         exit 1
     fi
 
-elif [ ! -z "${subscription_manager_user}" ];then
-
-    if [ -z "${director_public_ip}" ] || [ -z "${dns_ip}" ] || [ -z "${subscription_manager_user}" ] || [ -z "${subscription_manager_pass}" ]; then
-        echo -e "$USAGE"
-        exit 1
-    fi
-else
-    echo -e "$USAGE"
-    exit 1
 fi
 
 
@@ -225,15 +210,11 @@ echo "## Customizing the overcloud image & uploading images"
 if [ ! -z "${satellite_hostname}" ]; then
     run_command "~/pilot/customize_image.sh --director_ip ${director_public_ip} \
                 --satellite_hostname ${satellite_hostname} \
-                --satellite_org ${satellite_org} \
-                --satellite_key ${satellite_key} \
                 --proxy ${proxy}"
 
-elif [ ! -z "${subscription_manager_user}" ];then
+elif [ ! -z "${proxy}" ]; then
     run_command "~/pilot/customize_image.sh --director_ip ${director_public_ip} \
-                --sm_user ${subscription_manager_user} \
-                --sm_pwd ${subscription_manager_pass} \
-                --sm_pool ${subcription_manager_poolid} --proxy ${proxy}"
+                --proxy ${proxy}"
 fi
 
 echo
