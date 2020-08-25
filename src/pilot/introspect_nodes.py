@@ -94,9 +94,6 @@ def get_nodes(ironic_client, node_type=None):
                  or (bool(_node_type) and node_type == _node_type))
         if not match:
             nodes.remove(node)
-
-    logger.info("ppppppppppp len(nodes) is: %s",
-                str(len(nodes)))
     return nodes
 
 
@@ -311,8 +308,6 @@ def main():
 
     ironic_client = IronicHelper.get_ironic_client()
     nodes = get_nodes(ironic_client, args.node_type)
-    # logger.info("oooooooooooooooo nodes %s", str(nodes))
-    # os._exit(0)
     introspect_nodes(args.in_band, ironic_client, nodes)
 
 

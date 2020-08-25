@@ -32,12 +32,8 @@ class BootModeHelper(object):
 
     @staticmethod
     def is_boot_order_flexibly_programmable(drac_client, bios_settings=None):
-        print("dddddddddddddddddddddd Bootmode helper, bios settings: %s "
-              % str(bios_settings))
         if not bios_settings:
             bios_settings = drac_client.list_bios_settings(by_name=True)
-            print("eeeeeeeeeeeeeeeeeeeeeeee Bootmode helper, bios settings: %s "
-                  % str(bios_settings))
         return 'SetBootOrderFqdd1' in bios_settings
 
     @staticmethod
