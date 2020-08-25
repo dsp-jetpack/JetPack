@@ -124,7 +124,7 @@ class NetworkValidation(object):
         os_auth_url, os_tenant_name, os_username, os_password, \
         os_user_domain_name, os_project_domain_name = \
             CredentialHelper.get_undercloud_creds()
-        auth_url = os_auth_url + "v3"
+        auth_url = os_auth_url + "/v3"
 
         kwargs = {'username': os_username,
                   'password': os_password,
@@ -256,7 +256,7 @@ class NetworkValidation(object):
                    "{}@{}".format(self.user, self.ip),
                    "/usr/sbin/ip -4 a"]
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-            stdout = process.stdout.read()
+            stdout = process.stdout.read().decode('utf-8')
 
             for network in self.networks:
                 subnet = str(network_to_subnet[network].network)
@@ -302,7 +302,7 @@ class NetworkValidation(object):
                                               source_node.ip),
                                "sudo ping -c 1 -w 2 {}".format(destination_ip)]
                         process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-                        stdout = process.stdout.read()
+                        stdout = process.stdout.read().decode('utf-8')
                         match = re.search("64 bytes from {0}: icmp_.eq=\d+ "
                                           "ttl=\d+ time=(.*) ms".format(
                                               destination_ip), stdout)
