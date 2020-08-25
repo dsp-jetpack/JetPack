@@ -345,7 +345,7 @@ class Sah(InfraHost):
         conf = conf + ("# Iface     IP"
                        + "               NETMASK"
                        + "              MTU",)
-        conf = conf + (self.settings.director_node.public_api_ip
+        conf = conf + (self.settings.director_node.public_api_if
                        + "        "
                        + self.settings.director_node.public_api_ip
                        + "    " + self.settings.public_api_netmask
