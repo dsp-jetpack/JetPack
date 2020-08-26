@@ -357,7 +357,9 @@ class Director(InfraHost):
     def node_discovery_edge(self, node_type):
         setts = self.settings
         nodes = self.settings.node_types_map[node_type]
-        logger.debug("Discovering nodes for node type: %s", node_type)
+        _node_cnt = len(nodes)
+        logger.debug("vvvvvvvvvv Discovering {} nodes for node type: {}"
+                     .format(str(_node_cnt), node_type))
         paths = self._generate_edge_template_paths(node_type, INSTACK, "json")
         stg_instack_path, remote_instack_file = paths
         cmd = "rm " + remote_instack_file + " -f"
@@ -3890,7 +3892,9 @@ class Director(InfraHost):
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
-    director.deploy_edge_site("edge-compute-denver")
+
+    director.node_discovery_edge("edge-compute-denver")
+    # director.deploy_edge_site("edge-compute-denver")
     # new functions
     # director.node_discovery_edge_all()
     # director.configure_idracs_edge_all()

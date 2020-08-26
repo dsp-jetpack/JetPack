@@ -427,8 +427,10 @@ class Checkpoints:
                                      cmd)
         is_conf = not bool(int(re[0]))
         if is_conf is False:
-            msg = "Overcloud RC file missing"
-            logger.error("Error: %s", msg)
+            msg = ("Overcloud RC file missing, either the overcloud has not "
+                   "been deployed yet or there was an issue during "
+                   "the deployment")
+            logger.warning(msg)
             error = AssertionError(msg)
 
         # Check log for successful deployment
@@ -441,7 +443,7 @@ class Checkpoints:
         if success not in re[0]:
             msg = ("Overcloud did not install successfully, "
                    "check ~/pilot/overcloud_deploy_out.log")
-            logger.error("Error: %s", msg)
+            logger.warning(msg)
             error = AssertionError(msg)
 
         else:
