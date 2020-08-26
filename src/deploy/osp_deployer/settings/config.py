@@ -634,6 +634,8 @@ class Settings:
         self.sah_kickstart = self.cloud_repo_dir + "/src/mgmt/osp-sah.ks"
         self.director_deploy_sh = self.foreman_configuration_scripts +\
             '/mgmt/deploy-director-vm.sh'
+        self.powerflexgw_deploy_py = self.foreman_configuration_scripts +\
+            '/mgmt/deploy-powerflexgw-vm.py'
         self.install_director_sh = self.foreman_configuration_scripts +\
             '/pilot/install-director.sh'
         self.deploy_overcloud_sh = self.foreman_configuration_scripts + \
@@ -765,6 +767,13 @@ class Settings:
                                         == "true" else False)
                     if node.is_director:
                         self.director_node = node
+                except AttributeError:
+                    pass
+                try:
+                    node.is_powerflexgw = (True if node.is_powerflexgw
+                                         == "true" else False)
+                    if node.is_powerflexgw:
+                        self.powerflexgw_node = node
                 except AttributeError:
                     pass
                 try:

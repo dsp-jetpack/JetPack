@@ -42,7 +42,16 @@
                 "private_api",
                 "public_api"
             ]
+        },
+        "powerflexgw_vm": {
+            "user": "root",
+            "ip" : "10.148.44.14",
+            "networks": [
+                "public_api",
+                "storage"
+            ]
         }
+
     }
 }
 

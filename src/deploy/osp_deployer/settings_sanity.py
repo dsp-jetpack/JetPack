@@ -425,6 +425,17 @@ class DeployerSanity:
         self.check_net_attrs(self.settings.director_node,
                              shouldhaveattributes,
                              shouldbbevalidips)
+        # Verify powerflexgw VM node network definition
+        logger.debug("verifying powerflexgw VM network settings")
+        shouldhaveattributes = ['hostname',
+                                'root_password',
+                                'storage_ip',
+                                'public_api_ip']
+        shouldbbevalidips = ['storage_ip', 'public_api_ip']
+
+        self.check_net_attrs(self.settings.dashboard_node,
+                             shouldhaveattributes,
+                             shouldbbevalidips)
 
         # Verify Controller nodes network definitioncls
         logger.debug("verifying controller nodes network settings")

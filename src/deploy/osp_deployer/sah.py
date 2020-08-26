@@ -277,7 +277,8 @@ class Sah(InfraHost):
 
     def clear_known_hosts(self):
         hosts = [
-            self.settings.director_node.public_api_ip
+            self.settings.director_node.public_api_ip,
+            self.settings.powerflexgw_node.public_api_ip
         ]
 
         if self.is_running_from_sah() is True:
@@ -292,7 +293,8 @@ class Sah(InfraHost):
 
     def handle_lock_files(self):
         files = [
-            'director_vm.vlock'
+            'director_vm.vlock',
+            'powerflexgw_vm.vlock'
         ]
 
         # Delete any staged locking files to prevent accidental reuse
@@ -306,7 +308,7 @@ class Sah(InfraHost):
 
         if self.settings.version_locking_enabled is True:
             logger.debug(
-                "Uploading version locking files for the director VM")
+                "Uploading version locking files for the director and powerflexgw VM")
 
             for eachone in files:
                 source_file_name = self.settings.lock_files_dir + "/" + eachone
@@ -397,7 +399,86 @@ class Sah(InfraHost):
             time.sleep(20)
             self.run("virsh undefine director")
             time.sleep(20)
+    def create_powerflexgw_vm(self):
+        remote_file = "/root/deploy-powerflexgw-vm.py"
+        self.upload_file(self.settings.powerflexgw_deploy_py,
+                         remote_file)
 
+        logger.debug("=== create powerflexgw.cfg")
+        powerflexgw_conf = "/root/powerflexgw.cfg"
+        self.run("rm " + powerflexgw_conf + " -f")
+        conf = ("rootpassword " + self.settings.powerflexgw_node.root_password,
+                "timezone " + self.settings.time_zone,
+                "smuser " + self.settings.subscription_manager_user,
+                "smpassword " + self.settings.subscription_manager_password,
+                "smpool " + self.settings.subscription_manager_vm_powerflexgw
+                "hostname " + self.settings.powerflexgw.hostname + "." +
+                self.settings.domain,
+                "gateway " + self.settings.public_api_gateway,
+                "nameserver " + self.settings.name_server,
+                "ntpserver " + self.settings.sah_node.provisioning_ip,
+                "# Iface     IP               NETMASK              MTU",)
+        if self.settings.use_satellite is True:
+            conf = conf + ("satellite_ip " + self.settings.satellite_ip,)
+            conf = conf + ("satellite_hostname " +
+                           self.settings.satellite_hostname,)
+            conf = conf + ("satellite_org " +
+                           self.settings.satellite_org,)
+            conf = conf + ("satellite_activation_key " +
+                           self.settings.satellite_activation_key,)
+
+        conf = conf + ("eth0        " +
+                       self.settings.powerflexgw_node.public_api_ip +
+                       "    " + self.settings.public_api_netmask +
+                       "     " + self.settings.public_api_network_mtu,)
+        conf = conf + ("eth1        " +
+                       self.settings.powerflexgw_node.storage_ip +
+                       "    " + self.settings.storage_netmask +
+                       "     " + self.settings.storage_network_mtu,)
+
+        for comd in conf:
+            self.run("echo '" + comd + "' >> " + powerflexgw_conf)
+        logger.debug("=== kick off the Gateway VM deployment")
+
+        re = self.run_tty("python " +
+                          remote_file +
+                          " /root/powerflexgw.cfg " +
+                          "/store/data/iso/RHEL8.iso")
+        startVM = True
+        for ln in re[0].split("\n"):
+            if "Restarting guest" in ln:
+                startVM = False
+        if startVM:
+            logger.debug(
+                "=== wait for the powerflexgw VM install to be complete \
+                & power it on")
+            while "shut off" \
+                  not in self.run("virsh list --all | grep powerflexgw")[0]:
+                time.sleep(60)
+            logger.debug("=== power on the powerflexgw VM ")
+            self.run("start powerflexgw")
+        logger.debug("=== waiting for the powerflexgw vm to boot up")
+        self.wait_for_vm_to_come_up(self.settings.powerflexgw_node.public_api_ip,
+                                    "root",
+                                    self.settings.powerflexgw_node.root_password)
+        logger.debug("powerflexgw VM is up")
+
+    def delete_powerflexgw_vm(self):
+        # Also delete any leftover "powerflexgw" VM so that it cannot interfere
+        # with the new "powerflexgw" VM that replaces it.
+        for vm in "powerflexgw":
+            if vm in self.run("virsh list --all | grep {}".format(vm))[0]:
+                if vm == "ceph":
+                    logger.info("=== deleting powerflexgw VM")
+
+                if "running" in self.run("virsh domstate {}".format(vm))[0]:
+                    self.run("virsh destroy {}".format(vm))
+                    time.sleep(20)
+
+                self.run("virsh undefine {}".format(vm))
+                time.sleep(20)
+
+        
     def is_running_from_sah(self):
         # Check whether we're running from the SAH node
         out = subprocess.check_output("ip addr",
