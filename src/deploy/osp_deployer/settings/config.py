@@ -442,31 +442,54 @@ class Settings:
                 backend_settings['manila_unity_ssl_cert_path']
         else:
             self.enable_unity_manila_backend = False
-        # PowerFlex OS settings
-        powerflex_settings = self.get_settings_section(
-            "PowerFlex Settings")
-        self.enable_powerflex_backend = \
-            powerflex_settings['enable_powerflex_backend']
-        self.powerflex_rpms_method = \
-            powerflex_settings['powerflex_rpms_method']
-        self.powerflex_cluster_name = \
-            powerflex_settings['powerflex_cluster_name']
-        self.powerflex_protection_domain = \
-            powerflex_settings['powerflex_protection_domain']
-        self.powerflex_storage_pool = \
-            powerflex_settings['powerflex_storage_pool']
-        self.powerflex_cluster_config = \
-            powerflex_settings['powerflex_cluster_config']
-        self.powerflex_mgmt_interface = \
-            powerflex_settings['powerflex_mgmt_interface']
-        self.powerflex_cluster_interface = \
-            powerflex_settings['powerflex_cluster_interface']
-        self.powerflex_cluster_virtualip = \
-            powerflex_settings['powerflex_cluster_virtualip']
-        self.powerflex_password = \
-            powerflex_settings['powerflex_password']
-        self.powerflex_liatoken = \
-            powerflex_settings['powerflex_liatoken']
+        
+        # PowerFlex
+        if backend_settings['enable_powerflex_backend'].lower() == 'true':
+            self.enable_powerflex_backend = True
+            
+            # Cinder parameters
+            self.powerflex_san_login = \
+                 backend_settings['powerflex_san_login']
+            self.powerflex_san_password = \
+                 backend_settings['powerflex_san_password']
+            self.powerflex_storage_pools = \
+                 backend_settings['powerflex_storage_pools']
+            self.powerflex_gateway_rpm = \
+                 backend_settings['powerflex_gateway_rpm']
+            
+            # Powerflex parameters
+            powerflex_settings = self.get_settings_section(
+                "PowerFlex Settings")
+            self.powerflex_rpms_method = \
+                powerflex_settings['powerflex_rpms_method']
+            self.powerflex_rpms_path = \
+                powerflex_settings['powerflex_rpms_path']
+            self.powerflex_cluster_name = \
+                powerflex_settings['powerflex_cluster_name']
+            self.powerflex_protection_domain = \
+                powerflex_settings['powerflex_protection_domain']
+            self.powerflex_storage_pool = \
+                powerflex_settings['powerflex_storage_pool']
+            self.powerflex_cluster_config = \
+                powerflex_settings['powerflex_cluster_config']
+            self.powerflex_config_interface = \
+                powerflex_settings['powerflex_config_interface']
+            self.powerflex_mgmt_interface = \
+                powerflex_settings['powerflex_mgmt_interface']
+            self.powerflex_cluster_interface = \
+                powerflex_settings['powerflex_cluster_interface']
+            self.powerflex_cluster_vip = \
+                powerflex_settings['powerflex_cluster_vip']
+            self.powerflex_rebuild_interface = \
+                powerflex_settings['powerflex_rebuild_interface']
+            self.powerflex_disks = \
+                powerflex_settings['powerflex_disks']
+            self.powerflex_password = \
+                powerflex_settings['powerflex_password']
+            self.powerflex_lia_token = \
+              powerflex_settings['powerflex_lia_token']
+        else:
+            self.enable_powerflex_backend = False
 
         # powermax
         if backend_settings['enable_powermax_backend'].lower() == 'true':
@@ -635,6 +658,8 @@ class Settings:
             '/mgmt/deploy-director-vm.sh'
         self.install_director_sh = self.foreman_configuration_scripts +\
             '/pilot/install-director.sh'
+        self.deploy_powerflexgw_vm_sh = self.foreman_configuration_scripts + \
+            '/mgmt/deploy-powerflexgw-vm.sh'
         self.deploy_overcloud_sh = self.foreman_configuration_scripts + \
             '/pilot/deploy-overcloud.py'
         self.assign_role_py = self.foreman_configuration_scripts +\
@@ -769,6 +794,13 @@ class Settings:
                                         == "true" else False)
                     if node.is_director:
                         self.director_node = node
+                except AttributeError:
+                    pass
+                try:
+                    node.is_powerflexgw = (True if node.is_powerflexgw
+                                            ==  "true" else False)
+                    if node.is_powerflexgw:
+                        self.powerflexgw_vm = node
                 except AttributeError:
                     pass
                 try:

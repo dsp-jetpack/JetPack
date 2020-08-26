@@ -28,6 +28,7 @@ class Checkpoints:
         self.settings = Settings.settings
         self.ping_success = "packets transmitted, 1 received"
         self.director_ip = self.settings.director_node.public_api_ip
+        self.powerflexgw_ip = self.settings.powerflexgw_vm.public_api_ip
         self.sah_ip = self.settings.sah_node.public_api_ip
         self.verify_rhsm_status = self.settings.verify_rhsm_status
         if self.settings.use_satellite is True:
@@ -254,6 +255,86 @@ class Checkpoints:
         if self.ping_success not in test:
             raise AssertionError(
                 "Director VM cannot ping idrac network (ip) : " + test)
+
+    def powerlexgw_vm_health_check(self):
+        setts = self.settings
+        logger.info("Powerflex gateway VM health checks")
+        if self.verify_rhsm_status:
+            logger.debug("*** Verify the Powerflex gateway VM registered properly ***")
+            subscription_status = self.verify_subscription_status(
+                self.powerflexgw_ip,
+                "root",
+                setts.powerflexgw_vm.root_password,
+                setts.subscription_check_retries)
+            if "Current" not in subscription_status:
+                raise AssertionError(
+                    "Powerflex gateway VM did not register properly : " +
+                    subscription_status)
+
+        logger.debug(
+            "*** Verify all pools registered & repositories subscribed ***")
+        if self.verify_pools_attached(self.powerflexgw_ip,
+                                      "root",
+                                      setts.powerflexgw_vm.root_password,
+                                      "/root/" + setts.powerflexgw_vm.hostname +
+                                      "-posts.log") is False:
+            raise AssertionError(
+                "Powerflex gateway vm did not subscribe/attach "
+                "repos properly, see log.")
+
+        logger.debug("*** Verify the Powerflex gateway VM can ping its public gateway")
+        test = self.ping_host(self.powerflexgw_ip,
+                              "root",
+                              setts.powerflexgw_vm.root_password,
+                              setts.public_api_gateway)
+        if self.ping_success not in test:
+            raise AssertionError(
+                "Powerflex gateway VM cannot ping its public gateway : " + test)
+
+        logger.debug(
+            "*** Verify the Powerflex gateway VM can ping the outside world (ip)")
+        test = self.ping_host(self.powerflexgw_ip,
+                              "root",
+                              setts.powerflexgw_vm.root_password,
+                              "8.8.8.8")
+        if self.ping_success not in test:
+            raise AssertionError(
+                "Powerflex gateway VM cannot ping the outside world (ip) : " + test)
+
+        logger.debug(
+            "*** Verify the Powerflex gateway VM can ping the outside world (dns)")
+        test = self.ping_host(self.powerflexgw_ip,
+                              "root",
+                              setts.powerflexgw_vm.root_password,
+                              "google.com")
+        if self.ping_success not in test:
+            raise AssertionError(
+                "Powerflex gateway VM cannot ping the outside world (dns) : " + test)
+
+        logger.debug(
+            "*** Verify the Powerfle gateway VM can ping the SAH node "
+            "through the public network")
+        test = self.ping_host(self.powerflexgw_ip,
+                              "root",
+                              setts.powerflexgw_vm.root_password,
+                              self.sah_ip)
+        if self.ping_success not in test:
+            raise AssertionError(
+                "Powerflex gateway VM cannot ping the SAH node through "
+                "the public network : " + test)
+
+        logger.debug(
+            "*** Verify the Powerfle gateway VM can ping the SAH node "
+            "through the storage network")
+        test = self.ping_host(self.powerflexgw_ip,
+                              "root",
+                              setts.powerflexgw_vm.root_password,
+                              self.settings.sah_node.storage_ip)
+        if self.ping_success not in test:
+            raise AssertionError(
+                "Powerflex gateway VM cannot ping the SAH node through "
+                "the storage network : " + test)
+
 
     def verify_nodes_registered_in_ironic(self):
         logger.debug("Verify the expected amount of nodes imported in ironic")

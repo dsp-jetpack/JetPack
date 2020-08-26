@@ -1198,6 +1198,79 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
 
+    def setup_powerflex(self, powerflex_cinder_yaml, powerflex_ansible_yaml):
+
+        if self.settings.enable_powerflex_backend is False:
+            logger.debug("Not setting up powerflex backend.")
+            return
+
+        logger.debug("Configuring dell emc powerflex backend.")
+
+        cmds = ['sed -i "s|<powerflex_san_ip>|' +
+                self.settings.powerflexgw_vm.storage_ip +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_san_login>|' +
+                self.settings.powerflex_san_login +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_san_password>|' +
+                self.settings.powerflex_san_password +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_storage_pools>|' +
+                self.settings.powerflex_storage_pools +
+                '|" ' + powerflex_cinder_yaml,
+                ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
+        logger.debug("Configuring ansible playbook for powerflex deployment.")
+
+        cmds = ['sed -i "s|<powerflex_rpms_method>|' +
+                self.settings.powerflex_rpms_method +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_rpms_path>|' +
+                self.settings.powerflex_rpms_path +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_name>|' +
+                self.settings.powerflex_cluster_name +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_protection_domain>|' +
+                self.settings.powerflex_protection_domain +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_storage_pool>|' +
+                self.settings.powerflex_storage_pool +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_config>|' +
+                self.settings.powerflex_cluster_config +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_config_interface>|' +
+                self.settings.powerflex_config_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_mgmt_interface>|' +
+                self.settings.powerflex_mgmt_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_interface>|' +
+                self.settings.powerflex_cluster_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_vip>|' +
+                self.settings.powerflex_cluster_vip +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_rebuild_interface>|' +
+                self.settings.powerflex_rebuild_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_disks>|' +
+                self.settings.powerflex_disks +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_password>|' +
+                self.settings.powerflex_password +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_lia_token>|' +
+                self.settings.powerflex_lia_token +
+                '|" ' + powerflex_ansible_yaml,
+                ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
+
     def setup_net_envt(self):
 
         logger.debug("Configuring network-environment.yaml for overcloud")
