@@ -20,37 +20,16 @@
     },
     "roles": {
         "control": {
-            "pool_ids": [ "CHANGEME_openstack_pool_id" ],
-            "repos": [ "rhel-8-for-x86_64-baseos-eus-rpms",
-						"rhel-8-for-x86_64-appstream-eus-rpms",
-						"rhel-8-for-x86_64-highavailability-eus-rpms",
-						"ansible-2.9-for-rhel-8-x86_64-rpms",
-						"advanced-virt-for-rhel-8-x86_64-rpms",
-						"satellite-tools-6.5-for-rhel-8-x86_64-rpms",
-						"openstack-16.1-for-rhel-8-x86_64-rpms",
-						"fast-datapath-for-rhel-8-x86_64-rpms"  ]
+            "pool_ids": [ "CHANGEME_RHEL_8_pool_id" ],
+            "repos": [ "rhel-8-for-x86_64-baseos-eus-rpms" ]
         },
         "compute": {
-            "pool_ids": [ "CHANGEME_openstack_pool_id" ],
-            "repos": [ "rhel-8-for-x86_64-baseos-eus-rpms",
-						"rhel-8-for-x86_64-appstream-eus-rpms",
-						"rhel-8-for-x86_64-highavailability-eus-rpms",
-						"ansible-2.9-for-rhel-8-x86_64-rpms",
-						"advanced-virt-for-rhel-8-x86_64-rpms",
-						"satellite-tools-6.5-for-rhel-8-x86_64-rpms",
-						"openstack-16.1-for-rhel-8-x86_64-rpms",
-						"fast-datapath-for-rhel-8-x86_64-rpms"  ]
+            "pool_ids": [ "CHANGEME_RHEL_8_pool_id" ],
+            "repos": [ "rhel-8-for-x86_64-baseos-eus-rpms" ]
         },
         "ceph-storage": {
-            "pool_ids": [ "CHANGEME_openstack_pool_id"],
-            "repos": [  "rhel-8-for-x86_64-baseos-eus-rpms",
-						"rhel-8-for-x86_64-appstream-eus-rpms",
-						"rhel-8-for-x86_64-highavailability-eus-rpms",
-						"ansible-2.9-for-rhel-8-x86_64-rpms",
-						"advanced-virt-for-rhel-8-x86_64-rpms",
-						"satellite-tools-6.5-for-rhel-8-x86_64-rpms",
-						"openstack-16.1-for-rhel-8-x86_64-rpms",
-						"fast-datapath-for-rhel-8-x86_64-rpms" ]
+            "pool_ids": [ "CHANGEME_RHEL_8_pool_id"],
+            "repos": [  "rhel-8-for-x86_64-baseos-eus-rpms" ]
         }
     }
 }
