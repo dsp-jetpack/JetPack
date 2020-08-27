@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2017 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,15 +20,16 @@ import shutil
 import subprocess
 import sys
 
+
 def parse_arguments():
     """ Parses the input argments
     """
 
     parser = argparse.ArgumentParser(
-        description="Deploys the Storage Console VM.",
+        description="Deploys the Dashboard VM.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("cfg_filename",
-                        help="Storage Console configuration file",
+                        help="Dashboard configuration file",
                         metavar="CFG-FILE")
     parser.add_argument("rhel_iso",
                         help="RHEL ISO file",
@@ -38,7 +39,7 @@ def parse_arguments():
 
 
 def create_kickstart(ks_filename, cfg_filename):
-    """ Creates the kickstart file for the Storage Console VM
+    """ Creates the kickstart file for the Dashboard VM
 
     The kickstart file consists of 3 parts, two of which are fixed text. The
     middle section (part 2) is dynamically generated using the contents of the
@@ -90,31 +91,19 @@ skipx
 firstboot --disable
 eula --agreed
 
-#%packages
-#@core
-#-NetworkManager
-#-NetworkManager-*
-#ntp
-#ntpdate
-#-chrony
-#-firewalld
-#iptables
-#iptables-services
-#system-config-firewall-base
-#yum-plugin-versionlock
-#yum-utils
-#%end
-
 %packages
 @core
--NetworkManager
--NetworkManager-*
 ntp
 ntpdate
-wget
 -chrony
+-firewalld
+-NetworkManager
+-NetworkManager-*
 system-config-firewall-base
+iptables
+iptables-services
 yum-plugin-versionlock
+yum-utils
 %end
 
 %pre --log /tmp/powerflexgw-pre.log
@@ -125,7 +114,7 @@ yum-plugin-versionlock
 %end
 
 %post --nochroot --logfile /root/powerflexgw-post.log
-# Copy the files created during the %pre section to /root of the 
+# Copy the files created during the %pre section to /root of the
 # installed system for later use.
   cp -v /tmp/powerflexgw-pre.log /mnt/sysimage/root
   cp -v /tmp/ks_include.txt /mnt/sysimage/root
@@ -133,7 +122,7 @@ yum-plugin-versionlock
   mkdir -p /mnt/sysimage/root/powerflexgw-ks-logs
   cp -v /tmp/powerflexgw-pre.log /mnt/sysimage/root/powerflexgw-ks-logs
   cp -v /tmp/ks_include.txt /mnt/sysimage/root/powerflexgw-ks-logs
-  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/powerflexgw-ks-logs  
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/powerflexgw-ks-logs
 %end
 
 
@@ -153,16 +142,20 @@ chvt 8
   done
 
   echo "GATEWAY=${Gateway}" >> /etc/sysconfig/network
+  echo "MTU=${eth0_mtu}" >> /etc/sysconfig/network-scripts/ifcfg-eth0
+  echo "MTU=${eth1_mtu}" >> /etc/sysconfig/network-scripts/ifcfg-eth1
 
-  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth0
-  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-eth1
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' \
+/etc/sysconfig/network-scripts/ifcfg-eth0
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' \
+/etc/sysconfig/network-scripts/ifcfg-eth1
 
   echo "$( ip addr show dev eth0 | awk '/inet / { print $2 }' | \
 sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
 
   echo "----------------------"
   ip addr
-  echo "subscription-manager register --username ${SMUser} --password *********"
+  echo "subscription-manager register --username ${SMUser} --password ********"
   echo "----------------------"
 
   # Register the system using Subscription Manager
@@ -170,8 +163,9 @@ sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
     ProxyInfo="--proxy ${SMProxy}"
 
     [[ ${SMProxyUser} ]] && ProxyInfo+=" --proxyuser ${SMProxyUser}"
-    [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword ${SMProxyPassword}"
-	
+    [[ ${SMProxyPassword} ]] && ProxyInfo+=" --proxypassword \
+${SMProxyPassword}"
+
     Proxy_Creds=""
     [[ ${SMProxyUser} && ${SMProxyPassword} ]] && \\
       Proxy_Creds="${SMProxyUser}:${SMProxyPassword}@"
@@ -183,11 +177,17 @@ sed 's/\/.*//' )  ${HostName}" >> /etc/hosts
     export no_proxy=$no_proxy_list
     export http_proxy=${HTTP_Proxy}
     export https_proxy=${HTTP_Proxy}
-	
-    }
 
-  subscription-manager register --username ${SMUser} --password ${SMPassword} \
-${ProxyInfo}
+    }
+  
+if [[ -z ${SA_ip} ]]
+  then
+      subscription-manager register --username ${SMUser} --password ${SMPassword} ${ProxyInfo}
+  else
+      echo "$SA_ip    $SA_host" >> /etc/hosts
+      rpm -Uvh http://$SA_host/pub/katello-ca-consumer-latest.noarch.rpm
+      subscription-manager register --org=$SA_org --activationkey="$SA_key"
+fi
 
   [[ x${SMPool} = x ]] \\
     && SMPool=$( subscription-manager list --available ${ProxyInfo} \
@@ -201,9 +201,9 @@ attach to. - Auto-attaching to any pool." ; \\
          )
 
   subscription-manager repos ${ProxyInfo} --disable=* \\
-    --enable=rhel-7-server-rpms 
-
-#JTW - FIXME -- change for correct ports
+    --enable=rhel-7-server-rpms \\
+    --enable=rhel-7-server-extras-rpms \\
+    --enable=rhel-7-server-rh-common-rpms \\
 
   cat <<EOIP > /etc/sysconfig/iptables
 *filter
@@ -217,6 +217,9 @@ attach to. - Auto-attaching to any pool." ; \\
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 80 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 443 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 2003 -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 2004 -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 3000 -j ACCEPT
+-A INPUT -m state --state NEW -m tcp -p tcp --dport 7002 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 4505 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 4506 -j ACCEPT
 -A INPUT -m state --state NEW -m tcp -p tcp --dport 6789 -j ACCEPT
@@ -244,31 +247,23 @@ EOIP
     echo "server ${ntps}" >> /etc/ntp.conf
   done
 
-  # Add powerflexgw user for remote/manual installation steps of integrating 
-  # Storage Console to RDO based OSP
-  /usr/sbin/groupadd -g 1000 powerflexgw-admin
-  /usr/sbin/useradd -d /home/powerflexgw-admin -s /bin/bash -u 1000 -g 1000 powerflexgw-admin
+  # Add heat user for remote/manual installation steps of integrating
+  # Dashboard to RDO based OSP
+  /usr/sbin/groupadd -g 1000 heat-admin
+  /usr/sbin/useradd -d /home/heat-admin -s /bin/bash -u 1000 -g 1000 heat-admin
 
-  # Add powerflexgw-admin to sudoers 
-  echo "powerflexgw-admin ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/powerflexgw-admin
-  echo "Defaults:powerflexgw-admin !requiretty" >> /etc/sudoers.d/powerflexgw-admin
+  # Add heat-admin to sudoers
+  echo "heat-admin ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/heat-admin
+  echo "Defaults:heat-admin !requiretty" >> /etc/sudoers.d/heat-admin
 
-#JTW - FIXME -- change to install correct packages
-#  /usr/bin/yum install -y rhscon-core rhscon-ceph rhscon-ui
-  
   mkdir /tmp/mnt
   mount /dev/fd0 /tmp/mnt
   [[ -e /tmp/mnt/versionlock.list ]] && {
     cp /tmp/mnt/versionlock.list /etc/yum/pluginconf.d
     chmod 644 /etc/yum/pluginconf.d/versionlock.list
     }
-
+  yum install java-1.8.0-openjdk.x86_64 -y
   yum -y update
-
-  systemctl disable NetworkManager
-  systemctl disable firewalld
-  systemctl disable chronyd
-
 
 ) 2>&1 | /usr/bin/tee -a /root/powerflexgw-post.log
 
@@ -292,7 +287,7 @@ chvt 6
         nameservers = ""
         gateway = ""
 
-        for line in cfg_lines:            
+        for line in cfg_lines:
             if line.startswith("#") or line.startswith(";") or len(line) == 0:
                 continue
             tokens = line.split()
@@ -319,7 +314,7 @@ chvt 6
                 gateway = tokens[1]
                 ks.write("echo Gateway='{}' >> {}\n".
                          format(gateway, ks_post_include))
-        
+
             elif tokens[0] == "ntpserver":
                 ks.write("echo NTPServers='{}' >> {}\n".
                          format(tokens[1], ks_post_include))
@@ -334,6 +329,22 @@ chvt 6
 
             elif tokens[0] == "smpool":
                 ks.write("echo SMPool='{}' >> {}\n".
+                         format(tokens[1], ks_post_include))
+
+            elif tokens[0] == "satellite_ip":
+                ks.write("echo SA_ip='{}' >> {}\n".
+                         format(tokens[1], ks_post_include))
+
+            elif tokens[0] == "satellite_hostname":
+                ks.write("echo SA_host='{}' >> {}\n".
+                         format(tokens[1], ks_post_include))
+
+            elif tokens[0] == "satellite_org":
+                ks.write("echo SA_org='{}' >> {}\n".
+                         format(tokens[1], ks_post_include))
+
+            elif tokens[0] == "satellite_activation_key":
+                ks.write("echo SA_key='{}' >> {}\n".
                          format(tokens[1], ks_post_include))
 
             elif tokens[0] == "smproxy":
@@ -352,7 +363,7 @@ chvt 6
                 ks.write("echo network --activate --onboot=true --noipv6"
                          " --device='{}' --bootproto=static --ip='{}'"
                          " --netmask='{}' --hostname='{}'"
-                         " --gateway='{}' --nameserver='{}' >> {}\n".
+                         " --gateway='{}' --nameserver='{}' --mtu='{}'>> {}\n".
                          format(
                              tokens[0],
                              tokens[1],
@@ -360,22 +371,29 @@ chvt 6
                              hostname,
                              gateway,
                              nameservers,
+                             tokens[3],
                              ks_include))
+                ks.write("echo eth0_mtu='{}' >> {}\n".
+                         format(tokens[3], ks_post_include))
 
             elif tokens[0] == "eth1":
                 ks.write("echo network --activate --onboot=true --noipv6"
                          " --device='{}' --bootproto=static --ip='{}'"
-                         " --netmask='{}' --gateway='{}' --nodefroute >> {}\n".
+                         " --netmask='{}' --gateway='{}' --nodefroute "
+                         "--mtu='{}' >> {}\n".
                          format(
                              tokens[0],
                              tokens[1],
                              tokens[2],
                              gateway,
+                             tokens[3],
                              ks_include))
+                ks.write("echo eth1_mtu='{}' >> {}\n".
+                         format(tokens[3], ks_post_include))
 
         # Write part 3, and we're done
         ks.write(ks_part_3)
-    
+
 
 def create_floppy_image(vlock_filename, floppy_image):
     """ Creates the floppy image used to install the vlock file
@@ -424,6 +442,12 @@ def main():
         # doesn't exist. If no exception then we're good.
         os.listdir(images_path)
 
+    if os.path.exists(powerflexgw_image):
+        os.remove(powerflexgw_image)
+
+    if os.path.exists(floppy_image):
+        os.remove(floppy_image)
+
     virt_install_args = [
         "virt-install",
         "--name powerflexgw",
@@ -432,7 +456,7 @@ def main():
         "--hvm",
         "--os-type linux",
         "--os-variant rhel7",
-        "--disk {},bus=virtio,size=16".format(powerflexgw_image),
+        "--disk {},bus=virtio,size=100".format(powerflexgw_image),
         "--network bridge=br-pub-api",
         "--network bridge=br-stor",
         "--initrd-inject {}".format(ks_tmp_filename),
@@ -447,7 +471,8 @@ def main():
     vlock_filename = "powerflexgw_vm.vlock"
     if os.access(vlock_filename, os.R_OK):
         create_floppy_image(vlock_filename, floppy_image)
-        virt_install_args.append("--disk {},device=floppy".format(floppy_image))
+        virt_install_args.append("--disk {},device=floppy".format(
+            floppy_image))
 
     return subprocess.call(" ".join(virt_install_args), shell=True)
 
