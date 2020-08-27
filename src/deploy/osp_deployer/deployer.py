@@ -56,6 +56,10 @@ def get_settings():
     parser.add_argument('-overcloud_only', '--overcloud_only',
                         help='Only reinstall the overcloud',
                         action='store_true', required=False)
+    parser.add_argument('-skip_powerflexgw_vm', '--skip_powerflexgw_vm',
+                        help='Do not reinstall the powerflexgw VM',
+                        action='store_true',
+                        required=False)
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-validate_only', '--validate_only',
                        help='No deployment - just validate config values',
@@ -106,6 +110,8 @@ def deploy():
         else:
             if args.overcloud_only is True:
                 logger.info("Only redeploying the overcloud")
+            if args.skip_powerflexgw_vm is True:
+                logger.info("Skipping powerflexgw VM install")
 
         logger.info("Settings .ini: " + settings.settings_file)
         logger.info("Settings .properties " + settings.network_conf)
@@ -197,6 +203,26 @@ def deploy():
             logger.debug("Deleting overcloud stack")
             director_vm.delete_overcloud()
 
+        if args.skip_powerflexgw_vm is False:
+            logger.debug("Delete the powerflexfw VM")
+            powerflexgw_ip = settings.powerflexgw_node.public_api_ip
+            logger.debug(
+                Ssh.execute_command(powerflexgw_ip,
+                                    "root",
+                                    settings.powerflexgw_node.root_password,
+                                    "subscription-manager remove --all"))
+            Ssh.execute_command(powerflexgw_ip,
+                                "root",
+                                settings.powerflexgw_node.root_password,
+                                "subscription-manager unregister")
+
+            sah_node.delete_powerflexgw_vm()
+
+            logger.info("=== creating powerflexgw VM")
+            sah_node.create_powerflexgw_vm()
+            tester.dashboard_vm_health_check()
+        else:
+            logger.info("Skipped the powerflexgw VM install")
         logger.info("=== Preparing the overcloud ===")
 
         # The network-environment.yaml must be setup for use during DHCP
