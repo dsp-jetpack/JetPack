@@ -411,9 +411,8 @@ class Sah(InfraHost):
                 "timezone " + self.settings.time_zone,
                 "smuser " + self.settings.subscription_manager_user,
                 "smpassword " + self.settings.subscription_manager_password,
-                "smpool " + self.settings.subscription_manager_vm_powerflexgw
-                "hostname " + self.settings.powerflexgw.hostname + "." +
-                self.settings.domain,
+                "smpool " + self.settings.subscription_manager_pool_vm_rhel,
+                "hostname " + self.settings.powerflexgw_node.hostname,
                 "gateway " + self.settings.public_api_gateway,
                 "nameserver " + self.settings.name_server,
                 "ntpserver " + self.settings.sah_node.provisioning_ip,
@@ -462,6 +461,8 @@ class Sah(InfraHost):
                                     "root",
                                     self.settings.powerflexgw_node.root_password)
         logger.debug("powerflexgw VM is up")
+        #login to the powerflex gateway vm and install the gateway rpms.
+        
 
     def delete_powerflexgw_vm(self):
         # Also delete any leftover "powerflexgw" VM so that it cannot interfere

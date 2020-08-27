@@ -206,11 +206,10 @@ def deploy():
         if args.skip_powerflexgw_vm is False:
             logger.debug("Delete the powerflexfw VM")
             powerflexgw_ip = settings.powerflexgw_node.public_api_ip
-            logger.debug(
-                Ssh.execute_command(powerflexgw_ip,
+            Ssh.execute_command(powerflexgw_ip,
                                     "root",
                                     settings.powerflexgw_node.root_password,
-                                    "subscription-manager remove --all"))
+                                    "subscription-manager remove --all")
             Ssh.execute_command(powerflexgw_ip,
                                 "root",
                                 settings.powerflexgw_node.root_password,
