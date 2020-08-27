@@ -29,6 +29,7 @@ class Checkpoints:
         self.ping_success = "packets transmitted, 1 received"
         self.director_ip = self.settings.director_node.public_api_ip
         self.sah_ip = self.settings.sah_node.public_api_ip
+        self.powerflexgw_ip = self.settings.powerflexgw_node.public_api_ip
         self.verify_rhsm_status = self.settings.verify_rhsm_status
         if self.settings.use_satellite is True:
             self.verify_rhsm_status = False
