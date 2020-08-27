@@ -117,23 +117,23 @@ system-config-firewall-base
 yum-plugin-versionlock
 %end
 
-%pre --log /tmp/siogw-pre.log
+%pre --log /tmp/powerflexgw-pre.log
 
 """
 
     ks_part_3 = """
 %end
 
-%post --nochroot --logfile /root/siogw-post.log
+%post --nochroot --logfile /root/powerflexgw-post.log
 # Copy the files created during the %pre section to /root of the 
 # installed system for later use.
-  cp -v /tmp/siogw-pre.log /mnt/sysimage/root
+  cp -v /tmp/powerflexgw-pre.log /mnt/sysimage/root
   cp -v /tmp/ks_include.txt /mnt/sysimage/root
   cp -v /tmp/ks_post_include.txt /mnt/sysimage/root
-  mkdir -p /mnt/sysimage/root/siogw-ks-logs
-  cp -v /tmp/siogw-pre.log /mnt/sysimage/root/siogw-ks-logs
-  cp -v /tmp/ks_include.txt /mnt/sysimage/root/siogw-ks-logs
-  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/siogw-ks-logs  
+  mkdir -p /mnt/sysimage/root/powerflexgw-ks-logs
+  cp -v /tmp/powerflexgw-pre.log /mnt/sysimage/root/powerflexgw-ks-logs
+  cp -v /tmp/ks_include.txt /mnt/sysimage/root/powerflexgw-ks-logs
+  cp -v /tmp/ks_post_include.txt /mnt/sysimage/root/powerflexgw-ks-logs  
 %end
 
 
@@ -244,14 +244,14 @@ EOIP
     echo "server ${ntps}" >> /etc/ntp.conf
   done
 
-  # Add siogw user for remote/manual installation steps of integrating 
+  # Add powerflexgw user for remote/manual installation steps of integrating 
   # Storage Console to RDO based OSP
-  /usr/sbin/groupadd -g 1000 siogw-admin
-  /usr/sbin/useradd -d /home/siogw-admin -s /bin/bash -u 1000 -g 1000 siogw-admin
+  /usr/sbin/groupadd -g 1000 powerflexgw-admin
+  /usr/sbin/useradd -d /home/powerflexgw-admin -s /bin/bash -u 1000 -g 1000 powerflexgw-admin
 
-  # Add siogw-admin to sudoers 
-  echo "siogw-admin ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/siogw-admin
-  echo "Defaults:siogw-admin !requiretty" >> /etc/sudoers.d/siogw-admin
+  # Add powerflexgw-admin to sudoers 
+  echo "powerflexgw-admin ALL = (root) NOPASSWD:ALL" > /etc/sudoers.d/powerflexgw-admin
+  echo "Defaults:powerflexgw-admin !requiretty" >> /etc/sudoers.d/powerflexgw-admin
 
 #JTW - FIXME -- change to install correct packages
 #  /usr/bin/yum install -y rhscon-core rhscon-ceph rhscon-ui
@@ -270,7 +270,7 @@ EOIP
   systemctl disable chronyd
 
 
-) 2>&1 | /usr/bin/tee -a /root/siogw-post.log
+) 2>&1 | /usr/bin/tee -a /root/powerflexgw-post.log
 
 chvt 6
 
@@ -388,7 +388,7 @@ def create_floppy_image(vlock_filename, floppy_image):
     subprocess.check_call("mkfs.vfat -C {} 1440".format(floppy_image),
                           shell=True)
 
-    floppy_mnt = "/tmp/mnt-siogw"
+    floppy_mnt = "/tmp/mnt-powerflexgw"
     os.mkdir(floppy_mnt)
 
     subprocess.check_call("mount -o loop {} {}".format(floppy_image,
@@ -404,13 +404,13 @@ def create_floppy_image(vlock_filename, floppy_image):
 def main():
     args = parse_arguments()
 
-    ks_filename = "siogw.ks"
+    ks_filename = "powerflexgw.ks"
     ks_tmp_filename = os.path.join("/tmp", ks_filename)
     create_kickstart(ks_tmp_filename, args.cfg_filename)
 
     images_path = "/store/data/images"
-    siogw_image = os.path.join(images_path, "siogw.img")
-    floppy_image = os.path.join(images_path, "siogw-floppy.img")
+    powerflexgw_image = os.path.join(images_path, "powerflexgw.img")
+    floppy_image = os.path.join(images_path, "powerflexgw-floppy.img")
 
     # Ensure the images directory exists
     try:
@@ -426,13 +426,13 @@ def main():
 
     virt_install_args = [
         "virt-install",
-        "--name siogw",
+        "--name powerflexgw",
         "--memory 16384",
         "--vcpus 4",
         "--hvm",
         "--os-type linux",
         "--os-variant rhel7",
-        "--disk {},bus=virtio,size=16".format(siogw_image),
+        "--disk {},bus=virtio,size=16".format(powerflexgw_image),
         "--network bridge=br-pub-api",
         "--network bridge=br-stor",
         "--initrd-inject {}".format(ks_tmp_filename),
@@ -444,7 +444,7 @@ def main():
     ]
 
     # If the vlock file exists then add it to the floppy image
-    vlock_filename = "siogw_vm.vlock"
+    vlock_filename = "powerflexgw_vm.vlock"
     if os.access(vlock_filename, os.R_OK):
         create_floppy_image(vlock_filename, floppy_image)
         virt_install_args.append("--disk {},device=floppy".format(floppy_image))
