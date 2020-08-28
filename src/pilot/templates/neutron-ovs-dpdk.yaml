@@ -22,7 +22,7 @@ parameter_defaults:
   NeutronVhostuserSocketDir: "/var/lib/vhost_sockets"
 # DELL-NFV Overrides
   NovaSchedulerDefaultFilters: "ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,NUMATopologyFilter"
-  OvsDpdkDriverType: "mlx5_core"
+  OvsDpdkDriverType: "mlx5_core" 
   NeutronPluginExtensions: "qos,port_security"
   NeutronOVSFirewallDriver: openvswitch
   DellComputeParameters:
@@ -35,9 +35,9 @@ parameter_defaults:
     NovaReservedHostMemory: 4096
     OvsDpdkSocketMemory: "2048,2048"
     TunedProfileName: "cpu-partitioning"
-    NumDpdkInterfaceRxQueues: 1
-    OvsEnableDpdk: true
- DellComputeHCIParameters:
+    NovaLibvirtRxQueueSize: 1024
+    NovaLibvirtTxQueueSize: 1024
+  DellComputeHCIParameters:
     VhostuserSocketGroup: "hugetlbfs"
     OvsPmdCoreList: "4-7,28-31"
     OvsDpdkCoreList: "0-3,24-27"
@@ -47,5 +47,6 @@ parameter_defaults:
     NovaReservedHostMemory: 4096
     OvsDpdkSocketMemory: "2048,2048"
     TunedProfileName: "cpu-partitioning"
-    NumDpdkInterfaceRxQueues: 1
-    OvsEnableDpdk: true
+    NovaLibvirtRxQueueSize: 1024
+    NovaLibvirtTxQueueSize: 1024
+
