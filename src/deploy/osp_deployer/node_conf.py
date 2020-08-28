@@ -22,6 +22,7 @@ class NodeConf:
         self.is_director = False
         self.is_ceph_storage = False
         self.is_switch = False
+        self.is_powerflexgw = False 
         self.hostname = None
         self.idrac_ip = None
         self.service_tag = None

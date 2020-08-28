@@ -456,6 +456,8 @@ class Settings:
                  backend_settings['powerflex_san_password']
             self.powerflex_storage_pools = \
                  backend_settings['powerflex_storage_pools']
+            self.powerflex_gateway_rpm = \
+                 backend_settings['powerflex_gateway_rpm']
             
             # Powerflex parameters
             powerflex_settings = self.get_settings_section(
@@ -657,6 +659,8 @@ class Settings:
             '/mgmt/deploy-director-vm.sh'
         self.install_director_sh = self.foreman_configuration_scripts +\
             '/pilot/install-director.sh'
+        self.deploy_powerflexgw_vm_sh = self.foreman_configuration_scripts + \
+            '/mgmt/deploy-powerflexgw-vm.sh'
         self.deploy_overcloud_sh = self.foreman_configuration_scripts + \
             '/pilot/deploy-overcloud.py'
         self.assign_role_py = self.foreman_configuration_scripts +\
@@ -791,6 +795,13 @@ class Settings:
                                         == "true" else False)
                     if node.is_director:
                         self.director_node = node
+                except AttributeError:
+                    pass
+                try:
+                    node.is_powerflexgw = (True if node.is_powerflexgw
+                                            ==  "true" else False)
+                    if node.is_powerflexgw:
+                        self.powerflexgw_vm = node
                 except AttributeError:
                     pass
                 try:

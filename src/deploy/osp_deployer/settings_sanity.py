@@ -474,6 +474,17 @@ class DeployerSanity:
             self.check_overcloud_node_net_attrs(storage,
                                                 shouldhaveattributes,
                                                 shouldbbevalidips)
+        
+        # Verify powerflex gateway VM network definition
+        logger.debug("verifying powerflex gateway vm network settings")
+        shouldhaveattributes = ['hostname',
+                                'root_password',
+                                'public_api_ip',
+                                'storage_ip']
+        shouldbevalidips = ['public_api_ip', 'storage_ip']
+        self.check_net_attrs(self.settings.powerflexgw_vm,
+                             shouldhaveattributes,
+                             shouldbevalidips)
 
     def validate_profile(self):
         self.profile = Profile()

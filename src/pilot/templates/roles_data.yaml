@@ -355,7 +355,6 @@
     - OS::TripleO::Services::ContainersLogrotateCrond
     - OS::TripleO::Services::Podman
     - OS::TripleO::Services::PowerFlexLIA
-    - OS::TripleO::Services::PowerFlexMDM
     - OS::TripleO::Services::PowerFlexSDC
     - OS::TripleO::Services::Rear
     - OS::TripleO::Services::Rhsm

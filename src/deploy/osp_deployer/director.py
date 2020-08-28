@@ -1205,7 +1205,7 @@ class Director(InfraHost):
         logger.debug("Configuring dell emc powerflex backend.")
 
         cmds = ['sed -i "s|<powerflex_san_ip>|' +
-                self.settings.powerflex_san_ip +
+                self.settings.powerflexgw_vm.storage_ip +
                 '|" ' + powerflex_cinder_yaml,
                 'sed -i "s|<powerflex_san_login>|' +
                 self.settings.powerflex_san_login +

@@ -319,6 +319,12 @@ class Sah(InfraHost):
                          remote_file)
         self.run("chmod 777 /root/deploy-director-vm.sh")
 
+    def upload_powerflex_scripts(self):
+        remote_file = "/root/deploy-powerflexgw-vm.sh"
+        self.upload_file(self.settings.deploy_powerflexgw_vm_sh,
+                         remote_file)
+        self.run("chmod 777 /root/deploy-powerflexgw-vm.sh")
+
     def create_director_vm(self):
         director_conf = "/root/director.cfg"
         self.run("rm " + director_conf + " -f")
@@ -396,6 +402,75 @@ class Sah(InfraHost):
             self.run("virsh destroy director")
             time.sleep(20)
             self.run("virsh undefine director")
+            time.sleep(20)
+
+    def create_powerflexgw_vm(self):
+        powerflexgw_conf = "/root/powerflex-gw.cfg"
+        self.run("rm " + powerflexgw_conf + " -f")
+        conf = ("rootpassword " + self.settings.powerflexgw_vm.root_password,
+                "timezone " + self.settings.time_zone,
+                "smuser " + self.settings.subscription_manager_user,
+                "smpassword " + self.settings.subscription_manager_password,
+                "smpool " + self.settings.subscription_manager_pool_vm_rhel,
+                "hostname " + self.settings.powerflexgw_vm.hostname + "." +
+                self.settings.domain,
+                "gateway " + self.settings.public_api_gateway,
+                "nameserver " + self.settings.name_server,
+                "ntpserver " + self.settings.sah_node.provisioning_ip)
+        if self.settings.use_satellite is True:
+            conf = conf + ("satellite_ip " + self.settings.satellite_ip,)
+            conf = conf + ("satellite_hostname " +
+                           self.settings.satellite_hostname,)
+            conf = conf + ("satellite_org " + self.settings.satellite_org,)
+            conf = conf + ("satellite_activation_key " +
+                           self.settings.satellite_activation_key,)
+
+        conf = conf + ("# Iface     IP" +
+                       "               NETMASK" +
+                       "              MTU",)
+        conf = conf + ("enp1s0        " +
+                       self.settings.powerflexgw_vm.public_api_ip +
+                       "    " + self.settings.public_api_netmask +
+                       "     " + self.settings.public_api_network_mtu,)
+        conf = conf + ("enp2s0        " +
+                       self.settings.powerflexgw_vm.storage_ip +
+                       "    " + self.settings.provisioning_netmask +
+                       "     " + self.settings.provisioning_network_mtu,)
+
+        for line in conf:
+            self.run("echo '" +
+                     line +
+                     "' >> " +
+                     powerflexgw_conf)
+        remote_file = "sh /root/deploy-powerflexgw-vm.sh " + \
+                      powerflexgw_conf + " " + \
+                      "/store/data/iso/RHEL8.iso"
+        re = self.run_tty(remote_file)
+        startVM = True
+        for ln in re[0].split("\n"):
+            if "Restarting guest" in ln:
+                startVM = False
+        if startVM:
+            logger.debug(
+                "=== wait for the powerflex gateway vm install "
+                "to be complete")
+            while "shut off" not in \
+                    self.run("virsh list --all | grep powerflexgw")[0]:
+                time.sleep(60)
+            logger.debug("=== power on the powerflex gateway VM ")
+            self.run("virsh start powerflexgw")
+        logger.debug("=== waiting for the powerflex gateway vm to boot up")
+        self.wait_for_vm_to_come_up(self.settings.powerflexgw_vm.public_api_ip,
+                                    "root",
+                                    self.settings.powerflexgw_vm.root_password)
+        logger.debug("powerflex gateway vm is up")
+
+    def delete_powerflexgw_vm(self):
+        while "powerflexgw" in \
+                self.run("virsh list --all | grep powerflexgw")[0]:
+            self.run("virsh destroy powerflexgw")
+            time.sleep(20)
+            self.run("virsh undefine powerflexgw")
             time.sleep(20)
 
     def is_running_from_sah(self):
