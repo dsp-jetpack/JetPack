@@ -292,11 +292,9 @@ def deploy():
         sah_node.clear_known_hosts()
         sah_node.handle_lock_files()
         if args.edge_site_all:
-            sah_node.create_subnet_routes_edge_all()
-            sah_node.restart_networks()
+            sah_node.subnet_routes_edge_all()
         elif bool(args.edge_site):
-            sah_node.create_subnet_routes_edge(node_type)
-            sah_node.restart_networks()
+            sah_node.subnet_routes_edge(node_type)
 
         sah_node.upload_iso()
         sah_node.upload_director_scripts()

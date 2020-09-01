@@ -420,42 +420,61 @@ class Sah(InfraHost):
         for cmd in cmds:
             self.run_as_root(cmd)
 
-    def create_subnet_routes_edge_all(self):
+    def subnet_routes_edge_all(self, add=True):
         logger.info('Setting routes for edge subnets on SAH and '
                     'restarting bridge interfaces')
+        """
+        Example nmcli command:
+            nmcli connection modify br-mgmt +ipv4.routes
+            "192.168.111.0/24 192.168.110.1, 192.168.112.0/24 192.168.110.1"
+        """
         setts = self.settings
-        for node_type, node_type_data in setts.node_type_data_map.items():
-            self.create_subnet_routes_edge(node_type)
-        logger.info('Routes for edge subnets on SAH updated')
-
-    def create_subnet_routes_edge(self, node_type):
-        logger.info('Setting route for edge subnet for node_type: %s',
-                    node_type)
-        setts = self.settings
-        logger.info('setts.node_type_data_map: %s',
-                    setts.node_type_data_map)
-        node_type_data = setts.node_type_data_map[node_type]
-        route_br_mgmt = '/etc/sysconfig/network-scripts/route-br-mgmt'
-        route_br_prov = '/etc/sysconfig/network-scripts/route-br-prov'
-        with open(route_br_mgmt, 'w') as route_br_mgmt_stream:
+        add_remove = "+" if add else "-"
+        cmd = ("nmcli connection modify br-mgmt "
+               "{}ipv4.routes ".format(add_remove))
+        routes = set()
+        for _nt, node_type_data in setts.node_type_data_map.items():
             mgmt_cidr = node_type_data['mgmt_cidr']
-            mgmt_bridge = 'br-mgmt'
-            route = "{} via {} dev {}\n".format(mgmt_cidr,
-                                                setts.management_gateway,
-                                                mgmt_bridge)
-            route_br_mgmt_stream.write(route)
-        with open(route_br_prov, 'w') as route_br_prov_stream:
-            prov_cidr = node_type_data['cidr']
-            prov_bridge = 'br-prov'
-            route = "{} via {} dev {}\n".format(prov_cidr,
-                                                setts.provisioning_gateway,
-                                                prov_bridge)
-            route_br_prov_stream.write(route)
+            route = "{} {}".format(mgmt_cidr, setts.management_gateway)
+            routes.add(route)
+        cmd += "\"{}\"".format(",".join(routes))
+        subprocess.check_output(cmd,
+                                stderr=subprocess.STDOUT,
+                                shell=True)
+        up_cmd = "nmcli connection up br-mgmt"
+        subprocess.check_output(up_cmd,
+                                stderr=subprocess.STDOUT,
+                                shell=True)
+        logger.info('Routes for all edge subnets on SAH updated')
 
-    def restart_networks(self):
-        logger.info("Restarting networks on SAH")
-        for bridge in ['br-mgmt', 'br-prov']:
-            cmd = 'ifdown {} ; ifup {}'.format(bridge, bridge)
-            subprocess.check_output(cmd,
-                                    stderr=subprocess.STDOUT,
-                                    shell=True)
+    def subnet_routes_edge(self, node_type, add=True):
+        """
+        Example nmcli command:
+            nmcli connection modify br-mgmt +ipv4.routes
+            "192.168.112.0/24 192.168.110.1"
+        """
+        logger.info("Adding?: {} route for edge subnet for "
+                    "node_type: {}".format(add, node_type))
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        mgmt_cidr = node_type_data['mgmt_cidr']
+        add_remove = "+" if add else "-"
+        cmd = ("nmcli connection modify br-mgmt {}ipv4.routes "
+               "\"{} {}\"".format(add_remove,
+                                  mgmt_cidr, setts.management_gateway))
+
+        subprocess.check_output(cmd,
+                                stderr=subprocess.STDOUT,
+                                shell=True)
+        up_cmd = "nmcli connection load br-mgmt && exec nmcli connection up br-mgmt"
+        subprocess.check_output(up_cmd,
+                                stderr=subprocess.STDOUT,
+                                shell=True)
+        logger.info("Routes for edge site {} "
+                    "subnet on SAH updated".format(node_type))
+
+
+if __name__ == "__main__":
+    settings = Settings("/root/R62.ini")
+    sah = Sah()
+    sah.subnet_routes_edge_all()

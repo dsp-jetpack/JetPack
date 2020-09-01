@@ -1831,7 +1831,7 @@ class Director(InfraHost):
 
     def deploy_edge_site_all(self):
         logger.info("=== Preparing the overcloud ===")
-        self.create_subnet_routes_edge_all()
+        self.subnet_routes_edge_all()
         self.setup_net_envt_edge_all()
         self.overcloud_config_download()
         self.export_control_plane_config()
@@ -1914,7 +1914,7 @@ class Director(InfraHost):
         logger.debug("container_image_prepare_edge called!!!!!!!!!!!")
 
     def deploy_edge_site(self, node_type):
-        self.create_subnet_routes_edge(node_type)
+        self.subnet_routes_edge(node_type)
         self.restart_director_vm()
         self.setup_net_envt_edge(node_type)
         self.overcloud_config_download()
@@ -2824,7 +2824,7 @@ class Director(InfraHost):
             stg_net_env_fp.write(rendered_tmplt)
         self.upload_file(stg_net_env_path, net_env_file)
 
-    def create_subnet_routes_edge_all(self):
+    def subnet_routes_edge_all(self, add=True):
         """Create routes for Director VM and reboot it, which is required
         for routes to take effect
         """
@@ -2832,11 +2832,45 @@ class Director(InfraHost):
                     'restarting VM, as it is required to get the routes to '
                     'register with virsh properly')
         setts = self.settings
-        for node_type, node_type_data in setts.node_type_data_map.items():
-            self.create_subnet_routes_edge(node_type)
+        add_remove_mgmt = "+" if add else "-"
+        add_remove_prov = "add" if add else "del"
+
+        mgmt_routes = set()
+
+        mgmt_if = setts.director_node.management_if
+        prov_if = "br-ctlplane" # setts.director_node.provisioning_if
+        _mgmt_cmd = "nmcli connection modify {} {}ipv4.routes "
+        # ip route del 192.168.121.0/24 via 192.168.120.1 dev br-ctlplane
+        _prov_cmd = "ip route {} {} via {} dev {}"
+        mgmt_cmd = (_mgmt_cmd.format(mgmt_if, add_remove_mgmt))
+
+        for _nt, node_type_data in setts.node_type_data_map.items():
+            mgmt_cidr = node_type_data['mgmt_cidr']
+            prov_cidr = node_type_data['cidr']
+            prov_cmd = (_prov_cmd.format(add_remove_prov, prov_cidr,
+                                         setts.provisioning_gateway, prov_if))
+            _is_route = self._is_route_exists(prov_cidr)
+            if not _is_route:
+                self.run_as_root(prov_cmd)
+            mgmt_route = "{} {}".format(mgmt_cidr, setts.management_gateway)
+            mgmt_routes.add(mgmt_route)
+
+        mgmt_cmd += "\"{}\"".format(",".join(mgmt_routes))
+        self.run_as_root(mgmt_cmd)
+
+        mgmt_up_cmd = ("nmcli connection load {_if} "
+                       "&& exec nmcli connection up "
+                       "{_if}".format(_if=mgmt_if))
+        self.run_as_root(mgmt_up_cmd)
         logger.info('Director VM edge routes set')
 
-    def create_subnet_routes_edge(self, node_type):
+    def _is_route_exists(self, route):
+        cmd = "ip route show {}".format(route)
+        _res = self.run_as_root(cmd)
+        _is_route_exists = True if len(_res[0].strip()) != 0 else False
+        return _is_route_exists
+
+    def subnet_routes_edge(self, node_type):
         setts = self.settings
         node_type_data = setts.node_type_data_map[node_type]
         route_mgmt_file = (" >> /etc/sysconfig/network-scripts/route-"
@@ -3892,15 +3926,15 @@ class Director(InfraHost):
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
-
-    director.node_discovery_edge("edge-compute-denver")
+    director.subnet_routes_edge_all()
+    # director.node_discovery_edge("edge-compute-denver")
     # director.deploy_edge_site("edge-compute-denver")
     # new functions
     # director.node_discovery_edge_all()
     # director.configure_idracs_edge_all()
     # director.import_nodes_edge_all()
     # director.render_and_upload_undercloud_conf()
-    # director.create_subnet_routes_edge_all()
+    # director.subnet_routes_edge_all()
     # for node_type in settings.node_types:
     #    director.node_introspection(node_type)
     # director.overcloud_config_download()
