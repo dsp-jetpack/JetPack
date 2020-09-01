@@ -150,6 +150,12 @@ class InfraHost:
         nic_config_name = re.sub(r'[^a-z0-9]', "", type.lower())
         return nic_config_name
 
+    def _does_route_exist(self, route):
+        cmd = "ip route show {}".format(route)
+        _res = self.run_as_root(cmd)
+        _does_route_exist = (len(_res[0].strip()) != 0)
+        return _does_route_exist
+
 
 def directory_check(_path):
     def wrap(f):

@@ -53,6 +53,7 @@ OTHER_POOLS = ['.rgw.buckets',
                'default.rgw.meta',
                'metrics']
 
+CTLPLANE_BRIDGE = "br-ctlplane"
 FIRST_BOOT = "first-boot"
 NOVA_AZ_CONFIG = ("deployment/nova/nova-az-config.yaml")
 NOVA_AZ = "nova-az"
@@ -2836,63 +2837,67 @@ class Director(InfraHost):
         add_remove_prov = "add" if add else "del"
 
         mgmt_routes = set()
-
         mgmt_if = setts.director_node.management_if
-        prov_if = "br-ctlplane" # setts.director_node.provisioning_if
-        _mgmt_cmd = "nmcli connection modify {} {}ipv4.routes "
-        # ip route del 192.168.121.0/24 via 192.168.120.1 dev br-ctlplane
+        mgmt_gw = setts.management_gateway
+        prov_gw = setts.provisioning_gateway
+        _mgmt_cmd = "nmcli connection modify {} {}ipv4.routes \"{}\""
         _prov_cmd = "ip route {} {} via {} dev {}"
-        mgmt_cmd = (_mgmt_cmd.format(mgmt_if, add_remove_mgmt))
 
         for _nt, node_type_data in setts.node_type_data_map.items():
             mgmt_cidr = node_type_data['mgmt_cidr']
             prov_cidr = node_type_data['cidr']
             prov_cmd = (_prov_cmd.format(add_remove_prov, prov_cidr,
-                                         setts.provisioning_gateway, prov_if))
-            _is_route = self._is_route_exists(prov_cidr)
-            if not _is_route:
+                                         prov_gw, CTLPLANE_BRIDGE))
+
+            _is_prov_route = self._does_route_exist(prov_cidr)
+            if ((not _is_prov_route and add) or (_is_prov_route and not add)):
                 self.run_as_root(prov_cmd)
-            mgmt_route = "{} {}".format(mgmt_cidr, setts.management_gateway)
-            mgmt_routes.add(mgmt_route)
 
-        mgmt_cmd += "\"{}\"".format(",".join(mgmt_routes))
-        self.run_as_root(mgmt_cmd)
+            _is_mgmt_route = self._does_route_exist(mgmt_cidr)
+            if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
+                mgmt_route = "{} {}".format(mgmt_cidr, mgmt_gw)
+                mgmt_routes.add(mgmt_route)
 
-        mgmt_up_cmd = ("nmcli connection load {_if} "
-                       "&& exec nmcli connection up "
-                       "{_if}".format(_if=mgmt_if))
-        self.run_as_root(mgmt_up_cmd)
+        if len(mgmt_routes) != 0:
+            mgmt_cmd = _mgmt_cmd.format(mgmt_if, add_remove_mgmt,
+                                        ",".join(mgmt_routes))
+            self.run_as_root(mgmt_cmd)
+
+            mgmt_up_cmd = ("nmcli connection load {_if} "
+                           "&& exec nmcli connection up "
+                           "{_if}".format(_if=mgmt_if))
+            self.run_as_root(mgmt_up_cmd)
         logger.info('Director VM edge routes set')
 
-    def _is_route_exists(self, route):
-        cmd = "ip route show {}".format(route)
-        _res = self.run_as_root(cmd)
-        _is_route_exists = True if len(_res[0].strip()) != 0 else False
-        return _is_route_exists
-
-    def subnet_routes_edge(self, node_type):
+    def subnet_routes_edge(self, node_type, add=True):
         setts = self.settings
+        _mgmt_cmd = "nmcli connection modify {} {}ipv4.routes \"{} {}\""
+        _prov_cmd = "ip route {} {} via {} dev {}"
+        add_remove_mgmt = "+" if add else "-"
+        add_remove_prov = "add" if add else "del"
+        mgmt_if = setts.director_node.management_if
         node_type_data = setts.node_type_data_map[node_type]
-        route_mgmt_file = (" >> /etc/sysconfig/network-scripts/route-"
-                           + setts.director_node.management_if)
-        route_prov_file = (" >> /etc/sysconfig/network-scripts/"
-                           "route-br-ctlplane")
         mgmt_gw = setts.management_gateway
-        mgmt_cidr = node_type_data['mgmt_cidr']
-        mgmt_cmd = "{} via {} dev {}".format(mgmt_cidr,
-                                             mgmt_gw,
-                                             setts.director_node.management_if)
         prov_gw = setts.provisioning_gateway
+        mgmt_cidr = node_type_data['mgmt_cidr']
         prov_cidr = node_type_data['cidr']
-        prov_cmd = "{} via {} dev {}".format(prov_cidr,
-                                             prov_gw,
-                                             "br-ctlplane")
+        mgmt_cmd = _mgmt_cmd.format(mgmt_if, add_remove_mgmt,
+                                    mgmt_cidr, mgmt_gw)
+        prov_cmd = (_prov_cmd.format(add_remove_prov, prov_cidr,
+                                     prov_gw,
+                                     CTLPLANE_BRIDGE))
+        _is_mgmt_route = self._does_route_exist(mgmt_cidr)
+        if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
+            self.run_as_root(mgmt_cmd)
 
-        mgmt_cmd = "echo '" + mgmt_cmd + "'" + route_mgmt_file
-        prov_cmd = "echo '" + prov_cmd + "'" + route_prov_file
-        logger.info("Route commands: %s, %s", mgmt_cmd, prov_cmd)
-        self.run_as_root(mgmt_cmd)
-        self.run_as_root(prov_cmd)
+            mgmt_up_cmd = ("nmcli connection load {_if} "
+                           "&& exec nmcli connection up "
+                           "{_if}".format(_if=mgmt_if))
+            self.run_as_root(mgmt_up_cmd)
+
+        _is_prov_route = self._does_route_exist(prov_cidr)
+        if ((not _is_prov_route and add) or (_is_prov_route and not add)):
+            self.run_as_root(prov_cmd)
 
     def _update_instack_env_edge(self, node_type=None):
         mgmt_net = self.settings.management_network.rsplit(".", 1)[0]
@@ -3926,7 +3931,7 @@ class Director(InfraHost):
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
-    director.subnet_routes_edge_all()
+    director.subnet_routes_edge("edge-compute-denver", True)
     # director.node_discovery_edge("edge-compute-denver")
     # director.deploy_edge_site("edge-compute-denver")
     # new functions
@@ -3934,7 +3939,7 @@ if __name__ == "__main__":
     # director.configure_idracs_edge_all()
     # director.import_nodes_edge_all()
     # director.render_and_upload_undercloud_conf()
-    # director.subnet_routes_edge_all()
+
     # for node_type in settings.node_types:
     #    director.node_introspection(node_type)
     # director.overcloud_config_download()

@@ -27,6 +27,8 @@ import subprocess
 logger = logging.getLogger("osp_deployer")
 
 exitFlag = 0
+MGMT_BRIDGE = "br-mgmt"
+PROV_BRIDGE = "br-prov"
 
 
 class Sah(InfraHost):
@@ -430,21 +432,44 @@ class Sah(InfraHost):
         """
         setts = self.settings
         add_remove = "+" if add else "-"
-        cmd = ("nmcli connection modify br-mgmt "
-               "{}ipv4.routes ".format(add_remove))
-        routes = set()
+        _cmd = "nmcli connection modify {} {}ipv4.routes \"{}\""
+
+        mgmt_routes = set()
+        prov_routes = set()
         for _nt, node_type_data in setts.node_type_data_map.items():
             mgmt_cidr = node_type_data['mgmt_cidr']
-            route = "{} {}".format(mgmt_cidr, setts.management_gateway)
-            routes.add(route)
-        cmd += "\"{}\"".format(",".join(routes))
-        subprocess.check_output(cmd,
-                                stderr=subprocess.STDOUT,
-                                shell=True)
-        up_cmd = "nmcli connection up br-mgmt"
-        subprocess.check_output(up_cmd,
-                                stderr=subprocess.STDOUT,
-                                shell=True)
+            prov_cidr = node_type_data['cidr']
+            mgmt_route = "{} {}".format(mgmt_cidr, setts.management_gateway)
+            prov_route = "{} {}".format(prov_cidr, setts.provisioning_gateway)
+            _is_mgmt_route = self._does_route_exist(mgmt_cidr)
+            if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
+                mgmt_routes.add(mgmt_route)
+
+            _is_prov_route = self._does_route_exist(prov_cidr)
+            if ((not _is_prov_route and add) or (_is_prov_route and not add)):
+                prov_routes.add(prov_route)
+
+        if len(mgmt_routes) != 0:
+            mgmt_cmd = _cmd.format(MGMT_BRIDGE, add_remove,
+                                   ",".join(mgmt_routes))
+            subprocess.check_output(mgmt_cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
+            up_cmd = "nmcli connection up {}".format(MGMT_BRIDGE)
+            subprocess.check_output(up_cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
+
+        if len(prov_routes) != 0:
+            prov_cmd = _cmd.format(PROV_BRIDGE, add_remove,
+                                   ",".join(prov_routes))
+            subprocess.check_output(prov_cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
+            up_cmd = "nmcli connection up {}".format(PROV_BRIDGE)
+            subprocess.check_output(up_cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
         logger.info('Routes for all edge subnets on SAH updated')
 
     def subnet_routes_edge(self, node_type, add=True):
@@ -458,23 +483,38 @@ class Sah(InfraHost):
         setts = self.settings
         node_type_data = setts.node_type_data_map[node_type]
         mgmt_cidr = node_type_data['mgmt_cidr']
+        prov_cidr = node_type_data['cidr']
         add_remove = "+" if add else "-"
-        cmd = ("nmcli connection modify br-mgmt {}ipv4.routes "
-               "\"{} {}\"".format(add_remove,
-                                  mgmt_cidr, setts.management_gateway))
-
-        subprocess.check_output(cmd,
-                                stderr=subprocess.STDOUT,
-                                shell=True)
-        up_cmd = "nmcli connection load br-mgmt && exec nmcli connection up br-mgmt"
-        subprocess.check_output(up_cmd,
-                                stderr=subprocess.STDOUT,
-                                shell=True)
+        _cmd = "nmcli connection modify {} {}ipv4.routes \"{} {}\""
+        _up_cmd = ("nmcli connection load {br} && exec nmcli "
+                   "connection up {br}")
+        mgmt_cmd = _cmd.format(MGMT_BRIDGE, add_remove,
+                               mgmt_cidr, setts.management_gateway)
+        prov_cmd = _cmd.format(PROV_BRIDGE, add_remove,
+                               prov_cidr, setts.provisioning_gateway)
+        _is_mgmt_route = self._does_route_exist(mgmt_cidr)
+        _is_prov_route = self._does_route_exist(prov_cidr)
+        if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
+            subprocess.check_output(mgmt_cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
+            up_cmd = _up_cmd.format(br=MGMT_BRIDGE)
+            subprocess.check_output(up_cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
+        if ((not _is_prov_route and add) or (_is_prov_route and not add)):
+            subprocess.check_output(prov_cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
+            up_cmd = _up_cmd.format(br=PROV_BRIDGE)
+            subprocess.check_output(up_cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
         logger.info("Routes for edge site {} "
-                    "subnet on SAH updated".format(node_type))
+                    "subnets on SAH updated".format(node_type))
 
 
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     sah = Sah()
-    sah.subnet_routes_edge_all()
+    sah.subnet_routes_edge("edge-compute-denver", True)
