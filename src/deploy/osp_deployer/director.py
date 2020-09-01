@@ -112,6 +112,16 @@ OVERRIDES_EDGE_J2 = OVERRIDES + "-edge" + J2_EXT
 EC2_IPCIDR = '169.254.169.254/32'
 EC2_PUBLIC_IPCIDR_PARAM = 'EC2MetadataPublicIpCidr'
 
+# command constants
+MGMT_ROUTE_CMD = "nmcli connection modify {} {}ipv4.routes \"{} {}\""
+MGMT_UP_CMD = "nmcli connection load {_if} && exec nmcli connection up {_if}"
+PROV_DEL_ROUTE_CMD = ("sed -i -e '/{cidr_esc} via {gw} dev {br}/d' "
+                      "/etc/sysconfig/network-scripts/route-{br}")
+PROV_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {br}\" >> "
+                  "/etc/sysconfig/network-scripts/route-{br}")
+ROUTE_UP_CMD = "/etc/sysconfig/network-scripts/ifup-routes {br}"
+BR_DOWN_CMD = "/etc/sysconfig/network-scripts/ifdown-ovs ifcfg-{br}"
+BR_UP_CMD = "/etc/sysconfig/network-scripts/ifup-ovs ifcfg-{br}"
 
 class Director(InfraHost):
 
@@ -2834,69 +2844,72 @@ class Director(InfraHost):
                     'register with virsh properly')
         setts = self.settings
         add_remove_mgmt = "+" if add else "-"
-        add_remove_prov = "add" if add else "del"
-
-        mgmt_routes = set()
         mgmt_if = setts.director_node.management_if
         mgmt_gw = setts.management_gateway
         prov_gw = setts.provisioning_gateway
-        _mgmt_cmd = "nmcli connection modify {} {}ipv4.routes \"{}\""
-        _prov_cmd = "ip route {} {} via {} dev {}"
 
         for _nt, node_type_data in setts.node_type_data_map.items():
             mgmt_cidr = node_type_data['mgmt_cidr']
-            prov_cidr = node_type_data['cidr']
-            prov_cmd = (_prov_cmd.format(add_remove_prov, prov_cidr,
-                                         prov_gw, CTLPLANE_BRIDGE))
-
-            _is_prov_route = self._does_route_exist(prov_cidr)
-            if ((not _is_prov_route and add) or (_is_prov_route and not add)):
-                self.run_as_root(prov_cmd)
-
             _is_mgmt_route = self._does_route_exist(mgmt_cidr)
             if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
-                mgmt_route = "{} {}".format(mgmt_cidr, mgmt_gw)
-                mgmt_routes.add(mgmt_route)
+                self.run_as_root(MGMT_ROUTE_CMD.format(mgmt_if,
+                                                       add_remove_mgmt,
+                                                       mgmt_cidr, mgmt_gw))
 
-        if len(mgmt_routes) != 0:
-            mgmt_cmd = _mgmt_cmd.format(mgmt_if, add_remove_mgmt,
-                                        ",".join(mgmt_routes))
-            self.run_as_root(mgmt_cmd)
+            prov_cidr = node_type_data['cidr']
+            _prov_cidr_esc = prov_cidr.replace('/', '\/')
+            _is_prov_route = self._does_route_exist(prov_cidr)
+            if ((not _is_prov_route and add) or (_is_prov_route and not add)):
+                prv_cmds = []
+                if add:
+                    prv_cmds.append(PROV_DEL_ROUTE_CMD)
+                    prv_cmds.append(PROV_ROUTE_CMD)
+                    prv_cmds.append(ROUTE_UP_CMD)
+                else:
+                    prv_cmds.append(PROV_DEL_ROUTE_CMD)
+                    prv_cmds.append(BR_DOWN_CMD)
+                    prv_cmds.append(BR_UP_CMD)
+                prov_cmd = "; ".join(prv_cmds).format(cidr=prov_cidr,
+                                                      cidr_esc=_prov_cidr_esc,
+                                                      gw=prov_gw,
+                                                      br=CTLPLANE_BRIDGE)
+                self.run_as_root(prov_cmd)
 
-            mgmt_up_cmd = ("nmcli connection load {_if} "
-                           "&& exec nmcli connection up "
-                           "{_if}".format(_if=mgmt_if))
-            self.run_as_root(mgmt_up_cmd)
+        self.run_as_root(MGMT_UP_CMD.format(_if=mgmt_if))
         logger.info('Director VM edge routes set')
 
     def subnet_routes_edge(self, node_type, add=True):
         setts = self.settings
-        _mgmt_cmd = "nmcli connection modify {} {}ipv4.routes \"{} {}\""
-        _prov_cmd = "ip route {} {} via {} dev {}"
         add_remove_mgmt = "+" if add else "-"
-        add_remove_prov = "add" if add else "del"
         mgmt_if = setts.director_node.management_if
         node_type_data = setts.node_type_data_map[node_type]
         mgmt_gw = setts.management_gateway
         prov_gw = setts.provisioning_gateway
         mgmt_cidr = node_type_data['mgmt_cidr']
         prov_cidr = node_type_data['cidr']
-        mgmt_cmd = _mgmt_cmd.format(mgmt_if, add_remove_mgmt,
-                                    mgmt_cidr, mgmt_gw)
-        prov_cmd = (_prov_cmd.format(add_remove_prov, prov_cidr,
-                                     prov_gw,
-                                     CTLPLANE_BRIDGE))
+        _prov_cidr_esc = prov_cidr.replace('/', '\/')
+
         _is_mgmt_route = self._does_route_exist(mgmt_cidr)
         if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
-            self.run_as_root(mgmt_cmd)
-
-            mgmt_up_cmd = ("nmcli connection load {_if} "
-                           "&& exec nmcli connection up "
-                           "{_if}".format(_if=mgmt_if))
-            self.run_as_root(mgmt_up_cmd)
+            self.run_as_root(MGMT_ROUTE_CMD.format(mgmt_if, add_remove_mgmt,
+                                                   mgmt_cidr, mgmt_gw))
+            self.run_as_root(MGMT_UP_CMD.format(_if=mgmt_if))
 
         _is_prov_route = self._does_route_exist(prov_cidr)
         if ((not _is_prov_route and add) or (_is_prov_route and not add)):
+            cmds = []
+            if add:
+                cmds.append(PROV_DEL_ROUTE_CMD)
+                cmds.append(PROV_ROUTE_CMD)
+                cmds.append(ROUTE_UP_CMD)
+            else:
+                cmds.append(PROV_DEL_ROUTE_CMD)
+                cmds.append(BR_DOWN_CMD)
+                cmds.append(BR_UP_CMD)
+            prov_cmd = "; ".join(cmds).format(cidr=prov_cidr,
+                                              cidr_esc=_prov_cidr_esc,
+                                              gw=prov_gw,
+                                              br=CTLPLANE_BRIDGE)
             self.run_as_root(prov_cmd)
 
     def _update_instack_env_edge(self, node_type=None):
@@ -3931,7 +3944,7 @@ class Director(InfraHost):
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
-    director.subnet_routes_edge("edge-compute-denver", True)
+    director.subnet_routes_edge_all(False)
     # director.node_discovery_edge("edge-compute-denver")
     # director.deploy_edge_site("edge-compute-denver")
     # new functions
