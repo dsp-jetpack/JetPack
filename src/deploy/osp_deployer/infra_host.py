@@ -159,10 +159,9 @@ class InfraHost:
 
 def directory_check(_path):
     def wrap(f):
-
         def wrapped_f(*args):
             path = _path
-            if len(args) > 1:
+            if len(args) > 1 and isinstance(args[1], str):
                 _type_lwr = (re.sub(r'[^a-z0-9]', " ",
                              args[1].lower()).replace(" ", "_"))
                 path = os.path.join(_path, _type_lwr)

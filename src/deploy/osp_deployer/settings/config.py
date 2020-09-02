@@ -28,7 +28,7 @@ logger = logging.getLogger("osp_deployer")
 class Settings:
     CEPH_OSD_CONFIG_FILE = 'pilot/templates/ceph-osd-config.yaml'
     TEMPEST_DEFAULT_WORKSPACE_NAME = 'mytempest'
-    UNDERCLOUD_CONFIG_FILE = 'pilot/undercloud.conf'
+    UNDERCLOUD_CONFIG_FILE = 'undercloud.conf'
     NIC_CONFIGS_PATH = '/pilot/templates/nic-configs/'
 
     settings = ''
@@ -650,7 +650,7 @@ class Settings:
         self.nic_configs_abs_path = self.foreman_configuration_scripts + \
             Settings.NIC_CONFIGS_PATH
         self.undercloud_conf_path = self.foreman_configuration_scripts + \
-            '/' + Settings.UNDERCLOUD_CONFIG_FILE
+            '/pilot/' + Settings.UNDERCLOUD_CONFIG_FILE
         self.templates_dir = self.foreman_configuration_scripts + \
             '/pilot/templates'
         self.neutron_sriov_yaml = self.templates_dir + '/neutron-sriov.yaml'
@@ -866,11 +866,12 @@ class Settings:
                 node_type_section = self.get_settings_section(node_type)
                 self.node_type_data_map[node_type] = node_type_section
 
-    def parse_undercloud_conf(self):
+    def parse_undercloud_conf(self, path=None):
         undercloud_conf = configparser.ConfigParser()
         # The following line makes the parser return case sensitive keys
         undercloud_conf.optionxform = str
-        undercloud_conf.read(self.undercloud_conf_path)
+        path = path if path else self.undercloud_conf_path
+        undercloud_conf.read(path)
         return undercloud_conf
 
     def is_valid_subnet(self, conf, stanza):

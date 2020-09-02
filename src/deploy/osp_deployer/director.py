@@ -74,7 +74,7 @@ NIC_ENV = 'nic_environment'
 NODE_PLACEMENT = 'node-placement'
 DELL_ENV = 'dell-environment'
 NET_ENV = 'network-environment'
-INSTACK = 'instackenv'
+INSTACKENV = 'instackenv'
 STATIC_IP_ENV = 'static-ip-environment'
 STATIC_VIP_ENV = 'static-vip-environment'
 ROLES_DATA = 'roles_data'
@@ -122,6 +122,7 @@ PROV_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {br}\" >> "
 ROUTE_UP_CMD = "/etc/sysconfig/network-scripts/ifup-routes {br}"
 BR_DOWN_CMD = "/etc/sysconfig/network-scripts/ifdown-ovs ifcfg-{br}"
 BR_UP_CMD = "/etc/sysconfig/network-scripts/ifup-ovs ifcfg-{br}"
+UNDERCLOUD_INSTALL_CMD = "openstack undercloud install"
 
 class Director(InfraHost):
 
@@ -371,7 +372,8 @@ class Director(InfraHost):
         _node_cnt = len(nodes)
         logger.debug("vvvvvvvvvv Discovering {} nodes for node type: {}"
                      .format(str(_node_cnt), node_type))
-        paths = self._generate_edge_template_paths(node_type, INSTACK, "json")
+        paths = self._generate_edge_template_paths(node_type, INSTACKENV,
+                                                   "json")
         stg_instack_path, remote_instack_file = paths
         cmd = "rm " + remote_instack_file + " -f"
         self.run_tty(cmd)
@@ -434,14 +436,17 @@ class Director(InfraHost):
         # and json
         for node_type, edge_site_nodes in setts.node_types_map.items():
             paths = self._generate_edge_template_paths(node_type,
-                                                       INSTACK, "json")
+                                                       INSTACKENV, "json")
             stg_instack_path, remote_instack_file = paths
             nodes = list(edge_site_nodes)
             self.configure_idracs(nodes, remote_instack_file)
 
     def configure_idracs_edge(self, node_type):
         nodes = list(self.settings.node_types_map[node_type])
-        self.configure_idracs(nodes)
+        _stg, instack_file = self._generate_edge_template_paths(node_type,
+                                                                INSTACKENV,
+                                                                "json")
+        self.configure_idracs(nodes, instack_file)
 
     def configure_idracs(self, nodes, instack=None):
         setts = self.settings
@@ -479,7 +484,7 @@ class Director(InfraHost):
         cmd = self.source_stackrc + "~/pilot/import_nodes.py"
         if node_type:
             logging.debug("Import edge nodes for node type: %s", node_type)
-            paths = self._generate_edge_template_paths(node_type, INSTACK,
+            paths = self._generate_edge_template_paths(node_type, INSTACKENV,
                                                        "json")
             _stg_instack, instack = paths
             cmd += " -n " + instack
@@ -602,21 +607,22 @@ class Director(InfraHost):
         setts = self.settings
         logger.debug("Assigning roles to all edge sites")
         for node_type, nodes in setts.node_types_map.items():
-            self.assign_node_role_edge(node_type, nodes)
+            self.assign_node_role_edge(node_type)
 
-    def assign_node_role_edge(self, node_type, nodes):
+    def assign_node_role_edge(self, node_type):
         logger.debug("Assigning roles to node_type: %s", node_type)
+        nodes = self.settings.node_types_map[node_type]
         common_path = os.path.join(os.path.expanduser(
             self.settings.cloud_repo_dir + '/src'), 'common')
         sys.path.append(common_path)
         from thread_helper import ThreadWithExHandling  # noqa
-        paths = self._generate_edge_template_paths(node_type, INSTACK, "json")
+        paths = self._generate_edge_template_paths(node_type, INSTACKENV,
+                                                   "json")
         stg_instack_path, instack_file = paths
 
         threads = []
         index = 0
         for node in nodes:
-
             thread = ThreadWithExHandling(logger,
                                           target=self.assign_role,
                                           args=(node, node_type,
@@ -1842,7 +1848,8 @@ class Director(InfraHost):
 
     def deploy_edge_site_all(self):
         logger.info("=== Preparing the overcloud ===")
-        self.subnet_routes_edge_all()
+        ## self.subnet_routes_edge_all()
+        self.update_and_upload_undercloud_conf_edge_all()
         self.setup_net_envt_edge_all()
         self.overcloud_config_download()
         self.export_control_plane_config()
@@ -1873,7 +1880,7 @@ class Director(InfraHost):
     def container_image_prepare_edge(self, node_type):
         setts = self.settings
         env_files = [CONTROL_PLANE_EXPORT, NODE_PLACEMENT,
-                     DELL_ENV, NET_ENV, INSTACK, STATIC_IP_ENV, STATIC_VIP_ENV,
+                     DELL_ENV, NET_ENV, INSTACKENV, STATIC_IP_ENV, STATIC_VIP_ENV,
                      NET_ISO, NIC_ENV]
 
         stg_roles_file, roles_file = self._generate_edge_template_paths(
@@ -1925,17 +1932,19 @@ class Director(InfraHost):
         logger.debug("container_image_prepare_edge called!!!!!!!!!!!")
 
     def deploy_edge_site(self, node_type):
-        self.subnet_routes_edge(node_type)
-        self.restart_director_vm()
+        # self.subnet_routes_edge(node_type)
+        # TODO don't need anymore self.restart_director_vm()
+        self.update_and_upload_undercloud_conf_edge(node_type)
+        self.update_undercloud()
         self.setup_net_envt_edge(node_type)
         self.overcloud_config_download()
         self.export_control_plane_config()
         self.node_discovery_edge(node_type)
         self.configure_idracs_edge(node_type)
-        self.import_nodes_edge(node_type)
-        self.node_introspection_edge(node_type)
+        self.import_nodes(node_type)
+        self.node_introspection(node_type)
         self.update_sshd_conf()
-        self.assign_node_roles_edge(node_type)
+        self.assign_node_role_edge(node_type)
         self.revert_sshd_conf()
         self.setup_templates_edge(node_type)
         self.container_image_prepare_edge(node_type)
@@ -2305,6 +2314,19 @@ class Director(InfraHost):
         external_sub_guid = self.run_tty(external_sub_cmd)[0].rstrip()
         return external_sub_guid
 
+    def update_undercloud(self):
+        logging.debug("Updating undercloud...")
+        cmd = self.source_stackrc + "cd ; " + UNDERCLOUD_INSTALL_CMD
+        stdout, stderr, exit_status = self.run(cmd)
+        if exit_status:
+            raise AssertionError("Failed to install undercloud"
+                                 "exit_status: {}, error: {}, "
+                                 "stdout: {}".format(
+                                     exit_status, stderr, stdout))
+
+        # tester = Checkpoints()
+        # tester.verify_undercloud_installed()
+
     def _backup_tempest_conf(self):
         logger.info("Backing up tempest.conf")
         if self.is_tempest_conf():
@@ -2398,7 +2420,6 @@ class Director(InfraHost):
         sriov_interfaces = [x[1] for x in sorted(sriov_conf.items())]
         return sriov_interfaces
 
-    @directory_check(STAGING_TEMPLATES_PATH)
     def render_and_upload_undercloud_conf(self):
         """Updadate and upload undercloud.conf to director vm
 
@@ -2450,25 +2471,16 @@ class Director(InfraHost):
         uconf.set('DEFAULT', 'enable_routed_networks',
                   str(True))
 
-        for node_type, node_type_data in setts.node_type_data_map.items():
-            subnet_name = self._generate_subnet_name(node_type)
-            subnets.append(subnet_name)
-            if uconf.has_section(subnet_name):
-                uconf.remove_section(subnet_name)
-            uconf.add_section(subnet_name)
-            for opt, val in node_type_data.items():
-                uconf.set(subnet_name, opt, val)
-
         uconf.set('DEFAULT', 'subnets', ','.join(subnets))
 
         self._stage_and_upload_undercloud_conf(uconf)
 
-    @directory_check(STAGING_TEMPLATES_PATH)
     def update_and_upload_undercloud_conf_edge_all(self):
         """Update and upload undercloud.conf for all edge site subnets"""
 
         logger.info("Updating undercloud.conf")
         setts = self.settings
+        self._download_and_parse_undercloud_conf()
         uconf = setts.undercloud_conf
         subnets = set({'ctlplane-subnet'})
 
@@ -2485,17 +2497,17 @@ class Director(InfraHost):
 
         self._stage_and_upload_undercloud_conf(uconf)
 
-    @directory_check(STAGING_TEMPLATES_PATH)
     def update_and_upload_undercloud_conf_edge(self, node_type):
         """Update and upload undercloud.conf for single site"""
 
         logger.info("Updating undercloud.conf")
         setts = self.settings
+        self._download_and_parse_undercloud_conf()
         uconf = setts.undercloud_conf
         subnets = set({'ctlplane-subnet'})
 
         subnet_name = self._generate_subnet_name(node_type)
-        subnets.append(subnet_name)
+        subnets.add(subnet_name)
         if uconf.has_section(subnet_name):
             uconf.remove_section(subnet_name)
         uconf.add_section(subnet_name)
@@ -2505,20 +2517,6 @@ class Director(InfraHost):
 
         uconf.set('DEFAULT', 'subnets', ','.join(subnets))
         self._stage_and_upload_undercloud_conf(uconf)
-
-    def _stage_and_upload_undercloud_conf(self, uconf):
-        setts = self.settings
-        stg_undercloud_conf_path = self.get_timestamped_path(STAGING_PATH,
-                                                             "undercloud")
-        with open(stg_undercloud_conf_path, 'w+') as undercloud_conf_fp:
-            uconf.write(undercloud_conf_fp)
-            undercloud_conf_fp.flush()
-            undercloud_conf_fp.seek(0)
-        undercloud_conf_dst = os.path.join(self.home_dir,
-                                           setts.UNDERCLOUD_CONFIG_FILE)
-        self.upload_file(stg_undercloud_conf_path, undercloud_conf_dst)
-        logger.debug("Undercloud.conf uploaded to: %s",
-                     undercloud_conf_dst)
 
     def render_and_upload_roles_data_edge_all(self):
         """Add generated edge site roles to roles_data.yaml and upload it.
@@ -2912,9 +2910,80 @@ class Director(InfraHost):
                                               br=CTLPLANE_BRIDGE)
             self.run_as_root(prov_cmd)
 
+    def restart_director_vm(self):
+        setts = self.settings
+        logger.info('Restarting Director VM')
+        self.run_as_root('init 6')
+        dir_pub_ip = setts.director_node.public_api_ip
+        dir_pw = setts.director_node.root_password
+        self.wait_for_vm_to_go_down(dir_pub_ip, "root", dir_pw)
+        self.wait_for_vm_to_come_up(dir_pub_ip, "root", dir_pw)
+        logger.info('Director VM restarted')
+
+    def overcloud_config_download(self):
+        """
+        openstack overcloud config download --name r62
+        this arg seems broken: --config-dir ~/r62-config
+        """
+        download_path = os.path.join(self.home_dir,
+                                     self.settings.overcloud_name + "-config")
+        self.create_directory(download_path)
+        cmd = (self.source_stackrc + " openstack overcloud config download "
+               "--name " + self.settings.overcloud_name)
+        # this arg seems broken       + " --config-dir " + download_path)
+        self.run(cmd)
+
+    def export_control_plane_config(self):
+        """
+        openstack overcloud export -f --stack r62 --output-file --config-download-dir\
+        ~/edge-common/control-plane-export.yaml
+        """
+        # _dwnld_cfg_dir = self.settings.overcloud_name + "-config"
+        export_path = os.path.join(self.home_dir, EDGE_COMMON_PATH)
+        self.create_directory(export_path)
+        cmd = (self.source_stackrc + " openstack overcloud export -f --stack "
+               + self.settings.overcloud_name
+               + " --output-file "
+               + export_path + "/" + CONTROL_PLANE_EXPORT)
+        self.run(cmd)
+
+    @directory_check(STAGING_PATH)
+    def _download_and_parse_undercloud_conf(self):
+        setts = self.settings
+        stg_undercloud_conf_path = self.get_timestamped_path(STAGING_PATH,
+                                                             "undercloud")
+        undercloud_conf_file = os.path.join(self.home_dir,
+                                            setts.UNDERCLOUD_CONFIG_FILE)
+        self.download_file(stg_undercloud_conf_path, undercloud_conf_file)
+        uconf = setts.parse_undercloud_conf(stg_undercloud_conf_path)
+        setts.undercloud_conf = uconf
+
+    @directory_check(STAGING_PATH)
+    def _stage_and_upload_undercloud_conf(self, uconf):
+        setts = self.settings
+        stg_undercloud_conf_path = self.get_timestamped_path(STAGING_PATH,
+                                                             "undercloud")
+        with open(stg_undercloud_conf_path, 'w+') as undercloud_conf_fp:
+            uconf.write(undercloud_conf_fp)
+            undercloud_conf_fp.flush()
+            undercloud_conf_fp.seek(0)
+        # need to upload to both locations to keep them in sync as
+        # install-director.sh does a cp of undercloud.conf from pilot to home.
+        undercloud_conf_pilot_dst = os.path.join(self.pilot_dir,
+                                                 setts.UNDERCLOUD_CONFIG_FILE)
+        undercloud_conf_dst = os.path.join(self.home_dir,
+                                           setts.UNDERCLOUD_CONFIG_FILE)
+        self.upload_file(stg_undercloud_conf_path, undercloud_conf_pilot_dst)
+        self.upload_file(stg_undercloud_conf_path, undercloud_conf_dst)
+        setts.undercloud_conf = uconf
+        logger.debug("Undercloud.conf uploaded to: "
+                     "{} and {}".format(undercloud_conf_pilot_dst,
+                                        undercloud_conf_dst))
+
     def _update_instack_env_edge(self, node_type=None):
         mgmt_net = self.settings.management_network.rsplit(".", 1)[0]
-        paths = self._generate_edge_template_paths(node_type, INSTACK, "json")
+        paths = self._generate_edge_template_paths(node_type, INSTACKENV,
+                                                   "json")
         stg_instack_path, instack_file = paths
 
         self.download_file(stg_instack_path, instack_file)
@@ -3903,79 +3972,9 @@ class Director(InfraHost):
                      stg_path, remote_file)
         return stg_path, remote_file
 
-    def restart_director_vm(self):
-        setts = self.settings
-        logger.info('Restarting Director VM')
-        self.run_as_root('init 6')
-        dir_pub_ip = setts.director_node.public_api_ip
-        dir_pw = setts.director_node.root_password
-        self.wait_for_vm_to_go_down(dir_pub_ip, "root", dir_pw)
-        self.wait_for_vm_to_come_up(dir_pub_ip, "root", dir_pw)
-        logger.info('Director VM restarted')
-
-    def overcloud_config_download(self):
-        """
-        openstack overcloud config download --name r62
-        this arg seems broken: --config-dir ~/r62-config
-        """
-        download_path = os.path.join(self.home_dir,
-                                     self.settings.overcloud_name + "-config")
-        self.create_directory(download_path)
-        cmd = (self.source_stackrc + " openstack overcloud config download "
-               "--name " + self.settings.overcloud_name)
-        # this arg seems broken       + " --config-dir " + download_path)
-        self.run(cmd)
-
-    def export_control_plane_config(self):
-        """
-        openstack overcloud export -f --stack r62 --output-file --config-download-dir\
-        ~/edge-common/control-plane-export.yaml
-        """
-        # _dwnld_cfg_dir = self.settings.overcloud_name + "-config"
-        export_path = os.path.join(self.home_dir, EDGE_COMMON_PATH)
-        self.create_directory(export_path)
-        cmd = (self.source_stackrc + " openstack overcloud export -f --stack "
-               + self.settings.overcloud_name
-               + " --output-file "
-               + export_path + "/" + CONTROL_PLANE_EXPORT)
-        self.run(cmd)
-
 
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
-    director.subnet_routes_edge_all(False)
-    # director.node_discovery_edge("edge-compute-denver")
-    # director.deploy_edge_site("edge-compute-denver")
-    # new functions
-    # director.node_discovery_edge_all()
-    # director.configure_idracs_edge_all()
-    # director.import_nodes_edge_all()
-    # director.render_and_upload_undercloud_conf()
-
-    # for node_type in settings.node_types:
-    #    director.node_introspection(node_type)
-    # director.overcloud_config_download()
-    # director.export_control_plane_config()
-    # director.assign_node_roles()
-    ## director.render_and_upload_roles_data_edge_all()
-
-    ## director.render_and_upload_nova_az_edge_all()
-    ## director.setup_environment_edge_all()
-    # for node_type, nodes in settings.node_types_map.items():
-    #     director.assign_node_role_edge(node_type, nodes)
-    '''
-
-    director.discover_edge_nodes_all()
-    director.render_and_upload_overrides_edge_all()
-
-    director.render_and_upload_compute_edge_all()
-    director.render_and_upload_nic_env_edge_all()
-    director.render_and_upload_node_placement_edge_all()
-    director.render_and_upload_static_ips_edge_all()
-    director.render_and_upload_network_isolation_edge_all()
-
-    director.render_and_upload_network_data_edge_all()
-    director.setup_net_envt_edge_all()
-
-    '''
+    director.render_and_upload_undercloud_conf()
+    # director.subnet_routes_edge("edge-compute-boston", True)
