@@ -123,6 +123,7 @@ ROUTE_UP_CMD = "/etc/sysconfig/network-scripts/ifup-routes {br}"
 BR_DOWN_CMD = "/etc/sysconfig/network-scripts/ifdown-ovs ifcfg-{br}"
 BR_UP_CMD = "/etc/sysconfig/network-scripts/ifup-ovs ifcfg-{br}"
 UNDERCLOUD_INSTALL_CMD = "openstack undercloud install"
+CONTAINER_IMAGE_PREPARE_CMD = "sudo openstack tripleo container image prepare"
 
 
 class Director(InfraHost):
@@ -1869,25 +1870,37 @@ class Director(InfraHost):
         logger.debug("container_image_prepare_edge_all called!!!!!!!!!!!")
 
     def container_image_prepare_edge(self, node_type):
-        env_files = [CONTROL_PLANE_EXPORT, NODE_PLACEMENT,
+        """
+        openstack tripleo container image prepare \
+        --environment-directory dcn0 \
+        -r ~/dcn0/roles_data.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+        ...
+        -e /home/stack/dcn-common/central-export.yaml \
+        -e /home/stack/containers-prepare-parameter.yaml \
+        --output-env-file ~/dcn0/dcn0-images-env.yaml
+        """
+        _, output_env_file = self._generate_edge_template_paths(node_type,
+                                                                IMAGES_ENV)
+        env_files = [NODE_PLACEMENT,
                      DELL_ENV, NET_ENV, INSTACKENV, STATIC_IP_ENV,
                      STATIC_VIP_ENV, NET_ISO, NIC_ENV]
 
         stg_roles_file, roles_file = self._generate_edge_template_paths(
             node_type, ROLES_DATA)
 
-        stg_roles_file, nd_file = self._generate_edge_template_paths(
-            node_type, NETWORK_DATA)
+        # stg_roles_file, nd_file = self._generate_edge_template_paths(
+        #    node_type, NETWORK_DATA)
 
-        cmd = "openstack tripleo container image prepare "
-        cmd += "-r " + roles_file
-        cmd += " -n " + nd_file
-        paths = self._generate_edge_template_paths(node_type,
-                                                   CONTROL_PLANE_EXPORT,
-                                                   common=True)
-        _, cntl_plane_exp = paths
-        cnt_prep_param = os.join.path(self.home_dir,
+        cmd = CONTAINER_IMAGE_PREPARE_CMD
+        cmd += " -r " + roles_file
+        # cmd += " -n " + nd_file
+        cntl_plane_exp = os.path.join(self.home_dir,
+                                      EDGE_COMMON_PATH,
+                                      CONTROL_PLANE_EXPORT + ".yaml")
+        cnt_prep_param = os.path.join(self.home_dir,
                                       CONTAINERS_PREPARE_PARAM + ".yaml")
+        cmd += " -e " + cntl_plane_exp
         cmd += " -e " + cnt_prep_param
 
         for env_file in env_files:
@@ -1895,15 +1908,15 @@ class Director(InfraHost):
                                                             env_file)
             cmd += " -e " + tmplt
 
-        _, img_export = self._generate_edge_template_paths(node_type,
-                                                           IMAGES_ENV)
+        cmd += " --output-env-file " + output_env_file
+        self.run_as_root(cmd)
+
         """
                 openstack tripleo container image prepare \
         --environment-directory edge_all \
         -r ~/node_type/roles_data.yaml \
         -e ~/edge_common/control-plane-export.yaml \
         -e ~/containers-prepare-parameter.yaml \
-        -r ~/pilot/templates/roles_data.yaml \
  -e ~/pilot/templates/static-ip-environment.yaml \
  -e ~/pilot/templates/static-vip-environment.yaml \
  -e ~/pilot/templates/node-placement.yaml \
@@ -1919,7 +1932,7 @@ class Director(InfraHost):
         --output-env-file ~/[node_type]/[node_type]-images-env.yaml
 
         """
-        logger.debug("container_image_prepare_edge called!!!!!!!!!!!")
+        logger.debug("Container_image_prepare_edge done!!!!!!!!!!!")
 
     def deploy_edge_site(self, node_type):
         # self.subnet_routes_edge(node_type)
@@ -2954,7 +2967,7 @@ class Director(InfraHost):
         """
         openstack overcloud export -f --stack r62 --output-file
         --config-download-dir \
-        ~/edge-common/control-plane-export.yaml
+        ~/edge_common/control-plane-export.yaml
         """
         # _dwnld_cfg_dir = self.settings.overcloud_name + "-config"
         export_path = os.path.join(self.home_dir, EDGE_COMMON_PATH)
@@ -3889,11 +3902,12 @@ class Director(InfraHost):
             nic_dict_by_port_num[num_nics].append((node_type, node_type_data))
         return nic_dict_by_port_num
 
-    def _generate_deploy_cmd_edge(self):
+    def _generate_deploy_cmd_edge(self, node_type):
         """
         TODO:  need to create deploy-edge.py and decide.
         """
-        logger.debug("Configuring network settings for overcloud")
+        logger.debug("Generating edge site deployment "
+                     "command for: {}".format(node_type))
         """
         TODO: dpaterson, implement this method
         ########## Our overcloud deployment commands
@@ -3999,6 +4013,7 @@ class Director(InfraHost):
     @directory_check(STAGING_TEMPLATES_PATH)
     def _generate_edge_template_paths(self, node_type, template=None,
                                       extension="yaml"):
+
         _nt_lower = self._generate_node_type_lower(node_type)
         _tmplt_name = template + "_" + _nt_lower if template else _nt_lower
         edge_site_directory = self._generate_role_lower(node_type)
