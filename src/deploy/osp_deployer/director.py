@@ -124,6 +124,7 @@ BR_DOWN_CMD = "/etc/sysconfig/network-scripts/ifdown-ovs ifcfg-{br}"
 BR_UP_CMD = "/etc/sysconfig/network-scripts/ifup-ovs ifcfg-{br}"
 UNDERCLOUD_INSTALL_CMD = "openstack undercloud install"
 
+
 class Director(InfraHost):
 
     def __init__(self):
@@ -261,14 +262,10 @@ class Director(InfraHost):
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
-            raise AssertionError("Director/Undercloud did not " +
-                                 "install properly - see " +
-                                 "/pilot/install-director.log" +
-                                 " for details")
-
-        # TODO: believe this was moved to deployer.py
-        # tester = Checkpoints()
-        # tester.verify_undercloud_installed()
+            raise AssertionError("Director/Undercloud did not "
+                                 + "install properly - see "
+                                 + "/pilot/install-director.log"
+                                 + " for details")
 
     def upload_cloud_images(self):
         if self.settings.pull_images_from_cdn is False:
@@ -316,10 +313,10 @@ class Director(InfraHost):
                 setts.management_allocation_pool_end
 
             # Discover the nodes using static IPs for the iDRAC
-            for node in (self.settings.controller_nodes +
-                         self.settings.compute_nodes +
-                         self.settings.ceph_nodes +
-                         self.settings.computehci_nodes):
+            for node in (self.settings.controller_nodes
+                         + self.settings.compute_nodes
+                         + self.settings.ceph_nodes
+                         + self.settings.computehci_nodes):
                 if hasattr(node, "idrac_ip"):
                     cmd += ' ' + node.idrac_ip
 
@@ -368,9 +365,9 @@ class Director(InfraHost):
 
     def node_discovery_edge(self, node_type):
         setts = self.settings
-        nodes = self.settings.node_types_map[node_type]
+        nodes = setts.node_types_map[node_type]
         _node_cnt = len(nodes)
-        logger.debug("vvvvvvvvvv Discovering {} nodes for node type: {}"
+        logger.debug("Discovering {} nodes for node type: {}"
                      .format(str(_node_cnt), node_type))
         paths = self._generate_edge_template_paths(node_type, INSTACKENV,
                                                    "json")
@@ -571,10 +568,6 @@ class Director(InfraHost):
         roles_to_nodes["compute"] = setts.compute_nodes
         roles_to_nodes["storage"] = setts.ceph_nodes
         roles_to_nodes["computehci"] = setts.computehci_nodes
-        # only do this if --deploy-all-edge-sites flag is sent to deployer
-        # Add edge nodes if there are any defined
-        # for node_type, edge_site_nodes in setts.node_types_map.items():
-        #    roles_to_nodes[node_type] = edge_site_nodes
 
         threads = []
         for role in roles_to_nodes.keys():
@@ -1037,7 +1030,6 @@ class Director(InfraHost):
         else:
             self.setup_powermax_cinder(dell_powermax_fc_cinder_yaml)
 
-
         # Enable multiple backends now
         enabled_backends = "["
 
@@ -1049,7 +1041,6 @@ class Director(InfraHost):
 
         if self.settings.enable_powermax_backend is True:
             enabled_backends += ",'tripleo_dellemc_powermax'"
-
 
         enabled_backends += "]"
 
@@ -1262,7 +1253,6 @@ class Director(InfraHost):
             ])
         for cmd in cmds:
             self.run_tty(cmd)
-
 
     def setup_powermax_cinder(self, powermax_cinder_yaml):
 
@@ -1534,7 +1524,7 @@ class Director(InfraHost):
                     compute_private_ips += "\\n"
                     compute_storage_ips += "\\n"
 
-            computehci_tenant_tunnel_ips =''
+            computehci_tenant_tunnel_ips = ''
             computehci_private_ips = ''
             computehci_storage_ips = ''
             computehci_cluster_ips = ''
@@ -1630,7 +1620,8 @@ class Director(InfraHost):
                     # self.settings.storage_vip + '/" ' + static_vip_yaml,
                     # 'sed -i "s/StorageMgmtNetworkVip: ' +
                     # '.*/StorageMgmtNetworkVip: ' +
-                    # self.settings.storage_cluster_vip + '/" ' + static_vip_yaml
+                    # self.settings.storage_cluster_vip + '/" '
+                    # + static_vip_yaml
                     ]
             for cmd in cmds:
                 self.run_tty(cmd)
@@ -1878,16 +1869,15 @@ class Director(InfraHost):
         logger.debug("container_image_prepare_edge_all called!!!!!!!!!!!")
 
     def container_image_prepare_edge(self, node_type):
-        setts = self.settings
         env_files = [CONTROL_PLANE_EXPORT, NODE_PLACEMENT,
-                     DELL_ENV, NET_ENV, INSTACKENV, STATIC_IP_ENV, STATIC_VIP_ENV,
-                     NET_ISO, NIC_ENV]
+                     DELL_ENV, NET_ENV, INSTACKENV, STATIC_IP_ENV,
+                     STATIC_VIP_ENV, NET_ISO, NIC_ENV]
 
         stg_roles_file, roles_file = self._generate_edge_template_paths(
             node_type, ROLES_DATA)
 
-        stg_roles_file, nd_file = self._generate_edge_template_paths(node_type,
-                                                                     NET_DATA)
+        stg_roles_file, nd_file = self._generate_edge_template_paths(
+            node_type, NETWORK_DATA)
 
         cmd = "openstack tripleo container image prepare "
         cmd += "-r " + roles_file
@@ -1934,13 +1924,17 @@ class Director(InfraHost):
     def deploy_edge_site(self, node_type):
         # self.subnet_routes_edge(node_type)
         # TODO don't need anymore self.restart_director_vm()
+        ''' skip these for testing
         self.update_and_upload_undercloud_conf_edge(node_type)
-        self.update_undercloud()
+        # TODO update_undercloud should take a node_type and only
+        # run openstack undercloud intall if the subnet is not there.
+        self.update_undercloud(node_type)
         self.setup_net_envt_edge(node_type)
         self.overcloud_config_download()
         self.export_control_plane_config()
         self.node_discovery_edge(node_type)
         self.configure_idracs_edge(node_type)
+        '''
         self.import_nodes(node_type)
         self.node_introspection(node_type)
         self.update_sshd_conf()
@@ -2314,8 +2308,20 @@ class Director(InfraHost):
         external_sub_guid = self.run_tty(external_sub_cmd)[0].rstrip()
         return external_sub_guid
 
-    def update_undercloud(self):
+    def update_undercloud(self, node_type=None):
         logging.debug("Updating undercloud...")
+        subnet = self._generate_subnet_name(node_type)
+        if node_type:
+            subnet_cmd = ("{source_cmd} openstack subnet "
+                          "show {subnet} -c name "
+                          "-f value".format(source_cmd=self.source_stackrc,
+                                            subnet=subnet))
+            sn_out, sn_err, sn_exit_status = self.run(subnet_cmd)
+            if sn_out.strip() == subnet:
+                logger.info("Subnet: {}, already exists no need to "
+                            "install undercloud again".format(subnet))
+                return
+        return
         cmd = self.source_stackrc + "cd ; " + UNDERCLOUD_INSTALL_CMD
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
@@ -2557,10 +2563,11 @@ class Director(InfraHost):
         """
         logger.debug("render_and_upload_compute_edge_all called!")
         setts = self.settings
-        for node_type, node_type_data in setts.node_type_data_map.items():
-            self.render_and_upload_compute_edge(node_type, node_type_data)
+        for node_type in setts.node_type_data_map:
+            self.render_and_upload_compute_edge(node_type)
 
-    def render_and_upload_compute_edge(self, node_type, node_type_data):
+    def render_and_upload_compute_edge(self, node_type):
+        node_type_data = self.settings.node_type_data_map[node_type]
         paths = self._generate_edge_template_paths(node_type)
         stg_nic_path, dst_nic_path = paths
         num_nics = node_type_data['nic_port_count']
@@ -2595,14 +2602,18 @@ class Director(InfraHost):
         to:
         ~/pilot/templates/nic_configs/5_port/nic_environement_bostoncompute.yaml
         """
-        logger.debug("render_and_upload_nic_env_edge called!")
+        logger.debug("render_and_upload_nic_env_edge_all called!")
 
+        for node_type in self.settings.node_type_data:
+            self.render_and_upload_nic_env_edge(node_type)
+
+    def render_and_upload_nic_env_edge(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        num_nics = int(node_type_data['nic_port_count'])
         nic_dict_by_port_num = self._group_node_types_by_num_nics()
-
-        for num_nics, node_type_tuples in nic_dict_by_port_num.items():
-            self.render_and_upload_nic_env_edge(num_nics, node_type_tuples)
-
-    def render_and_upload_nic_env_edge(self, num_nics, node_type_tuples):
+        node_type_tuples = nic_dict_by_port_num[num_nics]
+        nic_dict_by_port_num[num_nics].append((node_type, node_type_data))
 
         port_dir = "{}_port".format(num_nics)
 
@@ -2701,10 +2712,11 @@ class Director(InfraHost):
     def render_and_upload_static_ips_edge_all(self):
         logger.debug("render_and_upload_static_ips_edge_all called!")
 
-        for node_type, nodes in self.settings.node_types_map.items():
-            self.render_and_upload_static_ips_edge(node_type, nodes)
+        for node_type in self.settings.node_types_map:
+            self.render_and_upload_static_ips_edge(node_type)
 
-    def render_and_upload_static_ips_edge(self, node_type, nodes):
+    def render_and_upload_static_ips_edge(self, node_type):
+        nodes = self.settings.node_types_map[node_type]
         paths = self._generate_edge_template_paths(node_type, STATIC_IP_ENV)
         stg_static_ip_env_path, remote_static_ip_env_file = paths
         tmplt = self.jinja2_env.get_template(STATIC_IP_ENV_EDGE_J2)
@@ -2795,9 +2807,11 @@ class Director(InfraHost):
         logger.debug("render_and_upload_network_data_edge_all called!")
         setts = self.settings
         for node_type, node_type_data in setts.node_type_data_map.items():
-            self.render_and_upload_network_data_edge(node_type, node_type_data)
+            self.render_and_upload_network_data_edge(node_type)
 
-    def render_and_upload_network_data_edge(self, node_type, node_type_data):
+    def render_and_upload_network_data_edge(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
         tmplt = self.jinja2_env.get_template(NETWORK_DATA_J2)
         paths = self._generate_edge_template_paths(node_type, NETWORK_DATA)
         stg_nd_file, nd_file = paths
@@ -2877,6 +2891,8 @@ class Director(InfraHost):
         logger.info('Director VM edge routes set')
 
     def subnet_routes_edge(self, node_type, add=True):
+        logger.info("Configuring routes for {}, add or "
+                    "remove {!s}".format(node_type, add))
         setts = self.settings
         add_remove_mgmt = "+" if add else "-"
         mgmt_if = setts.director_node.management_if
@@ -2908,6 +2924,7 @@ class Director(InfraHost):
                                               cidr_esc=_prov_cidr_esc,
                                               gw=prov_gw,
                                               br=CTLPLANE_BRIDGE)
+            logger.info("Provisioning route command: {}".format(prov_cmd))
             self.run_as_root(prov_cmd)
 
     def restart_director_vm(self):
@@ -2935,7 +2952,8 @@ class Director(InfraHost):
 
     def export_control_plane_config(self):
         """
-        openstack overcloud export -f --stack r62 --output-file --config-download-dir\
+        openstack overcloud export -f --stack r62 --output-file
+        --config-download-dir \
         ~/edge-common/control-plane-export.yaml
         """
         # _dwnld_cfg_dir = self.settings.overcloud_name + "-config"
@@ -3878,6 +3896,33 @@ class Director(InfraHost):
         logger.debug("Configuring network settings for overcloud")
         """
         TODO: dpaterson, implement this method
+        ########## Our overcloud deployment commands
+        cd ;source ~/stackrc; openstack overcloud deploy \
+        --debug \
+        --log-file ~/pilot/overcloud_deployment.log \
+        -t 150 \
+        --stack r62 \
+        --templates ~/pilot/templates/overcloud \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-rgw.yaml \
+        -r ~/pilot/templates/roles_data.yaml \
+        -e ~/pilot/templates/static-ip-environment.yaml \
+        -e ~/pilot/templates/static-vip-environment.yaml \
+        -e ~/pilot/templates/node-placement.yaml \
+        -e ~/pilot/templates/overcloud/environments/storage-environment.yaml \
+        -e ~/containers-prepare-parameter.yaml \
+        -e ~/pilot/templates/dell-environment.yaml \
+        -e ~/pilot/templates/dell-cinder-backends.yaml \
+        -e ~/pilot/templates/overcloud/environments/network-isolation.yaml \
+        -e ~/pilot/templates/network-environment.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/services/neutron-ovs.yaml \
+        -e /home/stack/pilot/templates/nic-configs/5_port/nic_environment.yaml \
+        --libvirt-type kvm \
+        --ntp-server 192.168.120.8
+
+        ############## End ours
+        Script from: https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/16.1/html-single/distributed_compute_node_and_storage_deployment/index
+
         !/bin/bash
         STACK=dcn0
         source ~/stackrc
@@ -3899,7 +3944,7 @@ class Director(InfraHost):
          -e overrides.yaml
          """
         cmd = " > overcloud_deploy_edge_out.log 2>&1"
-        return "ls -lt /home/stack/"
+        return cmd
 
     def _generate_deploy_cmd_edge_all(self):
         """
@@ -3976,5 +4021,7 @@ class Director(InfraHost):
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
-    director.render_and_upload_undercloud_conf()
+    director.subnet_routes_edge("edge-compute-denver", True)
+    # director.update_undercloud("edge-compute-denver")
+    # director.render_and_upload_undercloud_conf()
     # director.subnet_routes_edge("edge-compute-boston", True)
