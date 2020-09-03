@@ -535,7 +535,7 @@ def wait_for_jobs_to_complete(job_ids, drac_client, ip_service_tag):
 
 def clear_job_queue(drac_client, ip_service_tag):
     LOG.info("Clearing the job queue on {}".format(ip_service_tag))
-    drac_client.delete_jobs(job_ids=['JID_CLEARALL_FORCE'])
+    drac_client.delete_jobs(job_ids=['JID_CLEARALL'])
 
     # It takes a second or two for the iDRAC to switch from the ready state to
     # the not-ready state, so wait for this transition to happen
