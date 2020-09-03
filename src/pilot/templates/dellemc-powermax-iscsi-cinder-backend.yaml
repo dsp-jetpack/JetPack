@@ -1,5 +1,5 @@
 parameter_defaults: 
-  CinderEnableIscsiBackend:true
+  CinderEnableIscsiBackend: false
 
 parameter_defaults:
   ControllerExtraConfig:

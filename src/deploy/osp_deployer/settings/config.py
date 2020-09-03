@@ -622,8 +622,12 @@ class Settings:
             '/pilot/templates/dellsc-cinder-config.yaml'
         self.dell_unity_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellemc-unity-cinder-backend.yaml'
+        self.dell_unity_cinder_container_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/dellemc-unity-cinder-container.yaml'
         self.unity_manila_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/unity-manila-config.yaml'
+        self.unity_manila_container_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/unity-manila-container.yaml'
         self.dell_powermax_iscsi_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellemc-powermax-iscsi-cinder-backend.yaml'
         self.dell_powermax_fc_cinder_yaml = self.foreman_configuration_scripts + \
