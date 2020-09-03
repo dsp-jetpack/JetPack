@@ -50,15 +50,48 @@ parameters:
     default: 60
     description: Vlan ID for the management network traffic.
     type: number
-  ControlPlaneSubnetCidr: # Override this via parameter_defaults
-    default: '24'
-    description: The subnet CIDR of the control plane network.
+  ControlPlaneSubnetCidr:
+    default: ''
+    description: >
+      The subnet CIDR of the control plane network. (The parameter is
+      automatically resolved from the ctlplane subnet's cidr attribute.)
     type: string
+  ControlPlaneStaticRoutes:
+    default: []
+    description: >
+      Routes for the ctlplane network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+  StorageInterfaceRoutes:
+    default: []
+    description: >
+      Routes for the storage network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+  InternalApiInterfaceRoutes:
+    default: []
+    description: >
+      Routes for the internal_api network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+  TenantInterfaceRoutes:
+    default: []
+    description: >
+      Routes for the tenant network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
   ControlPlaneDefaultRoute: # Override this via parameter_defaults
     description: The default route of the control plane network.
     type: string
   ExternalInterfaceDefaultRoute: # Not used by default in this template
-    default: 10.0.0.1
     description: The default route of the external network.
     type: string
   ManagementInterfaceDefaultRoute: # Commented out by default in this template
@@ -117,35 +150,45 @@ parameters:
     default: mlx5_core
     description: DPDK driver for Mellanox
     type: string
-  ExternalNetworkMTU: # Override this via parameter_defaults
+  NumDpdkInterfaceRxQueues:
+    description: Number of Rx Queues required for DPDK bond or DPDK ports
+    default: 1
+    type: number
+  ControlPlaneMtu:
+    default: 1500
+    description: The maximum transmission unit (MTU) size(in bytes) that is
+      guaranteed to pass through the data path of the segments in the network.
+      (The parameter is automatically resolved from the ctlplane network's mtu attribute.)
+    type: number
+  ExternalMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  InternalApiMTU: # Override this via parameter_defaults
+  InternalApiMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  StorageNetworkMTU: # Override this via parameter_defaults
+  StorageMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  StorageMgmtNetworkMTU: # Override this via parameter_defaults
+  StorageMgmtMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  TenantNetworkMTU: # Override this via parameter_defaults
+  TenantMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  ProvisioningNetworkMTU: # Override this via parameter_defaults
+  ProvisioningMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  ManagementNetworkMTU: # Override this via parameter_defaults
+  ManagementMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  DefaultBondMTU: # Override this via parameter_defaults
+  DefaultBondMtu: # Override this via parameter_defaults
     default: 9000
     description: MTU value for this network.
     type: number
@@ -167,7 +210,7 @@ resources:
                 bonding_options:
                   get_param: ComputeBondInterfaceOptions
                 mtu:
-                  get_param: ProvisioningNetworkMTU
+                  get_param: ProvisioningMtu
                 use_dhcp: false
                 dns_servers:
                   get_param: DnsServers
@@ -189,19 +232,19 @@ resources:
                   name:
                     get_param: ComputeBond0Interface1
                   mtu:
-                    get_param: DefaultBondMTU
+                    get_param: DefaultBondMtu
                   primary: true
                 - type: interface
                   name:
                     get_param: ComputeBond0Interface2
                   mtu:
-                    get_param: DefaultBondMTU
+                    get_param: DefaultBondMtu
               - type: vlan
                 device: bond0
                 vlan_id:
                   get_param: TenantNetworkVlanID
                 mtu:
-                  get_param: TenantNetworkMTU
+                  get_param: TenantMtu
                 addresses:
                 - ip_netmask:
                     get_param: TenantIpSubnet
@@ -210,87 +253,89 @@ resources:
                 vlan_id:
                   get_param: InternalApiNetworkVlanID
                 mtu:
-                  get_param: InternalApiMTU
+                  get_param: InternalApiMtu
                 addresses:
                 - ip_netmask:
                     get_param: InternalApiIpSubnet
               - type: ovs_user_bridge
                 name: br-tenant
                 mtu:
-                  get_param: DefaultBondMTU
+                  get_param: DefaultBondMtu
                 use_dhcp: false
                 members:
                 - type: ovs_dpdk_bond
-                  name: ovs_dpdk_bond10
+                  name: dpdkbond0
+                  rx_queue:
+                    get_param: NumDpdkInterfaceRxQueues
                   mtu:
-                    get_param: DefaultBondMTU
+                    get_param: DefaultBondMtu
                   ovs_options:
                     get_param: BondInterfaceOvsOptions
                   members:
                   - type: ovs_dpdk_port
                     name: dpdk0
+                    mtu:
+                        get_param: DefaultBondMtu
                     driver:
                         get_param: HostNicDriver
                     members:
                     - type: interface
                       name:
                         get_param: ComputeOvsDpdkInterface1
-                      mtu:
-                        get_param: DefaultBondMTU
                   - type: ovs_dpdk_port
                     name: dpdk1
+                    mtu:
+                        get_param: DefaultBondMtu
                     driver:
                         get_param: HostNicDriver
                     members:
                     - type: interface
                       name:
                         get_param: ComputeOvsDpdkInterface2
-                      mtu:
-                        get_param: DefaultBondMTU
                   - type: ovs_dpdk_port
                     name: dpdk2
+                    mtu:
+                        get_param: DefaultBondMtu
                     driver:
                         get_param: HostNicDriver
                     members:
                     - type: interface
                       name:
                         get_param: ComputeOvsDpdkInterface3
-                      mtu:
-                        get_param: DefaultBondMTU
                   - type: ovs_dpdk_port
                     name: dpdk3
+                    mtu:
+                        get_param: DefaultBondMtu
                     driver:
                         get_param: HostNicDriver
                     members:
                     - type: interface
                       name:
                         get_param: ComputeOvsDpdkInterface4
-                      mtu:
-                        get_param: DefaultBondMTU
               - type: linux_bond
                 name: bond1
                 bonding_options:
                   get_param: ComputeBondInterfaceOptions
                 mtu:
-                  get_param: DefaultBondMTU
+                  get_param: DefaultBondMtu
                 members:
                 - type: interface
                   name:
                     get_param: ComputeBond1Interface1
                   mtu:
-                    get_param: DefaultBondMTU
+                    get_param: DefaultBondMtu
                   primary: true
                 - type: interface
                   name:
                     get_param: ComputeBond1Interface2
                   mtu:
-                    get_param: DefaultBondMTU
+                    get_param: DefaultBondMtu
               - type: vlan
                 device: bond1
                 vlan_id:
                   get_param: StorageNetworkVlanID
                 mtu:
-                  get_param: StorageNetworkMTU
+                  get_param: StorageMtu
                 addresses:
                 - ip_netmask:
                     get_param: StorageIpSubnet
