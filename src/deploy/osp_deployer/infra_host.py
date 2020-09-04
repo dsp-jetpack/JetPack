@@ -126,8 +126,7 @@ class InfraHost:
         return placement_exp
 
     def _generate_node_type_az(self, node_type):
-        az = ((re.sub(r'[^a-z0-9]', " ",
-                      node_type.lower())).replace(" ", "-") + "-az")
+        az = self._generate_role_lower(node_type) + "_az"
         return az
 
     def _generate_cc_role(self, node_type):

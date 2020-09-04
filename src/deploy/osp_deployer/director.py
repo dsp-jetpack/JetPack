@@ -55,8 +55,7 @@ OTHER_POOLS = ['.rgw.buckets',
 
 CTLPLANE_BRIDGE = "br-ctlplane"
 FIRST_BOOT = "first-boot"
-NOVA_AZ_CONFIG = ("deployment/nova/nova-az-config.yaml")
-NOVA_AZ = "nova-az"
+SITE_NAME = "site-name"
 OVERRIDES = "overrides"
 CONTROL_PLANE_EXPORT = "control-plane-export"
 TEMPEST_CONF = 'tempest.conf'
@@ -107,7 +106,7 @@ STATIC_IP_ENV_EDGE_J2 = STATIC_IP_ENV + "-edge" + J2_EXT
 NODE_PLACEMENT_EDGE_J2 = NODE_PLACEMENT + "-edge" + J2_EXT
 ROLES_DATA_EDGE_J2 = ROLES_DATA + "_edge" + J2_EXT
 NET_ISO_EDGE_J2 = NET_ISO + "-edge" + J2_EXT
-NOVA_AZ_EDGE_J2 = NOVA_AZ + "-edge" + J2_EXT
+SITE_NAME_EDGE_J2 = SITE_NAME + "-edge" + J2_EXT
 OVERRIDES_EDGE_J2 = OVERRIDES + "-edge" + J2_EXT
 
 EC2_IPCIDR = '169.254.169.254/32'
@@ -691,6 +690,8 @@ class Director(InfraHost):
         self.setup_networking_edge(node_type)
         self.render_and_upload_roles_data_edge(node_type)
         self.setup_environment_edge(node_type)
+        self.render_and_upload_site_name_edge(node_type)
+        self.render_and_upload_overrides_edge(node_type)
         # TODO self.setup_sanity_ini()
 
     def clamp_min_pgs(self, num_pgs):
@@ -1851,7 +1852,7 @@ class Director(InfraHost):
 
     def deploy_edge_site_all(self):
         logger.info("=== Preparing the overcloud ===")
-        ## self.subnet_routes_edge_all()
+        # self.subnet_routes_edge_all()
         self.update_and_upload_undercloud_conf_edge_all()
         self.setup_net_envt_edge_all()
         self.overcloud_config_download()
@@ -1953,7 +1954,6 @@ class Director(InfraHost):
         # TODO update_undercloud should take a node_type and only
         # run openstack undercloud intall if the subnet is not there.'''
         self.update_undercloud(node_type)
-        self.setup_net_envt_edge(node_type)
         self.overcloud_config_download()
         self.export_control_plane_config()
         self.node_discovery_edge(node_type)
@@ -2601,9 +2601,8 @@ class Director(InfraHost):
         tmplt_data = {}
         tmplt_data["parameters"] = self._generate_nic_params(node_type)
         tmplt_data["network_config"] = self._generate_nic_network_config(
-            node_type,
-            node_type_data)
-        logger.info("tmplt_data: %s", str(tmplt_data))
+            node_type)
+        logger.debug("tmplt_data: %s", str(tmplt_data))
         rendered_tmplt = tmplt.render(**tmplt_data)
         with open(stg_nic_path, 'w') as stg_nic_fp:
             stg_nic_fp.write(rendered_tmplt)
@@ -2690,21 +2689,20 @@ class Director(InfraHost):
             stg_plcmnt_fp.write(rendered_tmplt)
         self.upload_file(stg_plcmnt_path, remote_plcmnt_file)
 
-    def render_and_upload_nova_az_edge_all(self):
-        logger.debug("render_and_upload_nova_az_edge_all called!")
-        for node_type in self.settings.node_types:
-            self.render_and_upload_nova_az_edge(node_type)
+    def render_and_upload_site_name_edge_all(self):
+        logger.debug("render_and_upload_site_name_edge_all called!")
+        for node_type in self.settings.node_type_data:
+            self.render_and_upload_site_name_edge(node_type)
 
-    def render_and_upload_nova_az_edge(self, node_type):
-        paths = self._generate_edge_template_paths(node_type, NOVA_AZ)
+    def render_and_upload_site_name_edge(self, node_type):
+        logger.debug("render_and_upload_site_name_edge called!")
+        paths = self._generate_edge_template_paths(node_type, SITE_NAME)
         stg_az_path, remote_az_file = paths
-        tmplt = self.jinja2_env.get_template(NOVA_AZ_EDGE_J2)
-        tmplt_data = {'resource_registry': {},
-                      'parameter_defaults': {}}
-
-        _res = self._generate_az_edge(node_type)
-        tmplt_data['resource_registry'] = _res[0]
-        tmplt_data['parameter_defaults'] = _res[1]
+        tmplt = self.jinja2_env.get_template(SITE_NAME_EDGE_J2)
+        tmplt_data = {}
+        param_def = self._generate_site_name_edge(node_type)
+        tmplt_data['overcloud_templates'] = self.templates_overcloud_dir
+        tmplt_data['parameter_defaults'] = param_def
         logger.debug("tmplt_data: %s", str(tmplt_data))
         rendered_tmplt = tmplt.render(**tmplt_data)
 
@@ -2713,15 +2711,33 @@ class Director(InfraHost):
         self.upload_file(stg_az_path, remote_az_file)
 
     def render_and_upload_overrides_edge_all(self):
+        '''
+        Template output should look like:
+        parameter_defaults:
+          DistributedComputeCount: 3
+          DistributedComputeFlavor: baremetal
+          DistributedComputeSchedulerHints:
+            'capabilities:node': '0-compute-%index%'
+          NovaAZAttach: false
+        '''
         logger.debug("render_and_upload_overrides_edge_all called!")
         setts = self.settings
         for node_type in setts.node_types:
             self.render_and_upload_overrides_edge(node_type)
 
     def render_and_upload_overrides_edge(self, node_type):
+        '''
+        Template output should look like:
+        parameter_defaults:
+          DistributedComputeCount: 3
+          DistributedComputeFlavor: baremetal
+          DistributedComputeSchedulerHints:
+            'capabilities:node': '0-compute-%index%'
+          NovaAZAttach: false
+        '''
         tmplt = self.jinja2_env.get_template(OVERRIDES_EDGE_J2)
         paths = self._generate_edge_template_paths(node_type, OVERRIDES)
-        stg_or_path, remote_or_file = paths[0], paths[1]
+        stg_or_path, remote_or_file = paths
         tmplt_data = {}
 
         tmplt_data['parameter_defaults'] = self._generate_overrides_edge(
@@ -2864,13 +2880,10 @@ class Director(InfraHost):
             self.setup_net_envt_edge(node_type)
 
     def setup_net_envt_edge(self, node_type):
-        setts = self.settings
-        node_type_data = setts.node_type_data_map[node_type]
         tmplt = self.jinja2_env.get_template(NETWORK_ENV_EDGE_J2)
         paths = self._generate_edge_template_paths(node_type, NET_ENV)
         stg_net_env_path, net_env_file = paths
-        params = self._generate_network_environment_params_edge(node_type,
-                                                                node_type_data)
+        params = self._generate_network_environment_params_edge(node_type)
         tmplt_data = {"parameter_defaults": params}
         rendered_tmplt = tmplt.render(**tmplt_data)
         with open(stg_net_env_path, 'w') as stg_net_env_fp:
@@ -3177,7 +3190,7 @@ class Director(InfraHost):
             _res_reg[port_key] = port_val
         return _res_reg
 
-    def _generate_network_environment_params_edge(self, type, node_type_data):
+    def _generate_network_environment_params_edge(self, node_type):
         """Generate network-environment.yaml parameters for edge sites
         :returns: dict of edge site networks
         example:{
@@ -3185,25 +3198,37 @@ class Director(InfraHost):
             'InternalApiBostonComputeNetCidr': '192.168.141.0/24',
             'InternalApiBostonComputeNetworkVlanID': 141,
             'InternalApiBostonComputeInterfaceDefaultRoute': '192.168.141.1',
+            'InternalApiBostonComputeInterfaceRoutes':
+                [{'end': '192.168.141.60', 'start': '192.168.141.20'}],
+            ...}
             'InternalApiBostonComputeAllocationPools':
                 [{'end': '192.168.141.60', 'start': '192.168.141.20'}],
             ...}
         """
         logger.debug("Generate network environment params for node type: %s",
-                     type)
+                     node_type)
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
         params = {}
-        role = self._generate_cc_role(type)
-        edge_subnet = self._generate_subnet_name(type)
+        role = self._generate_cc_role(node_type)
+        edge_subnet = self._generate_subnet_name(node_type)
+        cp_oc_net_cidr = "{}NetCidr".format(CONTROL_PLANE_NET[0])
+        cp_oc_subnet_cidr = "{}SubnetCidr".format(CONTROL_PLANE_NET[0])
+        cp_oc_default_route = "{}DefaultRoute".format(CONTROL_PLANE_NET[0])
 
-        cp_net_cidr = 'ControlPlane' + role + 'NetCidr'
-        cp_subnet_cidr = 'ControlPlane' + role + 'SubnetCidr'
-        cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
-        cp_subnet = role + 'ControlPlaneSubnet'
+        params[cp_oc_net_cidr] = setts.provisioning_network
+        params[cp_oc_subnet_cidr] = setts.provisioning_network.split("/")[1]
+        params[cp_oc_default_route] = setts.director_node.provisioning_ip
+
+        cp_network = "{}{}".format(CONTROL_PLANE_NET[0], role)
+        cp_net_cidr = "{}NetCidr".format(cp_network)
+        cp_subnet_cidr = "{}SubnetCidr".format(cp_network)
+        cp_default_route = "{}DefaultRoute".format(cp_network)
+        cp_subnet = "{}Subnet".format(cp_network)
         params[cp_net_cidr] = node_type_data['cidr']
         params[cp_subnet] = edge_subnet
         _cp_subnet_cidr = node_type_data['cidr'].rsplit("/", 1)[1]
         params[cp_subnet_cidr] = _cp_subnet_cidr
-        params[cp_net_cidr] = node_type_data['cidr']
         params[cp_default_route] = node_type_data['gateway']
 
         int_api_network = INTERNAL_API_NET[0] + role
@@ -3211,9 +3236,10 @@ class Director(InfraHost):
         int_api_vlan = int_api_network + 'NetworkVlanID'
         int_api_subnet = int_api_network + 'IpSubnet'
         int_api_gateway = int_api_network + 'InterfaceDefaultRoute'
+        int_api_interface_routes = int_api_network + 'InterfaceRoutes'
         int_api_pools = int_api_network + 'AllocationPools'
-        int_def_route = "{}{}InterfaceDefaultRoute".format(INTERNAL_API_NET[0],
-                                                           role)
+        int_def_route = "{}InterfaceDefaultRoute".format(int_api_network)
+        int_api_mtu = "{}Mtu".format(int_api_network)
         _int_api = node_type_data['private_api_network']
         params[int_api_subnet] = _int_api
         params[int_api_cidr] = _int_api
@@ -3225,14 +3251,21 @@ class Director(InfraHost):
         _int_e = node_type_data['private_api_allocation_pool_end']
         params[int_api_pools] = [{'start': _int_s, 'end': _int_e}]
 
+        int_api_routes = [{"destination": _int_api,
+                           "nexthop": node_type_data['private_api_gateway']}]
+        params[int_api_interface_routes] = int_api_routes
+        params[int_api_mtu] = setts.private_api_network_mtu
+
         tenant_network = TENANT_NET[0] + role
         tenant_net_cidr = tenant_network + 'NetCidr'
         tenant_vlan = tenant_network + 'NetworkVlanID'
         tenant_subnet = tenant_network + 'IpSubnet'
         tenant_gateway = tenant_network + 'InterfaceDefaultRoute'
+        tenant_interface_routes = tenant_network + 'InterfaceRoutes'
         tenant_pools = tenant_network + 'AllocationPools'
         tenant_def_route = "{}{}InterfaceDefaultRoute".format(TENANT_NET[0],
                                                               role)
+        tenant_mtu = "{}Mtu".format(tenant_network)
         _tenant_vlanid = int(node_type_data['tenant_vlanid'])
         params[tenant_vlan] = _tenant_vlanid
         _tenant_net = node_type_data['tenant_network']
@@ -3243,15 +3276,21 @@ class Director(InfraHost):
         _ten_s = node_type_data['tenant_allocation_pool_start']
         _ten_e = node_type_data['tenant_allocation_pool_end']
         params[tenant_pools] = [{'start': _ten_s, 'end': _ten_e}]
+        tenant_routes = [{"destination": _tenant_net,
+                          "nexthop": node_type_data['tenant_gateway']}]
+
+        params[tenant_interface_routes] = tenant_routes
+        params[tenant_mtu] = setts.tenant_tunnel_network_mtu
 
         storage_network = STORAGE_NET[0] + role
         storage_net_cidr = storage_network + 'NetCidr'
         storage_vlan = storage_network + 'NetworkVlanID'
         storage_subnet = storage_network + 'IpSubnet'
         storage_gateway = storage_network + 'InterfaceDefaultRoute'
+        storage_interface_routes = storage_network + 'InterfaceRoutes'
         storage_pools = storage_network + 'AllocationPools'
-        storage_def_route = "{}{}InterfaceDefaultRoute".format(STORAGE_NET[0],
-                                                               role)
+        storage_def_route = "{}InterfaceDefaultRoute".format(storage_network)
+        storage_mtu = "{}Mtu".format(storage_network)
         _storage_vlanid = int(node_type_data['storage_vlanid'])
         params[storage_vlan] = _storage_vlanid
         _storage_net = node_type_data['storage_network']
@@ -3262,15 +3301,22 @@ class Director(InfraHost):
         _str_s = node_type_data['storage_allocation_pool_start']
         _str_e = node_type_data['storage_allocation_pool_end']
         params[storage_pools] = [{'start': _str_s, 'end': _str_e}]
+        storage_routes = [{"destination": _storage_net,
+                           "nexthop": node_type_data['storage_gateway']}]
+
+        params[storage_interface_routes] = storage_routes
+        params[storage_mtu] = setts.storage_network_mtu
 
         external_network = EXTERNAL_NET[0] + role
         external_net_cidr = external_network + 'NetCidr'
         external_vlan = external_network + 'NetworkVlanID'
         external_subnet = external_network + 'IpSubnet'
         external_gateway = external_network + 'InterfaceDefaultRoute'
+        external_interface_routes = external_network + 'InterfaceRoutes'
         external_pools = external_network + 'AllocationPools'
-        external_def_route = "{}{}InterfaceDefaultRoute".format(
-            EXTERNAL_NET[0], role)
+        external_def_route = "{}InterfaceDefaultRoute".format(external_network)
+        external_mtu = "{}Mtu".format(external_network)
+
         _external_vlanid = int(node_type_data['external_vlanid'])
         params[external_vlan] = _external_vlanid
         _external_net = node_type_data['external_network']
@@ -3281,7 +3327,11 @@ class Director(InfraHost):
         _ext_s = node_type_data['external_allocation_pool_start']
         _ext_e = node_type_data['external_allocation_pool_end']
         params[external_pools] = [{'start': _ext_s, 'end': _ext_e}]
+        params[external_mtu] = setts.floating_ip_network_mtu
 
+        external_routes = [{"default": True,
+                            "nexthop": node_type_data['external_gateway']}]
+        params[external_interface_routes] = external_routes
         return params
 
     def _generate_role_dict(self, node_type):
@@ -3391,19 +3441,20 @@ class Director(InfraHost):
     '''
 
     def _generate_nic_params(self, node_type):
+        setts = self.settings
         role = self._generate_cc_role(node_type)
-
-        cp_default_route = "{}{}DefaultRoute".format(CONTROL_PLANE_NET[0],
-                                                     role)
-        cp_subnet_cidr = "{}{}SubnetCidr".format(CONTROL_PLANE_NET[0],
-                                                 role)
-        cp_net_cidr = "{}{}NetCidr".format(CONTROL_PLANE_NET[0], role)
-        # TODO: this one is backwards, typically it's suppsed to  be
-        # [NetWorkName][Role]SomeKey, but role comes first for CP subet
-        # for some reason, try to refactor at some point so it's consistant
-        cp_subnet = "{}{}Subnet".format(role, CONTROL_PLANE_NET[0])
-
         params = {}
+        cp_oc_default_route = "{}DefaultRoute".format(CONTROL_PLANE_NET[0])
+        cp_oc_subnet_cidr = "{}SubnetCidr".format(CONTROL_PLANE_NET[0])
+        cp_oc_net_cidr = "{}NetCidr".format(CONTROL_PLANE_NET[0])
+
+        cp_network = "{}{}".format(CONTROL_PLANE_NET[0], role)
+        cp_default_route = "{}DefaultRoute".format(cp_network)
+        cp_subnet_cidr = "{}SubnetCidr".format(cp_network)
+        cp_net_cidr = "{}NetCidr".format(cp_network)
+
+        cp_subnet = "{}Subnet".format(cp_network)
+        cp_static_routes = "{}StaticRoutes".format(cp_network)
 
         int_api_network = INTERNAL_API_NET[0] + role
         tenant_network = TENANT_NET[0] + role
@@ -3413,19 +3464,29 @@ class Director(InfraHost):
         int_api_vlan = int_api_network + 'NetworkVlanID'
         int_api_subnet = int_api_network + 'IpSubnet'
         int_api_gateway = int_api_network + 'InterfaceDefaultRoute'
+        int_api_interface_routes = int_api_network + 'InterfaceRoutes'
+        int_api_mtu = int_api_network + 'Mtu'
+
         tenant_net_cidr = tenant_network + 'NetCidr'
         tenant_vlan = tenant_network + 'NetworkVlanID'
         tenant_subnet = tenant_network + 'IpSubnet'
         tenant_gateway = tenant_network + 'InterfaceDefaultRoute'
+        tenant_interface_routes = tenant_network + 'InterfaceRoutes'
+        tenant_mtu = tenant_network + 'Mtu'
+
         storage_net_cidr = storage_network + 'NetCidr'
         storage_vlan = storage_network + 'NetworkVlanID'
         storage_subnet = storage_network + 'IpSubnet'
         storage_gateway = storage_network + 'InterfaceDefaultRoute'
+        storage_interface_routes = storage_network + 'InterfaceRoutes'
+        storage_mtu = storage_network + 'Mtu'
 
         external_net_cidr = external_network + 'NetCidr'
         external_vlan = external_network + 'NetworkVlanID'
         external_subnet = external_network + 'IpSubnet'
         external_gateway = external_network + 'InterfaceDefaultRoute'
+        external_interface_routes = external_network + 'InterfaceRoutes'
+        external_mtu = external_network + 'Mtu'
 
         prov_if = role + 'ProvisioningInterface'
         bond_0_if_1 = role + 'Bond0Interface1'
@@ -3436,28 +3497,45 @@ class Director(InfraHost):
         for network_tup in EDGE_NETWORKS:
             _key = network_tup[0] + 'NetCidr'
             params[_key] = {"default": '', "type": "string"}
+
+        params[cp_oc_subnet_cidr] = {"default": '', "type": "string"}
+        params[cp_oc_default_route] = {"default": '', "type": "string"}
+        params[cp_oc_net_cidr] = {"default": '', "type": "string"}
         params[EC2_PUBLIC_IPCIDR_PARAM] = {"default": EC2_IPCIDR,
-                                             "type": "string"}
+                                           "type": "string"}
         params[cp_subnet_cidr] = {"default": '', "type": "string"}
         params[cp_subnet] = {"default": '', "type": "string"}
         params[cp_default_route] = {"default": '', "type": "string"}
+        params[cp_static_routes] = {"default": [], "type": "json"}
         params[cp_net_cidr] = {"default": '', "type": "string"}
         params[int_api_subnet] = {"default": '', "type": "string"}
         params[int_api_cidr] = {"default": '', "type": "string"}
         params[int_api_vlan] = {"default": 0, "type": "number"}
         params[int_api_gateway] = {"default": '', "type": "string"}
+        params[int_api_interface_routes] = {"default": [], "type": "json"}
+        params[int_api_mtu] = {"default": 1500, "type": "number"}
+
         params[tenant_net_cidr] = {"default": '', "type": "string"}
         params[tenant_vlan] = {"default": 0, "type": "number"}
         params[tenant_subnet] = {"default": '', "type": "string"}
         params[tenant_gateway] = {"default": '', "type": "string"}
+        params[tenant_interface_routes] = {"default": [], "type": "json"}
+        params[tenant_mtu] = {"default": 1500, "type": "number"}
+
         params[storage_net_cidr] = {"default": '', "type": "string"}
         params[storage_vlan] = {"default": 0, "type": "number"}
         params[storage_subnet] = {"default": '', "type": "string"}
         params[storage_gateway] = {"default": '', "type": "string"}
+        params[storage_interface_routes] = {"default": [], "type": "json"}
+        params[storage_mtu] = {"default": 1500, "type": "number"}
+
         params[external_net_cidr] = {"default": '', "type": "string"}
         params[external_vlan] = {"default": 0, "type": "number"}
         params[external_subnet] = {"default": '', "type": "string"}
         params[external_gateway] = {"default": '', "type": "string"}
+        params[external_interface_routes] = {"default": [], "type": "json"}
+        params[external_mtu] = {"default": 1500, "type": "number"}
+
         params[prov_if] = {"default": '', "type": "string"}
         params[bond_0_if_1] = {"default": '', "type": "string"}
         params[bond_0_if_2] = {"default": '', "type": "string"}
@@ -3477,21 +3555,27 @@ class Director(InfraHost):
         parameter_defaults map.
         """
         logger.debug("_generate_nic_environment_edge called!")
+        setts = self.settings
         role = self._generate_cc_role(node_type)
+
         params = {}
-        # ControlPlane[ROLE]DefaultRoute: 192.168.120.126
-        cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
-        # ControlPlane[ROLE]SubnetCidr: '26'
-        cp_subnet_cidr = 'ControlPlane' + role + 'SubnetCidr'
-        # [ROLE]ControlPlaneSubnet: [subnet]
-        cp_subnet = role + 'ControlPlaneSubnet'
+        cp_oc_default_route = "{}DefaultRoute".format(CONTROL_PLANE_NET[0])
+        cp_oc_subnet_cidr = "{}SubnetCidr".format(CONTROL_PLANE_NET[0])
+        cp_oc_net_cidr = "{}NetCidr".format(CONTROL_PLANE_NET[0])
+
+        cp_edge_network = "{}{}".format(CONTROL_PLANE_NET[0], role)
+        cp_default_route = "{}DefaultRoute".format(cp_edge_network)
+        cp_subnet_cidr = "{}SubnetCidr".format(cp_edge_network)
+        cp_subnet = "{}Subnet".format(cp_edge_network)
         prov_if = role + 'ProvisioningInterface'
         bond_0_if_1 = role + 'Bond0Interface1'
         bond_0_if_2 = role + 'Bond0Interface2'
         bond_1_if_1 = role + 'Bond1Interface1'
         bond_1_if_2 = role + 'Bond1Interface2'
-        # cidr = 192.168.122.0/24
         cc_cidr = node_type_data['cidr'].rsplit("/", 1)[1]
+        params[cp_oc_default_route] = setts.director_node.provisioning_ip
+        params[cp_oc_subnet_cidr] = setts.provisioning_network.split("/")[1]
+        params[cp_oc_net_cidr] = setts.provisioning_network
         params[cp_default_route] = node_type_data['gateway']
         params[cp_subnet_cidr] = cc_cidr
         params[cp_subnet] = self._generate_subnet_name(node_type)
@@ -3502,7 +3586,7 @@ class Director(InfraHost):
         params[bond_1_if_2] = node_type_data['Bond1Interface2']
         return params
 
-    def _generate_nic_network_config(self, node_type, node_type_data):
+    def _generate_nic_network_config(self, node_type):
         """Generate nic configuration template for a node type and network data
         provided.  This results in a file that corresoponds to the node type,
         which is uploaded to the correct nic_configs sub-directory based on the
@@ -3522,9 +3606,10 @@ class Director(InfraHost):
         :returns: list of nic configuration dicts
         """
         role = self._generate_cc_role(node_type)
-        cp_default_route = 'ControlPlane' + role + 'DefaultRoute'
-        cp_subnet_cidr = 'ControlPlane' + role + 'SubnetCidr'
-        cp_subnet = role + 'ControlPlaneSubnet'
+        cp_network = "{}{}".format(CONTROL_PLANE_NET[0], role)
+        cp_default_route = "{}DefaultRoute".format(cp_network)
+        cp_subnet_cidr = "{}SubnetCidr".format(cp_network)
+        cp_subnet = "{}Subnet".format(cp_network)
         prov_if_param = role + 'ProvisioningInterface'
         bond_0_if_1_param = role + 'Bond0Interface1'
         bond_0_if_2_param = role + 'Bond0Interface2'
@@ -3538,27 +3623,27 @@ class Director(InfraHost):
         storage_network = STORAGE_NET[0] + role
         external_network = EXTERNAL_NET[0] + role
         int_api_subnet = int_api_network + 'IpSubnet'
-        int_api_gateway = int_api_network + 'InterfaceDefaultRoute'
         int_api_vlan_id = int_api_network + 'NetworkVlanID'
+        int_api_interface_routes = int_api_network + 'InterfaceRoutes'
 
         tenant_subnet = tenant_network + 'IpSubnet'
-        tenant_gateway = tenant_network + 'InterfaceDefaultRoute'
         tenant_vlan_id = tenant_network + 'NetworkVlanID'
+        tenant_interface_routes = tenant_network + 'InterfaceRoutes'
 
         storage_subnet = storage_network + 'IpSubnet'
-        storage_gateway = storage_network + 'InterfaceDefaultRoute'
         storage_vlan_id = storage_network + 'NetworkVlanID'
+        storage_interface_routes = storage_network + 'InterfaceRoutes'
 
         external_subnet = external_network + 'IpSubnet'
-        external_gateway = external_network + 'InterfaceDefaultRoute'
         external_vlan_id = external_network + 'NetworkVlanID'
+        external_interface_routes = external_network + 'InterfaceRoutes'
 
         prov_if["name"] = prov_if_param
         prov_if["mtu"] = "ProvisioningNetworkMTU"
         prov_if["use_dhcp"] = False
         prov_if["dns_servers"] = "DnsServers"
-        _cp_add = [{"ip": "ControlPlaneIp",
-                    "cidr": "ControlPlaneSubnetCidr"}]
+        _cp_add = [{"ip": "{}Ip".format(CONTROL_PLANE_NET[0]),
+                    "cidr": "{}SubnetCidr".format(CONTROL_PLANE_NET[0])}]
         prov_if["addresses"] = _cp_add
 
         ec2_route = {"ip_netmask": EC2_PUBLIC_IPCIDR_PARAM,
@@ -3592,10 +3677,7 @@ class Director(InfraHost):
         internal_api_vlan["addresses"] = [{"ip_netmask":
                                            int_api_subnet}]
 
-        int_api_route = {"ip_netmask": 'InternalApiNetCidr',
-                         "next_hop":
-                         int_api_gateway}
-        internal_api_vlan['routes'] = [int_api_route]
+        internal_api_vlan['routes'] = int_api_interface_routes
 
         tenant_vlan = {"type": "vlan"}
         tenant_vlan["device"] = "bond0"
@@ -3603,9 +3685,7 @@ class Director(InfraHost):
         tenant_vlan["mtu"] = "DefaultBondMTU"
         tenant_vlan["addresses"] = [{"ip_netmask":
                                      tenant_subnet}]
-        tenant_route = {"ip_netmask": 'TenantNetCidr',
-                        "next_hop": tenant_gateway}
-        tenant_vlan['routes'] = [tenant_route]
+        tenant_vlan['routes'] = tenant_interface_routes
 
         storage_vlan = {"type": "vlan"}
         storage_vlan["device"] = "bond0"
@@ -3613,9 +3693,7 @@ class Director(InfraHost):
         storage_vlan["mtu"] = "DefaultBondMTU"
         storage_vlan["addresses"] = [{"ip_netmask":
                                       storage_subnet}]
-        storage_route = {"ip_netmask": 'StorageNetCidr',
-                         "next_hop": storage_gateway}
-        storage_vlan['routes'] = [storage_route]
+        storage_vlan['routes'] = storage_interface_routes
 
         tenant_br["members"] = [bond_0, internal_api_vlan,
                                 tenant_vlan, storage_vlan]
@@ -3641,9 +3719,7 @@ class Director(InfraHost):
         external_vlan["addresses"] = [
             {"ip_netmask": external_subnet}]
 
-        def_ex_route = {"default": True,
-                        "next_hop": external_gateway}
-        external_vlan["routes"] = [def_ex_route]
+        external_vlan["routes"] = external_interface_routes
         ex_br["members"] = [bond_1, external_vlan]
 
         return [prov_if, tenant_br, ex_br]
@@ -3884,26 +3960,26 @@ class Director(InfraHost):
         _role_hints = role + 'SchedulerHints'
         _sched_hints[_role_hints] = exp
 
-    def _generate_az_edge(self, node_type):
-        res_reg = {}
+    def _generate_site_name_edge(self, node_type):
+        '''
+          NovaComputeAvailabilityZone:
+             {{parameter_defaults.NovaComputeAvailabilityZone}}
+          RootStackName: {{parameter_defaults.RootStackName}}
+        '''
         param_defs = {}
-        _nova_az_tmplt = os.path.join(self.templates_overcloud_dir,
-                                      NOVA_AZ_CONFIG)
-        res_reg["OS::TripleO::Services::NovaAZConfig"] = _nova_az_tmplt
         _az = self._generate_node_type_az(node_type)
         _stack = self._generate_role_lower(node_type)
         param_defs["NovaComputeAvailabilityZone"] = _az
         param_defs["RootStackName"] = _stack
-        return res_reg, param_defs
+        return param_defs
 
     def _generate_overrides_edge(self, node_type):
         """
         parameter_defaults:
-          DistributedComputeHCICount: 3
-          DistributedComputeHCIFlavor: baremetal
-          DistributedComputeHCISchedulerHints:
-            'capabilities:node': '0-ceph-%index%'
-          CinderStorageAvailabilityZone: dcn0
+          DistributedComputeCount: 3
+          DistributedComputeFlavor: baremetal
+          DistributedComputeSchedulerHints:
+            'capabilities:node': '0-compute-%index%'
           NovaAZAttach: false
         """
         setts = self.settings
@@ -3911,11 +3987,11 @@ class Director(InfraHost):
         param_defs = {}
         param_defs[role + "Count"] = len(setts.node_types_map[node_type])
         param_defs[role + "Flavor"] = "baremetal"
-        _hints = {'capabilities:node':
+        _hints = {"'capabilities:node'":
                   self._generate_node_placement_exp(node_type)}
         param_defs[role + "SchedulerHints"] = _hints
-        _az = self._generate_node_type_az(node_type)
-        param_defs["CinderStorageAvailabilityZone"] = _az
+        # _az = self._generate_node_type_az(node_type)
+        # param_defs["CinderStorageAvailabilityZone"] = _az
         param_defs["NovaAZAttach"] = str(False).lower()
         return param_defs
 
@@ -3973,11 +4049,14 @@ class Director(InfraHost):
                                             "cinder-volume-active-active.yaml")
                                )
         cmd += "-e {} ".format(cntl_plane_exp)
+        cnt_prep_param = os.path.join(self.home_dir,
+                                      CONTAINERS_PREPARE_PARAM + ".yaml")
+        cmd += "-e {} ".format(cnt_prep_param)
         cmd += "-e {} ".format(containers_env_file)
 
         env_files = [STATIC_IP_ENV, NODE_PLACEMENT,
                      DELL_ENV, NET_ISO, NET_ENV, NEUTRON_OVS,
-                     STATIC_VIP_ENV, NIC_ENV, NOVA_AZ, OVERRIDES]
+                     NIC_ENV, SITE_NAME, OVERRIDES]
 
         for env_file in env_files:
             if env_file not in [NET_ISO, NEUTRON_OVS]:
@@ -3991,8 +4070,7 @@ class Director(InfraHost):
             else:  # neutron-ovs
                 tmplt = os.path.join(self.templates_overcloud_dir,
                                      "environments", "services",
-                                     env_file + "_" + node_type_lower
-                                     + ".yaml")
+                                     env_file + ".yaml")
 
             cmd += " -e {} ".format(tmplt)
         cmd += "--libvirt-type kvm "
@@ -4080,7 +4158,17 @@ class Director(InfraHost):
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
-    director.subnet_routes_edge("edge-compute-denver", True)
+    node_type = "edge-compute-denver"
+    # director.render_and_upload_overrides_edge("edge-compute-denver")
+    # director.container_image_prepare_edge("edge-compute-denver")
+    # os._exit(0)
+    # director.render_and_upload_site_name_edge("edge-compute-denver")
+    director.setup_templates_edge(node_type)
+
+    print("edge site deployment "
+          "command: {}"
+          .format(director._generate_deploy_cmd_edge(node_type)))
+    # director.subnet_routes_edge("edge-compute-denver", True)
     # director.update_undercloud("edge-compute-denver")
     # director.render_and_upload_undercloud_conf()
     # director.subnet_routes_edge("edge-compute-boston", True)

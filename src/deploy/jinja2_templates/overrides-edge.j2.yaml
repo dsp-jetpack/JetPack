@@ -14,5 +14,12 @@
 
 parameter_defaults:
 {%- for key, val in parameter_defaults.items() %}
+  {%- if key.endswith("SchedulerHints") %}
+  {{key}}:
+    {%- for sh_key, sh_val in val.items() %}
+    {{sh_key}}: {{sh_val}}
+    {%- endfor %}
+  {%- else %}
   {{key}}: {{val}}
+  {%- endif %}
 {%- endfor %}

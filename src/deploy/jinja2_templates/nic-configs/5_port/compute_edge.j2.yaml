@@ -256,6 +256,10 @@ resources:
                     - ip_netmask:
                         get_param: {{vlan_address.ip_netmask}}
                       {%- endfor %}
+                      {%- if 'routes' in bridge_member %}
+                    routes:
+                      get_param: {{bridge_member.routes}}
+                      {%- endif %}
                     {%- endif %}
                   {%- endfor %}
                 {%- endif %}
