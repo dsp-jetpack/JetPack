@@ -72,6 +72,7 @@ CONTAINERS_PREPARE_PARAM = 'containers-prepare-parameter'
 STAGING_NIC_CONFIGS = STAGING_TEMPLATES_PATH + '/' + NIC_CONFIGS
 NIC_ENV = 'nic_environment'
 NODE_PLACEMENT = 'node-placement'
+NEUTRON_OVS = 'neutron-ovs'
 DELL_ENV = 'dell-environment'
 NET_ENV = 'network-environment'
 INSTACKENV = 'instackenv'
@@ -251,7 +252,7 @@ class Director(InfraHost):
             cmd = '~/pilot/install-director.sh --dns ' + \
                   self.settings.name_server + \
                   " --director_ip " + \
-                  self.ip 
+                  self.ip
 
         if len(self.settings.overcloud_nodes_pwd) > 0:
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
@@ -1154,16 +1155,16 @@ class Director(InfraHost):
 
         if self.settings.use_satellite:
             cinder_container = "openstack-cinder-volume-dellemc-rhosp16:" + \
-                str(self.settings.cinder_unity_container_version) 
+                str(self.settings.cinder_unity_container_version)
             remote_registry = self.settings.satellite_hostname + \
-                ":5000/" 
+                ":5000/"
             local_url = remote_registry + self.settings.containers_prefix + \
                 cinder_container
             cmds.append('sed -i "s|ContainerCinderVolumeImage.*|' +
                         'ContainerCinderVolumeImage: ' + local_url +
                         '|" ' + dell_unity_cinder_container_yaml)
             cmds.append('sed -i "s|<dellemc_container_registry>|' + remote_registry +
-                        '|" ' + dell_unity_cinder_container_yaml)             
+                        '|" ' + dell_unity_cinder_container_yaml)
         else:
             undercloud_domain_name = self.settings.director_node.hostname + \
                                  ".ctlplane.localdomain"
@@ -1919,7 +1920,7 @@ class Director(InfraHost):
             cmd += " -e " + tmplt
 
         cmd += " --output-env-file " + output_env_file
-        self.run_as_root(cmd)
+        self.run(cmd)
 
         """
                 openstack tripleo container image prepare \
@@ -1950,14 +1951,14 @@ class Director(InfraHost):
         ''' skip these for testing
         self.update_and_upload_undercloud_conf_edge(node_type)
         # TODO update_undercloud should take a node_type and only
-        # run openstack undercloud intall if the subnet is not there.
+        # run openstack undercloud intall if the subnet is not there.'''
         self.update_undercloud(node_type)
         self.setup_net_envt_edge(node_type)
         self.overcloud_config_download()
         self.export_control_plane_config()
         self.node_discovery_edge(node_type)
         self.configure_idracs_edge(node_type)
-        '''
+
         self.import_nodes(node_type)
         self.node_introspection(node_type)
         self.update_sshd_conf()
@@ -1969,7 +1970,7 @@ class Director(InfraHost):
                      node_type)
 
         cmd = self._generate_deploy_cmd_edge(node_type)
-        self.run_tty(cmd)
+        self.run_tty(cmd)  # can I just use self.run()??????
 
     def delete_overcloud(self):
 
@@ -2766,7 +2767,12 @@ class Director(InfraHost):
     def render_and_upload_network_isolation_edge(self, node_type):
         tmplt = self.jinja2_env.get_template(NET_ISO_EDGE_J2)
         paths = self._generate_edge_template_paths(node_type, NET_ISO)
-        stg_n_iso_path, net_iso_file = paths[0], paths[1]
+        stg_n_iso_path, net_iso_file = paths
+        _nt_lower = self._generate_node_type_lower(node_type)
+        _oc_net_iso_filename = NET_ISO + "_" + _nt_lower + ".yaml"
+        net_iso_overcloud_file = (os.path.join(
+            self.templates_overcloud_dir, "environments",
+            _oc_net_iso_filename))
         tmplt_data = {}
         res_reg = tmplt_data["resource_registry"] = {}
         res_reg.update(self._generate_network_isolation(node_type))
@@ -2775,6 +2781,7 @@ class Director(InfraHost):
         with open(stg_n_iso_path, 'w') as stg_net_iso_fp:
             stg_net_iso_fp.write(rendered_tmplt)
         self.upload_file(stg_n_iso_path, net_iso_file)
+        self.upload_file(stg_n_iso_path, net_iso_overcloud_file)
 
     def setup_environment_edge_all(self):
         logger.debug("Updating dell environment for edge sites.")
@@ -2980,12 +2987,13 @@ class Director(InfraHost):
         ~/edge_common/control-plane-export.yaml
         """
         # _dwnld_cfg_dir = self.settings.overcloud_name + "-config"
-        export_path = os.path.join(self.home_dir, EDGE_COMMON_PATH)
+        export_path = os.path.join(self.home_dir, EDGE_COMMON_PATH,
+                                   CONTROL_PLANE_EXPORT + ".yaml")
         self.create_directory(export_path)
         cmd = (self.source_stackrc + " openstack overcloud export -f --stack "
                + self.settings.overcloud_name
                + " --output-file "
-               + export_path + "/" + CONTROL_PLANE_EXPORT)
+               + export_path)
         self.run(cmd)
 
     @directory_check(STAGING_PATH)
@@ -3073,21 +3081,30 @@ class Director(InfraHost):
         """
         port_dict = {}
         role = self._generate_cc_role(node_type)
-        role_network = self._generate_role_lower(node_type)
+        role_from_pool_yaml = (self._generate_role_lower(node_type)
+                               + '_from_pool.yaml')
 
         role_port = 'OS::TripleO::' + role + '::Ports::'
         int_api_port = role_port + 'InternalApi' + role + 'Port'
         storage_port = role_port + 'Storage' + role + 'Port'
         tenant_port = role_port + 'Tenant' + role + 'Port'
         external_port = role_port + 'External' + role + 'Port'
-        int_api_yaml = ('./overcloud/network/ports/internal_api_'
-                        + role_network + '_from_pool.yaml')
-        storage_yaml = ('./overcloud/network/ports/storage_'
-                        + role_network + '_from_pool.yaml')
-        tenant_yaml = ('./overcloud/network/ports/tenant_'
-                       + role_network + '_from_pool.yaml')
-        external_yaml = ('./overcloud/network/ports/external_'
-                         + role_network + '_from_pool.yaml')
+        int_api_yaml = (os.path.join(self.templates_overcloud_dir,
+                                     "network", "ports",
+                                     "internal_api_{}".format(
+                                         role_from_pool_yaml)))
+        storage_yaml = (os.path.join(self.templates_overcloud_dir,
+                                     "network", "ports",
+                                     "storage_{}".format(
+                                         role_from_pool_yaml)))
+        tenant_yaml = (os.path.join(self.templates_overcloud_dir,
+                                    "network", "ports",
+                                    "tenant_{}".format(
+                                         role_from_pool_yaml)))
+        external_yaml = (os.path.join(self.templates_overcloud_dir,
+                                      "network", "ports",
+                                      "external_{}".format(
+                                         role_from_pool_yaml)))
         port_dict[int_api_port] = int_api_yaml
         port_dict[storage_port] = storage_yaml
         port_dict[tenant_port] = tenant_yaml
@@ -3913,62 +3930,79 @@ class Director(InfraHost):
         return nic_dict_by_port_num
 
     def _generate_deploy_cmd_edge(self, node_type):
+        setts = self.settings
+        node_type_lower = self._generate_node_type_lower(node_type)
+        role_lower = self._generate_role_lower(node_type)
+        edge_site_directory = os.path.join(self.home_dir, role_lower)
+        log_file = os.path.join(edge_site_directory,
+                                "{nt_lower}_deployment.log")
+        _, output_env_file = self._generate_edge_template_paths(node_type,
+                                                                IMAGES_ENV)
+
+        _, roles_file = self._generate_edge_template_paths(
+            node_type, ROLES_DATA)
+
+        _, nd_file = self._generate_edge_template_paths(node_type,
+                                                        NETWORK_DATA)
+
+        _, containers_env_file = self._generate_edge_template_paths(
+            node_type, IMAGES_ENV)
+
+        cntl_plane_exp = os.path.join(self.home_dir,
+                                      EDGE_COMMON_PATH,
+                                      CONTROL_PLANE_EXPORT + ".yaml")
+        cmd = "cd ; {} ".format(self.source_stackrc)
+        cmd += "openstack overcloud deploy --stack {nt_lower} --debug -t 60 "
+        cmd += "--templates {oc_tempates} "
+        cmd += "--log-file {} ".format(log_file)
+        cmd += "-r {} ".format(roles_file)
+        cmd += "-n {} ".format(nd_file)
         """
-        TODO:  need to create deploy-edge.py and decide.
+        cmd += "-e {} ".format(os.path.join(self.templates_overcloud_dir,
+                                            "environments",
+                                            "disable-telemetry.yaml"))
+        cmd += "-e {} ".format(os.path.join(self.templates_overcloud_dir,
+                                            "environments",
+                                            "podman.yaml"))
+        cmd += "-e {} ".format(os.path.join(self.templates_overcloud_dir,
+                                            "environments", "ceph-ansible"
+                                            "ceph-ansible.yaml"))
         """
+        cmd += "-e {} ".format(os.path.join(self.templates_overcloud_dir,
+                                            "environments",
+                                            "cinder-volume-active-active.yaml")
+                               )
+        cmd += "-e {} ".format(cntl_plane_exp)
+        cmd += "-e {} ".format(containers_env_file)
+
+        env_files = [STATIC_IP_ENV, NODE_PLACEMENT,
+                     DELL_ENV, NET_ISO, NET_ENV, NEUTRON_OVS,
+                     STATIC_VIP_ENV, NIC_ENV, NOVA_AZ, OVERRIDES]
+
+        for env_file in env_files:
+            if env_file not in [NET_ISO, NEUTRON_OVS]:
+                _, tmplt = self._generate_edge_template_paths(node_type,
+                                                              env_file)
+            elif env_file == NET_ISO:
+                tmplt = os.path.join(self.templates_overcloud_dir,
+                                     "environments",
+                                     env_file + "_" + node_type_lower
+                                     + ".yaml")
+            else:  # neutron-ovs
+                tmplt = os.path.join(self.templates_overcloud_dir,
+                                     "environments", "services",
+                                     env_file + "_" + node_type_lower
+                                     + ".yaml")
+
+            cmd += " -e {} ".format(tmplt)
+        cmd += "--libvirt-type kvm "
+        cmd += "--ntp-server {} ".format(setts.sah_node.provisioning_ip)
+        cmd += " > {edge_site_dir}/{nt_lower}_deploy_out.log 2>&1"
         logger.debug("Generating edge site deployment "
                      "command for: {}".format(node_type))
-        """
-        TODO: dpaterson, implement this method
-        ########## Our overcloud deployment commands
-        cd ;source ~/stackrc; openstack overcloud deploy \
-        --debug \
-        --log-file ~/pilot/overcloud_deployment.log \
-        -t 150 \
-        --stack r62 \
-        --templates ~/pilot/templates/overcloud \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-rgw.yaml \
-        -r ~/pilot/templates/roles_data.yaml \
-        -e ~/pilot/templates/static-ip-environment.yaml \
-        -e ~/pilot/templates/static-vip-environment.yaml \
-        -e ~/pilot/templates/node-placement.yaml \
-        -e ~/pilot/templates/overcloud/environments/storage-environment.yaml \
-        -e ~/containers-prepare-parameter.yaml \
-        -e ~/pilot/templates/dell-environment.yaml \
-        -e ~/pilot/templates/dell-cinder-backends.yaml \
-        -e ~/pilot/templates/overcloud/environments/network-isolation.yaml \
-        -e ~/pilot/templates/network-environment.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services/neutron-ovs.yaml \
-        -e /home/stack/pilot/templates/nic-configs/5_port/nic_environment.yaml \
-        --libvirt-type kvm \
-        --ntp-server 192.168.120.8
-
-        ############## End ours
-        Script from: https://access.redhat.com/documentation/en-us/red_hat_openstack_platform/16.1/html-single/distributed_compute_node_and_storage_deployment/index
-
-        !/bin/bash
-        STACK=dcn0
-        source ~/stackrc
-        if [[ ! -e distributed_compute_hci.yaml ]]; then
-            openstack overcloud roles generate DistributedComputeHCI -o distributed_compute_hci.yaml
-        fi
-        time openstack overcloud deploy \
-         --stack $STACK \
-         --templates /usr/share/openstack-tripleo-heat-templates/ \
-         -r distributed_compute_hci.yaml \
-         -e /usr/share/openstack-tripleo-heat-templates/environments/disable-telemetry.yaml \
-         -e /usr/share/openstack-tripleo-heat-templates/environments/podman.yaml \
-         -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-         -e /usr/share/openstack-tripleo-heat-templates/environments/cinder-volume-active-active.yaml \
-         -e ~/dcn-common/control-plane-export.yaml \
-         -e ~/containers-env-file.yaml \
-         -e ceph.yaml \
-         -e nova-az.yaml \
-         -e overrides.yaml
-         """
-        cmd = " > overcloud_deploy_edge_out.log 2>&1"
-        return cmd
+        return cmd.format(edge_site_dir=edge_site_directory,
+                          nt_lower=node_type_lower,
+                          oc_tempates=self.templates_overcloud_dir)
 
     def _generate_deploy_cmd_edge_all(self):
         """

@@ -119,35 +119,39 @@ class InfraHost:
                 break
             time.sleep(5)
 
-    def _generate_node_placement_exp(self, type):
-        placement_exp = ((re.sub(r'[^a-z0-9]', " ",
-                                 type.lower())).replace(" ", "-") + "-%index%")
+    def _generate_node_placement_exp(self, node_type):
+        placement_exp = ((re.sub(
+            r'[^a-z0-9]', " ", node_type.lower())).replace(" ", "-")
+            + "-%index%")
         return placement_exp
 
-    def _generate_node_type_az(self, type):
+    def _generate_node_type_az(self, node_type):
         az = ((re.sub(r'[^a-z0-9]', " ",
-                      type.lower())).replace(" ", "-") + "-az")
+                      node_type.lower())).replace(" ", "-") + "-az")
         return az
 
-    def _generate_cc_role(self, type):
+    def _generate_cc_role(self, node_type):
         """Find non-alphanumerics in node type and replace with space then
         camel-case that and strip spaces
         :returns:  CamelCaseRoleName from my-node_type
         """
-        role_cc = (re.sub(r'[^a-z0-9]', " ",
-                          type.lower()).title()).replace(" ", "")
+        role_cc = (re.sub(
+            r'[^a-z0-9]', " ",
+            node_type.lower()).title()).replace(" ", "")
         return role_cc
 
-    def _generate_role_lower(self, type):
-        _type_lwr = (re.sub(r'[^a-z0-9]', " ", type.lower()).replace(" ", "_"))
+    def _generate_role_lower(self, node_type):
+        _type_lwr = (re.sub(
+            r'[^a-z0-9]', " ",
+            node_type.lower()).replace(" ", "_"))
         return _type_lwr
 
-    def _generate_subnet_name(self, type):
-        return self._generate_role_lower(type) + '_subnet'
+    def _generate_subnet_name(self, node_type):
+        return self._generate_role_lower(node_type) + '_subnet'
 
-    def _generate_node_type_lower(self, type):
+    def _generate_node_type_lower(self, node_type):
         # should look like denveredgecompute.yaml if following existing pattern
-        nic_config_name = re.sub(r'[^a-z0-9]', "", type.lower())
+        nic_config_name = re.sub(r'[^a-z0-9]', "", node_type.lower())
         return nic_config_name
 
     def _does_route_exist(self, route):
