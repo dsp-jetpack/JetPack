@@ -2987,13 +2987,13 @@ class Director(InfraHost):
         ~/edge_common/control-plane-export.yaml
         """
         # _dwnld_cfg_dir = self.settings.overcloud_name + "-config"
-        export_path = os.path.join(self.home_dir, EDGE_COMMON_PATH,
-                                   CONTROL_PLANE_EXPORT + ".yaml")
+        export_path = os.path.join(self.home_dir, EDGE_COMMON_PATH)
+        export_file = os.path.join(export_path, CONTROL_PLANE_EXPORT + ".yaml")
         self.create_directory(export_path)
         cmd = (self.source_stackrc + " openstack overcloud export -f --stack "
                + self.settings.overcloud_name
                + " --output-file "
-               + export_path)
+               + export_file)
         self.run(cmd)
 
     @directory_check(STAGING_PATH)
