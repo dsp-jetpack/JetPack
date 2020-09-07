@@ -43,7 +43,8 @@
 # Added for RHOSP 16 compatibility. This IP will be responsible for addressing any configuration task during the install
 - name: Set IP for cluster configuration
   set_fact:
-    powerflex_config_ip: "{{ hostvars[groups['mdms'][0]]['ansible_'+config_interface]['ipv4']['address'] }}"
+#    powerflex_config_ip: "{{ hostvars[groups['mdms'][0]]['ansible_'+config_interface]['ipv4']['address'] }}"
+    powerflex_config_ip: "{{ groups['mdms'][0] }}"
 
 # Misc
 - name: Count how many SDSs are present

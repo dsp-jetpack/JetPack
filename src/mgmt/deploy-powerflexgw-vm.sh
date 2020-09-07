@@ -149,17 +149,6 @@ chvt 8
     echo "server ${ntps}" >> /etc/chrony.conf
   done
 
-  # Create a new user
-  useradd ${User}
-  passwd -f ${User} << EOFPW
-${Password}
-${Password}
-EOFPW
-
-  # Give the user sudo permissions
-  echo "${User} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/${User}
-  chmod 0440 /etc/sudoers.d/${User}
-
   # Configure name resolution
   for ns in ${NameServers//,/ }
   do

@@ -3702,7 +3702,6 @@ class Director(InfraHost):
 
 
 if __name__ == "__main__":
-    settings = Settings("/root/r88.ini")
     director = Director()
     # director.render_and_upload_compute_templates_edge()
     # director.render_and_upload_network_isolation_edge()
