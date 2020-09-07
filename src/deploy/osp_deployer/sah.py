@@ -434,8 +434,8 @@ class Sah(InfraHost):
                        "     " + self.settings.public_api_network_mtu,)
         conf = conf + ("enp2s0        " +
                        self.settings.powerflexgw_vm.storage_ip +
-                       "    " + self.settings.provisioning_netmask +
-                       "     " + self.settings.provisioning_network_mtu,)
+                       "    " + self.settings.storage_netmask +
+                       "     " + self.settings.storage_network_mtu,)
 
         for line in conf:
             self.run("echo '" +

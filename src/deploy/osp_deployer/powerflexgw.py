@@ -44,12 +44,18 @@ class Powerflexgw(InfraHost):
         self.certs_dir = "/root/certs"
         self.lia_cert = "/opt/emc/scaleio/lia/cfg/lia_certificate.pem"
         self.mdm_cert = "/opt/emc/scaleio/mdm/cfg/mdm_management_certificate.pem"
-        self.keystore = "/opt/emc/scaleio/gateway/webapps/ROOT/WEB-INF/classes/certificates/truststore.jks"
+        self.gateway_dir = "/opt/emc/scaleio/gateway/webapps/ROOT/WEB-INF/classes"
+        self.gateway_conf = self.gateway_dir + "/gatewayUser.properties"
+        self.keystore = self.gateway_dir + "/certificates/truststore.jks"
         self.keystore_pwd = "changeit"
         self.controller_vip = self.settings.provisioning_vip
-        self.user = self.settings.director_install_account_user
-        self.home_dir = "/home/" + self.user 
+        self.director_user = self.settings.director_install_account_user
+        self.home_dir = "/home/" + self.director_user 
         self.source_overcloudrc = "source " + self.home_dir + "/" + self.settings.overcloud_name + "rc; " 
+        self.pilot_dir = self.settings.foreman_configuration_scripts + "/pilot"
+        self.powerflex_dir = self.pilot_dir + "/powerflex"
+
+        self.director = Director()
 
 
     def upload_rpm(self):
@@ -58,7 +64,7 @@ class Powerflexgw(InfraHost):
         self.run_as_root(cmd)
         
         logger.debug("Uploading powerflex gateway rpm")
-        source_file = "/root/JetPack/src/pilot/powerflex/rpms/" + \
+        source_file = self.powerflex_dir + "/rpms/" + \
                       self.settings.powerflex_gateway_rpm
         self.upload_file(source_file,
                          self.rpm_dir + "/" + \
@@ -83,13 +89,11 @@ class Powerflexgw(InfraHost):
         logger.debug("Retrieving MDM IPs")
 
         mdm_ips = []
-        properties = '/opt/emc/scaleio/gateway/webapps/ROOT/WEB-INF/classes/gatewayUser.properties'
-        director = Director()
 
         stor_ = self.settings.storage_network.rsplit(".", 1)[0]
         stor_.replace(".", '\.')
 
-        re = director.run_as_root("cat /var/lib/mistral/" +
+        re = self.director.run_as_root("cat /var/lib/mistral/" +
                                   self.settings.overcloud_name + 
                                   "/powerflex-ansible/inventory.yml " +
                                   "| sed -n '/mdms/,/tbs/{//!p}'")
@@ -108,7 +112,7 @@ class Powerflexgw(InfraHost):
                    " /sbin/ifconfig | grep inet.*" +
                    stor_ +
                    " | awk '{print $2}'")
-            re = director.run_tty(cmd)
+            re = self.director.run_tty(cmd)
 
             mdm_ip = re[0].split("\n")[1]
             mdm_ips.append(mdm_ip.strip())
@@ -121,7 +125,7 @@ class Powerflexgw(InfraHost):
                ',' +
                mdm_ips[1] +
                '|" ' +
-               properties)
+               self.gateway_conf)
 
         self.run_as_root(cmd)
 
@@ -134,15 +138,6 @@ class Powerflexgw(InfraHost):
         logger.debug("Retrieving all nodes IPs")
 
         node_ips = []
-        director = Director()
-
-        cmd = "grep " + self.ip + " ~./ssh/known_hosts"
-        re = director.run(cmd)
-        
-        if self.ip not in re:
-            logger.debug("First time connection to the powerflex gateway vm")
-            cmd = "ssh-keyscan -t ecdsa " + self.ip + " >> ~/.ssh/known_hosts"
-            re = director.run(cmd)
 
         ssh_opts = (
         " -o StrictHostKeyChecking=no "
@@ -150,7 +145,7 @@ class Powerflexgw(InfraHost):
         " -o KbdInteractiveDevices=no"
         " -o LogLevel=ERROR")
 
-        re = director.run(director.source_stackrc +
+        re = self.director.run(self.director.source_stackrc +
                               "openstack server list -f value")
         nodes = re[0].split("\n")
         nodes.pop()
@@ -163,7 +158,7 @@ class Powerflexgw(InfraHost):
                    ip + 
                    " test -f " + self.mdm_cert + "; echo $?;")
                  
-            re = director.run(cmd)[0].rstrip()
+            re = self.director.run(cmd)[0].rstrip()
             is_mdm = not bool(int(re))
                
             if is_mdm is True:
@@ -180,7 +175,8 @@ class Powerflexgw(InfraHost):
                     " ssh root@" + self.ip +
                     ' " cat > ' + self.certs_dir + "/" + hostname + '.lia.cer"']
                 for cmd in cmds:
-                    re = director.run(cmd)
+                    re = self.director.run(cmd)
+
             else:
                 logger.debug("Capturing LIA certificate on host {}".format(hostname))
                 cmd = ("ssh " + ssh_opts + " heat-admin@" +
@@ -189,7 +185,7 @@ class Powerflexgw(InfraHost):
                        " | sshpass -p " + self.root_pwd +
                        " ssh root@" + self.ip +
                        ' " cat > ' + self.certs_dir + "/" + hostname + '.lia.cer"')
-                re = director.run(cmd)
+                re = self.director.run(cmd)
 
  
     def inject_ssl_certificates(self):
@@ -235,8 +231,6 @@ class Powerflexgw(InfraHost):
 
     def restart_cinder_volume(self):
 
-        director = Director()
-
         ssh_opts = (
         " -o StrictHostKeyChecking=no "
         " -o UserKnownHostsFile=/dev/null "
@@ -246,9 +240,9 @@ class Powerflexgw(InfraHost):
         logger.debug("Restarting cinder-volume service")
         cmd = ("ssh " + ssh_opts + " heat-admin@" +
                self.controller_vip + " sudo pcs resource restart openstack-cinder-volume")
-        director.run(cmd)
+        self.director.run(cmd)
 
-        re = director.run(self.source_overcloudrc +
+        re = self.director.run(self.source_overcloudrc +
                           "openstack volume service list | grep powerflex")
         status = re[0].split("\n")
         status.pop()

@@ -271,41 +271,13 @@
                   "local",
                   "external"
                ]
-<<<<<<< HEAD
-            }
-      },
-      {
-         "PowerFlex Settings": {
-            "enable_powerflex_backend": {
-               "valid_values": [
-                  "true",
-                  "false"
-               ]
-            },
-=======
-        }
-
-       }
-      },
-      {
-         "PowerFlex Settings": {
->>>>>>> 7f7dd247a955e87fefb48b6c56ee23923c4f2675
-            "powerflex_rpms_method": {
-               "valid_values": [
-                  "local",
-                  "external"
-               ]
             },
             "powerflex_cluster_config": {
                "valid_values": [
                   "3_node"
                ]
             },
-<<<<<<< HEAD
-            "powerflex_cluster_virtualip": {
-=======
             "powerflex_cluster_vip": {
->>>>>>> 7f7dd247a955e87fefb48b6c56ee23923c4f2675
                "validate": [
                   "should_be_valid_ip"
                ]
