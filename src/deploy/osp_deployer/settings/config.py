@@ -539,7 +539,6 @@ class Settings:
         else:
             self.enable_powermax_manila_backend = False
 
-
         sanity_settings = self.get_settings_section(
             "Sanity Test Settings")
         self.floating_ip_network = sanity_settings['floating_ip_network']
@@ -684,6 +683,10 @@ class Settings:
             '/pilot/templates/dellemc-powermax-fc-cinder-backend.yaml'
         self.powermax_manila_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/powermax-manila-config.yaml'
+        self.dell_powerflex_cinder_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/dellemc-powerflex-cinder-conf.yaml'
+        self.dell_powerflex_ansible_yaml = self.foreman_configuration_scripts + \
+            '/pilot/powerflex/templates/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
         self.ceph_osd_config_yaml = self.foreman_configuration_scripts + \

@@ -268,12 +268,20 @@ def deploy():
 
         if len(settings.powerflex_nodes) > 0:
             powerflexgw_vm = Powerflexgw()
-            logger.info("=== creating the powerflex gateway vm")
+            logger.info("=== Creating the powerflex gateway vm")
             sah_node.create_powerflexgw_vm()
             tester.powerlexgw_vm_health_check()
-            logger.info("=== installing the powerflex gateway UI")
+            logger.info("Installing the powerflex gateway UI")
             powerflexgw_vm.upload_rpm()
             powerflexgw_vm.install_gateway()
+            logger.info("Configuring the powerflex gateway vm")
+            powerflexgw_vm.configure_gateway()
+            logger.info("Retrieving and injecting SSL certificates")
+            powerflexgw_vm.get_ssl_certificates()
+            powerflexgw_vm.inject_ssl_certificates()
+            logger.info("Restarting the gateway and cinder-volume")
+            powerflexgw_vm.restart_gateway()
+            powerflexgw_vm.restart_cinder_volume()
 
         
         logger.info("Deployment summary info; useful ip's etc.. " +

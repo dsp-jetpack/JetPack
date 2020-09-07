@@ -1,0 +1,5 @@
+- name: "include vars"
+  include_vars: "../vars/main.yaml"
+
+- include: ../../powerflex-common/tasks/install_powerflex.yaml
+

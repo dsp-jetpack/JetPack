@@ -85,7 +85,8 @@ class ConfigOvercloud(object):
             block_storage_flavor,
             vlan_range,
             dell_compute_count=0,
-            dell_computehci_count=0):
+            dell_computehci_count=0,
+            dell_powerflex_count=0):
         try:
             logger.info("Editing dell environment file")
             file_path = home_dir + '/pilot/templates/dell-environment.yaml'
@@ -116,6 +117,10 @@ class ConfigOvercloud(object):
                 file_path,
                 'sed -i "s|CephStorageCount:.*|CephStorageCount: ' +
                 str(ceph_storage_count) +
+                '|" ' +
+                file_path,
+                'sed -i "s|PowerflexStorageCount:.*|PowerflexStorageCount: ' +
+                str(dell_powerflex_count) +
                 '|" ' +
                 file_path,
                 'sed -i "s|OvercloudControllerFlavor:.*' +
@@ -260,6 +265,17 @@ class ConfigOvercloud(object):
                 cmds.append(
                     'sed -i "s|IsolCpusList:.*|IsolCpusList: \\"' +
                     self.nfv_params.isol_cpus + '\\" |" ' + dpdk_file)
+
+            if dell_powerflex_count > 0:
+                cmds.append(
+                     'sed -i "s|NovaEnableRbdBackend:.*' +
+                     '|NovaEnableRbdBackend: false |" ' +
+                     file_path)
+                cmds.append(
+                    'sed -i "s|CinderEnableRbdBackend:.*' +
+                    '|CinderEnableRbdBackend: false |" ' +
+                    file_path)
+
 
             for cmd in cmds:
                 status = os.system(cmd)

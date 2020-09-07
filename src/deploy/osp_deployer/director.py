@@ -141,7 +141,7 @@ class Director(InfraHost):
 
         self.jinja2_env = Environment(
             loader=FileSystemLoader(self.settings.jinja2_templates))
-
+         
         cmd = "mkdir -p " + self.pilot_dir
         self.run(cmd)
 
@@ -216,6 +216,7 @@ class Director(InfraHost):
                 self.settings.manila_unity_container_version = \
                     self.run_tty(cmd)[0].replace('\r', '').rstrip()
 
+
     def install_director(self):
         logger.info("Installing the undercloud")
         if self.settings.use_satellite:
@@ -236,6 +237,8 @@ class Director(InfraHost):
 
         if len(self.settings.overcloud_nodes_pwd) > 0:
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
+        if self.settings.enable_powerflex_backend is True:
+            cmd += " --enable_powerflex"
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
             raise AssertionError("Director/Undercloud did not " +
@@ -541,7 +544,8 @@ class Director(InfraHost):
             self.render_and_upload_roles_data_edge()
         self.setup_dell_storage()
         self.setup_manila()
-        self.setup_environment()
+        if self.settings.enable_powerflex_backend == False:
+            self.setup_environment()
         self.setup_sanity_ini()
 
     def clamp_min_pgs(self, num_pgs):
@@ -887,6 +891,22 @@ class Director(InfraHost):
             self.setup_powermax_cinder(dell_powermax_iscsi_cinder_yaml)
         else:
             self.setup_powermax_cinder(dell_powermax_fc_cinder_yaml)
+
+        # PowerFlex
+        dell_powerflex_cinder_yaml = self.templates_dir + \
+            "/dellemc-powerflex-cinder-conf.yaml"
+        self.upload_file(self.settings.dell_powerflex_cinder_yaml,
+                         dell_powerflex_cinder_yaml)
+        self.run_tty("cp " + dell_powerflex_cinder_yaml +
+                     " " + dell_powerflex_cinder_yaml + ".bak")
+
+        dell_powerflex_ansible_yaml = self.templates_dir  + \
+            "/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml"
+        self.upload_file(self.settings.dell_powerflex_ansible_yaml,
+                         dell_powerflex_ansible_yaml)
+        self.run_tty("cp " + dell_powerflex_ansible_yaml +
+                     " " + dell_powerflex_ansible_yaml + ".bak")
+        self.setup_powerflex(dell_powerflex_cinder_yaml,dell_powerflex_ansible_yaml)
 
 
         # Enable multiple backends now
@@ -1794,7 +1814,7 @@ class Director(InfraHost):
             cmd += " --debug"
         if self._has_edge_sites():
             cmd += " --network_data"
-        if self.settings.enable_dashboard is True:
+        if self.settings.enable_dashboard is True and self.settings.enable_powerflex_backend is False:
             cmd += " --dashboard_enable"
 
         cmd += " > overcloud_deploy_out.log 2>&1"
@@ -3682,7 +3702,7 @@ class Director(InfraHost):
 
 
 if __name__ == "__main__":
-    settings = Settings("/root/R62.ini")
+    settings = Settings("/root/r88.ini")
     director = Director()
     # director.render_and_upload_compute_templates_edge()
     # director.render_and_upload_network_isolation_edge()

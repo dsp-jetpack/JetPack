@@ -1,0 +1,167 @@
+heat_template_version: rocky
+
+description: >
+  PowerFlex base service. Shared by all PowerFlex services.
+
+parameters:
+  ServiceData:
+    default: {}
+    description: Dictionary packing service data
+    type: json
+  ServiceNetMap:
+    default: {}
+    description: Mapping of service_name -> network name. Typically set
+                 via parameter_defaults in the resource registry.  This
+                 mapping overrides those in ServiceNetMapDefaults.
+    type: json
+  DefaultPasswords:
+    default: {}
+    type: json
+  RoleName:
+    default: ''
+    description: Role name on which the service is applied
+    type: string
+  RoleParameters:
+    default: {}
+    description: Parameters specific to the role
+    type: json
+  EndpointMap:
+    default: {}
+    description: Mapping of service endpoint -> protocol. Typically set
+                 via parameter_defaults in the resource registry.
+    type: json
+  NodeDataLookup:
+    type: json
+    default: {}
+    description: json containing per-node configuration map
+  PowerflexAnsiblePlaybookVerbosity:
+    default: 1
+    description: The number of '-v', '-vv', etc. passed to ansible-playbook command
+    type: number
+    constraints:
+    - range: { min: 1, max: 5 }
+  PowerFlexClusterName:
+    default: powerflex
+    description: PowerFlex cluster name
+    type: string
+    constraints:
+      - allowed_pattern: "[a-zA-Z0-9]+"
+        description: >
+          The PowerFlex cluster name must be at least 1 character and contains only
+          letters and numbers.
+  PowerFlexRpmsPath:
+    default: '/opt/dellemc/powerflex/rpms/'
+    description: Path to look for PowerFlex RPMs
+    type: string
+  PowerFlexProtectionDomain:
+    default: 'domain1'
+    description: Protection Domain
+    type: string
+  PowerFlexStoragePool:
+    default: 'pool1'
+    description: Storage Pool
+    type: string
+  PowerFlexClusterConfig:
+    default: '3_node'
+    description: Cluster operation config
+    type: string
+    constraints:
+      - allowed_values: [ 3_node ]
+        description: Support for 3 nodes ONLY
+  PowerFlexConfigInterface:
+    default: eno3
+    description: Ansible interface used for cluster configuration
+    type: string
+  PowerFlexMgmtInterface:
+    default: vlan170
+    description: Network interface for management
+    type: string
+  PowerFlexClusterInterface:
+    default: vlan170
+    description: Network interface for control plane
+    type: string
+  PowerFlexRebuildInterface:
+    default: vlan170
+    description: Network interface for rebuild/rebalance operations
+    type: string
+  PowerFlexClusterVirtualIP:
+    default: ''
+    description: Virtual IP to access the PowerFlex cluster
+    type: string
+  PowerFlexPassword:
+    default: 'Vxflex123!'
+    description: Password for admin user
+    type: string
+  PowerFlexLiaToken:
+    default: 'Vxflex123!'
+    description: LIA Token
+    type: string
+  PowerFlexDisks:
+    default: []
+    description: List of comma separated values to use as disks for SDS
+    type: comma_delimited_list
+  PowerFlexRpmsMethod:
+    default: 'local'
+    description: Method of getting RPMs to install. Can be either local or external
+    type: string
+    constraints:
+      - allowed_values: [ local, external ]
+        description: >
+          local if rpms already present in the overcloud image.
+          external if using a remote path where to get RPMs from.
+
+
+resources:
+  PowerFlexBaseAnsibleVars:
+    type: OS::Heat::Value
+    properties:
+      type: json
+      value:
+        vars:
+          cluster_name: {get_param: PowerFlexClusterName}
+          cluster_config: {get_param: PowerFlexClusterConfig}
+          config_interface: {get_param: PowerFlexConfigInterface}
+          rpms_path: {get_param: PowerFlexRpmsPath}
+          rpms_method: {get_param: PowerFlexRpmsMethod}
+          protection_domain: {get_param: PowerFlexProtectionDomain}
+          storage_pool: {get_param: PowerFlexStoragePool}
+          mgmt_interface: {get_param: PowerFlexMgmtInterface}
+          cluster_interface: {get_param: PowerFlexClusterInterface}
+          rebuild_interface: {get_param: PowerFlexRebuildInterface}
+          cluster_vip: {get_param: PowerFlexClusterVirtualIP}
+          password: {get_param: PowerFlexPassword}
+          lia_token: {get_param: PowerFlexLiaToken}
+          sds_disks: {get_param: PowerFlexDisks}
+
+outputs:
+  role_data:
+    description: Role data for the PowerFlex base service.
+    value:
+      service_name: powerflex_base
+      upgrade_tasks: []
+      puppet_config:
+        config_image: ''
+        config_volume: ''
+        step_config: ''
+      docker_config: {}
+      config_settings: {}
+      external_deploy_tasks:
+        - name: powerflex_base_external_deploy_init
+          when: step|int == 1
+          block:
+            - name: set powerflex-ansible facts
+              set_fact:
+                powerflex_ansible_extra_vars:
+                  {get_attr: [PowerFlexBaseAnsibleVars, value, vars]}
+        - name: powerflex_base_external_deploy_task
+          when: step|int == 2
+          block:
+            - name: set powerflex-ansible facts
+              set_fact:
+                powerflex_ansible_playbooks_default: ["/usr/share/powerflex-ansible/site.yaml"]
+                powerflex_ansible_playbook_verbosity: {get_param: PowerflexAnsiblePlaybookVerbosity}
+            - name: run powerflex-ansible
+              include_role:
+                name: tripleo-powerflex-run-ansible 
+      external_update_tasks: {}
+      external_upgrade_tasks: {}

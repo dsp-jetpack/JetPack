@@ -179,6 +179,8 @@
     - OS::TripleO::Services::OsloMessagingRpc
     - OS::TripleO::Services::OsloMessagingNotify
     - OS::TripleO::Services::Podman
+    - OS::TripleO::Services::PowerFlexLIA
+    - OS::TripleO::Services::PowerFlexMDM
     - OS::TripleO::Services::Rear
     - OS::TripleO::Services::Redis
     - OS::TripleO::Services::Rhsm
@@ -356,6 +358,8 @@
     - OS::TripleO::Services::NovaMigrationTarget
     - OS::TripleO::Services::ContainersLogrotateCrond
     - OS::TripleO::Services::Podman
+    - OS::TripleO::Services::PowerFlexLIA
+    - OS::TripleO::Services::PowerFlexSDC
     - OS::TripleO::Services::Rear
     - OS::TripleO::Services::OvsDpdkNetcontrold
     - OS::TripleO::Services::Rhsm

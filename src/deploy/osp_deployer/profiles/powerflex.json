@@ -1,0 +1,290 @@
+{
+   "name": "powerflex",
+   "sample_ini": "sample_powerflex_profile.ini",
+   "associated_settings": [
+      {
+         "Dell NFV Settings": {
+            "hpg_enable": {
+               "valid_values": [
+                  "false"
+               ]
+            },
+            "hpg_size": {
+               "valid_values": [
+                  "2MB",
+                  "1GB"
+               ]
+            },
+            "numa_enable": {
+               "valid_values": [
+                  "false"
+               ]
+            },
+            "numa_hostos_cpu_count": {
+               "valid_values": [
+                  "2",
+                  "4",
+                  "6",
+                  "8"
+        ]
+        },
+            "ovs_dpdk_enable": {
+               "valid_values": [
+                  "false"
+               ]
+            },
+        "sriov_enable": {
+                "valid_values": [
+                   "false"
+                ]
+             },
+
+        "smart_nic": {
+                "valid_values": [
+                   "false"
+                ]
+             },
+       "sriov_vf_count": {
+                "validate": [
+                   "should_be_valid_int"
+                ],
+                "in_range": [
+                   "1-64"
+                ]
+             },
+       "octavia_enable": {
+               "valid_values": [
+                  "false"
+               ]
+             },
+       "octavia_generate_certs": {
+         "valid_values": [
+            "true",
+            "false"
+         ]
+        },
+        "dvr_enable" :{
+               "valid_values": [
+                  "false"
+               ]
+            },
+        "barbican_enable" :{
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            }
+        }
+    },
+      {
+         "MTU Settings": {
+            "mtu_selection": {
+               "valid_values": [
+                  "global",
+                  "per_network"
+               ]
+            },
+            "mtu_size_global_default": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "public_api_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "floating_ip_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "private_api_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "tenant_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "storage_cluster_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "storage_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            },
+            "tenant_tunnel_network_mtu": {
+               "validate": [
+                  "should_be_valid_int"
+               ],
+               "in_range": [
+                  "1500-9000"
+               ]
+            }
+         }
+      },
+      {
+         "Vips Settings": {
+            "use_static_vips": {
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            }
+         }
+      },
+      {
+         "Nodes Nics and Bonding Settings": {
+            "sah_bond_opts": "",
+            "nic_env_file": {
+               "valid_values": [
+                  "4_port_powerflex/nic_environment.yaml",
+                  "5_port_powerflex/nic_environment.yaml"
+               ]
+            },
+            "ControllerBondInterfaceOptions": "",
+            "ComputeBondInterfaceOptions": "",
+            "StorageBondInterfaceOptions": ""
+         }
+      },
+      {
+         "Deployment Settings": {
+            "undercloud_admin_host": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            },
+            "undercloud_public_host": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            },
+            "overcloud_static_ips": {
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            },
+            "glance_backend": {
+               "valid_values": [
+                  "file",
+                  "rbd",
+                  "cinder",
+                  "swift"
+               ]
+            },
+         "enable_fencing":""
+         }
+      },
+     {
+       "Subscription Manager Settings":{
+            "use_satellite" : {
+                  "valid_values": [
+                  "true",
+                  "false"
+               ]
+        }
+       }
+      },
+
+      {
+         "Advanced Settings": {
+            "rhsm_repos": "",
+            "use_internal_repo": "",
+            "deploy_overcloud_debug": {
+               "valid_values": [
+                  "true",
+                  "false"
+               ]
+            },
+         "use_ipmi_driver":"",
+         "use_in_band_introspection":"",
+         "enable_version_locking":"",
+         "node_types":""
+         }
+      },
+      {
+         "Network Settings": {
+            "public_api_gateway": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            },
+            "public_api_allocation_pool_start": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            },
+            "public_api_allocation_pool_end": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            }
+         }
+      },
+	  {
+       "Storage back-end Settings":{
+            "unity_storage_protocol" : {
+                  "valid_values": [
+                  "iSCSI",
+                  "FC"
+               ]
+        },
+             "powermax_protocol" : {
+                  "valid_values": [
+                  "iSCSI",
+                  "FC"
+               ]
+        }
+
+       }
+      },
+      {
+         "PowerFlex Settings": {
+            "powerflex_rpms_method": {
+               "valid_values": [
+                  "local",
+                  "external"
+               ]
+            },
+            "powerflex_cluster_config": {
+               "valid_values": [
+                  "3_node"
+               ]
+            },
+            "powerflex_cluster_vip": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            }
+         }
+      }
+   ]
+}

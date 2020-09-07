@@ -166,7 +166,8 @@
             "nic_env_file": {
                "valid_values": [
                   "4_port/nic_environment.yaml",
-                  "5_port/nic_environment.yaml"
+                  "5_port/nic_environment.yaml",
+                  "5_port_powerflex/nic_environment.yaml"
                ]
             },
             "ControllerBondInterfaceOptions": "",
@@ -270,6 +271,7 @@
                   "local",
                   "external"
                ]
+<<<<<<< HEAD
             }
       },
       {
@@ -280,6 +282,14 @@
                   "false"
                ]
             },
+=======
+        }
+
+       }
+      },
+      {
+         "PowerFlex Settings": {
+>>>>>>> 7f7dd247a955e87fefb48b6c56ee23923c4f2675
             "powerflex_rpms_method": {
                "valid_values": [
                   "local",
@@ -291,7 +301,11 @@
                   "3_node"
                ]
             },
+<<<<<<< HEAD
             "powerflex_cluster_virtualip": {
+=======
+            "powerflex_cluster_vip": {
+>>>>>>> 7f7dd247a955e87fefb48b6c56ee23923c4f2675
                "validate": [
                   "should_be_valid_ip"
                ]

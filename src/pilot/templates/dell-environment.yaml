@@ -15,7 +15,7 @@
 resource_registry:
   OS::TripleO::NodeUserData: ./first-boot.yaml
 
-  # Until PowerFlex resource registry is in-tree in the overcloud-resource-registry
+  # PowerFlex default mapping for disabled services
   OS::TripleO::Services::PowerFlexLIA: OS::Heat::None
   OS::TripleO::Services::PowerFlexMDM: OS::Heat::None
   OS::TripleO::Services::PowerFlexSDC: OS::Heat::None

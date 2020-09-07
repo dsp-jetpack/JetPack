@@ -1,0 +1,20 @@
+---
+- name: Upload package wrapper
+  template: dest="/var/tmp/package_wrapper.sh" src="roles/powerflex-common/templates/package_wrapper.sh.j2" mode="0775" owner="root" group="root" force="yes"
+
+- name: copy files
+  copy: src="{{ item }}" dest="/var/tmp" mode="0644"
+  register: file
+  with_fileglob: 
+    - "{{ rpms_path }}/*{{ file_glob_name }}*"
+
+- name: list the rpm file
+  register: package_file
+  find: paths="/var/tmp" patterns="*{{ file_glob_name }}*.rpm"
+
+- name: install package
+  raw: "/var/tmp/package_wrapper.sh rpm -i {{ package_file.files[0].path }}"
+  register: result
+  failed_when: 
+    - result.rc != 0
+    - '"already installed" not in result.stdout'

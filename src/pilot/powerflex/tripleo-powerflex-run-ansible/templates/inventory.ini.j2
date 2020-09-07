@@ -1,0 +1,43 @@
+#jinja2: trim_blocks: "true", lstrip_blocks: "true"
+# {{ ansible_managed }}
+
+[mdms]
+{% for host in powerflex_mdm[:2] %}
+{% if hostvars[host]['ansible_ssh_user'] is defined and hostvars[host]['ansible_ssh_user']|length > 0 %}
+{{ hostvars[host]['ansible_host'] }} ansible_ssh_user={{ hostvars[host]['ansible_ssh_user'] }}
+{% else %}
+{{ hostvars[host]['ansible_host'] }}
+{% endif %}
+{% endfor %}
+[tbs]
+{% for host in powerflex_mdm[2:] %}
+{% if hostvars[host]['ansible_ssh_user'] is defined and hostvars[host]['ansible_ssh_user']|length > 0 %}
+{{ hostvars[host]['ansible_host'] }} ansible_ssh_user={{ hostvars[host]['ansible_ssh_user'] }}
+{% else %}
+{{ hostvars[host]['ansible_host'] }}
+{% endif %}
+{% endfor %}
+[lias]
+{% for host in powerflex_lia %}
+{% if hostvars[host]['ansible_ssh_user'] is defined and hostvars[host]['ansible_ssh_user']|length > 0 %}
+{{ hostvars[host]['ansible_host'] }} ansible_ssh_user={{ hostvars[host]['ansible_ssh_user'] }}
+{% else %}
+{{ hostvars[host]['ansible_host'] }}
+{% endif %}
+{% endfor %}
+[sdcs]
+{% for host in powerflex_sdc %}
+{% if hostvars[host]['ansible_ssh_user'] is defined and hostvars[host]['ansible_ssh_user']|length > 0 %}
+{{ hostvars[host]['ansible_host'] }} ansible_ssh_user={{ hostvars[host]['ansible_ssh_user'] }}
+{% else %}
+{{ hostvars[host]['ansible_host'] }}
+{% endif %}
+{% endfor %}
+[sdss]
+{% for host in powerflex_sds %}
+{% if hostvars[host]['ansible_ssh_user'] is defined and hostvars[host]['ansible_ssh_user']|length > 0 %}
+{{ hostvars[host]['ansible_host'] }} ansible_ssh_user={{ hostvars[host]['ansible_ssh_user'] }}
+{% else %}
+{{ hostvars[host]['ansible_host'] }}
+{% endif %}
+{% endfor %}

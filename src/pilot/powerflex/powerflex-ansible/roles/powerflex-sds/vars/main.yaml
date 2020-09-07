@@ -1,0 +1,4 @@
+file_glob_name: sds
+powerflex_role_environment:
+  - key: "MDM_IP"
+    value: "{{ powerflex_mdm_ips }}"

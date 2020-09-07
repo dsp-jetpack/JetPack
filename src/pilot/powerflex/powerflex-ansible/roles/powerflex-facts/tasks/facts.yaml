@@ -1,0 +1,55 @@
+---
+# MDM IP/Hostnames assignement
+- name: Set MDM primary management IP
+  set_fact: 
+    powerflex_mdm_primary_mgmt_ip: "{{ hostvars[groups['mdms'][0]]['ansible_'+mgmt_interface]['ipv4']['address'] }}"
+
+- name: Set MDM primary cluster IP
+  set_fact:
+    powerflex_mdm_primary_ip: "{{ hostvars[groups['mdms'][0]]['ansible_'+cluster_interface]['ipv4']['address']  }}"
+
+- name: Set MDM primary hostname
+  set_fact:
+    powerflex_mdm_primary_hostname: "{{ hostvars[groups['mdms'][0]]['ansible_hostname'] }}"
+
+- name: Set MDM secondary management IP
+  set_fact:
+    powerflex_mdm_secondary_mgmt_ip: "{{ hostvars[groups['mdms'][1]]['ansible_'+mgmt_interface]['ipv4']['address'] }}"
+
+- name: Set MDM secondary cluster IP
+  set_fact:
+    powerflex_mdm_secondary_ip: "{{ hostvars[groups['mdms'][1]]['ansible_'+cluster_interface]['ipv4']['address']  }}"
+
+- name: Set MDM secondary hostname
+  set_fact:
+    powerflex_mdm_secondary_hostname: "{{ hostvars[groups['mdms'][1]]['ansible_hostname'] }}"
+
+- name: Set Tie-Breaker management IP
+  set_fact:
+   powerflex_tb_primary_mgmt_ip: "{{ hostvars[groups['tbs'][0]]['ansible_'+mgmt_interface]['ipv4']['address'] }}"
+
+- name: Set Tie-Breaker cluster IP
+  set_fact:
+    powerflex_tb_primary_ip: "{{ hostvars[groups['tbs'][0]]['ansible_'+cluster_interface]['ipv4']['address'] }}"
+
+- name: Set Tie-Breaker hostname
+  set_fact:
+    powerflex_tb_primary_hostname: "{{ hostvars[groups['tbs'][0]]['ansible_hostname'] }}"
+
+- name: Merge MDM cluster IPs
+  set_fact:
+    powerflex_mdm_ips: "{{ powerflex_mdm_primary_ip }}, {{ powerflex_mdm_secondary_ip }}"
+
+# Added for RHOSP 16 compatibility. This IP will be responsible for addressing any configuration task during the install
+- name: Set IP for cluster configuration
+  set_fact:
+    powerflex_config_ip: "{{ hostvars[groups['mdms'][0]]['ansible_'+config_interface]['ipv4']['address'] }}"
+
+# Misc
+- name: Count how many SDSs are present
+  set_fact:
+    sds_count: "{{ groups['sdss'] | length }}"
+
+- name: Set the spare policy based upon SDSs count
+  set_fact:
+    spare_policy_pct: "{{ ((100 / sds_count | int) | round) | int }}"
