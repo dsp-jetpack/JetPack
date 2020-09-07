@@ -524,11 +524,6 @@ def main():
         if args.static_vips:
             env_opts += " -e ~/pilot/templates/static-vip-environment.yaml"
 
-        # The neutron-ovs-dvr.yaml.yaml must be included after the
-        # network-environment.yaml
-        if args.dvr_enable:
-            env_opts += " -e ~/pilot/templates/neutron-ovs-dvr.yaml"
-
         # The configure-barbican.yaml must be included after the
         # network-environment.yaml
         if args.barbican_enable:
@@ -548,6 +543,11 @@ def main():
         # in OSP16.1. In case we need to use OVN in future, please delete this line
         env_opts += " -e ~/pilot/templates/overcloud/environments/services/neutron-ovs.yaml"
         
+        # The neutron-ovs-dvr.yaml.yaml must be included after the
+        # neutron-ovs.yaml
+        if args.dvr_enable:
+            env_opts += " -e ~/pilot/templates/neutron-ovs-dvr.yaml"
+
         # The dell-environment.yaml must be included after the
         # storage-environment.yaml and ceph-radosgw.yaml
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
