@@ -13,8 +13,9 @@
 # limitations under the License.
 
 resource_registry:
-  OS::TripleO::Services::ComputeNeutronL3Agent: ./overcloud/docker/services/neutron-l3.yaml
-  OS::TripleO::Services::ComputeNeutronMetadataAgent: ./overcloud/docker/services/neutron-metadata.yaml
+  OS::TripleO::Services::ComputeNeutronL3Agent: ./overcloud/deployment/neutron/neutron-l3-container-puppet.yaml
+  OS::TripleO::Services::ComputeNeutronMetadataAgent: ./overcloud/deployment/neutron/neutron-metadata-container-puppet.yaml
+#  OS::TripleO::DellCompute::Net::SoftwareConfig: ./overcloud/net-config-bridge.yaml
 
 parameter_defaults:
 
