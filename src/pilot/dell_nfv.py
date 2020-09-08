@@ -218,13 +218,14 @@ class ConfigOvercloud(object):
                 if ovs_dpdk:
                     dpdk_nics = self.find_ifaces_by_keyword(nic_env_file,
                                                             'Dpdk')
+                    logger.debug("DPDK-NICs >>" + str(dpdk_nics))
                     self.nfv_params.get_pmd_cpus(mtu, dpdk_nics)
                     self.nfv_params.get_socket_memory(mtu, dpdk_nics)
                 self.nfv_params.get_nova_cpus()
                 self.nfv_params.get_isol_cpus()
-                kernel_args += " isolcpus=%s" % self.nfv_params.nova_cpus
+                kernel_args += " isolcpus=%s" % self.nfv_params.isol_cpus
                 cmds.append(
-                    'sed -i "s|# NovaVcpuPinSet:.*|NovaVcpuPinSet: ' +
+                    'sed -i "s|# NovaComputeCpuDedicatedSet:.*|NovaComputeCpuDedicatedSet: ' +
                     self.nfv_params.nova_cpus + '|" ' + file_path)
             if kernel_args:
                 cmds.append(
@@ -241,6 +242,11 @@ class ConfigOvercloud(object):
                     '\\" |" ' +
                     dpdk_file)
                 cmds.append(
+                    'sed -i "s|NovaComputeCpuSharedSet:.*|NovaComputeCpuSharedSet: \\"' +
+                    self.nfv_params.host_cpus +
+                    '\\" |" ' +
+                    dpdk_file)
+                cmds.append(
                     'sed -i "s|OvsPmdCoreList:.*|OvsPmdCoreList: \\"' +
                     self.nfv_params.pmd_cpus +
                     '\\" |" ' +
@@ -252,8 +258,8 @@ class ConfigOvercloud(object):
                     '\\" |" ' +
                     dpdk_file)
                 cmds.append(
-                    'sed -i "s|# IsolCpusList:.*|IsolCpusList: ' +
-                    self.nfv_params.isol_cpus + '|" ' + dpdk_file)
+                    'sed -i "s|IsolCpusList:.*|IsolCpusList: \\"' +
+                    self.nfv_params.isol_cpus + '\\" |" ' + dpdk_file)
 
             for cmd in cmds:
                 status = os.system(cmd)

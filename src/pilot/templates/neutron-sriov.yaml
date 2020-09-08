@@ -1,14 +1,14 @@
 ## A Heat environment that can be used to deploy SR-IOV
 resource_registry:
-  OS::TripleO::Services::NeutronSriovAgent: ./overcloud/docker/services/neutron-sriov-agent.yaml
-  OS::TripleO::Services::NeutronSriovHostConfig: ./overcloud/puppet/services/neutron-sriov-host-config.yaml
+  OS::TripleO::Services::NeutronSriovAgent: ./overcloud/deployment/neutron/neutron-sriov-agent-container-puppet.yaml
+  OS::TripleO::Services::NeutronSriovHostConfig: ./overcloud/deployment/deprecated/neutron/neutron-sriov-host-config.yaml
 parameter_defaults:
   NeutronMechanismDrivers: ['sriovnicswitch', 'openvswitch']
-  NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','RamFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','PciPassthroughFilter']
+  NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','PciPassthroughFilter','AggregateInstanceExtraSpecsFilter']
   NovaSchedulerAvailableFilters: ["nova.scheduler.filters.all_filters","nova.scheduler.filters.pci_passthrough_filter.PciPassthroughFilter"]
   NeutronEnableIsolatedMetadata: true
   NeutronEnableForceMetadata: true
   NeutronTunnelTypes: ''
-  NeutronSriovNumVFs: 
-  NeutronPhysicalDevMappings: 
-  NovaPCIPassthrough: 
+  NumSriovVfs:
+  NeutronPhysicalDevMappings:
+  NovaPCIPassthrough:
