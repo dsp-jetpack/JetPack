@@ -29,7 +29,7 @@ from keystoneclient.v3 import client
 from credential_helper import CredentialHelper
 from netaddr import IPAddress
 from network_helper import NetworkHelper
-
+from ironic_helper import IronicHelper
 
 class RegisterOvercloud:
 
@@ -49,9 +49,9 @@ class RegisterOvercloud:
         stdout, stderr = process.communicate()
         self.logger.debug("Got back:\n" +
                           "    returncode=" + str(process.returncode) + "\n"
-                          "    stdout=" + stdout)
+                          "    stdout=" + stdout.decode('utf-8'))
 
-        return process.returncode, stdout
+        return process.returncode, stdout.decode('utf-8')
 
     def __init__(self):
         logging.basicConfig()
@@ -163,12 +163,12 @@ class RegisterOvercloud:
         provisioning_network = NetworkHelper.get_provisioning_network()
 
         kwargs = {'os_username': os_username,
-                  'os_password': os_password,
-                  'os_auth_url': os_auth_url,
-                  'os_tenant_name': os_tenant_name,
-                  'os_user_domain_name': os_user_domain_name,
-                  'os_project_domain_name': os_project_domain_name}
-        i_client = ironic_client.get_client(1, **kwargs)
+              'os_password': os_password,
+              'os_auth_url': os_auth_url,
+              'os_tenant_name': os_tenant_name,
+              'os_user_domain_name': os_user_domain_name,
+              'os_project_domain_name': os_project_domain_name}
+        i_client = IronicHelper.get_ironic_client()
 
         auth = v3.Password(
             auth_url=auth_url,

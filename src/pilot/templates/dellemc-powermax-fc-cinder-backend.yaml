@@ -10,7 +10,7 @@ parameter_defaults:
         tripleo_dellemc_powermax/san_login:
             value: <powermax_san_login>
         tripleo_dellemc_powermax/san_password:
-            value: <tripleo_dellemc_powermax_san_password>
+            value: <powermax_san_password>
         tripleo_dellemc_powermax/vmax_port_groups:
             value: '<powermax_port_groups>'
         tripleo_dellemc_powermax/vmax_array:

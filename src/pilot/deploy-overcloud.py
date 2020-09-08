@@ -543,7 +543,11 @@ def main():
 
         if args.node_placement:
             env_opts += " -e ~/pilot/templates/node-placement.yaml"
-
+            
+        # The neutron-ovs.yaml must be included before dell-environment.yaml to enable ovs and disable ovn
+        # in OSP16.1. In case we need to use OVN in future, please delete this line
+        env_opts += " -e ~/pilot/templates/overcloud/environments/services/neutron-ovs.yaml"
+        
         # The dell-environment.yaml must be included after the
         # storage-environment.yaml and ceph-radosgw.yaml
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
@@ -577,8 +581,12 @@ def main():
 
         if args.enable_unity:
             env_opts += " -e ~/pilot/templates/dellemc-unity-cinder-" \
+                        "container.yaml"
+            env_opts += " -e ~/pilot/templates/dellemc-unity-cinder-" \
                         "backend.yaml"
+
         if args.enable_unity_manila:
+            env_opts += " -e ~/pilot/templates/unity-manila-container.yaml"
             env_opts += " -e ~/pilot/templates/unity-manila-config.yaml"
 
         if args.enable_powermax:
@@ -597,8 +605,7 @@ def main():
 
         # The network-environment.yaml must be included after other templates
         # for effective parameter overrides (External vlan default route)
-        # The network-environment.yaml must be included after the
-        # network-isolation.yaml
+        # The network-environment.yaml must be included after the network-isolation.yaml
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "network-isolation.yaml" \
                     " -e ~/pilot/templates/network-environment.yaml" \

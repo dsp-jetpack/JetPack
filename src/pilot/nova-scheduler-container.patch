@@ -1,0 +1,10 @@
+--- /usr/share/openstack-tripleo-heat-templates/deployment/nova/nova-scheduler-container-puppet.yaml	2020-05-29 17:32:38.000000000 -0500
++++ nova-scheduler-container-puppet.yaml.new	2020-08-06 17:17:54.934974040 -0500
+@@ -212,7 +212,6 @@
+                 -
+                   - /var/lib/kolla/config_files/nova_scheduler.json:/var/lib/kolla/config_files/config.json:ro
+                   - /var/lib/config-data/puppet-generated/nova:/var/lib/kolla/config_files/src:ro
+-                  - /run:/run
+             environment:
+               KOLLA_CONFIG_STRATEGY: COPY_ALWAYS
+       deploy_steps_tasks:

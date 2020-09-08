@@ -10,11 +10,11 @@ parameter_defaults:
   ManilaUnityBackendName: tripleo_manila_unity
 # DELL-NFV Overrides
   ManilaUnityDriverHandlesShareServers: <manila_unity_driver_handles_share_servers>
-  ManilaUnityNasLogin: <manila_unity_nas_login>
-  ManilaUnityNasPassword: <manila_unity_nas_password>
-  ManilaUnityNasServer: <manila_unity_nas_server>
-  ManilaUnityServerMetaPool: <manila_unity_server_meta_pool>
-  ManilaUnityShareDataPools: <manila_unity_share_data_pools>
-  ManilaUnityEthernetPorts: <manila_unity_ethernet_ports>
+  ManilaUnityNasLogin: '<manila_unity_nas_login>'
+  ManilaUnityNasPassword: '<manila_unity_nas_password>'
+  ManilaUnityNasServer: '<manila_unity_nas_server>'
+  ManilaUnityServerMetaPool: '<manila_unity_server_meta_pool>'
+  ManilaUnityShareDataPools: '<manila_unity_share_data_pools>'
+  ManilaUnityEthernetPorts: '<manila_unity_ethernet_ports>'
   ManilaUnityEmcSslCertVerify: <manila_unity_ssl_cert_verify>
-  ManilaUnityEmcSslCertPath: <manila_unity_ssl_cert_path>
+  ManilaUnityEmcSslCertPath: '<manila_unity_ssl_cert_path>'
