@@ -137,6 +137,13 @@ class Powerflexgw(InfraHost):
 
         logger.debug("Retrieving all nodes IPs")
 
+        cmd = "grep " + self.ip + " ~./ssh/known_hosts"
+        re = self.director.run(cmd)
+        if self.ip not in re:
+            logger.debug("Authenticating the powerflex gateway vm")
+            cmd = "ssh-keyscan -t ecdsa " + self.ip + " >> ~/.ssh/known_hosts"
+            re = self.director.run(cmd)
+
         node_ips = []
 
         ssh_opts = (
