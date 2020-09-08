@@ -55,15 +55,13 @@ parameter_defaults:
   # CHANGEME: Change the interface names in the following lines for the
   # compute nodes provisioning interface and to include in the compute
   # SRIOV bonds
-  ComputeSriovInterface1: p1p1
-  ComputeSriovInterface2: p4p1
-  ComputeSriovInterface3: p1p2
-  ComputeSriovInterface4: p4p2
+  # bond-pf0 interfaces
+  ComputeSriovInterface1: ens1f0
+  ComputeSriovInterface2: ens1f1
+  # bond-pf1 interfaces
+  ComputeSriovInterface3: ens2f0
+  ComputeSriovInterface4: ens2f1
+  # The bonding mode to use for SRIOV VF-LAG
+  BondInterfaceSriovOptions: 802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
 
-  # CHANGEME: Change the interface names in the following lines for the
-  # controller nodes interfaces and include in the bridges
-  # for DHCP server communication
-  ControllerSriovInterface1: p1p2
-  ControllerSriovInterface2: p4p2
-  ControllerSriovInterface3: p3p2
-  ControllerSriovInterface4: p5p2
+
