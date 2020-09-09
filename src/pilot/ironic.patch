@@ -1,15 +1,15 @@
---- ironic.conf	2018-07-12 14:04:55.353000000 -0500
-+++ ironic.conf.new	2018-07-12 14:04:23.947000000 -0500
-@@ -1294,7 +1294,7 @@
- 
+--- ironic.conf	2020-08-07 13:16:47.000000000 -0400
++++ ironic.conf.new	2020-09-08 15:21:43.975308033 -0400
+@@ -1291,7 +1291,7 @@
  # Interval between syncing the node power state to the
- # database, in seconds. (integer value)
+ # database, in seconds. Set to 0 to disable syncing. (integer
+ # value)
 -#sync_power_state_interval = 60
 +sync_power_state_interval = 70
  
  # Interval between checks of provision timeouts, in seconds.
- # (integer value)
-@@ -1327,7 +1327,7 @@
+ # Set to 0 to disable checks. (integer value)
+@@ -1336,7 +1336,7 @@
  #periodic_max_workers = 8
  
  # Number of attempts to grab a node lock. (integer value)
@@ -18,7 +18,7 @@
  
  # Seconds to sleep between node lock attempts. (integer value)
  #node_locked_retry_interval = 1
-@@ -1393,7 +1393,7 @@
+@@ -1432,7 +1432,7 @@
  # doing the cleaning. If the timeout is reached the node will
  # be put in the "clean failed" provision state. Set to 0 to
  # disable timeout. (integer value)
