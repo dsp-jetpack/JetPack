@@ -1235,6 +1235,9 @@ class Director(InfraHost):
                 'sed -i "s|<powerflex_san_password>|' +
                 self.settings.powerflex_san_password +
                 '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_backend_name>|' +
+                self.settings.powerflex_backend_name +
+                '|" ' + powerflex_cinder_yaml,
                 'sed -i "s|<powerflex_storage_pools>|' +
                 self.settings.powerflex_storage_pools +
                 '|" ' + powerflex_cinder_yaml,

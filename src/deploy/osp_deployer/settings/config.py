@@ -452,6 +452,8 @@ class Settings:
                  backend_settings['powerflex_san_login']
             self.powerflex_san_password = \
                  backend_settings['powerflex_san_password']
+            self.powerflex_backend_name = \
+                 backend_settings['powerflex_backend_name']
             self.powerflex_storage_pools = \
                  backend_settings['powerflex_storage_pools']
             self.powerflex_gateway_rpm = \
