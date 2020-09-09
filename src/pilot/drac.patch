@@ -1,0 +1,17 @@
+--- drac.py	2020-05-09 00:31:44.000000000 -0400
++++ drac.py.new	2020-09-08 15:30:47.449976563 -0400
+@@ -28,7 +28,13 @@
+                help=_('Maximum amount of time (in seconds) to wait for '
+                       'the boot device configuration job to transition '
+                       'to the correct state to allow a reboot or power '
+-                      'on to complete.'))
++                      'on to complete.')),
++    cfg.IntOpt('config_job_max_retries',
++               default=240,
++               min=1,
++               help=_('Maximum number of retries for '
++                      'the configuration job to complete '
++                      'successfully. '))
+ ]
+ 
+ 
