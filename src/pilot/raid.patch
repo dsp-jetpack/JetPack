@@ -1,4 +1,4 @@
---- raid.py	2020-09-08 21:56:05.037053735 -0400
+--- raid.py	2020-05-09 00:31:44.000000000 -0400
 +++ raid.py.new	2020-09-08 22:54:03.643816594 -0400
 @@ -15,6 +15,7 @@
  DRAC RAID specific methods
@@ -494,19 +494,3 @@
      def _clear_raid_substep(self, node):
          driver_internal_info = node.driver_internal_info
          driver_internal_info.pop('raid_config_substep', None)
-@@ -1194,15 +1503,9 @@
-         node = task.node
-         controllers = list()
-         drac_raid_controllers = list_raid_controllers(node)
--        drac_raid_settings = list_raid_settings(node)
-         for cntrl in drac_raid_controllers:
-             if _is_raid_controller(node, cntrl.id, drac_raid_controllers):
-                 controller = dict()
--                if _controller_supports_ehba_mode(
--                        drac_raid_settings,
--                        cntrl.id) and _controller_in_hba_mode(
--                            drac_raid_settings, cntrl.id):
--                    controller['is_ehba_mode'] = True
-                 controller_cap = _reset_raid_config(node, cntrl.id)
-                 controller["raid_controller"] = cntrl.id
-                 controller["is_reboot_required"] = controller_cap[
