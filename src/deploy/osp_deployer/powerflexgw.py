@@ -144,7 +144,12 @@ class Powerflexgw(InfraHost):
             cmd = "ssh-keyscan -t ecdsa " + self.ip + " >> ~/.ssh/known_hosts"
             re = self.director.run(cmd)
 
-        node_ips = []
+        re = self.director.run_as_root("cat /var/lib/mistral/" +
+                                  self.settings.overcloud_name +
+                                  "/powerflex-ansible/inventory.yml " +
+                                  "| sed -n '/mdms/,/tbs/{//!p}'")
+        mdm_nodes = re[0].split("\n")
+        mdm_nodes.pop()
 
         ssh_opts = (
         " -o StrictHostKeyChecking=no "
@@ -160,15 +165,7 @@ class Powerflexgw(InfraHost):
         for each in nodes:
             hostname = each.split(" ")[1]
             ip = each.split(" ")[3].split("=")[1]
-
-            cmd = ("ssh " + ssh_opts + " heat-admin@" +
-                   ip + 
-                   " test -f " + self.mdm_cert + "; echo $?;")
-                 
-            re = self.director.run(cmd)[0].rstrip()
-            is_mdm = not bool(int(re))
-               
-            if is_mdm is True:
+            if ip in str(mdm_nodes):
                 logger.debug("MDM detected on host {}, capturing MDM and LIA certificates".format(hostname))
                 cmds = [
                     "ssh " + ssh_opts + " heat-admin@" +
@@ -183,11 +180,10 @@ class Powerflexgw(InfraHost):
                     ' " cat > ' + self.certs_dir + "/" + hostname + '.lia.cer"']
                 for cmd in cmds:
                     re = self.director.run(cmd)
-
             else:
                 logger.debug("Capturing LIA certificate on host {}".format(hostname))
                 cmd = ("ssh " + ssh_opts + " heat-admin@" +
-                       ip + 
+                       ip +
                        " sudo cat " + self.lia_cert +
                        " | sshpass -p " + self.root_pwd +
                        " ssh root@" + self.ip +
