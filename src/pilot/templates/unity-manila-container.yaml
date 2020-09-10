@@ -1,2 +1,2 @@
 parameter_defaults:
-  ContainerManilaShareImage: <dellemc_container_registry_domain>/dellemc/openstack-manila-share-dellemc-rhosp16:16.1-1
+  ContainerManilaShareImage: <dellemc_container_registry_domain>/dellemc/openstack-manila-share-dellemc-rhosp16:16.1-2
