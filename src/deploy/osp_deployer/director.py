@@ -1723,27 +1723,16 @@ class Director(InfraHost):
         # Specify number of VFs for sriov mentioned interfaces
         sriov_map_setting = []
         sriov_pci_passthrough = []
-        physical_network = ["physint", "physint1", "physint2", "physint3"]
+        physical_network = "physint"
         check = 0
         for interface in sriov_interfaces:
-            devname = interface
-            if (self.settings.enable_smart_nic is True):
-                mapping = physical_network[check] + ':' + interface
-                nova_pci = '{devname: ' + \
-                           '"' + interface + '",' + \
-                           'physical_network: ' + \
-                           '"' + physical_network[check] + '"}'
-                check = check + 1
-
-            else:
-                mapping = physical_network[0] + ':' + interface
-                nova_pci = '{devname: ' + \
-                           '"' + interface + '",' + \
-                           'physical_network: ' + \
-                           '"' + physical_network[0] + '"}'
+            mapping = physical_network + ':' + interface
+            nova_pci = '{devname: ' + \
+                       '"' + interface + '",' + \
+                       'physical_network: ' + \
+                       '"' + physical_network + '"}'
 
             sriov_map_setting.append(mapping)
-
             sriov_pci_passthrough.append(nova_pci)
 
         sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"

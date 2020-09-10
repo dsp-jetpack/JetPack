@@ -1,2 +1,2 @@
 parameter_defaults:
-  ContainerCinderVolumeImage: <dellemc_container_registry_domain>/dellemc/openstack-cinder-volume-dellemc-rhosp16:16.1-1
+  ContainerCinderVolumeImage: <dellemc_container_registry_domain>/dellemc/openstack-cinder-volume-dellemc-rhosp16:16.1-2

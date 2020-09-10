@@ -153,7 +153,7 @@ echo "## Install Tempest plugin dependencies"
 run_command "sudo dnf install -y openstack-tempest"
 run_command "sudo dnf install -y python3-neutron-tests-tempest python3-cinder-tests-tempest python3-telemetry-tests-tempest python3-keystone-tests-tempest python3-horizon-tests-tempest python3-octavia-tests-tempest python3-manila-tests-tempest python3-barbican-tests-tempest"
 run_command "sudo dnf install -y gcc"
-run_command "sudo pip3 install ironic"
+run_command "sudo dnf install -y openstack-ironic-api openstack-ironic-conductor python3-ironicclient"
 echo "## Done."
 
 echo
