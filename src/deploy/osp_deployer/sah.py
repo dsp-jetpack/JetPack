@@ -24,7 +24,10 @@ import shutil
 import os
 import subprocess
 
-logger = logging.getLogger("osp_deployer")
+# logger = logging.getLogger("osp_deployer")
+# TODO after testing delete two logging config lines below
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+logger = logging.getLogger()
 
 exitFlag = 0
 MGMT_BRIDGE = "br-mgmt"
@@ -495,18 +498,22 @@ class Sah(InfraHost):
         _is_mgmt_route = self._does_route_exist(mgmt_cidr)
         _is_prov_route = self._does_route_exist(prov_cidr)
         if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
+            logger.info("eeeeeeeeee MGMT command: {}".format(mgmt_cmd))
             subprocess.check_output(mgmt_cmd,
                                     stderr=subprocess.STDOUT,
                                     shell=True)
             up_cmd = _up_cmd.format(br=MGMT_BRIDGE)
+            logger.info("eeeeeeeeee MGMT up command: {}".format(up_cmd))
             subprocess.check_output(up_cmd,
                                     stderr=subprocess.STDOUT,
                                     shell=True)
         if ((not _is_prov_route and add) or (_is_prov_route and not add)):
+            logger.info("eeeeeeeeee prov command: {}".format(prov_cmd))
             subprocess.check_output(prov_cmd,
                                     stderr=subprocess.STDOUT,
                                     shell=True)
             up_cmd = _up_cmd.format(br=PROV_BRIDGE)
+            logger.info("eeeeeeeeee PROV up command: {}".format(up_cmd))
             subprocess.check_output(up_cmd,
                                     stderr=subprocess.STDOUT,
                                     shell=True)

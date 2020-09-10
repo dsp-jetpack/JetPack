@@ -1842,11 +1842,10 @@ class Director(InfraHost):
         cmd += " --node_placement"
         if self.settings.deploy_overcloud_debug:
             cmd += " --debug"
-        if self._has_edge_sites():
-            cmd += " --network_data"
+        # if self._has_edge_sites():
+        #    cmd += " --network_data"
         if self.settings.enable_dashboard is True:
             cmd += " --dashboard_enable"
-
         cmd += " > overcloud_deploy_out.log 2>&1"
         self.run_tty(cmd)
 
@@ -1947,13 +1946,13 @@ class Director(InfraHost):
         logger.debug("Container_image_prepare_edge done!!!!!!!!!!!")
 
     def deploy_edge_site(self, node_type):
-        # self.subnet_routes_edge(node_type)
-        # TODO don't need anymore self.restart_director_vm()
         ''' skip these for testing
         self.update_and_upload_undercloud_conf_edge(node_type)
         # TODO update_undercloud should take a node_type and only
         # run openstack undercloud intall if the subnet is not there.'''
+        self.update_and_upload_undercloud_conf_edge(node_type)
         self.update_undercloud(node_type)
+        self.subnet_routes_edge(node_type)
         self.overcloud_config_download()
         self.export_control_plane_config()
         self.node_discovery_edge(node_type)
@@ -2884,11 +2883,31 @@ class Director(InfraHost):
         paths = self._generate_edge_template_paths(node_type, NET_ENV)
         stg_net_env_path, net_env_file = paths
         params = self._generate_network_environment_params_edge(node_type)
-        tmplt_data = {"parameter_defaults": params}
+        params_oc = self._fetch_network_environment_params()
+        params_oc.pop("ExtraConfig")
+        params_oc.pop("ServiceNetMap")
+        params_oc.pop("NeutronExternalNetworkBridge")
+        params_oc.update(params)
+        logger.info("BBBBBB Edge parameter defaults: "
+                    "{}".format(params))
+        logger.info("DDDDDDDDDD Fetched parameter defaults: "
+                    "{}".format(params_oc))
+        tmplt_data = {"parameter_defaults": params_oc}
         rendered_tmplt = tmplt.render(**tmplt_data)
         with open(stg_net_env_path, 'w') as stg_net_env_fp:
             stg_net_env_fp.write(rendered_tmplt)
         self.upload_file(stg_net_env_path, net_env_file)
+
+    def _fetch_network_environment_params(self):
+        stg_net_env_file = os.path.join(STAGING_TEMPLATES_PATH,
+                                        NET_ENV + ".yaml")
+        oc_net_env_file = os.path.join(self.templates_dir,
+                                       NET_ENV + ".yaml")
+        self.download_file(stg_net_env_file, oc_net_env_file)
+        with open(stg_net_env_file) as stg_net_env_fp:
+            net_env_yaml = yaml.load(stg_net_env_fp)
+            param_defaults = net_env_yaml["parameter_defaults"]
+            return param_defaults
 
     def subnet_routes_edge_all(self, add=True):
         """Create routes for Director VM and reboot it, which is required
@@ -2948,8 +2967,15 @@ class Director(InfraHost):
 
         _is_mgmt_route = self._does_route_exist(mgmt_cidr)
         if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
+            logger.info("eeeeeeeeee dir mgmt route: {}".format(
+                MGMT_ROUTE_CMD.format(mgmt_if, add_remove_mgmt,
+                                                       mgmt_cidr, mgmt_gw)
+            ))
             self.run_as_root(MGMT_ROUTE_CMD.format(mgmt_if, add_remove_mgmt,
                                                    mgmt_cidr, mgmt_gw))
+            logger.info("eeeeeeeeee dir mgmt up: {}".format(
+                MGMT_UP_CMD.format(_if=mgmt_if)
+            ))
             self.run_as_root(MGMT_UP_CMD.format(_if=mgmt_if))
 
         _is_prov_route = self._does_route_exist(prov_cidr)
@@ -2967,7 +2993,7 @@ class Director(InfraHost):
                                               cidr_esc=_prov_cidr_esc,
                                               gw=prov_gw,
                                               br=CTLPLANE_BRIDGE)
-            logger.info("Provisioning route command: {}".format(prov_cmd))
+            logger.info("eeeeeeeeee Provisioning route command: {}".format(prov_cmd))
             self.run_as_root(prov_cmd)
 
     def restart_director_vm(self):
@@ -3366,8 +3392,7 @@ class Director(InfraHost):
                      'subnet': _external_subnet}
 
         role_d['networks'] = [_int_api, _tenant, _storage, _external]
-        role_d['HostnameFormatDefault'] = ("'%stackname%-"
-                                           + node_type + "-%index%'")
+        role_d['HostnameFormatDefault'] = ("'%stackname%-%index%'")
         role_params = {}
         role_params['TunedProfileName'] = "virtual-host"
         role_d['RoleParametersDefault'] = role_params
@@ -3639,7 +3664,7 @@ class Director(InfraHost):
         external_interface_routes = external_network + 'InterfaceRoutes'
 
         prov_if["name"] = prov_if_param
-        prov_if["mtu"] = "ProvisioningNetworkMTU"
+        prov_if["mtu"] = "ProvisioningMtu"
         prov_if["use_dhcp"] = False
         prov_if["dns_servers"] = "DnsServers"
         _cp_add = [{"ip": "{}Ip".format(CONTROL_PLANE_NET[0]),
@@ -3652,7 +3677,7 @@ class Director(InfraHost):
                          "next_hop": cp_default_route}
         prov_route = {"ip_netmask": "{}NetCidr".format(CONTROL_PLANE_NET[0]),
                       "next_hop": cp_default_route}
-        prov_if["routes"] = [ec2_route, prov_route]
+        prov_if["routes"] = [ec2_route, default_route, prov_route]
 
         tenant_br["name"] = "br-tenant"
         tenant_br["mtu"] = "DefaultBondMTU"
@@ -4159,16 +4184,17 @@ if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
     node_type = "edge-compute-denver"
+    director.subnet_routes_edge(node_type, True)
+    # director.setup_net_envt_edge(node_type)
     # director.render_and_upload_overrides_edge("edge-compute-denver")
     # director.container_image_prepare_edge("edge-compute-denver")
-    # os._exit(0)
+    os._exit(0)
     # director.render_and_upload_site_name_edge("edge-compute-denver")
     director.setup_templates_edge(node_type)
 
     print("edge site deployment "
           "command: {}"
           .format(director._generate_deploy_cmd_edge(node_type)))
-    # director.subnet_routes_edge("edge-compute-denver", True)
     # director.update_undercloud("edge-compute-denver")
     # director.render_and_upload_undercloud_conf()
     # director.subnet_routes_edge("edge-compute-boston", True)
