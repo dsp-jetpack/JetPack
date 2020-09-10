@@ -113,39 +113,35 @@ def deploy():
         settings.get_version_info()
         logger.info("source version # : "
                     + settings.source_version.decode('utf-8'))
-        tester = Checkpoints()
-        tester.verify_deployer_settings()
         if args.validate_only is True:
             logger.info("Settings validated")
             os._exit(0)
-        tester.retreive_switches_config()
 
         # non_sah_nodes = (settings.controller_nodes +
         #                 settings.compute_nodes +
         #                  settings.ceph_nodes)
 
         sah_node = Sah()
-        sah_node.clear_known_hosts()
-        sah_node.upload_iso()
+#        sah_node.clear_known_hosts()
+#        sah_node.upload_iso()
 
 
         #ADD
 
         powerflexgw_vm = Powerflexgw()
-        sah_node.delete_powerflexgw_vm()
         logger.info("=== Creating the powerflex gateway vm")
-        sah_node.create_powerflexgw_vm()
-        tester.powerlexgw_vm_health_check()
+        #sah_node.create_powerflexgw_vm()
+        #tester.powerlexgw_vm_health_check()
         logger.info("Installing the powerflex gateway UI")
-        powerflexgw_vm.upload_rpm()
-        powerflexgw_vm.install_gateway()
+        #powerflexgw_vm.upload_rpm()
+        #powerflexgw_vm.install_gateway()
         logger.info("Configuring the powerflex gateway vm")
-        powerflexgw_vm.configure_gateway()
+        #powerflexgw_vm.configure_gateway()
         logger.info("Retrieving and injecting SSL certificates")
         powerflexgw_vm.get_ssl_certificates()
-        powerflexgw_vm.inject_ssl_certificates()
-        powerflexgw_vm.restart_gateway()
-        powerflexgw_vm.restart_cinder_volume()
+        #powerflexgw_vm.inject_ssl_certificates()
+        #powerflexgw_vm.restart_gateway()
+        #powerflexgw_vm.restart_cinder_volume()
 
     except:  # noqa: E722
         logger.error(traceback.format_exc())

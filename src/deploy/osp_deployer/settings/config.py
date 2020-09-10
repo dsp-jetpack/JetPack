@@ -474,8 +474,6 @@ class Settings:
                 powerflex_settings['powerflex_storage_pool']
             self.powerflex_cluster_config = \
                 powerflex_settings['powerflex_cluster_config']
-            self.powerflex_config_interface = \
-                powerflex_settings['powerflex_config_interface']
             self.powerflex_mgmt_interface = \
                 powerflex_settings['powerflex_mgmt_interface']
             self.powerflex_cluster_interface = \

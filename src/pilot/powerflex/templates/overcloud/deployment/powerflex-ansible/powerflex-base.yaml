@@ -120,7 +120,6 @@ resources:
         vars:
           cluster_name: {get_param: PowerFlexClusterName}
           cluster_config: {get_param: PowerFlexClusterConfig}
-          config_interface: {get_param: PowerFlexConfigInterface}
           rpms_path: {get_param: PowerFlexRpmsPath}
           rpms_method: {get_param: PowerFlexRpmsMethod}
           protection_domain: {get_param: PowerFlexProtectionDomain}

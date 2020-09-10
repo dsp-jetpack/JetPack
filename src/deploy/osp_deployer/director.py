@@ -1265,9 +1265,6 @@ class Director(InfraHost):
                 'sed -i "s|<powerflex_cluster_config>|' +
                 self.settings.powerflex_cluster_config +
                 '|" ' + powerflex_ansible_yaml,
-                'sed -i "s|<powerflex_config_interface>|' +
-                self.settings.powerflex_config_interface +
-                '|" ' + powerflex_ansible_yaml,
                 'sed -i "s|<powerflex_mgmt_interface>|' +
                 self.settings.powerflex_mgmt_interface +
                 '|" ' + powerflex_ansible_yaml,
