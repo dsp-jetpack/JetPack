@@ -312,7 +312,7 @@ class Checkpoints:
                 "Powerflex gateway VM cannot ping the outside world (dns) : " + test)
 
         logger.debug(
-            "*** Verify the Powerfle gateway VM can ping the SAH node "
+            "*** Verify the Powerflex gateway VM can ping the SAH node "
             "through the public network")
         test = self.ping_host(self.powerflexgw_ip,
                               "root",
@@ -324,7 +324,7 @@ class Checkpoints:
                 "the public network : " + test)
 
         logger.debug(
-            "*** Verify the Powerfle gateway VM can ping the SAH node "
+            "*** Verify the Powerflex gateway VM can ping the SAH node "
             "through the storage network")
         test = self.ping_host(self.powerflexgw_ip,
                               "root",
