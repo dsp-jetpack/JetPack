@@ -894,7 +894,7 @@ class Director(InfraHost):
 
         # PowerFlex
         dell_powerflex_cinder_yaml = self.templates_dir + \
-            "/dellemc-powerflex-cinder-conf.yaml"
+            "/dellemc-powerflex-cinder-backend.yaml"
         self.upload_file(self.settings.dell_powerflex_cinder_yaml,
                          dell_powerflex_cinder_yaml)
         self.run_tty("cp " + dell_powerflex_cinder_yaml +
@@ -1226,7 +1226,7 @@ class Director(InfraHost):
 
         logger.debug("Configuring dell emc powerflex backend.")
 
-        cmds = ['sed -i "s|<powerflex_san_ip>|' +
+        cmds = [ 'sed -i "s|<powerflex_san_ip>|' +
                 self.settings.powerflexgw_vm.storage_ip +
                 '|" ' + powerflex_cinder_yaml,
                 'sed -i "s|<powerflex_san_login>|' +
@@ -1234,9 +1234,6 @@ class Director(InfraHost):
                 '|" ' + powerflex_cinder_yaml,
                 'sed -i "s|<powerflex_san_password>|' +
                 self.settings.powerflex_san_password +
-                '|" ' + powerflex_cinder_yaml,
-                'sed -i "s|<powerflex_backend_name>|' +
-                self.settings.powerflex_backend_name +
                 '|" ' + powerflex_cinder_yaml,
                 'sed -i "s|<powerflex_storage_pools>|' +
                 self.settings.powerflex_storage_pools +

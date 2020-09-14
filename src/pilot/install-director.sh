@@ -267,6 +267,12 @@ apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deploy
 apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/database/redis-container-puppet.yaml ${HOME}/pilot/redis-container.patch"
 echo "## Done"
 
+## This hacks in a patch to fix the powerflex cinder backend name required by Puppet to deploy
+echo
+echo "## Patching PowerFlex cinder backend HEAT Template"
+apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/cinder/cinder-backend-dellemc-vxflexos-puppet.yaml ${HOME}/pilot/powerflex-cinder-backend.patch"
+echo "## Done."
+
 echo
 echo "## Copying heat templates..."
 cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overcloud

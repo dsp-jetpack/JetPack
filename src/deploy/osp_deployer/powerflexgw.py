@@ -247,7 +247,7 @@ class Powerflexgw(InfraHost):
 
         re = self.director.run(self.source_overcloudrc +
                           "openstack volume service list | grep " +
-                          self.settings.powerflex_backend_name)
+                          "tripleo_dellemc_powerflex")
         status = re[0].split("\n")
         status.pop()
         status = status[0].split("|")[5]

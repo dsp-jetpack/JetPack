@@ -25,6 +25,7 @@ from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from auto_common import Ipmi, Ssh, Scp
 from osp_deployer.powerflexgw import Powerflexgw
+from osp_deployer.powerflexmgmt import Powerflexmgmt
 
 logger = logging.getLogger("osp_deployer")
 
@@ -138,10 +139,15 @@ def deploy():
         logger.info("Configuring the powerflex gateway vm")
         #powerflexgw_vm.configure_gateway()
         logger.info("Retrieving and injecting SSL certificates")
-        powerflexgw_vm.get_ssl_certificates()
+        #powerflexgw_vm.get_ssl_certificates()
         #powerflexgw_vm.inject_ssl_certificates()
         #powerflexgw_vm.restart_gateway()
         #powerflexgw_vm.restart_cinder_volume()
+
+        powerflexmgmt_vm = Powerflexmgmt()
+        sah_node.create_powerflexmgmt_vm()
+        powerflexmgmt_vm.upload_rpm()
+        powerflexmgmt_vm.install_presentation_server()
 
     except:  # noqa: E722
         logger.error(traceback.format_exc())

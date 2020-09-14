@@ -452,8 +452,6 @@ class Settings:
                  backend_settings['powerflex_san_login']
             self.powerflex_san_password = \
                  backend_settings['powerflex_san_password']
-            self.powerflex_backend_name = \
-                 backend_settings['powerflex_backend_name']
             self.powerflex_storage_pools = \
                  backend_settings['powerflex_storage_pools']
             self.powerflex_gateway_rpm = \
@@ -684,7 +682,7 @@ class Settings:
         self.powermax_manila_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/powermax-manila-config.yaml'
         self.dell_powerflex_cinder_yaml = self.foreman_configuration_scripts + \
-            '/pilot/templates/dellemc-powerflex-cinder-conf.yaml'
+            '/pilot/templates/dellemc-powerflex-cinder-backend.yaml'
         self.dell_powerflex_ansible_yaml = self.foreman_configuration_scripts + \
             '/pilot/powerflex/templates/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
