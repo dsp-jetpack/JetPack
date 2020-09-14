@@ -3664,18 +3664,18 @@ class Director(InfraHost):
         prov_if["routes"] = [ec2_route, default_route, prov_route]
 
         tenant_br["name"] = "br-tenant"
-        tenant_br["mtu"] = "DefaultBondMTU"
+        tenant_br["mtu"] = "DefaultBondMtu"
         bond_0 = {"type": "linux_bond"}
         bond_0["name"] = "bond0"
         bond_0["bonding_options"] = "ComputeBondInterfaceOptions"
-        bond_0["mtu"] = "DefaultBondMTU"
+        bond_0["mtu"] = "DefaultBondMtu"
         bond_0_if_1 = {"type": "interface"}
         bond_0_if_1["name"] = bond_0_if_1_param
-        bond_0_if_1["mtu"] = "DefaultBondMTU"
+        bond_0_if_1["mtu"] = "DefaultBondMtu"
         bond_0_if_1["primary"] = True
         bond_0_if_2 = {"type": "interface"}
         bond_0_if_2["name"] = bond_0_if_2_param
-        bond_0_if_2["mtu"] = "DefaultBondMTU"
+        bond_0_if_2["mtu"] = "DefaultBondMtu"
         bond_0["members"] = [bond_0_if_1, bond_0_if_2]
 
         internal_api_vlan = {"type": "vlan"}
@@ -3691,7 +3691,7 @@ class Director(InfraHost):
         tenant_vlan = {"type": "vlan"}
         tenant_vlan["device"] = "bond0"
         tenant_vlan["vlan_id"] = tenant_vlan_id
-        tenant_vlan["mtu"] = "DefaultBondMTU"
+        tenant_vlan["mtu"] = "DefaultBondMtu"
         tenant_vlan["addresses"] = [{"ip_netmask":
                                      tenant_subnet}]
         tenant_vlan['routes'] = tenant_interface_routes
@@ -3699,7 +3699,7 @@ class Director(InfraHost):
         storage_vlan = {"type": "vlan"}
         storage_vlan["device"] = "bond0"
         storage_vlan["vlan_id"] = storage_vlan_id
-        storage_vlan["mtu"] = "DefaultBondMTU"
+        storage_vlan["mtu"] = "DefaultBondMtu"
         storage_vlan["addresses"] = [{"ip_netmask":
                                       storage_subnet}]
         storage_vlan['routes'] = storage_interface_routes
@@ -3708,23 +3708,23 @@ class Director(InfraHost):
                                 tenant_vlan, storage_vlan]
 
         ex_br["name"] = "bridge_name"
-        ex_br["mtu"] = "DefaultBondMTU"
+        ex_br["mtu"] = "DefaultBondMtu"
         bond_1_if_1 = {"type": "interface"}
         bond_1_if_1["name"] = bond_1_if_1_param
-        bond_1_if_1["mtu"] = "DefaultBondMTU"
+        bond_1_if_1["mtu"] = "DefaultBondMtu"
         bond_1_if_1["primary"] = True
         bond_1_if_2 = {"type": "interface"}
         bond_1_if_2["name"] = bond_1_if_2_param
-        bond_1_if_2["mtu"] = "DefaultBondMTU"
+        bond_1_if_2["mtu"] = "DefaultBondMtu"
         bond_1 = {"type": "linux_bond"}
         bond_1["name"] = "bond1"
         bond_1["bonding_options"] = "ComputeBondInterfaceOptions"
-        bond_1["mtu"] = "DefaultBondMTU"
+        bond_1["mtu"] = "DefaultBondMtu"
         bond_1["members"] = [bond_1_if_1, bond_1_if_2]
         external_vlan = {"type": "vlan"}
         external_vlan["device"] = "bond0"
         external_vlan["vlan_id"] = external_vlan_id
-        external_vlan["mtu"] = "DefaultBondMTU"
+        external_vlan["mtu"] = "DefaultBondMtu"
         external_vlan["addresses"] = [
             {"ip_netmask": external_subnet}]
 
