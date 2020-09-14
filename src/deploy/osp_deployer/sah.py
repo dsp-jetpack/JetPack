@@ -524,4 +524,10 @@ class Sah(InfraHost):
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     sah = Sah()
-    sah.subnet_routes_edge("edge-compute-denver", True)
+    # node_type = "edge-compute-denver"
+    node_type = "edge-compute-boston"
+    add = True
+    # add = False
+    sah.subnet_routes_edge(node_type, add)
+    node_type = "edge-compute-denver"
+    sah.subnet_routes_edge(node_type, add)

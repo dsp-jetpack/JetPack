@@ -29,6 +29,9 @@ class Checkpoints:
         self.settings = Settings.settings
         self.ping_success = "packets transmitted, 1 received"
         self.director_ip = self.settings.director_node.public_api_ip
+        self.director_user = self.settings.director_install_account_user
+        self.director_home_dir = "/home/" + self.director_user
+        self.source_stackrc = 'source ' + self.director_home_dir + "/stackrc; "
         self.sah_ip = self.settings.sah_node.public_api_ip
         self.verify_rhsm_status = self.settings.verify_rhsm_status
         if self.settings.use_satellite is True:
@@ -411,6 +414,31 @@ class Checkpoints:
         if _error:
             install_fail = True
         return install_fail, _error
+
+    def provisioning_subnet_exists(self, subnet):
+        logger.debug("Check if edge subnet {} already "
+                     "exists or not".format(subnet))
+        setts = self.settings
+        user = setts.director_install_account_user
+        ip = setts.director_node.public_api_ip
+        pwd = setts.director_install_account_pwd
+        is_subnet = False
+        subnet_cmd = ("{} openstack subnet "
+                      "show {} -c name "
+                      "-f value".format(self.source_stackrc, subnet))
+        sn_out = Ssh.execute_command(ip, user, pwd, subnet_cmd)[0]
+        if sn_out.strip() == subnet:
+            is_subnet = True
+            logger.info("Subnet {} already exists".format(subnet))
+        return is_subnet
+
+    def verify_provisioning_subnets_created(self, subnets):
+        for subnet in subnets:
+            _is_subnet = self.provisioning_subnet_exists(subnet)
+            if not _is_subnet:
+                raise AssertionError(
+                    "Provisioning subnet {} not found in "
+                    "undercloud".format(subnet))
 
     def verify_overcloud_deployed(self):
         logger.debug("Verify the overcloud installed properly")

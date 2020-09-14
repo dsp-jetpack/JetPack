@@ -1940,7 +1940,7 @@ class Director(InfraHost):
         # TODO update_undercloud should take a node_type and only
         # run openstack undercloud intall if the subnet is not there.'''
         self.update_and_upload_undercloud_conf_edge(node_type)
-        self.update_undercloud(node_type)
+        self.update_undercloud([node_type])
         self.subnet_routes_edge(node_type)
         self.overcloud_config_download()
         self.export_control_plane_config()
@@ -2320,30 +2320,26 @@ class Director(InfraHost):
         external_sub_guid = self.run_tty(external_sub_cmd)[0].rstrip()
         return external_sub_guid
 
-    def update_undercloud(self, node_type=None):
+    def update_undercloud(self, node_types):
         logging.debug("Updating undercloud...")
-        subnet = self._generate_subnet_name(node_type)
-        if node_type:
-            subnet_cmd = ("{source_cmd} openstack subnet "
-                          "show {subnet} -c name "
-                          "-f value".format(source_cmd=self.source_stackrc,
-                                            subnet=subnet))
-            sn_out, sn_err, sn_exit_status = self.run(subnet_cmd)
-            if sn_out.strip() == subnet:
-                logger.info("Subnet: {}, already exists no need to "
-                            "install undercloud again".format(subnet))
-                return
-        return
-        cmd = self.source_stackrc + "cd ; " + UNDERCLOUD_INSTALL_CMD
-        stdout, stderr, exit_status = self.run(cmd)
-        if exit_status:
-            raise AssertionError("Failed to install undercloud"
-                                 "exit_status: {}, error: {}, "
-                                 "stdout: {}".format(
-                                     exit_status, stderr, stdout))
-
-        # tester = Checkpoints()
-        # tester.verify_undercloud_installed()
+        tester = Checkpoints()
+        subnets_to_create = []
+        for node_type in node_types:
+            subnet = self._generate_subnet_name(node_type)
+            _subnet_exists = tester.provisioning_subnet_exists(subnet)
+            if _subnet_exists:
+                continue
+            else:
+                subnets_to_create.append(subnet)
+        if subnets_to_create:
+            cmd = self.source_stackrc + "cd ; " + UNDERCLOUD_INSTALL_CMD
+            stdout, stderr, exit_status = self.run(cmd)
+            if exit_status:
+                raise AssertionError("Failed to install undercloud"
+                                     "exit_status: {}, error: {}, "
+                                     "stdout: {}".format(
+                                         exit_status, stderr, stdout))
+            tester.verify_provisioning_subnets_created(subnets_to_create)
 
     def _backup_tempest_conf(self):
         logger.info("Backing up tempest.conf")
@@ -3235,7 +3231,7 @@ class Director(InfraHost):
         params[cp_oc_subnet_cidr] = setts.provisioning_network.split("/")[1]
         params[cp_oc_default_route] = setts.director_node.provisioning_ip
 
-        cp_network = "{}{}".format(CONTROL_PLANE_NET[0], role)
+        cp_network = "{}{}".format(role, CONTROL_PLANE_NET[0])
         cp_net_cidr = "{}NetCidr".format(cp_network)
         cp_subnet_cidr = "{}SubnetCidr".format(cp_network)
         cp_default_route = "{}DefaultRoute".format(cp_network)
@@ -3449,20 +3445,19 @@ class Director(InfraHost):
             if_def_route = "{}InterfaceDefaultRoute".format(net_tup[0])
             params[net_cidr] = {"default": '', "type": "string"}
             params[if_def_route] = {"default": '', "type": "string"}
-        _cp_edge_key = "{}{}NetCidr".format(CONTROL_PLANE_NET[0], role)
+        _cp_edge_key = "{}{}NetCidr".format(role, CONTROL_PLANE_NET[0])
         params[_cp_edge_key] = {"default": '', "type": "string"}
         return params
     '''
 
     def _generate_nic_params(self, node_type):
-        setts = self.settings
         role = self._generate_cc_role(node_type)
         params = {}
         cp_oc_default_route = "{}DefaultRoute".format(CONTROL_PLANE_NET[0])
         cp_oc_subnet_cidr = "{}SubnetCidr".format(CONTROL_PLANE_NET[0])
         cp_oc_net_cidr = "{}NetCidr".format(CONTROL_PLANE_NET[0])
 
-        cp_network = "{}{}".format(CONTROL_PLANE_NET[0], role)
+        cp_network = "{}{}".format(role, CONTROL_PLANE_NET[0])
         cp_default_route = "{}DefaultRoute".format(cp_network)
         cp_subnet_cidr = "{}SubnetCidr".format(cp_network)
         cp_net_cidr = "{}NetCidr".format(cp_network)
@@ -3577,7 +3572,7 @@ class Director(InfraHost):
         cp_oc_subnet_cidr = "{}SubnetCidr".format(CONTROL_PLANE_NET[0])
         cp_oc_net_cidr = "{}NetCidr".format(CONTROL_PLANE_NET[0])
 
-        cp_edge_network = "{}{}".format(CONTROL_PLANE_NET[0], role)
+        cp_edge_network = "{}{}".format(role, CONTROL_PLANE_NET[0])
         cp_default_route = "{}DefaultRoute".format(cp_edge_network)
         cp_subnet_cidr = "{}SubnetCidr".format(cp_edge_network)
         cp_subnet = "{}Subnet".format(cp_edge_network)
@@ -3620,10 +3615,10 @@ class Director(InfraHost):
         :returns: list of nic configuration dicts
         """
         role = self._generate_cc_role(node_type)
-        cp_network = "{}{}".format(CONTROL_PLANE_NET[0], role)
+        cp_network = "{}{}".format(role, CONTROL_PLANE_NET[0])
         cp_default_route = "{}DefaultRoute".format(cp_network)
-        cp_subnet_cidr = "{}SubnetCidr".format(cp_network)
-        cp_subnet = "{}Subnet".format(cp_network)
+        # cp_subnet_cidr = "{}SubnetCidr".format(cp_network)
+        # cp_subnet = "{}Subnet".format(cp_network)
         prov_if_param = role + 'ProvisioningInterface'
         bond_0_if_1_param = role + 'Bond0Interface1'
         bond_0_if_2_param = role + 'Bond0Interface2'
@@ -4172,8 +4167,13 @@ class Director(InfraHost):
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
+    # node_type = "edge-compute-denver"
+    node_type = "edge-compute-boston"
+    add = True
+    # add = False
+    director.subnet_routes_edge(node_type, add)
     node_type = "edge-compute-denver"
-    director.subnet_routes_edge(node_type, True)
+    director.subnet_routes_edge(node_type, add)
     # director.setup_net_envt_edge(node_type)
     # director.render_and_upload_overrides_edge("edge-compute-denver")
     # director.container_image_prepare_edge("edge-compute-denver")
@@ -4184,6 +4184,6 @@ if __name__ == "__main__":
     print("edge site deployment "
           "command: {}"
           .format(director._generate_deploy_cmd_edge(node_type)))
-    # director.update_undercloud("edge-compute-denver")
+
     # director.render_and_upload_undercloud_conf()
     # director.subnet_routes_edge("edge-compute-boston", True)
