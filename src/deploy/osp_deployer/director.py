@@ -1989,6 +1989,33 @@ class Director(InfraHost):
                          "openstack baremetal node delete " +
                          node_id)
 
+    def delete_edge_site(self, node_type):
+        logger.info("Edge site {}".format(node_type))
+        stack_name = self._generate_node_type_lower(node_type)
+        # Delete the stack
+        stack_delete_re = self.run_tty(self.source_stackrc
+                                       + "openstack stack delete --yes --wait "
+                                       + stack_name)
+        logger.info("stack delete response: "
+                    "{}".format(", ".join(stack_delete_re)))
+        re = self.run_tty(self.source_stackrc
+                          + "openstack baremetal node list --fields "
+                          "uuid properties -f json")
+        nodes = json.loads(re[0])
+        nodes_for_deletion = []
+        for node in nodes:
+            if ("node_type" in node["Properties"]
+                    and node["Properties"]["node_type"] == node_type):
+                nodes_for_deletion.append(node["UUID"])
+        # Force all nodes into maintenance, easy way to make sure they
+        # are deletable regardless of state the node is in
+        for node_uuid in nodes_for_deletion:
+            self.run_tty(self.source_stackrc + " openstack baremetal node "
+                         "maintenance set {}".format(node_uuid))
+        # Delete all edge site nodes at once
+        self.run_tty(self.source_stackrc + "openstack baremetal node "
+                     "delete {}".format(" ".join(nodes_for_deletion)))
+
     def summarize_deployment(self):
         logger.info("**** Retrieving nodes information ")
         deployment_log = '/auto_results/deployment_summary.log'
@@ -2638,8 +2665,7 @@ class Director(InfraHost):
             _res_reg = tmplt_data['resource_registry'] = {}
             _params = tmplt_data['parameter_defaults'] = {}
 
-            ne_params = self._generate_nic_environment_edge(node_type,
-                                                            node_type_data)
+            ne_params = self._generate_nic_environment_edge(node_type)
             _params.update(ne_params)
             role = self._generate_cc_role(node_type)
             role_nic_key = ("OS::TripleO::"
@@ -3343,6 +3369,9 @@ class Director(InfraHost):
         external_routes = [{"default": True,
                             "nexthop": node_type_data['external_gateway']}]
         params[external_interface_routes] = external_routes
+
+        params[EC2_PUBLIC_IPCIDR_PARAM] = EC2_IPCIDR
+        params["ControlPlaneIp"] = setts.provisioning_vip
         return params
 
     def _generate_role_dict(self, node_type):
@@ -3552,7 +3581,7 @@ class Director(InfraHost):
         params[bond_1_if_2] = {"default": '', "type": "string"}
         return params
 
-    def _generate_nic_environment_edge(self, node_type, node_type_data):
+    def _generate_nic_environment_edge(self, node_type):
         """Generate default_parameters subsequently injected into
         nic_environment.yaml for a specific edge site.
 
@@ -3565,6 +3594,7 @@ class Director(InfraHost):
         """
         logger.debug("_generate_nic_environment_edge called!")
         setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
         role = self._generate_cc_role(node_type)
 
         params = {}
@@ -3682,7 +3712,7 @@ class Director(InfraHost):
         internal_api_vlan["device"] = "bond0"
 
         internal_api_vlan["vlan_id"] = int_api_vlan_id
-        internal_api_vlan["mtu"] = "InternalApiMTU"
+        internal_api_vlan["mtu"] = "InternalApiMtu"
         internal_api_vlan["addresses"] = [{"ip_netmask":
                                            int_api_subnet}]
 
@@ -3929,21 +3959,21 @@ class Director(InfraHost):
 
         xtra_cfg = {}
         xtra_cfg['nova::compute::libvirt::vncserver_listen'] = \
-            "'%{hiera(" + api_net + ")}'"
+            "\"%{hiera('" + api_net + "')}\""
         xtra_cfg['nova::compute::vncserver_proxyclient_address'] = \
-            "'%{hiera(" + api_net + ")}'"
+            "\"%{hiera('" + api_net + "')}\""
         xtra_cfg['neutron::agents::ml2::ovs::local_ip'] = \
-            "'%{hiera(" + tenant_net + ")}'"
+            "\"%{hiera('" + tenant_net + "')}\""
         xtra_cfg['cold_migration_ssh_inbound_addr'] = \
-            "'%{hiera(" + api_net + ")}'"
+            "\"%{hiera('" + api_net + "')}\""
         xtra_cfg['live_migration_ssh_inbound_addr'] = \
-            "'%{hiera(" + api_net + ")}'"
+            "\"%{hiera('" + api_net + "')}\""
         xtra_cfg['nova::migration::libvirt::live_migration_inbound_addr'] = \
-            "'%{hiera(" + api_net + ")}'"
-        xtra_cfg['nova::my_ip'] = "'%{hiera(" + api_net + ")}'"
+            "\"%{hiera('fqdn_" + api_net + "')}\""
+        xtra_cfg['nova::my_ip'] = "\"%{hiera('" + api_net + "')}\""
         _mysql_key = 'tripleo::profile::base::database::mysql' \
             + '::client::mysql_client_bind_address'
-        xtra_cfg[_mysql_key] = "'%{hiera(" + api_net + ")}'"
+        xtra_cfg[_mysql_key] = "\"%{hiera('" + api_net + "')}\""
         # TODO not sure below are needed
         xtra_cfg['nova::cpu_allocation_ratio'] = 1
         xtra_cfg['nova::compute::resume_guests_state_on_host_boot'] = True
@@ -4168,11 +4198,13 @@ if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     director = Director()
     # node_type = "edge-compute-denver"
-    node_type = "edge-compute-boston"
+    node_type = "edge-compute-denver"
+    director.setup_templates_edge(node_type)
+    os._exit(0)
     add = True
     # add = False
     director.subnet_routes_edge(node_type, add)
-    node_type = "edge-compute-denver"
+    node_type = "edge-compute-boston"
     director.subnet_routes_edge(node_type, add)
     # director.setup_net_envt_edge(node_type)
     # director.render_and_upload_overrides_edge("edge-compute-denver")
