@@ -107,6 +107,7 @@ NODE_PLACEMENT_EDGE_J2 = NODE_PLACEMENT + "-edge" + J2_EXT
 ROLES_DATA_EDGE_J2 = ROLES_DATA + "_edge" + J2_EXT
 NET_ISO_EDGE_J2 = NET_ISO + "-edge" + J2_EXT
 SITE_NAME_EDGE_J2 = SITE_NAME + "-edge" + J2_EXT
+SITE_NAME_J2 = SITE_NAME + J2_EXT
 OVERRIDES_EDGE_J2 = OVERRIDES + "-edge" + J2_EXT
 
 EC2_IPCIDR = '169.254.169.254/32'
@@ -115,10 +116,12 @@ EC2_PUBLIC_IPCIDR_PARAM = 'EC2MetadataPublicIpCidr'
 # command constants
 MGMT_ROUTE_CMD = "nmcli connection modify {} {}ipv4.routes \"{} {}\""
 MGMT_UP_CMD = "nmcli connection load {_if} && exec nmcli connection up {_if}"
-PROV_DEL_ROUTE_CMD = ("sed -i -e '/{cidr_esc} via {gw} dev {br}/d' "
-                      "/etc/sysconfig/network-scripts/route-{br}")
-PROV_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {br}\" >> "
-                  "/etc/sysconfig/network-scripts/route-{br}")
+LEGACY_DEL_ROUTE_CMD = ("sed -i -e '/{cidr_esc} via {gw} dev {br}/d' "
+                        "/etc/sysconfig/network-scripts/route-{br}")
+LEGACY_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {br}\" >> "
+                    "/etc/sysconfig/network-scripts/route-{br}")
+LEGACY_SSH_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {dev}\" | sudo tee -a "
+                        "/etc/sysconfig/network-scripts/route-{dev}")
 ROUTE_UP_CMD = "/etc/sysconfig/network-scripts/ifup-routes {br}"
 BR_DOWN_CMD = "/etc/sysconfig/network-scripts/ifdown-ovs ifcfg-{br}"
 BR_UP_CMD = "/etc/sysconfig/network-scripts/ifup-ovs ifcfg-{br}"
@@ -679,6 +682,7 @@ class Director(InfraHost):
         self.setup_manila()
         self.setup_environment()
         self.setup_sanity_ini()
+        self.render_and_upload_site_name()
 
     def setup_templates_edge_all(self):
         self.setup_networking_edge_all()
@@ -1910,29 +1914,7 @@ class Director(InfraHost):
 
         cmd += " --output-env-file " + output_env_file
         self.run(cmd)
-
-        """
-                openstack tripleo container image prepare \
-        --environment-directory edge_all \
-        -r ~/node_type/roles_data.yaml \
-        -e ~/edge_common/control-plane-export.yaml \
-        -e ~/containers-prepare-parameter.yaml \
- -e ~/pilot/templates/static-ip-environment.yaml \
- -e ~/pilot/templates/static-vip-environment.yaml \
- -e ~/pilot/templates/node-placement.yaml \
- -e ~/pilot/templates/overcloud/environments/storage-environment.yaml \
- -e ~/containers-prepare-parameter.yaml \
- -e ~/pilot/templates/dell-environment.yaml \
- -e ~/pilot/templates/dell-cinder-backends.yaml \
- -e ~/pilot/templates/overcloud/environments/network-isolation.yaml \
- -e ~/pilot/templates/network-environment.yaml \
- -e /usr/share/openstack-tripleo-heat-templates/environments/services/neutron-ovs.yaml \
- -e /home/stack/pilot/templates/nic-configs/5_port/nic_environment.yaml \
-
-        --output-env-file ~/[node_type]/[node_type]-images-env.yaml
-
-        """
-        logger.debug("Container_image_prepare_edge done!!!!!!!!!!!")
+        logger.debug("Container_image_prepare_edge done!")
 
     def deploy_edge_site(self, node_type):
         ''' skip these for testing
@@ -1990,7 +1972,7 @@ class Director(InfraHost):
                          node_id)
 
     def delete_edge_site(self, node_type):
-        logger.info("Edge site {}".format(node_type))
+        logger.info("Deleting edge site {}".format(node_type))
         stack_name = self._generate_node_type_lower(node_type)
         # Delete the stack
         stack_delete_re = self.run_tty(self.source_stackrc
@@ -2015,6 +1997,7 @@ class Director(InfraHost):
         # Delete all edge site nodes at once
         self.run_tty(self.source_stackrc + "openstack baremetal node "
                      "delete {}".format(" ".join(nodes_for_deletion)))
+        logger.info("Edge site {} deleted!".format(node_type))
 
     def summarize_deployment(self):
         logger.info("**** Retrieving nodes information ")
@@ -2704,6 +2687,20 @@ class Director(InfraHost):
         for node_type in self.settings.node_type_data:
             self.render_and_upload_site_name_edge(node_type)
 
+    def render_and_upload_site_name(self):
+        logger.debug("render_and_upload_site_name called!")
+        paths = self._generate_edge_template_paths(None, SITE_NAME)
+        logger.info("zzzzzzzzzzzz paths {}".format(", ".join(paths)))
+        stg_az_path, remote_az_file = paths
+        tmplt = self.jinja2_env.get_template(SITE_NAME_J2)
+        tmplt_data = {"az": self.settings.overcloud_name}
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
+        with open(stg_az_path, 'w') as stg_az_fp:
+            stg_az_fp.write(rendered_tmplt)
+        self.upload_file(stg_az_path, remote_az_file)
+
     def render_and_upload_site_name_edge(self, node_type):
         logger.debug("render_and_upload_site_name_edge called!")
         paths = self._generate_edge_template_paths(node_type, SITE_NAME)
@@ -2899,10 +2896,6 @@ class Director(InfraHost):
         params_oc.pop("ServiceNetMap")
         params_oc.pop("NeutronExternalNetworkBridge")
         params_oc.update(params)
-        logger.info("BBBBBB Edge parameter defaults: "
-                    "{}".format(params))
-        logger.info("DDDDDDDDDD Fetched parameter defaults: "
-                    "{}".format(params_oc))
         tmplt_data = {"parameter_defaults": params_oc}
         rendered_tmplt = tmplt.render(**tmplt_data)
         with open(stg_net_env_path, 'w') as stg_net_env_fp:
@@ -2947,11 +2940,11 @@ class Director(InfraHost):
             if ((not _is_prov_route and add) or (_is_prov_route and not add)):
                 prv_cmds = []
                 if add:
-                    prv_cmds.append(PROV_DEL_ROUTE_CMD)
-                    prv_cmds.append(PROV_ROUTE_CMD)
+                    prv_cmds.append(LEGACY_DEL_ROUTE_CMD)
+                    prv_cmds.append(LEGACY_ROUTE_CMD)
                     prv_cmds.append(ROUTE_UP_CMD)
                 else:
-                    prv_cmds.append(PROV_DEL_ROUTE_CMD)
+                    prv_cmds.append(LEGACY_DEL_ROUTE_CMD)
                     prv_cmds.append(BR_DOWN_CMD)
                     prv_cmds.append(BR_UP_CMD)
                 prov_cmd = "; ".join(prv_cmds).format(cidr=prov_cidr,
@@ -2993,11 +2986,11 @@ class Director(InfraHost):
         if ((not _is_prov_route and add) or (_is_prov_route and not add)):
             cmds = []
             if add:
-                cmds.append(PROV_DEL_ROUTE_CMD)
-                cmds.append(PROV_ROUTE_CMD)
+                cmds.append(LEGACY_DEL_ROUTE_CMD)
+                cmds.append(LEGACY_ROUTE_CMD)
                 cmds.append(ROUTE_UP_CMD)
             else:
-                cmds.append(PROV_DEL_ROUTE_CMD)
+                cmds.append(LEGACY_DEL_ROUTE_CMD)
                 cmds.append(BR_DOWN_CMD)
                 cmds.append(BR_UP_CMD)
             prov_cmd = "; ".join(cmds).format(cidr=prov_cidr,
@@ -3006,6 +2999,134 @@ class Director(InfraHost):
                                               br=CTLPLANE_BRIDGE)
             logger.info("eeeeeeeeee Provisioning route command: {}".format(prov_cmd))
             self.run_as_root(prov_cmd)
+
+    def controller_routes_edge(self, node_type, add=True):
+        logger.info("Configuring controller routes for {}, add or "
+                    "remove {!s}".format(node_type, add))
+        setts = self.settings
+        # controllers = setts.controller_nodes
+        _re = self.run("{} openstack server list --name {}-controller- "
+                       "-c Networks -f json".format(self.source_stackrc,
+                                                    setts.overcloud_name))
+        _c_nodes = json.loads(_re[0])
+        logger.info("controller nodes: {}".format(str(_c_nodes)))
+        cntl_ips = []
+        for node in _c_nodes:
+            cntl_ips.append(node["Networks"].split("=")[1])
+
+        logger.info("cntlips: {}".format(str(cntl_ips)))
+        node_type_data = setts.node_type_data_map[node_type]
+        route_tups = [(setts.private_api_vlanid,
+                       node_type_data["private_api_network"],
+                       setts.private_api_gateway),
+                      (setts.storage_vlanid,
+                       node_type_data["storage_network"],
+                       setts.storage_gateway),
+                      (setts.tenant_tunnel_vlanid,
+                       node_type_data["tenant_network"],
+                       setts.tenant_tunnel_gateway)]
+
+        for ip in cntl_ips:
+            new_routes = []
+            for tup in route_tups:
+                _vlan = "vlan{}".format(tup[0])
+                _route_exists = self._does_overcloud_node_route_exist(ip,
+                                                                      tup[1],
+                                                                      tup[2],
+                                                                      _vlan)
+                logger.info("route exists: {}".format(str(_route_exists)))
+
+                if not _route_exists and add:
+                    new_routes.append(LEGACY_SSH_ROUTE_CMD.format(cidr=tup[1],
+                                                                  gw=tup[2],
+                                                                  dev=_vlan))
+                    new_routes.append("sudo " + ROUTE_UP_CMD.format(br=_vlan))
+            if new_routes:
+                self._run_on_node(ip, "; ".join(new_routes))
+
+        '''
+
+        for vlan in vlans:
+            _does_route_exist = self._does_overcloud_node_route_exist(route, ip)
+            re = self.run_tty("ssh -o StrictHostKeyChecking=no "
+                              "-o UserKnownHostsFile=/dev/null "
+                              "-o KbdInteractiveDevices=no heat-admin@{ip}"
+
+                              " /sbin/ifconfig | grep \"inet.*" +
+                              priv_ +
+                              ".*netmask " +
+                              self.settings.private_api_netmask +
+                              ".*\" | awk '{print $2}'")
+
+        '''
+        '''
+        LEGACY_DEL_ROUTE_CMD = ("sed -i -e '/{cidr_esc} via {gw} dev {br}/d' "
+                                "/etc/sysconfig/network-scripts/route-{br}")
+        LEGACY_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {br}\" >> "
+                            "/etc/sysconfig/network-scripts/route-{br}")
+        ROUTE_UP_CMD = "/etc/sysconfig/network-scripts/ifup-routes {br}"
+        15: vlan130
+    inet 192.168.130.11/24 brd 192.168.130.255 scope global vlan130
+
+16: vlan170: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN group default qlen 1000
+    inet 192.168.170.11/24 brd 192.168.170.255 scope global vlan170
+
+17: vlan140:
+    inet 192.168.140.11/24 brd 192.168.140.255 scope global vlan140
+
+    route-vlan621
+
+    setts.tenant_tunnel_vlanid
+    setts.private_api_vlanid
+    setts.storage_vlanid
+    priv_vlan = "route-vlan{}"
+
+    LEGACY_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {br}\" >> "
+                        "/etc/sysconfig/network-scripts/route-{br}")
+
+        '''
+
+        '''
+        add_remove_mgmt = "+" if add else "-"
+        mgmt_if = setts.director_node.management_if
+        node_type_data = setts.node_type_data_map[node_type]
+        mgmt_gw = setts.management_gateway
+        prov_gw = setts.provisioning_gateway
+        mgmt_cidr = node_type_data['mgmt_cidr']
+        prov_cidr = node_type_data['cidr']
+        _prov_cidr_esc = prov_cidr.replace('/', '\/')
+
+        _is_mgmt_route = self._does_route_exist(mgmt_cidr)
+        if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
+            logger.info("eeeeeeeeee dir mgmt route: {}".format(
+                MGMT_ROUTE_CMD.format(mgmt_if, add_remove_mgmt,
+                                                       mgmt_cidr, mgmt_gw)
+            ))
+            self.run_as_root(MGMT_ROUTE_CMD.format(mgmt_if, add_remove_mgmt,
+                                                   mgmt_cidr, mgmt_gw))
+            logger.info("eeeeeeeeee dir mgmt up: {}".format(
+                MGMT_UP_CMD.format(_if=mgmt_if)
+            ))
+            self.run_as_root(MGMT_UP_CMD.format(_if=mgmt_if))
+
+        _is_prov_route = self._does_route_exist(prov_cidr)
+        if ((not _is_prov_route and add) or (_is_prov_route and not add)):
+            cmds = []
+            if add:
+                cmds.append(LEGACY_DEL_ROUTE_CMD)
+                cmds.append(LEGACY_ROUTE_CMD)
+                cmds.append(ROUTE_UP_CMD)
+            else:
+                cmds.append(LEGACY_DEL_ROUTE_CMD)
+                cmds.append(BR_DOWN_CMD)
+                cmds.append(BR_UP_CMD)
+            prov_cmd = "; ".join(cmds).format(cidr=prov_cidr,
+                                              cidr_esc=_prov_cidr_esc,
+                                              gw=prov_gw,
+                                              br=CTLPLANE_BRIDGE)
+            logger.info("eeeeeeeeee Provisioning route command: {}".format(prov_cmd))
+            self.run_as_root(prov_cmd)
+        '''
 
     def restart_director_vm(self):
         setts = self.settings
@@ -3248,11 +3369,12 @@ class Director(InfraHost):
         node_type_data = setts.node_type_data_map[node_type]
         params = {}
         role = self._generate_cc_role(node_type)
+        nw_deployment_actions = "{}NetworkDeploymentActions".format(role)
         edge_subnet = self._generate_subnet_name(node_type)
         cp_oc_net_cidr = "{}NetCidr".format(CONTROL_PLANE_NET[0])
         cp_oc_subnet_cidr = "{}SubnetCidr".format(CONTROL_PLANE_NET[0])
         cp_oc_default_route = "{}DefaultRoute".format(CONTROL_PLANE_NET[0])
-
+        params[nw_deployment_actions] = ['CREATE', 'UPDATE']
         params[cp_oc_net_cidr] = setts.provisioning_network
         params[cp_oc_subnet_cidr] = setts.provisioning_network.split("/")[1]
         params[cp_oc_default_route] = setts.director_node.provisioning_ip
@@ -3289,6 +3411,8 @@ class Director(InfraHost):
         params[int_api_pools] = [{'start': _int_s, 'end': _int_e}]
 
         int_api_routes = [{"destination": _int_api,
+                           "nexthop": node_type_data['private_api_gateway']},
+                          {"destination": setts.private_api_network,
                            "nexthop": node_type_data['private_api_gateway']}]
         params[int_api_interface_routes] = int_api_routes
         params[int_api_mtu] = setts.private_api_network_mtu
@@ -3314,6 +3438,8 @@ class Director(InfraHost):
         _ten_e = node_type_data['tenant_allocation_pool_end']
         params[tenant_pools] = [{'start': _ten_s, 'end': _ten_e}]
         tenant_routes = [{"destination": _tenant_net,
+                          "nexthop": node_type_data['tenant_gateway']},
+                         {"destination": setts.tenant_tunnel_network,
                           "nexthop": node_type_data['tenant_gateway']}]
 
         params[tenant_interface_routes] = tenant_routes
@@ -3339,6 +3465,8 @@ class Director(InfraHost):
         _str_e = node_type_data['storage_allocation_pool_end']
         params[storage_pools] = [{'start': _str_s, 'end': _str_e}]
         storage_routes = [{"destination": _storage_net,
+                           "nexthop": node_type_data['storage_gateway']},
+                          {"destination": setts.storage_network,
                            "nexthop": node_type_data['storage_gateway']}]
 
         params[storage_interface_routes] = storage_routes
@@ -3375,6 +3503,18 @@ class Director(InfraHost):
         return params
 
     def _generate_role_dict(self, node_type):
+        """
+          networks:
+            InternalApi:
+              subnet: internal_api_subnet
+            Tenant:
+              subnet: tenant_subnet
+            Storage:
+              subnet: storage_subnet
+          RoleParametersDefault:
+            TunedProfileName: "virtual-host"
+          update_serial: 25
+        """
         role_name = self._generate_cc_role(node_type)
         role_d = {}
         role_d['name'] = role_name
@@ -3415,69 +3555,6 @@ class Director(InfraHost):
         role_d["update_serial"] = 25
         role_d['ServicesDefault'] = self._get_default_compute_services()
         return role_d
-
-    ''' TODO: dpaterson DELETE ME if unused
-    def _update_stamp_controller_nic_net_cfg(self, r_map, node_type, num_nics):
-        role = self._generate_cc_role(node_type)
-
-        # TODO: dpaterson, we should probably break this out into seperate
-        # functions based on num_nics, hard coding to 5 for now to reach
-        # parity with 13.3
-        if num_nics == 5:
-            prov_if = r_map["prov_if"] = r_map.get("prov_if", [])
-
-            br_tenant = r_map["br_tenant"] = r_map.get("br_tenant", {})
-
-            prov_edge_route = {"ip_netmask":
-                               "{}{}NetCidr".format(CONTROL_PLANE_NET[0],
-                                                    role),
-                               "next_hop": "ProvisioningNetworkGateway"}
-
-            prov_if.append(prov_edge_route)
-
-            for vlan_id in EDGE_VLANS:
-                if vlan_id == "TenantNetworkVlanID":
-                    br_tenant["tenant_vlan"] = br_tenant.get("tenant_vlan", [])
-                    tenant_route = {"ip_netmask":
-                                    "Tenant{}NetCidr".format(role),
-                                    "next_hop": "TenantInterfaceDefaultRoute"}
-                    br_tenant["tenant_vlan"].append(tenant_route)
-                elif vlan_id == "InternalApiNetworkVlanID":
-                    br_tenant["internal_api_vlan"] = br_tenant.get(
-                        "internal_api_vlan", [])
-                    int_api_route = {"ip_netmask":
-                                     "InternalApi{}NetCidr".format(role),
-                                     "next_hop":
-                                     "InternalApiInterfaceDefaultRoute"}
-                    br_tenant["internal_api_vlan"].append(int_api_route)
-                else:
-                    br_tenant["storage_vlan"] = br_tenant.get(
-                        "storage_vlan", [])
-                    storage_route = {"ip_netmask":
-                                     "Storage{}NetCidr".format(role),
-                                     "next_hop":
-                                     "StorageInterfaceDefaultRoute"}
-                    br_tenant["storage_vlan"].append(storage_route)
-    '''
-
-    ''' TODO: dpaterson DELETE ME if unused
-    def _generate_stamp_controller_nic_params(self, node_type):
-        """
-        For each node type and network we need to route the edge subnet to
-        the local gateway
-        ip route add 192.168.142.0/24 via 192.168.140.1
-        """
-        role = self._generate_cc_role(node_type)
-        params = {}
-        for net_tup in EDGE_NETWORKS:
-            net_cidr = "{}{}NetCidr".format(net_tup[0], role)
-            if_def_route = "{}InterfaceDefaultRoute".format(net_tup[0])
-            params[net_cidr] = {"default": '', "type": "string"}
-            params[if_def_route] = {"default": '', "type": "string"}
-        _cp_edge_key = "{}{}NetCidr".format(role, CONTROL_PLANE_NET[0])
-        params[_cp_edge_key] = {"default": '', "type": "string"}
-        return params
-    '''
 
     def _generate_nic_params(self, node_type):
         role = self._generate_cc_role(node_type)
@@ -4007,7 +4084,7 @@ class Director(InfraHost):
         '''
         param_defs = {}
         _az = self._generate_node_type_az(node_type)
-        _stack = self._generate_role_lower(node_type)
+        _stack = self._generate_node_type_lower(node_type)
         param_defs["NovaComputeAvailabilityZone"] = _az
         param_defs["RootStackName"] = _stack
         return param_defs
@@ -4172,21 +4249,31 @@ class Director(InfraHost):
         return self.default_compute_services
 
     @directory_check(STAGING_TEMPLATES_PATH)
-    def _generate_edge_template_paths(self, node_type, template=None,
+    def _generate_edge_template_paths(self, node_type=None, template=None,
                                       extension="yaml"):
+        if template and not node_type:
+            _tmplt_name = template
+        elif template and node_type:
+            _nt_lower = self._generate_node_type_lower(node_type)
+            _tmplt_name = template + "_" + _nt_lower
+        else:
+            _nt_lower = self._generate_node_type_lower(node_type)
+            _tmplt_name = _nt_lower
 
-        _nt_lower = self._generate_node_type_lower(node_type)
-        _tmplt_name = template + "_" + _nt_lower if template else _nt_lower
-        edge_site_directory = self._generate_role_lower(node_type)
-        stg_edge_site_tmplt_path = os.path.join(STAGING_TEMPLATES_PATH,
-                                                edge_site_directory)
+        if node_type:
+            staging_directory = self._generate_role_lower(node_type)
+            stg_tmplt_path = os.path.join(STAGING_TEMPLATES_PATH,
+                                          staging_directory)
+            remote_site_directory = os.path.join(self.home_dir,
+                                                 staging_directory)
+        else:
+            stg_tmplt_path = STAGING_TEMPLATES_PATH
+            remote_site_directory = self.templates_dir
 
-        remote_site_directory = os.path.join(self.home_dir,
-                                             edge_site_directory)
         remote_file = os.path.join(remote_site_directory,
                                    _tmplt_name + "." + extension)
         stg_path = self.get_timestamped_path(
-            stg_edge_site_tmplt_path,
+            stg_tmplt_path,
             _tmplt_name, "yaml")
         self.create_directory(remote_site_directory)
         logger.debug("returning paths, stage: %s, remote: %s",
@@ -4199,11 +4286,15 @@ if __name__ == "__main__":
     director = Director()
     # node_type = "edge-compute-denver"
     node_type = "edge-compute-denver"
-    director.setup_templates_edge(node_type)
-    os._exit(0)
+    # director.setup_templates_edge(node_type)
     add = True
+    director.controller_routes_edge(node_type, add)
+    # director.render_and_upload_site_name()
+    # director.setup_templates()
+
+    os._exit(0)
+
     # add = False
-    director.subnet_routes_edge(node_type, add)
     node_type = "edge-compute-boston"
     director.subnet_routes_edge(node_type, add)
     # director.setup_net_envt_edge(node_type)

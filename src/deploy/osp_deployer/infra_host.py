@@ -159,10 +159,34 @@ class InfraHost:
         _does_route_exist = (len(_res[0].strip()) != 0)
         return _does_route_exist
 
+    def _does_overcloud_node_route_exist(self, address,
+                                         network, gateway, device):
+        cmd = ("ssh -o StrictHostKeyChecking=no "
+               "-o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "
+               "-o KbdInteractiveDevices=no heat-admin@{ip} "
+               "ip route show {nw} dev {dev} via {gw}".format(ip=address,
+                                                              nw=network,
+                                                              gw=gateway,
+                                                              dev=device))
+        _res = self.run_tty(cmd)
+        _does_route_exist = (len(_res[0].strip()) != 0)
+        return _does_route_exist
+
+    def _run_on_node(self, address, command):
+        cmd = ("ssh -o StrictHostKeyChecking=no "
+               "-o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "
+               "-o KbdInteractiveDevices=no heat-admin@{ip} "
+               "'{cmd}'".format(ip=address, cmd=command))
+        print("vvvvvvvvvvvvvvvv cmd: {}".format(str(cmd)))
+        _res = self.run_tty(cmd)
+        print("vvvvvvvvvvvvvvvv _res: {}".format(str(_res)))
+        _does_route_exist = (len(_res[0].strip()) != 0)
+        return _does_route_exist
+
 
 def directory_check(_path):
     def wrap(f):
-        def wrapped_f(*args):
+        def wrapped_f(*args):  # arg[0] is director object instance (self)
             path = _path
             if len(args) > 1 and isinstance(args[1], str):
                 _type_lwr = (re.sub(r'[^a-z0-9]', " ",

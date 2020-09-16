@@ -107,11 +107,10 @@ def get_settings():
     return settings, args
 
 
-def run_tempest():
+def run_tempest(director_vm):
     settings, args = get_settings()
     if settings.run_tempest is True or args.run_tempest_only:
         logger.info("=== Running tempest ==")
-        director_vm = Director()
         director_vm.run_tempest()
     else:
         logger.debug("Not running tempest")
@@ -157,6 +156,16 @@ def deploy_edge(args, director_vm):
         director_vm.deploy_edge_site_all()
 
 
+def delete_edge(args, director_vm):
+    logger.info("=== Deleting edge site(s)")
+    if args.edge_site_delete:
+        logger.info("=== Deleting edge site, args: %s", str(args.edge_site))
+        director_vm.delete_edge_site(args.edge_site)
+    elif args.edge_site_delete_all:
+        logger.info("=== Deleting all edge sites defined in ini")
+        director_vm.delete_edge_site_all()
+
+
 def get_is_deploy_overcloud():
     _is_deploy_overcloud = False
     _input = input("Deploy the overcloud prior to deploying edge site(s)"
@@ -175,7 +184,7 @@ def get_is_deploy_undercloud_and_overcloud():
     return _is_deploy_undercloud
 
 
-def deploy_undercloud(setts, sah_node, tester):
+def deploy_undercloud(setts, sah_node, tester, director_vm):
     director_ip = setts.director_node.public_api_ip
     Ssh.execute_command(director_ip,
                         "root",
@@ -192,7 +201,6 @@ def deploy_undercloud(setts, sah_node, tester):
     tester.director_vm_health_check()
 
     logger.info("Preparing the Director VM")
-    director_vm = Director()
     director_vm.apply_internal_repos()
 
     logger.debug(
@@ -231,6 +239,7 @@ def deploy():
     logger.debug("=================================")
     try:
         settings, args = get_settings()
+        director_vm = Director()
         is_deploy_edge_site = (bool(args.edge_site) or args.edge_site_all)
         is_delete_edge_site = (bool(args.edge_site_delete)
                                or args.edge_site_delete_all)
@@ -242,11 +251,12 @@ def deploy():
             list_edge_sites(settings)
             os._exit(0)
 
-
         # deploying or tearing down and edge site, validate arg is in ini.
         if bool(args.edge_site) or bool(args.edge_site_delete):
+            _edge_arg = (args.edge_site if args.edge_site
+                         else args.edge_site_delete)
             try:
-                if bool(settings.node_types_map[args.edge_site]):
+                if bool(settings.node_types_map[_edge_arg]):
                     node_type = args.edge_site
             except KeyError:
                 raise AssertionError("Could not find valid edge site for: %s" %
@@ -265,6 +275,9 @@ def deploy():
                     + settings.source_version.decode('utf-8'))
         tester = Checkpoints()
         tester.verify_deployer_settings()
+        if is_delete_edge_site:
+            delete_edge(args, director_vm)
+            os._exit(0)
         if args.validate_only is True:
             logger.info("Settings validated")
             os._exit(0)
@@ -276,7 +289,6 @@ def deploy():
         # mutually exclusive command, configure tempest and quit.
         if args.tempest_config_only:
             logger.info("Only (re-)generating tempest.conf")
-            director_vm = Director()
             director_vm.configure_tempest()
             os._exit(0)
 
@@ -284,8 +296,7 @@ def deploy():
         if args.run_tempest_only:
             logger.info("Only running tempest, will configure "
                         + "tempest.conf if needed.")
-            director_vm = Director()
-            director_vm.run_tempest()
+            director_vm.run_tempest(director_vm)
             os._exit(0)
 
         logger.info("Uploading configs/iso/scripts.")
@@ -299,9 +310,8 @@ def deploy():
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
         sah_node.enable_chrony_ports()
-        director_vm = Director()
         if args.overcloud_only is False and is_deploy_edge_site is False:
-            deploy_undercloud(settings, sah_node, tester)
+            deploy_undercloud(settings, sah_node, tester, director_vm)
             if args.undercloud_only:
                 return
         elif is_deploy_edge_site is False:
@@ -314,7 +324,7 @@ def deploy():
         if (is_deploy_edge_site and _is_undercloud_failed):
             _is_deploy_undercloud = get_is_deploy_undercloud_and_overcloud()
             if _is_deploy_undercloud:
-                deploy_undercloud(settings, sah_node, tester)
+                deploy_undercloud(settings, sah_node, tester, director_vm)
                 # recheck undercloud
                 _is_uc_failed, _err_uc = tester.verify_undercloud_installed()
                 if not _is_uc_failed:
@@ -378,7 +388,7 @@ def deploy():
         if external_sub_guid:
             director_vm.configure_tempest()
 
-        run_tempest()
+        run_tempest(director_vm)
 
         logger.info("Deployment summary info; useful ip's etc.. " +
                     "/auto_results/deployment_summary.log")

@@ -135,6 +135,8 @@ parameter_defaults:
   # Default Bonds MTU
   DefaultBondMtu: 9000
 
+  NetworkDeploymentActions: ['CREATE','UPDATE']
+
   # CHANGEME: Change the following to mtu size used for the floating network
   ExtraConfig:
     neutron::plugins::ml2::physical_network_mtus: physext:1500

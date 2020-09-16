@@ -609,7 +609,8 @@ def main():
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "network-isolation.yaml" \
                     " -e ~/pilot/templates/network-environment.yaml" \
-                    " -e {}".format(nic_env_file)
+                    " -e {} " \
+                    "-e ~/pilot/templates/site-name.yaml".format(nic_env_file)
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
