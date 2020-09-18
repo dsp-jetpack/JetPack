@@ -23,6 +23,7 @@ import time
 import shutil
 import os
 import subprocess
+import re
 
 # logger = logging.getLogger("osp_deployer")
 # TODO after testing delete two logging config lines below
@@ -520,9 +521,37 @@ class Sah(InfraHost):
         logger.info("Routes for edge site {} "
                     "subnets on SAH updated".format(node_type))
 
+    def get_virsh_interface_map(self):
+        '''
+        Transform output from:
+        virsh -r domiflist director
+        Interface  Type       Source     Model       MAC
+        -------------------------------------------------------
+        vnet0      bridge     br-pub-api virtio      52:54:00:b6:88:f9
+        vnet1      bridge     br-prov    virtio      52:54:00:2b:c7:12
+        ...
+        Return dict with source as key:
+        {'br-pub-api': ['vnet0', 'bridge', 'virtio', '52:54:00:b6:88:f9'], ...}
+        '''
+        if_map = {}
+        res = self.run("virsh -r domiflist director")[0]
+        lines = res.splitlines()
+        del lines[:2]  # delete header rows
+        del lines[-1]  # delete trailing empty line
+        for line in lines:
+            _l_arr = line.split()
+            src = _l_arr[2]
+            del _l_arr[2]
+            if_map[src] = _l_arr
+        logger.debug("virsh domain interface "
+                     "map for director vm: {}".format(str(if_map)))
+
+
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     sah = Sah()
+    sah.get_virsh_interface_map()
+    os._exit(0)
     # node_type = "edge-compute-denver"
     add = True
     node_type = "edge-compute-boston"
