@@ -1555,7 +1555,7 @@ def main():
         if super_role not in ROLES.keys():
             super_role = 'compute'
 
-        if node.driver == "pxe_drac":
+        if node.driver == "idrac":
             bios_settings = calculate_bios_settings(
                 super_role,
                 flavor_settings,
