@@ -53,7 +53,7 @@ def is_introspection_oob(in_band, node, logger):
     if in_band:
         # All drivers support in-band introspection
         out_of_band = False
-    elif node.driver == "pxe_ipmitool":
+    elif node.driver == "ipmi":
         # Can't do in-band introspection with the IPMI driver
         logger.warn("The Ironic IPMI driver does not support out-of-band "
                     "introspection.  Using in-band introspection")

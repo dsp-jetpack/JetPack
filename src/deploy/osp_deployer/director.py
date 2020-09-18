@@ -342,8 +342,8 @@ class Director(InfraHost):
                 " to the number of nodes defined in .properties file")
 
         if setts.use_ipmi_driver is True:
-            logger.debug("Using pxe_ipmi driver")
-            cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ~/instackenv.json'
+            logger.debug("Using ipmi driver")
+            cmd = 'sed -i "s|idrac|ipmi|" ~/instackenv.json'
             self.run_tty(cmd)
         if self._has_edge_sites():
             self.update_instack_env_subnets_edge()
