@@ -11,13 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 resource_registry:
-  {%- for key, val in resource_registry.items() %}
-  {{key}}: {{val}}
-  {%- endfor %}
+  OS::TripleO::NodeUserData: {{node_user_data_path}}
 
 parameter_defaults:
+  NeutronPublicInterface: bond1
+  NeutronNetworkType: vlan
+  NeutronNetworkVLANRanges: physint:201:250,physext
+  NeutronBridgeMappings: physint:br-tenant,physext:br-ex
+
 {%- for key, val in parameter_defaults.items() %}
   {%- if key.endswith("ExtraConfig") %}
   {{key}}:

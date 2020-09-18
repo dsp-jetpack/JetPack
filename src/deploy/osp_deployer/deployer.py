@@ -159,8 +159,9 @@ def deploy_edge(args, director_vm):
 def delete_edge(args, director_vm):
     logger.info("=== Deleting edge site(s)")
     if args.edge_site_delete:
-        logger.info("=== Deleting edge site, args: %s", str(args.edge_site))
-        director_vm.delete_edge_site(args.edge_site)
+        logger.info("=== Deleting edge site, args: %s",
+                    str(args.edge_site_delete))
+        director_vm.delete_edge_site(args.edge_site_delete)
     elif args.edge_site_delete_all:
         logger.info("=== Deleting all edge sites defined in ini")
         director_vm.delete_edge_site_all()

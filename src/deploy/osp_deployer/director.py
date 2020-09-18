@@ -1979,7 +1979,7 @@ class Director(InfraHost):
                                        + "openstack stack delete --yes --wait "
                                        + stack_name)
         logger.info("stack delete response: "
-                    "{}".format(", ".join(stack_delete_re)))
+                    "{}".format(str(stack_delete_re)))
         re = self.run_tty(self.source_stackrc
                           + "openstack baremetal node list --fields "
                           "uuid properties -f json")
@@ -1997,6 +1997,7 @@ class Director(InfraHost):
         # Delete all edge site nodes at once
         self.run_tty(self.source_stackrc + "openstack baremetal node "
                      "delete {}".format(" ".join(nodes_for_deletion)))
+        #TODO unwind routes as needed
         logger.info("Edge site {} deleted!".format(node_type))
 
     def summarize_deployment(self):
@@ -2817,7 +2818,9 @@ class Director(InfraHost):
         paths = self._generate_edge_template_paths(node_type, DELL_ENV)
         stg_dell_env_path, dell_env_file = paths
         tmplt_data = {}
-        tmplt_data["resource_registry"] = self._generate_dell_env_res_reg()
+        first_boot_file = os.path.join(self.templates_dir,
+                                       FIRST_BOOT + ".yaml")
+        tmplt_data["node_user_data_path"] = first_boot_file
         param_def = tmplt_data["parameter_defaults"] = {}
         role = self._generate_cc_role(node_type)
         edge_subnet = self._generate_subnet_name(node_type)
@@ -3232,13 +3235,6 @@ class Director(InfraHost):
             subnet_net = node_type_data['mgmt_cidr'].rsplit('.', 1)[0]
             if node_mgmt_net == subnet_net:
                 return self._generate_subnet_name(node_type)
-
-    def _generate_dell_env_res_reg(self):
-        res_reg = {}
-        first_boot_file = os.path.join(self.templates_dir,
-                                       FIRST_BOOT + ".yaml")
-        res_reg["OS::TripleO::NodeUserData"] = first_boot_file
-        return res_reg
 
     def _generate_static_ip_ports(self, node_type):
         """Generate resource_resource registry port mapping dict for specific

@@ -520,14 +520,13 @@ class Sah(InfraHost):
         logger.info("Routes for edge site {} "
                     "subnets on SAH updated".format(node_type))
 
-
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     sah = Sah()
     # node_type = "edge-compute-denver"
-    node_type = "edge-compute-boston"
     add = True
-    # add = False
+    node_type = "edge-compute-boston"
+
     sah.subnet_routes_edge(node_type, add)
     node_type = "edge-compute-denver"
     sah.subnet_routes_edge(node_type, add)
