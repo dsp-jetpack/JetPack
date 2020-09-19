@@ -373,7 +373,7 @@ class Checkpoints:
                                      cmd)
         if "No such file or directory" in re[0]:
             _error = AssertionError("Director & Undercloud did not install "
-                                    "properly, check "
+                                    "properly, no ~/stackrc found, check "
                                     "/pilot/install-director.log for details")
 
         cmd = ("grep \"The Undercloud has been successfully installed\" "
@@ -386,7 +386,8 @@ class Checkpoints:
                                      cmd)
         if "The Undercloud has been successfully installed" not in re[0]:
             _error = AssertionError("Director & Undercloud did not install "
-                                    "properly, check "
+                                    "properly, log does not indicate a "
+                                    "successful director installation, check "
                                     "/pilot/install-director.log for details")
 
         cmd = "cat "\

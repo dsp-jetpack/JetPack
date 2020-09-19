@@ -4018,15 +4018,15 @@ class Director(InfraHost):
             network_data_list.append(nd)
         return network_data_list
 
-    def _generate_extra_config(self, type):
+    def _generate_extra_config(self, node_type):
         """Each edge site requires some overrides, for connecting to mysql for
         example.  Generate hiera data parameters puppet will consume at edge
         sites to provide overrrides.
 
-        :param type: the node type the extra params are being generated for
+        :param node_type: the node type the extra params are being generated for
         :returns: dict containing parameter overrides
         """
-        net_suffix = '_' + self._generate_role_lower(type)
+        net_suffix = '_' + self._generate_role_lower(node_type)
         api_net = INTERNAL_API_NET[1] + net_suffix
         tenant_net = TENANT_NET[1] + net_suffix
 
@@ -4048,6 +4048,7 @@ class Director(InfraHost):
             + '::client::mysql_client_bind_address'
         xtra_cfg[_mysql_key] = "\"%{hiera('" + api_net + "')}\""
         # TODO not sure below are needed
+        '''
         xtra_cfg['nova::cpu_allocation_ratio'] = 1
         xtra_cfg['nova::compute::resume_guests_state_on_host_boot'] = True
         xtra_cfg['nova::compute::libvirt::libvirt_cpu_model'] = \
@@ -4055,6 +4056,7 @@ class Director(InfraHost):
         xtra_cfg['nova::compute::libvirt::libvirt_cpu_model_extra_flags'] = \
             'host-tsc-deadline'
         xtra_cfg['nova::compute::libvirt::mem_stats_period_seconds'] = 0
+        '''
         return xtra_cfg
 
     def _generate_node_placement(self, tmplt_data, node_type):

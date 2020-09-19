@@ -297,7 +297,7 @@ def deploy():
         if args.run_tempest_only:
             logger.info("Only running tempest, will configure "
                         + "tempest.conf if needed.")
-            director_vm.run_tempest(director_vm)
+            director_vm.run_tempest()
             os._exit(0)
 
         logger.info("Uploading configs/iso/scripts.")
