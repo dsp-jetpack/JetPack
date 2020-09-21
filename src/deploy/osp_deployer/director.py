@@ -968,6 +968,10 @@ class Director(InfraHost):
             '|" pilot/deployment-validation/sanity.ini',
             'sed -i "s|sanity_vlantest_network=.*|sanity_vlantest_network=' +
             self.settings.sanity_vlantest_network +
+            '|" pilot/deployment-validation/sanity.ini',
+            # need below for multi stack support
+            'sed -i "s|overcloud_stack_name=.*|overcloud_stack_name=' +
+            self.settings.overcloud_name +
             '|" pilot/deployment-validation/sanity.ini'
         ]
         for cmd in cmds:
@@ -2691,10 +2695,10 @@ class Director(InfraHost):
     def render_and_upload_site_name(self):
         logger.debug("render_and_upload_site_name called!")
         paths = self._generate_edge_template_paths(None, SITE_NAME)
-        logger.info("zzzzzzzzzzzz paths {}".format(", ".join(paths)))
         stg_az_path, remote_az_file = paths
         tmplt = self.jinja2_env.get_template(SITE_NAME_J2)
         tmplt_data = {"az": self.settings.overcloud_name}
+        tmplt_data['overcloud_templates'] = self.templates_overcloud_dir
         logger.debug("tmplt_data: %s", str(tmplt_data))
         rendered_tmplt = tmplt.render(**tmplt_data)
 

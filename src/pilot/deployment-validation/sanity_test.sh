@@ -33,7 +33,7 @@ get_value() {
     echo $(grep "$1=" $INI_FILE  | awk -F= '{print $2}')
 }
 
-get_value_lower() { 
+get_value_lower() {
     echo $(grep "$1=" $INI_FILE  | awk -F= '{print $2}'| tr '[:upper:]' '[:lower:]' )
 }
 
@@ -163,7 +163,8 @@ init(){
   CONTROLLER=($CONTROLLERS)
 
   # Now switch to point the OpenStack commands at the overcloud
-  STACK_NAME=$(openstack stack list -c 'Stack Name' -f value)
+  # Get explicitly declared stack name from sanity.ini for mutli-stack suppoort
+  STACK_NAME=$(get_value overcloud_stack_name)
   [ "${STACK_NAME}" ] ||  \
       fatal "### ${STACK_NAME} is required and could not be found!  Aborting sanity test"
 
@@ -281,7 +282,7 @@ create_the_networks(){
     else
       info "VLAN AWARE CHECK = false"
     fi
-    
+
 
   else
     info "#----- $TENANT_ROUTER_NAME exists. Skipping"
@@ -306,7 +307,7 @@ create_the_networks(){
 
   # Use external network name
   execute_command "openstack router set --external-gateway $FLOATING_IP_NETWORK_NAME $TENANT_ROUTER_NAME"
-  
+
   # switch to tenant context
   set_tenant_scope
   openstack security group list -c Name -f value | grep -q $SECURITY_GROUP_NAME
@@ -420,11 +421,11 @@ spin_up_instances(){
   tenant_net_id=$(openstack network list -f value | grep " $TENANT_NETWORK_NAME " | awk '{print $1}')
 
   image_id=$(openstack image list -f value | grep "$IMAGE_NAME" | awk 'NR==1{print $1}')
-  
+
   pp1_id=$(openstack port show $PARENT_PORT1 -c id -f value | awk '{print $1}')
 
   info "### Initiating build of instances..."
-  
+
   declare -a instance_names
 info "VLAN AWARE CHECK == ${VLAN_AWARE_SANITY}"
   if [ "$VLAN_AWARE_SANITY" != false ];then
@@ -487,7 +488,7 @@ info "VLAN AWARE CHECK == ${VLAN_AWARE_SANITY}"
         break
       else
         info "### Instance status is: ${instance_name} : ${instance_status}.  Sleeping..."
-        sleep 30 
+        sleep 30
         instance_status=$(nova list | grep -w $instance_name | awk '{print $6}')
       fi
     done
@@ -659,7 +660,7 @@ setup_cinder(){
     fi
   done
 
-  execute_command "cinder list"    
+  execute_command "cinder list"
 
   info "### Waiting for volumes status to change to available..."
   for volume_name in ${volumes[@]}
@@ -695,7 +696,7 @@ setup_cinder(){
 
 setup_manila(){
   info "### Manila test"""
-  
+
   set_admin_scope
   manila_exists=$(manila service-list | grep manila-share |  head -n 1  | awk '{print $4}')
   if [ "$manila_exists" != 'manila-share' ]; then
@@ -707,17 +708,17 @@ setup_manila(){
 
   set_tenant_scope #Create shares in tenant aka sanity scope
 
-  execute_command "manila share-network-list"  
+  execute_command "manila share-network-list"
   manila_share_network_exists=$(manila share-network-list | grep unity_share_net | awk '{print $4}')
   if [ "$manila_share_network_exists" != "unity_share_net" ]; then
     net_id=$(openstack network list | grep " $FLOATING_IP_NETWORK_NAME " | head -n 1 | awk '{print $2}')
     subnet_id=$(openstack network list | grep $FLOATING_IP_NETWORK_NAME | head -n 1 | awk '{print $6}')
-    
-    execute_command "manila share-network-create --neutron-net-id  $net_id --neutron-subnet-id $subnet_id --name unity_share_net" 
-  fi   
+
+    execute_command "manila share-network-create --neutron-net-id  $net_id --neutron-subnet-id $subnet_id --name unity_share_net"
+  fi
   execute_command "manila share-network-list"
-  
-	  
+
+
   execute_command "manila list"
 
   info "### Kicking off share creation..."
@@ -733,7 +734,7 @@ setup_manila(){
     info "### Share $share_name already exists.  Skipping creation"
   fi
 
-  execute_command "manila list"    
+  execute_command "manila list"
 
   info "### Waiting for shares status to change to available..."
   for share_name in ${shares[@]}
@@ -749,8 +750,8 @@ setup_manila(){
       fi
     done
     info "### Share $share_name is ready, status is $share_status"
- 
-  
+
+
   info "### Mounting the share to instances..."
   share_path=$(manila share-export-location-list "$share_name" | grep ":/" | awk '{print $4}')
   info "Share path of $share_name is $share_path ..."
@@ -769,9 +770,9 @@ setup_manila(){
     ssh ${SSH_OPTS} -i ~/$SANITY_KEY_NAME centos@${server_ip} "sudo mkdir ~/mnt"
     ssh ${SSH_OPTS} -i ~/$SANITY_KEY_NAME centos@${server_ip} "sudo mount -t nfs ${share_path} ~/mnt"
     ssh ${SSH_OPTS} -i ~/$SANITY_KEY_NAME centos@${server_ip} "sudo touch ~/mnt/${server_ip}"
- 
+
   done
-   
+
     set_admin_scope #reset
   done
 }
@@ -785,7 +786,7 @@ manila_cleanup()
     ids=$(manila list | grep $BASE_SHARE_NAME | awk '{print $2}')
     info "share ids: $ids"
     [[ $ids ]] && echo $ids | xargs -n1 manila delete
-     
+
     sleep 5
 
     ids=$(manila share-network-list | grep unity_share_net | awk '{print $2}')
@@ -825,7 +826,7 @@ gw_vlan_net=${SANITY_VLANTEST_NETWORK%0\/24}1
 cat << EOF >~/interfacescript
 #!/bin/bash
 intfc=\$(ip route | grep default | sed -e "s/^.*dev.//" -e "s/.proto.*//") && intfc=\$(echo \$intfc)
-sudo touch /etc/sysconfig/network-scripts/ifcfg-\${intfc}.${VLANID_1} 
+sudo touch /etc/sysconfig/network-scripts/ifcfg-\${intfc}.${VLANID_1}
 sudo tee /etc/sysconfig/network-scripts/ifcfg-\${intfc}.$VLANID_1 <<- End >/dev/null
     DEVICE="\${intfc}.$VLANID_1"
     BOOTPROTO="static"
@@ -842,7 +843,7 @@ sudo tee /etc/sysconfig/network-scripts/route-\${intfc}.$VLANID_1 <<- End >/dev/
     default via ${gw_vlan_net} dev \${intfc}.${VLANID_1} proto static metric 200
 End
 sudo /etc/sysconfig/network-scripts/ifup ifcfg-\${intfc}.${VLANID_1}
-sudo sleep 3  
+sudo sleep 3
 EOF
 }
 
@@ -963,7 +964,7 @@ then
     info "#### Deleting the user"
     openstack user show $USER_NAME >/dev/null 2>&1
     if [ $? -eq 0 ]
-    then 
+    then
       execute_command "openstack user delete $USER_NAME"
     fi
 
@@ -991,7 +992,7 @@ then
   then
     openstack flavor delete $FLAVOR_NAME
   fi
-  
+
   if [ -f ./$IMAGE_FILE_NAME ]; then
      rm -f ./$IMAGE_FILE_NAME
   fi
@@ -1003,15 +1004,15 @@ then
   info "### Deleting trunk and its associated ports"
   trunk_ports=$(openstack network trunk list | grep $TRUNK_PORT1 | awk '{print $2}')
   for trunk_port in $trunk_ports
-  do 
+  do
     openstack network trunk delete $trunk_port
   done
-  
+
   parent_ports=$(openstack port list | grep $PARENT_PORT1 | awk '{print $2}')
   for parent_port in $parent_ports
   do
     openstack port delete $parent_port
-  done 
+  done
 
   subports=$(openstack port list | grep subport1_$VLANID_1 | awk '{print $2}')
   for subport in $subports
@@ -1052,8 +1053,8 @@ then
   for subnet_network_id in $subnet_network_ids
   do
     openstack subnet delete $subnet_network_id
-  done 
-  
+  done
+
   info "### Deleting networks"
   network_ids=$(openstack network list | grep -E "$BASE_TENANT_NETWORK_NAME|$VLAN_NETWORK_NAME|$FLOATING_IP_NETWORK_NAME" | awk '{print $2}')
   public_id=$(openstack network list | grep $FLOATING_IP_NETWORK_NAME | head -n 1 | awk '{print $2}')
@@ -1088,12 +1089,12 @@ else
 
   create_the_networks
 
-  port_creation   
+  port_creation
 
   setup_glance
 
   setup_nova
-  
+
   if [ "$VLAN_AWARE_SANITY" != false ];then
     create_vlan_aware_interface_script
   else

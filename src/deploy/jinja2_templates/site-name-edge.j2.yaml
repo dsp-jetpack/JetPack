@@ -3,4 +3,3 @@ resource_registry:
 parameter_defaults:
   NovaComputeAvailabilityZone: {{parameter_defaults.NovaComputeAvailabilityZone}}
   RootStackName: {{parameter_defaults.RootStackName}}
-  
