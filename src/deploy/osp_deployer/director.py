@@ -2978,15 +2978,9 @@ class Director(InfraHost):
 
         _is_mgmt_route = self._does_route_exist(mgmt_cidr)
         if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
-            logger.info("eeeeeeeeee dir mgmt route: {}".format(
-                MGMT_ROUTE_CMD.format(mgmt_if, add_remove_mgmt,
-                                                       mgmt_cidr, mgmt_gw)
-            ))
+
             self.run_as_root(MGMT_ROUTE_CMD.format(mgmt_if, add_remove_mgmt,
                                                    mgmt_cidr, mgmt_gw))
-            logger.info("eeeeeeeeee dir mgmt up: {}".format(
-                MGMT_UP_CMD.format(_if=mgmt_if)
-            ))
             self.run_as_root(MGMT_UP_CMD.format(_if=mgmt_if))
 
         _is_prov_route = self._does_route_exist(prov_cidr)
@@ -3004,7 +2998,6 @@ class Director(InfraHost):
                                               cidr_esc=_prov_cidr_esc,
                                               gw=prov_gw,
                                               br=CTLPLANE_BRIDGE)
-            logger.info("eeeeeeeeee Provisioning route command: {}".format(prov_cmd))
             self.run_as_root(prov_cmd)
 
     def controller_routes_edge(self, node_type, add=True):
@@ -3050,90 +3043,6 @@ class Director(InfraHost):
                     new_routes.append("sudo " + ROUTE_UP_CMD.format(br=_vlan))
             if new_routes:
                 self._run_on_node(ip, "; ".join(new_routes))
-
-        '''
-
-        for vlan in vlans:
-            _does_route_exist = self._does_overcloud_node_route_exist(route, ip)
-            re = self.run_tty("ssh -o StrictHostKeyChecking=no "
-                              "-o UserKnownHostsFile=/dev/null "
-                              "-o KbdInteractiveDevices=no heat-admin@{ip}"
-
-                              " /sbin/ifconfig | grep \"inet.*" +
-                              priv_ +
-                              ".*netmask " +
-                              self.settings.private_api_netmask +
-                              ".*\" | awk '{print $2}'")
-
-        '''
-        '''
-        LEGACY_DEL_ROUTE_CMD = ("sed -i -e '/{cidr_esc} via {gw} dev {br}/d' "
-                                "/etc/sysconfig/network-scripts/route-{br}")
-        LEGACY_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {br}\" >> "
-                            "/etc/sysconfig/network-scripts/route-{br}")
-        ROUTE_UP_CMD = "/etc/sysconfig/network-scripts/ifup-routes {br}"
-        15: vlan130
-    inet 192.168.130.11/24 brd 192.168.130.255 scope global vlan130
-
-16: vlan170: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN group default qlen 1000
-    inet 192.168.170.11/24 brd 192.168.170.255 scope global vlan170
-
-17: vlan140:
-    inet 192.168.140.11/24 brd 192.168.140.255 scope global vlan140
-
-    route-vlan621
-
-    setts.tenant_tunnel_vlanid
-    setts.private_api_vlanid
-    setts.storage_vlanid
-    priv_vlan = "route-vlan{}"
-
-    LEGACY_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {br}\" >> "
-                        "/etc/sysconfig/network-scripts/route-{br}")
-
-        '''
-
-        '''
-        add_remove_mgmt = "+" if add else "-"
-        mgmt_if = setts.director_node.management_if
-        node_type_data = setts.node_type_data_map[node_type]
-        mgmt_gw = setts.management_gateway
-        prov_gw = setts.provisioning_gateway
-        mgmt_cidr = node_type_data['mgmt_cidr']
-        prov_cidr = node_type_data['cidr']
-        _prov_cidr_esc = prov_cidr.replace('/', '\/')
-
-        _is_mgmt_route = self._does_route_exist(mgmt_cidr)
-        if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
-            logger.info("eeeeeeeeee dir mgmt route: {}".format(
-                MGMT_ROUTE_CMD.format(mgmt_if, add_remove_mgmt,
-                                                       mgmt_cidr, mgmt_gw)
-            ))
-            self.run_as_root(MGMT_ROUTE_CMD.format(mgmt_if, add_remove_mgmt,
-                                                   mgmt_cidr, mgmt_gw))
-            logger.info("eeeeeeeeee dir mgmt up: {}".format(
-                MGMT_UP_CMD.format(_if=mgmt_if)
-            ))
-            self.run_as_root(MGMT_UP_CMD.format(_if=mgmt_if))
-
-        _is_prov_route = self._does_route_exist(prov_cidr)
-        if ((not _is_prov_route and add) or (_is_prov_route and not add)):
-            cmds = []
-            if add:
-                cmds.append(LEGACY_DEL_ROUTE_CMD)
-                cmds.append(LEGACY_ROUTE_CMD)
-                cmds.append(ROUTE_UP_CMD)
-            else:
-                cmds.append(LEGACY_DEL_ROUTE_CMD)
-                cmds.append(BR_DOWN_CMD)
-                cmds.append(BR_UP_CMD)
-            prov_cmd = "; ".join(cmds).format(cidr=prov_cidr,
-                                              cidr_esc=_prov_cidr_esc,
-                                              gw=prov_gw,
-                                              br=CTLPLANE_BRIDGE)
-            logger.info("eeeeeeeeee Provisioning route command: {}".format(prov_cmd))
-            self.run_as_root(prov_cmd)
-        '''
 
     def restart_director_vm(self):
         setts = self.settings
@@ -4289,15 +4198,15 @@ if __name__ == "__main__":
     # node_type = "edge-compute-denver"
     node_type = "edge-compute-denver"
     # director.setup_templates_edge(node_type)
-    add = True
-    director.controller_routes_edge(node_type, add)
+    # add = True
+    # director.controller_routes_edge(node_type, add)
     # director.render_and_upload_site_name()
     # director.setup_templates()
 
-    os._exit(0)
+    # os._exit(0)
 
-    # add = False
-    node_type = "edge-compute-boston"
+    add = False
+    # node_type = "edge-compute-boston"
     director.subnet_routes_edge(node_type, add)
     # director.setup_net_envt_edge(node_type)
     # director.render_and_upload_overrides_edge("edge-compute-denver")

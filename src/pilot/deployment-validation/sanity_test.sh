@@ -71,6 +71,9 @@ SRIOV_ENABLED=$(get_value_lower sriov_enabled)
 SMART_NIC_ENABLED=$(get_value_lower smart_nic_enabled)
 HPG_ENABLED=$(get_value_lower hugepages_enabled)
 NUMA_ENABLED=$(get_value_lower numa_enabled)
+# Now switch to point the OpenStack commands at the overcloud
+# Get explicitly declared stack name from sanity.ini for mutli-stack suppoort
+STACK_NAME=$(get_value overcloud_stack_name)
 
 IMAGE_FILE_NAME=$(basename $SANITY_IMAGE_URL)
 SECURITY_GROUP_NAME="$BASE_SECURITY_GROUP_NAME"
@@ -162,9 +165,6 @@ init(){
   CONTROLLERS=$(openstack server list -c Name -c Networks -f value | grep controller | awk '{print $2}' | tr -d 'cntlplane=')
   CONTROLLER=($CONTROLLERS)
 
-  # Now switch to point the OpenStack commands at the overcloud
-  # Get explicitly declared stack name from sanity.ini for mutli-stack suppoort
-  STACK_NAME=$(get_value overcloud_stack_name)
   [ "${STACK_NAME}" ] ||  \
       fatal "### ${STACK_NAME} is required and could not be found!  Aborting sanity test"
 
