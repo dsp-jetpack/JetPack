@@ -683,8 +683,6 @@ class Settings:
             '/pilot/templates/powermax-manila-config.yaml'
         self.dell_powerflex_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellemc-powerflex-cinder-backend.yaml'
-        self.dell_powerflex_ansible_yaml = self.foreman_configuration_scripts + \
-            '/pilot/powerflex/templates/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
         self.ceph_osd_config_yaml = self.foreman_configuration_scripts + \

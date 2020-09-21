@@ -1,3 +1,0 @@
----
-- name: include facts.yaml
-  include_tasks: facts.yaml

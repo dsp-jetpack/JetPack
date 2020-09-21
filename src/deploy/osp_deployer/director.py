@@ -902,10 +902,6 @@ class Director(InfraHost):
 
         dell_powerflex_ansible_yaml = self.templates_dir  + \
             "/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml"
-        self.upload_file(self.settings.dell_powerflex_ansible_yaml,
-                         dell_powerflex_ansible_yaml)
-        self.run_tty("cp " + dell_powerflex_ansible_yaml +
-                     " " + dell_powerflex_ansible_yaml + ".bak")
         self.setup_powerflex(dell_powerflex_cinder_yaml,dell_powerflex_ansible_yaml)
 
 

@@ -232,6 +232,8 @@ if [ ${enable_powerflex} == 1 ]; then
     echo "# PowerFlex backend enabled, injecting rpms"
     run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
     run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
+    echo "# Cloning Dell EMC TripleO PowerFlex repository"
+    run_command "git clone https://github.com/dell/tripleo-powerflex.git ${HOME}/pilot/powerflex/tripleo-powerflex"
 fi
 
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
@@ -283,10 +285,10 @@ echo "## Done."
 
 echo
 echo "## Copying powerflex and tripleo-powerflex ansible playbooks..."
-sudo cp -R $HOME/pilot/powerflex/powerflex-ansible /usr/share/powerflex-ansible
-sudo cp -R $HOME/pilot/powerflex/tripleo-powerflex-run-ansible /usr/share/ansible/roles/tripleo-powerflex-run-ansible
-cp -R $HOME/pilot/powerflex/templates/overcloud/environments/powerflex-ansible $HOME/pilot/templates/overcloud/environments/powerflex-ansible
-cp -R $HOME/pilot/powerflex/templates/overcloud/deployment/powerflex-ansible $HOME/pilot/templates/overcloud/deployment/powerflex-ansible
+sudo cp -R $HOME/pilot/powerflex/tripleo-powerflex/powerflex-ansible /usr/share/powerflex-ansible
+sudo cp -R $HOME/pilot/powerflex/tripleo-powerflex/tripleo-powerflex-run-ansible /usr/share/ansible/roles/tripleo-powerflex-run-ansible
+cp -R $HOME/pilot/powerflex/tripleo-powerflex/templates/overcloud/environments/powerflex-ansible $HOME/pilot/templates/overcloud/environments/powerflex-ansible
+cp -R $HOME/pilot/powerflex/tripleo-powerflex/templates/overcloud/deployment/powerflex-ansible $HOME/pilot/templates/overcloud/deployment/powerflex-ansible
 
 echo "## Done."
 
