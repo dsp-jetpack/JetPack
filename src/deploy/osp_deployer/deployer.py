@@ -70,7 +70,7 @@ def get_settings():
                        'and run tempest.',
                        action='store_true', required=False)
     edge_group = parser.add_mutually_exclusive_group()
-    edge_group.add_argument('-list_edge_sites', '--list_edge_sites',
+    edge_group.add_argument('-l', '--list_edge_sites',
                             help='Show list of available edge sites to deploy',
                             action='store_true', required=False)
     edge_group.add_argument('-e', '--edge_site',
@@ -79,20 +79,10 @@ def get_settings():
                             'already deployed you will be prompted to deploy '
                             'the overcloud first',
                             required=False)
-    edge_group.add_argument('-a', '--edge_site_all',
-                            help='Deploy all edge sites defined in .ini and '
-                            '.properties. Note: if overcloud is not already '
-                            'deployed you will be prompted to deploy the '
-                            'overcloud first',
-                            action='store_true', required=False)
     edge_group.add_argument('-d', '--edge_site_delete',
                             help='Tear-down a single edge site defined in '
                             '.ini and .properties',
                             required=False)
-    edge_group.add_argument('-f', '--edge_site_delete_all',
-                            help='Tear-down all edge sites defined in .ini '
-                            'and .properties',
-                            action='store_true', required=False)
 
     args, unknown = parser.parse_known_args()
     if len(unknown) > 0:
@@ -148,29 +138,19 @@ def deploy_overcloud(director_vm):
 
 def deploy_edge(args, director_vm):
     logger.info("=== Installing edge site(s)")
-    if args.edge_site:
-        logger.info("=== Installing edge site, args: %s", str(args.edge_site))
-        director_vm.deploy_edge_site(args.edge_site)
-    elif args.edge_site_all:
-        logger.info("=== Installing all edge sites defined in ini")
-        director_vm.deploy_edge_site_all()
+    logger.info("=== Installing edge site, args: %s", str(args.edge_site))
+    director_vm.deploy_edge_site(args.edge_site)
 
 
 def delete_edge(args, sah_node, director_vm):
     logger.info("=== Deleting edge site(s)")
     edge_site = args.edge_site_delete
-    if args.edge_site_delete:
-        logger.info("=== Deleting edge site, args: %s",
-                    str(edge_site))
-        director_vm.delete_edge_site(edge_site)
-        logger.info("Cleaning up routes for edge site: {}".format(edge_site))
-        director_vm.subnet_routes_edge(edge_site, False)
-        sah_node.subnet_routes_edge(edge_site, False)
-    elif args.edge_site_delete_all:
-        logger.info("=== Deleting all edge sites defined in ini")
-        director_vm.delete_edge_site_all()
-        director_vm.subnet_routes_edge_all(False)
-        sah_node.subnet_routes_edge_all(False)
+    logger.info("=== Deleting edge site, args: %s",
+                str(edge_site))
+    director_vm.delete_edge_site(edge_site)
+    logger.info("Cleaning up routes for edge site: {}".format(edge_site))
+    director_vm.subnet_routes_edge(edge_site, False)
+    sah_node.subnet_routes_edge(edge_site, False)
 
 
 def get_is_deploy_overcloud():
@@ -248,9 +228,8 @@ def deploy():
         settings, args = get_settings()
         director_vm = Director()
         sah_node = Sah()
-        is_deploy_edge_site = (bool(args.edge_site) or args.edge_site_all)
-        is_delete_edge_site = (bool(args.edge_site_delete)
-                               or args.edge_site_delete_all)
+        is_deploy_edge_site = bool(args.edge_site)
+        is_delete_edge_site = bool(args.edge_site_delete)
         logger.info("Deploying edge site(s)? %s", str(is_deploy_edge_site))
         logger.info("Tear down edge site(s)? %s", str(is_delete_edge_site))
         node_type = None
@@ -307,9 +286,8 @@ def deploy():
         logger.info("Uploading configs/iso/scripts.")
         sah_node.clear_known_hosts()
         sah_node.handle_lock_files()
-        if args.edge_site_all:
-            sah_node.subnet_routes_edge_all()
-        elif bool(args.edge_site):
+
+        if bool(args.edge_site):
             sah_node.subnet_routes_edge(node_type)
 
         sah_node.upload_iso()

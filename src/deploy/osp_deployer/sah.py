@@ -430,59 +430,6 @@ class Sah(InfraHost):
         for cmd in cmds:
             self.run_as_root(cmd)
 
-    def subnet_routes_edge_all(self, add=True):
-        logger.info('Setting routes for edge subnets on SAH and '
-                    'restarting bridge interfaces')
-        """
-        Example nmcli command:
-            nmcli connection modify br-mgmt +ipv4.routes
-            "192.168.111.0/24 192.168.110.1, 192.168.112.0/24 192.168.110.1"
-        """
-        setts = self.settings
-        add_remove = "+" if add else "-"
-        for _nt, node_type_data in setts.node_type_data_map:
-            mgmt_cidr = node_type_data['mgmt_cidr']
-            prov_cidr = node_type_data['cidr']
-            mgmt_gateway = setts.management_gateway
-            prov_gateway = setts.provisioning_gateway
-
-            _is_mgmt_route = self._does_route_exist(mgmt_cidr)
-            _mgmt_needs_refresh = False
-            _prov_needs_refresh = False
-            if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
-                mgmt_cmd = NWM_ROUTE_CMD.format(conn=MGMT_BRIDGE,
-                                                add_rem=add_remove,
-                                                cidr=mgmt_cidr,
-                                                gw=mgmt_gateway)
-                subprocess.check_output(mgmt_cmd,
-                                        stderr=subprocess.STDOUT,
-                                        shell=True)
-                _mgmt_needs_refresh = True
-
-            _is_prov_route = self._does_route_exist(prov_cidr)
-            if ((not _is_prov_route and add) or (_is_prov_route and not add)):
-                mgmt_cmd = NWM_ROUTE_CMD.format(conn=PROV_BRIDGE,
-                                                add_rem=add_remove,
-                                                cidr=prov_cidr,
-                                                gw=prov_gateway)
-                subprocess.check_output(mgmt_cmd,
-                                        stderr=subprocess.STDOUT,
-                                        shell=True)
-                _prov_needs_refresh = True
-
-        if _mgmt_needs_refresh:
-            up_cmd = NWM_UP_CMD.format(dev=MGMT_BRIDGE)
-            subprocess.check_output(up_cmd,
-                                    stderr=subprocess.STDOUT,
-                                    shell=True)
-
-        if _mgmt_needs_refresh:
-            up_cmd = NWM_UP_CMD.format(dev=PROV_BRIDGE)
-            subprocess.check_output(up_cmd,
-                                    stderr=subprocess.STDOUT,
-                                    shell=True)
-        logger.info('Routes for all edge subnets on SAH updated')
-
     def subnet_routes_edge(self, node_type, add=True):
         """
         Example nmcli command:

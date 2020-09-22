@@ -358,11 +358,6 @@ class Director(InfraHost):
             cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ~/instackenv.json'
             self.run_tty(cmd)
 
-    def node_discovery_edge_all(self):
-
-        for node_type, nodes in self.settings.node_types_map.items():
-            self.node_discovery_edge(node_type)
-
     def node_discovery_edge(self, node_type):
         setts = self.settings
         nodes = setts.node_types_map[node_type]
@@ -426,18 +421,6 @@ class Director(InfraHost):
         nodes.extend(setts.ceph_nodes)
         self.configure_idracs(nodes)
 
-    def configure_idracs_edge_all(self):
-        setts = self.settings
-        # TODO: dpaterson, improve this so only one call is made to
-        # config_idracs, this will require concatinating edge instack files,
-        # and json
-        for node_type, edge_site_nodes in setts.node_types_map.items():
-            paths = self._generate_edge_template_paths(node_type,
-                                                       INSTACKENV, "json")
-            stg_instack_path, remote_instack_file = paths
-            nodes = list(edge_site_nodes)
-            self.configure_idracs(nodes, remote_instack_file)
-
     def configure_idracs_edge(self, node_type):
         nodes = list(self.settings.node_types_map[node_type])
         _stg, instack_file = self._generate_edge_template_paths(node_type,
@@ -494,12 +477,6 @@ class Director(InfraHost):
 
         tester = Checkpoints()
         tester.verify_nodes_registered_in_ironic(node_type)
-
-    def import_nodes_edge_all(self):
-        logging.debug("Import nodes edge all node types: %s",
-                      str(self.settings.node_types))
-        for node_type in self.settings.node_types:
-            self.import_nodes(node_type)
 
     def node_introspection(self, node_type=None):
         setts = self.settings
@@ -596,12 +573,6 @@ class Director(InfraHost):
                 failed_threads, len(threads)))
             sys.exit(1)
 
-    def assign_node_role_edge_all(self):
-        setts = self.settings
-        logger.debug("Assigning roles to all edge sites")
-        for node_type, nodes in setts.node_types_map.items():
-            self.assign_node_role_edge(node_type)
-
     def assign_node_role_edge(self, node_type):
         logger.debug("Assigning roles to node_type: %s", node_type)
         nodes = self.settings.node_types_map[node_type]
@@ -685,12 +656,6 @@ class Director(InfraHost):
         self.setup_environment()
         self.setup_sanity_ini()
         self.render_and_upload_site_name()
-
-    def setup_templates_edge_all(self):
-        self.setup_networking_edge_all()
-        self.render_and_upload_roles_data_edge_all()
-        self.setup_environment_edge_all()
-        # TODO self.setup_sanity_ini()
 
     def setup_templates_edge(self, node_type):
         self.setup_networking_edge(node_type)
@@ -1661,16 +1626,6 @@ class Director(InfraHost):
             for cmd in cmds:
                 self.run_tty(cmd)
 
-    def setup_networking_edge_all(self):
-        self.render_and_upload_network_data_edge_all()
-        self.setup_net_envt_edge_all()
-        self.render_and_upload_network_isolation_edge_all()
-        self.render_and_upload_node_placement_edge_all()
-        self.render_and_upload_nic_env_edge_all()
-        self.render_and_upload_compute_edge_all()
-        if self.settings.overcloud_static_ips is True:
-            self.render_and_upload_static_ips_edge_all()
-
     def setup_networking_edge(self, node_type):
         self.render_and_upload_network_data_edge(node_type)
         self.setup_net_envt_edge(node_type)
@@ -1846,37 +1801,6 @@ class Director(InfraHost):
             cmd += " --dashboard_enable"
         cmd += " > overcloud_deploy_out.log 2>&1"
         self.run_tty(cmd)
-
-    def deploy_edge_site_all(self):
-        logger.info("=== Preparing the overcloud ===")
-        # self.subnet_routes_edge_all()
-        self.update_and_upload_undercloud_conf_edge_all()
-        self.setup_net_envt_edge_all()
-        self.overcloud_config_download()
-        self.export_control_plane_config()
-        self.node_discovery_edge_all()
-        self.configure_idracs_edge_all()
-        self.import_nodes_edge_all()
-        self.node_introspection_edge_all()
-        self.update_sshd_conf()
-        self.assign_node_roles_edge_all()
-        self.revert_sshd_conf()
-        self.setup_templates_edge_all()
-        self.container_image_prepare_edge_all()
-        logger.debug("Deploying all edge sites ... this might take a while")
-        cmd = self._generate_deploy_cmd_edge_all()
-        self.run_tty(cmd)
-
-    def container_image_prepare_edge_all(self):
-        """
-                openstack tripleo container image prepare \
-        --environment-directory edge_all \
-        -r ~/edge_all/roles_data.yaml \
-        -e ~/edge_common/control-plane-export.yaml \
-        -e ~/containers-prepare-parameter.yaml \
-        --output-env-file ~/edge_all/edge_all-images-env.yaml
-        """
-        logger.debug("container_image_prepare_edge_all called!!!!!!!!!!!")
 
     def container_image_prepare_edge(self, node_type):
         """
@@ -2497,28 +2421,6 @@ class Director(InfraHost):
 
         self._stage_and_upload_undercloud_conf(uconf)
 
-    def update_and_upload_undercloud_conf_edge_all(self):
-        """Update and upload undercloud.conf for all edge site subnets"""
-
-        logger.info("Updating undercloud.conf")
-        setts = self.settings
-        self._download_and_parse_undercloud_conf()
-        uconf = setts.undercloud_conf
-        subnets = set({'ctlplane-subnet'})
-
-        for node_type, node_type_data in setts.node_type_data_map.items():
-            subnet_name = self._generate_subnet_name(node_type)
-            subnets.append(subnet_name)
-            if uconf.has_section(subnet_name):
-                uconf.remove_section(subnet_name)
-            uconf.add_section(subnet_name)
-            for opt, val in node_type_data.items():
-                uconf.set(subnet_name, opt, val)
-
-        uconf.set('DEFAULT', 'subnets', ','.join(subnets))
-
-        self._stage_and_upload_undercloud_conf(uconf)
-
     def update_and_upload_undercloud_conf_edge(self, node_type):
         """Update and upload undercloud.conf for single site"""
 
@@ -2540,14 +2442,6 @@ class Director(InfraHost):
         uconf.set('DEFAULT', 'subnets', ','.join(subnets))
         self._stage_and_upload_undercloud_conf(uconf)
 
-    def render_and_upload_roles_data_edge_all(self):
-        """Add generated edge site roles to roles_data.yaml and upload it.
-        """
-        logger.debug("render_and_upload_roles_data_edge_all called!")
-        setts = self.settings
-        for node_type, node_type_data in setts.node_type_data_map.items():
-            self.render_and_upload_roles_data_edge(node_type)
-
     def render_and_upload_roles_data_edge(self, node_type):
         paths = self._generate_edge_template_paths(node_type, ROLES_DATA)
         stg_roles_file, roles_file = paths
@@ -2559,28 +2453,6 @@ class Director(InfraHost):
         with open(stg_roles_file, 'w') as stg_roles_fp:
             stg_roles_fp.write(rendered_tmplt)
         self.upload_file(stg_roles_file, roles_file)
-
-    def render_and_upload_compute_edge_all(self):
-        """Loop through settings.node_type_data_map, generate the nic config
-        template for each node_type, and upload the template to the director
-        vm.
-
-        Based on the number of nics for a site the corresponding
-        edge_compute.yaml is used as a baseline for creating the edge node
-        nic configs.
-
-        For example, if num_nics is 5 and the node_type is compute-boston, the
-        generated file will be uploaded to:
-        ~/pilot/templates/nic_configs/5_port/computeboston.yaml
-
-        Once all the nic configuration files are uploaded for each site
-        nic_environment.yaml for each site is also updated and uploaded,
-        see: render_and_upload_nic_env_edge()
-        """
-        logger.debug("render_and_upload_compute_edge_all called!")
-        setts = self.settings
-        for node_type in setts.node_type_data_map:
-            self.render_and_upload_compute_edge(node_type)
 
     def render_and_upload_compute_edge(self, node_type):
         node_type_data = self.settings.node_type_data_map[node_type]
@@ -2600,27 +2472,6 @@ class Director(InfraHost):
             stg_nic_fp.write(rendered_tmplt)
 
         self.upload_file(stg_nic_path, dst_nic_path)
-
-    def render_and_upload_nic_env_edge_all(self):
-        """Update and upload nic_environment_*.yaml templates for edge sites
-
-        Loop through the node_types, grouped by number of nics, and update
-        the template resource_registry and parameter_defaults with
-        site-specific parameters contained in the .ini file.
-
-        This results in a file that corresoponds to the node type,
-        which is uploaded to the correct nic-configs sub-directory based on the
-        number of ports declared in node_type_data.nic_port_count
-
-        For example if num_nics is 5 and node_type is boston-compute
-        the modified file will be uploaded to:
-        to:
-        ~/pilot/templates/nic_configs/5_port/nic_environement_bostoncompute.yaml
-        """
-        logger.debug("render_and_upload_nic_env_edge_all called!")
-
-        for node_type in self.settings.node_type_data:
-            self.render_and_upload_nic_env_edge(node_type)
 
     def render_and_upload_nic_env_edge(self, node_type):
         setts = self.settings
@@ -2659,12 +2510,6 @@ class Director(InfraHost):
                 stg_nic_env_fp.write(rendered_tmplt)
             self.upload_file(stg_nic_env_path, nic_env_file)
 
-    def render_and_upload_node_placement_edge_all(self):
-        logger.debug("render_and_upload_node_placement_edge_all called!")
-
-        for node_type in self.settings.node_types:
-            self.render_and_upload_node_placement_edge(node_type)
-
     def render_and_upload_node_placement_edge(self, node_type):
         tmplt = self.jinja2_env.get_template(NODE_PLACEMENT_EDGE_J2)
         paths = self._generate_edge_template_paths(node_type, NODE_PLACEMENT)
@@ -2679,11 +2524,6 @@ class Director(InfraHost):
         with open(stg_plcmnt_path, 'w') as stg_plcmnt_fp:
             stg_plcmnt_fp.write(rendered_tmplt)
         self.upload_file(stg_plcmnt_path, remote_plcmnt_file)
-
-    def render_and_upload_site_name_edge_all(self):
-        logger.debug("render_and_upload_site_name_edge_all called!")
-        for node_type in self.settings.node_type_data:
-            self.render_and_upload_site_name_edge(node_type)
 
     def render_and_upload_site_name(self):
         logger.debug("render_and_upload_site_name called!")
@@ -2715,21 +2555,6 @@ class Director(InfraHost):
             stg_az_fp.write(rendered_tmplt)
         self.upload_file(stg_az_path, remote_az_file)
 
-    def render_and_upload_overrides_edge_all(self):
-        '''
-        Template output should look like:
-        parameter_defaults:
-          DistributedComputeCount: 3
-          DistributedComputeFlavor: baremetal
-          DistributedComputeSchedulerHints:
-            'capabilities:node': '0-compute-%index%'
-          NovaAZAttach: false
-        '''
-        logger.debug("render_and_upload_overrides_edge_all called!")
-        setts = self.settings
-        for node_type in setts.node_types:
-            self.render_and_upload_overrides_edge(node_type)
-
     def render_and_upload_overrides_edge(self, node_type):
         '''
         Template output should look like:
@@ -2754,12 +2579,6 @@ class Director(InfraHost):
             stg_or_fp.write(rendered_tmplt)
         self.upload_file(stg_or_path, remote_or_file)
 
-    def render_and_upload_static_ips_edge_all(self):
-        logger.debug("render_and_upload_static_ips_edge_all called!")
-
-        for node_type in self.settings.node_types_map:
-            self.render_and_upload_static_ips_edge(node_type)
-
     def render_and_upload_static_ips_edge(self, node_type):
         nodes = self.settings.node_types_map[node_type]
         paths = self._generate_edge_template_paths(node_type, STATIC_IP_ENV)
@@ -2776,14 +2595,6 @@ class Director(InfraHost):
         with open(stg_static_ip_env_path, 'w') as stg_static_ip_env_fp:
             stg_static_ip_env_fp.write(rendered_tmplt)
         self.upload_file(stg_static_ip_env_path, remote_static_ip_env_file)
-
-    def render_and_upload_network_isolation_edge_all(self):
-        """Update and upload network-isolation.yaml based on
-        node types
-        """
-        logger.debug("Updating network isolation for edge sites.")
-        for nt, nt_data in self.settings.node_type_data_map.items():
-            self.render_and_upload_network_isolation_edge(nt)
 
     def render_and_upload_network_isolation_edge(self, node_type):
         tmplt = self.jinja2_env.get_template(NET_ISO_EDGE_J2)
@@ -2803,11 +2614,6 @@ class Director(InfraHost):
             stg_net_iso_fp.write(rendered_tmplt)
         self.upload_file(stg_n_iso_path, net_iso_file)
         self.upload_file(stg_n_iso_path, net_iso_overcloud_file)
-
-    def setup_environment_edge_all(self):
-        logger.debug("Updating dell environment for edge sites.")
-        for nt, nt_data in self.settings.node_type_data_map.items():
-            self.setup_environment_edge(nt)
 
     def setup_environment_edge(self, node_type):
         setts = self.settings
@@ -2855,13 +2661,6 @@ class Director(InfraHost):
 
         self.upload_file(stg_net_data_file, net_data_file)
 
-    def render_and_upload_network_data_edge_all(self):
-        """Generate and upload network_data.yaml for edge site networks"""
-        logger.debug("render_and_upload_network_data_edge_all called!")
-        setts = self.settings
-        for node_type, node_type_data in setts.node_type_data_map.items():
-            self.render_and_upload_network_data_edge(node_type)
-
     def render_and_upload_network_data_edge(self, node_type):
         setts = self.settings
         node_type_data = setts.node_type_data_map[node_type]
@@ -2876,15 +2675,6 @@ class Director(InfraHost):
             stg_nd_fp.write(rendered_tmplt)
 
         self.upload_file(stg_nd_file, nd_file)
-
-    def setup_net_envt_edge_all(self):
-        """Update and upload network-environment-*.yaml for
-        edge site specific networks
-        """
-        logger.debug("setup_net_envt_edge_all called")
-        setts = self.settings
-        for node_type, node_type_data in setts.node_type_data_map.items():
-            self.setup_net_envt_edge(node_type)
 
     def setup_net_envt_edge(self, node_type):
         tmplt = self.jinja2_env.get_template(NETWORK_ENV_EDGE_J2)
@@ -2912,52 +2702,6 @@ class Director(InfraHost):
             net_env_yaml = yaml.load(stg_net_env_fp)
             param_defaults = net_env_yaml["parameter_defaults"]
             return param_defaults
-
-    def subnet_routes_edge_all(self, add=True):
-        """Create routes for Director VM and reboot it, which is required
-        for routes to take effect
-        """
-        logger.info('Setting routes for edge subnets on Director VM and '
-                    'restarting VM, as it is required to get the routes to '
-                    'register with virsh properly')
-        setts = self.settings
-        add_remove_mgmt = "+" if add else "-"
-        mgmt_if = setts.director_node.management_if
-        mgmt_gw = setts.management_gateway
-        prov_gw = setts.provisioning_gateway
-
-        for _nt, node_type_data in setts.node_type_data_map.items():
-            mgmt_cidr = node_type_data['mgmt_cidr']
-            _is_mgmt_route = self._does_route_exist(mgmt_cidr)
-            if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
-                self.run_as_root(MGMT_ROUTE_CMD.format(mgmt_if,
-                                                       add_remove_mgmt,
-                                                       mgmt_cidr, mgmt_gw))
-
-            prov_cidr = node_type_data['cidr']
-            _prov_cidr_esc = prov_cidr.replace('/', '\/')
-            _is_prov_route = self._does_route_exist(prov_cidr)
-            if ((not _is_prov_route and add) or (_is_prov_route and not add)):
-                prv_cmds = []
-                if add:
-                    prv_cmds.append(LEGACY_DEL_ROUTE_CMD)
-                    prv_cmds.append(LEGACY_ROUTE_CMD)
-                    prv_cmds.append(IF_DOWN_CMD.format(
-                        dev=setts.director_node.provisioning_if))
-                    prv_cmds.append(IF_UP_CMD.format(
-                        dev=setts.director_node.provisioning_if))
-                else:
-                    prv_cmds.append(LEGACY_DEL_ROUTE_CMD)
-                    prv_cmds.append(BR_DOWN_CMD)
-                    prv_cmds.append(BR_UP_CMD)
-                prov_cmd = "; ".join(prv_cmds).format(cidr=prov_cidr,
-                                                      cidr_esc=_prov_cidr_esc,
-                                                      gw=prov_gw,
-                                                      dev=CTLPLANE_BRIDGE)
-                self.run_as_root(prov_cmd)
-
-        self.run_as_root(MGMT_UP_CMD.format(_if=mgmt_if))
-        logger.info('Director VM edge routes set')
 
     def subnet_routes_edge(self, node_type, add=True):
         logger.info("Configuring routes for {}, add or "
@@ -4073,17 +3817,6 @@ class Director(InfraHost):
         cmd += "--log-file {} ".format(log_file)
         cmd += "-r {} ".format(roles_file)
         cmd += "-n {} ".format(nd_file)
-        """
-        cmd += "-e {} ".format(os.path.join(self.templates_overcloud_dir,
-                                            "environments",
-                                            "disable-telemetry.yaml"))
-        cmd += "-e {} ".format(os.path.join(self.templates_overcloud_dir,
-                                            "environments",
-                                            "podman.yaml"))
-        cmd += "-e {} ".format(os.path.join(self.templates_overcloud_dir,
-                                            "environments", "ceph-ansible"
-                                            "ceph-ansible.yaml"))
-        """
         cmd += "-e {} ".format(os.path.join(self.templates_overcloud_dir,
                                             "environments",
                                             "cinder-volume-active-active.yaml")
@@ -4121,37 +3854,6 @@ class Director(InfraHost):
         return cmd.format(edge_site_dir=edge_site_directory,
                           nt_lower=node_type_lower,
                           oc_tempates=self.templates_overcloud_dir)
-
-    def _generate_deploy_cmd_edge_all(self):
-        """
-        TODO:  need to create deploy-edge.py and decide.
-        """
-        logger.debug("Configuring network settings for overcloud")
-        cmd = "rm -f " + self.home_dir + '/.ssh/known_hosts'
-        """
-        TODO: dpaterson, implement this method
-        !/bin/bash
-        STACK=dcn0
-        source ~/stackrc
-        if [[ ! -e distributed_compute_hci.yaml ]]; then
-            openstack overcloud roles generate DistributedComputeHCI -o distributed_compute_hci.yaml
-        fi
-        time openstack overcloud deploy \
-         --stack $STACK \
-         --templates /usr/share/openstack-tripleo-heat-templates/ \
-         -r distributed_compute_hci.yaml \
-         -e /usr/share/openstack-tripleo-heat-templates/environments/disable-telemetry.yaml \
-         -e /usr/share/openstack-tripleo-heat-templates/environments/podman.yaml \
-         -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-         -e /usr/share/openstack-tripleo-heat-templates/environments/cinder-volume-active-active.yaml \
-         -e ~/dcn-common/control-plane-export.yaml \
-         -e ~/containers-env-file.yaml \
-         -e ceph.yaml \
-         -e nova-az.yaml \
-         -e overrides.yaml
-         """
-        cmd += " > overcloud_deploy_edge_out.log 2>&1"
-        return "ls -lt /home/stack/"
 
     @directory_check(STAGING_TEMPLATES_PATH)
     def _get_default_compute_services(self):
