@@ -1841,8 +1841,7 @@ class Director(InfraHost):
         cmd += " --node_placement"
         if self.settings.deploy_overcloud_debug:
             cmd += " --debug"
-        # if self._has_edge_sites():
-        #    cmd += " --network_data"
+
         if self.settings.enable_dashboard is True:
             cmd += " --dashboard_enable"
         cmd += " > overcloud_deploy_out.log 2>&1"
@@ -3163,9 +3162,6 @@ class Director(InfraHost):
             json.dump(instack, stg_instack_fp, indent=2)
 
         self.upload_file(stg_instack_path, instack_file)
-
-    def _has_edge_sites(self):
-        return bool(self.settings.node_type_data_map)
 
     def _subnet_name_from_net(self, node_mgmt_net):
         setts = self.settings
