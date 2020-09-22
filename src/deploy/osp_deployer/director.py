@@ -32,10 +32,7 @@ from infra_host import directory_check
 from auto_common import Scp
 from auto_common.yaml_utils import OrderedLoader
 
-# logger = logging.getLogger("osp_deployer")
-# TODO after testing delete two logging config lines below
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
-logger = logging.getLogger()
+logger = logging.getLogger("osp_deployer")
 
 exitFlag = 0
 
@@ -3905,34 +3902,3 @@ class Director(InfraHost):
         logger.debug("returning paths, stage: %s, remote: %s",
                      stg_path, remote_file)
         return stg_path, remote_file
-
-
-if __name__ == "__main__":
-    settings = Settings("/root/R62.ini")
-    director = Director()
-    # node_type = "edge-compute-denver"
-    node_type = "edge-compute-denver"
-    # director.setup_templates_edge(node_type)
-    # add = True
-    # director.controller_routes_edge(node_type, add)
-    # director.render_and_upload_site_name()
-    # director.setup_templates()
-
-    # os._exit(0)
-
-    add = False
-    add = True
-    # node_type = "edge-compute-boston"
-    director.subnet_routes_edge(node_type, add)
-    # director.setup_net_envt_edge(node_type)
-    # director.render_and_upload_overrides_edge("edge-compute-denver")
-    # director.container_image_prepare_edge("edge-compute-denver")
-    os._exit(0)
-    # director.render_and_upload_site_name_edge("edge-compute-denver")
-    director.setup_templates_edge(node_type)
-
-    print("edge site deployment "
-          "command: {}"
-          .format(director._generate_deploy_cmd_edge(node_type)))
-
-    # director.render_and_upload_undercloud_conf()

@@ -25,10 +25,7 @@ import os
 import subprocess
 import re
 
-# logger = logging.getLogger("osp_deployer")
-# TODO after testing delete two logging config lines below
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
-logger = logging.getLogger()
+logger = logging.getLogger("osp_deployer")
 
 exitFlag = 0
 MGMT_BRIDGE = "br-mgmt"
@@ -497,18 +494,3 @@ class Sah(InfraHost):
             if_map[src] = _l_arr
         logger.debug("virsh domain interface "
                      "map for director vm: {}".format(str(if_map)))
-
-
-if __name__ == "__main__":
-    settings = Settings("/root/R62.ini")
-    sah = Sah()
-    # sah.get_virsh_interface_map()
-    # os._exit(0)
-    node_type = "edge-compute-denver"
-    add = False
-    # node_type = "edge-compute-boston"
-
-    sah.subnet_routes_edge(node_type, add)
-    os._exit(0)
-    node_type = "edge-compute-boston"
-    sah.subnet_routes_edge(node_type, add)

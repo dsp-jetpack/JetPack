@@ -47,12 +47,7 @@ def main():
     args = parse_arguments()
 
     LoggingHelper.configure_logging(args.logging_level)
-
-    # cmd = "source ~/stackrc;openstack baremetal node list -f value -c UUID"
     cmd = "openstack baremetal node list --fields uuid properties -f json"
-    # nodes = subprocess.check_output(cmd,
-    #                                 stderr=subprocess.STDOUT,
-    #                                 shell=True)
     nodes = json.loads(subprocess.check_output(cmd,
                                                stderr=subprocess.STDOUT,
                                                shell=True))

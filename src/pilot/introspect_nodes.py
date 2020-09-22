@@ -70,23 +70,6 @@ def is_introspection_oob(in_band, node, logger):
 
 def get_nodes(ironic_client, node_type=None):
     nodes = ironic_client.node.list(detail=True)
-    '''
-    cmd = "openstack baremetal node list --fields uuid properties -f json"
-    # nodes = subprocess.check_output(cmd,
-    #                                 stderr=subprocess.STDOUT,
-    #                                 shell=True)
-    nodes = json.loads(subprocess.check_output(cmd,
-                                               stderr=subprocess.STDOUT,
-                                               shell=True))
-
-    for node in nodes:
-        props = node["Properties"]
-        _node_type = props["node_type"] if "node_type" in props else None
-        match = ((not args.node_type) or (bool(_node_type)
-                                          and args.node_type == _node_type))
-        if (not match):
-            continue
-    '''
     for node in nodes[:]:
         props = node.properties
         _node_type = props["node_type"] if "node_type" in props else None
