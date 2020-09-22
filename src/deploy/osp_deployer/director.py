@@ -115,16 +115,18 @@ EC2_PUBLIC_IPCIDR_PARAM = 'EC2MetadataPublicIpCidr'
 
 # command constants
 MGMT_ROUTE_CMD = "nmcli connection modify {} {}ipv4.routes \"{} {}\""
-MGMT_UP_CMD = "nmcli connection load {_if} && exec nmcli connection up {_if}"
-LEGACY_DEL_ROUTE_CMD = ("sed -i -e '/{cidr_esc} via {gw} dev {br}/d' "
-                        "/etc/sysconfig/network-scripts/route-{br}")
-LEGACY_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {br}\" >> "
-                    "/etc/sysconfig/network-scripts/route-{br}")
+MGMT_UP_CMD = "nmcli connection load {dev} && exec nmcli connection up {dev}"
+LEGACY_DEL_ROUTE_CMD = ("sed -i -e '/{cidr_esc} via {gw} dev {dev}/d' "
+                        "/etc/sysconfig/network-scripts/route-{dev}")
+LEGACY_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {dev}\" >> "
+                    "/etc/sysconfig/network-scripts/route-{dev}")
 LEGACY_SSH_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {dev}\" | sudo tee -a "
                         "/etc/sysconfig/network-scripts/route-{dev}")
-ROUTE_UP_CMD = "/etc/sysconfig/network-scripts/ifup-routes {br}"
-BR_DOWN_CMD = "/etc/sysconfig/network-scripts/ifdown-ovs ifcfg-{br}"
-BR_UP_CMD = "/etc/sysconfig/network-scripts/ifup-ovs ifcfg-{br}"
+ROUTE_UP_CMD = "/etc/sysconfig/network-scripts/ifup-routes {dev}"
+BR_DOWN_CMD = "/etc/sysconfig/network-scripts/ifdown-ovs ifcfg-{dev}"
+BR_UP_CMD = "/etc/sysconfig/network-scripts/ifup-ovs ifcfg-{dev}"
+IF_DOWN_CMD = "/etc/sysconfig/network-scripts/ifdown {dev}"
+IF_UP_CMD = "/etc/sysconfig/network-scripts/ifup {dev}"
 UNDERCLOUD_INSTALL_CMD = "openstack undercloud install"
 CONTAINER_IMAGE_PREPARE_CMD = "sudo openstack tripleo container image prepare"
 
@@ -2949,7 +2951,10 @@ class Director(InfraHost):
                 if add:
                     prv_cmds.append(LEGACY_DEL_ROUTE_CMD)
                     prv_cmds.append(LEGACY_ROUTE_CMD)
-                    prv_cmds.append(ROUTE_UP_CMD)
+                    prv_cmds.append(IF_DOWN_CMD.format(
+                        dev=setts.director_node.provisioning_if))
+                    prv_cmds.append(IF_UP_CMD.format(
+                        dev=setts.director_node.provisioning_if))
                 else:
                     prv_cmds.append(LEGACY_DEL_ROUTE_CMD)
                     prv_cmds.append(BR_DOWN_CMD)
@@ -2957,7 +2962,7 @@ class Director(InfraHost):
                 prov_cmd = "; ".join(prv_cmds).format(cidr=prov_cidr,
                                                       cidr_esc=_prov_cidr_esc,
                                                       gw=prov_gw,
-                                                      br=CTLPLANE_BRIDGE)
+                                                      dev=CTLPLANE_BRIDGE)
                 self.run_as_root(prov_cmd)
 
         self.run_as_root(MGMT_UP_CMD.format(_if=mgmt_if))
@@ -2972,16 +2977,32 @@ class Director(InfraHost):
         node_type_data = setts.node_type_data_map[node_type]
         mgmt_gw = setts.management_gateway
         prov_gw = setts.provisioning_gateway
+        prov_ip = setts.director_node.provisioning_ip
+
         mgmt_cidr = node_type_data['mgmt_cidr']
         prov_cidr = node_type_data['cidr']
         _prov_cidr_esc = prov_cidr.replace('/', '\/')
+        prov_route_dir_prov_ip = ("{cidr} via {gw} "
+                                  "dev {dev}".format(cidr=prov_cidr,
+                                                     gw=prov_ip,
+                                                     dev=CTLPLANE_BRIDGE))
+        _def_prov_route = self._does_route_exist(prov_route_dir_prov_ip)
+        if add and _def_prov_route:
+            _del_prov_route = LEGACY_DEL_ROUTE_CMD.format(cidr_esc=
+                                                          _prov_cidr_esc,
+                                                          gw=prov_ip,
+                                                          dev=CTLPLANE_BRIDGE)
+            self.run_as_root(_del_prov_route)
+            self.run_as_root(BR_DOWN_CMD.format(dev=CTLPLANE_BRIDGE))
+            self.run_as_root(BR_UP_CMD.format(dev=CTLPLANE_BRIDGE))
+
 
         _is_mgmt_route = self._does_route_exist(mgmt_cidr)
         if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
 
             self.run_as_root(MGMT_ROUTE_CMD.format(mgmt_if, add_remove_mgmt,
                                                    mgmt_cidr, mgmt_gw))
-            self.run_as_root(MGMT_UP_CMD.format(_if=mgmt_if))
+            self.run_as_root(MGMT_UP_CMD.format(dev=mgmt_if))
 
         _is_prov_route = self._does_route_exist(prov_cidr)
         if ((not _is_prov_route and add) or (_is_prov_route and not add)):
@@ -2990,6 +3011,10 @@ class Director(InfraHost):
                 cmds.append(LEGACY_DEL_ROUTE_CMD)
                 cmds.append(LEGACY_ROUTE_CMD)
                 cmds.append(ROUTE_UP_CMD)
+                cmds.append(IF_DOWN_CMD.format(
+                    dev=setts.director_node.provisioning_if))
+                cmds.append(IF_UP_CMD.format(
+                    dev=setts.director_node.provisioning_if))
             else:
                 cmds.append(LEGACY_DEL_ROUTE_CMD)
                 cmds.append(BR_DOWN_CMD)
@@ -2997,7 +3022,7 @@ class Director(InfraHost):
             prov_cmd = "; ".join(cmds).format(cidr=prov_cidr,
                                               cidr_esc=_prov_cidr_esc,
                                               gw=prov_gw,
-                                              br=CTLPLANE_BRIDGE)
+                                              dev=CTLPLANE_BRIDGE)
             self.run_as_root(prov_cmd)
 
     def controller_routes_edge(self, node_type, add=True):
@@ -3040,7 +3065,7 @@ class Director(InfraHost):
                     new_routes.append(LEGACY_SSH_ROUTE_CMD.format(cidr=tup[1],
                                                                   gw=tup[2],
                                                                   dev=_vlan))
-                    new_routes.append("sudo " + ROUTE_UP_CMD.format(br=_vlan))
+                    new_routes.append("sudo " + ROUTE_UP_CMD.format(dev=_vlan))
             if new_routes:
                 self._run_on_node(ip, "; ".join(new_routes))
 
@@ -4206,6 +4231,7 @@ if __name__ == "__main__":
     # os._exit(0)
 
     add = False
+    add = True
     # node_type = "edge-compute-boston"
     director.subnet_routes_edge(node_type, add)
     # director.setup_net_envt_edge(node_type)
@@ -4220,4 +4246,3 @@ if __name__ == "__main__":
           .format(director._generate_deploy_cmd_edge(node_type)))
 
     # director.render_and_upload_undercloud_conf()
-    # director.subnet_routes_edge("edge-compute-boston", True)

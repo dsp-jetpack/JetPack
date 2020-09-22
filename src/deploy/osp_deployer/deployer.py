@@ -156,15 +156,21 @@ def deploy_edge(args, director_vm):
         director_vm.deploy_edge_site_all()
 
 
-def delete_edge(args, director_vm):
+def delete_edge(args, sah_node, director_vm):
     logger.info("=== Deleting edge site(s)")
+    edge_site = args.edge_site_delete
     if args.edge_site_delete:
         logger.info("=== Deleting edge site, args: %s",
-                    str(args.edge_site_delete))
-        director_vm.delete_edge_site(args.edge_site_delete)
+                    str(edge_site))
+        director_vm.delete_edge_site(edge_site)
+        logger.info("Cleaning up routes for edge site: {}".format(edge_site))
+        director_vm.subnet_routes_edge(edge_site, False)
+        sah_node.subnet_routes_edge(edge_site, False)
     elif args.edge_site_delete_all:
         logger.info("=== Deleting all edge sites defined in ini")
         director_vm.delete_edge_site_all()
+        director_vm.subnet_routes_edge_all(False)
+        sah_node.subnet_routes_edge_all(False)
 
 
 def get_is_deploy_overcloud():
@@ -241,6 +247,7 @@ def deploy():
     try:
         settings, args = get_settings()
         director_vm = Director()
+        sah_node = Sah()
         is_deploy_edge_site = (bool(args.edge_site) or args.edge_site_all)
         is_delete_edge_site = (bool(args.edge_site_delete)
                                or args.edge_site_delete_all)
@@ -277,15 +284,12 @@ def deploy():
         tester = Checkpoints()
         tester.verify_deployer_settings()
         if is_delete_edge_site:
-            delete_edge(args, director_vm)
+            delete_edge(args, sah_node, director_vm)
             os._exit(0)
         if args.validate_only is True:
             logger.info("Settings validated")
             os._exit(0)
         tester.retreive_switches_config()
-
-        sah_node = Sah()
-
         tester.sah_health_check()
         # mutually exclusive command, configure tempest and quit.
         if args.tempest_config_only:

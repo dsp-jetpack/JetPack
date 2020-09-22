@@ -34,6 +34,10 @@ exitFlag = 0
 MGMT_BRIDGE = "br-mgmt"
 PROV_BRIDGE = "br-prov"
 
+NWM_ROUTE_CMD = ("nmcli connection modify {conn} {add_rem}ipv4.routes "
+                 "\"{cidr} {gw}\"")
+NWM_UP_CMD = "nmcli connection load {dev} && exec nmcli device reapply {dev}"
+
 
 class Sah(InfraHost):
 
@@ -436,41 +440,44 @@ class Sah(InfraHost):
         """
         setts = self.settings
         add_remove = "+" if add else "-"
-        _cmd = "nmcli connection modify {} {}ipv4.routes \"{}\""
-
-        mgmt_routes = set()
-        prov_routes = set()
-        for _nt, node_type_data in setts.node_type_data_map.items():
+        for _nt, node_type_data in setts.node_type_data_map:
             mgmt_cidr = node_type_data['mgmt_cidr']
             prov_cidr = node_type_data['cidr']
-            mgmt_route = "{} {}".format(mgmt_cidr, setts.management_gateway)
-            prov_route = "{} {}".format(prov_cidr, setts.provisioning_gateway)
+            mgmt_gateway = setts.management_gateway
+            prov_gateway = setts.provisioning_gateway
+
             _is_mgmt_route = self._does_route_exist(mgmt_cidr)
+            _mgmt_needs_refresh = False
+            _prov_needs_refresh = False
             if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
-                mgmt_routes.add(mgmt_route)
+                mgmt_cmd = NWM_ROUTE_CMD.format(conn=MGMT_BRIDGE,
+                                                add_rem=add_remove,
+                                                cidr=mgmt_cidr,
+                                                gw=mgmt_gateway)
+                subprocess.check_output(mgmt_cmd,
+                                        stderr=subprocess.STDOUT,
+                                        shell=True)
+                _mgmt_needs_refresh = True
 
             _is_prov_route = self._does_route_exist(prov_cidr)
             if ((not _is_prov_route and add) or (_is_prov_route and not add)):
-                prov_routes.add(prov_route)
+                mgmt_cmd = NWM_ROUTE_CMD.format(conn=PROV_BRIDGE,
+                                                add_rem=add_remove,
+                                                cidr=prov_cidr,
+                                                gw=prov_gateway)
+                subprocess.check_output(mgmt_cmd,
+                                        stderr=subprocess.STDOUT,
+                                        shell=True)
+                _prov_needs_refresh = True
 
-        if len(mgmt_routes) != 0:
-            mgmt_cmd = _cmd.format(MGMT_BRIDGE, add_remove,
-                                   ",".join(mgmt_routes))
-            subprocess.check_output(mgmt_cmd,
-                                    stderr=subprocess.STDOUT,
-                                    shell=True)
-            up_cmd = "nmcli connection up {}".format(MGMT_BRIDGE)
+        if _mgmt_needs_refresh:
+            up_cmd = NWM_UP_CMD.format(dev=MGMT_BRIDGE)
             subprocess.check_output(up_cmd,
                                     stderr=subprocess.STDOUT,
                                     shell=True)
 
-        if len(prov_routes) != 0:
-            prov_cmd = _cmd.format(PROV_BRIDGE, add_remove,
-                                   ",".join(prov_routes))
-            subprocess.check_output(prov_cmd,
-                                    stderr=subprocess.STDOUT,
-                                    shell=True)
-            up_cmd = "nmcli connection up {}".format(PROV_BRIDGE)
+        if _mgmt_needs_refresh:
+            up_cmd = NWM_UP_CMD.format(dev=PROV_BRIDGE)
             subprocess.check_output(up_cmd,
                                     stderr=subprocess.STDOUT,
                                     shell=True)
@@ -489,20 +496,22 @@ class Sah(InfraHost):
         mgmt_cidr = node_type_data['mgmt_cidr']
         prov_cidr = node_type_data['cidr']
         add_remove = "+" if add else "-"
-        _cmd = "nmcli connection modify {} {}ipv4.routes \"{} {}\""
-        _up_cmd = ("nmcli connection load {br} && exec nmcli "
-                   "device reapply {br}")
-        mgmt_cmd = _cmd.format(MGMT_BRIDGE, add_remove,
-                               mgmt_cidr, setts.management_gateway)
-        prov_cmd = _cmd.format(PROV_BRIDGE, add_remove,
-                               prov_cidr, setts.provisioning_gateway)
+
+        mgmt_cmd = NWM_ROUTE_CMD.format(conn=MGMT_BRIDGE,
+                                        add_rem=add_remove,
+                                        cidr=mgmt_cidr,
+                                        gw=setts.management_gateway)
+        prov_cmd = NWM_ROUTE_CMD.format(conn=PROV_BRIDGE,
+                                        add_rem=add_remove,
+                                        cidr=prov_cidr,
+                                        gw=setts.provisioning_gateway)
         _is_mgmt_route = self._does_route_exist(mgmt_cidr)
         _is_prov_route = self._does_route_exist(prov_cidr)
         if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
             subprocess.check_output(mgmt_cmd,
                                     stderr=subprocess.STDOUT,
                                     shell=True)
-            up_cmd = _up_cmd.format(br=MGMT_BRIDGE)
+            up_cmd = NWM_UP_CMD.format(dev=MGMT_BRIDGE)
             subprocess.check_output(up_cmd,
                                     stderr=subprocess.STDOUT,
                                     shell=True)
@@ -510,7 +519,7 @@ class Sah(InfraHost):
             subprocess.check_output(prov_cmd,
                                     stderr=subprocess.STDOUT,
                                     shell=True)
-            up_cmd = _up_cmd.format(br=PROV_BRIDGE)
+            up_cmd = NWM_UP_CMD.format(dev=PROV_BRIDGE)
             subprocess.check_output(up_cmd,
                                     stderr=subprocess.STDOUT,
                                     shell=True)
@@ -546,12 +555,13 @@ class Sah(InfraHost):
 if __name__ == "__main__":
     settings = Settings("/root/R62.ini")
     sah = Sah()
-    sah.get_virsh_interface_map()
-    os._exit(0)
-    # node_type = "edge-compute-denver"
-    add = True
-    node_type = "edge-compute-boston"
+    # sah.get_virsh_interface_map()
+    # os._exit(0)
+    node_type = "edge-compute-denver"
+    add = False
+    # node_type = "edge-compute-boston"
 
     sah.subnet_routes_edge(node_type, add)
-    node_type = "edge-compute-denver"
+    os._exit(0)
+    node_type = "edge-compute-boston"
     sah.subnet_routes_edge(node_type, add)
