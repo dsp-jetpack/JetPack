@@ -23,7 +23,6 @@ from credential_helper import CredentialHelper
 from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
 from time import sleep
-# from update_ssh_config import get_nodes
 
 common_path = os.path.join(os.path.expanduser('~'), 'common')
 sys.path.append(common_path)
