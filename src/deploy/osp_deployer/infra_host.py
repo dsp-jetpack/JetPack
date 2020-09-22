@@ -177,9 +177,7 @@ class InfraHost:
                "-o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "
                "-o KbdInteractiveDevices=no heat-admin@{ip} "
                "'{cmd}'".format(ip=address, cmd=command))
-        print("vvvvvvvvvvvvvvvv cmd: {}".format(str(cmd)))
         _res = self.run_tty(cmd)
-        print("vvvvvvvvvvvvvvvv _res: {}".format(str(_res)))
         _does_route_exist = (len(_res[0].strip()) != 0)
         return _does_route_exist
 

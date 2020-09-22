@@ -1898,9 +1898,6 @@ class Director(InfraHost):
         stg_roles_file, roles_file = self._generate_edge_template_paths(
             node_type, ROLES_DATA)
 
-        # stg_roles_file, nd_file = self._generate_edge_template_paths(
-        #    node_type, NETWORK_DATA)
-
         cmd = CONTAINER_IMAGE_PREPARE_CMD
         cmd += " -r " + roles_file
         # cmd += " -n " + nd_file
@@ -1922,10 +1919,6 @@ class Director(InfraHost):
         logger.debug("Container_image_prepare_edge done!")
 
     def deploy_edge_site(self, node_type):
-        ''' skip these for testing
-        self.update_and_upload_undercloud_conf_edge(node_type)
-        # TODO update_undercloud should take a node_type and only
-        # run openstack undercloud intall if the subnet is not there.'''
         self.update_and_upload_undercloud_conf_edge(node_type)
         self.update_undercloud([node_type])
         self.subnet_routes_edge(node_type)
@@ -2002,7 +1995,6 @@ class Director(InfraHost):
         # Delete all edge site nodes at once
         self.run_tty(self.source_stackrc + "openstack baremetal node "
                      "delete {}".format(" ".join(nodes_for_deletion)))
-        #TODO unwind routes as needed
         logger.info("Edge site {} deleted!".format(node_type))
 
     def summarize_deployment(self):
