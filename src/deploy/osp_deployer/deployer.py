@@ -136,21 +136,19 @@ def deploy_overcloud(director_vm):
     director_vm.deploy_overcloud()
 
 
-def deploy_edge(args, director_vm):
-    logger.info("=== Installing edge site(s)")
-    logger.info("=== Installing edge site, args: %s", str(args.edge_site))
-    director_vm.deploy_edge_site(args.edge_site)
+def deploy_edge(director_vm, node_type):
+    logger.info("=== Installing edge site: %s", str(node_type))
+    director_vm.deploy_edge_site(node_type)
 
 
-def delete_edge(args, sah_node, director_vm):
-    logger.info("=== Deleting edge site(s)")
-    edge_site = args.edge_site_delete
-    logger.info("=== Deleting edge site, args: %s",
-                str(edge_site))
-    director_vm.delete_edge_site(edge_site)
-    logger.info("Cleaning up routes for edge site: {}".format(edge_site))
-    director_vm.subnet_routes_edge(edge_site, False)
-    sah_node.subnet_routes_edge(edge_site, False)
+def delete_edge(sah_node, director_vm, node_type):
+    logger.info("=== Deleting edge site: %s",
+                node_type)
+    director_vm.delete_edge_site(node_type)
+    logger.info("Cleaning up routes for edge site: {}".format(node_type))
+    director_vm.controller_routes_edge(node_type, False)
+    director_vm.subnet_routes_edge(node_type, False)
+    sah_node.subnet_routes_edge(node_type, False)
 
 
 def get_is_deploy_overcloud():
@@ -244,7 +242,7 @@ def deploy():
                          else args.edge_site_delete)
             try:
                 if bool(settings.node_types_map[_edge_arg]):
-                    node_type = args.edge_site
+                    node_type = _edge_arg
             except KeyError:
                 raise AssertionError("Could not find valid edge site for: %s" %
                                      args.edge_site)
@@ -263,7 +261,7 @@ def deploy():
         tester = Checkpoints()
         tester.verify_deployer_settings()
         if is_delete_edge_site:
-            delete_edge(args, sah_node, director_vm)
+            delete_edge(sah_node, director_vm, node_type)
             os._exit(0)
         if args.validate_only is True:
             logger.info("Settings validated")
@@ -317,7 +315,7 @@ def deploy():
 
                 _is_oc_failed, _err_oc = tester.verify_overcloud_deployed()
                 if not _is_oc_failed:
-                    deploy_edge(args, director_vm)
+                    deploy_edge(director_vm, node_type)
                 else:
                     raise _err_oc
             else:
@@ -334,7 +332,7 @@ def deploy():
                 deploy_overcloud(director_vm)
                 _is_oc_failed, _err_oc = tester.verify_overcloud_deployed()
                 if not _is_oc_failed:
-                    deploy_edge(args, director_vm)
+                    deploy_edge(director_vm, node_type)
                 else:
                     raise _err_oc
             else:
@@ -346,7 +344,7 @@ def deploy():
                             "existing overcloud, exiting")
                 os._exit(0)
         elif is_deploy_edge_site:  # undercloud/overcloud deployed, edge only
-            deploy_edge(args, director_vm)
+            deploy_edge(director_vm, node_type)
             os._exit(0)
         else:  # no edge sites, just do a normal overcloud deployment
             deploy_overcloud(director_vm)

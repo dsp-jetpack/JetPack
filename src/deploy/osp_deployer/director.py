@@ -113,17 +113,18 @@ EC2_PUBLIC_IPCIDR_PARAM = 'EC2MetadataPublicIpCidr'
 # command constants
 MGMT_ROUTE_CMD = "nmcli connection modify {} {}ipv4.routes \"{} {}\""
 MGMT_UP_CMD = "nmcli connection load {dev} && exec nmcli connection up {dev}"
-LEGACY_DEL_ROUTE_CMD = ("sed -i -e '/{cidr_esc} via {gw} dev {dev}/d' "
-                        "/etc/sysconfig/network-scripts/route-{dev}")
-LEGACY_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {dev}\" >> "
+LEGACY_DEL_ROUTE_CMD = ("sudo sed -i -e '/{cidr_esc} via {gw} dev {dev}/d' "
+                        "/etc/sysconfig/network-scripts/route-{dev}; "
+                        "sudo ip route del {cidr} via {gw} dev {dev}")
+LEGACY_ROUTE_CMD = ("sudo echo \"{cidr} via {gw} dev {dev}\" >> "
                     "/etc/sysconfig/network-scripts/route-{dev}")
 LEGACY_SSH_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {dev}\" | sudo tee -a "
                         "/etc/sysconfig/network-scripts/route-{dev}")
-ROUTE_UP_CMD = "/etc/sysconfig/network-scripts/ifup-routes {dev}"
-BR_DOWN_CMD = "/etc/sysconfig/network-scripts/ifdown-ovs ifcfg-{dev}"
-BR_UP_CMD = "/etc/sysconfig/network-scripts/ifup-ovs ifcfg-{dev}"
-IF_DOWN_CMD = "/etc/sysconfig/network-scripts/ifdown {dev}"
-IF_UP_CMD = "/etc/sysconfig/network-scripts/ifup {dev}"
+ROUTE_UP_CMD = "sudo /etc/sysconfig/network-scripts/ifup-routes {dev}"
+BR_DOWN_CMD = "sudo /etc/sysconfig/network-scripts/ifdown-ovs ifcfg-{dev}"
+BR_UP_CMD = "sudo /etc/sysconfig/network-scripts/ifup-ovs ifcfg-{dev}"
+IF_DOWN_CMD = "sudo /etc/sysconfig/network-scripts/ifdown {dev}"
+IF_UP_CMD = "sudo /etc/sysconfig/network-scripts/ifup {dev}"
 UNDERCLOUD_INSTALL_CMD = "openstack undercloud install"
 CONTAINER_IMAGE_PREPARE_CMD = "sudo openstack tripleo container image prepare"
 
@@ -1843,6 +1844,7 @@ class Director(InfraHost):
         self.update_and_upload_undercloud_conf_edge(node_type)
         self.update_undercloud([node_type])
         self.subnet_routes_edge(node_type)
+        self.controller_routes_edge(node_type)
         self.overcloud_config_download()
         self.export_control_plane_config()
         self.node_discovery_edge(node_type)
@@ -2722,6 +2724,7 @@ class Director(InfraHost):
         if add and _def_prov_route:
             _del_prov_route = LEGACY_DEL_ROUTE_CMD.format(cidr_esc=
                                                           _prov_cidr_esc,
+                                                          cidr=prov_cidr,
                                                           gw=prov_ip,
                                                           dev=CTLPLANE_BRIDGE)
             self.run_as_root(_del_prov_route)
@@ -2740,17 +2743,15 @@ class Director(InfraHost):
         if ((not _is_prov_route and add) or (_is_prov_route and not add)):
             cmds = []
             if add:
-                cmds.append(LEGACY_DEL_ROUTE_CMD)
                 cmds.append(LEGACY_ROUTE_CMD)
-                cmds.append(ROUTE_UP_CMD)
-                cmds.append(IF_DOWN_CMD.format(
-                    dev=setts.director_node.provisioning_if))
-                cmds.append(IF_UP_CMD.format(
-                    dev=setts.director_node.provisioning_if))
             else:
                 cmds.append(LEGACY_DEL_ROUTE_CMD)
-                cmds.append(BR_DOWN_CMD)
-                cmds.append(BR_UP_CMD)
+            cmds.append(ROUTE_UP_CMD)
+            cmds.append(IF_DOWN_CMD.format(
+                dev=setts.director_node.provisioning_if))
+            cmds.append(IF_UP_CMD.format(
+                dev=setts.director_node.provisioning_if))
+
             prov_cmd = "; ".join(cmds).format(cidr=prov_cidr,
                                               cidr_esc=_prov_cidr_esc,
                                               gw=prov_gw,
@@ -2761,7 +2762,6 @@ class Director(InfraHost):
         logger.info("Configuring controller routes for {}, add or "
                     "remove {!s}".format(node_type, add))
         setts = self.settings
-        # controllers = setts.controller_nodes
         _re = self.run("{} openstack server list --name {}-controller- "
                        "-c Networks -f json".format(self.source_stackrc,
                                                     setts.overcloud_name))
@@ -2784,7 +2784,7 @@ class Director(InfraHost):
                        setts.tenant_tunnel_gateway)]
 
         for ip in cntl_ips:
-            new_routes = []
+            cmds = []
             for tup in route_tups:
                 _vlan = "vlan{}".format(tup[0])
                 _route_exists = self._does_overcloud_node_route_exist(ip,
@@ -2794,12 +2794,20 @@ class Director(InfraHost):
                 logger.info("route exists: {}".format(str(_route_exists)))
 
                 if not _route_exists and add:
-                    new_routes.append(LEGACY_SSH_ROUTE_CMD.format(cidr=tup[1],
-                                                                  gw=tup[2],
-                                                                  dev=_vlan))
-                    new_routes.append("sudo " + ROUTE_UP_CMD.format(dev=_vlan))
-            if new_routes:
-                self._run_on_node(ip, "; ".join(new_routes))
+                    cmds.append(LEGACY_SSH_ROUTE_CMD.format(cidr=tup[1],
+                                                            gw=tup[2],
+                                                            dev=_vlan))
+                elif _route_exists and not add:
+                    _cidr_esc = tup[1].replace('/', '\/')
+                    cmds.append(LEGACY_DEL_ROUTE_CMD.format(
+                        cidr_esc=_cidr_esc,
+                        cidr=tup[1],
+                        gw=tup[2],
+                        dev=_vlan))
+                cmds.append(ROUTE_UP_CMD.format(dev=_vlan))
+            if cmds:
+                cmd_str = "; ".join(cmds)
+                self._run_on_node(ip, cmd_str)
 
     def restart_director_vm(self):
         setts = self.settings

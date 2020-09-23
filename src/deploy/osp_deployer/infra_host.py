@@ -176,7 +176,7 @@ class InfraHost:
         cmd = ("ssh -o StrictHostKeyChecking=no "
                "-o UserKnownHostsFile=/dev/null -o LogLevel=ERROR "
                "-o KbdInteractiveDevices=no heat-admin@{ip} "
-               "'{cmd}'".format(ip=address, cmd=command))
+               "\"{cmd}\"".format(ip=address, cmd=command))
         _res = self.run_tty(cmd)
         _does_route_exist = (len(_res[0].strip()) != 0)
         return _does_route_exist
