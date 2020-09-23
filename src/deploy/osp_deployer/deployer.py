@@ -303,8 +303,8 @@ def deploy():
         _is_undercloud_failed, _error_uc = tester.verify_undercloud_installed()
         _is_overcloud_failed, _error_oc = tester.verify_overcloud_deployed()
         if (is_deploy_edge_site and _is_undercloud_failed):
-            _is_deploy_undercloud = get_is_deploy_undercloud_and_overcloud()
-            if _is_deploy_undercloud:
+            _is_deploy_both = get_is_deploy_undercloud_and_overcloud()
+            if _is_deploy_both:
                 deploy_undercloud(settings, sah_node, tester, director_vm)
                 # recheck undercloud
                 _is_uc_failed, _err_uc = tester.verify_undercloud_installed()
@@ -326,7 +326,8 @@ def deploy():
                             "Edge sites cannot be deployed without an "
                             "existing undercloud and overcloud, exiting")
                 os._exit(0)
-        elif is_deploy_edge_site and _is_overcloud_failed:
+        elif (is_deploy_edge_site and _is_overcloud_failed
+              and not _is_undercloud_failed):
             is_deploy_overcloud = get_is_deploy_overcloud()
             if is_deploy_overcloud:
                 deploy_overcloud(director_vm)
