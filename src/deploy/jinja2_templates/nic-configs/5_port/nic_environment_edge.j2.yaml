@@ -18,10 +18,9 @@ resource_registry:
 {%- endfor %}
 
 parameter_defaults:
-  ControllerBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
-  ComputeBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
-  StorageBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
-  BondInterfaceSriovOptions: 802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+  ControllerBondInterfaceOptions: {{ControllerBondInterfaceOptions}}
+  ComputeBondInterfaceOptions: {{ComputeBondInterfaceOptions}}
+  StorageBondInterfaceOptions: {{StorageBondInterfaceOptions}}
 {%- for key, val in parameter_defaults.items() %}
   {{key}}: {{val}}
 {%- endfor %}

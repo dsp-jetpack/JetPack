@@ -2417,13 +2417,24 @@ class Director(InfraHost):
             paths = self._generate_edge_template_paths(node_type, NIC_ENV)
             stg_nic_env_path, nic_env_file = paths
             _nt_lower = self._generate_node_type_lower(node_type)
-
+            ini_nic_setts = setts.get_curated_nics_settings()
             tmplt_data = {}
-            _res_reg = tmplt_data['resource_registry'] = {}
-            _params = tmplt_data['parameter_defaults'] = {}
+            cntl_bond_opts = ini_nic_setts["ControllerBondInterfaceOptions"]
+            tmplt_data["ControllerBondInterfaceOptions"] = cntl_bond_opts
+            cmpt_bond_opts = ini_nic_setts["ComputeBondInterfaceOptions"]
+            tmplt_data["ComputeBondInterfaceOptions"] = cmpt_bond_opts
+            stor_bond_opts = ini_nic_setts["StorageBondInterfaceOptions"]
+            tmplt_data["StorageBondInterfaceOptions"] = stor_bond_opts
+            if "BondInterfaceSriovOptions" in ini_nic_setts:
+                sriov_bond_opts = ini_nic_setts["BondInterfaceSriovOptions"]
+                tmplt_data["BondInterfaceSriovOptions"] = sriov_bond_opts
+            if "BondInterfaceOvsOptions" in ini_nic_setts:
+                ovs_bond_opts = ini_nic_setts["BondInterfaceOvsOptions"]
+                tmplt_data["BondInterfaceOvsOptions"] = ovs_bond_opts
 
+            _res_reg = tmplt_data['resource_registry'] = {}
             ne_params = self._generate_nic_environment_edge(node_type)
-            _params.update(ne_params)
+            tmplt_data['parameter_defaults'] = ne_params
             role = self._generate_cc_role(node_type)
             role_nic_key = ("OS::TripleO::"
                             + role + "::Net::SoftwareConfig")
@@ -2548,7 +2559,9 @@ class Director(InfraHost):
         tmplt_data = {}
         first_boot_file = os.path.join(self.templates_dir,
                                        FIRST_BOOT + ".yaml")
-        tmplt_data["node_user_data_path"] = first_boot_file
+        tmplt_data["NodeUserData"] = first_boot_file
+        _vlan_range = "physint:{},physext".format(setts.tenant_vlan_range)
+        tmplt_data["NeutronNetworkVLANRanges"] = _vlan_range
         param_def = tmplt_data["parameter_defaults"] = {}
         role = self._generate_cc_role(node_type)
         edge_subnet = self._generate_subnet_name(node_type)

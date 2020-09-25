@@ -316,15 +316,15 @@ def deploy():
             #    delete_edge_stacks(sah_node, director_vm, settings.edge_sites)
             director_vm.delete_overcloud()
 
-        _is_overcloud_failed, _error_oc = tester.verify_overcloud_deployed()
-        if (is_deploy_edge_site and _is_overcloud_failed):
-            logger.error("Attempted to deploy edge site(s) but the "
-                         "overcloud has not been deployed, "
-                         "or failed to deploy. "
-                         "Edge sites cannot be deployed without an "
-                         "existing overcloud, exiting")
-            os._exit(0)
-        elif is_deploy_edge_site:
+        if is_deploy_edge_site:
+            _is_oc_failed, _error_oc = tester.verify_overcloud_deployed()
+            if _is_oc_failed:
+                logger.error("Attempted to deploy edge site(s) but the "
+                             "overcloud has not been deployed, "
+                             "or failed to deploy. "
+                             "Edge sites cannot be deployed without an "
+                             "existing overcloud, exiting")
+                os._exit(0)
             deploy_edge_sites(sah_node, director_vm, edge_sites)
             os._exit(0)
         else:  # no edge sites arguments, just deploy overcloud
