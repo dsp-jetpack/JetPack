@@ -29,8 +29,7 @@ logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 
 DOWNSTREAM_ATTRS = ["model", "provisioning_mac", "service_tag",
-                    "subnet", "node_type", "management_if", "private_api_if",
-                    "public_api_if", "provisioning_if"]
+                    "subnet", "node_type"]
 
 
 def parse_arguments():

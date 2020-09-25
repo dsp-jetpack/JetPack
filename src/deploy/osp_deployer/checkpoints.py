@@ -454,9 +454,11 @@ class Checkpoints:
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
-        # Oops, if director is turned off or not deployed
+        # Have to strip non-printing chars as re[0] contains newline '\n'
+        _resp = re[0].strip()
+        # If director is turned off or not deployed
         # re[0] == "host not up", handle this case by checking len(re[0])
-        is_conf = not bool(int(re[0])) if len(re[0]) == 1 else False
+        is_conf = not bool(int(_resp)) if len(_resp) == 1 else False
         if is_conf is False:
             msg = ("Overcloud RC file missing, either the overcloud has not "
                    "been deployed yet or there was an issue during "

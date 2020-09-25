@@ -24,6 +24,7 @@ from osp_deployer.sah import Sah
 from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from auto_common import Ipmi, Ssh, Scp
+from auto_common.constants import *
 from pprint import pformat
 
 logger = logging.getLogger("osp_deployer")
@@ -37,6 +38,7 @@ def setup_logging():
         os.makedirs(path)
     logging.config.fileConfig('logging.conf')
 
+
 def setup_staging():
     staging_path = '/deployment_staging'
     staging_templates_path = staging_path + "/templates"
@@ -44,6 +46,7 @@ def setup_staging():
         os.makedirs(staging_path)
     if not os.path.exists(staging_templates_path):
         os.makedirs(staging_templates_path)
+
 
 def get_settings():
     parser = argparse.ArgumentParser(
@@ -70,18 +73,21 @@ def get_settings():
                        'and run tempest.',
                        action='store_true', required=False)
     edge_group = parser.add_mutually_exclusive_group()
-    edge_group.add_argument('-l', '--list_edge_sites',
-                            help='Show list of available edge sites to deploy',
-                            action='store_true', required=False)
-    edge_group.add_argument('-e', '--edge_site',
-                            help='Deploy a single edge site defined in .ini '
-                            'and .properties. Note: if overcloud is not '
-                            'already deployed you will be prompted to deploy '
-                            'the overcloud first',
+    edge_group.add_argument('-e', '--edge_sites', nargs="+",
+                            help='Deploy edge site(s) defined in .ini '
+                            'and .properties. Note: if the overcloud is not '
+                            'already deployed you cannot deploy edge sites.',
                             required=False)
-    edge_group.add_argument('-d', '--edge_site_delete',
-                            help='Tear-down a single edge site defined in '
-                            '.ini and .properties',
+    # parser.add_argument("--foo", action="extend", nargs="+", type=str)
+    edge_group.add_argument('-a', '--edge_sites_all',
+                            help='Deploy all the edge sites defined '
+                            'in the .ini and .properties files.',
+                            action='store_true',
+                            required=False)
+    edge_group.add_argument('-l', '--list_edge_sites',
+                            help='Show a list of available edge sites to '
+                            'deploy, and their deployment status.',
+                            action='store_true',
                             required=False)
 
     args, unknown = parser.parse_known_args()
@@ -136,9 +142,15 @@ def deploy_overcloud(director_vm):
     director_vm.deploy_overcloud()
 
 
-def deploy_edge(director_vm, node_type):
+def deploy_edge(sah_node, director_vm, node_type):
     logger.info("=== Installing edge site: %s", str(node_type))
+    sah_node.subnet_routes_edge(node_type)
     director_vm.deploy_edge_site(node_type)
+
+
+def deploy_edge_sites(sah_node, director_vm, edge_sites):
+    for node_type in edge_sites:
+        deploy_edge(sah_node, director_vm, node_type)
 
 
 def delete_edge(sah_node, director_vm, node_type):
@@ -151,22 +163,9 @@ def delete_edge(sah_node, director_vm, node_type):
     sah_node.subnet_routes_edge(node_type, False)
 
 
-def get_is_deploy_overcloud():
-    _is_deploy_overcloud = False
-    _input = input("Deploy the overcloud prior to deploying edge site(s)"
-                   ", (y/N)? ")
-    if _input.lower().strip() == "y":
-        _is_deploy_overcloud = True
-    return _is_deploy_overcloud
-
-
-def get_is_deploy_undercloud_and_overcloud():
-    _is_deploy_undercloud = False
-    _input = input("Deploy the undercloud and overcloud prior to "
-                   "deploying edge site(s), (y/N)? ")
-    if _input.lower().strip() == "y":
-        _is_deploy_undercloud = True
-    return _is_deploy_undercloud
+def delete_edge_sites(sah_node, director_vm, edge_sites):
+    for site in edge_sites:
+        delete_edge(sah_node, director_vm, site)
 
 
 def deploy_undercloud(setts, sah_node, tester, director_vm):
@@ -201,19 +200,37 @@ def deploy_undercloud(setts, sah_node, tester, director_vm):
     if _is_failed:
         raise _error
 
-def list_edge_sites(settings):
-    logger.info("Available edge sites and nodes")
-    logger.info("\nEdge sites:")
-    for node_type in settings.node_types:
-        logger.info("  {}".format(node_type))
+
+def list_edge_sites(settings, director_vm):
+    logger.info("====================================")
+    logger.info("Edge sites:")
+    for node_type in settings.edge_sites:
+        stk_info = director_vm.fetch_stack_info_edge(node_type)
+        logger.info("Site Name: {}".format(node_type))
+        logger.info("Heat Stack Name: {}".format(stk_info["stack_name"]))
+        logger.info("Status: {}".format(stk_info["stack_status"]))
+        logger.info("Creation Time: {}\n".format(stk_info["creation_time"]))
     for node_type, node_type_data in settings.node_type_data_map.items():
-        logger.info("\nEdge site {} "
-                    "metadata:"
-                    "\n{}\n".format(node_type, pformat(node_type_data)))
+        logger.debug("\nEdge site {} "
+                     "metadata:"
+                     "\n{}\n".format(node_type, pformat(node_type_data)))
         nodes = settings.node_types_map[node_type]
-        logger.info("\nEdge site: {} nodes:".format(node_type))
+        logger.debug("\nEdge site: {} nodes:".format(node_type))
         for node in nodes:
-            logger.info("\n{}\n".format(pformat(node.__dict__)))
+            logger.debug("\n{}\n".format(pformat(node.__dict__)))
+
+
+def validate_edge_sites_in_settings(args, setts):
+    _sites = setts.edge_sites if args.edge_sites_all else args.edge_sites
+    _not_found = list(filter(lambda s: s not in setts.node_types_map, _sites))
+    if _not_found:
+        raise AssertionError("Could not find valid edge site(s) "
+                             "for: {}, please verify your .ini and "
+                             ".properties and try "
+                             "again".format(str(', '.join(_not_found))))
+    else:
+        return _sites
+
 
 def deploy():
     ret_code = 0
@@ -226,26 +243,21 @@ def deploy():
         settings, args = get_settings()
         director_vm = Director()
         sah_node = Sah()
-        is_deploy_edge_site = bool(args.edge_site)
-        is_delete_edge_site = bool(args.edge_site_delete)
-        logger.info("Deploying edge site(s)? %s", str(is_deploy_edge_site))
-        logger.info("Tear down edge site(s)? %s", str(is_delete_edge_site))
-        node_type = None
 
         if args.list_edge_sites:
-            list_edge_sites(settings)
+            list_edge_sites(settings, director_vm)
             os._exit(0)
 
-        # deploying or tearing down and edge site, validate arg is in ini.
-        if bool(args.edge_site) or bool(args.edge_site_delete):
-            _edge_arg = (args.edge_site if args.edge_site
-                         else args.edge_site_delete)
-            try:
-                if bool(settings.node_types_map[_edge_arg]):
-                    node_type = _edge_arg
-            except KeyError:
-                raise AssertionError("Could not find valid edge site for: %s" %
-                                     args.edge_site)
+        is_deploy_edge_site = bool(args.edge_sites) or args.edge_sites_all
+        logger.info("Deploying edge site(s)? %s", str(is_deploy_edge_site))
+        edge_sites = None
+
+        # deploying edge site(s)?, validate sites are in settings, if
+        # valid return a list of sites based on args.
+        if is_deploy_edge_site:
+            edge_sites = validate_edge_sites_in_settings(args, settings)
+
+        logger.info("Edge sites after validation: {}".format(str(edge_sites)))
 
         if args.validate_only is True:
             logger.info("Only validating ini/properties config values")
@@ -260,9 +272,6 @@ def deploy():
                     + settings.source_version.decode('utf-8'))
         tester = Checkpoints()
         tester.verify_deployer_settings()
-        if is_delete_edge_site:
-            delete_edge(sah_node, director_vm, node_type)
-            os._exit(0)
         if args.validate_only is True:
             logger.info("Settings validated")
             os._exit(0)
@@ -285,8 +294,10 @@ def deploy():
         sah_node.clear_known_hosts()
         sah_node.handle_lock_files()
 
-        if bool(args.edge_site):
-            sah_node.subnet_routes_edge(node_type)
+        # TODO: Refactored this call, keep here as temp reference if
+        # refactor breaks as this spot deployed okay
+        # if is_deploy_edge_site:
+        #    sah_node.subnet_routes_edge_sites(edge_sites)
 
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
@@ -298,60 +309,33 @@ def deploy():
         elif is_deploy_edge_site is False:
             logger.info("=== Skipped Director VM/Undercloud install")
             logger.debug("Deleting overcloud stack")
+            # TODO We should probably implement something like this
+            # To make sure the edge nodes are put in a state where
+            # re-deployment will be less likely to fail
+            # if settings.deploy_edge_sites and settings.edge_sites:
+            #    delete_edge_stacks(sah_node, director_vm, settings.edge_sites)
             director_vm.delete_overcloud()
 
-        _is_undercloud_failed, _error_uc = tester.verify_undercloud_installed()
         _is_overcloud_failed, _error_oc = tester.verify_overcloud_deployed()
-        if (is_deploy_edge_site and _is_undercloud_failed):
-            _is_deploy_both = get_is_deploy_undercloud_and_overcloud()
-            if _is_deploy_both:
-                deploy_undercloud(settings, sah_node, tester, director_vm)
-                # recheck undercloud
-                _is_uc_failed, _err_uc = tester.verify_undercloud_installed()
-                if not _is_uc_failed:
-                    deploy_overcloud(director_vm)
-                else:
-                    raise _err_uc
-
-                _is_oc_failed, _err_oc = tester.verify_overcloud_deployed()
-                if not _is_oc_failed:
-                    deploy_edge(director_vm, node_type)
-                else:
-                    raise _err_oc
-            else:
-                logger.warn("Attempted to deploy edge site(s) but the "
-                            "undercloud and overcloud are not deployed "
-                            "and the user declined to deploy "
-                            "the them first, follwed by edge site(s). "
-                            "Edge sites cannot be deployed without an "
-                            "existing undercloud and overcloud, exiting")
-                os._exit(0)
-        elif (is_deploy_edge_site and _is_overcloud_failed
-              and not _is_undercloud_failed):
-            is_deploy_overcloud = get_is_deploy_overcloud()
-            if is_deploy_overcloud:
-                deploy_overcloud(director_vm)
-                _is_oc_failed, _err_oc = tester.verify_overcloud_deployed()
-                if not _is_oc_failed:
-                    deploy_edge(director_vm, node_type)
-                else:
-                    raise _err_oc
-            else:
-                logger.warn("Attempted to deploy edge site(s) but the "
-                            "overcloud is not deployed and the user declined "
-                            "to deploy the overcloud prior to edge site(s) "
-                            "deployment. "
-                            "Edge sites cannot be deployed without an "
-                            "existing overcloud, exiting")
-                os._exit(0)
-        elif is_deploy_edge_site:  # undercloud/overcloud deployed, edge only
-            deploy_edge(director_vm, node_type)
+        if (is_deploy_edge_site and _is_overcloud_failed):
+            logger.error("Attempted to deploy edge site(s) but the "
+                         "overcloud has not been deployed, "
+                         "or failed to deploy. "
+                         "Edge sites cannot be deployed without an "
+                         "existing overcloud, exiting")
             os._exit(0)
-        else:  # no edge sites, just do a normal overcloud deployment
+        elif is_deploy_edge_site:
+            deploy_edge_sites(sah_node, director_vm, edge_sites)
+            os._exit(0)
+        else:  # no edge sites arguments, just deploy overcloud
             deploy_overcloud(director_vm)
             _is_oc_failed, _err_oc = tester.verify_overcloud_deployed()
             if _is_oc_failed:
                 raise _err_oc
+            # lastly, if there are edge sites defined in .ini
+            # and deploy_edge_sites is set to true in ini deploy the sites
+            if settings.deploy_edge_sites and settings.edge_sites:
+                deploy_edge_sites(sah_node, director_vm, settings.edge_sites)
 
         if settings.hpg_enable:
             logger.info("HugePages has been successfully configured "
@@ -388,5 +372,9 @@ def deploy():
 
 if __name__ == "__main__":
     setup_logging()
+    # setts, args = get_settings()
+    # logger.info("AAAAAAAAAAAAAAARGS: {}".format(str(args)))
+    # tester = Checkpoints()
+    # tester.verify_overcloud_deployed()
     setup_staging()
     deploy()

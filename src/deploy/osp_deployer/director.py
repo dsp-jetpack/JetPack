@@ -31,6 +31,7 @@ from infra_host import InfraHost
 from infra_host import directory_check
 from auto_common import Scp
 from auto_common.yaml_utils import OrderedLoader
+from auto_common.constants import *
 
 logger = logging.getLogger("osp_deployer")
 
@@ -50,91 +51,13 @@ OTHER_POOLS = ['.rgw.buckets',
                'default.rgw.meta',
                'metrics']
 
-CTLPLANE_BRIDGE = "br-ctlplane"
-FIRST_BOOT = "first-boot"
-SITE_NAME = "site-name"
-OVERRIDES = "overrides"
-CONTROL_PLANE_EXPORT = "control-plane-export"
-TEMPEST_CONF = 'tempest.conf'
-OVERCLOUD_PATH = 'overcloud'
-OVERCLOUD_ENVS_PATH = OVERCLOUD_PATH + '/environments'
-EDGE_COMMON_PATH = "edge_common"
-
-STAGING_PATH = '/deployment_staging'
-STAGING_TEMPLATES_PATH = STAGING_PATH + '/templates'
-NIC_CONFIGS = 'nic-configs'
-IMAGES_ENV = 'images-env'
-CONTAINERS_PREPARE_PARAM = 'containers-prepare-parameter'
-STAGING_NIC_CONFIGS = STAGING_TEMPLATES_PATH + '/' + NIC_CONFIGS
-NIC_ENV = 'nic_environment'
-NODE_PLACEMENT = 'node-placement'
-NEUTRON_OVS = 'neutron-ovs'
-DELL_ENV = 'dell-environment'
-NET_ENV = 'network-environment'
-INSTACKENV = 'instackenv'
-STATIC_IP_ENV = 'static-ip-environment'
-STATIC_VIP_ENV = 'static-vip-environment'
-ROLES_DATA = 'roles_data'
-NETWORK_DATA = 'network_data'
-NET_ISO = 'network-isolation'
-CONTROLLER = 'controller'
-DEF_COMPUTE_ROLE_FILE = 'DistributedCompute.yaml'
-DEF_COMPUTE_REMOTE_PATH = ('roles/{}'.format(DEF_COMPUTE_ROLE_FILE))
-CONTROL_PLANE_NET = ('ControlPlane', "ctlplane")
-INTERNAL_API_NET = ('InternalApi', 'internal_api')
-STORAGE_NET = ('Storage', 'storage')
-TENANT_NET = ('Tenant', 'tenant')
-EXTERNAL_NET = ('External', 'external')
-
-EDGE_NETWORKS = (INTERNAL_API_NET, STORAGE_NET,
-                 TENANT_NET, EXTERNAL_NET)
-EDGE_VLANS = ["TenantNetworkVlanID", "InternalApiNetworkVlanID",
-              "StorageNetworkVlanID"]
-
-# Jinja2 template constants
-J2_EXT = '.j2.yaml'
-NIC_ENV_EDGE_J2 = NIC_ENV + "_edge" + J2_EXT
-EDGE_COMPUTE_J2 = 'compute_edge' + J2_EXT
-CONTROLLER_J2 = CONTROLLER + J2_EXT
-NETWORK_DATA_J2 = NETWORK_DATA + J2_EXT
-NETWORK_ENV_EDGE_J2 = NET_ENV + "-edge" + J2_EXT
-DELL_ENV_EDGE_J2 = DELL_ENV + "-edge" + J2_EXT
-STATIC_IP_ENV_EDGE_J2 = STATIC_IP_ENV + "-edge" + J2_EXT
-NODE_PLACEMENT_EDGE_J2 = NODE_PLACEMENT + "-edge" + J2_EXT
-ROLES_DATA_EDGE_J2 = ROLES_DATA + "_edge" + J2_EXT
-NET_ISO_EDGE_J2 = NET_ISO + "-edge" + J2_EXT
-SITE_NAME_EDGE_J2 = SITE_NAME + "-edge" + J2_EXT
-SITE_NAME_J2 = SITE_NAME + J2_EXT
-OVERRIDES_EDGE_J2 = OVERRIDES + "-edge" + J2_EXT
-
-EC2_IPCIDR = '169.254.169.254/32'
-EC2_PUBLIC_IPCIDR_PARAM = 'EC2MetadataPublicIpCidr'
-
-# command constants
-MGMT_ROUTE_CMD = "nmcli connection modify {} {}ipv4.routes \"{} {}\""
-MGMT_UP_CMD = "nmcli connection load {dev} && exec nmcli connection up {dev}"
-LEGACY_DEL_ROUTE_CMD = ("sudo sed -i -e '/{cidr_esc} via {gw} dev {dev}/d' "
-                        "/etc/sysconfig/network-scripts/route-{dev}; "
-                        "sudo ip route del {cidr} via {gw} dev {dev}")
-LEGACY_ROUTE_CMD = ("sudo echo \"{cidr} via {gw} dev {dev}\" >> "
-                    "/etc/sysconfig/network-scripts/route-{dev}")
-LEGACY_SSH_ROUTE_CMD = ("echo \"{cidr} via {gw} dev {dev}\" | sudo tee -a "
-                        "/etc/sysconfig/network-scripts/route-{dev}")
-ROUTE_UP_CMD = "sudo /etc/sysconfig/network-scripts/ifup-routes {dev}"
-BR_DOWN_CMD = "sudo /etc/sysconfig/network-scripts/ifdown-ovs ifcfg-{dev}"
-BR_UP_CMD = "sudo /etc/sysconfig/network-scripts/ifup-ovs ifcfg-{dev}"
-IF_DOWN_CMD = "sudo /etc/sysconfig/network-scripts/ifdown {dev}"
-IF_UP_CMD = "sudo /etc/sysconfig/network-scripts/ifup {dev}"
-UNDERCLOUD_INSTALL_CMD = "openstack undercloud install"
-CONTAINER_IMAGE_PREPARE_CMD = "sudo openstack tripleo container image prepare"
-
 
 class Director(InfraHost):
 
     def __init__(self):
 
         self.settings = Settings.settings
-        logger.info("Settings.settings: %s", str(Settings.settings))
+        logger.debug("Settings.settings: %s", str(Settings.settings))
         self.user = self.settings.director_install_account_user
         self.ip = self.settings.director_node.public_api_ip
         self.provisioning_ip = self.settings.director_node.provisioning_ip
@@ -206,7 +129,8 @@ class Director(InfraHost):
         self.run('cd;tar zxvf pilot.tar.gz')
         self.render_and_upload_undercloud_conf()
 
-        #Configure containers-prepare-parameter.yaml to retrieve container images
+        # Configure containers-prepare-parameter.yaml to
+        # retrieve container images
         cmd = 'sed -i "s|[[:space:]]\+username: password|      ' + \
               self.settings.subscription_manager_user + ': ' + "'" + \
               self.settings.subscription_manager_password + "'" + \
@@ -289,6 +213,7 @@ class Director(InfraHost):
             remote_file = self.home_dir + "/instackenv.json"
             self.upload_file(setts.custom_instack_json,
                              remote_file)
+
             cmd = "sudo chown " + setts.director_install_account_user + ":" + \
                 setts.director_install_account_user + " " + remote_file
             self.run_tty(cmd)
@@ -994,7 +919,7 @@ class Director(InfraHost):
         self.upload_file(self.settings.dell_powermax_fc_cinder_yaml,
                          dell_powermax_fc_cinder_yaml)
 
-       # Backup before modifying
+        # Backup before modifying
         self.run_tty("cp " + dell_powermax_iscsi_cinder_yaml +
                      " " + dell_powermax_iscsi_cinder_yaml + ".bak")
         self.run_tty("cp " + dell_powermax_fc_cinder_yaml +
@@ -1099,6 +1024,7 @@ class Director(InfraHost):
         ]
         for cmd in cmds:
             self.run_tty(cmd)
+
     def setup_unity_cinder(self, dell_unity_cinder_yaml, \
                            dell_unity_cinder_container_yaml):
 
@@ -2251,11 +2177,11 @@ class Director(InfraHost):
         external_sub_guid = self.run_tty(external_sub_cmd)[0].rstrip()
         return external_sub_guid
 
-    def update_undercloud(self, node_types):
+    def update_undercloud(self, edge_sites):
         logging.debug("Updating undercloud...")
         tester = Checkpoints()
         subnets_to_create = []
-        for node_type in node_types:
+        for node_type in edge_sites:
             subnet = self._generate_subnet_name(node_type)
             _subnet_exists = tester.provisioning_subnet_exists(subnet)
             if _subnet_exists:
@@ -2386,7 +2312,7 @@ class Director(InfraHost):
         uconf.set('DEFAULT', 'local_ip',
                   setts.director_node.provisioning_ip + '/24')
         uconf.set('DEFAULT', 'local_interface',
-                  setts.director_node.provisioning_if)
+                  PROVISIONING_IF)
         uconf.set('DEFAULT', 'image_path', self.images_dir)
 
         _cnt_images_file = os.path.join(self.home_dir, CONTAINERS_PREPARE_PARAM
@@ -2707,7 +2633,6 @@ class Director(InfraHost):
                     "remove {!s}".format(node_type, add))
         setts = self.settings
         add_remove_mgmt = "+" if add else "-"
-        mgmt_if = setts.director_node.management_if
         node_type_data = setts.node_type_data_map[node_type]
         mgmt_gw = setts.management_gateway
         prov_gw = setts.provisioning_gateway
@@ -2731,13 +2656,13 @@ class Director(InfraHost):
             self.run_as_root(BR_DOWN_CMD.format(dev=CTLPLANE_BRIDGE))
             self.run_as_root(BR_UP_CMD.format(dev=CTLPLANE_BRIDGE))
 
-
         _is_mgmt_route = self._does_route_exist(mgmt_cidr)
         if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
 
-            self.run_as_root(MGMT_ROUTE_CMD.format(mgmt_if, add_remove_mgmt,
-                                                   mgmt_cidr, mgmt_gw))
-            self.run_as_root(MGMT_UP_CMD.format(dev=mgmt_if))
+            self.run_as_root(NWM_ROUTE_CMD.format(dev=MANAGEMENT_IF,
+                                                  add_rem=add_remove_mgmt,
+                                                  cidr=mgmt_cidr, gw=mgmt_gw))
+            self.run_as_root(NWM_UP_CMD.format(dev=MANAGEMENT_IF))
 
         _is_prov_route = self._does_route_exist(prov_cidr)
         if ((not _is_prov_route and add) or (_is_prov_route and not add)):
@@ -2748,9 +2673,9 @@ class Director(InfraHost):
                 cmds.append(LEGACY_DEL_ROUTE_CMD)
             cmds.append(ROUTE_UP_CMD)
             cmds.append(IF_DOWN_CMD.format(
-                dev=setts.director_node.provisioning_if))
+                dev=PROVISIONING_IF))
             cmds.append(IF_UP_CMD.format(
-                dev=setts.director_node.provisioning_if))
+                dev=PROVISIONING_IF))
 
             prov_cmd = "; ".join(cmds).format(cidr=prov_cidr,
                                               cidr_esc=_prov_cidr_esc,
@@ -2847,6 +2772,19 @@ class Director(InfraHost):
                + " --output-file "
                + export_file)
         self.run(cmd)
+
+    def fetch_stack_info_edge(self, node_type):
+        _stack = self._generate_node_type_lower(node_type)
+        _res = self.run(self.source_stackrc
+                        + STACK_SHOW_CMD.format(stack=_stack))
+        info = None
+        if _res[0] and len(_res[0].strip() != 0):
+            info = json.loads(_res[0])
+        else:
+            info = {"stack_name": _stack,
+                    "creation_time": "",
+                    "stack_status": "Not Deployed"}
+        return info
 
     @directory_check(STAGING_PATH)
     def _download_and_parse_undercloud_conf(self):

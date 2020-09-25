@@ -23,7 +23,6 @@ from auto_common import Ssh, Scp
 class InfraHost:
 
     def __init__(self):
-
         self.settings
         self.user
         self.ip
@@ -149,9 +148,10 @@ class InfraHost:
         return self._generate_role_lower(node_type) + '_subnet'
 
     def _generate_node_type_lower(self, node_type):
-        # should look like denveredgecompute.yaml if following existing pattern
-        nic_config_name = re.sub(r'[^a-z0-9]', "", node_type.lower())
-        return nic_config_name
+        # should look like denveredgecompute.yaml
+        # if following existing pattern
+        ntl = re.sub(r'[^a-z0-9]', "", node_type.lower())
+        return ntl
 
     def _does_route_exist(self, route):
         cmd = "ip route show {}".format(route)

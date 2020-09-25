@@ -35,7 +35,7 @@ class Settings:
 
     def __str__(self):
         settings = {}
-        settings["node_types"] = str(self.node_types)
+        settings["edge_sites"] = str(self.edge_sites)
         settings["node_type_data_map"] = str(self.node_type_data_map)
         if self.node_types_map:
             settings["node_types_map"] = {}
@@ -95,9 +95,9 @@ class Settings:
                                 stanza + "] section is deprecated and " +\
                                 "should be removed\n"
             elif self.is_valid_subnet(yourConf, stanza):
-                logger.info("Found a valid node_type_tuples "
-                            "stanza in configuration: %s",
-                            stanza)
+                logger.debug("Found a valid node_type_tuples "
+                             "stanza in configuration: %s",
+                             stanza)
             else:
                 warning_msg = warning_msg + "Section [" + stanza + \
                     "] in your ini file is deprecated" +\
@@ -658,8 +658,8 @@ class Settings:
         self.neutron_sriov_yaml = self.templates_dir + '/neutron-sriov.yaml'
 
         # New custom node type and edge related fields
-        # Advanced Settings[node_types] in ini
-        self.node_types = []
+        # Advanced Settings[edge_sites] in ini
+        self.edge_sites = []
         # node_type_data_map maps the various node types to the networking
         # attribute definitions in the .ini stanza that matches each node_type
         self.node_type_data_map = {}
@@ -668,9 +668,13 @@ class Settings:
         self.node_types_map = {}
         self.undercloud_conf = self.parse_undercloud_conf()
         # Process node types for edge sites etc
-        if ('node_types' in dev_settings
-                and len(dev_settings['node_types']) > 0):
-            self.process_node_type_settings(dev_settings['node_types'])
+        if dev_settings['deploy_edge_sites'].lower() == 'true':
+            self.deploy_edge_sites = True
+        else:
+            self.deploy_edge_sites = False
+        if ('edge_sites' in dev_settings
+                and len(dev_settings['edge_sites']) > 0):
+            self.process_node_type_settings(dev_settings['edge_sites'])
         # The NIC configurations settings are validated after the Settings
         # class has been instanciated.  Guard against the case where the two
         # fixed are missing here to prevent an exception before validation
@@ -812,8 +816,8 @@ class Settings:
                     self.node_types_map[node.node_type].append(node)
 
         Settings.settings = self
-        logger.info("Settings.settings is: %s",
-                    str(Settings.settings))
+        logger.debug("Settings.settings is: %s",
+                     str(Settings.settings))
 
     def get_curated_nics_settings(self):
         nics_settings = self.get_nics_settings()
@@ -857,10 +861,10 @@ class Settings:
                          " pick source version info")
             self.source_version = "????"
 
-    def process_node_type_settings(self, node_types):
-        self.node_types = (list(map(str.strip, node_types.split(','))))
-        logger.debug("Node types: %s", str(self.node_types))
-        for node_type in self.node_types:
+    def process_node_type_settings(self, edge_sites):
+        self.edge_sites = (list(map(str.strip, edge_sites.split(','))))
+        logger.debug("Edge sites: %s", str(self.edge_sites))
+        for node_type in self.edge_sites:
             # if we have ini section name that mathes node type
             # this is edge an site subnet definition to be injected into
             # undercloud.com
@@ -877,11 +881,11 @@ class Settings:
         return undercloud_conf
 
     def is_valid_subnet(self, conf, stanza):
-        if conf.has_option('Advanced Settings', 'node_types'):
-            node_types = (
+        if conf.has_option('Advanced Settings', 'edge_sites'):
+            edge_sites = (
                 list(map(str.strip, conf.get('Advanced Settings',
-                                             'node_types').split(','))))
-            if stanza in node_types and conf.has_section(stanza):
+                                             'edge_sites').split(','))))
+            if stanza in edge_sites and conf.has_section(stanza):
                 return True
         return False
 

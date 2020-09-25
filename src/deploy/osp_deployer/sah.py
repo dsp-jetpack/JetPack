@@ -18,6 +18,7 @@ from osp_deployer.settings.config import Settings
 from osp_deployer.checkpoints import Checkpoints
 from .infra_host import InfraHost
 from auto_common import Scp, Ssh, FileHelper
+from auto_common.constants import *
 import logging
 import time
 import shutil
@@ -28,12 +29,6 @@ import re
 logger = logging.getLogger("osp_deployer")
 
 exitFlag = 0
-MGMT_BRIDGE = "br-mgmt"
-PROV_BRIDGE = "br-prov"
-
-NWM_ROUTE_CMD = ("nmcli connection modify {conn} {add_rem}ipv4.routes "
-                 "\"{cidr} {gw}\"")
-NWM_UP_CMD = "nmcli connection load {dev} && exec nmcli device reapply {dev}"
 
 
 class Sah(InfraHost):
@@ -352,22 +347,22 @@ class Sah(InfraHost):
         conf = conf + ("# Iface     IP"
                        + "               NETMASK"
                        + "              MTU",)
-        conf = conf + (self.settings.director_node.public_api_if
+        conf = conf + (PUBLIC_API_IF
                        + "        "
                        + self.settings.director_node.public_api_ip
                        + "    " + self.settings.public_api_netmask
                        + "     " + self.settings.public_api_network_mtu,)
-        conf = conf + (self.settings.director_node.provisioning_if
+        conf = conf + (PROVISIONING_IF
                        + "        "
                        + self.settings.director_node.provisioning_ip
                        + "    " + self.settings.provisioning_netmask
                        + "     " + self.settings.provisioning_network_mtu,)
-        conf = conf + (self.settings.director_node.management_if
+        conf = conf + (MANAGEMENT_IF
                        + "        "
                        + self.settings.director_node.management_ip
                        + "    " + self.settings.management_netmask
                        + "     " + self.settings.management_network_mtu,)
-        conf = conf + (self.settings.director_node.private_api_if
+        conf = conf + (PRIVATE_API_IF
                        + "        "
                        + self.settings.director_node.private_api_ip
                        + "    " + self.settings.private_api_netmask
@@ -427,6 +422,7 @@ class Sah(InfraHost):
         for cmd in cmds:
             self.run_as_root(cmd)
 
+
     def subnet_routes_edge(self, node_type, add=True):
         """
         Example nmcli command:
@@ -441,11 +437,11 @@ class Sah(InfraHost):
         prov_cidr = node_type_data['cidr']
         add_remove = "+" if add else "-"
 
-        mgmt_cmd = NWM_ROUTE_CMD.format(conn=MGMT_BRIDGE,
+        mgmt_cmd = NWM_ROUTE_CMD.format(dev=MGMT_BRIDGE,
                                         add_rem=add_remove,
                                         cidr=mgmt_cidr,
                                         gw=setts.management_gateway)
-        prov_cmd = NWM_ROUTE_CMD.format(conn=PROV_BRIDGE,
+        prov_cmd = NWM_ROUTE_CMD.format(dev=PROV_BRIDGE,
                                         add_rem=add_remove,
                                         cidr=prov_cidr,
                                         gw=setts.provisioning_gateway)

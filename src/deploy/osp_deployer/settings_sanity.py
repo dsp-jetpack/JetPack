@@ -415,11 +415,7 @@ class DeployerSanity:
                                 'provisioning_ip',
                                 'management_ip',
                                 'public_api_ip',
-                                'private_api_ip',
-                                'provisioning_if',
-                                'management_if',
-                                'public_api_if',
-                                'private_api_if']
+                                'private_api_ip']
 
         shouldbbevalidips = ['provisioning_ip',
                              'management_ip',
