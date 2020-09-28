@@ -2791,7 +2791,7 @@ class Director(InfraHost):
         _res = self.run(self.source_stackrc
                         + STACK_SHOW_CMD.format(stack=_stack))
         info = None
-        if _res[0] and len(_res[0].strip() != 0):
+        if _res[0] and len(_res[0].strip()) != 0:
             info = json.loads(_res[0])
         else:
             info = {"stack_name": _stack,
