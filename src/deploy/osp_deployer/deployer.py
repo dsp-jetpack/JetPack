@@ -294,11 +294,6 @@ def deploy():
         sah_node.clear_known_hosts()
         sah_node.handle_lock_files()
 
-        # TODO: Refactored this call, keep here as temp reference if
-        # refactor breaks as this spot deployed okay
-        # if is_deploy_edge_site:
-        #    sah_node.subnet_routes_edge_sites(edge_sites)
-
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
         sah_node.enable_chrony_ports()
@@ -372,9 +367,5 @@ def deploy():
 
 if __name__ == "__main__":
     setup_logging()
-    # setts, args = get_settings()
-    # logger.info("AAAAAAAAAAAAAAARGS: {}".format(str(args)))
-    # tester = Checkpoints()
-    # tester.verify_overcloud_deployed()
     setup_staging()
     deploy()
