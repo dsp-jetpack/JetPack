@@ -251,21 +251,23 @@
          }
       },
       {
-       "Storage back-end Settings":{
+         "Storage back-end Settings":{
             "unity_storage_protocol" : {
-                  "valid_values": [
+               "valid_values": [
                   "iSCSI",
                   "FC"
-            }
-       },
-      {
-         "PowerFlex Settings": {
-            "enable_powerflex_backend": {
-               "valid_values": [
-                  "true",
-                  "false"
                ]
             },
+            "powermax_protocol" : {
+               "valid_values": [
+                  "iSCSI",
+                  "FC"
+               ]
+            } 
+         }
+      },
+      {
+         "PowerFlex Settings": {
             "powerflex_rpms_method": {
                "valid_values": [
                   "local",
@@ -279,7 +281,7 @@
             },
             "powerflex_cluster_vip": {
                "validate": [
-                  "should_be_valid_ip"
+                 "should_be_valid_ip"
                ]
             }
          }
