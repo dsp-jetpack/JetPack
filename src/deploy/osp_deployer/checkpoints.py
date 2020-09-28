@@ -260,26 +260,27 @@ class Checkpoints:
                 "Director VM cannot ping idrac network (ip) : " + test)
 
     def verify_nodes_registered_in_ironic(self, node_type=None):
-        logger.debug("Verify the expected amount of nodes imported in ironic")
-        cmd = "source ~/stackrc;openstack baremetal node list | grep None"
+        logger.debug("Verify the expected nodes imported in ironic")
+
+        cmd = ("source ~/stackrc; openstack baremetal node list "
+               "--long -c UUID -c 'Driver Info' -f json")
         setts = self.settings
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
-        ls_nodes = re[0].split("\n")
-        ls_nodes.pop()
-        expected_nodes = (len(setts.controller_nodes)
-                          + len(setts.compute_nodes)
-                          + len(setts.ceph_nodes)
-                          + len(setts.computehci_nodes))
-        # hack, checking we have at least the correct number of core nodes
-        # TODO, we should get more specific for core node validation
-        if len(ls_nodes) < expected_nodes:
+        ls_nodes = json.loads(re[0])
+        drac_addresses = list(map(lambda _n: _n["Driver Info"]["drac_address"],
+                                  ls_nodes))
+
+        missing = list(filter(lambda x: x.idrac_ip not in drac_addresses,
+                              setts.all_overcloud_nodes))
+
+        if missing:
             raise AssertionError(
-                "Expected amount of nodes registered in Ironic "
-                "does not add up "
-                + str(len(ls_nodes)) + "/" + str(expected_nodes))
+                "The following {:d} overcloud nodes defined in the "
+                ".properties were not found in the ironic "
+                "database {}".format(len(missing), str(missing)))
         if node_type:
             self.verify_nodes_registered_in_ironic_edge(node_type)
 

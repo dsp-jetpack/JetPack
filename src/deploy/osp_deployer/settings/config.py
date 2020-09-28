@@ -729,6 +729,7 @@ class Settings:
         self.compute_nodes = []
         self.computehci_nodes = []
         self.ceph_nodes = []
+        self.all_overcloud_nodes = []
         self.switches = []
         self.nodes = []
         with open(self.network_conf) as config_file:
@@ -814,6 +815,10 @@ class Settings:
                     if node.node_type not in self.node_types_map:
                         self.node_types_map[node.node_type] = []
                     self.node_types_map[node.node_type].append(node)
+        self.all_overcloud_nodes = [*self.controller_nodes,
+                                    *self.compute_nodes,
+                                    *self.ceph_nodes,
+                                    *self.computehci_nodes]
 
         Settings.settings = self
         logger.debug("Settings.settings is: %s",
