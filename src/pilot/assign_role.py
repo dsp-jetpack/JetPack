@@ -776,6 +776,8 @@ def configure_raid(ironic_client, node_uuid, super_role, os_volume_size_gb,
     ironic_client.node.wait_for_provision_state(node_uuid, 'manageable')
     LOG.info("Completed deletion of the existing RAID configuration")
 
+    # Work around the bugs in the ironic DRAC driver's RAID clean steps.
+
     target_raid_config = define_target_raid_config(
         super_role, drac_client)
 
@@ -788,6 +790,7 @@ def configure_raid(ironic_client, node_uuid, super_role, os_volume_size_gb,
 
     # Set the target RAID configuration on the ironic node.
     ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
+
 
     LOG.info("Applying the new RAID configuration")
     clean_steps = [{'interface': 'raid', 'step': 'create_configuration'}]
@@ -843,19 +846,16 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
     if role_index.index:
         role = "node:{}-{}".format(flavor, role_index.index)
 
-    if 'capabilities' in node.properties:
-        value = "{},{},boot_mode:uefi,boot_option:local".format(role, node.properties['capabilities'])
-        LOG.info(str(node.properties))
-        LOG.info(str(value))
-    else:
-        value = "{},boot_option:local".format(role)
-        LOG.info("..!")
+    value = "{},{},boot_mode:uefi,boot_option:local".format(role, node.properties['capabilities'])
+    LOG.info(str(node.properties))
+    LOG.info(str(value))
 
     patch = [{'op': 'add',
               'value': value,
               'path': '/properties/capabilities'}]
     ironic_client.node.update(node_uuid, patch)
     LOG.info(str(patch))
+
 
 
 def generate_osd_config(ip_mac_service_tag, drac_client):
@@ -964,7 +964,6 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
         fcntl.flock(stream, fcntl.LOCK_UN)
         stream.close()
 
-
 def get_drives(drac_client):
 
     spinners = []
@@ -1033,7 +1032,6 @@ def get_drives(drac_client):
 
     return spinners, ssds, nvme_drives
 
-
 def generate_osd_config_without_journals(controllers, drives):
 
     osd_config = {
@@ -1060,7 +1058,6 @@ def generate_osd_config_without_journals(controllers, drives):
             osd_config['devices'].append(drive_device_name)
     return osd_config
 
-
 # This method can be called with either physical or virtual disk.
 # Only physical disks can be NVMe drives, and only physical disks
 # have attribute named 'device_protocol'. As a result, the method
@@ -1069,7 +1066,6 @@ def is_nvme_drive(disk):
         return True\
             if hasattr(disk, "device_protocol") and disk.device_protocol and\
             disk.device_protocol.startswith("NVMe") else False
-
 
 def get_by_path_nvme_device_name(physical_disk):
         bus = physical_disk.bus.lower()
@@ -1101,6 +1097,8 @@ def get_by_path_device_name(physical_disk, controllers, ref_sas):
                     '{pci_bus_number}:00.0-sas-exp0x{sas_address}ff-phy{dindex}-lun-0').format(
                 pci_bus_number=pci_bus_number,
                 sas_address=ref_sas, dindex=disk_index)
+
+
 
 
 def get_pci_bus_number(controller):
@@ -1317,6 +1315,8 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                             "as the RAID.  Unable to specify the OS disk to "
                             "Ironic.".format(fqdd, physical_disk_size_gb))
 
+
+
     if os_volume_size_gb is not None:
         # If os_volume_size_gb was specified then just blindly use that
         raid_size_gb = os_volume_size_gb
@@ -1510,3 +1510,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

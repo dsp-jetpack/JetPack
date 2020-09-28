@@ -376,7 +376,6 @@ for container in "ironic_pxe_tftp"  "ironic_conductor" "ironic_api" ;
 #    aggressively.
 echo
 echo "## Patching ironic.conf..."
-apply_patch "sudo patch -b -s /var/lib/config-data/puppet-generated/ironic_api/etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
 apply_patch "sudo patch -b -s /var/lib/config-data/puppet-generated//ironic/etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
 echo "## Done."
 
