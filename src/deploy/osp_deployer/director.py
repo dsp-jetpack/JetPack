@@ -2729,7 +2729,6 @@ class Director(InfraHost):
                                                                       tup[1],
                                                                       tup[2],
                                                                       _vlan)
-                logger.info("route exists: {}".format(str(_route_exists)))
 
                 if not _route_exists and add:
                     cmds.append(LEGACY_SSH_ROUTE_CMD.format(cidr=tup[1],
