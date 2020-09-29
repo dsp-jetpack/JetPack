@@ -1825,7 +1825,7 @@ class Director(InfraHost):
         stack_delete_re = self.run_tty(self.source_stackrc
                                        + "openstack stack delete --yes --wait "
                                        + stack_name)
-        logger.info("stack delete response: "
+        logger.info("Stack delete response: "
                     "{}".format(str(stack_delete_re)))
         re = self.run_tty(self.source_stackrc
                           + "openstack baremetal node list --fields "

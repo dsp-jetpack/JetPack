@@ -144,6 +144,11 @@ def deploy_overcloud(director_vm):
 
 def deploy_edge(sah_node, director_vm, node_type):
     logger.info("=== Installing edge site: %s", str(node_type))
+    # if edge site is deployed delete the stack and baremetal nodes first
+    # then re-deploy it.
+    stk_info = director_vm.fetch_stack_info_edge(node_type)
+    if stk_info["stack_status"] != "Not Deployed":
+        delete_edge(sah_node, director_vm, node_type)
     sah_node.subnet_routes_edge(node_type)
     director_vm.deploy_edge_site(node_type)
 
@@ -243,6 +248,9 @@ def deploy():
         settings, args = get_settings()
         director_vm = Director()
         sah_node = Sah()
+        # director_vm.setup_environment_edge("edge-compute-boston")
+        # logger.debug("iiiiiiiiiiiiiiiiiiiiiiiiii ooooo")
+        # os._exit(0)
 
         if args.list_edge_sites:
             list_edge_sites(settings, director_vm)
@@ -304,11 +312,6 @@ def deploy():
         elif is_deploy_edge_site is False:
             logger.info("=== Skipped Director VM/Undercloud install")
             logger.debug("Deleting overcloud stack")
-            # TODO We should probably implement something like this
-            # To make sure the edge nodes are put in a state where
-            # re-deployment will be less likely to fail
-            # if settings.deploy_edge_sites and settings.edge_sites:
-            #    delete_edge_stacks(sah_node, director_vm, settings.edge_sites)
             director_vm.delete_overcloud()
 
         if is_deploy_edge_site:
