@@ -220,11 +220,16 @@ elif [ ! -z "${proxy}" ]; then
 fi
 
 echo
-if [ -n "${overcloud_nodes_pwd}" ]; then
-    echo "# Setting overcloud nodes password"
+
+if [ -n "${overcloud_nodes_pwd}" ] || [ ${enable_powerflex} == 1 ]; then
+    echo "# Overcloud customizatin required, Installing libguestfs-tools"
     run_command "sudo dnf install -y libguestfs-tools"
     run_command "sudo service libvirtd start"
     run_command "export LIBGUESTFS_BACKEND=direct"
+fi
+    
+if [ -n "${overcloud_nodes_pwd}" ]; then
+    echo "# Setting overcloud nodes password"
     run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
 fi
 
