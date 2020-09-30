@@ -778,32 +778,6 @@ def configure_raid(ironic_client, node_uuid, super_role, os_volume_size_gb,
 
     # Work around the bugs in the ironic DRAC driver's RAID clean steps.
 
-    '''TODO: After the upstream bugs have been resolved, remove the
-    workarounds.'''
-
-    '''TODO: Workaround 1:
-    Reset the RAID controller to delete all virtual disks and unassign
-    all hot spare physical disks.'''
-
-    '''TODO: Workaround 2:
-    Prepare any foreign physical disks for inclusion in the local RAID
-    configuration.'''
-
-    # Workaround 3:
-    # Attempt to convert all of the node's physical disks to JBOD mode.
-    # This may succeed or fail. A controller's capability to do that, or
-    # lack thereof, has no bearing on success or failure.
-    LOG.info("Converting all physical disks to JBOD mode")
-    succeeded = change_physical_disk_state_wait(
-        node_uuid, ironic_client, drac_client, 'JBOD')
-
-    if succeeded:
-        LOG.info("Completed converting all physical disks to JBOD mode")
-    else:
-        LOG.critical("Attempt to convert all physical disks to JBOD mode "
-                     "failed")
-        return False
-
     target_raid_config = define_target_raid_config(
         super_role, drac_client)
 
@@ -817,35 +791,6 @@ def configure_raid(ironic_client, node_uuid, super_role, os_volume_size_gb,
     # Set the target RAID configuration on the ironic node.
     ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
 
-    # Workaround 4:
-    # Attempt to convert all of the physical disks in the target RAID
-    # configuration to RAID mode. This may succeed or fail. A
-    # controller's capability to do that, or lack thereof, has no
-    # bearing on success or failure.
-    controllers_to_physical_disk_ids = defaultdict(list)
-
-    for logical_disk in target_raid_config['logical_disks']:
-        # Not applicable to JBOD logical disks.
-        if logical_disk['raid_level'] == 'JBOD':
-            continue
-
-        for physical_disk_name in logical_disk['physical_disks']:
-            controllers_to_physical_disk_ids[
-                logical_disk['controller']].append(physical_disk_name)
-
-    LOG.info("Converting physical disks configured to back RAID logical disks "
-             "to RAID mode")
-    succeeded = change_physical_disk_state_wait(
-        node_uuid, ironic_client, drac_client, 'RAID',
-        controllers_to_physical_disk_ids)
-
-    if succeeded:
-        LOG.info("Completed converting physical disks configured to back RAID "
-                 "logical disks to RAID mode")
-    else:
-        LOG.critical("Attempt to convert physical disks configured to back "
-                     "RAID logical disks to RAID mode failed")
-        return False
 
     LOG.info("Applying the new RAID configuration")
     clean_steps = [{'interface': 'raid', 'step': 'create_configuration'}]
@@ -882,7 +827,7 @@ def place_node_in_available_state(ironic_client, node_uuid):
     ironic_client.node.wait_for_provision_state(node_uuid, 'available')
 
 
-def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
+def assign_role(ip_mac_service_tag, node_uuid, role_index,
                 ironic_client, drac_client):
     if role_index.role not in ROLES.keys():
         flavor = role_index.role
@@ -901,26 +846,16 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
     if role_index.index:
         role = "node:{}-{}".format(flavor, role_index.index)
 
-    if 'capabilities' in node.properties:
-        value = "{},{},boot_mode:uefi,boot_option:local".format(role, node.properties['capabilities'])
-        LOG.info(str(node.properties))
-        LOG.info(str(value))
-    else:
-        value = "{},boot_option:local".format(role)
-        LOG.info("..!")
+    value = "{},{},boot_mode:uefi,boot_option:local".format(role, node.properties['capabilities'])
+    LOG.info(str(node.properties))
+    LOG.info(str(value))
 
     patch = [{'op': 'add',
               'value': value,
               'path': '/properties/capabilities'}]
     ironic_client.node.update(node_uuid, patch)
     LOG.info(str(patch))
-    # Select the volume for the OS to be installed on
-    select_os_volume(os_volume_size_gb, ironic_client, drac_client,
-                     node_uuid)
 
-    # Generate Ceph OSD/journal configuration for storage nodes
-    if flavor == "ceph-storage" or flavor =="computehci":
-        generate_osd_config(ip_mac_service_tag, drac_client)
 
 
 def generate_osd_config(ip_mac_service_tag, drac_client):
@@ -1478,52 +1413,6 @@ def ensure_node_is_powered_off(drac_client):
         drac_client.set_power_state(POWER_OFF)
 
 
-def change_physical_disk_state_wait(
-        node_uuid, ironic_client, drac_client, mode,
-        controllers_to_physical_disk_ids=None):
-
-    change_state_result = drac_client.change_physical_disk_state(
-        mode, controllers_to_physical_disk_ids)
-
-    job_ids = []
-    is_reboot_required = False
-    # Remove the line below to turn back on realtime conversion
-    is_reboot_required = True
-    conversion_results = change_state_result['conversion_results']
-    for controller_id in conversion_results.keys():
-        controller_result = conversion_results[controller_id]
-
-        if controller_result['is_reboot_required'] == RebootRequired.true:
-            is_reboot_required = True
-
-        if controller_result['is_commit_required']:
-            realtime = controller_result['is_reboot_required'] == \
-                RebootRequired.optional
-            # Remove the line below to turn back on realtime conversion
-            realtime = False
-            job_id = drac_client.commit_pending_raid_changes(
-                controller_id,
-                reboot=False,
-                start_time=None,
-                realtime=realtime)
-            job_ids.append(job_id)
-
-    result = True
-    if job_ids:
-        if is_reboot_required:
-            LOG.debug("Rebooting the node to apply configuration")
-            job_id = drac_client.create_reboot_job()
-            job_ids.append(job_id)
-
-        drac_client.schedule_job_execution(job_ids, start_time='TIME_NOW')
-
-        LOG.info("Waiting for physical disk conversion to complete")
-        JobHelper.wait_for_job_completions(ironic_client, node_uuid)
-        result = JobHelper.determine_job_outcomes(drac_client, job_ids)
-
-    return result
-
-
 def main():
 
     try:
@@ -1554,7 +1443,12 @@ def main():
         super_role = args.role_index.role
         if super_role not in ROLES.keys():
             super_role = 'compute'
-
+        assign_role(
+            args.ip_mac_service_tag,
+            node.uuid,
+            args.role_index,
+            ironic_client,
+            drac_client)
         if node.driver == "idrac":
             bios_settings = calculate_bios_settings(
                 super_role,
@@ -1588,13 +1482,16 @@ def main():
                     sys.exit(1)
             else:
                 LOG.info("Skipping BIOS configuration")
-        assign_role(
-            args.ip_mac_service_tag,
-            node.uuid,
-            args.role_index,
-            args.os_volume_size_gb,
-            ironic_client,
-            drac_client)
+        # Select the volume for the OS to be installed on
+        select_os_volume(args.os_volume_size_gb, ironic_client, drac_client,
+                         node.uuid)
+        if args.role_index.role not in ROLES.keys():
+            flavor = args.role_index.role
+        else:
+            flavor = ROLES[args.role_index.role]
+        # Generate Ceph OSD/journal configuration for storage nodes
+        if flavor == "ceph-storage" or flavor == "computehci":
+            generate_osd_config(args.ip_mac_service_tag, drac_client)
 
     except (DRACOperationFailed, DRACUnexpectedReturnValue,
             InternalServerError, KeyError, TypeError, ValueError,
@@ -1613,3 +1510,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
