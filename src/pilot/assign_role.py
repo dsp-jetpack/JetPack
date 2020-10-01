@@ -828,7 +828,7 @@ def place_node_in_available_state(ironic_client, node_uuid):
 
 
 def assign_role(ip_mac_service_tag, node_uuid, role_index,
-                ironic_client, drac_client):
+                ironic_client):
     if role_index.role not in ROLES.keys():
         flavor = role_index.role
     else:
