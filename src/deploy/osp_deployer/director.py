@@ -862,6 +862,31 @@ class Director(InfraHost):
             # need below for multi stack support
             'sed -i "s|overcloud_stack_name=.*|overcloud_stack_name=' +
             self.settings.overcloud_name +
+            '|" pilot/deployment-validation/sanity.ini',
+            # Share Storage Support
+            'sed -i "s|share_storage_network=.*|share_storage_network=' +
+            self.settings.share_storage_network +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|share_storage_network_start_ip=.*|' +
+            'share_storage_network_start_ip=' +
+            self.settings.share_storage_network_start_ip +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|share_storage_network_end_ip=.*|' +
+            'share_storage_network_end_ip=' +
+            self.settings.share_storage_network_end_ip +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|share_storage_network_gateway=.*|'
+            'share_storage_network_gateway=' +
+            self.settings.share_storage_network_gateway +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|share_storage_network_vlan=.*|share_storage_network_vlan=' +
+            self.settings.share_storage_network_vlan +
+            '|" pilot/deployment-validation/sanity.ini',
+           'sed -i "s|share_storage_network_name=.*|share_storage_network_name=' +
+            self.settings.share_storage_network_name +
+            '|" pilot/deployment-validation/sanity.ini',
+           'sed -i "s|share_storage_subnet_name=.*|share_storage_subnet_name=' +
+            self.settings.share_storage_subnet_name +
             '|" pilot/deployment-validation/sanity.ini'
         ]
         for cmd in cmds:

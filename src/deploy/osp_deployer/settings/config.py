@@ -514,6 +514,19 @@ class Settings:
         self.sanity_image_url = sanity_settings['sanity_image_url']
         self.sanity_vlantest_network = \
             sanity_settings['sanity_vlantest_network']
+        self.share_storage_network = sanity_settings['share_storage_network']
+        self.share_storage_network_start_ip = \
+            sanity_settings['share_storage_network_start_ip']
+        self.share_storage_network_end_ip = \
+            sanity_settings['share_storage_network_end_ip']
+        self.share_storage_network_gateway = \
+            sanity_settings['share_storage_network_gateway']
+        self.share_storage_network_vlan = \
+            sanity_settings['share_storage_network_vlan']
+        self.share_storage_network_name = \
+            sanity_settings['share_storage_network_name']
+        self.share_storage_subnet_name = \
+            sanity_settings['share_storage_subnet_name']
         if sanity_settings['run_sanity'].lower() == 'true':
             self.run_sanity = True
         else:
