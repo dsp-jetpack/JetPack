@@ -480,8 +480,6 @@ class Settings:
                 powerflex_settings['powerflex_cluster_vip']
             self.powerflex_rebuild_interface = \
                 powerflex_settings['powerflex_rebuild_interface']
-            self.powerflex_disks = \
-                powerflex_settings['powerflex_disks']
             self.powerflex_password = \
                 powerflex_settings['powerflex_password']
             self.powerflex_lia_token = \

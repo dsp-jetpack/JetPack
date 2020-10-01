@@ -1270,9 +1270,6 @@ class Director(InfraHost):
                 'sed -i "s|<powerflex_rebuild_interface>|' +
                 self.settings.powerflex_rebuild_interface +
                 '|" ' + powerflex_ansible_yaml,
-                'sed -i "s|<powerflex_disks>|' +
-                self.settings.powerflex_disks +
-                '|" ' + powerflex_ansible_yaml,
                 'sed -i "s|<powerflex_password>|' +
                 self.settings.powerflex_password +
                 '|" ' + powerflex_ansible_yaml,
