@@ -277,8 +277,8 @@ class Director(InfraHost):
                 " to the number of nodes defined in .properties file")
 
         if setts.use_ipmi_driver is True:
-            logger.debug("Using pxe_ipmi driver")
-            cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ~/instackenv.json'
+            logger.debug("Using ipmi driver")
+            cmd = 'sed -i "s|idrac|ipmi|" ~/instackenv.json'
             self.run_tty(cmd)
 
     def node_discovery_edge(self, node_type):
