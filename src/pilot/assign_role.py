@@ -829,6 +829,7 @@ def place_node_in_available_state(ironic_client, node_uuid):
 
 def assign_role(ip_mac_service_tag, node_uuid, role_index,
                 ironic_client):
+
     if role_index.role not in ROLES.keys():
         flavor = role_index.role
     else:
@@ -844,37 +845,16 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
     _role = ({"node": "{}-{}".format(flavor, role_index.index)}
              if _is_index else {"profile": flavor})
 
-    if 'capabilities' in node.properties:
-        _caps = (dict(item.split(":")
-                      for item in node.properties['capabilities'].split(",")))
-        # delete any existing node roles (will either be node or
-        # profile capabilities)
-        _caps.pop("node", None)
-        _caps.pop("profile", None)
-        _caps.update(_role)
-        _caps["boot_mode"] = "uefi"
-        _caps["boot_option"] = "local"
-
-        _op = "replace"
-        LOG.info(str(node.properties))
-        LOG.info(str(_caps))
-    else:
-        _caps = {"boot_option": "local"}
-        _caps.update(_role)
-        _op = "add"
-
-    # convert dict to "key:value,..." list
-    value = ",".join(['%s:%s' % (key, value)
-                      for (key, value) in _caps.items()])
+    value = ("{},{},boot_mode:uefi,boot_option:"
+             "local".format(_role, node.properties['capabilities']))
     LOG.info(str(node.properties))
     LOG.info(str(value))
 
-    patch = [{'op': _op,
+    patch = [{'op': 'add',
               'value': value,
               'path': '/properties/capabilities'}]
     ironic_client.node.update(node_uuid, patch)
     LOG.info(str(patch))
-
 
 
 def generate_osd_config(ip_mac_service_tag, drac_client):
@@ -1466,8 +1446,7 @@ def main():
             args.ip_mac_service_tag,
             node.uuid,
             args.role_index,
-            ironic_client,
-            drac_client)
+            ironic_client)
         if node.driver == "idrac":
             bios_settings = calculate_bios_settings(
                 super_role,
