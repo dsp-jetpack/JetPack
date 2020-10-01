@@ -843,8 +843,29 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
     _is_index = True if bool(role_index.index) else False
     _role = ({"node": "{}-{}".format(flavor, role_index.index)}
              if _is_index else {"profile": flavor})
-    
-    value = "{},{},boot_mode:uefi,boot_option:local".format(role, node.properties['capabilities'])
+
+    if 'capabilities' in node.properties:
+        _caps = (dict(item.split(":")
+                      for item in node.properties['capabilities'].split(",")))
+        # delete any existing node roles (will either be node or
+        # profile capabilities)
+        _caps.pop("node", None)
+        _caps.pop("profile", None)
+        _caps.update(_role)
+        _caps["boot_mode"] = "uefi"
+        _caps["boot_option"] = "local"
+
+        _op = "replace"
+        LOG.info(str(node.properties))
+        LOG.info(str(_caps))
+    else:
+        _caps = {"boot_option": "local"}
+        _caps.update(_role)
+        _op = "add"
+
+    # convert dict to "key:value,..." list
+    value = ",".join(['%s:%s' % (key, value)
+                      for (key, value) in _caps.items()])
     LOG.info(str(node.properties))
     LOG.info(str(value))
 
@@ -1508,4 +1529,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
