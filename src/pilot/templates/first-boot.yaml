@@ -37,7 +37,7 @@ resources:
     properties:
       config: |
         #!/bin/bash
-        if [[ $HOSTNAME =~ "cephstorage" ]] || [[ $HOSTNAME =~ "computehci" ]]; then
+        if [[ $HOSTNAME =~ "storage" ]] || [[ $HOSTNAME =~ "computehci" ]]; then
         {
           # LVM partitions are always in use by the kernel.  Destroy all of the
           # LVM components here so the disks are not in use and sgdisk and

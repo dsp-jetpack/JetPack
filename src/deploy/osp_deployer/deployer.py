@@ -24,6 +24,7 @@ from osp_deployer.sah import Sah
 from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from auto_common import Ipmi, Ssh, Scp
+from osp_deployer.powerflexgw import Powerflexgw
 
 logger = logging.getLogger("osp_deployer")
 
@@ -133,6 +134,7 @@ def deploy():
             director_vm.configure_tempest()
             os._exit(0)
 
+
         # mutually exclusive command, run tempest and quit.
         if args.run_tempest_only:
             logger.info("Only running tempest, will configure "
@@ -148,7 +150,10 @@ def deploy():
             sah_node.create_subnet_routes_edge()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
+        sah_node.upload_powerflex_scripts()
         sah_node.enable_chrony_ports()
+
+
 
         director_ip = settings.director_node.public_api_ip
         if args.overcloud_only is False:
@@ -160,9 +165,23 @@ def deploy():
                                 "root",
                                 settings.director_node.root_password,
                                 "subscription-manager unregister")
+            logger.info("=== deleting any existing director vm")
             sah_node.delete_director_vm()
+            if len(settings.powerflex_nodes) > 0:
+                powerflexgw_ip = settings.powerflexgw_vm.public_api_ip
+                Ssh.execute_command(powerflexgw_ip,
+                                    "root",
+                                    settings.powerflexgw_vm.root_password,
+                                    "subscription-manager remove --all")
+                Ssh.execute_command(powerflexgw_ip,
+                                    "root",
+                                    settings.powerflexgw_vm.root_password,
+                                    "subscription-manager unregister")
+                logger.info("=== deleting any existing powerflex gateway vm")
+                sah_node.delete_powerflexgw_vm()
 
-            logger.info("=== create the director vm")
+
+            logger.info("=== creating the director vm")
             sah_node.create_director_vm()
             tester.director_vm_health_check()
 
@@ -247,6 +266,24 @@ def deploy():
 
         run_tempest()
 
+        if len(settings.powerflex_nodes) > 0:
+            powerflexgw_vm = Powerflexgw()
+            logger.info("=== Creating the powerflex gateway vm")
+            sah_node.create_powerflexgw_vm()
+            tester.powerlexgw_vm_health_check()
+            logger.info("Installing the powerflex gateway UI")
+            powerflexgw_vm.upload_rpm()
+            powerflexgw_vm.install_gateway()
+            logger.info("Configuring the powerflex gateway vm")
+            powerflexgw_vm.configure_gateway()
+            logger.info("Retrieving and injecting SSL certificates")
+            powerflexgw_vm.get_ssl_certificates()
+            powerflexgw_vm.inject_ssl_certificates()
+            logger.info("Restarting the gateway and cinder-volume")
+            powerflexgw_vm.restart_gateway()
+            powerflexgw_vm.restart_cinder_volume()
+
+        
         logger.info("Deployment summary info; useful ip's etc.. " +
                     "/auto_results/deployment_summary.log")
 

@@ -85,7 +85,8 @@ class ConfigOvercloud(object):
             block_storage_flavor,
             vlan_range,
             dell_compute_count=0,
-            dell_computehci_count=0):
+            dell_computehci_count=0,
+            dell_powerflex_count=0):
         try:
             logger.info("Editing dell environment file")
             file_path = home_dir + '/pilot/templates/dell-environment.yaml'
@@ -116,6 +117,10 @@ class ConfigOvercloud(object):
                 file_path,
                 'sed -i "s|CephStorageCount:.*|CephStorageCount: ' +
                 str(ceph_storage_count) +
+                '|" ' +
+                file_path,
+                'sed -i "s|PowerflexStorageCount:.*|PowerflexStorageCount: ' +
+                str(dell_powerflex_count) +
                 '|" ' +
                 file_path,
                 'sed -i "s|OvercloudControllerFlavor:.*' +
@@ -218,13 +223,14 @@ class ConfigOvercloud(object):
                 if ovs_dpdk:
                     dpdk_nics = self.find_ifaces_by_keyword(nic_env_file,
                                                             'Dpdk')
+                    logger.debug("DPDK-NICs >>" + str(dpdk_nics))
                     self.nfv_params.get_pmd_cpus(mtu, dpdk_nics)
                     self.nfv_params.get_socket_memory(mtu, dpdk_nics)
                 self.nfv_params.get_nova_cpus()
                 self.nfv_params.get_isol_cpus()
-                kernel_args += " isolcpus=%s" % self.nfv_params.nova_cpus
+                kernel_args += " isolcpus=%s" % self.nfv_params.isol_cpus
                 cmds.append(
-                    'sed -i "s|# NovaVcpuPinSet:.*|NovaVcpuPinSet: ' +
+                    'sed -i "s|# NovaComputeCpuDedicatedSet:.*|NovaComputeCpuDedicatedSet: ' +
                     self.nfv_params.nova_cpus + '|" ' + file_path)
             if kernel_args:
                 cmds.append(
@@ -241,6 +247,11 @@ class ConfigOvercloud(object):
                     '\\" |" ' +
                     dpdk_file)
                 cmds.append(
+                    'sed -i "s|NovaComputeCpuSharedSet:.*|NovaComputeCpuSharedSet: \\"' +
+                    self.nfv_params.host_cpus +
+                    '\\" |" ' +
+                    dpdk_file)
+                cmds.append(
                     'sed -i "s|OvsPmdCoreList:.*|OvsPmdCoreList: \\"' +
                     self.nfv_params.pmd_cpus +
                     '\\" |" ' +
@@ -252,8 +263,19 @@ class ConfigOvercloud(object):
                     '\\" |" ' +
                     dpdk_file)
                 cmds.append(
-                    'sed -i "s|# IsolCpusList:.*|IsolCpusList: ' +
-                    self.nfv_params.isol_cpus + '|" ' + dpdk_file)
+                    'sed -i "s|IsolCpusList:.*|IsolCpusList: \\"' +
+                    self.nfv_params.isol_cpus + '\\" |" ' + dpdk_file)
+
+            if dell_powerflex_count > 0:
+                cmds.append(
+                     'sed -i "s|NovaEnableRbdBackend:.*' +
+                     '|NovaEnableRbdBackend: false |" ' +
+                     file_path)
+                cmds.append(
+                    'sed -i "s|CinderEnableRbdBackend:.*' +
+                    '|CinderEnableRbdBackend: false |" ' +
+                    file_path)
+
 
             for cmd in cmds:
                 status = os.system(cmd)

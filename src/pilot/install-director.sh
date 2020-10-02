@@ -17,10 +17,10 @@
 exec > >(tee $HOME/pilot/install-director.log)
 exec 2>&1
 
-USAGE="\nUsing RedHat CDN:$0 --director_ip <director public ip> --dns <dns_ip> --sm_user <subscription_manager_user> --sm_pwd <subscription_manager_pass> [--sm_pool <subcription_manager_poolid>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>]"
+USAGE="\nUsing RedHat CDN:$0 --director_ip <director public ip> --dns <dns_ip> [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] [--enable_powerflex]" 
 
 
-TEMP=`getopt -o h --long director_ip:,dns:,sm_user:,sm_pwd:,sm_pool:,proxy:,nodes_pwd:,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
+TEMP=`getopt -o h --long director_ip:,dns:,proxy:,nodes_pwd:,enable_powerflex,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
 eval set -- "$TEMP"
 
 
@@ -35,12 +35,6 @@ while true ; do
                 director_public_ip=$2 ; shift 2 ;;
         --dns)
                 dns_ip=$2 ; shift 2 ;;
-        --sm_user)
-                subscription_manager_user=$2 ; shift 2 ;;
-        --sm_pwd)
-                subscription_manager_pass=$2 ; shift 2 ;;
-        --sm_pool)
-                subcription_manager_poolid=$2; shift 2 ;;
         --satellite_hostname)
                 satellite_hostname=$2; shift 2;;
         --satellite_org)
@@ -53,6 +47,8 @@ while true ; do
                 proxy=$2; shift 2 ;;
         --nodes_pwd)
                 overcloud_nodes_pwd=$2; shift 2 ;;
+        --enable_powerflex)
+                enable_powerflex=1; shift 1;;
         --) shift ; break ;;
         *) echo -e "$USAGE" ; exit 1 ;;
     esac
@@ -66,19 +62,10 @@ if [ ! -z "${satellite_hostname}" ]; then
         exit 1
     fi
 
-elif [ ! -z "${subscription_manager_user}" ];then
-
-    if [ -z "${director_public_ip}" ] || [ -z "${dns_ip}" ] || [ -z "${subscription_manager_user}" ] || [ -z "${subscription_manager_pass}" ]; then
-        echo -e "$USAGE"
-        exit 1
-    fi
-else
-    echo -e "$USAGE"
-    exit 1
 fi
 
 
-flavors="control compute ceph-storage computehci"
+flavors="control compute ceph-storage computehcii powerflex-storage"
 subnet_name="ctlplane"
 
 # Create the requested flavor if it does not exist.
@@ -225,24 +212,33 @@ echo "## Customizing the overcloud image & uploading images"
 if [ ! -z "${satellite_hostname}" ]; then
     run_command "~/pilot/customize_image.sh --director_ip ${director_public_ip} \
                 --satellite_hostname ${satellite_hostname} \
-                --satellite_org ${satellite_org} \
-                --satellite_key ${satellite_key} \
                 --proxy ${proxy}"
 
-elif [ ! -z "${subscription_manager_user}" ];then
+elif [ ! -z "${proxy}" ]; then
     run_command "~/pilot/customize_image.sh --director_ip ${director_public_ip} \
-                --sm_user ${subscription_manager_user} \
-                --sm_pwd ${subscription_manager_pass} \
-                --sm_pool ${subcription_manager_poolid} --proxy ${proxy}"
+                --proxy ${proxy}"
 fi
 
 echo
-if [ -n "${overcloud_nodes_pwd}" ]; then
-    echo "# Setting overcloud nodes password"
+
+if [ -n "${overcloud_nodes_pwd}" ] || [ ${enable_powerflex} == 1 ]; then
+    echo "# Overcloud customizatin required, Installing libguestfs-tools"
     run_command "sudo dnf install -y libguestfs-tools"
     run_command "sudo service libvirtd start"
     run_command "export LIBGUESTFS_BACKEND=direct"
+fi
+    
+if [ -n "${overcloud_nodes_pwd}" ]; then
+    echo "# Setting overcloud nodes password"
     run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
+fi
+
+if [ ${enable_powerflex} == 1 ]; then
+    echo "# PowerFlex backend enabled, injecting rpms"
+    run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
+    run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
+    echo "# Cloning Dell EMC TripleO PowerFlex repository"
+    run_command "git clone https://github.com/dell/tripleo-powerflex.git ${HOME}/pilot/powerflex/tripleo-powerflex"
 fi
 
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
@@ -278,12 +274,27 @@ apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deploy
 apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/database/redis-container-puppet.yaml ${HOME}/pilot/redis-container.patch"
 echo "## Done"
 
+## This hacks in a patch to fix the powerflex cinder backend name required by Puppet to deploy
+echo
+echo "## Patching PowerFlex cinder backend HEAT Template"
+apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/cinder/cinder-backend-dellemc-vxflexos-puppet.yaml ${HOME}/pilot/powerflex-cinder-backend.patch"
+echo "## Done."
+
 echo
 echo "## Copying heat templates..."
 cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overcloud
 # TODO:dpaterson, why do we copy roles_data to ~/pilot/templates/overcloud/ ?
 cp $HOME/pilot/templates/roles_data.yaml $HOME/pilot/templates/overcloud/roles_data.yaml
 cp $HOME/pilot/templates/network-isolation.yaml $HOME/pilot/templates/overcloud/environments/network-isolation.yaml
+echo "## Done."
+
+echo
+echo "## Copying powerflex and tripleo-powerflex ansible playbooks..."
+sudo cp -R $HOME/pilot/powerflex/tripleo-powerflex/powerflex-ansible /usr/share/powerflex-ansible
+sudo cp -R $HOME/pilot/powerflex/tripleo-powerflex/tripleo-powerflex-run-ansible /usr/share/ansible/roles/tripleo-powerflex-run-ansible
+cp -R $HOME/pilot/powerflex/tripleo-powerflex/templates/overcloud/environments/powerflex-ansible $HOME/pilot/templates/overcloud/environments/powerflex-ansible
+cp -R $HOME/pilot/powerflex/tripleo-powerflex/templates/overcloud/deployment/powerflex-ansible $HOME/pilot/templates/overcloud/deployment/powerflex-ansible
+
 echo "## Done."
 
 echo
@@ -354,6 +365,21 @@ echo
 echo "## Restarting ironic-conductor..."
 sudo podman restart ironic_conductor
 echo "## Done."
+
+
+# Satellite , if using 
+if [ ! -z "${containers_prefix}" ]; then
+    container_yaml=$HOME/containers-prepare-parameter.yaml
+    sed -i "s/namespace:.*/namespace: ${satellite_hostname}:5000/" ${container_yaml}
+    sed -i "s/rhceph-4-dashboard-rhel8/${containers_prefix}rhceph_rhceph-4-dashboard-rhel8/" ${container_yaml}
+    sed -i "s/ose-prometheus-alertmanager/${containers_prefix}openshift4_ose-prometheus-alertmanager/" ${container_yaml}
+    sed -i "s/rhceph-4-rhel8/${containers_prefix}rhceph_rhceph-4-rhel8/" ${container_yaml}
+    sed -i "s/ose-prometheus-node-exporter/${containers_prefix}openshift4_ose-prometheus-node-exporter/" ${container_yaml}
+    sed -i "s/ose-prometheus$/${containers_prefix}openshift4_ose-prometheus/" ${container_yaml}
+    sed -i "s/openstack-/${containers_prefix}rhosp-rhel8_openstack-/" ${container_yaml}
+    sed -i "s/tag_from_label:.*/tag_from_label: '16.1'/" ${container_yaml}
+fi
+
 
 # If deployment is unlocked, generate the overcloud container list from the latest.
 #if [ -e $HOME/overcloud_images.yaml ];

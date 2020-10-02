@@ -98,7 +98,8 @@ ROLES = {
     'controller': 'control',
     'compute': 'compute',
     'storage': 'ceph-storage',
-    'computehci': 'computehci'
+    'computehci': 'computehci',
+    'powerflex': 'powerflex-storage'
 }
 
 # TODO: Use the OpenStack Oslo logging library, instead of the Python standard
@@ -268,6 +269,9 @@ def define_target_raid_config(super_role, drac_client):
         logical_disks = define_storage_logical_disks(drac_client,
                                                      raid_controller_ids)
     elif role == 'computehci':
+        logical_disks = define_storage_logical_disks(drac_client,
+                                                     raid_controller_ids)
+    elif role == 'powerflex':
         logical_disks = define_storage_logical_disks(drac_client,
                                                      raid_controller_ids)
     else:

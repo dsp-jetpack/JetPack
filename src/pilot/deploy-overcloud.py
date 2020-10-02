@@ -160,6 +160,9 @@ def create_volume_types():
     if args.enable_powermax:
         types.append(["powermax_backend", "tripleo_dellemc_powermax"])
 
+    if args.num_powerflex > 0:
+        types.append(["powerflex", "powerflex"])
+
     overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 
     for type in types:
@@ -280,7 +283,11 @@ def main():
                             type=int,
                             required=True,
                             help="The number of storage nodes")
-
+        parser.add_argument("--powerflex",
+                            dest="num_powerflex",
+                            type=int,
+                            required=True,
+                            help="The number of powerflex storage nodes")
         parser.add_argument("--enable_hugepages",
                             action='store_true',
                             default=False,
@@ -489,7 +496,8 @@ def main():
             block_storage_flavor,
             args.vlan_range,
             args.num_dell_computes,
-            args.num_dell_computeshci
+            args.num_dell_computeshci,
+            args.num_powerflex
             )
 
         # Launch the deployment
@@ -543,13 +551,22 @@ def main():
 
         if args.node_placement:
             env_opts += " -e ~/pilot/templates/node-placement.yaml"
-
+            
+        # The neutron-ovs.yaml must be included before dell-environment.yaml to enable ovs and disable ovn
+        # in OSP16.1. In case we need to use OVN in future, please delete this line
+        env_opts += " -e ~/pilot/templates/overcloud/environments/services/neutron-ovs.yaml"
+        
         # The dell-environment.yaml must be included after the
         # storage-environment.yaml and ceph-radosgw.yaml
-        env_opts += " -e ~/pilot/templates/overcloud/environments/" \
-                    "storage-environment.yaml" \
-                    " -e ~/containers-prepare-parameter.yaml" \
-                    " -e ~/pilot/templates/dell-environment.yaml"
+        if args.num_powerflex > 0:
+            env_opts += " -e ~/containers-prepare-parameter.yaml" \
+                        " -e ~/pilot/templates/dell-environment.yaml"
+        else:
+            env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+                        "storage-environment.yaml" \
+                        " -e ~/containers-prepare-parameter.yaml" \
+                        " -e ~/pilot/templates/dell-environment.yaml"
+
         host_config = False
         if args.enable_hugepages or args.enable_numa:
             env_opts += " -e ~/pilot/templates/overcloud/environments/" \
@@ -570,15 +587,17 @@ def main():
                 env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                             "host-config-and-reboot.yaml"
 
-        env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
-
         if args.enable_dellsc:
             env_opts += " -e ~/pilot/templates/dellsc-cinder-config.yaml"
 
         if args.enable_unity:
             env_opts += " -e ~/pilot/templates/dellemc-unity-cinder-" \
+                        "container.yaml"
+            env_opts += " -e ~/pilot/templates/dellemc-unity-cinder-" \
                         "backend.yaml"
+
         if args.enable_unity_manila:
+            env_opts += " -e ~/pilot/templates/unity-manila-container.yaml"
             env_opts += " -e ~/pilot/templates/unity-manila-config.yaml"
 
         if args.enable_powermax:
@@ -591,19 +610,23 @@ def main():
         if args.enable_powermax_manila:
             env_opts += " -e ~/pilot/templates/powermax-manila-config.yaml"
 
+        if args.num_powerflex > 0:
+            env_opts += " -e ~/pilot/templates/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml"
+            env_opts += " -e ~/pilot/templates/dellemc-powerflex-cinder-backend.yaml"
+        else:
+            env_opts += " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml" \
+                        " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-rgw.yaml"
+    
         if args.dashboard_enable:
             env_opts += " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-dashboard.yaml"
-            env_opts += " -e ~/pilot/templates/ceph_dashboard_admin.yaml "
+            env_opts += " -e ~/pilot/templates/ceph_dashboard_admin.yaml"
 
         # The network-environment.yaml must be included after other templates
         # for effective parameter overrides (External vlan default route)
         # The network-environment.yaml must be included after the network-isolation.yaml
-        # The neutron-ovs.yaml must be included to enable ovs and disable ovn
-        # in OSP16.1. In case we need to use OVN in future, please delete this line
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "network-isolation.yaml" \
                     " -e ~/pilot/templates/network-environment.yaml" \
-                    " -e /usr/share/openstack-tripleo-heat-templates/environments/services/neutron-ovs.yaml" \
                     " -e {}".format(nic_env_file)
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
@@ -612,10 +635,6 @@ def main():
               " -t {}" \
               " {}" \
               " --templates ~/pilot/templates/overcloud" \
-              " -e /usr/share/openstack-tripleo-heat-templates/" \
-              "environments/ceph-ansible/ceph-ansible.yaml" \
-              " -e /usr/share/openstack-tripleo-heat-templates/" \
-              "environments/ceph-ansible/ceph-rgw.yaml" \
               " {}" \
               " --libvirt-type kvm" \
               " --ntp-server {}" \

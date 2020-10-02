@@ -79,6 +79,8 @@
     - OS::TripleO::Services::CinderBackendDellEMCVMAXISCSI
     - OS::TripleO::Services::CinderBackendDellEMCVNX
     - OS::TripleO::Services::CinderBackendDellEMCXTREMIOISCSI
+    - OS::TripleO::Services::CinderBackendDellEMCVxFlexOS
+    - OS::TripleO::Services::CinderBackendDellEMCXtremio
     - OS::TripleO::Services::CinderBackendNetApp
     - OS::TripleO::Services::CinderBackendPure
     - OS::TripleO::Services::CinderBackendScaleIO
@@ -177,6 +179,8 @@
     - OS::TripleO::Services::OsloMessagingRpc
     - OS::TripleO::Services::OsloMessagingNotify
     - OS::TripleO::Services::Podman
+    - OS::TripleO::Services::PowerFlexLIA
+    - OS::TripleO::Services::PowerFlexMDM
     - OS::TripleO::Services::Rear
     - OS::TripleO::Services::Redis
     - OS::TripleO::Services::Rhsm
@@ -345,6 +349,8 @@
     - OS::TripleO::Services::NeutronBgpVpnBagpipe
     - OS::TripleO::Services::NeutronLinuxbridgeAgent
     - OS::TripleO::Services::NeutronVppAgent
+    - OS::TripleO::Services::NeutronSriovAgent
+    - OS::TripleO::Services::NeutronSriovHostConfig
     - OS::TripleO::Services::NovaAZConfig
     - OS::TripleO::Services::NovaCompute
     - OS::TripleO::Services::NovaLibvirt
@@ -352,7 +358,10 @@
     - OS::TripleO::Services::NovaMigrationTarget
     - OS::TripleO::Services::ContainersLogrotateCrond
     - OS::TripleO::Services::Podman
+    - OS::TripleO::Services::PowerFlexLIA
+    - OS::TripleO::Services::PowerFlexSDC
     - OS::TripleO::Services::Rear
+    - OS::TripleO::Services::OvsDpdkNetcontrold
     - OS::TripleO::Services::Rhsm
     - OS::TripleO::Services::Rsyslog
     - OS::TripleO::Services::RsyslogSidecar
@@ -365,11 +374,9 @@
     - OS::TripleO::Services::TripleoPackages
     - OS::TripleO::Services::Tuned
     - OS::TripleO::Services::Vpp
+    - OS::TripleO::Services::Ptp
     - OS::TripleO::Services::OVNController
     - OS::TripleO::Services::OVNMetadataAgent
-    - OS::TripleO::Services::NeutronSriovAgent
-    - OS::TripleO::Services::NeutronSriovHostConfig
-
 ###############################################################################
 #
 ###############################################################################
@@ -597,3 +604,46 @@
     - OS::TripleO::Services::TripleoFirewall
     - OS::TripleO::Services::TripleoPackages
     - OS::TripleO::Services::Tuned
+###############################################################################
+# Role: PowerflexStorage                                                      #
+###############################################################################
+- name: PowerflexStorage
+  description: |
+    PowerFlex SDS Storage node role
+  networks:
+    InternalApi:
+      subnet: internal_api_subnet
+    Storage:
+      subnet: storage_subnet
+    StorageMgmt:
+      subnet: storage_mgmt_subnet
+  ServicesDefault:
+    - OS::TripleO::Services::Aide
+    - OS::TripleO::Services::AuditD
+    - OS::TripleO::Services::BootParams
+    - OS::TripleO::Services::CACerts
+    - OS::TripleO::Services::CertmongerUser
+    - OS::TripleO::Services::Collectd
+    - OS::TripleO::Services::Docker
+    - OS::TripleO::Services::IpaClient
+    - OS::TripleO::Services::Ipsec
+    - OS::TripleO::Services::Kernel
+    - OS::TripleO::Services::LoginDefs
+    - OS::TripleO::Services::MetricsQdr
+    - OS::TripleO::Services::MySQLClient
+    - OS::TripleO::Services::ContainersLogrotateCrond
+    - OS::TripleO::Services::Podman
+    - OS::TripleO::Services::PowerFlexLIA
+    - OS::TripleO::Services::PowerFlexSDS
+    - OS::TripleO::Services::Rhsm
+    - OS::TripleO::Services::Rsyslog
+    - OS::TripleO::Services::RsyslogSidecar
+    - OS::TripleO::Services::Securetty
+    - OS::TripleO::Services::Snmp
+    - OS::TripleO::Services::Sshd
+    - OS::TripleO::Services::Timesync
+    - OS::TripleO::Services::Timezone
+    - OS::TripleO::Services::TripleoFirewall
+    - OS::TripleO::Services::TripleoPackages
+    - OS::TripleO::Services::Tuned
+

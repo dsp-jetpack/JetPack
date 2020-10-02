@@ -141,7 +141,7 @@ class Director(InfraHost):
 
         self.jinja2_env = Environment(
             loader=FileSystemLoader(self.settings.jinja2_templates))
-
+         
         cmd = "mkdir -p " + self.pilot_dir
         self.run(cmd)
 
@@ -216,6 +216,7 @@ class Director(InfraHost):
                 self.settings.manila_unity_container_version = \
                     self.run_tty(cmd)[0].replace('\r', '').rstrip()
 
+
     def install_director(self):
         logger.info("Installing the undercloud")
         if self.settings.use_satellite:
@@ -232,16 +233,12 @@ class Director(InfraHost):
             cmd = '~/pilot/install-director.sh --dns ' + \
                   self.settings.name_server + \
                   " --director_ip " + \
-                  self.ip + \
-                  " --sm_user " + \
-                  self.settings.subscription_manager_user + \
-                  " --sm_pwd " + \
-                  self.settings.subscription_manager_password + \
-                  " --sm_pool " + \
-                  self.settings.subscription_manager_vm_ceph
+                  self.ip 
 
         if len(self.settings.overcloud_nodes_pwd) > 0:
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
+        if self.settings.enable_powerflex_backend is True:
+            cmd += " --enable_powerflex"
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
             raise AssertionError("Director/Undercloud did not " +
@@ -302,7 +299,8 @@ class Director(InfraHost):
             for node in (self.settings.controller_nodes +
                          self.settings.compute_nodes +
                          self.settings.ceph_nodes +
-                         self.settings.computehci_nodes ):
+                         self.settings.computehci_nodes +
+                         self.settings.powerflex_nodes ):
                 if hasattr(node, "idrac_ip"):
                     cmd += ' ' + node.idrac_ip
             # Add edge nodes if there are any defined
@@ -333,7 +331,8 @@ class Director(InfraHost):
         expected_nodes = (len(self.settings.controller_nodes)
                           + len(self.settings.compute_nodes)
                           + len(self.settings.ceph_nodes)
-                          + len(self.settings.computehci_nodes))
+                          + len(self.settings.computehci_nodes)
+                          + len(self.settings.powerflex_nodes))
         for node_type, nodes in setts.node_types_map.items():
             expected_nodes += len(nodes)
 
@@ -360,6 +359,7 @@ class Director(InfraHost):
         nodes.extend(self.settings.compute_nodes)
         nodes.extend(self.settings.computehci_nodes)
         nodes.extend(self.settings.ceph_nodes)
+        nodes.extend(self.settings.powerflex_nodes)
         cmd = "~/pilot/config_idracs.py "
 
         for node_type, edge_site_nodes in setts.node_types_map.items():
@@ -466,6 +466,7 @@ class Director(InfraHost):
         roles_to_nodes["compute"] = setts.compute_nodes
         roles_to_nodes["storage"] = setts.ceph_nodes
         roles_to_nodes["computehci"] = setts.computehci_nodes
+        roles_to_nodes["powerflex"] = setts.powerflex_nodes
         # Add edge nodes if there are any defined
         for node_type, edge_site_nodes in setts.node_types_map.items():
             roles_to_nodes[node_type] = edge_site_nodes
@@ -504,7 +505,8 @@ class Director(InfraHost):
         non_sah_nodes = (setts.controller_nodes
                          + setts.compute_nodes
                          + setts.computehci_nodes
-                         + setts.ceph_nodes)
+                         + setts.ceph_nodes
+                         + setts.powerflex_nodes)
 
         for node_type, edge_site_nodes in setts.node_types_map.items():
             non_sah_nodes.extend(edge_site_nodes)
@@ -542,7 +544,8 @@ class Director(InfraHost):
             self.render_and_upload_roles_data_edge()
         self.setup_dell_storage()
         self.setup_manila()
-        self.setup_environment()
+        if self.settings.enable_powerflex_backend == False:
+            self.setup_environment()
         self.setup_sanity_ini()
 
     def clamp_min_pgs(self, num_pgs):
@@ -828,10 +831,6 @@ class Director(InfraHost):
 
     def setup_dell_storage(self):
 
-        # Clean the local docker registry
-        #if len(self.run_tty("sudo docker images -a -q")[0]) > 1:
-            #self.run_tty("sudo docker rmi $(sudo docker images -a -q) --force")
-
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy with
         # a different config
@@ -857,11 +856,20 @@ class Director(InfraHost):
             "/dellemc-unity-cinder-backend.yaml"
         self.upload_file(self.settings.dell_unity_cinder_yaml,
                          dell_unity_cinder_yaml)
+
+        dell_unity_cinder_container_yaml = self.templates_dir + \
+            "/dellemc-unity-cinder-container.yaml"
+        self.upload_file(self.settings.dell_unity_cinder_container_yaml,
+                         dell_unity_cinder_container_yaml)
+
         # Backup before modifying
         self.run_tty("cp " + dell_unity_cinder_yaml +
                      " " + dell_unity_cinder_yaml + ".bak")
+        self.run_tty("cp " + dell_unity_cinder_container_yaml +
+                     " " + dell_unity_cinder_container_yaml + ".bak")
 
-        self.setup_unity_cinder(dell_unity_cinder_yaml)
+        self.setup_unity_cinder(dell_unity_cinder_yaml, \
+                                dell_unity_cinder_container_yaml )
 
         # Powermax
         dell_powermax_iscsi_cinder_yaml = self.templates_dir + \
@@ -883,6 +891,18 @@ class Director(InfraHost):
             self.setup_powermax_cinder(dell_powermax_iscsi_cinder_yaml)
         else:
             self.setup_powermax_cinder(dell_powermax_fc_cinder_yaml)
+
+        # PowerFlex
+        dell_powerflex_cinder_yaml = self.templates_dir + \
+            "/dellemc-powerflex-cinder-backend.yaml"
+        self.upload_file(self.settings.dell_powerflex_cinder_yaml,
+                         dell_powerflex_cinder_yaml)
+        self.run_tty("cp " + dell_powerflex_cinder_yaml +
+                     " " + dell_powerflex_cinder_yaml + ".bak")
+
+        dell_powerflex_ansible_yaml = self.templates_dir  + \
+            "/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml"
+        self.setup_powerflex(dell_powerflex_cinder_yaml,dell_powerflex_ansible_yaml)
 
 
         # Enable multiple backends now
@@ -912,11 +932,17 @@ class Director(InfraHost):
         unity_manila_yaml = self.templates_dir + "/unity-manila-config.yaml"
         self.upload_file(self.settings.unity_manila_yaml,
                          unity_manila_yaml)
+        unity_manila_container_yaml = self.templates_dir + "/unity-manila-container.yaml"
+        self.upload_file(self.settings.unity_manila_container_yaml,
+                         unity_manila_container_yaml)
+
         # Backup before modifying
         self.run_tty("cp " + unity_manila_yaml +
                      " " + unity_manila_yaml + ".bak")
+        self.run_tty("cp " + unity_manila_container_yaml +
+                     " " + unity_manila_container_yaml + ".bak")
 
-        self.setup_unity_manila(unity_manila_yaml)
+        self.setup_unity_manila(unity_manila_yaml, unity_manila_container_yaml)
 
         #  Now powermax
         powermax_manila_yaml = self.templates_dir + "/powermax-manila-config.yaml"
@@ -974,7 +1000,8 @@ class Director(InfraHost):
         ]
         for cmd in cmds:
             self.run_tty(cmd)
-    def setup_unity_cinder(self, dell_unity_cinder_yaml):
+    def setup_unity_cinder(self, dell_unity_cinder_yaml, \
+                           dell_unity_cinder_container_yaml):
 
         if self.settings.enable_unity_backend is False:
             logger.debug("Not setting up unity cinder backend.")
@@ -1000,44 +1027,50 @@ class Director(InfraHost):
             self.settings.unity_storage_pool_names + '|" ' +
             dell_unity_cinder_yaml,
         ]
-        if self.settings.use_satellite:
-            cinder_container = "openstack-cinder-volume-dellemc-rhosp16" + \
-                ':' + str(self.settings.cinder_unity_container_version)
-            remote_registry = self.settings.satellite_hostname + \
-                ":5000/" + self.settings.containers_prefix
-            local_url = remote_registry + cinder_container
-            cmds.append('sed -i "s|DockerCinderVolumeImage.*|' +
-                        'DockerCinderVolumeImage: ' + local_url +
-                        '|" ' + overcloud_images_file)
-        else:
 
+        if self.settings.use_satellite:
+            cinder_container = "openstack-cinder-volume-dellemc-rhosp16:" + \
+                str(self.settings.cinder_unity_container_version) 
+            remote_registry = self.settings.satellite_hostname + \
+                ":5000/" 
+            local_url = remote_registry + self.settings.containers_prefix + \
+                cinder_container
+            cmds.append('sed -i "s|ContainerCinderVolumeImage.*|' +
+                        'ContainerCinderVolumeImage: ' + local_url +
+                        '|" ' + dell_unity_cinder_container_yaml)
+            cmds.append('sed -i "s|<dellemc_container_registry>|' + remote_registry +
+                        '|" ' + dell_unity_cinder_container_yaml)             
+        else:
+            undercloud_domain_name = self.settings.director_node.hostname + \
+                                 ".ctlplane.localdomain"
             cinder_container = "/dellemc/openstack-cinder-volume-dellemc-rhosp16:" + \
                 str(self.settings.cinder_unity_container_version)
             remote_registry = "registry.connect.redhat.com"
             remote_url = remote_registry + cinder_container
             local_registry = self.provisioning_ip + ":8787"
-            local_url = local_registry + cinder_container
+            local_registry_domain = undercloud_domain_name + ":8787"
+            local_url = local_registry_domain + cinder_container
 
             cmds.extend([
-                'docker login -u ' + self.settings.subscription_manager_user +
+                'sudo podman login -u ' + self.settings.subscription_manager_user +
                 ' -p ' + self.settings.subscription_manager_password +
                 ' ' + remote_registry,
-                'docker pull ' + remote_url,
-                'docker tag ' + remote_url + ' ' + local_url,
-                'docker push ' + local_url,
-                'sed -i "s|DockerCinderVolumeImage.*|' +
-                'DockerCinderVolumeImage: ' + local_url +
-                '|" ' + overcloud_images_file,
-                'echo "  DockerInsecureRegistryAddress:" >> ' +
-                overcloud_images_file,
-                'sudo echo "  - ' + local_registry + ' " >> ' +
-                overcloud_images_file,
-                'docker logout ' + remote_registry,
+                'sudo podman pull ' + remote_url,
+                'sudo openstack tripleo container image push --local ' + remote_url,
+                'sudo podman tag ' + remote_url + ' ' + local_url,
+                'sed -i "s|ContainerCinderVolumeImage.*|' +
+                'ContainerCinderVolumeImage: ' + local_url +
+                '|" ' + dell_unity_cinder_container_yaml,
+                'sed -i "s|<dellemc_container_registry>|' + local_registry +
+                '|" ' + dell_unity_cinder_container_yaml,
+                'sed -i "s|<dellemc_container_registry_domain>|' + local_registry_domain +
+                        '|" ' + dell_unity_cinder_container_yaml,
+                'sudo podman logout ' + remote_registry,
             ])
         for cmd in cmds:
             self.run_tty(cmd)
 
-    def setup_unity_manila(self, unity_manila_yaml):
+    def setup_unity_manila(self, unity_manila_yaml, unity_manila_container_yaml):
 
         if self.settings.enable_unity_manila_backend is False:
             logger.debug("Not setting up unity manila backend.")
@@ -1080,33 +1113,43 @@ class Director(InfraHost):
             manila_container = "openstack-manila-share-dellemc-rhosp16" + \
                 ':' + str(self.settings.manila_unity_container_version)
             remote_registry = self.settings.satellite_hostname + \
-                ":5000/" + self.settings.containers_prefix
-            local_url = remote_registry + manila_container
-            cmds.append('sed -i "50i \  DockerManilaShareImage: ' + local_url +
-                        '" ' + overcloud_images_file)
+                ":5000/"
+            local_url = remote_registry + self.settings.containers_prefix + \
+                manila_container
+            cmds.append('sed -i "s|ContainerManilaShareImage.*|' +
+                        'ContainerManilaShareImage: ' + local_url +
+                        '|" ' + unity_manila_container_yaml)
+            cmds.append('sed -i "s|<undercloud_registry>|' + remote_registry +
+                        '|" ' + unity_manila_container_yaml)
 
         else:
+            undercloud_domain_name = self.settings.director_node.hostname + \
+                                ".ctlplane.localdomain"
             manila_container = "/dellemc/openstack-manila-share-dellemc-rhosp16:" + \
-                           str(self.settings.manila_unity_container_version)
+                               str(self.settings.manila_unity_container_version)
             remote_registry = "registry.connect.redhat.com"
             remote_url = remote_registry + manila_container
             local_registry = self.provisioning_ip + ":8787"
-            local_url = local_registry + manila_container
+            local_registry_domain = undercloud_domain_name + ":8787"
+            local_url = local_registry_domain + manila_container
 
             cmds.extend([
-                'docker login -u ' + self.settings.subscription_manager_user +
+                'sudo podman login -u ' + self.settings.subscription_manager_user +
                 ' -p ' + self.settings.subscription_manager_password +
                 ' ' + remote_registry,
-                'docker pull ' + remote_url,
-                'docker tag ' + remote_url + ' ' + local_url,
-                'docker push ' + local_url,
-                'sed -i "50i \  DockerManilaShareImage: ' + local_url +
-                '" ' + overcloud_images_file,
-                'echo "  DockerInsecureRegistryAddress:" >> ' +
-                overcloud_images_file,
-                'echo "  - ' + local_registry + ' " >> ' +
-                overcloud_images_file,
+                'sudo podman pull ' + remote_url,
+                'sudo openstack tripleo container image push --local ' + remote_url,
+                'sudo podman tag ' + remote_url + ' ' + local_url,
+                'sed -i "s|ContainerManilaShareImage.*|' +
+                'ContainerManilaShareImage: ' + local_url +
+                '|" ' + unity_manila_container_yaml,
+                'sed -i "s|<dellemc_container_registry>|' + local_registry +
+                '|" ' + unity_manila_container_yaml,
+                'sed -i "s|<dellemc_container_registry_domain>|' + local_registry_domain +
+                        '|" ' + unity_manila_container_yaml,
+                'sudo podman logout ' + remote_registry,
             ])
+
         for cmd in cmds:
             self.run_tty(cmd)
 
@@ -1170,6 +1213,73 @@ class Director(InfraHost):
                 ]
         for cmd in cmds:
             self.run_tty(cmd)
+
+    def setup_powerflex(self, powerflex_cinder_yaml, powerflex_ansible_yaml):
+
+        if self.settings.enable_powerflex_backend is False:
+            logger.debug("Not setting up powerflex backend.")
+            return
+
+        logger.debug("Configuring dell emc powerflex backend.")
+
+        cmds = [ 'sed -i "s|<powerflex_san_ip>|' +
+                self.settings.powerflexgw_vm.storage_ip +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_san_login>|' +
+                self.settings.powerflex_san_login +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_san_password>|' +
+                self.settings.powerflex_san_password +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_storage_pools>|' +
+                self.settings.powerflex_storage_pools +
+                '|" ' + powerflex_cinder_yaml,
+                ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
+        logger.debug("Configuring ansible playbook for powerflex deployment.")
+
+        cmds = ['sed -i "s|<powerflex_rpms_method>|' +
+                self.settings.powerflex_rpms_method +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_rpms_path>|' +
+                self.settings.powerflex_rpms_path +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_name>|' +
+                self.settings.powerflex_cluster_name +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_protection_domain>|' +
+                self.settings.powerflex_protection_domain +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_storage_pool>|' +
+                self.settings.powerflex_storage_pool +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_config>|' +
+                self.settings.powerflex_cluster_config +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_mgmt_interface>|' +
+                self.settings.powerflex_mgmt_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_interface>|' +
+                self.settings.powerflex_cluster_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_vip>|' +
+                self.settings.powerflex_cluster_vip +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_rebuild_interface>|' +
+                self.settings.powerflex_rebuild_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_password>|' +
+                self.settings.powerflex_password +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_lia_token>|' +
+                self.settings.powerflex_lia_token +
+                '|" ' + powerflex_ansible_yaml,
+                ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
 
     def setup_net_envt(self):
 
@@ -1400,6 +1510,20 @@ class Director(InfraHost):
                     computehci_storage_ips += "\\n"
                     computehci_cluster_ips += "\\n"
 
+            powerflex_private_ips = ''
+            powerflex_storage_ips = ''
+            powerflex_cluster_ips = ''
+
+            for node in self.settings.powerflex_nodes:
+                powerflex_private_ips += "    - " + node.private_api_ip
+                powerflex_storage_ips += "    - " + node.storage_ip
+                powerflex_cluster_ips += "    - " + node.storage_cluster_ip
+                if node != self.settings.powerflex_nodes[-1]:
+                    powerflex_private_ips += "\\n"
+                    powerflex_storage_ips += "\\n"
+                    powerflex_cluster_ips += "\\n"
+
+
             storage_storgage_ip = ''
             storage_cluster_ip = ''
             for node in self.settings.ceph_nodes:
@@ -1447,6 +1571,14 @@ class Director(InfraHost):
                            'sed -i "/DellComputeHCIIPs:/,/storage_mgmt:/s/storage_mgmt:/storage_mgmt: \\n' +
                            computehci_cluster_ips + "/\" " + static_ips_yaml
                           ])
+            if len(self.settings.powerflex_nodes) > 0:
+                cmds.extend(['sed -i "/PowerflexStorageIPs:/,/internal_api:/s/internal_api:/internal_api: \\n' +
+                           powerflex_private_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/PowerflexStorageIPs:/,/storage:/s/storage:/storage: \\n' +
+                           powerflex_storage_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/PowerflexStorageIPs:/,/storage_mgmt:/s/storage_mgmt:/storage_mgmt: \\n' +
+                           powerflex_cluster_ips + "/\" " + static_ips_yaml
+                           ])
 
             for cmd in cmds:
                 self.run_tty(cmd)
@@ -1547,7 +1679,6 @@ class Director(InfraHost):
         # in the neutron-sriov.yaml (sriov environment file)
 
         # Specify number of VFs for sriov mentioned interfaces
-        sriov_vfs_setting = []
         sriov_map_setting = []
         sriov_pci_passthrough = []
         physical_network = ["physint", "physint1", "physint2", "physint3"]
@@ -1573,23 +1704,12 @@ class Director(InfraHost):
 
             sriov_pci_passthrough.append(nova_pci)
 
-            if (self.settings.enable_smart_nic is True):
-                interface = interface + ':' + \
-                                        self.settings.sriov_vf_count + \
-                                        ':switchdev'
-            else:
-                interface = interface + ':' + \
-                                        self.settings.sriov_vf_count
-
-            sriov_vfs_setting.append(interface)
-
-        sriov_vfs_setting = "'" + ",".join(sriov_vfs_setting) + "'"
         sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"
         sriov_pci_passthrough = "[" + ",".join(sriov_pci_passthrough) + "]"
 
-        cmds.append('sed -i "s|NeutronSriovNumVFs:.*|' +
-                    'NeutronSriovNumVFs: ' +
-                    sriov_vfs_setting + '|" ' + env_file)
+        cmds.append('sed -i "s|NumSriovVfs:.*|' +
+                    'NumSriovVfs: ' +
+                    self.settings.sriov_vf_count + '|" ' + env_file)
         cmds.append('sed -i "s|NeutronPhysicalDevMappings:.*|' +
                     'NeutronPhysicalDevMappings: ' +
                     sriov_map_setting + '|" ' + env_file)
@@ -1616,6 +1736,8 @@ class Director(InfraHost):
                                     str(len(self.settings.computehci_nodes)) + \
                                     " --storage " + \
                                     str(len(self.settings.ceph_nodes)) + \
+                                    " --powerflex " + \
+                                    str(len(self.settings.powerflex_nodes)) + \
                                     " --vlan " + \
                                     self.settings.tenant_vlan_range + \
                                     " --nic_env_file " + \
@@ -1682,7 +1804,7 @@ class Director(InfraHost):
             cmd += " --debug"
         if self._has_edge_sites():
             cmd += " --network_data"
-        if self.settings.enable_dashboard is True:
+        if self.settings.enable_dashboard is True and self.settings.enable_powerflex_backend is False:
             cmd += " --dashboard_enable"
 
         cmd += " > overcloud_deploy_out.log 2>&1"
@@ -3570,7 +3692,6 @@ class Director(InfraHost):
 
 
 if __name__ == "__main__":
-    settings = Settings("/root/R62.ini")
     director = Director()
     # director.render_and_upload_compute_templates_edge()
     # director.render_and_upload_network_isolation_edge()
