@@ -842,7 +842,7 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
 
     node = ironic_client.node.get(node_uuid, fields=['properties'])
     _is_index = True if bool(role_index.index) else False
-    _role = ({"node": "{}-{}".format(flavor, role_index.index)}
+    _role = ("node:{}-{}".format(flavor, role_index.index)
              if _is_index else {"profile": flavor})
 
     value = ("{},{},boot_mode:uefi,boot_option:"
