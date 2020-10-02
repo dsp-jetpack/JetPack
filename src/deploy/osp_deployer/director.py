@@ -2372,11 +2372,13 @@ class Director(InfraHost):
     def update_and_upload_undercloud_conf_edge(self, node_type):
         """Update and upload undercloud.conf for single site"""
 
-        logger.info("Updating undercloud.conf")
+        logger.info("Updating undercloud.conf for edge site: "
+                    "{}".format(node_type))
         setts = self.settings
         self._download_and_parse_undercloud_conf()
         uconf = setts.undercloud_conf
-        subnets = set({'ctlplane-subnet'})
+        subnets = {sn.strip() for sn in uconf.get('DEFAULT',
+                                                  'subnets').split(',')}
 
         subnet_name = self._generate_subnet_name(node_type)
         subnets.add(subnet_name)
