@@ -142,35 +142,28 @@ def deploy_overcloud(director_vm):
     director_vm.deploy_overcloud()
 
 
-def deploy_edge(sah_node, director_vm, node_type):
+def deploy_edge_site(sah_node, director_vm, node_type):
     logger.info("=== Installing edge site: %s", str(node_type))
-    # if edge site is deployed delete the stack and baremetal nodes first
-    # then re-deploy it.
-    stk_info = director_vm.fetch_stack_info_edge(node_type)
-    if stk_info["stack_status"] != "Not Deployed":
-        delete_edge(sah_node, director_vm, node_type)
+    # first delete site if it exists
+    delete_edge_site(sah_node, director_vm, node_type)
     sah_node.subnet_routes_edge(node_type)
     director_vm.deploy_edge_site(node_type)
 
 
 def deploy_edge_sites(sah_node, director_vm, edge_sites):
     for node_type in edge_sites:
-        deploy_edge(sah_node, director_vm, node_type)
+        deploy_edge_site(sah_node, director_vm, node_type)
 
 
-def delete_edge(sah_node, director_vm, node_type):
-    logger.info("=== Deleting edge site: %s",
-                node_type)
+def delete_edge_site(sah_node, director_vm, node_type):
+    logger.info("=== Deleting edge site: %s", node_type)
     director_vm.delete_edge_site(node_type)
-    logger.info("Cleaning up routes for edge site: {}".format(node_type))
-    director_vm.controller_routes_edge(node_type, False)
-    director_vm.subnet_routes_edge(node_type, False)
     sah_node.subnet_routes_edge(node_type, False)
 
 
 def delete_edge_sites(sah_node, director_vm, edge_sites):
     for site in edge_sites:
-        delete_edge(sah_node, director_vm, site)
+        delete_edge_site(sah_node, director_vm, site)
 
 
 def deploy_undercloud(setts, sah_node, tester, director_vm):
@@ -248,9 +241,6 @@ def deploy():
         settings, args = get_settings()
         director_vm = Director()
         sah_node = Sah()
-        # director_vm.setup_environment_edge("edge-compute-boston")
-        # logger.debug("iiiiiiiiiiiiiiiiiiiiiiiiii ooooo")
-        # os._exit(0)
 
         if args.list_edge_sites:
             list_edge_sites(settings, director_vm)

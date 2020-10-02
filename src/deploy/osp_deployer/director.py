@@ -1818,15 +1818,21 @@ class Director(InfraHost):
                          "openstack baremetal node delete " +
                          node_id)
 
-    def delete_edge_site(self, node_type):
-        logger.info("Deleting edge site {}".format(node_type))
+    def delete_edge_stack(self, node_type):
+        logger.info("Deleting edge site {} stack".format(node_type))
         stack_name = self._generate_node_type_lower(node_type)
-        # Delete the stack
+        stk_info = self.fetch_stack_info_edge(node_type)
+        if stk_info["stack_status"] == "Not Deployed":
+            return
+
         stack_delete_re = self.run_tty(self.source_stackrc
                                        + "openstack stack delete --yes --wait "
                                        + stack_name)
         logger.info("Stack delete response: "
                     "{}".format(str(stack_delete_re)))
+
+    def delete_edge_site_nodes(self, node_type):
+        logger.info("Deleting edge site {} nodes".format(node_type))
         re = self.run_tty(self.source_stackrc
                           + "openstack baremetal node list --fields "
                           "uuid properties -f json")
@@ -1842,8 +1848,25 @@ class Director(InfraHost):
             self.run_tty(self.source_stackrc + " openstack baremetal node "
                          "maintenance set {}".format(node_uuid))
         # Delete all edge site nodes at once
-        self.run_tty(self.source_stackrc + "openstack baremetal node "
-                     "delete {}".format(" ".join(nodes_for_deletion)))
+        if nodes_for_deletion:
+            self.run_tty(self.source_stackrc + "openstack baremetal node "
+                         "delete {}".format(" ".join(nodes_for_deletion)))
+
+    def delete_edge_site_template_directory(self, node_type):
+        logger.info("Deleting edge site {} template "
+                    "directory".format(node_type))
+        remote_site_dir = os.path.join(self.home_dir,
+                                       self._generate_role_lower(node_type))
+        cmd = "rm -rf {}".format(remote_site_dir)
+        self.run(cmd)
+
+    def delete_edge_site(self, node_type):
+        logger.info("Deleting edge site {}".format(node_type))
+        self.delete_edge_stack(node_type)
+        self.delete_edge_site_nodes(node_type)
+        self.delete_edge_site_template_directory(node_type)
+        self.controller_routes_edge(node_type, False)
+        self.subnet_routes_edge(node_type, False)
         logger.info("Edge site {} deleted!".format(node_type))
 
     def summarize_deployment(self):
