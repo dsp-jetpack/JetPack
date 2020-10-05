@@ -1335,8 +1335,8 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
 
 
 def configure_bios(node, ironic_client, settings, drac_client):
-    LOG.info("Configuring BIOS")
-
+    LOG.info("Configuring BIOS: settings: {}".format(str(settings)))
+    LOG.info("Configuring BIOS: node: {}".format(str(node)))
     if 'drac' not in node.driver:
         LOG.critical("Node is not being managed by an iDRAC driver")
         return False
