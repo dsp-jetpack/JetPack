@@ -8,7 +8,7 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
+# Unless required by applicable law or agreedgoo to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
@@ -145,7 +145,7 @@ class Checkpoints:
         test = self.ping_host(self.sah_ip,
                               "root",
                               self.settings.sah_node.root_password,
-                              "google.com")
+                              "redhat.com")
         if self.ping_success not in test:
             raise AssertionError(
                 "SAH cannot ping the outside world (dns) : " + test)
@@ -221,7 +221,7 @@ class Checkpoints:
         test = self.ping_host(self.director_ip,
                               "root",
                               setts.director_node.root_password,
-                              "google.com")
+                              "redhat.com")
         if self.ping_success not in test:
             raise AssertionError(
                 "Director VM cannot ping the outside world (dns) : " + test)
