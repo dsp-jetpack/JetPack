@@ -985,9 +985,9 @@ def get_drives(drac_client):
         phy_disks = [physical_disks[pd_id] for pd_id
                      in virtual_disk.physical_disks]
         if phy_disks[0].media_type == 'hdd':
-            spinners.append(phy_disks[0])
+            spinners.append(virtual_disk)
         else:
-            ssds.append(phy_disks[0])
+            ssds.append(virtual_disk)
 
         {physical_disks.pop(pd.id) for pd in phy_disks}
 
