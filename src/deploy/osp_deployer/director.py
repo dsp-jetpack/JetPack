@@ -2364,9 +2364,8 @@ class Director(InfraHost):
                   setts.director_node.provisioning_ip)
         uconf.set('DEFAULT', 'enable_routed_networks',
                   str(True))
-
         uconf.set('DEFAULT', 'subnets', ','.join(subnets))
-        _hiera = os.path.join(self.pilot_dir, undercloud_hieradata.yaml)
+        _hiera = os.path.join(self.pilot_dir, "undercloud_hieradata.yaml")
         uconf.set('DEFAULT', 'hieradata_override', _hiera)
 
         self._stage_and_upload_undercloud_conf(uconf)
