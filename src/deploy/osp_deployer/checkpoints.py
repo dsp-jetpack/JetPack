@@ -141,7 +141,7 @@ class Checkpoints:
         test = self.ping_host(self.sah_ip,
                               "root",
                               self.settings.sah_node.root_password,
-                              "google.com")
+                              "redhat.com")
         if self.ping_success not in test:
             raise AssertionError(
                 "SAH cannot ping the outside world (dns) : " + test)
@@ -217,7 +217,7 @@ class Checkpoints:
         test = self.ping_host(self.director_ip,
                               "root",
                               setts.director_node.root_password,
-                              "google.com")
+                              "redhat.com")
         if self.ping_success not in test:
             raise AssertionError(
                 "Director VM cannot ping the outside world (dns) : " + test)
