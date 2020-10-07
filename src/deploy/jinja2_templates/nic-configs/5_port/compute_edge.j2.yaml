@@ -197,7 +197,12 @@ resources:
               network_config:
               {%- for cfg in network_config %}
               - type: {{cfg.type}}
+                {%- if cfg.type == 'interface' %}
+                name:
+                  get_param: {{cfg.name}}
+                {%- else %}
                 name: {{cfg.name}}
+                {%- endif %}
                 mtu:
                   get_param: {{cfg.mtu}}
                 {%- if cfg.type == 'interface' %}
@@ -225,7 +230,7 @@ resources:
                     get_param: {{route.next_hop}}
                   {%- endfor %}
                 {% elif cfg.type == 'ovs_bridge' %}
-                  members:
+                members:
                   {%- for bridge_member in cfg.members %}
                   - type: {{bridge_member.type}}
                     {%- if bridge_member.type == 'linux_bond' %}
@@ -256,6 +261,10 @@ resources:
                     - ip_netmask:
                         get_param: {{vlan_address.ip_netmask}}
                       {%- endfor %}
+                      {%- if 'routes' in bridge_member %}
+                    routes:
+                      get_param: {{bridge_member.routes}}
+                      {%- endif %}
                     {%- endif %}
                   {%- endfor %}
                 {%- endif %}
