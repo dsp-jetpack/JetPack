@@ -245,6 +245,7 @@ EOFPW
   yum -y install yum-plugin-priorities
   yum -y install yum-utils
   yum -y install virt-who
+  yum -y install subscription-manager
 
   yum-config-manager --enable rhel-7-server-rpms --setopt="rhel-7-server-rpms.priority=1"
   yum-config-manager --enable rhel-7-server-extras-rpms --setopt="rhel-7-server-extras-rpms.priority=1"
