@@ -18,6 +18,9 @@ resource_registry:
 {%- endfor %}
 
 parameter_defaults:
+  ControllerBondInterfaceOptions: {{ControllerBondInterfaceOptions}}
+  ComputeBondInterfaceOptions: {{ComputeBondInterfaceOptions}}
+  StorageBondInterfaceOptions: {{StorageBondInterfaceOptions}}
 {%- for key, val in parameter_defaults.items() %}
   {{key}}: {{val}}
 {%- endfor %}

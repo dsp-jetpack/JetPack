@@ -99,7 +99,6 @@ parameter_defaults:
     nb_retry_wait_osd_up: 360
     delay_wait_osd_up: 60
 
-
   ControllerExtraConfig:
     nova::api::max_limit: 10000
     nova::rpc_response_timeout: 180

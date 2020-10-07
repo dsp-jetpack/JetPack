@@ -538,11 +538,11 @@ def main():
 
         if args.node_placement:
             env_opts += " -e ~/pilot/templates/node-placement.yaml"
-            
+
         # The neutron-ovs.yaml must be included before dell-environment.yaml to enable ovs and disable ovn
         # in OSP16.1. In case we need to use OVN in future, please delete this line
         env_opts += " -e ~/pilot/templates/overcloud/environments/services/neutron-ovs.yaml"
-        
+
         # The neutron-ovs-dvr.yaml.yaml must be included after the
         # neutron-ovs.yaml
         if args.dvr_enable:
@@ -609,7 +609,8 @@ def main():
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "network-isolation.yaml" \
                     " -e ~/pilot/templates/network-environment.yaml" \
-                    " -e {}".format(nic_env_file)
+                    " -e {} " \
+                    "-e ~/pilot/templates/site-name.yaml".format(nic_env_file)
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
@@ -623,6 +624,7 @@ def main():
               "environments/ceph-ansible/ceph-rgw.yaml" \
               " {}" \
               " --libvirt-type kvm" \
+              " --no-cleanup" \
               " --ntp-server {}" \
               "".format(debug,
                         args.timeout,

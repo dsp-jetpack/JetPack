@@ -1,0 +1,29 @@
+ironic::drivers::interfaces::enabled_inspect_interfaces: [idrac-redfish,idrac-wsman,ilo,inspector,no-inspect,redfish]
+ironic::drivers::interfaces::enabled_management_interfaces: [fake,idrac-redfish,idrac-wsman,ilo,ipmitool,noop,redfish]
+ironic::drivers::interfaces::enabled_power_interfaces: [fake,idrac-redfish,idrac-wsman,ilo,ipmitool,redfish]
+ironic::drivers::interfaces::enabled_raid_interfaces: [idrac-wsman,no-raid]
+ironic::drivers::interfaces::enabled_vendor_interfaces: [idrac-wsman,ipmitool,no-vendor]
+ironic::rpc_response_timeout: 600
+ironic::conductor::enabled_hardware_types: [idrac]
+ironic::drivers::interfaces::default_raid_interface: idrac-wsman
+ironic::drivers::interfaces::default_power_interface: idrac-wsman
+ironic::drivers::interfaces::default_management_interface: idrac-wsman
+ironic::drivers::interfaces::default_vendor_interface: idrac-wsman
+ironic::conductor::sync_power_state_interval: 70
+ironic::wsgi::apache::threads: 30
+
+ironic::config::ironic_config:
+  conductor/node_locked_retry_attempts:
+    value: 25
+  conductor/clean_callback_timeout:
+    value: 5400
+  # DEFAULT/sync_power_state_interval:
+  #  value: 77
+  # DEFAULT/default_raid_interface:
+  #  value: idrac-wsman
+  # DEFAULT/default_power_interface:
+  #  value: idrac-wsman
+  # DEFAULT/default_management_interface:
+  #  value: idrac-wsman
+  # DEFAULT/default_vendor_interface:
+  #  value: idrac-wsman

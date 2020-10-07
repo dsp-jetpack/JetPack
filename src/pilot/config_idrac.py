@@ -591,7 +591,6 @@ def config_idrac(instack_lock,
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_UEFI
     else:
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_BIOS
-
     config_boot_mode(drac_client, ip_service_tag, node, target_boot_mode)
 
     job_ids = list()
