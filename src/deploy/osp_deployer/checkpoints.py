@@ -8,7 +8,7 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
+# Unless required by applicable law or agreedgoo to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
@@ -17,6 +17,7 @@
 from auto_common import Ssh
 from osp_deployer.settings.config import Settings
 from osp_deployer.settings_sanity import DeployerSanity
+import json
 import time
 import logging
 
@@ -28,6 +29,9 @@ class Checkpoints:
         self.settings = Settings.settings
         self.ping_success = "packets transmitted, 1 received"
         self.director_ip = self.settings.director_node.public_api_ip
+        self.director_user = self.settings.director_install_account_user
+        self.director_home_dir = "/home/" + self.director_user
+        self.source_stackrc = 'source ' + self.director_home_dir + "/stackrc; "
         self.sah_ip = self.settings.sah_node.public_api_ip
         self.verify_rhsm_status = self.settings.verify_rhsm_status
         if self.settings.use_satellite is True:
@@ -141,7 +145,7 @@ class Checkpoints:
         test = self.ping_host(self.sah_ip,
                               "root",
                               self.settings.sah_node.root_password,
-                              "google.com")
+                              "redhat.com")
         if self.ping_success not in test:
             raise AssertionError(
                 "SAH cannot ping the outside world (dns) : " + test)
@@ -217,7 +221,7 @@ class Checkpoints:
         test = self.ping_host(self.director_ip,
                               "root",
                               setts.director_node.root_password,
-                              "google.com")
+                              "redhat.com")
         if self.ping_success not in test:
             raise AssertionError(
                 "Director VM cannot ping the outside world (dns) : " + test)
@@ -255,73 +259,138 @@ class Checkpoints:
             raise AssertionError(
                 "Director VM cannot ping idrac network (ip) : " + test)
 
-    def verify_nodes_registered_in_ironic(self):
-        logger.debug("Verify the expected amount of nodes imported in ironic")
-        cmd = "source ~/stackrc;openstack baremetal node list | grep None"
+    def verify_nodes_registered_in_ironic(self, node_type=None):
+        logger.debug("Verify the expected nodes imported in ironic")
+
+        cmd = ("source ~/stackrc; openstack baremetal node list "
+               "--long -c UUID -c 'Driver Info' -f json")
         setts = self.settings
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
-        ls_nodes = re[0].split("\n")
-        ls_nodes.pop()
-        expected_nodes = (len(setts.controller_nodes)
-                          + len(setts.compute_nodes)
-                          + len(setts.ceph_nodes)
-                          + len(setts.computehci_nodes))
+        ls_nodes = json.loads(re[0])
+        drac_addresses = list(map(lambda _n: _n["Driver Info"]["drac_address"],
+                                  ls_nodes))
 
-        for node_type, nodes in setts.node_types_map.items():
-            logger.debug("Number of %s nodes: %s", node_type, str(len(nodes)))
-            expected_nodes += len(nodes)
-        if len(ls_nodes) != expected_nodes:
+        missing = list(filter(lambda x: x.idrac_ip not in drac_addresses,
+                              setts.all_overcloud_nodes))
+
+        if missing:
             raise AssertionError(
-                "Expected amount of nodes registered in Ironic "
-                "does not add up "
-                + str(len(ls_nodes)) + "/" + str(expected_nodes))
+                "The following {:d} overcloud nodes defined in the "
+                ".properties were not found in the ironic "
+                "database {}".format(len(missing), str(missing)))
+        if node_type:
+            self.verify_nodes_registered_in_ironic_edge(node_type)
 
-    def verify_introspection_sucessfull(self):
-        logger.debug("Verify the introspection did not encounter any errors")
-        cmd = "source ~/stackrc;openstack baremetal node list | grep None"
+    def verify_nodes_registered_in_ironic_edge(self, node_type):
+        expected_node_type_count = len(self.settings.node_types_map[node_type])
+        cmd = ("source ~/stackrc;openstack baremetal node list "
+               "--fields properties -f json")
         setts = self.settings
-        re = Ssh.execute_command_tty(self.director_ip,
-                                     setts.director_install_account_user,
-                                     setts.director_install_account_pwd,
-                                     cmd)
-        # TODO :: i fnode failed introspection - set to to PXE - reboot
-        ls_nodes = re[0].split("\n")
-        ls_nodes.pop()
-        for node in ls_nodes:
-            state = node.split("|")[5]
-            if "available" not in state:
-                raise AssertionError(
-                    "Node state not available post bulk introspection" +
-                    "\n " + re[0])
+        stdout, stderr, exit_status = Ssh.execute_command_tty(
+            self.director_ip,
+            setts.director_install_account_user,
+            setts.director_install_account_pwd,
+            cmd)
+        nodes = json.loads(stdout)
+        registered_node_type_count = 0
+        for node in nodes:
+            props = node["Properties"]
+            if "node_type" in props and props["node_type"] == node_type:
+                registered_node_type_count += 1
+        if expected_node_type_count != registered_node_type_count:
+            raise AssertionError(
+                "Expected number of nodes registered in Ironic for node type: "
+                "{}, does not match, expected: {}, "
+                "imported: {}".format(node_type,
+                                      str(expected_node_type_count),
+                                      str(registered_node_type_count)))
+        logger.info("Validated node type: %s, "
+                    "has the correct number of nodes imported "
+                    "into Ironic: %s", node_type, registered_node_type_count)
+
+    def verify_introspection_sucessfull(self, node_type=None):
+        logger.debug("Verify the introspection did not encounter any errors")
+        if node_type:
+            self.verify_introspection_sucessfull_edge(node_type)
+        else:
+            cmd = "source ~/stackrc;openstack baremetal node list | grep None"
+            setts = self.settings
+            re = Ssh.execute_command_tty(self.director_ip,
+                                         setts.director_install_account_user,
+                                         setts.director_install_account_pwd,
+                                         cmd)
+            # TODO :: i fnode failed introspection - set to to PXE - reboot
+            ls_nodes = re[0].split("\n")
+            ls_nodes.pop()
+            for node in ls_nodes:
+                state = node.split("|")[5]
+                if "available" not in state:
+                    raise AssertionError(
+                        "Node state not available post bulk introspection"
+                        + "\n " + re[0])
+
+    def verify_introspection_sucessfull_edge(self, node_type):
+        node_type_count = len(self.settings.node_types_map[node_type])
+        cmd = ("source ~/stackrc;openstack baremetal node list "
+               "--fields uuid properties provision_state -f json")
+        setts = self.settings
+        stdout, stderr, exit_status = Ssh.execute_command_tty(
+            self.director_ip,
+            setts.director_install_account_user,
+            setts.director_install_account_pwd,
+            cmd)
+        nodes = json.loads(stdout)
+        introspected_node_type_count = 0
+        for node in nodes:
+            props = node["Properties"]
+            uuid = node["UUID"]
+            state = node["Provisioning State"]
+            if ("node_type" in props and props["node_type"] == node_type
+                    and state == "available"):
+                introspected_node_type_count += 1
+        if node_type_count != introspected_node_type_count:
+            raise AssertionError(
+                "Expected number of nodes introspected for node type: "
+                "{}, does not match, expected: {}, "
+                "introspected: {}".format(node_type,
+                                          str(node_type_count),
+                                          str(introspected_node_type_count)))
+        logger.info("Validated node type: %s, "
+                    "has the correct number of nodes introspected: %s",
+                    node_type, introspected_node_type_count)
 
     def verify_undercloud_installed(self):
         logger.debug("Verify the undercloud installed properly")
-        cmd = "stat ~/stackrc"
         setts = self.settings
+        cmd = "stat ~/stackrc"
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
         if "No such file or directory" in re[0]:
-            raise AssertionError(
-                "Director & Undercloud did not install properly, "
-                "check /pilot/install-director.log for details")
+            _error = AssertionError("Director & Undercloud did not install "
+                                    "properly, no ~/stackrc found, check "
+                                    "/pilot/install-director.log "
+                                    "for details")
+
+            return True, _error
 
         cmd = ("grep \"The Undercloud has been successfully installed\" "
                + "~/pilot/install-director.log")
 
-        setts = self.settings
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
         if "The Undercloud has been successfully installed" not in re[0]:
-            raise AssertionError(
-                "Director & Undercloud did not install properly,"
-                " check /pilot/install-director.log for details")
+            _error = AssertionError("Director & Undercloud did not install "
+                                    "properly, log does not indicate a "
+                                    "successful director installation, check "
+                                    "/pilot/install-director.log for details")
+            return True, _error
 
         cmd = "cat "\
               "~/pilot/install-director.log"
@@ -330,9 +399,9 @@ class Checkpoints:
                                      setts.director_install_account_pwd,
                                      cmd)
         if "There are no enabled repos" in re[0]:
-            raise AssertionError(
-                "Unable to attach to pool ID while updating the overcloud\
-                image")
+            _error = AssertionError("Unable to attach to pool ID while "
+                                    "updating the overcloud image")
+            return True, _error
 
         cmd = "source ~/stackrc;glance image-list"
         re = Ssh.execute_command_tty(self.director_ip,
@@ -340,18 +409,45 @@ class Checkpoints:
                                      setts.director_install_account_pwd,
                                      cmd)
         if "overcloud-full" not in re[0]:
-            raise AssertionError(
-                "Unable to find the overcloud image in glance - "
-                "check the install-director.log for possible package"
-                "download errors")
+            _error = AssertionError("Unable to find the overcloud image "
+                                    "in glance - check the "
+                                    "install-director.log for possible "
+                                    "package download errors")
+            return True, _error
 
         logger.info("Undercloud installed Successfully!")
+
+        return False, None
+
+    def provisioning_subnet_exists(self, subnet):
+        logger.debug("Check if edge subnet {} already "
+                     "exists or not".format(subnet))
+        setts = self.settings
+        user = setts.director_install_account_user
+        ip = setts.director_node.public_api_ip
+        pwd = setts.director_install_account_pwd
+        is_subnet = False
+        subnet_cmd = ("{} openstack subnet "
+                      "show {} -c name "
+                      "-f value".format(self.source_stackrc, subnet))
+        sn_out = Ssh.execute_command(ip, user, pwd, subnet_cmd)[0]
+        if sn_out.strip() == subnet:
+            is_subnet = True
+            logger.info("Subnet {} already exists".format(subnet))
+        return is_subnet
+
+    def verify_provisioning_subnets_created(self, subnets):
+        for subnet in subnets:
+            _is_subnet = self.provisioning_subnet_exists(subnet)
+            if not _is_subnet:
+                raise AssertionError(
+                    "Provisioning subnet {} not found in "
+                    "undercloud".format(subnet))
 
     def verify_overcloud_deployed(self):
         logger.debug("Verify the overcloud installed properly")
         setts = self.settings
         overcloud_name = setts.overcloud_name
-        install_fail=False
 
         # Verify the overcloud RC file was created
         cmd = "test -f ~/" + overcloud_name + "rc; echo $?;"
@@ -359,10 +455,18 @@ class Checkpoints:
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
-        is_conf = not bool(int(re[0]))
+        # Have to strip non-printing chars as re[0] contains newline '\n'
+        _resp = re[0].strip()
+        # If director is turned off or not deployed
+        # re[0] == "host not up", handle this case by checking len(re[0])
+        is_conf = not bool(int(_resp)) if len(_resp) == 1 else False
         if is_conf is False:
-            logger.error("Error : overcloud RC file missing")
-            install_fail=True
+            msg = ("Overcloud RC file missing, either the overcloud has not "
+                   "been deployed yet or there was an issue during "
+                   "the deployment, such as Director VM being down or a heat "
+                   "stack deployment failure")
+            logger.warning(msg)
+            return True, AssertionError(msg)
 
         # Check log for successful deployment
         success = "Overcloud Deployed"
@@ -372,13 +476,14 @@ class Checkpoints:
                                      setts.director_install_account_pwd,
                                      cmd)
         if success not in re[0]:
-            logger.error("Error: Overcloud did not install successfully, check ~/pilot/overcloud_deploy_out.log")
-            install_fail=True
-        if install_fail is True:
-            raise AssertionError("Overcloud did not install successfully")
+            msg = ("Overcloud did not install successfully, "
+                   "check ~/pilot/overcloud_deploy_out.log")
+            logger.warning(msg)
+            return True, AssertionError(msg)
+
         else:
             logger.info("Overcloud install successful")
-
+            return False, None
 
     def verify_computes_virtualization_enabled(self):
         logger.debug("*** Verify the Compute nodes have KVM enabled *** ")

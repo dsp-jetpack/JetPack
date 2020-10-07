@@ -47,12 +47,12 @@ parameter_defaults:
   # List of Default Filters to pass to the nova Scheduler
   # Default filters are used if profile is set to XSP
   # This line is uncommented when using with CSP profile
-  # NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','NUMATopologyFilter', 'AggregateInstanceExtraSpecsFilter']
+  # NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','NUMATopologyFilter','AggregateInstanceExtraSpecsFilter']
 
-  # List of CPUs reserver for Host OS operation
+  # List or range of physical CPU cores to reserve for virtual machine processes.
   # Disabled by default for XSP Profile
   # This line is uncommented and updated when using CSP Profile
-  # NovaVcpuPinSet: "8-23,32-47"
+  # NovaComputeCpuDedicatedSet: "8-23,32-47"
   # DellComputeParameters:
     # KernelArgs: "default_hugepagesz=1GB hugepagesz=1G hugepages=176 iommu=pt intel_iommu=on"
 
@@ -98,7 +98,6 @@ parameter_defaults:
   CephAnsibleExtraConfig:
     nb_retry_wait_osd_up: 360
     delay_wait_osd_up: 60
-
 
   ControllerExtraConfig:
     nova::api::max_limit: 10000

@@ -80,7 +80,7 @@
                  "false"
               ]
             }
-         }        
+         }
    },
       {
          "Vips Settings": {
@@ -91,7 +91,7 @@
                ]
             }
          }
-      }, 
+      },
       {
          "MTU Settings": {
             "mtu_selection": {
@@ -248,7 +248,13 @@
          "use_ipmi_driver":"",
          "use_in_band_introspection":"",
          "enable_version_locking":"",
-         "node_types":""
+         "edge_sites":"",
+         "deploy_edge_sites": {
+            "valid_values": [
+               "true",
+               "false"
+            ]
+          }
          }
       },
       {

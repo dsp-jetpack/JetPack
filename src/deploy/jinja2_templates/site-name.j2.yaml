@@ -1,0 +1,10 @@
+resource_registry:
+  OS::TripleO::Services::NovaAZConfig: {{overcloud_templates}}/deployment/nova/nova-az-config.yaml
+  
+parameter_defaults:
+  NovaComputeAvailabilityZone: {{az}}
+  ControllerExtraConfig:
+    nova::availability_zone::default_schedule_zone: {{az}}
+  NovaCrossAZAttach: false
+  CinderStorageAvailabilityZone: {{az}}
+  GlanceBackendID: {{az}}

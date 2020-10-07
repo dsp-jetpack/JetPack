@@ -27,6 +27,7 @@
   uses_deprecated_params: {{role.uses_deprecated_params}}
   disable_upgrade_deployment: {{role.disable_upgrade_deployment}}
   CountDefault: {{role.CountDefault}}
+  update_serial: {{role.update_serial}}
   ServicesDefault:
   {%- for service in role.ServicesDefault %}
     - {{service}}

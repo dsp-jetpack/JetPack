@@ -106,12 +106,22 @@ class NfvParameters(object):
 
     def parse_data(self, node_data):
         self.data['nics'] = self.get_numa_nics(node_data)
-        self.data['cpus'] = self.get_numa_cpus(node_data)
+        cpus = self.get_numa_cpus(node_data)
+        # Reorganize cpus keys to be in numeric order
+        for node in cpus.keys():
+            new_dict = {}
+            cpu_dict = cpus[node]
+            for key,value in cpu_dict.items():
+                min_val = min(value)        #extract min values
+                new_dict[min_val] = value
+        # Append Numa cpus to data
+            self.data['cpus'][node] = new_dict
+        logger.debug("NUMA NICs and CPUs >> " + str(self.data))
 
     def get_all_cpus(self):
         try:
             total_cpus = []
-            assert self.data.has_key('cpus'),\
+            assert 'cpus' in self.data,\
                 "Unable to fetch total number " \
                 "of CPUs. Parse CPU data first"
             for node in self.data['cpus'].keys():
@@ -120,6 +130,7 @@ class NfvParameters(object):
             total_cpus = [item for sublist in total_cpus for item in sublist]
             total_cpus = self.range_extract(sorted(total_cpus, key=int))
             self.total_cpus = ','.join(map(str, total_cpus))
+            logger.debug("Total CPUs >> " + str(self.total_cpus))
         except AssertionError:
             raise
 
@@ -133,6 +144,7 @@ class NfvParameters(object):
             i += 1
         host_cpus = self.range_extract(sorted(host_cpus, key=int))
         self.host_cpus = ','.join(map(str, host_cpus))
+        logger.debug("Host CPUs >> " + str(self.host_cpus))
 
     def get_pmd_cpus(self, mtu, dpdk_nics):
         pmd_cpus = []
@@ -155,6 +167,7 @@ class NfvParameters(object):
         pmd_cpus = [item for sublist in pmd_cpus for item in sublist]
         pmd_cpus = self.range_extract(sorted(pmd_cpus, key=int))
         self.pmd_cpus = ','.join(map(str, pmd_cpus))
+        logger.debug("PMD CPUs >> " + str(self.pmd_cpus))
 
     def get_nova_cpus(self):
         nova_cpus = []
@@ -166,6 +179,7 @@ class NfvParameters(object):
         nova_cpus = [item for sublist in nova_cpus for item in sublist]
         nova_cpus = self.range_extract(sorted(nova_cpus, key=int))
         self.nova_cpus = ','.join(map(str, nova_cpus))
+        logger.debug("NOVA CPUs >> " + str(self.nova_cpus))
 
     def get_isol_cpus(self):
         isol_cpus = []
@@ -175,6 +189,7 @@ class NfvParameters(object):
         isol_cpus = sorted(map(int, isol_cpus), key=int)
         isol_cpus = self.range_extract(isol_cpus)
         self.isol_cpus = ','.join(map(str, isol_cpus))
+        logger.debug("isol CPUs >> " + str(self.isol_cpus))
 
     def get_socket_memory(self, mtu, dpdk_nics):
         nodes = self.data['nics'].keys()
@@ -187,7 +202,7 @@ class NfvParameters(object):
                     mem += (mtu + 800) * (4096*64)
                     break
             mem = mem / (1024*1024)
-            numa_mem[n] = self.round_to_nearest(mem, 1024)
+            numa_mem[n] = int(self.round_to_nearest(mem, 1024))
         self.socket_mem = ','.join(map(str, numa_mem.values()))
 
     def round_to_nearest(self, n, m):

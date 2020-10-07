@@ -146,62 +146,6 @@ class ConfigOvercloud(object):
             kernel_args = ''
             if sriov or ovs_dpdk:
                 kernel_args = "iommu=pt intel_iommu=on"
-            if hw_offload:
-                vlan = str(vlan_range).split(':')
-                vlan_start = int(vlan[0])
-                vlan_end = int(vlan[1])
-                vlan_diff = vlan_end - vlan_start
-                if int(sriov_interfaces) == 2:
-                    vlan_a = (vlan_diff / 2) + vlan_start
-                    vlan_b = vlan_a + 1
-
-                    cmds.append(('sed -i "s|NeutronNetworkVLANRanges:.*' +
-                                 '|NeutronNetworkVLANRanges: ' +
-                                 'physint:' + str(vlan_start) +
-                                 ":" + str(vlan_a) +
-                                 ',physint1:' + str(vlan_b) +
-                                 ":" + str(vlan_end) +
-                                 ',physext' +
-                                 '|" ' +
-                                 file_path))
-                    cmds.append(('sed -i "s|NeutronBridgeMappings:.*' +
-                                 '|NeutronBridgeMappings: ' +
-                                 'physint:mlx_br1,' +
-                                 'physint1:mlx_br2,' +
-                                 'physext:br-ex' +
-                                 '|" ' +
-                                 file_path))
-
-                if int(sriov_interfaces) == 4:
-                    vlan_a = (vlan_diff / 4) + vlan_start
-                    vlan_b = vlan_a + 1
-                    vlan_c = (vlan_diff / 4) + vlan_b
-                    vlan_d = vlan_c + 1
-                    vlan_e = (vlan_diff / 4) + vlan_d
-                    vlan_f = vlan_e + 1
-
-                    cmds.append(('sed -i "s|NeutronNetworkVLANRanges:.*' +
-                                 '|NeutronNetworkVLANRanges: ' +
-                                 'physint:' + str(vlan_start) +
-                                 ":" + str(vlan_a) +
-                                 ',physint1:' + str(vlan_b) +
-                                 ":" + str(vlan_c) +
-                                 ',physint2:' + str(vlan_d) +
-                                 ":" + str(vlan_e) +
-                                 ',physint3:' + str(vlan_f) +
-                                 ":" + str(vlan_end) +
-                                 ',physext' +
-                                 '|" ' +
-                                 file_path))
-                    cmds.append(('sed -i "s|NeutronBridgeMappings:.*' +
-                                 '|NeutronBridgeMappings: ' +
-                                 'physint:mlx_br1,' +
-                                 'physint1:mlx_br2,' +
-                                 'physint2:mlx_br3,' +
-                                 'physint3:mlx_br4,' +
-                                 'physext:br-ex' +
-                                 '|" ' +
-                                 file_path))
 
             if enable_hugepage:
                 hpg_num = self.nfv_params.calculate_hugepage_count(
@@ -218,13 +162,14 @@ class ConfigOvercloud(object):
                 if ovs_dpdk:
                     dpdk_nics = self.find_ifaces_by_keyword(nic_env_file,
                                                             'Dpdk')
+                    logger.debug("DPDK-NICs >>" + str(dpdk_nics))
                     self.nfv_params.get_pmd_cpus(mtu, dpdk_nics)
                     self.nfv_params.get_socket_memory(mtu, dpdk_nics)
                 self.nfv_params.get_nova_cpus()
                 self.nfv_params.get_isol_cpus()
-                kernel_args += " isolcpus=%s" % self.nfv_params.nova_cpus
+                kernel_args += " isolcpus=%s" % self.nfv_params.isol_cpus
                 cmds.append(
-                    'sed -i "s|# NovaVcpuPinSet:.*|NovaVcpuPinSet: ' +
+                    'sed -i "s|# NovaComputeCpuDedicatedSet:.*|NovaComputeCpuDedicatedSet: ' +
                     self.nfv_params.nova_cpus + '|" ' + file_path)
             if kernel_args:
                 cmds.append(
@@ -241,6 +186,11 @@ class ConfigOvercloud(object):
                     '\\" |" ' +
                     dpdk_file)
                 cmds.append(
+                    'sed -i "s|NovaComputeCpuSharedSet:.*|NovaComputeCpuSharedSet: \\"' +
+                    self.nfv_params.host_cpus +
+                    '\\" |" ' +
+                    dpdk_file)
+                cmds.append(
                     'sed -i "s|OvsPmdCoreList:.*|OvsPmdCoreList: \\"' +
                     self.nfv_params.pmd_cpus +
                     '\\" |" ' +
@@ -252,8 +202,8 @@ class ConfigOvercloud(object):
                     '\\" |" ' +
                     dpdk_file)
                 cmds.append(
-                    'sed -i "s|# IsolCpusList:.*|IsolCpusList: ' +
-                    self.nfv_params.isol_cpus + '|" ' + dpdk_file)
+                    'sed -i "s|IsolCpusList:.*|IsolCpusList: \\"' +
+                    self.nfv_params.isol_cpus + '\\" |" ' + dpdk_file)
 
             for cmd in cmds:
                 status = os.system(cmd)

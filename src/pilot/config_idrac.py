@@ -535,7 +535,7 @@ def wait_for_jobs_to_complete(job_ids, drac_client, ip_service_tag):
 
 def clear_job_queue(drac_client, ip_service_tag):
     LOG.info("Clearing the job queue on {}".format(ip_service_tag))
-    drac_client.delete_jobs(job_ids=['JID_CLEARALL_FORCE'])
+    drac_client.delete_jobs(job_ids=['JID_CLEARALL'])
 
     # It takes a second or two for the iDRAC to switch from the ready state to
     # the not-ready state, so wait for this transition to happen
@@ -566,7 +566,7 @@ def config_idrac(instack_lock,
     drac_password = node["pm_password"]
     ironic_driver = node["pm_type"]
 
-    if ironic_driver != "pxe_drac":
+    if ironic_driver != "idrac":
         LOG.info("{} is using the {} driver.  No iDRAC configuration is "
                  "possible.".format(ip_service_tag, ironic_driver))
 
@@ -591,7 +591,6 @@ def config_idrac(instack_lock,
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_UEFI
     else:
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_BIOS
-
     config_boot_mode(drac_client, ip_service_tag, node, target_boot_mode)
 
     job_ids = list()
