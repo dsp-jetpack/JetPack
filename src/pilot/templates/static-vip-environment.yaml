@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#resource_registry:
-  #OS::TripleO::Network::Ports::NetVipMap: ./overcloud/network/ports/net_ip_map.yaml
-  #OS::TripleO::Network::Ports::ExternalVipPort: ./overcloud/network/ports/noop.yaml
-  #OS::TripleO::Network::Ports::InternalApiVipPort: ./overcloud/network/ports/noop.yaml
-  #OS::TripleO::Network::Ports::StorageVipPort: ./overcloud/network/ports/noop.yaml
-  #OS::TripleO::Network::Ports::StorageMgmtVipPort: ./overcloud/network/ports/noop.yaml
+# resource_registry:
+#   OS::TripleO::Network::Ports::NetVipMap: ./overcloud/network/ports/net_ip_map.yaml
+#   OS::TripleO::Network::Ports::ExternalVipPort: ./overcloud/network/ports/noop.yaml
+#   OS::TripleO::Network::Ports::InternalApiVipPort: ./overcloud/network/ports/noop.yaml
+#   OS::TripleO::Network::Ports::StorageVipPort: ./overcloud/network/ports/noop.yaml
+#   OS::TripleO::Network::Ports::StorageMgmtVipPort: ./overcloud/network/ports/noop.yaml
 
 
 parameter_defaults:
