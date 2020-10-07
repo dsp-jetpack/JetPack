@@ -594,7 +594,7 @@ def last_two_disks_by_location(physical_disks):
         # The second disk is smaller.
         logical_disk_size_mb = last_two_disks[1].size_mb
 
-    logical_disk_size_gb = logical_disk_size_mb / 1024
+    logical_disk_size_gb = int(logical_disk_size_mb / 1024)
 
     # Ensure that the logical disk size is unique from the perspective
     # of Linux logical volumes.
