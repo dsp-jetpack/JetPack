@@ -275,6 +275,10 @@ class ConfigOvercloud(object):
                     'sed -i "s|CinderEnableRbdBackend:.*' +
                     '|CinderEnableRbdBackend: false |" ' +
                     file_path)
+                cmds.append(
+                    'sed -i "s|GlanceBackend:.*' +
+                    '|GlanceBackend: cinder|" ' +
+                    file_path)
 
 
             for cmd in cmds:
