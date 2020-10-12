@@ -222,43 +222,42 @@ resources:
                   {%- endfor %}
                 {%- endif %}
                 members:
-                  {%- for bridge_member in cfg.members %}
+                {%- for bridge_member in cfg.members %}
                   - type: {{bridge_member.type}}
-                    {%- if bridge_member.type == 'linux_bond' %}
+                  {%- if bridge_member.type == 'linux_bond' %}
                     name: {{bridge_member.name}}
                     bonding_options:
                       get_param: {{bridge_member.bonding_options}}
                     mtu:
                       get_param: {{bridge_member.mtu}}
                     members:
-                      {%- for bond_member in bridge_member.members %}
+                    {%- for bond_member in bridge_member.members %}
                     - type: {{bond_member.type}}
                       name:
                         get_param: {{bond_member.name}}
                       mtu:
                         get_param: {{bond_member.mtu}}
-                        {%- if 'primary' in bond_member %}
+                      {%- if 'primary' in bond_member %}
                       primary: {{bond_member.primary}}
-                        {%- endif %}
-                      {%- endfor %}
-                    {%- elif bridge_member.type == 'vlan' %}
+                      {%- endif %}
+                    {%- endfor %}
+                  {%- elif bridge_member.type == 'vlan' %}
                     device: {{bridge_member.device}}
                     vlan_id:
                       get_param: {{bridge_member.vlan_id}}
                     mtu:
                       get_param: {{bridge_member.mtu}}
                     addresses:
-                      {%- for vlan_address in bridge_member.addresses %}
+                    {%- for vlan_address in bridge_member.addresses %}
                     - ip_netmask:
                         get_param: {{vlan_address.ip_netmask}}
-                      {%- endfor %}
-                      {%- if 'routes' in bridge_member %}
+                    {%- endfor %}
+                    {%- if 'routes' in bridge_member %}
                     routes:
                       get_param: {{bridge_member.routes}}
-                      {%- endif %}
                     {%- endif %}
-                  {%- endfor %}
-                {%- endif %}
+                  {%- endif %}
+                {%- endfor %}
               {%- endfor %}
 outputs:
   OS::stack_id:
