@@ -846,7 +846,11 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
     if role_index.index:
         role = "node:{}-{}".format(flavor, role_index.index)
 
-    value = "{},{},boot_mode:uefi,boot_option:local".format(role, node.properties['capabilities'])
+    if 'capabilities' in node.properties:
+        value = "{},{},boot_mode:uefi,boot_option:local".format(role, node.properties['capabilities'])
+    else:
+        value = "{},boot_mode:uefi,boot_option:local".format(role)
+
     LOG.info(str(node.properties))
     LOG.info(str(value))
 
