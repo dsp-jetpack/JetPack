@@ -286,6 +286,12 @@ echo "### Patching tripleo-heat-templates part II"
 apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/swift/swift-proxy-container-puppet.yaml ${HOME}/pilot/swift-proxy-container.patch"
 apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/nova/nova-scheduler-container-puppet.yaml ${HOME}/pilot/nova-scheduler-container.patch"
 apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/database/redis-container-puppet.yaml ${HOME}/pilot/redis-container.patch"
+# This hacks in a patch for XE2420 where if CertificateInstance lower and
+# upper bounds are None, patch will make the attributes nullable and set
+# default to 0 to avoid an exception as those two attibutes are not nullable
+echo "### Patching idrac_card.py"
+apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.py ${HOME}/pilot/idrac_card.patch"
+
 echo "## Done"
 
 echo
