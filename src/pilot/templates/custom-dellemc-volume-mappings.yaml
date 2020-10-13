@@ -1,0 +1,7 @@
+parameter_defaults:
+  NovaComputeOptVolumes:
+    - /opt/emc/scaleio/openstack:/opt/emc/scaleio/openstack
+  CinderVolumeOptVolumes:
+    - /opt/emc/scaleio/openstack:/opt/emc/scaleio/openstack
+  GlanceApiOptVolumes:
+    - /opt/emc/scaleio/openstack:/opt/emc/scaleio/openstack
