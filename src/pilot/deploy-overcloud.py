@@ -613,6 +613,7 @@ def main():
         if args.num_powerflex > 0:
             env_opts += " -e ~/pilot/templates/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml"
             env_opts += " -e ~/pilot/templates/dellemc-powerflex-cinder-backend.yaml"
+            env_opts += " -e ~/pilot/templates/custom-dellemc-volume-mappings.yaml"
         else:
             env_opts += " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml" \
                         " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-rgw.yaml"

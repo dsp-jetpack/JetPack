@@ -900,6 +900,11 @@ class Director(InfraHost):
         self.run_tty("cp " + dell_powerflex_cinder_yaml +
                      " " + dell_powerflex_cinder_yaml + ".bak")
 
+        dell_powerflex_custom_mapping_yaml = self.templates_dir + \
+            "/custom-dellemc-volume-mappings.yaml"
+        self.upload_file(self.settings.dell_powerflex_volume_mapping_yaml,
+                         dell_powerflex_custom_mapping_yaml)
+
         dell_powerflex_ansible_yaml = self.templates_dir  + \
             "/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml"
         self.setup_powerflex(dell_powerflex_cinder_yaml,dell_powerflex_ansible_yaml)
