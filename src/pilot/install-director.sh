@@ -366,6 +366,17 @@ for container in "ironic_pxe_tftp"  "ironic_conductor" "ironic_api" ;
     run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyo"
     echo "## Done"
 
+    # This hacks in a patch for XE2420 where CertificateInstance lower and
+    # upper bounds are None, patch will make the attributes nullable and set
+    # default to 0.
+    echo
+    echo "## Patching Ironic iDRAC driver idrac_card on ${container}..."
+    upload_file_to_container "${container}" "${HOME}/pilot/idrac_card.patch" "/tmp/idrac_card.patch"
+    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.py /tmp/idrac_card.patch"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.pyc"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.pyo"
+    echo "## Done"
+
   done
 
 # This patches workarounds for two issues into ironic.conf.
