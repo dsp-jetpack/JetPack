@@ -594,7 +594,7 @@ def last_two_disks_by_location(physical_disks):
         # The second disk is smaller.
         logical_disk_size_mb = last_two_disks[1].size_mb
 
-    logical_disk_size_gb = logical_disk_size_mb / 1024
+    logical_disk_size_gb = int(logical_disk_size_mb / 1024)
 
     # Ensure that the logical disk size is unique from the perspective
     # of Linux logical volumes.
@@ -828,7 +828,8 @@ def place_node_in_available_state(ironic_client, node_uuid):
 
 
 def assign_role(ip_mac_service_tag, node_uuid, role_index,
-                ironic_client, drac_client):
+                ironic_client):
+
     if role_index.role not in ROLES.keys():
         flavor = role_index.role
     else:
@@ -840,13 +841,12 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
             flavor))
 
     node = ironic_client.node.get(node_uuid, fields=['properties'])
+    _is_index = True if bool(role_index.index) else False
+    _role = ("node:{}-{}".format(flavor, role_index.index)
+             if _is_index else {"profile": flavor})
 
-    role = "profile:{}".format(flavor)
-
-    if role_index.index:
-        role = "node:{}-{}".format(flavor, role_index.index)
-
-    value = "{},{},boot_mode:uefi,boot_option:local".format(role, node.properties['capabilities'])
+    value = ("{},{},boot_mode:uefi,boot_option:"
+             "local".format(_role, node.properties['capabilities']))
     LOG.info(str(node.properties))
     LOG.info(str(value))
 
@@ -855,7 +855,6 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
               'path': '/properties/capabilities'}]
     ironic_client.node.update(node_uuid, patch)
     LOG.info(str(patch))
-
 
 
 def generate_osd_config(ip_mac_service_tag, drac_client):
@@ -1336,8 +1335,8 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
 
 
 def configure_bios(node, ironic_client, settings, drac_client):
-    LOG.info("Configuring BIOS")
-
+    LOG.info("Configuring BIOS: settings: {}".format(str(settings)))
+    LOG.info("Configuring BIOS: node: {}".format(str(node)))
     if 'drac' not in node.driver:
         LOG.critical("Node is not being managed by an iDRAC driver")
         return False
@@ -1447,8 +1446,7 @@ def main():
             args.ip_mac_service_tag,
             node.uuid,
             args.role_index,
-            ironic_client,
-            drac_client)
+            ironic_client)
         if node.driver == "idrac":
             bios_settings = calculate_bios_settings(
                 super_role,
@@ -1510,4 +1508,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

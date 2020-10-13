@@ -18,11 +18,13 @@ from osp_deployer.settings.config import Settings
 from osp_deployer.checkpoints import Checkpoints
 from .infra_host import InfraHost
 from auto_common import Scp, Ssh, FileHelper
+from auto_common.constants import *
 import logging
 import time
 import shutil
 import os
 import subprocess
+import re
 
 logger = logging.getLogger("osp_deployer")
 
@@ -342,25 +344,29 @@ class Sah(InfraHost):
             conf = conf + ("satellite_activation_key " +
                            self.settings.satellite_activation_key,)
 
-        conf = conf + ("# Iface     IP" +
-                       "               NETMASK" +
-                       "              MTU",)
-        conf = conf + ("enp1s0        " +
-                       self.settings.director_node.public_api_ip +
-                       "    " + self.settings.public_api_netmask +
-                       "     " + self.settings.public_api_network_mtu,)
-        conf = conf + ("enp2s0        " +
-                       self.settings.director_node.provisioning_ip +
-                       "    " + self.settings.provisioning_netmask +
-                       "     " + self.settings.provisioning_network_mtu,)
-        conf = conf + ("enp3s0        " +
-                       self.settings.director_node.management_ip +
-                       "    " + self.settings.management_netmask +
-                       "     " + self.settings.management_network_mtu,)
-        conf = conf + ("enp4s0        " +
-                       self.settings.director_node.private_api_ip +
-                       "    " + self.settings.private_api_netmask +
-                       "     " + self.settings.private_api_network_mtu,)
+        conf = conf + ("# Iface     IP"
+                       + "               NETMASK"
+                       + "              MTU",)
+        conf = conf + (PUBLIC_API_IF
+                       + "        "
+                       + self.settings.director_node.public_api_ip
+                       + "    " + self.settings.public_api_netmask
+                       + "     " + self.settings.public_api_network_mtu,)
+        conf = conf + (PROVISIONING_IF
+                       + "        "
+                       + self.settings.director_node.provisioning_ip
+                       + "    " + self.settings.provisioning_netmask
+                       + "     " + self.settings.provisioning_network_mtu,)
+        conf = conf + (MANAGEMENT_IF
+                       + "        "
+                       + self.settings.director_node.management_ip
+                       + "    " + self.settings.management_netmask
+                       + "     " + self.settings.management_network_mtu,)
+        conf = conf + (PRIVATE_API_IF
+                       + "        "
+                       + self.settings.director_node.private_api_ip
+                       + "    " + self.settings.private_api_netmask
+                       + "     " + self.settings.private_api_network_mtu,)
 
         for line in conf:
             self.run("echo '" +
@@ -415,33 +421,72 @@ class Sah(InfraHost):
                ]
         for cmd in cmds:
             self.run_as_root(cmd)
-    def create_subnet_routes_edge(self):
-        logger.info('Setting routes for edge subnets on SAH and '
-                    'restarting bridge interfaces')
+
+
+    def subnet_routes_edge(self, node_type, add=True):
+        """
+        Example nmcli command:
+            nmcli connection modify br-mgmt +ipv4.routes
+            "192.168.112.0/24 192.168.110.1"
+        """
+        logger.info("Adding?: {} route for edge subnet for "
+                    "node_type: {}".format(add, node_type))
         setts = self.settings
-        ntdm = setts.node_type_data_map
-        route_br_mgmt = '/etc/sysconfig/network-scripts/route-br-mgmt'
-        route_br_prov = '/etc/sysconfig/network-scripts/route-br-prov'
-        with open(route_br_mgmt, 'w') as route_br_mgmt_stream:
-            for node_type, node_type_data in ntdm.items():
-                mgmt_cidr = node_type_data['mgmt_cidr']
-                mgmt_bridge = 'br-mgmt'
-                route = "{} via {} dev {}\n".format(mgmt_cidr,
-                                                    setts.management_gateway,
-                                                    mgmt_bridge)
-                route_br_mgmt_stream.write(route)
-        with open(route_br_prov, 'w') as route_br_prov_stream:
-            for node_type, node_type_data in ntdm.items():
-                prov_cidr = node_type_data['cidr']
-                prov_bridge = 'br-prov'
-                route = "{} via {} dev {}\n".format(prov_cidr,
-                                                    setts.provisioning_gateway,
-                                                    prov_bridge)
-                route_br_prov_stream.write(route)
-        # Restart networks
-        for bridge in ['br-mgmt', 'br-prov']:
-            cmd = 'ifdown {} ; ifup {}'.format(bridge, bridge)
-            subprocess.check_output(cmd,
+        node_type_data = setts.node_type_data_map[node_type]
+        mgmt_cidr = node_type_data['mgmt_cidr']
+        prov_cidr = node_type_data['cidr']
+        add_remove = "+" if add else "-"
+
+        mgmt_cmd = NWM_ROUTE_CMD.format(dev=MGMT_BRIDGE,
+                                        add_rem=add_remove,
+                                        cidr=mgmt_cidr,
+                                        gw=setts.management_gateway)
+        prov_cmd = NWM_ROUTE_CMD.format(dev=PROV_BRIDGE,
+                                        add_rem=add_remove,
+                                        cidr=prov_cidr,
+                                        gw=setts.provisioning_gateway)
+        _is_mgmt_route = self._does_route_exist(mgmt_cidr)
+        _is_prov_route = self._does_route_exist(prov_cidr)
+        if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
+            subprocess.check_output(mgmt_cmd,
                                     stderr=subprocess.STDOUT,
                                     shell=True)
-        logger.info('Routes for edge subnets on SAH updated')
+            up_cmd = NWM_UP_CMD.format(dev=MGMT_BRIDGE)
+            subprocess.check_output(up_cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
+        if ((not _is_prov_route and add) or (_is_prov_route and not add)):
+            subprocess.check_output(prov_cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
+            up_cmd = NWM_UP_CMD.format(dev=PROV_BRIDGE)
+            subprocess.check_output(up_cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
+        logger.info("Routes for edge site {} "
+                    "subnets on SAH updated".format(node_type))
+
+    def get_virsh_interface_map(self):
+        '''
+        Transform output from:
+        virsh -r domiflist director
+        Interface  Type       Source     Model       MAC
+        -------------------------------------------------------
+        vnet0      bridge     br-pub-api virtio      52:54:00:b6:88:f9
+        vnet1      bridge     br-prov    virtio      52:54:00:2b:c7:12
+        ...
+        Return dict with source as key:
+        {'br-pub-api': ['vnet0', 'bridge', 'virtio', '52:54:00:b6:88:f9'], ...}
+        '''
+        if_map = {}
+        res = self.run("virsh -r domiflist director")[0]
+        lines = res.splitlines()
+        del lines[:2]  # delete header rows
+        del lines[-1]  # delete trailing empty line
+        for line in lines:
+            _l_arr = line.split()
+            src = _l_arr[2]
+            del _l_arr[2]
+            if_map[src] = _l_arr
+        logger.debug("virsh domain interface "
+                     "map for director vm: {}".format(str(if_map)))

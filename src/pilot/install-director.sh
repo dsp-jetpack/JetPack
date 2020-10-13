@@ -374,17 +374,17 @@ for container in "ironic_pxe_tftp"  "ironic_conductor" "ironic_api" ;
 # 2. sync_power_state_interval is increased to work around an issue where
 #    servers go into maintenance mode in ironic if polled for power state too
 #    aggressively.
-echo
-echo "## Patching ironic.conf..."
-apply_patch "sudo patch -b -s /var/lib/config-data/puppet-generated//ironic/etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
-echo "## Done."
+# echo
+# echo "## Patching ironic.conf..."
+# apply_patch "sudo patch -b -s /var/lib/config-data/puppet-generated//ironic/etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
+# echo "## Done."
 
 # This patches an issue where the  Ironic api service returns http 500 errors
 # https://bugzilla.redhat.com/show_bug.cgi?id=1613995
-echo
-echo "## Patching 10-ironic_wsgi.conf"
-apply_patch "sudo patch -b -s /var/lib/config-data/puppet-generated/ironic_api/etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
-echo "## Done"
+# echo
+# echo "## Patching 10-ironic_wsgi.conf"
+# apply_patch "sudo patch -b -s /var/lib/config-data/puppet-generated/ironic_api/etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
+# echo "## Done"
 
 # Restart containers/services
 
@@ -403,7 +403,7 @@ sudo systemctl restart httpd
 echo "## Done"
 
 
-# Satellite , if using 
+# Satellite , if using
 if [ ! -z "${containers_prefix}" ]; then
     container_yaml=$HOME/containers-prepare-parameter.yaml
     sed -i "s/namespace:.*/namespace: ${satellite_hostname}:5000/" ${container_yaml}
