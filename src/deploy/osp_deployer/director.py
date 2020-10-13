@@ -862,6 +862,31 @@ class Director(InfraHost):
             # need below for multi stack support
             'sed -i "s|overcloud_stack_name=.*|overcloud_stack_name=' +
             self.settings.overcloud_name +
+            '|" pilot/deployment-validation/sanity.ini',
+            # Share Storage Support
+            'sed -i "s|share_storage_network=.*|share_storage_network=' +
+            self.settings.share_storage_network +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|share_storage_network_start_ip=.*|' +
+            'share_storage_network_start_ip=' +
+            self.settings.share_storage_network_start_ip +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|share_storage_network_end_ip=.*|' +
+            'share_storage_network_end_ip=' +
+            self.settings.share_storage_network_end_ip +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|share_storage_network_gateway=.*|'
+            'share_storage_network_gateway=' +
+            self.settings.share_storage_network_gateway +
+            '|" pilot/deployment-validation/sanity.ini',
+            'sed -i "s|share_storage_network_vlan=.*|share_storage_network_vlan=' +
+            self.settings.share_storage_network_vlan +
+            '|" pilot/deployment-validation/sanity.ini',
+           'sed -i "s|share_storage_network_name=.*|share_storage_network_name=' +
+            self.settings.share_storage_network_name +
+            '|" pilot/deployment-validation/sanity.ini',
+           'sed -i "s|share_storage_subnet_name=.*|share_storage_subnet_name=' +
+            self.settings.share_storage_subnet_name +
             '|" pilot/deployment-validation/sanity.ini'
         ]
         for cmd in cmds:
@@ -2409,14 +2434,15 @@ class Director(InfraHost):
         node_type_data = self.settings.node_type_data_map[node_type]
         paths = self._generate_edge_template_paths(node_type)
         stg_nic_path, dst_nic_path = paths
-        num_nics = node_type_data['nic_port_count']
+        num_nics = int(node_type_data['nic_port_count'])
         port_dir = "{}_port".format(num_nics)
         _tmplt_path = os.path.join(NIC_CONFIGS, port_dir, EDGE_COMPUTE_J2)
         tmplt = self.jinja2_env.get_template(_tmplt_path)
         tmplt_data = {}
-        tmplt_data["parameters"] = self._generate_nic_params(node_type)
+        tmplt_data["parameters"] = self._generate_nic_params(node_type,
+                                                             num_nics)
         tmplt_data["network_config"] = self._generate_nic_network_config(
-            node_type)
+            node_type, num_nics)
         logger.debug("tmplt_data: %s", str(tmplt_data))
         rendered_tmplt = tmplt.render(**tmplt_data)
         with open(stg_nic_path, 'w') as stg_nic_fp:
@@ -2428,49 +2454,46 @@ class Director(InfraHost):
         setts = self.settings
         node_type_data = setts.node_type_data_map[node_type]
         num_nics = int(node_type_data['nic_port_count'])
-        nic_dict_by_port_num = self._group_node_types_by_num_nics()
-        node_type_tuples = nic_dict_by_port_num[num_nics]
-        nic_dict_by_port_num[num_nics].append((node_type, node_type_data))
+        # nic_dict_by_port_num = self._group_node_types_by_num_nics()
+        # node_type_tuples = nic_dict_by_port_num[num_nics]
+        # nic_dict_by_port_num[num_nics].append((node_type, node_type_data))
 
-        port_dir = "{}_port".format(num_nics)
-
-        _tmplt_path = os.path.join(NIC_CONFIGS, port_dir, NIC_ENV_EDGE_J2)
+        _tmplt_path = os.path.join(NIC_CONFIGS, NIC_ENV_EDGE_J2)
         tmplt = self.jinja2_env.get_template(_tmplt_path)
 
-        for node_type_tuple in node_type_tuples:
+        # node_type, node_type_data = node_type_tuple
+        paths = self._generate_edge_template_paths(node_type, NIC_ENV)
+        stg_nic_env_path, nic_env_file = paths
+        _nt_lower = self._generate_node_type_lower(node_type)
+        ini_nic_setts = setts.get_curated_nics_settings()
+        tmplt_data = {}
+        cntl_bond_opts = ini_nic_setts["ControllerBondInterfaceOptions"]
+        tmplt_data["ControllerBondInterfaceOptions"] = cntl_bond_opts
+        cmpt_bond_opts = ini_nic_setts["ComputeBondInterfaceOptions"]
+        tmplt_data["ComputeBondInterfaceOptions"] = cmpt_bond_opts
+        stor_bond_opts = ini_nic_setts["StorageBondInterfaceOptions"]
+        tmplt_data["StorageBondInterfaceOptions"] = stor_bond_opts
+        if "BondInterfaceSriovOptions" in ini_nic_setts:
+            sriov_bond_opts = ini_nic_setts["BondInterfaceSriovOptions"]
+            tmplt_data["BondInterfaceSriovOptions"] = sriov_bond_opts
+        if "BondInterfaceOvsOptions" in ini_nic_setts:
+            ovs_bond_opts = ini_nic_setts["BondInterfaceOvsOptions"]
+            tmplt_data["BondInterfaceOvsOptions"] = ovs_bond_opts
 
-            node_type, node_type_data = node_type_tuple
-            paths = self._generate_edge_template_paths(node_type, NIC_ENV)
-            stg_nic_env_path, nic_env_file = paths
-            _nt_lower = self._generate_node_type_lower(node_type)
-            ini_nic_setts = setts.get_curated_nics_settings()
-            tmplt_data = {}
-            cntl_bond_opts = ini_nic_setts["ControllerBondInterfaceOptions"]
-            tmplt_data["ControllerBondInterfaceOptions"] = cntl_bond_opts
-            cmpt_bond_opts = ini_nic_setts["ComputeBondInterfaceOptions"]
-            tmplt_data["ComputeBondInterfaceOptions"] = cmpt_bond_opts
-            stor_bond_opts = ini_nic_setts["StorageBondInterfaceOptions"]
-            tmplt_data["StorageBondInterfaceOptions"] = stor_bond_opts
-            if "BondInterfaceSriovOptions" in ini_nic_setts:
-                sriov_bond_opts = ini_nic_setts["BondInterfaceSriovOptions"]
-                tmplt_data["BondInterfaceSriovOptions"] = sriov_bond_opts
-            if "BondInterfaceOvsOptions" in ini_nic_setts:
-                ovs_bond_opts = ini_nic_setts["BondInterfaceOvsOptions"]
-                tmplt_data["BondInterfaceOvsOptions"] = ovs_bond_opts
-
-            _res_reg = tmplt_data['resource_registry'] = {}
-            ne_params = self._generate_nic_environment_edge(node_type)
-            tmplt_data['parameter_defaults'] = ne_params
-            role = self._generate_cc_role(node_type)
-            role_nic_key = ("OS::TripleO::"
-                            + role + "::Net::SoftwareConfig")
-            nic_config_name = ("./" + _nt_lower + ".yaml")
-            _res_reg[role_nic_key] = nic_config_name
-            logger.info("template data: %s", str(tmplt_data))
-            rendered_tmplt = tmplt.render(**tmplt_data)
-            with open(stg_nic_env_path, 'w') as stg_nic_env_fp:
-                stg_nic_env_fp.write(rendered_tmplt)
-            self.upload_file(stg_nic_env_path, nic_env_file)
+        _res_reg = tmplt_data['resource_registry'] = {}
+        ne_params = self._generate_nic_environment_edge(node_type,
+                                                        num_nics)
+        tmplt_data['parameter_defaults'] = ne_params
+        role = self._generate_cc_role(node_type)
+        role_nic_key = ("OS::TripleO::"
+                        + role + "::Net::SoftwareConfig")
+        nic_config_name = ("./" + _nt_lower + ".yaml")
+        _res_reg[role_nic_key] = nic_config_name
+        logger.info("template data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_nic_env_path, 'w') as stg_nic_env_fp:
+            stg_nic_env_fp.write(rendered_tmplt)
+        self.upload_file(stg_nic_env_path, nic_env_file)
 
     def render_and_upload_node_placement_edge(self, node_type):
         tmplt = self.jinja2_env.get_template(NODE_PLACEMENT_EDGE_J2)
@@ -3203,9 +3226,11 @@ class Director(InfraHost):
         role_d['ServicesDefault'] = self._get_default_compute_services()
         return role_d
 
-    def _generate_nic_params(self, node_type):
+    def _generate_nic_params(self, node_type, num_nics):
         role = self._generate_cc_role(node_type)
         params = {}
+        has_provsioning_nic = self._has_provisioning_nic(num_nics)
+
         cp_oc_default_route = "{}DefaultRoute".format(CONTROL_PLANE_NET[0])
         cp_oc_subnet_cidr = "{}SubnetCidr".format(CONTROL_PLANE_NET[0])
         cp_oc_net_cidr = "{}NetCidr".format(CONTROL_PLANE_NET[0])
@@ -3249,8 +3274,6 @@ class Director(InfraHost):
         external_gateway = external_network + 'InterfaceDefaultRoute'
         external_interface_routes = external_network + 'InterfaceRoutes'
         external_mtu = external_network + 'Mtu'
-
-        prov_if = role + 'ProvisioningInterface'
         bond_0_if_1 = role + 'Bond0Interface1'
         bond_0_if_2 = role + 'Bond0Interface2'
         bond_1_if_1 = role + 'Bond1Interface1'
@@ -3298,21 +3321,23 @@ class Director(InfraHost):
         params[external_interface_routes] = {"default": [], "type": "json"}
         params[external_mtu] = {"default": 1500, "type": "number"}
 
-        params[prov_if] = {"default": '', "type": "string"}
         params[bond_0_if_1] = {"default": '', "type": "string"}
         params[bond_0_if_2] = {"default": '', "type": "string"}
         params[bond_1_if_1] = {"default": '', "type": "string"}
         params[bond_1_if_2] = {"default": '', "type": "string"}
+
+        if has_provsioning_nic:
+            prov_if = role + 'ProvisioningInterface'
+            params[prov_if] = {"default": '', "type": "string"}
         return params
 
-    def _generate_nic_environment_edge(self, node_type):
+    def _generate_nic_environment_edge(self, node_type, num_nics):
         """Generate default_parameters subsequently injected into
-        nic_environment.yaml for a specific edge site.
+        nic_environment_[edge_site].yaml for a specific edge site.
 
         :param node_type: one of the node types defined in .ini file
-        :param node_type_data: node type data from node_type stanza in ini.
-        For edge sites node_type_data contains all the networking
-        params a site requires.
+        :param num_nics: integer representing the number of nics
+        from [node_type] stanza in ini.
         :returns: OrderedDict of params added to the template's
         parameter_defaults map.
         """
@@ -3320,6 +3345,7 @@ class Director(InfraHost):
         setts = self.settings
         node_type_data = setts.node_type_data_map[node_type]
         role = self._generate_cc_role(node_type)
+        has_provsioning_nic = self._has_provisioning_nic(num_nics)
 
         params = {}
         cp_oc_default_route = "{}DefaultRoute".format(CONTROL_PLANE_NET[0])
@@ -3330,7 +3356,7 @@ class Director(InfraHost):
         cp_default_route = "{}DefaultRoute".format(cp_edge_network)
         cp_subnet_cidr = "{}SubnetCidr".format(cp_edge_network)
         cp_subnet = "{}Subnet".format(cp_edge_network)
-        prov_if = role + 'ProvisioningInterface'
+
         bond_0_if_1 = role + 'Bond0Interface1'
         bond_0_if_2 = role + 'Bond0Interface2'
         bond_1_if_1 = role + 'Bond1Interface1'
@@ -3342,14 +3368,16 @@ class Director(InfraHost):
         params[cp_default_route] = node_type_data['gateway']
         params[cp_subnet_cidr] = cc_cidr
         params[cp_subnet] = self._generate_subnet_name(node_type)
-        params[prov_if] = node_type_data['ProvisioningInterface']
         params[bond_0_if_1] = node_type_data['Bond0Interface1']
         params[bond_0_if_2] = node_type_data['Bond0Interface2']
         params[bond_1_if_1] = node_type_data['Bond1Interface1']
         params[bond_1_if_2] = node_type_data['Bond1Interface2']
+        if has_provsioning_nic:
+            prov_if = role + 'ProvisioningInterface'
+            params[prov_if] = node_type_data['ProvisioningInterface']
         return params
 
-    def _generate_nic_network_config(self, node_type):
+    def _generate_nic_network_config(self, node_type, num_nics):
         """Generate nic configuration template for a node type and network data
         provided.  This results in a file that corresoponds to the node type,
         which is uploaded to the correct nic_configs sub-directory based on the
@@ -3369,16 +3397,15 @@ class Director(InfraHost):
         :returns: list of nic configuration dicts
         """
         role = self._generate_cc_role(node_type)
+        has_provsioning_nic = self._has_provisioning_nic(num_nics)
         cp_network = "{}{}".format(role, CONTROL_PLANE_NET[0])
         cp_default_route = "{}DefaultRoute".format(cp_network)
-        # cp_subnet_cidr = "{}SubnetCidr".format(cp_network)
-        # cp_subnet = "{}Subnet".format(cp_network)
-        prov_if_param = role + 'ProvisioningInterface'
+
         bond_0_if_1_param = role + 'Bond0Interface1'
         bond_0_if_2_param = role + 'Bond0Interface2'
         bond_1_if_1_param = role + 'Bond1Interface1'
         bond_1_if_2_param = role + 'Bond1Interface2'
-        prov_if = {"type": "interface"}
+
         tenant_br = {"type": "ovs_bridge"}
         ex_br = {"type": "ovs_bridge"}
         int_api_network = INTERNAL_API_NET[0] + role
@@ -3401,21 +3428,12 @@ class Director(InfraHost):
         external_vlan_id = external_network + 'NetworkVlanID'
         external_interface_routes = external_network + 'InterfaceRoutes'
 
-        prov_if["name"] = prov_if_param
-        prov_if["mtu"] = "ProvisioningMtu"
-        prov_if["use_dhcp"] = False
-        prov_if["dns_servers"] = "DnsServers"
-        _cp_add = [{"ip": "{}Ip".format(CONTROL_PLANE_NET[0]),
-                    "cidr": "{}SubnetCidr".format(CONTROL_PLANE_NET[0])}]
-        prov_if["addresses"] = _cp_add
-
         ec2_route = {"ip_netmask": EC2_PUBLIC_IPCIDR_PARAM,
                      "next_hop": cp_default_route}
         default_route = {"default": True,
                          "next_hop": cp_default_route}
         prov_route = {"ip_netmask": "{}NetCidr".format(CONTROL_PLANE_NET[0]),
                       "next_hop": cp_default_route}
-        prov_if["routes"] = [ec2_route, default_route, prov_route]
 
         tenant_br["name"] = "br-tenant"
         tenant_br["mtu"] = "DefaultBondMtu"
@@ -3485,7 +3503,28 @@ class Director(InfraHost):
         external_vlan["routes"] = external_interface_routes
         ex_br["members"] = [bond_1, external_vlan]
 
-        return [prov_if, tenant_br, ex_br]
+        _cp_add = [{"ip": "{}Ip".format(CONTROL_PLANE_NET[0]),
+                    "cidr": "{}SubnetCidr".format(CONTROL_PLANE_NET[0])}]
+        # if there is a provisioning nic populate the interface attributes
+        if has_provsioning_nic:
+            prov_if_param = role + 'ProvisioningInterface'
+            prov_if = {"type": "interface"}
+            prov_if["name"] = prov_if_param
+            prov_if["routes"] = [ec2_route, default_route, prov_route]
+            prov_if["mtu"] = "ProvisioningMtu"
+            prov_if["use_dhcp"] = False
+            prov_if["dns_servers"] = "DnsServers"
+            prov_if["addresses"] = _cp_add
+            return [prov_if, tenant_br, ex_br]
+        else:  # no provisioning interface add routes to tenant bridge
+            tenant_br["use_dhcp"] = False
+            tenant_br["dns_servers"] = "DnsServers"
+            tenant_br["addresses"] = _cp_add
+            tenant_br["routes"] = [ec2_route, default_route, prov_route]
+            return [tenant_br, ex_br]
+
+    def _has_provisioning_nic(self, num_nics):
+        return bool(num_nics % 2 != 0)
 
     def _generate_default_networks_data(self):
         """Generate network_data.yaml file with default networks
