@@ -446,7 +446,17 @@ class Settings:
         # PowerFlex
         if backend_settings['enable_powerflex_backend'].lower() == 'true':
             self.enable_powerflex_backend = True
-            
+            self.powerflex_gateway_rpm = \
+                 backend_settings['powerflex_gateway_rpm']
+
+           
+            if backend_settings['enable_powerflex_mgmt'].lower() == 'true':
+                self.enable_powerflex_mgmt = True
+                self.powerflex_presentation_server_rpm = \
+                     backend_settings['powerflex_presentation_server_rpm']
+            else:
+                self.enable_powerflex_mgmt = False
+
             # Cinder parameters
             self.powerflex_san_login = \
                  backend_settings['powerflex_san_login']
@@ -454,8 +464,6 @@ class Settings:
                  backend_settings['powerflex_san_password']
             self.powerflex_storage_pools = \
                  backend_settings['powerflex_storage_pools']
-            self.powerflex_gateway_rpm = \
-                 backend_settings['powerflex_gateway_rpm']
             
             # Powerflex parameters
             powerflex_settings = self.get_settings_section(
@@ -655,6 +663,8 @@ class Settings:
             '/pilot/install-director.sh'
         self.deploy_powerflexgw_vm_sh = self.foreman_configuration_scripts + \
             '/mgmt/deploy-powerflexgw-vm.sh'
+        self.deploy_powerflexmgmt_vm_sh = self.foreman_configuration_scripts + \
+            '/mgmt/deploy-powerflexmgmt-vm.sh'
         self.deploy_overcloud_sh = self.foreman_configuration_scripts + \
             '/pilot/deploy-overcloud.py'
         self.assign_role_py = self.foreman_configuration_scripts +\
@@ -800,6 +810,13 @@ class Settings:
                                             ==  "true" else False)
                     if node.is_powerflexgw:
                         self.powerflexgw_vm = node
+                except AttributeError:
+                    pass
+                try:
+                    node.is_powerflexmgmt = (True if node.is_powerflexmgmt
+                                             == "true" else False)
+                    if node.is_powerflexmgmt:
+                        self.powerflexmgmt_vm = node
                 except AttributeError:
                     pass
                 try:
