@@ -487,12 +487,12 @@ def define_storage_operating_system_logical_disk(physical_disks, drac_client,
     LOG.info(
         "Defining RAID 1 logical disk of size {} GB on the following physical "
         "disks, and marking it the root volume:\n  {}".format(
-            os_logical_disk_size_gb,
+            str(int(os_logical_disk_size_gb)),
             '\n  '.join(os_physical_disk_names)))
     if drac_client.is_boss_controller(raid_controller_name):
         os_logical_disk_size_gb = 0
     os_logical_disk = define_logical_disk(
-        os_logical_disk_size_gb,
+        int(os_logical_disk_size_gb),
         '1',
         raid_controller_name,
         os_physical_disk_names,
