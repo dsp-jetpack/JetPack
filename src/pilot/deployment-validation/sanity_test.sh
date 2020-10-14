@@ -820,14 +820,14 @@ radosgw_test(){
   info "### RadosGW test"
   set_tenant_scope
 
-  execute_command "swift post $SWIFT_CONTAINER_NAME"
+  execute_command "openstack container create $SWIFT_CONTAINER_NAME"
 
-  execute_command "swift list"
+  execute_command "openstack container list"
 
   echo "This is a test file for RGW" >  test_file
-  execute_command "swift upload $SWIFT_CONTAINER_NAME test_file"
+  execute_command "openstack object create $SWIFT_CONTAINER_NAME test_file"
 
-  execute_command "swift list $SWIFT_CONTAINER_NAME"
+  execute_command "openstack object list $SWIFT_CONTAINER_NAME"
 }
 
 
