@@ -241,6 +241,9 @@ def deploy():
         settings, args = get_settings()
         director_vm = Director()
         sah_node = Sah()
+        # director_vm.render_and_upload_nic_env_edge("edge-spain")
+        # director_vm.render_and_upload_compute_edge("edge-spain")
+        # os._exit(0)
 
         if args.list_edge_sites:
             list_edge_sites(settings, director_vm)

@@ -13,7 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+OVS_DPDK = "OvsDpdk"
+SRIOV = "Sriov"
+NFV_TYPE_MAP = {"dpdk": OVS_DPDK, "sriov": SRIOV}
 CTLPLANE_BRIDGE = "br-ctlplane"
 PUBLIC_API_IF = "enp1s0"
 PROVISIONING_IF = "enp2s0"
