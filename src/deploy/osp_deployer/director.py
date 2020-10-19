@@ -3600,13 +3600,16 @@ class Director(InfraHost):
             dpdk_bond_0["mtu"] = "DefaultBondMtu"
             dpdk_bond_0["members"] = []
             for num in range(4):
+                _if_p = "{}{}Interface{}".format(role,
+                                                 NFV_TYPE_MAP[nfv_type],
+                                                 num)
+
                 dpdk_port = {"type": "ovs_dpdk_port",
                              "name": "dpdk{}".format(num)}
                 dpdk_port["mtu"] = "DefaultBondMtu"
                 dpdk_port["driver"] = "{}HostNicDriver".format(role)
                 dpdk_port["members"] = [{"type": "interface",
-                                         "name": "{}ComputeOvsDpdkInterface{}"
-                                                 .format(role, num + 1)}]
+                                         "name": _if_p}]
                 dpdk_bond_0["members"].append(dpdk_port)
             tenant_br["members"] = [dpdk_bond_0]
             bond_0["use_dhcp"] = False
