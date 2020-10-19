@@ -3597,7 +3597,7 @@ class Director(InfraHost):
             dpdk_bond_0["rx_queue"] = "{}NumDpdkInterfaceRxQueues".format(role)
             dpdk_bond_0["ovs_options"] = "{}BondInterfaceOvsOptions".format(
                 role)
-            dpdk_bond_0["ovs_options"] = "DefaultBondMtu"
+            dpdk_bond_0["mtu"] = "DefaultBondMtu"
             dpdk_bond_0["members"] = []
             for num in range(4):
                 dpdk_port = {"type": "ovs_dpdk_port",

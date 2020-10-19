@@ -287,30 +287,19 @@ resources:
                       mtu:
                         get_param: {{_member.mtu}}
                         {%- endif %}
+                        {%- if "driver" in _member %}
+                      driver:
+                          get_param: {{_member.driver}}
+                        {%- endif %}
                         {%- if 'primary' in _member %}
                       primary: {{_member.primary}}
-                        {%- endif %}
-                        {%- if 'ovs_options' in _member %}
-                      ovs_options:
-                        get_param: {{_member.ovs_options}}
                         {%- endif %}
                         {%- if "members" in _member %}
                       members:
                           {%- for __member in _member.members %}
                         - type: {{__member.type}}
-                          name: {{__member.name}}
-                          mtu:
-                              get_param: {{__member.mtu}}
-                          driver:
-                              get_param: {{__member.driver}}
-                            {%- if "members" in __member %}
-                          members:
-                              {%- for ___member in __member.members %}
-                          - type: {{___member.type}}
-                            name:
-                              get_param: {{___member.name}}
-                              {%- endfor %}
-                            {%- endif %}
+                          name:
+                            get_param: {{__member.name}}
                           {%- endfor %}
                         {%- endif %}
                       {%- endfor %}
