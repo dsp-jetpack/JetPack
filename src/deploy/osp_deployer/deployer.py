@@ -25,6 +25,7 @@ from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from auto_common import Ipmi, Ssh, Scp
 from osp_deployer.powerflexgw import Powerflexgw
+from osp_deployer.powerflexmgmt import Powerflexmgmt
 
 logger = logging.getLogger("osp_deployer")
 
@@ -150,7 +151,8 @@ def deploy():
             sah_node.create_subnet_routes_edge()
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
-        sah_node.upload_powerflex_scripts()
+        sah_node.upload_powerflexgw_scripts()
+        sah_node.upload_powerflexmgmt_scripts()
         sah_node.enable_chrony_ports()
 
 
@@ -179,6 +181,19 @@ def deploy():
                                     "subscription-manager unregister")
                 logger.info("=== deleting any existing powerflex gateway vm")
                 sah_node.delete_powerflexgw_vm()
+                
+                if settings.enable_powerflex_mgmt is True:
+                    powerflexmgmt_ip = settings.powerflexmgmt_vm.public_api_ip
+                    Ssh.execute_command(powerflexmgmt_ip,
+                                        "root",
+                                        settings.powerflexmgmt_vm.root_password,
+                                        "subscription-manager remove --all")
+                    Ssh.execute_command(powerflexmgmt_ip,
+                                        "root",
+                                        settings.powerflexmgmt_vm.root_password,
+                                        "subscription-manager unregister")
+                    logger.info("=== deleting any existing powerflex presentation server vm")
+                    sah_node.delete_powerflexmgmt_vm()
 
 
             logger.info("=== creating the director vm")
@@ -270,7 +285,7 @@ def deploy():
             powerflexgw_vm = Powerflexgw()
             logger.info("=== Creating the powerflex gateway vm")
             sah_node.create_powerflexgw_vm()
-            tester.powerlexgw_vm_health_check()
+            tester.powerflexgw_vm_health_check()
             logger.info("Installing the powerflex gateway UI")
             powerflexgw_vm.upload_rpm()
             powerflexgw_vm.install_gateway()
@@ -282,6 +297,15 @@ def deploy():
             logger.info("Restarting the gateway and cinder-volume")
             powerflexgw_vm.restart_gateway()
             powerflexgw_vm.restart_cinder_volume()
+          
+            if settings.enable_powerflex_mgmt:
+                powerflexmgmt_vm = Powerflexmgmt()
+                logger.info("=== Creating the powerflex presentation server vm")
+                sah_node.create_powerflexmgmt_vm()
+                tester.powerflexmgmt_vm_health_check()
+                logger.info("Installing the powerflex presentation server UI")
+                powerflexmgmt_vm.upload_rpm()
+                powerflexmgmt_vm.install_presentation_server()
 
         
         logger.info("Deployment summary info; useful ip's etc.. " +

@@ -161,7 +161,7 @@ def create_volume_types():
         types.append(["powermax_backend", "tripleo_dellemc_powermax"])
 
     if args.num_powerflex > 0:
-        types.append(["powerflex", "powerflex"])
+        types.append(["powerflex_backend", "tripleo_dellemc_powerflex"])
 
     overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 

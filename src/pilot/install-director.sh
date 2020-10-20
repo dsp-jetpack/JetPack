@@ -236,6 +236,7 @@ fi
 if [ ${enable_powerflex} == 1 ]; then
     echo "# PowerFlex backend enabled, injecting rpms"
     run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
+    run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/emc/scaleio/openstack"
     run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
     echo "# Cloning Dell EMC TripleO PowerFlex repository"
     run_command "git clone https://github.com/dell/tripleo-powerflex.git ${HOME}/pilot/powerflex/tripleo-powerflex"
