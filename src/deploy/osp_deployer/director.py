@@ -131,17 +131,14 @@ class Director(InfraHost):
 
         # Configure containers-prepare-parameter.yaml to
         # retrieve container images
-        cmd = 'sed -i "s|[[:space:]]\+username: password|      ' + \
-              self.settings.subscription_manager_user + ': ' + "'" + \
-              self.settings.subscription_manager_password + "'" + \
-              '|" pilot/' + CONTAINERS_PREPARE_PARAM + '.yaml'
-        self.run(cmd)
 
         if self.settings.version_locking_enabled is True:
-            yaml = "/overcloud_images.yaml"
+            logger.debug("Version locking enabled")
+            yaml = "/containers-prepare-parameter.yaml"
             source_file = self.settings.lock_files_dir + yaml
-            dest_file = self.home_dir + yaml
+            dest_file = self.home_dir + "/pilot" +  yaml
             self.upload_file(source_file, dest_file)
+            logger.debug("uploading " + str(source_file) + " to " + str(dest_file))
 
             lock_file = "/unity_container_vlock.ini"
             source_file = self.settings.lock_files_dir + lock_file
@@ -161,6 +158,15 @@ class Director(InfraHost):
                       " | awk -F '=' '{print $2}'"
                 self.settings.manila_unity_container_version = \
                     self.run_tty(cmd)[0].replace('\r', '').rstrip()
+        else:
+            logger.debug("Version locking disabled")
+
+        cmd = 'sed -i "s|[[:space:]]\+username: password|      ' + \
+              self.settings.subscription_manager_user + ': ' + "'" + \
+              self.settings.subscription_manager_password + "'" + \
+              '|" pilot/' + CONTAINERS_PREPARE_PARAM + '.yaml'
+        self.run(cmd)
+
 
     def install_director(self):
         logger.info("Installing the undercloud")
