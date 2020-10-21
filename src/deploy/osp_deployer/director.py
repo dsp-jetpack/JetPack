@@ -275,7 +275,7 @@ class Director(InfraHost):
         expected_nodes = (len(self.settings.controller_nodes)
                           + len(self.settings.compute_nodes)
                           + len(self.settings.ceph_nodes)
-                          + len(self.settings.powerflex_nodes))
+                          + len(self.settings.powerflex_nodes)
                           + len(self.settings.computehci_nodes))
         found = self.run_tty(
             "grep pm_addr ~/instackenv.json | wc -l")[0].rstrip()
