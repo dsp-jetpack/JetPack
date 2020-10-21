@@ -34,6 +34,9 @@ from ironic_helper import IronicHelper
 from dracclient import client
 from command_helper import Ssh
 from nfv_parameters import NfvParameters
+from osp_deployer.settings.config import Settings
+
+
 logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -51,6 +54,7 @@ class ConfigOvercloud(object):
     get_drac_credential = CredentialHelper()
 
     def __init__(self, overcloud_name):
+        self.settings = Settings.settings
         self.overcloud_name = overcloud_name
         self.overcloudrc = "source " + home_dir + "/"\
             + self.overcloud_name + "rc;"
@@ -266,7 +270,7 @@ class ConfigOvercloud(object):
                     'sed -i "s|IsolCpusList:.*|IsolCpusList: \\"' +
                     self.nfv_params.isol_cpus + '\\" |" ' + dpdk_file)
 
-            if dell_powerflex_count > 0:
+            if self.settings.enable_powerflex_backend:
                 cmds.append(
                      'sed -i "s|NovaEnableRbdBackend:.*' +
                      '|NovaEnableRbdBackend: false |" ' +

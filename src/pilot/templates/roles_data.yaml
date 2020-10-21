@@ -431,6 +431,9 @@
     - OS::TripleO::Services::NovaMigrationTarget
     - OS::TripleO::Services::ContainersLogrotateCrond
     - OS::TripleO::Services::Podman
+    - OS::TripleO::Services::PowerFlexLIA
+    - OS::TripleO::Services::PowerFlexSDC
+    - OS::TripleO::Services::PowerFlexSDS
     - OS::TripleO::Services::Rear
     - OS::TripleO::Services::Rhsm
     - OS::TripleO::Services::Rsyslog
