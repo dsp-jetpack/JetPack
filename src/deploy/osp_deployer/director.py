@@ -2327,6 +2327,79 @@ class Director(InfraHost):
                         cmd, status))
             logger.debug("cmd: {}".format(cmd))
 
+    def render_and_upload_ovs_dpdk_edge(self, node_type):
+        tmplt_data = {}
+        tmplt_data["ComputeNeutronOvsDpdk"] = os.path.join(
+            self.templates_overcloud_dir,
+            "deployment", "neutron",
+            "neutron-ovs-dpdk-agent-container-puppet.yaml")
+        tmplt_data["parameter_defaults"] = self._generate_dpdk_params_edge(
+            node_type)
+        tmplt = self.jinja2_env.get_template(NEUTRON_OVS_DPDK_J2)
+        paths = self._generate_edge_template_paths(node_type, NEUTRON_OVS_DPDK)
+        stg_or_path, remote_or_file = paths
+
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
+        with open(stg_or_path, 'w') as stg_or_fp:
+            stg_or_fp.write(rendered_tmplt)
+        self.upload_file(stg_or_path, remote_or_file)
+
+    def _generate_dpdk_params_edge(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        role = self._generate_cc_role(node_type)
+        ntd_j = json.dumps(node_type_data)
+        logger.info("xxxx _generate_dpdk_params ntd_j: {}".format(ntd_j))
+        cmd = ("{} cd  ~/pilot;./dell_nfv_edge.py "
+               "--overcloud_name {} "
+               "--edge_site {} "
+               "--edge_site_data '{}'".format(self.source_stackrc,
+                                            setts.overcloud_name,
+                                            node_type,
+                                            ntd_j))
+        logger.info("xxxx _generate_dpdk_params cmd: {}".format(cmd))
+        res = self.run(cmd)
+        logger.info("xxxx _generate_dpdk_params res: %s", str(res))
+        res_j = json.loads(res[0])
+
+        logger.info("_generate_dpdk_params res: %s", str(res_j))
+        params = {}
+        HostNicDriver = node_type_data["HostNicDriver"]
+        params["OvsDpdkDriverType"] = HostNicDriver
+        role_param_k = "{}Parameters".format(role)
+        role_params = params[role_param_k] = {}
+        role_params["OvsDpdkCoreList"] = res_j["host_cpus"]
+        role_params["NovaComputeCpuSharedSet"] = res_j["host_cpus"]
+        role_params["OvsPmdCoreList"] = "self.nfv_params.pmd_cpus"
+        role_params["OvsDpdkSocketMemory"] = "self.nfv_params.socket_mem"
+        role_params["IsolCpusList"] = "self.nfv_params.isol_cpus"
+        # Unmodified params
+        role_params["OvsDpdkMemoryChannels"] = "4"
+        role_params["NovaReservedHostMemory"] = 4096
+        role_params["OvsDpdkSocketMemory"] = "2048,2048"
+        role_params["TunedProfileName"] = "cpu-partitioning"
+        role_params["NovaLibvirtRxQueueSize"] = 1024
+        role_params["NovaLibvirtTxQueueSize"] = 1024
+        role_params["VhostuserSocketGroup"] = "hugetlbfs"
+        return params
+        '''
+          DellComputeParameters:
+            VhostuserSocketGroup: "hugetlbfs"
+            OvsPmdCoreList: "4-7,28-31"
+            OvsDpdkCoreList: "0-3,24-27"
+            NovaComputeCpuSharedSet: "0-3,40-43"
+            IsolCpusList: "4-23,28-47"
+            OvsDpdkMemoryChannels: "4"
+            NovaReservedHostMemory: 4096
+            OvsDpdkSocketMemory: "2048,2048"
+            TunedProfileName: "cpu-partitioning"
+            NovaLibvirtRxQueueSize: 1024
+            NovaLibvirtTxQueueSize: 1024
+
+        '''
+
     def get_sriov_compute_interfaces(self):
         # Get settings from .ini file
         ini_nics_settings = self.settings.get_curated_nics_settings()
@@ -2604,20 +2677,34 @@ class Director(InfraHost):
         tmplt_data["NodeUserData"] = first_boot_file
         _vlan_range = "physint:{},physext".format(setts.tenant_vlan_range)
         tmplt_data["NeutronNetworkVLANRanges"] = _vlan_range
-        param_def = tmplt_data["parameter_defaults"] = {}
-        role = self._generate_cc_role(node_type)
-        edge_subnet = self._generate_subnet_name(node_type)
-        role_subnet_key = role + 'ConrolPlaneSubnet'
-        param_def[role_subnet_key] = edge_subnet
-        xtra_cfg_key = role + 'ExtraConfig'
-        param_def[xtra_cfg_key] = self._generate_extra_config(node_type)
-        role_count_key = role + 'Count'
-        nodes = setts.node_types_map[node_type]
-        param_def[role_count_key] = len(nodes)
+        tmplt_data["parameter_defaults"] = self._generate_dell_env_edge(
+            node_type)
+
         rendered_tmplt = tmplt.render(**tmplt_data)
         with open(stg_dell_env_path, 'w') as stg_dell_env_fp:
             stg_dell_env_fp.write(rendered_tmplt)
         self.upload_file(stg_dell_env_path, dell_env_file)
+
+    def _generate_dell_env_edge(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        nfv_type = (node_type_data["nfv_type"] if "nfv_type" in node_type_data
+                    else None)
+        params = {}
+        role = self._generate_cc_role(node_type)
+        edge_subnet = self._generate_subnet_name(node_type)
+        role_subnet_key = role + 'ConrolPlaneSubnet'
+        params[role_subnet_key] = edge_subnet
+        xtra_cfg_key = role + 'ExtraConfig'
+        params[xtra_cfg_key] = self._generate_extra_config(node_type)
+        role_count_key = role + 'Count'
+        nodes = setts.node_types_map[node_type]
+        params[role_count_key] = len(nodes)
+        if nfv_type and NFV_TYPE_MAP[nfv_type] == OVS_DPDK:
+            role_param_k = "{}Parameters".format(role)
+            role_params = params[role_param_k] = {}
+            role_params["KernelArgs"] = "iommu=pt intel_iommu=on"
+        return params
 
     @directory_check(STAGING_TEMPLATES_PATH)
     def render_and_upload_network_data(self):
@@ -3599,10 +3686,12 @@ class Director(InfraHost):
                 role)
             dpdk_bond_0["mtu"] = "DefaultBondMtu"
             dpdk_bond_0["members"] = []
-            for num in range(4):
+            nfv_nics = (list(map(str.strip,
+                                 node_type_data['nfv_interfaces'].split(','))))
+            for num, _if in enumerate(nfv_nics, start=0):
                 _if_p = "{}{}Interface{}".format(role,
                                                  NFV_TYPE_MAP[nfv_type],
-                                                 num)
+                                                 num + 1)
 
                 dpdk_port = {"type": "ovs_dpdk_port",
                              "name": "dpdk{}".format(num)}

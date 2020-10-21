@@ -14,7 +14,7 @@
 
 ## A Heat environment that can be used to deploy DPDK with OVS
 resource_registry:
-  OS::TripleO::Services::ComputeNeutronOvsDpdk: ./overcloud/deployment/neutron/neutron-ovs-dpdk-agent-container-puppet.yaml
+  OS::TripleO::Services::ComputeNeutronOvsDpdk: {{ComputeNeutronOvsDpdk}}
   OS::TripleO::Services::ComputeNeutronOvsAgent: OS::Heat::None
 
 parameter_defaults:
@@ -22,22 +22,10 @@ parameter_defaults:
   NeutronVhostuserSocketDir: "/var/lib/vhost_sockets"
 # DELL-NFV Overrides
   NovaSchedulerDefaultFilters: "ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,NUMATopologyFilter"
-  OvsDpdkDriverType: "mlx5_core" 
+  OvsDpdkDriverType: {{OvsDpdkDriverType}}
   NeutronPluginExtensions: "qos,port_security"
   NeutronOVSFirewallDriver: openvswitch
   DellComputeParameters:
-    VhostuserSocketGroup: "hugetlbfs"
-    OvsPmdCoreList: "4-7,28-31"
-    OvsDpdkCoreList: "0-3,24-27"
-    NovaComputeCpuSharedSet: "0-3,40-43"
-    IsolCpusList: "4-23,28-47"
-    OvsDpdkMemoryChannels: "4"
-    NovaReservedHostMemory: 4096
-    OvsDpdkSocketMemory: "2048,2048"
-    TunedProfileName: "cpu-partitioning"
-    NovaLibvirtRxQueueSize: 1024
-    NovaLibvirtTxQueueSize: 1024
-  DellComputeHCIParameters:
     VhostuserSocketGroup: "hugetlbfs"
     OvsPmdCoreList: "4-7,28-31"
     OvsDpdkCoreList: "0-3,24-27"

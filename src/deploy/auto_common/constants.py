@@ -48,6 +48,7 @@ ROLES_DATA = 'roles_data'
 NETWORK_DATA = 'network_data'
 NET_ISO = 'network-isolation'
 CONTROLLER = 'controller'
+NEUTRON_OVS_DPDK = "neutron-ovs-dpdk"
 DEF_COMPUTE_ROLE_FILE = 'DistributedCompute.yaml'
 DEF_COMPUTE_REMOTE_PATH = ('roles/{}'.format(DEF_COMPUTE_ROLE_FILE))
 CONTROL_PLANE_NET = ('ControlPlane', "ctlplane")
@@ -76,6 +77,7 @@ NET_ISO_EDGE_J2 = NET_ISO + "-edge" + J2_EXT
 SITE_NAME_EDGE_J2 = SITE_NAME + "-edge" + J2_EXT
 SITE_NAME_J2 = SITE_NAME + J2_EXT
 OVERRIDES_EDGE_J2 = OVERRIDES + "-edge" + J2_EXT
+NEUTRON_OVS_DPDK_J2 = NEUTRON_OVS_DPDK + "-edge" + J2_EXT
 
 EC2_IPCIDR = '169.254.169.254/32'
 EC2_PUBLIC_IPCIDR_PARAM = 'EC2MetadataPublicIpCidr'

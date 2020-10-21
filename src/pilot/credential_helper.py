@@ -62,11 +62,12 @@ class CredentialHelper:
             CredentialHelper.get_overcloudrc_name())
 
     @staticmethod
-    def get_drac_creds(ironic_client, node_uuid):
+    def get_drac_creds(ironic_client, node_uuid,
+                       instackenv_file=Constants.INSTACKENV_FILENAME):
         # Get the DRAC IP, username, and password
         node = ironic_client.node.get(node_uuid, ["driver_info"])
 
-        return CredentialHelper.get_drac_creds_from_node(node)
+        return CredentialHelper.get_drac_creds_from_node(node, instackenv_file)
 
     @staticmethod
     def get_drac_creds_from_node(
