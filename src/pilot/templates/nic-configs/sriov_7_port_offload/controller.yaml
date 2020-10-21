@@ -55,20 +55,69 @@ parameters:
     default: 60
     description: Vlan ID for the management network traffic.
     type: number
+  ControlPlaneSubnetCidr:
+    default: ''
+    description: >
+      The subnet CIDR of the control plane network. (The parameter is
+      automatically resolved from the ctlplane subnet's cidr attribute.)
+    type: string
+  ControlPlaneStaticRoutes:
+    default: []
+    description: >
+      Routes for the ctlplane network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+  StorageInterfaceRoutes:
+    default: []
+    description: >
+      Routes for the storage network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+  StorageMgmtInterfaceRoutes:
+    default: []
+    description: >
+      Routes for the storage_mgmt network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+  InternalApiInterfaceRoutes:
+    default: []
+    description: >
+      Routes for the internal_api network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+  TenantInterfaceRoutes:
+    default: []
+    description: >
+      Routes for the tenant network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+  ExternalInterfaceRoutes:
+    default: []
+    description: >
+      Routes for the external network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
   ControlPlaneDefaultRoute: # Override this via parameter_defaults
     description: The default route of the control plane network.
     type: string
   ExternalInterfaceDefaultRoute:
-    default: 10.0.0.1
     description: default route for the external network
     type: string
   ManagementInterfaceDefaultRoute: # Commented out by default in this template
     default: unset
     description: The default route of the management network.
-    type: string
-  ControlPlaneSubnetCidr: # Override this via parameter_defaults
-    default: '24'
-    description: The subnet CIDR of the control plane network.
     type: string
   DnsServers: # Override this via parameter_defaults
     default: []
@@ -109,43 +158,41 @@ parameters:
     default: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
     description: The bonding_options string for the bond interface.
     type: string
-  ControllerSriovInterface1:
-    default: p2p1
-    description: SRIOV bridge interface 1
-    type: string
-  ControllerSriovInterface2:
-    default: p2p2
-    description: SRIOV bridge interface 2
-    type: string
-  InternalApiMTU: # Override this via parameter_defaults
+  ControlPlaneMtu:
+    default: 1500
+    description: The maximum transmission unit (MTU) size(in bytes) that is
+      guaranteed to pass through the data path of the segments in the network.
+      (The parameter is automatically resolved from the ctlplane network's mtu attribute.)
+    type: number
+  InternalApiMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  StorageNetworkMTU: # Override this via parameter_defaults
+  StorageMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  StorageMgmtNetworkMTU: # Override this via parameter_defaults
+  StorageMgmtMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  TenantNetworkMTU: # Override this via parameter_defaults
+  TenantMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  ProvisioningNetworkMTU: # Override this via parameter_defaults
+  ProvisioningMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  ManagementNetworkMTU: # Override this via parameter_defaults
+  ManagementMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  DefaultBondMTU: # Override this via parameter_defaults
+  DefaultBondMtu: # Override this via parameter_defaults
     default: 9000
     description: MTU value for this network.
     type: number
-  ExternalNetworkMTU:
+  ExternalMtu:
     default: 1500
     description: MTU value for this network.
     type: number
@@ -167,7 +214,7 @@ resources:
                   get_param: ControllerProvisioningInterface
                 use_dhcp: false
                 mtu:
-                  get_param: ProvisioningNetworkMTU
+                  get_param: ProvisioningMtu
                 addresses:
                 - ip_netmask:
                     list_join:
@@ -196,12 +243,12 @@ resources:
               - type: ovs_bridge
                 name: br-tenant
                 mtu:
-                  get_param: DefaultBondMTU
+                  get_param: DefaultBondMtu
                 members:
                 - type: linux_bond
                   name: bond0
                   mtu:
-                    get_param: DefaultBondMTU
+                    get_param: DefaultBondMtu
                   bonding_options:
                     get_param: ControllerBondInterfaceOptions
                   members:
@@ -209,19 +256,19 @@ resources:
                     name:
                       get_param: ControllerBond0Interface1
                     mtu:
-                      get_param: DefaultBondMTU
+                      get_param: DefaultBondMtu
                     primary: true
                   - type: interface
                     name:
                       get_param: ControllerBond0Interface2
                     mtu:
-                      get_param: DefaultBondMTU
+                      get_param: DefaultBondMtu
                 - type: vlan
                   device: bond0
                   vlan_id:
                     get_param: TenantNetworkVlanID
                   mtu:
-                    get_param: TenantNetworkMTU
+                    get_param: TenantMtu
                   addresses:
                   - ip_netmask:
                       get_param: TenantIpSubnet
@@ -230,7 +277,7 @@ resources:
                   vlan_id:
                     get_param: InternalApiNetworkVlanID
                   mtu:
-                    get_param: InternalApiMTU
+                    get_param: InternalApiMtu
                   addresses:
                   - ip_netmask:
                       get_param: InternalApiIpSubnet
@@ -239,7 +286,7 @@ resources:
                   vlan_id:
                     get_param: StorageNetworkVlanID
                   mtu:
-                    get_param: StorageNetworkMTU
+                    get_param: StorageMtu
                   addresses:
                   - ip_netmask:
                       get_param: StorageIpSubnet
@@ -249,32 +296,32 @@ resources:
                 dns_servers:
                   get_param: DnsServers
                 mtu:
-                  get_param: DefaultBondMTU
+                  get_param: DefaultBondMtu
                 members:
                 - type: linux_bond
                   name: bond1
                   bonding_options:
                     get_param: ControllerBondInterfaceOptions
                   mtu:
-                    get_param: DefaultBondMTU
+                    get_param: DefaultBondMtu
                   members:
                   - type: interface
                     name:
                       get_param: ControllerBond1Interface1
                     mtu:
-                      get_param: DefaultBondMTU
+                      get_param: DefaultBondMtu
                     primary: true
                   - type: interface
                     name:
                       get_param: ControllerBond1Interface2
                     mtu:
-                      get_param: DefaultBondMTU
+                      get_param: DefaultBondMtu
                 - type: vlan
                   device: bond1
                   vlan_id:
                     get_param: ExternalNetworkVlanID
                   mtu:
-                    get_param: ExternalNetworkMTU
+                    get_param: ExternalMtu
                   addresses:
                   - ip_netmask:
                       get_param: ExternalIpSubnet
@@ -282,28 +329,6 @@ resources:
                   - ip_netmask: 0.0.0.0/0
                     next_hop:
                       get_param: ExternalInterfaceDefaultRoute
-              - type: ovs_bridge
-                name: mlx_br1
-                mtu:
-                  get_param: DefaultBondMTU
-                members:
-                - type: interface
-                  name:
-                    get_param: ControllerSriovInterface1
-                  mtu:
-                    get_param: DefaultBondMTU
-                  use_dhcp: false
-              - type: ovs_bridge
-                name: mlx_br2
-                mtu:
-                  get_param: DefaultBondMTU
-                members:
-                - type: interface
-                  name:
-                    get_param: ControllerSriovInterface2
-                  mtu:
-                    get_param: DefaultBondMTU
-                  use_dhcp: false
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.

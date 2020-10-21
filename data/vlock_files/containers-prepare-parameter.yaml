@@ -1,0 +1,373 @@
+# Generated with the following on 2020-05-15T17:52:49.239128
+#
+#   openstack tripleo container image prepare default --local-push-destination --output-env-file containers-prepare-parameter.yaml
+#
+
+parameter_defaults:
+  ContainerImagePrepare:
+  - push_destination: true
+    set:
+      ceph_alertmanager_image: ose-prometheus-alertmanager
+      ceph_alertmanager_namespace: registry.redhat.io/openshift4
+      ceph_alertmanager_tag: 4.1
+      ceph_grafana_image: rhceph-4-dashboard-rhel8
+      ceph_grafana_namespace: registry.redhat.io/rhceph
+      ceph_grafana_tag: 4
+      ceph_image: rhceph-4-rhel8
+      ceph_namespace: registry.redhat.io/rhceph
+      ceph_node_exporter_image: ose-prometheus-node-exporter
+      ceph_node_exporter_namespace: registry.redhat.io/openshift4
+      ceph_node_exporter_tag: v4.1
+      ceph_prometheus_image: ose-prometheus
+      ceph_prometheus_namespace: registry.redhat.io/openshift4
+      ceph_prometheus_tag: 4.1
+      ceph_tag: latest
+      name_prefix: openstack-
+      name_suffix: ''
+      namespace: registry.redhat.io/rhosp-rhel8
+# Use Null value for standard neutron-container and use ovn for OVN-based-container
+      neutron_driver:
+      rhel_containers: false
+      tag: '16.1'
+    tag_from_label: '{version}-{release}'
+  includes:
+  - aodh-api
+  set:
+    tag:16.1-51
+  includes:
+  - aodh-evaluator
+  set:
+    tag:16.1-51
+  includes:
+  - aodh-listener
+  set:
+    tag:16.1-49
+  includes:
+  - aodh-notifier
+  set:
+    tag:16.1-51
+  includes:
+  - barbican-api
+  set:
+    tag:16.1-51
+  includes:
+  - barbican-keystone-listener
+  set:
+    tag:16.1-51
+  includes:
+  - barbican-worker
+  set:
+    tag:16.1-51
+  includes:
+  - ceilometer-central
+  set:
+    tag:16.1-51
+  includes:
+  - ceilometer-compute
+  set:
+    tag:16.1-50
+  includes:
+  - ceilometer-notification
+  set:
+    tag:16.1-51
+  includes:
+  - cinder-api
+  set:
+    tag:16.1-49
+  includes:
+  - cinder-backup
+  set:
+    tag:16.1-49
+  includes:
+  - cinder-scheduler
+  set:
+    tag:16.1-49
+  includes:
+  - cinder-volume
+  set:
+    tag:16.1-48
+  includes:
+  - mariadb
+  set:
+    tag:16.1-59
+  includes:
+  - collectd
+  set:
+    tag:16.1-57
+  includes:
+  - cron
+  set:
+    tag:16.1-57
+  includes:
+  - designate-api
+  set:
+    tag:16.1-39
+  includes:
+  - designate-backend-bind9
+  set:
+    tag:16.1-38
+  includes:
+  - designate-central
+  set:
+    tag:16.1-39
+  includes:
+  - designate-worker
+  set:
+    tag:16.1-39
+  includes:
+  - designate-mdns
+  set:
+    tag:16.1-39
+  includes:
+  - designate-producer
+  set:
+    tag:16.1-39
+  includes:
+  - designate-sink
+  set:
+    tag:16.1-38
+  includes:
+  - ec2-api
+  set:
+    tag:16.1-54
+  includes:
+  - etcd
+  set:
+    tag:16.1-56
+  includes:
+  - glance-api
+  set:
+    tag:16.1-47
+  includes:
+  - gnocchi-api
+  set:
+    tag:16.1-51
+  includes:
+  - gnocchi-metricd
+  set:
+    tag:16.1-51
+  includes:
+  - gnocchi-statsd
+  set:
+    tag:16.1-51
+  includes:
+  - haproxy
+  set:
+    tag:16.1-57
+  includes:
+  - heat-api-cfn
+  set:
+    tag:16.1-52
+  includes:
+  - heat-api
+  set:
+    tag:16.1-51
+  includes:
+  - heat-engine
+  set:
+    tag:16.1-51
+  includes:
+  - horizon
+  set:
+    tag:16.1-53
+  includes:
+  - ironic-api
+  set:
+    tag:16.1-51
+  includes:
+  - ironic-conductor
+  set:
+    tag:16.1-51
+  includes:
+  - ironic-pxe
+  set:
+    tag:16.1-51
+  includes:
+  - ironic-inspector
+  set:
+    tag:16.1-55
+  includes:
+  - ironic-neutron-agent
+  set:
+    tag:16.1-54
+  includes:
+  - iscsid
+  set:
+    tag:16.1-56
+  includes:
+  - keepalived
+  set:
+    tag:16.1-56
+  includes:
+  - keystone
+  set:
+    tag:16.1-50
+  includes:
+  - manila-api
+  set:
+    tag:16.1-51
+  includes:
+  - manila-scheduler
+  set:
+    tag:16.1-50
+  includes:
+  - manila-share
+  set:
+    tag:16.1-51
+  includes:
+  - memcached
+  set:
+    tag:16.1-57
+  includes:
+  - qdrouterd
+  set:
+    tag:16.1-56
+  includes:
+  - mistral-api
+  set:
+    tag:16.1-51
+  includes:
+  - mistral-engine
+  set:
+    tag:16.1-52
+  includes:
+  - mistral-event-engine
+  set:
+    tag:16.1-53
+  includes:
+  - mistral-executor
+  set:
+    tag:16.1-62
+  includes:
+  - multipathd
+  set:
+    tag:16.1-56
+  includes:
+  - neutron-server-ovn
+  set:
+    tag:16.1-51
+  includes:
+  - neutron-dhcp-agent
+  set:
+    tag:16.1-51
+  includes:
+  - neutron-l3-agent
+  set:
+    tag:16.1-51
+  includes:
+  - neutron-metadata-agent
+  set:
+    tag:16.1-55
+  includes:
+  - nova-api
+  set:
+    tag:16.1-55
+  includes:
+  - nova-compute
+  set:
+    tag:16.1-52.1602000860
+  includes:
+  - nova-compute-ironic
+  set:
+    tag:16.1-54.1602001016
+  includes:
+  - nova-conductor
+  set:
+    tag:16.1-53
+  includes:
+  - nova-libvirt
+  set:
+    tag:16.1-56.1602000855
+  includes:
+  - nova-scheduler
+  set:
+    tag:16.1-53
+  includes:
+  - nova-novncproxy
+  set:
+    tag:16.1-54
+  includes:
+  - octavia-api
+  set:
+    tag:16.1-51
+  includes:
+  - octavia-health-manager
+  set:
+    tag:16.1-51
+  includes:
+  - octavia-housekeeping
+  set:
+    tag:16.1-51
+  includes:
+  - rsyslog
+  set:
+    tag:16.1-53
+  includes:
+  - octavia-worker
+  set:
+    tag:16.1-51
+  includes:
+  - neutron-openvswitch-agent
+  set:
+    tag:16.1-53
+  includes:
+  - ovn-controller
+  set:
+    tag:16.1-52
+  includes:
+  - ovn-northd
+  set:
+    tag:16.1-51
+  includes:
+  - neutron-metadata-agent-ovn
+  set:
+    tag:16.1-52
+  includes:
+  - ovn-nb-db-server
+  set:
+    tag:16.1-50
+  includes:
+  - ovn-sb-db-server
+  set:
+    tag:16.1-53
+  includes:
+  - panko-api
+  set:
+    tag:16.1-50
+  includes:
+  - placement-api
+  set:
+    tag:16.1-55
+  includes:
+  - rabbitmq
+  set:
+    tag:16.1-57
+  includes:
+  - redis
+  set:
+    tag:16.1-54
+  includes:
+  - swift-account
+  set:
+    tag:16.1-50
+  includes:
+  - swift-proxy-server
+  set:
+    tag:16.1-50
+  includes:
+  - swift-container
+  set:
+    tag:16.1-51
+  includes:
+  - swift-object
+  set:
+    tag:16.1-55
+  includes:
+  - zaqar-wsgi
+  set:
+    tag:16.1-51
+
+  ContainerImageRegistryCredentials:
+    registry.redhat.io:
+      username: password
+

@@ -51,15 +51,48 @@ parameters:
     default: 60
     description: Vlan ID for the management network traffic.
     type: number
-  ControlPlaneSubnetCidr: # Override this via parameter_defaults
-    default: '24'
-    description: The subnet CIDR of the control plane network.
+  ControlPlaneSubnetCidr:
+    default: ''
+    description: >
+      The subnet CIDR of the control plane network. (The parameter is
+      automatically resolved from the ctlplane subnet's cidr attribute.)
     type: string
+  ControlPlaneStaticRoutes:
+    default: []
+    description: >
+      Routes for the ctlplane network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+  StorageInterfaceRoutes:
+    default: []
+    description: >
+      Routes for the storage network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+  InternalApiInterfaceRoutes:
+    default: []
+    description: >
+      Routes for the internal_api network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
+  TenantInterfaceRoutes:
+    default: []
+    description: >
+      Routes for the tenant network traffic.
+      JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
+      Unless the default is changed, the parameter is automatically resolved
+      from the subnet host_routes attribute.
+    type: json
   ControlPlaneDefaultRoute: # Override this via parameter_defaults
     description: The default route of the control plane network.
     type: string
   ExternalInterfaceDefaultRoute: # Not used by default in this template
-    default: 10.0.0.1
     description: The default route of the external network.
     type: string
   ManagementInterfaceDefaultRoute: # Commented out by default in this template
@@ -95,44 +128,59 @@ parameters:
     type: string
   ComputeSriovInterface1:
     default: p2p1
-    description: SRIOV Interface 1 name
+    description: SRIOV bond-pf0 Interface 1 name
     type: string
   ComputeSriovInterface2:
     default: p3p1
-    description: SRIOV Interface 2 name
+    description: SRIOV bond-pf0 Interface 2 name
     type: string
-  ExternalNetworkMTU: # Override this via parameter_defaults
+  BondInterfaceSriovOptions:
+    default: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+    description: The bonding_options string for the bond interface.
+    type: string
+  NumSriovVfs: # Override this via parameter_defaults
+    default: 4
+    description: Number of SRIOV Virtual Functions.
+    type: number
+  ControlPlaneMtu:
+    default: 1500
+    description: The maximum transmission unit (MTU) size(in bytes) that is
+      guaranteed to pass through the data path of the segments in the network.
+      (The parameter is automatically resolved from the ctlplane network's mtu attribute.)
+    type: number
+  ExternalMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  InternalApiMTU: # Override this via parameter_defaults
+  InternalApiMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  StorageNetworkMTU: # Override this via parameter_defaults
+  StorageMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  StorageMgmtNetworkMTU: # Override this via parameter_defaults
+  StorageMgmtMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  TenantNetworkMTU: # Override this via parameter_defaults
+  TenantMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  ProvisioningNetworkMTU: # Override this via parameter_defaults
+  ProvisioningMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  ManagementNetworkMTU: # Override this via parameter_defaults
+  ManagementMtu: # Override this via parameter_defaults
     default: 1500
     description: MTU value for this network.
     type: number
-  DefaultBondMTU: # Override this via parameter_defaults
+  DefaultBondMtu: # Override this via parameter_defaults
     default: 9000
     description: MTU value for this network.
     type: number
+
 resources:
   OsNetConfigImpl:
     type: OS::Heat::SoftwareConfig
@@ -145,10 +193,12 @@ resources:
           params:
             $network_config:
               network_config:
-              - type: ovs_bridge
-                name: br-tenant
+              - type: linux_bond
+                name: bond0
+                bonding_options:
+                  get_param: ComputeBondInterfaceOptions
                 mtu:
-                  get_param: ProvisioningNetworkMTU
+                  get_param: ProvisioningMtu
                 use_dhcp: false
                 dns_servers:
                   get_param: DnsServers
@@ -166,96 +216,102 @@ resources:
                   next_hop:
                     get_param: ControlPlaneDefaultRoute
                 members:
+                - type: interface
+                  name:
+                    get_param: ComputeBond0Interface1
+                  mtu:
+                    get_param: DefaultBondMtu
+                  primary: true
+                - type: interface
+                  name:
+                    get_param: ComputeBond0Interface2
+                  mtu:
+                    get_param: DefaultBondMtu
+              - type: vlan
+                device: bond0
+                vlan_id:
+                  get_param: InternalApiNetworkVlanID
+                mtu:
+                  get_param: InternalApiMtu
+                addresses:
+                - ip_netmask:
+                    get_param: InternalApiIpSubnet
+              - type: vlan
+                device: bond0
+                vlan_id:
+                  get_param: TenantNetworkVlanID
+                mtu:
+                  get_param: TenantMtu
+                addresses:
+                - ip_netmask:
+                    get_param: TenantIpSubnet
+              # SRIOV Bridge (VF-LAG)
+              - type: ovs_bridge
+                name: br-tenant
+                use_dhcp: false
+                mtu:
+                  get_param: ProvisioningMtu
+                members:
                 - type: linux_bond
-                  name: bond0
+                  name: bond-pf0
                   bonding_options:
-                    get_param: ComputeBondInterfaceOptions
-                  mtu:
-                    get_param: DefaultBondMTU
+                    get_param: BondInterfaceSriovOptions
                   members:
-                  - type: interface
+                  - type: sriov_pf
                     name:
-                      get_param: ComputeBond0Interface1
+                      get_param: ComputeSriovInterface1
                     mtu:
-                      get_param: DefaultBondMTU
+                      get_param: DefaultBondMtu
+                    numvfs:
+                      get_param: NumSriovVfs
                     primary: true
-                  - type: interface
+                    promisc: true
+                    use_dhcp: false
+                    defroute: false
+                    link_mode: switchdev
+                  - type: sriov_pf
                     name:
-                      get_param: ComputeBond0Interface2
+                      get_param: ComputeSriovInterface2
                     mtu:
-                      get_param: DefaultBondMTU
-                - type: vlan
-                  device: bond0
-                  vlan_id:
-                    get_param: TenantNetworkVlanID
-                  mtu:
-                    get_param: TenantNetworkMTU
-                  addresses:
-                  - ip_netmask:
-                      get_param: TenantIpSubnet
-                - type: vlan
-                  device: bond0
-                  vlan_id:
-                    get_param: InternalApiNetworkVlanID
-                  mtu:
-                    get_param: InternalApiMTU
-                  addresses:
-                  - ip_netmask:
-                      get_param: InternalApiIpSubnet
+                      get_param: DefaultBondMtu
+                    numvfs:
+                      get_param: NumSriovVfs
+                    promisc: true
+                    use_dhcp: false
+                    defroute: false
+                    link_mode: switchdev
               - type: ovs_bridge
                 name: br-bond1
                 mtu:
-                  get_param: DefaultBondMTU
+                  get_param: DefaultBondMtu
                 members:
                 - type: linux_bond
                   name: bond1
                   bonding_options:
                     get_param: ComputeBondInterfaceOptions
                   mtu:
-                    get_param: DefaultBondMTU
+                    get_param: DefaultBondMtu
                   members:
                   - type: interface
                     name:
                       get_param: ComputeBond1Interface1
                     mtu:
-                      get_param: DefaultBondMTU
+                      get_param: DefaultBondMtu
                     primary: true
                   - type: interface
                     name:
                       get_param: ComputeBond1Interface2
                     mtu:
-                      get_param: DefaultBondMTU
+                      get_param: DefaultBondMtu
                 - type: vlan
                   device: bond1
                   vlan_id:
                     get_param: StorageNetworkVlanID
                   mtu:
-                    get_param: StorageNetworkMTU
+                    get_param: StorageMtu
                   addresses:
                   - ip_netmask:
                       get_param: StorageIpSubnet
-              - type: ovs_bridge
-                name: mlx_br1
-                mtu:
-                  get_param: DefaultBondMTU
-                members:
-                - type: interface
-                  name:
-                    get_param: ComputeSriovInterface1
-                  mtu:
-                    get_param: DefaultBondMTU
-                  use_dhcp: false
-              - type: ovs_bridge
-                name: mlx_br2
-                mtu:
-                  get_param: DefaultBondMTU
-                members:
-                - type: interface
-                  name:
-                    get_param: ComputeSriovInterface2
-                  mtu:
-                    get_param: DefaultBondMTU
-                  use_dhcp: false
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.

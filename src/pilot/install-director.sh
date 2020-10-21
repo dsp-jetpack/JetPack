@@ -109,6 +109,35 @@ apply_patch(){
   fi
 }
 
+run_on_container(){
+  container_name="$1"
+  command="$2"
+
+  echo "Executing: ${command} on ${container_name} "
+
+  cmd="sudo podman exec --user 0 -ti ${container_name} ${command}"
+  $cmd
+
+  if [ $? -ne 0 ]; then
+    echo "command failed"
+    exit 1
+  fi
+}
+
+upload_file_to_container(){
+  container_name="$1"
+  origin_file="$2"
+  destination_file="$3"
+  echo "uploading: ${origin_file} to ${destination_file} on ${container_name} "
+
+  cmd="sudo podman cp ${origin_file} ${container_name}:${destination_file}"
+  $cmd
+  if [ $? -ne 0 ]; then
+    echo "upload failed"
+    exit 1
+  fi
+}
+
 run_command(){
   cmd="$1"
 
@@ -139,11 +168,10 @@ fi
 echo
 echo "## Configuring paths..."
 ESCAPED_HOME=${HOME//\//\\/}
-sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
+sudo sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
 # Clean the nodes disks befor redeploying
-#sed -i "s/clean_nodes = false/clean_nodes = true/" $HOME/pilot/undercloud.conf
-cp $HOME/pilot/undercloud.conf $HOME
-cp $HOME/pilot/containers-prepare-parameter.yaml $HOME
+sudo cp $HOME/pilot/undercloud.conf $HOME
+sudo cp $HOME/pilot/containers-prepare-parameter.yaml $HOME
 echo "## Done."
 
 echo
@@ -155,7 +183,7 @@ echo "## Install Tempest plugin dependencies"
 run_command "sudo dnf install -y openstack-tempest"
 run_command "sudo dnf install -y python3-neutron-tests-tempest python3-cinder-tests-tempest python3-telemetry-tests-tempest python3-keystone-tests-tempest python3-horizon-tests-tempest python3-octavia-tests-tempest python3-manila-tests-tempest python3-barbican-tests-tempest"
 run_command "sudo dnf install -y gcc"
-run_command "sudo pip3 install ironic"
+run_command "sudo dnf install -y openstack-ironic-api openstack-ironic-conductor python3-ironicclient"
 echo "## Done."
 
 echo
@@ -273,6 +301,12 @@ echo "### Patching tripleo-heat-templates part II"
 apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/swift/swift-proxy-container-puppet.yaml ${HOME}/pilot/swift-proxy-container.patch"
 apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/nova/nova-scheduler-container-puppet.yaml ${HOME}/pilot/nova-scheduler-container.patch"
 apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/database/redis-container-puppet.yaml ${HOME}/pilot/redis-container.patch"
+# This hacks in a patch for XE2420 where if CertificateInstance lower and
+# upper bounds are None, patch will make the attributes nullable and set
+# default to 0 to avoid an exception as those two attibutes are not nullable
+echo "### Patching idrac_card.py"
+apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.py ${HOME}/pilot/idrac_card.patch"
+
 echo "## Done"
 
 ## This hacks in a patch to fix the powerflex cinder backend name required by Puppet to deploy
@@ -303,72 +337,109 @@ echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
-## This hacks in a patch to validate and retrieve raid and boss controller and physical disk status.
-#echo
-#echo "## Patching Ironic iDRAC driver raid.py..."
-#apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
-#sudo rm -f /usr/lib/python3.6/site-packages/dracclient/resources/raid.pyc
-#sudo rm -f /usr/lib/python3.6/site-packages/dracclient/resources/raid.pyo
-#
-## This hacks in a patch to out-of-band inspection to set boot_mode on the node
-## being inspected.
-#echo
-#echo "## Patching Ironic iDRAC driver inspect.py.."
-#apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/inspect.py ${HOME}/pilot/inspect.patch"
-#sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/inspect.pyc
-#sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/inspect.pyo
-#
-## This hacks in a patch to create a virtual disk using realtime mode.
-## Note that this code must be here because we use this code prior to deploying
-## the director.
-#echo
-#echo "## Patching Ironic iDRAC driver raid.py..."
-#apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
-#sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyc
-#sudo rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyo
-#echo "## Done."
-#
-## This hacks in a patch to filter out all non-printable characters during WSMAN
-## enumeration.
-## Note that this code must be here because we use this code prior to deploying
-## the director.
-#echo
-#echo "## Patching Ironic iDRAC driver wsman.py..."
-#apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
-#sudo rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyc
-#sudo rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyo
-#echo "## Done."
-#
-## This patches workarounds for two issues into ironic.conf.
-## 1. node_locked_retry_attempts is increased to work around an issue where
-##    lock contention on the nodes in ironic can occur during RAID cleaning.
-## 2. sync_power_state_interval is increased to work around an issue where
-##    servers go into maintenance mode in ironic if polled for power state too
-##    aggressively.
-#echo
-#echo "## Patching ironic.conf..."
-#apply_patch "sudo patch -b -s /etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
-#echo "## Done."
-#
-## This patches an issue where the  Ironic api service returns http 500 errors
-## https://bugzilla.redhat.com/show_bug.cgi?id=1613995
-#echo
-#echo "## Patching 10-ironic_wsgi.conf"
-#apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
-#echo "## Done"
+# Install patch on all containers to be patched
+for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_api";
+  do
+    run_on_container  "${container}" "dnf install -y patch"
+  done
+
+# Update ironic patches
+for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_api" ;
+  do
+    # This hacks in a patch to make conductor wait while completion of configuration job
+    echo
+    echo "## Patching Ironic iDRAC driver job.py on ${container}..."
+    upload_file_to_container "${container}" "${HOME}/pilot/ironic_job.patch" "/tmp/ironic_job.patch"
+    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/job.py /tmp/ironic_job.patch"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/job.pyc"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/job.pyo"
+    echo "## Done"
+
+    # This hacks in a patch to create a virtual disk using realtime mode.
+    # Note that this code must be here because we use this code prior to deploying
+    # the director.
+    echo
+    echo "## Patching Ironic iDRAC driver raid.py..."
+    upload_file_to_container "${container}" "${HOME}/pilot/raid.patch" "/tmp/raid.patch"
+    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.py /tmp/raid.patch"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyc"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyo"
+    echo "## Done"
+
+    # This hacks in a patch to define maximum number of retries for the conductor
+    # to wait during any configuration job completion.
+    echo
+    echo "## Patching Ironic iDRAC driver drac.py on ${container} ..."
+    upload_file_to_container "${container}" "${HOME}/pilot/drac.patch" "/tmp/drac.patch"
+    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/ironic/conf/drac.py /tmp/drac.patch"
+    run_on_container "${container}" "rm -f /usr/lib/python2.7/site-packages/ironic/conf/drac.pyc"
+    run_on_container "${container}" "rm -f /usr/lib/python2.7/site-packages/ironic/conf/drac.pyo"
+    echo "## Done"
+  done
+
+# Update Drac patches
+for container in "ironic_pxe_tftp"  "ironic_conductor" "ironic_api" ;
+  do
+
+    # This hacks in a patch to handle various types of settings.
+    echo
+    echo "## Patching Ironic iDRAC driver utils.py on ${container}.."
+    upload_file_to_container "${container}" "${HOME}/pilot/utils.patch" "/tmp/utils.patch"
+    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/dracclient/utils.py /tmp/utils.patch"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/utils.pyc"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/utils.pyo"
+    echo "## Done"
+
+    # This hacks in a patch to filter out all non-printable characters during WSMAN
+    # enumeration.
+    # Note that this code must be here because we use this code prior to deploying
+    # the director.
+    echo
+    echo "## Patching Ironic iDRAC driver wsman.py on ${container}..."
+    upload_file_to_container "${container}" "${HOME}/pilot/wsman.patch" "/tmp/wsman.patch"
+    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/dracclient/wsman.py /tmp/wsman.patch"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyc"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyo"
+    echo "## Done"
+
+  done
+
+# This patches workarounds for two issues into ironic.conf.
+# 1. node_locked_retry_attempts is increased to work around an issue where
+#    lock contention on the nodes in ironic can occur during RAID cleaning.
+# 2. sync_power_state_interval is increased to work around an issue where
+#    servers go into maintenance mode in ironic if polled for power state too
+#    aggressively.
+# echo
+# echo "## Patching ironic.conf..."
+# apply_patch "sudo patch -b -s /var/lib/config-data/puppet-generated//ironic/etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
+# echo "## Done."
+
+# This patches an issue where the  Ironic api service returns http 500 errors
+# https://bugzilla.redhat.com/show_bug.cgi?id=1613995
+# echo
+# echo "## Patching 10-ironic_wsgi.conf"
+# apply_patch "sudo patch -b -s /var/lib/config-data/puppet-generated/ironic_api/etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
+# echo "## Done"
+
+# Restart containers/services
+
+for service in "tripleo_ironic_api.service" "tripleo_ironic_conductor.service" "tripleo_ironic_inspector.service" "tripleo_ironic_pxe_http.service" "tripleo_ironic_pxe_tftp.service" ;
+  do
+    echo "restarting ${service}"
+    sudo systemctl stop ${service}
+    sudo systemctl start ${service}
+  done
+
+
 
 echo
 echo "## Restarting httpd"
 sudo systemctl restart httpd
 echo "## Done"
 
-echo
-echo "## Restarting ironic-conductor..."
-sudo podman restart ironic_conductor
-echo "## Done."
 
-
-# Satellite , if using 
+# Satellite , if using
 if [ ! -z "${containers_prefix}" ]; then
     container_yaml=$HOME/containers-prepare-parameter.yaml
     sed -i "s/namespace:.*/namespace: ${satellite_hostname}:5000/" ${container_yaml}
@@ -382,48 +453,6 @@ if [ ! -z "${containers_prefix}" ]; then
 fi
 
 
-# If deployment is unlocked, generate the overcloud container list from the latest.
-#if [ -e $HOME/overcloud_images.yaml ];
-#then
-#    echo "using locked containers versions"
-#
-#    if [ ! -z "${containers_prefix}" ]; then
-#        sed -i "s/registry.access.redhat.com\/rhosp15\/openstack-/${satellite_hostname}:5000\/${containers_prefix}/" $HOME/overcloud_images.yaml
-#        sed -i "s/registry.access.redhat.com\/rhceph\//${satellite_hostname}:5000\/${containers_prefix}/" $HOME/overcloud_images.yaml
-#
-#    fi
-#
-#else
-#    echo "using latest available containers versions"
-#    touch $HOME//overcloud_images.yaml
-#
-#    if [ ! -z "${containers_prefix}" ]; then
-#
-#        openstack overcloud container image prepare   --namespace=${satellite_hostname}:5000\
-#        --prefix=${containers_prefix}   \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
-#        --tag-from-label {version}-{release}   \
-#        --set ceph_namespace=${satellite_hostname}:5000 \
-#        --set ceph_image=${containers_prefix}rhceph-3-rhel7 \
-#        --output-env-file=$HOME/overcloud_images.yaml
-#
-#    else
-#        openstack overcloud container image prepare --output-env-file $HOME/overcloud_images.yaml \
-#        --namespace=registry.access.redhat.com/rhosp15 \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
-#        --set ceph_namespace=registry.access.redhat.com/rhceph \
-#        --set ceph_image=rhceph-3-rhel7 \
-#        --tag-from-label {version}-{release}
-#    fi
-#fi
-
-#sudo yum install -y os-cloud-config
 
 echo
 echo "## Configuration complete!"

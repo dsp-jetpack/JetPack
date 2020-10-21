@@ -1,15 +1,108 @@
---- ironic.conf	2018-07-12 14:04:55.353000000 -0500
-+++ ironic.conf.new	2018-07-12 14:04:23.947000000 -0500
-@@ -1294,7 +1294,7 @@
+--- ironic.conf	2020-09-17 02:13:45.000000000 +0000
++++ ironic.conf.new	2020-09-18 16:37:38.844775481 +0000
+@@ -37,7 +37,7 @@
+ # enumerating the "ironic.hardware.types" entrypoint. (list
+ # value)
+ #enabled_hardware_types = ipmi
+-enabled_hardware_types=idrac,ilo,ipmi,redfish
++enabled_hardware_types=idrac
  
+ # Specify the list of bios interfaces to load during service
+ # initialization. Missing bios interfaces, or bios interfaces
+@@ -148,7 +148,7 @@
+ # hardware type will have the same set of enabled inspect
+ # interfaces on every ironic-conductor service. (list value)
+ #enabled_inspect_interfaces = no-inspect
+-enabled_inspect_interfaces=idrac,ilo,inspector,no-inspect,redfish
++enabled_inspect_interfaces=idrac-redfish,idrac-wsman,ilo,inspector,no-inspect,redfish
+ 
+ # Default inspect interface to be used for nodes that do not
+ # have inspect_interface field set. A complete list of inspect
+@@ -174,7 +174,7 @@
+ # enabled management interfaces on every ironic-conductor
+ # service. (list value)
+ #enabled_management_interfaces = ipmitool
+-enabled_management_interfaces=fake,idrac,ilo,ipmitool,noop,redfish
++enabled_management_interfaces=fake,idrac-redfish,idrac-wsman,ilo,ipmitool,noop,redfish
+ 
+ # Default management interface to be used for nodes that do
+ # not have management_interface field set. A complete list of
+@@ -182,6 +182,7 @@
+ # enumerating the "ironic.hardware.interfaces.management"
+ # entrypoint. (string value)
+ #default_management_interface = <None>
++default_management_interface=idrac-wsman
+ 
+ # Specify the list of network interfaces to load during
+ # service initialization. Missing network interfaces, or
+@@ -223,7 +224,7 @@
+ # type will have the same set of enabled power interfaces on
+ # every ironic-conductor service. (list value)
+ #enabled_power_interfaces = ipmitool
+-enabled_power_interfaces=fake,idrac,ilo,ipmitool,redfish
++enabled_power_interfaces=fake,idrac-redfish,idrac-wsman,ilo,ipmitool,redfish
+ 
+ # Default power interface to be used for nodes that do not
+ # have power_interface field set. A complete list of power
+@@ -231,6 +232,7 @@
+ # enumerating the "ironic.hardware.interfaces.power"
+ # entrypoint. (string value)
+ #default_power_interface = <None>
++default_power_interface=idrac-wsman
+ 
+ # Specify the list of raid interfaces to load during service
+ # initialization. Missing raid interfaces, or raid interfaces
+@@ -247,13 +249,14 @@
+ # enabled raid interfaces on every ironic-conductor service.
+ # (list value)
+ #enabled_raid_interfaces = agent,no-raid
+-enabled_raid_interfaces=idrac,no-raid
++enabled_raid_interfaces=idrac-wsman,no-raid
+ 
+ # Default raid interface to be used for nodes that do not have
+ # raid_interface field set. A complete list of raid interfaces
+ # present on your system may be found by enumerating the
+ # "ironic.hardware.interfaces.raid" entrypoint. (string value)
+ #default_raid_interface = <None>
++default_raid_interface=idrac-wsman
+ 
+ # Specify the list of rescue interfaces to load during service
+ # initialization. Missing rescue interfaces, or rescue
+@@ -319,7 +322,7 @@
+ # type will have the same set of enabled vendor interfaces on
+ # every ironic-conductor service. (list value)
+ #enabled_vendor_interfaces = ipmitool,no-vendor
+-enabled_vendor_interfaces=idrac,ipmitool,no-vendor
++enabled_vendor_interfaces=idrac-wsman,ipmitool,no-vendor
+ 
+ # Default vendor interface to be used for nodes that do not
+ # have vendor_interface field set. A complete list of vendor
+@@ -327,6 +330,7 @@
+ # enumerating the "ironic.hardware.interfaces.vendor"
+ # entrypoint. (string value)
+ #default_vendor_interface = <None>
++default_vendor_interface=idrac-wsman
+ 
+ # DEPRECATED: Used if there is a formatting error when
+ # generating an exception message (a programming error). If
+@@ -701,6 +705,7 @@
+ 
+ # Seconds to wait for a response from a call. (integer value)
+ #rpc_response_timeout = 60
++rpc_response_timeout = 600
+ 
+ # The network address and optional user credentials for
+ # connecting to the messaging backend, in URL format. The
+@@ -1291,7 +1296,7 @@
  # Interval between syncing the node power state to the
- # database, in seconds. (integer value)
+ # database, in seconds. Set to 0 to disable syncing. (integer
+ # value)
 -#sync_power_state_interval = 60
 +sync_power_state_interval = 70
  
  # Interval between checks of provision timeouts, in seconds.
- # (integer value)
-@@ -1327,7 +1327,7 @@
+ # Set to 0 to disable checks. (integer value)
+@@ -1336,7 +1341,7 @@
  #periodic_max_workers = 8
  
  # Number of attempts to grab a node lock. (integer value)
@@ -18,7 +111,7 @@
  
  # Seconds to sleep between node lock attempts. (integer value)
  #node_locked_retry_interval = 1
-@@ -1393,7 +1393,7 @@
+@@ -1432,7 +1437,7 @@
  # doing the cleaning. If the timeout is reached the node will
  # be put in the "clean failed" provision state. Set to 0 to
  # disable timeout. (integer value)

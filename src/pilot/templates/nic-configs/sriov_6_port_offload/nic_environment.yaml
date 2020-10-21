@@ -57,9 +57,6 @@ parameter_defaults:
   # SRIOV bonds
   ComputeSriovInterface1: p1p1
   ComputeSriovInterface2: p4p1
+  # The bonding mode to use for SRIOV VF-LAG
+  BondInterfaceSriovOptions: 802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
 
-  # CHANGEME: Change the interface names in the following lines for the
-  # controller nodes interfaces and include in the bridges
-  # for DHCP server communication
-  ControllerSriovInterface1: p1p2
-  ControllerSriovInterface2: p4p2
