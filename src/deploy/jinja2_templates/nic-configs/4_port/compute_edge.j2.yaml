@@ -2,6 +2,12 @@ heat_template_version: rocky
 description: >
   Bond and VLAN configuration for compute nodes. comment14_0: ' The values of the following parameters are overridden by the
   entries in' comment15_0: ' network-environment.yaml'
+{%- if resource_registry%}
+resource_registry:
+  {%- for port, port_path in resource_registry.items() %}
+  {{port}}: {{port_path}}
+  {%- endfor %}
+{%- endif %}
 parameters:
   ControlPlaneIp:
     default: ''
@@ -51,11 +57,12 @@ parameters:
     default: 60
     description: Vlan ID for the management network traffic.
     type: number
-  ControlPlaneSubnetCidr:
-    default: ''
-    description: >
-      The subnet CIDR of the control plane network. (The parameter is
-      automatically resolved from the ctlplane subnet's cidr attribute.)
+  ControlPlaneSubnetCidr: # Override this via parameter_defaults
+    default: '24'
+    description: The subnet CIDR of the control plane network.
+    type: string
+  ControlPlaneNetCidr:
+    description: Control plane/provisioning network and mask
     type: string
   ControlPlaneStaticRoutes:
     default: []
@@ -93,6 +100,7 @@ parameters:
     description: The default route of the control plane network.
     type: string
   ExternalInterfaceDefaultRoute: # Not used by default in this template
+    default: 10.0.0.1
     description: The default route of the external network.
     type: string
   ManagementInterfaceDefaultRoute: # Commented out by default in this template
@@ -164,6 +172,12 @@ parameters:
     default: 9000
     description: MTU value for this network.
     type: number
+{%- for key, _dict in parameters.items() %}
+  {{key}}:
+  {%- for _key, _val in _dict.items() %}
+    {{_key}}: {{_val}}
+  {%- endfor %}
+{%- endfor %}
 
 resources:
   OsNetConfigImpl:
@@ -177,94 +191,74 @@ resources:
           params:
             $network_config:
               network_config:
-              - type: ovs_bridge
-                name: br-tenant
-                use_dhcp: false
+              {%- for cfg in network_config %}
+              - type: {{cfg.type}}
+                name: {{cfg.name}}
                 mtu:
-                  get_param: ProvisioningMtu
+                  get_param: {{cfg.mtu}}
+                {%- if cfg.name == 'br-tenant' %}
+                use_dhcp: {{cfg.use_dhcp}}
                 dns_servers:
-                  get_param: DnsServers
+                  get_param: {{cfg.dns_servers}}
                 addresses:
+                  {%- for address in cfg.addresses %}
                 - ip_netmask:
                     list_join:
                     - /
-                    - - get_param: ControlPlaneIp
-                      - get_param: ControlPlaneSubnetCidr
+                    - - get_param: {{address.ip}}
+                      - get_param: {{address.cidr}}
+                  {%- endfor %}
                 routes:
-                - ip_netmask: 169.254.169.254/32
+                  {%- for route in cfg.routes %}
+                    {%- if 'default' in route %}
+                - default: {{route.default}}
+                    {%- endif %}
+                    {%- if 'ip_netmask' in route %}
+                - ip_netmask:
+                    get_param: {{route.ip_netmask}}
+                    {%- endif %}
                   next_hop:
-                    get_param: EC2MetadataIp
-                - default: true
-                  next_hop:
-                    get_param: ControlPlaneDefaultRoute
+                    get_param: {{route.next_hop}}
+                  {%- endfor %}
+                {%- endif %}
                 members:
-                - type: linux_bond
-                  name: bond0
-                  bonding_options:
-                    get_param: ComputeBondInterfaceOptions
-                  mtu:
-                    get_param: DefaultBondMtu
-                  members:
-                  - type: interface
-                    name:
-                      get_param: ComputeBond0Interface1
+                {%- for bridge_member in cfg.members %}
+                  - type: {{bridge_member.type}}
+                  {%- if bridge_member.type == 'linux_bond' %}
+                    name: {{bridge_member.name}}
+                    bonding_options:
+                      get_param: {{bridge_member.bonding_options}}
                     mtu:
-                      get_param: DefaultBondMtu
-                    primary: true
-                  - type: interface
-                    name:
-                      get_param: ComputeBond0Interface2
+                      get_param: {{bridge_member.mtu}}
+                    members:
+                    {%- for bond_member in bridge_member.members %}
+                    - type: {{bond_member.type}}
+                      name:
+                        get_param: {{bond_member.name}}
+                      mtu:
+                        get_param: {{bond_member.mtu}}
+                      {%- if 'primary' in bond_member %}
+                      primary: {{bond_member.primary}}
+                      {%- endif %}
+                    {%- endfor %}
+                  {%- elif bridge_member.type == 'vlan' %}
+                    device: {{bridge_member.device}}
+                    vlan_id:
+                      get_param: {{bridge_member.vlan_id}}
                     mtu:
-                      get_param: DefaultBondMtu
-                - type: vlan
-                  device: bond0
-                  vlan_id:
-                    get_param: TenantNetworkVlanID
-                  mtu:
-                    get_param: TenantMtu
-                  addresses:
-                  - ip_netmask:
-                      get_param: TenantIpSubnet
-                - type: vlan
-                  device: bond0
-                  vlan_id:
-                    get_param: InternalApiNetworkVlanID
-                  addresses:
-                  - ip_netmask:
-                      get_param: InternalApiIpSubnet
-              - type: ovs_bridge
-                name:
-                  bridge_name
-                mtu:
-                  get_param: DefaultBondMtu
-                members:
-                - type: linux_bond
-                  name: bond1
-                  bonding_options:
-                    get_param: ComputeBondInterfaceOptions
-                  mtu:
-                    get_param: DefaultBondMtu
-                  members:
-                  - type: interface
-                    name:
-                      get_param: ComputeBond1Interface1
-                    mtu:
-                      get_param: DefaultBondMtu
-                    primary: true
-                  - type: interface
-                    name:
-                      get_param: ComputeBond1Interface2
-                    mtu:
-                      get_param: DefaultBondMtu
-                - type: vlan
-                  device: bond1
-                  vlan_id:
-                    get_param: StorageNetworkVlanID
-                  mtu:
-                    get_param: StorageMtu
-                  addresses:
-                  - ip_netmask:
-                      get_param: StorageIpSubnet
+                      get_param: {{bridge_member.mtu}}
+                    addresses:
+                    {%- for vlan_address in bridge_member.addresses %}
+                    - ip_netmask:
+                        get_param: {{vlan_address.ip_netmask}}
+                    {%- endfor %}
+                    {%- if 'routes' in bridge_member %}
+                    routes:
+                      get_param: {{bridge_member.routes}}
+                    {%- endif %}
+                  {%- endif %}
+                {%- endfor %}
+              {%- endfor %}
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.

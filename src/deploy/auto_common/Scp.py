@@ -45,3 +45,20 @@ class Scp:
         sftp.close()
         client.close()
 
+    @staticmethod
+    def mkdir(adress, user, passw, remote_directory):
+        client = paramiko.SSHClient()
+        client.load_system_host_keys()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(hostname=adress, username=str(user), password=str(passw))
+        sftp = client.open_sftp()
+        dir_path = str()
+        for dir_folder in remote_directory.split("/"):
+            if dir_folder == "":
+                continue
+            dir_path += r"/{0}".format(dir_folder)
+            try:
+                sftp.listdir(dir_path)
+            except IOError:
+                sftp.mkdir(dir_path)
+        sftp.close()

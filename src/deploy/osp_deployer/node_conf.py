@@ -22,7 +22,6 @@ class NodeConf:
         self.is_director = False
         self.is_ceph_storage = False
         self.is_switch = False
-        self.is_powerflexgw = False 
         self.hostname = None
         self.idrac_ip = None
         self.service_tag = None
@@ -44,4 +43,7 @@ class NodeConf:
         self.__dict__ = json
 
     def __str__(self):
+        return str(self.__dict__)
+
+    def __repr__(self):
         return str(self.__dict__)

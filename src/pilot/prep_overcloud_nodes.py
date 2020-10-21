@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import argparse
+import json
 import logging
 import os
 import sys
@@ -33,6 +34,12 @@ def parse_arguments():
 
     LoggingHelper.add_argument(parser)
 
+    parser.add_argument("-n",
+                        "--node_type",
+                        default=None,
+                        help="""Prepare nodes for this specific
+                         node type only""")
+
     return parser.parse_args()
 
 
@@ -40,31 +47,36 @@ def main():
     args = parse_arguments()
 
     LoggingHelper.configure_logging(args.logging_level)
+    cmd = "openstack baremetal node list --fields uuid properties -f json"
+    nodes = json.loads(subprocess.check_output(cmd,
+                                               stderr=subprocess.STDOUT,
+                                               shell=True))
 
-    cmd = "source ~/stackrc;openstack baremetal node list -f value -c UUID"
-    nodes = subprocess.check_output(cmd,
-                                    stderr=subprocess.STDOUT,
-                                    shell=True)
-
-    for node in nodes.splitlines():
-        node = node.decode("utf-8")
-        if len(node) < 1:
+    for node in nodes:
+        props = node["Properties"]
+        _node_type = props["node_type"] if "node_type" in props else None
+        match = ((not args.node_type) or (bool(_node_type)
+                                          and args.node_type == _node_type))
+        if (not match):
             continue
+
+        uuid = node["UUID"]
         # Power off the node
-        logger.info("Powering off node " + node)
-        cmd = "openstack baremetal node power off " + node
+        logger.info("Powering off node " + uuid)
+        cmd = "openstack baremetal node power off " + uuid
         logger.debug("    {}".format(cmd))
         os.system(cmd)
 
         # Set the first boot device to PXE
-        logger.info("Setting the provisioning NIC to PXE boot on node " + node)
+        logger.info("Setting the provisioning NIC to PXE boot on node %s ",
+                    uuid)
 
-        cmd = "openstack baremetal node boot device set --persistent " + \
-            node + " pxe"
+        cmd = ("openstack baremetal node boot device set --persistent "
+               + uuid + " pxe")
         logger.debug("    {}".format(cmd))
         os.system(cmd)
-        cmd = "openstack baremetal node set --driver-info " + \
-              "force_persistent_boot_device=True " + node
+        cmd = ("openstack baremetal node set --driver-info "
+               "force_persistent_boot_device=True " + uuid)
         logger.debug("    {}".format(cmd))
         os.system(cmd)
 

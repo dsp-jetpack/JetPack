@@ -120,8 +120,8 @@ OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_USER = 'pm_user'
 NODE_TEMPLATE_ATTRIBUTE_MODEL = 'model'
 NODE_TEMPLATE_ATTRIBUTE_SERVICE_TAG = 'service_tag'
 
-OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IDRAC = 'pxe_drac'
-OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IPMI = 'pxe_ipmitool'
+OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_IDRAC = 'idrac'
+OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_IPMI = 'ipmi'
 OSPD_NODE_TEMPLATE_VALUE_USER_INTERVENTION_REQUIRED = \
     'FIXME and rerun ' + PROGRAM_NAME
 
@@ -374,7 +374,7 @@ def scan_one(scan_info):
     # Initialize the values of the attributes.
     pm_address = scan_info.ip_address
     pm_password = scan_info.password
-    pm_type = OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IDRAC
+    pm_type = OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_IDRAC
     pm_user = scan_info.user_name
     model = ''
     service_tag = ''

@@ -566,7 +566,7 @@ def config_idrac(instack_lock,
     drac_password = node["pm_password"]
     ironic_driver = node["pm_type"]
 
-    if ironic_driver != "pxe_drac":
+    if ironic_driver != "idrac":
         LOG.info("{} is using the {} driver.  No iDRAC configuration is "
                  "possible.".format(ip_service_tag, ironic_driver))
 
@@ -591,7 +591,6 @@ def config_idrac(instack_lock,
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_UEFI
     else:
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_BIOS
-
     config_boot_mode(drac_client, ip_service_tag, node, target_boot_mode)
 
     job_ids = list()

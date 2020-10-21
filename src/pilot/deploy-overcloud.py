@@ -532,11 +532,6 @@ def main():
         if args.static_vips:
             env_opts += " -e ~/pilot/templates/static-vip-environment.yaml"
 
-        # The neutron-ovs-dvr.yaml.yaml must be included after the
-        # network-environment.yaml
-        if args.dvr_enable:
-            env_opts += " -e ~/pilot/templates/neutron-ovs-dvr.yaml"
-
         # The configure-barbican.yaml must be included after the
         # network-environment.yaml
         if args.barbican_enable:
@@ -551,11 +546,16 @@ def main():
 
         if args.node_placement:
             env_opts += " -e ~/pilot/templates/node-placement.yaml"
-            
+
         # The neutron-ovs.yaml must be included before dell-environment.yaml to enable ovs and disable ovn
         # in OSP16.1. In case we need to use OVN in future, please delete this line
         env_opts += " -e ~/pilot/templates/overcloud/environments/services/neutron-ovs.yaml"
-        
+
+        # The neutron-ovs-dvr.yaml.yaml must be included after the
+        # neutron-ovs.yaml
+        if args.dvr_enable:
+            env_opts += " -e ~/pilot/templates/neutron-ovs-dvr.yaml"
+
         # The dell-environment.yaml must be included after the
         # storage-environment.yaml and ceph-radosgw.yaml
         if args.num_powerflex > 0:
@@ -628,7 +628,8 @@ def main():
         env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                     "network-isolation.yaml" \
                     " -e ~/pilot/templates/network-environment.yaml" \
-                    " -e {}".format(nic_env_file)
+                    " -e {} " \
+                    "-e ~/pilot/templates/site-name.yaml".format(nic_env_file)
 
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
@@ -638,6 +639,7 @@ def main():
               " --templates ~/pilot/templates/overcloud" \
               " {}" \
               " --libvirt-type kvm" \
+              " --no-cleanup" \
               " --ntp-server {}" \
               "".format(debug,
                         args.timeout,
