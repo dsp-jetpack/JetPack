@@ -74,10 +74,8 @@ class NfvParameters(object):
 
     def check_ht_status(self, node,
                         instackenv_file=Constants.INSTACKENV_FILENAME):
-        logger.info("ttttttttttttttttttt {}".format(node))
         drac_ip, drac_user, drac_password = \
             CredentialHelper.get_drac_creds(self.ironic, node, instackenv_file)
-        print([drac_ip, drac_user, drac_password])
         stor = drac_client.DRACClient(drac_ip, drac_user, drac_password)
         # cpu socket information for every compute node
         sockets = stor.list_cpus()
@@ -85,7 +83,7 @@ class NfvParameters(object):
             if not socket.ht_enabled:
                 raise Exception("Hyperthreading is not enabled in "
                                 + str(node))
-        print("Hyperthreading enabled on %s" % node)
+        logger.debug("Hyperthreading enabled on %s" % node)
         return True
 
     def get_nodes_uuids(self, nodetype):
@@ -140,8 +138,13 @@ class NfvParameters(object):
 
     def get_host_cpus(self, host_cpus_count):
         host_cpus = []
+        logger.debug("pppppppp host_cpus_count {}".format(host_cpus_count))
         pairs = int(math.ceil(int(host_cpus_count)/2.0))
+        logger.debug("pppppppp pairs {}".format(pairs))
+        logger.debug("pppppppp self.data['cpus'] {}".format(self.data['cpus']))
         for i in range(0, pairs):
+            logger.debug("pppppppp i: {}".format(i))
+            logger.debug("pppppppp self.data['cpus'][i % 2]: {}".format(self.data['cpus'][i % 2]))
             host_cpus.append(self.data['cpus'][i % 2][i][0])
             host_cpus.append(self.data['cpus'][i % 2][i][1])
             self.data['cpus'][i % 2].pop(i, None)
@@ -255,11 +258,12 @@ class NfvParameters(object):
                 ref_node["uuid"] = node
                 ref_node["data"] = data
                 ref_node["cpus"] = data["cpus"]
-        logger.info("yyyyyyyy ref_node[cpus]: {}".format(str(ref_node["cpus"])))
-        if ref_node["cpus"] not in [40, 48, 56, 64, 72, 80, 128]:
+        logger.debug("ref_node[cpus]: {}".format(str(ref_node["cpus"])))
+        logger.debug("ref_node[data]: {}".format(str(ref_node["data"])))
+        if ref_node["cpus"] not in [40, 48, 56, 64, 72, 80, 88, 128]:
             raise Exception("The number of vCPUs, as specified in the"
                             " reference architecture, must be one of"
-                            " [40, 48, 56, 64, 72, 80, 128]"
+                            " [40, 48, 56, 64, 72, 80, 88, 128]"
                             " but number of vCPUs are " + str(
                                 ref_node["cpus"]))
         return ref_node["uuid"], ref_node["data"]
@@ -300,8 +304,8 @@ class NfvParameters(object):
                 hugepage_count = (memory_count / 2)
             if hugepage_size == "1GB":
                 hugepage_count = (memory_count / 1024)
-            logger.info("hugepage_size {}".format(hugepage_size))
-            logger.info("hugepage_count {}".format(hugepage_count))
+            logger.debug("hugepage_size {}".format(hugepage_size))
+            logger.debug("hugepage_count {}".format(hugepage_count))
             return hugepage_count
         except Exception as error:
             message = "Exception {}: {}".format(

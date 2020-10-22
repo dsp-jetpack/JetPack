@@ -85,6 +85,7 @@ class Director(InfraHost):
 
         self.jinja2_env = Environment(
             loader=FileSystemLoader(self.settings.jinja2_templates))
+        self.nfv_parameters = {}
 
         cmd = "mkdir -p " + self.pilot_dir
         self.run(cmd)
@@ -2350,55 +2351,42 @@ class Director(InfraHost):
         setts = self.settings
         node_type_data = setts.node_type_data_map[node_type]
         role = self._generate_cc_role(node_type)
-        ntd_j = json.dumps(node_type_data)
-        logger.info("xxxx _generate_dpdk_params ntd_j: {}".format(ntd_j))
-        cmd = ("{} cd  ~/pilot;./dell_nfv_edge.py "
-               "--overcloud_name {} "
-               "--edge_site {} "
-               "--edge_site_data '{}'".format(self.source_stackrc,
-                                            setts.overcloud_name,
-                                            node_type,
-                                            ntd_j))
-        logger.info("xxxx _generate_dpdk_params cmd: {}".format(cmd))
-        res = self.run(cmd)
-        logger.info("xxxx _generate_dpdk_params res: %s", str(res))
-        res_j = json.loads(res[0])
 
-        logger.info("_generate_dpdk_params res: %s", str(res_j))
+        self.set_nfv_parameters(node_type)
+        dpdk_res = self.nfv_parameters["dpdk"]
         params = {}
         HostNicDriver = node_type_data["HostNicDriver"]
         params["OvsDpdkDriverType"] = HostNicDriver
         role_param_k = "{}Parameters".format(role)
         role_params = params[role_param_k] = {}
-        role_params["OvsDpdkCoreList"] = res_j["host_cpus"]
-        role_params["NovaComputeCpuSharedSet"] = res_j["host_cpus"]
-        role_params["OvsPmdCoreList"] = "self.nfv_params.pmd_cpus"
-        role_params["OvsDpdkSocketMemory"] = "self.nfv_params.socket_mem"
-        role_params["IsolCpusList"] = "self.nfv_params.isol_cpus"
+        role_params["OvsDpdkCoreList"] = dpdk_res["OvsDpdkCoreList"]
+        role_params["NovaComputeCpuSharedSet"] = dpdk_res["NovaComputeCpuSharedSet"]
+        role_params["OvsPmdCoreList"] = dpdk_res["OvsPmdCoreList"]
+        role_params["OvsDpdkSocketMemory"] = dpdk_res["OvsDpdkSocketMemory"]
+        role_params["IsolCpusList"] = dpdk_res["IsolCpusList"]
         # Unmodified params
         role_params["OvsDpdkMemoryChannels"] = "4"
         role_params["NovaReservedHostMemory"] = 4096
-        role_params["OvsDpdkSocketMemory"] = "2048,2048"
         role_params["TunedProfileName"] = "cpu-partitioning"
         role_params["NovaLibvirtRxQueueSize"] = 1024
         role_params["NovaLibvirtTxQueueSize"] = 1024
         role_params["VhostuserSocketGroup"] = "hugetlbfs"
         return params
-        '''
-          DellComputeParameters:
-            VhostuserSocketGroup: "hugetlbfs"
-            OvsPmdCoreList: "4-7,28-31"
-            OvsDpdkCoreList: "0-3,24-27"
-            NovaComputeCpuSharedSet: "0-3,40-43"
-            IsolCpusList: "4-23,28-47"
-            OvsDpdkMemoryChannels: "4"
-            NovaReservedHostMemory: 4096
-            OvsDpdkSocketMemory: "2048,2048"
-            TunedProfileName: "cpu-partitioning"
-            NovaLibvirtRxQueueSize: 1024
-            NovaLibvirtTxQueueSize: 1024
 
-        '''
+    def set_nfv_parameters(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        ntd_j = json.dumps(node_type_data)
+        logger.info("set_nfv_parameters ntd_j: {}".format(ntd_j))
+        cmd = ("{} cd  ~/pilot;./dell_nfv_edge.py "
+               "--overcloud_name {} "
+               "--edge_site {} "
+               "--edge_site_data '{}'".format(self.source_stackrc,
+                                              setts.overcloud_name,
+                                              node_type,
+                                              ntd_j))
+        res = json.loads(self.run_tty(cmd)[0])
+        self.nfv_parameters = res
 
     def get_sriov_compute_interfaces(self):
         # Get settings from .ini file
@@ -2701,9 +2689,13 @@ class Director(InfraHost):
         nodes = setts.node_types_map[node_type]
         params[role_count_key] = len(nodes)
         if nfv_type and NFV_TYPE_MAP[nfv_type] == OVS_DPDK:
+            self.set_nfv_parameters(node_type)
+            dell_env_params = self.nfv_parameters["dell_env"]
+            nova_cpu_set = dell_env_params["NovaComputeCpuDedicatedSet"]
+            params["NovaComputeCpuDedicatedSet"] = nova_cpu_set
             role_param_k = "{}Parameters".format(role)
             role_params = params[role_param_k] = {}
-            role_params["KernelArgs"] = "iommu=pt intel_iommu=on"
+            role_params["KernelArgs"] = dell_env_params["KernelArgs"]
         return params
 
     @directory_check(STAGING_TEMPLATES_PATH)
@@ -3270,6 +3262,7 @@ class Director(InfraHost):
         role_d['name'] = role_name
         role_d['description'] = role_name + " compute node role."
         role_d['CountDefault'] = 0
+        node_type_data = self.settings.node_type_data_map[node_type]
 
         _int_api_name = INTERNAL_API_NET[0] + role_name
         _int_api_subnet = self._generate_subnet_name(INTERNAL_API_NET[1]
@@ -3304,6 +3297,15 @@ class Director(InfraHost):
         role_d['uses_deprecated_params'] = False
         role_d["update_serial"] = 25
         role_d['ServicesDefault'] = self._get_default_compute_services()
+        nfv_type = (node_type_data["nfv_type"]
+                    if "nfv_type" in node_type_data["nfv_type"]
+                    and len(node_type_data["nfv_type"].strip()) != 0
+                    else None)
+        if nfv_type and nfv_type in ["dpdk", "both"]:
+            for service in DPDK_SERVICES:
+                role_d['ServicesDefault'].append(
+                    "OS::TripleO::Services::{}".format(service))
+
         return role_d
 
     def _generate_nic_params(self, node_type):
@@ -4001,6 +4003,11 @@ class Director(InfraHost):
 
     def _generate_deploy_cmd_edge(self, node_type):
         setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        nfv_type = (node_type_data["nfv_type"]
+                    if "nfv_type" in node_type_data["nfv_type"]
+                    and len(node_type_data["nfv_type"].strip()) != 0
+                    else None)
         node_type_lower = self._generate_node_type_lower(node_type)
         role_lower = self._generate_role_lower(node_type)
         edge_site_directory = os.path.join(self.home_dir, role_lower)
@@ -4056,6 +4063,10 @@ class Director(InfraHost):
                                      env_file + ".yaml")
 
             cmd += " -e {} ".format(tmplt)
+        if nfv_type and (nfv_type == "dpdk" or nfv_type == "both"):
+            _, tmplt = self._generate_edge_template_paths(node_type,
+                                                          NEUTRON_OVS_DPDK)
+            cmd += " -e {}".format(tmplt)
         cmd += "--libvirt-type kvm "
         cmd += "--ntp-server {} ".format(setts.sah_node.provisioning_ip)
         cmd += " > {edge_site_dir}/{nt_lower}_deploy_out.log 2>&1"

@@ -37,6 +37,7 @@ from logging_helper import LoggingHelper
 from dracclient import client
 from command_helper import Ssh
 from nfv_parameters import NfvParameters
+from utils import Utils
 logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -53,15 +54,24 @@ class ConfigEdge(object):
     nodes = ironic_client.node.list()
     get_drac_credential = CredentialHelper()
 
-    def __init__(self, overcloud_name, node_type, node_type_data, instackenv):
+    def __init__(self, overcloud_name, node_type, node_type_data):
         self.overcloud_name = overcloud_name
         self.node_type = node_type
         self.node_type_data = json.loads(node_type_data)
-        self.instackenv = instackenv
+        self.mtu = int(self.node_type_data["nfv_mtu"])
+        _dir = (re.sub(r'[^a-z0-9]', " ", node_type.lower()).replace(" ", "_"))
+        ntl = re.sub(r'[^a-z0-9]', "", node_type.lower())
+        # nic_environment_edgespain.yaml
+        ne_name = "nic_environment_{}.yaml".format(ntl)
+        instack_name = "instackenv_{}.json".format(ntl)
+        nic_env_file = os.path.join(home_dir, _dir, ne_name)
+        instackenv_file = os.path.join(home_dir, _dir, instack_name)
+        self.instackenv = instackenv_file
+        self.nic_env = nic_env_file
         self.overcloudrc = "source " + home_dir + "/"\
             + self.overcloud_name + "rc;"
         self.nfv_params = NfvParameters()
-        self.res = {"my_results": {"a_key": "a_val"}}
+
 
     def find_ifaces_by_keyword(self, yaml_file, keyword):
         nics = []
@@ -72,166 +82,85 @@ class ConfigEdge(object):
                     nics.append(line.split(':')[1].strip())
         return nics
 
-    def edit_environment_files(
-            self,
-            mtu,
-            enable_hugepage,
-            enable_numa,
-            hugepage_size,
-            hostos_cpu_count,
-            ovs_dpdk,
-            sriov,
-            hw_offload,
-            sriov_interfaces,
-            nic_env_file,
-            controller_count,
-            ceph_storage_count,
-            controller_flavor,
-            ceph_storage_flavor,
-            swift_storage_flavor,
-            block_storage_flavor,
-            vlan_range,
-            dell_compute_count=0,
-            dell_computehci_count=0):
-        try:
-            logger.info("Editing dell environment file")
-            file_path = home_dir + '/pilot/templates/dell-environment.yaml'
-            dpdk_file = home_dir + '/pilot/templates/neutron-ovs-dpdk.yaml'
-            hw_off_file = home_dir + '/pilot/templates/ovs-hw-offload.yaml'
-            cmds = []
-            if not os.path.isfile(file_path):
-                raise Exception(
-                    "The dell-environment.yaml file does not exist")
-            if not os.path.isfile(dpdk_file):
-                raise Exception(
-                    "The neutron-ovs-dpdk.yaml file does not exist")
-            if not ovs_dpdk:
-                cmds.append('sed -i "s|  # NovaSchedulerDefaultFilters|  ' +
-                            'NovaSchedulerDefaultFilters|" ' + file_path)
-            cmds.extend((
-                'sed -i "s|DellComputeCount:.*|DellComputeCount: ' +
-                str(dell_compute_count) +
-                '|" ' +
-                file_path,
-                'sed -i "s|DellComputeHCICount:.*|DellComputeHCICount: ' +
-                str(dell_computehci_count) +
-                '|" ' +
-                file_path,
-                'sed -i "s|ControllerCount:.*|ControllerCount: ' +
-                str(controller_count) +
-                '|" ' +
-                file_path,
-                'sed -i "s|CephStorageCount:.*|CephStorageCount: ' +
-                str(ceph_storage_count) +
-                '|" ' +
-                file_path,
-                'sed -i "s|OvercloudControllerFlavor:.*' +
-                '|OvercloudControllerFlavor: ' +
-                str(controller_flavor) +
-                '|" ' +
-                file_path,
-                'sed -i "s|OvercloudCephStorageFlavor:.*' +
-                '|OvercloudCephStorageFlavor: ' +
-                str(ceph_storage_flavor) +
-                '|" ' +
-                file_path,
-                'sed -i "s|OvercloudSwiftStorageFlavor:.*' +
-                '|OvercloudSwiftStorageFlavor: ' +
-                str(swift_storage_flavor) +
-                '|" ' +
-                file_path,
-                'sed -i "s|OvercloudBlockStorageFlavor:.*' +
-                '|OvercloudBlockStorageFlavor: ' +
-                str(block_storage_flavor) +
-                '|" ' +
-                file_path,
-                'sed -i "s|NeutronNetworkVLANRanges:.*' +
-                '|NeutronNetworkVLANRanges: ' +
-                'physint:' + str(vlan_range) + ',physext'
-                '|" ' +
-                file_path))
-            kernel_args = ''
-            if sriov or ovs_dpdk:
-                kernel_args = "iommu=pt intel_iommu=on"
+    def fetch_nfv_parameters(self):
+        logger.debug("Retrieving NFV parameters")
+        ntd = self.node_type_data
+        enable_hugepage = Utils.string_to_bool(ntd["hpg_enable"])
+        enable_numa = Utils.string_to_bool(ntd["numa_enable"])
+        ovs_dpdk = ntd["nfv_type"] == "dpdk" or ntd["nfv_type"] == "both"
+        hostos_cpu_count = int(ntd["numa_hostos_cpu_count"])
+        _dir = (re.sub(r'[^a-z0-9]', " ",
+                       self.node_type.lower()).replace(" ", "_"))
+        ntl = re.sub(r'[^a-z0-9]', "", self.node_type.lower())
+        # nic_environment_edgespain.yaml
+        _f_name = "nic_environment_{}.yaml".format(ntl)
+        nic_env_file = os.path.join(home_dir, _dir, _f_name)
+        params = {}
+        '''
+# NFV site settings
+# nfv_type must be one of dpdk, sriov or both
+nfv_type=dpdk
+# the number of NfvInterfaceN attributes is dependent on the number of Ports
+# If ports are <= 7 you only need two NFVInterfaces > 7 implies four
+# The order is important, pairs need to be across nics.
+nfv_interfaces=ens4f0,ens5f0,ens4f1,ens5f1
+HostNicDriver=vfio-pci
+BondInterfaceOvsOptions=bond_mode=balance-tcp lacp=active
+BondInterfaceSriovOptions=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
+NumDpdkInterfaceRxQueues = 1
+hpg_enable=true
+hpg_size=1GB
+numa_enable=true
+numa_hostos_cpu_count=4
+sriov_vf_count=64
+    '''
+        # need to make sure dell-environment_[role].yaml has filters enabled
+        # if no dpdk
+        # if not ovs_dpdk:
+        #    cmds.append('sed -i "s|  # NovaSchedulerDefaultFilters|  ' +
+        #                'NovaSchedulerDefaultFilters|" ' + file_path)
+        # both SRIOV and DPDK require at least these kernel args
+        kernel_args = "iommu=pt intel_iommu=on"
 
-            if enable_hugepage:
-                hpg_num = self.nfv_params.calculate_hugepage_count(
-                    hugepage_size)
-                kernel_args += " default_hugepagesz=%s hugepagesz=%s" \
-                    " hugepages=%s" \
-                    % (hugepage_size, hugepage_size[0:-1], str(hpg_num))
-
-            if enable_numa:
-                node_uuid, node_data = self.nfv_params.select_compute_node()
-                self.nfv_params.parse_data(node_data)
-                self.nfv_params.get_all_cpus()
-                self.nfv_params.get_host_cpus(hostos_cpu_count)
-                if ovs_dpdk:
-                    dpdk_nics = self.find_ifaces_by_keyword(nic_env_file,
-                                                            'Dpdk')
-                    logger.debug("DPDK-NICs >>" + str(dpdk_nics))
-                    self.nfv_params.get_pmd_cpus(mtu, dpdk_nics)
-                    self.nfv_params.get_socket_memory(mtu, dpdk_nics)
-                self.nfv_params.get_nova_cpus()
-                self.nfv_params.get_isol_cpus()
-                kernel_args += " isolcpus=%s" % self.nfv_params.isol_cpus
-                cmds.append(
-                    'sed -i "s|# NovaComputeCpuDedicatedSet:.*|NovaComputeCpuDedicatedSet: ' +
-                    self.nfv_params.nova_cpus + '|" ' + file_path)
-            if kernel_args:
-                cmds.append(
-                    'sed -i "s|# DellComputeParameters:' +
-                    '|DellComputeParameters:|" ' +
-                    file_path)
-                cmds.append(
-                    'sed -i "s|# KernelArgs:.*|KernelArgs: \\"' +
-                    kernel_args + '\\" |" ' + file_path)
+        if enable_hugepage:
+            hpg_num = self.nfv_params.calculate_hugepage_count(
+                ntd["hpg_size"])
+            kernel_args += (" default_hugepagesz={} hugepagesz={}"
+                            " hugepages={}").format(ntd["hpg_size"],
+                                                    ntd["hpg_size"][0:-1],
+                                                    str(hpg_num))
+        if enable_numa:
+            _, node_data = self.nfv_params.select_compute_node(self.node_type,
+                                                               self.instackenv)
+            self.nfv_params.parse_data(node_data)
+            self.nfv_params.get_all_cpus()
+            self.nfv_params.get_host_cpus(hostos_cpu_count)
             if ovs_dpdk:
-                cmds.append(
-                    'sed -i "s|OvsDpdkCoreList:.*|OvsDpdkCoreList: \\"' +
-                    self.nfv_params.host_cpus +
-                    '\\" |" ' +
-                    dpdk_file)
-                cmds.append(
-                    'sed -i "s|NovaComputeCpuSharedSet:.*|NovaComputeCpuSharedSet: \\"' +
-                    self.nfv_params.host_cpus +
-                    '\\" |" ' +
-                    dpdk_file)
-                cmds.append(
-                    'sed -i "s|OvsPmdCoreList:.*|OvsPmdCoreList: \\"' +
-                    self.nfv_params.pmd_cpus +
-                    '\\" |" ' +
-                    dpdk_file)
-                cmds.append(
-                    'sed -i "s|OvsDpdkSocketMemory:' +
-                    '.*|OvsDpdkSocketMemory: \\"' +
-                    self.nfv_params.socket_mem +
-                    '\\" |" ' +
-                    dpdk_file)
-                cmds.append(
-                    'sed -i "s|IsolCpusList:.*|IsolCpusList: \\"' +
-                    self.nfv_params.isol_cpus + '\\" |" ' + dpdk_file)
-
-            for cmd in cmds:
-                status = os.system(cmd)
-                if status != 0:
-                    raise Exception(
-                        "Failed to execute the command {}"
-                        " with error code {}".format(
-                            cmd, status))
-                logger.debug("cmd: {}".format(cmd))
-
-        except Exception as error:
-            message = "Exception {}: {}".format(
-                type(error).__name__, str(error))
-            logger.error(message)
-            raise Exception(
-                "Failed to modify the dell_environment.yaml"
-                " at location {}".format(file_path))
+                dpdk_nics = self.find_ifaces_by_keyword(nic_env_file,
+                                                        'Dpdk')
+                logger.debug("DPDK-NICs >>" + str(dpdk_nics))
+                self.nfv_params.get_pmd_cpus(self.mtu, dpdk_nics)
+                self.nfv_params.get_socket_memory(self.mtu, dpdk_nics)
+            self.nfv_params.get_nova_cpus()
+            self.nfv_params.get_isol_cpus()
+            kernel_args += " isolcpus={}".format(self.nfv_params.isol_cpus)
+            # dell-environmment
+            params_dell_env = params["dell_env"] = {}
+            nova_cpus = self.nfv_params.nova_cpus
+            params_dell_env["NovaComputeCpuDedicatedSet"] = nova_cpus
+            params_dell_env["KernelArgs"] = kernel_args
+        if ovs_dpdk:
+            params_dpdk = params["dpdk"] = {}
+            params_dpdk["OvsDpdkCoreList"] = self.nfv_params.host_cpus
+            params_dpdk["NovaComputeCpuSharedSet"] = self.nfv_params.host_cpus
+            params_dpdk["OvsPmdCoreList"] = self.nfv_params.pmd_cpus
+            params_dpdk["OvsDpdkSocketMemory"] = self.nfv_params.socket_mem
+            params_dpdk["IsolCpusList"] = self.nfv_params.isol_cpus
+        return params
 
     def get_dell_compute_nodes_hostnames(self, nova):
         try:
-            logger.info("Getting dellnfv compute node hostnames")
+            logger.debug("Getting dellnfv compute node hostnames")
 
             # Get list of dell nfv nodes
             dell_hosts = []
@@ -262,10 +191,6 @@ def main():
                         default=None,
                         dest="node_type_data",
                         help="The edge site metadata")
-    parser.add_argument("--instackenv",
-                        default=None,
-                        dest="instackenv",
-                        help="Edge site instackenv.json file")
     parser.add_argument("--debug",
                         default=False,
                         action='store_true',
@@ -275,16 +200,41 @@ def main():
     args = parser.parse_args()
     LoggingHelper.configure_logging(args.logging_level)
     config_edge = ConfigEdge(args.overcloud_name, args.node_type,
-                             args.node_type_data, args.instackenv)
-    res = config_edge.res
+                             args.node_type_data)
+    params = config_edge.fetch_nfv_parameters()
+    logger.debug(">>>>>> nfv parameters {}".format(str(params)))
+    return json.dumps(params)
+    '''
+    _res = config_edge.res
     ntd = config_edge.node_type_data
     nfv_p = config_edge.nfv_params
-    nfv_p.select_compute_node(config_edge.node_type, config_edge.instackenv)
+
+    node_uuid, node_data = nfv_p.select_compute_node(config_edge.node_type,
+                                                     config_edge.instackenv)
+    hostos_cpu_count = ntd["numa_hostos_cpu_count"]
+    nfv_p.parse_data(node_data)
+    nfv_p.get_all_cpus()
+    nfv_p.get_host_cpus(hostos_cpu_count)
+    _dir = (re.sub(r'[^a-z0-9]', " ",
+            config_edge.node_type.lower()).replace(" ", "_"))
+    ntl = re.sub(r'[^a-z0-9]', "", config_edge.node_type.lower())
+    # nic_environment_edgespain.yaml
+    f_name = "nic_environment_{}.yaml".format(ntl)
+    nic_env_file = os.path.join(home_dir, _dir, f_name)
+    dpdk_nics = config_edge.find_ifaces_by_keyword(nic_env_file,
+                                                   'Dpdk')
+    logger.debug("DPDK-NICs >>" + str(dpdk_nics))
+    nfv_p.get_pmd_cpus(config_edge.mtu, dpdk_nics)
+    nfv_p.get_socket_memory(config_edge.mtu, dpdk_nics)
+    nfv_p.get_nova_cpus()
+    nfv_p.get_isol_cpus()
     nfv_p.get_host_cpus(ntd["numa_hostos_cpu_count"])
-    res["host_cpus"] = nfv_p.host_cpus
-    return json.dumps(res)
+    _res["host_cpus"] = nfv_p.host_cpus
+    return json.dumps(_res)
+    '''
 
 
 if __name__ == "__main__":
     res = main()
+    logger.debug(">>>>>> res {}".format(str(res)))
     sys.stdout.write(res)
