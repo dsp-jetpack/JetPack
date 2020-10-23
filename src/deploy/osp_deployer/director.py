@@ -587,6 +587,8 @@ class Director(InfraHost):
         self.setup_environment_edge(node_type)
         self.render_and_upload_site_name_edge(node_type)
         self.render_and_upload_overrides_edge(node_type)
+        if self._is_ovs_dpdk_required(node_type):
+            self.render_and_upload_ovs_dpdk_edge(node_type)
         # TODO self.setup_sanity_ini()
 
     def clamp_min_pgs(self, num_pgs):
@@ -2329,6 +2331,8 @@ class Director(InfraHost):
             logger.debug("cmd: {}".format(cmd))
 
     def render_and_upload_ovs_dpdk_edge(self, node_type):
+        logger.debug("Render and upload ovs dpdk template for "
+                     "edge site: {}".format(node_type))
         tmplt_data = {}
         tmplt_data["ComputeNeutronOvsDpdk"] = os.path.join(
             self.templates_overcloud_dir,
@@ -2675,9 +2679,8 @@ class Director(InfraHost):
 
     def _generate_dell_env_edge(self, node_type):
         setts = self.settings
-        node_type_data = setts.node_type_data_map[node_type]
-        nfv_type = (node_type_data["nfv_type"] if "nfv_type" in node_type_data
-                    else None)
+        # node_type_data = setts.node_type_data_map[node_type]
+        nfv_type = self._get_nfv_type(node_type)
         params = {}
         role = self._generate_cc_role(node_type)
         edge_subnet = self._generate_subnet_name(node_type)
@@ -2688,7 +2691,7 @@ class Director(InfraHost):
         role_count_key = role + 'Count'
         nodes = setts.node_types_map[node_type]
         params[role_count_key] = len(nodes)
-        if nfv_type and NFV_TYPE_MAP[nfv_type] == OVS_DPDK:
+        if nfv_type == OVS_DPDK:
             self.set_nfv_parameters(node_type)
             dell_env_params = self.nfv_parameters["dell_env"]
             nova_cpu_set = dell_env_params["NovaComputeCpuDedicatedSet"]
@@ -2918,6 +2921,10 @@ class Director(InfraHost):
                     "creation_time": "",
                     "stack_status": "Not Deployed"}
         return info
+
+    def _is_ovs_dpdk_required(self, node_type):
+        nfv_type = self._get_nfv_type(node_type)
+        return nfv_type in (OVS_DPDK, BOTH)
 
     @directory_check(STAGING_PATH)
     def _download_and_parse_undercloud_conf(self):
@@ -3297,11 +3304,8 @@ class Director(InfraHost):
         role_d['uses_deprecated_params'] = False
         role_d["update_serial"] = 25
         role_d['ServicesDefault'] = self._get_default_compute_services()
-        nfv_type = (node_type_data["nfv_type"]
-                    if "nfv_type" in node_type_data["nfv_type"]
-                    and len(node_type_data["nfv_type"].strip()) != 0
-                    else None)
-        if nfv_type and nfv_type in ["dpdk", "both"]:
+
+        if self._is_ovs_dpdk_required(node_type):
             for service in DPDK_SERVICES:
                 role_d['ServicesDefault'].append(
                     "OS::TripleO::Services::{}".format(service))
@@ -3547,11 +3551,8 @@ class Director(InfraHost):
         role = self._generate_cc_role(node_type)
         node_type_data = self.settings.node_type_data_map[node_type]
         num_nics = int(node_type_data["nic_port_count"])
+        nfv_type = self._get_nfv_type(node_type)
         has_provsioning_nic = self._has_provisioning_nic(num_nics)
-        nfv_type = (node_type_data["nfv_type"]
-                    if ("nfv_type" in node_type_data
-                        and len(node_type_data["nfv_type"].strip()) != 0)
-                    else None)
         cp_network = "{}{}".format(role, CONTROL_PLANE_NET[0])
         cp_default_route = "{}DefaultRoute".format(cp_network)
 
@@ -3676,7 +3677,7 @@ class Director(InfraHost):
             tenant_br["addresses"] = cp_addresses
             tenant_br["routes"] = [ec2_route, default_route, prov_route]
             return [tenant_br, ex_br]
-        elif nfv_type and nfv_type == "dpdk":
+        elif self._is_ovs_dpdk_required(node_type):
             tenant_br = {"type": "ovs_user_bridge",
                          "name": "br-tenant"}
             tenant_br["mtu"] = "DefaultBondMtu"
@@ -3692,7 +3693,7 @@ class Director(InfraHost):
                                  node_type_data['nfv_interfaces'].split(','))))
             for num, _if in enumerate(nfv_nics, start=0):
                 _if_p = "{}{}Interface{}".format(role,
-                                                 NFV_TYPE_MAP[nfv_type],
+                                                 nfv_type,
                                                  num + 1)
 
                 dpdk_port = {"type": "ovs_dpdk_port",
@@ -3710,10 +3711,18 @@ class Director(InfraHost):
             return [bond_0, internal_api_vlan, tenant_vlan, storage_vlan,
                     tenant_br, bond_1]
 
-        elif nfv_type and nfv_type == "sriov":
+        elif nfv_type == SRIOV:
             pass
-        elif nfv_type and nfv_type == "both":
+        elif nfv_type == BOTH:
             pass
+
+    def _get_nfv_type(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        if ("nfv_type" in node_type_data
+                and len(node_type_data["nfv_type"]) != 0):
+            return NFV_TYPE_MAP[node_type_data["nfv_type"]]
+        return None
 
     def _has_provisioning_nic(self, num_nics):
         return bool(num_nics % 2 != 0)
@@ -4003,11 +4012,8 @@ class Director(InfraHost):
 
     def _generate_deploy_cmd_edge(self, node_type):
         setts = self.settings
-        node_type_data = setts.node_type_data_map[node_type]
-        nfv_type = (node_type_data["nfv_type"]
-                    if "nfv_type" in node_type_data["nfv_type"]
-                    and len(node_type_data["nfv_type"].strip()) != 0
-                    else None)
+        # node_type_data = setts.node_type_data_map[node_type]
+        nfv_type = self._get_nfv_type(node_type)
         node_type_lower = self._generate_node_type_lower(node_type)
         role_lower = self._generate_role_lower(node_type)
         edge_site_directory = os.path.join(self.home_dir, role_lower)
@@ -4063,9 +4069,11 @@ class Director(InfraHost):
                                      env_file + ".yaml")
 
             cmd += " -e {} ".format(tmplt)
-        if nfv_type and (nfv_type == "dpdk" or nfv_type == "both"):
+        if nfv_type in (OVS_DPDK, BOTH):
             _, tmplt = self._generate_edge_template_paths(node_type,
                                                           NEUTRON_OVS_DPDK)
+            logger.info("deploying edge site with OVS DPDK, "
+                        "template: {}".format(tmplt))
             cmd += " -e {}".format(tmplt)
         cmd += "--libvirt-type kvm "
         cmd += "--ntp-server {} ".format(setts.sah_node.provisioning_ip)

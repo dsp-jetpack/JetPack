@@ -13,9 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+DPDK_K = "dpdk"
+BOTH = "both"
 OVS_DPDK = "OvsDpdk"
+SRIOV_K = "sriov"
 SRIOV = "Sriov"
-NFV_TYPE_MAP = {"dpdk": OVS_DPDK, "sriov": SRIOV}
+NFV_TYPE_MAP = {DPDK_K: OVS_DPDK, SRIOV_K: SRIOV,
+                BOTH: BOTH}
 DPDK_SERVICES = ["ComputeNeutronOvsDpdk", "OvsDpdkNetcontrold", "Rear"]
 CTLPLANE_BRIDGE = "br-ctlplane"
 PUBLIC_API_IF = "enp1s0"
