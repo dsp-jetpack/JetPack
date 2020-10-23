@@ -4074,7 +4074,7 @@ class Director(InfraHost):
                                                           NEUTRON_OVS_DPDK)
             logger.info("deploying edge site with OVS DPDK, "
                         "template: {}".format(tmplt))
-            cmd += " -e {}".format(tmplt)
+            cmd += " -e {} ".format(tmplt)
         cmd += "--libvirt-type kvm "
         cmd += "--ntp-server {} ".format(setts.sah_node.provisioning_ip)
         cmd += " > {edge_site_dir}/{nt_lower}_deploy_out.log 2>&1"
