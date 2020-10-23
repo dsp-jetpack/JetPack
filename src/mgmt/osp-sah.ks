@@ -565,7 +565,7 @@ mkdir -p /store/data/images
 mkdir -p /store/data/iso
 
 echo "POST: Install other rerquired packages, paramiko, ..."
-yum install -y gcc libffi-devel openssl-devel ipmitool tmux git
+yum install -y gcc libffi-devel openssl-devel ipmitool tmux git httpd
 
 # temporary workaround for CES-7248
 echo "POST: upgrade setuptools"
