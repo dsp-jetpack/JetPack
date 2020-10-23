@@ -2249,16 +2249,6 @@ class Director(InfraHost):
                                          exit_status, stderr, stdout))
             tester.verify_provisioning_subnets_created(subnets_to_create)
 
-    def _backup_tempest_conf(self):
-        logger.info("Backing up tempest.conf")
-        if self.is_tempest_conf():
-            timestamp = int(round(time.time() * 1000))
-            new_conf = (self.tempest_conf + "." + str(timestamp))
-            logger.debug("Backing up tempest.conf, new file is: %s "
-                         % new_conf)
-            cmd = ("mv " + self.tempest_conf + " " + new_conf + " 2>/dev/null")
-            self.run_tty(cmd)
-
     def enable_fencing(self):
         if self.settings.enable_fencing is True:
             logger.info("enabling fencing")
@@ -2275,39 +2265,6 @@ class Director(InfraHost):
                   passwd + \
                   ' enable'
             self.run_tty(cmd)
-
-    def _create_assign_role_command(self, node, role, index, instack=None):
-        logger.debug("Create assign role command for node: %s", str(node))
-        node_identifier = ""
-        if hasattr(node, 'service_tag'):
-            node_identifier = node.service_tag
-        else:
-            node_identifier = node.idrac_ip
-
-        skip_raid_config = ""
-        if node.skip_raid_config:
-            skip_raid_config = "-s"
-
-        skip_bios_config = ""
-        if node.skip_bios_config:
-            skip_bios_config = "-b"
-
-        os_volume_size_gb = ""
-        if hasattr(node, 'os_volume_size_gb'):
-            os_volume_size_gb = "-o {}".format(node.os_volume_size_gb)
-
-        cmd = ('./assign_role.py {} {} {} {} {}-{}'.format(
-            os_volume_size_gb,
-            skip_raid_config,
-            skip_bios_config,
-            node_identifier,
-            role,
-            str(index)))
-
-        if instack:
-            cmd += " -n " + instack
-
-        return cmd
 
     def set_ovs_dpdk_driver(self, neutron_ovs_dpdk_yaml):
         cmds = []
@@ -2350,32 +2307,6 @@ class Director(InfraHost):
         with open(stg_or_path, 'w') as stg_or_fp:
             stg_or_fp.write(rendered_tmplt)
         self.upload_file(stg_or_path, remote_or_file)
-
-    def _generate_dpdk_params_edge(self, node_type):
-        setts = self.settings
-        node_type_data = setts.node_type_data_map[node_type]
-        role = self._generate_cc_role(node_type)
-
-        self.set_nfv_parameters(node_type)
-        dpdk_res = self.nfv_parameters["dpdk"]
-        params = {}
-        HostNicDriver = node_type_data["HostNicDriver"]
-        params["OvsDpdkDriverType"] = HostNicDriver
-        role_param_k = "{}Parameters".format(role)
-        role_params = params[role_param_k] = {}
-        role_params["OvsDpdkCoreList"] = dpdk_res["OvsDpdkCoreList"]
-        role_params["NovaComputeCpuSharedSet"] = dpdk_res["NovaComputeCpuSharedSet"]
-        role_params["OvsPmdCoreList"] = dpdk_res["OvsPmdCoreList"]
-        role_params["OvsDpdkSocketMemory"] = dpdk_res["OvsDpdkSocketMemory"]
-        role_params["IsolCpusList"] = dpdk_res["IsolCpusList"]
-        # Unmodified params
-        role_params["OvsDpdkMemoryChannels"] = "4"
-        role_params["NovaReservedHostMemory"] = 4096
-        role_params["TunedProfileName"] = "cpu-partitioning"
-        role_params["NovaLibvirtRxQueueSize"] = 1024
-        role_params["NovaLibvirtTxQueueSize"] = 1024
-        role_params["VhostuserSocketGroup"] = "hugetlbfs"
-        return params
 
     def set_nfv_parameters(self, node_type):
         setts = self.settings
@@ -2677,30 +2608,6 @@ class Director(InfraHost):
             stg_dell_env_fp.write(rendered_tmplt)
         self.upload_file(stg_dell_env_path, dell_env_file)
 
-    def _generate_dell_env_edge(self, node_type):
-        setts = self.settings
-        # node_type_data = setts.node_type_data_map[node_type]
-        nfv_type = self._get_nfv_type(node_type)
-        params = {}
-        role = self._generate_cc_role(node_type)
-        edge_subnet = self._generate_subnet_name(node_type)
-        role_subnet_key = role + 'ConrolPlaneSubnet'
-        params[role_subnet_key] = edge_subnet
-        xtra_cfg_key = role + 'ExtraConfig'
-        params[xtra_cfg_key] = self._generate_extra_config(node_type)
-        role_count_key = role + 'Count'
-        nodes = setts.node_types_map[node_type]
-        params[role_count_key] = len(nodes)
-        if nfv_type == OVS_DPDK:
-            self.set_nfv_parameters(node_type)
-            dell_env_params = self.nfv_parameters["dell_env"]
-            nova_cpu_set = dell_env_params["NovaComputeCpuDedicatedSet"]
-            params["NovaComputeCpuDedicatedSet"] = nova_cpu_set
-            role_param_k = "{}Parameters".format(role)
-            role_params = params[role_param_k] = {}
-            role_params["KernelArgs"] = dell_env_params["KernelArgs"]
-        return params
-
     @directory_check(STAGING_TEMPLATES_PATH)
     def render_and_upload_network_data(self):
         """Generate and upload network_data.yaml for default overcloud networks
@@ -2753,17 +2660,6 @@ class Director(InfraHost):
         with open(stg_net_env_path, 'w') as stg_net_env_fp:
             stg_net_env_fp.write(rendered_tmplt)
         self.upload_file(stg_net_env_path, net_env_file)
-
-    def _fetch_network_environment_params(self):
-        stg_net_env_file = os.path.join(STAGING_TEMPLATES_PATH,
-                                        NET_ENV + ".yaml")
-        oc_net_env_file = os.path.join(self.templates_dir,
-                                       NET_ENV + ".yaml")
-        self.download_file(stg_net_env_file, oc_net_env_file)
-        with open(stg_net_env_file) as stg_net_env_fp:
-            net_env_yaml = yaml.load(stg_net_env_fp)
-            param_defaults = net_env_yaml["parameter_defaults"]
-            return param_defaults
 
     def subnet_routes_edge(self, node_type, add=True):
         logger.info("Configuring routes for {}, add or "
@@ -2921,6 +2817,110 @@ class Director(InfraHost):
                     "creation_time": "",
                     "stack_status": "Not Deployed"}
         return info
+
+    def _fetch_network_environment_params(self):
+        stg_net_env_file = os.path.join(STAGING_TEMPLATES_PATH,
+                                        NET_ENV + ".yaml")
+        oc_net_env_file = os.path.join(self.templates_dir,
+                                       NET_ENV + ".yaml")
+        self.download_file(stg_net_env_file, oc_net_env_file)
+        with open(stg_net_env_file) as stg_net_env_fp:
+            net_env_yaml = yaml.load(stg_net_env_fp)
+            param_defaults = net_env_yaml["parameter_defaults"]
+            return param_defaults
+
+    def _generate_dell_env_edge(self, node_type):
+        setts = self.settings
+        # node_type_data = setts.node_type_data_map[node_type]
+        nfv_type = self._get_nfv_type(node_type)
+        params = {}
+        role = self._generate_cc_role(node_type)
+        edge_subnet = self._generate_subnet_name(node_type)
+        role_subnet_key = role + 'ConrolPlaneSubnet'
+        params[role_subnet_key] = edge_subnet
+        xtra_cfg_key = role + 'ExtraConfig'
+        params[xtra_cfg_key] = self._generate_extra_config(node_type)
+        role_count_key = role + 'Count'
+        nodes = setts.node_types_map[node_type]
+        params[role_count_key] = len(nodes)
+        if nfv_type == OVS_DPDK:
+            self.set_nfv_parameters(node_type)
+            dell_env_params = self.nfv_parameters["dell_env"]
+            nova_cpu_set = dell_env_params["NovaComputeCpuDedicatedSet"]
+            params["NovaComputeCpuDedicatedSet"] = nova_cpu_set
+            role_param_k = "{}Parameters".format(role)
+            role_params = params[role_param_k] = {}
+            role_params["KernelArgs"] = dell_env_params["KernelArgs"]
+        return params
+
+    def _generate_dpdk_params_edge(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        role = self._generate_cc_role(node_type)
+
+        self.set_nfv_parameters(node_type)
+        dpdk_res = self.nfv_parameters["dpdk"]
+        params = {}
+        HostNicDriver = node_type_data["HostNicDriver"]
+        params["OvsDpdkDriverType"] = HostNicDriver
+        role_param_k = "{}Parameters".format(role)
+        role_params = params[role_param_k] = {}
+        role_params["OvsDpdkCoreList"] = dpdk_res["OvsDpdkCoreList"]
+        role_params["NovaComputeCpuSharedSet"] = dpdk_res["NovaComputeCpuSharedSet"]
+        role_params["OvsPmdCoreList"] = dpdk_res["OvsPmdCoreList"]
+        role_params["OvsDpdkSocketMemory"] = dpdk_res["OvsDpdkSocketMemory"]
+        role_params["IsolCpusList"] = dpdk_res["IsolCpusList"]
+        # Unmodified params
+        role_params["OvsDpdkMemoryChannels"] = "4"
+        role_params["NovaReservedHostMemory"] = 4096
+        role_params["TunedProfileName"] = "cpu-partitioning"
+        role_params["NovaLibvirtRxQueueSize"] = 1024
+        role_params["NovaLibvirtTxQueueSize"] = 1024
+        role_params["VhostuserSocketGroup"] = "hugetlbfs"
+        return params
+
+    def _create_assign_role_command(self, node, role, index, instack=None):
+        logger.debug("Create assign role command for node: %s", str(node))
+        node_identifier = ""
+        if hasattr(node, 'service_tag'):
+            node_identifier = node.service_tag
+        else:
+            node_identifier = node.idrac_ip
+
+        skip_raid_config = ""
+        if node.skip_raid_config:
+            skip_raid_config = "-s"
+
+        skip_bios_config = ""
+        if node.skip_bios_config:
+            skip_bios_config = "-b"
+
+        os_volume_size_gb = ""
+        if hasattr(node, 'os_volume_size_gb'):
+            os_volume_size_gb = "-o {}".format(node.os_volume_size_gb)
+
+        cmd = ('./assign_role.py {} {} {} {} {}-{}'.format(
+            os_volume_size_gb,
+            skip_raid_config,
+            skip_bios_config,
+            node_identifier,
+            role,
+            str(index)))
+
+        if instack:
+            cmd += " -n " + instack
+
+        return cmd
+
+    def _backup_tempest_conf(self):
+        logger.info("Backing up tempest.conf")
+        if self.is_tempest_conf():
+            timestamp = int(round(time.time() * 1000))
+            new_conf = (self.tempest_conf + "." + str(timestamp))
+            logger.debug("Backing up tempest.conf, new file is: %s "
+                         % new_conf)
+            cmd = ("mv " + self.tempest_conf + " " + new_conf + " 2>/dev/null")
+            self.run_tty(cmd)
 
     def _is_ovs_dpdk_required(self, node_type):
         nfv_type = self._get_nfv_type(node_type)

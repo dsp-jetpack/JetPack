@@ -17,27 +17,19 @@
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
-import time
-import subprocess
-import string
-import logging
+
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
-from novaclient.v2 import aggregates
-from novaclient.v2 import servers
 from credential_helper import CredentialHelper
-from datetime import datetime
-import novaclient.client as nova_client
-from novaclient import client as nvclient
+from dell_nfv import ConfigOvercloud
 from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
-from dracclient import client
-from command_helper import Ssh
-from nfv_parameters import NfvParameters
 from utils import Utils
+
 logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -45,7 +37,7 @@ home_dir = os.path.expanduser('~')
 UC_USERNAME = UC_PASSWORD = UC_PROJECT_ID = UC_AUTH_URL = ''
 
 
-class ConfigEdge(object):
+class ConfigEdge(ConfigOvercloud):
     """
     Description: Class responsible for overcloud configurations.
     """
@@ -55,32 +47,18 @@ class ConfigEdge(object):
     get_drac_credential = CredentialHelper()
 
     def __init__(self, overcloud_name, node_type, node_type_data):
-        self.overcloud_name = overcloud_name
         self.node_type = node_type
         self.node_type_data = json.loads(node_type_data)
         self.mtu = int(self.node_type_data["nfv_mtu"])
         _dir = (re.sub(r'[^a-z0-9]', " ", node_type.lower()).replace(" ", "_"))
-        ntl = re.sub(r'[^a-z0-9]', "", node_type.lower())
-        # nic_environment_edgespain.yaml
-        ne_name = "nic_environment_{}.yaml".format(ntl)
-        instack_name = "instackenv_{}.json".format(ntl)
+        _ntl = re.sub(r'[^a-z0-9]', "", node_type.lower())
+        ne_name = "nic_environment_{}.yaml".format(_ntl)
+        instack_name = "instackenv_{}.json".format(_ntl)
         nic_env_file = os.path.join(home_dir, _dir, ne_name)
         instackenv_file = os.path.join(home_dir, _dir, instack_name)
         self.instackenv = instackenv_file
         self.nic_env = nic_env_file
-        self.overcloudrc = "source " + home_dir + "/"\
-            + self.overcloud_name + "rc;"
-        self.nfv_params = NfvParameters()
-
-
-    def find_ifaces_by_keyword(self, yaml_file, keyword):
-        nics = []
-        with open(yaml_file, 'r') as f:
-            content = f.readlines()
-            for line in content:
-                if keyword in line:
-                    nics.append(line.split(':')[1].strip())
-        return nics
+        super().__init__(overcloud_name)
 
     def fetch_nfv_parameters(self):
         logger.debug("Retrieving NFV parameters")
@@ -96,30 +74,6 @@ class ConfigEdge(object):
         _f_name = "nic_environment_{}.yaml".format(ntl)
         nic_env_file = os.path.join(home_dir, _dir, _f_name)
         params = {}
-        '''
-# NFV site settings
-# nfv_type must be one of dpdk, sriov or both
-nfv_type=dpdk
-# the number of NfvInterfaceN attributes is dependent on the number of Ports
-# If ports are <= 7 you only need two NFVInterfaces > 7 implies four
-# The order is important, pairs need to be across nics.
-nfv_interfaces=ens4f0,ens5f0,ens4f1,ens5f1
-HostNicDriver=vfio-pci
-BondInterfaceOvsOptions=bond_mode=balance-tcp lacp=active
-BondInterfaceSriovOptions=mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
-NumDpdkInterfaceRxQueues = 1
-hpg_enable=true
-hpg_size=1GB
-numa_enable=true
-numa_hostos_cpu_count=4
-sriov_vf_count=64
-    '''
-        # need to make sure dell-environment_[role].yaml has filters enabled
-        # if no dpdk
-        # if not ovs_dpdk:
-        #    cmds.append('sed -i "s|  # NovaSchedulerDefaultFilters|  ' +
-        #                'NovaSchedulerDefaultFilters|" ' + file_path)
-        # both SRIOV and DPDK require at least these kernel args
         kernel_args = "iommu=pt intel_iommu=on"
 
         if enable_hugepage:
@@ -158,25 +112,6 @@ sriov_vf_count=64
             params_dpdk["IsolCpusList"] = self.nfv_params.isol_cpus
         return params
 
-    def get_dell_compute_nodes_hostnames(self, nova):
-        try:
-            logger.debug("Getting dellnfv compute node hostnames")
-
-            # Get list of dell nfv nodes
-            dell_hosts = []
-
-            for host in nova.servers.list():
-                if "dell-compute" in host.name:
-                    hostname = str(host.name)
-                    dell_hosts.append(hostname)
-
-            return dell_hosts
-        except Exception as error:
-            message = "Exception {}: {}".format(
-                type(error).__name__, str(error))
-            logger.error(message)
-            raise Exception("Failed to get the Dell Compute nodes.")
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -204,34 +139,6 @@ def main():
     params = config_edge.fetch_nfv_parameters()
     logger.debug(">>>>>> nfv parameters {}".format(str(params)))
     return json.dumps(params)
-    '''
-    _res = config_edge.res
-    ntd = config_edge.node_type_data
-    nfv_p = config_edge.nfv_params
-
-    node_uuid, node_data = nfv_p.select_compute_node(config_edge.node_type,
-                                                     config_edge.instackenv)
-    hostos_cpu_count = ntd["numa_hostos_cpu_count"]
-    nfv_p.parse_data(node_data)
-    nfv_p.get_all_cpus()
-    nfv_p.get_host_cpus(hostos_cpu_count)
-    _dir = (re.sub(r'[^a-z0-9]', " ",
-            config_edge.node_type.lower()).replace(" ", "_"))
-    ntl = re.sub(r'[^a-z0-9]', "", config_edge.node_type.lower())
-    # nic_environment_edgespain.yaml
-    f_name = "nic_environment_{}.yaml".format(ntl)
-    nic_env_file = os.path.join(home_dir, _dir, f_name)
-    dpdk_nics = config_edge.find_ifaces_by_keyword(nic_env_file,
-                                                   'Dpdk')
-    logger.debug("DPDK-NICs >>" + str(dpdk_nics))
-    nfv_p.get_pmd_cpus(config_edge.mtu, dpdk_nics)
-    nfv_p.get_socket_memory(config_edge.mtu, dpdk_nics)
-    nfv_p.get_nova_cpus()
-    nfv_p.get_isol_cpus()
-    nfv_p.get_host_cpus(ntd["numa_hostos_cpu_count"])
-    _res["host_cpus"] = nfv_p.host_cpus
-    return json.dumps(_res)
-    '''
 
 
 if __name__ == "__main__":
