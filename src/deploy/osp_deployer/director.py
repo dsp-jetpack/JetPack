@@ -2297,9 +2297,34 @@ class Director(InfraHost):
             "neutron-ovs-dpdk-agent-container-puppet.yaml")
         tmplt_data["parameter_defaults"] = self._generate_dpdk_params_edge(
             node_type)
-        tmplt = self.jinja2_env.get_template(NEUTRON_OVS_DPDK_J2)
+        tmplt = self.jinja2_env.get_template(NEUTRON_OVS_DPDK_EDGE_J2)
         paths = self._generate_edge_template_paths(node_type, NEUTRON_OVS_DPDK)
         stg_or_path, remote_or_file = paths
+
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
+        with open(stg_or_path, 'w') as stg_or_fp:
+            stg_or_fp.write(rendered_tmplt)
+        self.upload_file(stg_or_path, remote_or_file)
+
+    def render_and_upload_sriov_edge(self, node_type):
+        logger.debug("Render and upload SRIOV template for edge "
+                     "site: {}".format(node_type))
+        tmplt_data = {}
+        tmplt = self.jinja2_env.get_template(NEUTRON_SRIOV_EDGE_J2)
+        paths = self._generate_edge_template_paths(node_type, NEUTRON_SRIOV)
+        stg_or_path, remote_or_file = paths
+        sriov_agent_file = os.path.join(
+            self.templates_overcloud_dir,
+            "deployment/neutron/neutron-sriov-agent-container-puppet.yaml")
+        sriov_host_config_file = os.path.join(
+            self.templates_overcloud_dir,
+            "deployment/deprecated/neutron/neutron-sriov-host-config.yaml")
+        tmplt_data["NeutronSriovAgent"] = sriov_agent_file
+        tmplt_data["NeutronSriovHostConfig"] = sriov_host_config_file
+        tmplt_data["parameter_defaults"] = self._generate_sriov_params_edge(
+            node_type)
 
         logger.debug("tmplt_data: %s", str(tmplt_data))
         rendered_tmplt = tmplt.render(**tmplt_data)
@@ -2334,6 +2359,21 @@ class Director(InfraHost):
                 sriov_conf.update({int_name: int_value})
         sriov_interfaces = [x[1] for x in sorted(sriov_conf.items())]
         return sriov_interfaces
+
+    def get_sriov_compute_interfaces_edge(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        nfv_type = (node_type_data["nfv_type"] if "nfv_type" in node_type_data
+                    else None)
+        if not nfv_type or nfv_type not in (SRIOV_K, BOTH):
+            return []
+
+        nfv_nics = [nic.strip() for nic
+                    in node_type_data["nfv_interfaces"].split(",")]
+        if nfv_type == BOTH:
+            return nfv_nics[int(len(nfv_nics) / 2):]
+        else:
+            return nfv_nics
 
     def render_and_upload_undercloud_conf(self):
         """Updadate and upload undercloud.conf to director vm
@@ -2843,14 +2883,15 @@ class Director(InfraHost):
         role_count_key = role + 'Count'
         nodes = setts.node_types_map[node_type]
         params[role_count_key] = len(nodes)
-        if nfv_type == OVS_DPDK:
+        if nfv_type:
             self.set_nfv_parameters(node_type)
             dell_env_params = self.nfv_parameters["dell_env"]
-            nova_cpu_set = dell_env_params["NovaComputeCpuDedicatedSet"]
-            params["NovaComputeCpuDedicatedSet"] = nova_cpu_set
             role_param_k = "{}Parameters".format(role)
             role_params = params[role_param_k] = {}
             role_params["KernelArgs"] = dell_env_params["KernelArgs"]
+            if nfv_type in (DPDK_K, BOTH):
+                nova_cpu_set = dell_env_params["NovaComputeCpuDedicatedSet"]
+                params["NovaComputeCpuDedicatedSet"] = nova_cpu_set
         return params
 
     def _generate_dpdk_params_edge(self, node_type):
@@ -2877,6 +2918,30 @@ class Director(InfraHost):
         role_params["NovaLibvirtRxQueueSize"] = 1024
         role_params["NovaLibvirtTxQueueSize"] = 1024
         role_params["VhostuserSocketGroup"] = "hugetlbfs"
+        return params
+
+    def _generate_sriov_params_edge(self, node_type):
+        setts = self.settings
+        sriov_interfaces = self.get_sriov_compute_interfaces_edge(node_type)
+        params = {}
+        sriov_map_setting = []
+        sriov_pci_passthrough = []
+        physical_network = "physint"
+        for interface in sriov_interfaces:
+            mapping = physical_network + ':' + interface
+            nova_pci = '{devname: ' + \
+                       '"' + interface + '",' + \
+                       'physical_network: ' + \
+                       '"' + physical_network + '"}'
+
+            sriov_map_setting.append(mapping)
+            sriov_pci_passthrough.append(nova_pci)
+
+        sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"
+        sriov_pci_passthrough = "[" + ",".join(sriov_pci_passthrough) + "]"
+        params["NumSriovVfs"] = setts.sriov_vf_count
+        params["NeutronPhysicalDevMappings"] = sriov_map_setting
+        params["NovaPCIPassthrough"] = sriov_pci_passthrough
         return params
 
     def _create_assign_role_command(self, node, role, index, instack=None):

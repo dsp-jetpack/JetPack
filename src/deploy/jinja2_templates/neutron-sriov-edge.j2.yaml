@@ -1,0 +1,14 @@
+## A Heat environment that can be used to deploy SR-IOV
+resource_registry:
+  OS::TripleO::Services::NeutronSriovAgent: {{NeutronSriovAgent}}
+  OS::TripleO::Services::NeutronSriovHostConfig: {{NeutronSriovHostConfig}}
+parameter_defaults:
+  NeutronMechanismDrivers: ['sriovnicswitch', 'openvswitch']
+  NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','PciPassthroughFilter','AggregateInstanceExtraSpecsFilter']
+  NovaSchedulerAvailableFilters: ["nova.scheduler.filters.all_filters","nova.scheduler.filters.pci_passthrough_filter.PciPassthroughFilter"]
+  NeutronEnableIsolatedMetadata: true
+  NeutronEnableForceMetadata: true
+  NeutronTunnelTypes: ''
+  NumSriovVfs:
+  NeutronPhysicalDevMappings:
+  NovaPCIPassthrough:
