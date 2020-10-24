@@ -34,7 +34,6 @@ from ironic_helper import IronicHelper
 from dracclient import client
 from command_helper import Ssh
 from nfv_parameters import NfvParameters
-from osp_deployer.settings.config import Settings
 
 
 logging.basicConfig()
@@ -214,7 +213,7 @@ class ConfigOvercloud(object):
                     'sed -i "s|IsolCpusList:.*|IsolCpusList: \\"' +
                     self.nfv_params.isol_cpus + '\\" |" ' + dpdk_file)
 
-            if self.settings.enable_powerflex_backend:
+            if dell_powerflex_count > 0 :
                 cmds.append(
                      'sed -i "s|NovaEnableRbdBackend:.*' +
                      '|NovaEnableRbdBackend: false |" ' +
