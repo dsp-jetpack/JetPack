@@ -196,7 +196,12 @@ resources:
                 mtu:
                   get_param: {{cfg.mtu}}
                 {%- if "name" in cfg %}
+                  {%- if cfg.type == "sriov_pf" %}
+                name:
+                  get_param: {{cfg.name}}
+                  {%- else %}
                 name: {{cfg.name}}
+                  {%- endif %}
                 {%- endif %}
                 {%- if "device" in cfg %}
                 device: {{cfg.device}}
@@ -216,6 +221,17 @@ resources:
                 bonding_options:
                   get_param: {{cfg.bonding_options}}
                 {%- endif %}
+                {%- if "numvfs" in cfg %}
+                numvfs:
+                  get_param: {{cfg.numvfs}}
+                {%- endif %}
+                {%- if cfg.type == "sriov_pf" %}
+                use_dhcp: false
+                defroute: false
+                nm_controlled: true
+                hotplug: true
+                promisc: false
+                {%- endif %}
                 {%- if "addresses" in cfg %}
                 addresses:
                   {%- for address in cfg.addresses %}
@@ -232,7 +248,7 @@ resources:
                 {%- endif %}
                 {%- if "routes" in cfg %}
                 routes:
-                  {%- if cfg.name == "bond0" %}
+                  {%- if cfg.name == "bond0" or cfg.name == "br-tenant" %}
                     {%- for route in cfg.routes %}
                       {%- if 'default' in route %}
                 - default: {{route.default}}
