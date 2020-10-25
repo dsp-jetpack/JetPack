@@ -53,7 +53,6 @@ class ConfigOvercloud(object):
     get_drac_credential = CredentialHelper()
 
     def __init__(self, overcloud_name):
-        self.settings = Settings.settings
         self.overcloud_name = overcloud_name
         self.overcloudrc = "source " + home_dir + "/"\
             + self.overcloud_name + "rc;"
