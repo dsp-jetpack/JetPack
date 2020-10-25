@@ -9,6 +9,10 @@ parameter_defaults:
   NeutronEnableIsolatedMetadata: true
   NeutronEnableForceMetadata: true
   NeutronTunnelTypes: ''
-  NumSriovVfs:
-  NeutronPhysicalDevMappings:
+  NumSriovVfs: {{parameter_defaults.NumSriovVfs}}
+  NeutronPhysicalDevMappings: {{parameter_defaults.NeutronPhysicalDevMappings}}
   NovaPCIPassthrough:
+    {%- for dev in parameter_defaults.NovaPCIPassthrough %}
+    - devname: {{dev.devname}}
+      physical_network: {{dev.physical_network}}
+    {%- endfor %}

@@ -2925,6 +2925,7 @@ class Director(InfraHost):
 
     def _generate_sriov_params_edge(self, node_type):
         setts = self.settings
+        ntd = setts.node_type_data_map[node_type]
         sriov_interfaces = self.get_sriov_compute_interfaces_edge(node_type)
         params = {}
         sriov_map_setting = []
@@ -2932,17 +2933,13 @@ class Director(InfraHost):
         physical_network = "physint"
         for interface in sriov_interfaces:
             mapping = physical_network + ':' + interface
-            nova_pci = '{devname: ' + \
-                       '"' + interface + '",' + \
-                       'physical_network: ' + \
-                       '"' + physical_network + '"}'
-
+            nova_pci = {"devname": interface,
+                        "physical_network": physical_network}
             sriov_map_setting.append(mapping)
             sriov_pci_passthrough.append(nova_pci)
 
         sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"
-        sriov_pci_passthrough = "[" + ",".join(sriov_pci_passthrough) + "]"
-        params["NumSriovVfs"] = setts.sriov_vf_count
+        params["NumSriovVfs"] = ntd["sriov_vf_count"]
         params["NeutronPhysicalDevMappings"] = sriov_map_setting
         params["NovaPCIPassthrough"] = sriov_pci_passthrough
         return params
