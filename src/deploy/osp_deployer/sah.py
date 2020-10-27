@@ -372,8 +372,8 @@ class Sah(InfraHost):
                      director_conf)
         # Temporarly start http for the director vm to retreive lock files
         re = self.run_tty("systemctl stop httpd")
-        re - self.run_tty("firewall-cmd --zone=public --permanent --add-service=http")
-        re - self.run_tty("firewall-cmd --reload")
+        re = self.run_tty("firewall-cmd --zone=public --permanent --add-service=http")
+        re = self.run_tty("firewall-cmd --reload")
         re = self.run_tty("systemctl start httpd")
         remote_file = "sh /root/deploy-director-vm.sh " + \
                       director_conf + " " + \
