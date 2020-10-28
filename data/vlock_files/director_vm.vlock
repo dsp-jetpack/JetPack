@@ -84,7 +84,8 @@
 0:pytz-2016.10-2.el7.*
 0:libblkid-2.23.2-61.el7_7.1.*
 0:polkit-pkla-compat-0.1-4.el7.*
-0:firewalld-filesystem-0.6.3-11.el7_8.1.*
+0:firewalld-filesystem-0.6.3-11.el7.*
+0:firewalld-0.6.3-11.el7.*
 0:python-dogpile-core-0.4.1-6.1.el7ost.*
 0:python-paste-1.7.5.1-9.20111221hg1498.el7.*
 0:libgpg-error-1.12-3.el7.*
@@ -683,7 +684,7 @@
 0:rsyslog-8.24.0-41.el7_7.2.*
 0:pygpgme-0.3-9.el7.*
 0:python-slip-0.4.0-4.el7.*
-0:python-firewall-0.6.3-11.el7_8.1.*
+0:python-firewall=0.6.3-11.el7.*
 0:file-libs-5.11-35.el7.*
 0:kmod-20-25.el7.*
 0:python2-octavia-tests-tempest-1.1.0-1.el7ost.*
