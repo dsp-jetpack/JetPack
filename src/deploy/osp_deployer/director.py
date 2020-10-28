@@ -3493,31 +3493,29 @@ class Director(InfraHost):
             params[prov_if] = {"default": '', "type": "string"}
         # Set NFV params
         if num_nics > 5 and 'nfv_type' in node_type_data:
-            nfv_type = node_type_data['nfv_type']
-            nfv_nics = (list(map(str.strip,
-                                 node_type_data['nfv_interfaces'].split(','))))
-
-            if nfv_type in ["dpdk", "sriov"]:
+            nfv_nics = self._get_nfv_nics(node_type)
+            nfv_type = self._get_nfv_type(node_type)
+            if nfv_type in [OVS_DPDK, SRIOV]:
                 for num, _if in enumerate(nfv_nics, start=1):
                     _if_p = "{}{}Interface{}".format(role,
-                                                     NFV_TYPE_MAP[nfv_type],
+                                                     nfv_type,
                                                      num)
                     params[_if_p] = {"default": '', "type": "string"}
-            elif nfv_type == "both":
+            elif nfv_type == BOTH:
                 for num, _if in enumerate(nfv_nics, start=1):
-                    _type = "dpdk" if num < 3 else "sriov"
+                    _type = DPDK_K if num < 3 else SRIOV_K
                     _if_p = "{}{}Interface{}".format(role,
                                                      NFV_TYPE_MAP[_type],
                                                      num)
                     params[_if_p] = {"default": '', "type": "string"}
-            if nfv_type in ["dpdk", "both"]:
+            if nfv_type in [OVS_DPDK, BOTH]:
                 _drv_k = "{}HostNicDriver".format(role)
                 params[_drv_k] = {"default": '', "type": "string"}
                 _dpdk_k = "{}BondInterfaceOvsOptions".format(role)
                 params[_dpdk_k] = {"default": '', "type": "string"}
                 _q_k = "{}NumDpdkInterfaceRxQueues".format(role)
                 params[_q_k] = {"default": 1, "type": "number"}
-            elif nfv_type in ["sriov", "both"]:
+            elif nfv_type in [SRIOV, BOTH]:
                 _sriov_k = "{}BondInterfaceSriovOptions".format(role)
                 params[_sriov_k] = {"default": '', "type": "string"}
                 _mtu = "{}DefaultBondMtu".format(role)
@@ -3573,8 +3571,8 @@ class Director(InfraHost):
             params[prov_if] = node_type_data['ProvisioningInterface']
         # Set NFV params
         if num_nics > 5 and 'nfv_type' in node_type_data:
-            nfv_type = node_type_data['nfv_type']
             nfv_nics = self._get_nfv_nics(node_type)
+            nfv_type = self._get_nfv_type(node_type)
             # verify we have the right number of nfv nics
             if (len(nfv_nics) + 4) != (num_nics - (num_nics % 2)):
                 raise AssertionError("The number of nics ({}) specified "
@@ -3586,10 +3584,10 @@ class Director(InfraHost):
                                                              node_type,
                                                              str(nfv_nics)))
 
-            if NFV_TYPE_MAP[nfv_type] in (SRIOV, OVS_DPDK):
+            if nfv_type in (SRIOV, OVS_DPDK):
                 for num, _if in enumerate(nfv_nics, start=1):
                     _if_p = "{}{}Interface{}".format(role,
-                                                     NFV_TYPE_MAP[nfv_type],
+                                                     nfv_type,
                                                      num)
                     params[_if_p] = _if
             elif nfv_type == BOTH:
@@ -3599,14 +3597,14 @@ class Director(InfraHost):
                                                      NFV_TYPE_MAP[_type],
                                                      num)
                     params[_if_p] = _if
-            if NFV_TYPE_MAP[nfv_type] in (OVS_DPDK, BOTH):
+            if nfv_type in (OVS_DPDK, BOTH):
                 _drv_k = "{}HostNicDriver".format(role)
                 params[_drv_k] = node_type_data["HostNicDriver"]
                 _dpdk_k = "{}BondInterfaceOvsOptions".format(role)
                 params[_dpdk_k] = node_type_data["BondInterfaceOvsOptions"]
                 _q_k = "{}NumDpdkInterfaceRxQueues".format(role)
                 params[_q_k] = node_type_data["NumDpdkInterfaceRxQueues"]
-            elif NFV_TYPE_MAP[nfv_type] in (SRIOV, BOTH):
+            elif nfv_type in (SRIOV, BOTH):
                 _sriov_k = "{}BondInterfaceSriovOptions".format(role)
                 params[_sriov_k] = node_type_data["BondInterfaceSriovOptions"]
                 _mtu = "{}DefaultBondMtu".format(role)
@@ -3823,7 +3821,7 @@ class Director(InfraHost):
         setts = self.settings
         node_type_data = setts.node_type_data_map[node_type]
         if ("nfv_type" in node_type_data
-                and len(node_type_data["nfv_type"]) != 0):
+                and len(node_type_data["nfv_type"].strip()) != 0):
             return NFV_TYPE_MAP[node_type_data["nfv_type"]]
         return None
 
@@ -4115,7 +4113,6 @@ class Director(InfraHost):
 
     def _generate_deploy_cmd_edge(self, node_type):
         setts = self.settings
-        # node_type_data = setts.node_type_data_map[node_type]
         nfv_type = self._get_nfv_type(node_type)
         node_type_lower = self._generate_node_type_lower(node_type)
         role_lower = self._generate_role_lower(node_type)
