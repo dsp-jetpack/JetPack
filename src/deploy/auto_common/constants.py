@@ -21,6 +21,7 @@ SRIOV = "Sriov"
 NFV_TYPE_MAP = {DPDK_K: OVS_DPDK, SRIOV_K: SRIOV,
                 BOTH: BOTH}
 DPDK_SERVICES = ["ComputeNeutronOvsDpdk", "OvsDpdkNetcontrold", "Rear"]
+SRIOV_SERVICES = ["NeutronSriovAgent", "NeutronSriovHostConfig", "Rear"]
 CTLPLANE_BRIDGE = "br-ctlplane"
 PUBLIC_API_IF = "enp1s0"
 PROVISIONING_IF = "enp2s0"

@@ -236,7 +236,7 @@ resources:
                 addresses:
                   {%- for address in cfg.addresses %}
                 - ip_netmask:
-                    {%- if cfg.type == "linux_bond" and cfg.name == "bond0" %}
+                    {%- if cfg.type in ["linux_bond", "ovs_bridge"] and cfg.name in ["bond0", "br-tenant"] %}
                     list_join:
                     - /
                     - - get_param: {{address.ip}}
@@ -268,11 +268,13 @@ resources:
                 members:
                   {%- for member in cfg.members %}
                   - type: {{member.type}}
-                    {%- if member.type == "interface" %}
+                    {%- if 'name' in member %}
+                      {%- if member.type == "interface" %}
                     name:
                       get_param: {{member.name}}
-                    {%- else %}
+                      {%- else %}
                     name: {{member.name}}
+                      {%- endif %}
                     {%- endif %}
                     {%- if "rx_queue" in member %}
                     rx_queue:
@@ -285,6 +287,24 @@ resources:
                     {%- if "mtu" in member %}
                     mtu:
                       get_param: {{member.mtu}}
+                    {%- endif %}
+                    {%- if "vlan_id" in member %}
+                    vlan_id:
+                      get_param: {{member.vlan_id}}
+                    {%- endif %}
+                    {%- if "device" in member %}
+                    device: {{member.device}}
+                    {%- endif %}
+                    {%- if "addresses" in member %}
+                    addresses:
+                      {%- for address in member.addresses %}
+                      - ip_netmask:
+                          get_param: {{address.ip_netmask}}
+                      {%- endfor %}
+                    {%- endif %}
+                    {%- if 'routes' in member %}
+                    routes:
+                      get_param: {{member.routes}}
                     {%- endif %}
                     {%- if "primary" in member %}
                     primary: {{member.primary}}

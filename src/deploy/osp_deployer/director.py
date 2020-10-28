@@ -3379,6 +3379,11 @@ class Director(InfraHost):
                 role_d['ServicesDefault'].append(
                     "OS::TripleO::Services::{}".format(service))
 
+        if self._is_sriov_required(node_type):
+            for service in SRIOV_SERVICES:
+                role_d['ServicesDefault'].append(
+                    "OS::TripleO::Services::{}".format(service))
+
         return role_d
 
     def _generate_nic_params(self, node_type):
@@ -3518,7 +3523,7 @@ class Director(InfraHost):
                 _mtu = "{}DefaultBondMtu".format(role)
                 params[_mtu] = {"default": 1500, "type": "number"}
                 _numsriovfs = "{}NumSriovVfs".format(role)
-                params[_numsriovfs] = {"default": '', "type": "string"}
+                params[_numsriovfs] = {"default": '', "type": "number"}
 
         return params
 
@@ -4205,6 +4210,10 @@ class Director(InfraHost):
                 # Role yamls are always list, even for single-role
                 # template files
                 _srv_defs = compute_yaml[0]['ServicesDefault']
+                # TODO: DistributedCompute role has Etcd service, why?
+                # If we do not need it uncomment below
+                # if "OS::TripleO::Services::Etcd" in _srv_defs:
+                #     _srv_defs.remove("OS::TripleO::Services::Etcd")
                 self.default_compute_services = _srv_defs
         return self.default_compute_services
 
