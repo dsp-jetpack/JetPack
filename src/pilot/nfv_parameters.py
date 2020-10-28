@@ -138,13 +138,8 @@ class NfvParameters(object):
 
     def get_host_cpus(self, host_cpus_count):
         host_cpus = []
-        logger.debug("pppppppp host_cpus_count {}".format(host_cpus_count))
         pairs = int(math.ceil(int(host_cpus_count)/2.0))
-        logger.debug("pppppppp pairs {}".format(pairs))
-        logger.debug("pppppppp self.data['cpus'] {}".format(self.data['cpus']))
         for i in range(0, pairs):
-            logger.debug("pppppppp i: {}".format(i))
-            logger.debug("pppppppp self.data['cpus'][i % 2]: {}".format(self.data['cpus'][i % 2]))
             host_cpus.append(self.data['cpus'][i % 2][i][0])
             host_cpus.append(self.data['cpus'][i % 2][i][1])
             self.data['cpus'][i % 2].pop(i, None)
@@ -304,8 +299,8 @@ class NfvParameters(object):
                 hugepage_count = (memory_count / 2)
             if hugepage_size == "1GB":
                 hugepage_count = (memory_count / 1024)
-            logger.debug("hugepage_size {}".format(hugepage_size))
-            logger.debug("hugepage_count {}".format(hugepage_count))
+            logger.info("hugepage_size {}".format(hugepage_size))
+            logger.info("hugepage_count {}".format(hugepage_count))
             return hugepage_count
         except Exception as error:
             message = "Exception {}: {}".format(
