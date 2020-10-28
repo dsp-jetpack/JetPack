@@ -253,8 +253,6 @@ class NfvParameters(object):
                 ref_node["uuid"] = node
                 ref_node["data"] = data
                 ref_node["cpus"] = data["cpus"]
-        logger.debug("ref_node[cpus]: {}".format(str(ref_node["cpus"])))
-        logger.debug("ref_node[data]: {}".format(str(ref_node["data"])))
         if ref_node["cpus"] not in [40, 48, 56, 64, 72, 80, 88, 128]:
             raise Exception("The number of vCPUs, as specified in the"
                             " reference architecture, must be one of"
@@ -299,8 +297,6 @@ class NfvParameters(object):
                 hugepage_count = (memory_count / 2)
             if hugepage_size == "1GB":
                 hugepage_count = (memory_count / 1024)
-            logger.info("hugepage_size {}".format(hugepage_size))
-            logger.info("hugepage_count {}".format(hugepage_count))
             return hugepage_count
         except Exception as error:
             message = "Exception {}: {}".format(

@@ -2481,7 +2481,7 @@ class Director(InfraHost):
         tmplt_data["parameters"] = self._generate_nic_params(node_type)
         tmplt_data["network_config"] = self._generate_nic_network_config(
             node_type)
-        logger.info("tmplt_data: %s", str(tmplt_data))
+        logger.debug("tmplt_data: %s", str(tmplt_data))
         rendered_tmplt = tmplt.render(**tmplt_data)
         with open(stg_nic_path, 'w') as stg_nic_fp:
             stg_nic_fp.write(rendered_tmplt)
@@ -2490,8 +2490,6 @@ class Director(InfraHost):
 
     def render_and_upload_nic_env_edge(self, node_type):
         setts = self.settings
-        # node_type_data = setts.node_type_data_map[node_type]
-
         _tmplt_path = os.path.join(NIC_CONFIGS, NIC_ENV_EDGE_J2)
         tmplt = self.jinja2_env.get_template(_tmplt_path)
 
