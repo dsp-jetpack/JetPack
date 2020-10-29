@@ -2366,9 +2366,8 @@ class Director(InfraHost):
     def get_sriov_compute_interfaces_edge(self, node_type):
         setts = self.settings
         node_type_data = setts.node_type_data_map[node_type]
-        nfv_type = (node_type_data["nfv_type"] if "nfv_type" in node_type_data
-                    else None)
-        if not nfv_type or nfv_type not in (SRIOV_K, BOTH):
+        nfv_type = self._get_nfv_type(node_type)
+        if not nfv_type or nfv_type not in (SRIOV, BOTH):
             return []
 
         nfv_nics = [nic.strip() for nic
