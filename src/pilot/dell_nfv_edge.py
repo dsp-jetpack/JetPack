@@ -65,7 +65,7 @@ class ConfigEdge(ConfigOvercloud):
         ntd = self.node_type_data
         enable_hugepage = Utils.string_to_bool(ntd["hpg_enable"])
         enable_numa = Utils.string_to_bool(ntd["numa_enable"])
-        ovs_dpdk = ntd["nfv_type"] == "dpdk" or ntd["nfv_type"] == "both"
+        is_ovs_dpdk = ntd["nfv_type"] in ["dpdk", "both"]
         hostos_cpu_count = int(ntd["numa_hostos_cpu_count"])
         _dir = (re.sub(r'[^a-z0-9]', " ",
                        self.node_type.lower()).replace(" ", "_"))
@@ -89,7 +89,7 @@ class ConfigEdge(ConfigOvercloud):
             self.nfv_params.parse_data(node_data)
             self.nfv_params.get_all_cpus()
             self.nfv_params.get_host_cpus(hostos_cpu_count)
-            if ovs_dpdk:
+            if is_ovs_dpdk:
                 dpdk_nics = self.find_ifaces_by_keyword(nic_env_file,
                                                         'Dpdk')
                 logger.debug("DPDK-NICs >>" + str(dpdk_nics))
@@ -103,7 +103,7 @@ class ConfigEdge(ConfigOvercloud):
             nova_cpus = self.nfv_params.nova_cpus
             params_dell_env["NovaComputeCpuDedicatedSet"] = nova_cpus
             params_dell_env["KernelArgs"] = kernel_args
-        if ovs_dpdk:
+        if is_ovs_dpdk:
             params_dpdk = params["dpdk"] = {}
             params_dpdk["OvsDpdkCoreList"] = self.nfv_params.host_cpus
             params_dpdk["NovaComputeCpuSharedSet"] = self.nfv_params.host_cpus

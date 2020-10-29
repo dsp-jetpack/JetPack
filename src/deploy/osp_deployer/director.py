@@ -2339,7 +2339,6 @@ class Director(InfraHost):
         setts = self.settings
         node_type_data = setts.node_type_data_map[node_type]
         ntd_j = json.dumps(node_type_data)
-        logger.info("set_nfv_parameters ntd_j: {}".format(ntd_j))
         cmd = ("{} cd  ~/pilot;./dell_nfv_edge.py "
                "--overcloud_name {} "
                "--edge_site {} "
@@ -2347,8 +2346,10 @@ class Director(InfraHost):
                                               setts.overcloud_name,
                                               node_type,
                                               ntd_j))
-        res = json.loads(self.run_tty(cmd)[0])
-        self.nfv_parameters = res
+        res = self.run_tty(cmd)[0]
+        res_j = json.loads(res)
+        self.nfv_parameters = res_j
+        logger.debug("nfv_parameters: {}".format(self.nfv_parameters))
 
     def get_sriov_compute_interfaces(self):
         # Get settings from .ini file
@@ -2890,7 +2891,7 @@ class Director(InfraHost):
             role_param_k = "{}Parameters".format(role)
             role_params = params[role_param_k] = {}
             role_params["KernelArgs"] = dell_env_params["KernelArgs"]
-            if nfv_type in (DPDK_K, BOTH):
+            if nfv_type in (OVS_DPDK, BOTH):
                 nova_cpu_set = dell_env_params["NovaComputeCpuDedicatedSet"]
                 params["NovaComputeCpuDedicatedSet"] = nova_cpu_set
         return params
