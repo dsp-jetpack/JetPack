@@ -2872,8 +2872,9 @@ class Director(InfraHost):
 
     def _generate_dell_env_edge(self, node_type):
         setts = self.settings
-        # node_type_data = setts.node_type_data_map[node_type]
         nfv_type = self._get_nfv_type(node_type)
+        is_numa = self._is_numa_enabled(node_type)
+        is_hpg = self._is_huge_pages_enabled(node_type)
         params = {}
         role = self._generate_cc_role(node_type)
         edge_subnet = self._generate_subnet_name(node_type)
@@ -2884,13 +2885,13 @@ class Director(InfraHost):
         role_count_key = role + 'Count'
         nodes = setts.node_types_map[node_type]
         params[role_count_key] = len(nodes)
-        if nfv_type:
+        if nfv_type or is_numa or is_hpg:
             self.set_nfv_parameters(node_type)
             dell_env_params = self.nfv_parameters["dell_env"]
             role_param_k = "{}Parameters".format(role)
             role_params = params[role_param_k] = {}
             role_params["KernelArgs"] = dell_env_params["KernelArgs"]
-            if nfv_type in (OVS_DPDK, BOTH):
+            if is_numa:
                 nova_cpu_set = dell_env_params["NovaComputeCpuDedicatedSet"]
                 params["NovaComputeCpuDedicatedSet"] = nova_cpu_set
         return params
@@ -2992,6 +2993,22 @@ class Director(InfraHost):
     def _is_sriov_required(self, node_type):
         nfv_type = self._get_nfv_type(node_type)
         return nfv_type in (SRIOV, BOTH)
+
+    def  _is_numa_enabled(self, node_type):
+        setts = self.settings
+        ntd = setts.node_type_data_map[node_type]
+        if "numa_enable" in ntd:
+            return self.string_to_bool(ntd["numa_enable"])
+        else:
+            return False
+
+    def  _is_huge_pages_enabled(self, node_type):
+        setts = self.settings
+        ntd = setts.node_type_data_map[node_type]
+        if "hpg_enable" in ntd:
+            return self.string_to_bool(ntd["hpg_enable"])
+        else:
+            return False
 
     @directory_check(STAGING_PATH)
     def _download_and_parse_undercloud_conf(self):
