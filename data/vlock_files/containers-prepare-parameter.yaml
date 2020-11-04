@@ -80,6 +80,7 @@ parameter_defaults:
     - 'ovn-controller'
     - 'ovn-northd'
     - 'neutron-metadata-agent-ovn'
+    - 'neutron-server'
     - 'ovn-nb-db-server'
     - 'ovn-sb-db-server'
     - 'panko-api'
@@ -90,6 +91,7 @@ parameter_defaults:
     - 'swift-proxy-server'
     - 'swift-container'
     - 'swift-object'
+    - 'tempest'
     - 'zaqar-wsgi'   
     set:
       ceph_alertmanager_image: ose-prometheus-alertmanager
@@ -437,6 +439,12 @@ parameter_defaults:
       tag: 16.1-56
   - push_destination: true
     includes:
+    - 'neutron-server:'
+    set:
+      namespace: registry.redhat.io/rhosp-rhel8
+      tag: 16.1-53
+  - push_destination: true
+    includes:
     - 'neutron-server-ovn:'
     set:
       namespace: registry.redhat.io/rhosp-rhel8
@@ -615,6 +623,12 @@ parameter_defaults:
     set:
       namespace: registry.redhat.io/rhosp-rhel8
       tag: 16.1-55
+  - push_destination: true
+    includes:
+    - 'tempest:'
+    set:
+      namespace: registry.redhat.io/rhosp-rhel8
+      tag: 16.1-56
   - push_destination: true
     includes:
     - 'zaqar-wsgi:'
