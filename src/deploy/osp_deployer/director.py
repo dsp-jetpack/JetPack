@@ -3781,6 +3781,10 @@ class Director(InfraHost):
                          "name": "br-tenant"}
             tenant_br["mtu"] = "DefaultBondMtu"
             tenant_br["use_dhcp"] = False
+            tenant_br["ovs_extra"] = {"template":
+                "set port br-tenant tag=_VLAN_TAG_",
+                "tenant_vlan_id": tenant_vlan_id}
+
             dpdk_bond_0 = {"type": "ovs_dpdk_bond",
                            "name": "dpdkbond0"}
             dpdk_bond_0["rx_queue"] = "{}NumDpdkInterfaceRxQueues".format(role)
