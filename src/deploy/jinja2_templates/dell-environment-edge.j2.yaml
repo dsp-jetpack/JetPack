@@ -21,10 +21,10 @@ parameter_defaults:
   NeutronBridgeMappings: physint:br-tenant,physext:br-ex
 
 {%- for key, val in parameter_defaults.items() %}
-  {%- if key.endswith("ExtraConfig") %}
+  {%- if key.endswith("ExtraConfig") or key.endswith("Parameters") %}
   {{key}}:
-    {%- for extra_key, extra_val in val.items() %}
-    {{extra_key}}: {{extra_val}}
+    {%- for _key, _val in val.items() %}
+    {{_key}}: {{_val}}
     {%- endfor %}
   {%- else %}
   {{key}}: {{val}}
