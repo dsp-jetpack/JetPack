@@ -18,6 +18,7 @@ import configparser
 import json
 import os
 from constants import Constants
+from distutils.util import strtobool
 
 
 class Utils:
@@ -55,3 +56,14 @@ class Utils:
                           + "in undercloud.conf")
 
         return enable_routed_networks
+
+    @staticmethod
+    def string_to_bool(string):
+        try:
+            if not string or len(string.strip()) == 0:
+                return False
+            return bool(strtobool(str(string).strip()))
+        except ValueError as ex:
+            ex.message = ("strtobool could not interpret "
+                          "the value of: {}".format(string))
+            return False
