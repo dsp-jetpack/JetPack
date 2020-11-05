@@ -132,17 +132,14 @@ class Director(InfraHost):
 
         # Configure containers-prepare-parameter.yaml to
         # retrieve container images
-        cmd = 'sed -i "s|[[:space:]]\+username: password|      ' + \
-              self.settings.subscription_manager_user + ': ' + "'" + \
-              self.settings.subscription_manager_password + "'" + \
-              '|" pilot/' + CONTAINERS_PREPARE_PARAM + '.yaml'
-        self.run(cmd)
 
         if self.settings.version_locking_enabled is True:
-            yaml = "/overcloud_images.yaml"
+            logger.debug("Version locking enabled")
+            yaml = "/containers-prepare-parameter.yaml"
             source_file = self.settings.lock_files_dir + yaml
-            dest_file = self.home_dir + yaml
+            dest_file = self.home_dir + "/pilot" +  yaml
             self.upload_file(source_file, dest_file)
+            logger.debug("uploading " + str(source_file) + " to " + str(dest_file))
 
             lock_file = "/unity_container_vlock.ini"
             source_file = self.settings.lock_files_dir + lock_file
@@ -162,6 +159,15 @@ class Director(InfraHost):
                       " | awk -F '=' '{print $2}'"
                 self.settings.manila_unity_container_version = \
                     self.run_tty(cmd)[0].replace('\r', '').rstrip()
+        else:
+            logger.debug("Version locking disabled")
+
+        cmd = 'sed -i "s|[[:space:]]\+username: password|      ' + \
+              self.settings.subscription_manager_user + ': ' + "'" + \
+              self.settings.subscription_manager_password + "'" + \
+              '|" pilot/' + CONTAINERS_PREPARE_PARAM + '.yaml'
+        self.run(cmd)
+
 
     def install_director(self):
         logger.info("Installing the undercloud")
@@ -2872,8 +2878,9 @@ class Director(InfraHost):
 
     def _generate_dell_env_edge(self, node_type):
         setts = self.settings
-        # node_type_data = setts.node_type_data_map[node_type]
         nfv_type = self._get_nfv_type(node_type)
+        is_numa = self._is_numa_enabled(node_type)
+        is_hpg = self._is_huge_pages_enabled(node_type)
         params = {}
         role = self._generate_cc_role(node_type)
         edge_subnet = self._generate_subnet_name(node_type)
@@ -2884,13 +2891,13 @@ class Director(InfraHost):
         role_count_key = role + 'Count'
         nodes = setts.node_types_map[node_type]
         params[role_count_key] = len(nodes)
-        if nfv_type:
+        if nfv_type or is_numa or is_hpg:
             self.set_nfv_parameters(node_type)
             dell_env_params = self.nfv_parameters["dell_env"]
             role_param_k = "{}Parameters".format(role)
             role_params = params[role_param_k] = {}
             role_params["KernelArgs"] = dell_env_params["KernelArgs"]
-            if nfv_type in (OVS_DPDK, BOTH):
+            if is_numa:
                 nova_cpu_set = dell_env_params["NovaComputeCpuDedicatedSet"]
                 params["NovaComputeCpuDedicatedSet"] = nova_cpu_set
         return params
@@ -2992,6 +2999,22 @@ class Director(InfraHost):
     def _is_sriov_required(self, node_type):
         nfv_type = self._get_nfv_type(node_type)
         return nfv_type in (SRIOV, BOTH)
+
+    def  _is_numa_enabled(self, node_type):
+        setts = self.settings
+        ntd = setts.node_type_data_map[node_type]
+        if "numa_enable" in ntd:
+            return self.string_to_bool(ntd["numa_enable"])
+        else:
+            return False
+
+    def  _is_huge_pages_enabled(self, node_type):
+        setts = self.settings
+        ntd = setts.node_type_data_map[node_type]
+        if "hpg_enable" in ntd:
+            return self.string_to_bool(ntd["hpg_enable"])
+        else:
+            return False
 
     @directory_check(STAGING_PATH)
     def _download_and_parse_undercloud_conf(self):
@@ -3639,6 +3662,7 @@ class Director(InfraHost):
         role = self._generate_cc_role(node_type)
         node_type_data = self.settings.node_type_data_map[node_type]
         num_nics = int(node_type_data["nic_port_count"])
+        nfv_type = self._get_nfv_type(node_type)
         has_provsioning_nic = self._has_provisioning_nic(num_nics)
         nw_cfg = []
         cp_network = "{}{}".format(role, CONTROL_PLANE_NET[0])
@@ -3761,6 +3785,7 @@ class Director(InfraHost):
             prov_if["addresses"] = cp_addresses
             if num_nics < 6:
                 nw_cfg.extend([prov_if, tenant_br, ex_br])
+
         elif num_nics < 6 or self._is_sriov_required(node_type):
             tenant_br["use_dhcp"] = False
             tenant_br["dns_servers"] = "DnsServers"
@@ -3773,6 +3798,9 @@ class Director(InfraHost):
                          "name": "br-tenant"}
             tenant_br["mtu"] = "DefaultBondMtu"
             tenant_br["use_dhcp"] = False
+            tenant_br["ovs_extra"] = {"template":
+                "set port br-tenant tag=_VLAN_TAG_",
+                "tenant_vlan_id": tenant_vlan_id}
             dpdk_bond_0 = {"type": "ovs_dpdk_bond",
                            "name": "dpdkbond0"}
             dpdk_bond_0["rx_queue"] = "{}NumDpdkInterfaceRxQueues".format(role)
@@ -3780,6 +3808,7 @@ class Director(InfraHost):
                 role)
             dpdk_bond_0["mtu"] = "DefaultBondMtu"
             dpdk_bond_0["members"] = dpdk_ports
+
             tenant_br["members"] = [dpdk_bond_0]
             bond_0["use_dhcp"] = False
             bond_0["dns_servers"] = "DnsServers"

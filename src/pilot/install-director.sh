@@ -166,11 +166,10 @@ fi
 echo
 echo "## Configuring paths..."
 ESCAPED_HOME=${HOME//\//\\/}
-sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
+sudo sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
 # Clean the nodes disks befor redeploying
-#sed -i "s/clean_nodes = false/clean_nodes = true/" $HOME/pilot/undercloud.conf
-cp $HOME/pilot/undercloud.conf $HOME
-cp $HOME/pilot/containers-prepare-parameter.yaml $HOME
+sudo cp $HOME/pilot/undercloud.conf $HOME
+sudo cp $HOME/pilot/containers-prepare-parameter.yaml $HOME
 echo "## Done."
 
 echo
@@ -422,47 +421,6 @@ if [ ! -z "${containers_prefix}" ]; then
     sed -i "s/tag_from_label:.*/tag_from_label: '16.1'/" ${container_yaml}
 fi
 
-
-# If deployment is unlocked, generate the overcloud container list from the latest.
-#if [ -e $HOME/overcloud_images.yaml ];
-#then
-#    echo "using locked containers versions"
-#
-#    if [ ! -z "${containers_prefix}" ]; then
-#        sed -i "s/registry.access.redhat.com\/rhosp15\/openstack-/${satellite_hostname}:5000\/${containers_prefix}/" $HOME/overcloud_images.yaml
-#        sed -i "s/registry.access.redhat.com\/rhceph\//${satellite_hostname}:5000\/${containers_prefix}/" $HOME/overcloud_images.yaml
-#
-#    fi
-#
-#else
-#    echo "using latest available containers versions"
-#    touch $HOME//overcloud_images.yaml
-#
-#    if [ ! -z "${containers_prefix}" ]; then
-#
-#        openstack overcloud container image prepare   --namespace=${satellite_hostname}:5000\
-#        --prefix=${containers_prefix}   \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
-#        --tag-from-label {version}-{release}   \
-#        --set ceph_namespace=${satellite_hostname}:5000 \
-#        --set ceph_image=${containers_prefix}rhceph-3-rhel7 \
-#        --output-env-file=$HOME/overcloud_images.yaml
-#
-#    else
-#        openstack overcloud container image prepare --output-env-file $HOME/overcloud_images.yaml \
-#        --namespace=registry.access.redhat.com/rhosp15 \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
-#        --set ceph_namespace=registry.access.redhat.com/rhceph \
-#        --set ceph_image=rhceph-3-rhel7 \
-#        --tag-from-label {version}-{release}
-#    fi
-#fi
 
 
 echo

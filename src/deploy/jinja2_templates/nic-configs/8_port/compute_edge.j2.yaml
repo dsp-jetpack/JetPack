@@ -203,6 +203,14 @@ resources:
                 name: {{cfg.name}}
                   {%- endif %}
                 {%- endif %}
+                {%- if "ovs_extra" in cfg %}
+                ovs_extra:
+                  - str_replace:
+                      template: {{cfg.ovs_extra.template}}
+                      params:
+                        _VLAN_TAG_:
+                          get_param: {{cfg.ovs_extra.tenant_vlan_id}}
+                {%- endif %}
                 {%- if "device" in cfg %}
                 device: {{cfg.device}}
                 {%- endif %}

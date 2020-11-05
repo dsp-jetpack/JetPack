@@ -18,6 +18,7 @@ import os
 import re
 import time
 from auto_common import Ssh, Scp
+from distutils.util import strtobool
 
 
 class InfraHost:
@@ -117,6 +118,16 @@ class InfraHost:
             if status == "host not up":
                 break
             time.sleep(5)
+
+    def string_to_bool(self, string):
+        try:
+            if not string or len(string.strip()) == 0:
+                return False
+            return bool(strtobool(str(string).strip()))
+        except ValueError as ex:
+            ex.message = ("strtobool could not interpret "
+                          "the value of: {}".format(string))
+            return False
 
     def _generate_node_placement_exp(self, node_type):
         placement_exp = ((re.sub(

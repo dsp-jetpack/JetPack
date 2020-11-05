@@ -297,14 +297,10 @@ class Sah(InfraHost):
             'director_vm.vlock'
         ]
 
-        # Delete any staged locking files to prevent accidental reuse
+        # 0 out any staged locking files to prevent accidental reuse
         for eachone in files:
-            staged_file_name = '/root/' + eachone
-            if self.is_running_from_sah() is False:
-                self.run("rm -rf " + staged_file_name)
-            else:
-                if os.path.isfile(staged_file_name):
-                    os.remove(staged_file_name)
+            staged_file_name = '/var/www/html/' + eachone
+            self.run("echo '' > " + staged_file_name)
 
         if self.settings.version_locking_enabled is True:
             logger.debug(
@@ -312,8 +308,9 @@ class Sah(InfraHost):
 
             for eachone in files:
                 source_file_name = self.settings.lock_files_dir + "/" + eachone
-                dest_file_name = '/root/' + eachone
+                dest_file_name = '/var/www/html/' + eachone
                 self.upload_file(source_file_name, dest_file_name)
+
 
     def upload_director_scripts(self):
         remote_file = "/root/deploy-director-vm.sh"
@@ -373,6 +370,11 @@ class Sah(InfraHost):
                      line +
                      "' >> " +
                      director_conf)
+        # Temporarly start http for the director vm to retreive lock files
+        re = self.run_tty("systemctl stop httpd")
+        re = self.run_tty("firewall-cmd --zone=public --permanent --add-service=http")
+        re = self.run_tty("firewall-cmd --reload")
+        re = self.run_tty("systemctl start httpd")
         remote_file = "sh /root/deploy-director-vm.sh " + \
                       director_conf + " " + \
                       "/store/data/iso/RHEL8.iso"
@@ -395,6 +397,7 @@ class Sah(InfraHost):
                                     "root",
                                     self.settings.director_node.root_password)
         logger.debug("director host is up")
+        re = self.run_tty("systemctl stop httpd")
 
     def delete_director_vm(self):
         while "director" in \
