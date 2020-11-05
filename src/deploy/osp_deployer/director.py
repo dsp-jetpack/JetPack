@@ -85,6 +85,7 @@ class Director(InfraHost):
 
         self.jinja2_env = Environment(
             loader=FileSystemLoader(self.settings.jinja2_templates))
+        self.nfv_parameters = {}
 
         cmd = "mkdir -p " + self.pilot_dir
         self.run(cmd)
@@ -592,6 +593,10 @@ class Director(InfraHost):
         self.setup_environment_edge(node_type)
         self.render_and_upload_site_name_edge(node_type)
         self.render_and_upload_overrides_edge(node_type)
+        if self._is_ovs_dpdk_required(node_type):
+            self.render_and_upload_ovs_dpdk_edge(node_type)
+        if self._is_sriov_required(node_type):
+            self.render_and_upload_sriov_edge(node_type)
         # TODO self.setup_sanity_ini()
 
     def clamp_min_pgs(self, num_pgs):
@@ -2252,16 +2257,6 @@ class Director(InfraHost):
                                          exit_status, stderr, stdout))
             tester.verify_provisioning_subnets_created(subnets_to_create)
 
-    def _backup_tempest_conf(self):
-        logger.info("Backing up tempest.conf")
-        if self.is_tempest_conf():
-            timestamp = int(round(time.time() * 1000))
-            new_conf = (self.tempest_conf + "." + str(timestamp))
-            logger.debug("Backing up tempest.conf, new file is: %s "
-                         % new_conf)
-            cmd = ("mv " + self.tempest_conf + " " + new_conf + " 2>/dev/null")
-            self.run_tty(cmd)
-
     def enable_fencing(self):
         if self.settings.enable_fencing is True:
             logger.info("enabling fencing")
@@ -2278,39 +2273,6 @@ class Director(InfraHost):
                   passwd + \
                   ' enable'
             self.run_tty(cmd)
-
-    def _create_assign_role_command(self, node, role, index, instack=None):
-        logger.debug("Create assign role command for node: %s", str(node))
-        node_identifier = ""
-        if hasattr(node, 'service_tag'):
-            node_identifier = node.service_tag
-        else:
-            node_identifier = node.idrac_ip
-
-        skip_raid_config = ""
-        if node.skip_raid_config:
-            skip_raid_config = "-s"
-
-        skip_bios_config = ""
-        if node.skip_bios_config:
-            skip_bios_config = "-b"
-
-        os_volume_size_gb = ""
-        if hasattr(node, 'os_volume_size_gb'):
-            os_volume_size_gb = "-o {}".format(node.os_volume_size_gb)
-
-        cmd = ('./assign_role.py {} {} {} {} {}-{}'.format(
-            os_volume_size_gb,
-            skip_raid_config,
-            skip_bios_config,
-            node_identifier,
-            role,
-            str(index)))
-
-        if instack:
-            cmd += " -n " + instack
-
-        return cmd
 
     def set_ovs_dpdk_driver(self, neutron_ovs_dpdk_yaml):
         cmds = []
@@ -2333,6 +2295,68 @@ class Director(InfraHost):
                         cmd, status))
             logger.debug("cmd: {}".format(cmd))
 
+    def render_and_upload_ovs_dpdk_edge(self, node_type):
+        logger.debug("Render and upload ovs dpdk template for "
+                     "edge site: {}".format(node_type))
+        tmplt_data = {}
+        tmplt_data["ComputeNeutronOvsDpdk"] = os.path.join(
+            self.templates_overcloud_dir,
+            "deployment", "neutron",
+            "neutron-ovs-dpdk-agent-container-puppet.yaml")
+        tmplt_data["parameter_defaults"] = self._generate_dpdk_params_edge(
+            node_type)
+        tmplt = self.jinja2_env.get_template(NEUTRON_OVS_DPDK_EDGE_J2)
+        paths = self._generate_edge_template_paths(node_type, NEUTRON_OVS_DPDK)
+        stg_or_path, remote_or_file = paths
+
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
+        with open(stg_or_path, 'w') as stg_or_fp:
+            stg_or_fp.write(rendered_tmplt)
+        self.upload_file(stg_or_path, remote_or_file)
+
+    def render_and_upload_sriov_edge(self, node_type):
+        logger.debug("Render and upload SRIOV template for edge "
+                     "site: {}".format(node_type))
+        tmplt_data = {}
+        tmplt = self.jinja2_env.get_template(NEUTRON_SRIOV_EDGE_J2)
+        paths = self._generate_edge_template_paths(node_type, NEUTRON_SRIOV)
+        stg_or_path, remote_or_file = paths
+        sriov_agent_file = os.path.join(
+            self.templates_overcloud_dir,
+            "deployment/neutron/neutron-sriov-agent-container-puppet.yaml")
+        sriov_host_config_file = os.path.join(
+            self.templates_overcloud_dir,
+            "deployment/deprecated/neutron/neutron-sriov-host-config.yaml")
+        tmplt_data["NeutronSriovAgent"] = sriov_agent_file
+        tmplt_data["NeutronSriovHostConfig"] = sriov_host_config_file
+        tmplt_data["parameter_defaults"] = self._generate_sriov_params_edge(
+            node_type)
+
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
+        with open(stg_or_path, 'w') as stg_or_fp:
+            stg_or_fp.write(rendered_tmplt)
+        self.upload_file(stg_or_path, remote_or_file)
+
+    def set_nfv_parameters(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        ntd_j = json.dumps(node_type_data)
+        cmd = ("{} cd  ~/pilot;./dell_nfv_edge.py "
+               "--overcloud_name {} "
+               "--edge_site {} "
+               "--edge_site_data '{}'".format(self.source_stackrc,
+                                              setts.overcloud_name,
+                                              node_type,
+                                              ntd_j))
+        res = self.run_tty(cmd)[0]
+        res_j = json.loads(res)
+        self.nfv_parameters = res_j
+        logger.debug("nfv_parameters: {}".format(self.nfv_parameters))
+
     def get_sriov_compute_interfaces(self):
         # Get settings from .ini file
         ini_nics_settings = self.settings.get_curated_nics_settings()
@@ -2344,6 +2368,20 @@ class Director(InfraHost):
                 sriov_conf.update({int_name: int_value})
         sriov_interfaces = [x[1] for x in sorted(sriov_conf.items())]
         return sriov_interfaces
+
+    def get_sriov_compute_interfaces_edge(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        nfv_type = self._get_nfv_type(node_type)
+        if not nfv_type or nfv_type not in (SRIOV, BOTH):
+            return []
+
+        nfv_nics = [nic.strip() for nic
+                    in node_type_data["nfv_interfaces"].split(",")]
+        if nfv_type == BOTH:
+            return nfv_nics[int(len(nfv_nics) / 2):]
+        else:
+            return nfv_nics
 
     def render_and_upload_undercloud_conf(self):
         """Updadate and upload undercloud.conf to director vm
@@ -2438,6 +2476,7 @@ class Director(InfraHost):
 
     def render_and_upload_compute_edge(self, node_type):
         node_type_data = self.settings.node_type_data_map[node_type]
+        logger.debug("node_type_data: %s", str(node_type_data))
         paths = self._generate_edge_template_paths(node_type)
         stg_nic_path, dst_nic_path = paths
         num_nics = int(node_type_data['nic_port_count'])
@@ -2445,10 +2484,9 @@ class Director(InfraHost):
         _tmplt_path = os.path.join(NIC_CONFIGS, port_dir, EDGE_COMPUTE_J2)
         tmplt = self.jinja2_env.get_template(_tmplt_path)
         tmplt_data = {}
-        tmplt_data["parameters"] = self._generate_nic_params(node_type,
-                                                             num_nics)
+        tmplt_data["parameters"] = self._generate_nic_params(node_type)
         tmplt_data["network_config"] = self._generate_nic_network_config(
-            node_type, num_nics)
+            node_type)
         logger.debug("tmplt_data: %s", str(tmplt_data))
         rendered_tmplt = tmplt.render(**tmplt_data)
         with open(stg_nic_path, 'w') as stg_nic_fp:
@@ -2458,16 +2496,9 @@ class Director(InfraHost):
 
     def render_and_upload_nic_env_edge(self, node_type):
         setts = self.settings
-        node_type_data = setts.node_type_data_map[node_type]
-        num_nics = int(node_type_data['nic_port_count'])
-        # nic_dict_by_port_num = self._group_node_types_by_num_nics()
-        # node_type_tuples = nic_dict_by_port_num[num_nics]
-        # nic_dict_by_port_num[num_nics].append((node_type, node_type_data))
-
         _tmplt_path = os.path.join(NIC_CONFIGS, NIC_ENV_EDGE_J2)
         tmplt = self.jinja2_env.get_template(_tmplt_path)
 
-        # node_type, node_type_data = node_type_tuple
         paths = self._generate_edge_template_paths(node_type, NIC_ENV)
         stg_nic_env_path, nic_env_file = paths
         _nt_lower = self._generate_node_type_lower(node_type)
@@ -2487,15 +2518,14 @@ class Director(InfraHost):
             tmplt_data["BondInterfaceOvsOptions"] = ovs_bond_opts
 
         _res_reg = tmplt_data['resource_registry'] = {}
-        ne_params = self._generate_nic_environment_edge(node_type,
-                                                        num_nics)
+        ne_params = self._generate_nic_environment_edge(node_type)
         tmplt_data['parameter_defaults'] = ne_params
         role = self._generate_cc_role(node_type)
         role_nic_key = ("OS::TripleO::"
                         + role + "::Net::SoftwareConfig")
         nic_config_name = ("./" + _nt_lower + ".yaml")
         _res_reg[role_nic_key] = nic_config_name
-        logger.info("template data: %s", str(tmplt_data))
+        logger.debug("template data: %s", str(tmplt_data))
         rendered_tmplt = tmplt.render(**tmplt_data)
         with open(stg_nic_env_path, 'w') as stg_nic_env_fp:
             stg_nic_env_fp.write(rendered_tmplt)
@@ -2617,16 +2647,9 @@ class Director(InfraHost):
         tmplt_data["NodeUserData"] = first_boot_file
         _vlan_range = "physint:{},physext".format(setts.tenant_vlan_range)
         tmplt_data["NeutronNetworkVLANRanges"] = _vlan_range
-        param_def = tmplt_data["parameter_defaults"] = {}
-        role = self._generate_cc_role(node_type)
-        edge_subnet = self._generate_subnet_name(node_type)
-        role_subnet_key = role + 'ConrolPlaneSubnet'
-        param_def[role_subnet_key] = edge_subnet
-        xtra_cfg_key = role + 'ExtraConfig'
-        param_def[xtra_cfg_key] = self._generate_extra_config(node_type)
-        role_count_key = role + 'Count'
-        nodes = setts.node_types_map[node_type]
-        param_def[role_count_key] = len(nodes)
+        tmplt_data["parameter_defaults"] = self._generate_dell_env_edge(
+            node_type)
+
         rendered_tmplt = tmplt.render(**tmplt_data)
         with open(stg_dell_env_path, 'w') as stg_dell_env_fp:
             stg_dell_env_fp.write(rendered_tmplt)
@@ -2684,17 +2707,6 @@ class Director(InfraHost):
         with open(stg_net_env_path, 'w') as stg_net_env_fp:
             stg_net_env_fp.write(rendered_tmplt)
         self.upload_file(stg_net_env_path, net_env_file)
-
-    def _fetch_network_environment_params(self):
-        stg_net_env_file = os.path.join(STAGING_TEMPLATES_PATH,
-                                        NET_ENV + ".yaml")
-        oc_net_env_file = os.path.join(self.templates_dir,
-                                       NET_ENV + ".yaml")
-        self.download_file(stg_net_env_file, oc_net_env_file)
-        with open(stg_net_env_file) as stg_net_env_fp:
-            net_env_yaml = yaml.load(stg_net_env_fp)
-            param_defaults = net_env_yaml["parameter_defaults"]
-            return param_defaults
 
     def subnet_routes_edge(self, node_type, add=True):
         logger.info("Configuring routes for {}, add or "
@@ -2852,6 +2864,157 @@ class Director(InfraHost):
                     "creation_time": "",
                     "stack_status": "Not Deployed"}
         return info
+
+    def _fetch_network_environment_params(self):
+        stg_net_env_file = os.path.join(STAGING_TEMPLATES_PATH,
+                                        NET_ENV + ".yaml")
+        oc_net_env_file = os.path.join(self.templates_dir,
+                                       NET_ENV + ".yaml")
+        self.download_file(stg_net_env_file, oc_net_env_file)
+        with open(stg_net_env_file) as stg_net_env_fp:
+            net_env_yaml = yaml.load(stg_net_env_fp)
+            param_defaults = net_env_yaml["parameter_defaults"]
+            return param_defaults
+
+    def _generate_dell_env_edge(self, node_type):
+        setts = self.settings
+        nfv_type = self._get_nfv_type(node_type)
+        is_numa = self._is_numa_enabled(node_type)
+        is_hpg = self._is_huge_pages_enabled(node_type)
+        params = {}
+        role = self._generate_cc_role(node_type)
+        edge_subnet = self._generate_subnet_name(node_type)
+        role_subnet_key = role + 'ConrolPlaneSubnet'
+        params[role_subnet_key] = edge_subnet
+        xtra_cfg_key = role + 'ExtraConfig'
+        params[xtra_cfg_key] = self._generate_extra_config(node_type)
+        role_count_key = role + 'Count'
+        nodes = setts.node_types_map[node_type]
+        params[role_count_key] = len(nodes)
+        if nfv_type or is_numa or is_hpg:
+            self.set_nfv_parameters(node_type)
+            dell_env_params = self.nfv_parameters["dell_env"]
+            role_param_k = "{}Parameters".format(role)
+            role_params = params[role_param_k] = {}
+            role_params["KernelArgs"] = dell_env_params["KernelArgs"]
+            if is_numa:
+                nova_cpu_set = dell_env_params["NovaComputeCpuDedicatedSet"]
+                params["NovaComputeCpuDedicatedSet"] = nova_cpu_set
+        return params
+
+    def _generate_dpdk_params_edge(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        role = self._generate_cc_role(node_type)
+
+        self.set_nfv_parameters(node_type)
+        dpdk_res = self.nfv_parameters["dpdk"]
+        params = {}
+        HostNicDriver = node_type_data["HostNicDriver"]
+        params["OvsDpdkDriverType"] = HostNicDriver
+        role_param_k = "{}Parameters".format(role)
+        role_params = params[role_param_k] = {}
+        role_params["OvsDpdkCoreList"] = dpdk_res["OvsDpdkCoreList"]
+        role_params["NovaComputeCpuSharedSet"] = dpdk_res["NovaComputeCpuSharedSet"]
+        role_params["OvsPmdCoreList"] = dpdk_res["OvsPmdCoreList"]
+        role_params["OvsDpdkSocketMemory"] = dpdk_res["OvsDpdkSocketMemory"]
+        role_params["IsolCpusList"] = dpdk_res["IsolCpusList"]
+        # Unmodified params
+        role_params["OvsDpdkMemoryChannels"] = "4"
+        role_params["NovaReservedHostMemory"] = 4096
+        role_params["TunedProfileName"] = "cpu-partitioning"
+        role_params["NovaLibvirtRxQueueSize"] = 1024
+        role_params["NovaLibvirtTxQueueSize"] = 1024
+        role_params["VhostuserSocketGroup"] = "hugetlbfs"
+        return params
+
+    def _generate_sriov_params_edge(self, node_type):
+        setts = self.settings
+        ntd = setts.node_type_data_map[node_type]
+        sriov_interfaces = self.get_sriov_compute_interfaces_edge(node_type)
+        params = {}
+        sriov_map_setting = []
+        sriov_pci_passthrough = []
+        physical_network = "physint"
+        for interface in sriov_interfaces:
+            mapping = physical_network + ':' + interface
+            nova_pci = {"devname": interface,
+                        "physical_network": physical_network}
+            sriov_map_setting.append(mapping)
+            sriov_pci_passthrough.append(nova_pci)
+
+        sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"
+        params["NumSriovVfs"] = ntd["sriov_vf_count"]
+        params["NeutronPhysicalDevMappings"] = sriov_map_setting
+        params["NovaPCIPassthrough"] = sriov_pci_passthrough
+        return params
+
+    def _create_assign_role_command(self, node, role, index, instack=None):
+        logger.debug("Create assign role command for node: %s", str(node))
+        node_identifier = ""
+        if hasattr(node, 'service_tag'):
+            node_identifier = node.service_tag
+        else:
+            node_identifier = node.idrac_ip
+
+        skip_raid_config = ""
+        if node.skip_raid_config:
+            skip_raid_config = "-s"
+
+        skip_bios_config = ""
+        if node.skip_bios_config:
+            skip_bios_config = "-b"
+
+        os_volume_size_gb = ""
+        if hasattr(node, 'os_volume_size_gb'):
+            os_volume_size_gb = "-o {}".format(node.os_volume_size_gb)
+
+        cmd = ('./assign_role.py {} {} {} {} {}-{}'.format(
+            os_volume_size_gb,
+            skip_raid_config,
+            skip_bios_config,
+            node_identifier,
+            role,
+            str(index)))
+
+        if instack:
+            cmd += " -n " + instack
+
+        return cmd
+
+    def _backup_tempest_conf(self):
+        logger.info("Backing up tempest.conf")
+        if self.is_tempest_conf():
+            timestamp = int(round(time.time() * 1000))
+            new_conf = (self.tempest_conf + "." + str(timestamp))
+            logger.debug("Backing up tempest.conf, new file is: %s "
+                         % new_conf)
+            cmd = ("mv " + self.tempest_conf + " " + new_conf + " 2>/dev/null")
+            self.run_tty(cmd)
+
+    def _is_ovs_dpdk_required(self, node_type):
+        nfv_type = self._get_nfv_type(node_type)
+        return nfv_type in (OVS_DPDK, BOTH)
+
+    def _is_sriov_required(self, node_type):
+        nfv_type = self._get_nfv_type(node_type)
+        return nfv_type in (SRIOV, BOTH)
+
+    def  _is_numa_enabled(self, node_type):
+        setts = self.settings
+        ntd = setts.node_type_data_map[node_type]
+        if "numa_enable" in ntd:
+            return self.string_to_bool(ntd["numa_enable"])
+        else:
+            return False
+
+    def  _is_huge_pages_enabled(self, node_type):
+        setts = self.settings
+        ntd = setts.node_type_data_map[node_type]
+        if "hpg_enable" in ntd:
+            return self.string_to_bool(ntd["hpg_enable"])
+        else:
+            return False
 
     @directory_check(STAGING_PATH)
     def _download_and_parse_undercloud_conf(self):
@@ -3196,6 +3359,7 @@ class Director(InfraHost):
         role_d['name'] = role_name
         role_d['description'] = role_name + " compute node role."
         role_d['CountDefault'] = 0
+        node_type_data = self.settings.node_type_data_map[node_type]
 
         _int_api_name = INTERNAL_API_NET[0] + role_name
         _int_api_subnet = self._generate_subnet_name(INTERNAL_API_NET[1]
@@ -3230,10 +3394,23 @@ class Director(InfraHost):
         role_d['uses_deprecated_params'] = False
         role_d["update_serial"] = 25
         role_d['ServicesDefault'] = self._get_default_compute_services()
+
+        if self._is_ovs_dpdk_required(node_type):
+            for service in DPDK_SERVICES:
+                role_d['ServicesDefault'].append(
+                    "OS::TripleO::Services::{}".format(service))
+
+        if self._is_sriov_required(node_type):
+            for service in SRIOV_SERVICES:
+                role_d['ServicesDefault'].append(
+                    "OS::TripleO::Services::{}".format(service))
+
         return role_d
 
-    def _generate_nic_params(self, node_type, num_nics):
+    def _generate_nic_params(self, node_type):
         role = self._generate_cc_role(node_type)
+        node_type_data = self.settings.node_type_data_map[node_type]
+        num_nics = int(node_type_data['nic_port_count'])
         params = {}
         has_provsioning_nic = self._has_provisioning_nic(num_nics)
 
@@ -3335,21 +3512,53 @@ class Director(InfraHost):
         if has_provsioning_nic:
             prov_if = role + 'ProvisioningInterface'
             params[prov_if] = {"default": '', "type": "string"}
+        # Set NFV params
+        if num_nics > 5 and 'nfv_type' in node_type_data:
+            nfv_nics = self._get_nfv_nics(node_type)
+            nfv_type = self._get_nfv_type(node_type)
+            if nfv_type in [OVS_DPDK, SRIOV]:
+                for num, _if in enumerate(nfv_nics, start=1):
+                    _if_p = "{}{}Interface{}".format(role,
+                                                     nfv_type,
+                                                     num)
+                    params[_if_p] = {"default": '', "type": "string"}
+            elif nfv_type == BOTH:
+                for num, _if in enumerate(nfv_nics, start=1):
+                    _type = DPDK_K if num < 3 else SRIOV_K
+                    _if_p = "{}{}Interface{}".format(role,
+                                                     NFV_TYPE_MAP[_type],
+                                                     num)
+                    params[_if_p] = {"default": '', "type": "string"}
+            if nfv_type in [OVS_DPDK, BOTH]:
+                _drv_k = "{}HostNicDriver".format(role)
+                params[_drv_k] = {"default": '', "type": "string"}
+                _dpdk_k = "{}BondInterfaceOvsOptions".format(role)
+                params[_dpdk_k] = {"default": '', "type": "string"}
+                _q_k = "{}NumDpdkInterfaceRxQueues".format(role)
+                params[_q_k] = {"default": 1, "type": "number"}
+            elif nfv_type in [SRIOV, BOTH]:
+                _sriov_k = "{}BondInterfaceSriovOptions".format(role)
+                params[_sriov_k] = {"default": '', "type": "string"}
+                _mtu = "{}DefaultBondMtu".format(role)
+                params[_mtu] = {"default": 1500, "type": "number"}
+                _numsriovfs = "{}NumSriovVfs".format(role)
+                params[_numsriovfs] = {"default": '', "type": "number"}
+
         return params
 
-    def _generate_nic_environment_edge(self, node_type, num_nics):
+    def _generate_nic_environment_edge(self, node_type):
         """Generate default_parameters subsequently injected into
         nic_environment_[edge_site].yaml for a specific edge site.
 
         :param node_type: one of the node types defined in .ini file
-        :param num_nics: integer representing the number of nics
-        from [node_type] stanza in ini.
-        :returns: OrderedDict of params added to the template's
+        :returns: dict of params added to the template's
         parameter_defaults map.
         """
-        logger.debug("_generate_nic_environment_edge called!")
+        logger.debug("Generating nic environment parameters "
+                     "for {}".format(node_type))
         setts = self.settings
         node_type_data = setts.node_type_data_map[node_type]
+        num_nics = int(node_type_data['nic_port_count'])
         role = self._generate_cc_role(node_type)
         has_provsioning_nic = self._has_provisioning_nic(num_nics)
 
@@ -3381,9 +3590,51 @@ class Director(InfraHost):
         if has_provsioning_nic:
             prov_if = role + 'ProvisioningInterface'
             params[prov_if] = node_type_data['ProvisioningInterface']
+        # Set NFV params
+        if num_nics > 5 and 'nfv_type' in node_type_data:
+            nfv_nics = self._get_nfv_nics(node_type)
+            nfv_type = self._get_nfv_type(node_type)
+            # verify we have the right number of nfv nics
+            if (len(nfv_nics) + 4) != (num_nics - (num_nics % 2)):
+                raise AssertionError("The number of nics ({}) specified "
+                                     "for edge site {} does not match what "
+                                     "is defined in the edge site's "
+                                     "nfv_interfaces attribute ({}), "
+                                     "please verify your "
+                                     "configuration ".format(num_nics,
+                                                             node_type,
+                                                             str(nfv_nics)))
+
+            if nfv_type in (SRIOV, OVS_DPDK):
+                for num, _if in enumerate(nfv_nics, start=1):
+                    _if_p = "{}{}Interface{}".format(role,
+                                                     nfv_type,
+                                                     num)
+                    params[_if_p] = _if
+            elif nfv_type == BOTH:
+                for num, _if in enumerate(nfv_nics, start=1):
+                    _type = DPDK_K if num < 3 else SRIOV_K
+                    _if_p = "{}{}Interface{}".format(role,
+                                                     NFV_TYPE_MAP[_type],
+                                                     num)
+                    params[_if_p] = _if
+            if nfv_type in (OVS_DPDK, BOTH):
+                _drv_k = "{}HostNicDriver".format(role)
+                params[_drv_k] = node_type_data["HostNicDriver"]
+                _dpdk_k = "{}BondInterfaceOvsOptions".format(role)
+                params[_dpdk_k] = node_type_data["BondInterfaceOvsOptions"]
+                _q_k = "{}NumDpdkInterfaceRxQueues".format(role)
+                params[_q_k] = node_type_data["NumDpdkInterfaceRxQueues"]
+            elif nfv_type in (SRIOV, BOTH):
+                _sriov_k = "{}BondInterfaceSriovOptions".format(role)
+                params[_sriov_k] = node_type_data["BondInterfaceSriovOptions"]
+                _mtu = "{}DefaultBondMtu".format(role)
+                params[_mtu] = node_type_data["nfv_mtu"]
+                _numsriovfs = "{}NumSriovVfs".format(role)
+                params[_numsriovfs] = node_type_data["sriov_vf_count"]
         return params
 
-    def _generate_nic_network_config(self, node_type, num_nics):
+    def _generate_nic_network_config(self, node_type):
         """Generate nic configuration template for a node type and network data
         provided.  This results in a file that corresoponds to the node type,
         which is uploaded to the correct nic_configs sub-directory based on the
@@ -3397,12 +3648,12 @@ class Director(InfraHost):
         L3 routing between an edge site and central cloud networks.
 
         :param node_type: one of the node types defined in .ini file
-        :param node_type_data: node type data from node_type stanza in ini.
-        For edge sites node_type_data contains all the networking
-        params a site requires.
         :returns: list of nic configuration dicts
         """
         role = self._generate_cc_role(node_type)
+        node_type_data = self.settings.node_type_data_map[node_type]
+        num_nics = int(node_type_data["nic_port_count"])
+        nfv_type = self._get_nfv_type(node_type)
         has_provsioning_nic = self._has_provisioning_nic(num_nics)
         cp_network = "{}{}".format(role, CONTROL_PLANE_NET[0])
         cp_default_route = "{}DefaultRoute".format(cp_network)
@@ -3412,8 +3663,6 @@ class Director(InfraHost):
         bond_1_if_1_param = role + 'Bond1Interface1'
         bond_1_if_2_param = role + 'Bond1Interface2'
 
-        tenant_br = {"type": "ovs_bridge"}
-        ex_br = {"type": "ovs_bridge"}
         int_api_network = INTERNAL_API_NET[0] + role
         tenant_network = TENANT_NET[0] + role
         storage_network = STORAGE_NET[0] + role
@@ -3440,7 +3689,11 @@ class Director(InfraHost):
                          "next_hop": cp_default_route}
         prov_route = {"ip_netmask": "{}NetCidr".format(CONTROL_PLANE_NET[0]),
                       "next_hop": cp_default_route}
+        cp_addresses = [{"ip": "{}Ip".format(CONTROL_PLANE_NET[0]),
+                         "cidr": "{}SubnetCidr".format(CONTROL_PLANE_NET[0])}]
 
+        tenant_br = {"type": "ovs_bridge"}
+        ex_br = {"type": "ovs_bridge"}
         tenant_br["name"] = "br-tenant"
         tenant_br["mtu"] = "DefaultBondMtu"
         bond_0 = {"type": "linux_bond"}
@@ -3509,10 +3762,9 @@ class Director(InfraHost):
         external_vlan["routes"] = external_interface_routes
         ex_br["members"] = [bond_1, external_vlan]
 
-        _cp_add = [{"ip": "{}Ip".format(CONTROL_PLANE_NET[0]),
-                    "cidr": "{}SubnetCidr".format(CONTROL_PLANE_NET[0])}]
         # if there is a provisioning nic populate the interface attributes
-        if has_provsioning_nic:
+        if ((num_nics < 6 or self._is_sriov_required(node_type))
+                and has_provsioning_nic):
             prov_if_param = role + 'ProvisioningInterface'
             prov_if = {"type": "interface"}
             prov_if["name"] = prov_if_param
@@ -3520,14 +3772,83 @@ class Director(InfraHost):
             prov_if["mtu"] = "ProvisioningMtu"
             prov_if["use_dhcp"] = False
             prov_if["dns_servers"] = "DnsServers"
-            prov_if["addresses"] = _cp_add
-            return [prov_if, tenant_br, ex_br]
-        else:  # no provisioning interface add routes to tenant bridge
+            prov_if["addresses"] = cp_addresses
+            if num_nics < 6:
+                return [prov_if, tenant_br, ex_br]
+        elif num_nics < 6 or self._is_sriov_required(node_type):
             tenant_br["use_dhcp"] = False
             tenant_br["dns_servers"] = "DnsServers"
-            tenant_br["addresses"] = _cp_add
+            tenant_br["addresses"] = cp_addresses
             tenant_br["routes"] = [ec2_route, default_route, prov_route]
-            return [tenant_br, ex_br]
+            if num_nics < 6:  # no SRIOV return
+                return [tenant_br, ex_br]
+        elif self._is_ovs_dpdk_required(node_type):
+            tenant_br = {"type": "ovs_user_bridge",
+                         "name": "br-tenant"}
+            tenant_br["mtu"] = "DefaultBondMtu"
+            tenant_br["use_dhcp"] = False
+            tenant_br["ovs_extra"] = {"template":
+                "set port br-tenant tag=_VLAN_TAG_",
+                "tenant_vlan_id": tenant_vlan_id}
+
+            dpdk_bond_0 = {"type": "ovs_dpdk_bond",
+                           "name": "dpdkbond0"}
+            dpdk_bond_0["rx_queue"] = "{}NumDpdkInterfaceRxQueues".format(role)
+            dpdk_bond_0["ovs_options"] = "{}BondInterfaceOvsOptions".format(
+                role)
+            dpdk_bond_0["mtu"] = "DefaultBondMtu"
+            dpdk_bond_0["members"] = []
+            nfv_nics = self._get_nfv_nics(node_type)
+            for num, _if in enumerate(nfv_nics, start=0):
+                _if_p = "{}{}Interface{}".format(role,
+                                                 nfv_type,
+                                                 num + 1)
+
+                dpdk_port = {"type": "ovs_dpdk_port",
+                             "name": "dpdk{}".format(num)}
+                dpdk_port["mtu"] = "DefaultBondMtu"
+                dpdk_port["driver"] = "{}HostNicDriver".format(role)
+                dpdk_port["members"] = [{"type": "interface",
+                                         "name": _if_p}]
+                dpdk_bond_0["members"].append(dpdk_port)
+            tenant_br["members"] = [dpdk_bond_0]
+            bond_0["use_dhcp"] = False
+            bond_0["dns_servers"] = "DnsServers"
+            bond_0["addresses"] = cp_addresses
+            bond_0["routes"] = [ec2_route, default_route, prov_route]
+            return [bond_0, internal_api_vlan, tenant_vlan, storage_vlan,
+                    tenant_br, bond_1]
+        if self._is_sriov_required(node_type):
+            if has_provsioning_nic:
+                nw_cfg = [prov_if, tenant_br, ex_br]
+            else:
+                nw_cfg = [tenant_br, ex_br]
+            nfv_nics = self._get_nfv_nics(node_type)
+            for idx, nic in enumerate(nfv_nics, start=1):
+                pf = {"type": "sriov_pf"}
+                pf["name"] = "{}SriovInterface{}".format(role, idx)
+                pf["mtu"] = "{}DefaultBondMtu".format(role)
+                pf["numvfs"] = "{}NumSriovVfs".format(role)
+                nw_cfg.append(pf)
+            return nw_cfg
+        elif nfv_type == BOTH:
+            pass
+
+    def _get_nfv_nics(self, node_type):
+        node_type_data = self.settings.node_type_data_map[node_type]
+        if 'nfv_interfaces' not in node_type_data:
+            return None
+        nfv_nics = (list(map(str.strip,
+                             node_type_data['nfv_interfaces'].split(','))))
+        return nfv_nics
+
+    def _get_nfv_type(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        if ("nfv_type" in node_type_data
+                and len(node_type_data["nfv_type"].strip()) != 0):
+            return NFV_TYPE_MAP[node_type_data["nfv_type"]]
+        return None
 
     def _has_provisioning_nic(self, num_nics):
         return bool(num_nics % 2 != 0)
@@ -3817,6 +4138,7 @@ class Director(InfraHost):
 
     def _generate_deploy_cmd_edge(self, node_type):
         setts = self.settings
+        nfv_type = self._get_nfv_type(node_type)
         node_type_lower = self._generate_node_type_lower(node_type)
         role_lower = self._generate_role_lower(node_type)
         edge_site_directory = os.path.join(self.home_dir, role_lower)
@@ -3872,6 +4194,19 @@ class Director(InfraHost):
                                      env_file + ".yaml")
 
             cmd += " -e {} ".format(tmplt)
+        if self._is_ovs_dpdk_required(node_type):
+            _, tmplt = self._generate_edge_template_paths(node_type,
+                                                          NEUTRON_OVS_DPDK)
+            logger.info("deploying edge site with OVS DPDK, "
+                        "template: {}".format(tmplt))
+            cmd += " -e {} ".format(tmplt)
+        elif self._is_sriov_required(node_type):
+            _, tmplt = self._generate_edge_template_paths(node_type,
+                                                          NEUTRON_SRIOV)
+            logger.info("deploying edge site with SRIOV, "
+                        "template: {}".format(tmplt))
+            cmd += " -e {} ".format(tmplt)
+
         cmd += "--libvirt-type kvm "
         cmd += "--ntp-server {} ".format(setts.sah_node.provisioning_ip)
         cmd += " > {edge_site_dir}/{nt_lower}_deploy_out.log 2>&1"
@@ -3897,6 +4232,10 @@ class Director(InfraHost):
                 # Role yamls are always list, even for single-role
                 # template files
                 _srv_defs = compute_yaml[0]['ServicesDefault']
+                # TODO: DistributedCompute role has Etcd service, why?
+                # If we do not need it uncomment below
+                # if "OS::TripleO::Services::Etcd" in _srv_defs:
+                #     _srv_defs.remove("OS::TripleO::Services::Etcd")
                 self.default_compute_services = _srv_defs
         return self.default_compute_services
 

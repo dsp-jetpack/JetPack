@@ -13,7 +13,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+DPDK_K = "dpdk"
+BOTH = "both"
+OVS_DPDK = "OvsDpdk"
+SRIOV_K = "sriov"
+SRIOV = "Sriov"
+NFV_TYPE_MAP = {DPDK_K: OVS_DPDK, SRIOV_K: SRIOV,
+                BOTH: BOTH}
+DPDK_SERVICES = ["ComputeNeutronOvsDpdk", "OvsDpdkNetcontrold", "Rear"]
+SRIOV_SERVICES = ["NeutronSriovAgent", "NeutronSriovHostConfig", "Rear"]
 CTLPLANE_BRIDGE = "br-ctlplane"
 PUBLIC_API_IF = "enp1s0"
 PROVISIONING_IF = "enp2s0"
@@ -46,6 +54,8 @@ ROLES_DATA = 'roles_data'
 NETWORK_DATA = 'network_data'
 NET_ISO = 'network-isolation'
 CONTROLLER = 'controller'
+NEUTRON_OVS_DPDK = "neutron-ovs-dpdk"
+NEUTRON_SRIOV = "neutron-sriov"
 DEF_COMPUTE_ROLE_FILE = 'DistributedCompute.yaml'
 DEF_COMPUTE_REMOTE_PATH = ('roles/{}'.format(DEF_COMPUTE_ROLE_FILE))
 CONTROL_PLANE_NET = ('ControlPlane', "ctlplane")
@@ -74,6 +84,8 @@ NET_ISO_EDGE_J2 = NET_ISO + "-edge" + J2_EXT
 SITE_NAME_EDGE_J2 = SITE_NAME + "-edge" + J2_EXT
 SITE_NAME_J2 = SITE_NAME + J2_EXT
 OVERRIDES_EDGE_J2 = OVERRIDES + "-edge" + J2_EXT
+NEUTRON_OVS_DPDK_EDGE_J2 = NEUTRON_OVS_DPDK + "-edge" + J2_EXT
+NEUTRON_SRIOV_EDGE_J2 = NEUTRON_SRIOV + "-edge" + J2_EXT
 
 EC2_IPCIDR = '169.254.169.254/32'
 EC2_PUBLIC_IPCIDR_PARAM = 'EC2MetadataPublicIpCidr'
