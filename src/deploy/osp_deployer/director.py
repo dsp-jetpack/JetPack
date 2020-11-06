@@ -3662,8 +3662,11 @@ class Director(InfraHost):
         role = self._generate_cc_role(node_type)
         node_type_data = self.settings.node_type_data_map[node_type]
         num_nics = int(node_type_data["nic_port_count"])
+        has_provisioning_nic = self._has_provisioning_nic(num_nics)
+        dpdk_ports, sriov_pfs = self._get_nfv_nics_by_type(node_type)
         nfv_type = self._get_nfv_type(node_type)
-        has_provsioning_nic = self._has_provisioning_nic(num_nics)
+        is_sriov_req = self._is_sriov_required(node_type)
+        is_dpdk_req = self._is_ovs_dpdk_required(node_type)
         nw_cfg = []
         cp_network = "{}{}".format(role, CONTROL_PLANE_NET[0])
         cp_default_route = "{}DefaultRoute".format(cp_network)
@@ -3702,8 +3705,7 @@ class Director(InfraHost):
         cp_addresses = [{"ip": "{}Ip".format(CONTROL_PLANE_NET[0]),
                          "cidr": "{}SubnetCidr".format(CONTROL_PLANE_NET[0])}]
 
-        tenant_br = {"type": "ovs_bridge"}
-        ex_br = {"type": "ovs_bridge"}
+        tenant_br = {"type": "ovs_user_bridge"}
         tenant_br["name"] = "br-tenant"
         tenant_br["mtu"] = "DefaultBondMtu"
         bond_0 = {"type": "linux_bond"}
@@ -3747,7 +3749,7 @@ class Director(InfraHost):
 
         tenant_br["members"] = [bond_0, internal_api_vlan,
                                 tenant_vlan, storage_vlan]
-
+        ex_br = {"type": "ovs_user_bridge"}
         ex_br["name"] = "bridge_name"
         ex_br["mtu"] = "DefaultBondMtu"
         bond_1_if_1 = {"type": "interface"}
@@ -3762,8 +3764,9 @@ class Director(InfraHost):
         bond_1["bonding_options"] = "ComputeBondInterfaceOptions"
         bond_1["mtu"] = "DefaultBondMtu"
         bond_1["members"] = [bond_1_if_1, bond_1_if_2]
+
         external_vlan = {"type": "vlan"}
-        external_vlan["device"] = "bond0"
+        external_vlan["device"] = "bond1"
         external_vlan["vlan_id"] = external_vlan_id
         external_vlan["mtu"] = "DefaultBondMtu"
         external_vlan["addresses"] = [
@@ -3771,10 +3774,9 @@ class Director(InfraHost):
 
         external_vlan["routes"] = external_interface_routes
         ex_br["members"] = [bond_1, external_vlan]
-        dpdk_ports, sriov_pfs = self._get_nfv_nics_by_type(node_type)
+        prov_if = None
         # if there is a provisioning nic populate the interface attributes
-        if ((num_nics < 6 or self._is_sriov_required(node_type))
-                and has_provsioning_nic):
+        if (has_provisioning_nic):
             prov_if_param = role + 'ProvisioningInterface'
             prov_if = {"type": "interface"}
             prov_if["name"] = prov_if_param
@@ -3783,24 +3785,29 @@ class Director(InfraHost):
             prov_if["use_dhcp"] = False
             prov_if["dns_servers"] = "DnsServers"
             prov_if["addresses"] = cp_addresses
-            if num_nics < 6:
-                nw_cfg.extend([prov_if, tenant_br, ex_br])
+            nw_cfg.extend([prov_if])
 
-        elif num_nics < 6 or self._is_sriov_required(node_type):
-            tenant_br["use_dhcp"] = False
-            tenant_br["dns_servers"] = "DnsServers"
+        if not nfv_type:
             tenant_br["addresses"] = cp_addresses
             tenant_br["routes"] = [ec2_route, default_route, prov_route]
-            if num_nics < 6:  # no SRIOV return
+            nw_cfg.extend([tenant_br, ex_br])
+
+        if is_sriov_req:
+            tenant_br["use_dhcp"] = False
+            tenant_br["dns_servers"] = "DnsServers"
+            if not has_provisioning_nic:
+                tenant_br["addresses"] = cp_addresses
+                tenant_br["routes"] = [ec2_route, default_route, prov_route]
+            if nfv_type == "sriov":
                 nw_cfg.extend([tenant_br, ex_br])
-        elif self._is_ovs_dpdk_required(node_type):
-            tenant_br = {"type": "ovs_user_bridge",
-                         "name": "br-tenant"}
+            nw_cfg.extend(sriov_pfs)
+
+        if is_dpdk_req:
             tenant_br["mtu"] = "DefaultBondMtu"
             tenant_br["use_dhcp"] = False
             tenant_br["ovs_extra"] = {"template":
-                "set port br-tenant tag=_VLAN_TAG_",
-                "tenant_vlan_id": tenant_vlan_id}
+                                      "set port br-tenant tag=_VLAN_TAG_",
+                                      "tenant_vlan_id": tenant_vlan_id}
             dpdk_bond_0 = {"type": "ovs_dpdk_bond",
                            "name": "dpdkbond0"}
             dpdk_bond_0["rx_queue"] = "{}NumDpdkInterfaceRxQueues".format(role)
@@ -3812,16 +3819,11 @@ class Director(InfraHost):
             tenant_br["members"] = [dpdk_bond_0]
             bond_0["use_dhcp"] = False
             bond_0["dns_servers"] = "DnsServers"
-            bond_0["addresses"] = cp_addresses
-            bond_0["routes"] = [ec2_route, default_route, prov_route]
+            if not has_provisioning_nic:
+                bond_0["addresses"] = cp_addresses
+                bond_0["routes"] = [ec2_route, default_route, prov_route]
             nw_cfg.extend([bond_0, internal_api_vlan, tenant_vlan,
-                           storage_vlan, tenant_br, bond_1])
-        if self._is_sriov_required(node_type):
-            if has_provsioning_nic:
-                nw_cfg.extend([prov_if, tenant_br, ex_br])
-            else:
-                nw_cfg.extend([tenant_br, ex_br])
-            nw_cfg.extend(sriov_pfs)
+                           storage_vlan, tenant_br, bond_1, external_vlan])
 
         return nw_cfg
 
