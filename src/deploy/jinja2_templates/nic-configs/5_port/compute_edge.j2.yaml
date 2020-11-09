@@ -229,7 +229,7 @@ resources:
                   next_hop:
                     get_param: {{route.next_hop}}
                   {%- endfor %}
-                {% elif cfg.type == 'ovs_bridge' %}
+                {% elif cfg.type == 'ovs_user_bridge' %}
                 members:
                   {%- for bridge_member in cfg.members %}
                   - type: {{bridge_member.type}}

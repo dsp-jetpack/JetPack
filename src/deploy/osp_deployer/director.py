@@ -3776,7 +3776,7 @@ class Director(InfraHost):
         ex_br["members"] = [bond_1, external_vlan]
         prov_if = None
         # if there is a provisioning nic populate the interface attributes
-        if (has_provisioning_nic):
+        if has_provisioning_nic:
             prov_if_param = role + 'ProvisioningInterface'
             prov_if = {"type": "interface"}
             prov_if["name"] = prov_if_param
@@ -3788,8 +3788,9 @@ class Director(InfraHost):
             nw_cfg.extend([prov_if])
 
         if not nfv_type:
-            tenant_br["addresses"] = cp_addresses
-            tenant_br["routes"] = [ec2_route, default_route, prov_route]
+            if not has_provisioning_nic:
+                tenant_br["addresses"] = cp_addresses
+                tenant_br["routes"] = [ec2_route, default_route, prov_route]
             nw_cfg.extend([tenant_br, ex_br])
 
         if is_sriov_req:
@@ -3824,7 +3825,6 @@ class Director(InfraHost):
                 bond_0["routes"] = [ec2_route, default_route, prov_route]
             nw_cfg.extend([bond_0, internal_api_vlan, tenant_vlan,
                            storage_vlan, tenant_br, bond_1, external_vlan])
-
         return nw_cfg
 
     def _get_nfv_nics_by_type(self, node_type):
