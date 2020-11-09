@@ -3791,6 +3791,7 @@ class Director(InfraHost):
             if not has_provisioning_nic:
                 tenant_br["addresses"] = cp_addresses
                 tenant_br["routes"] = [ec2_route, default_route, prov_route]
+                tenant_br["dns_servers"] = "DnsServers"
             nw_cfg.extend([tenant_br, ex_br])
 
         if is_sriov_req:
