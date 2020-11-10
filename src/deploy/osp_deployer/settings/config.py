@@ -250,8 +250,8 @@ class Settings:
         self.subscription_manager_pool_vm_rhel = rhsm_settings[
             'subscription_manager_pool_vm_rhel']
         if 'subscription_check_retries' in rhsm_settings:
-            self.subscription_check_retries = rhsm_settings[
-                'subscription_check_retries']
+            self.subscription_check_retries = int(rhsm_settings[
+                'subscription_check_retries'])
         else:
             self.subscription_check_retries = 20
         if rhsm_settings['use_satellite'].lower() == 'true':
