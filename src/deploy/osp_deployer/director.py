@@ -3705,9 +3705,11 @@ class Director(InfraHost):
         cp_addresses = [{"ip": "{}Ip".format(CONTROL_PLANE_NET[0]),
                          "cidr": "{}SubnetCidr".format(CONTROL_PLANE_NET[0])}]
 
-        tenant_br = {"type": "ovs_user_bridge"}
+        tenant_br = {"type": "ovs_bridge"}
         tenant_br["name"] = "br-tenant"
         tenant_br["mtu"] = "DefaultBondMtu"
+        tenant_br["dns_servers"] = "DnsServers"
+        tenant_br["use_dhcp"] = False
         bond_0 = {"type": "linux_bond"}
         bond_0["name"] = "bond0"
         bond_0["bonding_options"] = "ComputeBondInterfaceOptions"
@@ -3749,7 +3751,7 @@ class Director(InfraHost):
 
         tenant_br["members"] = [bond_0, internal_api_vlan,
                                 tenant_vlan, storage_vlan]
-        ex_br = {"type": "ovs_user_bridge"}
+        ex_br = {"type": "ovs_bridge"}
         ex_br["name"] = "bridge_name"
         ex_br["mtu"] = "DefaultBondMtu"
         bond_1_if_1 = {"type": "interface"}
@@ -3787,26 +3789,17 @@ class Director(InfraHost):
             prov_if["addresses"] = cp_addresses
             nw_cfg.extend([prov_if])
 
-        if not nfv_type:
+        if not nfv_type or nfv_type == SRIOV:
             if not has_provisioning_nic:
                 tenant_br["addresses"] = cp_addresses
                 tenant_br["routes"] = [ec2_route, default_route, prov_route]
-                tenant_br["dns_servers"] = "DnsServers"
             nw_cfg.extend([tenant_br, ex_br])
 
         if is_sriov_req:
-            tenant_br["use_dhcp"] = False
-            tenant_br["dns_servers"] = "DnsServers"
-            if not has_provisioning_nic:
-                tenant_br["addresses"] = cp_addresses
-                tenant_br["routes"] = [ec2_route, default_route, prov_route]
-            if nfv_type == "sriov":
-                nw_cfg.extend([tenant_br, ex_br])
             nw_cfg.extend(sriov_pfs)
 
         if is_dpdk_req:
-            tenant_br["mtu"] = "DefaultBondMtu"
-            tenant_br["use_dhcp"] = False
+            tenant_br["type"] = "ovs_user_bridge"
             tenant_br["ovs_extra"] = {"template":
                                       "set port br-tenant tag=_VLAN_TAG_",
                                       "tenant_vlan_id": tenant_vlan_id}
