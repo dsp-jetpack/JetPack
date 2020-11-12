@@ -85,6 +85,7 @@ class Director(InfraHost):
 
         self.jinja2_env = Environment(
             loader=FileSystemLoader(self.settings.jinja2_templates))
+         
         self.nfv_parameters = {}
 
         cmd = "mkdir -p " + self.pilot_dir
@@ -169,6 +170,7 @@ class Director(InfraHost):
         self.run(cmd)
 
 
+
     def install_director(self):
         logger.info("Installing the undercloud")
         if self.settings.use_satellite:
@@ -189,6 +191,8 @@ class Director(InfraHost):
 
         if len(self.settings.overcloud_nodes_pwd) > 0:
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
+        if self.settings.enable_powerflex_backend is True:
+            cmd += " --enable_powerflex"
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
             raise AssertionError("Director/Undercloud did not "
@@ -243,10 +247,11 @@ class Director(InfraHost):
                 setts.management_allocation_pool_end
 
             # Discover the nodes using static IPs for the iDRAC
-            for node in (self.settings.controller_nodes
-                         + self.settings.compute_nodes
-                         + self.settings.ceph_nodes
-                         + self.settings.computehci_nodes):
+            for node in (self.settings.controller_nodes +
+                         self.settings.compute_nodes +
+                         self.settings.ceph_nodes +
+                         self.settings.computehci_nodes +
+                         self.settings.powerflex_nodes ):
                 if hasattr(node, "idrac_ip"):
                     cmd += ' ' + node.idrac_ip
 
@@ -272,6 +277,7 @@ class Director(InfraHost):
         expected_nodes = (len(self.settings.controller_nodes)
                           + len(self.settings.compute_nodes)
                           + len(self.settings.ceph_nodes)
+                          + len(self.settings.powerflex_nodes)
                           + len(self.settings.computehci_nodes))
         found = self.run_tty(
             "grep pm_addr ~/instackenv.json | wc -l")[0].rstrip()
@@ -475,6 +481,7 @@ class Director(InfraHost):
         roles_to_nodes["compute"] = setts.compute_nodes
         roles_to_nodes["storage"] = setts.ceph_nodes
         roles_to_nodes["computehci"] = setts.computehci_nodes
+        roles_to_nodes["powerflex"] = setts.powerflex_nodes
 
         threads = []
         for role in roles_to_nodes.keys():
@@ -548,7 +555,8 @@ class Director(InfraHost):
         non_sah_nodes = (setts.controller_nodes
                          + setts.compute_nodes
                          + setts.computehci_nodes
-                         + setts.ceph_nodes)
+                         + setts.ceph_nodes
+                         + setts.powerflex_nodes)
 
         for node_type, edge_site_nodes in setts.node_types_map.items():
             non_sah_nodes.extend(edge_site_nodes)
@@ -583,7 +591,8 @@ class Director(InfraHost):
         self.setup_networking()
         self.setup_dell_storage()
         self.setup_manila()
-        self.setup_environment()
+        if self.settings.enable_powerflex_backend == False:
+            self.setup_environment()
         self.setup_sanity_ini()
         self.render_and_upload_site_name()
 
@@ -966,6 +975,23 @@ class Director(InfraHost):
         else:
             self.setup_powermax_cinder(dell_powermax_fc_cinder_yaml)
 
+        # PowerFlex
+        dell_powerflex_cinder_yaml = self.templates_dir + \
+            "/dellemc-powerflex-cinder-backend.yaml"
+        self.upload_file(self.settings.dell_powerflex_cinder_yaml,
+                         dell_powerflex_cinder_yaml)
+        self.run_tty("cp " + dell_powerflex_cinder_yaml +
+                     " " + dell_powerflex_cinder_yaml + ".bak")
+
+        dell_powerflex_custom_mapping_yaml = self.templates_dir + \
+            "/custom-dellemc-volume-mappings.yaml"
+        self.upload_file(self.settings.dell_powerflex_volume_mapping_yaml,
+                         dell_powerflex_custom_mapping_yaml)
+
+        dell_powerflex_ansible_yaml = self.templates_dir  + \
+            "/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml"
+        self.setup_powerflex(dell_powerflex_cinder_yaml,dell_powerflex_ansible_yaml)
+
         # Enable multiple backends now
         enabled_backends = "["
 
@@ -1274,6 +1300,73 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
 
+    def setup_powerflex(self, powerflex_cinder_yaml, powerflex_ansible_yaml):
+
+        if self.settings.enable_powerflex_backend is False:
+            logger.debug("Not setting up powerflex backend.")
+            return
+
+        logger.debug("Configuring dell emc powerflex backend.")
+
+        cmds = [ 'sed -i "s|<powerflex_san_ip>|' +
+                self.settings.powerflexgw_vm.storage_ip +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_san_login>|' +
+                self.settings.powerflex_san_login +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_san_password>|' +
+                self.settings.powerflex_san_password +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_storage_pools>|' +
+                self.settings.powerflex_storage_pools +
+                '|" ' + powerflex_cinder_yaml,
+                ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
+        logger.debug("Configuring ansible playbook for powerflex deployment.")
+
+        cmds = ['sed -i "s|<powerflex_rpms_method>|' +
+                self.settings.powerflex_rpms_method +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_rpms_path>|' +
+                self.settings.powerflex_rpms_path +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_name>|' +
+                self.settings.powerflex_cluster_name +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_protection_domain>|' +
+                self.settings.powerflex_protection_domain +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_storage_pool>|' +
+                self.settings.powerflex_storage_pool +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_config>|' +
+                self.settings.powerflex_cluster_config +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_mgmt_interface>|' +
+                self.settings.powerflex_mgmt_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_interface>|' +
+                self.settings.powerflex_cluster_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_vip>|' +
+                self.settings.powerflex_cluster_vip +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_rebuild_interface>|' +
+                self.settings.powerflex_rebuild_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_password>|' +
+                self.settings.powerflex_password +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_lia_token>|' +
+                self.settings.powerflex_lia_token +
+                '|" ' + powerflex_ansible_yaml,
+                ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
+
     def setup_net_envt(self):
 
         logger.debug("Configuring network-environment.yaml for overcloud")
@@ -1500,6 +1593,20 @@ class Director(InfraHost):
                     computehci_storage_ips += "\\n"
                     computehci_cluster_ips += "\\n"
 
+            powerflex_private_ips = ''
+            powerflex_storage_ips = ''
+            powerflex_cluster_ips = ''
+
+            for node in self.settings.powerflex_nodes:
+                powerflex_private_ips += "    - " + node.private_api_ip
+                powerflex_storage_ips += "    - " + node.storage_ip
+                powerflex_cluster_ips += "    - " + node.storage_cluster_ip
+                if node != self.settings.powerflex_nodes[-1]:
+                    powerflex_private_ips += "\\n"
+                    powerflex_storage_ips += "\\n"
+                    powerflex_cluster_ips += "\\n"
+
+
             storage_storgage_ip = ''
             storage_cluster_ip = ''
             for node in self.settings.ceph_nodes:
@@ -1547,6 +1654,14 @@ class Director(InfraHost):
                            'sed -i "/DellComputeHCIIPs:/,/storage_mgmt:/s/storage_mgmt:/storage_mgmt: \\n' +
                            computehci_cluster_ips + "/\" " + static_ips_yaml
                           ])
+            if len(self.settings.powerflex_nodes) > 0:
+                cmds.extend(['sed -i "/PowerflexStorageIPs:/,/internal_api:/s/internal_api:/internal_api: \\n' +
+                           powerflex_private_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/PowerflexStorageIPs:/,/storage:/s/storage:/storage: \\n' +
+                           powerflex_storage_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/PowerflexStorageIPs:/,/storage_mgmt:/s/storage_mgmt:/storage_mgmt: \\n' +
+                           powerflex_cluster_ips + "/\" " + static_ips_yaml
+                           ])
 
             for cmd in cmds:
                 self.run_tty(cmd)
@@ -1692,6 +1807,8 @@ class Director(InfraHost):
                                     str(len(self.settings.computehci_nodes)) + \
                                     " --storage " + \
                                     str(len(self.settings.ceph_nodes)) + \
+                                    " --powerflex " + \
+                                    str(len(self.settings.powerflex_nodes)) + \
                                     " --vlan " + \
                                     self.settings.tenant_vlan_range + \
                                     " --nic_env_file " + \
@@ -1757,7 +1874,7 @@ class Director(InfraHost):
         if self.settings.deploy_overcloud_debug:
             cmd += " --debug"
 
-        if self.settings.enable_dashboard is True:
+        if self.settings.enable_dashboard is True and self.settings.enable_powerflex_backend is False:
             cmd += " --dashboard_enable"
         cmd += " > overcloud_deploy_out.log 2>&1"
         self.run_tty(cmd)

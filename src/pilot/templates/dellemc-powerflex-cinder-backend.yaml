@@ -1,0 +1,18 @@
+resource_registry:
+  OS::TripleO::Services::CinderBackendDellEMCVxFlexOS: ./overcloud/deployment/cinder/cinder-backend-dellemc-vxflexos-puppet.yaml
+
+parameter_defaults:
+  CinderEnableVxFlexOSBackend: true
+  CinderVxFlexOSBackendName: 'tripleo_dellemc_powerflex'
+  CinderVxFlexOSSanIp: '<powerflex_san_ip>'
+  CinderVxFlexOSSanLogin: '<powerflex_san_login>'
+  CinderVxFlexOSSanPassword: '<powerflex_san_password>'
+  CinderVxFlexOSStoragePools: '<powerflex_storage_pools>'
+  CinderVxFlexOSAllowMigrationDuringRebuild: false
+  CinderVxFlexOSAllowNonPaddedVolumes: false
+  CinderVxFlexOSMaxOverSubscriptionRatio: 7.0
+  CinderVxFlexOSRestServerPort: 443
+  CinderVxFlexOSUnmapVolumeBeforeDeletion: false
+  CinderVxFlexOSSanThinProvision: true
+  CinderVxFlexOSDriverSSLCertVerify: false
+  CinderVxFlexOSDriverSSLCertPath: ''

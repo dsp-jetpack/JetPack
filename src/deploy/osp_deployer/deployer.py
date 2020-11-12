@@ -24,6 +24,8 @@ from osp_deployer.sah import Sah
 from osp_deployer.settings.config import Settings
 from checkpoints import Checkpoints
 from auto_common import Ipmi, Ssh, Scp
+from osp_deployer.powerflexgw import Powerflexgw
+from osp_deployer.powerflexmgmt import Powerflexmgmt
 from auto_common.constants import *
 from pprint import pformat
 
@@ -281,6 +283,7 @@ def deploy():
             director_vm.configure_tempest()
             os._exit(0)
 
+
         # mutually exclusive command, run tempest and quit.
         if args.run_tempest_only:
             logger.info("Only running tempest, will configure "
@@ -294,7 +297,77 @@ def deploy():
 
         sah_node.upload_iso()
         sah_node.upload_director_scripts()
+        sah_node.upload_powerflexgw_scripts()
+        sah_node.upload_powerflexmgmt_scripts()
         sah_node.enable_chrony_ports()
+
+        director_ip = settings.director_node.public_api_ip
+        if args.overcloud_only is False:
+            Ssh.execute_command(director_ip,
+                                "root",
+                                settings.director_node.root_password,
+                                "subscription-manager remove --all")
+            Ssh.execute_command(director_ip,
+                                "root",
+                                settings.director_node.root_password,
+                                "subscription-manager unregister")
+            logger.info("=== deleting any existing director vm")
+            sah_node.delete_director_vm()
+            if len(settings.powerflex_nodes) > 0:
+                powerflexgw_ip = settings.powerflexgw_vm.public_api_ip
+                Ssh.execute_command(powerflexgw_ip,
+                                    "root",
+                                    settings.powerflexgw_vm.root_password,
+                                    "subscription-manager remove --all")
+                Ssh.execute_command(powerflexgw_ip,
+                                    "root",
+                                    settings.powerflexgw_vm.root_password,
+                                    "subscription-manager unregister")
+                logger.info("=== deleting any existing powerflex gateway vm")
+                sah_node.delete_powerflexgw_vm()
+                
+                if settings.enable_powerflex_mgmt is True:
+                    powerflexmgmt_ip = settings.powerflexmgmt_vm.public_api_ip
+                    Ssh.execute_command(powerflexmgmt_ip,
+                                        "root",
+                                        settings.powerflexmgmt_vm.root_password,
+                                        "subscription-manager remove --all")
+                    Ssh.execute_command(powerflexmgmt_ip,
+                                        "root",
+                                        settings.powerflexmgmt_vm.root_password,
+                                        "subscription-manager unregister")
+                    logger.info("=== deleting any existing powerflex presentation server vm")
+                    sah_node.delete_powerflexmgmt_vm()
+
+
+            logger.info("=== creating the director vm")
+            sah_node.create_director_vm()
+            tester.director_vm_health_check()
+
+            logger.info("Preparing the Director VM")
+            director_vm = Director()
+            director_vm.apply_internal_repos()
+
+            logger.debug(
+                "===  Uploading & configuring undercloud.conf . "
+                "environment yaml ===")
+            director_vm.upload_update_conf_files()
+
+            logger.info("=== installing the director & undercloud ===")
+            director_vm.inject_ssh_key()
+            director_vm.upload_cloud_images()
+            director_vm.install_director()
+            if settings.node_type_data_map:
+                director_vm.create_subnet_routes_edge()
+                dir_pub_ip = settings.director_node.public_api_ip
+                dir_pw = settings.director_node.root_password
+                director_vm.wait_for_vm_to_come_up(dir_pub_ip,
+                                                   "root",
+                                                   dir_pw)
+                logger.info('Director VM routes set and VM is running')
+            # director_vm.render_and_upload_roles_data()
+            tester.verify_undercloud_installed()
+        
         if args.overcloud_only is False and is_deploy_edge_site is False:
             deploy_undercloud(settings, sah_node, tester, director_vm)
             if args.undercloud_only:
@@ -344,6 +417,33 @@ def deploy():
 
         run_tempest(director_vm)
 
+        if len(settings.powerflex_nodes) > 0:
+            powerflexgw_vm = Powerflexgw()
+            logger.info("=== Creating the powerflex gateway vm")
+            sah_node.create_powerflexgw_vm()
+            tester.powerflexgw_vm_health_check()
+            logger.info("Installing the powerflex gateway UI")
+            powerflexgw_vm.upload_rpm()
+            powerflexgw_vm.install_gateway()
+            logger.info("Configuring the powerflex gateway vm")
+            powerflexgw_vm.configure_gateway()
+            logger.info("Retrieving and injecting SSL certificates")
+            powerflexgw_vm.get_ssl_certificates()
+            powerflexgw_vm.inject_ssl_certificates()
+            logger.info("Restarting the gateway and cinder-volume")
+            powerflexgw_vm.restart_gateway()
+            powerflexgw_vm.restart_cinder_volume()
+          
+            if settings.enable_powerflex_mgmt:
+                powerflexmgmt_vm = Powerflexmgmt()
+                logger.info("=== Creating the powerflex presentation server vm")
+                sah_node.create_powerflexmgmt_vm()
+                tester.powerflexmgmt_vm_health_check()
+                logger.info("Installing the powerflex presentation server UI")
+                powerflexmgmt_vm.upload_rpm()
+                powerflexmgmt_vm.install_presentation_server()
+
+        
         logger.info("Deployment summary info; useful ip's etc.. " +
                     "/auto_results/deployment_summary.log")
 

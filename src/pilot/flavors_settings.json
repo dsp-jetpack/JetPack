@@ -4,6 +4,11 @@
       "SriovGlobalEnable": "Disabled"
     }
   },
+  "powerflex-storage": {
+    "bios": {
+      "SriovGlobalEnable": "Disabled"
+    }
+  },
   "computehci": {
     "bios": {
       "SriovGlobalEnable": "Disabled",
