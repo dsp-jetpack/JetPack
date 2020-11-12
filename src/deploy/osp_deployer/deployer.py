@@ -241,13 +241,15 @@ def deploy():
         settings, args = get_settings()
         director_vm = Director()
         sah_node = Sah()
-
+        # director_vm.setup_templates_edge("edge-spain")
+        # os._exit(0)
         if args.list_edge_sites:
             list_edge_sites(settings, director_vm)
             os._exit(0)
 
         is_deploy_edge_site = bool(args.edge_sites) or args.edge_sites_all
-        logger.info("Deploying edge site(s)? %s", str(is_deploy_edge_site))
+        logger.info("Deploying edge site(s) from CLI argument? %s",
+                    str(is_deploy_edge_site))
         edge_sites = None
 
         # deploying edge site(s)?, validate sites are in settings, if
@@ -323,6 +325,10 @@ def deploy():
             # lastly, if there are edge sites defined in .ini
             # and deploy_edge_sites is set to true in ini deploy the sites
             if settings.deploy_edge_sites and settings.edge_sites:
+                logger.info("Automatic edge site deployment is set to true "
+                            "in the ini (deploy_edge_sites==true), "
+                            "deploying all defined edge sites: %s",
+                            str(settings.edge_sites))
                 deploy_edge_sites(sah_node, director_vm, settings.edge_sites)
 
         if settings.hpg_enable:

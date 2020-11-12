@@ -3410,10 +3410,12 @@ class Director(InfraHost):
     def _generate_nic_params(self, node_type):
         role = self._generate_cc_role(node_type)
         node_type_data = self.settings.node_type_data_map[node_type]
+        mtu = node_type_data["nfv_mtu"]
         num_nics = int(node_type_data['nic_port_count'])
         nfv_type = self._get_nfv_type(node_type)
         params = {}
         has_provsioning_nic = self._has_provisioning_nic(num_nics)
+        mtu_k = "{}DefaultBondMtu".format(role)
 
         cp_oc_default_route = "{}DefaultRoute".format(CONTROL_PLANE_NET[0])
         cp_oc_subnet_cidr = "{}SubnetCidr".format(CONTROL_PLANE_NET[0])
@@ -3482,28 +3484,29 @@ class Director(InfraHost):
         params[int_api_vlan] = {"default": 0, "type": "number"}
         params[int_api_gateway] = {"default": '', "type": "string"}
         params[int_api_interface_routes] = {"default": [], "type": "json"}
-        params[int_api_mtu] = {"default": 1500, "type": "number"}
+        params[int_api_mtu] = {"default": mtu, "type": "number"}
 
         params[tenant_net_cidr] = {"default": '', "type": "string"}
         params[tenant_vlan] = {"default": 0, "type": "number"}
         params[tenant_subnet] = {"default": '', "type": "string"}
         params[tenant_gateway] = {"default": '', "type": "string"}
         params[tenant_interface_routes] = {"default": [], "type": "json"}
-        params[tenant_mtu] = {"default": 1500, "type": "number"}
+        params[tenant_mtu] = {"default": mtu, "type": "number"}
 
         params[storage_net_cidr] = {"default": '', "type": "string"}
         params[storage_vlan] = {"default": 0, "type": "number"}
         params[storage_subnet] = {"default": '', "type": "string"}
         params[storage_gateway] = {"default": '', "type": "string"}
         params[storage_interface_routes] = {"default": [], "type": "json"}
-        params[storage_mtu] = {"default": 1500, "type": "number"}
+        params[storage_mtu] = {"default": mtu, "type": "number"}
 
         params[external_net_cidr] = {"default": '', "type": "string"}
         params[external_vlan] = {"default": 0, "type": "number"}
         params[external_subnet] = {"default": '', "type": "string"}
         params[external_gateway] = {"default": '', "type": "string"}
         params[external_interface_routes] = {"default": [], "type": "json"}
-        params[external_mtu] = {"default": 1500, "type": "number"}
+        params[external_mtu] = {"default": mtu, "type": "number"}
+        params[mtu_k] = {"default": mtu, "type": "number"}
 
         params[bond_0_if_1] = {"default": '', "type": "string"}
         params[bond_0_if_2] = {"default": '', "type": "string"}
@@ -3563,6 +3566,7 @@ class Director(InfraHost):
                      "for {}".format(node_type))
         setts = self.settings
         node_type_data = setts.node_type_data_map[node_type]
+        dpdk_ports, sriov_pfs = self._get_nfv_nics_by_type(node_type)
         num_nics = int(node_type_data['nic_port_count'])
         role = self._generate_cc_role(node_type)
         has_provsioning_nic = self._has_provisioning_nic(num_nics)
@@ -3599,7 +3603,6 @@ class Director(InfraHost):
         # Set NFV params
         if num_nics > 5 and nfv_type:
             nfv_nics = self._get_nfv_nics(node_type)
-            num_nfv_nics = len(nfv_nics)
 
             # verify we have the right number of nfv nics
             if (len(nfv_nics) + 4) != (num_nics - (num_nics % 2)):
@@ -3612,21 +3615,16 @@ class Director(InfraHost):
                                                              node_type,
                                                              str(nfv_nics)))
 
-            if nfv_type in (SRIOV, OVS_DPDK):
-                for num, _if in enumerate(nfv_nics, start=1):
-                    _if_p = "{}{}Interface{}".format(role,
-                                                     nfv_type,
-                                                     num)
-                    params[_if_p] = _if
-            elif nfv_type == BOTH:
-                for idx, _if in enumerate(nfv_nics, start=1):
-                    _type = OVS_DPDK if idx <= (num_nfv_nics / 2) else SRIOV
-                    num = (idx if _type == OVS_DPDK
-                           else ((idx - (num_nfv_nics / 2))))
-                    _if_p = "{}{}Interface{}".format(role,
-                                                     _type,
-                                                     num)
-                    params[_if_p] = _if
+            for port in dpdk_ports:
+                _if_p = port["members"][0]["name"]
+                _if = port["members"][0]["interface"]
+                params[_if_p] = _if
+
+            for pf in sriov_pfs:
+                _if_pf = pf["name"]
+                _if = pf["interface"]
+                params[_if_pf] = _if
+
             if nfv_type in (OVS_DPDK, BOTH):
                 _drv_k = "{}HostNicDriver".format(role)
                 params[_drv_k] = node_type_data["HostNicDriver"]
@@ -3660,6 +3658,7 @@ class Director(InfraHost):
         :returns: list of nic configuration dicts
         """
         role = self._generate_cc_role(node_type)
+        mtu = "{}DefaultBondMtu".format(role)
         node_type_data = self.settings.node_type_data_map[node_type]
         num_nics = int(node_type_data["nic_port_count"])
         has_provisioning_nic = self._has_provisioning_nic(num_nics)
@@ -3707,27 +3706,27 @@ class Director(InfraHost):
 
         tenant_br = {"type": "ovs_bridge"}
         tenant_br["name"] = "br-tenant"
-        tenant_br["mtu"] = "DefaultBondMtu"
+        tenant_br["mtu"] = mtu
         tenant_br["dns_servers"] = "DnsServers"
         tenant_br["use_dhcp"] = False
         bond_0 = {"type": "linux_bond"}
         bond_0["name"] = "bond0"
         bond_0["bonding_options"] = "ComputeBondInterfaceOptions"
-        bond_0["mtu"] = "DefaultBondMtu"
+        bond_0["mtu"] = mtu
         bond_0_if_1 = {"type": "interface"}
         bond_0_if_1["name"] = bond_0_if_1_param
-        bond_0_if_1["mtu"] = "DefaultBondMtu"
+        bond_0_if_1["mtu"] = mtu
         bond_0_if_1["primary"] = True
         bond_0_if_2 = {"type": "interface"}
         bond_0_if_2["name"] = bond_0_if_2_param
-        bond_0_if_2["mtu"] = "DefaultBondMtu"
+        bond_0_if_2["mtu"] = mtu
         bond_0["members"] = [bond_0_if_1, bond_0_if_2]
 
         internal_api_vlan = {"type": "vlan"}
         internal_api_vlan["device"] = "bond0"
 
         internal_api_vlan["vlan_id"] = int_api_vlan_id
-        internal_api_vlan["mtu"] = "InternalApiMtu"
+        internal_api_vlan["mtu"] = mtu
         internal_api_vlan["addresses"] = [{"ip_netmask":
                                            int_api_subnet}]
 
@@ -3736,7 +3735,7 @@ class Director(InfraHost):
         tenant_vlan = {"type": "vlan"}
         tenant_vlan["device"] = "bond0"
         tenant_vlan["vlan_id"] = tenant_vlan_id
-        tenant_vlan["mtu"] = "DefaultBondMtu"
+        tenant_vlan["mtu"] = mtu
         tenant_vlan["addresses"] = [{"ip_netmask":
                                      tenant_subnet}]
         tenant_vlan['routes'] = tenant_interface_routes
@@ -3744,7 +3743,7 @@ class Director(InfraHost):
         storage_vlan = {"type": "vlan"}
         storage_vlan["device"] = "bond0"
         storage_vlan["vlan_id"] = storage_vlan_id
-        storage_vlan["mtu"] = "DefaultBondMtu"
+        storage_vlan["mtu"] = mtu
         storage_vlan["addresses"] = [{"ip_netmask":
                                       storage_subnet}]
         storage_vlan['routes'] = storage_interface_routes
@@ -3753,24 +3752,24 @@ class Director(InfraHost):
                                 tenant_vlan, storage_vlan]
         ex_br = {"type": "ovs_bridge"}
         ex_br["name"] = "bridge_name"
-        ex_br["mtu"] = "DefaultBondMtu"
+        ex_br["mtu"] = mtu
         bond_1_if_1 = {"type": "interface"}
         bond_1_if_1["name"] = bond_1_if_1_param
-        bond_1_if_1["mtu"] = "DefaultBondMtu"
+        bond_1_if_1["mtu"] = mtu
         bond_1_if_1["primary"] = True
         bond_1_if_2 = {"type": "interface"}
         bond_1_if_2["name"] = bond_1_if_2_param
-        bond_1_if_2["mtu"] = "DefaultBondMtu"
+        bond_1_if_2["mtu"] = mtu
         bond_1 = {"type": "linux_bond"}
         bond_1["name"] = "bond1"
         bond_1["bonding_options"] = "ComputeBondInterfaceOptions"
-        bond_1["mtu"] = "DefaultBondMtu"
+        bond_1["mtu"] = mtu
         bond_1["members"] = [bond_1_if_1, bond_1_if_2]
 
         external_vlan = {"type": "vlan"}
         external_vlan["device"] = "bond1"
         external_vlan["vlan_id"] = external_vlan_id
-        external_vlan["mtu"] = "DefaultBondMtu"
+        external_vlan["mtu"] = mtu
         external_vlan["addresses"] = [
             {"ip_netmask": external_subnet}]
 
@@ -3783,7 +3782,7 @@ class Director(InfraHost):
             prov_if = {"type": "interface"}
             prov_if["name"] = prov_if_param
             prov_if["routes"] = [ec2_route, default_route, prov_route]
-            prov_if["mtu"] = "ProvisioningMtu"
+            prov_if["mtu"] = mtu
             prov_if["use_dhcp"] = False
             prov_if["dns_servers"] = "DnsServers"
             prov_if["addresses"] = cp_addresses
@@ -3808,7 +3807,7 @@ class Director(InfraHost):
             dpdk_bond_0["rx_queue"] = "{}NumDpdkInterfaceRxQueues".format(role)
             dpdk_bond_0["ovs_options"] = "{}BondInterfaceOvsOptions".format(
                 role)
-            dpdk_bond_0["mtu"] = "DefaultBondMtu"
+            dpdk_bond_0["mtu"] = mtu
             dpdk_bond_0["members"] = dpdk_ports
 
             tenant_br["members"] = [dpdk_bond_0]
@@ -3827,6 +3826,7 @@ class Director(InfraHost):
         role = self._generate_cc_role(node_type)
         nfv_type = self._get_nfv_type(node_type)
         nfv_nics = self._get_nfv_nics(node_type)
+        mtu = "{}DefaultBondMtu".format(role)
 
         dpdk_nics = nfv_nics if nfv_type == OVS_DPDK else []
         sriov_nics = nfv_nics if nfv_type == SRIOV else []
@@ -3836,19 +3836,21 @@ class Director(InfraHost):
             sriov_nics = nfv_nics[len(nfv_nics)//2:]
 
         for idx, _if in enumerate(dpdk_nics, start=1):
-            if_p = "{}{}Interface{}".format(role, nfv_type, idx)
+            if_p = "{}{}Interface{}".format(role, OVS_DPDK, int(idx))
             dpdk_port = {"type": "ovs_dpdk_port",
                          "name": "dpdk{}".format(idx)}
-            dpdk_port["mtu"] = "DefaultBondMtu"
+            dpdk_port["mtu"] = mtu
             dpdk_port["driver"] = "{}HostNicDriver".format(role)
             dpdk_port["members"] = [{"type": "interface",
-                                     "name": if_p}]
+                                     "name": if_p,
+                                     "interface": _if}]
             dpdk_ports.append(dpdk_port)
 
-        for idx, nic in enumerate(sriov_nics, start=1):
+        for idx, _if in enumerate(sriov_nics, start=1):
             pf = {"type": "sriov_pf"}
-            pf["name"] = "{}SriovInterface{}".format(role, idx)
-            pf["mtu"] = "{}DefaultBondMtu".format(role)
+            pf["name"] = "{}{}Interface{}".format(role, SRIOV, int(idx))
+            pf["interface"] = _if
+            pf["mtu"] = mtu
             pf["numvfs"] = "{}NumSriovVfs".format(role)
             sriov_pfs.append(pf)
         return dpdk_ports, sriov_pfs
