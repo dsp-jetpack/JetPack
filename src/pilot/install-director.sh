@@ -17,10 +17,10 @@
 exec > >(tee $HOME/pilot/install-director.log)
 exec 2>&1
 
-USAGE="\nUsing RedHat CDN:$0 --director_ip <director public ip> --dns <dns_ip> [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>]"
+USAGE="\nUsing RedHat CDN:$0 --director_ip <director public ip> --dns <dns_ip> [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] [--enable_powerflex]" 
 
 
-TEMP=`getopt -o h --long director_ip:,dns:,proxy:,nodes_pwd:,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
+TEMP=`getopt -o h --long director_ip:,dns:,proxy:,nodes_pwd:,enable_powerflex,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
 eval set -- "$TEMP"
 
 
@@ -47,6 +47,8 @@ while true ; do
                 proxy=$2; shift 2 ;;
         --nodes_pwd)
                 overcloud_nodes_pwd=$2; shift 2 ;;
+        --enable_powerflex)
+                enable_powerflex=1; shift 1;;
         --) shift ; break ;;
         *) echo -e "$USAGE" ; exit 1 ;;
     esac
@@ -63,7 +65,7 @@ if [ ! -z "${satellite_hostname}" ]; then
 fi
 
 
-flavors="control compute ceph-storage computehci"
+flavors="control compute ceph-storage computehcii powerflex-storage"
 subnet_name="ctlplane"
 
 # Create the requested flavor if it does not exist.
@@ -246,12 +248,26 @@ elif [ ! -z "${proxy}" ]; then
 fi
 
 echo
-if [ -n "${overcloud_nodes_pwd}" ]; then
-    echo "# Setting overcloud nodes password"
+
+if [ -n "${overcloud_nodes_pwd}" ] || [ ${enable_powerflex} == 1 ]; then
+    echo "# Overcloud customizatin required, Installing libguestfs-tools"
     run_command "sudo dnf install -y libguestfs-tools"
     run_command "sudo service libvirtd start"
     run_command "export LIBGUESTFS_BACKEND=direct"
+fi
+    
+if [ -n "${overcloud_nodes_pwd}" ]; then
+    echo "# Setting overcloud nodes password"
     run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
+fi
+
+if [ ${enable_powerflex} == 1 ]; then
+    echo "# PowerFlex backend enabled, injecting rpms"
+    run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
+    run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
+    echo "# Cloning Dell EMC TripleO PowerFlex repository"
+    run_command "git clone https://github.com/dell/tripleo-powerflex.git ${HOME}/pilot/powerflex/tripleo-powerflex"
+    #run_command "git clone https://github.com/jproque-dell/tripleo-powerflex.git ${HOME}/pilot/powerflex/tripleo-powerflex"
 fi
 
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
@@ -280,6 +296,7 @@ echo "### Patching tripleo-heat-templates"
 sudo sed -i 's/$(get_python)/python3/' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/per_node.yaml
 echo "## Done."
 
+
 # This hacks in a patch for XE2420 where if CertificateInstance lower and
 # upper bounds are None, patch will make the attributes nullable and set
 # default to 0 to avoid an exception as those two attibutes are not nullable
@@ -288,12 +305,27 @@ apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/resour
 
 echo "## Done"
 
+## This hacks in a patch to fix the powerflex cinder backend name required by Puppet to deploy
+echo
+echo "## Patching PowerFlex cinder backend HEAT Template"
+apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/cinder/cinder-backend-dellemc-vxflexos-puppet.yaml ${HOME}/pilot/powerflex-cinder-backend.patch"
+echo "## Done."
+
 echo
 echo "## Copying heat templates..."
 cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overcloud
 # TODO:dpaterson, why do we copy roles_data to ~/pilot/templates/overcloud/ ?
 cp $HOME/pilot/templates/roles_data.yaml $HOME/pilot/templates/overcloud/roles_data.yaml
 cp $HOME/pilot/templates/network-isolation.yaml $HOME/pilot/templates/overcloud/environments/network-isolation.yaml
+echo "## Done."
+
+echo
+echo "## Copying powerflex and tripleo-powerflex ansible playbooks..."
+sudo cp -R $HOME/pilot/powerflex/tripleo-powerflex/powerflex-ansible /usr/share/powerflex-ansible
+sudo cp -R $HOME/pilot/powerflex/tripleo-powerflex/tripleo-powerflex-run-ansible /usr/share/ansible/roles/tripleo-powerflex-run-ansible
+cp -R $HOME/pilot/powerflex/tripleo-powerflex/templates/overcloud/environments/powerflex-ansible $HOME/pilot/templates/overcloud/environments/powerflex-ansible
+cp -R $HOME/pilot/powerflex/tripleo-powerflex/templates/overcloud/deployment/powerflex-ansible $HOME/pilot/templates/overcloud/deployment/powerflex-ansible
+
 echo "## Done."
 
 echo
@@ -321,6 +353,7 @@ for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_
     run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyo"
     echo "## Done"
   done
+
 
 # Update Drac patches
 for container in "ironic_pxe_tftp"  "ironic_conductor" "ironic_api" ;
