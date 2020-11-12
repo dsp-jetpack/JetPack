@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from constants import Constants
 from credential_helper import CredentialHelper
 from ironic_helper import IronicHelper
 from keystoneauth1.identity import v3
@@ -71,9 +72,10 @@ class NfvParameters(object):
         sess = session.Session(auth=auth)
         self.inspector = ironic_inspector_client.ClientV1(session=sess)
 
-    def check_ht_status(self, node):
+    def check_ht_status(self, node,
+                        instackenv_file=Constants.INSTACKENV_FILENAME):
         drac_ip, drac_user, drac_password = \
-            CredentialHelper.get_drac_creds(self.ironic, node)
+            CredentialHelper.get_drac_creds(self.ironic, node, instackenv_file)
         stor = drac_client.DRACClient(drac_ip, drac_user, drac_password)
         # cpu socket information for every compute node
         sockets = stor.list_cpus()
@@ -81,7 +83,7 @@ class NfvParameters(object):
             if not socket.ht_enabled:
                 raise Exception("Hyperthreading is not enabled in "
                                 + str(node))
-        print("Hyperthreading enabled on %s" % node)
+        logger.debug("Hyperthreading enabled on %s" % node)
         return True
 
     def get_nodes_uuids(self, nodetype):
@@ -236,10 +238,11 @@ class NfvParameters(object):
         ls.sort()
         return ','.join(map(str, ls))
 
-    def select_compute_node(self):
+    def select_compute_node(self, node_type="compute",
+                            instackenv_file=Constants.INSTACKENV_FILENAME):
         ref_node = {"uuid": None, "cpus": None, "data": None}
-        for node in self.get_nodes_uuids("compute"):
-            self.check_ht_status(node)
+        for node in self.get_nodes_uuids(node_type):
+            self.check_ht_status(node, instackenv_file)
             data = self.get_introspection_data(node)
             if not ref_node["uuid"]:
                 ref_node["uuid"] = node
@@ -250,10 +253,10 @@ class NfvParameters(object):
                 ref_node["uuid"] = node
                 ref_node["data"] = data
                 ref_node["cpus"] = data["cpus"]
-        if ref_node["cpus"] not in [40, 48, 56, 64, 72, 80, 128]:
+        if ref_node["cpus"] not in [40, 48, 56, 64, 72, 80, 88, 128]:
             raise Exception("The number of vCPUs, as specified in the"
                             " reference architecture, must be one of"
-                            " [40, 48, 56, 64, 72, 80, 128]"
+                            " [40, 48, 56, 64, 72, 80, 88, 128]"
                             " but number of vCPUs are " + str(
                                 ref_node["cpus"]))
         return ref_node["uuid"], ref_node["data"]
@@ -294,8 +297,6 @@ class NfvParameters(object):
                 hugepage_count = (memory_count / 2)
             if hugepage_size == "1GB":
                 hugepage_count = (memory_count / 1024)
-            logger.info("hugepage_size {}".format(hugepage_size))
-            logger.info("hugepage_count {}".format(hugepage_count))
             return hugepage_count
         except Exception as error:
             message = "Exception {}: {}".format(
