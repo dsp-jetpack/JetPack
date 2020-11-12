@@ -302,10 +302,10 @@ echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
 # Install patch on all containers to be patched
-#for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_api";
-#  do
-#    run_on_container  "${container}" "dnf install -y patch"
-#  done
+for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_api";
+  do
+    run_on_container  "${container}" "dnf install -y patch"
+  done
 
 # Update ironic patches
 for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_api" ;
@@ -320,6 +320,33 @@ for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_
     run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyc"
     run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyo"
     echo "## Done"
+  done
+
+# Update Drac patches
+for container in "ironic_pxe_tftp"  "ironic_conductor" "ironic_api" ;
+  do
+
+    # This hacks in a patch to handle various types of settings.
+    echo
+    echo "## Patching Ironic iDRAC driver utils.py on ${container}.."
+    upload_file_to_container "${container}" "${HOME}/pilot/utils.patch" "/tmp/utils.patch"
+    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/dracclient/utils.py /tmp/utils.patch"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/utils.pyc"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/utils.pyo"
+    echo "## Done"
+
+    # This hacks in a patch to filter out all non-printable characters during WSMAN
+    # enumeration.
+    # Note that this code must be here because we use this code prior to deploying
+    # the director.
+    echo
+    echo "## Patching Ironic iDRAC driver wsman.py on ${container}..."
+    upload_file_to_container "${container}" "${HOME}/pilot/wsman.patch" "/tmp/wsman.patch"
+    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/dracclient/wsman.py /tmp/wsman.patch"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyc"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyo"
+    echo "## Done"
+
   done
 
 # Restart containers/services
