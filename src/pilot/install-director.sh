@@ -264,6 +264,7 @@ fi
 if [ ${enable_powerflex} == 1 ]; then
     echo "# PowerFlex backend enabled, injecting rpms"
     run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
+    run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
     echo "# Cloning Dell EMC TripleO PowerFlex repository"
     run_command "git clone https://github.com/dell/tripleo-powerflex.git ${HOME}/pilot/powerflex/tripleo-powerflex"
     #run_command "git clone https://github.com/jproque-dell/tripleo-powerflex.git ${HOME}/pilot/powerflex/tripleo-powerflex"
@@ -297,9 +298,9 @@ echo "## Done."
 
 # Patch a fix for https://bugzilla.redhat.com/show_bug.cgi?id=1846020
 echo "### Patching tripleo-heat-templates part II"
-apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/swift/swift-proxy-container-puppet.yaml ${HOME}/pilot/swift-proxy-container.patch"
-apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/nova/nova-scheduler-container-puppet.yaml ${HOME}/pilot/nova-scheduler-container.patch"
-apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/database/redis-container-puppet.yaml ${HOME}/pilot/redis-container.patch"
+#apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/swift/swift-proxy-container-puppet.yaml ${HOME}/pilot/swift-proxy-container.patch"
+#apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/nova/nova-scheduler-container-puppet.yaml ${HOME}/pilot/nova-scheduler-container.patch"
+#apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/database/redis-container-puppet.yaml ${HOME}/pilot/redis-container.patch"
 # This hacks in a patch for XE2420 where if CertificateInstance lower and
 # upper bounds are None, patch will make the attributes nullable and set
 # default to 0 to avoid an exception as those two attibutes are not nullable
@@ -342,39 +343,39 @@ for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_
     run_on_container  "${container}" "dnf install -y patch"
   done
 
-# Update ironic patches
-for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_api" ;
-  do
-    # This hacks in a patch to make conductor wait while completion of configuration job
-    echo
-    echo "## Patching Ironic iDRAC driver job.py on ${container}..."
-    upload_file_to_container "${container}" "${HOME}/pilot/ironic_job.patch" "/tmp/ironic_job.patch"
-    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/job.py /tmp/ironic_job.patch"
-    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/job.pyc"
-    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/job.pyo"
-    echo "## Done"
-
-    # This hacks in a patch to create a virtual disk using realtime mode.
-    # Note that this code must be here because we use this code prior to deploying
-    # the director.
-    echo
-    echo "## Patching Ironic iDRAC driver raid.py..."
-    upload_file_to_container "${container}" "${HOME}/pilot/raid.patch" "/tmp/raid.patch"
-    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.py /tmp/raid.patch"
-    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyc"
-    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyo"
-    echo "## Done"
-
-    # This hacks in a patch to define maximum number of retries for the conductor
-    # to wait during any configuration job completion.
-    echo
-    echo "## Patching Ironic iDRAC driver drac.py on ${container} ..."
-    upload_file_to_container "${container}" "${HOME}/pilot/drac.patch" "/tmp/drac.patch"
-    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/ironic/conf/drac.py /tmp/drac.patch"
-    run_on_container "${container}" "rm -f /usr/lib/python2.7/site-packages/ironic/conf/drac.pyc"
-    run_on_container "${container}" "rm -f /usr/lib/python2.7/site-packages/ironic/conf/drac.pyo"
-    echo "## Done"
-  done
+## Update ironic patches
+#for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_api" ;
+#  do
+#    # This hacks in a patch to make conductor wait while completion of configuration job
+#    echo
+#    echo "## Patching Ironic iDRAC driver job.py on ${container}..."
+#    upload_file_to_container "${container}" "${HOME}/pilot/ironic_job.patch" "/tmp/ironic_job.patch"
+#    #run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/job.py /tmp/ironic_job.patch"
+#    #run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/job.pyc"
+#    #run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/job.pyo"
+#    echo "## Done"
+#
+#    # This hacks in a patch to create a virtual disk using realtime mode.
+#    # Note that this code must be here because we use this code prior to deploying
+#    # the director.
+#    echo
+#    echo "## Patching Ironic iDRAC driver raid.py..."
+#    upload_file_to_container "${container}" "${HOME}/pilot/raid.patch" "/tmp/raid.patch"
+#    #run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.py /tmp/raid.patch"
+#    #run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyc"
+#    #run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyo"
+#    echo "## Done"
+#
+#    # This hacks in a patch to define maximum number of retries for the conductor
+#    # to wait during any configuration job completion.
+#    echo
+#    echo "## Patching Ironic iDRAC driver drac.py on ${container} ..."
+#    upload_file_to_container "${container}" "${HOME}/pilot/drac.patch" "/tmp/drac.patch"
+#    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/ironic/conf/drac.py /tmp/drac.patch"
+#    run_on_container "${container}" "rm -f /usr/lib/python2.7/site-packages/ironic/conf/drac.pyc"
+#    run_on_container "${container}" "rm -f /usr/lib/python2.7/site-packages/ironic/conf/drac.pyo"
+#    echo "## Done"
+#  done
 
 # Update Drac patches
 for container in "ironic_pxe_tftp"  "ironic_conductor" "ironic_api" ;
