@@ -3519,24 +3519,18 @@ class Director(InfraHost):
         # Set NFV params
         if num_nics > 5 and nfv_type:
             nfv_nics = self._get_nfv_nics(node_type)
+            dpdk_ports, sriov_pfs = self._get_nfv_nics_by_type(node_type)
             num_nfv_nics = len(nfv_nics)
+            for port in dpdk_ports:
+                _if_p = port["members"][0]["name"]
+                _if = port["members"][0]["interface"]
+                params[_if_p] = {"default": '', "type": "string"}
 
-            if nfv_type in [OVS_DPDK, SRIOV]:
-                for idx, _if in enumerate(nfv_nics, start=1):
-                    _if_p = "{}{}Interface{}".format(role,
-                                                     nfv_type,
-                                                     idx)
-                    params[_if_p] = {"default": '', "type": "string"}
-            elif nfv_type == BOTH:
-                for idx, _if in enumerate(nfv_nics, start=1):
-                    _type = OVS_DPDK if idx <= (num_nfv_nics / 2) else SRIOV
-                    num = (idx if _type == OVS_DPDK
-                           else ((idx - (num_nfv_nics / 2))))
+            for pf in sriov_pfs:
+                _if_pf = pf["name"]
+                _if = pf["interface"]
+                params[_if_pf] = {"default": '', "type": "string"}
 
-                    _if_p = "{}{}Interface{}".format(role,
-                                                     _type,
-                                                     num)
-                    params[_if_p] = {"default": '', "type": "string"}
             if nfv_type in [OVS_DPDK, BOTH]:
                 _drv_k = "{}HostNicDriver".format(role)
                 params[_drv_k] = {"default": '', "type": "string"}
@@ -3566,7 +3560,6 @@ class Director(InfraHost):
                      "for {}".format(node_type))
         setts = self.settings
         node_type_data = setts.node_type_data_map[node_type]
-        dpdk_ports, sriov_pfs = self._get_nfv_nics_by_type(node_type)
         num_nics = int(node_type_data['nic_port_count'])
         role = self._generate_cc_role(node_type)
         has_provsioning_nic = self._has_provisioning_nic(num_nics)
@@ -3603,6 +3596,7 @@ class Director(InfraHost):
         # Set NFV params
         if num_nics > 5 and nfv_type:
             nfv_nics = self._get_nfv_nics(node_type)
+            dpdk_ports, sriov_pfs = self._get_nfv_nics_by_type(node_type)
 
             # verify we have the right number of nfv nics
             if (len(nfv_nics) + 4) != (num_nics - (num_nics % 2)):
