@@ -47,3 +47,6 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# PowerFlex RPMS
+/src/pilot/powerflex/rpms/*.rpm
