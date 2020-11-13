@@ -3538,7 +3538,7 @@ class Director(InfraHost):
                 params[_dpdk_k] = {"default": '', "type": "string"}
                 _q_k = "{}NumDpdkInterfaceRxQueues".format(role)
                 params[_q_k] = {"default": 1, "type": "number"}
-            elif nfv_type in [SRIOV, BOTH]:
+            if nfv_type in [SRIOV, BOTH]:
                 _sriov_k = "{}BondInterfaceSriovOptions".format(role)
                 params[_sriov_k] = {"default": '', "type": "string"}
                 _mtu = "{}DefaultBondMtu".format(role)
@@ -3626,7 +3626,7 @@ class Director(InfraHost):
                 params[_dpdk_k] = node_type_data["BondInterfaceOvsOptions"]
                 _q_k = "{}NumDpdkInterfaceRxQueues".format(role)
                 params[_q_k] = node_type_data["NumDpdkInterfaceRxQueues"]
-            elif nfv_type in (SRIOV, BOTH):
+            if nfv_type in (SRIOV, BOTH):
                 _sriov_k = "{}BondInterfaceSriovOptions".format(role)
                 params[_sriov_k] = node_type_data["BondInterfaceSriovOptions"]
                 _mtu = "{}DefaultBondMtu".format(role)
