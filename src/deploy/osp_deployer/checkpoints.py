@@ -29,9 +29,10 @@ class Checkpoints:
         self.settings = Settings.settings
         self.ping_success = "packets transmitted, 1 received"
         self.director_ip = self.settings.director_node.public_api_ip
-        self.powerflexgw_ip = self.settings.powerflexgw_vm.public_api_ip
-        if self.settings.enable_powerflex_mgmt is True:
-            self.powerflexmgmt_ip = self.settings.powerflexmgmt_vm.public_api_ip
+        if self.settings.enable_powerflex_backend is True:
+            self.powerflexgw_ip = self.settings.powerflexgw_vm.public_api_ip
+            if self.settings.enable_powerflex_mgmt is True:
+                self.powerflexmgmt_ip = self.settings.powerflexmgmt_vm.public_api_ip
         self.director_user = self.settings.director_install_account_user
         self.director_home_dir = "/home/" + self.director_user
         self.source_stackrc = 'source ' + self.director_home_dir + "/stackrc; "
