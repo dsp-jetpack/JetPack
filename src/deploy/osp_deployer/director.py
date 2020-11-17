@@ -355,6 +355,7 @@ class Director(InfraHost):
         nodes.extend(setts.compute_nodes)
         nodes.extend(setts.computehci_nodes)
         nodes.extend(setts.ceph_nodes)
+        nodes.extend(setts.powerflex_nodes)
         self.configure_idracs(nodes)
 
     def configure_idracs_edge(self, node_type):
