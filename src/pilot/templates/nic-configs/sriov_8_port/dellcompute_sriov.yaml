@@ -285,7 +285,7 @@ resources:
                     get_param: StorageMtu
                   addresses:
                   - ip_netmask:
-                      get_param: StorageIpSubnet                       
+                      get_param: StorageIpSubnet
               - type: sriov_pf
                 name:
                   get_param: ComputeSriovInterface1
@@ -334,7 +334,7 @@ resources:
                 nm_controlled: true
                 hotplug: true
                 promisc: false
-                
+
 outputs:
   OS::stack_id:
     description: The OsNetConfigImpl resource.
