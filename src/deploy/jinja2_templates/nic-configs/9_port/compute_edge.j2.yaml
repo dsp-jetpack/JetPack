@@ -114,10 +114,6 @@ parameters:
   EC2MetadataIp: # Override this via parameter_defaults
     description: The IP address of the EC2 metadata server.
     type: string
-  ComputeProvisioningInterface:
-    default: em3
-    description: Provisioning interface name
-    type: string
   ComputeBond0Interface1:
     default: em1
     description: Bond 0 interface 1 name
@@ -197,74 +193,160 @@ resources:
               network_config:
               {%- for cfg in network_config %}
               - type: {{cfg.type}}
-                {%- if cfg.type == 'interface' %}
-                name:
-                  get_param: {{cfg.name}}
-                {%- else %}
-                name: {{cfg.name}}
-                {%- endif %}
                 mtu:
                   get_param: {{cfg.mtu}}
-                {%- if cfg.type == 'interface' %}
+                {%- if "name" in cfg %}
+                  {%- if cfg.type == "sriov_pf" or cfg.type == "interface" %}
+                name:
+                  get_param: {{cfg.name}}
+                  {%- else %}
+                name: {{cfg.name}}
+                  {%- endif %}
+                {%- endif %}
+                {%- if "ovs_extra" in cfg %}
+                ovs_extra:
+                  - str_replace:
+                      template: {{cfg.ovs_extra.template}}
+                      params:
+                        _VLAN_TAG_:
+                          get_param: {{cfg.ovs_extra.tenant_vlan_id}}
+                {%- endif %}
+                {%- if "device" in cfg %}
+                device: {{cfg.device}}
+                {%- endif %}
+                {%- if "use_dhcp" in cfg %}
                 use_dhcp: {{cfg.use_dhcp}}
+                {%- endif %}
+                {%- if "dns_servers" in cfg %}
                 dns_servers:
                   get_param: {{cfg.dns_servers}}
+                {%- endif %}
+                {%- if "vlan_id" in cfg %}
+                vlan_id:
+                  get_param: {{cfg.vlan_id}}
+                {%- endif %}
+                {%- if "bonding_options" in cfg %}
+                bonding_options:
+                  get_param: {{cfg.bonding_options}}
+                {%- endif %}
+                {%- if "numvfs" in cfg %}
+                numvfs:
+                  get_param: {{cfg.numvfs}}
+                {%- endif %}
+                {%- if cfg.type == "sriov_pf" %}
+                use_dhcp: false
+                defroute: false
+                nm_controlled: true
+                hotplug: true
+                promisc: false
+                {%- endif %}
+                {%- if "addresses" in cfg %}
                 addresses:
                   {%- for address in cfg.addresses %}
                 - ip_netmask:
+                    {%- if cfg.type == "interface" or (cfg.type in ["linux_bond", "ovs_user_bridge"] and cfg.name in ["bond0", "br-tenant"]) %}
                     list_join:
                     - /
                     - - get_param: {{address.ip}}
                       - get_param: {{address.cidr}}
-                  {%- endfor %}
-                routes:
-                  {%- for route in cfg.routes %}
-                    {%- if 'default' in route %}
-                - default: {{route.default}}
+                    {%- else %}
+                        get_param: {{address.ip_netmask}}
                     {%- endif %}
-                    {%- if 'ip_netmask' in route %}
+                  {%- endfor %}
+                {%- endif %}
+                {%- if "routes" in cfg %}
+                routes:
+                  {%- if cfg.name == "bond0" or cfg.name == "br-tenant" or cfg.type == "interface" %}
+                    {%- for route in cfg.routes %}
+                      {%- if 'default' in route %}
+                - default: {{route.default}}
+                      {%- endif %}
+                      {%- if 'ip_netmask' in route %}
                 - ip_netmask:
                     get_param: {{route.ip_netmask}}
-                    {%- endif %}
+                      {%- endif %}
                   next_hop:
                     get_param: {{route.next_hop}}
-                  {%- endfor %}
-                {% elif cfg.type == 'ovs_user_bridge' %}
+                    {%- endfor %}
+                  {%- else %}
+                  get_param: {{cfg.routes}}
+                  {%- endif %}
+                {%- endif %}
+                {%- if 'members' in cfg %}
                 members:
-                  {%- for bridge_member in cfg.members %}
-                  - type: {{bridge_member.type}}
-                    {%- if bridge_member.type == 'linux_bond' %}
-                    name: {{bridge_member.name}}
-                    bonding_options:
-                      get_param: {{bridge_member.bonding_options}}
+                  {%- for member in cfg.members %}
+                  - type: {{member.type}}
+                    {%- if 'name' in member %}
+                      {%- if member.type == "interface" %}
+                    name:
+                      get_param: {{member.name}}
+                      {%- else %}
+                    name: {{member.name}}
+                      {%- endif %}
+                    {%- endif %}
+                    {%- if "rx_queue" in member %}
+                    rx_queue:
+                      get_param: {{member.rx_queue}}
+                    {%- endif %}
+                    {%- if "ovs_options" in member %}
+                    ovs_options:
+                      get_param: {{member.ovs_options}}
+                    {%- endif %}
+                    {%- if "mtu" in member %}
                     mtu:
-                      get_param: {{bridge_member.mtu}}
+                      get_param: {{member.mtu}}
+                    {%- endif %}
+                    {%- if "vlan_id" in member %}
+                    vlan_id:
+                      get_param: {{member.vlan_id}}
+                    {%- endif %}
+                    {%- if "device" in member %}
+                    device: {{member.device}}
+                    {%- endif %}
+                    {%- if "addresses" in member %}
+                    addresses:
+                      {%- for address in member.addresses %}
+                      - ip_netmask:
+                          get_param: {{address.ip_netmask}}
+                      {%- endfor %}
+                    {%- endif %}
+                    {%- if 'routes' in member %}
+                    routes:
+                      get_param: {{member.routes}}
+                    {%- endif %}
+                    {%- if "primary" in member %}
+                    primary: {{member.primary}}
+                    {%- endif %}
+                    {%- if "members" in member %}
                     members:
-                      {%- for bond_member in bridge_member.members %}
-                    - type: {{bond_member.type}}
+                      {%- for _member in member.members %}
+                    - type: {{_member.type}}
+                        {%- if _member.type == 'interface' %}
                       name:
-                        get_param: {{bond_member.name}}
+                        get_param: {{_member.name}}
+                        {%- else %}
+                      name: {{_member.name}}
+                        {%- endif %}
+                        {%- if "mtu" in _member %}
                       mtu:
-                        get_param: {{bond_member.mtu}}
-                        {%- if 'primary' in bond_member %}
-                      primary: {{bond_member.primary}}
+                        get_param: {{_member.mtu}}
+                        {%- endif %}
+                        {%- if "driver" in _member %}
+                      driver:
+                          get_param: {{_member.driver}}
+                        {%- endif %}
+                        {%- if 'primary' in _member %}
+                      primary: {{_member.primary}}
+                        {%- endif %}
+                        {%- if "members" in _member %}
+                      members:
+                          {%- for __member in _member.members %}
+                        - type: {{__member.type}}
+                          name:
+                            get_param: {{__member.name}}
+                          {%- endfor %}
                         {%- endif %}
                       {%- endfor %}
-                    {%- elif bridge_member.type == 'vlan' %}
-                    device: {{bridge_member.device}}
-                    vlan_id:
-                      get_param: {{bridge_member.vlan_id}}
-                    mtu:
-                      get_param: {{bridge_member.mtu}}
-                    addresses:
-                      {%- for vlan_address in bridge_member.addresses %}
-                    - ip_netmask:
-                        get_param: {{vlan_address.ip_netmask}}
-                      {%- endfor %}
-                      {%- if 'routes' in bridge_member %}
-                    routes:
-                      get_param: {{bridge_member.routes}}
-                      {%- endif %}
                     {%- endif %}
                   {%- endfor %}
                 {%- endif %}

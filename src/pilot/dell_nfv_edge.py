@@ -65,12 +65,12 @@ class ConfigEdge(ConfigOvercloud):
         ntd = self.node_type_data
         enable_hugepage = Utils.string_to_bool(ntd["hpg_enable"])
         enable_numa = Utils.string_to_bool(ntd["numa_enable"])
-        is_ovs_dpdk = ntd["nfv_type"] in ["dpdk", "both"]
+        nfv_type = self._get_nfv_type(ntd)
+        is_ovs_dpdk = bool(nfv_type and nfv_type in ["dpdk", "both"])
         hostos_cpu_count = int(ntd["numa_hostos_cpu_count"])
         _dir = (re.sub(r'[^a-z0-9]', " ",
                        self.node_type.lower()).replace(" ", "_"))
         ntl = re.sub(r'[^a-z0-9]', "", self.node_type.lower())
-        # nic_environment_edgespain.yaml
         _f_name = "nic_environment_{}.yaml".format(ntl)
         nic_env_file = os.path.join(home_dir, _dir, _f_name)
         params = {}
@@ -112,6 +112,13 @@ class ConfigEdge(ConfigOvercloud):
             params_dpdk["IsolCpusList"] = self.nfv_params.isol_cpus
         return params
 
+    def _get_nfv_type(self, node_type_data):
+        if ("nfv_type" in node_type_data
+                and len(node_type_data["nfv_type"].strip()) != 0
+                and node_type_data["nfv_type"].strip() in ("dpdk",
+                                                           "sriov", "both")):
+            return node_type_data["nfv_type"].strip()
+        return None
 
 def main():
     parser = argparse.ArgumentParser()
