@@ -191,7 +191,7 @@ class Director(InfraHost):
 
         if len(self.settings.overcloud_nodes_pwd) > 0:
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
-        if self.settings.enable_powerflex_backend is True:
+        if len(self.settings.powerflex_nodes) > 0:
             cmd += " --enable_powerflex"
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
@@ -355,6 +355,7 @@ class Director(InfraHost):
         nodes.extend(setts.compute_nodes)
         nodes.extend(setts.computehci_nodes)
         nodes.extend(setts.ceph_nodes)
+        nodes.extend(setts.powerflex_nodes)
         self.configure_idracs(nodes)
 
     def configure_idracs_edge(self, node_type):
@@ -665,7 +666,7 @@ class Director(InfraHost):
             num_osds = len(osd_config["devices"])
             total_osds = total_osds + num_osds
 
-        num_storage_nodes = len(self.settings.ceph_nodes) + len(self.settings.computehci_nodes)
+        num_storage_nodes = len(self.settings.ceph_nodes) + len(self.settings.computehci_nodes) + len(self.settings.powerflex_nodes)
         num_unaccounted = num_storage_nodes - len(uuid_to_osd_configs)
         if num_unaccounted < 0:
             raise AssertionError("There are extraneous servers listed in {}. "
