@@ -1492,7 +1492,7 @@ def main():
         else:
             flavor = ROLES[args.role_index.role]
         # Generate Ceph OSD/journal configuration for storage nodes
-        if flavor == "ceph-storage" or flavor == "computehci":
+        if flavor == "ceph-storage" or flavor == "computehci" or flavor == "powerflex-storage":
             generate_osd_config(args.ip_mac_service_tag, drac_client)
 
     except (DRACOperationFailed, DRACUnexpectedReturnValue,

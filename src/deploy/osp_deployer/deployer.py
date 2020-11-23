@@ -236,11 +236,11 @@ def deploy_powerflex_gw(setts, sah_node, tester, powerflexgw_vm):
     powerflexgw_ip = setts.powerflexgw_vm.public_api_ip
     Ssh.execute_command(powerflexgw_ip,
                         "root",
-                        settings.powerflexgw_vm.root_password,
+                        setts.powerflexgw_vm.root_password,
                         "subscription-manager remove --all")
     Ssh.execute_command(powerflexgw_ip,
                         "root",
-                         settings.powerflexgw_vm.root_password,
+                         setts.powerflexgw_vm.root_password,
                         "subscription-manager unregister")
     logger.info("=== deleting any existing powerflex gateway vm")
     sah_node.delete_powerflexgw_vm()
@@ -265,11 +265,11 @@ def deploy_powerflex_mgmt(setts, sah_node, tester, powerflexmgmt_vm):
     powerflexmgmt_ip = setts.powerflexmgmt_vm.public_api_ip
     Ssh.execute_command(powerflexmgmt_ip,
                         "root",
-                        settings.powerflexmgmt_vm.root_password,
+                        setts.powerflexmgmt_vm.root_password,
                         "subscription-manager remove --all")
     Ssh.execute_command(powerflexmgmt_ip,
                         "root",
-                        settings.powerflexmgmt_vm.root_password,
+                        setts.powerflexmgmt_vm.root_password,
                         "subscription-manager unregister")
     logger.info("=== deleting any existing powerflex presentation server vm")
     sah_node.delete_powerflexmgmt_vm()
