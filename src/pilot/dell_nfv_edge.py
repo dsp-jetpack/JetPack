@@ -74,6 +74,7 @@ class ConfigEdge(ConfigOvercloud):
         _f_name = "nic_environment_{}.yaml".format(ntl)
         nic_env_file = os.path.join(home_dir, _dir, _f_name)
         params = {}
+        params_dell_env = params["dell_env"] = {}
         kernel_args = "iommu=pt intel_iommu=on"
 
         if enable_hugepage:
@@ -99,10 +100,8 @@ class ConfigEdge(ConfigOvercloud):
             self.nfv_params.get_isol_cpus()
             kernel_args += " isolcpus={}".format(self.nfv_params.isol_cpus)
             # dell-environmment
-            params_dell_env = params["dell_env"] = {}
             nova_cpus = self.nfv_params.nova_cpus
             params_dell_env["NovaComputeCpuDedicatedSet"] = nova_cpus
-            params_dell_env["KernelArgs"] = kernel_args
         if is_ovs_dpdk:
             params_dpdk = params["dpdk"] = {}
             params_dpdk["OvsDpdkCoreList"] = self.nfv_params.host_cpus
@@ -110,6 +109,8 @@ class ConfigEdge(ConfigOvercloud):
             params_dpdk["OvsPmdCoreList"] = self.nfv_params.pmd_cpus
             params_dpdk["OvsDpdkSocketMemory"] = self.nfv_params.socket_mem
             params_dpdk["IsolCpusList"] = self.nfv_params.isol_cpus
+
+        params_dell_env["KernelArgs"] = kernel_args
         return params
 
     def _get_nfv_type(self, node_type_data):
