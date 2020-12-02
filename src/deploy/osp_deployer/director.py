@@ -2477,11 +2477,10 @@ class Director(InfraHost):
     def render_and_upload_compute_edge(self, node_type):
         node_type_data = self.settings.node_type_data_map[node_type]
         logger.debug("node_type_data: %s", str(node_type_data))
-        paths = self._generate_edge_template_paths(node_type)
-        stg_nic_path, dst_nic_path = paths
-        num_nics = int(node_type_data['nic_port_count'])
-        port_dir = "{}_port".format(num_nics)
-        _tmplt_path = os.path.join(NIC_CONFIGS, port_dir, EDGE_COMPUTE_J2)
+        _paths = self._generate_edge_template_paths(node_type)
+        stg_nic_path, dst_nic_path = _paths
+
+        _tmplt_path = os.path.join(NIC_CONFIGS, EDGE_COMPUTE_J2)
         tmplt = self.jinja2_env.get_template(_tmplt_path)
         tmplt_data = {}
         tmplt_data["parameters"] = self._generate_nic_params(node_type)
@@ -3410,11 +3409,11 @@ class Director(InfraHost):
     def _generate_nic_params(self, node_type):
         role = self._generate_cc_role(node_type)
         node_type_data = self.settings.node_type_data_map[node_type]
-        mtu = node_type_data["nfv_mtu"]
         num_nics = int(node_type_data['nic_port_count'])
+        mtu = node_type_data["nfv_mtu"]
         nfv_type = self._get_nfv_type(node_type)
         params = {}
-        has_provsioning_nic = self._has_provisioning_nic(num_nics)
+        has_provsioning_nic = self._get_provisioning_nic(node_type)
         mtu_k = "{}DefaultBondMtu".format(role)
 
         cp_oc_default_route = "{}DefaultRoute".format(CONTROL_PLANE_NET[0])
@@ -3562,7 +3561,7 @@ class Director(InfraHost):
         node_type_data = setts.node_type_data_map[node_type]
         num_nics = int(node_type_data['nic_port_count'])
         role = self._generate_cc_role(node_type)
-        has_provsioning_nic = self._has_provisioning_nic(num_nics)
+        has_provsioning_nic = self._get_provisioning_nic(node_type)
         nfv_type = self._get_nfv_type(node_type)
 
         params = {}
@@ -3636,17 +3635,62 @@ class Director(InfraHost):
         return params
 
     def _generate_nic_network_config(self, node_type):
-        """Generate nic configuration template for a node type and network data
-        provided.  This results in a file that corresoponds to the node type,
-        which is uploaded to the correct nic_configs sub-directory based on the
-        number of ports declared in node_type_data.
+        """Generate nic configuration template for an edge site
+        This results in a file that corresoponds to the node type,
+        which is uploaded to the correct <site_name> sub-directory.
 
-        For example if node_type is boston-compute and
-        node_type_data.nic_port_count is 5, the resultant file will be uploaded
-        to ~/pilot/templates/nic_configs/5_port/bostoncompute.yaml
+        For example if node_type is boston-compute the resultant file will be uploaded
+        to ~/boston_compute/bostoncompute.yaml
 
         Nic configs contain nic bonding, ovs bridges, vlans and
         L3 routing between an edge site and central cloud networks.
+
+        The top level config objects are defined based on the NFV features
+        the site requires as well as a provisioning interface, if the site
+        nodes have a dedicated provisioning interface otherwise the
+        provisioning interface is part of a bond
+        which will be created post-provisioning, LACP fallback allows for the
+        operator to enable this feature.
+        The following rules apply:
+            - If there is a dedicated provisioning interface defined in the
+            site's .ini attributes, a 'interface' is defined with the name
+            provided by the site's 'ProvisioningInterface' attribute, example:
+                ProvisioningInterface=eno1
+            - If are NO NFV (nfv_type=None) features required by the site the
+            top-level network config objects will be:
+                - interface - the provisioning interface, if applicable
+                - ovs_bridge - 'br-tenant', which encapsulates bond0 and
+                the private api, storage and tenant tunnel vlans
+                - ovs_bridge - 'bridge_name', which encapluates bond1 and
+                the external vlan used by the provider network for accessing
+                workloads running at the edge.
+            - SRIOV only (nfv_type=sriov), configuration is the same as above
+            with the additional sriov_pf objects:
+                - sriov_pf - one of these objects will be generated for each
+                interface declared in the edge site's nfv_interfaces attribute
+            - DPDK only (nfv_type=dpdk):
+                - interface - the provisioning interface, if applicable
+                - ovs_user_bridge - 'br-tenant', encapulates a ovs_dpdk_bond
+                which in-turn will have members based on the interfaces defined
+                in the site's nfv_interfaces ini attribute
+                - linux_bond - 'bond0', which is used by the next three vlans
+                - vlan - internal api vlan, which consumes bond0
+                - vlan - storage vlan, which consumes bond0
+                - vlan - tenant tunnel vlan, which consumes bond0
+                - linux_bond - 'bond1' which is used by the external vlan below
+                - vlan - external vlan, used to configure the provider network
+                to expose workloads running at the edge site
+            - DPDK and SRIOV (nfv_type=both), same as DPDK only with two
+            differences, additional top-level sriov_pf objects SRIOV requires
+            are created and the nfv_interfaces defined for the site are split
+            between the ovs_dpdk_bond and sriov_pfs. For example if there are
+            four nfv_interfaces defined
+            (nfv_interfaces=ens4f0,ens5f0,ens4f1,ens5f1):
+                - ovs_user_bridge - 'br-tenant', the nested ovs_dpdk_bond will
+                only have two interfaces, ens4f0,ens5f0
+                - sriov_pf - two will be defined for the interfaces
+                ens4f1 & ens5f1
+                - The rest of the configuration is identical to DPDK only mode
 
         :param node_type: one of the node types defined in .ini file
         :returns: list of nic configuration dicts
@@ -3655,7 +3699,7 @@ class Director(InfraHost):
         mtu = "{}DefaultBondMtu".format(role)
         node_type_data = self.settings.node_type_data_map[node_type]
         num_nics = int(node_type_data["nic_port_count"])
-        has_provisioning_nic = self._has_provisioning_nic(num_nics)
+        has_provisioning_nic = self._get_provisioning_nic(num_nics)
         dpdk_ports, sriov_pfs = self._get_nfv_nics_by_type(node_type)
         nfv_type = self._get_nfv_type(node_type)
         is_sriov_req = self._is_sriov_required(node_type)
@@ -3698,11 +3742,14 @@ class Director(InfraHost):
         cp_addresses = [{"ip": "{}Ip".format(CONTROL_PLANE_NET[0]),
                          "cidr": "{}SubnetCidr".format(CONTROL_PLANE_NET[0])}]
 
-        tenant_br = {"type": "ovs_bridge"}
+        _bridge_type = ("ovs_user_bridge" if nfv_type (SRIOV, BOTH)
+                        else "ovs_bridge")
+        tenant_br = {"type": _bridge_type}
         tenant_br["name"] = "br-tenant"
         tenant_br["mtu"] = mtu
         tenant_br["dns_servers"] = "DnsServers"
         tenant_br["use_dhcp"] = False
+
         bond_0 = {"type": "linux_bond"}
         bond_0["name"] = "bond0"
         bond_0["bonding_options"] = "ComputeBondInterfaceOptions"
@@ -3718,12 +3765,10 @@ class Director(InfraHost):
 
         internal_api_vlan = {"type": "vlan"}
         internal_api_vlan["device"] = "bond0"
-
         internal_api_vlan["vlan_id"] = int_api_vlan_id
         internal_api_vlan["mtu"] = mtu
         internal_api_vlan["addresses"] = [{"ip_netmask":
                                            int_api_subnet}]
-
         internal_api_vlan['routes'] = int_api_interface_routes
 
         tenant_vlan = {"type": "vlan"}
@@ -3742,11 +3787,6 @@ class Director(InfraHost):
                                       storage_subnet}]
         storage_vlan['routes'] = storage_interface_routes
 
-        tenant_br["members"] = [bond_0, internal_api_vlan,
-                                tenant_vlan, storage_vlan]
-        ex_br = {"type": "ovs_bridge"}
-        ex_br["name"] = "bridge_name"
-        ex_br["mtu"] = mtu
         bond_1_if_1 = {"type": "interface"}
         bond_1_if_1["name"] = bond_1_if_1_param
         bond_1_if_1["mtu"] = mtu
@@ -3783,16 +3823,20 @@ class Director(InfraHost):
             nw_cfg.extend([prov_if])
 
         if not nfv_type or nfv_type == SRIOV:
+            tenant_br["members"] = [bond_0, internal_api_vlan,
+                                    tenant_vlan, storage_vlan]
             if not has_provisioning_nic:
                 tenant_br["addresses"] = cp_addresses
                 tenant_br["routes"] = [ec2_route, default_route, prov_route]
+            ex_br = {"type": "ovs_bridge"}
+            ex_br["name"] = "bridge_name"
+            ex_br["mtu"] = mtu
             nw_cfg.extend([tenant_br, ex_br])
 
         if is_sriov_req:
             nw_cfg.extend(sriov_pfs)
 
         if is_dpdk_req:
-            tenant_br["type"] = "ovs_user_bridge"
             tenant_br["ovs_extra"] = {"template":
                                       "set port br-tenant tag=_VLAN_TAG_",
                                       "tenant_vlan_id": tenant_vlan_id}
@@ -3866,8 +3910,23 @@ class Director(InfraHost):
             return NFV_TYPE_MAP[node_type_data["nfv_type"].strip()]
         return None
 
-    def _has_provisioning_nic(self, num_nics):
-        return bool(num_nics % 2 != 0)
+    def _get_provisioning_nic(self, node_type):
+        node_type_data = self.settings.node_type_data_map[node_type]
+        num_nics = int(node_type_data['nic_port_count'])
+        prov_if = (node_type_data['ProvisioningInterface']
+                   if 'ProvisioningInterface' in node_type_data
+                   and len(node_type_data['ProvisioningInterface'].strip())
+                   != 0 else None)
+        is_odd = bool(num_nics % 2 != 0)
+        if is_odd and not prov_if:
+            raise AssertionError("Edge site {} is configured to use a dedicated"
+                                 "provisioning interface as this site's "
+                                 "nic_port_count is an odd number, yet the "
+                                 "ProvisioningInterface attribute is missing "
+                                 "or empty, please check the site's "
+                                 "configuration and redeploy the site after "
+                                 "correcting any errors.".format(node_type))
+        return prov_if
 
     def _generate_default_networks_data(self):
         """Generate network_data.yaml file with default networks
@@ -4268,11 +4327,11 @@ class Director(InfraHost):
             _tmplt_name = _nt_lower
 
         if node_type:
-            staging_directory = self._generate_role_lower(node_type)
+            site_sub_directory = self._generate_role_lower(node_type)
             stg_tmplt_path = os.path.join(STAGING_TEMPLATES_PATH,
-                                          staging_directory)
+                                          site_sub_directory)
             remote_site_directory = os.path.join(self.home_dir,
-                                                 staging_directory)
+                                                 site_sub_directory)
         else:
             stg_tmplt_path = STAGING_TEMPLATES_PATH
             remote_site_directory = self.templates_dir
@@ -4283,6 +4342,6 @@ class Director(InfraHost):
             stg_tmplt_path,
             _tmplt_name, "yaml")
         self.create_directory(remote_site_directory)
-        logger.debug("returning paths, stage: %s, remote: %s",
+        logger.debug("Returning template paths, stage: %s, remote: %s",
                      stg_path, remote_file)
         return stg_path, remote_file
