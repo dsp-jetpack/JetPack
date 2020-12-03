@@ -1587,6 +1587,7 @@ class Director(InfraHost):
                 self.run_tty(cmd)
 
     def setup_networking_edge(self, node_type):
+        self.validate_edge_nics(node_type)
         self.render_and_upload_network_data_edge(node_type)
         self.setup_net_envt_edge(node_type)
         self.render_and_upload_network_isolation_edge(node_type)
@@ -2864,6 +2865,66 @@ class Director(InfraHost):
                     "stack_status": "Not Deployed"}
         return info
 
+    def validate_edge_nics(self, node_type):
+        node_type_data = self.settings.node_type_data_map[node_type]
+        num_nics = int(node_type_data['nic_port_count'])
+        nfv_nics = self._get_nfv_nics(node_type)
+        nfv_type = self._get_nfv_type(node_type)
+        provisioning_if = self._get_provisioning_if(node_type)
+        is_odd = bool(num_nics % 2 != 0)
+        num_nics_expected = 4
+        if provisioning_if:
+            num_nics_expected += 1
+        if nfv_type:
+            num_nics_expected += len(nfv_nics)
+
+        if nfv_type and nfv_type == BOTH and num_nics not in (8, 9):
+            raise AssertionError("Edge site {} is configured to use both "
+                                 "SRIOV and OVS DPDK but only 8 and 9 port "
+                                 "configurations are possible for this type "
+                                 "of edge site deployment and {} are declared "
+                                 "in nic_port_count".format(node_type,
+                                                            num_nics))
+
+        if is_odd and not provisioning_if:
+            raise AssertionError("Edge site {} is configured to use a "
+                                 "dedicated provisioning interface as "
+                                 "this site's nic_port_count "
+                                 "is an odd number, yet the "
+                                 "ProvisioningInterface attribute is missing "
+                                 "or empty, please check the site's "
+                                 "configuration and redeploy the site after "
+                                 "correcting any errors.".format(node_type))
+
+        # verify we have the right number of nfv nics
+        if num_nics_expected != num_nics:
+            _data = {"node_type": node_type,
+                     "nfv_type": nfv_type,
+                     "num_nics": num_nics,
+                     "num_nics_expected": num_nics_expected,
+                     "nfv_interfaces": str(nfv_nics),
+                     "provisioning_if": provisioning_if,
+                     "bond0_if1": node_type_data["Bond0Interface1"],
+                     "bond0_if2": node_type_data["Bond0Interface2"],
+                     "bond1_if1": node_type_data["Bond1Interface1"],
+                     "bond1_if2": node_type_data["Bond1Interface2"]
+                     }
+            raise AssertionError("The number of interfaces ({num_nics}) "
+                                 " specified for edge site {node_type} does "
+                                 "not match the number of interfaces expected "
+                                 "({num_nics_expected}). Please fix your site "
+                                 "configuration and redeploy it, "
+                                 "existing settings: \n"
+                                 "- nic_port_count: {num_nics}\n"
+                                 "- ProvisioningInterface: {provisioning_if}\n"
+                                 "- Bond0Interface1: {bond0_if1}\n"
+                                 "- Bond0Interface2: {bond0_if2}\n"
+                                 "- Bond1Interface1: {bond1_if1}\n"
+                                 "- Bond1Interface2: {bond1_if2}\n"
+                                 "- nfv_type: {nfv_type}\n"
+                                 "- nfv_interfaces: {nfv_interfaces}\n"
+                                 .format(**_data))
+
     def _fetch_network_environment_params(self):
         stg_net_env_file = os.path.join(STAGING_TEMPLATES_PATH,
                                         NET_ENV + ".yaml")
@@ -3412,8 +3473,10 @@ class Director(InfraHost):
         num_nics = int(node_type_data['nic_port_count'])
         mtu = node_type_data["nfv_mtu"]
         nfv_type = self._get_nfv_type(node_type)
+        is_sriov_req = self._is_sriov_required(node_type)
+        is_dpdk_req = self._is_ovs_dpdk_required(node_type)
         params = {}
-        has_provsioning_nic = self._get_provisioning_nic(node_type)
+        provisioning_if = self._get_provisioning_if(node_type)
         mtu_k = "{}DefaultBondMtu".format(role)
 
         cp_oc_default_route = "{}DefaultRoute".format(CONTROL_PLANE_NET[0])
@@ -3512,32 +3575,28 @@ class Director(InfraHost):
         params[bond_1_if_1] = {"default": '', "type": "string"}
         params[bond_1_if_2] = {"default": '', "type": "string"}
 
-        if has_provsioning_nic:
+        if provisioning_if:
             prov_if = role + 'ProvisioningInterface'
             params[prov_if] = {"default": '', "type": "string"}
         # Set NFV params
         if num_nics > 5 and nfv_type:
-            nfv_nics = self._get_nfv_nics(node_type)
             dpdk_ports, sriov_pfs = self._get_nfv_nics_by_type(node_type)
-            num_nfv_nics = len(nfv_nics)
-            for port in dpdk_ports:
-                _if_p = port["members"][0]["name"]
-                _if = port["members"][0]["interface"]
-                params[_if_p] = {"default": '', "type": "string"}
-
-            for pf in sriov_pfs:
-                _if_pf = pf["name"]
-                _if = pf["interface"]
-                params[_if_pf] = {"default": '', "type": "string"}
-
-            if nfv_type in [OVS_DPDK, BOTH]:
+            if is_dpdk_req:
+                for port in dpdk_ports:
+                    _if_p = port["members"][0]["name"]
+                    _if = port["members"][0]["interface"]
+                    params[_if_p] = {"default": '', "type": "string"}
                 _drv_k = "{}HostNicDriver".format(role)
                 params[_drv_k] = {"default": '', "type": "string"}
                 _dpdk_k = "{}BondInterfaceOvsOptions".format(role)
                 params[_dpdk_k] = {"default": '', "type": "string"}
                 _q_k = "{}NumDpdkInterfaceRxQueues".format(role)
                 params[_q_k] = {"default": 1, "type": "number"}
-            if nfv_type in [SRIOV, BOTH]:
+            if is_sriov_req:
+                for pf in sriov_pfs:
+                    _if_pf = pf["name"]
+                    _if = pf["interface"]
+                    params[_if_pf] = {"default": '', "type": "string"}
                 _sriov_k = "{}BondInterfaceSriovOptions".format(role)
                 params[_sriov_k] = {"default": '', "type": "string"}
                 _mtu = "{}DefaultBondMtu".format(role)
@@ -3561,8 +3620,10 @@ class Director(InfraHost):
         node_type_data = setts.node_type_data_map[node_type]
         num_nics = int(node_type_data['nic_port_count'])
         role = self._generate_cc_role(node_type)
-        has_provsioning_nic = self._get_provisioning_nic(node_type)
+        provisioning_if = self._get_provisioning_if(node_type)
         nfv_type = self._get_nfv_type(node_type)
+        is_sriov_req = self._is_sriov_required(node_type)
+        is_dpdk_req = self._is_ovs_dpdk_required(node_type)
 
         params = {}
         cp_oc_default_route = "{}DefaultRoute".format(CONTROL_PLANE_NET[0])
@@ -3589,43 +3650,31 @@ class Director(InfraHost):
         params[bond_0_if_2] = node_type_data['Bond0Interface2']
         params[bond_1_if_1] = node_type_data['Bond1Interface1']
         params[bond_1_if_2] = node_type_data['Bond1Interface2']
-        if has_provsioning_nic:
+        if provisioning_if:
             prov_if = role + 'ProvisioningInterface'
-            params[prov_if] = node_type_data['ProvisioningInterface']
+            params[prov_if] = provisioning_if
         # Set NFV params
         if num_nics > 5 and nfv_type:
             nfv_nics = self._get_nfv_nics(node_type)
             dpdk_ports, sriov_pfs = self._get_nfv_nics_by_type(node_type)
 
-            # verify we have the right number of nfv nics
-            if (len(nfv_nics) + 4) != (num_nics - (num_nics % 2)):
-                raise AssertionError("The number of nics ({}) specified "
-                                     "for edge site {} does not match what "
-                                     "is defined in the edge site's "
-                                     "nfv_interfaces attribute ({}), "
-                                     "please verify your "
-                                     "configuration ".format(num_nics,
-                                                             node_type,
-                                                             str(nfv_nics)))
-
-            for port in dpdk_ports:
-                _if_p = port["members"][0]["name"]
-                _if = port["members"][0]["interface"]
-                params[_if_p] = _if
-
-            for pf in sriov_pfs:
-                _if_pf = pf["name"]
-                _if = pf["interface"]
-                params[_if_pf] = _if
-
-            if nfv_type in (OVS_DPDK, BOTH):
+            if is_dpdk_req:
+                for port in dpdk_ports:
+                    _if_p = port["members"][0]["name"]
+                    _if = port["members"][0]["interface"]
+                    params[_if_p] = _if
                 _drv_k = "{}HostNicDriver".format(role)
                 params[_drv_k] = node_type_data["HostNicDriver"]
                 _dpdk_k = "{}BondInterfaceOvsOptions".format(role)
                 params[_dpdk_k] = node_type_data["BondInterfaceOvsOptions"]
                 _q_k = "{}NumDpdkInterfaceRxQueues".format(role)
                 params[_q_k] = node_type_data["NumDpdkInterfaceRxQueues"]
-            if nfv_type in (SRIOV, BOTH):
+
+            if is_sriov_req:
+                for pf in sriov_pfs:
+                    _if_pf = pf["name"]
+                    _if = pf["interface"]
+                    params[_if_pf] = _if
                 _sriov_k = "{}BondInterfaceSriovOptions".format(role)
                 params[_sriov_k] = node_type_data["BondInterfaceSriovOptions"]
                 _mtu = "{}DefaultBondMtu".format(role)
@@ -3697,9 +3746,7 @@ class Director(InfraHost):
         """
         role = self._generate_cc_role(node_type)
         mtu = "{}DefaultBondMtu".format(role)
-        node_type_data = self.settings.node_type_data_map[node_type]
-        num_nics = int(node_type_data["nic_port_count"])
-        has_provisioning_nic = self._get_provisioning_nic(num_nics)
+        provisioning_if = self._get_provisioning_if(node_type)
         dpdk_ports, sriov_pfs = self._get_nfv_nics_by_type(node_type)
         nfv_type = self._get_nfv_type(node_type)
         is_sriov_req = self._is_sriov_required(node_type)
@@ -3742,7 +3789,7 @@ class Director(InfraHost):
         cp_addresses = [{"ip": "{}Ip".format(CONTROL_PLANE_NET[0]),
                          "cidr": "{}SubnetCidr".format(CONTROL_PLANE_NET[0])}]
 
-        _bridge_type = ("ovs_user_bridge" if nfv_type (SRIOV, BOTH)
+        _bridge_type = ("ovs_user_bridge" if is_dpdk_req
                         else "ovs_bridge")
         tenant_br = {"type": _bridge_type}
         tenant_br["name"] = "br-tenant"
@@ -3808,10 +3855,10 @@ class Director(InfraHost):
             {"ip_netmask": external_subnet}]
 
         external_vlan["routes"] = external_interface_routes
-        ex_br["members"] = [bond_1, external_vlan]
+
         prov_if = None
         # if there is a provisioning nic populate the interface attributes
-        if has_provisioning_nic:
+        if provisioning_if:
             prov_if_param = role + 'ProvisioningInterface'
             prov_if = {"type": "interface"}
             prov_if["name"] = prov_if_param
@@ -3825,12 +3872,13 @@ class Director(InfraHost):
         if not nfv_type or nfv_type == SRIOV:
             tenant_br["members"] = [bond_0, internal_api_vlan,
                                     tenant_vlan, storage_vlan]
-            if not has_provisioning_nic:
+            if not provisioning_if:
                 tenant_br["addresses"] = cp_addresses
                 tenant_br["routes"] = [ec2_route, default_route, prov_route]
             ex_br = {"type": "ovs_bridge"}
             ex_br["name"] = "bridge_name"
             ex_br["mtu"] = mtu
+            ex_br["members"] = [bond_1, external_vlan]
             nw_cfg.extend([tenant_br, ex_br])
 
         if is_sriov_req:
@@ -3851,7 +3899,7 @@ class Director(InfraHost):
             tenant_br["members"] = [dpdk_bond_0]
             bond_0["use_dhcp"] = False
             bond_0["dns_servers"] = "DnsServers"
-            if not has_provisioning_nic:
+            if not provisioning_if:
                 bond_0["addresses"] = cp_addresses
                 bond_0["routes"] = [ec2_route, default_route, prov_route]
             nw_cfg.extend([bond_0, internal_api_vlan, tenant_vlan,
@@ -3910,22 +3958,12 @@ class Director(InfraHost):
             return NFV_TYPE_MAP[node_type_data["nfv_type"].strip()]
         return None
 
-    def _get_provisioning_nic(self, node_type):
+    def _get_provisioning_if(self, node_type):
         node_type_data = self.settings.node_type_data_map[node_type]
-        num_nics = int(node_type_data['nic_port_count'])
         prov_if = (node_type_data['ProvisioningInterface']
                    if 'ProvisioningInterface' in node_type_data
                    and len(node_type_data['ProvisioningInterface'].strip())
                    != 0 else None)
-        is_odd = bool(num_nics % 2 != 0)
-        if is_odd and not prov_if:
-            raise AssertionError("Edge site {} is configured to use a dedicated"
-                                 "provisioning interface as this site's "
-                                 "nic_port_count is an odd number, yet the "
-                                 "ProvisioningInterface attribute is missing "
-                                 "or empty, please check the site's "
-                                 "configuration and redeploy the site after "
-                                 "correcting any errors.".format(node_type))
         return prov_if
 
     def _generate_default_networks_data(self):
