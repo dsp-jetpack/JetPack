@@ -893,6 +893,7 @@ setup_project(){
     execute_command "openstack project create $PROJECT_NAME"
     execute_command "openstack user create --project $PROJECT_NAME --password $SANITY_USER_PASSWORD --email $SANITY_USER_EMAIL $USER_NAME"
     execute_command "openstack role add --project $PROJECT_NAME --user $USER_NAME member"
+    execute_command "openstack role add --project $PROJECT_NAME --user $USER_NAME swiftoperator"
   else
     info "#Project $PROJECT_NAME exists ---- Skipping"
   fi
