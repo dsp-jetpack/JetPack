@@ -281,6 +281,10 @@ class Sah(InfraHost):
         hosts = [
             self.settings.director_node.public_api_ip
         ]
+        if self.settings.enable_powerflex_backend:
+            hosts.append(self.settings.powerflexgw_vm.public_api_ip)
+            if self.settings.enable_powerflex_mgmt:
+                hosts.append(self.settings.powerflexmgmt_vm.public_api_ip)
 
         if self.is_running_from_sah() is True:
             for host in hosts:
