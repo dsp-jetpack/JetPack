@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1492,7 +1492,7 @@ def main():
         else:
             flavor = ROLES[args.role_index.role]
         # Generate Ceph OSD/journal configuration for storage nodes
-        if flavor == "ceph-storage" or flavor == "computehci":
+        if flavor == "ceph-storage" or flavor == "computehci" or flavor == "powerflex-storage":
             generate_osd_config(args.ip_mac_service_tag, drac_client)
 
     except (DRACOperationFailed, DRACUnexpectedReturnValue,

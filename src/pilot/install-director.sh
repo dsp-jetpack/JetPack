@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -266,8 +266,7 @@ if [ ${enable_powerflex} == 1 ]; then
     run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
     run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
     echo "# Cloning Dell EMC TripleO PowerFlex repository"
-    run_command "git clone https://github.com/dell/tripleo-powerflex.git ${HOME}/pilot/powerflex/tripleo-powerflex"
-    #run_command "git clone https://github.com/jproque-dell/tripleo-powerflex.git ${HOME}/pilot/powerflex/tripleo-powerflex"
+    run_command "sudo dnf install -y ansible-tripleo-powerflex"
 fi
 
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
@@ -297,35 +296,12 @@ sudo sed -i 's/$(get_python)/python3/' /usr/share/openstack-tripleo-heat-templat
 echo "## Done."
 
 
-# This hacks in a patch for XE2420 where if CertificateInstance lower and
-# upper bounds are None, patch will make the attributes nullable and set
-# default to 0 to avoid an exception as those two attibutes are not nullable
-echo "### Patching idrac_card.py"
-apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.py ${HOME}/pilot/idrac_card.patch"
-
-echo "## Done"
-
-## This hacks in a patch to fix the powerflex cinder backend name required by Puppet to deploy
-echo
-echo "## Patching PowerFlex cinder backend HEAT Template"
-apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/cinder/cinder-backend-dellemc-vxflexos-puppet.yaml ${HOME}/pilot/powerflex-cinder-backend.patch"
-echo "## Done."
-
 echo
 echo "## Copying heat templates..."
 cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overcloud
 # TODO:dpaterson, why do we copy roles_data to ~/pilot/templates/overcloud/ ?
 cp $HOME/pilot/templates/roles_data.yaml $HOME/pilot/templates/overcloud/roles_data.yaml
 cp $HOME/pilot/templates/network-isolation.yaml $HOME/pilot/templates/overcloud/environments/network-isolation.yaml
-echo "## Done."
-
-echo
-echo "## Copying powerflex and tripleo-powerflex ansible playbooks..."
-sudo cp -R $HOME/pilot/powerflex/tripleo-powerflex/powerflex-ansible /usr/share/powerflex-ansible
-sudo cp -R $HOME/pilot/powerflex/tripleo-powerflex/tripleo-powerflex-run-ansible /usr/share/ansible/roles/tripleo-powerflex-run-ansible
-cp -R $HOME/pilot/powerflex/tripleo-powerflex/templates/overcloud/environments/powerflex-ansible $HOME/pilot/templates/overcloud/environments/powerflex-ansible
-cp -R $HOME/pilot/powerflex/tripleo-powerflex/templates/overcloud/deployment/powerflex-ansible $HOME/pilot/templates/overcloud/deployment/powerflex-ansible
-
 echo "## Done."
 
 echo

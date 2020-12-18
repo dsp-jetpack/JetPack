@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -191,7 +191,7 @@ class Director(InfraHost):
 
         if len(self.settings.overcloud_nodes_pwd) > 0:
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
-        if self.settings.enable_powerflex_backend is True:
+        if len(self.settings.powerflex_nodes) > 0:
             cmd += " --enable_powerflex"
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
@@ -666,7 +666,7 @@ class Director(InfraHost):
             num_osds = len(osd_config["devices"])
             total_osds = total_osds + num_osds
 
-        num_storage_nodes = len(self.settings.ceph_nodes) + len(self.settings.computehci_nodes)
+        num_storage_nodes = len(self.settings.ceph_nodes) + len(self.settings.computehci_nodes) + len(self.settings.powerflex_nodes)
         num_unaccounted = num_storage_nodes - len(uuid_to_osd_configs)
         if num_unaccounted < 0:
             raise AssertionError("There are extraneous servers listed in {}. "
