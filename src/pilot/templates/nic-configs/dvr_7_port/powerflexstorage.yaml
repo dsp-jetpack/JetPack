@@ -76,7 +76,7 @@ parameters:
       JSON route e.g. [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}]
       Unless the default is changed, the parameter is automatically resolved
       from the subnet host_routes attribute.
-    type: json  
+    type: json
   StorageInterfaceRoutes:
     default: []
     description: >
@@ -111,23 +111,23 @@ parameters:
     description: The IP address of the EC2 metadata server.
     type: string
   StorageProvisioningInterface:
-    default: em3
+    default: eno3
     description: Provisioning interface name
     type: string
   StorageBond0Interface1:
-    default: em1
+    default: eno1
     description: Bond 0 interface 1 name
     type: string
   StorageBond0Interface2:
-    default: p2p1
+    default: ens2f0
     description: Bond 0 interface 2 name
     type: string
   StorageBond1Interface1:
-    default: em2
+    default: eno2
     description: Bond 1 interface 1 name
     type: string
   StorageBond1Interface2:
-    default: p2p2
+    default: ens2f1
     description: Bond 1 interface 2 name
     type: string
   StorageBondInterfaceOptions:
@@ -242,7 +242,7 @@ resources:
                     get_param: InternalApiMtu
                   addresses:
                   - ip_netmask:
-                      get_param: InternalApiIpSubnet      
+                      get_param: InternalApiIpSubnet
               - type: ovs_bridge
                 name: br-bond1
                 mtu:

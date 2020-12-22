@@ -107,19 +107,19 @@ parameters:
     description: The IP address of the EC2 metadata server.
     type: string
   ComputeBond0Interface1:
-    default: em1
+    default: eno1
     description: Bond 0 interface 1 name
     type: string
   ComputeBond0Interface2:
-    default: p3p1
+    default: ens3f0
     description: Bond 0 interface 2 name
     type: string
   ComputeBond1Interface1:
-    default: em2
+    default: eno2
     description: Bond 1 interface 1 name
     type: string
   ComputeBond1Interface2:
-    default: p3p2
+    default: ens3f1
     description: Bond 1 interface 2 name
     type: string
   ComputeBondInterfaceOptions:
@@ -127,11 +127,11 @@ parameters:
     description: The bonding_options string for the bond interface.
     type: string
   ComputeSriovInterface1:
-    default: p2p1
+    default: ens2f0
     description: SRIOV Interface 1 name
     type: string
   ComputeSriovInterface2:
-    default: p3p1
+    default: ens3f0
     description: SRIOV Interface 2 name
     type: string
   NumSriovVfs: # Override this via parameter_defaults

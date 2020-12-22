@@ -1,4 +1,4 @@
-# Copyright (c)2018-2020 Dell Inc. or its subsidiaries.
+# Copyright (c)2018-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,33 +22,33 @@ parameter_defaults:
   # CHANGEME: Change the interface names in the following lines for the
   # controller nodes provisioning interface and to include in the controller
   # nodes bonds
-  #ControllerProvisioningInterface: em3
-  ControllerBond0Interface1: em1
-  ControllerBond0Interface2: p3p1
-  ControllerBond1Interface1: em2
-  ControllerBond1Interface2: p3p2
+  #ControllerProvisioningInterface: eno3
+  ControllerBond0Interface1: eno1
+  ControllerBond0Interface2: ens3f0
+  ControllerBond1Interface1: eno2
+  ControllerBond1Interface2: ens3f1
   # The bonding mode to use for controller nodes
   ControllerBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
 
   # CHANGEME: Change the interface names in the following lines for the
   # compute nodes provisioning interface and to include in the compute
   # nodes bonds
-  #ComputeProvisioningInterface: em3
-  ComputeBond0Interface1: em1
-  ComputeBond0Interface2: p3p1
-  ComputeBond1Interface1: em2
-  ComputeBond1Interface2: p3p2
+  #ComputeProvisioningInterface: eno3
+  ComputeBond0Interface1: eno1
+  ComputeBond0Interface2: ens3f0
+  ComputeBond1Interface1: eno2
+  ComputeBond1Interface2: ens3f1
   # The bonding mode to use for compute nodes
   ComputeBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
 
   # CHANGEME: Change the interface names in the following lines for the
   # storage nodes provisioning interface and to include in the storage
   # nodes bonds
-  #StorageProvisioningInterface: em3
-  StorageBond0Interface1: em1
-  StorageBond0Interface2: p2p1
-  StorageBond1Interface1: em2
-  StorageBond1Interface2: p2p2
+  #StorageProvisioningInterface: eno3
+  StorageBond0Interface1: eno1
+  StorageBond0Interface2: ens2f0
+  StorageBond1Interface1: eno2
+  StorageBond1Interface2: ens2f1
   # The bonding mode to use for storage nodes
   StorageBondInterfaceOptions: mode=802.3ad miimon=100 xmit_hash_policy=layer3+4 lacp_rate=1
   

@@ -112,7 +112,7 @@ TimeZone="UTC"
 
 # Installation interface configuration
 # Format is "ip/netmask interface no"
-anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 em4 no"
+anaconda_interface="CHANGEME e.g. 10.148.44.211/255.255.255.0 eno4 no"
 
 # Bonding and Bridge configuration. These variables are bash associative arrays and take the form of array[key]="value".
 # Specifying a key more than once will overwrite the first key. For example:
