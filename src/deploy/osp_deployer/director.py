@@ -2192,7 +2192,7 @@ class Director(InfraHost):
                                                  '/ceph-ansible/group_vars/all.yml')[0].split(' ')[1]
                     dashboard_ip = self.run_tty('sudo grep dashboard_frontend /var/lib/mistral/' +
                                                 self.settings.overcloud_name +
-                                                '/ceph-ansible/group_vars/mgrs.yml')[0].split(' ')[1]
+                                                '/ceph-ansible/group_vars/all.yml')[0].split(' ')[1]
                 ip_info.append("OverCloud Horizon        : " +
                                overcloud_endpoint)
                 ip_info.append("OverCloud admin password : " +
