@@ -1738,7 +1738,7 @@ class Director(InfraHost):
                                    self.settings.nic_env_file)
         for setting_name, setting_value in ini_nics_settings.items():
             # The following is executing a sed command of the following format:
-            # sed -i -r 's/(^\s*StorageBond0Interface1:\s*).*/\1p1p2/'
+            # sed -i -r 's/(^\s*StorageBond0Interface1:\s*).*/\1ens1f1/'
             cmds.append('sed -i -r \'s/(^\s*' + setting_name +    # noqa: W605
                         ':\s*).*/\\1' + setting_value + '/\' ' + remote_file)
 

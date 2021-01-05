@@ -135,19 +135,19 @@ parameters:
     description: The IP of the gateway on the provisioning network which will allow access to the management network.
     type: string
   ControllerBond0Interface1:
-    default: em1
+    default: eno1
     description: Bond 0 interface 1 name
     type: string
   ControllerBond0Interface2:
-    default: p3p1
+    default: ens3f0
     description: Bond 0 interface 2 name
     type: string
   ControllerBond1Interface1:
-    default: em2
+    default: eno2
     description: Bond 1 interface 1 name
     type: string
   ControllerBond1Interface2:
-    default: p3p2
+    default: ens3f1
     description: Bond 1 interface 2 name
     type: string
   ControllerBondInterfaceOptions:
