@@ -445,6 +445,7 @@ class Settings:
         
         # PowerFlex
         if backend_settings['enable_powerflex_backend'].lower() == 'true':
+            self.enable_dashboard = False
             self.enable_powerflex_backend = True
             self.powerflex_gateway_rpm = \
                  backend_settings['powerflex_gateway_rpm']
