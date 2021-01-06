@@ -308,15 +308,13 @@ def define_controller_logical_disks(drac_client, raid_controllers):
             else:
                 raid_cntlr_physical_disks[disk.controller] = [disk]
 
-    boss_controller = [cntrl for cntrl in raid_controllers
-                       if drac_client.is_boss_controller(cntrl)]
-
+    boss_controller = _fetch_boss_controller(drac_client, raid_controllers)
     if boss_controller:
         if check_cntlr_physical_disks_len(
-           raid_cntlr_physical_disks[boss_controller[0]]):
+           raid_cntlr_physical_disks[boss_controller]):
             os_logical_disk = define_storage_operating_system_logical_disk(
-                raid_cntlr_physical_disks[boss_controller[0]],
-                drac_client, boss_controller[0])
+                raid_cntlr_physical_disks[boss_controller],
+                drac_client, boss_controller)
         else:
             LOG.critical("The BOSS card has only 1 SSD. "
                          "2 SSDs are needed to configure a RAID 1")
@@ -367,15 +365,13 @@ def define_compute_logical_disks(drac_client, raid_controllers):
             else:
                 raid_cntlr_physical_disks[disk.controller] = [disk]
 
-    boss_controller = [cntrl for cntrl in raid_controllers
-                       if drac_client.is_boss_controller(cntrl)]
-
+    boss_controller = _fetch_boss_controller(drac_client, raid_controllers)
     if boss_controller:
         if check_cntlr_physical_disks_len(
-           raid_cntlr_physical_disks[boss_controller[0]]):
+           raid_cntlr_physical_disks[boss_controller]):
             os_logical_disk = define_storage_operating_system_logical_disk(
-                raid_cntlr_physical_disks[boss_controller[0]],
-                drac_client, boss_controller[0])
+                raid_cntlr_physical_disks[boss_controller],
+                drac_client, boss_controller)
         else:
             LOG.critical("The BOSS card has only 1 SSD. "
                          "2 SSDs are needed to configure a RAID 1")
@@ -475,6 +471,13 @@ def check_cntlr_physical_disks_len(cntrl_physical_disks):
     # a RAID1
     if len(cntrl_physical_disks) >= 2:
         return True
+
+
+def _fetch_boss_controller(drac_client, raid_controllers):
+    boss_controller = [cntrl for cntrl in raid_controllers
+                       if drac_client.is_boss_controller(cntrl)]
+    if boss_controller:
+        return boss_controller[0]
 
 
 def define_storage_logical_disks(drac_client, raid_controllers):
