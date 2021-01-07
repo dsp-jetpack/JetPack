@@ -1,6 +1,7 @@
 /.project
 /.pydevproject
 /.settings
+/.idea
 *~
 ## vi / vim ##########################################################
 *.s[a-w][a-z]
