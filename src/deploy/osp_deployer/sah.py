@@ -298,7 +298,9 @@ class Sah(InfraHost):
 
     def handle_lock_files(self):
         files = [
-            'director_vm.vlock'
+            'director_vm.vlock',
+            'powerflex_gw.vlock',
+            'powerflex_mgmt.vlock'
         ]
 
         # 0 out any staged locking files to prevent accidental reuse
