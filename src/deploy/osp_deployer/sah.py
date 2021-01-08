@@ -457,7 +457,6 @@ class Sah(InfraHost):
                        self.settings.powerflexgw_vm.storage_ip +
                        "    " + self.settings.storage_netmask +
                        "     " + self.settings.storage_network_mtu,)
-        logger.info(" >> " + self.settings.director_node.provisioning_ip + "" + self.settings.provisioning_netmask  + "" + self.settings.provisioning_network_mtu)
         conf = conf + ("enp3s0        " +
                        self.settings.powerflexgw_vm.provisioning_ip +
                        "    " + self.settings.provisioning_netmask +
