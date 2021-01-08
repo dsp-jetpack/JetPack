@@ -114,6 +114,10 @@ do
   [[ ${iface} == enp2s0 ]] && {
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
     }
+
+  [[ ${iface} == enp3s0 ]] && {
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
+    }
     
 done <<< "$( grep -Ev "^#|^;|^\s*$" ${cfg_file} )"
 } >> /tmp/powerflexmgmt.ks
@@ -156,6 +160,7 @@ chvt 8
   done
 
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-enp2s0
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-enp3s0
   host=`hostname -s`
   sed -i "s/\(127.0.0.1\s\+\)/\1${HostName} ${host} /" /etc/hosts
 
@@ -322,6 +327,7 @@ virt-install --name powerflexmgmt \
   --disk /store/data/images/powerflexmgmt.img,bus=virtio,size=120 \
   --network bridge=br-pub-api \
   --network bridge=br-stor \
+  --network bridge=br-prov \
   --initrd-inject /tmp/powerflexmgmt.ks \
   --extra-args "ks=file:/powerflexmgmt.ks" \
   --noautoconsole \
