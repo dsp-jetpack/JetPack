@@ -289,6 +289,14 @@
                "validate": [
                  "should_be_valid_ip"
                ]
+            },
+            "powerflex_version": {
+               "validate": [
+                  "should_be_version"
+               ],
+               "is_value": [
+                  "3.5-2.107"
+               ]
             }
          }
       }
