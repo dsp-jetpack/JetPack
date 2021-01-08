@@ -71,7 +71,7 @@ ntp=""
 while read iface ip mask mtu
 do
   flag=""
-  [[ ${iface} == ntpserver ]] && echo "echo NTPServers=${ip} >> /tmp/ks_post_include.txt"
+  [[ ${iface} == ntpserver ]] && echo "echo NTPServers=${ip} >> /tmp/ks_post_include.txt;echo sah_ip=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == rootpassword ]] && echo "echo rootpw ${ip} >> /tmp/ks_include.txt"
   [[ ${iface} == timezone ]] && echo "echo timezone ${ip} --utc >> /tmp/ks_include.txt"
 
@@ -112,6 +112,10 @@ do
     }
 
   [[ ${iface} == enp2s0 ]] && {
+    echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
+    }
+
+  [[ ${iface} == enp3s0 ]] && {
     echo "echo network --activate --onboot=true --noipv6 --device=${iface} --bootproto=static --ip=${ip} --netmask=${mask} --gateway=${Gateway} --nodefroute --mtu=${mtu} >> /tmp/ks_include.txt"
     }
     
@@ -156,6 +160,7 @@ chvt 8
   done
 
   sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-enp2s0
+  sed -i -e '/^DNS/d' -e '/^GATEWAY/d' /etc/sysconfig/network-scripts/ifcfg-enp3s0
   host=`hostname -s`
   sed -i "s/\(127.0.0.1\s\+\)/\1${HostName} ${host} /" /etc/hosts
 
@@ -210,13 +215,8 @@ chvt 8
 
   subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-8-for-x86_64-baseos-eus-rpms --enable=rhel-8-for-x86_64-appstream-rpms --enable=rhel-8-for-x86_64-highavailability-eus-rpms --enable=ansible-2.8-for-rhel-8-x86_64-rpms --enable=fast-datapath-for-rhel-8-x86_64-rpms --enable=advanced-virt-for-rhel-8-x86_64-rpms --enable=satellite-tools-6.5-for-rhel-8-x86_64-rpms
 
-  mkdir /tmp/mnt
-  mount /dev/fd0 /tmp/mnt
-  [[ -e /tmp/mnt/versionlock.list ]] && {
-    cp /tmp/mnt/versionlock.list /etc/yum/pluginconf.d
-    chmod 644 /etc/yum/pluginconf.d/versionlock.list
-    }
-  umount /tmp/mnt
+  wget http://${sah_ip}/powerflex_mgmt.vlock -O /etc/yum/pluginconf.d/versionlock.list
+  chmod 644 /etc/yum/pluginconf.d/versionlock.list
 
   yum-config-manager --enable rhel-8-for-x86_64-baseos-eus-rpms --setopt="rhel-8-for-x86_64-baseos-eus-rpms.priority=1"
   yum-config-manager --enable rhel-8-for-x86_64-appstream-rpms --setopt="rhel-8-for-x86_64-appstream-rpms.priority=1"
@@ -327,6 +327,7 @@ virt-install --name powerflexmgmt \
   --disk /store/data/images/powerflexmgmt.img,bus=virtio,size=120 \
   --network bridge=br-pub-api \
   --network bridge=br-stor \
+  --network bridge=br-prov \
   --initrd-inject /tmp/powerflexmgmt.ks \
   --extra-args "ks=file:/powerflexmgmt.ks" \
   --noautoconsole \
