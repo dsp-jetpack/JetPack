@@ -56,6 +56,7 @@ class Checkpoints:
         checks.verify_dpdk_dependencies()
         checks.verify_sriov_dependencies()
         checks.verify_hw_offload_dependencies()
+        checks.verify_powerflex_rpms_present()
 
     @staticmethod
     def verify_subscription_status(public_api_ip, user, password, retries):

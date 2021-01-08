@@ -17,6 +17,7 @@
 from .settings.config import Settings
 import re
 import os
+import glob
 import json
 import inspect
 import logging
@@ -82,6 +83,10 @@ class Profile:
                                             stanza), set)) is False:
                                         Err = Err + "\nSetting for " + set + \
                                             " Should be a valid value\n"
+                                if 'should_be_version' in test:
+                                    if self.valid_powerflex_version('3.6-0.249') is False:
+                                        Err = Err + "\nRPM version found for " + \
+                                            " PowerFlex is not supported\n"
 
                             validated = True
                         if vals['in_range']:
@@ -168,3 +173,24 @@ class Profile:
             if val < 0:
                 return False
         return True
+
+    def valid_powerflex_version(self, version):
+        valid = True
+        rpms_glob = ['sdc', 'sds', 'mdm', 'lia']
+        dict = {}
+
+        for rpm in rpms_glob:
+            file = glob.glob(self.settings.foreman_configuration_scripts +
+                             '/pilot/powerflex/rpms/*' +
+                             rpm + 
+                             '*.rpm')[0]
+            ver = file.split('/')[-1].split('-',3)[3].rsplit('.',3)[0]
+            dict[rpm] = ver
+
+        if len(set(dict.values())) == 1:
+            found_version = ''.join(set(dict.values()))
+            if found_version != version:
+                valid = False
+       
+        print(version, found_version) 
+        return valid

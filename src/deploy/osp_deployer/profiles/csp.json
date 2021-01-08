@@ -311,7 +311,12 @@
                "validate": [
 	         "should_be_valid_ip"
 	       ]
-	    } 
+	    },
+            "powerflex_version": {
+               "validate": [
+                  "should_be_version"
+               ]
+            }
          }
       }
    ]
