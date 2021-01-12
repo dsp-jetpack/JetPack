@@ -295,7 +295,7 @@
             },
             "powerflex_version": {
                "validate": [
-                  "should_be_version": {
+                  "should_be_version", {
                       "core_version": "3.6-0.249",
                       "mgmt_version": "3.6-0.178"
                   }
