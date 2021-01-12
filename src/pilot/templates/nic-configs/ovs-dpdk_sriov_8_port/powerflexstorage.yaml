@@ -110,24 +110,20 @@ parameters:
   EC2MetadataIp: # Override this via parameter_defaults
     description: The IP address of the EC2 metadata server.
     type: string
-  StorageProvisioningInterface:
-    default: em3
-    description: Provisioning interface name
-    type: string
   StorageBond0Interface1:
-    default: em1
+    default: eno1
     description: Bond 0 interface 1 name
     type: string
   StorageBond0Interface2:
-    default: p2p1
+    default: ens2f0
     description: Bond 0 interface 2 name
     type: string
   StorageBond1Interface1:
-    default: em2
+    default: eno2
     description: Bond 1 interface 1 name
     type: string
   StorageBond1Interface2:
-    default: p2p2
+    default: ens2f1
     description: Bond 1 interface 2 name
     type: string
   StorageBondInterfaceOptions:
@@ -181,14 +177,13 @@ resources:
           params:
             $network_config:
               network_config:
-              - type: interface
-                name:
-                  get_param: StorageProvisioningInterface
-                mtu:
-                  get_param: ProvisioningMtu
+              - type: ovs_bridge
+                name: br-bond0
                 use_dhcp: false
                 dns_servers:
                   get_param: DnsServers
+                mtu:
+                  get_param: ProvisioningMtu
                 addresses:
                 - ip_netmask:
                     list_join:
@@ -202,10 +197,6 @@ resources:
                 - default: true
                   next_hop:
                     get_param: ControlPlaneDefaultRoute
-              - type: ovs_bridge
-                name: br-bond0
-                mtu:
-                  get_param: DefaultBondMtu
                 members:
                 - type: linux_bond
                   name: bond0

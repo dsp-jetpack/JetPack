@@ -298,7 +298,9 @@ class Sah(InfraHost):
 
     def handle_lock_files(self):
         files = [
-            'director_vm.vlock'
+            'director_vm.vlock',
+            'powerflex_gw.vlock',
+            'powerflex_mgmt.vlock'
         ]
 
         # 0 out any staged locking files to prevent accidental reuse
@@ -455,12 +457,16 @@ class Sah(InfraHost):
                        self.settings.powerflexgw_vm.storage_ip +
                        "    " + self.settings.storage_netmask +
                        "     " + self.settings.storage_network_mtu,)
-
+        conf = conf + ("enp3s0        " +
+                       self.settings.powerflexgw_vm.provisioning_ip +
+                       "    " + self.settings.provisioning_netmask +
+                       "     " + self.settings.provisioning_network_mtu,)
         for line in conf:
             self.run("echo '" +
                      line +
                      "' >> " +
                      powerflexgw_conf)
+        re = self.run_tty("systemctl start httpd")
         remote_file = "sh /root/deploy-powerflexgw-vm.sh " + \
                       powerflexgw_conf + " " + \
                       "/store/data/iso/RHEL8.iso"
@@ -483,6 +489,7 @@ class Sah(InfraHost):
                                     "root",
                                     self.settings.powerflexgw_vm.root_password)
         logger.debug("powerflex gateway vm is up")
+        re = self.run_tty("systemctl stop httpd")
     
     def delete_powerflexgw_vm(self):
         while "powerflexgw" in \
@@ -524,12 +531,16 @@ class Sah(InfraHost):
                        self.settings.powerflexmgmt_vm.storage_ip +
                        "    " + self.settings.storage_netmask +
                        "     " + self.settings.storage_network_mtu,)
-
+        conf = conf + ("enp3s0        " +
+                       self.settings.powerflexmgmt_vm.provisioning_ip +
+                       "    " + self.settings.provisioning_netmask +
+                       "     " + self.settings.provisioning_network_mtu,)
         for line in conf:
             self.run("echo '" +
                      line +
                      "' >> " +
                      powerflexmgmt_conf)
+        re = self.run_tty("systemctl start httpd")
         remote_file = "sh /root/deploy-powerflexmgmt-vm.sh " + \
                       powerflexmgmt_conf + " " + \
                       "/store/data/iso/RHEL8.iso"
@@ -552,6 +563,7 @@ class Sah(InfraHost):
                                     "root",
                                     self.settings.powerflexmgmt_vm.root_password)
         logger.debug("powerflex presentation server vm is up")
+        re = self.run_tty("systemctl stop httpd")
 
     def delete_powerflexmgmt_vm(self):
         while "powerflexmgmt" in \
