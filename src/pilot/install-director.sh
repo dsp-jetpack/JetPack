@@ -295,6 +295,11 @@ echo "### Patching tripleo-heat-templates"
 sudo sed -i 's/$(get_python)/python3/' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/per_node.yaml
 echo "## Done."
 
+# This hacks in a patch for XE2420 where if GroupID returned by wsman is null
+# config_idrac.py fails.  This patch allows GroupID to be returned as null and the deployment to continue
+echo "### Patching idrac_card.py"
+apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.py ${HOME}/pilot/idrac_card_groupid.patch"
+echo "## Done"
 
 echo
 echo "## Copying heat templates..."
@@ -354,6 +359,14 @@ for container in "ironic_pxe_tftp"  "ironic_conductor" "ironic_api" ;
     run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/dracclient/wsman.py /tmp/wsman.patch"
     run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyc"
     run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyo"
+    echo "## Done"
+
+    echo
+    echo "## Patching Ironic iDRAC driver idrac_card.py on ${container}..."
+    upload_file_to_container "${container}" "${HOME}/pilot/idrac_card_groupid.patch" "/tmp/idrac_card_groupid.patch"
+    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.py /tmp/idrac_card_groupid.patch"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.pyc"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.pyo"
     echo "## Done"
 
   done

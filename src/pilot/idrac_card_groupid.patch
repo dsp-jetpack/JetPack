@@ -1,0 +1,16 @@
+--- idrac_card_train.py	2021-01-12 11:09:12.702610525 -0600
++++ idrac_card.py	2021-01-12 11:05:14.941262715 -0600
+@@ -61,7 +61,7 @@
+         fqdd = utils.get_wsman_resource_attr(
+             idrac_attr_xml, namespace, 'FQDD')
+         group_id = utils.get_wsman_resource_attr(
+-            idrac_attr_xml, namespace, 'GroupID')
++            idrac_attr_xml, namespace, 'GroupID', nullable=True)
+ 
+         return cls(name, instance_id, current_value, pending_value,
+                    (read_only == 'true'), fqdd, group_id)
+@@ -351,4 +351,3 @@
+ 
+ def _name_formatter(attribute):
+     return "{}#{}".format(attribute.group_id, attribute.name)
+-
