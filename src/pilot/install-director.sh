@@ -361,14 +361,6 @@ for container in "ironic_pxe_tftp"  "ironic_conductor" "ironic_api" ;
     run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyo"
     echo "## Done"
 
-    echo
-    echo "## Patching Ironic iDRAC driver idrac_card.py on ${container}..."
-    upload_file_to_container "${container}" "${HOME}/pilot/idrac_card_groupid.patch" "/tmp/idrac_card_groupid.patch"
-    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.py /tmp/idrac_card_groupid.patch"
-    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.pyc"
-    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.pyo"
-    echo "## Done"
-
   done
 
 # Restart containers/services
