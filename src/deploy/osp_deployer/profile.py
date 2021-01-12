@@ -25,7 +25,7 @@ from configparser import ConfigParser
 from osp_deployer.settings.config import Settings
 
 logger = logging.getLogger("osp_deployer")
-
+import pdb
 
 class Profile:
     def __init__(self):
@@ -54,6 +54,7 @@ class Profile:
         profile_config.read(os.path.dirname(inspect.getfile(Settings)) +
                             "/" + profile_definition['sample_ini'])
         Err = ''
+
         for items in profile_definition['associated_settings']:
             for stanza, value in list(items.items()):
                 for set, vals in list(value.items()):
@@ -67,6 +68,7 @@ class Profile:
                     try:
                         if vals['validate']:
                             for test in vals['validate']:
+                                logger.info(test)
                                 if 'should_be_valid_ip' in test:
                                     if self.is_valid_ip(user_config.get(str(
                                             stanza), set)) is False:
@@ -84,10 +86,18 @@ class Profile:
                                         Err = Err + "\nSetting for " + set + \
                                             " Should be a valid value\n"
                                 if 'should_be_version' in test:
-                                    if self.valid_powerflex_version('3.6-0.249') is False:
-                                        Err = Err + "\nRPM version found for " + \
-                                            " PowerFlex is not supported\n"
-
+#                                    pdb.set_trace()
+                                    if (len(self.settings.powerflex_nodes)) > 0:
+                                        rpm_type = {}
+                                        rpm_type['core'] = vals['validate'][1]['core_version']
+                                        if (self.settings.enable_powerflex_mgmt):
+                                            rpm_type['mgmt'] = vals['validate'][1]['mgmt_version']
+                                    for type, version in rpm_type.items():
+                                       if self.valid_powerflex_version(
+                                               type, version ) is False:
+                                          Err = Err + "\nRPM version for PoweFlex " + type + \
+                                              " is not supported!" 
+                                    
                             validated = True
                         if vals['in_range']:
                             for test in vals['in_range']:
@@ -96,7 +106,6 @@ class Profile:
                                     Err = Err + "\nSetting for " + set + \
                                         " Should be in valid" \
                                         " range "+test+"\n"
-                            
                     except:  # noqa: E722
                         pass
                     if len(allowed_settings) > 0:
@@ -175,17 +184,23 @@ class Profile:
                 return False
         return True
 
-    def valid_powerflex_version(self, version):
+    def valid_powerflex_version(self, type, version):
         valid = True
-        rpms_glob = ['sdc', 'sds', 'mdm', 'lia']
+        if type == 'core': 
+            rpms_glob = ['sdc', 'sds', 'mdm', 'lia']
+        elif type == 'mgmt':
+            rpms_glob = ['mgmt']
         dict = {}
-
         for rpm in rpms_glob:
             file = glob.glob(self.settings.foreman_configuration_scripts +
                              '/pilot/powerflex/rpms/*' +
                              rpm + 
                              '*.rpm')[0]
-            ver = file.split('/')[-1].split('-',3)[3].rsplit('.',3)[0]
+            if type == 'core':
+                ver = file.split('/')[-1].split('-',3)[3].rsplit('.',3)[0]
+            else:
+                ver = file.split('/')[-1].split('-',4)[4].rsplit('.',2)[0]
+
             dict[rpm] = ver
 
         if len(set(dict.values())) == 1:
@@ -194,5 +209,5 @@ class Profile:
                 valid = False
         else:
             valid = False
-        print(valid, found_version, version) 
+        
         return valid
