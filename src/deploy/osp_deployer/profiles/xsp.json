@@ -292,10 +292,10 @@
             },
             "powerflex_version": {
                "validate": [
-                  "should_be_version"
-               ],
-               "is_value": [
-                  "3.5-2.107"
+                  "should_be_version": {
+                      "core_version": "3.6-0.249",
+                      "mgmt_version": "3.6-0.178"
+                  }
                ]
             }
          }
