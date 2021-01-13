@@ -295,6 +295,11 @@ echo "### Patching tripleo-heat-templates"
 sudo sed -i 's/$(get_python)/python3/' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/per_node.yaml
 echo "## Done."
 
+# This hacks in a patch for XE2420 where if GroupID returned by wsman is null
+# config_idrac.py fails.  This patch allows GroupID to be returned as null and the deployment to continue
+echo "### Patching idrac_card.py"
+apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.py ${HOME}/pilot/idrac_card_groupid.patch"
+echo "## Done"
 
 echo
 echo "## Copying heat templates..."
