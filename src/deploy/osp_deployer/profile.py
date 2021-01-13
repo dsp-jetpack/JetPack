@@ -17,6 +17,7 @@
 from .settings.config import Settings
 import re
 import os
+import glob
 import json
 import inspect
 import logging
@@ -24,7 +25,6 @@ from configparser import ConfigParser
 from osp_deployer.settings.config import Settings
 
 logger = logging.getLogger("osp_deployer")
-
 
 class Profile:
     def __init__(self):
@@ -53,6 +53,7 @@ class Profile:
         profile_config.read(os.path.dirname(inspect.getfile(Settings)) +
                             "/" + profile_definition['sample_ini'])
         Err = ''
+
         for items in profile_definition['associated_settings']:
             for stanza, value in list(items.items()):
                 for set, vals in list(value.items()):
@@ -82,7 +83,18 @@ class Profile:
                                             stanza), set)) is False:
                                         Err = Err + "\nSetting for " + set + \
                                             " Should be a valid value\n"
-
+                                if 'should_be_version' in test:
+                                    if (len(self.settings.powerflex_nodes)) > 0:
+                                        rpm_type = {}
+                                        rpm_type['core'] = vals['validate'][1]['core_version']
+                                        if (self.settings.enable_powerflex_mgmt):
+                                            rpm_type['mgmt'] = vals['validate'][1]['mgmt_version']
+                                    for type, version in rpm_type.items():
+                                       if self.valid_powerflex_version(
+                                               type, version ) is False:
+                                          Err = Err + "\nRPM version for PoweFlex " + type + \
+                                              " is not supported!" 
+                                    
                             validated = True
                         if vals['in_range']:
                             for test in vals['in_range']:
@@ -168,3 +180,32 @@ class Profile:
             if val < 0:
                 return False
         return True
+
+    def valid_powerflex_version(self, type, version):
+        valid = True
+        if type == 'core': 
+            rpms_glob = ['sdc', 'sds', 'mdm', 'lia']
+        elif type == 'mgmt':
+            rpms_glob = ['mgmt']
+        dict = {}
+        for rpm in rpms_glob:
+            file = glob.glob(self.settings.foreman_configuration_scripts +
+                             '/pilot/powerflex/rpms/*' +
+                             rpm + 
+                             '*.rpm')[0]
+            if type == 'core':
+                ver = file.split('/')[-1].split('-',3)[3].rsplit('.',3)[0]
+            else:
+                # Special case for mgmt rpm file format
+                ver = file.split('/')[-1].split('-',4)[4].rsplit('.',2)[0]
+
+            dict[rpm] = ver
+
+        if len(set(dict.values())) == 1:
+            found_version = ''.join(set(dict.values()))
+            if found_version != version:
+                valid = False
+        else:
+            valid = False
+        
+        return valid

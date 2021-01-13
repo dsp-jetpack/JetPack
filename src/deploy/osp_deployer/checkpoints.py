@@ -52,6 +52,7 @@ class Checkpoints:
         checks.check_network_overlaps()
         checks.check_duplicate_ips()
         checks.verify_overcloud_name()
+        checks.verify_powerflex_rpms_present()
         checks.validate_profile()
         checks.verify_dpdk_dependencies()
         checks.verify_sriov_dependencies()

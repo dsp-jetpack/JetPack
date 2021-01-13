@@ -21,6 +21,7 @@ import logging
 import os.path
 import collections
 import yaml
+import glob
 
 logger = logging.getLogger("osp_deployer")
 
@@ -595,3 +596,22 @@ class DeployerSanity:
             raise AssertionError("SR-IOV hardware offload can't be " +
                                  "enabled as SR-IOV is not enabled. " +
                                  "Please verify the settings.")
+
+    def verify_powerflex_rpms_present(self):
+        logger.debug("Verifying PowerFlex RPMs are present in the " +
+                     "appropriate directory")
+        if self.settings.enable_powerflex_backend is True:
+            rpms_glob = ['sdc', 'sds', 'mdm', 'lia']
+            for component in rpms_glob:
+                file_present = glob.glob(self.settings.foreman_configuration_scripts +
+                                         '/pilot/powerflex/rpms/*' +
+                                         component + '*.rpm')
+                if any(file_present):
+                    logger.debug("RPM required for {} component successfully "
+                                 "found".format(component.upper()))
+                else:
+                    raise AssertionError("At least one RPM is missing. " +
+                                         "Please verify all PowerFlex RPMs are present " +
+                                         "before running the installation again.")
+        else:
+            logger.debug("PowerFlex backend not enabled, skipping.")
