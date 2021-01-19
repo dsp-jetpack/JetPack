@@ -301,6 +301,16 @@ echo "### Patching idrac_card.py"
 apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.py ${HOME}/pilot/idrac_card_groupid.patch"
 echo "## Done"
 
+# This patch fixes an issue when updating a stack on which PowerFlex is already installed
+# Waiting for the mod we did into the tripleo-powerflex avaiable into the RDO package
+echo
+echo "### Patching powerflex-ansible site.yaml"
+apply_patch "sudo patch -b -s /usr/share/powerflex-ansible/site.yaml ${HOME}/pilot/powerflex_ansible_site.patch"
+echo "### Patching powerflex-ansible roles/powerflex-facts/task/facts.yaml"
+apply_patch "sudo patch -b -s /usr/share/powerflex-ansible/roles/powerflex-facts/tasks/facts.yaml ${HOME}/pilot/powerflex_ansible_facts.patch"
+echo "### Done."
+
+
 echo
 echo "## Copying heat templates..."
 cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overcloud
