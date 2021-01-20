@@ -39,7 +39,7 @@
    gather_facts: no
    become: true
    roles: 
-+    - { role: "powerflex-lia", when: ''EMC-ScaleIO-lia' not in ansible_facts.packages" }
++    - { role: "powerflex-lia", when: "'EMC-ScaleIO-lia' not in ansible_facts.packages" }
 -    - powerflex-lia
    tags: powerflex-lia
 
