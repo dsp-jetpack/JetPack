@@ -168,7 +168,6 @@
                   "4_port/nic_environment.yaml",
                   "4_port/nic_environment_powerflex.yaml",
                   "5_port/nic_environment.yaml",
-                  "5_port_powerflex/nic_environment.yaml",
                   "5_port/nic_environment_powerflex.yaml"
 
                ]
