@@ -1,0 +1,10 @@
+-- roles/powerflex-facts/tasks/facts.yaml      2021-01-15 10:00:48.890130804 -0600
++++ /usr/share/powerflex-ansible/roles/powerflex-facts/tasks/facts.yaml 2021-01-15 07:57:51.983749499 -0600
+@@ -53,3 +53,7 @@
+ - name: Set the spare policy based upon SDSs count
+   set_fact:
+     spare_policy_pct: "{{ ((100 / sds_count | int) | round) | int }}"
++
++- name: Check installed RPMS
++  package_facts:
++    manager: auto
