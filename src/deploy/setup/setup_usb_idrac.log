@@ -1,0 +1,95 @@
+2021-01-22 02:11:07,894 INFO * Creating the SAH node usb image.
+2021-01-22 02:11:07,895 DEBUG loading settings files /root/r88.ini
+2021-01-22 02:11:07,906 ERROR Traceback (most recent call last):
+  File "setup_usb_idrac.py", line 65, in setup
+    settings = Settings(args.settings)
+  File "/root/JetPack/src/deploy/osp_deployer/settings/config.py", line 107, in __init__
+    raise AssertionError("\n" + error_msg)
+AssertionError: 
+Missing "share_storage_network" setting in your ini file [Sanity Test Settings] section 
+Missing "share_storage_network_start_ip" setting in your ini file [Sanity Test Settings] section 
+Missing "share_storage_network_end_ip" setting in your ini file [Sanity Test Settings] section 
+Missing "share_storage_network_gateway" setting in your ini file [Sanity Test Settings] section 
+Missing "share_storage_network_vlan" setting in your ini file [Sanity Test Settings] section 
+Missing "share_storage_network_name" setting in your ini file [Sanity Test Settings] section 
+Missing "share_storage_subnet_name" setting in your ini file [Sanity Test Settings] section 
+Missing "edge_sites" setting in your ini file [Advanced Settings] section 
+Missing "deploy_edge_sites" setting in your ini file [Advanced Settings] section 
+
+
+2021-01-22 02:11:07,907 ERROR <class 'AssertionError'>
+2021-01-22 02:13:25,664 INFO * Creating the SAH node usb image.
+2021-01-22 02:13:25,665 DEBUG loading settings files /root/r88.powerflex.ini
+2021-01-22 02:13:25,672 INFO Profile has been set to csp
+2021-01-22 02:13:25,673 INFO DVR is disabled.
+2021-01-22 02:13:25,673 INFO Barbican is disabled.
+2021-01-22 02:13:25,673 INFO Octavia is disabled.
+2021-01-22 02:13:25,674 INFO Using ini repo settings
+2021-01-22 02:13:25,675 INFO OVS_DPDK is disabled.
+2021-01-22 02:13:25,675 INFO SR-IOV is disabled.
+2021-01-22 02:13:25,675 INFO Smart NIC for SR-IOV Hardware Offload is disabled.
+2021-01-22 02:13:25,676 DEBUG Settings.settings is: {'edge_sites': '[]', 'node_type_data_map': '{}', 'undercloud_conf': '<configparser.ConfigParser object at 0x7f3e9449e5f8>'}
+2021-01-22 02:13:25,676 INFO Settings .ini: /root/r88.powerflex.ini
+2021-01-22 02:13:25,676 INFO Settings .properties /root/r88.powerflex.properties
+2021-01-22 02:13:25,676 INFO ==== Running environment sanity tests
+2021-01-22 02:13:25,676 DEBUG verifying sah network settings
+2021-01-22 02:13:25,676 DEBUG verifying director vm network settings
+2021-01-22 02:13:25,676 DEBUG verifying controller nodes network settings
+2021-01-22 02:13:25,676 DEBUG verifying compute nodes network settings
+2021-01-22 02:13:25,676 DEBUG verifying storage nodes network settings
+2021-01-22 02:13:25,676 DEBUG verifying powerflex gateway vm network settings
+2021-01-22 02:13:25,684 DEBUG Check settings ip's are valid.
+2021-01-22 02:13:25,685 DEBUG Verifying PowerFlex RPMs are present in the appropriate directory
+2021-01-22 02:13:25,686 ERROR Traceback (most recent call last):
+  File "setup_usb_idrac.py", line 74, in setup
+    sah.update_kickstart_usb()
+  File "/root/JetPack/src/deploy/osp_deployer/sah.py", line 46, in update_kickstart_usb
+    tester.verify_deployer_settings()
+  File "/root/JetPack/src/deploy/osp_deployer/checkpoints.py", line 55, in verify_deployer_settings
+    checks.verify_powerflex_rpms_present()
+  File "/root/JetPack/src/deploy/osp_deployer/settings_sanity.py", line 615, in verify_powerflex_rpms_present
+    "before running the installation again.")
+AssertionError: At least one RPM is missing. Please verify all PowerFlex RPMs are present before running the installation again.
+
+2021-01-22 02:13:25,686 ERROR <class 'AssertionError'>
+2021-01-22 02:20:25,747 INFO * Creating the SAH node usb image.
+2021-01-22 02:20:25,749 DEBUG loading settings files /root/r88.powerflex.ini
+2021-01-22 02:20:25,756 INFO Profile has been set to csp
+2021-01-22 02:20:25,756 INFO DVR is disabled.
+2021-01-22 02:20:25,756 INFO Barbican is disabled.
+2021-01-22 02:20:25,756 INFO Octavia is disabled.
+2021-01-22 02:20:25,757 INFO Using ini repo settings
+2021-01-22 02:20:25,758 INFO OVS_DPDK is disabled.
+2021-01-22 02:20:25,758 INFO SR-IOV is disabled.
+2021-01-22 02:20:25,758 INFO Smart NIC for SR-IOV Hardware Offload is disabled.
+2021-01-22 02:20:25,759 DEBUG Settings.settings is: {'edge_sites': '[]', 'node_type_data_map': '{}', 'undercloud_conf': '<configparser.ConfigParser object at 0x7f9926896588>'}
+2021-01-22 02:20:25,759 INFO Settings .ini: /root/r88.powerflex.ini
+2021-01-22 02:20:25,759 INFO Settings .properties /root/r88.powerflex.properties
+2021-01-22 02:20:25,759 INFO ==== Running environment sanity tests
+2021-01-22 02:20:25,759 DEBUG verifying sah network settings
+2021-01-22 02:20:25,759 DEBUG verifying director vm network settings
+2021-01-22 02:20:25,759 DEBUG verifying controller nodes network settings
+2021-01-22 02:20:25,760 DEBUG verifying compute nodes network settings
+2021-01-22 02:20:25,760 DEBUG verifying storage nodes network settings
+2021-01-22 02:20:25,760 DEBUG verifying powerflex gateway vm network settings
+2021-01-22 02:20:25,767 DEBUG Check settings ip's are valid.
+2021-01-22 02:20:25,768 DEBUG Verifying PowerFlex RPMs are present in the appropriate directory
+2021-01-22 02:20:25,768 DEBUG RPM required for SDC component successfully found
+2021-01-22 02:20:25,768 DEBUG RPM required for SDS component successfully found
+2021-01-22 02:20:25,769 DEBUG RPM required for MDM component successfully found
+2021-01-22 02:20:25,769 DEBUG RPM required for LIA component successfully found
+2021-01-22 02:20:25,776 DEBUG verifying numa and hugepages enabled when dpdk enabled
+2021-01-22 02:20:25,776 DEBUG verifying DVR is disabled when OVS-DPDK is enabled
+2021-01-22 02:20:25,776 DEBUG verifying DVR is disabled when SR-IOV is enabled
+2021-01-22 02:20:25,776 DEBUG Verifying SR-IOV is enabled when Smart NIC is enabled
+2021-01-22 02:20:28,853 DEBUG running cd ~;rm -f osp_ks.img
+2021-01-22 02:20:28,869 DEBUG b''
+2021-01-22 02:20:28,869 DEBUG running cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=10000
+2021-01-22 02:20:54,044 DEBUG b'10000+0 records in\n10000+0 records out\n10485760000 bytes (10 GB, 9.8 GiB) copied, 25.1625 s, 417 MB/s\n'
+2021-01-22 02:20:54,056 DEBUG running cd ~;mkfs ext3 -F osp_ks.img
+2021-01-22 02:20:58,218 DEBUG b'mke2fs 1.45.4 (23-Sep-2019)\nDiscarding device blocks:    4096/2560000\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x082101248/2560000\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08               \x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08done                            \nCreating filesystem with 2560000 4k blocks and 640848 inodes\nFilesystem UUID: d4fd724e-a484-4db9-a5a7-2e333892bf37\nSuperblock backups stored on blocks: \n\t32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632\n\nAllocating group tables:  0/79\x08\x08\x08\x08\x08     \x08\x08\x08\x08\x08done                            \nWriting inode tables:  0/79\x08\x08\x08\x08\x08     \x08\x08\x08\x08\x08done                            \nWriting superblocks and filesystem accounting information:  0/79\x08\x08\x08\x08\x08     \x08\x08\x08\x08\x08done\n\n'
+2021-01-22 02:20:58,218 DEBUG running mkdir -p /mnt/usb
+2021-01-22 02:20:58,291 DEBUG b''
+2021-01-22 02:20:58,291 DEBUG running cd ~;mount -o loop osp_ks.img /mnt/usb
+2021-01-22 02:20:58,482 DEBUG b''
+2021-01-22 02:20:58,483 DEBUG running cd ~;cp -R ~/JetPack /mnt/usb
