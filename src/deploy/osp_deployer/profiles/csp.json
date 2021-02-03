@@ -80,33 +80,8 @@
                  "false"
               ]
             }
-         }        
-   },
-   {
-      "Performance and Optimization": {
-            "innodb_buffer_pool_instances": {
-               "validate": [
-                  "should_be_valid_int"
-               ],
-               "in_range": [
-                  "8-48"
-               ]
-            },
-            "innodb_buffer_pool_size": {
-               "validate": [
-                  "valid_buffer_pool_size"
-               ]
-            },
-            "mariadb_max_connections": {
-               "validate": [
-                  "should_be_valid_int"
-               ],
-               "in_range": [
-                  "1000-100000"
-               ]
-        }
          }
-      },
+   },
       {
          "Vips Settings": {
             "use_static_vips" :{
@@ -116,7 +91,7 @@
                ]
             }
          }
-      }, 
+      },
       {
          "MTU Settings": {
             "mtu_selection": {
@@ -197,23 +172,41 @@
             "nic_env_file": {
                "valid_values": [
                   "4_port/nic_environment.yaml",
+                  "4_port/nic_environment_powerflex.yaml",
                   "5_port/nic_environment.yaml",
+                  "5_port/nic_environment_powerflex.yaml",
                   "ovs-dpdk_9_port/nic_environment.yaml",
+                  "ovs-dpdk_9_port/nic_environment_powerflex.yaml",
                   "ovs-dpdk_8_port/nic_environment.yaml",
+                  "ovs-dpdk_8_port/nic_environment_powerflex.yaml",
                   "ovs-dpdk_7_port/nic_environment.yaml",
+                  "ovs-dpdk_7_port/nic_environment_powerflex.yaml",
                   "ovs-dpdk_6_port/nic_environment.yaml",
+                  "ovs-dpdk_6_port/nic_environment_powerflex.yaml",
                   "sriov_9_port/nic_environment.yaml",
+                  "sriov_9_port/nic_environment_powerflex.yaml",
                   "sriov_8_port/nic_environment.yaml",
+                  "sriov_8_port/nic_environment_powerflex.yaml",
                   "sriov_7_port/nic_environment.yaml",
+                  "sriov_7_port/nic_environment_powerflex.yaml",
                   "sriov_6_port/nic_environment.yaml",
+                  "sriov_6_port/nic_environment_powerflex.yaml",
                   "sriov_9_port_offload/nic_environment.yaml",
+                  "sriov_9_port_offload/nic_environment_powerflex.yaml",
                   "sriov_8_port_offload/nic_environment.yaml",
+                  "sriov_8_port_offload/nic_environment_powerflex.yaml",
                   "sriov_7_port_offload/nic_environment.yaml",
+                  "sriov_7_port_offload/nic_environment_powerflex.yaml",
                   "sriov_6_port_offload/nic_environment.yaml",
+                  "sriov_6_port_offload/nic_environment_powerflex.yaml",
                   "dvr_6_port/nic_environment.yaml",
+                  "dvr_6_port/nic_environment_powerflex.yaml",
                   "dvr_7_port/nic_environment.yaml",
+                  "dvr_7_port/nic_environment_powerflex.yaml",
                   "ovs-dpdk_sriov_9_port/nic_environment.yaml",
-                  "ovs-dpdk_sriov_8_port/nic_environment.yaml"
+                  "ovs-dpdk_sriov_9_port/nic_environment_powerflex.yaml",
+                  "ovs-dpdk_sriov_8_port/nic_environment.yaml",
+                  "ovs-dpdk_sriov_8_port/nic_environment_powerflex.yaml"
                ]
             },
             "ControllerBondInterfaceOptions": "",
@@ -223,6 +216,16 @@
       },
       {
          "Deployment Settings":{
+            "undercloud_admin_host": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            },
+            "undercloud_public_host": {
+               "validate": [
+                  "should_be_valid_ip"
+               ]
+            },
             "overcloud_static_ips" :{
                "valid_values": [
                   "true",
@@ -262,7 +265,14 @@
             },
          "use_ipmi_driver":"",
          "use_in_band_introspection":"",
-         "enable_version_locking":""
+         "enable_version_locking":"",
+         "edge_sites":"",
+         "deploy_edge_sites": {
+            "valid_values": [
+               "true",
+               "false"
+            ]
+          }
          }
       },
       {
@@ -284,22 +294,50 @@
             }
          }
       },
-     {
-       "Storage back-end Settings":{
+      {
+         "Storage back-end Settings":{
             "unity_storage_protocol" : {
-                  "valid_values": [
+               "valid_values": [
                   "iSCSI",
                   "FC"
                ]
-        },
-             "powermax_protocol" : {
-                  "valid_values": [
+            },
+            "powermax_protocol" : {
+               "valid_values": [
                   "iSCSI",
                   "FC"
                ]
-        }
+            }
 
-       }
+         }
+      },
+      {
+         "PowerFlex Settings": {
+	    "powerflex_rpms_method": {
+               "valid_values": [
+	          "local",
+		  "external"
+	       ]
+	    },
+	    "powerflex_cluster_config": {
+               "valid_values": [
+	          "3_node"
+	       ]
+	    },
+	    "powerflex_cluster_vip": {
+               "validate": [
+	         "should_be_valid_ip"
+	       ]
+	    },
+            "powerflex_version": {
+               "validate": [
+                  "should_be_version", {
+                      "core_version": "3.5-1100.107",
+                      "mgmt_version": "3.5-1100.105"
+                  }
+               ]
+            }
+         }
       }
    ]
 }

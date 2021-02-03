@@ -2,10 +2,11 @@
 # Barbican with the default secret store backend.
 
 resource_registry:
-  OS::TripleO::Services::BarbicanApi: ./overcloud/docker/services/barbican-api.yaml
-  OS::TripleO::Services::BarbicanBackendSimpleCrypto: ./overcloud/puppet/services/barbican-backend-simple-crypto.yaml
+  OS::TripleO::Services::BarbicanApi: ./overcloud/deployment/barbican/barbican-api-container-puppet.yaml
+  OS::TripleO::Services::BarbicanBackendSimpleCrypto: ./overcloud/deployment/barbican/barbican-backend-simple-crypto-puppet.yaml
 
 parameter_defaults:
+# DELL-NFV Overrides
   BarbicanSimpleCryptoGlobalDefault: true
   BarbicanDebug: true
   VerifyGlanceSignatures: true

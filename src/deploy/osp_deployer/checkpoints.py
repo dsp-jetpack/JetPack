@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -8,7 +8,7 @@
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
+# Unless required by applicable law or agreedgoo to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
@@ -17,19 +17,26 @@
 from auto_common import Ssh
 from osp_deployer.settings.config import Settings
 from osp_deployer.settings_sanity import DeployerSanity
+import json
 import time
 import logging
 
 logger = logging.getLogger("osp_deployer")
 
 
-class Checkpoints():
+class Checkpoints:
     def __init__(self):
         self.settings = Settings.settings
         self.ping_success = "packets transmitted, 1 received"
         self.director_ip = self.settings.director_node.public_api_ip
+        if self.settings.enable_powerflex_backend is True:
+            self.powerflexgw_ip = self.settings.powerflexgw_vm.public_api_ip
+            if self.settings.enable_powerflex_mgmt is True:
+                self.powerflexmgmt_ip = self.settings.powerflexmgmt_vm.public_api_ip
+        self.director_user = self.settings.director_install_account_user
+        self.director_home_dir = "/home/" + self.director_user
+        self.source_stackrc = 'source ' + self.director_home_dir + "/stackrc; "
         self.sah_ip = self.settings.sah_node.public_api_ip
-        self.dashboard_ip = self.settings.dashboard_node.public_api_ip
         self.verify_rhsm_status = self.settings.verify_rhsm_status
         if self.settings.use_satellite is True:
             self.verify_rhsm_status = False
@@ -45,6 +52,7 @@ class Checkpoints():
         checks.check_network_overlaps()
         checks.check_duplicate_ips()
         checks.verify_overcloud_name()
+        checks.verify_powerflex_rpms_present()
         checks.validate_profile()
         checks.verify_dpdk_dependencies()
         checks.verify_sriov_dependencies()
@@ -142,7 +150,7 @@ class Checkpoints():
         test = self.ping_host(self.sah_ip,
                               "root",
                               self.settings.sah_node.root_password,
-                              "google.com")
+                              "redhat.com")
         if self.ping_success not in test:
             raise AssertionError(
                 "SAH cannot ping the outside world (dns) : " + test)
@@ -218,7 +226,7 @@ class Checkpoints():
         test = self.ping_host(self.director_ip,
                               "root",
                               setts.director_node.root_password,
-                              "google.com")
+                              "redhat.com")
         if self.ping_success not in test:
             raise AssertionError(
                 "Director VM cannot ping the outside world (dns) : " + test)
@@ -256,150 +264,296 @@ class Checkpoints():
             raise AssertionError(
                 "Director VM cannot ping idrac network (ip) : " + test)
 
-    def dashboard_vm_health_check(self):
-        logger.info("Dashboard VM health checks")
+    def powerflexgw_vm_health_check(self):
+        setts = self.settings
+        logger.info("Powerflex gateway VM health checks")
         if self.verify_rhsm_status:
-            logger.debug(
-                "*** Verify the Dashboard VM registered properly ***")
+            logger.debug("*** Verify the Powerflex gateway VM registered properly ***")
             subscription_status = self.verify_subscription_status(
-                self.dashboard_ip,
+                self.powerflexgw_ip,
                 "root",
-                self.settings.dashboard_node.root_password,
-                self.settings.subscription_check_retries)
+                setts.powerflexgw_vm.root_password,
+                setts.subscription_check_retries)
             if "Current" not in subscription_status:
                 raise AssertionError(
-                    "Dashboard VM did not register properly : " +
+                    "Powerflex gateway VM did not register properly : " +
                     subscription_status)
 
         logger.debug(
-            "*** Verify the Dashboard VM can ping its public gateway")
-        test = self.ping_host(self.dashboard_ip,
+            "*** Verify all pools registered & repositories subscribed ***")
+        if self.verify_pools_attached(self.powerflexgw_ip,
+                                      "root",
+                                      setts.powerflexgw_vm.root_password,
+                                      "/root/" + setts.powerflexgw_vm.hostname +
+                                      "-posts.log") is False:
+            raise AssertionError(
+                "Powerflex gateway vm did not subscribe/attach "
+                "repos properly, see log.")
+
+        logger.debug("*** Verify the Powerflex gateway VM can ping its public gateway")
+        test = self.ping_host(self.powerflexgw_ip,
                               "root",
-                              self.settings.dashboard_node.root_password,
-                              self.settings.public_api_gateway)
+                              setts.powerflexgw_vm.root_password,
+                              setts.public_api_gateway)
         if self.ping_success not in test:
             raise AssertionError(
-                "Dashboard VM cannot ping its public gateway : " + test)
+                "Powerflex gateway VM cannot ping its public gateway : " + test)
+
         logger.debug(
-            "*** Verify the Dashboard VM " +
-            "can ping the outside world (IP)")
-        test = self.ping_host(self.dashboard_ip,
+            "*** Verify the Powerflex gateway VM can ping the outside world (ip)")
+        test = self.ping_host(self.powerflexgw_ip,
                               "root",
-                              self.settings.dashboard_node.root_password,
+                              setts.powerflexgw_vm.root_password,
                               "8.8.8.8")
         if self.ping_success not in test:
             raise AssertionError(
-                "Dashboard VM cannot ping the outside world (IP) : " +
-                test)
-
-        logger.debug("*** Verify the Dashboard VM can ping "
-                     "the outside world (DNS)")
-        test = self.ping_host(self.dashboard_ip,
-                              "root",
-                              self.settings.dashboard_node.root_password,
-                              "google.com")
-        if self.ping_success not in test:
-            raise AssertionError(
-                "Dashboard VM cannot ping the outside world (DNS) : " +
-                test)
+                "Powerflex gateway VM cannot ping the outside world (ip) : " + test)
 
         logger.debug(
-            "*** Verify the Dashboard VM can ping the SAH node "
-            "through the storage network")
-        test = self.ping_host(self.dashboard_ip,
+            "*** Verify the Powerflex gateway VM can ping the outside world (dns)")
+        test = self.ping_host(self.powerflexgw_ip,
                               "root",
-                              self.settings.dashboard_node.root_password,
-                              self.settings.sah_node.storage_ip)
+                              setts.powerflexgw_vm.root_password,
+                              "redhat.com")
         if self.ping_success not in test:
             raise AssertionError(
-                "Dashboard VM cannot ping the SAH node "
-                "through the storage network : " + test)
+                "Powerflex gateway VM cannot ping the outside world (dns) : " + test)
 
         logger.debug(
-            "*** Verify the Dashboard VM can ping the SAH "
-            "node through the public network")
-        test = self.ping_host(self.dashboard_ip,
+            "*** Verify the Powerflex gateway VM can ping the SAH node "
+            "through the public network")
+        test = self.ping_host(self.powerflexgw_ip,
                               "root",
-                              self.settings.dashboard_node.root_password,
+                              setts.powerflexgw_vm.root_password,
                               self.sah_ip)
         if self.ping_success not in test:
             raise AssertionError(
-                "Dashboard VM cannot ping the SAH node through "
+                "Powerflex gateway VM cannot ping the SAH node through "
                 "the public network : " + test)
 
         logger.debug(
-            "*** Verify the Dashboard VM can ping the Director VM "
-            "through the public network")
-        test = self.ping_host(self.dashboard_ip,
+            "*** Verify the Powerflex gateway VM can ping the SAH node "
+            "through the storage network")
+        test = self.ping_host(self.powerflexgw_ip,
                               "root",
-                              self.settings.dashboard_node.root_password,
-                              self.director_ip)
+                              setts.powerflexgw_vm.root_password,
+                              self.settings.sah_node.storage_ip)
         if self.ping_success not in test:
             raise AssertionError(
-                "Dashboard VM cannot ping the Director VM through "
-                "the provisioning network : " + test)
+                "Powerflex gateway VM cannot ping the SAH node through "
+                "the storage network : " + test)
 
-    def verify_nodes_registered_in_ironic(self):
-        logger.debug("Verify the expected amount of nodes imported in ironic")
-        cmd = "source ~/stackrc;openstack baremetal node list | grep None"
+    def powerflexmgmt_vm_health_check(self):
         setts = self.settings
-        re = Ssh.execute_command_tty(self.director_ip,
-                                     setts.director_install_account_user,
-                                     setts.director_install_account_pwd,
-                                     cmd)
-        ls_nodes = re[0].split("\n")
-        ls_nodes.pop()
-        expected_nodes = len(self.settings.controller_nodes) + len(
-            self.settings.compute_nodes) + len(
-            self.settings.ceph_nodes) + len(
-            self.settings.computehci_nodes)
-        if len(ls_nodes) != expected_nodes:
-            raise AssertionError(
-                "Expected amount of nodes registered in Ironic "
-                "does not add up " +
-                str(len(ls_nodes)) + "/" + str(expected_nodes))
-
-    def verify_introspection_sucessfull(self):
-        logger.debug("Verify the introspection did not encounter any errors")
-        cmd = "source ~/stackrc;openstack baremetal node list | grep None"
-        setts = self.settings
-        re = Ssh.execute_command_tty(self.director_ip,
-                                     setts.director_install_account_user,
-                                     setts.director_install_account_pwd,
-                                     cmd)
-        # TODO :: i fnode failed introspection - set to to PXE - reboot
-        ls_nodes = re[0].split("\n")
-        ls_nodes.pop()
-        for node in ls_nodes:
-            state = node.split("|")[5]
-            if "available" not in state:
+        logger.info("Powerflex presentation server VM health checks")
+        if self.verify_rhsm_status:
+            logger.debug("*** Verify the Powerflex presentation server VM registered properly ***")
+            subscription_status = self.verify_subscription_status(
+                self.powerflexmgmt_ip,
+                "root",
+                setts.powerflexmgmt_vm.root_password,
+                setts.subscription_check_retries)
+            if "Current" not in subscription_status:
                 raise AssertionError(
-                    "Node state not available post bulk introspection" +
-                    "\n " + re[0])
+                    "Powerflex presentation server VM did not register properly : " +
+                    subscription_status)
+
+        logger.debug(
+            "*** Verify all pools registered & repositories subscribed ***")
+        if self.verify_pools_attached(self.powerflexmgmt_ip,
+                                      "root",
+                                      setts.powerflexmgmt_vm.root_password,
+                                      "/root/" + setts.powerflexmgmt_vm.hostname +
+                                      "-posts.log") is False:
+            raise AssertionError(
+                "Powerflex gateway vm did not subscribe/attach "
+                "repos properly, see log.")
+
+        logger.debug("*** Verify the Powerflex presentation server VM can ping its public gateway")
+        test = self.ping_host(self.powerflexmgmt_ip,
+                              "root",
+                              setts.powerflexmgmt_vm.root_password,
+                              setts.public_api_gateway)
+        if self.ping_success not in test:
+            raise AssertionError(
+                "Powerflex presentation server VM cannot ping its public gateway : " + test)
+
+        logger.debug(
+            "*** Verify the Powerflex presentation server VM can ping the outside world (ip)")
+        test = self.ping_host(self.powerflexmgmt_ip,
+                              "root",
+                              setts.powerflexmgmt_vm.root_password,
+                              "8.8.8.8")
+        if self.ping_success not in test:
+            raise AssertionError(
+                "Powerflex presentation server VM cannot ping the outside world (ip) : " + test)
+
+        logger.debug(
+            "*** Verify the Powerflex presentation server VM can ping the outside world (dns)")
+        test = self.ping_host(self.powerflexmgmt_ip,
+                              "root",
+                              setts.powerflexmgmt_vm.root_password,
+                              "redhat.com")
+        if self.ping_success not in test:
+            raise AssertionError(
+                "Powerflex presentation server VM cannot ping the outside world (dns) : " + test)
+
+        logger.debug(
+            "*** Verify the Powerflex presentation server VM can ping the SAH node "
+            "through the public network")
+        test = self.ping_host(self.powerflexmgmt_ip,
+                              "root",
+                              setts.powerflexmgmt_vm.root_password,
+                              self.sah_ip)
+        if self.ping_success not in test:
+            raise AssertionError(
+                "Powerflex presentation server VM cannot ping the SAH node through "
+                "the public network : " + test)
+
+        logger.debug(
+            "*** Verify the Powerflex presentation server VM can ping the SAH node "
+            "through the storage network")
+        test = self.ping_host(self.powerflexmgmt_ip,
+                              "root",
+                              setts.powerflexmgmt_vm.root_password,
+                              self.settings.sah_node.storage_ip)
+        if self.ping_success not in test:
+            raise AssertionError(
+                "Powerflex presentation server VM cannot ping the SAH node through "
+                "the storage network : " + test)
+
+    def verify_nodes_registered_in_ironic(self, node_type=None):
+        logger.debug("Verify the expected nodes imported in ironic")
+
+        cmd = ("source ~/stackrc; openstack baremetal node list "
+               "--long -c UUID -c 'Driver Info' -f json")
+        setts = self.settings
+        re = Ssh.execute_command_tty(self.director_ip,
+                                     setts.director_install_account_user,
+                                     setts.director_install_account_pwd,
+                                     cmd)
+        ls_nodes = json.loads(re[0])
+        drac_addresses = list(map(lambda _n: _n["Driver Info"]["drac_address"],
+                                  ls_nodes))
+
+        missing = list(filter(lambda x: x.idrac_ip not in drac_addresses,
+                              setts.all_overcloud_nodes))
+
+        if missing:
+            raise AssertionError(
+                "The following {:d} overcloud nodes defined in the "
+                ".properties were not found in the ironic "
+                "database {}".format(len(missing), str(missing)))
+        if node_type:
+            self.verify_nodes_registered_in_ironic_edge(node_type)
+
+    def verify_nodes_registered_in_ironic_edge(self, node_type):
+        expected_node_type_count = len(self.settings.node_types_map[node_type])
+        cmd = ("source ~/stackrc;openstack baremetal node list "
+               "--fields properties -f json")
+        setts = self.settings
+        stdout, stderr, exit_status = Ssh.execute_command_tty(
+            self.director_ip,
+            setts.director_install_account_user,
+            setts.director_install_account_pwd,
+            cmd)
+        nodes = json.loads(stdout)
+        registered_node_type_count = 0
+        for node in nodes:
+            props = node["Properties"]
+            if "node_type" in props and props["node_type"] == node_type:
+                registered_node_type_count += 1
+        if expected_node_type_count != registered_node_type_count:
+            raise AssertionError(
+                "Expected number of nodes registered in Ironic for node type: "
+                "{}, does not match, expected: {}, "
+                "imported: {}".format(node_type,
+                                      str(expected_node_type_count),
+                                      str(registered_node_type_count)))
+        logger.info("Validated node type: %s, "
+                    "has the correct number of nodes imported "
+                    "into Ironic: %s", node_type, registered_node_type_count)
+
+    def verify_introspection_sucessfull(self, node_type=None):
+        logger.debug("Verify the introspection did not encounter any errors")
+        if node_type:
+            self.verify_introspection_sucessfull_edge(node_type)
+        else:
+            cmd = "source ~/stackrc;openstack baremetal node list | grep None"
+            setts = self.settings
+            re = Ssh.execute_command_tty(self.director_ip,
+                                         setts.director_install_account_user,
+                                         setts.director_install_account_pwd,
+                                         cmd)
+            # TODO :: i fnode failed introspection - set to to PXE - reboot
+            ls_nodes = re[0].split("\n")
+            ls_nodes.pop()
+            for node in ls_nodes:
+                state = node.split("|")[5]
+                if "available" not in state:
+                    raise AssertionError(
+                        "Node state not available post bulk introspection"
+                        + "\n " + re[0])
+
+    def verify_introspection_sucessfull_edge(self, node_type):
+        node_type_count = len(self.settings.node_types_map[node_type])
+        cmd = ("source ~/stackrc;openstack baremetal node list "
+               "--fields uuid properties provision_state -f json")
+        setts = self.settings
+        stdout, stderr, exit_status = Ssh.execute_command_tty(
+            self.director_ip,
+            setts.director_install_account_user,
+            setts.director_install_account_pwd,
+            cmd)
+        nodes = json.loads(stdout)
+        introspected_node_type_count = 0
+        for node in nodes:
+            props = node["Properties"]
+            uuid = node["UUID"]
+            state = node["Provisioning State"]
+            if ("node_type" in props and props["node_type"] == node_type
+                    and state == "available"):
+                introspected_node_type_count += 1
+        if node_type_count != introspected_node_type_count:
+            raise AssertionError(
+                "Expected number of nodes introspected for node type: "
+                "{}, does not match, expected: {}, "
+                "introspected: {}".format(node_type,
+                                          str(node_type_count),
+                                          str(introspected_node_type_count)))
+        logger.info("Validated node type: %s, "
+                    "has the correct number of nodes introspected: %s",
+                    node_type, introspected_node_type_count)
 
     def verify_undercloud_installed(self):
         logger.debug("Verify the undercloud installed properly")
-        cmd = "stat ~/stackrc"
         setts = self.settings
+        cmd = "stat ~/stackrc"
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
         if "No such file or directory" in re[0]:
-            raise AssertionError(
-                "Director & Undercloud did not install properly, "
-                "check /pilot/install-director.log for details")
-        cmd = " grep \"Undercloud install complete\" " \
-              "~/pilot/install-director.log"
-        setts = self.settings
+            _error = AssertionError("Director & Undercloud did not install "
+                                    "properly, no ~/stackrc found, check "
+                                    "/pilot/install-director.log "
+                                    "for details")
+
+            return True, _error
+
+        cmd = ("grep \"The Undercloud has been successfully installed\" "
+               + "~/pilot/install-director.log")
+
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
-        if "Undercloud install complete." not in re[0]:
-            raise AssertionError(
-                "Director & Undercloud did not install properly,"
-                " check /pilot/install-director.log for details")
+        if "The Undercloud has been successfully installed" not in re[0]:
+            _error = AssertionError("Director & Undercloud did not install "
+                                    "properly, log does not indicate a "
+                                    "successful director installation, check "
+                                    "/pilot/install-director.log for details")
+            return True, _error
 
         cmd = "cat "\
               "~/pilot/install-director.log"
@@ -408,9 +562,9 @@ class Checkpoints():
                                      setts.director_install_account_pwd,
                                      cmd)
         if "There are no enabled repos" in re[0]:
-            raise AssertionError(
-                "Unable to attach to pool ID while updating the overcloud\
-                image")
+            _error = AssertionError("Unable to attach to pool ID while "
+                                    "updating the overcloud image")
+            return True, _error
 
         cmd = "source ~/stackrc;glance image-list"
         re = Ssh.execute_command_tty(self.director_ip,
@@ -418,18 +572,81 @@ class Checkpoints():
                                      setts.director_install_account_pwd,
                                      cmd)
         if "overcloud-full" not in re[0]:
-            raise AssertionError(
-                "Unable to find the overcloud image in glance - "
-                "check the install-director.log for possible package"
-                "download errors")
+            _error = AssertionError("Unable to find the overcloud image "
+                                    "in glance - check the "
+                                    "install-director.log for possible "
+                                    "package download errors")
+            return True, _error
 
-        cmd = "cat "\
-              " /etc/rhosp-release"
+        logger.info("Undercloud installed Successfully!")
+
+        return False, None
+
+    def provisioning_subnet_exists(self, subnet):
+        logger.debug("Check if edge subnet {} already "
+                     "exists or not".format(subnet))
+        setts = self.settings
+        user = setts.director_install_account_user
+        ip = setts.director_node.public_api_ip
+        pwd = setts.director_install_account_pwd
+        is_subnet = False
+        subnet_cmd = ("{} openstack subnet "
+                      "show {} -c name "
+                      "-f value".format(self.source_stackrc, subnet))
+        sn_out = Ssh.execute_command(ip, user, pwd, subnet_cmd)[0]
+        if sn_out.strip() == subnet:
+            is_subnet = True
+            logger.info("Subnet {} already exists".format(subnet))
+        return is_subnet
+
+    def verify_provisioning_subnets_created(self, subnets):
+        for subnet in subnets:
+            _is_subnet = self.provisioning_subnet_exists(subnet)
+            if not _is_subnet:
+                raise AssertionError(
+                    "Provisioning subnet {} not found in "
+                    "undercloud".format(subnet))
+
+    def verify_overcloud_deployed(self):
+        logger.debug("Verify the overcloud installed properly")
+        setts = self.settings
+        overcloud_name = setts.overcloud_name
+
+        # Verify the overcloud RC file was created
+        cmd = "test -f ~/" + overcloud_name + "rc; echo $?;"
         re = Ssh.execute_command_tty(self.director_ip,
                                      setts.director_install_account_user,
                                      setts.director_install_account_pwd,
                                      cmd)
-        logger.debug("Undercloud version : " + re[0])
+        # Have to strip non-printing chars as re[0] contains newline '\n'
+        _resp = re[0].strip()
+        # If director is turned off or not deployed
+        # re[0] == "host not up", handle this case by checking len(re[0])
+        is_conf = not bool(int(_resp)) if len(_resp) == 1 else False
+        if is_conf is False:
+            msg = ("Overcloud RC file missing, either the overcloud has not "
+                   "been deployed yet or there was an issue during "
+                   "the deployment, such as Director VM being down or a heat "
+                   "stack deployment failure")
+            logger.warning(msg)
+            return True, AssertionError(msg)
+
+        # Check log for successful deployment
+        success = "Overcloud Deployed"
+        cmd = "grep \"" + success + "\" " + "~/pilot/overcloud_deploy_out.log"
+        re = Ssh.execute_command_tty(self.director_ip,
+                                     setts.director_install_account_user,
+                                     setts.director_install_account_pwd,
+                                     cmd)
+        if success not in re[0]:
+            msg = ("Overcloud did not install successfully, "
+                   "check ~/pilot/overcloud_deploy_out.log")
+            logger.warning(msg)
+            return True, AssertionError(msg)
+
+        else:
+            logger.info("Overcloud install successful")
+            return False, None
 
     def verify_computes_virtualization_enabled(self):
         logger.debug("*** Verify the Compute nodes have KVM enabled *** ")

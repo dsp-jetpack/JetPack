@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2017-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ class ThreadWithExHandling(threading.Thread):
     def __init__(self, logger, object_identity=None, group=None, target=None,
                  name=None, args=(), kwargs=None, verbose=None):
         threading.Thread.__init__(self, group=group, target=target, name=name,
-                                  args=args, kwargs=kwargs, verbose=verbose)
+                                  args=args, kwargs=kwargs)
         self.logger = logger
         self.ex = None
         self.object_identity = object_identity
@@ -32,4 +32,4 @@ class ThreadWithExHandling(threading.Thread):
             threading.Thread.run(self)
         except:
             self.ex = sys.exc_info()[0]
-            self.logger.exception(self.ex.message)
+            self.logger.exception(str(self.ex))

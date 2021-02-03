@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# Copyright (c) 2014-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2014-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ConfigParser
 import sys
 import argparse
 import json
@@ -119,14 +118,13 @@ class NetworkValidation(object):
 
             self.nodes.append(node)
 
-        # Sort just these by name so the SAH/Director/Dashboard nodes come
-        # first
+        # Sort just these by name so the SAH/Director/ nodes come first
         self.nodes.sort(key=lambda n: n.name)
 
         os_auth_url, os_tenant_name, os_username, os_password, \
         os_user_domain_name, os_project_domain_name = \
             CredentialHelper.get_undercloud_creds()
-        auth_url = os_auth_url + "v3"
+        auth_url = os_auth_url + "/v3"
 
         kwargs = {'username': os_username,
                   'password': os_password,
@@ -258,7 +256,7 @@ class NetworkValidation(object):
                    "{}@{}".format(self.user, self.ip),
                    "/usr/sbin/ip -4 a"]
             process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-            stdout = process.stdout.read()
+            stdout = process.stdout.read().decode('utf-8')
 
             for network in self.networks:
                 subnet = str(network_to_subnet[network].network)
@@ -304,7 +302,7 @@ class NetworkValidation(object):
                                               source_node.ip),
                                "sudo ping -c 1 -w 2 {}".format(destination_ip)]
                         process = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-                        stdout = process.stdout.read()
+                        stdout = process.stdout.read().decode('utf-8')
                         match = re.search("64 bytes from {0}: icmp_.eq=\d+ "
                                           "ttl=\d+ time=(.*) ms".format(
                                               destination_ip), stdout)
@@ -316,7 +314,7 @@ class NetworkValidation(object):
                                             destination_ip,
                                             match.group(1)))
                         else:
-                            logger.warn("      FAILED {0: <20} - {1: <15} "
+                            logger.warning("      FAILED {0: <20} - {1: <15} "
                                         "({2}) network {2}!".format(
                                             destination_node.name,
                                             destination_ip,

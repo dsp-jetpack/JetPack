@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2017-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -139,7 +139,7 @@ def main():
         LOG.error(ex)
         sys.exit(1)
     except Exception as ex:
-        LOG.exception(ex.message)
+        LOG.exception(str(ex))
         sys.exit(1)
     t_end = int(time.time()) - t_start
     LOG.info("config_idracs took %i seconds to run", t_end)

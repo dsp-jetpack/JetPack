@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,20 +15,20 @@
 # limitations under the License.
 
 from auto_common import Ipmi
-from settings.config import Settings
-from profile import Profile
+from osp_deployer.settings.config import Settings
+from .profile import Profile
 import logging
 import os.path
 import collections
 import yaml
+import glob
 
 logger = logging.getLogger("osp_deployer")
 
 
-class DeployerSanity():
+class DeployerSanity:
     def __init__(self):
         self.settings = Settings.settings
-
     @staticmethod
     def is_valid_ip(address):
         valid = True
@@ -177,6 +177,9 @@ class DeployerSanity():
         start = self.settings.private_api_allocation_pool_start.split(".")[-1]
         end = self.settings.private_api_allocation_pool_end.split(".")[-1]
         for each in self.settings.nodes:
+            if hasattr(each, 'node_type'):
+                logger.info("Skip validating this node as it is edge node")
+                continue
             if hasattr(each, 'private_api_ip'):
                 ip = each.private_api_ip.split(".")[-1]
                 if int(start) <= int(ip) <= int(end):
@@ -207,7 +210,7 @@ class DeployerSanity():
         start = self.settings.storage_allocation_pool_start.split(".")[-1]
         end = self.settings.storage_allocation_pool_end.split(".")[-1]
         for each in self.settings.nodes:
-            if hasattr(each, 'storage_ip'):
+            if hasattr(each, 'storage_ip') and not hasattr(each, 'node_type'):
                 ip = each.storage_ip.split(".")[-1]
                 if int(start) <= int(ip) <= int(end):
                     raise AssertionError(each.storage_ip + " in " +
@@ -317,7 +320,7 @@ class DeployerSanity():
                 if self.is_valid_ip(str(getattr(each, att))):
                     ips.append(getattr(each, att))
         dups = [item for item,
-                count in collections.Counter(ips).items() if count > 1]
+                count in list(collections.Counter(ips).items()) if count > 1]
         if len(dups) > 0:
             raise AssertionError("Duplicate ips found in your \
                                  .properties/.ini :" + ', '.join(dups))
@@ -424,18 +427,6 @@ class DeployerSanity():
                              shouldhaveattributes,
                              shouldbbevalidips)
 
-        # Verify Dashboard VM node network definition
-        logger.debug("verifying Dashboard VM network settings")
-        shouldhaveattributes = ['hostname',
-                                'root_password',
-                                'storage_ip',
-                                'public_api_ip']
-        shouldbbevalidips = ['storage_ip', 'public_api_ip']
-
-        self.check_net_attrs(self.settings.dashboard_node,
-                             shouldhaveattributes,
-                             shouldbbevalidips)
-
         # Verify Controller nodes network definitioncls
         logger.debug("verifying controller nodes network settings")
         for controller in self.settings.controller_nodes:
@@ -484,6 +475,18 @@ class DeployerSanity():
             self.check_overcloud_node_net_attrs(storage,
                                                 shouldhaveattributes,
                                                 shouldbbevalidips)
+        
+        # Verify powerflex gateway VM network definition
+        if  self.settings.enable_powerflex_backend is True:
+            logger.debug("verifying powerflex gateway vm network settings")
+            shouldhaveattributes = ['hostname',
+                                    'root_password',
+                                    'public_api_ip',
+                                    'storage_ip']
+            shouldbevalidips = ['public_api_ip', 'storage_ip']
+            self.check_net_attrs(self.settings.powerflexgw_vm,
+                                 shouldhaveattributes,
+                                 shouldbevalidips)
 
     def validate_profile(self):
         self.profile = Profile()
@@ -593,3 +596,22 @@ class DeployerSanity():
             raise AssertionError("SR-IOV hardware offload can't be " +
                                  "enabled as SR-IOV is not enabled. " +
                                  "Please verify the settings.")
+
+    def verify_powerflex_rpms_present(self):
+        logger.debug("Verifying PowerFlex RPMs are present in the " +
+                     "appropriate directory")
+        if self.settings.enable_powerflex_backend is True:
+            rpms_glob = ['sdc', 'sds', 'mdm', 'lia']
+            for component in rpms_glob:
+                file_present = glob.glob(self.settings.foreman_configuration_scripts +
+                                         '/pilot/powerflex/rpms/*' +
+                                         component + '*.rpm')
+                if any(file_present):
+                    logger.debug("RPM required for {} component successfully "
+                                 "found".format(component.upper()))
+                else:
+                    raise AssertionError("At least one RPM is missing. " +
+                                         "Please verify all PowerFlex RPMs are present " +
+                                         "before running the installation again.")
+        else:
+            logger.debug("PowerFlex backend not enabled, skipping.")

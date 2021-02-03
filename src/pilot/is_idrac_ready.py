@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2017-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,8 +22,13 @@ import sys
 
 from arg_helper import ArgHelper
 from credential_helper import CredentialHelper
-from dracclient import client
 from logging_helper import LoggingHelper
+
+discover_nodes_path = os.path.join(os.path.expanduser('~'),
+                                   'pilot/discover_nodes')
+sys.path.append(discover_nodes_path)
+
+from discover_nodes.dracclient.client import DRACClient  # noqa
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being made
 requests.packages.urllib3.disable_warnings()
@@ -61,7 +66,7 @@ def main():
         drac_user = node["pm_user"]
         drac_password = node["pm_password"]
 
-        drac_client = client.DRACClient(drac_ip, drac_user, drac_password)
+        drac_client = DRACClient(drac_ip, drac_user, drac_password)
 
         ready = drac_client.is_idrac_ready()
 

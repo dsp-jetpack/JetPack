@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,16 +30,15 @@ class CredentialHelper:
     @staticmethod
     def get_creds(filename):
         command = ['bash', '-c', 'source %s && env' % filename]
-        ret = check_output(command)
+        ret = check_output(command).decode('utf-8')
         env_keys = {}
         for line in ret.split('\n'):
             if line:
                 (key, value) = line.split("=")[0:2]
                 env_keys[key] = value
-
         if 'hiera' in env_keys['OS_PASSWORD']:
-            env_keys['OS_PASSWORD'] = check_output(['sudo', 'hiera',
-                                                    'admin_password']).strip()
+             env_keys['OS_PASSWORD'] = check_output(['sudo', 'hiera',
+                                                     'admin_password']).decode('utf-8').strip()
         if 'OS_PROJECT_NAME' in env_keys:
             project_name = env_keys['OS_PROJECT_NAME']
         else:
@@ -63,11 +62,12 @@ class CredentialHelper:
             CredentialHelper.get_overcloudrc_name())
 
     @staticmethod
-    def get_drac_creds(ironic_client, node_uuid):
+    def get_drac_creds(ironic_client, node_uuid,
+                       instackenv_file=Constants.INSTACKENV_FILENAME):
         # Get the DRAC IP, username, and password
         node = ironic_client.node.get(node_uuid, ["driver_info"])
 
-        return CredentialHelper.get_drac_creds_from_node(node)
+        return CredentialHelper.get_drac_creds_from_node(node, instackenv_file)
 
     @staticmethod
     def get_drac_creds_from_node(
@@ -181,7 +181,7 @@ class CredentialHelper:
               ";openstack stack list | grep CREATE | awk '{print $4}'"
         return subprocess.check_output(cmd,
                                        stderr=subprocess.STDOUT,
-                                       shell=True).strip()
+                                       shell=True).decode('utf-8').strip()
 
     @staticmethod
     def get_overcloud_stack_status():
@@ -189,4 +189,4 @@ class CredentialHelper:
               ";openstack stack list | grep CREATE | awk '{print $8}'"
         return subprocess.check_output(cmd,
                                        stderr=subprocess.STDOUT,
-                                       shell=True).strip()
+                                       shell=True).decode('utf-8').strip()

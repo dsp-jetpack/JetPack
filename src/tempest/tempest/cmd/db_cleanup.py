@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ explicitly specify what cleaners are executed. By default only
 reset_quotas.py is in the list of subclasses that will execute.
 """
 import argparse
-import ConfigParser
+import configparser
 import sys
 
 
@@ -52,7 +52,7 @@ class DbCleanup(object):
         # Arbitrary getattr() call required to init config for logging.
         CONF.debug.enable
         self._init_options()
-        self.config = ConfigParser.ConfigParser()
+        self.config = configParser.ConfigParser()
         self.config.read(CLEANUP_DB_CONF)
 
     def run(self):
@@ -68,7 +68,7 @@ class DbCleanup(object):
     def _init_db_conf(self):
         """Create default db config file."""
         LOG.debug("Initialize database configuration")
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
 
         secs = ['cinder', 'keystone', 'heat', 'nova', 'swift']
         for sec in secs:

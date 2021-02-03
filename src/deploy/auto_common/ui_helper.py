@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import time
 
 
 # noinspection PyClassHasNoInit,PyUnresolvedReferences,PyProtectedMember
-class UIHelper():
+class UIHelper:
     @staticmethod
     def verify_new_window_opened(page_title):
         """

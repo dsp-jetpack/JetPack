@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,28 +21,44 @@ except ImportError:
 
 
 # noinspection PyClassHasNoInit
-class Scp():
+class Scp:
 
     @staticmethod
     def get_file(adress, user, passw, localfile, remotefile):
         client = paramiko.SSHClient()
         client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        trans = paramiko.Transport((adress, 22))
-        trans.connect(username=user, password=passw)
-        sftp = paramiko.SFTPClient.from_transport(trans)
+        client.connect(hostname=adress, username=str(user), password=str(passw))
+        sftp=client.open_sftp()
         sftp.get(remotefile, localfile)
         sftp.close()
-        trans.close()
+        client.close()
 
     @staticmethod
     def put_file(adress, user, passw, localfile, remotefile):
         client = paramiko.SSHClient()
         client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        trans = paramiko.Transport((adress, 22))
-        trans.connect(username=user, password=passw)
-        sftp = paramiko.SFTPClient.from_transport(trans)
+        client.connect(hostname=adress, username=str(user), password=str(passw))
+        sftp=client.open_sftp()
         sftp.put(localfile, remotefile)
         sftp.close()
-        trans.close()
+        client.close()
+
+    @staticmethod
+    def mkdir(adress, user, passw, remote_directory):
+        client = paramiko.SSHClient()
+        client.load_system_host_keys()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(hostname=adress, username=str(user), password=str(passw))
+        sftp = client.open_sftp()
+        dir_path = str()
+        for dir_folder in remote_directory.split("/"):
+            if dir_folder == "":
+                continue
+            dir_path += r"/{0}".format(dir_folder)
+            try:
+                sftp.listdir(dir_path)
+            except IOError:
+                sftp.mkdir(dir_path)
+        sftp.close()

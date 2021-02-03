@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,8 +13,9 @@
 # limitations under the License.
 
 resource_registry:
-  OS::TripleO::Services::ComputeNeutronL3Agent: ./overcloud/docker/services/neutron-l3.yaml
-  OS::TripleO::Services::ComputeNeutronMetadataAgent: ./overcloud/docker/services/neutron-metadata.yaml
+  OS::TripleO::Services::ComputeNeutronL3Agent: ./overcloud/deployment/neutron/neutron-l3-container-puppet.yaml
+  OS::TripleO::Services::ComputeNeutronMetadataAgent: ./overcloud/deployment/neutron/neutron-metadata-container-puppet.yaml
+#  OS::TripleO::DellCompute::Net::SoftwareConfig: ./overcloud/net-config-bridge.yaml
 
 parameter_defaults:
 

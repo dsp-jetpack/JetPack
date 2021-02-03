@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -82,6 +82,9 @@ parameter_defaults:
   # CHANGEME: Set to the CIDR of the control plane network
   ControlPlaneSubnetCidr: "24"
 
+  # CHANGEME: Set to the network/cidr of the control plane network
+  ControlPlaneNetCidr: 192.168.120.0/24
+
   # CHANGEME: Set to the IP address of the Undercloud
   EC2MetadataIp: 192.168.120.13
 
@@ -109,29 +112,31 @@ parameter_defaults:
   ExternalNetworkVlanID: 190
   # CHANGEME: Change the following to the MTU value to use on the
   # External network
-  ExternalNetworkMTU: 1500
+  ExternalMtu: 1500
   # CHANGEME: Change the following to the MTU value to use on the
-  # internal network  
-  InternalApiMTU: 1500
+  # internal network
+  InternalApiMtu: 1500
   # CHANGEME: Change the following to the MTU value to use on the
   # Storage network
-  StorageNetworkMTU: 1500
+  StorageMtu: 1500
   # CHANGEME: Change the following to the MTU value to use on the
   # StorageMgmtNetwork network
-  StorageMgmtNetworkMTU: 1500
+  StorageMgmtMtu: 1500
   # CHANGEME: Change the following to the MTU value to use on the
   # TenantNetwork network
-  TenantNetworkMTU: 1500
+  TenantMtu: 1500
   # CHANGEME: Change the following to the MTU value to use on the
   # Provisioning network
-  ProvisioningNetworkMTU: 1500
+  ProvisioningMtu: 1500
   # CHANGEME: Change the following to the MTU value to use on the
   # Management network
-  ManagementNetworkMTU: 1500
+  ManagementMtu: 1500
   # CHANGEME: Change the following to the MTU value to use on the
   # Default Bonds MTU
-  DefaultBondMTU: 9000
-  
+  DefaultBondMtu: 9000
+
+  NetworkDeploymentActions: ['CREATE','UPDATE']
+
   # CHANGEME: Change the following to mtu size used for the floating network
   ExtraConfig:
     neutron::plugins::ml2::physical_network_mtus: physext:1500
@@ -172,4 +177,3 @@ parameter_defaults:
     CephStorageHostnameResolveNetwork: storage
     NovaColdMigrationNetwork: internal_api
     NovaLibvirtNetwork: internal_api
-

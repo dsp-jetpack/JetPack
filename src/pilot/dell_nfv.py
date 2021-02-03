@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2018-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2018-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,6 +34,8 @@ from ironic_helper import IronicHelper
 from dracclient import client
 from command_helper import Ssh
 from nfv_parameters import NfvParameters
+
+
 logging.basicConfig()
 logger = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -77,9 +79,6 @@ class ConfigOvercloud(object):
             hw_offload,
             sriov_interfaces,
             nic_env_file,
-            mariadb_max_connections,
-            innodb_buffer_pool_size,
-            innodb_buffer_pool_instances,
             controller_count,
             ceph_storage_count,
             controller_flavor,
@@ -88,7 +87,8 @@ class ConfigOvercloud(object):
             block_storage_flavor,
             vlan_range,
             dell_compute_count=0,
-            dell_computehci_count=0):
+            dell_computehci_count=0,
+            dell_powerflex_count=0):
         try:
             logger.info("Editing dell environment file")
             file_path = home_dir + '/pilot/templates/dell-environment.yaml'
@@ -121,6 +121,10 @@ class ConfigOvercloud(object):
                 str(ceph_storage_count) +
                 '|" ' +
                 file_path,
+                'sed -i "s|PowerflexStorageCount:.*|PowerflexStorageCount: ' +
+                str(dell_powerflex_count) +
+                '|" ' +
+                file_path,
                 'sed -i "s|OvercloudControllerFlavor:.*' +
                 '|OvercloudControllerFlavor: ' +
                 str(controller_flavor) +
@@ -149,62 +153,6 @@ class ConfigOvercloud(object):
             kernel_args = ''
             if sriov or ovs_dpdk:
                 kernel_args = "iommu=pt intel_iommu=on"
-            if hw_offload:
-                vlan = str(vlan_range).split(':')
-                vlan_start = int(vlan[0])
-                vlan_end = int(vlan[1])
-                vlan_diff = vlan_end - vlan_start
-                if int(sriov_interfaces) == 2:
-                    vlan_a = (vlan_diff / 2) + vlan_start
-                    vlan_b = vlan_a + 1
-
-                    cmds.append(('sed -i "s|NeutronNetworkVLANRanges:.*' +
-                                 '|NeutronNetworkVLANRanges: ' +
-                                 'physint:' + str(vlan_start) +
-                                 ":" + str(vlan_a) +
-                                 ',physint1:' + str(vlan_b) +
-                                 ":" + str(vlan_end) +
-                                 ',physext' +
-                                 '|" ' +
-                                 file_path))
-                    cmds.append(('sed -i "s|NeutronBridgeMappings:.*' +
-                                 '|NeutronBridgeMappings: ' +
-                                 'physint:mlx_br1,' +
-                                 'physint1:mlx_br2,' +
-                                 'physext:br-ex' +
-                                 '|" ' +
-                                 file_path))
-
-                if int(sriov_interfaces) == 4:
-                    vlan_a = (vlan_diff / 4) + vlan_start
-                    vlan_b = vlan_a + 1
-                    vlan_c = (vlan_diff / 4) + vlan_b
-                    vlan_d = vlan_c + 1
-                    vlan_e = (vlan_diff / 4) + vlan_d
-                    vlan_f = vlan_e + 1
-
-                    cmds.append(('sed -i "s|NeutronNetworkVLANRanges:.*' +
-                                 '|NeutronNetworkVLANRanges: ' +
-                                 'physint:' + str(vlan_start) +
-                                 ":" + str(vlan_a) +
-                                 ',physint1:' + str(vlan_b) +
-                                 ":" + str(vlan_c) +
-                                 ',physint2:' + str(vlan_d) +
-                                 ":" + str(vlan_e) +
-                                 ',physint3:' + str(vlan_f) +
-                                 ":" + str(vlan_end) +
-                                 ',physext' +
-                                 '|" ' +
-                                 file_path))
-                    cmds.append(('sed -i "s|NeutronBridgeMappings:.*' +
-                                 '|NeutronBridgeMappings: ' +
-                                 'physint:mlx_br1,' +
-                                 'physint1:mlx_br2,' +
-                                 'physint2:mlx_br3,' +
-                                 'physint3:mlx_br4,' +
-                                 'physext:br-ex' +
-                                 '|" ' +
-                                 file_path))
 
             if enable_hugepage:
                 hpg_num = self.nfv_params.calculate_hugepage_count(
@@ -221,13 +169,14 @@ class ConfigOvercloud(object):
                 if ovs_dpdk:
                     dpdk_nics = self.find_ifaces_by_keyword(nic_env_file,
                                                             'Dpdk')
+                    logger.debug("DPDK-NICs >>" + str(dpdk_nics))
                     self.nfv_params.get_pmd_cpus(mtu, dpdk_nics)
                     self.nfv_params.get_socket_memory(mtu, dpdk_nics)
                 self.nfv_params.get_nova_cpus()
                 self.nfv_params.get_isol_cpus()
-                kernel_args += " isolcpus=%s" % self.nfv_params.nova_cpus
+                kernel_args += " isolcpus=%s" % self.nfv_params.isol_cpus
                 cmds.append(
-                    'sed -i "s|# NovaVcpuPinSet:.*|NovaVcpuPinSet: ' +
+                    'sed -i "s|# NovaComputeCpuDedicatedSet:.*|NovaComputeCpuDedicatedSet: ' +
                     self.nfv_params.nova_cpus + '|" ' + file_path)
             if kernel_args:
                 cmds.append(
@@ -244,6 +193,11 @@ class ConfigOvercloud(object):
                     '\\" |" ' +
                     dpdk_file)
                 cmds.append(
+                    'sed -i "s|NovaComputeCpuSharedSet:.*|NovaComputeCpuSharedSet: \\"' +
+                    self.nfv_params.host_cpus +
+                    '\\" |" ' +
+                    dpdk_file)
+                cmds.append(
                     'sed -i "s|OvsPmdCoreList:.*|OvsPmdCoreList: \\"' +
                     self.nfv_params.pmd_cpus +
                     '\\" |" ' +
@@ -255,36 +209,23 @@ class ConfigOvercloud(object):
                     '\\" |" ' +
                     dpdk_file)
                 cmds.append(
-                    'sed -i "s|# IsolCpusList:.*|IsolCpusList: ' +
-                    self.nfv_params.isol_cpus + '|" ' + dpdk_file)
+                    'sed -i "s|IsolCpusList:.*|IsolCpusList: \\"' +
+                    self.nfv_params.isol_cpus + '\\" |" ' + dpdk_file)
 
-            # Performance and Optimization
-            if innodb_buffer_pool_size != "dynamic":
-                BufferPoolSize = int(innodb_buffer_pool_size.replace(
-                    "G", "")) * 1024
-                memory_mb = self.nfv_params.get_minimum_memory_size("control")
-                if memory_mb < BufferPoolSize:
-                    raise Exception("innodb_buffer_pool_size is greater than"
-                                    " available memory size")
-            cmds.append(
-                'sed -i "s|MysqlMaxConnections.*|MysqlMaxConnections: ' +
-                mariadb_max_connections +
-                '|" ' +
-                file_path)
-            if ovs_dpdk:
-                f_path = dpdk_file
-            else:
-                f_path = file_path
-            cmds.append(
-                'sed -i "s|BufferPoolSize.*|BufferPoolSize: ' +
-                innodb_buffer_pool_size +
-                '|" ' +
-                f_path)
-            cmds.append(
-                'sed -i "s|BufferPoolInstances.*|BufferPoolInstances: ' +
-                innodb_buffer_pool_instances +
-                '|" ' +
-                f_path)
+            if dell_powerflex_count > 0 :
+                cmds.append(
+                     'sed -i "s|NovaEnableRbdBackend:.*' +
+                     '|NovaEnableRbdBackend: false |" ' +
+                     file_path)
+                cmds.append(
+                    'sed -i "s|CinderEnableRbdBackend:.*' +
+                    '|CinderEnableRbdBackend: false |" ' +
+                    file_path)
+                cmds.append(
+                    'sed -i "s|GlanceBackend:.*' +
+                    '|GlanceBackend: cinder|" ' +
+                    file_path)
+
 
             for cmd in cmds:
                 status = os.system(cmd)

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@
 exec > >(tee $HOME/pilot/install-director.log)
 exec 2>&1
 
-USAGE="\nUsing RedHat CDN:$0 --dns <dns_ip> --sm_user <subscription_manager_user> --sm_pwd <subscription_manager_pass> [--sm_pool <subcription_manager_poolid>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>]"
+USAGE="\nUsing RedHat CDN:$0 --director_ip <director public ip> --dns <dns_ip> [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] [--enable_powerflex]" 
 
 
-TEMP=`getopt -o h --long dns:,sm_user:,sm_pwd:,sm_pool:,proxy:,nodes_pwd:,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
+TEMP=`getopt -o h --long director_ip:,dns:,proxy:,nodes_pwd:,enable_powerflex,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
 eval set -- "$TEMP"
 
 
@@ -31,14 +31,10 @@ while true ; do
             echo -e "$USAGE "
             exit 1
             ;;
+        --director_ip)
+                director_public_ip=$2 ; shift 2 ;;
         --dns)
-            dns_ip=$2 ; shift 2 ;;
-        --sm_user)
-                subscription_manager_user=$2 ; shift 2 ;;
-        --sm_pwd)
-                subscription_manager_pass=$2 ; shift 2 ;;
-        --sm_pool)
-                subcription_manager_poolid=$2; shift 2 ;; 
+                dns_ip=$2 ; shift 2 ;;
         --satellite_hostname)
                 satellite_hostname=$2; shift 2;;
         --satellite_org)
@@ -51,6 +47,8 @@ while true ; do
                 proxy=$2; shift 2 ;;
         --nodes_pwd)
                 overcloud_nodes_pwd=$2; shift 2 ;;
+        --enable_powerflex)
+                enable_powerflex=1; shift 1;;
         --) shift ; break ;;
         *) echo -e "$USAGE" ; exit 1 ;;
     esac
@@ -58,25 +56,16 @@ done
 
 
 if [ ! -z "${satellite_hostname}" ]; then
-   
-    if [ -z "${dns_ip}" ] || [ -z "${satellite_hostname}" ] || [ -z "${satellite_org}" ] || [ -z ${satellite_key} ] ; then
+
+    if [ -z "${satellite_hostname}" ] || [ -z "${dns_ip}" ] || [ -z "${satellite_org}" ] || [ -z ${satellite_key} ] ; then
         echo -e "$USAGE"
         exit 1
     fi
 
-elif [ ! -z "${subscription_manager_user}" ];then
-
-    if [ -z "${dns_ip}" ] || [ -z "${subscription_manager_user}" ] || [ -z "${subscription_manager_pass}" ]; then
-        echo -e "$USAGE"
-        exit 1
-    fi
-else
-    echo -e "$USAGE"
-    exit 1
 fi
 
 
-flavors="control compute ceph-storage computehci"
+flavors="control compute ceph-storage computehci powerflex-storage"
 subnet_name="ctlplane"
 
 # Create the requested flavor if it does not exist.
@@ -120,6 +109,35 @@ apply_patch(){
   fi
 }
 
+run_on_container(){
+  container_name="$1"
+  command="$2"
+
+  echo "Executing: ${command} on ${container_name} "
+
+  cmd="sudo podman exec --user 0 -ti ${container_name} ${command}"
+  $cmd
+
+  if [ $? -ne 0 ]; then
+    echo "command failed"
+    exit 1
+  fi
+}
+
+upload_file_to_container(){
+  container_name="$1"
+  origin_file="$2"
+  destination_file="$3"
+  echo "uploading: ${origin_file} to ${destination_file} on ${container_name} "
+
+  cmd="sudo podman cp ${origin_file} ${container_name}:${destination_file}"
+  $cmd
+  if [ $? -ne 0 ]; then
+    echo "upload failed"
+    exit 1
+  fi
+}
+
 run_command(){
   cmd="$1"
 
@@ -143,27 +161,29 @@ then
   export no_proxy=$no_proxy_list
   export http_proxy=$proxy
   export https_proxy=$proxy
-  export -p 
+  export -p
   echo "## Done."
 fi
 
 echo
 echo "## Configuring paths..."
 ESCAPED_HOME=${HOME//\//\\/}
-sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
+sudo sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
 # Clean the nodes disks befor redeploying
-#sed -i "s/clean_nodes = false/clean_nodes = true/" $HOME/pilot/undercloud.conf
-cp $HOME/pilot/undercloud.conf $HOME
+sudo cp $HOME/pilot/undercloud.conf $HOME
+sudo cp $HOME/pilot/containers-prepare-parameter.yaml $HOME
 echo "## Done."
 
 echo
 echo "## Installing Director"
-run_command "sudo yum -y install python-tripleoclient"
-run_command "sudo yum install -y ceph-ansible"
+run_command "sudo dnf install -y python3-tripleoclient"
+run_command "sudo dnf install -y ceph-ansible"
 run_command "openstack undercloud install"
 echo "## Install Tempest plugin dependencies"
-run_command "sudo yum -y install openstack-tempest"
-run_command "sudo yum install -y python-neutron-tests-tempest python-cinder-tests-tempest python-telemetry-tests-tempest python-keystone-tests-tempest python-horizon-tests-tempest python2-octavia-tests-tempest python2-manila-tests-tempest python2-barbican-tests-tempest"
+run_command "sudo dnf install -y openstack-tempest"
+run_command "sudo dnf install -y python3-neutron-tests-tempest python3-cinder-tests-tempest python3-telemetry-tests-tempest python3-keystone-tests-tempest python3-horizon-tests-tempest python3-octavia-tests-tempest python3-manila-tests-tempest python3-barbican-tests-tempest"
+run_command "sudo dnf install -y gcc"
+run_command "sudo dnf install -y openstack-ironic-api openstack-ironic-conductor python3-ironicclient"
 echo "## Done."
 
 echo
@@ -177,19 +197,19 @@ echo
 images_tar_path='.'
 if [ ! -d $HOME/pilot/images ];
 then
-  sudo yum install rhosp-director-images rhosp-director-images-ipa octavia-amphora-image -y
+  sudo dnf install -y rhosp-director-images rhosp-director-images-ipa octavia-amphora-image
 
   # It's not uncommon to get connection reset errors when installing this 1.2G
   # RPM.  Keep retrying to complete the download
   echo "Downloading and installing rhosp-director-image"
   while :
   do
-    yum_out=$(sudo yum install rhosp-director-images rhosp-director-images-ipa -y 2>&1)
-    yum_rc=$?
-    echo $yum_out
-    if [ $yum_rc -eq 1 ]
+    dnf_out=$(sudo dnf install -y rhosp-director-images rhosp-director-images-ipa 2>&1)
+    dnf_rc=$?
+    echo $dnf_out
+    if [ $dnf_rc -eq 1 ]
     then
-        if [[ $yum_out == *"TCP connection reset by peer"* ]];
+        if [[ $dnf_out == *"TCP connection reset by peer"* ]];
         then
           echo "Got a TCP connection reset.  Retrying..."
           continue
@@ -208,31 +228,45 @@ then
 fi
 cd $HOME/pilot/images
 
-for i in /usr/share/rhosp-director-images/overcloud-full-latest-13.0.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-13.0.tar;
+for i in /usr/share/rhosp-director-images/overcloud-full-latest-16.1.tar /usr/share/rhosp-director-images/ironic-python-agent-latest-16.1.tar;
 do
   tar -xvf $i;
 done
 echo "## Done."
 
-echo 
+echo
 echo "## Customizing the overcloud image & uploading images"
+
 if [ ! -z "${satellite_hostname}" ]; then
-    run_command "~/pilot/customize_image.sh --satellite_hostname ${satellite_hostname} \
-                --satellite_org ${satellite_org} \
-                --satellite_key ${satellite_key} \
+    run_command "~/pilot/customize_image.sh --director_ip ${director_public_ip} \
+                --satellite_hostname ${satellite_hostname} \
                 --proxy ${proxy}"
-                  
-elif [ ! -z "${subscription_manager_user}" ];then
-    run_command "~/pilot/customize_image.sh --sm_user ${subscription_manager_user} \
-                --sm_pwd ${subscription_manager_pass} \
-                --sm_pool ${subcription_manager_poolid} --proxy ${proxy}"
+
+elif [ ! -z "${proxy}" ]; then
+    run_command "~/pilot/customize_image.sh --director_ip ${director_public_ip} \
+                --proxy ${proxy}"
 fi
 
 echo
+
+if [ -n "${overcloud_nodes_pwd}" ] || [ ${enable_powerflex} == 1 ]; then
+    echo "# Overcloud customizatin required, Installing libguestfs-tools"
+    run_command "sudo dnf install -y libguestfs-tools"
+    run_command "sudo service libvirtd start"
+    run_command "export LIBGUESTFS_BACKEND=direct"
+fi
+    
 if [ -n "${overcloud_nodes_pwd}" ]; then
     echo "# Setting overcloud nodes password"
-    run_command "sudo yum install libguestfs-tools -y"
-    run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd}"
+    run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
+fi
+
+if [ ${enable_powerflex} == 1 ]; then
+    echo "# PowerFlex backend enabled, injecting rpms"
+    run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
+    run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
+    echo "# Cloning Dell EMC TripleO PowerFlex repository"
+    run_command "sudo dnf install -y ansible-tripleo-powerflex"
 fi
 
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
@@ -258,12 +292,30 @@ echo "## Done."
 # This patch fixes an issue in tripleo-heat-templates
 echo
 echo "### Patching tripleo-heat-templates"
-sudo sed -i 's/$(get_python)/python/' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/per_node.yaml
+sudo sed -i 's/$(get_python)/python3/' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/per_node.yaml
 echo "## Done."
+
+# This hacks in a patch for XE2420 where if GroupID returned by wsman is null
+# config_idrac.py fails.  This patch allows GroupID to be returned as null and the deployment to continue
+echo "### Patching idrac_card.py"
+apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.py ${HOME}/pilot/idrac_card_groupid.patch"
+echo "## Done"
+
+if [ ${enable_powerflex} == 1 ]; then
+    # This patch fixes an issue when updating a stack on which PowerFlex is already installed
+    # Waiting for the mod we did into the tripleo-powerflex avaiable into the RDO package
+    echo
+    echo "### Patching powerflex-ansible site.yaml"
+    apply_patch "sudo patch -b -s /usr/share/powerflex-ansible/site.yaml ${HOME}/pilot/powerflex_ansible_site.patch"
+    echo "### Patching powerflex-ansible roles/powerflex-facts/task/facts.yaml"
+    apply_patch "sudo patch -b -s /usr/share/powerflex-ansible/roles/powerflex-facts/tasks/facts.yaml ${HOME}/pilot/powerflex_ansible_facts.patch"
+    echo "### Done."
+fi
 
 echo
 echo "## Copying heat templates..."
 cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overcloud
+# TODO:dpaterson, why do we copy roles_data to ~/pilot/templates/overcloud/ ?
 cp $HOME/pilot/templates/roles_data.yaml $HOME/pilot/templates/overcloud/roles_data.yaml
 cp $HOME/pilot/templates/network-isolation.yaml $HOME/pilot/templates/overcloud/environments/network-isolation.yaml
 echo "## Done."
@@ -273,176 +325,85 @@ echo "## Updating .bash_profile..."
 echo "source ~/stackrc" >> ~/.bash_profile
 echo "## Done."
 
-# This hacks in a patch to allow clearing foreign config and clearing RAID config
-echo
-echo "## Patching Ironic iDRAC driver client.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/client.py ${HOME}/pilot/client.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/client.pyo
+# Install patch on all containers to be patched
+for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_api";
+  do
+    run_on_container  "${container}" "dnf install -y patch"
+  done
 
-# This hacks in a patch to validate and retrieve raid and boss controller and physical disk status.
-echo
-echo "## Patching Ironic iDRAC driver raid.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/raid.py ${HOME}/pilot/dracclient_raid.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/raid.pyo
+# Update ironic patches
+for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_api" ;
+  do
+    # This hacks in a patch to create a virtual disk using realtime mode.
+    # Note that this code must be here because we use this code prior to deploying
+    # the director.
+    echo
+    echo "## Patching Ironic iDRAC driver raid.py..."
+    upload_file_to_container "${container}" "${HOME}/pilot/raid.patch" "/tmp/raid.patch"
+    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.py /tmp/raid.patch"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyc"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyo"
+    echo "## Done"
+  done
 
-# This hacks in a patch to allow lifecycle controller management.
-echo
-echo "## Patching Ironic iDRAC driver lifecycle_controller.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.py ${HOME}/pilot/lifecycle_controller.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/resources/lifecycle_controller.pyo
 
-# This hacks in a patch to apply constants.
-echo
-echo "## Patching Ironic iDRAC driver constants.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/constants.py ${HOME}/pilot/constants.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/constants.pyo
+# Update Drac patches
+for container in "ironic_pxe_tftp"  "ironic_conductor" "ironic_api" ;
+  do
 
-# This hacks in a patch to handle various types of settings.
-echo
-echo "## Patching Ironic iDRAC driver utils.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/utils.py ${HOME}/pilot/utils.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/utils.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/utils.pyo
+    # This hacks in a patch to handle various types of settings.
+    echo
+    echo "## Patching Ironic iDRAC driver utils.py on ${container}.."
+    upload_file_to_container "${container}" "${HOME}/pilot/utils.patch" "/tmp/utils.patch"
+    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/dracclient/utils.py /tmp/utils.patch"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/utils.pyc"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/utils.pyo"
+    echo "## Done"
 
-# This hacks in a patch to out-of-band inspection to set boot_mode on the node
-# being inspected.
-echo
-echo "## Patching Ironic iDRAC driver inspect.py.."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.py ${HOME}/pilot/inspect.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/inspect.pyo
+    # This hacks in a patch to filter out all non-printable characters during WSMAN
+    # enumeration.
+    # Note that this code must be here because we use this code prior to deploying
+    # the director.
+    echo
+    echo "## Patching Ironic iDRAC driver wsman.py on ${container}..."
+    upload_file_to_container "${container}" "${HOME}/pilot/wsman.patch" "/tmp/wsman.patch"
+    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/dracclient/wsman.py /tmp/wsman.patch"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyc"
+    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/dracclient/wsman.pyo"
+    echo "## Done"
 
-# This hacks in a patch to create a virtual disk using realtime mode.
-# Note that this code must be here because we use this code prior to deploying
-# the director.
-echo
-echo "## Patching Ironic iDRAC driver raid.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.py ${HOME}/pilot/raid.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/raid.pyo
-echo "## Done."
+  done
 
-# This hacks in a patch to fix issue where server fails to reboot.
-# Note that this code must be here because we use this code prior to deploying
-# the director.
-echo
-echo "## Patching Ironic iDRAC driver power.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/power.py ${HOME}/pilot/power.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/power.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/power.pyo
-echo "## Done."
+# Restart containers/services
 
-# This hacks in a patch to make conductor wait while completion of configuration job
-echo
-echo "## Patching Ironic iDRAC driver job.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/job.py ${HOME}/pilot/ironic_job.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/job.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/job.pyo
-echo "## Done."
+for service in "tripleo_ironic_api.service" "tripleo_ironic_conductor.service" "tripleo_ironic_inspector.service" "tripleo_ironic_pxe_http.service" "tripleo_ironic_pxe_tftp.service" ;
+  do
+    echo "restarting ${service}"
+    sudo systemctl stop ${service}
+    sudo systemctl start ${service}
+  done
 
-# This hacks in a patch to define maximum number of retries for the conductor
-# to wait during any configuration job completion.
-echo
-echo "## Patching Ironic iDRAC driver drac.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/conf/drac.py ${HOME}/pilot/drac.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/conf/drac.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/conf/drac.pyo
-echo "## Done."
 
-# This hacks in a patch to add clean steps in management interface.
-echo
-echo "## Patching Ironic iDRAC driver management.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/management.py ${HOME}/pilot/management.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/management.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/ironic/drivers/modules/drac/management.pyo
-echo "## Done."
-
-# This hacks in a patch to filter out all non-printable characters during WSMAN
-# enumeration.
-# Note that this code must be here because we use this code prior to deploying
-# the director.
-echo
-echo "## Patching Ironic iDRAC driver wsman.py..."
-apply_patch "sudo patch -b -s /usr/lib/python2.7/site-packages/dracclient/wsman.py ${HOME}/pilot/wsman.patch"
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyc
-sudo rm -f /usr/lib/python2.7/site-packages/dracclient/wsman.pyo
-echo "## Done."
-
-# This patches workarounds for two issues into ironic.conf.
-# 1. node_locked_retry_attempts is increased to work around an issue where
-#    lock contention on the nodes in ironic can occur during RAID cleaning.
-# 2. sync_power_state_interval is increased to work around an issue where
-#    servers go into maintenance mode in ironic if polled for power state too
-#    aggressively.
-echo
-echo "## Patching ironic.conf..."
-apply_patch "sudo patch -b -s /etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
-echo "## Done."
-
-# This patches an issue where the  Ironic api service returns http 500 errors
-# https://bugzilla.redhat.com/show_bug.cgi?id=1613995
-echo
-echo "## Patching 10-ironic_wsgi.conf"
-apply_patch "sudo patch -b -s /etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
-echo "## Done"
 
 echo
 echo "## Restarting httpd"
 sudo systemctl restart httpd
 echo "## Done"
 
-echo
-echo "## Restarting openstack-ironic-conductor.service..."
-sudo systemctl restart openstack-ironic-conductor.service
-echo "## Done."
 
-# If deployment is unlocked, generate the overcloud container list from the latest.
-if [ -e $HOME/overcloud_images.yaml ];
-then
-    echo "using locked containers versions"
-
-    if [ ! -z "${containers_prefix}" ]; then
-        sed -i "s/registry.access.redhat.com\/rhosp13\/openstack-/${satellite_hostname}:5000\/${containers_prefix}/" $HOME/overcloud_images.yaml
-        sed -i "s/registry.access.redhat.com\/rhceph\//${satellite_hostname}:5000\/${containers_prefix}/" $HOME/overcloud_images.yaml
-
-    fi
-
-else
-    echo "using latest available containers versions"
-    touch $HOME//overcloud_images.yaml
-
-    if [ ! -z "${containers_prefix}" ]; then
-
-        openstack overcloud container image prepare   --namespace=${satellite_hostname}:5000\
-        --prefix=${containers_prefix}   \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
-        --tag-from-label {version}-{release}   \
-        --set ceph_namespace=${satellite_hostname}:5000 \
-        --set ceph_image=${containers_prefix}rhceph-3-rhel7 \
-        --output-env-file=$HOME/overcloud_images.yaml
-     
-    else
-        openstack overcloud container image prepare --output-env-file $HOME/overcloud_images.yaml \
-        --namespace=registry.access.redhat.com/rhosp13 \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
-        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
-        --set ceph_namespace=registry.access.redhat.com/rhceph \
-        --set ceph_image=rhceph-3-rhel7 \
-        --tag-from-label {version}-{release}
-    fi
+# Satellite , if using
+if [ ! -z "${containers_prefix}" ]; then
+    container_yaml=$HOME/containers-prepare-parameter.yaml
+    sed -i "s/namespace:.*/namespace: ${satellite_hostname}:5000/" ${container_yaml}
+    sed -i "s/rhceph-4-dashboard-rhel8/${containers_prefix}rhceph_rhceph-4-dashboard-rhel8/" ${container_yaml}
+    sed -i "s/ose-prometheus-alertmanager/${containers_prefix}openshift4_ose-prometheus-alertmanager/" ${container_yaml}
+    sed -i "s/rhceph-4-rhel8/${containers_prefix}rhceph_rhceph-4-rhel8/" ${container_yaml}
+    sed -i "s/ose-prometheus-node-exporter/${containers_prefix}openshift4_ose-prometheus-node-exporter/" ${container_yaml}
+    sed -i "s/ose-prometheus$/${containers_prefix}openshift4_ose-prometheus/" ${container_yaml}
+    sed -i "s/openstack-/${containers_prefix}rhosp-rhel8_openstack-/" ${container_yaml}
+    sed -i "s/tag_from_label:.*/tag_from_label: '16.1'/" ${container_yaml}
 fi
 
-sudo yum install -y os-cloud-config
-sudo yum install -y ceph-ansible
 
 
 echo

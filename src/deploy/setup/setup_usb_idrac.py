@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -78,7 +78,7 @@ def setup():
         iso_path = os.path.dirname(settings.rhel_iso)
         if args.idrac_vmedia_img is True:
             cmds = ['cd ~;rm -f osp_ks.img',
-                    'cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=5000',
+                    'cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=10000',
                     'cd ~;mkfs ext3 -F osp_ks.img',
                     'mkdir -p /mnt/usb',
                     'cd ~;mount -o loop osp_ks.img /mnt/usb',
@@ -119,8 +119,8 @@ def setup():
         logger.error(traceback.format_exc())
         e = sys.exc_info()[0]
         logger.error(e)
-        print e
-        print traceback.format_exc()
+        print(e)
+        print(traceback.format_exc())
 
 
 if __name__ == "__main__":

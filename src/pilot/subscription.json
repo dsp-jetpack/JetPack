@@ -20,33 +20,16 @@
     },
     "roles": {
         "control": {
-            "pool_ids": [ "CHANGEME_openstack_pool_id" ],
-            "repos": [ "rhel-7-server-rpms",
-                       "rhel-7-server-extras-rpms",
-                       "rhel-ha-for-rhel-7-server-rpms",
-                       "rhel-7-server-openstack-13-rpms",
-                       "rhel-7-server-rhceph-3-mon-rpms",
-                       "rhel-7-server-rhceph-3-tools-rpms" ]
+            "pool_ids": [ "CHANGEME_RHEL_8_pool_id" ],
+            "repos": [ "rhel-8-for-x86_64-baseos-eus-rpms" ]
         },
         "compute": {
-            "pool_ids": [ "CHANGEME_openstack_pool_id" ],
-            "repos": [ "rhel-7-server-rpms",
-                       "rhel-7-server-extras-rpms",
-                       "rhel-ha-for-rhel-7-server-rpms",
-                       "rhel-7-server-openstack-13-rpms",
-                       "rhel-7-server-rhceph-3-mon-rpms",
-                       "rhel-7-server-rhceph-3-tools-rpms" ]
+            "pool_ids": [ "CHANGEME_RHEL_8_pool_id" ],
+            "repos": [ "rhel-8-for-x86_64-baseos-eus-rpms" ]
         },
         "ceph-storage": {
-            "pool_ids": [ "CHANGEME_openstack_pool_id",
-                          "CHANGEME_ceph_pool_id" ],
-            "repos": [ "rhel-7-server-rpms",
-                       "rhel-7-server-extras-rpms",
-                       "rhel-ha-for-rhel-7-server-rpms",
-                       "rhel-7-server-openstack-13-rpms",
-                       "rhel-7-server-rhceph-3-mon-rpms",
-                       "rhel-7-server-rhceph-3-osd-rpms",
-                       "rhel-7-server-rhceph-3-tools-rpms" ]
+            "pool_ids": [ "CHANGEME_RHEL_8_pool_id"],
+            "repos": [  "rhel-8-for-x86_64-baseos-eus-rpms" ]
         }
     }
 }

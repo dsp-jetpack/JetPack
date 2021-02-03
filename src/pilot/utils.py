@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2017-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ConfigParser
+import configparser
 import json
 import os
 from constants import Constants
+from distutils.util import strtobool
 
 
 class Utils:
@@ -44,7 +45,7 @@ class Utils:
 
     @staticmethod
     def is_enable_routed_networks():
-        conf = ConfigParser.SafeConfigParser()
+        conf = configparser.SafeConfigParser()
         conf.read(Constants.UNDERCLOUD_CONF)
         enable_routed_networks = False
         try:
@@ -55,3 +56,14 @@ class Utils:
                           + "in undercloud.conf")
 
         return enable_routed_networks
+
+    @staticmethod
+    def string_to_bool(string):
+        try:
+            if not string or len(string.strip()) == 0:
+                return False
+            return bool(strtobool(str(string).strip()))
+        except ValueError as ex:
+            ex.message = ("strtobool could not interpret "
+                          "the value of: {}".format(string))
+            return False

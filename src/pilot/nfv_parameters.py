@@ -1,4 +1,4 @@
-# Copyright (c) 2018-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2018-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from constants import Constants
 from credential_helper import CredentialHelper
 from ironic_helper import IronicHelper
 from keystoneauth1.identity import v3
@@ -50,7 +51,7 @@ class NfvParameters(object):
         os_auth_url, os_tenant_name, os_username, os_password, \
             os_user_domain_name, os_project_domain_name = \
             CredentialHelper.get_undercloud_creds()
-        auth_url = os_auth_url + "v3"
+        auth_url = os_auth_url + "/v3"
 
         kwargs = {
                 'username': os_username,
@@ -71,9 +72,10 @@ class NfvParameters(object):
         sess = session.Session(auth=auth)
         self.inspector = ironic_inspector_client.ClientV1(session=sess)
 
-    def check_ht_status(self, node):
+    def check_ht_status(self, node,
+                        instackenv_file=Constants.INSTACKENV_FILENAME):
         drac_ip, drac_user, drac_password = \
-            CredentialHelper.get_drac_creds(self.ironic, node)
+            CredentialHelper.get_drac_creds(self.ironic, node, instackenv_file)
         stor = drac_client.DRACClient(drac_ip, drac_user, drac_password)
         # cpu socket information for every compute node
         sockets = stor.list_cpus()
@@ -81,7 +83,7 @@ class NfvParameters(object):
             if not socket.ht_enabled:
                 raise Exception("Hyperthreading is not enabled in "
                                 + str(node))
-        print "Hyperthreading enabled on %s" % node
+        logger.debug("Hyperthreading enabled on %s" % node)
         return True
 
     def get_nodes_uuids(self, nodetype):
@@ -106,12 +108,22 @@ class NfvParameters(object):
 
     def parse_data(self, node_data):
         self.data['nics'] = self.get_numa_nics(node_data)
-        self.data['cpus'] = self.get_numa_cpus(node_data)
+        cpus = self.get_numa_cpus(node_data)
+        # Reorganize cpus keys to be in numeric order
+        for node in cpus.keys():
+            new_dict = {}
+            cpu_dict = cpus[node]
+            for key,value in cpu_dict.items():
+                min_val = min(value)        #extract min values
+                new_dict[min_val] = value
+        # Append Numa cpus to data
+            self.data['cpus'][node] = new_dict
+        logger.debug("NUMA NICs and CPUs >> " + str(self.data))
 
     def get_all_cpus(self):
         try:
             total_cpus = []
-            assert self.data.has_key('cpus'),\
+            assert 'cpus' in self.data,\
                 "Unable to fetch total number " \
                 "of CPUs. Parse CPU data first"
             for node in self.data['cpus'].keys():
@@ -120,6 +132,7 @@ class NfvParameters(object):
             total_cpus = [item for sublist in total_cpus for item in sublist]
             total_cpus = self.range_extract(sorted(total_cpus, key=int))
             self.total_cpus = ','.join(map(str, total_cpus))
+            logger.debug("Total CPUs >> " + str(self.total_cpus))
         except AssertionError:
             raise
 
@@ -133,6 +146,7 @@ class NfvParameters(object):
             i += 1
         host_cpus = self.range_extract(sorted(host_cpus, key=int))
         self.host_cpus = ','.join(map(str, host_cpus))
+        logger.debug("Host CPUs >> " + str(self.host_cpus))
 
     def get_pmd_cpus(self, mtu, dpdk_nics):
         pmd_cpus = []
@@ -155,6 +169,7 @@ class NfvParameters(object):
         pmd_cpus = [item for sublist in pmd_cpus for item in sublist]
         pmd_cpus = self.range_extract(sorted(pmd_cpus, key=int))
         self.pmd_cpus = ','.join(map(str, pmd_cpus))
+        logger.debug("PMD CPUs >> " + str(self.pmd_cpus))
 
     def get_nova_cpus(self):
         nova_cpus = []
@@ -166,6 +181,7 @@ class NfvParameters(object):
         nova_cpus = [item for sublist in nova_cpus for item in sublist]
         nova_cpus = self.range_extract(sorted(nova_cpus, key=int))
         self.nova_cpus = ','.join(map(str, nova_cpus))
+        logger.debug("NOVA CPUs >> " + str(self.nova_cpus))
 
     def get_isol_cpus(self):
         isol_cpus = []
@@ -175,6 +191,7 @@ class NfvParameters(object):
         isol_cpus = sorted(map(int, isol_cpus), key=int)
         isol_cpus = self.range_extract(isol_cpus)
         self.isol_cpus = ','.join(map(str, isol_cpus))
+        logger.debug("isol CPUs >> " + str(self.isol_cpus))
 
     def get_socket_memory(self, mtu, dpdk_nics):
         nodes = self.data['nics'].keys()
@@ -187,7 +204,7 @@ class NfvParameters(object):
                     mem += (mtu + 800) * (4096*64)
                     break
             mem = mem / (1024*1024)
-            numa_mem[n] = self.round_to_nearest(mem, 1024)
+            numa_mem[n] = int(self.round_to_nearest(mem, 1024))
         self.socket_mem = ','.join(map(str, numa_mem.values()))
 
     def round_to_nearest(self, n, m):
@@ -221,10 +238,11 @@ class NfvParameters(object):
         ls.sort()
         return ','.join(map(str, ls))
 
-    def select_compute_node(self):
+    def select_compute_node(self, node_type="compute",
+                            instackenv_file=Constants.INSTACKENV_FILENAME):
         ref_node = {"uuid": None, "cpus": None, "data": None}
-        for node in self.get_nodes_uuids("compute"):
-            self.check_ht_status(node)
+        for node in self.get_nodes_uuids(node_type):
+            self.check_ht_status(node, instackenv_file)
             data = self.get_introspection_data(node)
             if not ref_node["uuid"]:
                 ref_node["uuid"] = node
@@ -235,10 +253,10 @@ class NfvParameters(object):
                 ref_node["uuid"] = node
                 ref_node["data"] = data
                 ref_node["cpus"] = data["cpus"]
-        if ref_node["cpus"] not in [40, 48, 56, 64, 72, 80, 128]:
+        if ref_node["cpus"] not in [40, 48, 56, 64, 72, 80, 88, 128]:
             raise Exception("The number of vCPUs, as specified in the"
                             " reference architecture, must be one of"
-                            " [40, 48, 56, 64, 72, 80, 128]"
+                            " [40, 48, 56, 64, 72, 80, 88, 128]"
                             " but number of vCPUs are " + str(
                                 ref_node["cpus"]))
         return ref_node["uuid"], ref_node["data"]
@@ -279,8 +297,6 @@ class NfvParameters(object):
                 hugepage_count = (memory_count / 2)
             if hugepage_size == "1GB":
                 hugepage_count = (memory_count / 1024)
-            logger.info("hugepage_size {}".format(hugepage_size))
-            logger.info("hugepage_count {}".format(hugepage_count))
             return hugepage_count
         except Exception as error:
             message = "Exception {}: {}".format(

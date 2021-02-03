@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,18 +15,13 @@
 # limitations under the License.
 
 import argparse
-import distutils.dir_util
 import os
 import re
 import sys
 import subprocess
-import paramiko
 import logging
-import string
 import novaclient.client as nova_client
 import time
-from command_helper import Ssh
-from novaclient.v2 import aggregates
 from ironic_helper import IronicHelper
 from logging_helper import LoggingHelper
 from credential_helper import CredentialHelper
@@ -44,7 +39,10 @@ BAREMETAL_FLAVOR = "baremetal"
 
 # Check to see if the sequence contains numbers that increase by 1
 def is_coherent(seq):
-    return seq == range(seq[0], seq[-1]+1)
+    r = []
+    for i in range(seq[0], seq[-1]+1):
+        r.append(i)
+    return seq == r
 
 
 def validate_node_placement():
@@ -79,7 +77,6 @@ def validate_node_placement():
         hyphen = node_capability.rfind("-")
         flavor = node_capability[0:hyphen]
         index = node_capability[hyphen + 1:]
-
         # Build up a dict that maps a flavor name to a sequence of placment
         # indices
         if flavor not in flavor_to_indices:
@@ -140,12 +137,12 @@ def create_flavors():
 
     for flavor in flavors:
         if flavor["id"] not in existing_flavor_ids:
-            print '    Creating ' + flavor["name"]
+            print('    Creating ' + flavor["name"])
             n_client.flavors.create(flavor["name"], flavor["memory"],
                                     flavor["cpus"], flavor["disk"],
                                     flavorid=flavor["id"])
         else:
-            print '    Flavor ' + flavor["name"] + " already exists"
+            print('    Flavor ' + flavor["name"] + " already exists")
 
 
 def create_volume_types():
@@ -162,6 +159,9 @@ def create_volume_types():
 
     if args.enable_powermax:
         types.append(["powermax_backend", "tripleo_dellemc_powermax"])
+
+    if args.num_powerflex > 0:
+        types.append(["powerflex_backend", "tripleo_dellemc_powerflex"])
 
     overcloudrc_name = CredentialHelper.get_overcloudrc_name()
 
@@ -213,10 +213,8 @@ def create_share_types():
             logger.info("Creating manila share type {}".format(type[0]))
             cmd = "source {} && " \
                   "manila type-create --is_public True {} true && " \
-                  "manila type-key {} set share_backend_name={} && " \
-                  "manila type-key {} set snapshot_support=True && " \
-                  "manila type-key {} set create_share_from_snapshot_support=True" \
-                  "".format(overcloudrc_name, type[0], type[0], type[1], type[0], type[0])
+                  "manila type-key {} set share_backend_name={}" \
+                  "".format(overcloudrc_name, type[0], type[0], type[1])
             os.system(cmd)
 
     os.system("source {} && "
@@ -285,7 +283,11 @@ def main():
                             type=int,
                             required=True,
                             help="The number of storage nodes")
-
+        parser.add_argument("--powerflex",
+                            dest="num_powerflex",
+                            type=int,
+                            required=True,
+                            help="The number of powerflex storage nodes")
         parser.add_argument("--enable_hugepages",
                             action='store_true',
                             default=False,
@@ -323,21 +325,6 @@ def main():
                             required=False,
                             default="4",
                             help="HostOs Cpus to be configured")
-        parser.add_argument("--mariadb_max_connections",
-                            dest="mariadb_max_connections",
-                            required=False,
-                            default="15360",
-                            help="Maximum number of connections for MariaDB")
-        parser.add_argument("--innodb_buffer_pool_size",
-                            dest="innodb_buffer_pool_size",
-                            required=False,
-                            default="dynamic",
-                            help="InnoDB buffer pool size")
-        parser.add_argument("--innodb_buffer_pool_instances",
-                            dest="innodb_buffer_pool_instances",
-                            required=False,
-                            default="16",
-                            help="InnoDB buffer pool instances.")
         parser.add_argument('--enable_dellsc',
                             action='store_true',
                             default=False,
@@ -362,7 +349,7 @@ def main():
         parser.add_argument('--enable_powermax_manila',
                             action='store_true',
                             default=False,
-                            help="Enable Dell EMC Unity Manila backend")
+                            help="Enable Dell EMC PowerMax  Manila backend")
         parser.add_argument('--disable_rbd',
                             action='store_true',
                             default=False,
@@ -424,6 +411,16 @@ def main():
                             required=True,
                             default=1500,
                             help="Tenant Network MTU")
+        parser.add_argument("--dashboard_enable",
+                            action='store_true',
+                            default=False,
+                            help="Enable the ceph dashboard deployment")
+        parser.add_argument('--network_data',
+                            action='store_true',
+                            default=False,
+                            help="Use network_data.yaml to create edge site "
+                                 "networks")
+
         LoggingHelper.add_argument(parser)
         args = parser.parse_args()
         LoggingHelper.configure_logging(args.logging_level)
@@ -476,6 +473,7 @@ def main():
         # If disabled, default values will be set and
         # they won't be used for configuration
         # Create ConfigOvercloud object
+        print("Configure environment file")
         config = ConfigOvercloud(args.overcloud_name)
         # Remove this when Numa siblings added
         # Edit the dellnfv_environment.yaml
@@ -490,9 +488,6 @@ def main():
             args.hw_offload,
             args.sriov_interfaces,
             nic_env_file,
-            args.mariadb_max_connections,
-            args.innodb_buffer_pool_size,
-            args.innodb_buffer_pool_instances,
             args.num_controllers,
             args.num_storage,
             control_flavor,
@@ -501,11 +496,11 @@ def main():
             block_storage_flavor,
             args.vlan_range,
             args.num_dell_computes,
-            args.num_dell_computeshci
+            args.num_dell_computeshci,
+            args.num_powerflex
             )
 
         # Launch the deployment
-
         overcloud_name_opt = ""
         if args.overcloud_name is not None:
             overcloud_name_opt = "--stack " + args.overcloud_name
@@ -517,19 +512,15 @@ def main():
         # The order of the environment files is important as a later inclusion
         # overrides resources defined in prior inclusions.
 
+        env_opts = ""
+        # If there are edge sites we have to use network_data.yaml and
+        # it must in as first argument.
+        if args.network_data:
+            env_opts += "-n ~/pilot/templates/network_data.yaml "
         # The roles_data.yaml must be included at the beginning.
-        # This is needed to enable the custome role Dell Compute.
+        # This is needed to enable the custom role Dell Compute.
         # It overrides the default roles_data.yaml
-        env_opts = "-r ~/pilot/templates/roles_data.yaml"
-
-        # The network-environment.yaml must be included after the
-        # network-isolation.yaml
-        env_opts += " -e ~/pilot/templates/overcloud/environments/" \
-                    "network-isolation.yaml" \
-                    " -e ~/pilot/templates/network-environment.yaml" \
-                    " -e {}" \
-                    " -e ~/pilot/templates/ceph-osd-config.yaml" \
-                    "".format(nic_env_file)
+        env_opts += "-r ~/pilot/templates/roles_data.yaml"
 
         # The static-ip-environment.yaml must be included after the
         # network-environment.yaml
@@ -540,11 +531,6 @@ def main():
         # network-environment.yaml
         if args.static_vips:
             env_opts += " -e ~/pilot/templates/static-vip-environment.yaml"
-
-        # The neutron-ovs-dvr.yaml.yaml must be included after the
-        # network-environment.yaml
-        if args.dvr_enable:
-            env_opts += " -e ~/pilot/templates/neutron-ovs-dvr.yaml"
 
         # The configure-barbican.yaml must be included after the
         # network-environment.yaml
@@ -561,14 +547,26 @@ def main():
         if args.node_placement:
             env_opts += " -e ~/pilot/templates/node-placement.yaml"
 
+        # The neutron-ovs.yaml must be included before dell-environment.yaml to enable ovs and disable ovn
+        # in OSP16.1. In case we need to use OVN in future, please delete this line
+        env_opts += " -e ~/pilot/templates/overcloud/environments/services/neutron-ovs.yaml"
+
+        # The neutron-ovs-dvr.yaml.yaml must be included after the
+        # neutron-ovs.yaml
+        if args.dvr_enable:
+            env_opts += " -e ~/pilot/templates/neutron-ovs-dvr.yaml"
+
         # The dell-environment.yaml must be included after the
         # storage-environment.yaml and ceph-radosgw.yaml
-        env_opts += " -e ~/pilot/templates/overcloud/environments/" \
-                    "storage-environment.yaml" \
-                    " -e ~/overcloud_images.yaml" \
-                    " -e ~/pilot/templates/dell-environment.yaml" \
-                    " -e ~/pilot/templates/overcloud/environments/" \
-                    "puppet-pacemaker.yaml"
+        if args.num_powerflex > 0:
+            env_opts += " -e ~/containers-prepare-parameter.yaml" \
+                        " -e ~/pilot/templates/dell-environment.yaml"
+        else:
+            env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+                        "storage-environment.yaml" \
+                        " -e ~/containers-prepare-parameter.yaml" \
+                        " -e ~/pilot/templates/dell-environment.yaml"
+
         host_config = False
         if args.enable_hugepages or args.enable_numa:
             env_opts += " -e ~/pilot/templates/overcloud/environments/" \
@@ -589,15 +587,17 @@ def main():
                 env_opts += " -e ~/pilot/templates/overcloud/environments/" \
                             "host-config-and-reboot.yaml"
 
-        env_opts += " -e ~/pilot/templates/dell-cinder-backends.yaml"
-
         if args.enable_dellsc:
             env_opts += " -e ~/pilot/templates/dellsc-cinder-config.yaml"
 
         if args.enable_unity:
             env_opts += " -e ~/pilot/templates/dellemc-unity-cinder-" \
+                        "container.yaml"
+            env_opts += " -e ~/pilot/templates/dellemc-unity-cinder-" \
                         "backend.yaml"
+
         if args.enable_unity_manila:
+            env_opts += " -e ~/pilot/templates/unity-manila-container.yaml"
             env_opts += " -e ~/pilot/templates/unity-manila-config.yaml"
 
         if args.enable_powermax:
@@ -610,18 +610,36 @@ def main():
         if args.enable_powermax_manila:
             env_opts += " -e ~/pilot/templates/powermax-manila-config.yaml"
 
+        if args.num_powerflex > 0:
+            env_opts += " -e ~/pilot/templates/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml"
+            env_opts += " -e ~/pilot/templates/dellemc-powerflex-cinder-backend.yaml"
+            env_opts += " -e ~/pilot/templates/custom-dellemc-volume-mappings.yaml"
+        else:
+            env_opts += " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml" \
+                        " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-rgw.yaml"
+    
+        if args.dashboard_enable:
+            env_opts += " -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-dashboard.yaml"
+            env_opts += " -e ~/pilot/templates/ceph_dashboard_admin.yaml"
+
+        # The network-environment.yaml must be included after other templates
+        # for effective parameter overrides (External vlan default route)
+        # The network-environment.yaml must be included after the network-isolation.yaml
+        env_opts += " -e ~/pilot/templates/overcloud/environments/" \
+                    "network-isolation.yaml" \
+                    " -e ~/pilot/templates/network-environment.yaml" \
+                    " -e {} " \
+                    "-e ~/pilot/templates/site-name.yaml".format(nic_env_file)
+
         cmd = "cd ;source ~/stackrc; openstack overcloud deploy" \
               " {}" \
               " --log-file ~/pilot/overcloud_deployment.log" \
               " -t {}" \
               " {}" \
               " --templates ~/pilot/templates/overcloud" \
-              " -e /usr/share/openstack-tripleo-heat-templates/" \
-              "environments/ceph-ansible/ceph-ansible.yaml" \
-              " -e /usr/share/openstack-tripleo-heat-templates/" \
-              "environments/ceph-ansible/ceph-rgw.yaml" \
               " {}" \
               " --libvirt-type kvm" \
+              " --no-cleanup" \
               " --ntp-server {}" \
               "".format(debug,
                         args.timeout,
@@ -629,12 +647,10 @@ def main():
                         env_opts,
                         args.ntp_server_fqdn,
                         )
-
         with open(os.path.join(home_dir, 'pilot', 'overcloud_deploy_cmd.log'),
                   'w') as f:
             f.write(cmd.replace(' -', ' \\\n -'))
             f.write('\n')
-        print cmd
         start = time.time()
         status = run_deploy_command(cmd)
         end = time.time()
@@ -655,7 +671,8 @@ def main():
         if horizon_url:
             logger.info('\nHorizon Dashboard URL: {}\n'.format(horizon_url))
     except Exception as err:
-        print >> sys.stderr, err
+        print(sys.stderr, err)
+        raise
         sys.exit(1)
 
 

@@ -1,4 +1,4 @@
-# Copyright (c)2018-2020 Dell Inc. or its subsidiaries.
+# Copyright (c)2018-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ resource_registry:
   OS::TripleO::Network::Ports::StorageVipPort: ../network/ports/storage.yaml
   OS::TripleO::Network::Ports::StorageMgmtVipPort: ../network/ports/storage_mgmt.yaml
   OS::TripleO::Network::Ports::RedisVipPort: ../network/ports/vip.yaml
+  #OS::TripleO::Network::Ports::OVNDBsVipPort: ../network/ports/vip.yaml
 
   # Port assignments for service virtual IPs for the controller role
   OS::TripleO::Controller::Ports::RedisVipPort: ../network/ports/vip.yaml
@@ -89,4 +90,12 @@ resource_registry:
   OS::TripleO::BlockStorage::Ports::StorageMgmtPort: ../network/ports/storage_mgmt.yaml
   OS::TripleO::BlockStorage::Ports::TenantPort: ../network/ports/noop.yaml
   #OS::TripleO::BlockStorage::Ports::ManagementPort: ../network/ports/management.yaml
+  
+  # Port assignments for the PowerFlex storage role
+  OS::TripleO::PowerflexStorage::Ports::ExternalPort: ../network/ports/noop.yaml
+  OS::TripleO::PowerflexStorage::Ports::InternalApiPort: ../network/ports/internal_api.yaml
+  OS::TripleO::PowerflexStorage::Ports::StoragePort: ../network/ports/storage.yaml
+  OS::TripleO::PowerflexStorage::Ports::StorageMgmtPort: ../network/ports/storage_mgmt.yaml
+  OS::TripleO::PowerflexStorage::Ports::TenantPort: ../network/ports/noop.yaml
+  #OS::TripleO::PowerflexStorage::Ports::ManagementPort: ../network/ports/management.yaml
 

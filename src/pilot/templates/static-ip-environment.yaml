@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ resource_registry:
   OS::TripleO::Compute::Ports::StorageMgmtPort: ./overcloud/network/ports/noop.yaml
   OS::TripleO::Compute::Ports::TenantPort: ./overcloud/network/ports/tenant_from_pool.yaml
 
-
   OS::TripleO::DellCompute::Ports::ExternalPort: ./overcloud/network/ports/noop.yaml
   OS::TripleO::DellCompute::Ports::InternalApiPort: ./overcloud/network/ports/internal_api_from_pool.yaml
   OS::TripleO::DellCompute::Ports::StoragePort: ./overcloud/network/ports/storage_from_pool.yaml
@@ -44,6 +43,13 @@ resource_registry:
   OS::TripleO::CephStorage::Ports::StoragePort: ./overcloud/network/ports/storage_from_pool.yaml
   OS::TripleO::CephStorage::Ports::StorageMgmtPort: ./overcloud/network/ports/storage_mgmt_from_pool.yaml
   OS::TripleO::CephStorage::Ports::TenantPort: ./overcloud/network/ports/noop.yaml
+
+  OS::TripleO::PowerflexStorage::Ports::ExternalPort: ./overcloud/network/ports/noop.yaml
+  OS::TripleO::PowerflexStorage::Ports::InternalApiPort: ./overcloud/network/ports/internal_api_from_pool.yaml
+  OS::TripleO::PowerflexStorage::Ports::StoragePort: ./overcloud/network/ports/storage_from_pool.yaml
+  OS::TripleO::PowerflexStorage::Ports::StorageMgmtPort: ./overcloud/network/ports/storage_mgmt_from_pool.yaml
+  OS::TripleO::PowerflexStorage::Ports::TenantPort: ./overcloud/network/ports/noop.yaml
+
 
 parameter_defaults:
   # Specify the IPs for the overcloud nodes on the indicated networks below.
@@ -85,7 +91,7 @@ parameter_defaults:
     tenant:
     internal_api:
     storage:
-    
+
   DellComputeIPs:
     # CHANGEME: Change the following IPs to the static IPs for the computes on
     # the Tenant network
@@ -127,3 +133,8 @@ parameter_defaults:
     storage:
     storage_mgmt:
 
+  # CHANGEME: The PowerFlex node ips
+  PowerflexStorageIPs:
+    internal_api:
+    storage:
+    storage_mgmt:

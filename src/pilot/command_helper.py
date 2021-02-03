@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import subprocess
 logger = logging.getLogger(__name__)
 
 
-class Scp():
+class Scp:
 
     @staticmethod
     def get_file(address, localfile, remotefile,
@@ -46,7 +46,7 @@ class Scp():
         client.close()
 
 
-class Ssh():
+class Ssh:
 
     @staticmethod
     def get_client(address, user=None, password=None, pkey=None):
@@ -66,17 +66,17 @@ class Ssh():
             stdout, stderr = stdout_stream.read(), stderr_stream.read()
             exit_code = stdout_stream.channel.recv_exit_status()
             logger.debug("exit_code: " + str(exit_code))
-            logger.debug("stdout: " + stdout)
-            logger.debug("stderr: " + stderr)
+            logger.debug("stdout: " + stdout.decode('utf-8'))
+            logger.debug("stderr: " + stderr.decode('utf-8'))
             client.close()
         except IOError:
             logger.warning(".. host " + address + " is not up")
             return -1, "host not up", "host not up"
 
-        return exit_code, stdout, stderr
+        return exit_code, stdout.decode('utf-8'), stderr.decode('utf-8')
 
 
-class Exec():
+class Exec:
 
     @staticmethod
     def execute_command(cmd):
@@ -90,6 +90,6 @@ class Exec():
                      "    returncode={}\n"
                      "    stdout={}\n"
                      "    stderr={}".format(str(process.returncode),
-                                            stdout, stderr))
+                                            stdout.decode('utf-8'), stderr.decode('utf-8')))
 
-        return exit_code, stdout, stderr
+        return exit_code, stdout.decode('utf-8'), stderr.decode('utf-8')
