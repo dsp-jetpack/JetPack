@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,8 +19,7 @@ from __future__ import print_function
 
 import argparse
 from collections import namedtuple
-from dracclient import client
-from exceptions import ValueError
+from builtins import ValueError
 import json
 import logging
 import os.path
@@ -30,7 +29,8 @@ import dracclient.exceptions
 import dracclient.utils
 import netaddr
 import requests.packages
-from time import sleep
+
+import discover_nodes.dracclient.client as discover_nodes_dracclient
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being
 # made. See
@@ -120,8 +120,8 @@ OSPD_NODE_TEMPLATE_ATTRIBUTE_PM_USER = 'pm_user'
 NODE_TEMPLATE_ATTRIBUTE_MODEL = 'model'
 NODE_TEMPLATE_ATTRIBUTE_SERVICE_TAG = 'service_tag'
 
-OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IDRAC = 'pxe_drac'
-OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IPMI = 'pxe_ipmitool'
+OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_IDRAC = 'idrac'
+OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_IPMI = 'ipmi'
 OSPD_NODE_TEMPLATE_VALUE_USER_INTERVENTION_REQUIRED = \
     'FIXME and rerun ' + PROGRAM_NAME
 
@@ -207,7 +207,7 @@ def main():
         parser.print_usage(file=sys.stderr)
         print(sys.argv[0],
               ': error: argument idrac:',
-              e.message,
+              str(e),
               file=sys.stderr)
         sys.exit(1)
 
@@ -261,14 +261,14 @@ def ip_set_from_address_range(start, end):
             {
                 'start': start,
                 'end': end,
-                'message': e.message})
+                'message': str(e)})
     except netaddr.AddrFormatError as e:
         raise ValueError(
             ("invalid IP range: '%(start)s-%(end)s' (%(message)s)") %
             {
                 'start': start,
                 'end': end,
-                'message': e.message})
+                'message': str(e)})
 
     if start_ip_address > end_ip_address:
         raise ValueError(
@@ -342,49 +342,6 @@ def ip_network_from_address(address):
                 'version': ip_network.version})
 
 
-def determine_job_outcomes(drac_client, job_ids):
-    all_succeeded = True
-
-    for job_id in job_ids:
-        job_status = drac_client.get_job(job_id).status
-
-        if job_succeeded(job_status):
-            continue
-
-        all_succeeded = False
-        LOG.error(
-            "Configuration job {} encountered issues; its final status is "
-            "{}".format(job_id, job_status))
-
-    return all_succeeded
-
-
-def job_succeeded(job_status):
-    return job_status == 'Completed' or job_status == 'Reboot Completed'
-
-
-def wait_for_jobs_to_complete(job_ids, drac_client):
-    # Wait up to 10 minutes for the unfinished jobs to run
-    unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
-    retries = 60
-    while unfinished_jobs and retries > 0:
-        LOG.debug("{} jobs remain to complete".format(
-            len(unfinished_jobs)))
-        retries -= 1
-        if retries > 0:
-            sleep(10)
-            unfinished_jobs = drac_client.list_jobs(only_unfinished=True)
-
-    if retries > 0:
-        LOG.debug("All jobs have completed")
-        success = determine_job_outcomes(drac_client, job_ids)
-    else:
-        LOG.error("Timed out while waiting for jobs to complete")
-        success = False
-
-    return success
-
-
 def scan(ip_set, user_name, password, provisioning_nics):
     # Scan each iDRAC.
     nodes = []
@@ -410,14 +367,14 @@ def scan_one(scan_info):
     # protocol. See the DMTF's "Web Services for Management
     # (WS-Management) Specification"
     # (http://www.dmtf.org/sites/default/files/standards/documents/DSP0226_1.2.0.pdf).
-    drac_client = client.DRACClient(scan_info.ip_address,
+    client = discover_nodes_dracclient.DRACClient(scan_info.ip_address,
                                                   scan_info.user_name,
                                                   scan_info.password)
 
     # Initialize the values of the attributes.
     pm_address = scan_info.ip_address
     pm_password = scan_info.password
-    pm_type = OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_PXE_IDRAC
+    pm_type = OSPD_NODE_TEMPLATE_VALUE_PM_TYPE_IDRAC
     pm_user = scan_info.user_name
     model = ''
     service_tag = ''
@@ -426,12 +383,12 @@ def scan_one(scan_info):
         # Determine if the IP address is a WS-Man endpoint and an iDRAC.
         # If it is not, return None so that no entry is created for it
         # in the node definition template.
-        if not is_idrac(drac_client):
+        if not is_idrac(client):
             LOG.info('IP address is not an iDRAC')
             return None
 
-        model = drac_client.get_system().model
-        service_tag = drac_client.get_system().service_tag
+        model = client.get_system().model
+        service_tag = client.get_system().service_tag
     except dracclient.exceptions.WSManInvalidResponse:
         # Most likely the user credentials are unauthorized.
 
@@ -486,7 +443,7 @@ def scan_one(scan_info):
 #       (http://www.dmtf.org/sites/default/files/standards/documents/DSP0226_1.2.0.pdf),
 #       section 11, "Metadata and Discovery", for the specification of
 #       Identify.
-def is_idrac(drac_client):
+def is_idrac(client):
     # This determines whether or not an IPv4 address is a WS-Man
     # endpoint and iDRAC.
     #
@@ -500,21 +457,7 @@ def is_idrac(drac_client):
     requests_logger.disabled = True
 
     try:
-        if drac_client.is_lifecycle_in_recovery():
-            settings = {'Lifecycle Controller State': 'Enabled'}
-            drac_client.set_lifecycle_settings(settings)
-
-            LOG.info("Waiting for lifecycle controller to get out of "
-                     "recovery mode")
-            job_id = drac_client.commit_pending_lifecycle_changes(reboot=False)
-            job_succeeded = wait_for_jobs_to_complete(
-                [job_id], drac_client)
-
-            if not job_succeeded:
-                raise RuntimeError("An error occurred while taking the iDRAC"
-                                   " out of recovery mode")
-        else:
-            LOG.info("IP address is an iDRAC and the iDRAC is ready")
+        client.client.is_idrac_ready()
     except dracclient.exceptions.WSManInvalidResponse as e:
         # Most likely the user credentials are unauthorized.
 
@@ -531,7 +474,7 @@ def is_idrac(drac_client):
         # number of them can occur.
         LOG.debug(
             '%(message)s; host is not reachable or connection refused' % {
-                'message': e.message})
+                'message': str(e)})
         # Consider the IP address to not be an iDRAC.
         return False
     except Exception as e:

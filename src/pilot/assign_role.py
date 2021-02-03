@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,6 @@ import errno
 import fcntl
 import time
 
-from dracclient import client
 from dracclient import utils
 from dracclient.constants import POWER_OFF
 from dracclient.constants import RebootRequired
@@ -46,7 +45,12 @@ from logging_helper import LoggingHelper
 import requests.packages
 from ironicclient.common.apiclient.exceptions import InternalServerError
 
+discover_nodes_path = os.path.join(os.path.expanduser('~'),
+                                   'pilot/discover_nodes')
 
+sys.path.append(discover_nodes_path)
+
+from discover_nodes.dracclient.client import DRACClient  # noqa
 requests.packages.urllib3.disable_warnings()
 
 # Perform basic configuration of the logging system, which configures the root
@@ -58,7 +62,7 @@ logging.basicConfig()
 
 # Create this script's logger. Give it a more friendly name than __main__.
 LOG = logging.getLogger(os.path.splitext(os.path.basename(sys.argv[0]))[0])
-
+LOG.setLevel(logging.DEBUG)
 # Create a factory function for creating tuple-like objects that contain the
 # role that the node will play and an optional index that indicates placement
 # order in the rack.
@@ -94,7 +98,8 @@ ROLES = {
     'controller': 'control',
     'compute': 'compute',
     'storage': 'ceph-storage',
-    'computehci': 'computehci'
+    'computehci': 'computehci',
+    'powerflex': 'powerflex-storage'
 }
 
 # TODO: Use the OpenStack Oslo logging library, instead of the Python standard
@@ -151,15 +156,16 @@ def role_index(string):
     index = None
 
     if string.find("-") != -1:
-        role_tokens = role.split("-")
+        role_tokens = role.rsplit('-', 1)
         role = role_tokens[0]
         index = role_tokens[1]
 
-    if role not in ROLES.keys():
-        raise argparse.ArgumentTypeError(
-            "{} is not a valid role; choices are {}".format(
-                role, str(
-                    ROLES.keys())))
+    # do not check roles as we may have edge nodes
+    #if role not in ROLES.keys():
+    #    raise argparse.ArgumentTypeError(
+    #        "{} is not a valid role; choices are {}".format(
+    #            role, str(
+    #                ROLES.keys())))
 
     if index and not index.isdigit():
         raise argparse.ArgumentTypeError(
@@ -186,17 +192,17 @@ def get_flavor_settings(json_filename):
     return flavor_settings
 
 
-def calculate_bios_settings(role, flavor_settings, json_filename):
+def calculate_bios_settings(super_role, flavor_settings, json_filename):
     return calculate_category_settings_for_role(
         'bios',
-        role,
+        super_role,
         flavor_settings,
         json_filename)
 
 
 def calculate_category_settings_for_role(
         category,
-        role,
+        super_role,
         flavor_settings,
         json_filename):
     default = {}
@@ -204,7 +210,7 @@ def calculate_category_settings_for_role(
     if 'default' in flavor_settings and category in flavor_settings['default']:
         default = flavor_settings['default'][category]
 
-    flavor = ROLES[role]
+    flavor = ROLES[super_role]
     flavor_specific = {}
 
     if flavor in flavor_settings and category in flavor_settings[flavor]:
@@ -234,7 +240,7 @@ def get_drac_client(node_definition_filename, node):
     drac_ip, drac_user, drac_password = \
         CredentialHelper.get_drac_creds_from_node(node,
                                                   node_definition_filename)
-    drac_client = client.DRACClient(drac_ip, drac_user, drac_password)
+    drac_client = DRACClient(drac_ip, drac_user, drac_password)
     # TODO: Validate the IP address is an iDRAC.
     #
     #       This could detect an error by an off-roading user who provided an
@@ -246,29 +252,32 @@ def get_drac_client(node_definition_filename, node):
     return drac_client
 
 
-def define_target_raid_config(role, drac_client):
+def define_target_raid_config(super_role, drac_client):
     raid_controller_ids = get_raid_controller_ids(drac_client)
 
     if not raid_controller_ids:
         LOG.critical("Found no RAID controller")
         return None
 
-    if role == 'controller':
+    if super_role == 'controller':
         logical_disks = define_controller_logical_disks(drac_client,
                                                         raid_controller_ids)
-    elif role == 'compute':
+    elif super_role == 'compute':
         logical_disks = define_compute_logical_disks(drac_client,
                                                      raid_controller_ids)
-    elif role == 'storage':
+    elif super_role == 'storage':
         logical_disks = define_storage_logical_disks(drac_client,
-                                     raid_controller_ids)
-    elif role == 'computehci':
+                                                     raid_controller_ids)
+    elif super_role == 'computehci':
+        logical_disks = define_storage_logical_disks(drac_client,
+                                                     raid_controller_ids)
+    elif super_role == 'powerflex':
         logical_disks = define_storage_logical_disks(drac_client,
                                                      raid_controller_ids)
     else:
         LOG.critical(
             'Cannot define target RAID configuration for role "{}"').format(
-                role)
+                super_role)
         return None
 
     return {
@@ -465,6 +474,7 @@ def define_storage_logical_disks(drac_client, raid_controllers):
             return None
 
         logical_disks.extend(jbod_logical_disks)
+
     return logical_disks
 
 
@@ -481,12 +491,12 @@ def define_storage_operating_system_logical_disk(physical_disks, drac_client,
     LOG.info(
         "Defining RAID 1 logical disk of size {} GB on the following physical "
         "disks, and marking it the root volume:\n  {}".format(
-            os_logical_disk_size_gb,
+            str(int(os_logical_disk_size_gb)),
             '\n  '.join(os_physical_disk_names)))
     if drac_client.is_boss_controller(raid_controller_name):
         os_logical_disk_size_gb = 0
     os_logical_disk = define_logical_disk(
-        os_logical_disk_size_gb,
+        int(os_logical_disk_size_gb),
         '1',
         raid_controller_name,
         os_physical_disk_names,
@@ -588,7 +598,7 @@ def last_two_disks_by_location(physical_disks):
         # The second disk is smaller.
         logical_disk_size_mb = last_two_disks[1].size_mb
 
-    logical_disk_size_gb = logical_disk_size_mb / 1024
+    logical_disk_size_gb = int(logical_disk_size_mb / 1024)
 
     # Ensure that the logical disk size is unique from the perspective
     # of Linux logical volumes.
@@ -729,7 +739,7 @@ def physical_disk_to_key(physical_disk):
     return physical_disk_id_to_key(physical_disk.id)
 
 
-def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
+def configure_raid(ironic_client, node_uuid, super_role, os_volume_size_gb,
                    drac_client):
     '''TODO: Add some selective exception handling so we can determine
     when RAID configuration failed and return False. Further testing
@@ -773,7 +783,7 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
     # Work around the bugs in the ironic DRAC driver's RAID clean steps.
 
     target_raid_config = define_target_raid_config(
-        role, drac_client)
+        super_role, drac_client)
 
     if target_raid_config is None:
         return False
@@ -784,6 +794,7 @@ def configure_raid(ironic_client, node_uuid, role, os_volume_size_gb,
 
     # Set the target RAID configuration on the ironic node.
     ironic_client.node.set_target_raid_config(node_uuid, target_raid_config)
+
 
     LOG.info("Applying the new RAID configuration")
     clean_steps = [{'interface': 'raid', 'step': 'create_configuration'}]
@@ -820,9 +831,13 @@ def place_node_in_available_state(ironic_client, node_uuid):
     ironic_client.node.wait_for_provision_state(node_uuid, 'available')
 
 
-def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
-                ironic_client, drac_client):
-    flavor = ROLES[role_index.role]
+def assign_role(ip_mac_service_tag, node_uuid, role_index,
+                ironic_client):
+
+    if role_index.role not in ROLES.keys():
+        flavor = role_index.role
+    else:
+        flavor = ROLES[role_index.role]
     LOG.info(
         "Setting role for {} to {}, flavor {}".format(
             ip_mac_service_tag,
@@ -830,29 +845,20 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index, os_volume_size_gb,
             flavor))
 
     node = ironic_client.node.get(node_uuid, fields=['properties'])
+    _is_index = True if bool(role_index.index) else False
+    _role = ("node:{}-{}".format(flavor, role_index.index)
+             if _is_index else {"profile": flavor})
 
-    role = "profile:{}".format(flavor)
-
-    if role_index.index:
-        role = "node:{}-{}".format(flavor, role_index.index)
-
-    if 'capabilities' in node.properties:
-        value = "{},{}".format(role, node.properties['capabilities'])
-    else:
-        value = "{},boot_option:local".format(role)
+    value = ("{},{},boot_mode:uefi,boot_option:"
+             "local".format(_role, node.properties['capabilities']))
+    LOG.info(str(node.properties))
+    LOG.info(str(value))
 
     patch = [{'op': 'add',
               'value': value,
               'path': '/properties/capabilities'}]
     ironic_client.node.update(node_uuid, patch)
-
-    # Select the volume for the OS to be installed on
-    select_os_volume(os_volume_size_gb, ironic_client, drac_client,
-                     node_uuid)
-
-    # Generate Ceph OSD/journal configuration for storage nodes
-    if flavor == "ceph-storage" or flavor =="computehci":
-        generate_osd_config(ip_mac_service_tag, drac_client)
+    LOG.info(str(patch))
 
 
 def generate_osd_config(ip_mac_service_tag, drac_client):
@@ -866,8 +872,8 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
     new_osd_config = None
     # Let ceph handle journaling/disks assignment
     disks = spinners + ssds + nvme_drives
-    new_osd_config  = generate_osd_config_without_journals(controllers,
-                                                              disks)
+    new_osd_config = generate_osd_config_without_journals(controllers,
+                                                          disks)
 
     # load the osd environment file
     osd_config_file = os.path.join(Constants.TEMPLATES, "ceph-osd-config.yaml")
@@ -891,7 +897,8 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
         if not node_data_lookup_str:
             node_data_lookup = {}
         else:
-            node_data_lookup = json.loads(node_data_lookup_str)
+            LOG.info(str(node_data_lookup_str))
+            node_data_lookup = json.loads(json.dumps(node_data_lookup_str))
         LOG.info("Checking for existing config ")
         if system_id in node_data_lookup:
             current_osd_config = node_data_lookup[system_id]
@@ -961,11 +968,11 @@ def generate_osd_config(ip_mac_service_tag, drac_client):
         stream.close()
 
 def get_drives(drac_client):
+
     spinners = []
     ssds = []
-    nvme_drives = []
-
     virtual_disks = drac_client.list_virtual_disks()
+    nvme_drives = []
 
     raid0_disks = [vd for vd in virtual_disks if vd.raid_level != '1']
     raid1_disks = []
@@ -989,10 +996,12 @@ def get_drives(drac_client):
 
     if physical_disks:
         for pd_id in physical_disks:
+
             # Get all NVMe drives
             if is_nvme_drive(physical_disks[pd_id]):
                 nvme_drives.append(physical_disks[pd_id])
                 continue
+
             # Eliminate physical disks in a state other than non-RAID
             # including failed disks
             if physical_disks[pd_id].raid_status != "non-RAID":
@@ -1027,47 +1036,29 @@ def get_drives(drac_client):
     return spinners, ssds, nvme_drives
 
 def generate_osd_config_without_journals(controllers, drives):
+
     osd_config = {
         'osd_scenario': 'lvm',
         'osd_objectstore': 'bluestore',
         'devices': []}
+    # RHEL 8 generate a list of by path with a common sas adress for both HDD & SDD's
+    # based on the first sas adress found by alphabetical order
+    sas_ls = []
     for drive in drives:
-        # Get by-path device name for NVMe drives
+        if is_nvme_drive(drive):
+            continue
+        else:
+            sas_ls.append(drive.sas_address.lower()[:-2])
+    sas_ls.sort()
+    for drive in drives:
         if is_nvme_drive(drive):
             nvme_device_name = get_by_path_nvme_device_name(drive)
             osd_config['devices'].append(nvme_device_name)
         else:
+            base_sas = sas_ls[0]
             drive_device_name = get_by_path_device_name(
-                    drive, controllers)
+                drive, controllers, base_sas)
             osd_config['devices'].append(drive_device_name)
-    return osd_config
-
-def generate_osd_config_with_journals(controllers, osd_drives, ssds):
-    if len(osd_drives) % len(ssds) != 0:
-        LOG.warning("There is not an even mapping of OSD drives to SSD "
-                    "journals.  This will cause inconsistent performance "
-                    "characteristics.")
-    osd_config = {
-        'osd_scenario': 'lvm',
-        'osd_objectstore': 'bluestore',
-        'devices': []}
-    osd_index = 0
-    remaining_ssds = len(ssds)
-    for ssd in ssds:
-        ssd_device_name = get_by_path_device_name(ssd, controllers)
-
-        num_osds_for_ssd = int(math.ceil((len(osd_drives)-osd_index) /
-                                         (remaining_ssds * 1.0)))
-
-        osds_for_ssd = osd_drives[osd_index:
-                                  osd_index + num_osds_for_ssd]
-        for osd_drive in osds_for_ssd:
-            osd_drive_device_name = get_by_path_device_name(
-                osd_drive, controllers)
-            osd_config['devices'].append(osd_drive_device_name)
-        osd_index += num_osds_for_ssd
-        remaining_ssds -= 1
-
     return osd_config
 
 # This method can be called with either physical or virtual disk.
@@ -1075,15 +1066,15 @@ def generate_osd_config_with_journals(controllers, osd_drives, ssds):
 # have attribute named 'device_protocol'. As a result, the method
 # return True only if device_protocol is present and indicates NVMe.
 def is_nvme_drive(disk):
-    return True\
-        if hasattr(disk, "device_protocol") and disk.device_protocol and\
-        disk.device_protocol.startswith("NVMe") else False
+        return True\
+            if hasattr(disk, "device_protocol") and disk.device_protocol and\
+            disk.device_protocol.startswith("NVMe") else False
 
 def get_by_path_nvme_device_name(physical_disk):
-    bus = physical_disk.bus.lower()
-    return ('/dev/disk/by-path/pci-0000:'+ str(bus) + ':00.0-nvme-1')
+        bus = physical_disk.bus.lower()
+        return ('/dev/disk/by-path/pci-0000:'+ str(bus) + ':00.0-nvme-1')
 
-def get_by_path_device_name(physical_disk, controllers):
+def get_by_path_device_name(physical_disk, controllers, ref_sas):
     if physical_disk.description.startswith("Virtual Disk"):
         disk_index = physical_disk.description.split(" ")[2]
     else:
@@ -1106,9 +1097,11 @@ def get_by_path_device_name(physical_disk, controllers):
                 disk_index=disk_index)
         else:
             return ('/dev/disk/by-path/pci-0000:'
-                    '{pci_bus_number}:00.0-sas-0x{sas_address}-lun-0').format(
+                    '{pci_bus_number}:00.0-sas-exp0x{sas_address}ff-phy{dindex}-lun-0').format(
                 pci_bus_number=pci_bus_number,
-                sas_address=physical_disk.sas_address.lower())
+                sas_address=ref_sas, dindex=disk_index)
+
+
 
 
 def get_pci_bus_number(controller):
@@ -1132,16 +1125,29 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
     if os_volume_size_gb is None:
         # Detect BOSS Card and find the volume size
         lst_ctrls = drac_client.list_raid_controllers()
+        for ct in lst_ctrls :
+            if ct.model.startswith("BOSS"):
+                pci_bus_number = ct.bus.lower()
         boss_disk = \
             [ctrl.id for ctrl in lst_ctrls if ctrl.model.startswith("BOSS")]
+        LOG.info("Boss : " + str(boss_disk))
         if boss_disk:
             lst_physical_disks = drac_client.list_physical_disks()
             for disks in lst_physical_disks:
                 if disks.controller in boss_disk:
-                    os_volume_size_gb = disks.size_mb / 1024
+                    os_volume_size_gb = int(disks.size_mb / 1024)
                     LOG.info("Detect BOSS Card {} and volume size {}".format(
                         disks.controller,
                         os_volume_size_gb))
+                    by_path = '/dev/disk/by-path/pci-0000:' \
+                              + str(pci_bus_number) + ':00.0-ata-1'
+                    LOG.info("..> " + str(by_path))
+                    patch = [{'op': 'add',
+                              'value': {"by_path": by_path},
+                              'path': '/properties/root_device'}]
+                    ironic_client.node.update(node_uuid, patch)
+
+                    return
         else:
             drac_client = drac_client.client
             # Get the virtual disks
@@ -1163,10 +1169,35 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                                            DCIM_VirtualDiskView).text
 
                 if raid_type != NORAID and raid_type != RAID0:
+                    LOG.info("...")
+                    LOG.info("using bypath for VD hint")
+                    if lst_ctrls[0].model.startswith("PERC H740P"):
+                        pci_bus_number = get_pci_bus_number(lst_ctrls[0])
+                        by_path='/dev/disk/by-path/pci-0000:' \
+                                + str(pci_bus_number) + ':00.0-scsi-0:2:0:0'
+                        LOG.info(".. " + str(by_path))
+                        patch = [{'op': 'add',
+                                'value': {"by_path": by_path},
+                                'path': '/properties/root_device'}]
+                        ironic_client.node.update(node_uuid, patch)
+
+                    elif lst_ctrls[0].model.startswith("PERC H730"):
+                        LOG.info("using bypath for VD hint")
+                        pci_bus_number = get_pci_bus_number(lst_ctrls[0])
+                        LOG.info(">> " + str(lst_ctrls[0].description))
+                        by_path = ('/dev/disk/by-path/pci-0000:'
+                                '{pci_bus_number}:00.0-scsi-0:2:0:0').format(
+                                pci_bus_number=pci_bus_number)
+                        LOG.info(".. " + str(by_path))
+                        patch = [{'op': 'add',
+                                  'value': {"by_path": by_path},
+                                  'path': '/properties/root_device'}]
+                        ironic_client.node.update(node_uuid, patch)
+
                     # Get the size
                     raid_size = get_size_in_bytes(virtual_disk_doc,
                                                   DCIM_VirtualDiskView)
-                    raid_size_gb = int(raid_size) / units.Gi
+                    raid_size_gb = int(int(raid_size) / units.Gi)
 
                     # Get the physical disks that back this RAID
                     raid_physical_disk_docs = utils.find_xml(
@@ -1186,7 +1217,7 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                             raid_size,
                             "\n  ".join(raid_physical_disk_ids)))
 
-                    break
+                    return
 
             # Note: This code block represents single disk scenario.
             if raid_size_gb == 0:
@@ -1202,7 +1233,7 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                         if raid_type == RAID0:
                             raid_size = get_size_in_bytes(virtual_disk_doc,
                                                           DCIM_VirtualDiskView)
-                            raid_size_gb = int(raid_size) / units.Gi
+                            raid_size_gb = int(int(raid_size) / units.Gi)
                             raid0_disk_sizes.append(raid_size_gb)
 
                             # Get the physical disks that back this RAID
@@ -1256,7 +1287,7 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                             "to install the OS on,"
                             "or os-volume-size-gb must be specified.")
 
-                    os_volume_size_gb = int(physical_disk_sizes[0]) / units.Gi
+                    os_volume_size_gb = int(int(physical_disk_sizes[0]) / units.Gi)
 
             # Now check to see if we have any physical disks that don't back
             # the RAID that are the same size as the RAID
@@ -1274,7 +1305,7 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                 if fqdd not in raid_physical_disk_ids:
                     physical_disk_size = get_size_in_bytes(
                         physical_disk_doc, DCIM_PhysicalDiskView)
-                    physical_disk_size_gb = int(physical_disk_size) / units.Gi
+                    physical_disk_size_gb = int(int(physical_disk_size) / units.Gi)
 
                     if physical_disk_size_gb == raid_size_gb:
                         # If we did find a disk that's the same size as the
@@ -1287,6 +1318,8 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                             "as the RAID.  Unable to specify the OS disk to "
                             "Ironic.".format(fqdd, physical_disk_size_gb))
 
+
+
     if os_volume_size_gb is not None:
         # If os_volume_size_gb was specified then just blindly use that
         raid_size_gb = os_volume_size_gb
@@ -1297,9 +1330,8 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
         volume_type = RAID_TYPE_TO_DESCRIPTION[raid_type]
 
     # Set the root_device property in ironic to the volume size in gigs
-    LOG.info(
-        "Setting the OS volume for this node to the {} with size "
-        "{} GB".format(volume_type, raid_size_gb))
+    LOG.info("Setting the OS volume for this node to the {} with size "
+             "{} GB".format(volume_type, raid_size_gb))
     patch = [{'op': 'add',
               'value': {"size": raid_size_gb},
               'path': '/properties/root_device'}]
@@ -1307,8 +1339,8 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
 
 
 def configure_bios(node, ironic_client, settings, drac_client):
-    LOG.info("Configuring BIOS")
-
+    LOG.info("Configuring BIOS: settings: {}".format(str(settings)))
+    LOG.info("Configuring BIOS: node: {}".format(str(node)))
     if 'drac' not in node.driver:
         LOG.critical("Node is not being managed by an iDRAC driver")
         return False
@@ -1374,71 +1406,14 @@ def ensure_node_is_powered_off(drac_client):
     # (http://en.community.dell.com/techcenter/extras/m/white_papers/20440458/download).
     # See section 8.1 DCIM_ComputerSystem.RequestStateChange(), beginning on p.
     # 22 of 25.
+    #
+    # An alternative approach was considered, unconditionally powering off the
+    # node, catching the DRACOperationFailed exception, and ignoring it.
+    # However, because neither the documentation nor exception provides details
+    # about the cause, that approach could mask an interesting error condition.
     if drac_client.get_power_state() is not POWER_OFF:
         LOG.info("Powering off the node")
-        max_attempts = 40
-        for i in range (0, max_attempts):
-            try:
-                LOG.debug("..." + drac_client.get_power_state())
-                if drac_client.get_power_state() is not POWER_OFF:
-                    drac_client.set_power_state(POWER_OFF)
-                else:
-                    return
-            except Exception as e:
-                if "The command failed to set RequestedState" in e.message:
-                    LOG.debug("Trying again ... (SYS021) " + str(i) + '/' + str(max_attempts))
-                    time.sleep(5)
-                else:
-                    raise e
-                if i == max_attempts:
-                    raise e
-
-
-def change_physical_disk_state_wait(
-        node_uuid, ironic_client, drac_client, mode,
-        controllers_to_physical_disk_ids=None):
-
-    change_state_result = drac_client.change_physical_disk_state(
-        mode, controllers_to_physical_disk_ids)
-
-    job_ids = []
-    is_reboot_required = False
-    # Remove the line below to turn back on realtime conversion	
-    is_reboot_required = True
-
-    conversion_results = change_state_result['conversion_results']
-    for controller_id in conversion_results.keys():
-        controller_result = conversion_results[controller_id]
-
-        if controller_result['is_reboot_required'] == RebootRequired.true:
-            is_reboot_required = True
-
-        if controller_result['is_commit_required']:
-            realtime = controller_result['is_reboot_required'] == \
-                RebootRequired.optional
-            # Remove the line below to turn back on realtime conversion	
-            realtime = False 
-            job_id = drac_client.commit_pending_raid_changes(
-                controller_id,
-                reboot=False,
-                start_time=None,
-                realtime=realtime)
-            job_ids.append(job_id)
-
-    result = True
-    if job_ids:
-        if is_reboot_required:
-            LOG.debug("Rebooting the node to apply configuration")
-            job_id = drac_client.create_reboot_job()
-            job_ids.append(job_id)
-
-        drac_client.schedule_job_execution(job_ids, start_time='TIME_NOW')
-
-        LOG.info("Waiting for physical disk conversion to complete")
-        JobHelper.wait_for_job_completions(ironic_client, node_uuid)
-        result = JobHelper.determine_job_outcomes(drac_client, job_ids)
-
-    return result
+        drac_client.set_power_state(POWER_OFF)
 
 
 def main():
@@ -1466,10 +1441,19 @@ def main():
             sys.exit(1)
 
         drac_client = get_drac_client(args.node_definition, node)
-
-        if node.driver == "pxe_drac":
+        # Assume all node roles that are not in ROLES are edge computes
+        # and act accordingly and set bios to compute settings
+        super_role = args.role_index.role
+        if super_role not in ROLES.keys():
+            super_role = 'compute'
+        assign_role(
+            args.ip_mac_service_tag,
+            node.uuid,
+            args.role_index,
+            ironic_client)
+        if node.driver == "idrac":
             bios_settings = calculate_bios_settings(
-                args.role_index.role,
+                super_role,
                 flavor_settings,
                 flavor_settings_filename)
 
@@ -1480,7 +1464,7 @@ def main():
                 succeeded = configure_raid(
                     ironic_client,
                     node.uuid,
-                    args.role_index.role,
+                    super_role,
                     args.os_volume_size_gb,
                     drac_client)
 
@@ -1500,13 +1484,16 @@ def main():
                     sys.exit(1)
             else:
                 LOG.info("Skipping BIOS configuration")
-        assign_role(
-            args.ip_mac_service_tag,
-            node.uuid,
-            args.role_index,
-            args.os_volume_size_gb,
-            ironic_client,
-            drac_client)
+        # Select the volume for the OS to be installed on
+        select_os_volume(args.os_volume_size_gb, ironic_client, drac_client,
+                         node.uuid)
+        if args.role_index.role not in ROLES.keys():
+            flavor = args.role_index.role
+        else:
+            flavor = ROLES[args.role_index.role]
+        # Generate Ceph OSD/journal configuration for storage nodes
+        if flavor == "ceph-storage" or flavor == "computehci" or flavor == "powerflex-storage":
+            generate_osd_config(args.ip_mac_service_tag, drac_client)
 
     except (DRACOperationFailed, DRACUnexpectedReturnValue,
             InternalServerError, KeyError, TypeError, ValueError,
@@ -1518,9 +1505,9 @@ def main():
     except:  # noqa: E722
         LOG.exception("Unexpected error")
         sys.exit(1)
-    finally:	
-        # Leave the node powered off.	
-        if drac_client is not None:	
+    finally:
+        # Leave the node powered off.
+        if drac_client is not None:
             ensure_node_is_powered_off(drac_client)
 
 if __name__ == "__main__":

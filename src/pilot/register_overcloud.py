@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ from keystoneclient.v3 import client
 from credential_helper import CredentialHelper
 from netaddr import IPAddress
 from network_helper import NetworkHelper
-
+from ironic_helper import IronicHelper
 
 class RegisterOvercloud:
 
@@ -49,9 +49,9 @@ class RegisterOvercloud:
         stdout, stderr = process.communicate()
         self.logger.debug("Got back:\n" +
                           "    returncode=" + str(process.returncode) + "\n"
-                          "    stdout=" + stdout)
+                          "    stdout=" + stdout.decode('utf-8'))
 
-        return process.returncode, stdout
+        return process.returncode, stdout.decode('utf-8')
 
     def __init__(self):
         logging.basicConfig()
@@ -158,17 +158,17 @@ class RegisterOvercloud:
         os_auth_url, os_tenant_name, os_username, os_password, \
             os_user_domain_name, os_project_domain_name = \
             CredentialHelper.get_undercloud_creds()
-        auth_url = os_auth_url + "v3"
+        auth_url = os_auth_url + "/v3"
 
         provisioning_network = NetworkHelper.get_provisioning_network()
 
         kwargs = {'os_username': os_username,
-                  'os_password': os_password,
-                  'os_auth_url': os_auth_url,
-                  'os_tenant_name': os_tenant_name,
-                  'os_user_domain_name': os_user_domain_name,
-                  'os_project_domain_name': os_project_domain_name}
-        i_client = ironic_client.get_client(1, **kwargs)
+              'os_password': os_password,
+              'os_auth_url': os_auth_url,
+              'os_tenant_name': os_tenant_name,
+              'os_user_domain_name': os_user_domain_name,
+              'os_project_domain_name': os_project_domain_name}
+        i_client = IronicHelper.get_ironic_client()
 
         auth = v3.Password(
             auth_url=auth_url,
@@ -253,7 +253,7 @@ class RegisterOvercloud:
                self.proxy_args]
         return_code, stdout = self._execute_cmd(cmd)
         if return_code == 0:
-            self.logger.warn(role + " " + node_ip +
+            self.logger.warning(role + " " + node_ip +
                              " is already registered.  "
                              "Using existing registration")
         else:
@@ -306,7 +306,7 @@ class RegisterOvercloud:
             self.logger.debug("Removed subscriptions from {} "
                               "{} successfully".format(role, node_ip))
         else:
-            self.logger.warn("Unable to remove subscriptions from " + role +
+            self.logger.warning("Unable to remove subscriptions from " + role +
                              " " + node_ip + ": " + stdout)
 
         cmd = ["ssh",
@@ -320,7 +320,7 @@ class RegisterOvercloud:
             self.logger.debug("Unregistered {} {} successfully".format(
                 role, node_ip))
         else:
-            self.logger.warn("Failed to unregister " + role + " " + node_ip +
+            self.logger.warning("Failed to unregister " + role + " " + node_ip +
                              ": " + stdout)
 
     def _get_consumed_pool_ids(self, node_ip):
@@ -360,7 +360,7 @@ class RegisterOvercloud:
         for pool_id in pool_ids:
             # Check to see if this node is already attached to this pool ID
             if pool_id in consumed_pool_ids:
-                self.logger.warn(role + " " + node_ip +
+                self.logger.warning(role + " " + node_ip +
                                  " is already attached to pool " + pool_id +
                                  ".  Skipping attach")
             else:

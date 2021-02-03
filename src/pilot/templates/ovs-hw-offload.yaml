@@ -3,15 +3,16 @@
 # compute nodes. The feature supported in OVS 2.8.0
 
 resource_registry:
-  OS::TripleO::Services::NeutronSriovHostConfig: ./overcloud/puppet/services/neutron-sriov-host-config.yaml
+  OS::TripleO::Services::NeutronSriovHostConfig: ./overcloud/deployment/deprecated/neutron/neutron-sriov-host-config.yaml
 
 parameter_defaults:
 
-  NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','RamFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','PciPassthroughFilter']
+  NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','PciPassthroughFilter','NUMATopologyFilter']
   NovaSchedulerAvailableFilters: ["nova.scheduler.filters.all_filters","nova.scheduler.filters.pci_passthrough_filter.PciPassthroughFilter"]
 
   # Kernel arguments for ComputeSriov node
   DellComputeParameters:
     OvsHwOffload: True
+
   DellComputeHCIParameters:
     OvsHwOffload: True

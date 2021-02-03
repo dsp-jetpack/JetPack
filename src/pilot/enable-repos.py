@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,12 +27,12 @@ args_parser.add_argument("--proxy",
 args = args_parser.parse_args()
 
 repos = [
-    "rhel-7-server-openstack-13-rpms"
-    ]
+    "rhel-7-server-openstack-13-rpms",
+    "rhel-7-server-openstack-13-devtools-rpms"]
 
 
 def execute(cmd):
-    print cmd
+    print(cmd)
     return_code = os.system(cmd)
     if return_code != 0:
         sys.exit(return_code)

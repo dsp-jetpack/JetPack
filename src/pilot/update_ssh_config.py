@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ def get_nodes():
     undercloudrc = CredentialHelper.get_undercloudrc_name()
     nova_list_cmd = 'source {} && nova list'.format(undercloudrc)
 
-    for line in subprocess.check_output(nova_list_cmd, shell=True).split('\n'):
+    for line in subprocess.check_output(nova_list_cmd, shell=True).decode('utf-8').split('\n'):
         # Create a match object that chops up the "nova list" output so we
         # can extract the pieces we need.
         m = re.search('(.+ \| )(\S+)(-)(\d+)( .+ctlplane=)(\S+)( .+)', line)  # noqa: W605
@@ -106,7 +106,7 @@ def update_known_hosts(host_addrs):
     if os.path.isfile(known_hosts):
         os.rename(known_hosts, known_hosts + '.old')
     os.rename(known_hosts_new, known_hosts)
-    os.chmod(known_hosts, 0600)
+    os.chmod(known_hosts, 0o600)
 
 
 def update_etc_hosts(overcloud):
@@ -138,7 +138,7 @@ def update_etc_hosts(overcloud):
         new_file.write('{}\n'.format(overcloud[node]))
 
     new_file.close()
-    os.chmod(new_hosts, 0644)
+    os.chmod(new_hosts, 0o644)
     os.system('sudo mv {} {}'.format(new_hosts, etc_hosts))
     os.system('sudo chown root:root {}'.format(etc_hosts))
 
@@ -164,7 +164,7 @@ def main():
             f.write("Host {} {}\n".format(node, full_name))
             f.write("  Hostname {}\n".format(addr))
             f.write("  User heat-admin\n\n")
-    os.chmod(ssh_config, 0600)
+    os.chmod(ssh_config, 0o600)
 
     update_known_hosts(overcloud.values())
     update_etc_hosts(overcloud_nodes)

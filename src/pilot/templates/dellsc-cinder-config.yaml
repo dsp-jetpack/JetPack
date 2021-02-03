@@ -1,7 +1,7 @@
-# Heat environment file which can be used to enable a
+# A Heat environment file which can be used to enable a
 # Cinder Dell EMC Storage Center ISCSI backend, configured via puppet
 resource_registry:
-  OS::TripleO::Services::CinderBackendDellSc: ./overcloud/puppet/services/cinder-backend-dellsc.yaml
+  OS::TripleO::Services::CinderBackendDellSc: ./overcloud/deployment/cinder/cinder-backend-dellsc-puppet.yaml
 
 parameter_defaults:
   CinderEnableDellScBackend: <enable_dellsc_backend>

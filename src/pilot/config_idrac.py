@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2017-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2017-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,6 +34,12 @@ from job_helper import JobHelper
 from logging_helper import LoggingHelper
 from time import sleep
 from utils import Utils
+
+discover_nodes_path = os.path.join(os.path.expanduser('~'),
+                                   'pilot/discover_nodes')
+sys.path.append(discover_nodes_path)
+
+from discover_nodes.dracclient.client import DRACClient  # noqa
 
 # Suppress InsecureRequestWarning: Unverified HTTPS request is being made
 requests.packages.urllib3.disable_warnings()
@@ -218,8 +224,8 @@ def configure_bios_nics_boot_settings(drac_client, ip_service_tag, pxe_nic_id):
                     result = set_nic_legacy_boot_protocol_none(
                         nic_id, drac_client)
             except exceptions.InvalidParameterValue:
-                LOG.warn("Unable to check the legacy boot protocol of NIC {} "
-                         "on {}, and so cannot set it to None".format(
+                LOG.warning("Unable to check the legacy boot protocol of NIC "
+                            "{} on {}, and so cannot set it to None".format(
                              nic_id, ip_service_tag))
 
         if result is None:
@@ -267,7 +273,8 @@ def is_nic_legacy_boot_protocol_none(nic_id, drac_client):
              interface
     :raises: InvalidParameterValue on invalid NIC attribute
     """
-    return get_nic_legacy_boot_protocol(nic_id, drac_client).current_value == 'NONE'
+    return (get_nic_legacy_boot_protocol(nic_id, drac_client)
+            .current_value == 'NONE')
 
 
 def is_nic_legacy_boot_protocol_pxe(nic_id, drac_client):
@@ -284,7 +291,8 @@ def is_nic_legacy_boot_protocol_pxe(nic_id, drac_client):
              interface
     :raises: InvalidParameterValue on invalid NIC attribute
     """
-    return get_nic_legacy_boot_protocol(nic_id, drac_client).current_value == 'PXE'
+    return (get_nic_legacy_boot_protocol(nic_id, drac_client)
+            .current_value == 'PXE')
 
 
 def set_nic_legacy_boot_protocol(nic_id, value, drac_client):
@@ -403,7 +411,7 @@ def set_nic_setting(nic_id, attribute_name, value, drac_client):
 
 def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):
     LOG.info("Setting {} to {} boot".format(
-        ip_service_tag, boot_mode.upper()))
+             ip_service_tag, boot_mode.upper()))
     settings = {"BootMode": boot_mode}
     response = drac_client.set_bios_settings(settings)
 
@@ -425,7 +433,7 @@ def config_boot_mode(drac_client, ip_service_tag, node, boot_mode):
 
 def config_idrac_settings(drac_client, ip_service_tag, password, node):
     LOG.info("Configuring initial iDRAC settings on {}".format(
-        ip_service_tag))
+             ip_service_tag))
 
     idrac_settings = {
         "IPMILan.1#Enable": "Enabled",
@@ -439,7 +447,7 @@ def config_idrac_settings(drac_client, ip_service_tag, password, node):
     }
 
     if password:
-        LOG.warn("Updating the password on {}".format(ip_service_tag))
+        LOG.warning("Updating the password on {}".format(ip_service_tag))
         idrac_settings["Users.2#Password"] = password
 
     # Set the iDRAC card attributes
@@ -484,7 +492,7 @@ def config_hard_disk_drive_boot_sequence(drac_client, ip_service_tag):
             drac_client.change_boot_device_order('BCV', bcv_boot_device_ids)
 
             LOG.info("Rebooting {} to apply configuration".format(
-                ip_service_tag))
+                     ip_service_tag))
             job_id = drac_client.commit_pending_bios_changes(reboot=True)
 
             LOG.info("Waiting for iDRAC configuration to complete on "
@@ -527,7 +535,7 @@ def wait_for_jobs_to_complete(job_ids, drac_client, ip_service_tag):
 
 def clear_job_queue(drac_client, ip_service_tag):
     LOG.info("Clearing the job queue on {}".format(ip_service_tag))
-    drac_client.delete_jobs(job_ids=['JID_CLEARALL_FORCE'])
+    drac_client.delete_jobs(job_ids=['JID_CLEARALL'])
 
     # It takes a second or two for the iDRAC to switch from the ready state to
     # the not-ready state, so wait for this transition to happen
@@ -558,19 +566,19 @@ def config_idrac(instack_lock,
     drac_password = node["pm_password"]
     ironic_driver = node["pm_type"]
 
-    if ironic_driver != "pxe_drac":
+    if ironic_driver != "idrac":
         LOG.info("{} is using the {} driver.  No iDRAC configuration is "
                  "possible.".format(ip_service_tag, ironic_driver))
 
         if pxe_nic:
-            LOG.warn("Ignoring specified PXE NIC ({})".format(pxe_nic))
+            LOG.warning("Ignoring specified PXE NIC ({})".format(pxe_nic))
 
         if password:
-            LOG.warn("Ignoring specified password")
+            LOG.warning("Ignoring specified password")
 
         return
 
-    drac_client = client.DRACClient(drac_ip, drac_user, drac_password)
+    drac_client = DRACClient(drac_ip, drac_user, drac_password)
 
     reset_idrac(drac_client, ip_service_tag)
 
@@ -583,7 +591,6 @@ def config_idrac(instack_lock,
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_UEFI
     else:
         target_boot_mode = boot_mode_helper.DRAC_BOOT_MODE_BIOS
-
     config_boot_mode(drac_client, ip_service_tag, node, target_boot_mode)
 
     job_ids = list()
@@ -639,7 +646,7 @@ def config_idrac(instack_lock,
 
         # If the user set the password, then we need to change creds
         if password:
-            new_drac_client = client.DRACClient(drac_ip, drac_user, password)
+            new_drac_client = DRACClient(drac_ip, drac_user, password)
 
             # Try every 10 seconds over 2 minutes to connect with the new creds
             password_changed = False
@@ -651,7 +658,7 @@ def config_idrac(instack_lock,
                     new_drac_client.is_idrac_ready()
                     password_changed = True
                 except exceptions.WSManInvalidResponse as ex:
-                    if "unauthorized" in ex.message.lower():
+                    if "unauthorized" in str(ex).lower():
                         LOG.debug("Got an unauthorized exception on {}, so "
                                   "sleeping and trying again".format(
                                       ip_service_tag))
@@ -671,7 +678,7 @@ def config_idrac(instack_lock,
                 drac_client = new_drac_client
             else:
                 success = False
-                LOG.warn("Failed to change the password on {}".format(
+                LOG.warning("Failed to change the password on {}".format(
                     ip_service_tag))
 
         all_jobs_succeeded = wait_for_jobs_to_complete(
@@ -696,8 +703,8 @@ def config_idrac(instack_lock,
 
     if new_password is not None or \
         "provisioning_mac" not in node or \
-        ("provisioning_mac" in node and
-         node["provisioning_mac"] != provisioning_mac):
+        ("provisioning_mac" in node
+         and node["provisioning_mac"] != provisioning_mac):
 
         # Synchronize to prevent thread collisions while saving the instack
         # file
@@ -748,11 +755,11 @@ def main():
                      args.skip_nic_config)
     except ValueError as ex:
         LOG.error("An error occurred while configuring iDRAC {}: {}".format(
-            args.ip_service_tag, ex.message))
+            args.ip_service_tag, str(ex)))
         sys.exit(1)
     except Exception as ex:
         LOG.exception("An error occurred while configuring iDRAC {}: "
-                      "{}".format(args.ip_service_tag, ex.message))
+                      "{}".format(args.ip_service_tag, str(ex)))
         sys.exit(1)
 
 

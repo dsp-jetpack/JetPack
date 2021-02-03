@@ -1,5 +1,5 @@
---- /usr/lib/python2.7/site-packages/dracclient/wsman.py	2019-11-14 20:33:58.006199695 +0000
-+++ wsman.py.new	2019-11-14 20:33:48.327021298 +0000
+--- wsman.py	2020-03-10 09:18:37.000000000 -0400
++++ wsman.py.new	2020-09-08 15:09:15.459367672 -0400
 @@ -25,6 +25,8 @@
  
  LOG = logging.getLogger(__name__)

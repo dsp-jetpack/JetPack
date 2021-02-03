@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -47,7 +47,8 @@ def main():
 
         cmd = "ipmitool -H {} -I lanplus -U {} -P '{}' chassis power {}". \
             format(ip, username, password, args.power)
-        print cmd
+        print(cmd)
+
         os.system(cmd)
 
 

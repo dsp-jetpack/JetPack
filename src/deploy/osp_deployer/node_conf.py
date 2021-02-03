@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,12 +15,10 @@
 # limitations under the License.
 
 
-class NodeConf():
+class NodeConf:
 
     def __init__(self, json):
         self.is_sah = False
-        self.is_foreman = False
-        self.is_dashboard = False
         self.is_director = False
         self.is_ceph_storage = False
         self.is_switch = False
@@ -41,4 +39,11 @@ class NodeConf():
         self.provisioning_netmask = None
         self.provisioning_slaves = None
         self.name_server = None
+        self.node_type = None
         self.__dict__ = json
+
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __repr__(self):
+        return str(self.__dict__)

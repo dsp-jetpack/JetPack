@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,27 +23,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
 
 
-class Ipmi():
-    """
-    this assumes CygWin is installed along with ipmi
-    (if used on windows)
-    ipmitools : download & extract from
-        http://sourceforge.net/projects/ipmitool/files/
-        ./configure --enable-intf-lanplus
-        check the output contains :
-        Interfaces
-        lan : yes
-        lanplus : yes
-        if not, check the log output,
-            and fix the missing dependencies etc.
-        make
-        make install
-        Add c:\cygwin\bin and c:\cygwin\usr\local\bin to your path
-        (or the relevant paths for your setup)
-        make sure you can talk to one of your servers :
-        in cygwin :
-        ipmitool -I lanplus -H idracIp -U user -P password  power status
-    """
+class Ipmi:
 
     def __init__(self, cygwinlocation, ipmi_user, ipmi_password, idrac_ip):
         self.cygwin_loc = cygwinlocation

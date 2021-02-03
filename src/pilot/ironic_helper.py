@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,12 +44,14 @@ class IronicHelper:
                   'os_auth_token': '',
                   'ironic_url': '',
                   'timeout': 600,
-                  'os_project_domain_name': os.environ[
+                  'user_domain_name':os.environ['OS_USER_DOMAIN_NAME'],
+                  'project_domain_name': os.environ[
                       'OS_PROJECT_DOMAIN_NAME'],
-                  'os_username': os.environ['OS_USERNAME'],
-                  'os_password': os.environ['OS_PASSWORD'],
-                  'os_auth_url': os.environ['OS_AUTH_URL'],
-                  'os_project_name': os.environ['OS_PROJECT_NAME']}
+                  'username': os.environ['OS_USERNAME'],
+                  'password': os.environ['OS_PASSWORD'],
+                  'auth_url': os.environ['OS_AUTH_URL'],
+                  'project_name': os.environ['OS_PROJECT_NAME']}
+
         return ironicclient.client.get_client(1, **kwargs)
 
     @staticmethod

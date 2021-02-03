@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ import codecs
 
 
 # noinspection PyClassHasNoInit
-class FileHelper():
+class FileHelper:
     @staticmethod
     def replace_expression(fileref, search_exp, replace_exp):
-        fh = open(fileref, 'rU')
+        fh = open(fileref, 'r')
         content = fh.readlines()
         fh.close()
         updated = []
@@ -30,7 +30,7 @@ class FileHelper():
             line = re.sub(search_exp, replace_exp, line)
             updated.append(line)
 
-        with codecs.open(fileref, 'wbU', encoding='utf8') as f:
+        with codecs.open(fileref, 'wb', encoding='utf8') as f:
             for line in updated:
                 f.write(line)
         f.close()

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ mk_bundle() {
 
 # make bundles
 # mk_bundle <tar-file-name> <tar-root-dir-name> <src-dirs> <vlock-files>
-mk_bundle dell-mgmt-node sah mgmt dashboard_vm.vlock director_vm.vlock
+mk_bundle dell-mgmt-node sah mgmt director_vm.vlock
 mk_bundle dell-pilot manual pilot common
 mk_bundle dell-deploy automated deploy common
 

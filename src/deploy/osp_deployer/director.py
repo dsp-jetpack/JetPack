@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-# Copyright (c) 2015-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2015-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,11 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from settings.config import Settings
-from checkpoints import Checkpoints
-from collections import defaultdict
-from infra_host import InfraHost
-from auto_common import Scp
 import json
 import logging
 import os
@@ -27,6 +22,16 @@ import sys
 import tempfile
 import time
 import yaml
+from jinja2 import Environment
+from jinja2 import FileSystemLoader
+from osp_deployer.settings.config import Settings
+from checkpoints import Checkpoints
+from collections import defaultdict
+from infra_host import InfraHost
+from infra_host import directory_check
+from auto_common import Scp
+from auto_common.yaml_utils import OrderedLoader
+from auto_common.constants import *
 
 logger = logging.getLogger("osp_deployer")
 
@@ -46,15 +51,13 @@ OTHER_POOLS = ['.rgw.buckets',
                'default.rgw.meta',
                'metrics']
 
-# tempest configuraton file
-TEMPEST_CONF = "tempest.conf"
-
 
 class Director(InfraHost):
 
     def __init__(self):
 
         self.settings = Settings.settings
+        logger.debug("Settings.settings: %s", str(Settings.settings))
         self.user = self.settings.director_install_account_user
         self.ip = self.settings.director_node.public_api_ip
         self.provisioning_ip = self.settings.director_node.provisioning_ip
@@ -66,8 +69,10 @@ class Director(InfraHost):
         self.sanity_dir = os.path.join(self.pilot_dir, "deployment-validation")
         self.images_dir = os.path.join(self.pilot_dir, "images")
         self.templates_dir = os.path.join(self.pilot_dir, "templates")
+        self.templates_overcloud_dir = os.path.join(self.templates_dir,
+                                                    "overcloud")
         self.nic_configs_dir = os.path.join(self.templates_dir,
-                                            "nic-configs")
+                                            NIC_CONFIGS)
         self.validation_dir = os.path.join(self.pilot_dir,
                                            "deployment-validation")
         self.source_stackrc = 'source ' + self.home_dir + "/stackrc;"
@@ -76,6 +81,12 @@ class Director(InfraHost):
                                               self.settings.tempest_workspace)
         self.tempest_conf = os.path.join(self.tempest_directory,
                                          "etc", TEMPEST_CONF)
+        self.default_compute_services = []
+
+        self.jinja2_env = Environment(
+            loader=FileSystemLoader(self.settings.jinja2_templates))
+         
+        self.nfv_parameters = {}
 
         cmd = "mkdir -p " + self.pilot_dir
         self.run(cmd)
@@ -109,6 +120,7 @@ class Director(InfraHost):
                     sys.exit(1)
 
     def upload_update_conf_files(self):
+
         logger.debug("tar up the required pilot files")
         os.system("cd " +
                   self.settings.foreman_configuration_scripts +
@@ -117,13 +129,18 @@ class Director(InfraHost):
                          self.home_dir + "/pilot.tar.gz")
 
         self.run('cd;tar zxvf pilot.tar.gz')
-        self._update_and_upload_undercloud_conf()
+        self.render_and_upload_undercloud_conf()
+
+        # Configure containers-prepare-parameter.yaml to
+        # retrieve container images
 
         if self.settings.version_locking_enabled is True:
-            yaml = "/overcloud_images.yaml"
+            logger.debug("Version locking enabled")
+            yaml = "/containers-prepare-parameter.yaml"
             source_file = self.settings.lock_files_dir + yaml
-            dest_file = self.home_dir + yaml
+            dest_file = self.home_dir + "/pilot" +  yaml
             self.upload_file(source_file, dest_file)
+            logger.debug("uploading " + str(source_file) + " to " + str(dest_file))
 
             lock_file = "/unity_container_vlock.ini"
             source_file = self.settings.lock_files_dir + lock_file
@@ -143,12 +160,23 @@ class Director(InfraHost):
                       " | awk -F '=' '{print $2}'"
                 self.settings.manila_unity_container_version = \
                     self.run_tty(cmd)[0].replace('\r', '').rstrip()
+        else:
+            logger.debug("Version locking disabled")
+
+        cmd = 'sed -i "s|[[:space:]]\+username: password|      ' + \
+              self.settings.subscription_manager_user + ': ' + "'" + \
+              self.settings.subscription_manager_password + "'" + \
+              '|" pilot/' + CONTAINERS_PREPARE_PARAM + '.yaml'
+        self.run(cmd)
+
+
 
     def install_director(self):
         logger.info("Installing the undercloud")
         if self.settings.use_satellite:
             cmd = '~/pilot/install-director.sh --dns ' + \
-                  self.settings.name_server + ' --satellite_hostname ' + \
+                  self.settings.name_server + ' --director_ip ' + \
+                  self.ip + ' --satellite_hostname ' + \
                   self.settings.satellite_hostname + ' --satellite_org ' + \
                   self.settings.satellite_org + ' --satellite_key ' + \
                   self.settings.satellite_activation_key
@@ -158,24 +186,19 @@ class Director(InfraHost):
         else:
             cmd = '~/pilot/install-director.sh --dns ' + \
                   self.settings.name_server + \
-                  " --sm_user " + \
-                  self.settings.subscription_manager_user + \
-                  " --sm_pwd " + \
-                  self.settings.subscription_manager_password + \
-                  " --sm_pool " + \
-                  self.settings.subscription_manager_vm_ceph
+                  " --director_ip " + \
+                  self.ip
 
         if len(self.settings.overcloud_nodes_pwd) > 0:
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
+        if len(self.settings.powerflex_nodes) > 0:
+            cmd += " --enable_powerflex"
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
-            raise AssertionError("Director/Undercloud did not " +
-                                 "install properly - see " +
-                                 "/pilot/install-director.log" +
-                                 " for details")
-
-        tester = Checkpoints()
-        tester.verify_undercloud_installed()
+            raise AssertionError("Director/Undercloud did not "
+                                 + "install properly - see "
+                                 + "/pilot/install-director.log"
+                                 + " for details")
 
     def upload_cloud_images(self):
         if self.settings.pull_images_from_cdn is False:
@@ -201,6 +224,7 @@ class Director(InfraHost):
             remote_file = self.home_dir + "/instackenv.json"
             self.upload_file(setts.custom_instack_json,
                              remote_file)
+
             cmd = "sudo chown " + setts.director_install_account_user + ":" + \
                 setts.director_install_account_user + " " + remote_file
             self.run_tty(cmd)
@@ -225,8 +249,9 @@ class Director(InfraHost):
             # Discover the nodes using static IPs for the iDRAC
             for node in (self.settings.controller_nodes +
                          self.settings.compute_nodes +
+                         self.settings.ceph_nodes +
                          self.settings.computehci_nodes +
-                         self.settings.ceph_nodes):
+                         self.settings.powerflex_nodes ):
                 if hasattr(node, "idrac_ip"):
                     cmd += ' ' + node.idrac_ip
 
@@ -249,9 +274,11 @@ class Director(InfraHost):
                 logger.debug("nodes appear to have been picked up")
 
         logger.debug("Verify the number of nodes picked match up to settings")
-        expected_nodes = len(self.settings.controller_nodes) + len(
-            self.settings.compute_nodes) + len(
-            self.settings.ceph_nodes) + len(self.settings.computehci_nodes)
+        expected_nodes = (len(self.settings.controller_nodes)
+                          + len(self.settings.compute_nodes)
+                          + len(self.settings.ceph_nodes)
+                          + len(self.settings.powerflex_nodes)
+                          + len(self.settings.computehci_nodes))
         found = self.run_tty(
             "grep pm_addr ~/instackenv.json | wc -l")[0].rstrip()
         logger.debug("Found " + found + " Expected : " + str(expected_nodes))
@@ -263,18 +290,85 @@ class Director(InfraHost):
                 " to the number of nodes defined in .properties file")
 
         if setts.use_ipmi_driver is True:
-            logger.debug("Using pxe_ipmi driver")
-            cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ~/instackenv.json'
+            logger.debug("Using ipmi driver")
+            cmd = 'sed -i "s|idrac|ipmi|" ~/instackenv.json'
             self.run_tty(cmd)
 
-    def configure_idracs(self):
-        nodes = list(self.settings.controller_nodes)
-        nodes.extend(self.settings.compute_nodes)
-        nodes.extend(self.settings.computehci_nodes)
-        nodes.extend(self.settings.ceph_nodes)
-        cmd = "~/pilot/config_idracs.py "
+    def node_discovery_edge(self, node_type):
+        setts = self.settings
+        nodes = setts.node_types_map[node_type]
+        _node_cnt = len(nodes)
+        logger.debug("Discovering {} nodes for node type: {}"
+                     .format(str(_node_cnt), node_type))
+        paths = self._generate_edge_template_paths(node_type, INSTACKENV,
+                                                   "json")
+        stg_instack_path, remote_instack_file = paths
+        cmd = "rm " + remote_instack_file + " -f"
+        self.run_tty(cmd)
 
+        cmd = "cd ~/pilot/discover_nodes;./discover_nodes.py  -u " + \
+              setts.ipmi_user + \
+              " -p '" + setts.ipmi_password + "'"
+
+        for node in nodes:
+            if hasattr(node, "idrac_ip"):
+                cmd += ' ' + node.idrac_ip
+
+        cmd += '> ' + remote_instack_file
+
+        self.run_tty(cmd)
+
+        cmd = "ls -la " + remote_instack_file + " | awk '{print $5;}'"
+        size = self.run_tty(cmd)[0]
+        if int(size) <= 50:
+            logger.fatal("did not manage to pick up the nodes..")
+            raise AssertionError(
+                "Unable to scan all the nodes ... need to go & pull "
+                "the plug(s) - "
+                + size + " - "
+                + size[0])
+        else:
+            logger.debug("nodes appear to have been picked up")
+
+        logger.debug("Verify the number of nodes picked match up to settings")
+
+        found = self.run_tty(
+            "grep pm_addr " + remote_instack_file + " | wc -l")[0].rstrip()
+        logger.debug("Found " + found + " Expected : " + str(len(nodes)))
+        if int(found) == len(nodes):
+            pass
+        else:
+            raise AssertionError(
+                "Number of nodes in instackenv.json does not add up"
+                " to the number of nodes defined in .properties file")
+
+        if setts.use_ipmi_driver is True:
+            logger.debug("Using pxe_ipmi driver")
+            cmd = 'sed -i "s|pxe_drac|pxe_ipmitool|" ' + remote_instack_file
+            self.run_tty(cmd)
+
+        self._update_instack_env_edge(node_type)
+
+    def configure_idracs_core(self):
+        setts = self.settings
+        nodes = list(setts.controller_nodes)
+        nodes.extend(setts.compute_nodes)
+        nodes.extend(setts.computehci_nodes)
+        nodes.extend(setts.ceph_nodes)
+        nodes.extend(setts.powerflex_nodes)
+        self.configure_idracs(nodes)
+
+    def configure_idracs_edge(self, node_type):
+        nodes = list(self.settings.node_types_map[node_type])
+        _stg, instack_file = self._generate_edge_template_paths(node_type,
+                                                                INSTACKENV,
+                                                                "json")
+        self.configure_idracs(nodes, instack_file)
+
+    def configure_idracs(self, nodes, instack=None):
+        setts = self.settings
         json_config = defaultdict(dict)
+        cmd = "~/pilot/config_idracs.py "
         for node in nodes:
             if hasattr(node, 'idrac_ip'):
                 node_id = node.idrac_ip
@@ -284,13 +378,16 @@ class Director(InfraHost):
             if hasattr(node, 'pxe_nic'):
                 json_config[node_id]["pxe_nic"] = node.pxe_nic
 
-            new_ipmi_password = self.settings.new_ipmi_password
+            new_ipmi_password = setts.new_ipmi_password
             if new_ipmi_password:
                 json_config[node_id]["password"] = new_ipmi_password
             if node.skip_nic_config:
                 json_config[node_id]["skip_nic_config"] = node.skip_nic_config
         if json_config.items():
             cmd += "-j '{}'".format(json.dumps(json_config))
+
+        if instack:
+            cmd += " -n {}".format(instack)
 
         stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
@@ -300,9 +397,15 @@ class Director(InfraHost):
                                                                 stderr,
                                                                 stdout))
 
-    def import_nodes(self):
-        stdout, stderr, exit_status = self.run(self.source_stackrc +
-                                               "~/pilot/import_nodes.py")
+    def import_nodes(self, node_type=None):
+        cmd = self.source_stackrc + "~/pilot/import_nodes.py"
+        if node_type:
+            logging.debug("Import edge nodes for node type: %s", node_type)
+            paths = self._generate_edge_template_paths(node_type, INSTACKENV,
+                                                       "json")
+            _stg_instack, instack = paths
+            cmd += " -n " + instack
+        stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
             raise AssertionError("Unable to import nodes into Ironic.  "
                                  "exit_status: {}, error: {}, "
@@ -310,13 +413,14 @@ class Director(InfraHost):
                                      exit_status, stderr, stdout))
 
         tester = Checkpoints()
-        tester.verify_nodes_registered_in_ironic()
+        tester.verify_nodes_registered_in_ironic(node_type)
 
-    def node_introspection(self):
+    def node_introspection(self, node_type=None):
         setts = self.settings
-
-        stdout, stderr, exit_status = self.run(
-            self.source_stackrc + "~/pilot/prep_overcloud_nodes.py")
+        cmd = self.source_stackrc + "~/pilot/prep_overcloud_nodes.py"
+        if node_type:
+            cmd += " -n " + node_type
+        stdout, stderr, exit_status = self.run(cmd)
         if exit_status:
             raise AssertionError("An error occurred while running "
                                  "prep_overcloud_nodes.  exit_status: {}, "
@@ -324,12 +428,15 @@ class Director(InfraHost):
                                                                 stderr,
                                                                 stdout))
         # Turning LLDP off before introspection
-        lldp_off_cmd = "sudo sed -i 's/ipa-collect-lldp=1/ipa-collect-lldp=0/g' /httpboot/inspector.ipxe"  # noqa
+        lldp_off_cmd = "sudo sed -i 's/ipa-collect-lldp=1/ipa-collect-lldp=0/g' /var/lib/ironic/httpboot/inspector.ipxe"  # noqa
         self.run(lldp_off_cmd)
 
         introspection_cmd = self.source_stackrc + "~/pilot/introspect_nodes.py"
         if setts.use_in_band_introspection is True:
             introspection_cmd += " -i"
+
+        if node_type:
+            introspection_cmd += " -n " + node_type
 
         stdout, stderr, exit_status = self.run(introspection_cmd)
         if exit_status:
@@ -339,11 +446,11 @@ class Director(InfraHost):
                                      exit_status, stderr, stdout))
 
         tester = Checkpoints()
-        tester.verify_introspection_sucessfull()
+        tester.verify_introspection_sucessfull(node_type)
 
-    def assign_role(self, node, role, index):
+    def assign_role(self, node, role, index, instack=None):
         assign_role_command = self._create_assign_role_command(
-            node, role, index)
+            node, role, index, instack)
         stdout, stderr, exit_status = self.run(self.source_stackrc +
                                                "cd ~/pilot;" +
                                                assign_role_command)
@@ -361,19 +468,21 @@ class Director(InfraHost):
                                      exit_status))
 
     def assign_node_roles(self):
+        setts = self.settings
         logger.debug("Assigning roles to nodes")
         osd_yaml = os.path.join(self.templates_dir, "ceph-osd-config.yaml")
         self.run("/bin/cp -rf " + osd_yaml + ".orig " + osd_yaml)
         common_path = os.path.join(os.path.expanduser(
-            self.settings.cloud_repo_dir + '/src'), 'common')
+            setts.cloud_repo_dir + '/src'), 'common')
         sys.path.append(common_path)
         from thread_helper import ThreadWithExHandling  # noqa
 
         roles_to_nodes = {}
-        roles_to_nodes["controller"] = self.settings.controller_nodes
-        roles_to_nodes["compute"] = self.settings.compute_nodes
-        roles_to_nodes["computehci"] = self.settings.computehci_nodes
-        roles_to_nodes["storage"] = self.settings.ceph_nodes
+        roles_to_nodes["controller"] = setts.controller_nodes
+        roles_to_nodes["compute"] = setts.compute_nodes
+        roles_to_nodes["storage"] = setts.ceph_nodes
+        roles_to_nodes["computehci"] = setts.computehci_nodes
+        roles_to_nodes["powerflex"] = setts.powerflex_nodes
 
         threads = []
         for role in roles_to_nodes.keys():
@@ -402,13 +511,56 @@ class Director(InfraHost):
                 failed_threads, len(threads)))
             sys.exit(1)
 
+    def assign_node_role_edge(self, node_type):
+        logger.debug("Assigning roles to node_type: %s", node_type)
+        nodes = self.settings.node_types_map[node_type]
+        common_path = os.path.join(os.path.expanduser(
+            self.settings.cloud_repo_dir + '/src'), 'common')
+        sys.path.append(common_path)
+        from thread_helper import ThreadWithExHandling  # noqa
+        paths = self._generate_edge_template_paths(node_type, INSTACKENV,
+                                                   "json")
+        stg_instack_path, instack_file = paths
+
+        threads = []
+        index = 0
+        for node in nodes:
+            thread = ThreadWithExHandling(logger,
+                                          target=self.assign_role,
+                                          args=(node, node_type,
+                                                index, instack_file))
+            threads.append(thread)
+            thread.start()
+            index += 1
+
+        for thread in threads:
+            thread.join()
+
+        failed_threads = 0
+        for thread in threads:
+            if thread.ex is not None:
+                failed_threads += 1
+
+        if failed_threads == 0:
+            logger.info("Successfully assigned role: %s to site nodes: %s",
+                        node_type, nodes)
+        else:
+            logger.info("assign_role failed on {} out of {} edge nodes".format(
+                failed_threads, len(threads)))
+            sys.exit(1)
+
     def update_sshd_conf(self):
+        setts = self.settings
         # Update sshd_config to allow for more than 10 ssh sessions
         # Required for assign_role to run threaded if stamp has > 10 nodes
-        non_sah_nodes = (self.settings.controller_nodes +
-                         self.settings.compute_nodes +
-                         self.settings.computehci_nodes +
-                         self.settings.ceph_nodes)
+        non_sah_nodes = (setts.controller_nodes
+                         + setts.compute_nodes
+                         + setts.computehci_nodes
+                         + setts.ceph_nodes
+                         + setts.powerflex_nodes)
+
+        for node_type, edge_site_nodes in setts.node_types_map.items():
+            non_sah_nodes.extend(edge_site_nodes)
         # Allow for the number of nodes + a few extra sessions
         maxSessions = len(non_sah_nodes) + 10
 
@@ -433,14 +585,29 @@ class Director(InfraHost):
             self.run_as_root(cmd)
 
     def setup_templates(self):
-        # Re-upload the yaml files in case we're trying to leave the undercloud
-        # intact but want to redeploy with a different config.
-
+        """Re-upload the yaml files in the case where
+        the undercloud is left intact but want to redeploy the overcloud
+        with a different config.
+        """
         self.setup_networking()
         self.setup_dell_storage()
         self.setup_manila()
-        self.setup_environment()
+        if self.settings.enable_powerflex_backend == False:
+            self.setup_environment()
         self.setup_sanity_ini()
+        self.render_and_upload_site_name()
+
+    def setup_templates_edge(self, node_type):
+        self.setup_networking_edge(node_type)
+        self.render_and_upload_roles_data_edge(node_type)
+        self.setup_environment_edge(node_type)
+        self.render_and_upload_site_name_edge(node_type)
+        self.render_and_upload_overrides_edge(node_type)
+        if self._is_ovs_dpdk_required(node_type):
+            self.render_and_upload_ovs_dpdk_edge(node_type)
+        if self._is_sriov_required(node_type):
+            self.render_and_upload_sriov_edge(node_type)
+        # TODO self.setup_sanity_ini()
 
     def clamp_min_pgs(self, num_pgs):
         if num_pgs < 1:
@@ -493,15 +660,14 @@ class Director(InfraHost):
 
         node_data_lookup_str = osd_configs_yaml["parameter_defaults"][
             "NodeDataLookup"]
-        uuid_to_osd_configs = json.loads(node_data_lookup_str)
+        uuid_to_osd_configs = json.loads(json.dumps(node_data_lookup_str))
         for uuid in uuid_to_osd_configs:
             osd_config = uuid_to_osd_configs[uuid]
             num_osds = len(osd_config["devices"])
             total_osds = total_osds + num_osds
 
-        num_storage_nodes = len(self.settings.ceph_nodes) + len(self.settings.computehci_nodes)
+        num_storage_nodes = len(self.settings.ceph_nodes) + len(self.settings.computehci_nodes) + len(self.settings.powerflex_nodes)
         num_unaccounted = num_storage_nodes - len(uuid_to_osd_configs)
-        # Also add nodes with osds defined in properties to allow for mix of configs
         if num_unaccounted < 0:
             raise AssertionError("There are extraneous servers listed in {}. "
                                  "Unable to calculate the number of OSDs in "
@@ -514,7 +680,7 @@ class Director(InfraHost):
                                      self.settings.ceph_osd_config_yaml))
 
         total_osds = total_osds + (num_unaccounted * default_osds_per_node)
-        logger.debug("Total osds : " + str(total_osds))
+
         return total_osds
 
     def setup_environment(self):
@@ -523,15 +689,11 @@ class Director(InfraHost):
         # If the osd_disks were not specified then just return
         osd_disks = None
         if len(self.settings.computehci_nodes) > 0 and hasattr(self.settings.computehci_nodes[0], 'osd_disks'):
-            osd_disks = self.settings.computehci_nodes[0].osd_disks
-
-        else:
             if len(self.settings.ceph_nodes) > 0 and hasattr(self.settings.ceph_nodes[0], 'osd_disks'):
-               # If the OSD disks are specified on the first storage node, then
-               # use them.  This is the best we can do until the OSP Director
-               # supports more than a single, global OSD configuration.
+                # If the OSD disks are specified on the first storage node, then
+                # use them.  This is the best we can do until the OSP Director
+                # supports more than a single, global OSD configuration.
                osd_disks = self.settings.ceph_nodes[0].osd_disks
-
         src_file = open(self.settings.dell_env_yaml, 'r')
 
         # Temporary local file used to stage the modified environment file
@@ -646,10 +808,12 @@ class Director(InfraHost):
         src_file.close()
         tmp_file.close()
 
-        env_name = os.path.join(self.templates_dir, "dell-environment.yaml")
+        env_name = os.path.join(self.templates_dir, DELL_ENV + ".yaml")
         self.upload_file(tmp_name, env_name)
         os.remove(tmp_name)
 
+    # TODO: dpaterson, refactor to use ini parser like was done
+    # in undercloud.conf
     def setup_sanity_ini(self):
         sanity_ini = self.sanity_dir + "/sanity.ini"
         self.upload_file(self.settings.sanity_ini,
@@ -716,6 +880,11 @@ class Director(InfraHost):
             'sed -i "s|sanity_vlantest_network=.*|sanity_vlantest_network=' +
             self.settings.sanity_vlantest_network +
             '|" pilot/deployment-validation/sanity.ini',
+            # need below for multi stack support
+            'sed -i "s|overcloud_stack_name=.*|overcloud_stack_name=' +
+            self.settings.overcloud_name +
+            '|" pilot/deployment-validation/sanity.ini',
+            # Share Storage Support
             'sed -i "s|share_storage_network=.*|share_storage_network=' +
             self.settings.share_storage_network +
             '|" pilot/deployment-validation/sanity.ini',
@@ -746,10 +915,6 @@ class Director(InfraHost):
 
     def setup_dell_storage(self):
 
-        # Clean the local docker registry
-        if len(self.run_tty("sudo docker images -a -q")[0]) > 1:
-            self.run_tty("sudo docker rmi $(sudo docker images -a -q) --force")
-
         # Re - Upload the yaml files in case we're trying to
         # leave the undercloud intact but want to redeploy with
         # a different config
@@ -775,11 +940,20 @@ class Director(InfraHost):
             "/dellemc-unity-cinder-backend.yaml"
         self.upload_file(self.settings.dell_unity_cinder_yaml,
                          dell_unity_cinder_yaml)
+
+        dell_unity_cinder_container_yaml = self.templates_dir + \
+            "/dellemc-unity-cinder-container.yaml"
+        self.upload_file(self.settings.dell_unity_cinder_container_yaml,
+                         dell_unity_cinder_container_yaml)
+
         # Backup before modifying
         self.run_tty("cp " + dell_unity_cinder_yaml +
                      " " + dell_unity_cinder_yaml + ".bak")
+        self.run_tty("cp " + dell_unity_cinder_container_yaml +
+                     " " + dell_unity_cinder_container_yaml + ".bak")
 
-        self.setup_unity_cinder(dell_unity_cinder_yaml)
+        self.setup_unity_cinder(dell_unity_cinder_yaml, \
+                                dell_unity_cinder_container_yaml )
 
         # Powermax
         dell_powermax_iscsi_cinder_yaml = self.templates_dir + \
@@ -801,7 +975,24 @@ class Director(InfraHost):
             self.setup_powermax_cinder(dell_powermax_iscsi_cinder_yaml)
         else:
             self.setup_powermax_cinder(dell_powermax_fc_cinder_yaml)
-      
+
+        # PowerFlex
+        dell_powerflex_cinder_yaml = self.templates_dir + \
+            "/dellemc-powerflex-cinder-backend.yaml"
+        self.upload_file(self.settings.dell_powerflex_cinder_yaml,
+                         dell_powerflex_cinder_yaml)
+        self.run_tty("cp " + dell_powerflex_cinder_yaml +
+                     " " + dell_powerflex_cinder_yaml + ".bak")
+
+        dell_powerflex_custom_mapping_yaml = self.templates_dir + \
+            "/custom-dellemc-volume-mappings.yaml"
+        self.upload_file(self.settings.dell_powerflex_volume_mapping_yaml,
+                         dell_powerflex_custom_mapping_yaml)
+
+        dell_powerflex_ansible_yaml = self.templates_dir  + \
+            "/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml"
+        self.setup_powerflex(dell_powerflex_cinder_yaml,dell_powerflex_ansible_yaml)
+
         # Enable multiple backends now
         enabled_backends = "["
 
@@ -828,11 +1019,17 @@ class Director(InfraHost):
         unity_manila_yaml = self.templates_dir + "/unity-manila-config.yaml"
         self.upload_file(self.settings.unity_manila_yaml,
                          unity_manila_yaml)
+        unity_manila_container_yaml = self.templates_dir + "/unity-manila-container.yaml"
+        self.upload_file(self.settings.unity_manila_container_yaml,
+                         unity_manila_container_yaml)
+
         # Backup before modifying
         self.run_tty("cp " + unity_manila_yaml +
                      " " + unity_manila_yaml + ".bak")
+        self.run_tty("cp " + unity_manila_container_yaml +
+                     " " + unity_manila_container_yaml + ".bak")
 
-        self.setup_unity_manila(unity_manila_yaml)
+        self.setup_unity_manila(unity_manila_yaml, unity_manila_container_yaml)
 
         #  Now powermax
         powermax_manila_yaml = self.templates_dir + "/powermax-manila-config.yaml"
@@ -891,7 +1088,8 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
 
-    def setup_unity_cinder(self, dell_unity_cinder_yaml):
+    def setup_unity_cinder(self, dell_unity_cinder_yaml, \
+                           dell_unity_cinder_container_yaml):
 
         if self.settings.enable_unity_backend is False:
             logger.debug("Not setting up unity cinder backend.")
@@ -917,44 +1115,50 @@ class Director(InfraHost):
             self.settings.unity_storage_pool_names + '|" ' +
             dell_unity_cinder_yaml,
         ]
-        if self.settings.use_satellite:
-            cinder_container = "openstack-cinder-volume-dellemc" + \
-                ':' + str(self.settings.cinder_unity_container_version)
-            remote_registry = self.settings.satellite_hostname + \
-                ":5000/" + self.settings.containers_prefix
-            local_url = remote_registry + cinder_container
-            cmds.append('sed -i "s|DockerCinderVolumeImage.*|' +
-                        'DockerCinderVolumeImage: ' + local_url +
-                        '|" ' + overcloud_images_file)
-        else:
 
-            cinder_container = "/dellemc/openstack-cinder-volume-dellemc:" + \
+        if self.settings.use_satellite:
+            cinder_container = "openstack-cinder-volume-dellemc-rhosp16:" + \
+                str(self.settings.cinder_unity_container_version)
+            remote_registry = self.settings.satellite_hostname + \
+                ":5000/"
+            local_url = remote_registry + self.settings.containers_prefix + \
+                cinder_container
+            cmds.append('sed -i "s|ContainerCinderVolumeImage.*|' +
+                        'ContainerCinderVolumeImage: ' + local_url +
+                        '|" ' + dell_unity_cinder_container_yaml)
+            cmds.append('sed -i "s|<dellemc_container_registry>|' + remote_registry +
+                        '|" ' + dell_unity_cinder_container_yaml)
+        else:
+            undercloud_domain_name = self.settings.director_node.hostname + \
+                                 ".ctlplane.localdomain"
+            cinder_container = "/dellemc/openstack-cinder-volume-dellemc-rhosp16:" + \
                 str(self.settings.cinder_unity_container_version)
             remote_registry = "registry.connect.redhat.com"
             remote_url = remote_registry + cinder_container
             local_registry = self.provisioning_ip + ":8787"
-            local_url = local_registry + cinder_container
+            local_registry_domain = undercloud_domain_name + ":8787"
+            local_url = local_registry_domain + cinder_container
 
             cmds.extend([
-                'docker login -u ' + self.settings.subscription_manager_user +
+                'sudo podman login -u ' + self.settings.subscription_manager_user +
                 ' -p ' + self.settings.subscription_manager_password +
                 ' ' + remote_registry,
-                'docker pull ' + remote_url,
-                'docker tag ' + remote_url + ' ' + local_url,
-                'docker push ' + local_url,
-                'sed -i "s|DockerCinderVolumeImage.*|' +
-                'DockerCinderVolumeImage: ' + local_url +
-                '|" ' + overcloud_images_file,
-                'echo "  DockerInsecureRegistryAddress:" >> ' +
-                overcloud_images_file,
-                'sudo echo "  - ' + local_registry + ' " >> ' +
-                overcloud_images_file,
-                'docker logout ' + remote_registry,
+                'sudo podman pull ' + remote_url,
+                'sudo openstack tripleo container image push --local ' + remote_url,
+                'sudo podman tag ' + remote_url + ' ' + local_url,
+                'sed -i "s|ContainerCinderVolumeImage.*|' +
+                'ContainerCinderVolumeImage: ' + local_url +
+                '|" ' + dell_unity_cinder_container_yaml,
+                'sed -i "s|<dellemc_container_registry>|' + local_registry +
+                '|" ' + dell_unity_cinder_container_yaml,
+                'sed -i "s|<dellemc_container_registry_domain>|' + local_registry_domain +
+                        '|" ' + dell_unity_cinder_container_yaml,
+                'sudo podman logout ' + remote_registry,
             ])
         for cmd in cmds:
             self.run_tty(cmd)
 
-    def setup_unity_manila(self, unity_manila_yaml):
+    def setup_unity_manila(self, unity_manila_yaml, unity_manila_container_yaml):
 
         if self.settings.enable_unity_manila_backend is False:
             logger.debug("Not setting up unity manila backend.")
@@ -994,39 +1198,48 @@ class Director(InfraHost):
                 ]
 
         if self.settings.use_satellite:
-            manila_container = "openstack-manila-share-dellemc" + \
+            manila_container = "openstack-manila-share-dellemc-rhosp16" + \
                 ':' + str(self.settings.manila_unity_container_version)
             remote_registry = self.settings.satellite_hostname + \
-                ":5000/" + self.settings.containers_prefix
-            local_url = remote_registry + manila_container
-            cmds.append('sed -i "50i \  DockerManilaShareImage: ' + local_url +
-                        '" ' + overcloud_images_file)
+                ":5000/"
+            local_url = remote_registry + self.settings.containers_prefix + \
+                manila_container
+            cmds.append('sed -i "s|ContainerManilaShareImage.*|' +
+                        'ContainerManilaShareImage: ' + local_url +
+                        '|" ' + unity_manila_container_yaml)
+            cmds.append('sed -i "s|<undercloud_registry>|' + remote_registry +
+                        '|" ' + unity_manila_container_yaml)
 
         else:
-            manila_container = "/dellemc/openstack-manila-share-dellemc:" + \
-                           str(self.settings.manila_unity_container_version)
+            undercloud_domain_name = self.settings.director_node.hostname + \
+                                ".ctlplane.localdomain"
+            manila_container = "/dellemc/openstack-manila-share-dellemc-rhosp16:" + \
+                               str(self.settings.manila_unity_container_version)
             remote_registry = "registry.connect.redhat.com"
             remote_url = remote_registry + manila_container
             local_registry = self.provisioning_ip + ":8787"
-            local_url = local_registry + manila_container
+            local_registry_domain = undercloud_domain_name + ":8787"
+            local_url = local_registry_domain + manila_container
 
             cmds.extend([
-                'docker login -u ' + self.settings.subscription_manager_user +
+                'sudo podman login -u ' + self.settings.subscription_manager_user +
                 ' -p ' + self.settings.subscription_manager_password +
                 ' ' + remote_registry,
-                'docker pull ' + remote_url,
-                'docker tag ' + remote_url + ' ' + local_url,
-                'docker push ' + local_url,
-                'sed -i "50i \  DockerManilaShareImage: ' + local_url +
-                '" ' + overcloud_images_file,
-                'echo "  DockerInsecureRegistryAddress:" >> ' +
-                overcloud_images_file,
-                'echo "  - ' + local_registry + ' " >> ' +
-                overcloud_images_file,
+                'sudo podman pull ' + remote_url,
+                'sudo openstack tripleo container image push --local ' + remote_url,
+                'sudo podman tag ' + remote_url + ' ' + local_url,
+                'sed -i "s|ContainerManilaShareImage.*|' +
+                'ContainerManilaShareImage: ' + local_url +
+                '|" ' + unity_manila_container_yaml,
+                'sed -i "s|<dellemc_container_registry>|' + local_registry +
+                '|" ' + unity_manila_container_yaml,
+                'sed -i "s|<dellemc_container_registry_domain>|' + local_registry_domain +
+                        '|" ' + unity_manila_container_yaml,
+                'sudo podman logout ' + remote_registry,
             ])
+
         for cmd in cmds:
             self.run_tty(cmd)
-
 
     def setup_powermax_cinder(self, powermax_cinder_yaml):
 
@@ -1050,7 +1263,7 @@ class Director(InfraHost):
             'sed -i "s|<powermax_port_groups>|' +
             self.settings.powermax_port_groups + '|" ' + powermax_cinder_yaml,
             'sed -i "s|<powermax_srp>|' +
-            self.settings.powermax_srp + '|" ' + powermax_cinder_yaml,            
+            self.settings.powermax_srp + '|" ' + powermax_cinder_yaml,
         ]
         for cmd in cmds:
             self.run_tty(cmd)
@@ -1088,6 +1301,71 @@ class Director(InfraHost):
         for cmd in cmds:
             self.run_tty(cmd)
 
+    def setup_powerflex(self, powerflex_cinder_yaml, powerflex_ansible_yaml):
+
+        if self.settings.enable_powerflex_backend is False:
+            logger.debug("Not setting up powerflex backend.")
+            return
+
+        logger.debug("Configuring dell emc powerflex backend.")
+
+        cmds = [ 'sed -i "s|<powerflex_san_ip>|' +
+                self.settings.powerflexgw_vm.storage_ip +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_san_login>|' +
+                self.settings.powerflex_san_login +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_san_password>|' +
+                self.settings.powerflex_san_password +
+                '|" ' + powerflex_cinder_yaml,
+                'sed -i "s|<powerflex_storage_pools>|' +
+                self.settings.powerflex_storage_pools +
+                '|" ' + powerflex_cinder_yaml,
+                ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
+        logger.debug("Configuring ansible playbook for powerflex deployment.")
+
+        cmds = ['sed -i "s|<powerflex_rpms_method>|' +
+                self.settings.powerflex_rpms_method +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_rpms_path>|' +
+                self.settings.powerflex_rpms_path +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_name>|' +
+                self.settings.powerflex_cluster_name +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_protection_domain>|' +
+                self.settings.powerflex_protection_domain +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_storage_pool>|' +
+                self.settings.powerflex_storage_pool +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_config>|' +
+                self.settings.powerflex_cluster_config +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_mgmt_interface>|' +
+                self.settings.powerflex_mgmt_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_interface>|' +
+                self.settings.powerflex_cluster_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_cluster_vip>|' +
+                self.settings.powerflex_cluster_vip +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_rebuild_interface>|' +
+                self.settings.powerflex_rebuild_interface +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_password>|' +
+                self.settings.powerflex_password +
+                '|" ' + powerflex_ansible_yaml,
+                'sed -i "s|<powerflex_lia_token>|' +
+                self.settings.powerflex_lia_token +
+                '|" ' + powerflex_ansible_yaml,
+                ]
+        for cmd in cmds:
+            self.run_tty(cmd)
 
 
     def setup_net_envt(self):
@@ -1176,6 +1454,10 @@ class Director(InfraHost):
             '"' +
             self.settings.provisioning_network.split("/")[
                 1] + '"' + "|' " + network_yaml,
+            'sed -i "s|ControlPlaneNetCidr:.*|' +
+            'ControlPlaneNetCidr: ' +
+            self.settings.provisioning_network +
+            '|" ' + network_yaml,
             'sed -i "s|EC2MetadataIp:.*|EC2MetadataIp: ' +
             self.settings.director_node.provisioning_ip + '|" ' + network_yaml,
             "sed -i 's|DnsServers:.*|DnsServers: " + '["' +
@@ -1192,21 +1474,21 @@ class Director(InfraHost):
             self.settings.public_api_vlanid + '|" ' + network_yaml,
             'sed -i "s|TenantNetworkVlanID:.*|TenantNetworkVlanID: ' +
             self.settings.tenant_tunnel_vlanid + '|" ' + network_yaml,
-            'sed -i "s|ExternalNetworkMTU:.*|ExternalNetworkMTU: ' +
+            'sed -i "s|ExternalMtu:.*|ExternalMtu: ' +
             self.settings.public_api_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|InternalApiMTU:.*|InternalApiMTU: ' +
+            'sed -i "s|InternalApiMtu:.*|InternalApiMtu: ' +
             self.settings.private_api_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|StorageNetworkMTU:.*|StorageNetworkMTU: ' +
+            'sed -i "s|StorageMtu:.*|StorageMtu: ' +
             self.settings.storage_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|StorageMgmtNetworkMTU:.*|StorageMgmtNetworkMTU: ' +
+            'sed -i "s|StorageMgmtMtu:.*|StorageMgmtMtu: ' +
             self.settings.storage_cluster_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|TenantNetworkMTU:.*|TenantNetworkMTU: ' +
+            'sed -i "s|TenantMtu:.*|TenantMtu: ' +
             self.settings.tenant_tunnel_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|ProvisioningNetworkMTU:.*|ProvisioningNetworkMTU: ' +
+            'sed -i "s|ProvisioningMtu:.*|ProvisioningMtu: ' +
             self.settings.provisioning_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|ManagementNetworkMTU:.*|ManagementNetworkMTU: ' +
+            'sed -i "s|ManagementMtu:.*|ManagementMtu: ' +
             self.settings.management_network_mtu + '|" ' + network_yaml,
-            'sed -i "s|DefaultBondMTU:.*|DefaultBondMTU: ' +
+            'sed -i "s|DefaultBondMtu:.*|DefaultBondMtu: ' +
             self.settings.default_bond_mtu + '|" ' + network_yaml,
             'sed -i "s|NeutronGlobalPhysnetMtu:.*|NeutronGlobalPhysnetMtu: ' +
             self.settings.tenant_network_mtu + '|" ' + network_yaml,
@@ -1296,7 +1578,7 @@ class Director(InfraHost):
                     compute_private_ips += "\\n"
                     compute_storage_ips += "\\n"
 
-            computehci_tenant_tunnel_ips =''
+            computehci_tenant_tunnel_ips = ''
             computehci_private_ips = ''
             computehci_storage_ips = ''
             computehci_cluster_ips = ''
@@ -1311,6 +1593,20 @@ class Director(InfraHost):
                     computehci_private_ips += "\\n"
                     computehci_storage_ips += "\\n"
                     computehci_cluster_ips += "\\n"
+
+            powerflex_private_ips = ''
+            powerflex_storage_ips = ''
+            powerflex_cluster_ips = ''
+
+            for node in self.settings.powerflex_nodes:
+                powerflex_private_ips += "    - " + node.private_api_ip
+                powerflex_storage_ips += "    - " + node.storage_ip
+                powerflex_cluster_ips += "    - " + node.storage_cluster_ip
+                if node != self.settings.powerflex_nodes[-1]:
+                    powerflex_private_ips += "\\n"
+                    powerflex_storage_ips += "\\n"
+                    powerflex_cluster_ips += "\\n"
+
 
             storage_storgage_ip = ''
             storage_cluster_ip = ''
@@ -1359,30 +1655,63 @@ class Director(InfraHost):
                            'sed -i "/DellComputeHCIIPs:/,/storage_mgmt:/s/storage_mgmt:/storage_mgmt: \\n' +
                            computehci_cluster_ips + "/\" " + static_ips_yaml
                           ])
+            if len(self.settings.powerflex_nodes) > 0:
+                cmds.extend(['sed -i "/PowerflexStorageIPs:/,/internal_api:/s/internal_api:/internal_api: \\n' +
+                           powerflex_private_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/PowerflexStorageIPs:/,/storage:/s/storage:/storage: \\n' +
+                           powerflex_storage_ips + "/\" " + static_ips_yaml,
+                           'sed -i "/PowerflexStorageIPs:/,/storage_mgmt:/s/storage_mgmt:/storage_mgmt: \\n' +
+                           powerflex_cluster_ips + "/\" " + static_ips_yaml
+                           ])
+
             for cmd in cmds:
                 self.run_tty(cmd)
 
         if self.settings.use_static_vips is True:
             logger.debug("Updating static vip yaml")
-            cmds = ['sed -i "s/redis: .*/redis: ' +
-                    self.settings.redis_vip + '/" ' + static_vip_yaml,
-                    'sed -i "s/ControlPlaneIP: .*/ControlPlaneIP: ' +
-                    self.settings.provisioning_vip + '/" ' + static_vip_yaml,
-                    'sed -i "s/InternalApiNetworkVip: ' +
-                    '.*/InternalApiNetworkVip: ' +
-                    self.settings.private_api_vip + '/" ' + static_vip_yaml,
-                    'sed -i "s/ExternalNetworkVip: ' +
-                    '.*/ExternalNetworkVip: ' +
-                    self.settings.public_api_vip + '/" ' + static_vip_yaml,
-                    'sed -i "s/StorageNetworkVip: ' +
-                    '.*/StorageNetworkVip: ' +
-                    self.settings.storage_vip + '/" ' + static_vip_yaml,
-                    'sed -i "s/StorageMgmtNetworkVip: ' +
-                    '.*/StorageMgmtNetworkVip: ' +
-                    self.settings.storage_cluster_vip + '/" ' + static_vip_yaml
+            cmds = ["""sed -i "s/RedisVirtualFixedIPs: .*/RedisVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.redis_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/ControlFixedIPs: .*/ControlFixedIPs: [{'ip_address':'""" +
+                    self.settings.provisioning_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/InternalApiVirtualFixedIPs: .*/InternalApiVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.private_api_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/PublicVirtualFixedIPs: .*/PublicVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.public_api_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/StorageVirtualFixedIPs: .*/StorageVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.storage_vip + """'}]/" """ + static_vip_yaml,
+                    """sed -i "s/StorageMgmtVirtualFixedIPs: .*/StorageMgmtVirtualFixedIPs: [{'ip_address':'""" +
+                    self.settings.storage_cluster_vip + """'}]/" """ + static_vip_yaml
+                    # 'sed -i "s/redis: .*/redis: ' +
+                    # self.settings.redis_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/ControlPlaneIP: .*/ControlPlaneIP: ' +
+                    # self.settings.provisioning_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/InternalApiNetworkVip: ' +
+                    # '.*/InternalApiNetworkVip: ' +
+                    # self.settings.private_api_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/ExternalNetworkVip: ' +
+                    # '.*/ExternalNetworkVip: ' +
+                    # self.settings.public_api_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/StorageNetworkVip: ' +
+                    # '.*/StorageNetworkVip: ' +
+                    # self.settings.storage_vip + '/" ' + static_vip_yaml,
+                    # 'sed -i "s/StorageMgmtNetworkVip: ' +
+                    # '.*/StorageMgmtNetworkVip: ' +
+                    # self.settings.storage_cluster_vip + '/" '
+                    # + static_vip_yaml
                     ]
             for cmd in cmds:
                 self.run_tty(cmd)
+
+    def setup_networking_edge(self, node_type):
+        self.validate_edge_nics(node_type)
+        self.render_and_upload_network_data_edge(node_type)
+        self.setup_net_envt_edge(node_type)
+        self.render_and_upload_network_isolation_edge(node_type)
+        self.render_and_upload_node_placement_edge(node_type)
+        self.render_and_upload_nic_env_edge(node_type)
+        self.render_and_upload_compute_edge(node_type)
+        if self.settings.overcloud_static_ips is True:
+            self.render_and_upload_static_ips_edge(node_type)
 
     def setup_nic_configuration(self):
         # Upload all yaml files in the NIC config directory
@@ -1408,9 +1737,9 @@ class Director(InfraHost):
         cmds = []
         remote_file = os.path.join(self.nic_configs_dir,
                                    self.settings.nic_env_file)
-        for setting_name, setting_value in ini_nics_settings.iteritems():
+        for setting_name, setting_value in ini_nics_settings.items():
             # The following is executing a sed command of the following format:
-            # sed -i -r 's/(^\s*StorageBond0Interface1:\s*).*/\1p1p2/'
+            # sed -i -r 's/(^\s*StorageBond0Interface1:\s*).*/\1ens1f1/'
             cmds.append('sed -i -r \'s/(^\s*' + setting_name +    # noqa: W605
                         ':\s*).*/\\1' + setting_value + '/\' ' + remote_file)
 
@@ -1434,49 +1763,26 @@ class Director(InfraHost):
         # in the neutron-sriov.yaml (sriov environment file)
 
         # Specify number of VFs for sriov mentioned interfaces
-        sriov_vfs_setting = []
         sriov_map_setting = []
         sriov_pci_passthrough = []
-        physical_network = ["physint", "physint1", "physint2", "physint3"]
+        physical_network = "physint"
         check = 0
         for interface in sriov_interfaces:
-            devname = interface
-            if (self.settings.enable_smart_nic is True):
-                mapping = physical_network[check] + ':' + interface
-                nova_pci = '{devname: ' + \
-                           '"' + interface + '",' + \
-                           'physical_network: ' + \
-                           '"' + physical_network[check] + '"}'
-                check = check + 1
-
-            else:
-                mapping = physical_network[0] + ':' + interface
-                nova_pci = '{devname: ' + \
-                           '"' + interface + '",' + \
-                           'physical_network: ' + \
-                           '"' + physical_network[0] + '"}'
+            mapping = physical_network + ':' + interface
+            nova_pci = '{devname: ' + \
+                       '"' + interface + '",' + \
+                       'physical_network: ' + \
+                       '"' + physical_network + '"}'
 
             sriov_map_setting.append(mapping)
-
             sriov_pci_passthrough.append(nova_pci)
 
-            if (self.settings.enable_smart_nic is True):
-                interface = interface + ':' + \
-                                        self.settings.sriov_vf_count + \
-                                        ':switchdev'
-            else:
-                interface = interface + ':' + \
-                                        self.settings.sriov_vf_count
-
-            sriov_vfs_setting.append(interface)
-
-        sriov_vfs_setting = "'" + ",".join(sriov_vfs_setting) + "'"
         sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"
         sriov_pci_passthrough = "[" + ",".join(sriov_pci_passthrough) + "]"
 
-        cmds.append('sed -i "s|NeutronSriovNumVFs:.*|' +
-                    'NeutronSriovNumVFs: ' +
-                    sriov_vfs_setting + '|" ' + env_file)
+        cmds.append('sed -i "s|NumSriovVfs:.*|' +
+                    'NumSriovVfs: ' +
+                    self.settings.sriov_vf_count + '|" ' + env_file)
         cmds.append('sed -i "s|NeutronPhysicalDevMappings:.*|' +
                     'NeutronPhysicalDevMappings: ' +
                     sriov_map_setting + '|" ' + env_file)
@@ -1497,13 +1803,14 @@ class Director(InfraHost):
                                     " ~/pilot;./deploy-overcloud.py" \
                                     " --dell-computes " + \
                                     str(len(self.settings.compute_nodes)) + \
+                                    " --controllers " + \
+                                    str(len(self.settings.controller_nodes)) + \
                                     " --dell-computeshci " + \
                                     str(len(self.settings.computehci_nodes)) + \
-                                    " --controllers " + \
-                                    str(len(self.settings.controller_nodes
-                                            )) + \
                                     " --storage " + \
                                     str(len(self.settings.ceph_nodes)) + \
+                                    " --powerflex " + \
+                                    str(len(self.settings.powerflex_nodes)) + \
                                     " --vlan " + \
                                     self.settings.tenant_vlan_range + \
                                     " --nic_env_file " + \
@@ -1566,23 +1873,80 @@ class Director(InfraHost):
         # of the nodes is the order in which they are defined in the
         # .properties file
         cmd += " --node_placement"
-        # Performance and Optimization parameters
-        cmd += " --mariadb_max_connections " \
-            + self.settings.mariadb_max_connections
-        cmd += " --innodb_buffer_pool_size " \
-            + self.settings.innodb_buffer_pool_size
-        cmd += " --innodb_buffer_pool_instances " + \
-            self.settings.innodb_buffer_pool_instances
         if self.settings.deploy_overcloud_debug:
             cmd += " --debug"
 
+        if self.settings.enable_dashboard is True and self.settings.enable_powerflex_backend is False:
+            cmd += " --dashboard_enable"
         cmd += " > overcloud_deploy_out.log 2>&1"
-
         self.run_tty(cmd)
+
+    def container_image_prepare_edge(self, node_type):
+        """
+        openstack tripleo container image prepare \
+        --environment-directory dcn0 \
+        -r ~/dcn0/roles_data.yaml \
+        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
+        ...
+        -e /home/stack/dcn-common/central-export.yaml \
+        -e /home/stack/containers-prepare-parameter.yaml \
+        --output-env-file ~/dcn0/dcn0-images-env.yaml
+        """
+        _, output_env_file = self._generate_edge_template_paths(node_type,
+                                                                IMAGES_ENV)
+        env_files = [NODE_PLACEMENT,
+                     DELL_ENV, NET_ENV, INSTACKENV, STATIC_IP_ENV,
+                     STATIC_VIP_ENV, NET_ISO, NIC_ENV]
+
+        stg_roles_file, roles_file = self._generate_edge_template_paths(
+            node_type, ROLES_DATA)
+
+        cmd = CONTAINER_IMAGE_PREPARE_CMD
+        cmd += " -r " + roles_file
+        # cmd += " -n " + nd_file
+        cntl_plane_exp = os.path.join(self.home_dir,
+                                      EDGE_COMMON_PATH,
+                                      CONTROL_PLANE_EXPORT + ".yaml")
+        cnt_prep_param = os.path.join(self.home_dir,
+                                      CONTAINERS_PREPARE_PARAM + ".yaml")
+        cmd += " -e " + cntl_plane_exp
+        cmd += " -e " + cnt_prep_param
+
+        for env_file in env_files:
+            stg, tmplt = self._generate_edge_template_paths(node_type,
+                                                            env_file)
+            cmd += " -e " + tmplt
+
+        cmd += " --output-env-file " + output_env_file
+        self.run(cmd)
+        logger.debug("Container_image_prepare_edge done!")
+
+    def deploy_edge_site(self, node_type):
+        self.update_and_upload_undercloud_conf_edge(node_type)
+        self.update_undercloud([node_type])
+        self.subnet_routes_edge(node_type)
+        self.controller_routes_edge(node_type)
+        self.overcloud_config_download()
+        self.export_control_plane_config()
+        self.node_discovery_edge(node_type)
+        self.configure_idracs_edge(node_type)
+
+        self.import_nodes(node_type)
+        self.node_introspection(node_type)
+        self.update_sshd_conf()
+        self.assign_node_role_edge(node_type)
+        self.revert_sshd_conf()
+        self.setup_templates_edge(node_type)
+        self.container_image_prepare_edge(node_type)
+        logger.debug("Deploying edge site: %s ... this might take a while",
+                     node_type)
+
+        cmd = self._generate_deploy_cmd_edge(node_type)
+        self.run_tty(cmd)  # can I just use self.run()??????
 
     def delete_overcloud(self):
 
-        logger.debug("Deleting the overcloud stack")
+        logger.info("Deleting the overcloud stack")
         self.run_tty(self.source_stackrc +
                      "openstack stack delete --yes --wait " +
                      self.settings.overcloud_name)
@@ -1594,20 +1958,71 @@ class Director(InfraHost):
         for node in ls_nodes:
             node_state = node.split("|")[5]
             node_id = node.split("|")[1]
-            if "ERROR" in node_state:
+            if "ERROR" or "inspect failed" in node_state:
                 self.run_tty(self.source_stackrc +
-                             "ironic node-set-maintenance " +
-                             node_id + " true")
+                             "openstack baremetal node maintenance set" +
+                             node_id)
             if "clean failed" in node_state:
                 self.run_tty(self.source_stackrc +
-                             "ironic node-set-maintenance " +
-                             node_id + " False")
+                             "openstack baremetal node maintenance unset" +
+                             node_id)
                 self.run_tty(self.source_stackrc +
-                             "ironic node-set-provision-state " +
-                             node_id + " manage")
+                             "openstack baremetal node manage " +
+                             node_id)
             self.run_tty(self.source_stackrc +
-                         "ironic node-delete " +
+                         "openstack baremetal node delete " +
                          node_id)
+
+    def delete_edge_stack(self, node_type):
+        logger.info("Deleting edge site {} stack".format(node_type))
+        stack_name = self._generate_node_type_lower(node_type)
+        stk_info = self.fetch_stack_info_edge(node_type)
+        if stk_info["stack_status"] == "Not Deployed":
+            return
+
+        stack_delete_re = self.run_tty(self.source_stackrc
+                                       + "openstack stack delete --yes --wait "
+                                       + stack_name)
+        logger.info("Stack delete response: "
+                    "{}".format(str(stack_delete_re)))
+
+    def delete_edge_site_nodes(self, node_type):
+        logger.info("Deleting edge site {} nodes".format(node_type))
+        re = self.run_tty(self.source_stackrc
+                          + "openstack baremetal node list --fields "
+                          "uuid properties -f json")
+        nodes = json.loads(re[0])
+        nodes_for_deletion = []
+        for node in nodes:
+            if ("node_type" in node["Properties"]
+                    and node["Properties"]["node_type"] == node_type):
+                nodes_for_deletion.append(node["UUID"])
+        # Force all nodes into maintenance, easy way to make sure they
+        # are deletable regardless of state the node is in
+        for node_uuid in nodes_for_deletion:
+            self.run_tty(self.source_stackrc + " openstack baremetal node "
+                         "maintenance set {}".format(node_uuid))
+        # Delete all edge site nodes at once
+        if nodes_for_deletion:
+            self.run_tty(self.source_stackrc + "openstack baremetal node "
+                         "delete {}".format(" ".join(nodes_for_deletion)))
+
+    def delete_edge_site_template_directory(self, node_type):
+        logger.info("Deleting edge site {} template "
+                    "directory".format(node_type))
+        remote_site_dir = os.path.join(self.home_dir,
+                                       self._generate_role_lower(node_type))
+        cmd = "rm -rf {}".format(remote_site_dir)
+        self.run(cmd)
+
+    def delete_edge_site(self, node_type):
+        logger.info("Deleting edge site {}".format(node_type))
+        self.delete_edge_stack(node_type)
+        self.delete_edge_site_nodes(node_type)
+        self.delete_edge_site_template_directory(node_type)
+        self.controller_routes_edge(node_type, False)
+        self.subnet_routes_edge(node_type, False)
+        logger.info("Edge site {} deleted!".format(node_type))
 
     def summarize_deployment(self):
         logger.info("**** Retrieving nodes information ")
@@ -1772,10 +2187,22 @@ class Director(InfraHost):
                 overcloud_pass = self.run('grep "OS_PASSWORD=" ~/' +
                                           self.settings.overcloud_name +
                                           'rc')[0].split('=')[1]
+                if self.settings.enable_dashboard is True:
+                    dashboard_pwd = self.run_tty('sudo grep dashboard_admin_password /var/lib/mistral/' +
+                                                 self.settings.overcloud_name +
+                                                 '/ceph-ansible/group_vars/all.yml')[0].split(' ')[1]
+                    dashboard_ip = self.run_tty('sudo grep dashboard_frontend /var/lib/mistral/' +
+                                                self.settings.overcloud_name +
+                                                '/ceph-ansible/group_vars/all.yml')[0].split(' ')[1]
                 ip_info.append("OverCloud Horizon        : " +
                                overcloud_endpoint)
                 ip_info.append("OverCloud admin password : " +
                                overcloud_pass)
+                if self.settings.enable_dashboard is True:
+                    ip_info.append("Ceph Dashboard           : " +
+                                   "http://" + dashboard_ip.rstrip()+ ":8444")
+                    ip_info.append("Dashboard admin password : " +
+                                   dashboard_pwd)
                 ip_info.append("cloud_repo # " +
                                self.settings.cloud_repo_version)
                 ip_info.append("deploy-auto # " +
@@ -1783,16 +2210,12 @@ class Director(InfraHost):
             except:  # noqa: E722
                 pass
             ip_info.append("====================================")
-            re= self.run_tty("cat /etc/rhosp-release")
-            ip_info.append("Undercloud version : " + re[0])
-            ip_info.append("====================================")
-
         except:  # noqa: E722
             logger.debug(" Failed to retrieve the nodes ip information ")
         finally:
             for each in ip_info:
                 logger.debug(each)
-                fi.write(each + "\n")
+                fi.write((each + "\n").encode('utf-8'))
             fi.close()
 
     def inject_ssh_key(self):
@@ -1856,7 +2279,7 @@ class Director(InfraHost):
 
         cmd_route = ("source ~/" + setts.overcloud_name + "rc;" +
                      "sudo ip route add " + setts.floating_ip_network +
-                     " dev eth0")
+                     " dev enp1s0")
         cmd_config = ("source ~/" + setts.overcloud_name + "rc;" +
 
                       "if [ ! -d " + self.tempest_directory +
@@ -1932,49 +2355,26 @@ class Director(InfraHost):
         external_sub_guid = self.run_tty(external_sub_cmd)[0].rstrip()
         return external_sub_guid
 
-    def _backup_tempest_conf(self):
-        logger.info("Backing up tempest.conf")
-        if self.is_tempest_conf():
-            timestamp = int(round(time.time() * 1000))
-            new_conf = (self.tempest_conf + "." + str(timestamp))
-            logger.debug("Backing up tempest.conf, new file is: %s "
-                         % new_conf)
-            cmd = ("mv " + self.tempest_conf + " " + new_conf + " 2>/dev/null")
-            self.run_tty(cmd)
-
-    def configure_dashboard(self):
-        logger.info("Configure Dashboard")
-        ip = self.settings.dashboard_node.public_api_ip
-
-        if self.settings.use_satellite is True:
-            self.run_tty(self.source_stackrc + 'cd ' +
-                         self.pilot_dir +
-                         ';./config_dashboard.py --dashboard_addr ' +
-                         ip + ' --dashboard_pass ' +
-                         self.settings.dashboard_node.root_password +
-                         ' --satOrg ' +
-                         self.settings.satellite_org +
-                         ' --satKey ' +
-                         self.settings.satellite_activation_key +
-                         ' --physId ' +
-                         self.settings.subscription_manager_pool_sah +
-                         ' --cephId ' +
-                         self.settings.subscription_manager_vm_ceph)
-        else:
-            self.run_tty(self.source_stackrc + 'cd ' +
-                         self.pilot_dir +
-                         ';./config_dashboard.py --dashboard_addr ' +
-                         ip +
-                         ' --dashboard_pass ' +
-                         self.settings.dashboard_node.root_password +
-                         ' --subUser ' +
-                         self.settings.subscription_manager_user +
-                         ' --subPass ' +
-                         self.settings.subscription_manager_password +
-                         ' --physId ' +
-                         self.settings.subscription_manager_pool_sah +
-                         ' --cephId ' +
-                         self.settings.subscription_manager_vm_ceph)
+    def update_undercloud(self, edge_sites):
+        logging.debug("Updating undercloud...")
+        tester = Checkpoints()
+        subnets_to_create = []
+        for node_type in edge_sites:
+            subnet = self._generate_subnet_name(node_type)
+            _subnet_exists = tester.provisioning_subnet_exists(subnet)
+            if _subnet_exists:
+                continue
+            else:
+                subnets_to_create.append(subnet)
+        if subnets_to_create:
+            cmd = self.source_stackrc + "cd ; " + UNDERCLOUD_INSTALL_CMD
+            stdout, stderr, exit_status = self.run(cmd)
+            if exit_status:
+                raise AssertionError("Failed to install undercloud"
+                                     "exit_status: {}, error: {}, "
+                                     "stdout: {}".format(
+                                         exit_status, stderr, stdout))
+            tester.verify_provisioning_subnets_created(subnets_to_create)
 
     def enable_fencing(self):
         if self.settings.enable_fencing is True:
@@ -1992,33 +2392,6 @@ class Director(InfraHost):
                   passwd + \
                   ' enable'
             self.run_tty(cmd)
-
-    def _create_assign_role_command(self, node, role, index):
-        node_identifier = ""
-        if hasattr(node, 'service_tag'):
-            node_identifier = node.service_tag
-        else:
-            node_identifier = node.idrac_ip
-
-        skip_raid_config = ""
-        if node.skip_raid_config:
-            skip_raid_config = "-s"
-
-        skip_bios_config = ""
-        if node.skip_bios_config:
-            skip_bios_config = "-b"
-
-        os_volume_size_gb = ""
-        if hasattr(node, 'os_volume_size_gb'):
-            os_volume_size_gb = "-o {}".format(node.os_volume_size_gb)
-
-        return './assign_role.py {} {} {} {} {}-{}'.format(
-            os_volume_size_gb,
-            skip_raid_config,
-            skip_bios_config,
-            node_identifier,
-            role,
-            str(index))
 
     def set_ovs_dpdk_driver(self, neutron_ovs_dpdk_yaml):
         cmds = []
@@ -2041,33 +2414,130 @@ class Director(InfraHost):
                         cmd, status))
             logger.debug("cmd: {}".format(cmd))
 
+    def render_and_upload_ovs_dpdk_edge(self, node_type):
+        logger.debug("Render and upload ovs dpdk template for "
+                     "edge site: {}".format(node_type))
+        tmplt_data = {}
+        tmplt_data["ComputeNeutronOvsDpdk"] = os.path.join(
+            self.templates_overcloud_dir,
+            "deployment", "neutron",
+            "neutron-ovs-dpdk-agent-container-puppet.yaml")
+        tmplt_data["parameter_defaults"] = self._generate_dpdk_params_edge(
+            node_type)
+        tmplt = self.jinja2_env.get_template(NEUTRON_OVS_DPDK_EDGE_J2)
+        paths = self._generate_edge_template_paths(node_type, NEUTRON_OVS_DPDK)
+        stg_or_path, remote_or_file = paths
+
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
+        with open(stg_or_path, 'w') as stg_or_fp:
+            stg_or_fp.write(rendered_tmplt)
+        self.upload_file(stg_or_path, remote_or_file)
+
+    def render_and_upload_sriov_edge(self, node_type):
+        logger.debug("Render and upload SRIOV template for edge "
+                     "site: {}".format(node_type))
+        tmplt_data = {}
+        tmplt = self.jinja2_env.get_template(NEUTRON_SRIOV_EDGE_J2)
+        paths = self._generate_edge_template_paths(node_type, NEUTRON_SRIOV)
+        stg_or_path, remote_or_file = paths
+        sriov_agent_file = os.path.join(
+            self.templates_overcloud_dir,
+            "deployment/neutron/neutron-sriov-agent-container-puppet.yaml")
+        sriov_host_config_file = os.path.join(
+            self.templates_overcloud_dir,
+            "deployment/deprecated/neutron/neutron-sriov-host-config.yaml")
+        tmplt_data["NeutronSriovAgent"] = sriov_agent_file
+        tmplt_data["NeutronSriovHostConfig"] = sriov_host_config_file
+        tmplt_data["parameter_defaults"] = self._generate_sriov_params_edge(
+            node_type)
+
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
+        with open(stg_or_path, 'w') as stg_or_fp:
+            stg_or_fp.write(rendered_tmplt)
+        self.upload_file(stg_or_path, remote_or_file)
+
+    def set_nfv_parameters(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        ntd_j = json.dumps(node_type_data)
+        cmd = ("{} cd  ~/pilot;./dell_nfv_edge.py "
+               "--overcloud_name {} "
+               "--edge_site {} "
+               "--edge_site_data '{}'".format(self.source_stackrc,
+                                              setts.overcloud_name,
+                                              node_type,
+                                              ntd_j))
+        res = self.run_tty(cmd)[0]
+        res_j = json.loads(res)
+        self.nfv_parameters = res_j
+        logger.debug("nfv_parameters: {}".format(self.nfv_parameters))
+
     def get_sriov_compute_interfaces(self):
         # Get settings from .ini file
         ini_nics_settings = self.settings.get_curated_nics_settings()
         sriov_conf = {}
 
         # Get and sort the SR-IOV interfaces that user provided
-        for int_name, int_value in ini_nics_settings.iteritems():
+        for int_name, int_value in ini_nics_settings.items():
             if int_name.find('ComputeSriov') != -1:
                 sriov_conf.update({int_name: int_value})
         sriov_interfaces = [x[1] for x in sorted(sriov_conf.items())]
         return sriov_interfaces
 
-    def _update_and_upload_undercloud_conf(self):
+    def get_sriov_compute_interfaces_edge(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        nfv_type = self._get_nfv_type(node_type)
+        if not nfv_type or nfv_type not in (SRIOV, BOTH):
+            return []
+
+        nfv_nics = [nic.strip() for nic
+                    in node_type_data["nfv_interfaces"].split(",")]
+        if nfv_type == BOTH:
+            return nfv_nics[int(len(nfv_nics) / 2):]
+        else:
+            return nfv_nics
+
+    def render_and_upload_undercloud_conf(self):
+        """Updadate and upload undercloud.conf to director vm
+
+        Note: if there are any edge sites defined in the .ini and .properties
+        enable_routed_networks must be set to True in order for edge sites to
+        function as DCN depends on Neutron's routed L3 networks feature.
+
+        Also if there are defined edge sites the provisioning subnets must be
+        added to undercloud.conf prior to deploying the undercloud."""
+
+        logger.info("Updating undercloud.conf")
         setts = self.settings
         uconf = setts.undercloud_conf
         hostname = (setts.director_node.hostname + '.'
                     + setts.domain)
-        subnets = ['ctlplane-subnet']
+        subnets = set({'ctlplane-subnet'})
 
         uconf.set('DEFAULT', 'undercloud_hostname', hostname)
         uconf.set('DEFAULT', 'local_ip',
                   setts.director_node.provisioning_ip + '/24')
-        uconf.set('DEFAULT', 'local_interface', 'eth1')
-        uconf.set('DEFAULT', 'masquerade_network',
-                  setts.provisioning_network)
+        uconf.set('DEFAULT', 'local_interface',
+                  PROVISIONING_IF)
+        uconf.set('DEFAULT', 'image_path', self.images_dir)
+
+        _cnt_images_file = os.path.join(self.home_dir, CONTAINERS_PREPARE_PARAM
+                                        + '.yaml')
+        uconf.set('DEFAULT', 'container_images_file', _cnt_images_file)
+
+        uconf.set('DEFAULT', 'undercloud_nameservers',
+                  setts.name_server)
         uconf.set('DEFAULT', 'undercloud_ntp_servers',
                   setts.sah_node.provisioning_ip)
+        uconf.set('DEFAULT', 'undercloud_public_host',
+                  setts.undercloud_public_host)
+        uconf.set('DEFAULT', 'undercloud_admin_host',
+                  setts.undercloud_admin_host)
 
         # Always need control plane subnet
         uconf.set('ctlplane-subnet', 'cidr',
@@ -2080,32 +2550,1954 @@ class Director(InfraHost):
                   setts.discovery_ip_range)
         uconf.set('ctlplane-subnet', 'gateway',
                   setts.director_node.provisioning_ip)
-        # set enable_routed_networks create and deine routed networks
-        is_enable_routed_networks = bool(setts.node_type_subnets)
-
         uconf.set('DEFAULT', 'enable_routed_networks',
-                  is_enable_routed_networks)
+                  str(True))
+        uconf.set('DEFAULT', 'subnets', ','.join(subnets))
+        _hiera = os.path.join(self.pilot_dir, "undercloud_hieradata.yaml")
+        uconf.set('DEFAULT', 'hieradata_override', _hiera)
 
-        for node_type, subnet_section in setts.node_type_subnets.iteritems():
-            subnet_name = node_type + "-subnet"
-            subnets.append(subnet_name)
-            if uconf.has_section(subnet_name):
-                uconf.remove_section(subnet_name)
-            uconf.add_section(subnet_name)
-            for opt, val in subnet_section.iteritems():
-                uconf.set(subnet_name, opt, val)
+        self._stage_and_upload_undercloud_conf(uconf)
+
+    def update_and_upload_undercloud_conf_edge(self, node_type):
+        """Update and upload undercloud.conf for single site"""
+
+        logger.info("Updating undercloud.conf for edge site: "
+                    "{}".format(node_type))
+        setts = self.settings
+        self._download_and_parse_undercloud_conf()
+        uconf = setts.undercloud_conf
+        subnets = {sn.strip() for sn in uconf.get('DEFAULT',
+                                                  'subnets').split(',')}
+
+        subnet_name = self._generate_subnet_name(node_type)
+        subnets.add(subnet_name)
+        if uconf.has_section(subnet_name):
+            uconf.remove_section(subnet_name)
+        uconf.add_section(subnet_name)
+        node_type_data = setts.node_type_data_map[node_type]
+        for opt, val in node_type_data.items():
+            uconf.set(subnet_name, opt, val)
 
         uconf.set('DEFAULT', 'subnets', ','.join(subnets))
-        timestamp = str(int(round(time.time() * 1000)))
-        tmp_undercloud_conf_path = ("/auto_results/undercloud_" + timestamp
-                                    + ".conf")
+        self._stage_and_upload_undercloud_conf(uconf)
 
-        with open(tmp_undercloud_conf_path, 'w+b') as tmp_undercloud_conf:
-            uconf.write(tmp_undercloud_conf)
-            tmp_undercloud_conf.flush()
-            tmp_undercloud_conf.seek(0)
-            logger.debug("Temp undercloud.conf path: %s, contents:\n%s",
-                         tmp_undercloud_conf_path, tmp_undercloud_conf.read())
-            tmp_undercloud_conf.close()
-        dest_file = self.home_dir + "/" + setts.UNDERCLOUD_CONFIG_FILE
-        self.upload_file(tmp_undercloud_conf_path, dest_file)
+    def render_and_upload_roles_data_edge(self, node_type):
+        paths = self._generate_edge_template_paths(node_type, ROLES_DATA)
+        stg_roles_file, roles_file = paths
+        tmplt = self.jinja2_env.get_template(ROLES_DATA_EDGE_J2)
+        tmplt_data = {}
+        tmplt_data["roles"] = [self._generate_role_dict(node_type)]
+        logger.debug("template data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_roles_file, 'w') as stg_roles_fp:
+            stg_roles_fp.write(rendered_tmplt)
+        self.upload_file(stg_roles_file, roles_file)
+
+    def render_and_upload_compute_edge(self, node_type):
+        node_type_data = self.settings.node_type_data_map[node_type]
+        logger.debug("node_type_data: %s", str(node_type_data))
+        _paths = self._generate_edge_template_paths(node_type)
+        stg_nic_path, dst_nic_path = _paths
+
+        _tmplt_path = os.path.join(NIC_CONFIGS, EDGE_COMPUTE_J2)
+        tmplt = self.jinja2_env.get_template(_tmplt_path)
+        tmplt_data = {}
+        tmplt_data["parameters"] = self._generate_nic_params(node_type)
+        tmplt_data["network_config"] = self._generate_nic_network_config(
+            node_type)
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_nic_path, 'w') as stg_nic_fp:
+            stg_nic_fp.write(rendered_tmplt)
+
+        self.upload_file(stg_nic_path, dst_nic_path)
+
+    def render_and_upload_nic_env_edge(self, node_type):
+        setts = self.settings
+        _tmplt_path = os.path.join(NIC_CONFIGS, NIC_ENV_EDGE_J2)
+        tmplt = self.jinja2_env.get_template(_tmplt_path)
+
+        paths = self._generate_edge_template_paths(node_type, NIC_ENV)
+        stg_nic_env_path, nic_env_file = paths
+        _nt_lower = self._generate_node_type_lower(node_type)
+        ini_nic_setts = setts.get_curated_nics_settings()
+        tmplt_data = {}
+        cntl_bond_opts = ini_nic_setts["ControllerBondInterfaceOptions"]
+        tmplt_data["ControllerBondInterfaceOptions"] = cntl_bond_opts
+        cmpt_bond_opts = ini_nic_setts["ComputeBondInterfaceOptions"]
+        tmplt_data["ComputeBondInterfaceOptions"] = cmpt_bond_opts
+        stor_bond_opts = ini_nic_setts["StorageBondInterfaceOptions"]
+        tmplt_data["StorageBondInterfaceOptions"] = stor_bond_opts
+        if "BondInterfaceSriovOptions" in ini_nic_setts:
+            sriov_bond_opts = ini_nic_setts["BondInterfaceSriovOptions"]
+            tmplt_data["BondInterfaceSriovOptions"] = sriov_bond_opts
+        if "BondInterfaceOvsOptions" in ini_nic_setts:
+            ovs_bond_opts = ini_nic_setts["BondInterfaceOvsOptions"]
+            tmplt_data["BondInterfaceOvsOptions"] = ovs_bond_opts
+
+        _res_reg = tmplt_data['resource_registry'] = {}
+        ne_params = self._generate_nic_environment_edge(node_type)
+        tmplt_data['parameter_defaults'] = ne_params
+        role = self._generate_cc_role(node_type)
+        role_nic_key = ("OS::TripleO::"
+                        + role + "::Net::SoftwareConfig")
+        nic_config_name = ("./" + _nt_lower + ".yaml")
+        _res_reg[role_nic_key] = nic_config_name
+        logger.debug("template data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_nic_env_path, 'w') as stg_nic_env_fp:
+            stg_nic_env_fp.write(rendered_tmplt)
+        self.upload_file(stg_nic_env_path, nic_env_file)
+
+    def render_and_upload_node_placement_edge(self, node_type):
+        tmplt = self.jinja2_env.get_template(NODE_PLACEMENT_EDGE_J2)
+        paths = self._generate_edge_template_paths(node_type, NODE_PLACEMENT)
+        stg_plcmnt_path, remote_plcmnt_file = paths
+        tmplt_data = {'scheduler_hints': {}}
+        _sched_hints = tmplt_data['scheduler_hints']
+        exp = self._generate_node_placement_exp(node_type)
+        role = self._generate_cc_role(node_type)
+        _role_hints = role + 'SchedulerHints'
+        _sched_hints[_role_hints] = exp
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_plcmnt_path, 'w') as stg_plcmnt_fp:
+            stg_plcmnt_fp.write(rendered_tmplt)
+        self.upload_file(stg_plcmnt_path, remote_plcmnt_file)
+
+    def render_and_upload_site_name(self):
+        logger.debug("render_and_upload_site_name called!")
+        paths = self._generate_edge_template_paths(None, SITE_NAME)
+        stg_az_path, remote_az_file = paths
+        tmplt = self.jinja2_env.get_template(SITE_NAME_J2)
+        tmplt_data = {"az": self.settings.overcloud_name}
+        tmplt_data['overcloud_templates'] = self.templates_overcloud_dir
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
+        with open(stg_az_path, 'w') as stg_az_fp:
+            stg_az_fp.write(rendered_tmplt)
+        self.upload_file(stg_az_path, remote_az_file)
+
+    def render_and_upload_site_name_edge(self, node_type):
+        logger.debug("render_and_upload_site_name_edge called!")
+        paths = self._generate_edge_template_paths(node_type, SITE_NAME)
+        stg_az_path, remote_az_file = paths
+        tmplt = self.jinja2_env.get_template(SITE_NAME_EDGE_J2)
+        tmplt_data = {}
+        param_def = self._generate_site_name_edge(node_type)
+        tmplt_data['overcloud_templates'] = self.templates_overcloud_dir
+        tmplt_data['parameter_defaults'] = param_def
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
+        with open(stg_az_path, 'w') as stg_az_fp:
+            stg_az_fp.write(rendered_tmplt)
+        self.upload_file(stg_az_path, remote_az_file)
+
+    def render_and_upload_overrides_edge(self, node_type):
+        '''
+        Template output should look like:
+        parameter_defaults:
+          DistributedComputeCount: 3
+          DistributedComputeFlavor: baremetal
+          DistributedComputeSchedulerHints:
+            'capabilities:node': '0-compute-%index%'
+          NovaAZAttach: false
+        '''
+        tmplt = self.jinja2_env.get_template(OVERRIDES_EDGE_J2)
+        paths = self._generate_edge_template_paths(node_type, OVERRIDES)
+        stg_or_path, remote_or_file = paths
+        tmplt_data = {}
+
+        tmplt_data['parameter_defaults'] = self._generate_overrides_edge(
+            node_type)
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
+        with open(stg_or_path, 'w') as stg_or_fp:
+            stg_or_fp.write(rendered_tmplt)
+        self.upload_file(stg_or_path, remote_or_file)
+
+    def render_and_upload_static_ips_edge(self, node_type):
+        nodes = self.settings.node_types_map[node_type]
+        paths = self._generate_edge_template_paths(node_type, STATIC_IP_ENV)
+        stg_static_ip_env_path, remote_static_ip_env_file = paths
+        tmplt = self.jinja2_env.get_template(STATIC_IP_ENV_EDGE_J2)
+        tmplt_data = {}
+        tmplt_data['resource_registry'] = self._generate_static_ip_ports(
+            node_type)
+        tmplt_data['parameter_defaults'] = self._generate_static_ip_params(
+            node_type,
+            nodes)
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_static_ip_env_path, 'w') as stg_static_ip_env_fp:
+            stg_static_ip_env_fp.write(rendered_tmplt)
+        self.upload_file(stg_static_ip_env_path, remote_static_ip_env_file)
+
+    def render_and_upload_network_isolation_edge(self, node_type):
+        tmplt = self.jinja2_env.get_template(NET_ISO_EDGE_J2)
+        paths = self._generate_edge_template_paths(node_type, NET_ISO)
+        stg_n_iso_path, net_iso_file = paths
+        _nt_lower = self._generate_node_type_lower(node_type)
+        _oc_net_iso_filename = NET_ISO + "_" + _nt_lower + ".yaml"
+        net_iso_overcloud_file = (os.path.join(
+            self.templates_overcloud_dir, "environments",
+            _oc_net_iso_filename))
+        tmplt_data = {}
+        res_reg = tmplt_data["resource_registry"] = {}
+        res_reg.update(self._generate_network_isolation(node_type))
+        logger.debug("tmplt_data: %s", str(tmplt_data))
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_n_iso_path, 'w') as stg_net_iso_fp:
+            stg_net_iso_fp.write(rendered_tmplt)
+        self.upload_file(stg_n_iso_path, net_iso_file)
+        self.upload_file(stg_n_iso_path, net_iso_overcloud_file)
+
+    def setup_environment_edge(self, node_type):
+        setts = self.settings
+        tmplt = self.jinja2_env.get_template(DELL_ENV_EDGE_J2)
+        paths = self._generate_edge_template_paths(node_type, DELL_ENV)
+        stg_dell_env_path, dell_env_file = paths
+        tmplt_data = {}
+        first_boot_file = os.path.join(self.templates_dir,
+                                       FIRST_BOOT + ".yaml")
+        tmplt_data["NodeUserData"] = first_boot_file
+        _vlan_range = "physint:{},physext".format(setts.tenant_vlan_range)
+        tmplt_data["NeutronNetworkVLANRanges"] = _vlan_range
+        tmplt_data["parameter_defaults"] = self._generate_dell_env_edge(
+            node_type)
+
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_dell_env_path, 'w') as stg_dell_env_fp:
+            stg_dell_env_fp.write(rendered_tmplt)
+        self.upload_file(stg_dell_env_path, dell_env_file)
+
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def render_and_upload_network_data(self):
+        """Generate and upload network_data.yaml for default overcloud networks
+        and edge site specific networks"""
+        logger.debug("Creating network_data.yaml")
+        net_data_path = self.templates_dir
+        net_data_file = os.path.join(net_data_path, NETWORK_DATA + ".yaml")
+
+        stg_net_data_file = self.get_timestamped_path(STAGING_TEMPLATES_PATH,
+                                                      NETWORK_DATA, "yaml")
+        stg_net_data_lst = self._generate_default_networks_data()
+        tmplt = self.jinja2_env.get_template(NETWORK_DATA_J2)
+
+        logger.info("Network data dump: %s", str(stg_net_data_lst))
+        tmplt_data = {'networks': stg_net_data_lst}
+        rendered_tmplt = tmplt.render(**tmplt_data)
+
+        with open(stg_net_data_file, 'w') as stg_net_data_fp:
+            stg_net_data_fp.write(rendered_tmplt)
+
+        self.upload_file(stg_net_data_file, net_data_file)
+
+    def render_and_upload_network_data_edge(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        tmplt = self.jinja2_env.get_template(NETWORK_DATA_J2)
+        paths = self._generate_edge_template_paths(node_type, NETWORK_DATA)
+        stg_nd_file, nd_file = paths
+        nd = self._generate_network_data(node_type, node_type_data)
+        logger.info("Network data dump: %s", str(nd))
+        tmplt_data = {'networks': nd}
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_nd_file, 'w') as stg_nd_fp:
+            stg_nd_fp.write(rendered_tmplt)
+
+        self.upload_file(stg_nd_file, nd_file)
+
+    def setup_net_envt_edge(self, node_type):
+        tmplt = self.jinja2_env.get_template(NETWORK_ENV_EDGE_J2)
+        paths = self._generate_edge_template_paths(node_type, NET_ENV)
+        stg_net_env_path, net_env_file = paths
+        params = self._generate_network_environment_params_edge(node_type)
+        params_oc = self._fetch_network_environment_params()
+        params_oc.pop("ExtraConfig")
+        params_oc.pop("ServiceNetMap")
+        params_oc.pop("NeutronExternalNetworkBridge")
+        params_oc.update(params)
+        tmplt_data = {"parameter_defaults": params_oc}
+        rendered_tmplt = tmplt.render(**tmplt_data)
+        with open(stg_net_env_path, 'w') as stg_net_env_fp:
+            stg_net_env_fp.write(rendered_tmplt)
+        self.upload_file(stg_net_env_path, net_env_file)
+
+    def subnet_routes_edge(self, node_type, add=True):
+        logger.info("Configuring routes for {}, add or "
+                    "remove {!s}".format(node_type, add))
+        setts = self.settings
+        add_remove_mgmt = "+" if add else "-"
+        node_type_data = setts.node_type_data_map[node_type]
+        mgmt_gw = setts.management_gateway
+        prov_gw = setts.provisioning_gateway
+        prov_ip = setts.director_node.provisioning_ip
+
+        mgmt_cidr = node_type_data['mgmt_cidr']
+        prov_cidr = node_type_data['cidr']
+        _prov_cidr_esc = prov_cidr.replace('/', '\/')
+        prov_route_dir_prov_ip = ("{cidr} via {gw} "
+                                  "dev {dev}".format(cidr=prov_cidr,
+                                                     gw=prov_ip,
+                                                     dev=CTLPLANE_BRIDGE))
+        _def_prov_route = self._does_route_exist(prov_route_dir_prov_ip)
+        if add and _def_prov_route:
+            _del_prov_route = LEGACY_DEL_ROUTE_CMD.format(cidr_esc=
+                                                          _prov_cidr_esc,
+                                                          cidr=prov_cidr,
+                                                          gw=prov_ip,
+                                                          dev=CTLPLANE_BRIDGE)
+            self.run_as_root(_del_prov_route)
+            self.run_as_root(BR_DOWN_CMD.format(dev=CTLPLANE_BRIDGE))
+            self.run_as_root(BR_UP_CMD.format(dev=CTLPLANE_BRIDGE))
+
+        _is_mgmt_route = self._does_route_exist(mgmt_cidr)
+        if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
+
+            self.run_as_root(NWM_ROUTE_CMD.format(dev=MANAGEMENT_IF,
+                                                  add_rem=add_remove_mgmt,
+                                                  cidr=mgmt_cidr, gw=mgmt_gw))
+            self.run_as_root(NWM_UP_CMD.format(dev=MANAGEMENT_IF))
+
+        _is_prov_route = self._does_route_exist(prov_cidr)
+        if ((not _is_prov_route and add) or (_is_prov_route and not add)):
+            cmds = []
+            if add:
+                cmds.append(LEGACY_ROUTE_CMD)
+            else:
+                cmds.append(LEGACY_DEL_ROUTE_CMD)
+            cmds.append(ROUTE_UP_CMD)
+            cmds.append(IF_DOWN_CMD.format(
+                dev=PROVISIONING_IF))
+            cmds.append(IF_UP_CMD.format(
+                dev=PROVISIONING_IF))
+
+            prov_cmd = "; ".join(cmds).format(cidr=prov_cidr,
+                                              cidr_esc=_prov_cidr_esc,
+                                              gw=prov_gw,
+                                              dev=CTLPLANE_BRIDGE)
+            self.run_as_root(prov_cmd)
+
+    def controller_routes_edge(self, node_type, add=True):
+        logger.info("Configuring controller routes for {}, add or "
+                    "remove {!s}".format(node_type, add))
+        setts = self.settings
+        _re = self.run("{} openstack server list --name {}-controller- "
+                       "-c Networks -f json".format(self.source_stackrc,
+                                                    setts.overcloud_name))
+        _c_nodes = json.loads(_re[0])
+        logger.info("controller nodes: {}".format(str(_c_nodes)))
+        cntl_ips = []
+        for node in _c_nodes:
+            cntl_ips.append(node["Networks"].split("=")[1])
+
+        logger.info("cntlips: {}".format(str(cntl_ips)))
+        node_type_data = setts.node_type_data_map[node_type]
+        route_tups = [(setts.private_api_vlanid,
+                       node_type_data["private_api_network"],
+                       setts.private_api_gateway),
+                      (setts.storage_vlanid,
+                       node_type_data["storage_network"],
+                       setts.storage_gateway),
+                      (setts.tenant_tunnel_vlanid,
+                       node_type_data["tenant_network"],
+                       setts.tenant_tunnel_gateway)]
+
+        for ip in cntl_ips:
+            cmds = []
+            for tup in route_tups:
+                _vlan = "vlan{}".format(tup[0])
+                _route_exists = self._does_overcloud_node_route_exist(ip,
+                                                                      tup[1],
+                                                                      tup[2],
+                                                                      _vlan)
+
+                if not _route_exists and add:
+                    cmds.append(LEGACY_SSH_ROUTE_CMD.format(cidr=tup[1],
+                                                            gw=tup[2],
+                                                            dev=_vlan))
+                elif _route_exists and not add:
+                    _cidr_esc = tup[1].replace('/', '\/')
+                    cmds.append(LEGACY_DEL_ROUTE_CMD.format(
+                        cidr_esc=_cidr_esc,
+                        cidr=tup[1],
+                        gw=tup[2],
+                        dev=_vlan))
+                cmds.append(ROUTE_UP_CMD.format(dev=_vlan))
+            if cmds:
+                cmd_str = "; ".join(cmds)
+                self._run_on_node(ip, cmd_str)
+
+    def restart_director_vm(self):
+        setts = self.settings
+        logger.info('Restarting Director VM')
+        self.run_as_root('init 6')
+        dir_pub_ip = setts.director_node.public_api_ip
+        dir_pw = setts.director_node.root_password
+        self.wait_for_vm_to_go_down(dir_pub_ip, "root", dir_pw)
+        self.wait_for_vm_to_come_up(dir_pub_ip, "root", dir_pw)
+        logger.info('Director VM restarted')
+
+    def overcloud_config_download(self):
+        """
+        openstack overcloud config download --name r62
+        this arg seems broken: --config-dir ~/r62-config
+        """
+        download_path = os.path.join(self.home_dir,
+                                     self.settings.overcloud_name + "-config")
+        self.create_directory(download_path)
+        cmd = (self.source_stackrc + " openstack overcloud config download "
+               "--name " + self.settings.overcloud_name)
+        # this arg seems broken       + " --config-dir " + download_path)
+        self.run(cmd)
+
+    def export_control_plane_config(self):
+        """
+        openstack overcloud export -f --stack r62 --output-file
+        --config-download-dir \
+        ~/edge_common/control-plane-export.yaml
+        """
+        # _dwnld_cfg_dir = self.settings.overcloud_name + "-config"
+        export_path = os.path.join(self.home_dir, EDGE_COMMON_PATH)
+        export_file = os.path.join(export_path, CONTROL_PLANE_EXPORT + ".yaml")
+        self.create_directory(export_path)
+        cmd = (self.source_stackrc + " openstack overcloud export -f --stack "
+               + self.settings.overcloud_name
+               + " --output-file "
+               + export_file)
+        self.run(cmd)
+
+    def fetch_stack_info_edge(self, node_type):
+        _stack = self._generate_node_type_lower(node_type)
+        _res = self.run(self.source_stackrc
+                        + STACK_SHOW_CMD.format(stack=_stack))
+        info = None
+        if _res[0] and len(_res[0].strip()) != 0:
+            info = json.loads(_res[0])
+        else:
+            info = {"stack_name": _stack,
+                    "creation_time": "",
+                    "stack_status": "Not Deployed"}
+        return info
+
+    def validate_edge_nics(self, node_type):
+        node_type_data = self.settings.node_type_data_map[node_type]
+        num_nics = int(node_type_data['nic_port_count'])
+        nfv_nics = self._get_nfv_nics(node_type)
+        nfv_type = self._get_nfv_type(node_type)
+        provisioning_if = self._get_provisioning_if(node_type)
+        is_odd = bool(num_nics % 2 != 0)
+        num_nics_expected = 4
+        if provisioning_if:
+            num_nics_expected += 1
+        if nfv_type:
+            num_nics_expected += len(nfv_nics)
+
+        if nfv_type and nfv_type == BOTH and num_nics not in (8, 9):
+            raise AssertionError("Edge site {} is configured to use both "
+                                 "SRIOV and OVS DPDK but only 8 and 9 port "
+                                 "configurations are possible for this type "
+                                 "of edge site deployment and {} are declared "
+                                 "in nic_port_count".format(node_type,
+                                                            num_nics))
+
+        if is_odd and not provisioning_if:
+            raise AssertionError("Edge site {} is configured to use a "
+                                 "dedicated provisioning interface as "
+                                 "this site's nic_port_count "
+                                 "is an odd number, yet the "
+                                 "ProvisioningInterface attribute is missing "
+                                 "or empty, please check the site's "
+                                 "configuration and redeploy the site after "
+                                 "correcting any errors.".format(node_type))
+
+        # verify we have the right number of nfv nics
+        if num_nics_expected != num_nics:
+            _data = {"node_type": node_type,
+                     "nfv_type": nfv_type,
+                     "num_nics": num_nics,
+                     "num_nics_expected": num_nics_expected,
+                     "nfv_interfaces": str(nfv_nics),
+                     "provisioning_if": provisioning_if,
+                     "bond0_if1": node_type_data["Bond0Interface1"],
+                     "bond0_if2": node_type_data["Bond0Interface2"],
+                     "bond1_if1": node_type_data["Bond1Interface1"],
+                     "bond1_if2": node_type_data["Bond1Interface2"]
+                     }
+            raise AssertionError("The number of interfaces ({num_nics}) "
+                                 " specified for edge site {node_type} does "
+                                 "not match the number of interfaces expected "
+                                 "({num_nics_expected}). Please fix your site "
+                                 "configuration and redeploy it, "
+                                 "existing settings: \n"
+                                 "- nic_port_count: {num_nics}\n"
+                                 "- ProvisioningInterface: {provisioning_if}\n"
+                                 "- Bond0Interface1: {bond0_if1}\n"
+                                 "- Bond0Interface2: {bond0_if2}\n"
+                                 "- Bond1Interface1: {bond1_if1}\n"
+                                 "- Bond1Interface2: {bond1_if2}\n"
+                                 "- nfv_type: {nfv_type}\n"
+                                 "- nfv_interfaces: {nfv_interfaces}\n"
+                                 .format(**_data))
+
+    def _fetch_network_environment_params(self):
+        stg_net_env_file = os.path.join(STAGING_TEMPLATES_PATH,
+                                        NET_ENV + ".yaml")
+        oc_net_env_file = os.path.join(self.templates_dir,
+                                       NET_ENV + ".yaml")
+        self.download_file(stg_net_env_file, oc_net_env_file)
+        with open(stg_net_env_file) as stg_net_env_fp:
+            net_env_yaml = yaml.load(stg_net_env_fp)
+            param_defaults = net_env_yaml["parameter_defaults"]
+            return param_defaults
+
+    def _generate_dell_env_edge(self, node_type):
+        setts = self.settings
+        nfv_type = self._get_nfv_type(node_type)
+        is_numa = self._is_numa_enabled(node_type)
+        is_hpg = self._is_huge_pages_enabled(node_type)
+        params = {}
+        role = self._generate_cc_role(node_type)
+        edge_subnet = self._generate_subnet_name(node_type)
+        role_subnet_key = role + 'ConrolPlaneSubnet'
+        params[role_subnet_key] = edge_subnet
+        xtra_cfg_key = role + 'ExtraConfig'
+        params[xtra_cfg_key] = self._generate_extra_config(node_type)
+        role_count_key = role + 'Count'
+        nodes = setts.node_types_map[node_type]
+        params[role_count_key] = len(nodes)
+        if nfv_type or is_numa or is_hpg:
+            self.set_nfv_parameters(node_type)
+            dell_env_params = self.nfv_parameters["dell_env"]
+            role_param_k = "{}Parameters".format(role)
+            role_params = params[role_param_k] = {}
+            role_params["KernelArgs"] = dell_env_params["KernelArgs"]
+            if is_numa:
+                nova_cpu_set = dell_env_params["NovaComputeCpuDedicatedSet"]
+                params["NovaComputeCpuDedicatedSet"] = nova_cpu_set
+        return params
+
+    def _generate_dpdk_params_edge(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        role = self._generate_cc_role(node_type)
+
+        self.set_nfv_parameters(node_type)
+        dpdk_res = self.nfv_parameters["dpdk"]
+        params = {}
+        HostNicDriver = node_type_data["HostNicDriver"]
+        params["OvsDpdkDriverType"] = HostNicDriver
+        role_param_k = "{}Parameters".format(role)
+        role_params = params[role_param_k] = {}
+        role_params["OvsDpdkCoreList"] = dpdk_res["OvsDpdkCoreList"]
+        role_params["NovaComputeCpuSharedSet"] = dpdk_res["NovaComputeCpuSharedSet"]
+        role_params["OvsPmdCoreList"] = dpdk_res["OvsPmdCoreList"]
+        role_params["OvsDpdkSocketMemory"] = dpdk_res["OvsDpdkSocketMemory"]
+        role_params["IsolCpusList"] = dpdk_res["IsolCpusList"]
+        # Unmodified params
+        role_params["OvsDpdkMemoryChannels"] = "4"
+        role_params["NovaReservedHostMemory"] = 4096
+        role_params["TunedProfileName"] = "cpu-partitioning"
+        role_params["NovaLibvirtRxQueueSize"] = 1024
+        role_params["NovaLibvirtTxQueueSize"] = 1024
+        role_params["VhostuserSocketGroup"] = "hugetlbfs"
+        return params
+
+    def _generate_sriov_params_edge(self, node_type):
+        setts = self.settings
+        ntd = setts.node_type_data_map[node_type]
+        sriov_interfaces = self.get_sriov_compute_interfaces_edge(node_type)
+        params = {}
+        sriov_map_setting = []
+        sriov_pci_passthrough = []
+        physical_network = "physint"
+        for interface in sriov_interfaces:
+            mapping = physical_network + ':' + interface
+            nova_pci = {"devname": interface,
+                        "physical_network": physical_network}
+            sriov_map_setting.append(mapping)
+            sriov_pci_passthrough.append(nova_pci)
+
+        sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"
+        params["NumSriovVfs"] = ntd["sriov_vf_count"]
+        params["NeutronPhysicalDevMappings"] = sriov_map_setting
+        params["NovaPCIPassthrough"] = sriov_pci_passthrough
+        return params
+
+    def _create_assign_role_command(self, node, role, index, instack=None):
+        logger.debug("Create assign role command for node: %s", str(node))
+        node_identifier = ""
+        if hasattr(node, 'service_tag'):
+            node_identifier = node.service_tag
+        else:
+            node_identifier = node.idrac_ip
+
+        skip_raid_config = ""
+        if node.skip_raid_config:
+            skip_raid_config = "-s"
+
+        skip_bios_config = ""
+        if node.skip_bios_config:
+            skip_bios_config = "-b"
+
+        os_volume_size_gb = ""
+        if hasattr(node, 'os_volume_size_gb'):
+            os_volume_size_gb = "-o {}".format(node.os_volume_size_gb)
+
+        cmd = ('./assign_role.py {} {} {} {} {}-{}'.format(
+            os_volume_size_gb,
+            skip_raid_config,
+            skip_bios_config,
+            node_identifier,
+            role,
+            str(index)))
+
+        if instack:
+            cmd += " -n " + instack
+
+        return cmd
+
+    def _backup_tempest_conf(self):
+        logger.info("Backing up tempest.conf")
+        if self.is_tempest_conf():
+            timestamp = int(round(time.time() * 1000))
+            new_conf = (self.tempest_conf + "." + str(timestamp))
+            logger.debug("Backing up tempest.conf, new file is: %s "
+                         % new_conf)
+            cmd = ("mv " + self.tempest_conf + " " + new_conf + " 2>/dev/null")
+            self.run_tty(cmd)
+
+    def _is_ovs_dpdk_required(self, node_type):
+        nfv_type = self._get_nfv_type(node_type)
+        return nfv_type in (OVS_DPDK, BOTH)
+
+    def _is_sriov_required(self, node_type):
+        nfv_type = self._get_nfv_type(node_type)
+        return nfv_type in (SRIOV, BOTH)
+
+    def  _is_numa_enabled(self, node_type):
+        setts = self.settings
+        ntd = setts.node_type_data_map[node_type]
+        if "numa_enable" in ntd:
+            return self.string_to_bool(ntd["numa_enable"])
+        else:
+            return False
+
+    def  _is_huge_pages_enabled(self, node_type):
+        setts = self.settings
+        ntd = setts.node_type_data_map[node_type]
+        if "hpg_enable" in ntd:
+            return self.string_to_bool(ntd["hpg_enable"])
+        else:
+            return False
+
+    @directory_check(STAGING_PATH)
+    def _download_and_parse_undercloud_conf(self):
+        setts = self.settings
+        stg_undercloud_conf_path = self.get_timestamped_path(STAGING_PATH,
+                                                             "undercloud")
+        undercloud_conf_file = os.path.join(self.home_dir,
+                                            setts.UNDERCLOUD_CONFIG_FILE)
+        self.download_file(stg_undercloud_conf_path, undercloud_conf_file)
+        uconf = setts.parse_undercloud_conf(stg_undercloud_conf_path)
+        setts.undercloud_conf = uconf
+
+    @directory_check(STAGING_PATH)
+    def _stage_and_upload_undercloud_conf(self, uconf):
+        setts = self.settings
+        stg_undercloud_conf_path = self.get_timestamped_path(STAGING_PATH,
+                                                             "undercloud")
+        with open(stg_undercloud_conf_path, 'w+') as undercloud_conf_fp:
+            uconf.write(undercloud_conf_fp)
+            undercloud_conf_fp.flush()
+            undercloud_conf_fp.seek(0)
+        # need to upload to both locations to keep them in sync as
+        # install-director.sh does a cp of undercloud.conf from pilot to home.
+        undercloud_conf_pilot_dst = os.path.join(self.pilot_dir,
+                                                 setts.UNDERCLOUD_CONFIG_FILE)
+        undercloud_conf_dst = os.path.join(self.home_dir,
+                                           setts.UNDERCLOUD_CONFIG_FILE)
+        self.upload_file(stg_undercloud_conf_path, undercloud_conf_pilot_dst)
+        self.upload_file(stg_undercloud_conf_path, undercloud_conf_dst)
+        setts.undercloud_conf = uconf
+        logger.debug("Undercloud.conf uploaded to: "
+                     "{} and {}".format(undercloud_conf_pilot_dst,
+                                        undercloud_conf_dst))
+
+    def _update_instack_env_edge(self, node_type=None):
+        mgmt_net = self.settings.management_network.rsplit(".", 1)[0]
+        paths = self._generate_edge_template_paths(node_type, INSTACKENV,
+                                                   "json")
+        stg_instack_path, instack_file = paths
+
+        self.download_file(stg_instack_path, instack_file)
+        instack = {}
+        with open(stg_instack_path, 'r') as stg_instack_fp:
+            instack = json.load(stg_instack_fp)
+            nodes = instack['nodes']
+            for node in nodes:
+                node_mgmt_net = node['pm_addr'].rsplit('.', 1)[0]
+                if node_mgmt_net != mgmt_net:
+                    node['subnet'] = self._subnet_name_from_net(node_mgmt_net)
+                if node_type:
+                    node['node_type'] = node_type
+
+        with open(stg_instack_path, 'w') as stg_instack_fp:
+            json.dump(instack, stg_instack_fp, indent=2)
+
+        self.upload_file(stg_instack_path, instack_file)
+
+    def _subnet_name_from_net(self, node_mgmt_net):
+        setts = self.settings
+        for node_type, node_type_data in setts.node_type_data_map.items():
+            subnet_net = node_type_data['mgmt_cidr'].rsplit('.', 1)[0]
+            if node_mgmt_net == subnet_net:
+                return self._generate_subnet_name(node_type)
+
+    def _generate_static_ip_ports(self, node_type):
+        """Generate resource_resource registry port mapping dict for specific
+        node type based on Tripleo heat template naming conventions
+        :returns: dict of node type port mappings
+        example: {
+        'OS::TripleO::BostonCompute::Ports::InternalApiBostonComputePort':
+        './overcloud/network/ports/internal_api_boston_compute_from_pool.yaml',
+        ...
+        }
+        """
+        port_dict = {}
+        role = self._generate_cc_role(node_type)
+        role_from_pool_yaml = (self._generate_role_lower(node_type)
+                               + '_from_pool.yaml')
+
+        role_port = 'OS::TripleO::' + role + '::Ports::'
+        int_api_port = role_port + 'InternalApi' + role + 'Port'
+        storage_port = role_port + 'Storage' + role + 'Port'
+        tenant_port = role_port + 'Tenant' + role + 'Port'
+        external_port = role_port + 'External' + role + 'Port'
+        int_api_yaml = (os.path.join(self.templates_overcloud_dir,
+                                     "network", "ports",
+                                     "internal_api_{}".format(
+                                         role_from_pool_yaml)))
+        storage_yaml = (os.path.join(self.templates_overcloud_dir,
+                                     "network", "ports",
+                                     "storage_{}".format(
+                                         role_from_pool_yaml)))
+        tenant_yaml = (os.path.join(self.templates_overcloud_dir,
+                                    "network", "ports",
+                                    "tenant_{}".format(
+                                         role_from_pool_yaml)))
+        external_yaml = (os.path.join(self.templates_overcloud_dir,
+                                      "network", "ports",
+                                      "external_{}".format(
+                                         role_from_pool_yaml)))
+        port_dict[int_api_port] = int_api_yaml
+        port_dict[storage_port] = storage_yaml
+        port_dict[tenant_port] = tenant_yaml
+        port_dict[external_port] = external_yaml
+
+        return port_dict
+
+    def _generate_static_ip_params(self, node_type, nodes):
+        """Generate resource_resource registry port mapping dict for specific
+        node type based on Tripleo heat template naming conventions
+        :returns: dict which maps node_type to a list of static ips
+        example: {
+        'BostonComputeIPs':
+           'internal_api_boston_compute': ['192.168.142.40', '192.168.142.41'],
+            ...,
+        }
+        """
+        role = self._generate_cc_role(node_type)
+        ip_params = {}
+        role_ips = role + 'IPs'
+        network_dict = {}
+        int_api_ips = []
+        storage_ips = []
+        tenant_ips = []
+        external_ips = []
+        for node in nodes:
+            int_api_ips.append(node.private_api_ip)
+            storage_ips.append(node.storage_ip)
+            tenant_ips.append(node.tenant_tunnel_ip)
+            external_ips.append(node.external_ip)
+
+        suffix = '_' + self._generate_role_lower(node_type)
+
+        network_dict[INTERNAL_API_NET[1] + suffix] = int_api_ips
+        network_dict[STORAGE_NET[1] + suffix] = storage_ips
+        network_dict[TENANT_NET[1] + suffix] = tenant_ips
+        network_dict[EXTERNAL_NET[1] + suffix] = external_ips
+        ip_params[role_ips] = network_dict
+        return ip_params
+
+    def _generate_network_isolation(self, type):
+        """Generate network isolation resource_registry network and port
+        parameters using Tripleo heat template naming conventions
+        example: {
+            'OS::TripleO::BostonCompute::Ports::InternalApiBostonComputePort':
+            '../network/ports/internal_api_boston_compute.yaml',
+            ...
+            'OS::TripleO::Network::InternalApiBostonCompute':
+            '../network/internal_api_boston_compute.yaml',
+            ...
+        }
+        """
+        role = self._generate_cc_role(type)
+        edge_net = self._generate_role_lower(type)
+        _res_reg = {}
+        for net_tuple in EDGE_NETWORKS:
+            net_key = "OS::TripleO::Network::{}{}".format(net_tuple[0],
+                                                          role)
+            net_val = "../network/{}_{}.yaml".format(net_tuple[1],
+                                                     edge_net)
+            _res_reg[net_key] = net_val
+
+        for net_tuple in EDGE_NETWORKS:
+            port_key = "OS::TripleO::{}::Ports::{}{}Port".format(role,
+                                                                 net_tuple[0],
+                                                                 role)
+
+            port_val = "../network/ports/{}_{}.yaml".format(net_tuple[1],
+                                                            edge_net)
+            _res_reg[port_key] = port_val
+        return _res_reg
+
+    def _generate_network_environment_params_edge(self, node_type):
+        """Generate network-environment.yaml parameters for edge sites
+        :returns: dict of edge site networks
+        example:{
+            'InternalApiBostonComputeIpSubnet': '192.168.141.0/24',
+            'InternalApiBostonComputeNetCidr': '192.168.141.0/24',
+            'InternalApiBostonComputeNetworkVlanID': 141,
+            'InternalApiBostonComputeInterfaceDefaultRoute': '192.168.141.1',
+            'InternalApiBostonComputeInterfaceRoutes':
+                [{'end': '192.168.141.60', 'start': '192.168.141.20'}],
+            ...}
+            'InternalApiBostonComputeAllocationPools':
+                [{'end': '192.168.141.60', 'start': '192.168.141.20'}],
+            ...}
+        """
+        logger.debug("Generate network environment params for node type: %s",
+                     node_type)
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        params = {}
+        role = self._generate_cc_role(node_type)
+        nw_deployment_actions = "{}NetworkDeploymentActions".format(role)
+        edge_subnet = self._generate_subnet_name(node_type)
+        cp_oc_net_cidr = "{}NetCidr".format(CONTROL_PLANE_NET[0])
+        cp_oc_subnet_cidr = "{}SubnetCidr".format(CONTROL_PLANE_NET[0])
+        cp_oc_default_route = "{}DefaultRoute".format(CONTROL_PLANE_NET[0])
+        params[nw_deployment_actions] = ['CREATE', 'UPDATE']
+        params[cp_oc_net_cidr] = setts.provisioning_network
+        params[cp_oc_subnet_cidr] = setts.provisioning_network.split("/")[1]
+        params[cp_oc_default_route] = setts.director_node.provisioning_ip
+
+        cp_network = "{}{}".format(role, CONTROL_PLANE_NET[0])
+        cp_net_cidr = "{}NetCidr".format(cp_network)
+        cp_subnet_cidr = "{}SubnetCidr".format(cp_network)
+        cp_default_route = "{}DefaultRoute".format(cp_network)
+        cp_subnet = "{}Subnet".format(cp_network)
+        params[cp_net_cidr] = node_type_data['cidr']
+        params[cp_subnet] = edge_subnet
+        _cp_subnet_cidr = node_type_data['cidr'].rsplit("/", 1)[1]
+        params[cp_subnet_cidr] = _cp_subnet_cidr
+        params[cp_default_route] = node_type_data['gateway']
+
+        int_api_network = INTERNAL_API_NET[0] + role
+        int_api_cidr = int_api_network + 'NetCidr'
+        int_api_vlan = int_api_network + 'NetworkVlanID'
+        int_api_subnet = int_api_network + 'IpSubnet'
+        int_api_gateway = int_api_network + 'InterfaceDefaultRoute'
+        int_api_interface_routes = int_api_network + 'InterfaceRoutes'
+        int_api_pools = int_api_network + 'AllocationPools'
+        int_def_route = "{}InterfaceDefaultRoute".format(int_api_network)
+        int_api_mtu = "{}Mtu".format(int_api_network)
+        _int_api = node_type_data['private_api_network']
+        params[int_api_subnet] = _int_api
+        params[int_api_cidr] = _int_api
+        _int_api_vlanid = int(node_type_data['private_api_vlanid'])
+        params[int_api_vlan] = _int_api_vlanid
+        params[int_api_gateway] = node_type_data['private_api_gateway']
+        params[int_def_route] = node_type_data['private_api_gateway']
+        _int_s = node_type_data['private_api_allocation_pool_start']
+        _int_e = node_type_data['private_api_allocation_pool_end']
+        params[int_api_pools] = [{'start': _int_s, 'end': _int_e}]
+
+        int_api_routes = [{"destination": _int_api,
+                           "nexthop": node_type_data['private_api_gateway']},
+                          {"destination": setts.private_api_network,
+                           "nexthop": node_type_data['private_api_gateway']}]
+        params[int_api_interface_routes] = int_api_routes
+        params[int_api_mtu] = setts.private_api_network_mtu
+
+        tenant_network = TENANT_NET[0] + role
+        tenant_net_cidr = tenant_network + 'NetCidr'
+        tenant_vlan = tenant_network + 'NetworkVlanID'
+        tenant_subnet = tenant_network + 'IpSubnet'
+        tenant_gateway = tenant_network + 'InterfaceDefaultRoute'
+        tenant_interface_routes = tenant_network + 'InterfaceRoutes'
+        tenant_pools = tenant_network + 'AllocationPools'
+        tenant_def_route = "{}{}InterfaceDefaultRoute".format(TENANT_NET[0],
+                                                              role)
+        tenant_mtu = "{}Mtu".format(tenant_network)
+        _tenant_vlanid = int(node_type_data['tenant_vlanid'])
+        params[tenant_vlan] = _tenant_vlanid
+        _tenant_net = node_type_data['tenant_network']
+        params[tenant_subnet] = _tenant_net
+        params[tenant_net_cidr] = _tenant_net
+        params[tenant_gateway] = node_type_data['tenant_gateway']
+        params[tenant_def_route] = node_type_data['tenant_gateway']
+        _ten_s = node_type_data['tenant_allocation_pool_start']
+        _ten_e = node_type_data['tenant_allocation_pool_end']
+        params[tenant_pools] = [{'start': _ten_s, 'end': _ten_e}]
+        tenant_routes = [{"destination": _tenant_net,
+                          "nexthop": node_type_data['tenant_gateway']},
+                         {"destination": setts.tenant_tunnel_network,
+                          "nexthop": node_type_data['tenant_gateway']}]
+
+        params[tenant_interface_routes] = tenant_routes
+        params[tenant_mtu] = setts.tenant_tunnel_network_mtu
+
+        storage_network = STORAGE_NET[0] + role
+        storage_net_cidr = storage_network + 'NetCidr'
+        storage_vlan = storage_network + 'NetworkVlanID'
+        storage_subnet = storage_network + 'IpSubnet'
+        storage_gateway = storage_network + 'InterfaceDefaultRoute'
+        storage_interface_routes = storage_network + 'InterfaceRoutes'
+        storage_pools = storage_network + 'AllocationPools'
+        storage_def_route = "{}InterfaceDefaultRoute".format(storage_network)
+        storage_mtu = "{}Mtu".format(storage_network)
+        _storage_vlanid = int(node_type_data['storage_vlanid'])
+        params[storage_vlan] = _storage_vlanid
+        _storage_net = node_type_data['storage_network']
+        params[storage_subnet] = _storage_net
+        params[storage_net_cidr] = _storage_net
+        params[storage_gateway] = node_type_data['storage_gateway']
+        params[storage_def_route] = node_type_data['storage_gateway']
+        _str_s = node_type_data['storage_allocation_pool_start']
+        _str_e = node_type_data['storage_allocation_pool_end']
+        params[storage_pools] = [{'start': _str_s, 'end': _str_e}]
+        storage_routes = [{"destination": _storage_net,
+                           "nexthop": node_type_data['storage_gateway']},
+                          {"destination": setts.storage_network,
+                           "nexthop": node_type_data['storage_gateway']}]
+
+        params[storage_interface_routes] = storage_routes
+        params[storage_mtu] = setts.storage_network_mtu
+
+        external_network = EXTERNAL_NET[0] + role
+        external_net_cidr = external_network + 'NetCidr'
+        external_vlan = external_network + 'NetworkVlanID'
+        external_subnet = external_network + 'IpSubnet'
+        external_gateway = external_network + 'InterfaceDefaultRoute'
+        external_interface_routes = external_network + 'InterfaceRoutes'
+        external_pools = external_network + 'AllocationPools'
+        external_def_route = "{}InterfaceDefaultRoute".format(external_network)
+        external_mtu = "{}Mtu".format(external_network)
+
+        _external_vlanid = int(node_type_data['external_vlanid'])
+        params[external_vlan] = _external_vlanid
+        _external_net = node_type_data['external_network']
+        params[external_subnet] = _external_net
+        params[external_net_cidr] = _external_net
+        params[external_gateway] = node_type_data['external_gateway']
+        params[external_def_route] = node_type_data['external_gateway']
+        _ext_s = node_type_data['external_allocation_pool_start']
+        _ext_e = node_type_data['external_allocation_pool_end']
+        params[external_pools] = [{'start': _ext_s, 'end': _ext_e}]
+        params[external_mtu] = setts.floating_ip_network_mtu
+
+        external_routes = [{"default": True,
+                            "nexthop": node_type_data['external_gateway']}]
+        params[external_interface_routes] = external_routes
+
+        params[EC2_PUBLIC_IPCIDR_PARAM] = EC2_IPCIDR
+        params["ControlPlaneIp"] = setts.provisioning_vip
+        return params
+
+    def _generate_role_dict(self, node_type):
+        """
+          networks:
+            InternalApi:
+              subnet: internal_api_subnet
+            Tenant:
+              subnet: tenant_subnet
+            Storage:
+              subnet: storage_subnet
+          RoleParametersDefault:
+            TunedProfileName: "virtual-host"
+          update_serial: 25
+        """
+        role_name = self._generate_cc_role(node_type)
+        role_d = {}
+        role_d['name'] = role_name
+        role_d['description'] = role_name + " compute node role."
+        role_d['CountDefault'] = 0
+        node_type_data = self.settings.node_type_data_map[node_type]
+
+        _int_api_name = INTERNAL_API_NET[0] + role_name
+        _int_api_subnet = self._generate_subnet_name(INTERNAL_API_NET[1]
+                                                     + "_" + role_name)
+        _int_api = {'name': _int_api_name,
+                    'subnet': _int_api_subnet}
+
+        _tenant_name = TENANT_NET[0] + role_name
+        _tenant_subnet = self._generate_subnet_name(TENANT_NET[1]
+                                                    + "_" + role_name)
+        _tenant = {'name': _tenant_name,
+                   'subnet': _tenant_subnet}
+
+        _storage_name = STORAGE_NET[0] + role_name
+        _storage_subnet = self._generate_subnet_name(STORAGE_NET[1]
+                                                     + "_" + role_name)
+        _storage = {'name': _storage_name,
+                    'subnet': _storage_subnet}
+
+        _external_name = EXTERNAL_NET[0] + role_name
+        _external_subnet = self._generate_subnet_name(EXTERNAL_NET[1]
+                                                      + "_" + role_name)
+        _external = {'name': _external_name,
+                     'subnet': _external_subnet}
+
+        role_d['networks'] = [_int_api, _tenant, _storage, _external]
+        role_d['HostnameFormatDefault'] = ("'%stackname%-%index%'")
+        role_params = {}
+        role_params['TunedProfileName'] = "virtual-host"
+        role_d['RoleParametersDefault'] = role_params
+        role_d['disable_upgrade_deployment'] = True
+        role_d['uses_deprecated_params'] = False
+        role_d["update_serial"] = 25
+        role_d['ServicesDefault'] = self._get_default_compute_services()
+
+        if self._is_ovs_dpdk_required(node_type):
+            for service in DPDK_SERVICES:
+                role_d['ServicesDefault'].append(
+                    "OS::TripleO::Services::{}".format(service))
+
+        if self._is_sriov_required(node_type):
+            for service in SRIOV_SERVICES:
+                role_d['ServicesDefault'].append(
+                    "OS::TripleO::Services::{}".format(service))
+
+        return role_d
+
+    def _generate_nic_params(self, node_type):
+        role = self._generate_cc_role(node_type)
+        node_type_data = self.settings.node_type_data_map[node_type]
+        num_nics = int(node_type_data['nic_port_count'])
+        mtu = node_type_data["nfv_mtu"]
+        nfv_type = self._get_nfv_type(node_type)
+        is_sriov_req = self._is_sriov_required(node_type)
+        is_dpdk_req = self._is_ovs_dpdk_required(node_type)
+        params = {}
+        provisioning_if = self._get_provisioning_if(node_type)
+        mtu_k = "{}DefaultBondMtu".format(role)
+
+        cp_oc_default_route = "{}DefaultRoute".format(CONTROL_PLANE_NET[0])
+        cp_oc_subnet_cidr = "{}SubnetCidr".format(CONTROL_PLANE_NET[0])
+        cp_oc_net_cidr = "{}NetCidr".format(CONTROL_PLANE_NET[0])
+
+        cp_network = "{}{}".format(role, CONTROL_PLANE_NET[0])
+        cp_default_route = "{}DefaultRoute".format(cp_network)
+        cp_subnet_cidr = "{}SubnetCidr".format(cp_network)
+        cp_net_cidr = "{}NetCidr".format(cp_network)
+
+        cp_subnet = "{}Subnet".format(cp_network)
+        cp_static_routes = "{}StaticRoutes".format(cp_network)
+
+        int_api_network = INTERNAL_API_NET[0] + role
+        tenant_network = TENANT_NET[0] + role
+        storage_network = STORAGE_NET[0] + role
+        external_network = EXTERNAL_NET[0] + role
+        int_api_cidr = int_api_network + 'NetCidr'
+        int_api_vlan = int_api_network + 'NetworkVlanID'
+        int_api_subnet = int_api_network + 'IpSubnet'
+        int_api_gateway = int_api_network + 'InterfaceDefaultRoute'
+        int_api_interface_routes = int_api_network + 'InterfaceRoutes'
+        int_api_mtu = int_api_network + 'Mtu'
+
+        tenant_net_cidr = tenant_network + 'NetCidr'
+        tenant_vlan = tenant_network + 'NetworkVlanID'
+        tenant_subnet = tenant_network + 'IpSubnet'
+        tenant_gateway = tenant_network + 'InterfaceDefaultRoute'
+        tenant_interface_routes = tenant_network + 'InterfaceRoutes'
+        tenant_mtu = tenant_network + 'Mtu'
+
+        storage_net_cidr = storage_network + 'NetCidr'
+        storage_vlan = storage_network + 'NetworkVlanID'
+        storage_subnet = storage_network + 'IpSubnet'
+        storage_gateway = storage_network + 'InterfaceDefaultRoute'
+        storage_interface_routes = storage_network + 'InterfaceRoutes'
+        storage_mtu = storage_network + 'Mtu'
+
+        external_net_cidr = external_network + 'NetCidr'
+        external_vlan = external_network + 'NetworkVlanID'
+        external_subnet = external_network + 'IpSubnet'
+        external_gateway = external_network + 'InterfaceDefaultRoute'
+        external_interface_routes = external_network + 'InterfaceRoutes'
+        external_mtu = external_network + 'Mtu'
+        bond_0_if_1 = role + 'Bond0Interface1'
+        bond_0_if_2 = role + 'Bond0Interface2'
+        bond_1_if_1 = role + 'Bond1Interface1'
+        bond_1_if_2 = role + 'Bond1Interface2'
+        # InternalApi, Storage and Tenant for routes.
+        for network_tup in EDGE_NETWORKS:
+            _key = network_tup[0] + 'NetCidr'
+            params[_key] = {"default": '', "type": "string"}
+
+        params[cp_oc_subnet_cidr] = {"default": '', "type": "string"}
+        params[cp_oc_default_route] = {"default": '', "type": "string"}
+        params[cp_oc_net_cidr] = {"default": '', "type": "string"}
+        params[EC2_PUBLIC_IPCIDR_PARAM] = {"default": EC2_IPCIDR,
+                                           "type": "string"}
+        params[cp_subnet_cidr] = {"default": '', "type": "string"}
+        params[cp_subnet] = {"default": '', "type": "string"}
+        params[cp_default_route] = {"default": '', "type": "string"}
+        params[cp_static_routes] = {"default": [], "type": "json"}
+        params[cp_net_cidr] = {"default": '', "type": "string"}
+        params[int_api_subnet] = {"default": '', "type": "string"}
+        params[int_api_cidr] = {"default": '', "type": "string"}
+        params[int_api_vlan] = {"default": 0, "type": "number"}
+        params[int_api_gateway] = {"default": '', "type": "string"}
+        params[int_api_interface_routes] = {"default": [], "type": "json"}
+        params[int_api_mtu] = {"default": mtu, "type": "number"}
+
+        params[tenant_net_cidr] = {"default": '', "type": "string"}
+        params[tenant_vlan] = {"default": 0, "type": "number"}
+        params[tenant_subnet] = {"default": '', "type": "string"}
+        params[tenant_gateway] = {"default": '', "type": "string"}
+        params[tenant_interface_routes] = {"default": [], "type": "json"}
+        params[tenant_mtu] = {"default": mtu, "type": "number"}
+
+        params[storage_net_cidr] = {"default": '', "type": "string"}
+        params[storage_vlan] = {"default": 0, "type": "number"}
+        params[storage_subnet] = {"default": '', "type": "string"}
+        params[storage_gateway] = {"default": '', "type": "string"}
+        params[storage_interface_routes] = {"default": [], "type": "json"}
+        params[storage_mtu] = {"default": mtu, "type": "number"}
+
+        params[external_net_cidr] = {"default": '', "type": "string"}
+        params[external_vlan] = {"default": 0, "type": "number"}
+        params[external_subnet] = {"default": '', "type": "string"}
+        params[external_gateway] = {"default": '', "type": "string"}
+        params[external_interface_routes] = {"default": [], "type": "json"}
+        params[external_mtu] = {"default": mtu, "type": "number"}
+        params[mtu_k] = {"default": mtu, "type": "number"}
+
+        params[bond_0_if_1] = {"default": '', "type": "string"}
+        params[bond_0_if_2] = {"default": '', "type": "string"}
+        params[bond_1_if_1] = {"default": '', "type": "string"}
+        params[bond_1_if_2] = {"default": '', "type": "string"}
+
+        if provisioning_if:
+            prov_if = role + 'ProvisioningInterface'
+            params[prov_if] = {"default": '', "type": "string"}
+        # Set NFV params
+        if num_nics > 5 and nfv_type:
+            dpdk_ports, sriov_pfs = self._get_nfv_nics_by_type(node_type)
+            if is_dpdk_req:
+                for port in dpdk_ports:
+                    _if_p = port["members"][0]["name"]
+                    _if = port["members"][0]["interface"]
+                    params[_if_p] = {"default": '', "type": "string"}
+                _drv_k = "{}HostNicDriver".format(role)
+                params[_drv_k] = {"default": '', "type": "string"}
+                _dpdk_k = "{}BondInterfaceOvsOptions".format(role)
+                params[_dpdk_k] = {"default": '', "type": "string"}
+                _q_k = "{}NumDpdkInterfaceRxQueues".format(role)
+                params[_q_k] = {"default": 1, "type": "number"}
+            if is_sriov_req:
+                for pf in sriov_pfs:
+                    _if_pf = pf["name"]
+                    _if = pf["interface"]
+                    params[_if_pf] = {"default": '', "type": "string"}
+                _sriov_k = "{}BondInterfaceSriovOptions".format(role)
+                params[_sriov_k] = {"default": '', "type": "string"}
+                _mtu = "{}DefaultBondMtu".format(role)
+                params[_mtu] = {"default": 1500, "type": "number"}
+                _numsriovfs = "{}NumSriovVfs".format(role)
+                params[_numsriovfs] = {"default": '', "type": "number"}
+
+        return params
+
+    def _generate_nic_environment_edge(self, node_type):
+        """Generate default_parameters subsequently injected into
+        nic_environment_[edge_site].yaml for a specific edge site.
+
+        :param node_type: one of the node types defined in .ini file
+        :returns: dict of params added to the template's
+        parameter_defaults map.
+        """
+        logger.debug("Generating nic environment parameters "
+                     "for {}".format(node_type))
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        num_nics = int(node_type_data['nic_port_count'])
+        role = self._generate_cc_role(node_type)
+        provisioning_if = self._get_provisioning_if(node_type)
+        nfv_type = self._get_nfv_type(node_type)
+        is_sriov_req = self._is_sriov_required(node_type)
+        is_dpdk_req = self._is_ovs_dpdk_required(node_type)
+
+        params = {}
+        cp_oc_default_route = "{}DefaultRoute".format(CONTROL_PLANE_NET[0])
+        cp_oc_subnet_cidr = "{}SubnetCidr".format(CONTROL_PLANE_NET[0])
+        cp_oc_net_cidr = "{}NetCidr".format(CONTROL_PLANE_NET[0])
+
+        cp_edge_network = "{}{}".format(role, CONTROL_PLANE_NET[0])
+        cp_default_route = "{}DefaultRoute".format(cp_edge_network)
+        cp_subnet_cidr = "{}SubnetCidr".format(cp_edge_network)
+        cp_subnet = "{}Subnet".format(cp_edge_network)
+
+        bond_0_if_1 = role + 'Bond0Interface1'
+        bond_0_if_2 = role + 'Bond0Interface2'
+        bond_1_if_1 = role + 'Bond1Interface1'
+        bond_1_if_2 = role + 'Bond1Interface2'
+        cc_cidr = node_type_data['cidr'].rsplit("/", 1)[1]
+        params[cp_oc_default_route] = setts.director_node.provisioning_ip
+        params[cp_oc_subnet_cidr] = setts.provisioning_network.split("/")[1]
+        params[cp_oc_net_cidr] = setts.provisioning_network
+        params[cp_default_route] = node_type_data['gateway']
+        params[cp_subnet_cidr] = cc_cidr
+        params[cp_subnet] = self._generate_subnet_name(node_type)
+        params[bond_0_if_1] = node_type_data['Bond0Interface1']
+        params[bond_0_if_2] = node_type_data['Bond0Interface2']
+        params[bond_1_if_1] = node_type_data['Bond1Interface1']
+        params[bond_1_if_2] = node_type_data['Bond1Interface2']
+        if provisioning_if:
+            prov_if = role + 'ProvisioningInterface'
+            params[prov_if] = provisioning_if
+        # Set NFV params
+        if num_nics > 5 and nfv_type:
+            nfv_nics = self._get_nfv_nics(node_type)
+            dpdk_ports, sriov_pfs = self._get_nfv_nics_by_type(node_type)
+
+            if is_dpdk_req:
+                for port in dpdk_ports:
+                    _if_p = port["members"][0]["name"]
+                    _if = port["members"][0]["interface"]
+                    params[_if_p] = _if
+                _drv_k = "{}HostNicDriver".format(role)
+                params[_drv_k] = node_type_data["HostNicDriver"]
+                _dpdk_k = "{}BondInterfaceOvsOptions".format(role)
+                params[_dpdk_k] = node_type_data["BondInterfaceOvsOptions"]
+                _q_k = "{}NumDpdkInterfaceRxQueues".format(role)
+                params[_q_k] = node_type_data["NumDpdkInterfaceRxQueues"]
+
+            if is_sriov_req:
+                for pf in sriov_pfs:
+                    _if_pf = pf["name"]
+                    _if = pf["interface"]
+                    params[_if_pf] = _if
+                _sriov_k = "{}BondInterfaceSriovOptions".format(role)
+                params[_sriov_k] = node_type_data["BondInterfaceSriovOptions"]
+                _mtu = "{}DefaultBondMtu".format(role)
+                params[_mtu] = node_type_data["nfv_mtu"]
+                _numsriovfs = "{}NumSriovVfs".format(role)
+                params[_numsriovfs] = node_type_data["sriov_vf_count"]
+        return params
+
+    def _generate_nic_network_config(self, node_type):
+        """Generate nic configuration template for an edge site
+        This results in a file that corresoponds to the node type,
+        which is uploaded to the correct <site_name> sub-directory.
+
+        For example if node_type is boston-compute the resultant file will be uploaded
+        to ~/boston_compute/bostoncompute.yaml
+
+        Nic configs contain nic bonding, ovs bridges, vlans and
+        L3 routing between an edge site and central cloud networks.
+
+        The top level config objects are defined based on the NFV features
+        the site requires as well as a provisioning interface, if the site
+        nodes have a dedicated provisioning interface otherwise the
+        provisioning interface is part of a bond
+        which will be created post-provisioning, LACP fallback allows for the
+        operator to enable this feature.
+        The following rules apply:
+            - If there is a dedicated provisioning interface defined in the
+            site's .ini attributes, a 'interface' is defined with the name
+            provided by the site's 'ProvisioningInterface' attribute, example:
+                ProvisioningInterface=eno1
+            - If are NO NFV (nfv_type=None) features required by the site the
+            top-level network config objects will be:
+                - interface - the provisioning interface, if applicable
+                - ovs_bridge - 'br-tenant', which encapsulates bond0 and
+                the private api, storage and tenant tunnel vlans
+                - ovs_bridge - 'bridge_name', which encapluates bond1 and
+                the external vlan used by the provider network for accessing
+                workloads running at the edge.
+            - SRIOV only (nfv_type=sriov), configuration is the same as above
+            with the additional sriov_pf objects:
+                - sriov_pf - one of these objects will be generated for each
+                interface declared in the edge site's nfv_interfaces attribute
+            - DPDK only (nfv_type=dpdk):
+                - interface - the provisioning interface, if applicable
+                - ovs_user_bridge - 'br-tenant', encapulates a ovs_dpdk_bond
+                which in-turn will have members based on the interfaces defined
+                in the site's nfv_interfaces ini attribute
+                - linux_bond - 'bond0', which is used by the next three vlans
+                - vlan - internal api vlan, which consumes bond0
+                - vlan - storage vlan, which consumes bond0
+                - vlan - tenant tunnel vlan, which consumes bond0
+                - linux_bond - 'bond1' which is used by the external vlan below
+                - vlan - external vlan, used to configure the provider network
+                to expose workloads running at the edge site
+            - DPDK and SRIOV (nfv_type=both), same as DPDK only with two
+            differences, additional top-level sriov_pf objects SRIOV requires
+            are created and the nfv_interfaces defined for the site are split
+            between the ovs_dpdk_bond and sriov_pfs. For example if there are
+            four nfv_interfaces defined
+            (nfv_interfaces=ens4f0,ens5f0,ens4f1,ens5f1):
+                - ovs_user_bridge - 'br-tenant', the nested ovs_dpdk_bond will
+                only have two interfaces, ens4f0,ens5f0
+                - sriov_pf - two will be defined for the interfaces
+                ens4f1 & ens5f1
+                - The rest of the configuration is identical to DPDK only mode
+
+        :param node_type: one of the node types defined in .ini file
+        :returns: list of nic configuration dicts
+        """
+        role = self._generate_cc_role(node_type)
+        mtu = "{}DefaultBondMtu".format(role)
+        provisioning_if = self._get_provisioning_if(node_type)
+        dpdk_ports, sriov_pfs = self._get_nfv_nics_by_type(node_type)
+        nfv_type = self._get_nfv_type(node_type)
+        is_sriov_req = self._is_sriov_required(node_type)
+        is_dpdk_req = self._is_ovs_dpdk_required(node_type)
+        nw_cfg = []
+        cp_network = "{}{}".format(role, CONTROL_PLANE_NET[0])
+        cp_default_route = "{}DefaultRoute".format(cp_network)
+
+        bond_0_if_1_param = role + 'Bond0Interface1'
+        bond_0_if_2_param = role + 'Bond0Interface2'
+        bond_1_if_1_param = role + 'Bond1Interface1'
+        bond_1_if_2_param = role + 'Bond1Interface2'
+
+        int_api_network = INTERNAL_API_NET[0] + role
+        tenant_network = TENANT_NET[0] + role
+        storage_network = STORAGE_NET[0] + role
+        external_network = EXTERNAL_NET[0] + role
+        int_api_subnet = int_api_network + 'IpSubnet'
+        int_api_vlan_id = int_api_network + 'NetworkVlanID'
+        int_api_interface_routes = int_api_network + 'InterfaceRoutes'
+
+        tenant_subnet = tenant_network + 'IpSubnet'
+        tenant_vlan_id = tenant_network + 'NetworkVlanID'
+        tenant_interface_routes = tenant_network + 'InterfaceRoutes'
+
+        storage_subnet = storage_network + 'IpSubnet'
+        storage_vlan_id = storage_network + 'NetworkVlanID'
+        storage_interface_routes = storage_network + 'InterfaceRoutes'
+
+        external_subnet = external_network + 'IpSubnet'
+        external_vlan_id = external_network + 'NetworkVlanID'
+        external_interface_routes = external_network + 'InterfaceRoutes'
+
+        ec2_route = {"ip_netmask": EC2_PUBLIC_IPCIDR_PARAM,
+                     "next_hop": cp_default_route}
+        default_route = {"default": True,
+                         "next_hop": cp_default_route}
+        prov_route = {"ip_netmask": "{}NetCidr".format(CONTROL_PLANE_NET[0]),
+                      "next_hop": cp_default_route}
+        cp_addresses = [{"ip": "{}Ip".format(CONTROL_PLANE_NET[0]),
+                         "cidr": "{}SubnetCidr".format(CONTROL_PLANE_NET[0])}]
+
+        _bridge_type = ("ovs_user_bridge" if is_dpdk_req
+                        else "ovs_bridge")
+        tenant_br = {"type": _bridge_type}
+        tenant_br["name"] = "br-tenant"
+        tenant_br["mtu"] = mtu
+        tenant_br["dns_servers"] = "DnsServers"
+        tenant_br["use_dhcp"] = False
+
+        bond_0 = {"type": "linux_bond"}
+        bond_0["name"] = "bond0"
+        bond_0["bonding_options"] = "ComputeBondInterfaceOptions"
+        bond_0["mtu"] = mtu
+        bond_0_if_1 = {"type": "interface"}
+        bond_0_if_1["name"] = bond_0_if_1_param
+        bond_0_if_1["mtu"] = mtu
+        bond_0_if_1["primary"] = True
+        bond_0_if_2 = {"type": "interface"}
+        bond_0_if_2["name"] = bond_0_if_2_param
+        bond_0_if_2["mtu"] = mtu
+        bond_0["members"] = [bond_0_if_1, bond_0_if_2]
+
+        internal_api_vlan = {"type": "vlan"}
+        internal_api_vlan["device"] = "bond0"
+        internal_api_vlan["vlan_id"] = int_api_vlan_id
+        internal_api_vlan["mtu"] = mtu
+        internal_api_vlan["addresses"] = [{"ip_netmask":
+                                           int_api_subnet}]
+        internal_api_vlan['routes'] = int_api_interface_routes
+
+        tenant_vlan = {"type": "vlan"}
+        tenant_vlan["device"] = "bond0"
+        tenant_vlan["vlan_id"] = tenant_vlan_id
+        tenant_vlan["mtu"] = mtu
+        tenant_vlan["addresses"] = [{"ip_netmask":
+                                     tenant_subnet}]
+        tenant_vlan['routes'] = tenant_interface_routes
+
+        storage_vlan = {"type": "vlan"}
+        storage_vlan["device"] = "bond0"
+        storage_vlan["vlan_id"] = storage_vlan_id
+        storage_vlan["mtu"] = mtu
+        storage_vlan["addresses"] = [{"ip_netmask":
+                                      storage_subnet}]
+        storage_vlan['routes'] = storage_interface_routes
+
+        bond_1_if_1 = {"type": "interface"}
+        bond_1_if_1["name"] = bond_1_if_1_param
+        bond_1_if_1["mtu"] = mtu
+        bond_1_if_1["primary"] = True
+        bond_1_if_2 = {"type": "interface"}
+        bond_1_if_2["name"] = bond_1_if_2_param
+        bond_1_if_2["mtu"] = mtu
+        bond_1 = {"type": "linux_bond"}
+        bond_1["name"] = "bond1"
+        bond_1["bonding_options"] = "ComputeBondInterfaceOptions"
+        bond_1["mtu"] = mtu
+        bond_1["members"] = [bond_1_if_1, bond_1_if_2]
+
+        external_vlan = {"type": "vlan"}
+        external_vlan["device"] = "bond1"
+        external_vlan["vlan_id"] = external_vlan_id
+        external_vlan["mtu"] = mtu
+        external_vlan["addresses"] = [
+            {"ip_netmask": external_subnet}]
+
+        external_vlan["routes"] = external_interface_routes
+
+        prov_if = None
+        # if there is a provisioning nic populate the interface attributes
+        if provisioning_if:
+            prov_if_param = role + 'ProvisioningInterface'
+            prov_if = {"type": "interface"}
+            prov_if["name"] = prov_if_param
+            prov_if["routes"] = [ec2_route, default_route, prov_route]
+            prov_if["mtu"] = mtu
+            prov_if["use_dhcp"] = False
+            prov_if["dns_servers"] = "DnsServers"
+            prov_if["addresses"] = cp_addresses
+            nw_cfg.extend([prov_if])
+
+        if not nfv_type or nfv_type == SRIOV:
+            tenant_br["members"] = [bond_0, internal_api_vlan,
+                                    tenant_vlan, storage_vlan]
+            if not provisioning_if:
+                tenant_br["addresses"] = cp_addresses
+                tenant_br["routes"] = [ec2_route, default_route, prov_route]
+            ex_br = {"type": "ovs_bridge"}
+            ex_br["name"] = "bridge_name"
+            ex_br["mtu"] = mtu
+            ex_br["members"] = [bond_1, external_vlan]
+            nw_cfg.extend([tenant_br, ex_br])
+
+        if is_sriov_req:
+            nw_cfg.extend(sriov_pfs)
+
+        if is_dpdk_req:
+            tenant_br["ovs_extra"] = {"template":
+                                      "set port br-tenant tag=_VLAN_TAG_",
+                                      "tenant_vlan_id": tenant_vlan_id}
+            dpdk_bond_0 = {"type": "ovs_dpdk_bond",
+                           "name": "dpdkbond0"}
+            dpdk_bond_0["rx_queue"] = "{}NumDpdkInterfaceRxQueues".format(role)
+            dpdk_bond_0["ovs_options"] = "{}BondInterfaceOvsOptions".format(
+                role)
+            dpdk_bond_0["mtu"] = mtu
+            dpdk_bond_0["members"] = dpdk_ports
+
+            tenant_br["members"] = [dpdk_bond_0]
+            bond_0["use_dhcp"] = False
+            bond_0["dns_servers"] = "DnsServers"
+            if not provisioning_if:
+                bond_0["addresses"] = cp_addresses
+                bond_0["routes"] = [ec2_route, default_route, prov_route]
+            nw_cfg.extend([bond_0, internal_api_vlan, tenant_vlan,
+                           storage_vlan, tenant_br, bond_1, external_vlan])
+        return nw_cfg
+
+    def _get_nfv_nics_by_type(self, node_type):
+        dpdk_ports = []
+        sriov_pfs = []
+        role = self._generate_cc_role(node_type)
+        nfv_type = self._get_nfv_type(node_type)
+        nfv_nics = self._get_nfv_nics(node_type)
+        mtu = "{}DefaultBondMtu".format(role)
+
+        dpdk_nics = nfv_nics if nfv_type == OVS_DPDK else []
+        sriov_nics = nfv_nics if nfv_type == SRIOV else []
+
+        if nfv_type == BOTH:
+            dpdk_nics = nfv_nics[:len(nfv_nics)//2]
+            sriov_nics = nfv_nics[len(nfv_nics)//2:]
+
+        for idx, _if in enumerate(dpdk_nics, start=1):
+            if_p = "{}{}Interface{}".format(role, OVS_DPDK, int(idx))
+            dpdk_port = {"type": "ovs_dpdk_port",
+                         "name": "dpdk{}".format(idx)}
+            dpdk_port["mtu"] = mtu
+            dpdk_port["driver"] = "{}HostNicDriver".format(role)
+            dpdk_port["members"] = [{"type": "interface",
+                                     "name": if_p,
+                                     "interface": _if}]
+            dpdk_ports.append(dpdk_port)
+
+        for idx, _if in enumerate(sriov_nics, start=1):
+            pf = {"type": "sriov_pf"}
+            pf["name"] = "{}{}Interface{}".format(role, SRIOV, int(idx))
+            pf["interface"] = _if
+            pf["mtu"] = mtu
+            pf["numvfs"] = "{}NumSriovVfs".format(role)
+            sriov_pfs.append(pf)
+        return dpdk_ports, sriov_pfs
+
+    def _get_nfv_nics(self, node_type):
+        node_type_data = self.settings.node_type_data_map[node_type]
+        if 'nfv_interfaces' not in node_type_data:
+            return None
+        nfv_nics = (list(map(str.strip,
+                             node_type_data['nfv_interfaces'].split(','))))
+        return nfv_nics
+
+    def _get_nfv_type(self, node_type):
+        setts = self.settings
+        node_type_data = setts.node_type_data_map[node_type]
+        if ("nfv_type" in node_type_data
+                and len(node_type_data["nfv_type"].strip()) != 0
+                and node_type_data["nfv_type"].strip() in NFV_TYPE_MAP):
+            return NFV_TYPE_MAP[node_type_data["nfv_type"].strip()]
+        return None
+
+    def _get_provisioning_if(self, node_type):
+        node_type_data = self.settings.node_type_data_map[node_type]
+        prov_if = (node_type_data['ProvisioningInterface']
+                   if 'ProvisioningInterface' in node_type_data
+                   and len(node_type_data['ProvisioningInterface'].strip())
+                   != 0 else None)
+        return prov_if
+
+    def _generate_default_networks_data(self):
+        """Generate network_data.yaml file with default networks
+
+        :returns: list of dicts for overcloud networks
+        example:
+            [{'name': InternalApi,
+              'name_lower': internal_api_custom_name,
+              # if name_lower is set to a custom name this should be set
+              # to original default (optional).  This field is only necessary
+              # when changing the default network names,
+              # not when adding a new custom network.
+              'service_net_map_replace': 'internal_api',
+              # for existing stack you may need to override the default
+              # transformation for the resource's name.
+              'compat_name': DeprecatedInternalApiName,
+              'vip': true,
+              'enabled': true,
+              'vlan': 140,
+              'ip_subnet': '192.168.140.0/24',
+              'allocation_pools': [{end: '192.168.110.20',
+                                    start: '192.168.110.20'}],
+              'routes': [{'destination':'10.0.0.0/16', 'nexthop':'10.0.0.1'}],
+              'gateway_ip': '192.168.140.1',
+
+              'ipv6': '{{network.ipv6}}',
+              'ipv6_subnet': '{{network.ipv6_subnet}}',
+              'ipv6_allocation_pools': [{'start': '2001:db8:fd00:1000::10',
+                  'end': '2001:db8:fd00:1000:ffff:ffff:ffff:fffe'}],
+              'gateway_ipv6': '2001:db8:fd00:1000::/64',
+              'routes_ipv6': [{'destination':'fd00:fd00:fd00:3004::/64',
+                               'nexthop':'fd00:fd00:fd00:3000::1'}],
+
+               },
+            ...
+            ]
+        """
+        setts = self.settings
+        default_network_data_list = []
+        external = {'name': 'External'}
+        external['name_lower'] = 'external'
+        external['compat_name'] = "compat name"
+        external['ip_subnet'] = setts.public_api_network
+        external['vip'] = True
+        external['enabled'] = True
+        external['vlan'] = int(setts.public_api_vlanid)
+        external['gateway_ip'] = setts.public_api_gateway
+        _ex_s = setts.public_api_allocation_pool_start
+        _ex_e = setts.public_api_allocation_pool_end
+        external['allocation_pools'] = [{'start': _ex_s, 'end': _ex_e}]
+        default_network_data_list.append(external)
+
+        internal_api = {'name': INTERNAL_API_NET[0]}
+        internal_api['name_lower'] = 'internal_api'
+        _int_ip_subnet = setts.private_api_network
+        internal_api['ip_subnet'] = _int_ip_subnet
+        internal_api['vip'] = True
+        internal_api['enabled'] = True
+        internal_api['vlan'] = int(setts.private_api_vlanid)
+        internal_api['gateway_ip'] = setts.private_api_gateway
+        _int_s = setts.management_allocation_pool_start
+        _int_e = setts.management_allocation_pool_end
+        internal_api['allocation_pools'] = [{'start': _int_s, 'end': _int_e}]
+        default_network_data_list.append(internal_api)
+
+        storage = {'name': STORAGE_NET[0]}
+        storage['name_lower'] = STORAGE_NET[1]
+        storage['ip_subnet'] = setts.storage_network
+        storage['vip'] = True
+        storage['enabled'] = True
+        storage['vlan'] = int(setts.storage_vlanid)
+        storage['gateway_ip'] = setts.storage_gateway
+        _st_s = setts.storage_allocation_pool_start
+        _st_e = setts.storage_allocation_pool_end
+        storage['allocation_pools'] = [{'start': _st_s, 'end': _st_e}]
+        default_network_data_list.append(storage)
+
+        storage_mgmt = {'name': 'StorageMgmt'}
+        storage_mgmt['name_lower'] = 'storage_mgmt'
+        storage_mgmt['ip_subnet'] = setts.storage_cluster_network
+        storage_mgmt['vip'] = True
+        storage_mgmt['enabled'] = True
+        storage_mgmt['vlan'] = int(setts.storage_cluster_vlanid)
+        _stmgmt_s = setts.storage_cluster_allocation_pool_start
+        _stmgmt_e = setts.storage_cluster_allocation_pool_end
+        storage_mgmt['allocation_pools'] = [{'start': _stmgmt_s,
+                                             'end': _stmgmt_e}]
+        default_network_data_list.append(storage_mgmt)
+
+        tenant = {'name': TENANT_NET[0]}
+        tenant['name_lower'] = TENANT_NET[1]
+        _t_ip_subnet = setts.tenant_tunnel_network
+        tenant['ip_subnet'] = _t_ip_subnet
+        tenant['vip'] = False
+        tenant['enabled'] = True
+        tenant['vlan'] = int(setts.tenant_tunnel_vlanid)
+        tenant['gateway_ip'] = setts.tenant_tunnel_gateway
+        _t_s = setts.tenant_tunnel_network_allocation_pool_start
+        _t_e = setts.tenant_tunnel_network_allocation_pool_end
+        tenant['allocation_pools'] = [{'start': _t_s, 'end': _t_e}]
+        default_network_data_list.append(tenant)
+
+        return default_network_data_list
+
+    def _generate_network_data(self, node_type, node_type_data):
+        """Generate network_data.yaml networks based on node type network
+        definitions
+
+        :param node_type: The node type network data is being generated for
+        :param node_type_data: dict containing all the site specific networking
+        configuration data
+        :returns: list of dicts for edge networks
+        example:
+            [{'name': InternalApiBostonCompute
+              'name_lower': internal_api_boston_compute
+              'ip_subnet': '192.168.141.0/24'
+              'vip': true
+              'vlan': 141
+              'allocation_pools': [{end: '192.168.111.20',
+                                    start: '192.168.111.20'}]
+               },
+            ...
+            ]
+        """
+        role = self._generate_cc_role(node_type)
+        networks_param_mapping = {}
+        int_api = {}
+        int_api['vlan'] = 'private_api_vlanid'
+        int_api['lower'] = INTERNAL_API_NET[1]
+        int_api['ip_subnet'] = 'private_api_network'
+        int_api['allocation_pools'] = ('private_api_allocation_pool_start',
+                                       'private_api_allocation_pool_end')
+        int_api['gateway_ip'] = 'private_api_gateway'
+        tenant = {}
+        tenant['vlan'] = 'tenant_vlanid'
+        tenant['lower'] = TENANT_NET[1]
+        tenant['ip_subnet'] = 'tenant_network'
+        tenant['allocation_pools'] = ('tenant_allocation_pool_start',
+                                      'tenant_allocation_pool_end')
+        tenant['gateway_ip'] = 'tenant_gateway'
+
+        storage = {}
+        storage['vlan'] = 'storage_vlanid'
+        storage['lower'] = STORAGE_NET[1]
+        storage['ip_subnet'] = 'storage_network'
+        storage['allocation_pools'] = ('storage_allocation_pool_start',
+                                       'storage_allocation_pool_end')
+        storage['gateway_ip'] = 'storage_gateway'
+
+        external = {}
+        external['vlan'] = 'external_vlanid'
+        external['lower'] = EXTERNAL_NET[1]
+        external['ip_subnet'] = 'external_network'
+        external['allocation_pools'] = ('external_allocation_pool_start',
+                                        'external_allocation_pool_end')
+        external['gateway_ip'] = 'external_gateway'
+
+        networks_param_mapping[INTERNAL_API_NET[0]] = int_api
+        networks_param_mapping[TENANT_NET[0]] = tenant
+        networks_param_mapping[STORAGE_NET[0]] = storage
+        networks_param_mapping[EXTERNAL_NET[0]] = external
+        network_data_list = []
+        suffix = '_' + self._generate_role_lower(node_type)
+        for network, mapping in networks_param_mapping.items():
+            nd = {'enabled': True}
+            name_cc = network + role
+            name_lower = mapping['lower']
+
+            nd['name'] = name_cc
+            nd['name_lower'] = name_lower + suffix
+            nd['vip'] = False
+            nd['vlan'] = int(node_type_data[mapping['vlan']])
+            _ip_subnet = node_type_data[mapping['ip_subnet']]
+            nd['ip_subnet'] = _ip_subnet
+            _s = node_type_data[mapping['allocation_pools'][0]]
+            _e = node_type_data[mapping['allocation_pools'][1]]
+            nap = [{'start': _s, 'end': _e}]
+            nd['allocation_pools'] = nap
+            gw = node_type_data[mapping['gateway_ip']]
+            nd['gateway_ip'] = gw
+            network_data_list.append(nd)
+        return network_data_list
+
+    def _generate_extra_config(self, node_type):
+        """Each edge site requires some overrides, for connecting to mysql for
+        example.  Generate hiera data parameters puppet will consume at edge
+        sites to provide overrrides.
+
+        :param node_type: the node type the extra params are being generated for
+        :returns: dict containing parameter overrides
+        """
+        net_suffix = '_' + self._generate_role_lower(node_type)
+        api_net = INTERNAL_API_NET[1] + net_suffix
+        tenant_net = TENANT_NET[1] + net_suffix
+
+        xtra_cfg = {}
+        xtra_cfg['nova::compute::libvirt::vncserver_listen'] = \
+            "\"%{hiera('" + api_net + "')}\""
+        xtra_cfg['nova::compute::vncserver_proxyclient_address'] = \
+            "\"%{hiera('" + api_net + "')}\""
+        xtra_cfg['neutron::agents::ml2::ovs::local_ip'] = \
+            "\"%{hiera('" + tenant_net + "')}\""
+        xtra_cfg['cold_migration_ssh_inbound_addr'] = \
+            "\"%{hiera('" + api_net + "')}\""
+        xtra_cfg['live_migration_ssh_inbound_addr'] = \
+            "\"%{hiera('" + api_net + "')}\""
+        xtra_cfg['nova::migration::libvirt::live_migration_inbound_addr'] = \
+            "\"%{hiera('fqdn_" + api_net + "')}\""
+        xtra_cfg['nova::my_ip'] = "\"%{hiera('" + api_net + "')}\""
+        _mysql_key = 'tripleo::profile::base::database::mysql' \
+            + '::client::mysql_client_bind_address'
+        xtra_cfg[_mysql_key] = "\"%{hiera('" + api_net + "')}\""
+        # TODO not sure below are needed
+        '''
+        xtra_cfg['nova::cpu_allocation_ratio'] = 1
+        xtra_cfg['nova::compute::resume_guests_state_on_host_boot'] = True
+        xtra_cfg['nova::compute::libvirt::libvirt_cpu_model'] = \
+            'host-passthrough'
+        xtra_cfg['nova::compute::libvirt::libvirt_cpu_model_extra_flags'] = \
+            'host-tsc-deadline'
+        xtra_cfg['nova::compute::libvirt::mem_stats_period_seconds'] = 0
+        '''
+        return xtra_cfg
+
+    def _generate_node_placement(self, tmplt_data, node_type):
+        tmplt_data["parameter_defaults"] = (tmplt_data["parameter_defaults"]
+                                            if "parameter_defaults"
+                                            in tmplt_data else {})
+        _param_def = tmplt_data["parameter_defaults"]
+        _param_def["scheduler_hints"] = (_param_def["scheduler_hints"]
+                                         if "scheduler_hints"
+                                         in _param_def else {})
+        _sched_hints = _param_def["scheduler_hints"]
+
+        exp = self._generate_node_placement_exp(node_type)
+        role = self._generate_cc_role(node_type)
+        _role_hints = role + 'SchedulerHints'
+        _sched_hints[_role_hints] = exp
+
+    def _generate_site_name_edge(self, node_type):
+        '''
+          NovaComputeAvailabilityZone:
+             {{parameter_defaults.NovaComputeAvailabilityZone}}
+          RootStackName: {{parameter_defaults.RootStackName}}
+        '''
+        param_defs = {}
+        _az = self._generate_node_type_az(node_type)
+        _stack = self._generate_node_type_lower(node_type)
+        param_defs["NovaComputeAvailabilityZone"] = _az
+        param_defs["RootStackName"] = _stack
+        return param_defs
+
+    def _generate_overrides_edge(self, node_type):
+        """
+        parameter_defaults:
+          DistributedComputeCount: 3
+          DistributedComputeFlavor: baremetal
+          DistributedComputeSchedulerHints:
+            'capabilities:node': '0-compute-%index%'
+          NovaAZAttach: false
+        """
+        setts = self.settings
+        role = self._generate_cc_role(node_type)
+        param_defs = {}
+        param_defs[role + "Count"] = len(setts.node_types_map[node_type])
+        param_defs[role + "Flavor"] = "baremetal"
+        _hints = {"'capabilities:node'":
+                  self._generate_node_placement_exp(node_type)}
+        param_defs[role + "SchedulerHints"] = _hints
+        # _az = self._generate_node_type_az(node_type)
+        # param_defs["CinderStorageAvailabilityZone"] = _az
+        param_defs["NovaAZAttach"] = str(False).lower()
+        return param_defs
+
+    def _group_node_types_by_num_nics(self):
+        setts = self.settings
+        nic_dict_by_port_num = {}
+        for node_type, node_type_data in setts.node_type_data_map.items():
+            num_nics = int(node_type_data['nic_port_count'])
+            if num_nics not in nic_dict_by_port_num:
+                nic_dict_by_port_num[num_nics] = []
+            nic_dict_by_port_num[num_nics].append((node_type, node_type_data))
+        return nic_dict_by_port_num
+
+    def _generate_deploy_cmd_edge(self, node_type):
+        setts = self.settings
+        nfv_type = self._get_nfv_type(node_type)
+        node_type_lower = self._generate_node_type_lower(node_type)
+        role_lower = self._generate_role_lower(node_type)
+        edge_site_directory = os.path.join(self.home_dir, role_lower)
+        log_file = os.path.join(edge_site_directory,
+                                "{nt_lower}_deployment.log")
+        _, output_env_file = self._generate_edge_template_paths(node_type,
+                                                                IMAGES_ENV)
+
+        _, roles_file = self._generate_edge_template_paths(
+            node_type, ROLES_DATA)
+
+        _, nd_file = self._generate_edge_template_paths(node_type,
+                                                        NETWORK_DATA)
+
+        _, containers_env_file = self._generate_edge_template_paths(
+            node_type, IMAGES_ENV)
+
+        cntl_plane_exp = os.path.join(self.home_dir,
+                                      EDGE_COMMON_PATH,
+                                      CONTROL_PLANE_EXPORT + ".yaml")
+        cmd = "cd ; {} ".format(self.source_stackrc)
+        cmd += "openstack overcloud deploy --stack {nt_lower} --debug -t 60 "
+        cmd += "--templates {oc_tempates} "
+        cmd += "--log-file {} ".format(log_file)
+        cmd += "-r {} ".format(roles_file)
+        cmd += "-n {} ".format(nd_file)
+        cmd += "-e {} ".format(os.path.join(self.templates_overcloud_dir,
+                                            "environments",
+                                            "cinder-volume-active-active.yaml")
+                               )
+        cmd += "-e {} ".format(cntl_plane_exp)
+        cnt_prep_param = os.path.join(self.home_dir,
+                                      CONTAINERS_PREPARE_PARAM + ".yaml")
+        cmd += "-e {} ".format(cnt_prep_param)
+        cmd += "-e {} ".format(containers_env_file)
+
+        env_files = [STATIC_IP_ENV, NODE_PLACEMENT,
+                     DELL_ENV, NET_ISO, NET_ENV, NEUTRON_OVS,
+                     NIC_ENV, SITE_NAME, OVERRIDES]
+
+        for env_file in env_files:
+            if env_file not in [NET_ISO, NEUTRON_OVS]:
+                _, tmplt = self._generate_edge_template_paths(node_type,
+                                                              env_file)
+            elif env_file == NET_ISO:
+                tmplt = os.path.join(self.templates_overcloud_dir,
+                                     "environments",
+                                     env_file + "_" + node_type_lower
+                                     + ".yaml")
+            else:  # neutron-ovs
+                tmplt = os.path.join(self.templates_overcloud_dir,
+                                     "environments", "services",
+                                     env_file + ".yaml")
+
+            cmd += " -e {} ".format(tmplt)
+        if self._is_ovs_dpdk_required(node_type):
+            _, tmplt = self._generate_edge_template_paths(node_type,
+                                                          NEUTRON_OVS_DPDK)
+            logger.info("deploying edge site with OVS DPDK, "
+                        "template: {}".format(tmplt))
+            cmd += " -e {} ".format(tmplt)
+        elif self._is_sriov_required(node_type):
+            _, tmplt = self._generate_edge_template_paths(node_type,
+                                                          NEUTRON_SRIOV)
+            logger.info("deploying edge site with SRIOV, "
+                        "template: {}".format(tmplt))
+            cmd += " -e {} ".format(tmplt)
+
+        cmd += "--libvirt-type kvm "
+        cmd += "--ntp-server {} ".format(setts.sah_node.provisioning_ip)
+        cmd += " > {edge_site_dir}/{nt_lower}_deploy_out.log 2>&1"
+        logger.debug("Generating edge site deployment "
+                     "command for: {}".format(node_type))
+        return cmd.format(edge_site_dir=edge_site_directory,
+                          nt_lower=node_type_lower,
+                          oc_tempates=self.templates_overcloud_dir)
+
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def _get_default_compute_services(self):
+        """Lazy loading of default compute role services
+        :returns: list of default compute services for edge role generation
+        """
+        if not self.default_compute_services:
+            stg_compute_file = os.path.join(STAGING_TEMPLATES_PATH,
+                                            DEF_COMPUTE_ROLE_FILE)
+            _role_tmplt_path = os.path.join(self.templates_overcloud_dir,
+                                            DEF_COMPUTE_REMOTE_PATH)
+            self.download_file(stg_compute_file, _role_tmplt_path)
+            with open(stg_compute_file) as stg_compute_fp:
+                compute_yaml = yaml.load(stg_compute_fp, Loader=OrderedLoader)
+                # Role yamls are always list, even for single-role
+                # template files
+                _srv_defs = compute_yaml[0]['ServicesDefault']
+                # TODO: DistributedCompute role has Etcd service, why?
+                # If we do not need it uncomment below
+                # if "OS::TripleO::Services::Etcd" in _srv_defs:
+                #     _srv_defs.remove("OS::TripleO::Services::Etcd")
+                self.default_compute_services = _srv_defs
+        return self.default_compute_services
+
+    @directory_check(STAGING_TEMPLATES_PATH)
+    def _generate_edge_template_paths(self, node_type=None, template=None,
+                                      extension="yaml"):
+        if template and not node_type:
+            _tmplt_name = template
+        elif template and node_type:
+            _nt_lower = self._generate_node_type_lower(node_type)
+            _tmplt_name = template + "_" + _nt_lower
+        else:
+            _nt_lower = self._generate_node_type_lower(node_type)
+            _tmplt_name = _nt_lower
+
+        if node_type:
+            site_sub_directory = self._generate_role_lower(node_type)
+            stg_tmplt_path = os.path.join(STAGING_TEMPLATES_PATH,
+                                          site_sub_directory)
+            remote_site_directory = os.path.join(self.home_dir,
+                                                 site_sub_directory)
+        else:
+            stg_tmplt_path = STAGING_TEMPLATES_PATH
+            remote_site_directory = self.templates_dir
+
+        remote_file = os.path.join(remote_site_directory,
+                                   _tmplt_name + "." + extension)
+        stg_path = self.get_timestamped_path(
+            stg_tmplt_path,
+            _tmplt_name, "yaml")
+        self.create_directory(remote_site_directory)
+        logger.debug("Returning template paths, stage: %s, remote: %s",
+                     stg_path, remote_file)
+        return stg_path, remote_file

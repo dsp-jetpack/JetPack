@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,35 +14,38 @@
 
 ## A Heat environment that can be used to deploy DPDK with OVS
 resource_registry:
-  OS::TripleO::Services::ComputeNeutronOvsDpdk: ./overcloud/docker/services/neutron-ovs-dpdk-agent.yaml
+  OS::TripleO::Services::ComputeNeutronOvsDpdk: ./overcloud/deployment/neutron/neutron-ovs-dpdk-agent-container-puppet.yaml
   OS::TripleO::Services::ComputeNeutronOvsAgent: OS::Heat::None
 
 parameter_defaults:
   NeutronDatapathType: "netdev"
   NeutronVhostuserSocketDir: "/var/lib/vhost_sockets"
-  NovaSchedulerDefaultFilters: "RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,NUMATopologyFilter"
-  OvsDpdkDriverType: "mlx5_core"
+# DELL-NFV Overrides
+  NovaSchedulerDefaultFilters: "ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,NUMATopologyFilter"
+  OvsDpdkDriverType: "mlx5_core" 
+  NeutronPluginExtensions: "qos,port_security"
   NeutronOVSFirewallDriver: openvswitch
   DellComputeParameters:
     VhostuserSocketGroup: "hugetlbfs"
     OvsPmdCoreList: "4-7,28-31"
     OvsDpdkCoreList: "0-3,24-27"
+    NovaComputeCpuSharedSet: "0-3,40-43"
     IsolCpusList: "4-23,28-47"
     OvsDpdkMemoryChannels: "4"
     NovaReservedHostMemory: 4096
     OvsDpdkSocketMemory: "2048,2048"
     TunedProfileName: "cpu-partitioning"
-    NumDpdkInterfaceRxQueues: 1
-    OvsEnableDpdk: true
+    NovaLibvirtRxQueueSize: 1024
+    NovaLibvirtTxQueueSize: 1024
   DellComputeHCIParameters:
     VhostuserSocketGroup: "hugetlbfs"
     OvsPmdCoreList: "4-7,28-31"
     OvsDpdkCoreList: "0-3,24-27"
+    NovaComputeCpuSharedSet: "0-3,40-43"
     IsolCpusList: "4-23,28-47"
     OvsDpdkMemoryChannels: "4"
     NovaReservedHostMemory: 4096
     OvsDpdkSocketMemory: "2048,2048"
     TunedProfileName: "cpu-partitioning"
-    NumDpdkInterfaceRxQueues: 1
-    OvsEnableDpdk: true
-
+    NovaLibvirtRxQueueSize: 1024
+    NovaLibvirtTxQueueSize: 1024

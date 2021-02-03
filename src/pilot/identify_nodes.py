@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2021 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,21 +22,15 @@ from novaclient import client as novaclient
 from os import path
 from subprocess import check_output
 from credential_helper import CredentialHelper
-
+from ironic_helper import IronicHelper
 
 def main():
     os_auth_url, os_tenant_name, os_username, os_password, \
         os_user_domain_name, os_project_domain_name = \
         CredentialHelper.get_undercloud_creds()
-    auth_url = os_auth_url + "v3"
+    auth_url = os_auth_url + "/v3"
 
-    kwargs = {'os_username': os_username,
-              'os_password': os_password,
-              'os_auth_url': os_auth_url,
-              'os_tenant_name': os_tenant_name,
-              'os_user_domain_name': os_user_domain_name,
-              'os_project_domain_name': os_project_domain_name}
-    ironic = ironicclient.client.get_client(1, **kwargs)
+    ironic = IronicHelper.get_ironic_client()
     nodes = ironic.node.list(detail=True)
 
     auth = v3.Password(
@@ -56,9 +50,9 @@ def main():
         "+-----------------+---------------------------+-----------------+"
     )
     nodeinfo = "| {:<15} | {:<25} | {:<15} |"
-    print banner
-    print nodeinfo.format('iDRAC Addr', 'Node Name', 'Provision Addr')
-    print banner
+    print(banner)
+    print(nodeinfo.format('iDRAC Addr', 'Node Name', 'Provision Addr'))
+    print(banner)
     # Display the list ordered by the iDRAC address
     for n in sorted(nodes, key=lambda x: CredentialHelper.get_drac_ip(x)):
         idrac_addr = CredentialHelper.get_drac_ip(n)
@@ -74,8 +68,8 @@ def main():
             if nova_ips and 'ctlplane' in nova_ips:
                 prov_addr = nova_ips['ctlplane'][0]['addr']
 
-        print nodeinfo.format(idrac_addr, node_name, prov_addr)
-    print banner
+        print(nodeinfo.format(idrac_addr, node_name, prov_addr))
+    print(banner)
 
 
 if __name__ == "__main__":
