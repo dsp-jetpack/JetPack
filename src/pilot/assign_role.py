@@ -1173,8 +1173,12 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
                     LOG.info("using bypath for VD hint")
                     if lst_ctrls[0].model.startswith("PERC H740P"):
                         pci_bus_number = get_pci_bus_number(lst_ctrls[0])
-                        by_path='/dev/disk/by-path/pci-0000:' \
-                                + str(pci_bus_number) + ':00.0-scsi-0:2:0:0'
+                        if "PowerEdge R7515" in str(ironic_client.node.get(node_uuid, fields=['properties'])):
+                            by_path='/dev/disk/by-path/pci-0000:0' \
+                                    + str(pci_bus_number) + ':00.0-scsi-0:2:0:0'
+                        else:
+                            by_path='/dev/disk/by-path/pci-0000:' \
+                                    + str(pci_bus_number) + ':00.0-scsi-0:2:0:0'
                         LOG.info(".. " + str(by_path))
                         patch = [{'op': 'add',
                                 'value': {"by_path": by_path},
