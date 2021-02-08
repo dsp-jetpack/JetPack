@@ -43,5 +43,8 @@
   },
   "DSS 9620": {
     "pxe_nic": "NIC.Mezzanine.3-1-1"
+  },
+  "PowerEdge R7515":{
+    "pxe_nic": "NIC.Mezzanine.1-1-1"
   }
 }
