@@ -308,6 +308,10 @@ def main():
                             dest="ntp_server_fqdn",
                             default="0.centos.pool.ntp.org",
                             help="The FQDN of the ntp server to use")
+        parser.add_argument("--timezone",
+                            dest="time_zone",
+                            default="America/Chicago",
+                            help="The timezone to use")
         parser.add_argument("--timeout",
                             default="300",
                             help="The amount of time in minutes to allow the "
@@ -495,6 +499,7 @@ def main():
             swift_storage_flavor,
             block_storage_flavor,
             args.vlan_range,
+            args.time_zone,
             args.num_dell_computes,
             args.num_dell_computeshci,
             args.num_powerflex
