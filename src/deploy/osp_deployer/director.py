@@ -1820,7 +1820,10 @@ class Director(InfraHost):
                                     " --ntp " + \
                                     self.settings.sah_node.provisioning_ip + \
                                     " --mtu " + \
-                                    self.settings.default_bond_mtu
+                                    self.settings.default_bond_mtu + \
+                                    " --timezone " + \
+                                    self.settings.time_zone
+
 
         if self.settings.hpg_enable is True:
             cmd += " --enable_hugepages "
