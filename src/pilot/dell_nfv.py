@@ -86,9 +86,11 @@ class ConfigOvercloud(object):
             swift_storage_flavor,
             block_storage_flavor,
             vlan_range,
+            time_zone,
             dell_compute_count=0,
             dell_computehci_count=0,
             dell_powerflex_count=0):
+
         try:
             logger.info("Editing dell environment file")
             file_path = home_dir + '/pilot/templates/dell-environment.yaml'
@@ -226,6 +228,13 @@ class ConfigOvercloud(object):
                     '|GlanceBackend: cinder|" ' +
                     file_path)
 
+
+            cmds.append(
+                'sed -i "s|TimeZone:.*' +
+                '|TimeZone: \\"' +
+                time_zone +
+                '\\" |" ' +
+                file_path)
 
             for cmd in cmds:
                 status = os.system(cmd)

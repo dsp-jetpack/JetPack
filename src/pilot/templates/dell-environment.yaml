@@ -24,6 +24,9 @@ resource_registry:
 
 parameter_defaults:
 
+  # Default timezone set to CST
+  TimeZone: America/Chicago
+
   # Defines the interface to bridge onto br-ex for network nodes
   NeutronPublicInterface: bond1
   # The tenant network type for Neutron
