@@ -6,7 +6,7 @@ JetPack code and documentation is distributed under the Apache 2 license. Contr
 
 JetPack is an innovative automation package that is used to configure the infrastructure hardware and OpenStack software in a fully automated fashion. The toolkit includes scripts from Dell EMC that work with Red Hat OpenStack Platform Director to automate the deployment process, not only to save time but to ensure the process is reliable and repeatable each time.
 
-Please reference the current Dell EMC Ready Architecture For Red Hat OpenStack Platform Software Deployment Guide v16.1 for installation and configuration at:
+Please reference the current Dell EMC Ready Architecture For Red Hat OpenStack Platform Software Deployment Guide v16.1 for installation and configuration
 
 ## Legal
 
