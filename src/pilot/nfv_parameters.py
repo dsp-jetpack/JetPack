@@ -39,6 +39,8 @@ class NfvParameters(object):
         self.data = {'nics': {}, 'cpus': {}}
         self.inspector = None
         self.total_cpus = None
+        self.num_cpus = None
+        self.cpu_arch = None
         self.host_cpus = None
         self.pmd_cpus = None
         self.nova_cpus = None
@@ -139,11 +141,26 @@ class NfvParameters(object):
     def get_host_cpus(self, host_cpus_count):
         host_cpus = []
         pairs = int(math.ceil(int(host_cpus_count)/2.0))
-        for i in range(0, pairs):
-            host_cpus.append(self.data['cpus'][i % 2][i][0])
-            host_cpus.append(self.data['cpus'][i % 2][i][1])
-            self.data['cpus'][i % 2].pop(i, None)
-            i += 1
+        if "AMD" in self.cpu_arch:
+            k=0
+            l=0
+            for i in range(0, pairs):
+                if i % 2 == 0:
+                    j = k
+                    k += 1
+                else:
+                    j = ((self.num_cpus / 4) + l)
+                    l += 1
+                host_cpus.append(self.data['cpus'][i % 2][j][0])
+                host_cpus.append(self.data['cpus'][i % 2][j][1])
+                self.data['cpus'][i % 2].pop(j, None)
+                i += 1
+        else:
+            for i in range(0, pairs):
+                host_cpus.append(self.data['cpus'][i % 2][i][0])
+                host_cpus.append(self.data['cpus'][i % 2][i][1])
+                self.data['cpus'][i % 2].pop(i, None)
+                i += 1
         host_cpus = self.range_extract(sorted(host_cpus, key=int))
         self.host_cpus = ','.join(map(str, host_cpus))
         logger.debug("Host CPUs >> " + str(self.host_cpus))
@@ -259,6 +276,8 @@ class NfvParameters(object):
                             " [40, 48, 56, 64, 72, 80, 88, 128]"
                             " but number of vCPUs are " + str(
                                 ref_node["cpus"]))
+        self.num_cpus = ref_node["cpus"]
+        self.cpu_arch = data["inventory"]["cpu"]["model_name"]
         return ref_node["uuid"], ref_node["data"]
 
     def get_introspection_data(self, node):
