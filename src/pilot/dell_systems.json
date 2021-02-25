@@ -46,5 +46,8 @@
   },
   "PowerEdge R7515":{
     "pxe_nic": "NIC.Mezzanine.1-1-1"
+  },
+  "PowerEdge R6515":{
+    "pxe_nic": "NIC.Slot.2-1-1"
   }
 }
