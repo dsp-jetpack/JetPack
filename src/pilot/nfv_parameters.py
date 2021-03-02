@@ -142,19 +142,28 @@ class NfvParameters(object):
         host_cpus = []
         pairs = int(math.ceil(int(host_cpus_count)/2.0))
         if "AMD" in self.cpu_arch:
-            k=0
-            l=0
-            for i in range(0, pairs):
-                if i % 2 == 0:
-                    j = k
-                    k += 1
-                else:
-                    j = ((self.num_cpus / 4) + l)
-                    l += 1
-                host_cpus.append(self.data['cpus'][i % 2][j][0])
-                host_cpus.append(self.data['cpus'][i % 2][j][1])
-                self.data['cpus'][i % 2].pop(j, None)
-                i += 1
+            # If NPS==1, Select pairs from numa node 0
+            # Else, Select pairs from two numa nodes 0,1
+            if not self.data['cpus'][1]:
+                for i in range(0, pairs):
+                    host_cpus.append(self.data['cpus'][0][i][0])
+                    host_cpus.append(self.data['cpus'][0][i][1])
+                    self.data['cpus'][0].pop(i, None)
+                    i += 1
+            else:
+                k=0
+                l=0
+                for i in range(0, pairs):
+                    if i % 2 == 0:
+                        j = k
+                        k += 1
+                    else:
+                        j = ((self.num_cpus / 4) + l)
+                        l += 1
+                    host_cpus.append(self.data['cpus'][i % 2][j][0])
+                    host_cpus.append(self.data['cpus'][i % 2][j][1])
+                    self.data['cpus'][i % 2].pop(j, None)
+                    i += 1
         else:
             for i in range(0, pairs):
                 host_cpus.append(self.data['cpus'][i % 2][i][0])
@@ -168,21 +177,28 @@ class NfvParameters(object):
     def get_pmd_cpus(self, mtu, dpdk_nics):
         pmd_cpus = []
         nics_numa_distribution = {}
-        nodes = self.data['nics'].keys()
-        for node in nodes:
-            # if not nics_numa_distribution.has_key(node):
-            nics_numa_distribution[node] = False
-            for nic in dpdk_nics:
-                if nic in self.data['nics'][node]:
+        # If only one numa node (NPS==1), select PMD cores from numa node 0 for all NICs.
+        # Else two numa nodes (NPS==2), Select PMD cores for NICs from respective CPU allignment.
+        if not self.data['nics'][1]: 
+           for nic in dpdk_nics:
+               cpu_pair = next(iter(self.data['cpus'][0]))
+               pmd_cpus.append(self.data['cpus'][0][cpu_pair])
+               self.data['cpus'][0].pop(cpu_pair, None)
+        else:      
+            nodes = self.data['nics'].keys()
+            for node in nodes: 
+                nics_numa_distribution[node] = False
+                for nic in dpdk_nics:
+                    if nic in self.data['nics'][node]: 
+                        cpu_pair = next(iter(self.data['cpus'][node]))
+                        pmd_cpus.append(self.data['cpus'][node][cpu_pair])
+                        self.data['cpus'][node].pop(cpu_pair, None)
+                        nics_numa_distribution[node] = True
+            for node in nics_numa_distribution.keys():
+                if nics_numa_distribution[node] is False:
                     cpu_pair = next(iter(self.data['cpus'][node]))
                     pmd_cpus.append(self.data['cpus'][node][cpu_pair])
                     self.data['cpus'][node].pop(cpu_pair, None)
-                    nics_numa_distribution[node] = True
-        for node in nics_numa_distribution.keys():
-            if nics_numa_distribution[node] is False:
-                cpu_pair = next(iter(self.data['cpus'][node]))
-                pmd_cpus.append(self.data['cpus'][node][cpu_pair])
-                self.data['cpus'][node].pop(cpu_pair, None)
         pmd_cpus = [item for sublist in pmd_cpus for item in sublist]
         pmd_cpus = self.range_extract(sorted(pmd_cpus, key=int))
         self.pmd_cpus = ','.join(map(str, pmd_cpus))
@@ -211,21 +227,34 @@ class NfvParameters(object):
         logger.debug("isol CPUs >> " + str(self.isol_cpus))
 
     def get_socket_memory(self, mtu, dpdk_nics):
-        nodes = self.data['nics'].keys()
-        numa_mem = {el: 1024 for el in nodes}
-        mtu = self.round_to_nearest(mtu, 1024)
-        for n in nodes:
-            mem = 536870912
-            for nic in dpdk_nics:
-                if nic in self.data['nics'][n]:
-                    mem += (mtu + 800) * (4096*64)
-                    break
-            mem = mem / (1024*1024)
-            numa_mem[n] = int(self.round_to_nearest(mem, 1024))
-        self.socket_mem = ','.join(map(str, numa_mem.values()))
+        # If only one numa node (NPS==1)
+        if not self.data['nics'][1]:
+           mtu = self.round_to_nearest(mtu, 1024)
+           mem = 536870912
+           for nic in dpdk_nics:  
+               mem += (mtu + 800) * (4096*64)
+           mem = mem / (1024*1024)
+           
+           numa_mem = int(self.round_to_nearest(mem, 1024))
+           mem_upd = [numa_mem,0]
+           self.socket_mem = ','.join(map(str, mem_upd))
+        #Else NPS=2
+        else:   
+            nodes = self.data['nics'].keys()
+            numa_mem = {el: 1024 for el in nodes}
+            mtu = self.round_to_nearest(mtu, 1024)
+            for n in nodes:
+                mem = 536870912
+                for nic in dpdk_nics:
+                    if nic in self.data['nics'][n]:
+                        mem += (mtu + 800) * (4096*64)
+                        break
+                mem = mem / (1024*1024)
+                numa_mem[n] = int(self.round_to_nearest(mem, 1024))
+            self.socket_mem = ','.join(map(str, numa_mem.values()))
 
     def round_to_nearest(self, n, m):
-        return m if n <= m else ((n / m) + 1) * m
+        return m if n <= m else (round(n / m) + 1) * m
 
     def subtract(self, x):
         return x[1] - x[0]

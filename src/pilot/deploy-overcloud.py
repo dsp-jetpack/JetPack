@@ -572,11 +572,6 @@ def main():
                         " -e ~/containers-prepare-parameter.yaml" \
                         " -e ~/pilot/templates/dell-environment.yaml"
 
-        host_config = False
-        if args.enable_hugepages or args.enable_numa:
-            env_opts += " -e ~/pilot/templates/overcloud/environments/" \
-                        "host-config-and-reboot.yaml"
-            host_config = True
         if args.ovs_dpdk:
             if not args.enable_hugepages or not args.enable_numa:
                 raise ValueError("Both hugepages and numa must be" +
@@ -585,12 +580,11 @@ def main():
                 env_opts += " -e ~/pilot/templates/neutron-ovs-dpdk.yaml"
 
         if args.sriov:
-            env_opts += " -e ~/pilot/templates/neutron-sriov.yaml"
-            if args.hw_offload:
-                env_opts += " -e ~/pilot/templates/ovs-hw-offload.yaml"
-            if not host_config:
-                env_opts += " -e ~/pilot/templates/overcloud/environments/" \
-                            "host-config-and-reboot.yaml"
+            if not args.enable_numa:
+                raise ValueError("Numa cpu pinning must be " +
+                                 "enabled in order to use SRIOV")
+            else:
+                env_opts += " -e ~/pilot/templates/neutron-sriov.yaml"
 
         if args.enable_dellsc:
             env_opts += " -e ~/pilot/templates/dellsc-cinder-config.yaml"

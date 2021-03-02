@@ -21,16 +21,16 @@ parameter_defaults:
   NeutronDatapathType: "netdev"
   NeutronVhostuserSocketDir: "/var/lib/vhost_sockets"
 # DELL-NFV Overrides
-  NovaSchedulerDefaultFilters: "ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,NUMATopologyFilter"
-  OvsDpdkDriverType: "mlx5_core" 
+  HostNicDriver: "mlx5_core" 
   NeutronPluginExtensions: "qos,port_security"
   NeutronOVSFirewallDriver: openvswitch
   DellComputeParameters:
     VhostuserSocketGroup: "hugetlbfs"
     OvsPmdCoreList: "4-7,28-31"
     OvsDpdkCoreList: "0-3,24-27"
-    NovaComputeCpuSharedSet: "0-3,40-43"
-    IsolCpusList: "4-23,28-47"
+    # IsolCpusList: "4-23,28-47" (Populated in Dell-environment.yaml)
+    # NovaComputeCpuDedicatedSet: "4-23,28-47" (Populated in Dell-environment.yaml)
+    # NovaComputeCpuSharedSet: "0-3,40-43" (Populated in Dell-environment.yaml)
     OvsDpdkMemoryChannels: "4"
     NovaReservedHostMemory: 4096
     OvsDpdkSocketMemory: "2048,2048"
@@ -41,8 +41,9 @@ parameter_defaults:
     VhostuserSocketGroup: "hugetlbfs"
     OvsPmdCoreList: "4-7,28-31"
     OvsDpdkCoreList: "0-3,24-27"
-    NovaComputeCpuSharedSet: "0-3,40-43"
-    IsolCpusList: "4-23,28-47"
+    # IsolCpusList: "4-23,28-47" (Populated in Dell-environment.yaml)
+    # NovaComputeCpuDedicatedSet: "4-23,28-47" (Populated in Dell-environment.yaml)
+    # NovaComputeCpuSharedSet: "0-3,40-43" (Populated in Dell-environment.yaml)
     OvsDpdkMemoryChannels: "4"
     NovaReservedHostMemory: 4096
     OvsDpdkSocketMemory: "2048,2048"

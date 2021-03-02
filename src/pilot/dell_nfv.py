@@ -95,7 +95,7 @@ class ConfigOvercloud(object):
             logger.info("Editing dell environment file")
             file_path = home_dir + '/pilot/templates/dell-environment.yaml'
             dpdk_file = home_dir + '/pilot/templates/neutron-ovs-dpdk.yaml'
-            hw_off_file = home_dir + '/pilot/templates/ovs-hw-offload.yaml'
+            sriov_file = home_dir + '/pilot/templates/neutron-sriov.yaml'
             cmds = []
             if not os.path.isfile(file_path):
                 raise Exception(
@@ -103,9 +103,6 @@ class ConfigOvercloud(object):
             if not os.path.isfile(dpdk_file):
                 raise Exception(
                     "The neutron-ovs-dpdk.yaml file does not exist")
-            if not ovs_dpdk:
-                cmds.append('sed -i "s|  # NovaSchedulerDefaultFilters|  ' +
-                            'NovaSchedulerDefaultFilters|" ' + file_path)
             cmds.extend((
                 'sed -i "s|DellComputeCount:.*|DellComputeCount: ' +
                 str(dell_compute_count) +
@@ -154,7 +151,15 @@ class ConfigOvercloud(object):
                 file_path))
             kernel_args = ''
             if sriov or ovs_dpdk:
-                kernel_args = "iommu=pt intel_iommu=on"
+                node_uuid, node_data = self.nfv_params.select_compute_node()
+                if "AMD" in self.nfv_params.cpu_arch:
+                    # R7515 and R6515 servers have 8 Memory Channels per CPU socket
+                    ServerMemoryChannels=8
+                    kernel_args = "iommu=pt amd_iommu=on numa_balancing=disable processor.max_cstate=0"
+                else:
+                    # R740 and R640 servers have 4 Memory Channels per CPU socket
+                    ServerMemoryChannels=4
+                    kernel_args = "iommu=pt intel_iommu=on"
 
             if enable_hugepage:
                 hpg_num = self.nfv_params.calculate_hugepage_count(
@@ -178,6 +183,12 @@ class ConfigOvercloud(object):
                 self.nfv_params.get_isol_cpus()
                 kernel_args += " isolcpus=%s" % self.nfv_params.isol_cpus
                 cmds.append(
+                    'sed -i "s|# TunedProfileName:.*|TunedProfileName: \\"cpu-partitioning\\"|" ' +
+                    file_path)
+                cmds.append(
+                    'sed -i "s|# IsolCpusList:.*|IsolCpusList: ' +
+                    self.nfv_params.isol_cpus + '|" ' + file_path)
+                cmds.append(
                     'sed -i "s|# NovaComputeCpuDedicatedSet:.*|NovaComputeCpuDedicatedSet: ' +
                     self.nfv_params.nova_cpus + '|" ' + file_path)
             if kernel_args:
@@ -190,12 +201,12 @@ class ConfigOvercloud(object):
                     kernel_args + '\\" |" ' + file_path)
             if ovs_dpdk:
                 cmds.append(
-                    'sed -i "s|OvsDpdkCoreList:.*|OvsDpdkCoreList: \\"' +
-                    self.nfv_params.host_cpus +
+                    'sed -i "s|OvsDpdkMemoryChannels:.*|OvsDpdkMemoryChannels: \\"' +
+                    str(ServerMemoryChannels) +
                     '\\" |" ' +
                     dpdk_file)
                 cmds.append(
-                    'sed -i "s|NovaComputeCpuSharedSet:.*|NovaComputeCpuSharedSet: \\"' +
+                    'sed -i "s|OvsDpdkCoreList:.*|OvsDpdkCoreList: \\"' +
                     self.nfv_params.host_cpus +
                     '\\" |" ' +
                     dpdk_file)
@@ -210,10 +221,10 @@ class ConfigOvercloud(object):
                     self.nfv_params.socket_mem +
                     '\\" |" ' +
                     dpdk_file)
+            if hw_offload:
                 cmds.append(
-                    'sed -i "s|IsolCpusList:.*|IsolCpusList: \\"' +
-                    self.nfv_params.isol_cpus + '\\" |" ' + dpdk_file)
-
+                    'sed -i "s|OvsHwOffload:.*|OvsHwOffload: True' +
+                    ' |" ' + sriov_file)
             if dell_powerflex_count > 0 :
                 cmds.append(
                      'sed -i "s|NovaEnableRbdBackend:.*' +
