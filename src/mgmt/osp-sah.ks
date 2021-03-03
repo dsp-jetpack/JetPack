@@ -565,14 +565,16 @@ mkdir -p /store/data/images
 mkdir -p /store/data/iso
 
 echo "POST: Install other rerquired packages, paramiko, ..."
-yum install -y gcc libffi-devel openssl-devel ipmitool tmux git httpd
+yum install -y gcc libffi-devel openssl-devel ipmitool tmux git httpd rust-toolset python3-devel
 
 # temporary workaround for CES-7248
 echo "POST: upgrade setuptools"
 pip3 install --upgrade setuptools
+pip3 install setuptools_rust
+pip3 install --upgrade cffi
+pip3 install cryptography
 pip3 install paramiko
 pip3 install selenium
-pip3 install cryptography
 echo "POST: Done installing extra packages"
 
 echo 'export PYTHONPATH=/lib/python3.6:/usr/local/lib/python3.6/site-packages/:~/JetPack/src/deploy:~/JetPack/src/deploy/auto_common' >> /root/.bashrc
