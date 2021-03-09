@@ -4,15 +4,27 @@ resource_registry:
   OS::TripleO::Services::NeutronSriovHostConfig: {{NeutronSriovHostConfig}}
 parameter_defaults:
   NeutronMechanismDrivers: ['sriovnicswitch', 'openvswitch']
-  NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','PciPassthroughFilter','AggregateInstanceExtraSpecsFilter']
-  NovaSchedulerAvailableFilters: ["nova.scheduler.filters.all_filters","nova.scheduler.filters.pci_passthrough_filter.PciPassthroughFilter"]
   NeutronEnableIsolatedMetadata: true
   NeutronEnableForceMetadata: true
   NeutronTunnelTypes: ''
   NumSriovVfs: {{parameter_defaults.NumSriovVfs}}
-  NeutronPhysicalDevMappings: {{parameter_defaults.NeutronPhysicalDevMappings}}
-  NovaPCIPassthrough:
-    {%- for dev in parameter_defaults.NovaPCIPassthrough %}
-    - devname: {{dev.devname}}
-      physical_network: {{dev.physical_network}}
-    {%- endfor %}
+  {%- for key, val in parameter_defaults.items() %}
+    {%- if key.endswith("Parameters") %}
+  {{key}}:
+      {%- for _key, _val in val.items() %}
+        {%- if _key == "NeutronPhysicalDevMappings" %}
+    {{_key}}:
+          {%- for item in _val %}
+      - {{item}}
+          {%- endfor %}
+        {%- endif %}
+        {%- if _key == "NovaPCIPassthrough" %}
+    {{_key}}:
+          {%- for dev in _val %}
+      - devname: {{dev.devname}}
+        physical_network: {{dev.physical_network}}
+          {%- endfor %}
+        {%- endif %}
+      {%- endfor %}
+    {%- endif %}
+  {%- endfor %}

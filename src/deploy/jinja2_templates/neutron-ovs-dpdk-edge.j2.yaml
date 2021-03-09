@@ -20,7 +20,6 @@ resource_registry:
 parameter_defaults:
   NeutronDatapathType: "netdev"
   NeutronVhostuserSocketDir: "/var/lib/vhost_sockets"
-  NovaSchedulerDefaultFilters: "ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,NUMATopologyFilter"
   NeutronPluginExtensions: "qos,port_security"
   NeutronOVSFirewallDriver: openvswitch
   {%- for key, val in parameter_defaults.items() %}
