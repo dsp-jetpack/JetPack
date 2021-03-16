@@ -1763,22 +1763,17 @@ class Director(InfraHost):
         # in the neutron-sriov.yaml (sriov environment file)
 
         # Specify number of VFs for sriov mentioned interfaces
-        sriov_map_setting = []
-        sriov_pci_passthrough = []
+        sriov_map_setting = ""
+        sriov_pci_passthrough = ""
         physical_network = "physint"
         check = 0
         for interface in sriov_interfaces:
-            mapping = physical_network + ':' + interface
-            nova_pci = '{devname: ' + \
-                       '"' + interface + '",' + \
-                       'physical_network: ' + \
-                       '"' + physical_network + '"}'
+            mapping = '\\n      - ' + physical_network + ':' + interface
+            nova_pci = '\\n      - devname: ' + interface + \
+                       '\\n        physical_network: ' + physical_network
 
-            sriov_map_setting.append(mapping)
-            sriov_pci_passthrough.append(nova_pci)
-
-        sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"
-        sriov_pci_passthrough = "[" + ",".join(sriov_pci_passthrough) + "]"
+            sriov_map_setting += mapping
+            sriov_pci_passthrough += nova_pci
 
         cmds.append('sed -i "s|NumSriovVfs:.*|' +
                     'NumSriovVfs: ' +
@@ -2401,10 +2396,10 @@ class Director(InfraHost):
         HostNicDriver = self.settings.HostNicDriver
         if HostNicDriver == 'mlx5_core':
             nic_driver = 'mlx5_core'
-        else:
+        elif HostNicDriver == 'vfio-pci':
             nic_driver = 'vfio-pci'
         cmds.append(
-            'sed -i "s|OvsDpdkDriverType:.*|OvsDpdkDriverType: \\"' +
+            'sed -i "s|HostNicDriver:.*|HostNicDriver: \\"' +
             nic_driver +
             '\\" |" ' +
             neutron_ovs_dpdk_yaml)

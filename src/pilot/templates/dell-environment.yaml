@@ -29,9 +29,16 @@ parameter_defaults:
 
   # Defines the interface to bridge onto br-ex for network nodes
   NeutronPublicInterface: bond1
+  
   # The tenant network type for Neutron
   NeutronNetworkType: vlan
-  ## >neutron-disable-tunneling no mapping.
+  
+  # Enable sriovnicswitch & l2population driver by default in controllers
+  # to support SRIOV and DVR deployments.
+  NeutronMechanismDrivers: ['sriovnicswitch','openvswitch','l2population']
+  NeutronEnableIsolatedMetadata: true
+  NeutronEnableForceMetadata: true
+  NeutronTunnelTypes: ''
 
   # The neutron ML2 and OpenvSwith VLAN Mapping ranges to support.
   NeutronNetworkVLANRanges: physint:201:250,physext
@@ -58,15 +65,20 @@ parameter_defaults:
 
 
   # List of Default Filters to pass to the nova Scheduler
-  # Default filters are used if profile is set to XSP
-  # This line is uncommented when using with CSP profile
-  # NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','NUMATopologyFilter', 'AggregateInstanceExtraSpecsFilter']
+  # Scheduler filters are applied to core controllers only. All the filters are
+  # added here to support different NFV features on different Core/DCN stacks.
+  NovaSchedulerDefaultFilters: ['RetryFilter','AvailabilityZoneFilter','ComputeFilter','ComputeCapabilitiesFilter','ImagePropertiesFilter','ServerGroupAntiAffinityFilter','ServerGroupAffinityFilter','NUMATopologyFilter','AggregateInstanceExtraSpecsFilter','PciPassthroughFilter']
+  NovaSchedulerAvailableFilters: ["nova.scheduler.filters.all_filters","nova.scheduler.filters.pci_passthrough_filter.PciPassthroughFilter"]
 
-  # List or range of physical CPU cores to reserve for virtual machine processes.
-  # Disabled by default for XSP Profile
-  # This line is uncommented and updated when using CSP Profile
-  # NovaComputeCpuDedicatedSet: "8-23,32-47"
+  # Kernel parameters for NUMA, HugePages and iommu >> KernelArgs
+  # List of isolated CPUs on which host processes don't run >> IsolCpusList
+  # List of CPUs reserved for Pinned Instances >> NovaComputeCpuDedicatedSet
+  # List of CPUs reserved for Shared Instances >> NovaComputeCpuSharedSet
   # DellComputeParameters:
+    # TunedProfileName: "cpu-partitioning"
+    # IsolCpusList: "8-23,32-47"
+    # NovaComputeCpuDedicatedSet: "8-23,32-47"
+    # NovaComputeCpuSharedSet: "0-3,40-43" (Cpu sharing is not utilized in current architecture)
     # KernelArgs: "default_hugepagesz=1GB hugepagesz=1G hugepages=176 iommu=pt intel_iommu=on"
 
   # Number of Dell Compute nodes

@@ -442,7 +442,7 @@ class Settings:
                 backend_settings['manila_unity_ssl_cert_path']
         else:
             self.enable_unity_manila_backend = False
-        
+
         # PowerFlex
         if backend_settings['enable_powerflex_backend'].lower() == 'true':
             self.enable_dashboard = False
@@ -450,7 +450,7 @@ class Settings:
             self.powerflex_gateway_rpm = \
                  backend_settings['powerflex_gateway_rpm']
 
-           
+
             if backend_settings['enable_powerflex_mgmt'].lower() == 'true':
                 self.enable_powerflex_mgmt = True
                 self.powerflex_presentation_server_rpm = \
@@ -465,7 +465,7 @@ class Settings:
                  backend_settings['powerflex_san_password']
             self.powerflex_storage_pools = \
                  backend_settings['powerflex_storage_pools']
-            
+
             # Powerflex parameters
             powerflex_settings = self.get_settings_section(
                 "PowerFlex Settings")
@@ -773,8 +773,7 @@ class Settings:
         elif self.ovs_dpdk_enable.lower() == 'true':
             self.enable_ovs_dpdk = True
             logger.info("OVS-DPDK is enabled.")
-            if 'HostNicDriver' in nics_settings:
-                self.HostNicDriver = nics_settings['HostNicDriver']
+            self.HostNicDriver = dellnfv_settings['HostNicDriver']
 
         # TO enable SRIOV
         self.sriov_enable = dellnfv_settings['sriov_enable']
