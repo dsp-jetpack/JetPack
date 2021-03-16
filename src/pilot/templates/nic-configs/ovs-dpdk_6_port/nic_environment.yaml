@@ -43,7 +43,6 @@ parameter_defaults:
   ComputeOvsDpdkInterface2: ens4f1
   # The DPDK bonding mode to use for compute nodes
   BondInterfaceOvsOptions: bond_mode=balance-tcp lacp=active
-  HostNicDriver: mlx5_core
   
   # CHANGEME: Change the interface names in the following lines
   # to include in the storage nodes bonds

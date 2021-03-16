@@ -48,7 +48,6 @@ parameter_defaults:
   ComputeOvsDpdkInterface2: ens3f0
   # The DPDK bonding mode to use for compute nodes
   BondInterfaceOvsOptions: bond_mode=balance-tcp lacp=active
-  HostNicDriver: mlx5_core
 
   ComputeSriovInterface1: ens1f0
   ComputeSriovInterface2: ens4f0
