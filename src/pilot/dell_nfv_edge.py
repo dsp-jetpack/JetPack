@@ -90,25 +90,26 @@ class ConfigEdge(ConfigOvercloud):
             self.nfv_params.parse_data(node_data)
             self.nfv_params.get_all_cpus()
             self.nfv_params.get_host_cpus(hostos_cpu_count)
+            self.nfv_params.get_nova_cpus()
+            self.nfv_params.get_isol_cpus()
             if is_ovs_dpdk:
                 dpdk_nics = self.find_ifaces_by_keyword(nic_env_file,
                                                         'Dpdk')
                 logger.debug("DPDK-NICs >>" + str(dpdk_nics))
                 self.nfv_params.get_pmd_cpus(self.mtu, dpdk_nics)
                 self.nfv_params.get_socket_memory(self.mtu, dpdk_nics)
-            self.nfv_params.get_nova_cpus()
-            self.nfv_params.get_isol_cpus()
             kernel_args += " isolcpus={}".format(self.nfv_params.isol_cpus)
-            # dell-environmment
-            nova_cpus = self.nfv_params.nova_cpus
-            params_dell_env["NovaComputeCpuDedicatedSet"] = nova_cpus
+            # dell-environmment role specific cpu parameters
+            params_dell_env["IsolCpusList"] = self.nfv_params.isol_cpus
+            params_dell_env["NovaComputeCpuDedicatedSet"] = self.nfv_params.nova_cpus
         if is_ovs_dpdk:
             params_dpdk = params["dpdk"] = {}
             params_dpdk["OvsDpdkCoreList"] = self.nfv_params.host_cpus
-            params_dpdk["NovaComputeCpuSharedSet"] = self.nfv_params.host_cpus
             params_dpdk["OvsPmdCoreList"] = self.nfv_params.pmd_cpus
             params_dpdk["OvsDpdkSocketMemory"] = self.nfv_params.socket_mem
-            params_dpdk["IsolCpusList"] = self.nfv_params.isol_cpus
+            # params_dpdk["IsolCpusList"] = self.nfv_params.isol_cpus # Populated in dell_env file
+            # params_dpdk["NovaComputeCpuDedicatedSet"] = self.nfv_params.nova_cpus # Populated in dell_env file
+            # params_dpdk["NovaComputeCpuSharedSet"] = self.nfv_params.shared_cpus # Not used in current Architecture
 
         params_dell_env["KernelArgs"] = kernel_args
         return params

@@ -85,7 +85,7 @@ class Director(InfraHost):
 
         self.jinja2_env = Environment(
             loader=FileSystemLoader(self.settings.jinja2_templates))
-         
+
         self.nfv_parameters = {}
 
         cmd = "mkdir -p " + self.pilot_dir
@@ -3079,8 +3079,8 @@ class Director(InfraHost):
             role_params = params[role_param_k] = {}
             role_params["KernelArgs"] = dell_env_params["KernelArgs"]
             if is_numa:
-                nova_cpu_set = dell_env_params["NovaComputeCpuDedicatedSet"]
-                params["NovaComputeCpuDedicatedSet"] = nova_cpu_set
+                role_params["NovaComputeCpuDedicatedSet"] = dell_env_params["NovaComputeCpuDedicatedSet"]
+                role_params["IsolCpusList"] = dell_env_params["IsolCpusList"]
         return params
 
     def _generate_dpdk_params_edge(self, node_type):
@@ -3096,12 +3096,11 @@ class Director(InfraHost):
         role_param_k = "{}Parameters".format(role)
         role_params = params[role_param_k] = {}
         role_params["OvsDpdkCoreList"] = dpdk_res["OvsDpdkCoreList"]
-        role_params["NovaComputeCpuSharedSet"] = dpdk_res["NovaComputeCpuSharedSet"]
         role_params["OvsPmdCoreList"] = dpdk_res["OvsPmdCoreList"]
         role_params["OvsDpdkSocketMemory"] = dpdk_res["OvsDpdkSocketMemory"]
-        role_params["IsolCpusList"] = dpdk_res["IsolCpusList"]
         # Unmodified params
-        role_params["OvsDpdkMemoryChannels"] = "4"
+	# XE2420 Has 8 Memory Channels per CPU socket.
+        role_params["OvsDpdkMemoryChannels"] = "8"
         role_params["NovaReservedHostMemory"] = 4096
         role_params["TunedProfileName"] = "cpu-partitioning"
         role_params["NovaLibvirtRxQueueSize"] = 1024
@@ -3112,8 +3111,12 @@ class Director(InfraHost):
     def _generate_sriov_params_edge(self, node_type):
         setts = self.settings
         ntd = setts.node_type_data_map[node_type]
+        role = self._generate_cc_role(node_type)
         sriov_interfaces = self.get_sriov_compute_interfaces_edge(node_type)
+
         params = {}
+        role_param_k = "{}Parameters".format(role)
+        role_params = params[role_param_k] = {}
         sriov_map_setting = []
         sriov_pci_passthrough = []
         physical_network = "physint"
@@ -3123,11 +3126,9 @@ class Director(InfraHost):
                         "physical_network": physical_network}
             sriov_map_setting.append(mapping)
             sriov_pci_passthrough.append(nova_pci)
-
-        sriov_map_setting = "'" + ",".join(sriov_map_setting) + "'"
         params["NumSriovVfs"] = ntd["sriov_vf_count"]
-        params["NeutronPhysicalDevMappings"] = sriov_map_setting
-        params["NovaPCIPassthrough"] = sriov_pci_passthrough
+        role_params["NeutronPhysicalDevMappings"] = sriov_map_setting
+        role_params["NovaPCIPassthrough"] = sriov_pci_passthrough
         return params
 
     def _create_assign_role_command(self, node, role, index, instack=None):
@@ -4434,7 +4435,7 @@ class Director(InfraHost):
             logger.info("deploying edge site with OVS DPDK, "
                         "template: {}".format(tmplt))
             cmd += " -e {} ".format(tmplt)
-        elif self._is_sriov_required(node_type):
+        if self._is_sriov_required(node_type):
             _, tmplt = self._generate_edge_template_paths(node_type,
                                                           NEUTRON_SRIOV)
             logger.info("deploying edge site with SRIOV, "
