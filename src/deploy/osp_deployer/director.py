@@ -3074,6 +3074,7 @@ class Director(InfraHost):
             role_params = params[role_param_k] = {}
             role_params["KernelArgs"] = dell_env_params["KernelArgs"]
             if is_numa:
+                role_params["TunedProfileName"] = "cpu-partitioning"
                 role_params["NovaComputeCpuDedicatedSet"] = dell_env_params["NovaComputeCpuDedicatedSet"]
                 role_params["IsolCpusList"] = dell_env_params["IsolCpusList"]
         return params
