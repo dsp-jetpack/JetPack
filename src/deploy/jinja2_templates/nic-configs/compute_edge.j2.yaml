@@ -296,6 +296,10 @@ resources:
                     mtu:
                       get_param: {{member.mtu}}
                     {%- endif %}
+                    {%- if "bonding_options" in member %}
+                    bonding_options:
+                      get_param: {{member.bonding_options}}
+                    {%- endif %}
                     {%- if "vlan_id" in member %}
                     vlan_id:
                       get_param: {{member.vlan_id}}
