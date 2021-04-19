@@ -160,6 +160,10 @@ def create_volume_types():
     if args.enable_powermax:
         types.append(["powermax_backend", "tripleo_dellemc_powermax"])
 
+    if args.enable_powerstore:
+        types.append(["powerstore_backend", "tripleo_dellemc_powerstore"])
+
+
     if args.num_powerflex > 0:
         types.append(["powerflex_backend", "tripleo_dellemc_powerflex"])
 
@@ -354,6 +358,11 @@ def main():
                             action='store_true',
                             default=False,
                             help="Enable Dell EMC PowerMax  Manila backend")
+        parser.add_argument('--enable_powerstore',
+                            action='store_true',
+                            default=False,
+                            help="Enable Dell EMC Powerstore backend")
+
         parser.add_argument('--disable_rbd',
                             action='store_true',
                             default=False,
@@ -608,6 +617,9 @@ def main():
                         "backend.yaml"
         if args.enable_powermax_manila:
             env_opts += " -e ~/pilot/templates/powermax-manila-config.yaml"
+
+        if args.enable_powerstore:
+            env_opts += " -e ~/pilot/templates/dellemc-powerstore-cinder-backend.yaml"
 
         if args.num_powerflex > 0:
             env_opts += " -e ~/pilot/templates/overcloud/environments/powerflex-ansible/powerflex-ansible.yaml"
