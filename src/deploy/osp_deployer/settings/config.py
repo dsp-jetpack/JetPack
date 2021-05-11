@@ -544,6 +544,29 @@ class Settings:
         else:
             self.enable_powermax_manila_backend = False
 
+         # PowerStore
+        if backend_settings['enable_powerstore_backend'].lower() == 'true':
+            if (backend_settings['powerstore_protocol'] != 'iSCSI' and
+               backend_settings['powerstore_protocol'] != 'FC'):
+                error_msg = "Invalid Powerstore Protocol " +\
+                    "in your ini file '" + backend_settings['powerstore_protocol'] +\
+                    "'. Valid protocols are iSCSI or FC"
+                raise AssertionError(error_msg)
+
+            self.enable_powerstore_backend = True
+            self.powerstore_san_ip = backend_settings['powerstore_san_ip']
+            self.powerstore_san_login = backend_settings[
+                'powerstore_san_login']
+            self.powerstore_san_password = backend_settings[
+                'powerstore_san_password']
+            self.powerstore_protocol = backend_settings[
+                'powerstore_protocol']
+            self.powerstore_appliances = backend_settings[
+                'powerstore_appliances']
+        else:
+            self.powermax_protocol = 'iSCSI'
+            self.enable_powerstore_backend = False
+
         sanity_settings = self.get_settings_section(
             "Sanity Test Settings")
         self.floating_ip_network = sanity_settings['floating_ip_network']
@@ -703,6 +726,8 @@ class Settings:
             '/pilot/templates/dellemc-powermax-fc-cinder-backend.yaml'
         self.powermax_manila_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/powermax-manila-config.yaml'
+        self.dell_powerstore_cinder_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/dellemc-powerstore-cinder-backend.yaml'
         self.dell_powerflex_cinder_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dellemc-powerflex-cinder-backend.yaml'
         self.dell_powerflex_volume_mapping_yaml = self.foreman_configuration_scripts + \
