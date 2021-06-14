@@ -52,6 +52,19 @@ class OCP_Settings:
                 "Deployment Settings")
             self.nodes_yaml = deploy_settings['nodes_yaml']
             self.csah_root_pwd = deploy_settings['csah_root_password']
+            self.ocp_version = deploy_settings['ocp_version']
+            self.cluster_name = deploy_settings['cluster_name']
+
+            self.computes_pxe_nic=deploy_settings['comnpute_nodes_pxe_interface']
+            self.controllers_pxe_nic=deploy_settings['control_nodes_pxe_interface']
+
+            self.boot_disk_controllers=deploy_settings['boot_disk_controllers']
+            self.boot_disk_computes=deploy_settings['boot_disk_computes']
+            self.pull_secret_file=deploy_settings['pull_secret_file']
+            
+            network_settings = self.get_settings_section(
+                "Network Settings")
+            self.dns=network_settings['name_server']
 
             # Load the nodes definition 
             with open(self.nodes_yaml, 'r') as file:
