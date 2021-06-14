@@ -21,6 +21,9 @@ from ocp_deployer.settings.ocp_config import OCP_Settings
 logger = logging.getLogger("ocp_deployer")
 import requests, json, urllib3
 from auto_common import Ssh
+from collections import defaultdict
+from generate_inventory_file import InventoryFile
+import shutil, os
 
 class CSah(InfraHost):
 
@@ -73,6 +76,8 @@ class CSah(InfraHost):
                                             cm)
                 else:
                     bBoostrapDestroyed = True
+            cmd = 'rm -rf /home/bootstrapvm-disk.qcow2'
+            Ssh.execute_command("localhost", "root", self.settings.csah_root_pwd, cmd)
 
         def run_playbooks(self):
             logger.info("- Run ansible playbook to generate ignition files etc")
@@ -225,3 +230,70 @@ class CSah(InfraHost):
                 else:
                     logger.info (" All operators are up & running ")
                     bOperatorsReady = True
+
+        def complete_cluster_setup(self):
+            logger.info("- Complete the cluster setup")
+            cmd = 'ssh -t root@localhost "sudo su - core -c \'./openshift-install --dir=openshift wait-for install-complete --log-level debug\'"'
+            Ssh.execute_command_tty("localhost","root", self.settings.csah_root_pwd, cmd)
+
+        def discover_nodes(self):
+            logger.info("- Discover nodes")
+            cmd = 'rm -rf instackenv.json'
+            subprocess.call(cmd, shell=True, cwd='/home/ansible/')
+
+            nodes = self.settings.controller_nodes  + self.settings.compute_nodes
+            cmd = "./discover_nodes.py  -u " + \
+                self.settings.ipmi_user + \
+                " -p '" + self.settings.ipmi_pwd + "'"
+            for node in nodes:
+                cmd += ' ' + node.idrac_ip
+            cmd += '> ~/instackenv.json'
+
+            subprocess.call(cmd, shell=True, cwd='/home/ansible/JetPack/src/pilot/discover_nodes')
+
+        def configure_idracs(self):
+            logger.info("- Configure Idracs")
+            json_config = defaultdict(dict)
+            cmd = "/home/ansible/JetPack/src/pilot/config_idracs.py "
+            for node in self.settings.controller_nodes:
+                node_id = node.idrac_ip
+                json_config[node_id]["pxe_nic"] = self.settings.controllers_pxe_nic
+            for node in self.settings.compute_nodes:
+                node_id = node.idrac_ip
+                json_config[node_id]["pxe_nic"] = self.settings.controllers_pxe_nic
+            if json_config.items():
+                cmd += "-j '{}'".format(json.dumps(json_config))
+            subprocess.call(cmd, shell=True, cwd='/home/ansible/JetPack/src/pilot')
+
+
+        def generate_inventory_file(self):
+            logger.info("- Generating inventory file")
+            logger.debug(" remove any existing inventory")
+            existing_inventory='/home/ansible/openshift-bare-metal/ansible/generated_inventory'
+            if os.path.exists(existing_inventory):
+                os.remove(existing_inventory)
+            gen_inv_file = InventoryFile(id_user=self.settings.ipmi_user,
+                                         id_pass=self.settings.ipmi_pwd,
+                                         version=self.settings.ocp_version,
+                                         nodes_inventory=self.settings.nodes_yaml,
+                                         diskname_master=self.settings.boot_disk_controllers,
+                                         diskname_worker=self.settings.boot_disk_computes,
+                                         dns_forwarder=self.settings.dns,
+                                         cluster_name=self.settings.cluster_name
+                                         )                
+            gen_inv_file.run()
+            logger.debug("add pull secret to inventory")
+            with open('generated_inventory', 'a') as file:
+                file.write('    pull_secret_file: pullsecret')
+
+            logger.debug("copy generated inventory filei & pullsecret")
+            shutil.copyfile(self.settings.pull_secret_file, '/home/ansible/files/pullsecret')
+            shutil.copyfile('generated_inventory', '/home/ansible/openshift-bare-metal/ansible/generated_inventory')
+
+        def update_nodes_yaml(self):
+            # Inject the NIC informations into the nodes.yml
+            logger.info("- Update the nodes.yaml with NICs information")
+            # ToDo : Add nodes
+
+            
+            

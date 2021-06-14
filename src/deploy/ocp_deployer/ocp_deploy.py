@@ -98,9 +98,16 @@ def deploy():
 
     csah = CSah()
     # CSah healthChecks
-    csah.power_off_cluster_nodes()
+
+    # Add step : [root@csah-pri ~]# nmcli connection modify bridge-br0 ipv4.dns <IP address>
     csah.cleanup_sah()
     csah.delete_bootstrap_vm()
+
+    csah.generate_inventory_file()
+
+    csah.discover_nodes()
+    csah.configure_idracs()
+    csah.power_off_cluster_nodes()
 
     csah.run_playbooks()
     csah.create_bootstrap_vm()
@@ -112,7 +119,9 @@ def deploy():
     csah.complete_bootstrap_process()
     csah.pxe_boot_computes()
     csah.wait_for_operators_ready()
+    csah.complete_cluster_setup()
 
+    csah.delete_bootstrap_vm()
 
     sys.exit(1)
 
