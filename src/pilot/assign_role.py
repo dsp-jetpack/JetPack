@@ -852,7 +852,7 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
     # if else statement needed to run this script before out-of-band
     # inspection or in-band introspection has been performed.
     if 'capabilities' in node.properties:
-       value = "{},{}".format(role, node.properties['capabilities'])
+        value = "{},{}".format(role, node.properties['capabilities'])
     else:
         value = "{},boot_mode:uefi,boot_option:local".format(role)
 
