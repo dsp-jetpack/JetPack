@@ -846,8 +846,13 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
     if role_index.index:
         role = "node:{}-{}".format(flavor, role_index.index)
 
+    # capabilities will be available if in-band introspection or
+    # out-of-band inspection is performed before
+    # assign_role.py is executed.
+    # if else statement needed to run this script before out-of-band
+    # inspection or in-band introspection has been performed.
     if 'capabilities' in node.properties:
-        value = "{},{},boot_mode:uefi,boot_option:local".format(role, node.properties['capabilities'])
+       value = "{},{}".format(role, node.properties['capabilities'])
     else:
         value = "{},boot_mode:uefi,boot_option:local".format(role)
 
@@ -859,7 +864,6 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
               'path': '/properties/capabilities'}]
     ironic_client.node.update(node_uuid, patch)
     LOG.info(str(patch))
-
 
 
 def generate_osd_config(ip_mac_service_tag, drac_client):
