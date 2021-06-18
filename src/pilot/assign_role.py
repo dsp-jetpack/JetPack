@@ -310,16 +310,14 @@ def _define_controller_or_compute_logical_disks(drac_client,
                                                 raid_controller_ids):
     all_physical_disks = drac_client.list_physical_disks()
     # Get the drives controlled by the RAID controller
-    raid_cntlr_physical_disks=defaultdict(list)
+    raid_cntlr_physical_disks = defaultdict(list)
     for disk in all_physical_disks:
         if disk.controller in raid_controller_ids:
             raid_cntlr_physical_disks[disk.controller].append(disk)
 
-    is_root_volume=True
     logical_disks = []
     boss_controller = _fetch_boss_controller(drac_client, raid_controller_ids)
     if boss_controller:
-        is_root_volume=False
         if check_cntlr_physical_disks_len(
            raid_cntlr_physical_disks[boss_controller]):
             boss_os_logical_disk = define_operating_system_logical_disk(
@@ -332,8 +330,11 @@ def _define_controller_or_compute_logical_disks(drac_client,
             return None
 
     raid_10_logical_disk = define_single_raid_10_logical_disk(
-        drac_client, raid_controller_ids[0], is_root_volume)
+        drac_client, raid_controller_ids[0], not boss_controller)
 
+    # None indicates an error occurred.
+    if raid_10_logical_disk is None:
+        return None
 
     if raid_10_logical_disk:
         logical_disks.append(raid_10_logical_disk)
@@ -488,8 +489,7 @@ def define_storage_logical_disks(drac_client, raid_controllers):
 def define_operating_system_logical_disk(physical_disks, drac_client,
                                                  raid_controller_name):
     (os_logical_disk_size_gb,
-     os_physical_disk_names) = find_physical_disks_for_os(
-        physical_disks)
+     os_physical_disk_names) = find_physical_disks_for_os(physical_disks)
 
     if os_physical_disk_names is None:
         return None
