@@ -852,7 +852,21 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
     # if else statement needed to run this script before out-of-band
     # inspection or in-band introspection has been performed.
     if 'capabilities' in node.properties:
-        value = "{},{}".format(role, node.properties['capabilities'])
+        current_capabilities = node.properties.get('capabilities')
+        try:
+            cap_dict = dict(x.split(':', 1)
+                            for x in current_capabilities.split(','))
+        except ValueError:
+        # ValueError can occur if capabilities values not properly
+        # defined like capabilities='boot_mode:uefi,boot_option'.
+            raise ValueError(
+                _("Invalid capabilities string '%s'.") % current_capabilities)
+
+        new_capabilities = {'boot_mode':'uefi', 'boot_option':'local'}
+        cap_dict.update(new_capabilities)
+        capabilities_value = ','.join('%(key)s:%(value)s' % {'key': key, 'value': value}
+                                      for key, value in cap_dict.items())
+        value = "{},{}".format(role, capabilities_value)
     else:
         value = "{},boot_mode:uefi,boot_option:local".format(role)
 
