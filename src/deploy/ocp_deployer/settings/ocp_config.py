@@ -88,8 +88,6 @@ class OCP_Settings:
             self.public_bond_mtu = network_settings['public_bond_mtu']
 
             self.bridge_name = network_settings['bridge_name']
-            self.bridge_bond_name = network_settings['bridge_bond_name']
-            self.bridge_ip = network_settings['bridge_ip']
             self.bridge_netmask = network_settings['bridge_netmask']
             self.bridge_mtu = network_settings['bridge_mtu'] 
 
@@ -102,6 +100,7 @@ class OCP_Settings:
             self.controller_nodes = []
             self.compute_nodes = []
             self.csah_node = OCP_node(nodes['csah'][0], None, None)
+            logger.debug(self.csah_node)
             self.bootstrap_node = OCP_node(nodes['bootstrap_kvm'][0], None, None)
             for control in nodes['control_nodes']:
                 self.controller_nodes.append(OCP_node(control, self.ipmi_user, self.ipmi_pwd))

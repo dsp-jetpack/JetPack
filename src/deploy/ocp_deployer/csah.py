@@ -304,6 +304,11 @@ class CSah(InfraHost):
                         "/../../ocp-csah.ks")
             sets.csah_kickstart = sets.cloud_repo_dir + "/../../ocp-csah.ks"
             FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^HostName=.*',
+                                          'HostName="' +
+                                           sets.csah_node.name +
+                                           '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
                                           '^SystemPassword=.*',
                                           'SystemPassword="' +
                                            sets.csah_root_pwd +
@@ -388,12 +393,12 @@ class CSah(InfraHost):
             FileHelper.replace_expression(sets.csah_kickstart,
                                           '^bridge_bond_name=.*',
                                           'bridge_bond_name="' +
-                                          sets.bridge_bond_name +
+                                          sets.public_bond_name +
                                           '"')
             FileHelper.replace_expression(sets.csah_kickstart,
                                           '^bridge_boot_opts=.*',
                                           'bridge_boot_opts="onboot static ' + 
-                                          sets.bridge_ip + '/' +
+                                          sets.csah_node.os_ip + '/' +
                                           sets.bridge_netmask + '"')
             FileHelper.replace_expression(sets.csah_kickstart,
                                           '^bridge_mtu=.*',
@@ -402,11 +407,3 @@ class CSah(InfraHost):
                                           '"')
 
             time.sleep(3)
-
-
-
-
-
-
-            
-            
