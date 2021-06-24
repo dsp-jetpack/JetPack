@@ -723,6 +723,7 @@ FileNotFoundError: [Errno 2] No such file or directory: '/root/ansible/JetPack/.
 subprocess.CalledProcessError: Command 'cd ~;cp ocp-sah.ks /mnt/usb' returned non-zero exit status 1.
 
 2021-06-24 12:01:51,090 ERROR <class 'subprocess.CalledProcessError'>
+<<<<<<< HEAD
 2021-06-24 14:44:33,013 INFO * Creating the SAH node usb image.
 2021-06-24 14:44:33,015 DEBUG loading settings files /root/ansible/r87.ini
 2021-06-24 14:44:33,025 INFO Settings .ini: /root/ansible/r87.ini
@@ -839,3 +840,5 @@ subprocess.CalledProcessError: Command 'cd ~;cp ocp-sah.ks /mnt/usb' returned no
 2021-06-24 15:45:16,451 DEBUG running sync; umount /mnt/usb
 2021-06-24 15:45:22,981 DEBUG b''
 2021-06-24 15:45:22,982 INFO All done - attach ~/ocp_ks.img to the sah node & continue with the deployment ...
+=======
+>>>>>>> fdaa93a2d052def5657ee8a3a2d2a75d3e937283
