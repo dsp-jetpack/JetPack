@@ -72,6 +72,7 @@ class OCP_Settings:
             
             network_settings = self.get_settings_section(
                 "Network Settings")
+            self.domain_name = network_settings['domain']
             self.name_server = network_settings['name_server']
             self.gateway = network_settings['gateway']
             self.ntp_server = network_settings['ntp_server']

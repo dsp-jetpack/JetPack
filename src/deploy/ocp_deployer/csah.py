@@ -306,7 +306,9 @@ class CSah(InfraHost):
             FileHelper.replace_expression(sets.csah_kickstart,
                                           '^HostName=.*',
                                           'HostName="' +
-                                           sets.csah_node.name +
+                                           sets.csah_node.name + 
+                                           '.' +
+                                           sets.domain_name +
                                            '"')
             FileHelper.replace_expression(sets.csah_kickstart,
                                           '^SystemPassword=.*',
