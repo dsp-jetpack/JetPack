@@ -43,6 +43,11 @@ class OCP_Settings:
             self.subscription_manager_pool_csah = rhsm_settings[
                 'subscription_manager_pool_csah']
 
+            dev_settings = self.get_settings_section(
+                "Development Settings")
+            self.cloud_repo_dir = dev_settings['cloud_repo_dir']
+            self.rhel_iso = dev_settings['rhel_iso']
+
             ipmi_settings = self.get_settings_section(
                 "IPMI credentials Settings")
             self.ipmi_user = ipmi_settings['ipmi_user']
@@ -55,16 +60,41 @@ class OCP_Settings:
             self.ocp_version = deploy_settings['ocp_version']
             self.cluster_name = deploy_settings['cluster_name']
 
-            self.computes_pxe_nic=deploy_settings['comnpute_nodes_pxe_interface']
-            self.controllers_pxe_nic=deploy_settings['control_nodes_pxe_interface']
+            self.computes_pxe_nic = deploy_settings['comnpute_nodes_pxe_interface']
+            self.controllers_pxe_nic = deploy_settings['control_nodes_pxe_interface']
 
-            self.boot_disk_controllers=deploy_settings['boot_disk_controllers']
-            self.boot_disk_computes=deploy_settings['boot_disk_computes']
-            self.pull_secret_file=deploy_settings['pull_secret_file']
+            self.boot_disk_controllers = deploy_settings['boot_disk_controllers']
+            self.boot_disk_computes = deploy_settings['boot_disk_computes']
+            
+            self.pull_secret_file = deploy_settings['pull_secret_file']
+            self.ansible_password = deploy_settings['ansible_password']
+            
             
             network_settings = self.get_settings_section(
                 "Network Settings")
-            self.dns=network_settings['name_server']
+            self.name_server = network_settings['name_server']
+            self.gateway = network_settings['gateway']
+            self.ntp_server = network_settings['ntp_server']
+            self.timezone = network_settings['timezone']
+
+            self.anaconda_iface = network_settings['anaconda_iface']
+            self.anaconda_ip = network_settings['anaconda_ip']
+            self.anaconda_netmask = network_settings['anaconda_netmask']
+
+            self.public_bond_name = network_settings['public_bond_name']
+            self.public_boot_opts = network_settings['public_boot_opts']
+            self.public_bond_opts = network_settings['public_bond_opts']
+            self.public_bond_ifaces = network_settings['public_bond_ifaces']
+            self.public_bond_mtu = network_settings['public_bond_mtu']
+
+            self.bridge_name = network_settings['bridge_name']
+            self.bridge_bond_name = network_settings['bridge_bond_name']
+            self.bridge_ip = network_settings['bridge_ip']
+            self.bridge_netmask = network_settings['bridge_netmask']
+            self.bridge_mtu = network_settings['bridge_mtu'] 
+
+
+            self.csah_kickstart = self.cloud_repo_dir + "/src/mgmt/ocp-csah.ks"
 
             # Load the nodes definition 
             with open(self.nodes_yaml, 'r') as file:
