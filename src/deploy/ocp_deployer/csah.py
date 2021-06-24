@@ -18,9 +18,10 @@ from discover_nodes.dracclient.client import DRACClient
 from infra_host import InfraHost
 import logging, subprocess, yaml, time 
 from ocp_deployer.settings.ocp_config import OCP_Settings
+from ocp_deployer.checkpoints import Checkpoints
 logger = logging.getLogger("ocp_deployer")
 import requests, json, urllib3
-from auto_common import Ssh
+from auto_common import Ssh, FileHelper
 from collections import defaultdict
 from generate_inventory_file import InventoryFile
 import shutil, os
@@ -294,6 +295,118 @@ class CSah(InfraHost):
             # Inject the NIC informations into the nodes.yml
             logger.info("- Update the nodes.yaml with NICs information")
             # ToDo : Add nodes
+
+        def update_kickstart_usb(self):
+            #tester = Checkpoints()
+            #tester.verify_deployer_settings()
+            sets = self.settings
+            shutil.copyfile(sets.csah_kickstart, sets.cloud_repo_dir +
+                        "/../ocp-csah.ks")
+            sets.csah_kickstart = sets.cloud_repo_dir + "/../ocp-csah.ks"
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^SystemPassword=.*',
+                                          'SystemPassword="' +
+                                           sets.csah_root_pwd +
+                                           '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^AnsiblePassword=.*',
+                                          'AnsiblePassword="' +
+                                           sets.ansible_password +
+                                           '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^SubscriptionManagerUser=.*',
+                                          'SubscriptionManagerUser="' +
+                                           sets.subscription_manager_user +
+                                          '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^SubscriptionManagerPassword=.*',
+                                          'SubscriptionManagerPassword="' +
+                                          sets.subscription_manager_password +
+                                          '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^SubscriptionManagerPool=.*',
+                                          'SubscriptionManagerPool="' +
+                                          sets.subscription_manager_pool_csah +
+                                          '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^Gateway=.*',
+                                          'Gateway="' +
+                                          sets.gateway +
+                                          '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^NameServers=.*',
+                                          'NameServers="' +
+                                          sets.name_server +
+                                          '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^NTPServers=.*',
+                                          'NTPServers="' +
+                                          sets.ntp_server +
+                                          '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^TimeZone=.*',
+                                          'TimeZone="' +
+                                          sets.timezone +
+                                          '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^anaconda_interface=.*',
+                                          'anaconda_interface="' +
+                                          sets.anaconda_ip + '/' +
+                                          sets.anaconda_netmask + ' ' +
+                                          sets.anaconda_iface +
+                                          ' no"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^extern_bond_name=.*',
+                                          'extern_bond_name="' +
+                                          sets.public_bond_name +
+                                          '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^extern_boot_opts=.*',
+                                          'extern_boot_opts="' +
+                                          sets.public_boot_opts +
+                                          '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^extern_bond_opts=.*',
+                                          'extern_bond_opts="' +
+                                          sets.public_bond_opts +
+                                          '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^extern_ifaces=.*',
+                                          'extern_ifaces="' +
+                                          sets.public_bond_ifaces +
+                                          '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^extern_bond_mtu=.*',
+                                          'extern_bond_mtu="' +
+                                          sets.public_bond_mtu +
+                                          '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^bridge_name=.*',
+                                          'bridge_name="' +
+                                          sets.bridge_name + 
+                                          '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^bridge_bond_name=.*',
+                                          'bridge_bond_name="' +
+                                          sets.bridge_bond_name +
+                                          '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^bridge_boot_opts=.*',
+                                          'bridge_boot_opts="onboot static ' + 
+                                          sets.bridge_ip + '/' +
+                                          sets.bridge_netmask + '"')
+            FileHelper.replace_expression(sets.csah_kickstart,
+                                          '^bridge_mtu=.*',
+                                          'bridge_mtu="' +
+                                          sets.bridge_mtu +
+                                          '"')
+
+            time.sleep(3)
+
+
+
+
+
 
             
             
