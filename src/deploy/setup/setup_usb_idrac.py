@@ -82,7 +82,6 @@ def setup():
                     'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
                     'cd ~;cp ' + settings.nodes_yaml + ' /mnt/usb',
                     'cd ~;cp ocp-csah.ks /mnt/usb',
-                    "sed -i 's|" + iso_path + "|/root|' " + target_ini,
                     'sync; umount /mnt/usb']
         else:
             cmds = ['mkfs.ext3 -F ' + args.usb_key,
@@ -93,7 +92,6 @@ def setup():
                     'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
                     'cd ~;cp ' + settings.nodes_yaml + ' /mnt/usb',
                     'cd ~;cp ocp-sah.ks /mnt/usb',
-                    "sed -i 's|" + iso_path + "|/root|' " + target_ini,
                     'sync; umount /mnt/usb']
 
         for cmd in cmds:
