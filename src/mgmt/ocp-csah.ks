@@ -422,7 +422,7 @@ pip3 install setuptools_rust
 pip3 install python-heatclient
 
 echo "POST: Install other required packages"
-yum install -y gcc libffi-devel openssl-devel ipmitool tmux httpd rust-toolset python3-devel xinetd tftp
+yum install -y gcc libffi-devel openssl-devel ipmitool tmux httpd rust-toolset python3-devel xinetd tftp-server
 yum install -y git ansible python3-netaddr python38 python38-pyyaml python38-requests libguestfs-tools
 
 echo "POST: Done installing extra packages"
