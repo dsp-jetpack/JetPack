@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+a!/usr/bin/env python3
 
 # Copyright (c) 2015-2021 Dell Inc. or its subsidiaries.
 #
@@ -87,6 +87,8 @@ def setup():
                     'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
                     'cd ~;cp ' + settings.nodes_yaml + ' /mnt/usb',
                     'cd ~;cp ocp-csah.ks /mnt/usb',
+                    'cd ~;mkdir -p /mnt/usb/ansible/pilot',
+                    'cd ~;cp ~/ansible/JetPack/src/pilot/dell_systems.json /mnt/usb/ansible/pilot/',
                     "sed -i 's|" + iso_path + "|/root|' " + target_ini,
                     'sync; umount /mnt/usb']
         else:
@@ -99,6 +101,8 @@ def setup():
                     'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
                     'cd ~;cp ' + settings.nodes_yaml + ' /mnt/usb',
                     'cd ~;cp ocp-sah.ks /mnt/usb',
+                    'cd ~;mkdir -p /mnt/usb/ansible/pilot',
+                    'cd ~;cp ~/ansible/JetPack/src/pilot/dell_systems.json /mnt/usb/ansible/pilot/',
                     "sed -i 's|" + iso_path + "|/root|' " + target_ini,
                     'sync; umount /mnt/usb']
 
