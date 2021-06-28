@@ -46,7 +46,6 @@ class OCP_Settings:
             dev_settings = self.get_settings_section(
                 "Development Settings")
             self.cloud_repo_dir = dev_settings['cloud_repo_dir']
-            self.rhel_iso = dev_settings['rhel_iso']
 
             ipmi_settings = self.get_settings_section(
                 "IPMI credentials Settings")
