@@ -415,11 +415,14 @@ echo "POST: upgrade setuptools"
 pip3 install --upgrade pip
 pip3 install --upgrade setuptools
 pip3 install paramiko
-pip3 install selenium
 pip3 install cryptography
-pip3 install dracclient
+pip3 install python-dracclient
+pip3 install ironic --ignore-installed PyYAML
+pip3 install setuptools_rust
+pip3 install python-heatclient
 
 echo "POST: Install other required packages"
+yum install -y gcc libffi-devel openssl-devel ipmitool tmux httpd rust-toolset python3-devel xinetd tftp-server
 yum install -y git ansible python3-netaddr python38 python38-pyyaml python38-requests libguestfs-tools
 
 echo "POST: Done installing extra packages"
@@ -447,7 +450,11 @@ cat /etc/ssh/ssh_host_ecdsa_key.pub >> /home/ansible/.ssh/known_hosts
 chmod 600 /home/ansible/.ssh/authorized_keys
 
 # Set PYTHONPATH for ansible user
-echo "export PYTHONPATH=/lib/python3.6:/usr/local/lib/python3.6/site-packages/:/home/ansible/JetPack/src/deploy:/home/ansible/JetPack/src/deploy/auto_common:/home/ansible/JetPack/src/pilot/discover_nodes://home/ansible/JetPack/src/deploy/osp_deployer:/home/ansible/openshift-bare-metal/python" >> /home/ansible/.bashrc
+echo "export PYTHONPATH=/lib/python3.6:/usr/local/lib/python3.6/site-packages/:/home/ansible/JetPack/src/deploy:/home/ansible/JetPack/src/deploy/auto_common:/home/ansible/JetPack/src/pilot/discover_nodes:/home/ansible/JetPack/src/deploy/osp_deployer:/home/ansible/openshift-bare-metal/python:/home/ansible/JetPack/src/common/" >> /home/ansible/.bashrc
+
+# Fix permission issues for Ansible user
+mkdir /auto_results
+chown ansible:ansible /auto_results
 
 
 # Remove ssh banners
