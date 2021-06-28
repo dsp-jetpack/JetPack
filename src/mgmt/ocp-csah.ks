@@ -417,7 +417,7 @@ pip3 install --upgrade setuptools
 pip3 install paramiko
 pip3 install cryptography
 pip3 install python-dracclient
-pip3 install ironic --ignore-installed=PyYAML
+pip3 install ironic --ignore-installed PyYAML
 pip3 install setuptools_rust
 pip3 install python-heatclient
 
