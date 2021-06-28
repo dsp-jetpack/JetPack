@@ -450,7 +450,7 @@ cat /etc/ssh/ssh_host_ecdsa_key.pub >> /home/ansible/.ssh/known_hosts
 chmod 600 /home/ansible/.ssh/authorized_keys
 
 # Set PYTHONPATH for ansible user
-echo "export PYTHONPATH=/lib/python3.6:/usr/local/lib/python3.6/site-packages/:/home/ansible/JetPack/src/deploy:/home/ansible/JetPack/src/deploy/auto_common:/home/ansible/JetPack/src/pilot/discover_nodes://home/ansible/JetPack/src/deploy/osp_deployer:/home/ansible/openshift-bare-metal/python:/home/ansible/JetPack/src/common/" >> /home/ansible/.bashrc
+echo "export PYTHONPATH=/lib/python3.6:/usr/local/lib/python3.6/site-packages/:/home/ansible/JetPack/src/deploy:/home/ansible/JetPack/src/deploy/auto_common:/home/ansible/JetPack/src/pilot/discover_nodes:/home/ansible/JetPack/src/deploy/osp_deployer:/home/ansible/openshift-bare-metal/python:/home/ansible/JetPack/src/common/" >> /home/ansible/.bashrc
 
 # Fix permission issues for Ansible user
 mkdir /auto_results

@@ -72,7 +72,6 @@ def setup():
 
         # Create the usb Media & update path references
         target_ini = settings.settings_file.replace('/root', "/mnt/usb")
-        iso_path = os.path.dirname(settings.rhel_iso)
         if args.idrac_vmedia_img is True:
             cmds = ['cd ~;rm -f ocp_ks.img',
                     'cd ~;dd if=/dev/zero of=ocp_ks.img bs=1M count=10000',
