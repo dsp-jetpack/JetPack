@@ -409,7 +409,7 @@ fi
          subscription-manager attach --auto ${ProxyInfo}
          )
 
-subscription-manager repos ${ProxyInfo} '--disable=*' --enable=ansible-2.9-for-rhel-8-x86_64-rpms --enable=rhel-8-server-extras-rpms --enable=rhocp-4.6-for-rhel-8-x86_64-rpms --enable=rhel-8-for-x86_64-baseos-rpms --enable=rhel-8-for-x86_64-appstream-rpms
+subscription-manager repos ${ProxyInfo} '--disable=*' --enable=ansible-2.9-for-rhel-8-x86_64-rpms --enable=rhocp-4.6-for-rhel-8-x86_64-rpms --enable=rhel-8-for-x86_64-baseos-rpms --enable=rhel-8-for-x86_64-appstream-rpms --enable=rhocp-4.6-for-rhel-8-x86_64-rpms
 
 echo "POST: upgrade setuptools"
 pip3 install --upgrade pip
