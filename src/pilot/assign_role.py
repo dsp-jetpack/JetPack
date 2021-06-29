@@ -329,14 +329,21 @@ def _define_controller_or_compute_logical_disks(drac_client,
                          "2 SSDs are needed to configure a RAID 1")
             return None
 
-    raid_10_logical_disk = define_single_raid_10_logical_disk(
-        drac_client, raid_controller_ids[0], not boss_controller)
+    raid_controller = [cntlr for cntlr in raid_controller_ids
+                       if not drac_client.is_boss_controller(cntlr)]
 
-    # None indicates an error occurred.
-    if raid_10_logical_disk is None:
-        return None
+    if raid_controller:
+        if len(raid_controller) > 1:
+            LOG.warning(
+                "Found more than one RAID controller. Selecting RAID "
+                "controller {}".format(raid_controller[0]))
+        raid_10_logical_disk = define_single_raid_10_logical_disk(
+            drac_client, raid_controller[0], not boss_controller)
 
-    if raid_10_logical_disk:
+        # None indicates an error occurred.
+        if raid_10_logical_disk is None:
+            return None
+
         logical_disks.append(raid_10_logical_disk)
 
     return logical_disks
@@ -410,6 +417,10 @@ def _fetch_boss_controller(drac_client, raid_controllers):
     boss_controller = [cntrl for cntrl in raid_controllers
                        if drac_client.is_boss_controller(cntrl)]
     if boss_controller:
+        if len(boss_controller) > 1:
+            LOG.warning(
+                "Found more than one BOSS card. Selecting BOSS card "
+                "{}".format(boss_controller[0]))
         return boss_controller[0]
 
 
