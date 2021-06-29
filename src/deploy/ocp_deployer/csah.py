@@ -279,7 +279,7 @@ class CSah(InfraHost):
                                          nodes_inventory=self.settings.nodes_yaml,
                                          diskname_master=self.settings.boot_disk_controllers,
                                          diskname_worker=self.settings.boot_disk_computes,
-                                         dns_forwarder=self.settings.dns,
+                                         dns_forwarder=self.settings.name_server,
                                          cluster_name=self.settings.cluster_name
                                          )                
             gen_inv_file.run()

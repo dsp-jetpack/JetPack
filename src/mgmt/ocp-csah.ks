@@ -419,12 +419,12 @@ pip3 install cryptography
 pip3 install python-dracclient
 pip3 install setuptools_rust
 pip3 install python-heatclient
-pip3 install ironic --ignore-installed PyYAML
 
 echo "POST: Install other required packages"
 yum install -y gcc libffi-devel openssl-devel ipmitool tmux httpd rust-toolset python3-devel xinetd tftp-server
-yum install -y git ansible python3-netaddr python38 python38-pyyaml python38-requests libguestfs-tools
+yum install -y git ansible python3-netaddr python38 python38-pyyaml python38-requests libguestfs-tools python3-devel
 
+pip3 install ironic --ignore-installed PyYAML
 echo "POST: Done installing extra packages"
 
 # Create a new user for running ansible playbooks
