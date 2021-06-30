@@ -79,12 +79,9 @@ def setup():
                     'mkdir -p /mnt/usb',
                     'cd ~;mount -o loop ocp_ks.img /mnt/usb',
                     'cd ~;cp -R ~/ansible /mnt/usb',
-                    'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
-                    'cd ~;cp ' + settings.nodes_yaml + ' /mnt/usb',
                     'cd ~;cp ocp-csah.ks /mnt/usb',
                     'cd ~;mkdir -p /mnt/usb/ansible/pilot',
                     'cd ~;cp ~/ansible/JetPack/src/pilot/dell_systems.json /mnt/usb/ansible/pilot/',
-        #            "sed -i 's|" + iso_path + "|/root|' " + target_ini,
                     'sync; umount /mnt/usb']
         else:
             cmds = ['mkfs.ext3 -F ' + args.usb_key,
@@ -92,12 +89,9 @@ def setup():
                     'cd ~;mount -o loop ' + args.usb_key +
                     ' /mnt/usb',
                     'cd ~;cp -R ~/ansible /mnt/usb',
-                    'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
-                    'cd ~;cp ' + settings.nodes_yaml + ' /mnt/usb',
                     'cd ~;cp ocp-sah.ks /mnt/usb',
                     'cd ~;mkdir -p /mnt/usb/ansible/pilot',
                     'cd ~;cp ~/ansible/JetPack/src/pilot/dell_systems.json /mnt/usb/ansible/pilot/',
-                    "sed -i 's|" + iso_path + "|/root|' " + target_ini,
                     'sync; umount /mnt/usb']
 
         for cmd in cmds:
