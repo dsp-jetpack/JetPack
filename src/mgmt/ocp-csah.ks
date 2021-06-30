@@ -427,6 +427,9 @@ yum install -y git ansible python3-netaddr python38 python38-pyyaml python38-req
 pip3 install ironic --ignore-installed PyYAML
 echo "POST: Done installing extra packages"
 
+# Workaround for firewall issue - aka: Module decorator not found
+yum reinstall -y python3-decorator
+
 # Create a new user for running ansible playbooks
 useradd ansible
 passwd -f ansible << EOFPW
@@ -447,7 +450,10 @@ chmod 600 /etc/ssh/ssh_host_ecdsa_key
 chmod 644 /etc/ssh/ssh_host_ecdsa_key.pub
 restorecon /etc/ssh/ssh_host_ecdsa_key.pub
 cat /etc/ssh/ssh_host_ecdsa_key.pub >> /home/ansible/.ssh/known_hosts
+echo -n "localhost ">> /home/ansible/.ssh/known_hosts
+cat /etc/ssh/ssh_host_ecdsa_key.pub >> /home/ansible/.ssh/known_hosts
 chmod 600 /home/ansible/.ssh/authorized_keys
+chown -R ansible:ansible /home/ansible
 
 # Set Passwordless authentication to allow ansible user to gain root access
 mkdir ~/.ssh
