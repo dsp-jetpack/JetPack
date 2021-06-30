@@ -66,16 +66,12 @@ def setup():
         logger.info("Settings .ini: " + settings.settings_file)
         logger.info("Settings .yaml " + settings.nodes_yaml)
 
-        # Check to verify RHEL ISO exists
-        rhel_iso = settings.rhel_iso
-        assert os.path.isfile(settings.rhel_iso), settings.rhel_iso +\
-            " ISO file is not present"
+        
         sah = CSah()
         sah.update_kickstart_usb()
 
         # Create the usb Media & update path references
         target_ini = settings.settings_file.replace('/root', "/mnt/usb")
-        iso_path = os.path.dirname(settings.rhel_iso)
         if args.idrac_vmedia_img is True:
             cmds = ['cd ~;rm -f ocp_ks.img',
                     'cd ~;dd if=/dev/zero of=ocp_ks.img bs=1M count=10000',
@@ -83,11 +79,12 @@ def setup():
                     'mkdir -p /mnt/usb',
                     'cd ~;mount -o loop ocp_ks.img /mnt/usb',
                     'cd ~;cp -R ~/ansible /mnt/usb',
-                    'cd ~;cp ' + settings.rhel_iso + ' /mnt/usb',
                     'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
                     'cd ~;cp ' + settings.nodes_yaml + ' /mnt/usb',
                     'cd ~;cp ocp-csah.ks /mnt/usb',
-                    "sed -i 's|" + iso_path + "|/root|' " + target_ini,
+                    'cd ~;mkdir -p /mnt/usb/ansible/pilot',
+                    'cd ~;cp ~/ansible/JetPack/src/pilot/dell_systems.json /mnt/usb/ansible/pilot/',
+        #            "sed -i 's|" + iso_path + "|/root|' " + target_ini,
                     'sync; umount /mnt/usb']
         else:
             cmds = ['mkfs.ext3 -F ' + args.usb_key,
@@ -95,10 +92,11 @@ def setup():
                     'cd ~;mount -o loop ' + args.usb_key +
                     ' /mnt/usb',
                     'cd ~;cp -R ~/ansible /mnt/usb',
-                    'cd ~;cp ' + settings.rhel_iso + ' /mnt/usb',
                     'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
                     'cd ~;cp ' + settings.nodes_yaml + ' /mnt/usb',
                     'cd ~;cp ocp-sah.ks /mnt/usb',
+                    'cd ~;mkdir -p /mnt/usb/ansible/pilot',
+                    'cd ~;cp ~/ansible/JetPack/src/pilot/dell_systems.json /mnt/usb/ansible/pilot/',
                     "sed -i 's|" + iso_path + "|/root|' " + target_ini,
                     'sync; umount /mnt/usb']
 
