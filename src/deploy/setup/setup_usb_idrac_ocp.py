@@ -29,7 +29,7 @@ logger = logging.getLogger("osp_deployer")
 
 def setup():
     try:
-        hdlr = logging.FileHandler('setup_usb_idrac.log')
+        hdlr = logging.FileHandler('setup_usb_idrac_ocp.log')
         formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
         hdlr.setFormatter(formatter)
         logger.addHandler(hdlr)
