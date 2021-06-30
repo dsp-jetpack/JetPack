@@ -849,8 +849,8 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
     # capabilities will be available if in-band introspection or
     # out-of-band inspection is performed before
     # assign_role.py is executed.
-    # if else statement needed to run this script before out-of-band
-    # inspection or in-band introspection has been performed.
+    # This conditional handling is needed to run this script before
+    # out-of-band inspection or in-band introspection has been performed.
     if 'capabilities' in node.properties:
         current_capabilities = node.properties.get('capabilities')
         try:
@@ -860,7 +860,7 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
         # ValueError can occur if capabilities values not properly
         # defined like capabilities='boot_mode:uefi,boot_option'.
             raise ValueError(
-                _("Invalid capabilities string '%s'.") % current_capabilities)
+                    ("Invalid capabilities string '%s'.") % current_capabilities)
 
         new_capabilities = {'boot_mode':'uefi', 'boot_option':'local'}
         cap_dict.update(new_capabilities)
