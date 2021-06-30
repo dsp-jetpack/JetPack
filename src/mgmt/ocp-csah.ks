@@ -418,13 +418,13 @@ pip3 install paramiko
 pip3 install cryptography
 pip3 install python-dracclient
 pip3 install setuptools_rust
-pip3 install python-heatclient
 
 echo "POST: Install other required packages"
 yum install -y gcc libffi-devel openssl-devel ipmitool tmux httpd rust-toolset python3-devel xinetd tftp-server
 yum install -y git ansible python3-netaddr python38 python38-pyyaml python38-requests libguestfs-tools 
 
 pip3 install ironic --ignore-installed PyYAML
+pip3 install python3-heatclient
 echo "POST: Done installing extra packages"
 
 # Workaround for firewall issue - aka: Module decorator not found
@@ -456,8 +456,8 @@ chmod 600 /home/ansible/.ssh/authorized_keys
 chown -R ansible:ansible /home/ansible
 
 # Set Passwordless authentication to allow ansible user to gain root access
-mkdir ~/.ssh
-cat /home/ansible/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+mkdir /root/.ssh
+cat /home/ansible/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
 
 # Set PYTHONPATH for ansible user
 echo "export PYTHONPATH=/lib/python3.6:/usr/local/lib/python3.6/site-packages/:/home/ansible/JetPack/src/deploy:/home/ansible/JetPack/src/deploy/auto_common:/home/ansible/JetPack/src/pilot/discover_nodes:/home/ansible/JetPack/src/deploy/osp_deployer:/home/ansible/openshift-bare-metal/python:/home/ansible/JetPack/src/common/" >> /home/ansible/.bashrc
