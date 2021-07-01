@@ -267,7 +267,7 @@ class CSah(InfraHost):
                 json_config[node_id]["pxe_nic"] = self.settings.controllers_pxe_nic
             for node in self.settings.compute_nodes:
                 node_id = node.idrac_ip
-                json_config[node_id]["pxe_nic"] = self.settings.controllers_pxe_nic
+                json_config[node_id]["pxe_nic"] = self.settings.computes_pxe_nic
             if json_config.items():
                 cmd += "-j '{}'".format(json.dumps(json_config))
             subprocess.call(cmd, shell=True, cwd='/home/ansible/JetPack/src/pilot')
