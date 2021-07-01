@@ -21,15 +21,15 @@ import logging
 import traceback
 import argparse
 import os
-from osp_deployer.settings.config import Settings
-from osp_deployer.sah import Sah
+from ocp_deployer.settings.ocp_config import OCP_Settings as Settings
+from ocp_deployer.csah import CSah
 
 logger = logging.getLogger("osp_deployer")
 
 
 def setup():
     try:
-        hdlr = logging.FileHandler('setup_usb_idrac.log')
+        hdlr = logging.FileHandler('setup_usb_idrac_ocp.log')
         formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
         hdlr.setFormatter(formatter)
         logger.addHandler(hdlr)
@@ -64,42 +64,34 @@ def setup():
         logger.debug("loading settings files " + args.settings)
         settings = Settings(args.settings)
         logger.info("Settings .ini: " + settings.settings_file)
-        logger.info("Settings .properties " + settings.network_conf)
+        logger.info("Settings .yaml " + settings.nodes_yaml)
 
-        # Check to verify RHEL ISO exists
-        rhel_iso = settings.rhel_iso
-        assert os.path.isfile(settings.rhel_iso), settings.rhel_iso +\
-            " ISO file is not present"
-        sah = Sah()
+        
+        sah = CSah()
         sah.update_kickstart_usb()
 
         # Create the usb Media & update path references
         target_ini = settings.settings_file.replace('/root', "/mnt/usb")
-        iso_path = os.path.dirname(settings.rhel_iso)
         if args.idrac_vmedia_img is True:
-            cmds = ['cd ~;rm -f osp_ks.img',
-                    'cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=10000',
-                    'cd ~;mkfs ext3 -F osp_ks.img',
+            cmds = ['cd ~;rm -f ocp_ks.img',
+                    'cd ~;dd if=/dev/zero of=ocp_ks.img bs=1M count=10000',
+                    'cd ~;mkfs ext3 -F ocp_ks.img',
                     'mkdir -p /mnt/usb',
-                    'cd ~;mount -o loop osp_ks.img /mnt/usb',
-                    'cd ~;cp -R ~/JetPack /mnt/usb',
-                    'cd ~;cp ' + settings.rhel_iso + ' /mnt/usb',
-                    'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
-                    'cd ~;cp ' + settings.network_conf + ' /mnt/usb',
-                    'cd ~;cp osp-sah.ks /mnt/usb',
-                    "sed -i 's|" + iso_path + "|/root|' " + target_ini,
+                    'cd ~;mount -o loop ocp_ks.img /mnt/usb',
+                    'cd ~;cp -R ~/ansible /mnt/usb',
+                    'cd ~;cp ocp-csah.ks /mnt/usb',
+                    'cd ~;mkdir -p /mnt/usb/ansible/pilot',
+                    'cd ~;cp ~/ansible/JetPack/src/pilot/dell_systems.json /mnt/usb/ansible/pilot/',
                     'sync; umount /mnt/usb']
         else:
             cmds = ['mkfs.ext3 -F ' + args.usb_key,
                     'mkdir -p /mnt/usb',
                     'cd ~;mount -o loop ' + args.usb_key +
                     ' /mnt/usb',
-                    'cd ~;cp -R ~/JetPack /mnt/usb',
-                    'cd ~;cp ' + settings.rhel_iso + ' /mnt/usb',
-                    'cd ~;cp ' + settings.settings_file + ' /mnt/usb',
-                    'cd ~;cp ' + settings.network_conf + ' /mnt/usb',
-                    'cd ~;cp osp-sah.ks /mnt/usb',
-                    "sed -i 's|" + iso_path + "|/root|' " + target_ini,
+                    'cd ~;cp -R ~/ansible /mnt/usb',
+                    'cd ~;cp ocp-sah.ks /mnt/usb',
+                    'cd ~;mkdir -p /mnt/usb/ansible/pilot',
+                    'cd ~;cp ~/ansible/JetPack/src/pilot/dell_systems.json /mnt/usb/ansible/pilot/',
                     'sync; umount /mnt/usb']
 
         for cmd in cmds:
@@ -109,7 +101,7 @@ def setup():
                                                  shell=True))
 
         if args.idrac_vmedia_img:
-            logger.info("All done - attach ~/osp_ks.img to the sah node" +
+            logger.info("All done - attach ~/ocp_ks.img to the sah node" +
                         " & continue with the deployment ...")
         else:
             logger.info("All done - plug the usb into the sah node" +
