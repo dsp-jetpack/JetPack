@@ -83,6 +83,12 @@ class CSah(InfraHost):
         def run_playbooks(self):
             logger.info("- Run ansible playbook to generate ignition files etc")
             subprocess.call('ansible-playbook -i generated_inventory haocp.yaml', shell=True, cwd='/home/ansible/openshift-bare-metal/ansible')
+            logger.info("Updating the dns settings")
+            cmds = [
+                 'nmcli connection modify br0 ipv4.dns ' + self.settings.csah_node.os_ip,
+                 'sed -i "s/nameserver.*/nameserver ' + self.settings.csah_node.os_ip  + '/" /etc/resolv.conf']
+            for cmd in cmds:
+                Ssh.execute_command("localhost","root",self.settings.csah_root_pwd, cmd)
 
         def create_bootstrap_vm(self):
             logger.info("- Create the bootstrap VM")
@@ -97,7 +103,7 @@ class CSah(InfraHost):
         def wait_for_bootstrap_ready(self):
             bBootstrap_ready = False
             while bBootstrap_ready is False:
-                cmd = 'ssh -t root@localhost "sudo su - core -c \' ssh -o \\"StrictHostKeyChecking no \\" bootstrap sudo ss -tulpn | grep -E \\"6443|22623|2379\\"\'"'
+                cmd = 'sudo su - core -c \'ssh -o "StrictHostKeyChecking no " bootstrap sudo ss -tulpn | grep -E "6443|22623|2379"\''
                 openedPorts= Ssh.execute_command_tty("localhost",
                                                  "root",
                                                  self.settings.csah_root_pwd,
@@ -168,7 +174,7 @@ class CSah(InfraHost):
             for node in self.settings.controller_nodes:
                 bNodeReady = False
                 while bNodeReady is False:
-                    cmd = 'ssh -t root@localhost "sudo su - core -c \' ssh -o \\"StrictHostKeyChecking no \\" ' + node.name + ' ls -lart /etc/kubernetes/manifests\'"'
+                    cmd = 'su - core -c \' ssh -o "StrictHostKeyChecking no " ' + node.name + ' ls -lart /etc/kubernetes/manifests\''
                     ls  = Ssh.execute_command_tty("localhost",
                                                   "root",
                                                   self.settings.csah_root_pwd,
@@ -182,7 +188,7 @@ class CSah(InfraHost):
 
         def complete_bootstrap_process(self):
             logger.info("Wait for the bootstrap node services to be up")
-            cmd = 'ssh -t root@localhost "sudo su - core -c \' ssh -o \\"StrictHostKeyChecking no \\" bootstrap journalctl | grep \'bootkube.service complete\'\'"'
+            cmd = 'su - core -c \'ssh -o "StrictHostKeyChecking no " bootstrap journalctl | grep \'bootkube.service complete\'\''
             bBootStrapReady = False
             while bBootStrapReady is False:
                 journal =  Ssh.execute_command_tty("localhost",
@@ -197,12 +203,12 @@ class CSah(InfraHost):
                     time.sleep(30)
 
             logger.info("Complete the bootstrap process")
-            cmd = 'ssh -t root@localhost "sudo su - core -c \' ./openshift-install --dir=openshift wait-for bootstrap-complete --log-level debug\'"'
+            cmd = 'su - core -c \' ./openshift-install --dir=openshift wait-for bootstrap-complete --log-level debug\''
             re =  Ssh.execute_command_tty("localhost",
                                           "root",
                                           self.settings.csah_root_pwd,
                                           cmd)
-            cmd = 'ssh -t root@localhost "sudo su - core -c \'oc get nodes\'"'
+            cmd = 'su - core -c \'oc get nodes\''
             re =  Ssh.execute_command_tty("localhost",
                                           "root",
                                           self.settings.csah_root_pwd,
@@ -213,9 +219,9 @@ class CSah(InfraHost):
             logger.info(" - Wait for all operators to be available")
             bOperatorsReady = False
             while bOperatorsReady is False:
-                cmd = 'ssh -t root@localhost "sudo su - core -c \'oc get csr -o name | xargs oc adm certificate approve\'"'
+                cmd = 'su - core -c \'oc get csr -o name | xargs oc adm certificate approve\''
                 Ssh.execute_command_tty("localhost","root", self.settings.csah_root_pwd, cmd)
-                cmd = 'ssh -t root@localhost "sudo su - core -c \'oc get clusteroperators\'"'
+                cmd = 'su - core -c \'oc get clusteroperators\''
                 re =  Ssh.execute_command_tty("localhost",
                                               "root",
                                               self.settings.csah_root_pwd,
@@ -234,7 +240,7 @@ class CSah(InfraHost):
 
         def complete_cluster_setup(self):
             logger.info("- Complete the cluster setup")
-            cmd = 'ssh -t root@localhost "sudo su - core -c \'./openshift-install --dir=openshift wait-for install-complete --log-level debug\'"'
+            cmd = 'su - core -c \'./openshift-install --dir=openshift wait-for install-complete --log-level debug\''
             Ssh.execute_command_tty("localhost","root", self.settings.csah_root_pwd, cmd)
 
         def discover_nodes(self):
