@@ -99,7 +99,7 @@ def deploy():
     csah = CSah()
     # CSah healthChecks
 
-    # Add step : [root@csah-pri ~]# nmcli connection modify bridge-br0 ipv4.dns <IP address>
+    # Add step : [root@csah-pri ~]# nmcli connection modify bridge-br0 ipv4.dns <IP address> & resolv.conf
     csah.cleanup_sah()
     csah.delete_bootstrap_vm()
 
