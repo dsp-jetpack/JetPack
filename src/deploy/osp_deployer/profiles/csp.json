@@ -80,7 +80,7 @@
                  "false"
               ]
             }
-         }        
+         }
    },
       {
          "Vips Settings": {
@@ -91,7 +91,7 @@
                ]
             }
          }
-      }, 
+      },
       {
          "MTU Settings": {
             "mtu_selection": {
@@ -173,6 +173,7 @@
                "valid_values": [
                   "4_port/nic_environment.yaml",
                   "5_port/nic_environment.yaml",
+                  "5_port_powerflex/nic_environment.yaml",
                   "ovs-dpdk_9_port/nic_environment.yaml",
                   "ovs-dpdk_8_port/nic_environment.yaml",
                   "ovs-dpdk_7_port/nic_environment.yaml",
@@ -248,7 +249,13 @@
          "use_ipmi_driver":"",
          "use_in_band_introspection":"",
          "enable_version_locking":"",
-         "node_types":""
+         "edge_sites":"",
+         "deploy_edge_sites": {
+            "valid_values": [
+               "true",
+               "false"
+            ]
+          }
          }
       },
       {
@@ -271,21 +278,41 @@
          }
       },
       {
-       "Storage back-end Settings":{
+         "Storage back-end Settings":{
             "unity_storage_protocol" : {
-                  "valid_values": [
+               "valid_values": [
                   "iSCSI",
                   "FC"
                ]
-        },
-             "powermax_protocol" : {
-                  "valid_values": [
+            },
+            "powermax_protocol" : {
+               "valid_values": [
                   "iSCSI",
                   "FC"
                ]
-        }
+            }
 
-       }
+         }
+      },
+      {
+         "PowerFlex Settings": {
+	    "powerflex_rpms_method": {
+               "valid_values": [
+	          "local",
+		  "external"
+	       ]
+	    },
+	    "powerflex_cluster_config": {
+               "valid_values": [
+	          "3_node"
+	       ]
+	    },
+	    "powerflex_cluster_vip": {
+               "validate": [
+	         "should_be_valid_ip"
+	       ]
+	    } 
+         }
       }
    ]
 }

@@ -1,0 +1,5 @@
+resource_registry:
+  OS::TripleO::Services::NovaAZConfig: {{overcloud_templates}}/deployment/nova/nova-az-config.yaml
+parameter_defaults:
+  NovaComputeAvailabilityZone: {{parameter_defaults.NovaComputeAvailabilityZone}}
+  RootStackName: {{parameter_defaults.RootStackName}}

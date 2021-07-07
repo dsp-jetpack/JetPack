@@ -1,4 +1,4 @@
-# Copyright (c)2018-2019 Dell Inc. or its subsidiaries.
+# Copyright (c) 2016-2020 Dell Inc. or its subsidiaries.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-resource_registry:
-{%- for key, val in resource_registry.items() %}
-  {{key}}: {{val}}
-{%- endfor %}
-
 parameter_defaults:
 {%- for key, val in parameter_defaults.items() %}
+  {%- if key.endswith("SchedulerHints") %}
+  {{key}}:
+    {%- for sh_key, sh_val in val.items() %}
+    {{sh_key}}: {{sh_val}}
+    {%- endfor %}
+  {%- else %}
   {{key}}: {{val}}
+  {%- endif %}
 {%- endfor %}

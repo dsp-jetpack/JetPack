@@ -18,11 +18,13 @@ from osp_deployer.settings.config import Settings
 from osp_deployer.checkpoints import Checkpoints
 from .infra_host import InfraHost
 from auto_common import Scp, Ssh, FileHelper
+from auto_common.constants import *
 import logging
 import time
 import shutil
 import os
 import subprocess
+import re
 
 logger = logging.getLogger("osp_deployer")
 
@@ -295,14 +297,10 @@ class Sah(InfraHost):
             'director_vm.vlock'
         ]
 
-        # Delete any staged locking files to prevent accidental reuse
+        # 0 out any staged locking files to prevent accidental reuse
         for eachone in files:
-            staged_file_name = '/root/' + eachone
-            if self.is_running_from_sah() is False:
-                self.run("rm -rf " + staged_file_name)
-            else:
-                if os.path.isfile(staged_file_name):
-                    os.remove(staged_file_name)
+            staged_file_name = '/var/www/html/' + eachone
+            self.run("echo '' > " + staged_file_name)
 
         if self.settings.version_locking_enabled is True:
             logger.debug(
@@ -310,14 +308,27 @@ class Sah(InfraHost):
 
             for eachone in files:
                 source_file_name = self.settings.lock_files_dir + "/" + eachone
-                dest_file_name = '/root/' + eachone
+                dest_file_name = '/var/www/html/' + eachone
                 self.upload_file(source_file_name, dest_file_name)
+
 
     def upload_director_scripts(self):
         remote_file = "/root/deploy-director-vm.sh"
         self.upload_file(self.settings.director_deploy_sh,
                          remote_file)
         self.run("chmod 777 /root/deploy-director-vm.sh")
+
+    def upload_powerflexgw_scripts(self):
+        remote_file = "/root/deploy-powerflexgw-vm.sh"
+        self.upload_file(self.settings.deploy_powerflexgw_vm_sh,
+                         remote_file)
+        self.run("chmod 777 /root/deploy-powerflexgw-vm.sh")
+
+    def upload_powerflexmgmt_scripts(self):
+        remote_file = "/root/deploy-powerflexmgmt-vm.sh"
+        self.upload_file(self.settings.deploy_powerflexmgmt_vm_sh,
+                         remote_file)
+        self.run("chmod 777 /root/deploy-powerflexmgmt-vm.sh")
 
     def create_director_vm(self):
         director_conf = "/root/director.cfg"
@@ -342,31 +353,40 @@ class Sah(InfraHost):
             conf = conf + ("satellite_activation_key " +
                            self.settings.satellite_activation_key,)
 
-        conf = conf + ("# Iface     IP" +
-                       "               NETMASK" +
-                       "              MTU",)
-        conf = conf + ("enp1s0        " +
-                       self.settings.director_node.public_api_ip +
-                       "    " + self.settings.public_api_netmask +
-                       "     " + self.settings.public_api_network_mtu,)
-        conf = conf + ("enp2s0        " +
-                       self.settings.director_node.provisioning_ip +
-                       "    " + self.settings.provisioning_netmask +
-                       "     " + self.settings.provisioning_network_mtu,)
-        conf = conf + ("enp3s0        " +
-                       self.settings.director_node.management_ip +
-                       "    " + self.settings.management_netmask +
-                       "     " + self.settings.management_network_mtu,)
-        conf = conf + ("enp4s0        " +
-                       self.settings.director_node.private_api_ip +
-                       "    " + self.settings.private_api_netmask +
-                       "     " + self.settings.private_api_network_mtu,)
+        conf = conf + ("# Iface     IP"
+                       + "               NETMASK"
+                       + "              MTU",)
+        conf = conf + (PUBLIC_API_IF
+                       + "        "
+                       + self.settings.director_node.public_api_ip
+                       + "    " + self.settings.public_api_netmask
+                       + "     " + self.settings.public_api_network_mtu,)
+        conf = conf + (PROVISIONING_IF
+                       + "        "
+                       + self.settings.director_node.provisioning_ip
+                       + "    " + self.settings.provisioning_netmask
+                       + "     " + self.settings.provisioning_network_mtu,)
+        conf = conf + (MANAGEMENT_IF
+                       + "        "
+                       + self.settings.director_node.management_ip
+                       + "    " + self.settings.management_netmask
+                       + "     " + self.settings.management_network_mtu,)
+        conf = conf + (PRIVATE_API_IF
+                       + "        "
+                       + self.settings.director_node.private_api_ip
+                       + "    " + self.settings.private_api_netmask
+                       + "     " + self.settings.private_api_network_mtu,)
 
         for line in conf:
             self.run("echo '" +
                      line +
                      "' >> " +
                      director_conf)
+        # Temporarly start http for the director vm to retreive lock files
+        re = self.run_tty("systemctl stop httpd")
+        re = self.run_tty("firewall-cmd --zone=public --permanent --add-service=http")
+        re = self.run_tty("firewall-cmd --reload")
+        re = self.run_tty("systemctl start httpd")
         remote_file = "sh /root/deploy-director-vm.sh " + \
                       director_conf + " " + \
                       "/store/data/iso/RHEL8.iso"
@@ -389,6 +409,7 @@ class Sah(InfraHost):
                                     "root",
                                     self.settings.director_node.root_password)
         logger.debug("director host is up")
+        re = self.run_tty("systemctl stop httpd")
 
     def delete_director_vm(self):
         while "director" in \
@@ -396,6 +417,144 @@ class Sah(InfraHost):
             self.run("virsh destroy director")
             time.sleep(20)
             self.run("virsh undefine director")
+            time.sleep(20)
+
+    def create_powerflexgw_vm(self):
+        powerflexgw_conf = "/root/powerflex-gw.cfg"
+        self.run("rm " + powerflexgw_conf + " -f")
+        conf = ("rootpassword " + self.settings.powerflexgw_vm.root_password,
+                "timezone " + self.settings.time_zone,
+                "smuser " + self.settings.subscription_manager_user,
+                "smpassword " + self.settings.subscription_manager_password,
+                "smpool " + self.settings.subscription_manager_pool_vm_rhel,
+                "hostname " + self.settings.powerflexgw_vm.hostname + "." +
+                self.settings.domain,
+                "gateway " + self.settings.public_api_gateway,
+                "nameserver " + self.settings.name_server,
+                "ntpserver " + self.settings.sah_node.provisioning_ip)
+        if self.settings.use_satellite is True:
+            conf = conf + ("satellite_ip " + self.settings.satellite_ip,)
+            conf = conf + ("satellite_hostname " +
+                           self.settings.satellite_hostname,)
+            conf = conf + ("satellite_org " + self.settings.satellite_org,)
+            conf = conf + ("satellite_activation_key " +
+                           self.settings.satellite_activation_key,)
+
+        conf = conf + ("# Iface     IP" +
+                       "               NETMASK" +
+                       "              MTU",)
+        conf = conf + ("enp1s0        " +
+                       self.settings.powerflexgw_vm.public_api_ip +
+                       "    " + self.settings.public_api_netmask +
+                       "     " + self.settings.public_api_network_mtu,)
+        conf = conf + ("enp2s0        " +
+                       self.settings.powerflexgw_vm.storage_ip +
+                       "    " + self.settings.storage_netmask +
+                       "     " + self.settings.storage_network_mtu,)
+
+        for line in conf:
+            self.run("echo '" +
+                     line +
+                     "' >> " +
+                     powerflexgw_conf)
+        remote_file = "sh /root/deploy-powerflexgw-vm.sh " + \
+                      powerflexgw_conf + " " + \
+                      "/store/data/iso/RHEL8.iso"
+        re = self.run_tty(remote_file)
+        startVM = True
+        for ln in re[0].split("\n"):
+            if "Restarting guest" in ln:
+                startVM = False
+        if startVM:
+            logger.debug(
+                "=== wait for the powerflex gateway vm install "
+                "to be complete")
+            while "shut off" not in \
+                    self.run("virsh list --all | grep powerflexgw")[0]:
+                time.sleep(60)
+            logger.debug("=== power on the powerflex gateway VM ")
+            self.run("virsh start powerflexgw")
+        logger.debug("=== waiting for the powerflex gateway vm to boot up")
+        self.wait_for_vm_to_come_up(self.settings.powerflexgw_vm.public_api_ip,
+                                    "root",
+                                    self.settings.powerflexgw_vm.root_password)
+        logger.debug("powerflex gateway vm is up")
+    
+    def delete_powerflexgw_vm(self):
+        while "powerflexgw" in \
+                self.run("virsh list --all | grep powerflexgw")[0]:
+            self.run("virsh destroy powerflexgw")
+            time.sleep(20)
+            self.run("virsh undefine powerflexgw")
+            time.sleep(20)
+
+    def create_powerflexmgmt_vm(self):
+        powerflexmgmt_conf = "/root/powerflexmgmt.cfg"
+        self.run("rm " + powerflexmgmt_conf + " -f")
+        conf = ("rootpassword " + self.settings.powerflexmgmt_vm.root_password,
+                "timezone " + self.settings.time_zone,
+                "smuser " + self.settings.subscription_manager_user,
+                "smpassword " + self.settings.subscription_manager_password,
+                "smpool " + self.settings.subscription_manager_pool_vm_rhel,
+                "hostname " + self.settings.powerflexmgmt_vm.hostname + "." +
+                self.settings.domain,
+                "gateway " + self.settings.public_api_gateway,
+                "nameserver " + self.settings.name_server,
+                "ntpserver " + self.settings.sah_node.provisioning_ip)
+        if self.settings.use_satellite is True:
+            conf = conf + ("satellite_ip " + self.settings.satellite_ip,)
+            conf = conf + ("satellite_hostname " +
+                           self.settings.satellite_hostname,)
+            conf = conf + ("satellite_org " + self.settings.satellite_org,)
+            conf = conf + ("satellite_activation_key " +
+                           self.settings.satellite_activation_key,)
+
+        conf = conf + ("# Iface     IP" +
+                       "               NETMASK" +
+                       "              MTU",)
+        conf = conf + ("enp1s0        " +
+                       self.settings.powerflexmgmt_vm.public_api_ip +
+                       "    " + self.settings.public_api_netmask +
+                       "     " + self.settings.public_api_network_mtu,)
+        conf = conf + ("enp2s0        " +
+                       self.settings.powerflexmgmt_vm.storage_ip +
+                       "    " + self.settings.storage_netmask +
+                       "     " + self.settings.storage_network_mtu,)
+
+        for line in conf:
+            self.run("echo '" +
+                     line +
+                     "' >> " +
+                     powerflexmgmt_conf)
+        remote_file = "sh /root/deploy-powerflexmgmt-vm.sh " + \
+                      powerflexmgmt_conf + " " + \
+                      "/store/data/iso/RHEL8.iso"
+        re = self.run_tty(remote_file)
+        startVM = True
+        for ln in re[0].split("\n"):
+            if "Restarting guest" in ln:
+                startVM = False
+        if startVM:
+            logger.debug(
+                "=== wait for the powerflex presentation server vm install "
+                "to be complete")
+            while "shut off" not in \
+                    self.run("virsh list --all | grep powerflexmgmt")[0]:
+                time.sleep(60)
+            logger.debug("=== power on the powerflex presentation server VM ")
+            self.run("virsh start powerflexmgmt")
+        logger.debug("=== waiting for the powerflex presentation server vm to boot up")
+        self.wait_for_vm_to_come_up(self.settings.powerflexmgmt_vm.public_api_ip,
+                                    "root",
+                                    self.settings.powerflexmgmt_vm.root_password)
+        logger.debug("powerflex presentation server vm is up")
+
+    def delete_powerflexmgmt_vm(self):
+        while "powerflexmgmt" in \
+                self.run("virsh list --all | grep powerflexmgmt")[0]:
+            self.run("virsh destroy powerflexmgmt")
+            time.sleep(20)
+            self.run("virsh undefine powerflexmgmt")
             time.sleep(20)
 
     def is_running_from_sah(self):
@@ -415,33 +574,72 @@ class Sah(InfraHost):
                ]
         for cmd in cmds:
             self.run_as_root(cmd)
-    def create_subnet_routes_edge(self):
-        logger.info('Setting routes for edge subnets on SAH and '
-                    'restarting bridge interfaces')
+
+
+    def subnet_routes_edge(self, node_type, add=True):
+        """
+        Example nmcli command:
+            nmcli connection modify br-mgmt +ipv4.routes
+            "192.168.112.0/24 192.168.110.1"
+        """
+        logger.info("Adding?: {} route for edge subnet for "
+                    "node_type: {}".format(add, node_type))
         setts = self.settings
-        ntdm = setts.node_type_data_map
-        route_br_mgmt = '/etc/sysconfig/network-scripts/route-br-mgmt'
-        route_br_prov = '/etc/sysconfig/network-scripts/route-br-prov'
-        with open(route_br_mgmt, 'w') as route_br_mgmt_stream:
-            for node_type, node_type_data in ntdm.items():
-                mgmt_cidr = node_type_data['mgmt_cidr']
-                mgmt_bridge = 'br-mgmt'
-                route = "{} via {} dev {}\n".format(mgmt_cidr,
-                                                    setts.management_gateway,
-                                                    mgmt_bridge)
-                route_br_mgmt_stream.write(route)
-        with open(route_br_prov, 'w') as route_br_prov_stream:
-            for node_type, node_type_data in ntdm.items():
-                prov_cidr = node_type_data['cidr']
-                prov_bridge = 'br-prov'
-                route = "{} via {} dev {}\n".format(prov_cidr,
-                                                    setts.provisioning_gateway,
-                                                    prov_bridge)
-                route_br_prov_stream.write(route)
-        # Restart networks
-        for bridge in ['br-mgmt', 'br-prov']:
-            cmd = 'ifdown {} ; ifup {}'.format(bridge, bridge)
-            subprocess.check_output(cmd,
+        node_type_data = setts.node_type_data_map[node_type]
+        mgmt_cidr = node_type_data['mgmt_cidr']
+        prov_cidr = node_type_data['cidr']
+        add_remove = "+" if add else "-"
+
+        mgmt_cmd = NWM_ROUTE_CMD.format(dev=MGMT_BRIDGE,
+                                        add_rem=add_remove,
+                                        cidr=mgmt_cidr,
+                                        gw=setts.management_gateway)
+        prov_cmd = NWM_ROUTE_CMD.format(dev=PROV_BRIDGE,
+                                        add_rem=add_remove,
+                                        cidr=prov_cidr,
+                                        gw=setts.provisioning_gateway)
+        _is_mgmt_route = self._does_route_exist(mgmt_cidr)
+        _is_prov_route = self._does_route_exist(prov_cidr)
+        if ((not _is_mgmt_route and add) or (_is_mgmt_route and not add)):
+            subprocess.check_output(mgmt_cmd,
                                     stderr=subprocess.STDOUT,
                                     shell=True)
-        logger.info('Routes for edge subnets on SAH updated')
+            up_cmd = NWM_UP_CMD.format(dev=MGMT_BRIDGE)
+            subprocess.check_output(up_cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
+        if ((not _is_prov_route and add) or (_is_prov_route and not add)):
+            subprocess.check_output(prov_cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
+            up_cmd = NWM_UP_CMD.format(dev=PROV_BRIDGE)
+            subprocess.check_output(up_cmd,
+                                    stderr=subprocess.STDOUT,
+                                    shell=True)
+        logger.info("Routes for edge site {} "
+                    "subnets on SAH updated".format(node_type))
+
+    def get_virsh_interface_map(self):
+        '''
+        Transform output from:
+        virsh -r domiflist director
+        Interface  Type       Source     Model       MAC
+        -------------------------------------------------------
+        vnet0      bridge     br-pub-api virtio      52:54:00:b6:88:f9
+        vnet1      bridge     br-prov    virtio      52:54:00:2b:c7:12
+        ...
+        Return dict with source as key:
+        {'br-pub-api': ['vnet0', 'bridge', 'virtio', '52:54:00:b6:88:f9'], ...}
+        '''
+        if_map = {}
+        res = self.run("virsh -r domiflist director")[0]
+        lines = res.splitlines()
+        del lines[:2]  # delete header rows
+        del lines[-1]  # delete trailing empty line
+        for line in lines:
+            _l_arr = line.split()
+            src = _l_arr[2]
+            del _l_arr[2]
+            if_map[src] = _l_arr
+        logger.debug("virsh domain interface "
+                     "map for director vm: {}".format(str(if_map)))

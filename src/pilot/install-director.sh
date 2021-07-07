@@ -17,10 +17,10 @@
 exec > >(tee $HOME/pilot/install-director.log)
 exec 2>&1
 
-USAGE="\nUsing RedHat CDN:$0 --director_ip <director public ip> --dns <dns_ip> [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>]"
+USAGE="\nUsing RedHat CDN:$0 --director_ip <director public ip> --dns <dns_ip> [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] \nUsing Satellite:$0 --dns <dns_ip> --satellite_hostname <satellite_host_name> --satellite_org <satellite_organization> --satellite_key <satellite_activation_key> [--containers_prefix <containers_satellite_prefix>] [--proxy <proxy> --nodes_pwd <overcloud_nodes_password>] [--enable_powerflex]" 
 
 
-TEMP=`getopt -o h --long director_ip:,dns:,proxy:,nodes_pwd:,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
+TEMP=`getopt -o h --long director_ip:,dns:,proxy:,nodes_pwd:,enable_powerflex,satellite_hostname:,satellite_org:,satellite_key:,containers_prefix: -n 'install-director.sh' -- "$@"`
 eval set -- "$TEMP"
 
 
@@ -47,6 +47,8 @@ while true ; do
                 proxy=$2; shift 2 ;;
         --nodes_pwd)
                 overcloud_nodes_pwd=$2; shift 2 ;;
+        --enable_powerflex)
+                enable_powerflex=1; shift 1;;
         --) shift ; break ;;
         *) echo -e "$USAGE" ; exit 1 ;;
     esac
@@ -63,7 +65,7 @@ if [ ! -z "${satellite_hostname}" ]; then
 fi
 
 
-flavors="control compute ceph-storage computehci"
+flavors="control compute ceph-storage computehcii powerflex-storage"
 subnet_name="ctlplane"
 
 # Create the requested flavor if it does not exist.
@@ -166,11 +168,10 @@ fi
 echo
 echo "## Configuring paths..."
 ESCAPED_HOME=${HOME//\//\\/}
-sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
+sudo sed -i "s/HOME/$ESCAPED_HOME/g" $HOME/pilot/undercloud.conf
 # Clean the nodes disks befor redeploying
-#sed -i "s/clean_nodes = false/clean_nodes = true/" $HOME/pilot/undercloud.conf
-cp $HOME/pilot/undercloud.conf $HOME
-cp $HOME/pilot/containers-prepare-parameter.yaml $HOME
+sudo cp $HOME/pilot/undercloud.conf $HOME
+sudo cp $HOME/pilot/containers-prepare-parameter.yaml $HOME
 echo "## Done."
 
 echo
@@ -247,12 +248,26 @@ elif [ ! -z "${proxy}" ]; then
 fi
 
 echo
-if [ -n "${overcloud_nodes_pwd}" ]; then
-    echo "# Setting overcloud nodes password"
+
+if [ -n "${overcloud_nodes_pwd}" ] || [ ${enable_powerflex} == 1 ]; then
+    echo "# Overcloud customizatin required, Installing libguestfs-tools"
     run_command "sudo dnf install -y libguestfs-tools"
     run_command "sudo service libvirtd start"
     run_command "export LIBGUESTFS_BACKEND=direct"
+fi
+    
+if [ -n "${overcloud_nodes_pwd}" ]; then
+    echo "# Setting overcloud nodes password"
     run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
+fi
+
+if [ ${enable_powerflex} == 1 ]; then
+    echo "# PowerFlex backend enabled, injecting rpms"
+    run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
+    run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
+    echo "# Cloning Dell EMC TripleO PowerFlex repository"
+    run_command "git clone https://github.com/dell/tripleo-powerflex.git ${HOME}/pilot/powerflex/tripleo-powerflex"
+    #run_command "git clone https://github.com/jproque-dell/tripleo-powerflex.git ${HOME}/pilot/powerflex/tripleo-powerflex"
 fi
 
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
@@ -281,12 +296,20 @@ echo "### Patching tripleo-heat-templates"
 sudo sed -i 's/$(get_python)/python3/' /usr/share/openstack-tripleo-heat-templates/puppet/extraconfig/pre_deploy/per_node.yaml
 echo "## Done."
 
-# Patch a fix for https://bugzilla.redhat.com/show_bug.cgi?id=1846020
-echo "### Patching tripleo-heat-templates part II"
-apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/swift/swift-proxy-container-puppet.yaml ${HOME}/pilot/swift-proxy-container.patch"
-apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/nova/nova-scheduler-container-puppet.yaml ${HOME}/pilot/nova-scheduler-container.patch"
-apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/database/redis-container-puppet.yaml ${HOME}/pilot/redis-container.patch"
+
+# This hacks in a patch for XE2420 where if CertificateInstance lower and
+# upper bounds are None, patch will make the attributes nullable and set
+# default to 0 to avoid an exception as those two attibutes are not nullable
+echo "### Patching idrac_card.py"
+apply_patch "sudo patch -b -s /usr/lib/python3.6/site-packages/dracclient/resources/idrac_card.py ${HOME}/pilot/idrac_card.patch"
+
 echo "## Done"
+
+## This hacks in a patch to fix the powerflex cinder backend name required by Puppet to deploy
+echo
+echo "## Patching PowerFlex cinder backend HEAT Template"
+apply_patch "sudo patch -b -s /usr/share/openstack-tripleo-heat-templates/deployment/cinder/cinder-backend-dellemc-vxflexos-puppet.yaml ${HOME}/pilot/powerflex-cinder-backend.patch"
+echo "## Done."
 
 echo
 echo "## Copying heat templates..."
@@ -294,6 +317,15 @@ cp -r /usr/share/openstack-tripleo-heat-templates $HOME/pilot/templates/overclou
 # TODO:dpaterson, why do we copy roles_data to ~/pilot/templates/overcloud/ ?
 cp $HOME/pilot/templates/roles_data.yaml $HOME/pilot/templates/overcloud/roles_data.yaml
 cp $HOME/pilot/templates/network-isolation.yaml $HOME/pilot/templates/overcloud/environments/network-isolation.yaml
+echo "## Done."
+
+echo
+echo "## Copying powerflex and tripleo-powerflex ansible playbooks..."
+sudo cp -R $HOME/pilot/powerflex/tripleo-powerflex/powerflex-ansible /usr/share/powerflex-ansible
+sudo cp -R $HOME/pilot/powerflex/tripleo-powerflex/tripleo-powerflex-run-ansible /usr/share/ansible/roles/tripleo-powerflex-run-ansible
+cp -R $HOME/pilot/powerflex/tripleo-powerflex/templates/overcloud/environments/powerflex-ansible $HOME/pilot/templates/overcloud/environments/powerflex-ansible
+cp -R $HOME/pilot/powerflex/tripleo-powerflex/templates/overcloud/deployment/powerflex-ansible $HOME/pilot/templates/overcloud/deployment/powerflex-ansible
+
 echo "## Done."
 
 echo
@@ -310,15 +342,6 @@ for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_
 # Update ironic patches
 for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_api" ;
   do
-    # This hacks in a patch to make conductor wait while completion of configuration job
-    echo
-    echo "## Patching Ironic iDRAC driver job.py on ${container}..."
-    upload_file_to_container "${container}" "${HOME}/pilot/ironic_job.patch" "/tmp/ironic_job.patch"
-    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/job.py /tmp/ironic_job.patch"
-    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/job.pyc"
-    run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/job.pyo"
-    echo "## Done"
-
     # This hacks in a patch to create a virtual disk using realtime mode.
     # Note that this code must be here because we use this code prior to deploying
     # the director.
@@ -329,17 +352,8 @@ for container in "ironic_pxe_http" "ironic_pxe_tftp" "ironic_conductor" "ironic_
     run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyc"
     run_on_container "${container}" "rm -f /usr/lib/python3.6/site-packages/ironic/drivers/modules/drac/raid.pyo"
     echo "## Done"
-
-    # This hacks in a patch to define maximum number of retries for the conductor
-    # to wait during any configuration job completion.
-    echo
-    echo "## Patching Ironic iDRAC driver drac.py on ${container} ..."
-    upload_file_to_container "${container}" "${HOME}/pilot/drac.patch" "/tmp/drac.patch"
-    run_on_container "${container}" "patch -b -s /usr/lib/python3.6/site-packages/ironic/conf/drac.py /tmp/drac.patch"
-    run_on_container "${container}" "rm -f /usr/lib/python2.7/site-packages/ironic/conf/drac.pyc"
-    run_on_container "${container}" "rm -f /usr/lib/python2.7/site-packages/ironic/conf/drac.pyo"
-    echo "## Done"
   done
+
 
 # Update Drac patches
 for container in "ironic_pxe_tftp"  "ironic_conductor" "ironic_api" ;
@@ -368,24 +382,6 @@ for container in "ironic_pxe_tftp"  "ironic_conductor" "ironic_api" ;
 
   done
 
-# This patches workarounds for two issues into ironic.conf.
-# 1. node_locked_retry_attempts is increased to work around an issue where
-#    lock contention on the nodes in ironic can occur during RAID cleaning.
-# 2. sync_power_state_interval is increased to work around an issue where
-#    servers go into maintenance mode in ironic if polled for power state too
-#    aggressively.
-echo
-echo "## Patching ironic.conf..."
-apply_patch "sudo patch -b -s /var/lib/config-data/puppet-generated//ironic/etc/ironic/ironic.conf ${HOME}/pilot/ironic.patch"
-echo "## Done."
-
-# This patches an issue where the  Ironic api service returns http 500 errors
-# https://bugzilla.redhat.com/show_bug.cgi?id=1613995
-echo
-echo "## Patching 10-ironic_wsgi.conf"
-apply_patch "sudo patch -b -s /var/lib/config-data/puppet-generated/ironic_api/etc/httpd/conf.d/10-ironic_wsgi.conf ${HOME}/pilot/wsgi.patch"
-echo "## Done"
-
 # Restart containers/services
 
 for service in "tripleo_ironic_api.service" "tripleo_ironic_conductor.service" "tripleo_ironic_inspector.service" "tripleo_ironic_pxe_http.service" "tripleo_ironic_pxe_tftp.service" ;
@@ -403,7 +399,7 @@ sudo systemctl restart httpd
 echo "## Done"
 
 
-# Satellite , if using 
+# Satellite , if using
 if [ ! -z "${containers_prefix}" ]; then
     container_yaml=$HOME/containers-prepare-parameter.yaml
     sed -i "s/namespace:.*/namespace: ${satellite_hostname}:5000/" ${container_yaml}
@@ -416,47 +412,6 @@ if [ ! -z "${containers_prefix}" ]; then
     sed -i "s/tag_from_label:.*/tag_from_label: '16.1'/" ${container_yaml}
 fi
 
-
-# If deployment is unlocked, generate the overcloud container list from the latest.
-#if [ -e $HOME/overcloud_images.yaml ];
-#then
-#    echo "using locked containers versions"
-#
-#    if [ ! -z "${containers_prefix}" ]; then
-#        sed -i "s/registry.access.redhat.com\/rhosp15\/openstack-/${satellite_hostname}:5000\/${containers_prefix}/" $HOME/overcloud_images.yaml
-#        sed -i "s/registry.access.redhat.com\/rhceph\//${satellite_hostname}:5000\/${containers_prefix}/" $HOME/overcloud_images.yaml
-#
-#    fi
-#
-#else
-#    echo "using latest available containers versions"
-#    touch $HOME//overcloud_images.yaml
-#
-#    if [ ! -z "${containers_prefix}" ]; then
-#
-#        openstack overcloud container image prepare   --namespace=${satellite_hostname}:5000\
-#        --prefix=${containers_prefix}   \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
-#        --tag-from-label {version}-{release}   \
-#        --set ceph_namespace=${satellite_hostname}:5000 \
-#        --set ceph_image=${containers_prefix}rhceph-3-rhel7 \
-#        --output-env-file=$HOME/overcloud_images.yaml
-#
-#    else
-#        openstack overcloud container image prepare --output-env-file $HOME/overcloud_images.yaml \
-#        --namespace=registry.access.redhat.com/rhosp15 \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/ceph-ansible/ceph-ansible.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/ironic.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services/barbican.yaml \
-#        -e /usr/share/openstack-tripleo-heat-templates/environments/services-docker/octavia.yaml \
-#        --set ceph_namespace=registry.access.redhat.com/rhceph \
-#        --set ceph_image=rhceph-3-rhel7 \
-#        --tag-from-label {version}-{release}
-#    fi
-#fi
 
 
 echo

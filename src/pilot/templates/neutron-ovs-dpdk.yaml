@@ -49,4 +49,3 @@ parameter_defaults:
     TunedProfileName: "cpu-partitioning"
     NovaLibvirtRxQueueSize: 1024
     NovaLibvirtTxQueueSize: 1024
-

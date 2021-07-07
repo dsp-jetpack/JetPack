@@ -11,11 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 resource_registry:
-  OS::TripleO::NodeUserData: ./first-boot.yaml
+  OS::TripleO::NodeUserData: {{NodeUserData}}
 
 parameter_defaults:
+  NeutronPublicInterface: bond1
+  NeutronNetworkType: vlan
+  NeutronNetworkVLANRanges: physint:201:250,physext
+  NeutronBridgeMappings: physint:br-tenant,physext:br-ex
+
 {%- for key, val in parameter_defaults.items() %}
+  {%- if key.endswith("ExtraConfig") or key.endswith("Parameters") %}
+  {{key}}:
+    {%- for _key, _val in val.items() %}
+    {{_key}}: {{_val}}
+    {%- endfor %}
+  {%- else %}
   {{key}}: {{val}}
+  {%- endif %}
 {%- endfor %}

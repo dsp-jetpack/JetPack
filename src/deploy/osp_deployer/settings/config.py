@@ -28,14 +28,14 @@ logger = logging.getLogger("osp_deployer")
 class Settings:
     CEPH_OSD_CONFIG_FILE = 'pilot/templates/ceph-osd-config.yaml'
     TEMPEST_DEFAULT_WORKSPACE_NAME = 'mytempest'
-    UNDERCLOUD_CONFIG_FILE = 'pilot/undercloud.conf'
+    UNDERCLOUD_CONFIG_FILE = 'undercloud.conf'
     NIC_CONFIGS_PATH = '/pilot/templates/nic-configs/'
 
     settings = ''
 
     def __str__(self):
         settings = {}
-        settings["node_types"] = str(self.node_types)
+        settings["edge_sites"] = str(self.edge_sites)
         settings["node_type_data_map"] = str(self.node_type_data_map)
         if self.node_types_map:
             settings["node_types_map"] = {}
@@ -95,9 +95,9 @@ class Settings:
                                 stanza + "] section is deprecated and " +\
                                 "should be removed\n"
             elif self.is_valid_subnet(yourConf, stanza):
-                logger.info("Found a valid node_type_tuples "
-                            "stanza in configuration: %s",
-                            stanza)
+                logger.debug("Found a valid node_type_tuples "
+                             "stanza in configuration: %s",
+                             stanza)
             else:
                 warning_msg = warning_msg + "Section [" + stanza + \
                     "] in your ini file is deprecated" +\
@@ -442,6 +442,58 @@ class Settings:
                 backend_settings['manila_unity_ssl_cert_path']
         else:
             self.enable_unity_manila_backend = False
+        
+        # PowerFlex
+        if backend_settings['enable_powerflex_backend'].lower() == 'true':
+            self.enable_powerflex_backend = True
+            self.powerflex_gateway_rpm = \
+                 backend_settings['powerflex_gateway_rpm']
+
+           
+            if backend_settings['enable_powerflex_mgmt'].lower() == 'true':
+                self.enable_powerflex_mgmt = True
+                self.powerflex_presentation_server_rpm = \
+                     backend_settings['powerflex_presentation_server_rpm']
+            else:
+                self.enable_powerflex_mgmt = False
+
+            # Cinder parameters
+            self.powerflex_san_login = \
+                 backend_settings['powerflex_san_login']
+            self.powerflex_san_password = \
+                 backend_settings['powerflex_san_password']
+            self.powerflex_storage_pools = \
+                 backend_settings['powerflex_storage_pools']
+            
+            # Powerflex parameters
+            powerflex_settings = self.get_settings_section(
+                "PowerFlex Settings")
+            self.powerflex_rpms_method = \
+                powerflex_settings['powerflex_rpms_method']
+            self.powerflex_rpms_path = \
+                powerflex_settings['powerflex_rpms_path']
+            self.powerflex_cluster_name = \
+                powerflex_settings['powerflex_cluster_name']
+            self.powerflex_protection_domain = \
+                powerflex_settings['powerflex_protection_domain']
+            self.powerflex_storage_pool = \
+                powerflex_settings['powerflex_storage_pool']
+            self.powerflex_cluster_config = \
+                powerflex_settings['powerflex_cluster_config']
+            self.powerflex_mgmt_interface = \
+                powerflex_settings['powerflex_mgmt_interface']
+            self.powerflex_cluster_interface = \
+                powerflex_settings['powerflex_cluster_interface']
+            self.powerflex_cluster_vip = \
+                powerflex_settings['powerflex_cluster_vip']
+            self.powerflex_rebuild_interface = \
+                powerflex_settings['powerflex_rebuild_interface']
+            self.powerflex_password = \
+                powerflex_settings['powerflex_password']
+            self.powerflex_lia_token = \
+              powerflex_settings['powerflex_lia_token']
+        else:
+            self.enable_powerflex_backend = False
 
         # powermax
         if backend_settings['enable_powermax_backend'].lower() == 'true':
@@ -491,7 +543,6 @@ class Settings:
         else:
             self.enable_powermax_manila_backend = False
 
-
         sanity_settings = self.get_settings_section(
             "Sanity Test Settings")
         self.floating_ip_network = sanity_settings['floating_ip_network']
@@ -514,6 +565,19 @@ class Settings:
         self.sanity_image_url = sanity_settings['sanity_image_url']
         self.sanity_vlantest_network = \
             sanity_settings['sanity_vlantest_network']
+        self.share_storage_network = sanity_settings['share_storage_network']
+        self.share_storage_network_start_ip = \
+            sanity_settings['share_storage_network_start_ip']
+        self.share_storage_network_end_ip = \
+            sanity_settings['share_storage_network_end_ip']
+        self.share_storage_network_gateway = \
+            sanity_settings['share_storage_network_gateway']
+        self.share_storage_network_vlan = \
+            sanity_settings['share_storage_network_vlan']
+        self.share_storage_network_name = \
+            sanity_settings['share_storage_network_name']
+        self.share_storage_subnet_name = \
+            sanity_settings['share_storage_subnet_name']
         if sanity_settings['run_sanity'].lower() == 'true':
             self.run_sanity = True
         else:
@@ -610,6 +674,10 @@ class Settings:
             '/mgmt/deploy-director-vm.sh'
         self.install_director_sh = self.foreman_configuration_scripts +\
             '/pilot/install-director.sh'
+        self.deploy_powerflexgw_vm_sh = self.foreman_configuration_scripts + \
+            '/mgmt/deploy-powerflexgw-vm.sh'
+        self.deploy_powerflexmgmt_vm_sh = self.foreman_configuration_scripts + \
+            '/mgmt/deploy-powerflexmgmt-vm.sh'
         self.deploy_overcloud_sh = self.foreman_configuration_scripts + \
             '/pilot/deploy-overcloud.py'
         self.assign_role_py = self.foreman_configuration_scripts +\
@@ -634,6 +702,10 @@ class Settings:
             '/pilot/templates/dellemc-powermax-fc-cinder-backend.yaml'
         self.powermax_manila_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/powermax-manila-config.yaml'
+        self.dell_powerflex_cinder_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/dellemc-powerflex-cinder-backend.yaml'
+        self.dell_powerflex_volume_mapping_yaml = self.foreman_configuration_scripts + \
+            '/pilot/templates/custom-dellemc-volume-mappings.yaml'
         self.dell_env_yaml = self.foreman_configuration_scripts + \
             '/pilot/templates/dell-environment.yaml'
         self.ceph_osd_config_yaml = self.foreman_configuration_scripts + \
@@ -652,14 +724,14 @@ class Settings:
         self.nic_configs_abs_path = self.foreman_configuration_scripts + \
             Settings.NIC_CONFIGS_PATH
         self.undercloud_conf_path = self.foreman_configuration_scripts + \
-            '/' + Settings.UNDERCLOUD_CONFIG_FILE
+            '/pilot/' + Settings.UNDERCLOUD_CONFIG_FILE
         self.templates_dir = self.foreman_configuration_scripts + \
             '/pilot/templates'
         self.neutron_sriov_yaml = self.templates_dir + '/neutron-sriov.yaml'
 
         # New custom node type and edge related fields
-        # Advanced Settings[node_types] in ini
-        self.node_types = []
+        # Advanced Settings[edge_sites] in ini
+        self.edge_sites = []
         # node_type_data_map maps the various node types to the networking
         # attribute definitions in the .ini stanza that matches each node_type
         self.node_type_data_map = {}
@@ -668,9 +740,13 @@ class Settings:
         self.node_types_map = {}
         self.undercloud_conf = self.parse_undercloud_conf()
         # Process node types for edge sites etc
-        if ('node_types' in dev_settings
-                and len(dev_settings['node_types']) > 0):
-            self.process_node_type_settings(dev_settings['node_types'])
+        if dev_settings['deploy_edge_sites'].lower() == 'true':
+            self.deploy_edge_sites = True
+        else:
+            self.deploy_edge_sites = False
+        if ('edge_sites' in dev_settings
+                and len(dev_settings['edge_sites']) > 0):
+            self.process_node_type_settings(dev_settings['edge_sites'])
         # The NIC configurations settings are validated after the Settings
         # class has been instanciated.  Guard against the case where the two
         # fixed are missing here to prevent an exception before validation
@@ -725,6 +801,8 @@ class Settings:
         self.compute_nodes = []
         self.computehci_nodes = []
         self.ceph_nodes = []
+        self.powerflex_nodes = []
+        self.all_overcloud_nodes = []
         self.switches = []
         self.nodes = []
         with open(self.network_conf) as config_file:
@@ -743,6 +821,20 @@ class Settings:
                                         == "true" else False)
                     if node.is_director:
                         self.director_node = node
+                except AttributeError:
+                    pass
+                try:
+                    node.is_powerflexgw = (True if node.is_powerflexgw
+                                            ==  "true" else False)
+                    if node.is_powerflexgw:
+                        self.powerflexgw_vm = node
+                except AttributeError:
+                    pass
+                try:
+                    node.is_powerflexmgmt = (True if node.is_powerflexmgmt
+                                             == "true" else False)
+                    if node.is_powerflexmgmt:
+                        self.powerflexmgmt_vm = node
                 except AttributeError:
                     pass
                 try:
@@ -778,6 +870,14 @@ class Settings:
                     node.is_storage = False
                     pass
                 try:
+                    node.is_powerflex = (True if node.is_powerflex
+                                         == "true" else False)
+                    if node.is_powerflex:
+                        self.powerflex_nodes.append(node)
+                except AttributeError:
+                    node.is_powerflex = False
+                    pass
+                try:
                     node.is_switch = (True if node.is_switch
                                       == "true" else False)
                     if node.is_switch:
@@ -810,10 +910,14 @@ class Settings:
                     if node.node_type not in self.node_types_map:
                         self.node_types_map[node.node_type] = []
                     self.node_types_map[node.node_type].append(node)
+        self.all_overcloud_nodes = [*self.controller_nodes,
+                                    *self.compute_nodes,
+                                    *self.ceph_nodes,
+                                    *self.computehci_nodes]
 
         Settings.settings = self
-        logger.info("Settings.settings is: %s",
-                    str(Settings.settings))
+        logger.debug("Settings.settings is: %s",
+                     str(Settings.settings))
 
     def get_curated_nics_settings(self):
         nics_settings = self.get_nics_settings()
@@ -857,10 +961,10 @@ class Settings:
                          " pick source version info")
             self.source_version = "????"
 
-    def process_node_type_settings(self, node_types):
-        self.node_types = (list(map(str.strip, node_types.split(','))))
-        logger.debug("Node types: %s", str(self.node_types))
-        for node_type in self.node_types:
+    def process_node_type_settings(self, edge_sites):
+        self.edge_sites = (list(map(str.strip, edge_sites.split(','))))
+        logger.debug("Edge sites: %s", str(self.edge_sites))
+        for node_type in self.edge_sites:
             # if we have ini section name that mathes node type
             # this is edge an site subnet definition to be injected into
             # undercloud.com
@@ -868,19 +972,20 @@ class Settings:
                 node_type_section = self.get_settings_section(node_type)
                 self.node_type_data_map[node_type] = node_type_section
 
-    def parse_undercloud_conf(self):
+    def parse_undercloud_conf(self, path=None):
         undercloud_conf = configparser.ConfigParser()
         # The following line makes the parser return case sensitive keys
         undercloud_conf.optionxform = str
-        undercloud_conf.read(self.undercloud_conf_path)
+        path = path if path else self.undercloud_conf_path
+        undercloud_conf.read(path)
         return undercloud_conf
 
     def is_valid_subnet(self, conf, stanza):
-        if conf.has_option('Advanced Settings', 'node_types'):
-            node_types = (
+        if conf.has_option('Advanced Settings', 'edge_sites'):
+            edge_sites = (
                 list(map(str.strip, conf.get('Advanced Settings',
-                                             'node_types').split(','))))
-            if stanza in node_types and conf.has_section(stanza):
+                                             'edge_sites').split(','))))
+            if stanza in edge_sites and conf.has_section(stanza):
                 return True
         return False
 

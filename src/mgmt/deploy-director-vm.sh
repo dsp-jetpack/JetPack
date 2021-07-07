@@ -71,7 +71,7 @@ ntp=""
 while read iface ip mask mtu
 do
   flag=""
-  [[ ${iface} == ntpserver ]] && echo "echo NTPServers=${ip} >> /tmp/ks_post_include.txt"
+  [[ ${iface} == ntpserver ]] && echo "echo NTPServers=${ip} >> /tmp/ks_post_include.txt;echo sah_ip=${ip} >> /tmp/ks_post_include.txt"
   [[ ${iface} == rootpassword ]] && echo "echo rootpw ${ip} >> /tmp/ks_include.txt"
   [[ ${iface} == timezone ]] && echo "echo timezone ${ip} --utc >> /tmp/ks_include.txt"
 
@@ -228,18 +228,17 @@ EOFPW
   subscription-manager release --set=8.2
 
   subscription-manager repos ${ProxyInfo} '--disable=*' --enable=rhel-8-for-x86_64-baseos-eus-rpms --enable=rhel-8-for-x86_64-appstream-eus-rpms --enable=rhel-8-for-x86_64-highavailability-eus-rpms --enable=ansible-2.9-for-rhel-8-x86_64-rpms --enable=openstack-16.1-for-rhel-8-x86_64-rpms --enable=fast-datapath-for-rhel-8-x86_64-rpms --enable=rhceph-4-tools-for-rhel-8-x86_64-rpms --enable=advanced-virt-for-rhel-8-x86_64-rpms --enable=satellite-tools-6.5-for-rhel-8-x86_64-rpms
-
-  mkdir /tmp/mnt
-  mount /dev/fd0 /tmp/mnt
-  [[ -e /tmp/mnt/versionlock.list ]] && {
-    cp /tmp/mnt/versionlock.list /etc/yum/pluginconf.d
-    chmod 644 /etc/yum/pluginconf.d/versionlock.list
-    }
-  umount /tmp/mnt
+  wget http://${sah_ip}/director_vm.vlock -O /etc/yum/pluginconf.d/versionlock.list
+  chmod 644 /etc/yum/pluginconf.d/versionlock.list
 
   yum-config-manager --enable rhel-8-for-x86_64-baseos-eus-rpms --setopt="rhel-8-for-x86_64-baseos-eus-rpms.priority=1"
   yum-config-manager --enable rhel-8-for-x86_64-appstream-rpms --setopt="rhel-8-for-x86_64-appstream-eus-rpms.priority=1"
   yum-config-manager --enable rhel-8-for-x86_64-highavailability-eus-rpms --setopt="rhel-8-for-x86_64-highavailability-eus-rpms.priority=1"
+
+  dnf module disable -y container-tools:rhel8
+  dnf module enable -y container-tools:2.0
+  dnf module disable -y virt:rhel
+  dnf module enable -y virt:8.2
 
   dnf update -y
 
@@ -299,42 +298,8 @@ chvt 1
 
 EOFKS
 
-
 [[ ! -e /store/data/images ]] && mkdir -p /store/data/images
-
-[[ -e /store/data/images/floppy-director.img ]] && rm -f /store/data/images/floppy-director.img
 rm -f /store/data/images/director.img
-
-[[ -e director_vm.vlock ]] && {
-
-  mkfs.vfat -C /store/data/images/floppy-director.img 1440
-  mkdir /tmp/mnt-director
-  mount -o loop /store/data/images/floppy-director.img /tmp/mnt-director
-  cp director_vm.vlock /tmp/mnt-director/versionlock.list
-  sync
-  umount /tmp/mnt-director
-  rmdir /tmp/mnt-director
-
-  virt-install --name director \
-    --ram 32768 \
-    --vcpus 8 \
-    --hvm \
-    --os-type linux \
-    --os-variant rhel8.2 \
-    --disk /store/data/images/director.img,bus=virtio,size=120 \
-    --disk /store/data/images/floppy-director.img,device=floppy \
-    --network bridge=br-pub-api \
-    --network bridge=br-prov \
-    --network bridge=br-mgmt \
-    --network bridge=br-priv-api \
-    --initrd-inject /tmp/director.ks \
-    --extra-args "ks=file:/director.ks" \
-    --noautoconsole \
-    --graphics spice \
-    --autostart \
-    --location ${location}
-
-  } || {
 
 virt-install --name director \
   --ram 32768 \
@@ -353,4 +318,3 @@ virt-install --name director \
   --graphics spice \
   --autostart \
   --location ${location}
-  }

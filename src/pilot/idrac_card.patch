@@ -1,0 +1,18 @@
+--- idrac_card.py	2020-10-13 09:16:05.627985329 -0500
++++ idrac_card_dp.py	2020-10-13 09:22:44.659502897 -0500
+@@ -218,9 +218,13 @@
+
+         idrac_attr = iDRACCardAttribute.parse(cls.namespace, idrac_attr_xml)
+         lower_bound = utils.get_wsman_resource_attr(
+-            idrac_attr_xml, cls.namespace, 'LowerBound')
++            idrac_attr_xml, cls.namespace, 'LowerBound',
++            nullable=True)
+         upper_bound = utils.get_wsman_resource_attr(
+-            idrac_attr_xml, cls.namespace, 'UpperBound')
++            idrac_attr_xml, cls.namespace, 'UpperBound',
++            nullable=True)
++        lower_bound = lower_bound if lower_bound else 0
++        upper_bound = upper_bound if upper_bound else 0
+ 
+         if idrac_attr.current_value:
+             idrac_attr.current_value = int(idrac_attr.current_value)

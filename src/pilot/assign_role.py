@@ -98,7 +98,8 @@ ROLES = {
     'controller': 'control',
     'compute': 'compute',
     'storage': 'ceph-storage',
-    'computehci': 'computehci'
+    'computehci': 'computehci',
+    'powerflex': 'powerflex-storage'
 }
 
 # TODO: Use the OpenStack Oslo logging library, instead of the Python standard
@@ -267,7 +268,10 @@ def define_target_raid_config(super_role, drac_client):
     elif super_role == 'storage':
         logical_disks = define_storage_logical_disks(drac_client,
                                                      raid_controller_ids)
-    elif role == 'computehci':
+    elif super_role == 'computehci':
+        logical_disks = define_storage_logical_disks(drac_client,
+                                                     raid_controller_ids)
+    elif super_role == 'powerflex':
         logical_disks = define_storage_logical_disks(drac_client,
                                                      raid_controller_ids)
     else:
@@ -487,12 +491,12 @@ def define_storage_operating_system_logical_disk(physical_disks, drac_client,
     LOG.info(
         "Defining RAID 1 logical disk of size {} GB on the following physical "
         "disks, and marking it the root volume:\n  {}".format(
-            os_logical_disk_size_gb,
+            str(int(os_logical_disk_size_gb)),
             '\n  '.join(os_physical_disk_names)))
     if drac_client.is_boss_controller(raid_controller_name):
         os_logical_disk_size_gb = 0
     os_logical_disk = define_logical_disk(
-        os_logical_disk_size_gb,
+        int(os_logical_disk_size_gb),
         '1',
         raid_controller_name,
         os_physical_disk_names,
@@ -594,7 +598,7 @@ def last_two_disks_by_location(physical_disks):
         # The second disk is smaller.
         logical_disk_size_mb = last_two_disks[1].size_mb
 
-    logical_disk_size_gb = logical_disk_size_mb / 1024
+    logical_disk_size_gb = int(logical_disk_size_mb / 1024)
 
     # Ensure that the logical disk size is unique from the perspective
     # of Linux logical volumes.
@@ -622,7 +626,7 @@ def bin_physical_disks_by_size_gb(physical_disks, media_type_filter=None):
         # Apply media type filter, if present.
         if (media_type_filter is None or
                 physical_disk.media_type == media_type_filter):
-            disks_by_size[physical_disk.free_size_mb / 1024].append(physical_disk)
+            disks_by_size[int(physical_disk.free_size_mb / 1024)].append(physical_disk)
 
     return disks_by_size
 
@@ -828,7 +832,8 @@ def place_node_in_available_state(ironic_client, node_uuid):
 
 
 def assign_role(ip_mac_service_tag, node_uuid, role_index,
-                ironic_client, drac_client):
+                ironic_client):
+
     if role_index.role not in ROLES.keys():
         flavor = role_index.role
     else:
@@ -840,11 +845,9 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
             flavor))
 
     node = ironic_client.node.get(node_uuid, fields=['properties'])
-
-    role = "profile:{}".format(flavor)
-
-    if role_index.index:
-        role = "node:{}-{}".format(flavor, role_index.index)
+    _is_index = True if bool(role_index.index) else False
+    _role = ("node:{}-{}".format(flavor, role_index.index)
+             if _is_index else {"profile": flavor})
 
     # capabilities will be available if in-band introspection or
     # out-of-band inspection is performed before
@@ -859,16 +862,15 @@ def assign_role(ip_mac_service_tag, node_uuid, role_index,
         except ValueError:
         # ValueError can occur if capabilities values not properly
         # defined like capabilities='boot_mode:uefi,boot_option'.
-            raise ValueError(
-                    ("Invalid capabilities string '%s'.") % current_capabilities)
+            raise ValueError("Invalid capabilities string '%s'." % current_capabilities)
 
         new_capabilities = {'boot_mode':'uefi', 'boot_option':'local'}
         cap_dict.update(new_capabilities)
         capabilities_value = ','.join('%(key)s:%(value)s' % {'key': key, 'value': value}
                                       for key, value in cap_dict.items())
-        value = "{},{}".format(role, capabilities_value)
+        value = "{},{}".format(_role, capabilities_value)
     else:
-        value = "{},boot_mode:uefi,boot_option:local".format(role)
+        value = "{},boot_mode:uefi,boot_option:local".format(_role)
 
     LOG.info(str(node.properties))
     LOG.info(str(value))
@@ -1358,8 +1360,8 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
 
 
 def configure_bios(node, ironic_client, settings, drac_client):
-    LOG.info("Configuring BIOS")
-
+    LOG.info("Configuring BIOS: settings: {}".format(str(settings)))
+    LOG.info("Configuring BIOS: node: {}".format(str(node)))
     if 'drac' not in node.driver:
         LOG.critical("Node is not being managed by an iDRAC driver")
         return False
@@ -1469,8 +1471,7 @@ def main():
             args.ip_mac_service_tag,
             node.uuid,
             args.role_index,
-            ironic_client,
-            drac_client)
+            ironic_client)
         if node.driver == "idrac":
             bios_settings = calculate_bios_settings(
                 super_role,
@@ -1512,7 +1513,7 @@ def main():
         else:
             flavor = ROLES[args.role_index.role]
         # Generate Ceph OSD/journal configuration for storage nodes
-        if flavor == "ceph-storage" or flavor == "computehci":
+        if flavor == "ceph-storage" or flavor == "computehci" or flavor == "powerflex-storage":
             generate_osd_config(args.ip_mac_service_tag, drac_client)
 
     except (DRACOperationFailed, DRACUnexpectedReturnValue,
@@ -1532,4 +1533,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
