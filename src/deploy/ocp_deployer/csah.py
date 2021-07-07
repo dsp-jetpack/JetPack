@@ -183,7 +183,7 @@ class CSah(InfraHost):
                         bNodeReady = True
                         logger.debug(node.name  + " is ready")
                     else:
-                        logger.debug("Waiting for" + node.name + " to be readdy...")
+                        logger.debug("Waiting for " + node.name + " to be readdy...")
                         time.sleep(30)
 
         def complete_bootstrap_process(self):
