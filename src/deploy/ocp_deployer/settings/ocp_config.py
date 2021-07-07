@@ -77,19 +77,23 @@ class OCP_Settings:
             self.ntp_server = network_settings['ntp_server']
             self.timezone = network_settings['timezone']
 
-            self.anaconda_iface = network_settings['anaconda_iface']
-            self.anaconda_ip = network_settings['anaconda_ip']
-            self.anaconda_netmask = network_settings['anaconda_netmask']
+            csah_settings = self.get_settings_section(
+                "CSAH Settings")
+            self.anaconda_iface = csah_settings['anaconda_iface']
+            self.anaconda_ip = csah_settings['anaconda_ip']
+            self.anaconda_netmask = csah_settings['anaconda_netmask']
 
-            self.public_bond_name = network_settings['public_bond_name']
-            self.public_boot_opts = network_settings['public_boot_opts']
-            self.public_bond_opts = network_settings['public_bond_opts']
-            self.public_bond_ifaces = network_settings['public_bond_ifaces']
-            self.public_bond_mtu = network_settings['public_bond_mtu']
+            self.public_bond_name = csah_settings['public_bond_name']
+            self.public_boot_opts = csah_settings['public_boot_opts']
+            self.public_bond_opts = csah_settings['public_bond_opts']
+            self.public_bond_ifaces = csah_settings['public_bond_ifaces']
+            self.public_bond_mtu = csah_settings['public_bond_mtu']
 
-            self.bridge_name = network_settings['bridge_name']
-            self.bridge_netmask = network_settings['bridge_netmask']
-            self.bridge_mtu = network_settings['bridge_mtu'] 
+            self.bridge_name = csah_settings['bridge_name']
+            self.bridge_netmask = csah_settings['bridge_netmask']
+            self.bridge_mtu = csah_settings['bridge_mtu'] 
+
+            self.install_disk = csah_settings['install_disk']
 
 
             self.csah_kickstart = self.cloud_repo_dir + "/src/mgmt/ocp-csah.ks"
