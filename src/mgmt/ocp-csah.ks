@@ -17,13 +17,13 @@ cdrom
 reboot
 
 # Partitioning
-ignoredisk --only-use=sda
+ignoredisk --only-use=INSTALL_DISK
 zerombr
-bootloader --boot-drive=sda
+bootloader --boot-drive=INSTALL_DISK
 
 clearpart --all --initlabel
 
-part /boot/efi --fstype=efi --ondisk=sda --size=2
+part /boot/efi --fstype=efi --ondisk=INSTALL_DISK --size=2
 part /boot --fstype=ext4 --size=1024
 part pv.01 --size=79872
 part pv.02 --size=1024 --grow
