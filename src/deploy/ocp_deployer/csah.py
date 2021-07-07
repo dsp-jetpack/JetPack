@@ -310,6 +310,10 @@ class CSah(InfraHost):
                         "/../../ocp-csah.ks")
             sets.csah_kickstart = sets.cloud_repo_dir + "/../../ocp-csah.ks"
             FileHelper.replace_expression(sets.csah_kickstart,
+                                          'INSTALL_DISK',
+                                          sets.install_disk
+                                         )
+            FileHelper.replace_expression(sets.csah_kickstart,
                                           '^HostName=.*',
                                           'HostName="' +
                                            sets.csah_node.name + 
