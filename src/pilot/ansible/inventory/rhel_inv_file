@@ -1,0 +1,6 @@
+workers:
+  hosts: com-2.demo.lab
+  vars:
+    subscription_user: *****************
+    subscription_pass: ***********
+    pool_id: *************************

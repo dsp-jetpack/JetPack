@@ -1,0 +1,29 @@
+apiVersion: v1
+baseDomain: {{ ansible_domain }}
+compute:
+{% if cluster_install == '5+ node' %}
+- hyperthreading: Enabled
+  name: worker
+  replicas: {{ num_of_compute_nodes }}
+{% else %}
+- name: worker
+  platform: {}
+  replicas: 0
+{% endif %}
+controlPlane:
+  hyperthreading: Enabled
+  name: master
+  replicas: {{ num_of_control_nodes }}
+metadata:
+  name: {{ cluster }}
+networking:
+  clusterNetworks:
+  - cidr: {{ cluster_network_cidr }}
+    hostPrefix: {{ host_prefix }}
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - {{ service_network_cidr }}
+platform:
+  none: {}
+pullSecret: '{{ pull_secret.stdout }}'
+sshkey: '{{ ssh_key.stdout }}'

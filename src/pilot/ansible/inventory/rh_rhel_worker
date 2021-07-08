@@ -1,0 +1,6 @@
+[all:vars]
+ansible_user=ansible
+ansible_become=True
+openshift_kubeconfig_path="/home/ansible/kubeconfig"
+[new_workers]
+com-2.demo.lab

@@ -1,0 +1,68 @@
+# tasks file for http
+- name: install http
+  yum: 
+    name: httpd 
+    state: latest
+
+- name: enable and start firewalld service
+  systemd:
+    name: firewalld
+    enabled: yes
+    state: started
+
+- name: allow http to listen on port {{ http_port }}
+  seport:
+    ports: "{{ http_port }}"
+    proto: tcp
+    setype: http_port_t
+    state: present
+
+- name: allow {{ http_port }} through firewall
+  firewalld:
+    port: "{{ http_port }}/tcp"
+    permanent: yes
+    immediate: yes
+    state: enabled
+
+- name: generate httpd config
+  template:
+    src: httpd.conf.j2
+    dest: /etc/httpd/conf/httpd.conf
+  notify: "restart httpd"
+
+- name: enable and start service
+  systemd:
+    name: httpd
+    enabled: yes
+    state: started
+
+- name: create directory for rhcos software
+  file: 
+    path: /var/www/html/{{ os }}/{{ version }}
+    state: directory
+  register: http_os_dir
+
+- name: create directories for rhel os and kickstart
+  file:
+    path: /var/www/html/{{ item }}
+    state: directory
+  loop:
+    - kickstart
+    - "{{ http_ignition }}"
+
+- name: copy rhcos files to http
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ http_os_dir.path }}/{{ item.dest }}"
+  with_items:
+    - { src: "{{ software_src }}/{{ uefi_file }}", dest: "{{ uefi_file }}" }
+    - { src: "{{ software_src }}/{{ initramfs }}", dest: "{{ initramfs }}" }
+    - { src: "{{ software_src }}/{{ rootfs }}", dest: "{{ rootfs }}" }
+
+- name: create directory in secondary server
+  file:
+    path: /home/ansible/files
+    state: directory
+  when:
+    - groups['secondary'] is defined
+    - ansible_fqdn in groups['secondary']
