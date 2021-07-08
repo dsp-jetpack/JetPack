@@ -1,0 +1,13 @@
+---
+# handlers file for pxe
+- name: restart dhcp service
+  systemd:
+    name: dhcpd
+    state: restarted
+  listen: "restart dhcp"
+
+- name: restart xinetd service
+  systemd:
+    name: xinetd
+    state: restarted
+  listen: "restart xinetd"

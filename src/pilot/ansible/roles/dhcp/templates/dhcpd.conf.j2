@@ -1,0 +1,51 @@
+#
+# DHCP Server Configuration file.
+#   see /usr/share/doc/dhcp-server/dhcpd.conf.example
+#   see dhcpd.conf(5) man page
+#
+#
+option space pxelinux;
+option pxelinux.magic code 208 = string;
+option pxelinux.configfile code 209 = text;
+option pxelinux.pathprefix code 210 = text;
+option pxelinux.reboottime code 211 = unsigned integer 32;
+option architecture-type code 93 = unsigned integer 16;
+option domain-name "{{ ansible_domain }}, {{ cluster }}.{{ ansible_domain }}";
+
+default-lease-time {{ default_lease_time }};
+max-lease-time {{ max_lease_time }};
+
+{% if bootstrap_node is defined %}
+{% for node in bootstrap_node %}
+host {{ node.name }}{
+   hardware ethernet {{ node.mac }};
+   fixed-address {{ node.ip }};
+}
+
+{% endfor %}
+{% endif %}
+
+{% for node in control_nodes %}
+host {{ node.name }}{
+   hardware ethernet {{ node.mac }};
+   fixed-address {{ node.ip }};
+}
+
+{% endfor %}
+
+{% if compute_nodes is defined %}
+{% for node in compute_nodes %}
+host {{ node.name }}{
+   hardware ethernet {{ node.mac }};
+   fixed-address {{ node.ip }};
+}
+
+{% endfor %}
+{% endif %}
+
+
+subnet {{ ansible_default_ipv4.network }} netmask {{ ansible_default_ipv4.netmask}} {
+  option broadcast-address {{ ansible_default_ipv4.broadcast }};
+  option routers {{ ansible_default_ipv4.gateway }};
+  option domain-name-servers {{ ansible_default_ipv4.address }};
+}

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: velero-bkpone-pvc
+  namespace: test-velero
+  labels:
+    velero: test-velero
+    velero.io/csi-volumesnapshot-class: "true"
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: unity-fc

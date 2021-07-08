@@ -1,0 +1,185 @@
+---
+# tasks file for pxe
+
+- name: enable services
+  systemd:
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+  with_items:
+    - xinetd
+    - tftp
+  when:
+    - groups['primary'] is defined
+    - ansible_fqdn in groups['primary']
+
+- name: add firewalld service for tftp
+  firewalld:
+    service: tftp
+    permanent: yes
+    immediate: yes
+    state: enabled
+  when:
+    - groups['primary'] is defined
+    - ansible_fqdn in groups['primary']
+
+- name: use vip if defined
+  set_fact: 
+    vip_ip: "{% if vip is defined %}{{ vip }}{% else %}{{ ansible_default_ipv4.address }}{% endif %}"
+
+- debug:
+    msg: "{{ vip_ip }}"
+
+- name: update dhcpd config file with pxe details
+  blockinfile:
+    path: /etc/dhcp/dhcpd.conf
+    insertafter: "subnet"
+    block: "{{ lookup('template', 'pxe.config.j2') }}"
+  notify: "restart dhcp"
+  when:
+    - groups['primary'] is defined
+    - ansible_fqdn in groups['primary']
+
+- name: create required directories for pxe uefi/bios
+  file:
+     path: "/var/lib/tftpboot/{{ item }}"
+     state: directory
+  with_items:
+    - uefi
+    - rhcos
+    - rhcos/{{ version }}
+  when:
+    - groups['primary'] is defined
+    - ansible_fqdn in groups['primary']
+
+- name: copy required files for pxe uefi/bios
+  copy:
+    src: "{{ item.src }}"
+    dest: "/var/lib/tftpboot/{{ item.dest }}"
+    remote_src: yes
+  with_items:
+    - { src: "{{ software_src }}/{{ kernel_file }}", dest: "rhcos/{{ version }}/{{ kernel_file }}" }
+    - { src: "{{ software_src }}/{{ initramfs }}", dest: "rhcos/{{ version }}/{{ initramfs }}" }
+    - { src: "{{ software_src }}/{{ rootfs }}", dest: "rhcos/{{ version }}/{{ rootfs }}" }
+    - { src: /boot/efi/EFI/redhat/shimx64.efi, dest: uefi/shim.efi }
+    - { src: /boot/efi/EFI/redhat/grubx64.efi, dest: uefi/grubx64.efi }
+  when:
+    - groups['primary'] is defined
+    - ansible_fqdn in groups['primary']
+    
+- name: display network cidr
+  set_fact:
+    net_mask: "{{ ansible_default_ipv4.network }}/{{ ansible_default_ipv4.netmask }}"
+
+- name: display cidr
+  set_fact:
+    net_mask_cidr: "{{ net_mask | ipaddr('prefix') }}"
+
+- name: get worker nodes details
+  set_fact:
+    nodes: "{{ hostvars[inventory_hostname]['compute_nodes'] }}"
+  when:
+    - groups['primary'] is defined
+    - ansible_fqdn in groups['primary']
+    - cluster_install == '5+ node'
+
+- name: dispay compute node names
+  debug:
+    msg: "{{ item.name }}"
+  loop: "{{ nodes }}"
+  when:
+    - groups['primary'] is defined
+    - ansible_fqdn in groups['primary']
+    - cluster_install == '5+ node'
+
+- name: dispay rhel compute node names
+  debug:
+    msg: "{{ item.name }}"
+  loop: "{{ nodes }}"
+  when:
+    - groups['primary'] is defined
+    - ansible_fqdn in groups['primary']
+    - cluster_install == '5+ node'
+    - item.os == 'rhel'
+
+- name: generate kickstart files
+  template:
+    src: ks.j2
+    dest: /var/www/html/kickstart/{{ item.name }}.ks.cfg
+  loop: "{{ nodes }}"
+  when:
+    - groups['primary'] is defined
+    - ansible_fqdn in groups['primary']
+    - cluster_install == '5+ node'
+    - item.os == 'rhel'
+
+- name: generate bootstrap node grub.cfg file
+  copy:
+    dest: /var/lib/tftpboot/uefi/grub.cfg-01-{{item.mac|lower|replace(':','-')}}
+    content: |
+      set default=0
+      set timeout=5
+      menuentry 'hi {{item.name}} node :)' --class fedora --class gnu-linux --class gnu --class os {
+        linuxefi {{ os }}/{{ version }}/{{ kernel_file }} nomodeset rd.neednet=1 coreos.inst.insecure coreos.live.rootfs_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ rootfs }} coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ uefi_file }} coreos.inst.ignition_url=http://{{ vip_ip }}:{{ http_port }}/{{ http_ignition }}/bootstrap.ign ip=dhcp 
+        initrdefi {{ os }}/{{ version }}/{{ initramfs }}
+      }
+    mode: 0775
+  loop: "{{bootstrap_node}}"
+  
+  
+
+- name: generate control nodes grub.cfg files
+  copy:
+    dest: /var/lib/tftpboot/uefi/grub.cfg-01-{{item.mac|lower|replace(':','-')}}
+    content: |
+      set default=0
+      set timeout=5
+      menuentry 'hi {{item.name}} node :)' --class fedora --class gnu-linux --class gnu --class os {
+        linuxefi {{ os }}/{{ version }}/{{ kernel_file }} nomodeset rd.neednet=1 coreos.inst.insecure coreos.live.rootfs_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ rootfs }} coreos.inst=yes coreos.inst.install_dev={{ master_install_device }} coreos.inst.image_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ uefi_file }} coreos.inst.ignition_url=http://{{ vip_ip }}:{{ http_port }}/{{ http_ignition }}/master.ign ip={{ item.ip}}::{{ ansible_default_ipv4.gateway }}:{{ ansible_default_ipv4.netmask }}:{{ item.name }}.{{ ansible_domain }}:{{ item.bond }}:none bond={{ item.bond }}:{{ item.primary }},{{ item.backup }}:{{ item.options }} nameserver={{ vip_ip }}
+        initrdefi {{ os }}/{{ version }}/{{ initramfs }}
+      }
+    mode: 0775
+  loop: "{{control_nodes}}"
+
+- name: generate compute nodes grub.cfg files
+  copy:
+    dest: /var/lib/tftpboot/uefi/grub.cfg-01-{{item.mac|lower|replace(':','-')}}
+    content: |
+      set default=0
+      set timeout=5
+      menuentry 'hi {{item.name}} node :)' --class fedora --class gnu-linux --class gnu --class os {
+        linuxefi {{ os }}/{{ version }}/{{ kernel_file }} nomodeset rd.neednet=1 coreos.inst.insecure coreos.live.rootfs_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ rootfs }} coreos.inst=yes coreos.inst.install_dev={{ worker_install_device }} coreos.inst.image_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ uefi_file }} coreos.inst.ignition_url=http://{{ vip_ip }}:{{ http_port }}/{{ http_ignition }}/worker.ign ip={{ item.ip}}::{{ ansible_default_ipv4.gateway }}:{{ ansible_default_ipv4.netmask }}:{{ item.name }}.{{ ansible_domain }}:{{ item.bond }}:none bond={{ item.bond }}:{{ item.primary }},{{ item.backup }}:{{ item.options }} nameserver={{ vip_ip }}
+        initrdefi {{ os }}/{{ version }}/{{ initramfs }}
+      }
+    mode: 0775
+  loop: "{{compute_nodes}}"
+
+
+- name: create tftp file under /etc/xinetd.d
+  copy:
+    dest: "/etc/xinetd.d/tftp"
+    content: |
+      service tftp
+      {
+         socket_type     = dgram
+         protocol        = udp
+         wait            = yes
+         user            = root
+         server          = /usr/sbin/in.tftpd
+         server_args     = -s /var/lib/tftpboot
+         disable         = no
+      }
+  notify: "restart xinetd"
+  when:
+    - groups['primary'] is defined
+    - ansible_fqdn in groups['primary']
+
+- name: copy kickstart directory to secondary management
+  copy:
+    src: /var/www/html/{{ item }}
+    dest: /var/www/html/
+  loop:
+    - kickstart
+  when:
+    - groups['secondary'] is defined
+    - ansible_fqdn in groups['secondary']

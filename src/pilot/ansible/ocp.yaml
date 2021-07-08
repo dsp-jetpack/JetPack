@@ -1,0 +1,10 @@
+- hosts: primary
+  become: yes
+  roles:
+    - http
+    - dhcp
+    - dns
+    - proxy
+    - ignition
+    - pxe
+    - bootstrap

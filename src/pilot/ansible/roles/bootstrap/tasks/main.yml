@@ -1,0 +1,50 @@
+---
+# tasks file for bootstrap
+- name: install virtualization tools
+  dnf:
+    name:
+      - 'qemu-kvm'
+      - 'libvirt'
+      - 'libgcrypt'
+      - 'python3-libvirt'
+      - 'libguestfs-tools'
+      - 'virt-install'
+      - 'virt-viewer'
+      - '@Virtualization Client'
+      - '@Virtualization Hypervisor'
+      - '@Virtualization Tools'
+    state: latest
+
+- name: enable libvirtd service
+  systemd:
+    name: libvirtd
+    enabled: yes
+    state: started
+
+- name: get bootstrap node details
+  set_fact:
+    bootstrap_info: "{{ hostvars[inventory_hostname]['bootstrap_node'] }}"
+  when: bootstrap_node is defined
+
+- name: get bootstrap mac address
+  set_fact:
+    bootstrap_mac_info: "{{ bootstrap_info[0].mac }}"
+  when: bootstrap_node is defined
+
+- name: bootstrap kvm command
+  set_fact:
+    command: "KVM Command: virt-install --name bootstrapkvm --ram 20480 --vcpu 8 --disk path=/home/bootstrapvm-disk.qcow2,format=qcow2,size=200 --os-variant generic --network=bridge=br0,model=virtio,mac={{ bootstrap_mac_info }} --pxe --boot uefi,hd,network &"
+  when: bootstrap_node is defined
+
+- name: create a file to save bootstrap command
+  file:
+    path: "{{ software_src }}/bootstrap_command"
+    state: touch 
+  when: bootstrap_node is defined
+
+- name: add bootstrap command in file
+  blockinfile:
+    path: "{{ software_src }}/bootstrap_command"
+    block: |
+      "{{ command }}"
+  when: bootstrap_node is defined

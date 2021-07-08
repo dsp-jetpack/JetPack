@@ -1,0 +1,29 @@
+$ORIGIN {{ arpa_name }}.
+$TTL 86400
+@       IN        SOA      {{ ansible_hostname }}.{{ ansible_domain }}. {{ ansible_domain }}. (
+                  50         ;  serial
+                  604800     ;  Refresh after 1 week
+                  3600       ;  Retry after 1 hour
+                  604800     ;  Expire after 1 week
+                  86400      ;  Minimum TTL of 1 day
+         )
+@        IN        NS        {{ ansible_hostname }}.{{ ansible_domain }}.
+
+{% if bootstrap_node is defined %}
+{% for node in bootstrap_node %}
+{% set last_octet = '.'.join(node.ip.split('.')[-(strip_last_octets|int):][::-1]) %}
+{{ last_octet }}   IN       PTR       {{ node.name }}.{{ ansible_domain }}.
+{% endfor %}
+{% endif %}
+
+{% for node in control_nodes %}
+{% set last_octet = '.'.join(node.ip.split('.')[-(strip_last_octets|int):][::-1]) %}
+{{ last_octet }}   IN       PTR       {{ node.name }}.{{ ansible_domain }}.
+{% endfor %}
+
+{% if compute_nodes is defined %}
+{% for node in compute_nodes %}
+{% set last_octet = '.'.join(node.ip.split('.')[-(strip_last_octets|int):][::-1]) %}
+{{ last_octet }}   IN       PTR       {{ node.name }}.{{ ansible_domain }}.
+{% endfor %}
+{% endif %}
