@@ -1,0 +1,63 @@
+apiVersion: storage.dell.com/v1
+kind: CSIIsilon
+metadata:
+  name: isilon
+  namespace: isilon
+spec:
+  driver:
+    # Config version for CSI PowerScale v1.4.0 driver
+    configVersion: v4
+    replicas: 2
+    forceUpdate: false
+    common:
+      # Image for CSI PowerScale driver v1.4.0
+      image: "dellemc/csi-isilon:v1.4.0.000R"
+      imagePullPolicy: IfNotPresent
+      envs:
+        - name: X_CSI_VERBOSE
+          value: "1"
+        - name: X_CSI_ISI_ENDPOINT
+          value: 192.168.182.85
+        - name: X_CSI_ISI_PORT
+          value: "8080"
+        - name: X_CSI_ISI_PATH
+          value: "/ifs"
+        - name: X_CSI_ISILON_NO_PROBE_ON_START
+          value: "false"
+        - name: X_CSI_ISI_AUTOPROBE
+          value: "true"
+        - name: X_CSI_ISI_INSECURE
+          value: "true"
+        - name: X_CSI_DEBUG
+          value: "false"
+        - name: X_CSI_CUSTOM_TOPOLOGY_ENABLED
+          value: "false"
+    controller:
+      envs:
+      - name: X_CSI_ISI_QUOTA_ENABLED
+        value: "true"
+      - name: X_CSI_ISI_ACCESS_ZONE
+        value: System
+    node:
+      envs:
+      - name: X_CSI_ISILON_NFS_V3
+        value: "false"
+    sideCars:
+      - name: provisioner
+        args: ["--volume-name-prefix=csipscale"]
+    storageClass:
+      # The storageClass name will have a prefix "isilon"
+      - name: nfs
+        reclaimPolicy: "Delete"
+        allowVolumeExpansion: true
+        volumeBindingMode: WaitForFirstConsumer
+        parameters:
+          AccessZone: "System"
+          IsiPath: "/ifs"
+          AzServiceIP: 192.168.182.85
+          RootClientEnabled: "false"
+    snapshotClass:
+      # The volumeSnapshotClass name will have a prefix "isilon"
+      - name: snap
+        parameters:
+          IsiPath: "/ifs"

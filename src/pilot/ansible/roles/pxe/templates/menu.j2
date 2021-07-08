@@ -1,0 +1,43 @@
+{% if bootstrap_node is defined %}
+{% for node in bootstrap_node %}
+menuentry '{{ node.name }}' --class fedora --class gnu-linux --class gnu --class os {
+  linuxefi {{ os }}/{{ version }}/{{ kernel_file }} nomodeset rd.neednet=1 coreos.inst.insecure coreos.live.rootfs_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ rootfs }} coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ uefi_file }} coreos.inst.ignition_url=http://{{ vip_ip }}:{{ http_port }}/{{ http_ignition }}/bootstrap.ign ip=dhcp
+  initrdefi {{ os }}/{{ version }}/{{ initramfs }} 
+}
+{% endfor %}
+{% endif %}
+
+{% for node in control_nodes %}
+{% if node.bond is defined %}
+menuentry '{{ node.name }}' --class fedora --class gnu-linux --class gnu --class os {
+  linuxefi {{ os }}/{{ version }}/{{ kernel_file }} nomodeset rd.neednet=1 coreos.inst.insecure coreos.live.rootfs_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ rootfs }} coreos.inst=yes coreos.inst.install_dev={{ master_install_device }} coreos.inst.image_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ uefi_file }} coreos.inst.ignition_url=http://{{ vip_ip }}:{{ http_port }}/{{ http_ignition }}/master.ign ip={{ node.ip}}::{{ ansible_default_ipv4.gateway }}:{{ ansible_default_ipv4.netmask }}:{{ node.name }}.{{ ansible_domain }}:{{ node.bond }}:none bond={{ node.bond }}:{{ node.primary }},{{ node.backup }}:{{ node.options }} nameserver={{ vip_ip }}
+  initrdefi {{ os }}/{{ version }}/{{ initramfs }}
+}
+{% else %}
+menuentry '{{ node.name }}' --class fedora --class gnu-linux --class gnu --class os {
+  linuxefi {{ os }}/{{ version }}/{{ kernel_file }} nomodeset rd.neednet=1 coreos.inst.insecure coreos.live.rootfs_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ rootfs }} coreos.inst=yes coreos.inst.install_dev={{ master_install_device }} coreos.inst.image_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ uefi_file }} coreos.inst.ignition_url=http://{{ vip_ip }}:{{ http_port }}/{{ http_ignition }}/master.ign ip={{ node.ip}}::{{ ansible_default_ipv4.gateway }}:{{ ansible_default_ipv4.netmask }}:{{ node.name }}.{{ ansible_domain }}:{{ node.interface }}:none nameserver={{ vip_ip }}
+  initrdefi {{ os }}/{{ version }}/{{ initramfs }}
+}
+{% endif %}
+{% endfor %}
+
+{% if compute_nodes is defined %}
+{% for node in compute_nodes %}
+{% if node.os == 'rhel' %}
+menuentry '{{ node.name }}' --class fedora --class gnu-linux --class gnu --class os {
+  linuxefi rhel/vmlinuz ip=dhcp inst.ks=http://{{ vip_ip }}:{{ http_port }}/kickstart/{{ node.name }}.ks.cfg
+  initrdefi rhel/initrd.img
+}
+{% elif node.os == 'rhcos' and node.bond is defined %}
+menuentry '{{ node.name }}' --class fedora --class gnu-linux --class gnu --class os {
+  linuxefi {{ os }}/{{ version }}/{{ kernel_file }} nomodeset rd.neednet=1 coreos.inst.insecure coreos.live.rootfs_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ rootfs }} coreos.inst=yes coreos.inst.install_dev={{ worker_install_device }} coreos.inst.image_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ uefi_file }} coreos.inst.ignition_url=http://{{ vip_ip }}:{{ http_port }}/{{ http_ignition }}/worker.ign ip={{ node.ip}}::{{ ansible_default_ipv4.gateway }}:{{ ansible_default_ipv4.netmask }}:{{ node.name }}.{{ ansible_domain }}:{{ node.bond }}:none bond={{ node.bond }}:{{ node.primary }},{{ node.backup }}:{{ node.options }} nameserver={{ vip_ip }}
+  initrdefi {{ os }}/{{ version }}/{{ initramfs }}
+}
+{% elif node.os == 'rhcos' and node.bond is not defined %}
+menuentry '{{ node.name }}' --class fedora --class gnu-linux --class gnu --class os {
+  linuxefi {{ os }}/{{ version }}/{{ kernel_file }} nomodeset rd.neednet=1 coreos.inst.insecure coreos.live.rootfs_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ rootfs }} coreos.inst=yes coreos.inst.install_dev={{ worker_install_device }} coreos.inst.image_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ uefi_file }} coreos.inst.ignition_url=http://{{ vip_ip }}:{{ http_port }}/{{ http_ignition }}/worker.ign ip={{ node.ip}}::{{ ansible_default_ipv4.gateway }}:{{ ansible_default_ipv4.netmask }}:{{ node.name }}.{{ ansible_domain }}:{{ node.interface }}:none nameserver={{ vip_ip }}
+  initrdefi {{ os }}/{{ version }}/{{ initramfs }}
+}
+{% endif %}
+{% endfor %}
+{% endif %}

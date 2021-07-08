@@ -1,0 +1,25 @@
+---
+# tasks file for dhcp
+- name: install dhcp server
+  yum:
+    name: dhcp-server
+    state: latest
+
+- name: add firewalld service for dhcp
+  firewalld:
+    service: dhcp
+    permanent: yes
+    immediate: yes
+    state: enabled
+
+- name: generate dhcpd config
+  template:
+    src: dhcpd.conf.j2
+    dest: /etc/dhcp/dhcpd.conf
+  notify: "restart dhcp"
+
+- name: enable and start dhcpd service
+  systemd:
+    name: dhcpd
+    enabled: yes
+    state: started
