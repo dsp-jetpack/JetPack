@@ -1,0 +1,53 @@
+apiVersion: storage.dell.com/v1
+kind: CSIPowerMax
+metadata:
+  name: powermax
+  namespace: powermax
+spec:
+  driver:
+    # Config version for CSI PowerMax v1.5 driver
+    configVersion: v4
+    # Controller count. Don't increase it
+    replicas: 2
+    forceUpdate: false
+    common:
+      # Image for CSI PowerMax driver v1.5
+      image: dellemc/csi-powermax:v1.5.0.000R
+      imagePullPolicy: IfNotPresent
+      envs:
+        # Unisphere IP
+        # If using PowerMax reverseproxy, leave it unchanged
+        - name: X_CSI_POWERMAX_ENDPOINT
+          value: "https://192.168.46.26:8443/"
+        # Change this to a 3 character prefix unique for this cluster
+        - name: X_CSI_K8S_CLUSTER_PREFIX
+          value: "OCP"
+        # Preferred transport protocol (FC/ISCSI)
+        - name: "X_CSI_TRANSPORT_PROTOCOL"
+          value: "ISCSI"
+        # iSCSI port group name
+        - name: "X_CSI_POWERMAX_PORTGROUPS"
+          value: "SEPort"
+        - name: "X_CSI_POWERMAX_ARRAYS"
+          value: ""
+        # Set this value to a higher number (max 50) if you are using the proxy
+        - name: "X_CSI_GRPC_MAX_THREADS"
+          value: "4"
+    node:
+      envs:
+        # Enable ISCSI CHAP Authentication
+        - name: "X_CSI_POWERMAX_ISCSI_ENABLE_CHAP"
+          value: "false"
+    storageClass:
+      - name: iscsi
+        reclaimPolicy: Delete
+        volumeBindingMode: "Immediate"
+        allowVolumeExpansion: true
+        parameters:
+          # Replace the SYMID with the Symmetrix ID of the PowerMax array
+          SYMID: "000197900896"
+          # Replace the SRP with the name of the Storage Resource Pool on the PowerMax array
+          SRP: SRP_1
+          ServiceLevel: Bronze
+    snapshotClass:
+      - name: snap

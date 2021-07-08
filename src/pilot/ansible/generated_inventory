@@ -1,0 +1,97 @@
+all:
+  children:
+    primary:
+      hosts: sahr3.dsp.lab
+  vars:
+    bootstrap_node:
+    - ip: 100.82.46.19
+      mac: '52:54:00:10:34:50'
+      name: bootstrap
+    cluster: r3ocp
+    cluster_install: 5+ node
+    cluster_network_cidr: 10.128.0.0/14
+    compute_nodes:
+    - backup: ens2f1
+      bond: bond0
+      interfaces: []
+      ip: 100.82.46.24
+      mac: B8:59:9F:C0:36:3E
+      name: compute1
+      options: mode=active-backup
+      os: rhcos
+      primary: ens2f0
+    - backup: p2p2
+      bond: bond0
+      interfaces: []
+      ip: 100.82.46.25
+      mac: B8:59:9F:C0:35:E6
+      name: compute2
+      options: mode=active-backup
+      os: rhel
+      primary: p2p1
+    - backup: ens2f1
+      bond: bond0
+      interfaces: []
+      ip: 100.82.46.27
+      mac: B8:59:9F:C0:35:26
+      name: compute3
+      options: mode=active-backup
+      os: rhcos
+      primary: ens2f0
+    control_nodes:
+    - backup: ens2f1
+      bond: bond0
+      ip: 100.82.46.21
+      mac: B8:59:9F:C0:36:46
+      name: control1
+      options: mode=active-backup
+      primary: ens2f0
+    - backup: ens2f1
+      bond: bond0
+      ip: 100.82.46.22
+      mac: B8:59:9F:C0:35:66
+      name: control2
+      options: mode=active-backup
+      primary: ens2f0
+    - backup: ens2f1
+      bond: bond0
+      ip: 100.82.46.23
+      mac: B8:59:9F:C0:34:C6
+      name: control3
+      options: mode=active-backup
+      primary: ens2f0
+    default_lease_time: 8000
+    default_zone_file: /var/named/r3ocp.zones
+    dns_forwarder: 10.8.8.8
+    haproxy_conf: /etc/haproxy/haproxy.cfg
+    host_prefix: 23
+    http_ignition: ignition
+    http_port: 8080
+    initramfs: rhcos-live-initramfs.x86_64.img
+    install_dir: openshift
+    install_user: core
+    kernel_file: rhcos-live-kernel-x86_64
+    master_install_device: nvme0n1
+    master_ports:
+    - description: apiserver
+      port: 6443
+    - description: configserver
+      port: 22623
+    max_lease_time: 72000
+    num_of_compute_nodes: 3
+    num_of_control_nodes: 3
+    openshift_installer: openshift-install-linux.tar.gz
+    os: rhcos
+    proxy: haproxy
+    rootfs: rhcos-live-rootfs.x86_64.img
+    service_network_cidr: 172.30.0.0/16
+    software_src: /home/ansible/files
+    uefi_file: rhcos-metal.x86_64.raw.gz
+    version: '4.6'
+    worker_install_device: nvme0n1
+    worker_ports:
+    - description: http
+      port: 80
+    - description: https
+      port: 443
+    pull_secret_file: pullsecret

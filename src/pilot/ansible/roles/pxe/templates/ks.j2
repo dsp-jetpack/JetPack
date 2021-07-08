@@ -1,0 +1,92 @@
+#version=DEVEL
+# X Window System configuration information
+xconfig  --startxonboot
+# License agreement
+eula --agreed
+# System authorization information
+auth --enableshadow --passalgo=sha512
+# Use CDROM installation media
+url --url http://{{ vip_ip }}:{{ http_port }}/rhel
+# Run the Setup Agent on first boot
+firstboot --enable
+# System services
+services --enabled="chronyd"
+# Keyboard layouts
+keyboard --vckeymap=us --xlayouts='us'
+# System language
+lang en_US.UTF-8
+
+ignoredisk --only-use={{ worker_install_device }}
+# Network information
+{% for interface in item.interfaces %}
+network --bootproto=dhcp --device={{ interface }} --onboot=off --ipv6=auto
+{% endfor %}
+network  --hostname={{ item.name }}.{{ ansible_domain }}
+
+# Root password
+rootpw --plaintext password
+# System timezone
+timezone America/New_York --isUtc
+user --name=user --plaintext --password=password
+user --name=ansible --plaintext --password=password
+# System bootloader configuration
+bootloader --append=" crashkernel=auto" --location=mbr --boot-drive={{ worker_install_device }}
+# Partition clearing information
+clearpart --all --initlabel --drives={{ worker_install_device }}
+# Disk partitioning information
+part /boot/efi --fstype="efi" --ondisk={{ worker_install_device }} --size=200 --fsoptions="umask=0077,shortname=winnt"
+part /boot --fstype="xfs" --ondisk={{ worker_install_device }} --size=1024
+part pv.265 --fstype="lvmpv" --ondisk={{ worker_install_device }} --size=1024 --grow
+volgroup rhel --pesize=4096 pv.265
+logvol swap  --fstype="swap" --size=4096 --name=swap --vgname=rhel
+logvol /  --fstype="xfs" --grow --maxsize=51200 --size=1024 --name=root --vgname=rhel
+logvol /home  --fstype="xfs" --grow --maxsize=102400 --size=1024 --name=home --vgname=rhel
+logvol /var --fstype="xfs" --grow --size=1024 --name=var --vgname=rhel
+
+%packages
+@^graphical-server-environment
+@base
+@core
+@desktop-debugging
+@dial-up
+@fonts
+@gnome-desktop
+@guest-agents
+@guest-desktop-agents
+@hardware-monitoring
+@input-methods
+@internet-browser
+@multimedia
+@print-client
+@x11
+chrony
+git
+kexec-tools
+
+%end
+
+%addon com_redhat_kdump --enable --reserve-mb=auto
+%end
+
+#create bonding by NetworkManager
+%post --nochroot --log=/mnt/sysimage/root/ks-post-log.log
+
+#configure networking
+{% if item.bond is defined %}
+nmcli conn add type bond ifname {{ item.bond }} con-name {{ item.bond }} bond.options "lacp_rate=1,miimon=100,mode=802.3ad,xmit_hash_policy=layer3+4"
+nmcli conn add type ethernet ifname {{ item.primary }} master {{ item.bond }}
+nmcli conn add type ethernet ifname {{ item.backup }} master {{ item.bond }}
+nmcli conn mod {{ item.bond }} ipv4.method manual ipv4.addresses {{ item.ip }}/{{ net_mask_cidr }} connection.autoconnect yes ipv4.gateway {{ ansible_default_ipv4.gateway }} ipv4.dns {{ vip_ip }} ipv4.dns-search {{ ansible_domain }}
+{% else %}
+nmcli con add type ethernet ifname {{ item.interface }} con-name {{ item.interface }} 
+nmcli con mod {{ item.interface }} ipv4.method manual ipv4.addresses {{ item.ip }}/{{ net_mask_cidr }} connection.autoconnect yes ipv4.gateway {{ ansible_default_ipv4.gateway }} ipv4.dns {{ vip_ip }} ipv4.dns-search {{ ansible_domain }}
+{% endif %}
+
+#copy network configuration files to the install image
+rm -rf /mnt/sysimage/etc/sysconfig/network-scripts/ifcfg-*
+cp -p /etc/sysconfig/network-scripts/ifcfg-* /mnt/sysimage/etc/sysconfig/network-scripts/
+
+#add ansible user sudo permission
+echo "ansible ALL=(ALL) NOPASSWD: ALL" > /mnt/sysimage/etc/sudoers.d/ansible
+
+%end

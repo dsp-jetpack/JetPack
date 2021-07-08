@@ -1,0 +1,48 @@
+apiVersion: storage.dell.com/v1
+kind: CSIUnity
+metadata:
+  name: unity
+  namespace: unity
+spec:
+  driver:
+    configVersion: v3
+    replicas: 2
+    common:
+      image: "dellemc/csi-unity:v1.4.0.000R"
+      imagePullPolicy: IfNotPresent
+      envs:
+      - name: X_CSI_UNITY_DEBUG
+        value: "true"
+    sideCars:
+      - name: provisioner
+        args: ["--volume-name-prefix=csiunity"]
+      - name: snapshotter
+        args: ["--snapshot-name-prefix=csiunitysnap"]
+    storageClass:
+    - name: fc
+      reclaimPolicy: "Delete"
+      allowVolumeExpansion: true
+      parameters:
+        storagePool: pool_2
+        arrayId: "APM00193820970"
+        protocol: "FC"
+    - name: iscsi
+      reclaimPolicy: "Delete"
+      allowVolumeExpansion: true
+      parameters:
+        storagePool: pool_2
+        arrayId: "APM00193820970"
+        protocol: "iSCSI"
+    - name: nfs
+      reclaimPolicy: "Delete"
+      allowVolumeExpansion: true
+      parameters:
+        storagePool: pool_2
+        arrayId: "APM00193820970"
+        protocol: "NFS"
+        hostIoSize: "8192"
+        nasServer: nas_1
+    snapshotClass:
+      - name: snap
+        parameters:
+          retentionDuration: ""

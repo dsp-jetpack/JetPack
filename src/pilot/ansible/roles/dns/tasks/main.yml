@@ -1,0 +1,58 @@
+---
+# tasks file for bind
+- name: identify number of '255' in {{ ansible_default_ipv4.netmask }}
+  set_fact:
+    striped_netmask: "{{ ansible_default_ipv4.netmask | regex_findall('(255)') |length }}" 
+
+- name: number of octets to remove
+  set_fact:
+    strip_last_octets: "{{ 4 - striped_netmask|int }}"
+
+- name: set reverse zone name prefix
+  set_fact:
+    arpa_name_prefix: "{{ ansible_default_ipv4.network.split('.')[:striped_netmask|int][::-1] }}"
+
+- name: set reverse zone file name
+  set_fact:
+    arpa_name: "{{ arpa_name_prefix | join('.') }}.in-addr.arpa"
+
+- name: install dns 
+  yum:
+    name: bind
+    state: latest
+
+- name: enable firewalld bind service
+  firewalld:
+    service: dns
+    permanent: yes
+    immediate: yes
+    state: enabled
+
+- name: generate dns config
+  template:
+    src: named.conf.j2
+    dest: /etc/named.conf
+  notify: "restart named"
+
+- name: generate zone config file 
+  template:
+    src: zones.j2
+    dest: /var/named/{{ cluster }}.zones
+
+- name: generate forward zone file
+  template:
+    src: forward.dns.j2
+    dest: /var/named/{{ ansible_domain }}
+  notify: "restart named"
+
+- name: generate reverse zone file
+  template:
+    src: reverse.dns.j2
+    dest: /var/named/{{ arpa_name }}
+  notify: "restart named"
+
+- name: enable and start bind service
+  systemd:
+    name: named
+    enabled: yes
+    state: started
