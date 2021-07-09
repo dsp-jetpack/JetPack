@@ -424,7 +424,7 @@ yum install -y gcc libffi-devel openssl-devel ipmitool tmux httpd rust-toolset p
 yum install -y git ansible python3-netaddr python38 python38-pyyaml python38-requests libguestfs-tools 
 
 pip3 install ironic --ignore-installed PyYAML
-pip3 install python3-heatclient
+pip3 install python-heatclient
 echo "POST: Done installing extra packages"
 
 # Workaround for firewall issue - aka: Module decorator not found
