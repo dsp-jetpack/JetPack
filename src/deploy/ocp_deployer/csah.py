@@ -82,7 +82,7 @@ class CSah(InfraHost):
 
         def run_playbooks(self):
             logger.info("- Run ansible playbook to generate ignition files etc")
-            subprocess.call('ansible-playbook -i generated_inventory haocp.yaml', shell=True, cwd='/home/ansible/openshift-bare-metal/ansible')
+            subprocess.call('ansible-playbook -i generated_inventory haocp.yaml', shell=True, cwd='/home/ansible/JetPack/src/pilot/ansible')
             logger.info("Updating the dns settings")
             cmds = [
                  'nmcli connection modify br0 ipv4.dns ' + self.settings.csah_node.os_ip,
@@ -126,7 +126,7 @@ class CSah(InfraHost):
             logger.info("- Bootstrap VM is ready") 
 
         def get_inventory(sel):
-            with open(r'/home/ansible/openshift-bare-metal/ansible/generated_inventory') as file:
+            with open(r'/home/ansible/JetPack/src/pilot/ansible/generated_inventory') as file:
                 inventory = yaml.load(file)
             return inventory
         
@@ -276,7 +276,7 @@ class CSah(InfraHost):
         def generate_inventory_file(self):
             logger.info("- Generating inventory file")
             logger.debug(" remove any existing inventory")
-            existing_inventory='/home/ansible/openshift-bare-metal/ansible/generated_inventory'
+            existing_inventory='/home/ansible/JetPack/src/pilot/ansible/generated_inventory'
             if os.path.exists(existing_inventory):
                 os.remove(existing_inventory)
             gen_inv_file = InventoryFile(id_user=self.settings.ipmi_user,
@@ -295,7 +295,7 @@ class CSah(InfraHost):
 
             logger.debug("copy generated inventory filei & pullsecret")
             shutil.copyfile(self.settings.pull_secret_file, '/home/ansible/files/pullsecret')
-            shutil.copyfile('generated_inventory', '/home/ansible/openshift-bare-metal/ansible/generated_inventory')
+            shutil.copyfile('generated_inventory', '/home/ansible/JetPack/src/pilot/ansible/generated_inventory') 
 
         def update_nodes_yaml(self):
             # Inject the NIC informations into the nodes.yml
