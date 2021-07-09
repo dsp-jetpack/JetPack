@@ -82,7 +82,9 @@ class CSah(InfraHost):
 
         def run_playbooks(self):
             logger.info("- Run ansible playbook to generate ignition files etc")
-            subprocess.call('ansible-playbook -i generated_inventory haocp.yaml', shell=True, cwd='/home/ansible/JetPack/src/pilot/ansible')
+            logfile = logger.handlers[0].baseFilename
+            cmd = 'export ANSIBLE_LOG_PATH=' + logfile + '; ansible-playbook -i generated_inventory haocp.yaml'
+            subprocess.call(cmd, shell=True, cwd='/home/ansible/JetPack/src/pilot/ansible')
             logger.info("Updating the dns settings")
             cmds = [
                  'nmcli connection modify br0 ipv4.dns ' + self.settings.csah_node.os_ip,
