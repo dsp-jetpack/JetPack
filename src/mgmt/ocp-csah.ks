@@ -192,6 +192,19 @@ echo "bridges[br0]=\"${bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
 echo "bridge_iface[br0]=\"${bridge_bond_name}\"" >> /tmp/ks_post_include.txt
 echo "bridges_mtu[br0]=\"${bridge_mtu}\"" >> /tmp/ks_post_include.txt
 
+read parms <<< $( tr -d '\r' <<< ${bridge_boot_opts} )
+for parm in ${parms}
+do
+  case $parm in
+       *.*.*.*/*.*.*.* ) read IP NETMASK <<< $( tr '/' ' ' <<< ${parm} )
+                         NTPServer=$IP
+                         NTPNetwork=$(ipcalc -np $IP $NETMASK | sed -n 's/^NETWORK=\(.*\)/\1/p')
+                         NTPNetmask=$(ipcalc -np $IP $NETMASK | sed -n 's/^PREFIX=\(.*\)/\1/p')
+                         ;;
+  esac
+done
+echo "NTPSettings=${NTPNetwork}/${NTPNetmask}" >> /tmp/ks_post_include.txt
+
 echo "SMUser=\"${SubscriptionManagerUser}\"" >> /tmp/ks_post_include.txt
 echo "SMPassword=\"${SubscriptionManagerPassword}\"" >> /tmp/ks_post_include.txt
 echo "SMPool=\"${SubscriptionManagerPool}\"" >> /tmp/ks_post_include.txt
