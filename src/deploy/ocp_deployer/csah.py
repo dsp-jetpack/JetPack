@@ -25,6 +25,7 @@ from auto_common import Ssh, FileHelper
 from collections import defaultdict
 from generate_inventory_file import InventoryFile
 import shutil, os
+import base64
 
 class CSah(InfraHost):
 
@@ -33,6 +34,14 @@ class CSah(InfraHost):
             self.settings = OCP_Settings.settings
             self.root_user = "root"
             self_root_pwd = self.settings.csah_root_pwd
+            self.home_dir = "/home/ansible/JetPack/src"
+            self.pilot_dir = os.path.join(self.home_dir, "pilot/")
+            self.templates_dir = os.path.join(self.pilot_dir, "ocp_templates/")
+            self.ntp_dir = os.path.join(self.templates_dir, "ntp/")
+            self.chrony_file = self.ntp_dir + "chrony.conf"
+            self.worker_ntp_manifest = self.ntp_dir + "99-worker-chrony-configuration.yml"
+            self.master_ntp_manifest = self.ntp_dir + "99-master-chrony-configuration.yml"
+
 
 
         def power_off_cluster_nodes(self):
@@ -421,3 +430,33 @@ class CSah(InfraHost):
                                           '"')
 
             time.sleep(3)
+
+
+        def configure_ntp(self):
+            logger.info("Customizing NTP configuration on all OpenShift nodes")
+            sets = self.settings
+            FileHelper.replace_expression(self.chrony_file,
+                                          'CSAH_IP',
+                                          sets.csah_node.os_ip
+                                         )
+            data = open(self.chrony_file, "r").read()
+            encoded = base64.b64encode(data.encode('utf-8'))
+            FileHelper.replace_expression(self.worker_ntp_manifest,
+                                          'CHRONY_BASE64',
+                                          encoded.decode()
+                                         )
+            FileHelper.replace_expression(self.master_ntp_manifest,
+                                          'CHRONY_BASE64',
+                                          encoded.decode()
+                                          )
+            cmd = 'su - core -c \' oc apply -f ' + self.master_ntp_manifest + '\''
+            re =  Ssh.execute_command_tty("localhost",
+                                          "root",
+                                          self.settings.csah_root_pwd,
+                                          cmd)
+            cmd = 'su - core -c \' oc apply -f ' + self.worker_ntp_manifest + '\''
+            re =  Ssh.execute_command_tty("localhost",
+                                          "root",
+                                          self.settings.csah_root_pwd,
+                                          cmd)
+

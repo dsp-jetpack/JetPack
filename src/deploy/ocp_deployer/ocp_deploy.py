@@ -123,34 +123,10 @@ def deploy():
 
     csah.delete_bootstrap_vm()
 
-    sys.exit(1)
+    csah.configure_ntp()
+    csah.wait_for_operators_ready()
 
-    time.sleep(350)
 
-    logger.info(" - Wait for all operators to be available")
-    #cmd = 'ssh -t root@localhost "sudo su - core -c \'oc get clusteroperators\'"'
-    bOperatorsReady = False
-    while bOperatorsReady is False:
-        cmd = 'ssh -t root@localhost "sudo su - core -c \'oc get csr -o name | xargs oc adm certificate approve\'"'
-        Ssh.execute_command_tty("localhost","root","Dell0SS!",cmd)
-        cmd = 'ssh -t root@localhost "sudo su - core -c \'oc get clusteroperators\'"'
-
-        re =  Ssh.execute_command_tty("localhost",
-                                      "root",
-                                      "Dell0SS!",
-                                      cmd)
-        logger.debug(str(re))
-        notReady = []
-        ls = str(re).split('\\r\\')
-        for each in ls:
-            if "False" in each.split()[2].strip():
-                notReady.append(each.split()[0].strip())
-        if len(notReady) > 0:
-            logger.debug(" Operators still not ready : " + str(notReady))
-            time.sleep(120)
-        else:
-            logger.info (" All operators are up & running ")
-            bOperatorsReady = True
     logger.info("- Done")
     # .. /openshift-install --dir=openshift wait-for install-complete
 

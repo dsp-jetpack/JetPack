@@ -450,6 +450,9 @@ ${AnsiblePassword}
 ${AnsiblePassword}
 EOFPW
 
+# Allow core user to browse ansible home directory
+chmod o+rx /home/ansible
+
 # Give the user sudo permissions
 echo "ansible ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ansible
 chmod 0440 /etc/sudoers.d/ansible
