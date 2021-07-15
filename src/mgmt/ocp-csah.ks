@@ -444,6 +444,7 @@ echo "POST: Done installing extra packages"
 yum reinstall -y python3-decorator
 
 # Create a new user for running ansible playbooks
+echo "POST: Creating ansible user"
 useradd ansible
 passwd -f ansible << EOFPW
 ${AnsiblePassword}
@@ -458,6 +459,7 @@ echo "ansible ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ansible
 chmod 0440 /etc/sudoers.d/ansible
 
 # Set Passwordless authentication for ansible user
+echo "POST: Set Passwordless authentication for ansible user"
 su - ansible -c "ssh-keygen -f ~/.ssh/id_rsa -t rsa -N ''"
 su - ansible -c "cat /home/ansible/.ssh/id_rsa.pub >> /home/ansible/.ssh/authorized_keys"
 echo -n "${HostName},${IP} " >> /home/ansible/.ssh/known_hosts
@@ -482,6 +484,9 @@ echo "export PYTHONPATH=/lib/python3.6:/usr/local/lib/python3.6/site-packages/:/
 mkdir /auto_results
 chown ansible:ansible /auto_results
 
+# Allow NTP traffic coming to/from CSAH
+firewall-cmd --permanent --add-service=ntp
+firewall-cmd reload
 
 # Remove ssh banners
 rm -rf /etc/motd.d/
