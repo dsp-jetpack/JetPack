@@ -4,6 +4,7 @@
     - http
     - dhcp
     - dns
+    - ntp
     - proxy
     - ignition
     - pxe

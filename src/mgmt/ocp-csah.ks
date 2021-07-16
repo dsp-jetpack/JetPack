@@ -192,19 +192,6 @@ echo "bridges[br0]=\"${bridge_boot_opts}\"" >> /tmp/ks_post_include.txt
 echo "bridge_iface[br0]=\"${bridge_bond_name}\"" >> /tmp/ks_post_include.txt
 echo "bridges_mtu[br0]=\"${bridge_mtu}\"" >> /tmp/ks_post_include.txt
 
-read parms <<< $( tr -d '\r' <<< ${bridge_boot_opts} )
-for parm in ${parms}
-do
-  case $parm in
-       *.*.*.*/*.*.*.* ) read IP NETMASK <<< $( tr '/' ' ' <<< ${parm} )
-                         NTPServer=$IP
-                         NTPNetwork=$(ipcalc -np $IP $NETMASK | sed -n 's/^NETWORK=\(.*\)/\1/p')
-                         NTPNetmask=$(ipcalc -np $IP $NETMASK | sed -n 's/^PREFIX=\(.*\)/\1/p')
-                         ;;
-  esac
-done
-echo "NTPSettings=${NTPNetwork}/${NTPNetmask}" >> /tmp/ks_post_include.txt
-
 echo "SMUser=\"${SubscriptionManagerUser}\"" >> /tmp/ks_post_include.txt
 echo "SMPassword=\"${SubscriptionManagerPassword}\"" >> /tmp/ks_post_include.txt
 echo "SMPool=\"${SubscriptionManagerPool}\"" >> /tmp/ks_post_include.txt
@@ -357,20 +344,6 @@ do
   echo "nameserver ${ns}" >> /etc/resolv.conf
 done
 
-# Configure the chrony daemon for ntp
-systemctl enable chronyd
-sed -i -e "s/rhel/centos/" /etc/chrony.conf
-sed -i -e "/^server /d" /etc/chrony.conf
-sed -i -e "/^pool /d" /etc/chrony.conf
-
-for ntps in ${NTPServers//,/ }
-do
-  echo "pool ${ntps}" >> /etc/chrony.conf
-done
-
-echo "allow ${NTPSettings}" >> /etc/chrony.conf
-echo "local stratum 10" >> /etc/chrony.conf
-
 
 [[ ${AnacondaIface_noboot} ]] && {
   sed -i -e '/DEFROUTE=/d' /etc/sysconfig/network-scripts/ifcfg-${AnacondaIface_device}
@@ -483,10 +456,6 @@ echo "export PYTHONPATH=/lib/python3.6:/usr/local/lib/python3.6/site-packages/:/
 # Fix permission issues for Ansible user
 mkdir /auto_results
 chown ansible:ansible /auto_results
-
-# Allow NTP traffic coming to/from CSAH
-firewall-cmd --permanent --add-service=ntp
-firewall-cmd reload
 
 # Remove ssh banners
 rm -rf /etc/motd.d/

@@ -1,0 +1,8 @@
+---
+- name: 'manage the chrony service'
+  become: yes
+  service: 
+    name: '{{ chrony_service_name }}'
+    enabled: 'yes'
+    state: 'started'
+  tags: 'chrony-service'

@@ -1,0 +1,19 @@
+---
+- name: 'include os-specific vars'
+  include_vars: "{{ ansible_os_family | lower }}.yml"
+  tags:
+    - 'chrony'
+    - 'chrony-vars'
+
+- name: 'gather CIDR'
+  set_fact:
+    chrony_allow: "{{ (ansible_br0.ipv4.address + '/' + ansible_br0.ipv4.netmask) | ipaddr('network/prefix') }}"
+
+- name: 'debug'
+  debug:
+    var=chrony_allow
+
+- include: "install.yml"
+- include: "configure.yml"
+- include: "service.yml"
+- include: "firewall.yml"
