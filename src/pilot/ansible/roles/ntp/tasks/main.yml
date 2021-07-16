@@ -1,0 +1,10 @@
+---
+- name: 'include os-specific vars'
+  include_vars: "{{ ansible_os_family | lower }}.yml"
+  tags:
+    - 'chrony'
+    - 'chrony-vars'
+
+- include: "install.yml"
+- include: "configure.yml"
+- include: "service.yml"
