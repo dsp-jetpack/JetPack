@@ -97,9 +97,7 @@ def deploy():
     settings = load_settings()
 
     csah = CSah()
-    # CSah healthChecks
 
-    # Add step : [root@csah-pri ~]# nmcli connection modify bridge-br0 ipv4.dns <IP address> & resolv.conf
     csah.cleanup_sah()
     csah.delete_bootstrap_vm()
 
@@ -128,9 +126,7 @@ def deploy():
 
 
     logger.info("- Done")
-    # .. /openshift-install --dir=openshift wait-for install-complete
 
-    # oc get nodes .. all in
 
 
 
