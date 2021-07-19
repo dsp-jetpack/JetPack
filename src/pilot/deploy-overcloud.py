@@ -434,6 +434,10 @@ def main():
                             help="Use network_data.yaml to create edge site "
                                  "networks")
 
+        # Should be removed when gets landed in upcoming 16.1 upstream release
+        logger.info("Patching KernelArgs for UEFI workaround...")
+        os.system("sudo patch -b -s /usr/share/ansible/roles/tripleo-kernel/tasks/kernelargs.yml ~/pilot/kernelargs.patch")
+
         LoggingHelper.add_argument(parser)
         args = parser.parse_args()
         LoggingHelper.configure_logging(args.logging_level)
