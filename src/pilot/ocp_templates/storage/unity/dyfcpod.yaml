@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dynamic-fc-unity-pod
+  namespace: unity
+spec:
+  containers:
+  - name: task-pv-container
+    image: nginx:latest
+    ports:
+      - containerPort: 80
+        name: "http-server"
+    volumeMounts:
+      - mountPath: "/usr/share/nginx/html"
+        name: dy-fc-unity
+  volumes:
+    - name: dy-fc-unity
+      persistentVolumeClaim:
+        claimName: dynamic-fc-unity-pvc

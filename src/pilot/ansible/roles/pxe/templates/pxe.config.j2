@@ -1,0 +1,10 @@
+  class "pxeclients" {
+    match if substring (option vendor-class-identifier, 0, 9) = "PXEClient";
+    next-server {{ ansible_default_ipv4.address }};
+    if option architecture-type = 00:07 {
+      filename "uefi/shim.efi";
+    }
+    else {
+      filename "bios/pxelinux.0";
+    }
+  }

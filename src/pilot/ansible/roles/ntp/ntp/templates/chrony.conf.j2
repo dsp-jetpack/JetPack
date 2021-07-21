@@ -1,0 +1,9 @@
+pool {{ chrony_pool }}
+driftfile {{ chrony_driftfile }}
+makestep 1.0 3
+rtcsync
+keyfile {{ chrony_keyfile }}
+logdir {{ chrony_logdir }}
+allow {{ chrony_allow }} 
+local stratum 10
+

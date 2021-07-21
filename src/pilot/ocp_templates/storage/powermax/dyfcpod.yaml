@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dynamic-fc-powermax-pod
+  namespace: powermax
+spec:
+  containers:
+  - name: task-pv-container
+    image: nginx:latest
+    ports:
+      - containerPort: 80
+        name: "http-server"
+    volumeMounts:
+      - mountPath: "/usr/share/nginx/html"
+        name: dy-fc-powermax
+  volumes:
+    - name: dy-fc-powermax
+      persistentVolumeClaim:
+        claimName: dynamic-fc-powermax-pvc
