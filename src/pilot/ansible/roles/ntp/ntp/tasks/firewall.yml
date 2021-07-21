@@ -1,0 +1,7 @@
+---
+- name: "allow NTP traffic from clients"
+  become: yes
+  firewalld:
+    service: ntp
+    permanent: true
+    state: enabled

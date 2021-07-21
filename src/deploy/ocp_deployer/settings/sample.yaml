@@ -1,0 +1,47 @@
+csah:
+  - name: csah
+    ip_os: 100.82.46.20
+bootstrap_kvm:
+  - name: bootstrap
+    ip_os: 100.82.46.19
+control_nodes:
+  - name: control1
+    ip_os: 100.82.46.21
+    ip_idrac: 100.82.34.21
+    pxe_interface: NIC.Slot.2-1-1
+    bond_interface_primary: NIC.Slot.2-1-1
+    bond_interface_backup: NIC.Slot.2-2-1
+  - name: control2
+    ip_os: 100.82.46.22
+    ip_idrac: 100.82.34.22
+    pxe_interface: NIC.Slot.2-1-1
+    bond_interface_primary: NIC.Slot.2-1-1
+    bond_interface_backup: NIC.Slot.2-2-1
+  - name: control3
+    ip_os: 100.82.46.23
+    ip_idrac: 100.82.34.23
+    pxe_interface: NIC.Slot.2-1-1
+    bond_interface_primary: NIC.Slot.2-1-1
+    bond_interface_backup: NIC.Slot.2-2-1
+compute_nodes:
+  - name: compute1
+    ip_os: 100.82.46.24
+    ip_idrac: 100.82.34.24
+    pxe_interface: NIC.Slot.2-1-1
+    bond_interface_primary: NIC.Slot.2-1-1
+    bond_interface_backup: NIC.Slot.2-2-1
+    os: rhcos
+  - name: compute2
+    ip_os: 100.82.46.25
+    ip_idrac: 100.82.34.25
+    pxe_interface: NIC.Slot.2-1-1
+    bond_interface_primary: NIC.Slot.2-1-1
+    bond_interface_backup: NIC.Slot.2-2-1
+    os: rhel
+  - name: compute3
+    ip_os: 100.82.46.27
+    ip_idrac: 100.82.34.27
+    pxe_interface: NIC.Slot.2-1-1
+    bond_interface_primary: NIC.Slot.2-1-1
+    bond_interface_backup: NIC.Slot.2-2-1
+    os: rhcos

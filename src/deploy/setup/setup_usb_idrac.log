@@ -1,0 +1,92 @@
+2021-07-16 08:39:17,769 INFO * Creating the SAH node usb image.
+2021-07-16 08:39:17,771 DEBUG loading settings files /root/ansible/r87.ini
+2021-07-16 08:39:17,775 ERROR Traceback (most recent call last):
+  File "setup_usb_idrac.py", line 65, in setup
+    settings = Settings(args.settings)
+  File "/root/ansible/JetPack/src/deploy/osp_deployer/settings/config.py", line 107, in __init__
+    raise AssertionError("\n" + error_msg)
+AssertionError: 
+Missing "public_api_network" setting in your ini file [Network Settings] section 
+Missing "public_api_vlanid" setting in your ini file [Network Settings] section 
+Missing "public_api_gateway" setting in your ini file [Network Settings] section 
+Missing "public_api_netmask" setting in your ini file [Network Settings] section 
+Missing "public_api_allocation_pool_start" setting in your ini file [Network Settings] section 
+Missing "public_api_allocation_pool_end" setting in your ini file [Network Settings] section 
+Missing "private_api_network" setting in your ini file [Network Settings] section 
+Missing "private_api_vlanid" setting in your ini file [Network Settings] section 
+Missing "private_api_gateway" setting in your ini file [Network Settings] section 
+Missing "private_api_netmask" setting in your ini file [Network Settings] section 
+Missing "private_api_allocation_pool_start" setting in your ini file [Network Settings] section 
+Missing "private_api_allocation_pool_end" setting in your ini file [Network Settings] section 
+Missing "storage_network" setting in your ini file [Network Settings] section 
+Missing "storage_gateway" setting in your ini file [Network Settings] section 
+Missing "storage_vlanid" setting in your ini file [Network Settings] section 
+Missing "storage_netmask" setting in your ini file [Network Settings] section 
+Missing "storage_allocation_pool_start" setting in your ini file [Network Settings] section 
+Missing "storage_allocation_pool_end" setting in your ini file [Network Settings] section 
+Missing "provisioning_network" setting in your ini file [Network Settings] section 
+Missing "provisioning_vlanid" setting in your ini file [Network Settings] section 
+Missing "provisioning_netmask" setting in your ini file [Network Settings] section 
+Missing "provisioning_gateway" setting in your ini file [Network Settings] section 
+Missing "provisioning_net_dhcp_start" setting in your ini file [Network Settings] section 
+Missing "provisioning_net_dhcp_end" setting in your ini file [Network Settings] section 
+Missing "discovery_ip_range" setting in your ini file [Network Settings] section 
+Missing "storage_cluster_network" setting in your ini file [Network Settings] section 
+Missing "storage_cluster_vlanid" setting in your ini file [Network Settings] section 
+Missing "storage_cluster_gateway" setting in your ini file [Network Settings] section 
+Missing "storage_cluster_allocation_pool_start" setting in your ini file [Network Settings] section 
+Missing "storage_cluster_allocation_pool_end" setting in your ini file [Network Settings] section 
+Missing "management_network" setting in your ini file [Network Settings] section 
+Missing "management_vlanid" setting in your ini file [Network Settings] section 
+Missing "management_netmask" setting in your ini file [Network Settings] section 
+Missing "management_gateway" setting in your ini file [Network Settings] section 
+Missing "management_allocation_pool_start" setting in your ini file [Network Settings] section 
+Missing "management_allocation_pool_end" setting in your ini file [Network Settings] section 
+Missing "tenant_tunnel_network" setting in your ini file [Network Settings] section 
+Missing "tenant_tunnel_gateway" setting in your ini file [Network Settings] section 
+Missing "tenant_tunnel_network_allocation_pool_start" setting in your ini file [Network Settings] section 
+Missing "tenant_tunnel_network_allocation_pool_end" setting in your ini file [Network Settings] section 
+Missing "tenant_tunnel_network_vlanid" setting in your ini file [Network Settings] section 
+Missing "tenant_vlan_range" setting in your ini file [Network Settings] section 
+Missing [MTU Settings] section in your ini file 
+Missing [Vips Settings] section in your ini file 
+Missing "subscription_manager_pool_sah" setting in your ini file [Subscription Manager Settings] section 
+Missing "subscription_manager_pool_vm_rhel" setting in your ini file [Subscription Manager Settings] section 
+Missing "subscription_check_retries" setting in your ini file [Subscription Manager Settings] section 
+Missing "use_satellite" setting in your ini file [Subscription Manager Settings] section 
+Missing "satellite_ip" setting in your ini file [Subscription Manager Settings] section 
+Missing "satellite_hostname" setting in your ini file [Subscription Manager Settings] section 
+Missing "satellite_org" setting in your ini file [Subscription Manager Settings] section 
+Missing "satellite_activation_key" setting in your ini file [Subscription Manager Settings] section 
+Missing "pull_containers_from_satellite" setting in your ini file [Subscription Manager Settings] section 
+Missing "containers_prefix" setting in your ini file [Subscription Manager Settings] section 
+Missing [Nodes Nics and Bonding Settings] section in your ini file 
+Missing [Dell NFV Settings] section in your ini file 
+Missing "sah_ipmi_user" setting in your ini file [IPMI credentials Settings] section 
+Missing "sah_ipmi_password" setting in your ini file [IPMI credentials Settings] section 
+Missing "new_ipmi_password" setting in your ini file [IPMI credentials Settings] section 
+Missing "profile" setting in your ini file [Deployment Settings] section 
+Missing "cluster_nodes_configuration_file" setting in your ini file [Deployment Settings] section 
+Missing "director_install_user" setting in your ini file [Deployment Settings] section 
+Missing "director_install_user_password" setting in your ini file [Deployment Settings] section 
+Missing "undercloud_admin_host" setting in your ini file [Deployment Settings] section 
+Missing "undercloud_public_host" setting in your ini file [Deployment Settings] section 
+Missing "overcloud_name" setting in your ini file [Deployment Settings] section 
+Missing "domain" setting in your ini file [Deployment Settings] section 
+Missing "overcloud_nodes_pwd" setting in your ini file [Deployment Settings] section 
+Missing "ntp_servers" setting in your ini file [Deployment Settings] section 
+Missing "time_zone" setting in your ini file [Deployment Settings] section 
+Missing "overcloud_static_ips" setting in your ini file [Deployment Settings] section 
+Missing "enable_rbd_backend" setting in your ini file [Deployment Settings] section 
+Missing "enable_rbd_nova_backend" setting in your ini file [Deployment Settings] section 
+Missing "glance_backend" setting in your ini file [Deployment Settings] section 
+Missing "enable_fencing" setting in your ini file [Deployment Settings] section 
+Missing "enable_dashboard" setting in your ini file [Deployment Settings] section 
+Missing [Storage back-end Settings] section in your ini file 
+Missing [Sanity Test Settings] section in your ini file 
+Missing [Tempest Settings] section in your ini file 
+Missing [Advanced Settings] section in your ini file 
+Missing [PowerFlex Settings] section in your ini file 
+
+
+2021-07-16 08:39:17,775 ERROR <class 'AssertionError'>

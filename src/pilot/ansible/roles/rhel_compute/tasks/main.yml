@@ -1,0 +1,34 @@
+---
+# tasks file for management
+- name: register to pool id
+  redhat_subscription:
+    state: present
+    username: "{{ subscription_user }}"
+    password: "{{ subscription_pass }}"
+    pool_ids:
+      - "{{ pool_id }}"
+
+- name: enable repositories in worker nodes
+  rhsm_repository:
+    name: "{{ item }}"
+    state: enabled
+  loop:
+    - rhel-7-server-extras-rpms
+    - rhel-7-server-rpms
+    - rhel-7-server-ose-4.6-rpms
+    - rhel-7-fast-datapath-rpms
+    - rhel-7-server-optional-rpms
+
+- name: disable firewalld in worker nodes
+  systemd:
+    name: firewalld
+    state: stopped
+    enabled: no
+
+- name: copy kubeconfig file
+  copy:
+    src: /home/ansible/kubeconfig
+    dest: /home/ansible/
+    owner: ansible
+    group: ansible
+    mode: '0644'

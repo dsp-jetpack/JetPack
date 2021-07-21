@@ -1,0 +1,5 @@
+---
+# handlers file for http
+- name: restart http service
+  systemd: name=httpd state=restarted
+  listen: "restart httpd"

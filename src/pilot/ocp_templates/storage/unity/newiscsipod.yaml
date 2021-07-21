@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: new-iscsi-pvc
+  namespace: unity
+spec:
+  containers:
+  - name: task-pv-container
+    #image: nginx:latest
+    image: image-registry.openshift-image-registry.svc:5000/openshift/nginxnfs
+    ports:
+      - containerPort: 80
+        name: "http-server"
+    volumeMounts:
+      - mountPath: "/usr/share/nginx/html"
+        name: restore-pvc
+  volumes:
+    - name: restore-pvc
+      persistentVolumeClaim:
+        claimName: dynamic-new-iscsi-unity-pvc

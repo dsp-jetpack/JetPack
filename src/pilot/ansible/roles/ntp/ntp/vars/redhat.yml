@@ -1,0 +1,6 @@
+chrony_service_name: 'chronyd'
+chrony_driftfile: '/var/lib/chrony/drift'
+chrony_keyfile: '/etc/chrony/chrony.keys'
+chrony_conf_file: '/etc/chrony.conf'
+chrony_pool: '0.centos.pool.ntp.org'
+chrony_logdir: '/var/log/chrony'

@@ -1,0 +1,9 @@
+zone "{{ ansible_domain }}" IN {
+type master;
+file "{{ ansible_domain }}";
+};
+
+zone "{{ arpa_name }}" {
+type master;
+file "{{ arpa_name }}";
+};
