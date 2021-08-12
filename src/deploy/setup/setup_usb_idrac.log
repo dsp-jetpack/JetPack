@@ -90,3 +90,59 @@ Missing [PowerFlex Settings] section in your ini file
 
 
 2021-07-16 08:39:17,775 ERROR <class 'AssertionError'>
+2021-08-12 06:20:17,302 INFO * Creating the SAH node usb image.
+2021-08-12 06:20:17,303 DEBUG loading settings files /root/r180_AMD_powerstore.ini
+2021-08-12 06:20:17,317 INFO 
+Section [Performance and Optimization] in your ini file is deprecated and should be removed
+"node_types" setting in your ini file [Advanced Settings] section is deprecated and should be removed
+
+2021-08-12 06:20:17,318 INFO Profile has been set to custom
+2021-08-12 06:20:17,318 INFO DVR is disabled.
+2021-08-12 06:20:17,318 INFO Barbican is disabled.
+2021-08-12 06:20:17,318 INFO Octavia is disabled.
+2021-08-12 06:20:17,319 INFO Using ini repo settings
+2021-08-12 06:20:17,320 INFO OVS_DPDK is disabled.
+2021-08-12 06:20:17,320 INFO SR-IOV is disabled.
+2021-08-12 06:20:17,321 INFO Smart NIC for SR-IOV Hardware Offload is disabled.
+2021-08-12 06:20:17,321 DEBUG Settings.settings is: {'edge_sites': '[]', 'node_type_data_map': '{}', 'undercloud_conf': '<configparser.ConfigParser object at 0x7fdc7dc92f60>'}
+2021-08-12 06:20:17,321 INFO Settings .ini: /root/r180_AMD_powerstore.ini
+2021-08-12 06:20:17,321 INFO Settings .properties /root/r180_AMD_powerstore.properties
+2021-08-12 06:20:17,321 INFO ==== Running environment sanity tests
+2021-08-12 06:20:17,321 DEBUG verifying sah network settings
+2021-08-12 06:20:17,322 DEBUG verifying director vm network settings
+2021-08-12 06:20:17,322 DEBUG verifying controller nodes network settings
+2021-08-12 06:20:17,322 DEBUG verifying compute nodes network settings
+2021-08-12 06:20:17,322 DEBUG verifying storage nodes network settings
+2021-08-12 06:20:17,328 DEBUG Check settings ip's are valid.
+2021-08-12 06:20:17,329 DEBUG Verifying PowerFlex RPMs are present in the appropriate directory
+2021-08-12 06:20:17,329 DEBUG PowerFlex backend not enabled, skipping.
+2021-08-12 06:20:17,329 INFO Using Custom profile
+2021-08-12 06:20:17,329 DEBUG verifying numa and hugepages enabled when dpdk enabled
+2021-08-12 06:20:17,329 DEBUG verifying DVR is disabled when OVS-DPDK is enabled
+2021-08-12 06:20:17,329 DEBUG verifying DVR is disabled when SR-IOV is enabled
+2021-08-12 06:20:17,329 DEBUG Verifying SR-IOV is enabled when Smart NIC is enabled
+2021-08-12 06:20:20,405 DEBUG running cd ~;rm -f osp_ks.img
+2021-08-12 06:20:20,421 DEBUG b''
+2021-08-12 06:20:20,421 DEBUG running cd ~;dd if=/dev/zero of=osp_ks.img bs=1M count=10000
+2021-08-12 06:20:35,633 DEBUG b'10000+0 records in\n10000+0 records out\n10485760000 bytes (10 GB, 9.8 GiB) copied, 15.2027 s, 690 MB/s\n'
+2021-08-12 06:20:36,123 DEBUG running cd ~;mkfs ext3 -F osp_ks.img
+2021-08-12 06:20:43,478 DEBUG b'mke2fs 1.45.4 (23-Sep-2019)\nDiscarding device blocks:    4096/2560000\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x081052672/2560000\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08               \x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08\x08done                            \nCreating filesystem with 2560000 4k blocks and 640848 inodes\nFilesystem UUID: c6872114-db08-40f5-937f-62e70dd18278\nSuperblock backups stored on blocks: \n\t32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632\n\nAllocating group tables:  0/79\x08\x08\x08\x08\x08     \x08\x08\x08\x08\x08done                            \nWriting inode tables:  0/79\x08\x08\x08\x08\x08     \x08\x08\x08\x08\x08done                            \nWriting superblocks and filesystem accounting information:  0/79\x08\x08\x08\x08\x08     \x08\x08\x08\x08\x08done\n\n'
+2021-08-12 06:20:43,478 DEBUG running mkdir -p /mnt/usb
+2021-08-12 06:20:43,547 DEBUG b''
+2021-08-12 06:20:43,547 DEBUG running cd ~;mount -o loop osp_ks.img /mnt/usb
+2021-08-12 06:20:43,567 DEBUG b''
+2021-08-12 06:20:43,567 DEBUG running cd ~;cp -R ~/JetPack /mnt/usb
+2021-08-12 06:20:44,267 DEBUG b''
+2021-08-12 06:20:44,268 DEBUG running cd ~;cp /root/rhel82.iso /mnt/usb
+2021-08-12 06:21:23,608 DEBUG b''
+2021-08-12 06:21:23,613 DEBUG running cd ~;cp /root/r180_AMD_powerstore.ini /mnt/usb
+2021-08-12 06:21:23,625 DEBUG b''
+2021-08-12 06:21:23,625 DEBUG running cd ~;cp /root/r180_AMD_powerstore.properties /mnt/usb
+2021-08-12 06:21:23,629 DEBUG b''
+2021-08-12 06:21:23,629 DEBUG running cd ~;cp osp-sah.ks /mnt/usb
+2021-08-12 06:21:23,657 DEBUG b''
+2021-08-12 06:21:23,657 DEBUG running sed -i 's|/root|/root|' /mnt/usb/r180_AMD_powerstore.ini
+2021-08-12 06:21:23,685 DEBUG b''
+2021-08-12 06:21:23,685 DEBUG running sync; umount /mnt/usb
+2021-08-12 06:21:24,729 DEBUG b''
+2021-08-12 06:21:24,729 INFO All done - attach ~/osp_ks.img to the sah node & continue with the deployment ...
