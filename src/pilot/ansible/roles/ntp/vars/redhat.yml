@@ -1,0 +1,3 @@
+chrony_driftfile: '/var/lib/chrony/drift'
+chrony_keyfile: '/etc/chrony/chrony.keys'
+chrony_conf_file: '/etc/chrony.conf'

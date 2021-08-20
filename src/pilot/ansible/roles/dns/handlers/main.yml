@@ -1,0 +1,9 @@
+---
+# handlers file for bind
+- name: restart bind service
+  systemd: name=named state=restarted
+  listen: "restart named"
+
+- name: reload NetworkManager
+  systemd: name=NetworkManager state=restarted
+  listen: "reload NetworkManager"

@@ -1,0 +1,18 @@
+# A Heat environment file which can be used to enable a
+# Cinder Dell EMC PowerMax backend, configured via puppet.
+resource_registry:
+  OS::TripleO::Services::CinderBackendDellEMCPowerStore: ./overcloud/deployment/cinder/cinder-backend-dellemc-powerstore-puppet.yaml
+
+parameter_defaults:
+  CinderEnablePowerStoreBackend: true
+  CinderPowerStoreBackendName: 'tripleo_dellemc_powerstore'
+  CinderPowerStoreMultiConfig: {}
+  CinderPowerStoreAvailabilityZone: ''
+  CinderPowerStoreSanIp: '<powerstore_san_ip>'
+  CinderPowerStoreSanLogin: '<powerstore_san_login>'
+  CinderPowerStoreSanPassword: '<powerstore_san_password>'
+  CinderPowerStoreAppliances: '<powerstore_appliances>'
+  CinderPowerStorePorts: ''
+  CinderPowerStoreStorageProtocol: '<powerstore_protocol>'
+
+

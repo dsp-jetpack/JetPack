@@ -1,0 +1,17 @@
+apiVersion: sriovnetwork.openshift.io/v1
+kind: SriovNetworkNodePolicy
+metadata:
+  name: compute-1-network-node-policy
+  namespace: sriov-network-operator
+spec:
+  resourceName: compute_1_net_devices
+  nodeSelector:
+    kubernetes.io/hostname: compute-1.example.com
+  priority: 10
+  mtu: 1500
+  numVfs: 5
+  nicSelector:
+    pfNames: ["eno1","eno2"]
+    rootDevices: ["0000:1a:00.1","0000:1a:00.2"]
+  deviceType: netdevice
+  isRdma: false

@@ -952,6 +952,7 @@ class Director(InfraHost):
         self.run_tty("cp " + dell_unity_cinder_container_yaml +
                      " " + dell_unity_cinder_container_yaml + ".bak")
 
+
         self.setup_unity_cinder(dell_unity_cinder_yaml, \
                                 dell_unity_cinder_container_yaml )
 
@@ -975,6 +976,18 @@ class Director(InfraHost):
             self.setup_powermax_cinder(dell_powermax_iscsi_cinder_yaml)
         else:
             self.setup_powermax_cinder(dell_powermax_fc_cinder_yaml)
+
+        # PowerStore
+        dell_powerstore_cinder_yaml = self.templates_dir + \
+            "/dellemc-powerstore-cinder-backend.yaml"
+        self.upload_file(self.settings.dell_powerstore_cinder_yaml,
+                         dell_powerstore_cinder_yaml)
+
+        # Backup before modifying
+        self.run_tty("cp " + dell_powerstore_cinder_yaml +
+                     " " + dell_powerstore_cinder_yaml + ".bak")
+
+        self.setup_powerstore_cinder(dell_powerstore_cinder_yaml)
 
         # PowerFlex
         dell_powerflex_cinder_yaml = self.templates_dir + \
@@ -1004,6 +1017,9 @@ class Director(InfraHost):
 
         if self.settings.enable_powermax_backend is True:
             enabled_backends += ",'tripleo_dellemc_powermax'"
+
+        if self.settings.enable_powerstore_backend is True:
+            enabled_backends += ",'tripleo_dellemc_powerstore'"
 
         enabled_backends += "]"
 
@@ -1267,6 +1283,32 @@ class Director(InfraHost):
         ]
         for cmd in cmds:
             self.run_tty(cmd)
+
+    def setup_powerstore_cinder(self, powerstore_cinder_yaml):
+
+        if self.settings.enable_powerstore_backend is False:
+            logger.debug("not setting up powerstore backend")
+            return
+
+        logger.debug("configuring powerstore backend")
+
+        cmds = [
+            'sed -i "s|<enable_powerstore_backend>|' +
+            'True' + '|" ' + powerstore_cinder_yaml,
+            'sed -i "s|<powerstore_san_ip>|' +
+            self.settings.powerstore_san_ip + '|" ' + powerstore_cinder_yaml,
+            'sed -i "s|<powerstore_san_login>|' +
+            self.settings.powerstore_san_login + '|" ' + powerstore_cinder_yaml,
+            'sed -i "s|<powerstore_san_password>|' +
+            self.settings.powerstore_san_password + '|" ' + powerstore_cinder_yaml,
+            'sed -i "s|<powerstore_appliances>|' +
+            self.settings.powerstore_appliances + '|" ' + powerstore_cinder_yaml,
+            'sed -i "s|<powerstore_protocol>|' +
+            self.settings.powerstore_protocol + '|" ' + powerstore_cinder_yaml,
+        ]
+        for cmd in cmds:
+            self.run_tty(cmd)
+
 
     def setup_powermax_manila(self, powermax_manila_yaml):
 
@@ -1845,6 +1887,8 @@ class Director(InfraHost):
             cmd += " --enable_powermax"
         if self.settings.enable_powermax_manila_backend is True:
             cmd += " --enable_powermax_manila"
+        if self.settings.enable_powerstore_backend is True:
+            cmd += " --enable_powerstore"
         if self.settings.enable_rbd_backend is False:
             cmd += " --disable_rbd"
         if self.settings.overcloud_static_ips is True:

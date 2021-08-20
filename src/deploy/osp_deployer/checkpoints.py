@@ -141,7 +141,7 @@ class Checkpoints:
         test = self.ping_host(self.sah_ip,
                               "root",
                               self.settings.sah_node.root_password,
-                              "8.8.8.8")
+                              self.settings.name_server)
         if self.ping_success not in test:
             raise AssertionError(
                 "SAH cannot ping the outside world (ip) : " + test)
@@ -216,7 +216,7 @@ class Checkpoints:
         test = self.ping_host(self.director_ip,
                               "root",
                               setts.director_node.root_password,
-                              "8.8.8.8")
+                              self.settings.name_server)
         if self.ping_success not in test:
             raise AssertionError(
                 "Director VM cannot ping the outside world (ip) : " + test)
@@ -304,7 +304,7 @@ class Checkpoints:
         test = self.ping_host(self.powerflexgw_ip,
                               "root",
                               setts.powerflexgw_vm.root_password,
-                              "8.8.8.8")
+                              self.settings.name_server)
         if self.ping_success not in test:
             raise AssertionError(
                 "Powerflex gateway VM cannot ping the outside world (ip) : " + test)
@@ -383,7 +383,7 @@ class Checkpoints:
         test = self.ping_host(self.powerflexmgmt_ip,
                               "root",
                               setts.powerflexmgmt_vm.root_password,
-                              "8.8.8.8")
+                              self.settings.name_server)
         if self.ping_success not in test:
             raise AssertionError(
                 "Powerflex presentation server VM cannot ping the outside world (ip) : " + test)

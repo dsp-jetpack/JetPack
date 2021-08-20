@@ -1,0 +1,26 @@
+vrrp_script chk_haproxy {
+    script "killall -0 haproxy" # check the haproxy process
+    interval 2 # every 2 seconds
+    weight 2 # add 2 points if OK
+}
+
+vrrp_instance VI_1 {
+    interface br0            # interface to monitor
+    {% if ansible_fqdn in groups['primary'] %}
+    state MASTER             
+    {% else %}
+    state BACKUP
+    {% endif %}
+    virtual_router_id 51
+    {% if ansible_fqdn in groups['primary'] %}
+    priority 101             # 101 on MASTER, 100 on BACKUP
+    {% else %}
+    priority 100
+    {% endif %}
+    virtual_ipaddress {
+        {{ vip }}/{{ net_mask_cidr }}    # virtual ip address
+    }
+    track_script {
+        chk_haproxy
+    }
+}

@@ -1,0 +1,18 @@
+default vesamenu.c32
+prompt 0timeout 300
+ONTIMEOUT local
+MENU MARGIN 10
+MENU ROWS 16
+MENU TABMSGROW 21
+MENU TIMEOUTROW 26
+MENU COLOR BORDER 30;44         #20ffffff #00000000 none
+MENU COLOR SCROLLBAR 30;44              #20ffffff #00000000 none
+MENU COLOR TITLE 0              #ffffffff #00000000 none
+MENU COLOR SEL   30;47          #40000000 #20ffffff
+MENU BACKGROUND redhat.jpg
+MENU TITLE PXE MenuLABEL local
+menu label Boot from ^local drive
+localboot 0xffff
+LABEL Bootstrap
+  KERNEL {{ os }}/{{ version }}/{{ kernel_file }}
+  APPEND initrd={{ os }}/{{ version }}/{{ initramfs }} ip=dhcp nomodeset rd.neednet=1 coreos.inst.insecure coreos.live.rootfs_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ rootfs }} coreos.inst=yes coreos.inst.install_dev=sda coreos.inst.image_url=http://{{ vip_ip }}:{{ http_port }}/{{ os }}/{{ version }}/{{ uefi_file }} coreos.inst.ignition_url=http://{{ vip_ip }}:{{ http_port }}/{{ http_ignition }}/bootstrap.ign

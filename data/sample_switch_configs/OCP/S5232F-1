@@ -1,0 +1,429 @@
+! Version 10.5.1.0
+! Last configuration change at Feb  25 15:06:23 2020
+!
+ip vrf default
+!
+no ip igmp snooping enable
+interface breakout 1/1/1 map 100g-1x
+interface breakout 1/1/2 map 100g-1x
+interface breakout 1/1/3 map 100g-1x
+interface breakout 1/1/4 map 100g-1x
+interface breakout 1/1/5 map 100g-1x
+interface breakout 1/1/6 map 100g-1x
+interface breakout 1/1/7 map 100g-1x
+interface breakout 1/1/8 map 100g-1x
+interface breakout 1/1/9 map 100g-1x
+interface breakout 1/1/10 map 100g-1x
+interface breakout 1/1/11 map 100g-1x
+interface breakout 1/1/12 map 100g-1x
+interface breakout 1/1/13 map 100g-1x
+interface breakout 1/1/14 map 100g-1x
+interface breakout 1/1/15 map 100g-1x
+interface breakout 1/1/16 map 100g-1x
+interface breakout 1/1/17 map 100g-1x
+interface breakout 1/1/18 map 100g-1x
+interface breakout 1/1/19 map 100g-1x
+interface breakout 1/1/20 map 100g-1x
+interface breakout 1/1/21 map 100g-1x
+interface breakout 1/1/22 map 100g-1x
+interface breakout 1/1/23 map 100g-1x
+interface breakout 1/1/24 map 100g-1x
+interface breakout 1/1/25 map 100g-1x
+interface breakout 1/1/26 map 100g-1x
+interface breakout 1/1/27 map 100g-1x
+interface breakout 1/1/28 map 100g-1x
+interface breakout 1/1/29 map 100g-1x
+interface breakout 1/1/30 map 100g-1x
+interface breakout 1/1/31 map 100g-1x
+interface breakout 1/1/32 map 100g-1x
+hostname S5232F-1
+no multicast snooping flood-restrict
+iscsi target port 860
+iscsi target port 3260
+system-user linuxadmin password $6$h7FDkFKa$UMENTFKvxaBbIbGrTPQpocbyZCZ7zDUa5l5fqsJazcN6sWiXJGdVfhIhbmaTMZ.BzSDVsgdLBabI.pyS/cKlQ/
+no ipv6 mld snooping enable
+spanning-tree mode rstp
+spanning-tree rstp priority 28672
+username admin password $6$q9QBeYjZ$jfxzVqGhkxX3smxJSH9DDz7/3OJc6m5wjF8nnLD7/VKx8SloIhp4NoGZs0I/UNwh8WVuxwfd9q4pWIgNs5BKH. role sysadmin priv-lvl 15
+aaa authentication login default local
+aaa authentication login console local
+!
+class-map type application class-iscsi
+!
+policy-map type application policy-iscsi
+!
+interface vlan1
+ no shutdown
+!
+interface vlan32
+ no shutdown
+!
+interface vlan34
+ description iDRACs
+ no shutdown
+!
+interface vlan47
+ shutdown
+ mtu 9216
+!
+interface vlan461
+ description R3-RHOCP
+ no shutdown
+ ip address 192.168.46.3/26
+!
+interface port-channel1
+ no shutdown
+ switchport access vlan 461
+ mtu 9216
+ lacp fallback enable
+ lacp fallback preemption disable
+ lacp fallback timeout 100
+ vlt-port-channel 1
+!
+interface port-channel2
+ no shutdown
+ switchport access vlan 461
+ mtu 9216
+ lacp fallback enable
+ lacp fallback preemption disable
+ lacp fallback timeout 100
+ vlt-port-channel 2
+!
+interface port-channel3
+ no shutdown
+ switchport access vlan 461
+ mtu 9216
+ lacp fallback enable
+ lacp fallback preemption disable
+ lacp fallback timeout 100
+ vlt-port-channel 3
+!
+interface port-channel4
+ no shutdown
+ switchport access vlan 461
+ mtu 9216
+ lacp fallback enable
+ lacp fallback preemption disable
+ lacp fallback timeout 100
+ vlt-port-channel 4
+!
+interface port-channel5
+ no shutdown
+ switchport access vlan 461
+ mtu 9216
+ lacp fallback enable
+ lacp fallback preemption disable
+ lacp fallback timeout 100
+ vlt-port-channel 5
+!
+interface port-channel6
+ no shutdown
+ switchport access vlan 461
+ mtu 9216
+ lacp fallback enable
+ lacp fallback preemption disable
+ lacp fallback timeout 100
+ vlt-port-channel 6
+!
+interface port-channel7
+ no shutdown
+ switchport access vlan 461
+ mtu 9216
+ lacp fallback enable
+ lacp fallback preemption disable
+ lacp fallback timeout 100
+ vlt-port-channel 7
+!
+interface port-channel8
+ no shutdown
+ switchport access vlan 461
+ mtu 9216
+ lacp fallback enable
+ lacp fallback preemption disable
+ lacp fallback timeout 100
+ vlt-port-channel 8
+!
+interface port-channel9
+ no shutdown
+ switchport access vlan 461
+ mtu 9216
+ lacp fallback enable
+ lacp fallback preemption disable
+ lacp fallback timeout 100
+ vlt-port-channel 9
+!
+interface port-channel10
+ no shutdown
+ switchport access vlan 461
+ mtu 9216
+ lacp fallback enable
+ lacp fallback preemption disable
+ lacp fallback timeout 100
+ vlt-port-channel 10
+!
+interface port-channel11
+ no shutdown
+ switchport access vlan 461
+ mtu 9216
+ lacp fallback enable
+ lacp fallback preemption disable
+ lacp fallback timeout 100
+ vlt-port-channel 11
+!
+interface port-channel34
+ description down-S3048
+ no shutdown
+ switchport mode trunk
+ switchport trunk allowed vlan 34,47,461
+ mtu 9216
+ vlt-port-channel 34
+!
+interface port-channel100
+ description Uplink-R4-S5232F
+ no shutdown
+ switchport mode trunk
+ switchport access vlan 1
+ switchport trunk allowed vlan 32,34,47,461
+ mtu 9216
+ vlt-port-channel 100
+!
+interface mgmt1/1/1
+ no shutdown
+ no ip address dhcp
+ ip address 192.168.33.44/24
+ ipv6 address autoconfig
+!
+interface ethernet1/1/1
+ description r3csah->p2p1
+ no shutdown
+ channel-group 1 mode active
+ no switchport
+ mtu 9216
+ flowcontrol receive on
+ flowcontrol transmit on
+!
+interface ethernet1/1/2
+ description r3m1->p2p1
+ no shutdown
+ channel-group 2 mode active
+ no switchport
+ mtu 9216
+ flowcontrol receive on
+ flowcontrol transmit on
+ lacp port-priority 32002
+!
+interface ethernet1/1/3
+ description r3m2->p2p1
+ no shutdown
+ channel-group 3 mode active
+ no switchport
+ mtu 9216
+ flowcontrol receive on
+ flowcontrol transmit on
+ lacp port-priority 32003
+!
+interface ethernet1/1/4
+ description r3m3->p2p1
+ no shutdown
+ channel-group 4 mode active
+ no switchport
+ mtu 9216
+ flowcontrol receive on
+ flowcontrol transmit on
+ lacp port-priority 32004
+!
+interface ethernet1/1/5
+ description r3w1->p2p1
+ no shutdown
+ channel-group 5 mode active
+ no switchport
+ mtu 9216
+ flowcontrol receive on
+ flowcontrol transmit on
+ lacp port-priority 32005
+!
+interface ethernet1/1/6
+ description r3w2->p2p1
+ no shutdown
+ channel-group 6 mode active
+ no switchport
+ mtu 9216
+ flowcontrol receive on
+ flowcontrol transmit on
+ lacp port-priority 32006
+!
+interface ethernet1/1/7
+ description r3bsw3->p2p1
+ no shutdown
+ channel-group 7 mode active
+ no switchport
+ mtu 9216
+ flowcontrol receive on
+ flowcontrol transmit on
+ lacp port-priority 32007
+!
+interface ethernet1/1/8
+ no shutdown
+ switchport access vlan 461
+ mtu 9216
+ flowcontrol receive on
+ flowcontrol transmit on
+!
+interface ethernet1/1/9
+ no shutdown
+ switchport access vlan 461
+ mtu 9216
+ flowcontrol receive on
+ flowcontrol transmit on
+!
+interface ethernet1/1/10
+ no shutdown
+ switchport access vlan 461
+ mtu 9216
+ flowcontrol receive on
+ flowcontrol transmit on
+!
+interface ethernet1/1/11
+ no shutdown
+ switchport access vlan 461
+ flowcontrol receive on
+ flowcontrol transmit on
+!
+interface ethernet1/1/12
+ shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/13
+ shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/14
+ shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/15
+ shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/16
+ shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/17
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/18
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/19
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/20
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/21
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/22
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/23
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/24
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/25
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/26
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/27
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/28
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/29
+ no shutdown
+ switchport access vlan 1
+ flowcontrol receive off
+!
+interface ethernet1/1/30
+ description Up-po100
+ no shutdown
+ channel-group 100 mode active
+ no switchport
+ mtu 9216
+ flowcontrol receive on
+ flowcontrol transmit on
+!
+interface ethernet1/1/31
+ description VLTi
+ no shutdown
+ no switchport
+ flowcontrol receive off
+!
+interface ethernet1/1/32
+ description VLTi
+ no shutdown
+ no switchport
+ flowcontrol receive off
+!
+interface ethernet1/1/33
+ description iSCSI-47
+ no shutdown
+ switchport access vlan 47
+ mtu 9216
+ flowcontrol receive off
+!
+interface ethernet1/1/34
+ description Down-S3048
+ no shutdown
+ channel-group 34 mode active
+ no switchport
+ mtu 9216
+ flowcontrol receive on
+ flowcontrol transmit on
+!
+management route 0.0.0.0/0 192.168.33.1
+!
+vlt-domain 1
+ backup destination 192.168.33.45
+ discovery-interface ethernet1/1/31-1/1/32
+ peer-routing
+ vlt-mac 00:33:03:03:03:aa
+!
+snmp-server contact "Contact Support"
+!
+telemetry

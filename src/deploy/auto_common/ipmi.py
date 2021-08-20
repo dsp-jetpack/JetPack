@@ -53,7 +53,7 @@ class Ipmi:
 
     def get_power_state(self):
         state = self.__exec_ipmi_command("power status").strip()
-        logger.debug("power state: " + state)
+        print("power state: [" + state + "]")
         return state
 
     def set_boot_to_pxe(self):
@@ -75,11 +75,11 @@ class Ipmi:
         retries = 20
         for i in range(0, retries):
             try:
-                logger.debug("executing :" + cmdline)
+                print("executing :" + cmdline)
                 out = subprocess.check_output(cmdline,
                                               stderr=subprocess.STDOUT,
                                               shell=True)
-                logger.debug("cmd return :" + out)
+                out("cmd return :" + out)
                 return out
 
             except subprocess.CalledProcessError as e:
