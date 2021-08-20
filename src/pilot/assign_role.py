@@ -1126,7 +1126,10 @@ def select_os_volume(os_volume_size_gb, ironic_client, drac_client, node_uuid):
         # Detect BOSS Card and find the volume size
         lst_ctrls = drac_client.list_raid_controllers()
         for ct in lst_ctrls :
-            if ct.model.startswith("BOSS"):
+            LOG.info("Controller " + str(ct.model))
+            if ct.model.startswith("BOSS-S2"):
+                pci_bus_number = "0" + ct.bus.lower()
+            elif ct.model.startswith("BOSS"):
                 pci_bus_number = ct.bus.lower()
         boss_disk = \
             [ctrl.id for ctrl in lst_ctrls if ctrl.model.startswith("BOSS")]
