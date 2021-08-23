@@ -745,7 +745,7 @@ def configure_raid(ironic_client, node_uuid, super_role, os_volume_size_gb,
     when RAID configuration failed and return False. Further testing
     should uncover interesting error conditions.'''
 
-    if get_raid_controller_ids(drac_client) is None:
+    if not get_raid_controller_ids(drac_client):
         LOG.warning("No RAID controller is present.  Skipping RAID "
                     "configuration")
         return True
