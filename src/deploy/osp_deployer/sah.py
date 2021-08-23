@@ -290,6 +290,9 @@ class Sah(InfraHost):
             for host in hosts:
                 cmd = 'ssh-keygen -R ' + host
                 self.run(cmd)
+            # Removing authorized keys as well (if any), i.e. director node
+            cmd = 'rm -f .ssh/authorized_keys'
+            self.run(cmd)
         else:
             for host in hosts:
                 subprocess.check_output('ssh-keygen -R ' + host,
