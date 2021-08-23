@@ -390,11 +390,6 @@ echo "## Restarting httpd"
 sudo systemctl restart httpd
 echo "## Done"
 
-# Patching kernelargs for 16.1.6, to be removed when landed in upcoming upstream
-echo
-echo "### Patching kernelargs.yml for UEFI workaround"
-apply_patch "sudo patch -b -s /usr/share/ansible/roles/tripleo-kernel/tasks/kernelargs.yml ${HOME}/pilot/kernelargs.patch"
-echo "## Done"
 
 # Satellite , if using
 if [ ! -z "${containers_prefix}" ]; then
