@@ -273,49 +273,66 @@ if [ -n "${overcloud_nodes_pwd}" ] || [ ${enable_powerflex} == 1 ]; then
     run_command "sudo service libvirtd start"
     run_command "export LIBGUESTFS_BACKEND=direct"
 
-    echo "Copy director's public key to SAH node for ssh"
+    echo "# Installing sshpass, if not installed already"
+    run_command "sudo yum install -y sshpass"
+    echo "# Copy director's public key to SAH node for ssh"
     run_command "sudo sshpass -p '${sah_node_password}' scp -o StrictHostKeyChecking=no ~/.ssh/id_rsa.pub root@${sah_public_ip}:~/.ssh/authorized_keys"
 
 
     echo "# Overcloud customizatin required on SAH node first as virt will get freeze on icelake, Installing libguestfs-tools"
     run_command_on_sah "sudo dnf install -y libguestfs-tools"
     run_command_on_sah "sudo service libvirtd start"
-#    run_command_on_sah "echo export LIBGUESTFS_BACKEND=direct > /root/env_file"
-#    run_command_on_sah "source /root/env_file"
 
 fi
 
-
-
-if [ -n "${overcloud_nodes_pwd}" ]; then
+if [ -n "${overcloud_nodes_pwd}" ] && [ ${enable_powerflex} == 1 ]; then
+    # Customizing image for both nodes_pwd and powerflex in one go for efficiency
+    echo "# SCP overcloud image to sah node to begin customization"
+    run_command "scp -o StrictHostKeyChecking=no overcloud-full.qcow2 root@${sah_public_ip}:/root"
 
     echo "# Setting overcloud nodes password"
-#    run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
-
-    echo "# SCP overcloud image to sah node to begin customization"
-    run_command "scp -o StrictHostKeyChecking=no overcloud-full.qcow2 root@${sah_public_ip}:/root"
+    # run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
     run_command_on_sah "LIBGUESTFS_BACKEND=direct virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
 
-    echo "# Reupload customized overcloud image to director node"
-    run_command_on_sah "scp -o StrictHostKeyChecking=no overcloud-full.qcow2 root@${director_public_ip}:$HOME/pilot/images"
-fi
-
-if [ ${enable_powerflex} == 1 ]; then
-#    echo "# PowerFlex backend enabled, injecting rpms"
-#    run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
-#    run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
-#    echo "# Cloning Dell EMC TripleO PowerFlex repository"
-#    run_command "sudo dnf install -y ansible-tripleo-powerflex"
-
-    echo "# SCP overcloud image to sah node to begin customization"
-    run_command "scp -o StrictHostKeyChecking=no overcloud-full.qcow2 root@${sah_public_ip}:/root"
     echo "# PowerFlex backend enabled, injecting rpms"
     run_command_on_sah "LIBGUESTFS_BACKEND=direct virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
     run_command_on_sah "LIBGUESTFS_BACKEND=direct virt-customize -a overcloud-full.qcow2 --copy-in /root/JetPack/src/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
-    echo "# Reupload customized overcloud image to director node"
+
+    echo "# Reuploading customized overcloud image to director node"
     run_command_on_sah "scp -o StrictHostKeyChecking=no overcloud-full.qcow2 root@${director_public_ip}:$HOME/pilot/images"
     echo "# Cloning Dell EMC TripleO PowerFlex repository"
     run_command "sudo dnf install -y ansible-tripleo-powerflex"
+
+else
+    if [ -n "${overcloud_nodes_pwd}" ]; then
+        echo "# SCP overcloud image to sah node to begin customization"
+        run_command "scp -o StrictHostKeyChecking=no overcloud-full.qcow2 root@${sah_public_ip}:/root"
+
+        echo "# Setting overcloud nodes password"
+        #    run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
+        run_command_on_sah "LIBGUESTFS_BACKEND=direct virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
+
+        echo "# Reuploading customized overcloud image to director node"
+        run_command_on_sah "scp -o StrictHostKeyChecking=no overcloud-full.qcow2 root@${director_public_ip}:$HOME/pilot/images"
+    fi
+
+    if [ ${enable_powerflex} == 1 ]; then
+        #    echo "# PowerFlex backend enabled, injecting rpms"
+        #    run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
+        #    run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
+        #    echo "# Cloning Dell EMC TripleO PowerFlex repository"
+        #    run_command "sudo dnf install -y ansible-tripleo-powerflex"
+        echo "# SCP overcloud image to sah node to begin customization"
+        run_command "scp -o StrictHostKeyChecking=no overcloud-full.qcow2 root@${sah_public_ip}:/root"
+
+        echo "# PowerFlex backend enabled, injecting rpms"
+        run_command_on_sah "LIBGUESTFS_BACKEND=direct virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
+        run_command_on_sah "LIBGUESTFS_BACKEND=direct virt-customize -a overcloud-full.qcow2 --copy-in /root/JetPack/src/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
+        echo "# Reuploading customized overcloud image to director node"
+        run_command_on_sah "scp -o StrictHostKeyChecking=no overcloud-full.qcow2 root@${director_public_ip}:$HOME/pilot/images"
+        echo "# Cloning Dell EMC TripleO PowerFlex repository"
+        run_command "sudo dnf install -y ansible-tripleo-powerflex"
+    fi
 fi
 
 openstack overcloud image upload --update-existing --image-path $HOME/pilot/images
