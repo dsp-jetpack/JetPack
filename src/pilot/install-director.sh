@@ -287,16 +287,10 @@ if [ -n "${overcloud_nodes_pwd}" ] || [ ${enable_powerflex} == 1 ]; then
 
     if [ -n "${overcloud_nodes_pwd}" ]; then
     echo "# Setting overcloud nodes password"
-#    run_command "virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
     run_command_on_sah "LIBGUESTFS_BACKEND=direct virt-customize -a overcloud-full.qcow2 --root-password password:${overcloud_nodes_pwd} --selinux-relabel"
     fi
 
     if [ ${enable_powerflex} == 1 ]; then
-#    echo "# PowerFlex backend enabled, injecting rpms"
-#    run_command "virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
-#    run_command "virt-customize -a overcloud-full.qcow2 --copy-in $HOME/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
-#    echo "# Cloning Dell EMC TripleO PowerFlex repository"
-#    run_command "sudo dnf install -y ansible-tripleo-powerflex"
     echo "# PowerFlex backend enabled, injecting rpms"
     run_command_on_sah "LIBGUESTFS_BACKEND=direct virt-customize -a overcloud-full.qcow2 --mkdir /opt/dellemc/powerflex"
     run_command_on_sah "LIBGUESTFS_BACKEND=direct virt-customize -a overcloud-full.qcow2 --copy-in /root/JetPack/src/pilot/powerflex/rpms:/opt/dellemc/powerflex/ --selinux-relabel"
