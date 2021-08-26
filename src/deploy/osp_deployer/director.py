@@ -189,8 +189,14 @@ class Director(InfraHost):
                   " --director_ip " + \
                   self.ip
 
+        if len(self.settings.overcloud_nodes_pwd) | len(self.settings.powerflex_nodes ) > 0:
+            cmd += " --sah_ip " + self.settings.sah_node.public_api_ip
+            cmd += " --sah_pwd " + self.settings.sah_node.root_password
+
         if len(self.settings.overcloud_nodes_pwd) > 0:
             cmd += " --nodes_pwd " + self.settings.overcloud_nodes_pwd
+
+
         if len(self.settings.powerflex_nodes) > 0:
             cmd += " --enable_powerflex"
         stdout, stderr, exit_status = self.run(cmd)
