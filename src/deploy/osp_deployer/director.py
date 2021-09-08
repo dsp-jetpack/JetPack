@@ -637,7 +637,7 @@ class Director(InfraHost):
         if num_osds == 0:
             return 0, 0
         replication_factor = 3
-        max_pgs = num_osds * 200 / replication_factor
+        max_pgs = num_osds * 100 / replication_factor
         total_pgs = max_pgs * 0.8
         total_heavy_pgs = total_pgs / 2
         heavy_pgs = total_heavy_pgs / num_heavy_pools
