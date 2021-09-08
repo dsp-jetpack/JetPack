@@ -10,6 +10,7 @@ ironic::drivers::interfaces::default_power_interface: idrac-wsman
 ironic::drivers::interfaces::default_management_interface: idrac-wsman
 ironic::drivers::interfaces::default_vendor_interface: idrac-wsman
 ironic::conductor::sync_power_state_interval: 70
+ironic::conductor::force_power_state_during_sync: true
 ironic::wsgi::apache::threads: 30
 
 ironic::config::ironic_config:
