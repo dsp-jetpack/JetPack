@@ -23,7 +23,7 @@ bootloader --boot-drive=sda
 
 clearpart --all --initlabel
 
-part biosboot --ondisk=sda --size=2
+part /boot/efi --fstype=efi --ondisk=sda --size=2
 part /boot --fstype=ext4 --size=1024
 part pv.01 --size=79872
 part pv.02 --size=1024 --grow
