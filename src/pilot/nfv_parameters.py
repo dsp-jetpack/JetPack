@@ -165,11 +165,21 @@ class NfvParameters(object):
                     self.data['cpus'][i % 2].pop(j, None)
                     i += 1
         else:
-            for i in range(0, pairs):
-                host_cpus.append(self.data['cpus'][i % 2][i][0])
-                host_cpus.append(self.data['cpus'][i % 2][i][1])
-                self.data['cpus'][i % 2].pop(i, None)
-                i += 1
+            # For Intel
+            # If one numa node, Select pairs from numa node 0
+            # Else, Select pairs from two numa nodes 0,1
+            if not self.data['cpus'][1]:
+                for i in range(0, pairs):
+                    host_cpus.append(self.data['cpus'][0][i][0])
+                    host_cpus.append(self.data['cpus'][0][i][1])
+                    self.data['cpus'][0].pop(i, None)
+                    i += 1
+            else:
+                for i in range(0, pairs):
+                    host_cpus.append(self.data['cpus'][i % 2][i][0])
+                    host_cpus.append(self.data['cpus'][i % 2][i][1])
+                    self.data['cpus'][i % 2].pop(i, None)
+                    i += 1
         host_cpus = self.range_extract(sorted(host_cpus, key=int))
         self.host_cpus = ','.join(map(str, host_cpus))
         logger.debug("Host CPUs >> " + str(self.host_cpus))
